@@ -52,8 +52,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle API requests with network-first strategy
-  if (url.pathname.includes('/api/') || url.pathname.includes('.json')) {
+  // Handle API requests with network-first strategy (exclude manifest.json)
+  if ((url.pathname.includes('/api/') || url.pathname.includes('.json')) && !url.pathname.includes('manifest.json')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
