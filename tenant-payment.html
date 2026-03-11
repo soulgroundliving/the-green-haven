@@ -110,7 +110,10 @@
       <h1>💳 ชำระค่าเช่า</h1>
       <p>The Green Haven</p>
     </div>
-    <button class="app-header-install" onclick="installApp()" id="installBtn" style="display:none;">📱 ติดตั้ง</button>
+    <div style="display:flex;gap:8px;">
+      <button class="app-header-install" onclick="installApp()" id="installBtn" style="display:none;">📱 ติดตั้ง</button>
+      <button class="app-header-install" onclick="handleLogout()" style="background:rgba(198,40,40,0.2);color:#c62828;">🚪 Out</button>
+    </div>
   </div>
 
   <!-- Main Content -->
@@ -218,6 +221,44 @@ function installApp() {
         document.getElementById('installBtn').style.display = 'none';
       }
     });
+  }
+}
+
+// ===== AUTHENTICATION CHECK =====
+window.addEventListener('load', () => {
+  checkTenantAuth();
+});
+
+function checkTenantAuth() {
+  const user = sessionStorage.getItem('user');
+  if (!user) {
+    // Not logged in - redirect to login
+    window.location.href = 'login.html';
+    return;
+  }
+
+  const userData = JSON.parse(user);
+
+  // Check if user is tenant
+  if (userData.userType !== 'tenant') {
+    alert('เฉพาะผู้เช่าเท่านั้นที่สามารถเข้าถึง Payment Portal');
+    window.location.href = 'login.html';
+    return;
+  }
+
+  // Update header with user info
+  const header = document.querySelector('.app-header-title p');
+  if (header) {
+    header.innerHTML = `👤 ${userData.name} (ห้อง ${userData.roomNumber})`;
+  }
+
+  console.log('✅ Tenant authenticated:', userData.name);
+}
+
+function handleLogout() {
+  if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
+    sessionStorage.removeItem('user');
+    window.location.href = 'login.html';
   }
 }
 
