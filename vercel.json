@@ -1,12 +1,5 @@
 {
   "version": 2,
   "buildCommand": "echo 'Static site'",
-  "publicPath": "./",
-  "cleanUrls": false,
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/$1"
-    }
-  ]
+  "cleanUrls": false
 }
