@@ -8,6 +8,34 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="meter_data.js"></script>
+<!-- Firebase Configuration -->
+<script type="module">
+  // Import Firebase SDKs
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+  import { getDatabase } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+  import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+
+  // Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyCbOKefRd5mXh3ZxlBjhHkonwbWWBtlQmo",
+    authDomain: "the-green-haven.firebaseapp.com",
+    databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "the-green-haven",
+    storageBucket: "the-green-haven.firebasestorage.app",
+    messagingSenderId: "523697750767",
+    appId: "1:523697750767:web:89b253f92d8d5cfe8a111a"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
+  const auth = getAuth(app);
+
+  // Make them globally available for other scripts
+  window.firebaseApp = app;
+  window.firebaseDatabase = database;
+  window.firebaseAuth = auth;
+</script>
 <style>
   :root {
     --green-dark:#1a5c38;--green:#2d8653;--green-light:#4caf50;--green-pale:#e8f5e9;
