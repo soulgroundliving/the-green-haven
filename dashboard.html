@@ -8,6 +8,7 @@
 <title>The Green Haven — ระบบจัดการอพาร์ทเมนต์</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="security.js"></script>
+<script src="audit.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="meter_data.js"></script>
@@ -2268,6 +2269,12 @@ function generateInvoice(){
 
   document.getElementById('invoicePanel').innerHTML=buildDocHTML(d,'invoice',dueStr);
   renderQR('qr-payment', d.total); // generate PromptPay QR with bill amount
+
+  // ===== AUDIT LOGGING =====
+  if (window.logBillGenerated) {
+    window.logBillGenerated(d.room, d.total, { invoiceNumber: d.no, building: d.building, month: d.month, year: d.year });
+  }
+
   // Show slip verification section (instead of auto-enabling receipt)
   slipVerified=false; slipData=null;
   document.getElementById('slipResult').innerHTML='';
@@ -2284,6 +2291,15 @@ function generateReceipt(){
   if(!invoiceData){alert('กรุณาส่งใบวางบิลก่อน');return;}
   const d=invoiceData;
   const payDate=new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+
+  // ===== AUDIT LOGGING =====
+  if (window.AuditLogger) {
+    window.AuditLogger.log(
+      window.AuditActionTypes.RECEIPT_GENERATED,
+      `Generated receipt for room ${d.room}: ฿${d.total.toLocaleString()}`,
+      { room: d.room, amount: d.total, receiptNumber: d.no, slipVerified: slipVerified }
+    );
+  }
   // Attach slip verification result if available
   const slipNote = slipVerified && slipData
     ? `<div style="margin-top:10px;padding:8px;background:#e8f5e9;border-radius:6px;font-size:.78rem;color:var(--green-dark);">✅ ยืนยันด้วย SlipOK · ผู้โอน: ${slipData.sender} · ฿${slipData.amount.toLocaleString()} · ${slipData.tDate}</div>`
@@ -3480,6 +3496,12 @@ function addMaintenanceRequest(){
   const mx=loadMaintenance();
   mx.unshift({id:Date.now(),room:sanitizedRoom,desc:sanitizedDesc,category:cat,priority:pri,status:'pending',reportedAt:date,updatedAt:date});
   saveMaintenance(mx);
+
+  // ===== AUDIT LOGGING =====
+  if (window.logMaintenanceCreated) {
+    window.logMaintenanceCreated(sanitizedRoom, sanitizedDesc, MX_CAT_LABEL[cat] || cat);
+  }
+
   document.getElementById('mx-room').value='';
   document.getElementById('mx-desc').value='';
   document.getElementById('mx-priority').value='normal';
