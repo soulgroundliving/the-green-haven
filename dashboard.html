@@ -1931,6 +1931,155 @@ function calcBill(){
   document.getElementById('c-total').textContent='฿'+total.toLocaleString();
 }
 
+// ===== FORM VALIDATION FUNCTIONS =====
+
+/**
+ * Validate bill form before generating invoice
+ */
+function validateBillForm() {
+  const errors = [];
+
+  // Validate room selection
+  const room = document.getElementById('f-room').value;
+  if (!room) {
+    errors.push('❌ กรุณาเลือกห้อง');
+  } else if (!/^[0-9ก-๙A-Za-z]{1,10}$/.test(room)) {
+    errors.push('❌ เลขห้องไม่ถูกต้อง');
+  }
+
+  // Validate rent amount
+  const isDaily = document.getElementById('f-rent-type')?.value === 'daily' &&
+                  document.getElementById('dailySection').classList.contains('show');
+
+  if (isDaily) {
+    const nights = parseFloat(document.getElementById('f-nights').value) || 0;
+    const dailyRate = parseFloat(document.getElementById('f-daily-rate').value) || 0;
+    if (nights <= 0) errors.push('❌ จำนวนคืนต้องมากกว่า 0');
+    if (dailyRate <= 0) errors.push('❌ ราคารายวันต้องมากกว่า 0');
+  } else {
+    const rent = parseFloat(document.getElementById('f-rent').value) || 0;
+    if (rent <= 0) errors.push('❌ ค่าเช่าต้องมากกว่า 0');
+  }
+
+  // Validate electricity readings
+  const eNew = parseFloat(document.getElementById('f-elec-new').value) || 0;
+  const eOld = parseFloat(document.getElementById('f-elec-old').value) || 0;
+  const eRate = parseFloat(document.getElementById('f-elec-rate').value) || 0;
+  if (eNew < 0 || eOld < 0) errors.push('❌ เลขมิเตอร์ไฟต้องเป็นจำนวนบวก');
+  if (eRate < 0) errors.push('❌ ราคาไฟต้องเป็นจำนวนบวก');
+  if (eNew < eOld && eNew > 0) errors.push('⚠️ เลขมิเตอร์ไฟล่าสุด < เดิม (เซเรสหรือป้อนผิด?)');
+
+  // Validate water readings
+  const wNew = parseFloat(document.getElementById('f-water-new').value) || 0;
+  const wOld = parseFloat(document.getElementById('f-water-old').value) || 0;
+  const wRate = parseFloat(document.getElementById('f-water-rate').value) || 0;
+  if (wNew < 0 || wOld < 0) errors.push('❌ เลขมิเตอร์น้ำต้องเป็นจำนวนบวก');
+  if (wRate < 0) errors.push('❌ ราคาน้ำต้องเป็นจำนวนบวก');
+  if (wNew < wOld && wNew > 0) errors.push('⚠️ เลขมิเตอร์น้ำล่าสุด < เดิม (เซเรสหรือป้อนผิด?)');
+
+  // Validate other charges
+  const trash = parseFloat(document.getElementById('f-trash').value) || 0;
+  const other = parseFloat(document.getElementById('f-other').value) || 0;
+  if (trash < 0) errors.push('❌ ค่าขยะต้องเป็นจำนวนบวก');
+  if (other < 0) errors.push('❌ ค่าบริการต้องเป็นจำนวนบวก');
+
+  // Validate year
+  const year = parseInt(document.getElementById('f-year').value);
+  if (year < 2560 || year > 2590) errors.push('❌ ปีต้องอยู่ระหว่าง 2560-2590');
+
+  // Validate note length
+  const note = document.getElementById('f-note').value;
+  if (note.length > 500) errors.push('❌ หมายเหตุต้องไม่เกิน 500 ตัวอักษร');
+
+  return {
+    isValid: errors.length === 0,
+    errors: errors
+  };
+}
+
+/**
+ * Validate maintenance request form
+ */
+function validateMaintenanceForm() {
+  const errors = [];
+
+  // Validate room
+  const room = document.getElementById('mx-room').value.trim();
+  if (!room) {
+    errors.push('❌ กรุณากรอกเลขห้อง');
+  } else if (room.length > 10) {
+    errors.push('❌ เลขห้องต้องไม่เกิน 10 ตัวอักษร');
+  }
+
+  // Validate date
+  const date = document.getElementById('mx-date').value;
+  if (!date) {
+    errors.push('❌ กรุณาเลือกวันที่แจ้ง');
+  } else {
+    const selectedDate = new Date(date);
+    const today = new Date();
+    if (selectedDate > today) {
+      errors.push('❌ ไม่สามารถเลือกวันที่ในอนาคตได้');
+    }
+  }
+
+  // Validate description
+  const desc = document.getElementById('mx-desc').value.trim();
+  if (!desc) {
+    errors.push('❌ กรุณากรอกรายละเอียดปัญหา');
+  } else if (desc.length < 5) {
+    errors.push('❌ รายละเอียดต้องมีอย่างน้อย 5 ตัวอักษร');
+  } else if (desc.length > 500) {
+    errors.push('❌ รายละเอียดต้องไม่เกิน 500 ตัวอักษร');
+  }
+
+  // Validate category and priority (they have default values so always valid)
+
+  return {
+    isValid: errors.length === 0,
+    errors: errors
+  };
+}
+
+/**
+ * Validate tenant maintenance form
+ */
+function validateTenantForm() {
+  const errors = [];
+
+  // Validate room
+  const room = document.getElementById('tp-room').value.trim();
+  if (!room) {
+    errors.push('❌ กรุณากรอกเลขห้องของคุณ');
+  } else if (room.length > 10) {
+    errors.push('❌ เลขห้องต้องไม่เกิน 10 ตัวอักษร');
+  }
+
+  // Validate description
+  const desc = document.getElementById('tp-description').value.trim();
+  if (!desc) {
+    errors.push('❌ กรุณาอธิบายปัญหาของคุณ');
+  } else if (desc.length < 5) {
+    errors.push('❌ รายละเอียดต้องมีอย่างน้อย 5 ตัวอักษร');
+  } else if (desc.length > 500) {
+    errors.push('❌ รายละเอียดต้องไม่เกิน 500 ตัวอักษร');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors: errors
+  };
+}
+
+/**
+ * Show validation errors in alert
+ */
+function showValidationErrors(errors) {
+  if (errors.length === 0) return false;
+  alert('⚠️ ข้อมูลไม่ครบถ้วน:\n\n' + errors.join('\n'));
+  return true;
+}
+
 function getBillData(){
   const room=document.getElementById('f-room').value;
   const isDaily=document.getElementById('f-rent-type')?.value==='daily' && document.getElementById('dailySection').classList.contains('show');
@@ -2102,6 +2251,13 @@ function renderQR(imgId,amount){
 }
 
 function generateInvoice(){
+  // Validate bill form before processing
+  const validation = validateBillForm();
+  if (!validation.isValid) {
+    showValidationErrors(validation.errors);
+    return;
+  }
+
   const d=getBillData();
   if(!d.room||d.total===0){alert('กรุณากรอกข้อมูลให้ครบถ้วน');return;}
   invoiceData=d;
@@ -2779,12 +2935,23 @@ function saveTenantMaintenance(data){
 }
 
 function submitMaintenance(){
+  // Validate tenant maintenance form
+  const validation = validateTenantForm();
+  if (!validation.isValid) {
+    showValidationErrors(validation.errors);
+    return;
+  }
+
   const room=document.getElementById('tp-room').value.trim();
   const type=document.getElementById('tp-type').value;
   const priority=document.getElementById('tp-priority').value;
   const description=document.getElementById('tp-description').value.trim();
 
-  if(!room||!type||!description){
+  // Sanitize inputs
+  const sanitizedRoom = window.SecurityUtils.sanitizeInput(room);
+  const sanitizedDescription = window.SecurityUtils.sanitizeInput(description);
+
+  if(!sanitizedRoom||!type||!sanitizedDescription){
     alert('กรุณากรอกข้อมูลให้ครบถ้วน');
     return;
   }
@@ -2792,10 +2959,10 @@ function submitMaintenance(){
   const data=loadTenantMaintenance();
   data.unshift({
     id:Date.now(),
-    room:room,
+    room:sanitizedRoom,
     type:type,
     priority:priority,
-    description:description,
+    description:sanitizedDescription,
     status:'pending',
     submittedAt:new Date().toLocaleString('th-TH'),
     updatedAt:new Date().toLocaleString('th-TH')
@@ -3295,14 +3462,23 @@ const MX_STATUS_LABEL={'pending':'⏳ รอดำเนินการ','inprog
 const MX_STATUS_CLASS={'pending':'mx-pending','inprogress':'mx-inprogress','done':'mx-done'};
 
 function addMaintenanceRequest(){
+  // Validate maintenance form
+  const validation = validateMaintenanceForm();
+  if (!validation.isValid) {
+    showValidationErrors(validation.errors);
+    return;
+  }
+
   const room=document.getElementById('mx-room').value.trim();
   const desc=document.getElementById('mx-desc').value.trim();
   const date=document.getElementById('mx-date').value;
   const cat=document.getElementById('mx-category').value;
   const pri=document.getElementById('mx-priority').value;
-  if(!room||!desc){alert('กรุณากรอกห้องและรายละเอียด');return;}
+  // Sanitize inputs
+  const sanitizedRoom = window.SecurityUtils.sanitizeInput(room);
+  const sanitizedDesc = window.SecurityUtils.sanitizeInput(desc);
   const mx=loadMaintenance();
-  mx.unshift({id:Date.now(),room,desc,category:cat,priority:pri,status:'pending',reportedAt:date,updatedAt:date});
+  mx.unshift({id:Date.now(),room:sanitizedRoom,desc:sanitizedDesc,category:cat,priority:pri,status:'pending',reportedAt:date,updatedAt:date});
   saveMaintenance(mx);
   document.getElementById('mx-room').value='';
   document.getElementById('mx-desc').value='';
