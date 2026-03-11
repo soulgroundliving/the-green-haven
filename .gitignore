@@ -1,0 +1,25 @@
+# Debug files
+debug*.ps1
+server.ps1
+extract_meters.ps1
+
+# Excel files (backup)
+บิลปี*.xlsx
+
+# Node modules
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Cache
+.claude/

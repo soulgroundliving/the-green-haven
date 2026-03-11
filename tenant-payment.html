@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2d8653">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="The Green Haven">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%232d8653' width='192' height='192'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='100' font-family='Arial' fill='white' font-weight='bold'>💳</text></svg>">
+<title>ชำระค่าเช่า - The Green Haven</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --green-dark:#1a5c38;--green:#2d8653;--green-light:#4caf50;--green-pale:#e8f5e9;
+    --accent:#ff8f00;--accent-light:#fff8e1;--blue:#1976d2;--blue-pale:#e3f2fd;
+    --red:#c62828;--red-pale:#ffebee;
+    --bg:#f4f6f8;--card:#fff;--text:#1a2332;--text-muted:#6b7a8d;
+    --border:#e0e6ed;--radius:14px;--radius-sm:8px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);height:100%;width:100%;}
+
+  body{display:flex;flex-direction:column;}
+
+  .app-container{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);}
+
+  /* App Header */
+  .app-header{
+    background:linear-gradient(135deg,var(--green-dark) 0%,var(--green) 100%);
+    color:#fff;padding:1rem 1.5rem;box-shadow:0 4px 16px rgba(0,0,0,.15);
+    display:flex;align-items:center;justify-content:space-between;gap:1rem;
+    padding-top:max(1rem, env(safe-area-inset-top));
+  }
+  .app-header-back{background:rgba(255,255,255,.2);border:none;color:#fff;width:40px;height:40px;
+    border-radius:8px;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;}
+  .app-header-title{flex:1;}
+  .app-header-title h1{font-size:1.2rem;font-weight:800;margin:0;}
+  .app-header-title p{font-size:.75rem;opacity:.85;margin:.2rem 0 0 0;}
+  .app-header-install{background:rgba(255,255,255,.2);border:none;color:#fff;padding:8px 12px;
+    border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:700;}
+
+  /* Main Content */
+  .app-content{flex:1;padding:1.5rem;overflow-y:auto;padding-bottom:2rem;}
+
+  .card{background:#fff;border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 12px rgba(0,0,0,.08);}
+  .card-title{font-size:1.1rem;font-weight:700;margin-bottom:1rem;color:var(--text);}
+
+  .bill-box{background:var(--blue-pale);border-left:4px solid var(--blue);padding:1.5rem;border-radius:var(--radius-sm);}
+  .bill-box .label{color:var(--text-muted);font-size:.9rem;}
+  .bill-box .amount{font-size:2.5rem;font-weight:800;color:var(--green);margin:.5rem 0;}
+  .bill-box .detail{display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-size:.95rem;margin-top:1rem;}
+  .bill-box .detail-item{display:flex;flex-direction:column;}
+  .bill-box .detail-label{color:var(--text-muted);font-size:.85rem;margin-bottom:.2rem;}
+  .bill-box .detail-value{font-weight:700;color:var(--text);}
+
+  .status-badge{display:inline-block;padding:8px 16px;border-radius:20px;font-size:.85rem;font-weight:700;}
+  .status-badge.pending{background:#fff3cd;color:#856404;}
+  .status-badge.success{background:var(--green-pale);color:var(--green-dark);}
+
+  .instruction-box{background:var(--accent-light);border-left:4px solid var(--accent);padding:1rem;border-radius:var(--radius-sm);font-size:.95rem;line-height:1.6;}
+
+  .payment-methods{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;}
+  .method-btn{background:#fff;border:2px solid var(--border);border-radius:var(--radius-sm);padding:1rem;
+    text-align:center;cursor:pointer;transition:.2s;font-family:'Sarabun',sans-serif;font-weight:700;}
+  .method-btn:hover{border-color:var(--green);background:var(--green-pale);}
+  .method-btn-icon{font-size:2rem;margin-bottom:.5rem;}
+  .method-btn-text{font-size:.9rem;color:var(--text);}
+
+  .qr-section{background:#f5f5f5;border-radius:var(--radius-sm);padding:1.5rem;text-align:center;margin:1rem 0;}
+  .qr-box{background:#fff;border-radius:8px;padding:1rem;display:inline-block;margin-bottom:1rem;}
+  .qr-box canvas,.qr-box img{max-width:100%;width:200px;height:200px;}
+
+  .btn{display:block;width:100%;padding:14px 28px;border:none;border-radius:var(--radius-sm);
+    font-family:'Sarabun',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;transition:.2s;}
+  .btn-primary{background:var(--green);color:#fff;margin-bottom:.5rem;}
+  .btn-primary:hover{background:var(--green-dark);}
+  .btn-primary:active{transform:scale(.98);}
+  .btn-secondary{background:var(--blue);color:#fff;}
+  .btn-secondary:hover{background:#1565c0;}
+
+  .success-box{background:var(--green-pale);border-left:4px solid var(--green);padding:1rem;border-radius:var(--radius-sm);
+    color:var(--green-dark);line-height:1.6;margin:1rem 0;}
+
+  .footer{text-align:center;color:var(--text-muted);font-size:.8rem;padding:1rem;border-top:1px solid var(--border);margin-top:auto;}
+
+  /* App Footer Navigation */
+  .app-footer{background:#fff;border-top:1px solid var(--border);padding:1rem;
+    padding-bottom:max(1rem, env(safe-area-inset-bottom));
+    display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+  .footer-btn{padding:10px;border:none;border-radius:6px;background:var(--bg);cursor:pointer;font-family:'Sarabun',sans-serif;
+    font-weight:700;font-size:.85rem;transition:.2s;}
+  .footer-btn:active{background:var(--border);}
+
+  @media (max-width: 600px) {
+    .app-content{padding:1rem;padding-bottom:1.5rem;}
+    .bill-box .amount{font-size:2rem;}
+    .bill-box .detail{grid-template-columns:1fr;}
+    .payment-methods{grid-template-columns:1fr;}
+    .app-header{padding:0.75rem 1rem;}
+    .app-header-title h1{font-size:1rem;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- App Header -->
+  <div class="app-header">
+    <button class="app-header-back" onclick="goBack()" id="backBtn" style="display:none;">←</button>
+    <div class="app-header-title">
+      <h1>💳 ชำระค่าเช่า</h1>
+      <p>The Green Haven</p>
+    </div>
+    <button class="app-header-install" onclick="installApp()" id="installBtn" style="display:none;">📱 ติดตั้ง</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="app-content">
+    <!-- Bill Info -->
+    <div class="card">
+      <div id="billContent">
+        <div style="text-align:center;color:var(--text-muted);padding:2rem;">
+          🔄 กำลังโหลด...
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Status -->
+    <div class="card">
+      <div style="font-size:.9rem;color:var(--text-muted);margin-bottom:.5rem;">📊 สถานะการชำระ</div>
+      <div id="paymentStatus"></div>
+    </div>
+
+    <!-- Payment Methods -->
+    <div class="card" id="paymentSection" style="display:none;">
+      <div class="card-title">💡 วิธีการชำระเงิน</div>
+
+      <div class="instruction-box">
+        เลือกวิธีการชำระเงินจากด้านล่าง <br>
+        หลังจากจ่ายเสร็จ ระบบจะกลับมาที่หน้านี้โดยอัตโนมัติ
+      </div>
+
+      <!-- PromptPay Section -->
+      <div style="margin-top:1.5rem;">
+        <div style="font-weight:700;margin-bottom:1rem;color:var(--text);">📱 PromptPay QR Code</div>
+        <div class="qr-section">
+          <div class="qr-box" id="promptPayQR"></div>
+          <div style="font-size:.85rem;color:var(--text-muted);margin-top:.5rem;">
+            สแกนด้วย Mobile Banking
+          </div>
+        </div>
+      </div>
+
+      <!-- Banking Links -->
+      <div style="margin-top:1.5rem;">
+        <div style="font-weight:700;margin-bottom:1rem;color:var(--text);">🏦 บริการธนาคาร</div>
+        <div class="payment-methods">
+          <button class="method-btn" onclick="goToBank('promptpay')">
+            <div class="method-btn-icon">💳</div>
+            <div class="method-btn-text">PromptPay</div>
+          </button>
+          <button class="method-btn" onclick="goToBank('ebanking')">
+            <div class="method-btn-icon">📱</div>
+            <div class="method-btn-text">e-Banking</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Confirm Payment -->
+      <div style="margin-top:1.5rem;">
+        <button class="btn btn-primary" onclick="confirmPayment()">✅ โอนแล้ว - ส่งแจ้ง</button>
+      </div>
+    </div>
+
+    <!-- Success Message -->
+    <div id="successMessage" style="display:none;">
+      <div class="success-box">
+        ✅ <strong>โอนเงินเรียบร้อย</strong><br><br>
+        ระบบได้รับแจ้งแล้ว<br>
+        เจ้าของจะตรวจสอบในไม่ช้า<br>
+        ใบเสร็จจะถูกส่งให้ในเร็ว ๆ นี้
+      </div>
+    </div>
+
+    <!-- Payment History -->
+    <div class="card" id="historyCard" style="display:none;">
+      <div class="card-title">📋 ประวัติการชำระเงิน</div>
+      <div id="paymentHistory"></div>
+    </div>
+  </div>
+
+  <!-- App Footer Navigation -->
+  <div class="app-footer">
+    <button class="footer-btn" onclick="refreshPage()">🔄 รีเฟรช</button>
+    <button class="footer-btn" onclick="shareApp()">📤 แชร์</button>
+  </div>
+
+  <div class="footer">
+    <p>The Green Haven | © 2024-2025</p>
+  </div>
+</div>
+
+<!-- PWA Install Prompt -->
+<script>
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBtn').style.display = 'block';
+});
+
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        deferredPrompt = null;
+        document.getElementById('installBtn').style.display = 'none';
+      }
+    });
+  }
+}
+
+// ===== APP STATE =====
+let roomId = null;
+let billData = null;
+let installed = false;
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  roomId = params.get('room');
+  const paid = params.get('paid');
+
+  if (!roomId) {
+    document.querySelector('.app-content').innerHTML =
+      '<div class="card"><div style="background:#ffebee;color:#c62828;padding:1rem;border-radius:8px;">❌ ไม่พบเลขห้อง</div></div>';
+    return;
+  }
+
+  document.querySelector('.app-header-title h1').innerHTML = '💳 ชำระค่าเช่า';
+
+  loadBillData();
+
+  // If returning from payment
+  if (paid === 'true') {
+    document.getElementById('successMessage').style.display = 'block';
+    confirmPayment();
+  }
+
+  // Register Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  // Show back button if in app
+  if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
+    document.getElementById('backBtn').style.display = 'flex';
+    installed = true;
+  }
+});
+
+// ===== LOAD BILL DATA =====
+function loadBillData() {
+  const tenants = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  let tenant = tenants[roomId];
+
+  // Mock data for testing
+  const mockTenants = {
+    '15': { name: 'นายสมชาย ใจดี' },
+    '16': { name: 'นางสาวศรีสวรรค์ สวยใจ' },
+    '17': { name: 'นายไพฑูรย์ เก่งมาก' }
+  };
+
+  if (!tenant && mockTenants[roomId]) {
+    tenant = mockTenants[roomId];
+  }
+
+  if (!tenant) {
+    document.querySelector('.app-content').innerHTML =
+      '<div class="card"><div style="background:#ffebee;color:#c62828;padding:1rem;border-radius:8px;">❌ ไม่พบข้อมูลห้อง<br><br><small>ห้องที่มี: 15, 16, 17</small></div></div>';
+    return;
+  }
+
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear() + 543;
+
+  const mockBill = {
+    room: roomId,
+    name: tenant.name || 'ลูกบ้าน',
+    month: month,
+    year: year,
+    rent: 1200,
+    electric: 180,
+    water: 60,
+    trash: 20,
+    total: 1460
+  };
+
+  billData = mockBill;
+  renderBillContent(mockBill);
+  updatePaymentStatus();
+}
+
+function renderBillContent(bill) {
+  const monthName = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][bill.month];
+
+  document.getElementById('billContent').innerHTML = `
+    <div class="bill-box">
+      <div class="label">ค่าเช่า ${monthName} ${bill.year}</div>
+      <div class="amount">฿${bill.total.toLocaleString()}</div>
+      <div class="detail">
+        <div class="detail-item">
+          <div class="detail-label">👤 ผู้เช่า</div>
+          <div class="detail-value">${bill.name}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">🏠 ห้อง</div>
+          <div class="detail-value">${bill.room}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ===== PAYMENT STATUS =====
+function updatePaymentStatus() {
+  const payments = loadPayments();
+  const currentMonth = `${billData.year}_${billData.month}`;
+  const payment = payments.find(p => p.month === currentMonth && p.room === billData.room);
+
+  let html = '';
+  if (!payment) {
+    html = `<span class="status-badge pending">⏳ ยังไม่ได้ชำระ</span>`;
+    document.getElementById('paymentSection').style.display = 'block';
+    document.getElementById('historyCard').style.display = 'none';
+  } else if (payment.status === 'pending') {
+    html = `<span class="status-badge pending">⏳ รอการตรวจสอบ</span><p style="margin-top:.5rem;font-size:.85rem;color:var(--text-muted);">แจ้งเจ้าของเมื่อ ${payment.reportedAt}</p>`;
+    document.getElementById('paymentSection').style.display = 'none';
+    document.getElementById('historyCard').style.display = 'block';
+  } else if (payment.status === 'verified') {
+    html = `<span class="status-badge success">✅ ชำระแล้ว</span><p style="margin-top:.5rem;font-size:.85rem;color:var(--text-muted);">ยืนยันเมื่อ ${payment.verifiedAt}</p>`;
+    document.getElementById('paymentSection').style.display = 'none';
+    document.getElementById('historyCard').style.display = 'block';
+  }
+
+  document.getElementById('paymentStatus').innerHTML = html;
+  loadPaymentHistory();
+  generatePromptPayQR();
+}
+
+// ===== PROMPTPAY QR =====
+function generatePromptPayQR() {
+  const qrBox = document.getElementById('promptPayQR');
+  qrBox.innerHTML = '';
+
+  const promptPayID = '0812345678'; // Mock PromptPay ID
+  const qrText = `00020126360014th.co.bpmg.promptpay0107${promptPayID}520400005303764051${billData.total}5802TH63041234`;
+
+  setTimeout(() => {
+    new QRCode(qrBox, {
+      text: qrText,
+      width: 200,
+      height: 200,
+      colorDark: '#000',
+      colorLight: '#fff'
+    });
+  }, 50);
+}
+
+// ===== PAYMENT ACTIONS =====
+function goToBank(type) {
+  // Create return URL
+  const returnUrl = `${window.location.origin}${window.location.pathname}?room=${roomId}&paid=true`;
+
+  if (type === 'promptpay') {
+    // PromptPay deep link
+    const promptPayID = '0812345678';
+    window.location.href = `promptpay://?q=${promptPayID}&n=The%20Green%20Haven&a=${billData.total}`;
+  } else if (type === 'ebanking') {
+    // Generic e-banking (would need to configure per bank)
+    alert('📱 กรุณาเปิดแอป Mobile Banking ของท่าน\n\nจ่ายเงินไปยัง:\n' +
+          'ชื่อ: The Green Haven\n' +
+          'จำนวน: ฿' + billData.total.toLocaleString() + '\n\n' +
+          'หลังจากจ่าย กด "โอนแล้ว" ด้านล่าง');
+  }
+
+  // Fallback: return to app after timeout
+  setTimeout(() => {
+    if (document.hidden === false) {
+      location.href = returnUrl;
+    }
+  }, 5000);
+}
+
+function confirmPayment() {
+  const payments = loadPayments();
+  const currentMonth = `${billData.year}_${billData.month}`;
+  const existing = payments.find(p => p.month === currentMonth && p.room === billData.room);
+
+  if (existing && existing.status !== 'pending') {
+    alert('✅ การชำระเงินเสร็จเรียบร้อยแล้ว');
+    return;
+  }
+
+  if (existing) {
+    alert('⚠️ คุณได้แจ้งแล้ว รอเจ้าของตรวจสอบ');
+    return;
+  }
+
+  payments.push({
+    id: Date.now(),
+    room: billData.room,
+    month: currentMonth,
+    amount: billData.total,
+    status: 'pending',
+    reportedAt: new Date().toLocaleString('th-TH'),
+    verifiedAt: null
+  });
+
+  savePayments(payments);
+  document.getElementById('successMessage').style.display = 'block';
+  document.getElementById('paymentSection').style.display = 'none';
+  updatePaymentStatus();
+}
+
+// ===== UTILITIES =====
+function loadPayments() {
+  return JSON.parse(localStorage.getItem('tenant_payments') || '[]');
+}
+
+function savePayments(data) {
+  localStorage.setItem('tenant_payments', JSON.stringify(data));
+}
+
+function loadPaymentHistory() {
+  const payments = loadPayments();
+  const roomPayments = payments.filter(p => p.room === billData.room);
+
+  if (roomPayments.length === 0) {
+    document.getElementById('paymentHistory').innerHTML = '';
+    return;
+  }
+
+  const html = roomPayments.map(p => {
+    const color = p.status === 'pending' ? '#ff9800' : '#4caf50';
+    const text = p.status === 'pending' ? '⏳ รอตรวจสอบ' : '✅ ชำระแล้ว';
+    return `
+      <div style="background:${color}10;border-left:4px solid ${color};padding:1rem;margin-bottom:.5rem;border-radius:6px;">
+        <div style="font-weight:700;">฿${p.amount.toLocaleString()} • ${p.month}</div>
+        <div style="font-size:.8rem;color:var(--text-muted);margin-top:.3rem;">
+          แจ้ง: ${p.reportedAt} | ${text}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('paymentHistory').innerHTML = html;
+}
+
+function goBack() {
+  window.history.back();
+}
+
+function refreshPage() {
+  location.reload();
+}
+
+function shareApp() {
+  const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+  const text = `ชำระค่าเช่า ห้อง ${roomId} - The Green Haven\n${url}`;
+
+  if (navigator.share) {
+    navigator.share({
+      title: 'ชำระค่าเช่า',
+      text: text,
+      url: url
+    }).catch(() => {});
+  } else {
+    alert('📋 ลิ้งค์:\n' + url);
+  }
+}
+</script>
+
+</body>
+</html>

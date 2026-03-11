@@ -1,0 +1,19 @@
+{
+  "name": "the-green-haven",
+  "version": "1.0.0",
+  "description": "The Green Haven - Apartment Management System",
+  "private": true,
+  "scripts": {
+    "dev": "python -m http.server 8080",
+    "build": "echo 'Static site - no build needed'",
+    "start": "python -m http.server 8080"
+  },
+  "keywords": [
+    "apartment",
+    "management",
+    "tenant",
+    "payment"
+  ],
+  "author": "The Green Haven",
+  "license": "MIT"
+}
