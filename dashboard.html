@@ -136,6 +136,68 @@
 
   // Log Firebase functions available
   console.log('✅ Firebase functions loaded: testFirebaseConnection, saveToFirebase, readFromFirebase, syncDataToFirebase');
+
+  // Initialize monitoring panel
+  window.firebaseMonitorReady = true;
+  updateFirebaseMonitorPanel();
+</script>
+
+<!-- Firebase Monitoring Panel Controller -->
+<script>
+  let firebasePanelOpen = false;
+
+  function toggleFirebasePanel() {
+    const panel = document.getElementById('firebaseMonitorPanel');
+    const btn = document.getElementById('firebaseToggleBtn');
+    firebasePanelOpen = !firebasePanelOpen;
+    panel.style.display = firebasePanelOpen ? 'block' : 'none';
+    btn.style.display = firebasePanelOpen ? 'none' : 'flex';
+  }
+
+  async function updateFirebaseMonitorPanel() {
+    const statusEl = document.getElementById('firebaseStatus');
+    const testEl = document.getElementById('firebaseTestResult');
+    const updateEl = document.getElementById('firebaseLastUpdate');
+    const functionsEl = document.getElementById('firebaseFunctions');
+
+    // Check if Firebase is ready
+    if (!window.firebaseMonitorReady || !window.firebaseApp) {
+      statusEl.innerHTML = '🔴 Firebase Not Ready';
+      return;
+    }
+
+    statusEl.innerHTML = '🟢 Connected';
+
+    // Show available functions
+    const functions = [
+      'testFirebaseConnection',
+      'saveToFirebase',
+      'readFromFirebase',
+      'syncDataToFirebase'
+    ];
+    functionsEl.innerHTML = functions.map(f => `✅ ${f}`).join('<br>');
+
+    // Test connection
+    try {
+      const result = await window.testFirebaseConnection();
+      testEl.innerHTML = result ? '✅ Connected' : '❌ Failed';
+      testEl.style.color = result ? '#2d8653' : '#c62828';
+    } catch (err) {
+      testEl.innerHTML = '⚠️ Error';
+      testEl.style.color = '#ff8f00';
+    }
+
+    // Update timestamp
+    updateEl.innerHTML = new Date().toLocaleTimeString('th-TH');
+  }
+
+  // Auto-update every 5 seconds
+  setInterval(updateFirebaseMonitorPanel, 5000);
+
+  // Initial update on load
+  window.addEventListener('load', () => {
+    setTimeout(updateFirebaseMonitorPanel, 500);
+  });
 </script>
 
 <style>
@@ -1388,6 +1450,48 @@
 </div>
 
 </div><!-- end main -->
+
+<!-- Firebase Monitoring Panel -->
+<div id="firebaseMonitorPanel" style="position:fixed;bottom:20px;right:20px;width:320px;background:white;border:2px solid #2d8653;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:9999;font-family:'Sarabun',sans-serif;display:none;">
+  <div style="background:#2d8653;color:white;padding:12px;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center;">
+    <span style="font-weight:700;font-size:14px;">🔥 Firebase Monitor</span>
+    <button onclick="toggleFirebasePanel()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;padding:0;">×</button>
+  </div>
+
+  <div style="padding:14px;">
+    <div style="margin-bottom:12px;padding:10px;background:#f0f7ff;border-radius:6px;border-left:3px solid #1976d2;">
+      <div style="font-size:12px;color:#666;margin-bottom:4px;">Status</div>
+      <div style="font-weight:700;font-size:14px;color:#1a2332;">
+        <span id="firebaseStatus">🔄 Connecting...</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;padding:10px;background:#e8f5e9;border-radius:6px;border-left:3px solid #2d8653;">
+      <div style="font-size:12px;color:#666;margin-bottom:4px;">Connection Test</div>
+      <div id="firebaseTestResult" style="font-weight:600;font-size:13px;color:#2d8653;">⏳ Testing...</div>
+    </div>
+
+    <div style="margin-bottom:12px;padding:10px;background:#fff8e1;border-radius:6px;border-left:3px solid #ff8f00;">
+      <div style="font-size:12px;color:#666;margin-bottom:4px;">Last Updated</div>
+      <div id="firebaseLastUpdate" style="font-weight:600;font-size:12px;color:#ff8f00;">Initializing...</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+      <button onclick="window.testFirebaseConnection && window.testFirebaseConnection()" style="padding:8px;background:#2d8653;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Sarabun',sans-serif;">🧪 Test</button>
+      <button onclick="window.syncDataToFirebase && window.syncDataToFirebase()" style="padding:8px;background:#1976d2;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Sarabun',sans-serif;">📤 Sync</button>
+    </div>
+
+    <div style="margin-top:12px;padding:10px;background:#f5f5f5;border-radius:6px;max-height:100px;overflow-y:auto;">
+      <div style="font-size:11px;color:#666;margin-bottom:6px;font-weight:600;">Functions Loaded</div>
+      <div id="firebaseFunctions" style="font-size:11px;color:#333;line-height:1.5;font-family:monospace;">
+        ⏳ Loading...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toggle Button for Firebase Panel -->
+<button id="firebaseToggleBtn" onclick="toggleFirebasePanel()" style="position:fixed;bottom:20px;right:20px;width:50px;height:50px;background:#2d8653;color:white;border:none;border-radius:50%;cursor:pointer;font-size:24px;box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:9998;display:flex;align-items:center;justify-content:center;">🔥</button>
 
 <script>
 const MONTHS_TH=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
