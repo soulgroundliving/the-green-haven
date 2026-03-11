@@ -389,13 +389,94 @@
       document.getElementById('registerBtn').disabled = show;
     }
 
+    // ===== RATE LIMITING FOR LOGIN ATTACKS =====
+    /**
+     * Rate Limiter to prevent brute force attacks
+     * Tracks failed login attempts per email address
+     * Locks account after 5 failed attempts for 15 minutes
+     */
+    const RateLimiter = {
+      maxAttempts: 5,
+      lockoutDuration: 15 * 60 * 1000, // 15 minutes
+      storage: 'auth_rate_limit',
+
+      /**
+       * Get attempts data for an email
+       */
+      getAttempts(email) {
+        const data = JSON.parse(sessionStorage.getItem(this.storage) || '{}');
+        return data[email] || { count: 0, lockedUntil: 0 };
+      },
+
+      /**
+       * Record a failed login attempt
+       */
+      recordFailure(email) {
+        const data = JSON.parse(sessionStorage.getItem(this.storage) || '{}');
+        const attempts = data[email] || { count: 0, lockedUntil: 0 };
+        attempts.count += 1;
+        attempts.lastAttempt = Date.now();
+
+        // Lock account after max attempts
+        if (attempts.count >= this.maxAttempts) {
+          attempts.lockedUntil = Date.now() + this.lockoutDuration;
+          console.warn(`⚠️ Too many login attempts for ${email}. Locked until ${new Date(attempts.lockedUntil).toLocaleString()}`);
+        }
+
+        data[email] = attempts;
+        sessionStorage.setItem(this.storage, JSON.stringify(data));
+      },
+
+      /**
+       * Reset attempts on successful login
+       */
+      resetAttempts(email) {
+        const data = JSON.parse(sessionStorage.getItem(this.storage) || '{}');
+        delete data[email];
+        sessionStorage.setItem(this.storage, JSON.stringify(data));
+      },
+
+      /**
+       * Check if account is locked
+       */
+      isLocked(email) {
+        const attempts = this.getAttempts(email);
+        if (attempts.lockedUntil > Date.now()) {
+          const minutesLeft = Math.ceil((attempts.lockedUntil - Date.now()) / 60000);
+          return {
+            locked: true,
+            minutesLeft: minutesLeft,
+            message: `❌ บัญชีนี้ถูกล็อคไว้ ${minutesLeft} นาที เนื่องจากพยายามเข้าสู่ระบบล้มเหลวหลายครั้ง`
+          };
+        }
+        return { locked: false };
+      },
+
+      /**
+       * Get remaining attempts for display
+       */
+      getRemainingAttempts(email) {
+        const attempts = this.getAttempts(email);
+        return Math.max(0, this.maxAttempts - attempts.count);
+      }
+    };
+
     async function handleLogin(event) {
       event.preventDefault();
       clearMessages();
+
+      const email = document.getElementById('loginEmail').value.trim();
+
+      // ===== RATE LIMITING CHECK =====
+      const lockStatus = RateLimiter.isLocked(email);
+      if (lockStatus.locked) {
+        showMessage(lockStatus.message);
+        return;
+      }
+
       setLoading(true);
 
       try {
-        const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
 
         // Validate email format
@@ -423,6 +504,9 @@
           throw new Error(`บัญชีนี้ไม่ใช่ ${currentUserType === 'admin' ? 'Admin' : 'Tenant'}`);
         }
 
+        // ===== SUCCESS: RESET RATE LIMITER =====
+        RateLimiter.resetAttempts(email);
+
         // Save session
         sessionStorage.setItem('user', JSON.stringify({
           uid: user.uid,
@@ -448,7 +532,17 @@
 
       } catch (error) {
         console.error('Login error:', error);
-        showMessage(error.message || 'เข้าสู่ระบบไม่สำเร็จ');
+
+        // ===== FAILURE: RECORD RATE LIMIT ATTEMPT =====
+        RateLimiter.recordFailure(email);
+        const remaining = RateLimiter.getRemainingAttempts(email);
+
+        let errorMessage = error.message || 'เข้าสู่ระบบไม่สำเร็จ';
+        if (remaining > 0) {
+          errorMessage += ` (เหลือความพยายาม ${remaining} ครั้ง)`;
+        }
+
+        showMessage(errorMessage);
         setLoading(false);
       }
     }
@@ -479,14 +573,27 @@
       event.preventDefault();
       clearMessages();
 
-      const name = document.getElementById('registerName').value;
-      const email = document.getElementById('registerEmail').value;
+      const name = document.getElementById('registerName').value.trim();
+      const email = document.getElementById('registerEmail').value.trim();
       const password = document.getElementById('registerPassword').value;
       const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+
+      // ===== RATE LIMITING CHECK FOR REGISTRATION =====
+      const lockStatus = RateLimiter.isLocked(email);
+      if (lockStatus.locked) {
+        showMessage(lockStatus.message);
+        return;
+      }
 
       // Validate inputs
       if (!window.SecurityUtils.isValidEmail(email)) {
         showMessage('อีเมลไม่ถูกต้อง');
+        return;
+      }
+
+      // Validate name
+      if (!name || name.length < 2 || name.length > 100) {
+        showMessage('ชื่อต้องมีความยาว 2-100 ตัวอักษร');
         return;
       }
 
@@ -507,9 +614,6 @@
       setLoading(true);
 
       try {
-        const email = document.getElementById('registerEmail').value;
-        const name = document.getElementById('registerName').value;
-
         // Create auth user
         const userCredential = await window.auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
@@ -527,13 +631,19 @@
 
         if (currentUserType === 'tenant') {
           const sanitizedRoom = window.SecurityUtils.sanitizeInput(
-            document.getElementById('roomNumber').value
+            document.getElementById('roomNumber').value.trim()
           );
+          if (!sanitizedRoom || sanitizedRoom.length > 10) {
+            throw new Error('หมายเลขห้องต้องมีความยาว 1-10 ตัวอักษร');
+          }
           userData.roomNumber = sanitizedRoom;
         }
 
         const userRef = window.firebaseDB.ref(window.database, `users/${user.uid}`);
         await window.firebaseDB.set(userRef, userData);
+
+        // ===== SUCCESS: RESET RATE LIMITER FOR REGISTRATION =====
+        RateLimiter.resetAttempts(email);
 
         showMessage('สมัครสมาชิกสำเร็จ! กำลังเข้าสู่ระบบ...', false);
 
@@ -551,6 +661,10 @@
 
       } catch (error) {
         console.error('Register error:', error);
+
+        // ===== FAILURE: RECORD RATE LIMIT ATTEMPT FOR REGISTRATION =====
+        RateLimiter.recordFailure(email);
+
         let errorMsg = error.message;
         if (error.code === 'auth/email-already-in-use') {
           errorMsg = 'อีเมลนี้ลงทะเบียนไปแล้ว';
