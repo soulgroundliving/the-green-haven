@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://fonts.googleapis.com; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;">
   <title>Login - The Green Haven</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="security.js"></script>
   <style>
     * {
       margin: 0;
@@ -261,7 +264,16 @@
 
         <div class="form-group">
           <label>Password</label>
-          <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6">
+          <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6" oninput="updatePasswordStrength()">
+          <div id="passwordStrength" style="font-size:12px;margin-top:6px;padding:8px;background:#f5f5f5;border-radius:4px;display:none;">
+            <div id="strengthFeedback">ตรวจสอบความแข็งแรง...</div>
+            <div style="margin-top:6px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+              <div id="req-length" style="font-size:11px;padding:4px;background:#ddd;border-radius:2px;text-align:center;">8+ ตัว</div>
+              <div id="req-upper" style="font-size:11px;padding:4px;background:#ddd;border-radius:2px;text-align:center;">A-Z</div>
+              <div id="req-lower" style="font-size:11px;padding:4px;background:#ddd;border-radius:2px;text-align:center;">a-z</div>
+              <div id="req-number" style="font-size:11px;padding:4px;background:#ddd;border-radius:2px;text-align:center;">0-9</div>
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -386,6 +398,13 @@
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
 
+        // Validate email format
+        if (!window.SecurityUtils.isValidEmail(email)) {
+          showMessage('อีเมลไม่ถูกต้อง');
+          setLoading(false);
+          return;
+        }
+
         const userCredential = await window.auth.signInWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
@@ -415,6 +434,9 @@
 
         showMessage(`เข้าสู่ระบบสำเร็จ! (${userData.name})`, false);
 
+        // Save secure session with timeout
+        window.SecurityUtils.saveSecureSession(userData);
+
         // Redirect
         setTimeout(() => {
           if (userData.userType === 'admin') {
@@ -431,17 +453,56 @@
       }
     }
 
+    function updatePasswordStrength() {
+      const password = document.getElementById('registerPassword').value;
+      const strengthEl = document.getElementById('passwordStrength');
+      const feedbackEl = document.getElementById('strengthFeedback');
+
+      if (!password) {
+        strengthEl.style.display = 'none';
+        return;
+      }
+
+      strengthEl.style.display = 'block';
+      const strength = window.SecurityUtils.validatePasswordStrength(password);
+
+      feedbackEl.textContent = strength.feedback;
+
+      // Update requirement indicators
+      document.getElementById('req-length').style.background = strength.requirements.length ? '#4caf50' : '#ddd';
+      document.getElementById('req-upper').style.background = strength.requirements.uppercase ? '#4caf50' : '#ddd';
+      document.getElementById('req-lower').style.background = strength.requirements.lowercase ? '#4caf50' : '#ddd';
+      document.getElementById('req-number').style.background = strength.requirements.number ? '#4caf50' : '#ddd';
+    }
+
     async function handleRegister(event) {
       event.preventDefault();
       clearMessages();
 
+      const name = document.getElementById('registerName').value;
+      const email = document.getElementById('registerEmail').value;
       const password = document.getElementById('registerPassword').value;
       const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+
+      // Validate inputs
+      if (!window.SecurityUtils.isValidEmail(email)) {
+        showMessage('อีเมลไม่ถูกต้อง');
+        return;
+      }
+
+      const strength = window.SecurityUtils.validatePasswordStrength(password);
+      if (!strength.isValid) {
+        showMessage(strength.feedback);
+        return;
+      }
 
       if (password !== passwordConfirm) {
         showMessage('รหัสผ่านไม่ตรงกัน');
         return;
       }
+
+      // Sanitize name input
+      const sanitizedName = window.SecurityUtils.sanitizeInput(name);
 
       setLoading(true);
 
@@ -457,13 +518,18 @@
         const userData = {
           uid: user.uid,
           email: email,
-          name: name,
+          name: sanitizedName,
           userType: currentUserType,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          timestamp: Date.now(),
+          expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
         };
 
         if (currentUserType === 'tenant') {
-          userData.roomNumber = document.getElementById('roomNumber').value;
+          const sanitizedRoom = window.SecurityUtils.sanitizeInput(
+            document.getElementById('roomNumber').value
+          );
+          userData.roomNumber = sanitizedRoom;
         }
 
         const userRef = window.firebaseDB.ref(window.database, `users/${user.uid}`);
@@ -471,8 +537,8 @@
 
         showMessage('สมัครสมาชิกสำเร็จ! กำลังเข้าสู่ระบบ...', false);
 
-        // Save session
-        sessionStorage.setItem('user', JSON.stringify(userData));
+        // Save secure session with timeout
+        window.SecurityUtils.saveSecureSession(userData);
 
         // Redirect
         setTimeout(() => {
