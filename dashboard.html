@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.gstatic.com https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; script-src 'self' https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;">
 <title>The Green Haven — ระบบจัดการอพาร์ทเมนต์</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="security.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="meter_data.js"></script>
@@ -147,17 +150,16 @@
   });
 
   function checkAuthentication() {
-    const user = sessionStorage.getItem('user');
+    // Use secure session utility with expiration checking
+    const user = window.SecurityUtils.getSecureSession();
     if (!user) {
-      // Not logged in - redirect to login
+      // Not logged in or session expired - redirect to login
       window.location.href = 'login.html';
       return;
     }
 
-    const userData = JSON.parse(user);
-
     // Check if user is admin
-    if (userData.userType !== 'admin') {
+    if (user.userType !== 'admin') {
       alert('เฉพาะ Admin เท่านั้นที่สามารถเข้าถึง Dashboard');
       window.location.href = 'login.html';
       return;
@@ -166,16 +168,19 @@
     // Show user info in header
     const userInfoEl = document.getElementById('userInfo');
     if (userInfoEl) {
-      userInfoEl.innerHTML = `👤 ${userData.name} (Admin)`;
+      userInfoEl.innerHTML = `👤 ${window.SecurityUtils.sanitizeInput(user.name)} (Admin)`;
     }
 
-    console.log('✅ Authentication verified:', userData.name);
+    // Set session timeout for auto-logout on inactivity
+    window.SecurityUtils.setSessionTimeout(30);
+
+    console.log('✅ Authentication verified:', user.name);
   }
 
   window.handleLogout = function() {
     if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
-      sessionStorage.removeItem('user');
-      window.location.href = 'login.html';
+      // Use secure logout which clears all sensitive data
+      window.SecurityUtils.secureLogout();
     }
   };
 </script>

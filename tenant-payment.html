@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.firebase.com https://*.firebaseio.com; frame-src 'self';">
 <meta name="theme-color" content="#2d8653">
 <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%232d8653' width='192' height='192'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='100' font-family='Arial' fill='white' font-weight='bold'>💳</text></svg>">
 <title>ชำระค่าเช่า - The Green Haven</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="security.js"></script>
 <style>
   :root {
     --green-dark:#1a5c38;--green:#2d8653;--green-light:#4caf50;--green-pale:#e8f5e9;
@@ -230,17 +232,16 @@ window.addEventListener('load', () => {
 });
 
 function checkTenantAuth() {
-  const user = sessionStorage.getItem('user');
+  // Use secure session utility with expiration checking
+  const user = window.SecurityUtils.getSecureSession();
   if (!user) {
-    // Not logged in - redirect to login
+    // Not logged in or session expired - redirect to login
     window.location.href = 'login.html';
     return;
   }
 
-  const userData = JSON.parse(user);
-
   // Check if user is tenant
-  if (userData.userType !== 'tenant') {
+  if (user.userType !== 'tenant') {
     alert('เฉพาะผู้เช่าเท่านั้นที่สามารถเข้าถึง Payment Portal');
     window.location.href = 'login.html';
     return;
@@ -249,16 +250,19 @@ function checkTenantAuth() {
   // Update header with user info
   const header = document.querySelector('.app-header-title p');
   if (header) {
-    header.innerHTML = `👤 ${userData.name} (ห้อง ${userData.roomNumber})`;
+    header.innerHTML = `👤 ${window.SecurityUtils.sanitizeInput(user.name)} (ห้อง ${window.SecurityUtils.sanitizeInput(user.roomNumber)})`;
   }
 
-  console.log('✅ Tenant authenticated:', userData.name);
+  // Set session timeout for auto-logout on inactivity
+  window.SecurityUtils.setSessionTimeout(30);
+
+  console.log('✅ Tenant authenticated:', user.name);
 }
 
 function handleLogout() {
   if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
-    sessionStorage.removeItem('user');
-    window.location.href = 'login.html';
+    // Use secure logout which clears all sensitive data
+    window.SecurityUtils.secureLogout();
   }
 }
 
@@ -269,15 +273,20 @@ let installed = false;
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
+  // Sanitize URL parameters to prevent XSS
   const params = new URLSearchParams(window.location.search);
-  roomId = params.get('room');
+  const rawRoomId = params.get('room');
   const paid = params.get('paid');
 
-  if (!roomId) {
+  // Validate room ID (alphanumeric only, max 10 chars)
+  if (!rawRoomId || !/^[a-zA-Z0-9]{1,10}$/.test(rawRoomId)) {
     document.querySelector('.app-content').innerHTML =
-      '<div class="card"><div style="background:#ffebee;color:#c62828;padding:1rem;border-radius:8px;">❌ ไม่พบเลขห้อง</div></div>';
+      '<div class="card"><div style="background:#ffebee;color:#c62828;padding:1rem;border-radius:8px;">❌ เลขห้องไม่ถูกต้อง</div></div>';
     return;
   }
+
+  // Sanitize room ID
+  roomId = window.SecurityUtils.sanitizeInput(rawRoomId);
 
   document.querySelector('.app-header-title h1').innerHTML = '💳 ชำระค่าเช่า';
 
@@ -436,9 +445,21 @@ function goToBank(type) {
 }
 
 function confirmPayment() {
+  // Validate bill data before processing
+  if (!billData || !billData.room || !billData.total) {
+    alert('❌ ข้อมูลการชำระไม่ถูกต้อง');
+    return;
+  }
+
+  // Validate amount is a positive number
+  if (typeof billData.total !== 'number' || billData.total <= 0) {
+    alert('❌ จำนวนเงินไม่ถูกต้อง');
+    return;
+  }
+
   const payments = loadPayments();
   const currentMonth = `${billData.year}_${billData.month}`;
-  const existing = payments.find(p => p.month === currentMonth && p.room === billData.room);
+  const existing = payments.find(p => p.month === currentMonth && p.room === window.SecurityUtils.sanitizeInput(billData.room.toString()));
 
   if (existing && existing.status !== 'pending') {
     alert('✅ การชำระเงินเสร็จเรียบร้อยแล้ว');
@@ -450,16 +471,17 @@ function confirmPayment() {
     return;
   }
 
-  payments.push({
+  const newPayment = {
     id: Date.now(),
-    room: billData.room,
+    room: window.SecurityUtils.sanitizeInput(billData.room.toString()),
     month: currentMonth,
-    amount: billData.total,
+    amount: Math.round(billData.total * 100) / 100, // Ensure valid amount format
     status: 'pending',
     reportedAt: new Date().toLocaleString('th-TH'),
     verifiedAt: null
-  });
+  };
 
+  payments.push(newPayment);
   savePayments(payments);
   document.getElementById('successMessage').style.display = 'block';
   document.getElementById('paymentSection').style.display = 'none';
