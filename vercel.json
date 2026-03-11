@@ -2,5 +2,16 @@
   "version": 2,
   "buildCommand": "echo 'Static site'",
   "outputDirectory": ".",
-  "cleanUrls": false
+  "cleanUrls": false,
+  "headers": [
+    {
+      "source": "/manifest.json",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
+    }
+  ]
 }
