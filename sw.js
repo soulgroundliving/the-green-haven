@@ -1,9 +1,8 @@
 // The Green Haven - Payment Portal Service Worker
-const CACHE_NAME = 'green-haven-payment-v1';
+const CACHE_NAME = 'green-haven-payment-v2';
 const urlsToCache = [
   '/',
   '/tenant-payment.html',
-  '/manifest.json',
   'https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
 ];
