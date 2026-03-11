@@ -51,6 +51,34 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Handle HTML files with network-first strategy (always get fresh HTML)
+  if (request.destination === 'document' || url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clonedResponse = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, clonedResponse);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(request).then((cachedResponse) => {
+            return cachedResponse || new Response('Offline - HTML not available', {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: new Headers({
+                'Content-Type': 'text/html; charset=utf-8'
+              })
+            });
+          });
+        })
+    );
+    return;
+  }
+
   // Handle API requests with network-first strategy (exclude manifest.json)
   if ((url.pathname.includes('/api/') || url.pathname.includes('.json')) && !url.pathname.includes('manifest.json')) {
     event.respondWith(
