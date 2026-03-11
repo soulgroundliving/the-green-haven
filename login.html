@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - The Green Haven</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: linear-gradient(135deg, #1a5c38 0%, #2d8653 60%, #3aa86a 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      max-width: 420px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .login-header {
+      background: linear-gradient(135deg, #1a5c38 0%, #2d8653 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+
+    .login-header h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .login-header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .login-body {
+      padding: 40px 30px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #1a2332;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e6ed;
+      border-radius: 8px;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #2d8653;
+      box-shadow: 0 0 8px rgba(45, 134, 83, 0.1);
+    }
+
+    .user-type {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .user-type-btn {
+      padding: 12px;
+      border: 2px solid #e0e6ed;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      color: #6b7a8d;
+      transition: all 0.3s;
+    }
+
+    .user-type-btn.active {
+      border-color: #2d8653;
+      background: #e8f5e9;
+      color: #2d8653;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1a5c38 0%, #2d8653 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Sarabun', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 12px;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(45, 134, 83, 0.3);
+    }
+
+    .login-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .signup-toggle {
+      text-align: center;
+      font-size: 14px;
+      color: #6b7a8d;
+    }
+
+    .signup-toggle a {
+      color: #2d8653;
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .error-message {
+      display: none;
+      background: #ffebee;
+      color: #c62828;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      border-left: 4px solid #c62828;
+    }
+
+    .success-message {
+      display: none;
+      background: #e8f5e9;
+      color: #2d8653;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      border-left: 4px solid #2d8653;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .spinner {
+      border: 4px solid #e0e6ed;
+      border-top: 4px solid #2d8653;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .form-mode {
+      display: none;
+    }
+
+    .form-mode.active {
+      display: block;
+    }
+
+    .forgot-password {
+      text-align: right;
+      margin-bottom: 20px;
+    }
+
+    .forgot-password a {
+      color: #2d8653;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-header">
+      <h1>🏢 The Green Haven</h1>
+      <p>ระบบจัดการอพาร์ทเมนต์</p>
+    </div>
+
+    <div class="login-body">
+      <!-- User Type Selection -->
+      <div class="user-type">
+        <button class="user-type-btn active" onclick="selectUserType('admin')">👨‍💼 Admin</button>
+        <button class="user-type-btn" onclick="selectUserType('tenant')">👤 Tenant</button>
+      </div>
+
+      <div id="errorMessage" class="error-message"></div>
+      <div id="successMessage" class="success-message"></div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="form-mode active" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="loginEmail" required placeholder="your@email.com">
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••">
+        </div>
+
+        <div class="forgot-password">
+          <a onclick="showForgotPassword()">ลืมรหัสผ่าน?</a>
+        </div>
+
+        <button type="submit" class="login-btn" id="loginBtn">เข้าสู่ระบบ</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" class="form-mode" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label>ชื่อ</label>
+          <input type="text" id="registerName" required placeholder="ชื่อของคุณ">
+        </div>
+
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="registerEmail" required placeholder="your@email.com">
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6">
+        </div>
+
+        <div class="form-group">
+          <label>ยืนยัน Password</label>
+          <input type="password" id="registerPasswordConfirm" required placeholder="••••••••">
+        </div>
+
+        <div id="tenantFields" style="display: none;">
+          <div class="form-group">
+            <label>หมายเลขห้อง</label>
+            <input type="text" id="roomNumber" placeholder="เช่น 15, 101">
+          </div>
+        </div>
+
+        <button type="submit" class="login-btn" id="registerBtn">สมัครสมาชิก</button>
+      </form>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p style="margin-top: 12px; color: #6b7a8d;">กำลังประมวลผล...</p>
+      </div>
+
+      <!-- Form Toggle -->
+      <div class="signup-toggle" id="formToggle">
+        ยังไม่มีบัญชี? <a onclick="toggleForm()">สมัครสมาชิก</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Auth -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCbOKefRd5mXh3ZxlBjhHkonwbWWBtlQmo",
+      authDomain: "the-green-haven.firebaseapp.com",
+      databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "the-green-haven",
+      storageBucket: "the-green-haven.firebasestorage.app",
+      messagingSenderId: "523697750767",
+      appId: "1:523697750767:web:89b253f92d8d5cfe8a111a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const database = getDatabase(app);
+
+    window.auth = auth;
+    window.database = database;
+    window.firebaseDB = { ref, set, get };
+
+    console.log('✅ Firebase Auth initialized');
+  </script>
+
+  <!-- Authentication Logic -->
+  <script>
+    let currentUserType = 'admin';
+    let isLoginMode = true;
+
+    function selectUserType(type) {
+      currentUserType = type;
+      document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      const tenantFields = document.getElementById('tenantFields');
+      if (type === 'tenant') {
+        tenantFields.style.display = 'block';
+      } else {
+        tenantFields.style.display = 'none';
+      }
+    }
+
+    function toggleForm() {
+      isLoginMode = !isLoginMode;
+      document.getElementById('loginForm').classList.toggle('active');
+      document.getElementById('registerForm').classList.toggle('active');
+
+      const toggle = document.getElementById('formToggle');
+      if (isLoginMode) {
+        toggle.innerHTML = 'ยังไม่มีบัญชี? <a onclick="toggleForm()">สมัครสมาชิก</a>';
+      } else {
+        toggle.innerHTML = 'มีบัญชีอยู่แล้ว? <a onclick="toggleForm()">เข้าสู่ระบบ</a>';
+      }
+
+      clearMessages();
+    }
+
+    function showMessage(message, isError = true) {
+      const errorEl = document.getElementById('errorMessage');
+      const successEl = document.getElementById('successMessage');
+
+      if (isError) {
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+        successEl.style.display = 'none';
+      } else {
+        successEl.textContent = message;
+        successEl.style.display = 'block';
+        errorEl.style.display = 'none';
+      }
+    }
+
+    function clearMessages() {
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+    }
+
+    function setLoading(show) {
+      document.getElementById('loading').style.display = show ? 'block' : 'none';
+      document.getElementById('loginBtn').disabled = show;
+      document.getElementById('registerBtn').disabled = show;
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      clearMessages();
+      setLoading(true);
+
+      try {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+
+        const userCredential = await window.auth.signInWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+
+        // Get user data from database
+        const userRef = window.firebaseDB.ref(window.database, `users/${user.uid}`);
+        const snapshot = await window.firebaseDB.get(userRef);
+        const userData = snapshot.val();
+
+        if (!userData) {
+          throw new Error('ไม่พบข้อมูลผู้ใช้');
+        }
+
+        // Verify user type
+        if (userData.userType !== currentUserType) {
+          await window.auth.signOut();
+          throw new Error(`บัญชีนี้ไม่ใช่ ${currentUserType === 'admin' ? 'Admin' : 'Tenant'}`);
+        }
+
+        // Save session
+        sessionStorage.setItem('user', JSON.stringify({
+          uid: user.uid,
+          email: user.email,
+          name: userData.name,
+          userType: userData.userType,
+          roomNumber: userData.roomNumber || null
+        }));
+
+        showMessage(`เข้าสู่ระบบสำเร็จ! (${userData.name})`, false);
+
+        // Redirect
+        setTimeout(() => {
+          if (userData.userType === 'admin') {
+            window.location.href = 'dashboard.html';
+          } else {
+            window.location.href = `tenant-payment.html?room=${userData.roomNumber}`;
+          }
+        }, 1500);
+
+      } catch (error) {
+        console.error('Login error:', error);
+        showMessage(error.message || 'เข้าสู่ระบบไม่สำเร็จ');
+        setLoading(false);
+      }
+    }
+
+    async function handleRegister(event) {
+      event.preventDefault();
+      clearMessages();
+
+      const password = document.getElementById('registerPassword').value;
+      const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+
+      if (password !== passwordConfirm) {
+        showMessage('รหัสผ่านไม่ตรงกัน');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const email = document.getElementById('registerEmail').value;
+        const name = document.getElementById('registerName').value;
+
+        // Create auth user
+        const userCredential = await window.auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+
+        // Save user data
+        const userData = {
+          uid: user.uid,
+          email: email,
+          name: name,
+          userType: currentUserType,
+          createdAt: new Date().toISOString()
+        };
+
+        if (currentUserType === 'tenant') {
+          userData.roomNumber = document.getElementById('roomNumber').value;
+        }
+
+        const userRef = window.firebaseDB.ref(window.database, `users/${user.uid}`);
+        await window.firebaseDB.set(userRef, userData);
+
+        showMessage('สมัครสมาชิกสำเร็จ! กำลังเข้าสู่ระบบ...', false);
+
+        // Save session
+        sessionStorage.setItem('user', JSON.stringify(userData));
+
+        // Redirect
+        setTimeout(() => {
+          if (currentUserType === 'admin') {
+            window.location.href = 'dashboard.html';
+          } else {
+            window.location.href = `tenant-payment.html?room=${userData.roomNumber}`;
+          }
+        }, 1500);
+
+      } catch (error) {
+        console.error('Register error:', error);
+        let errorMsg = error.message;
+        if (error.code === 'auth/email-already-in-use') {
+          errorMsg = 'อีเมลนี้ลงทะเบียนไปแล้ว';
+        } else if (error.code === 'auth/weak-password') {
+          errorMsg = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
+        }
+        showMessage(errorMsg);
+        setLoading(false);
+      }
+    }
+
+    function showForgotPassword() {
+      const email = prompt('กรุณากรอกอีเมลของคุณ:');
+      if (email) {
+        window.auth.sendPasswordResetEmail(email).then(() => {
+          showMessage('ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว', false);
+        }).catch(error => {
+          showMessage(error.message);
+        });
+      }
+    }
+
+    console.log('✅ Authentication logic loaded');
+  </script>
+</body>
+</html>
