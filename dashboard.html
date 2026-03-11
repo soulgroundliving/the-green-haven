@@ -140,6 +140,44 @@
   // Initialize monitoring panel
   window.firebaseMonitorReady = true;
   updateFirebaseMonitorPanel();
+
+  // Check authentication on page load
+  window.addEventListener('load', () => {
+    checkAuthentication();
+  });
+
+  function checkAuthentication() {
+    const user = sessionStorage.getItem('user');
+    if (!user) {
+      // Not logged in - redirect to login
+      window.location.href = 'login.html';
+      return;
+    }
+
+    const userData = JSON.parse(user);
+
+    // Check if user is admin
+    if (userData.userType !== 'admin') {
+      alert('เฉพาะ Admin เท่านั้นที่สามารถเข้าถึง Dashboard');
+      window.location.href = 'login.html';
+      return;
+    }
+
+    // Show user info in header
+    const userInfoEl = document.getElementById('userInfo');
+    if (userInfoEl) {
+      userInfoEl.innerHTML = `👤 ${userData.name} (Admin)`;
+    }
+
+    console.log('✅ Authentication verified:', userData.name);
+  }
+
+  window.handleLogout = function() {
+    if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
+      sessionStorage.removeItem('user');
+      window.location.href = 'login.html';
+    }
+  };
 </script>
 
 <!-- Firebase Monitoring Panel Controller -->
@@ -595,6 +633,7 @@
     <div class="header-logo">🏢</div>
     <div>
       <h1>The Green Haven <span>ระบบจัดการอพาร์ทเมนต์ · Professional Edition</span></h1>
+      <div id="userInfo" style="font-size:0.85rem;opacity:0.9;margin-top:4px;"></div>
     </div>
   </div>
   <nav class="header-nav">
@@ -610,6 +649,7 @@
     <button class="nav-btn" onclick="showPage('tenant-portal',this)">🏠 ข้อมูลผู้เช่า</button>
     <button class="nav-btn" onclick="showPage('analytics',this)">📈 วิเคราะห์</button>
     <button class="nav-btn" onclick="showPage('contract',this)">📄 สัญญา</button>
+    <button class="nav-btn" onclick="handleLogout()" style="background:rgba(255,76,76,0.2);color:#c62828;">🚪 Logout</button>
   </nav>
 </div>
 
