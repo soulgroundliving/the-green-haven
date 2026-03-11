@@ -35,7 +35,112 @@
   window.firebaseApp = app;
   window.firebaseDatabase = database;
   window.firebaseAuth = auth;
+
+  // Log Firebase connection status
+  console.log('✅ Firebase initialized successfully');
+  console.log('📊 Database URL:', database);
+  console.log('🔐 Auth:', auth);
 </script>
+
+<!-- Firebase Integration Functions -->
+<script>
+// ===== FIREBASE FUNCTIONS =====
+
+// Test Firebase connection
+async function testFirebaseConnection() {
+  try {
+    const { ref, set, get } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
+    const testRef = ref(window.firebaseDatabase, 'system/lastTest');
+    await set(testRef, {
+      timestamp: new Date().toISOString(),
+      status: 'connected'
+    });
+    console.log('✅ Firebase Database Connection Test: SUCCESS');
+    return true;
+  } catch (error) {
+    console.error('❌ Firebase Connection Error:', error);
+    return false;
+  }
+}
+
+// Save data to Firebase
+async function saveToFirebase(path, data) {
+  try {
+    const { ref, set } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
+    const dbRef = ref(window.firebaseDatabase, path);
+    await set(dbRef, {
+      ...data,
+      lastUpdated: new Date().toISOString()
+    });
+    console.log(`✅ Saved to Firebase: ${path}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Error saving to Firebase (${path}):`, error);
+    return false;
+  }
+}
+
+// Read data from Firebase
+async function readFromFirebase(path) {
+  try {
+    const { ref, get } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
+    const dbRef = ref(window.firebaseDatabase, path);
+    const snapshot = await get(dbRef);
+
+    if (snapshot.exists()) {
+      console.log(`✅ Read from Firebase: ${path}`);
+      return snapshot.val();
+    } else {
+      console.log(`⚠️ No data found at: ${path}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`❌ Error reading from Firebase (${path}):`, error);
+    return null;
+  }
+}
+
+// Sync all data to Firebase
+async function syncDataToFirebase() {
+  try {
+    console.log('🔄 Syncing data to Firebase...');
+
+    // Save bills data
+    const billsData = JSON.parse(localStorage.getItem('billsData') || '{}');
+    if (Object.keys(billsData).length > 0) {
+      await saveToFirebase('data/bills', billsData);
+    }
+
+    // Save payment data
+    const paymentData = JSON.parse(localStorage.getItem('paymentData') || '{}');
+    if (Object.keys(paymentData).length > 0) {
+      await saveToFirebase('data/payments', paymentData);
+    }
+
+    // Save tenant data
+    const tenantData = JSON.parse(localStorage.getItem('tenantData') || '{}');
+    if (Object.keys(tenantData).length > 0) {
+      await saveToFirebase('data/tenants', tenantData);
+    }
+
+    console.log('✅ Data sync to Firebase complete');
+    return true;
+  } catch (error) {
+    console.error('❌ Error syncing data to Firebase:', error);
+    return false;
+  }
+}
+
+// Initialize Firebase on page load
+window.addEventListener('load', async () => {
+  console.log('🚀 Initializing Firebase integration...');
+  await testFirebaseConnection();
+});
+
+// Log Firebase functions available
+console.log('✅ Firebase functions loaded: testFirebaseConnection, saveToFirebase, readFromFirebase, syncDataToFirebase');
+</script>
+
 <style>
   :root {
     --green-dark:#1a5c38;--green:#2d8653;--green-light:#4caf50;--green-pale:#e8f5e9;
