@@ -231,3 +231,4 @@ self.addEventListener('message', (event) => {
 });
 
 console.log('[SW] Service Worker loaded');
+// Cache bust: Thu Mar 12 02:12:03 SEAST 2026
