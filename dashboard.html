@@ -1378,6 +1378,15 @@
       </table>
     </div>
   </div>
+
+  <!-- Compact grid for Nest -->
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <span>📦 รายชื่อห้อง Nest (ตารางกระทัดรัด)</span>
+      <input type="text" id="nestCompactSearch" placeholder="🔍 ค้นหาห้อง..." style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
+    </div>
+    <div class="compact-grid" id="nestCompactGrid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin-top:1rem;"></div>
+  </div>
 </div>
 
 <!-- ===== MONTHLY ===== -->
@@ -2057,6 +2066,7 @@ function showPage(page,btn){
   }
   if(page==='dashboard'){setTimeout(initDashboardCharts,100);updateDashboardLive();}
   if(page==='rooms')initRoomsPage();
+  if(page==='newbuild')initNestPage();
   if(page==='monthly')initMonthlyPage();
   if(page==='tenant')initTenantPage();
   if(page==='expense')initExpensePage();
@@ -2217,41 +2227,89 @@ function renderCompactRoomGrid(){
   const allTenants = loadTenants();
   const searchInput=document.getElementById('roomCompactSearch');
   const searchTerm=(searchInput?.value||'').toLowerCase();
-  const filtered=ROOMS_OLD.filter(r=>r.id.toString().toLowerCase().includes(searchTerm));
+  const filtered=ROOMS_OLD.filter(r=>r.id.toString().toLowerCase().includes(searchTerm) || (allTenants[r.id]?.name||'').toLowerCase().includes(searchTerm));
   const grid=document.getElementById('roomCompactGrid');
+
+  // Calculate contract expiry summary
+  const today = new Date();
+  const in30 = new Date(today.getTime() + 30*86400000);
+  const in60 = new Date(today.getTime() + 60*86400000);
+
+  const expiring30 = ROOMS_OLD.filter(r => {
+    const t = allTenants[r.id];
+    if(!t?.contractEnd) return false;
+    const exp = new Date(t.contractEnd);
+    return exp > today && exp <= in30;
+  }).length;
+
+  const expiring60 = ROOMS_OLD.filter(r => {
+    const t = allTenants[r.id];
+    if(!t?.contractEnd) return false;
+    const exp = new Date(t.contractEnd);
+    return exp > in30 && exp <= in60;
+  }).length;
 
   grid.innerHTML=filtered.map(r=>{
     const tenant = allTenants[r.id];
-    const occupancyLabel = tenant && tenant.name ? `✅ ${tenant.name}` : '🚪 ว่าง';
+    const isOccupied = tenant && tenant.name;
+
+    // Format dates
+    const moveInDate = tenant?.moveInDate ? new Date(tenant.moveInDate).toLocaleDateString('th-TH', {month: 'short', day: 'numeric'}) : '—';
+    const contractEnd = tenant?.contractEnd ? new Date(tenant.contractEnd).toLocaleDateString('th-TH', {month: 'short', day: 'numeric', year: '2-digit'}) : '—';
+
+    // Calculate days until contract end
+    let daysLeft = '—';
+    let expiryColor = 'var(--text-muted)';
+    if(tenant?.contractEnd) {
+      const exp = new Date(tenant.contractEnd);
+      const days = Math.ceil((exp - today) / 86400000);
+      if(days > 0) {
+        daysLeft = days;
+        if(days <= 30) expiryColor = 'var(--red)';
+        else if(days <= 60) expiryColor = 'var(--orange)';
+        else expiryColor = 'var(--green-dark)';
+      }
+    }
+
     return `
     <div class="compact-card ${r.type==='commercial'?'':''}" style="border-left-color:${r.type==='commercial'?'var(--blue)':'var(--green)'}">
       <div class="compact-card-header">
         <div class="compact-card-id">${r.id}</div>
         <span class="compact-card-type">${r.type==='commercial'?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
+        <span style="margin-left:auto;font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOccupied?'var(--green-pale)':'#f3e5f5'};color:${isOccupied?'var(--green-dark)':'#6a1b9a'};font-weight:600;">${isOccupied?'มีผู้เช่า':'ว่าง'}</span>
+      </div>
+      ${isOccupied ? `
+      <div class="compact-card-info">
+        <span style="font-weight:600;color:var(--text);">ชื่อ</span>
+        <span class="compact-card-value">${tenant.name}</span>
       </div>
       <div class="compact-card-info">
-        <span>ผู้เช่า</span>
-        <span class="compact-card-value">${occupancyLabel}</span>
+        <span>โทร</span>
+        <span style="font-size:.8rem;">${tenant.phone || '—'}</span>
       </div>
       <div class="compact-card-info">
+        <span>เข้าพัก</span>
+        <span style="font-size:.8rem;">${moveInDate}</span>
+      </div>
+      <div class="compact-card-info">
+        <span>สัญญาสิ้นสุด</span>
+        <span style="font-size:.8rem;color:${expiryColor};font-weight:600;">${contractEnd}</span>
+      </div>
+      <div class="compact-card-info" style="border-top:1px solid var(--border);padding-top:8px;margin-top:6px;">
+        <span style="color:var(--text-muted);font-size:.75rem;">เหลือ</span>
+        <span style="font-weight:700;color:${expiryColor};">${daysLeft === '—' ? '—' : daysLeft + ' วัน'}</span>
+      </div>
+      ` : `
+      <div class="compact-card-info" style="text-align:center;padding:1rem 0;color:var(--text-muted);">
+        <span style="font-size:.9rem;">🚪 ไม่มีผู้เช่า</span>
+      </div>
+      `}
+      <div class="compact-card-info" style="border-top:1px solid var(--border);padding-top:8px;margin-top:6px;">
         <span>ค่าเช่า</span>
-        <span class="compact-card-value">฿${r.rent.toLocaleString()}/เดือน</span>
-      </div>
-      <div class="compact-card-info">
-        <span>ค่าไฟ</span>
-        <span>฿${r.elecRate}/หน่วย</span>
-      </div>
-      <div class="compact-card-info">
-        <span>ค่าน้ำ</span>
-        <span>฿20/หน่วย</span>
-      </div>
-      <div class="compact-card-info">
-        <span>ค่าขยะ</span>
-        <span>฿${r.trashFee}</span>
+        <span class="compact-card-value">฿${r.rent.toLocaleString()}</span>
       </div>
       <div class="compact-card-actions">
         <button class="compact-btn compact-btn-view" onclick="editRoom('${r.id}')">📝 แก้ไข</button>
-        <button class="compact-btn compact-btn-edit" onclick="viewRoomDetails('${r.id}')">👁️ ดู</button>
       </div>
     </div>`;
   }).join('');
@@ -2259,6 +2317,20 @@ function renderCompactRoomGrid(){
   if(filtered.length===0){
     grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted);">ไม่พบห้องที่ค้นหา</div>';
   }
+
+  // Add contract expiry summary at the bottom
+  const summaryHtml = `
+  <div style="grid-column:1/-1;margin-top:1rem;padding:1rem;background:linear-gradient(135deg, #e8f5e9, #f1f8e9);border-radius:8px;border-left:4px solid var(--green);">
+    <div style="font-weight:700;color:var(--green-dark);margin-bottom:0.5rem;">📋 สรุปสัญญา (ห้องแถว)</div>
+    <div style="display:flex;gap:2rem;flex-wrap:wrap;font-size:.85rem;">
+      <div>⚠️ <strong>${expiring30}</strong> ห้อง หมดภายใน 30 วัน</div>
+      <div>⏳ <strong>${expiring60}</strong> ห้อง หมดใน 30-60 วัน</div>
+      <div>✅ <strong>${ROOMS_OLD.filter(r => allTenants[r.id]?.name).length}</strong> ห้องมีผู้เช่า</div>
+      <div>🚪 <strong>${ROOMS_OLD.filter(r => !allTenants[r.id]?.name).length}</strong> ห้องว่าง</div>
+    </div>
+  </div>`;
+
+  grid.innerHTML += summaryHtml;
 }
 
 function toggleRoomView(view, btn){
@@ -2287,6 +2359,160 @@ function toggleRoomView(view, btn){
 
 function editRoom(roomId){openTenantModal(roomId);}
 function viewRoomDetails(roomId){openTenantModal(roomId);}
+
+// ===== NEST BUILDING ROOMS DATA =====
+const NEST_ROOMS = [
+  // Floor 1
+  {id:'N101', floor:1, type:'daily', rent:5600, deposit:3000},
+  {id:'N102', floor:1, type:'daily', rent:5600, deposit:3000},
+  {id:'N103', floor:1, type:'daily', rent:5600, deposit:3000},
+  {id:'N104', floor:1, type:'studio', rent:5600, deposit:3000},
+  {id:'N105', floor:1, type:'studio', rent:5600, deposit:3000},
+  // Floor 2
+  {id:'N201', floor:2, type:'studio', rent:5600, deposit:3000},
+  {id:'N202', floor:2, type:'studio', rent:5600, deposit:3000},
+  {id:'N203', floor:2, type:'studio', rent:5600, deposit:3000},
+  {id:'N204', floor:2, type:'studio', rent:5600, deposit:3000},
+  {id:'N205', floor:2, type:'studio', rent:5600, deposit:3000},
+  // Floor 3
+  {id:'N301', floor:3, type:'pet', rent:5900, deposit:3000},
+  {id:'N302', floor:3, type:'pet', rent:5900, deposit:3000},
+  {id:'N303', floor:3, type:'pet', rent:5900, deposit:3000},
+  {id:'N304', floor:3, type:'pet', rent:5900, deposit:3000},
+  {id:'N305', floor:3, type:'pet', rent:5900, deposit:3000},
+  // Floor 4
+  {id:'N401', floor:4, type:'pet', rent:5900, deposit:3000},
+  {id:'N402', floor:4, type:'pet', rent:5900, deposit:3000},
+  {id:'N403', floor:4, type:'pet', rent:5900, deposit:3000},
+  {id:'N404', floor:4, type:'pet', rent:5900, deposit:3000},
+  {id:'N405', floor:4, type:'pet', rent:5900, deposit:3000}
+];
+
+// ===== RENDER NEST COMPACT GRID =====
+function renderNestCompactGrid(){
+  const allTenants = loadTenants();
+  const searchInput = document.getElementById('nestCompactSearch');
+  const searchTerm = (searchInput?.value || '').toLowerCase();
+  const filtered = NEST_ROOMS.filter(r =>
+    r.id.toString().toLowerCase().includes(searchTerm) ||
+    (allTenants[r.id]?.name || '').toLowerCase().includes(searchTerm)
+  );
+  const grid = document.getElementById('nestCompactGrid');
+
+  // Calculate contract expiry summary for Nest
+  const today = new Date();
+  const in30 = new Date(today.getTime() + 30*86400000);
+  const in60 = new Date(today.getTime() + 60*86400000);
+
+  const expiring30 = NEST_ROOMS.filter(r => {
+    const t = allTenants[r.id];
+    if(!t?.contractEnd) return false;
+    const exp = new Date(t.contractEnd);
+    return exp > today && exp <= in30;
+  }).length;
+
+  const expiring60 = NEST_ROOMS.filter(r => {
+    const t = allTenants[r.id];
+    if(!t?.contractEnd) return false;
+    const exp = new Date(t.contractEnd);
+    return exp > in30 && exp <= in60;
+  }).length;
+
+  grid.innerHTML = filtered.map(r => {
+    const tenant = allTenants[r.id];
+    const isOccupied = tenant && tenant.name;
+
+    // Format dates
+    const moveInDate = tenant?.moveInDate ? new Date(tenant.moveInDate).toLocaleDateString('th-TH', {month: 'short', day: 'numeric'}) : '—';
+    const contractEnd = tenant?.contractEnd ? new Date(tenant.contractEnd).toLocaleDateString('th-TH', {month: 'short', day: 'numeric', year: '2-digit'}) : '—';
+
+    // Calculate days until contract end
+    let daysLeft = '—';
+    let expiryColor = 'var(--text-muted)';
+    if(tenant?.contractEnd) {
+      const exp = new Date(tenant.contractEnd);
+      const days = Math.ceil((exp - today) / 86400000);
+      if(days > 0) {
+        daysLeft = days;
+        if(days <= 30) expiryColor = 'var(--red)';
+        else if(days <= 60) expiryColor = 'var(--orange)';
+        else expiryColor = 'var(--green-dark)';
+      }
+    }
+
+    const typeLabel = r.type === 'daily' ? '📅 รายวัน' : (r.type === 'pet' ? '🐾 Pet Friendly' : '🏠 Studio');
+    const floorLabel = `ชั้น ${r.floor}`;
+
+    return `
+    <div class="compact-card" style="border-left-color: ${r.type === 'pet' ? 'var(--purple)' : 'var(--blue)'}">
+      <div class="compact-card-header">
+        <div class="compact-card-id">${r.id}</div>
+        <span class="compact-card-type" style="background: ${r.type === 'pet' ? 'var(--purple-pale)' : 'var(--blue)'}60; color: ${r.type === 'pet' ? 'var(--purple)' : 'var(--blue)'};">${floorLabel}</span>
+        <span style="margin-left:auto;font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOccupied?'var(--green-pale)':'#f3e5f5'};color:${isOccupied?'var(--green-dark)':'#6a1b9a'};font-weight:600;">${isOccupied?'มีผู้เช่า':'ว่าง'}</span>
+      </div>
+      <div class="compact-card-info">
+        <span style="font-size:.8rem;color:var(--text-muted);">${typeLabel}</span>
+        <span class="compact-card-value">฿${r.rent.toLocaleString()}</span>
+      </div>
+      ${isOccupied ? `
+      <div class="compact-card-info">
+        <span style="font-weight:600;color:var(--text);">ชื่อ</span>
+        <span class="compact-card-value" style="font-size:.9rem;">${tenant.name}</span>
+      </div>
+      <div class="compact-card-info">
+        <span>โทร</span>
+        <span style="font-size:.8rem;">${tenant.phone || '—'}</span>
+      </div>
+      <div class="compact-card-info">
+        <span>เข้าพัก</span>
+        <span style="font-size:.8rem;">${moveInDate}</span>
+      </div>
+      <div class="compact-card-info">
+        <span>สัญญาสิ้นสุด</span>
+        <span style="font-size:.8rem;color:${expiryColor};font-weight:600;">${contractEnd}</span>
+      </div>
+      <div class="compact-card-info" style="border-top:1px solid var(--border);padding-top:8px;margin-top:6px;">
+        <span style="color:var(--text-muted);font-size:.75rem;">เหลือ</span>
+        <span style="font-weight:700;color:${expiryColor};">${daysLeft === '—' ? '—' : daysLeft + ' วัน'}</span>
+      </div>
+      ` : `
+      <div class="compact-card-info" style="text-align:center;padding:1rem 0;color:var(--text-muted);">
+        <span style="font-size:.9rem;">🚪 ไม่มีผู้เช่า</span>
+      </div>
+      `}
+      <div class="compact-card-actions">
+        <button class="compact-btn compact-btn-view" onclick="editRoom('${r.id}')">📝 แก้ไข</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  if(filtered.length===0){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted);">ไม่พบห้องที่ค้นหา</div>';
+  }
+
+  // Add contract expiry summary at the bottom
+  const summaryHtml = `
+  <div style="grid-column:1/-1;margin-top:1rem;padding:1rem;background:linear-gradient(135deg, #f3e5f5, #ede7f6);border-radius:8px;border-left:4px solid var(--purple);">
+    <div style="font-weight:700;color:var(--purple);margin-bottom:0.5rem;">📋 สรุปสัญญา (Nest)</div>
+    <div style="display:flex;gap:2rem;flex-wrap:wrap;font-size:.85rem;">
+      <div>⚠️ <strong>${expiring30}</strong> ห้อง หมดภายใน 30 วัน</div>
+      <div>⏳ <strong>${expiring60}</strong> ห้อง หมดใน 30-60 วัน</div>
+      <div>✅ <strong>${NEST_ROOMS.filter(r => allTenants[r.id]?.name).length}</strong> ห้องมีผู้เช่า</div>
+      <div>🚪 <strong>${NEST_ROOMS.filter(r => !allTenants[r.id]?.name).length}</strong> ห้องว่าง</div>
+    </div>
+  </div>`;
+
+  grid.innerHTML += summaryHtml;
+}
+
+// Initialize Nest compact grid when page loads
+function initNestPage(){
+  renderNestCompactGrid();
+  const searchInput = document.getElementById('nestCompactSearch');
+  if(searchInput){
+    searchInput.addEventListener('input', renderNestCompactGrid);
+  }
+}
 
 // ===== MONTHLY PAGE =====
 let monthlyYear='67';
@@ -4624,8 +4850,7 @@ function saveTenantInfo() {
     renderCompactRoomGrid();
   } else if (currentPage && currentPage.id === 'page-newbuild') {
     // Refresh new building page
-    const activeBtn = document.querySelector('[onclick*="newbuild"]');
-    if (activeBtn) showPage('newbuild', activeBtn);
+    initNestPage();
   }
 
   // Show success message
