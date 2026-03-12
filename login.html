@@ -556,7 +556,8 @@
         // Verify user type
         if (userData.userType !== currentUserType) {
           await window.auth.signOut();
-          throw new Error(`บัญชีนี้ไม่ใช่ ${currentUserType === 'admin' ? 'Admin' : 'Tenant'}`);
+          const typeLabel = currentUserType === 'admin' ? 'Admin' : currentUserType === 'accountant' ? 'Accountant (บัญชี)' : 'Tenant';
+          throw new Error(`บัญชีนี้ไม่ใช่ ${typeLabel}`);
         }
 
         // ===== SUCCESS: RESET RATE LIMITER =====
@@ -578,7 +579,9 @@
 
         // Redirect based on user type
         setTimeout(() => {
-          if (userData.userType === 'admin' || userData.userType === 'accountant') {
+          if (userData.userType === 'accountant') {
+            window.location.href = 'accounting.html';
+          } else if (userData.userType === 'admin') {
             window.location.href = 'dashboard.html';
           } else if (userData.userType === 'tenant') {
             window.location.href = `tenant-payment.html?room=${userData.roomNumber}`;
@@ -707,11 +710,13 @@
         // Save secure session with timeout
         window.SecurityUtils.saveSecureSession(userData);
 
-        // Redirect based on user type
+        // Redirect based on user type (use userData.userType instead of currentUserType)
         setTimeout(() => {
-          if (currentUserType === 'admin' || currentUserType === 'accountant') {
+          if (userData.userType === 'accountant') {
+            window.location.href = 'accounting.html';
+          } else if (userData.userType === 'admin') {
             window.location.href = 'dashboard.html';
-          } else if (currentUserType === 'tenant') {
+          } else if (userData.userType === 'tenant') {
             window.location.href = `tenant-payment.html?room=${userData.roomNumber}`;
           } else {
             window.location.href = 'dashboard.html'; // Default to dashboard
