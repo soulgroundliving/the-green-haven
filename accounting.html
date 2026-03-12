@@ -527,8 +527,10 @@
   <div class="header-nav">
     <button class="nav-btn active" onclick="showPage('dashboard')">📊 Dashboard</button>
     <button class="nav-btn" onclick="showPage('expenses')">💸 ค่าใช้จ่าย</button>
+    <button class="nav-btn" onclick="showPage('payments')">💳 ตรวจสอบการชำระ<span id="paymentBadge" style="display:none;background:var(--red);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:.7rem;margin-left:.5rem;"></span></button>
     <button class="nav-btn" onclick="showPage('reports')">📄 รายงาน</button>
     <button class="nav-btn" onclick="showPage('settings')">⚙️ ตั้งค่า</button>
+    <button class="nav-btn" onclick="window.location.href='dashboard.html'" style="margin-left:auto;">🏠 กลับไปที่ระบบ</button>
     <button class="nav-btn logout-btn" onclick="handleLogout()">🚪 ออกจากระบบ</button>
   </div>
 </div>
@@ -756,6 +758,81 @@
       <div id="generatedReportsList" style="color: var(--text-muted); padding: 2rem; text-align: center;">
         ยังไม่มีรายงาน
       </div>
+    </div>
+  </div>
+
+  <!-- PAYMENT VERIFICATION PAGE -->
+  <div class="page" id="payments">
+    <div class="section-title">💳 ตรวจสอบการชำระเงิน</div>
+
+    <!-- Filter Tabs -->
+    <div style="display:flex;gap:10px;margin-bottom:1.5rem;overflow-x:auto;padding-bottom:10px;">
+      <button class="filter-tab active" onclick="filterPaymentSlips('all')">📋 ทั้งหมด</button>
+      <button class="filter-tab" onclick="filterPaymentSlips('pending')">⏳ รอตรวจสอบ</button>
+      <button class="filter-tab" onclick="filterPaymentSlips('verified')">✅ ยืนยันแล้ว</button>
+      <button class="filter-tab" onclick="filterPaymentSlips('rejected')">❌ ปฏิเสธ</button>
+    </div>
+
+    <!-- Payment Slip List -->
+    <div id="paymentSlipsList">
+      <div style="text-align:center;padding:2rem;color:var(--text-muted);">
+        ⏳ กำลังโหลดข้อมูล...
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYMENT VERIFICATION MODAL -->
+  <div id="slipVerificationModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;overflow-y:auto;padding:1rem;">
+    <div style="background:#fff;max-width:600px;margin:2rem auto;border-radius:12px;padding:2rem;max-height:90vh;overflow-y:auto;">
+      <button onclick="closeSlipModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.5rem;cursor:pointer;">✕</button>
+
+      <div class="section-title" style="margin-bottom:1.5rem;">📸 ตรวจสอบสลิปการโอนเงิน</div>
+
+      <!-- Slip Image -->
+      <div style="margin-bottom:1.5rem;text-align:center;">
+        <img id="verifySlipImage" src="" alt="Payment Slip" style="max-width:100%;max-height:400px;border-radius:8px;border:2px solid var(--border);">
+      </div>
+
+      <!-- Invoice Details -->
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div>
+            <div style="color:var(--text-muted);font-size:.9rem;margin-bottom:.3rem;">ห้อง</div>
+            <div style="font-weight:700;font-size:1.2rem;" id="verifyRoomId">—</div>
+          </div>
+          <div>
+            <div style="color:var(--text-muted);font-size:.9rem;margin-bottom:.3rem;">จำนวนเงิน</div>
+            <div style="font-weight:700;font-size:1.2rem;color:var(--green);" id="verifyAmount">฿0</div>
+          </div>
+          <div>
+            <div style="color:var(--text-muted);font-size:.9rem;margin-bottom:.3rem;">วันที่อัปโหลด</div>
+            <div style="font-weight:600;font-size:.95rem;" id="verifyUploadDate">—</div>
+          </div>
+          <div>
+            <div style="color:var(--text-muted);font-size:.9rem;margin-bottom:.3rem;">สถานะปัจจุบัน</div>
+            <div style="font-weight:600;font-size:.95rem;" id="verifyStatus">⏳ รอตรวจสอบ</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div id="verificationActions" style="display:flex;gap:10px;margin-bottom:1.5rem;">
+        <button onclick="approvePaymentSlip()" style="flex:1;background:var(--green);color:#fff;border:none;padding:12px;border-radius:8px;font-weight:700;cursor:pointer;font-size:.95rem;">
+          ✅ ยืนยันการชำระ
+        </button>
+        <button onclick="rejectPaymentSlip()" style="flex:1;background:var(--red);color:#fff;border:none;padding:12px;border-radius:8px;font-weight:700;cursor:pointer;font-size:.95rem;">
+          ❌ ปฏิเสธ
+        </button>
+      </div>
+
+      <!-- Notes -->
+      <div style="background:var(--bg);padding:1rem;border-radius:8px;margin-bottom:1rem;">
+        <label style="display:block;color:var(--text-muted);font-size:.85rem;font-weight:700;margin-bottom:.5rem;">หมายเหตุ (ถ้ามี)</label>
+        <textarea id="verificationNotes" placeholder="ระบุเหตุผลการปฏิเสธหรือหมายเหตุอื่น..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.9rem;resize:vertical;min-height:80px;"></textarea>
+      </div>
+
+      <!-- Status Message -->
+      <div id="verificationMessage" style="display:none;padding:1rem;border-radius:8px;margin-bottom:1rem;"></div>
     </div>
   </div>
 

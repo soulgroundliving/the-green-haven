@@ -1087,6 +1087,226 @@ function showSuccess(message) {
   alert('✅ ' + message);
 }
 
+// ===== PAYMENT VERIFICATION FUNCTIONS =====
+
+let currentPaymentFilter = 'all';
+let currentVerifyingSlip = null;
+
+/**
+ * Load and display payment slips
+ */
+function loadPaymentSlips() {
+  const slips = JSON.parse(localStorage.getItem('tenant_slips') || '[]');
+  const filtered = filterByStatus(slips, currentPaymentFilter);
+
+  const container = document.getElementById('paymentSlipsList');
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">
+      ${currentPaymentFilter === 'all' ? '📋 ยังไม่มีสลิปการชำระ' : '✨ ไม่มีสลิปที่ตรงกับการค้นหา'}
+    </div>`;
+    return;
+  }
+
+  const html = filtered.map((slip, idx) => {
+    const statusColor = slip.status === 'pending' ? '#ff9800' : slip.status === 'verified' ? '#4caf50' : '#c62828';
+    const statusText = slip.status === 'pending' ? '⏳ รอตรวจสอบ' : slip.status === 'verified' ? '✅ ยืนยันแล้ว' : '❌ ปฏิเสธ';
+
+    return `
+      <div class="card" style="cursor:pointer;border-left:4px solid ${statusColor};">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <div>
+            <div style="font-weight:700;font-size:1.1rem;">ห้อง ${slip.roomId}</div>
+            <div style="color:var(--text-muted);font-size:.85rem;margin-top:.3rem;">${slip.uploadedDate}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:700;font-size:1.3rem;color:var(--green);">฿${slip.amount.toLocaleString()}</div>
+            <div style="color:${statusColor};font-weight:700;font-size:.9rem;margin-top:.3rem;">${statusText}</div>
+          </div>
+        </div>
+        <button onclick="openSlipVerification('${slip.invoiceId}')" style="width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;">
+          🔍 ตรวจสอบ
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = html;
+}
+
+/**
+ * Filter slips by status
+ */
+function filterByStatus(slips, status) {
+  if (status === 'all') return slips;
+  return slips.filter(s => s.status === status);
+}
+
+/**
+ * Filter payment slips by status
+ */
+function filterPaymentSlips(status) {
+  currentPaymentFilter = status;
+  document.querySelectorAll('.filter-tab').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  loadPaymentSlips();
+}
+
+/**
+ * Open slip verification modal
+ */
+function openSlipVerification(invoiceId) {
+  const slips = JSON.parse(localStorage.getItem('tenant_slips') || '[]');
+  const slip = slips.find(s => s.invoiceId === invoiceId);
+
+  if (!slip) {
+    alert('❌ ไม่พบสลิปนี้');
+    return;
+  }
+
+  currentVerifyingSlip = slip;
+
+  // Set modal data
+  document.getElementById('verifySlipImage').src = slip.slipImage;
+  document.getElementById('verifyRoomId').textContent = slip.roomId;
+  document.getElementById('verifyAmount').textContent = `฿${slip.amount.toLocaleString()}`;
+  document.getElementById('verifyUploadDate').textContent = slip.uploadedDate;
+  document.getElementById('verificationNotes').value = slip.notes || '';
+
+  // Set status
+  const statusMap = {
+    'pending': '⏳ รอตรวจสอบ',
+    'verified': '✅ ยืนยันแล้ว',
+    'rejected': '❌ ปฏิเสธ'
+  };
+  document.getElementById('verifyStatus').textContent = statusMap[slip.status];
+
+  // Show/hide action buttons based on status
+  const actions = document.getElementById('verificationActions');
+  if (slip.status === 'verified' || slip.status === 'rejected') {
+    actions.style.display = 'none';
+  } else {
+    actions.style.display = 'flex';
+  }
+
+  document.getElementById('slipVerificationModal').style.display = 'block';
+}
+
+/**
+ * Close verification modal
+ */
+function closeSlipModal() {
+  document.getElementById('slipVerificationModal').style.display = 'none';
+  currentVerifyingSlip = null;
+}
+
+/**
+ * Approve payment slip
+ */
+function approvePaymentSlip() {
+  if (!currentVerifyingSlip) return;
+
+  const slips = JSON.parse(localStorage.getItem('tenant_slips') || '[]');
+  const slipIdx = slips.findIndex(s => s.invoiceId === currentVerifyingSlip.invoiceId);
+
+  if (slipIdx === -1) return;
+
+  // Update slip status
+  slips[slipIdx].status = 'verified';
+  slips[slipIdx].approvedAt = new Date().toISOString();
+  slips[slipIdx].notes = document.getElementById('verificationNotes').value;
+
+  // Generate receipt number
+  slips[slipIdx].receiptNumber = `RCP-${slips[slipIdx].roomId}-${new Date().toLocaleDateString('th-TH', {year: '2-digit', month: '2-digit', day: '2-digit'}).replace(/\//g, '')}`;
+
+  // Save
+  localStorage.setItem('tenant_slips', JSON.stringify(slips));
+  if (window.saveToFirebase) {
+    const slipsObj = {};
+    slips.forEach(s => {
+      slipsObj[s.invoiceId] = s;
+    });
+    window.saveToFirebase('data/payment_slips', slipsObj);
+  }
+
+  // Log audit
+  if (window.AuditLogger) {
+    window.AuditLogger.log('PAYMENT_APPROVED', `Approved payment for room ${slips[slipIdx].roomId}`, {
+      roomId: slips[slipIdx].roomId,
+      amount: slips[slipIdx].amount,
+      receiptNumber: slips[slipIdx].receiptNumber
+    });
+  }
+
+  // Show success
+  showSuccess('ยืนยันการชำระแล้ว');
+  setTimeout(() => {
+    closeSlipModal();
+    loadPaymentSlips();
+    updatePaymentBadge();
+  }, 1500);
+}
+
+/**
+ * Reject payment slip
+ */
+function rejectPaymentSlip() {
+  if (!currentVerifyingSlip) return;
+
+  const slips = JSON.parse(localStorage.getItem('tenant_slips') || '[]');
+  const slipIdx = slips.findIndex(s => s.invoiceId === currentVerifyingSlip.invoiceId);
+
+  if (slipIdx === -1) return;
+
+  // Update slip status
+  slips[slipIdx].status = 'rejected';
+  slips[slipIdx].rejectedAt = new Date().toISOString();
+  slips[slipIdx].rejectionReason = document.getElementById('verificationNotes').value || 'ไม่ชัดเจน';
+
+  // Save
+  localStorage.setItem('tenant_slips', JSON.stringify(slips));
+  if (window.saveToFirebase) {
+    const slipsObj = {};
+    slips.forEach(s => {
+      slipsObj[s.invoiceId] = s;
+    });
+    window.saveToFirebase('data/payment_slips', slipsObj);
+  }
+
+  // Log audit
+  if (window.AuditLogger) {
+    window.AuditLogger.log('PAYMENT_REJECTED', `Rejected payment for room ${slips[slipIdx].roomId}`, {
+      roomId: slips[slipIdx].roomId,
+      amount: slips[slipIdx].amount,
+      reason: slips[slipIdx].rejectionReason
+    });
+  }
+
+  // Show success
+  showSuccess('ปฏิเสธการชำระแล้ว');
+  setTimeout(() => {
+    closeSlipModal();
+    loadPaymentSlips();
+    updatePaymentBadge();
+  }, 1500);
+}
+
+/**
+ * Update payment badge count
+ */
+function updatePaymentBadge() {
+  const slips = JSON.parse(localStorage.getItem('tenant_slips') || '[]');
+  const pending = slips.filter(s => s.status === 'pending').length;
+
+  const badge = document.getElementById('paymentBadge');
+  if (pending > 0) {
+    badge.textContent = pending;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
 // ===== INITIALIZATION =====
 
 console.log('✅ Accounting.js loaded');
@@ -1099,5 +1319,12 @@ window.AccountingSystem = {
   generateSummaryReport,
   generateRoomDetail,
   saveTaxRate,
-  renderFinancialCharts
+  renderFinancialCharts,
+  loadPaymentSlips,
+  filterPaymentSlips,
+  openSlipVerification,
+  closeSlipModal,
+  approvePaymentSlip,
+  rejectPaymentSlip,
+  updatePaymentBadge
 };
