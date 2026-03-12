@@ -21,8 +21,9 @@ function initMeterPage() {
 
 function checkAdminAccess() {
   const userData = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  if (!userData.userType || userData.userType !== 'admin') {
-    alert('❌ เฉพาะแอดมิน เท่านั้น');
+  const allowedRoles = ['admin', 'owner'];
+  if (!userData.userType || !allowedRoles.includes(userData.userType)) {
+    alert('❌ เฉพาะเจ้าของและแอดมินเท่านั้น');
     window.location.href = 'login.html';
   }
 }
