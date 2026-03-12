@@ -4958,8 +4958,11 @@ document.addEventListener('click', function(e) {
               onkeypress="if(event.key==='Enter')changePassword()"
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <button type="button" onclick="togglePasswordVisibility('oldPassword')" style="position:absolute;right:6px;background:#d32f2f;border:none;cursor:pointer;font-size:1.1rem;color:#fff;padding:8px 12px;z-index:10;pointer-events:auto;transition:all .2s;border-radius:6px;display:flex;align-items:center;justify-content:center;width:38px;height:38px;hover:background:#b71c1c;">
-              <span id="icon-oldPassword">👁️</span>
+            <button type="button" onclick="togglePasswordVisibility('oldPassword')" style="position:absolute;right:6px;background:#d32f2f;border:none;cursor:pointer;color:#fff;padding:0;z-index:10;pointer-events:auto;transition:all .2s;border-radius:6px;display:flex;align-items:center;justify-content:center;width:38px;height:38px;">
+              <svg id="icon-oldPassword" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
             </button>
           </div>
         </div>
@@ -4973,8 +4976,11 @@ document.addEventListener('click', function(e) {
               onkeypress="if(event.key==='Enter')changePassword()"
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <button type="button" onclick="togglePasswordVisibility('newPassword')" style="position:absolute;right:6px;background:#d32f2f;border:none;cursor:pointer;font-size:1.1rem;color:#fff;padding:8px 12px;z-index:10;pointer-events:auto;transition:all .2s;border-radius:6px;display:flex;align-items:center;justify-content:center;width:38px;height:38px;hover:background:#b71c1c;">
-              <span id="icon-newPassword">👁️</span>
+            <button type="button" onclick="togglePasswordVisibility('newPassword')" style="position:absolute;right:6px;background:#d32f2f;border:none;cursor:pointer;color:#fff;padding:0;z-index:10;pointer-events:auto;transition:all .2s;border-radius:6px;display:flex;align-items:center;justify-content:center;width:38px;height:38px;">
+              <svg id="icon-newPassword" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
             </button>
           </div>
         </div>
@@ -4988,8 +4994,11 @@ document.addEventListener('click', function(e) {
               onkeypress="if(event.key==='Enter')changePassword()"
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <button type="button" onclick="togglePasswordVisibility('confirmPassword')" style="position:absolute;right:6px;background:#d32f2f;border:none;cursor:pointer;font-size:1.1rem;color:#fff;padding:8px 12px;z-index:10;pointer-events:auto;transition:all .2s;border-radius:6px;display:flex;align-items:center;justify-content:center;width:38px;height:38px;hover:background:#b71c1c;">
-              <span id="icon-confirmPassword">👁️</span>
+            <button type="button" onclick="togglePasswordVisibility('confirmPassword')" style="position:absolute;right:6px;background:#d32f2f;border:none;cursor:pointer;color:#fff;padding:0;z-index:10;pointer-events:auto;transition:all .2s;border-radius:6px;display:flex;align-items:center;justify-content:center;width:38px;height:38px;">
+              <svg id="icon-confirmPassword" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
             </button>
           </div>
         </div>
@@ -5013,13 +5022,24 @@ document.addEventListener('click', function(e) {
 function togglePasswordVisibility(fieldId) {
   const input = document.getElementById(fieldId);
   const icon = document.getElementById(`icon-${fieldId}`);
+  const path = icon.querySelector('path');
 
   if (input.type === 'password') {
     input.type = 'text';
-    icon.textContent = '👁️‍🗨️';
+    // Eye open - show full icon
+    if (path) {
+      path.setAttribute('d', 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z');
+    }
+    icon.classList.add('eye-open');
+    icon.classList.remove('eye-closed');
   } else {
     input.type = 'password';
-    icon.textContent = '👁️';
+    // Eye closed - show crossed eye
+    if (path) {
+      path.setAttribute('d', 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z');
+    }
+    icon.classList.add('eye-closed');
+    icon.classList.remove('eye-open');
   }
 }
 </script>
