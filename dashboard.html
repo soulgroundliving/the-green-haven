@@ -5008,6 +5008,22 @@ document.addEventListener('click', function(e) {
   </div>
 </div>
 
+<script>
+// ===== Password Visibility Toggle (Inline) =====
+function togglePasswordVisibility(fieldId) {
+  const input = document.getElementById(fieldId);
+  const icon = document.getElementById(`icon-${fieldId}`);
+
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.textContent = '👁️‍🗨️';
+  } else {
+    input.type = 'password';
+    icon.textContent = '👁️';
+  }
+}
+</script>
+
 <script src="change-password.js"></script>
 </body>
 </html>
