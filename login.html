@@ -287,9 +287,15 @@
 
       <!-- Register Form -->
       <form id="registerForm" class="form-mode" onsubmit="handleRegister(event)">
-        <div class="form-group">
-          <label>ชื่อ</label>
-          <input type="text" id="registerName" required placeholder="ชื่อของคุณ">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label>ชื่อ</label>
+            <input type="text" id="registerFirstName" required placeholder="ชื่อ">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>นามสกุล</label>
+            <input type="text" id="registerLastName" placeholder="นามสกุล">
+          </div>
         </div>
 
         <div class="form-group">
@@ -633,7 +639,9 @@
       event.preventDefault();
       clearMessages();
 
-      const name = document.getElementById('registerName').value.trim();
+      const firstName = document.getElementById('registerFirstName').value.trim();
+      const lastName = document.getElementById('registerLastName').value.trim();
+      const name = firstName && lastName ? `${firstName} ${lastName}` : (firstName || lastName || '');
       const email = document.getElementById('registerEmail').value.trim();
       const password = document.getElementById('registerPassword').value;
       const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
@@ -651,8 +659,8 @@
         return;
       }
 
-      // Validate name
-      if (!name || name.length < 2 || name.length > 100) {
+      // Validate name (first name is required)
+      if (!firstName || firstName.length < 2 || firstName.length > 100) {
         showMessage('ชื่อต้องมีความยาว 2-100 ตัวอักษร');
         return;
       }
@@ -668,8 +676,10 @@
         return;
       }
 
-      // Sanitize name input
-      const sanitizedName = window.SecurityUtils.sanitizeInput(name);
+      // Sanitize name inputs
+      const sanitizedFirstName = window.SecurityUtils.sanitizeInput(firstName);
+      const sanitizedLastName = window.SecurityUtils.sanitizeInput(lastName);
+      const sanitizedName = sanitizedFirstName && sanitizedLastName ? `${sanitizedFirstName} ${sanitizedLastName}` : (sanitizedFirstName || sanitizedLastName || '');
 
       setLoading(true);
 
@@ -682,6 +692,8 @@
         const userData = {
           uid: user.uid,
           email: email,
+          firstName: sanitizedFirstName,
+          lastName: sanitizedLastName,
           name: sanitizedName,
           userType: currentUserType,
           createdAt: new Date().toISOString(),
