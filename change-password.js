@@ -1,17 +1,6 @@
 // ===== Change Password Feature =====
-
-function togglePasswordVisibility(fieldId) {
-  const input = document.getElementById(fieldId);
-  const icon = document.getElementById(`icon-${fieldId}`);
-
-  if (input.type === 'password') {
-    input.type = 'text';
-    icon.textContent = '👁️‍🗨️';
-  } else {
-    input.type = 'password';
-    icon.textContent = '👁️';
-  }
-}
+// Note: togglePasswordVisibility is defined inline in dashboard.html
+// Do not define it here as it will override the inline version
 
 function openChangePasswordModal() {
   const modal = document.getElementById('changePasswordModal');
