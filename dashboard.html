@@ -1100,18 +1100,24 @@
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;">
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">ชื่อ-นามสกุล</label>
-            <input type="text" id="modalTenantName" placeholder="ชื่อผู้เช่า" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">ชื่อ</label>
+            <input type="text" id="modalTenantFirstName" placeholder="ชื่อ" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
+          <div>
+            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">นามสกุล</label>
+            <input type="text" id="modalTenantLastName" placeholder="นามสกุล" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;">
           <div>
             <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📱 โทรศัพท์</label>
             <input type="tel" id="modalTenantPhone" placeholder="0XX-XXX-XXXX" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
-        </div>
-
-        <div>
-          <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">💬 Line ID</label>
-          <input type="text" id="modalTenantLineID" placeholder="line_id (ตัวอักษรเล็ก เครื่องหมายขีด)" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+          <div>
+            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">💬 Line ID</label>
+            <input type="text" id="modalTenantLineID" placeholder="line_id (ตัวอักษรเล็ก เครื่องหมายขีด)" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+          </div>
         </div>
       </div>
 
@@ -4814,7 +4820,19 @@ function openTenantModal(roomId) {
   }
 
   // Fill form with tenant data
-  document.getElementById('modalTenantName').value = tenant.name || '';
+  // Handle both separate fields and combined name for backward compatibility
+  if (tenant.firstName || tenant.lastName) {
+    document.getElementById('modalTenantFirstName').value = tenant.firstName || '';
+    document.getElementById('modalTenantLastName').value = tenant.lastName || '';
+  } else if (tenant.name) {
+    // Split combined name into first and last (simple split by space)
+    const nameParts = (tenant.name || '').trim().split(' ');
+    document.getElementById('modalTenantFirstName').value = nameParts[0] || '';
+    document.getElementById('modalTenantLastName').value = nameParts.slice(1).join(' ') || '';
+  } else {
+    document.getElementById('modalTenantFirstName').value = '';
+    document.getElementById('modalTenantLastName').value = '';
+  }
   document.getElementById('modalTenantPhone').value = tenant.phone || '';
   document.getElementById('modalTenantLineID').value = tenant.lineID || '';
   document.getElementById('modalTenantMoveIn').value = tenant.moveInDate || '';
@@ -4837,8 +4855,15 @@ function saveTenantInfo() {
   // Load current tenants
   const allTenants = loadTenants();
 
+  // Read separate firstName and lastName
+  const firstName = document.getElementById('modalTenantFirstName').value.trim();
+  const lastName = document.getElementById('modalTenantLastName').value.trim();
+  const fullName = firstName && lastName ? `${firstName} ${lastName}` : (firstName || lastName || '');
+
   const tenantData = {
-    name: document.getElementById('modalTenantName').value,
+    firstName: firstName,
+    lastName: lastName,
+    name: fullName, // Keep combined name for backward compatibility and display
     phone: document.getElementById('modalTenantPhone').value,
     lineID: document.getElementById('modalTenantLineID').value,
     moveInDate: document.getElementById('modalTenantMoveIn').value,
