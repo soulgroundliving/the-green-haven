@@ -1,0 +1,62 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        // Allow users to write their own data during registration
+        ".write": "$uid === auth.uid || root.child('users').child($uid).exists() === false",
+        ".read": "$uid === auth.uid || auth.uid !== null",
+        ".validate": "newData.hasChildren(['uid', 'email', 'name', 'userType', 'createdAt', 'timestamp', 'expiresAt'])"
+      }
+    },
+    "financials": {
+      "expenses": {
+        ".read": "root.child('users').child(auth.uid).child('userType').val() === 'admin' || root.child('users').child(auth.uid).child('userType').val() === 'accountant'",
+        ".write": "root.child('users').child(auth.uid).child('userType').val() === 'admin' || root.child('users').child(auth.uid).child('userType').val() === 'accountant'",
+        "$month": {
+          ".read": true,
+          ".write": "root.child('users').child(auth.uid).child('userType').val() === 'admin' || root.child('users').child(auth.uid).child('userType').val() === 'accountant'",
+          "$expenseId": {
+            ".read": true,
+            ".write": "root.child('users').child(auth.uid).child('userType').val() === 'admin' || root.child('users').child(auth.uid).child('userType').val() === 'accountant'"
+          }
+        }
+      },
+      "tax_withholding": {
+        ".read": "root.child('users').child(auth.uid).child('userType').val() === 'admin' || root.child('users').child(auth.uid).child('userType').val() === 'accountant'",
+        ".write": "root.child('users').child(auth.uid).child('userType').val() === 'admin' || root.child('users').child(auth.uid).child('userType').val() === 'accountant'"
+      }
+    },
+    "bills": {
+      ".read": "auth.uid !== null",
+      ".write": "root.child('users').child(auth.uid).child('userType').val() === 'admin'",
+      "$billId": {
+        ".read": "auth.uid !== null",
+        ".write": "root.child('users').child(auth.uid).child('userType').val() === 'admin'"
+      }
+    },
+    "tenants": {
+      ".read": "root.child('users').child(auth.uid).child('userType').val() === 'admin' || auth.uid !== null",
+      ".write": "root.child('users').child(auth.uid).child('userType').val() === 'admin'",
+      "$tenantId": {
+        ".read": "auth.uid !== null",
+        ".write": "root.child('users').child(auth.uid).child('userType').val() === 'admin'"
+      }
+    },
+    "maintenance": {
+      ".read": "auth.uid !== null",
+      ".write": "root.child('users').child(auth.uid).child('userType').val() === 'admin'",
+      "$requestId": {
+        ".read": "auth.uid !== null",
+        ".write": "root.child('users').child(auth.uid).child('userType').val() === 'admin'"
+      }
+    },
+    "audit_logs": {
+      ".read": "root.child('users').child(auth.uid).child('userType').val() === 'admin' || root.child('users').child(auth.uid).child('userType').val() === 'accountant'",
+      ".write": "auth.uid !== null",
+      "$logId": {
+        ".read": "root.child('users').child(auth.uid).child('userType').val() === 'admin' || root.child('users').child(auth.uid).child('userType').val() === 'accountant'",
+        ".write": "auth.uid !== null"
+      }
+    }
+  }
+}
