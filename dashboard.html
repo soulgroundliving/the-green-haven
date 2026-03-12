@@ -184,6 +184,15 @@
       window.SecurityUtils.secureLogout();
     }
   };
+
+  window.goToAccounting = function() {
+    const user = window.SecurityUtils.getSecureSession();
+    if (user && (user.userType === 'admin' || user.userType === 'accountant')) {
+      window.location.href = 'accounting.html';
+    } else {
+      alert('⛔ เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบบัญชี');
+    }
+  };
 </script>
 
 <!-- Firebase Monitoring Panel Controller -->
@@ -655,6 +664,7 @@
     <button class="nav-btn" onclick="showPage('tenant-portal',this)">🏠 ข้อมูลผู้เช่า</button>
     <button class="nav-btn" onclick="showPage('analytics',this)">📈 วิเคราะห์</button>
     <button class="nav-btn" onclick="showPage('contract',this)">📄 สัญญา</button>
+    <button class="nav-btn" onclick="goToAccounting()">💰 บัญชี</button>
     <button class="nav-btn" onclick="handleLogout()" style="background:rgba(255,76,76,0.2);color:#c62828;">🚪 Logout</button>
   </nav>
 </div>
