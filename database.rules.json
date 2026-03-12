@@ -1,60 +1,32 @@
 {
   "rules": {
+    ".read": "auth.uid !== null",
+    ".write": "auth.uid !== null",
     "users": {
       "$uid": {
-        ".write": "auth.uid === $uid",
-        ".read": "auth.uid === $uid || auth.uid !== null"
+        ".read": "auth.uid !== null",
+        ".write": "auth.uid === $uid"
       }
     },
     "financials": {
-      "expenses": {
-        ".read": "auth.uid !== null",
-        ".write": "auth.uid !== null",
-        "$month": {
-          ".read": "auth.uid !== null",
-          ".write": "auth.uid !== null",
-          "$expenseId": {
-            ".read": "auth.uid !== null",
-            ".write": "auth.uid !== null"
-          }
-        }
-      },
-      "tax_withholding": {
-        ".read": "auth.uid !== null",
-        ".write": "auth.uid !== null"
-      }
+      ".read": "auth.uid !== null",
+      ".write": "auth.uid !== null"
     },
     "bills": {
       ".read": "auth.uid !== null",
-      ".write": "auth.uid !== null",
-      "$billId": {
-        ".read": "auth.uid !== null",
-        ".write": "auth.uid !== null"
-      }
+      ".write": "auth.uid !== null"
     },
     "tenants": {
       ".read": "auth.uid !== null",
-      ".write": "auth.uid !== null",
-      "$tenantId": {
-        ".read": "auth.uid !== null",
-        ".write": "auth.uid !== null"
-      }
+      ".write": "auth.uid !== null"
     },
     "maintenance": {
       ".read": "auth.uid !== null",
-      ".write": "auth.uid !== null",
-      "$requestId": {
-        ".read": "auth.uid !== null",
-        ".write": "auth.uid !== null"
-      }
+      ".write": "auth.uid !== null"
     },
     "audit_logs": {
       ".read": "auth.uid !== null",
-      ".write": "auth.uid !== null",
-      "$logId": {
-        ".read": "auth.uid !== null",
-        ".write": "auth.uid !== null"
-      }
+      ".write": "auth.uid !== null"
     }
   }
 }
