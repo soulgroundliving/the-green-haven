@@ -212,6 +212,37 @@
       font-weight: 600;
       cursor: pointer;
     }
+
+    /* Password Toggle Styles */
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-wrapper input {
+      flex: 1;
+      padding-right: 40px;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: #6b7a8d;
+      padding: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s;
+    }
+
+    .password-toggle:hover {
+      color: #2d8653;
+    }
   </style>
 </head>
 <body>
@@ -241,7 +272,10 @@
 
         <div class="form-group">
           <label>Password</label>
-          <input type="password" id="loginPassword" required placeholder="••••••••">
+          <div class="password-wrapper">
+            <input type="password" id="loginPassword" required placeholder="••••••••">
+            <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)">👁️</button>
+          </div>
         </div>
 
         <div class="forgot-password">
@@ -265,7 +299,10 @@
 
         <div class="form-group">
           <label>Password</label>
-          <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6" oninput="updatePasswordStrength()">
+          <div class="password-wrapper">
+            <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6" oninput="updatePasswordStrength()">
+            <button type="button" class="password-toggle" onclick="togglePassword('registerPassword', this)">👁️</button>
+          </div>
           <div id="passwordStrength" style="font-size:12px;margin-top:6px;padding:8px;background:#f5f5f5;border-radius:4px;display:none;">
             <div id="strengthFeedback">ตรวจสอบความแข็งแรง...</div>
             <div style="margin-top:6px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
@@ -279,7 +316,10 @@
 
         <div class="form-group">
           <label>ยืนยัน Password</label>
-          <input type="password" id="registerPasswordConfirm" required placeholder="••••••••">
+          <div class="password-wrapper">
+            <input type="password" id="registerPasswordConfirm" required placeholder="••••••••">
+            <button type="button" class="password-toggle" onclick="togglePassword('registerPasswordConfirm', this)">👁️</button>
+          </div>
         </div>
 
         <div id="tenantFields" style="display: none;">
@@ -354,6 +394,13 @@
       } else {
         tenantFields.style.display = 'none';
       }
+    }
+
+    function togglePassword(fieldId, button) {
+      const field = document.getElementById(fieldId);
+      const isPassword = field.type === 'password';
+      field.type = isPassword ? 'text' : 'password';
+      button.textContent = isPassword ? '🙈' : '👁️';
     }
 
     function toggleForm() {
