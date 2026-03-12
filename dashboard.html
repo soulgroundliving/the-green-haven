@@ -1060,75 +1060,96 @@
 </aside>
 
 <!-- ===== TENANT EDIT MODAL ===== -->
-<div class="modal" id="tenantModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
-  <div style="background:#fff;border-radius:var(--radius);padding:2rem;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-      <h2 style="margin:0;color:var(--text);">📋 ข้อมูลห้อง & ผู้เช่า</h2>
-      <button onclick="closeTenantModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-muted);">✕</button>
-    </div>
-
-    <!-- Room Status -->
-    <div style="background:#f5f5f5;padding:1rem;border-radius:8px;margin-bottom:1.2rem;border-left:4px solid var(--green);">
-      <div style="font-weight:700;font-size:.95rem;margin-bottom:.5rem;display:flex;justify-content:space-between;">
-        <span id="modalRoomNumber">ห้อง —</span>
-        <span id="modalRoomStatus" style="padding:4px 10px;border-radius:4px;font-size:.8rem;background:var(--green-pale);color:var(--green-dark);">🟢 ว่าง</span>
-      </div>
-      <div style="font-size:.85rem;color:var(--text-muted);">
-        <div>ประเภท: <strong id="modalRoomType">—</strong></div>
-        <div>ค่าเช่า: <strong id="modalRoomRent">฿0</strong>/เดือน</div>
-      </div>
-    </div>
-
-    <!-- Tenant Information Form -->
-    <div style="margin-bottom:1.2rem;">
-      <div style="font-weight:700;font-size:.95rem;color:var(--text-dark);margin-bottom:1rem;display:flex;align-items:center;gap:8px;">
-        👤 ข้อมูลผู้เช่า
-        <span id="modalOccupancyBadge" style="padding:2px 8px;font-size:.7rem;background:#e3f2fd;color:#1565c0;border-radius:4px;font-weight:600;">ว่าง</span>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div>
-          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">ชื่อ-นามสกุล</label>
-          <input type="text" id="modalTenantName" placeholder="ชื่อผู้เช่า" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
-        </div>
-        <div>
-          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">เบอร์โทรศัพท์</label>
-          <input type="tel" id="modalTenantPhone" placeholder="0XX-XXX-XXXX" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div>
-          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Line ID</label>
-          <input type="text" id="modalTenantLineID" placeholder="Line ID" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
-        </div>
-        <div>
-          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">วันเข้าพัก</label>
-          <input type="date" id="modalTenantMoveIn" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div>
-          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">สัญญาสิ้นสุด</label>
-          <input type="date" id="modalTenantContractEnd" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
-        </div>
-        <div>
-          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">มัดจำ (บาท)</label>
-          <input type="number" id="modalTenantDeposit" placeholder="0" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
-        </div>
-      </div>
-
+<div class="modal" id="tenantModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;padding:1rem;backdrop-filter:blur(2px);">
+  <div style="background:#fff;border-radius:var(--radius);max-width:680px;width:100%;max-height:95vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;">
+    <!-- Modal Header with Gradient -->
+    <div style="background:linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
       <div>
-        <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">หมายเหตุ</label>
-        <textarea id="modalTenantNotes" placeholder="หมายเหตุเพิ่มเติม..." rows="3" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;resize:vertical;"></textarea>
+        <h2 style="margin:0;font-size:1.25rem;font-weight:700;">📋 จัดการข้อมูลห้อง</h2>
+        <small style="opacity:.85;font-size:.85rem;">แก้ไขข้อมูลผู้เช่าและสัญญา</small>
+      </div>
+      <button onclick="closeTenantModal()" style="background:rgba(255,255,255,.2);border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:all .2s;hover:background:rgba(255,255,255,.3);">✕</button>
+    </div>
+
+    <!-- Modal Content -->
+    <div style="padding:2rem;overflow-y:auto;flex:1;">
+
+      <!-- Room Status Section -->
+      <div style="background:linear-gradient(135deg, var(--green-pale) 0%, #f0f7f0 100%);padding:1.5rem;border-radius:var(--radius-sm);margin-bottom:2rem;border:2px solid var(--green-light);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1.5rem;">
+          <div>
+            <div style="font-weight:700;font-size:1.15rem;color:var(--green-dark);margin-bottom:.5rem;">
+              <span id="modalRoomNumber">ห้อง —</span>
+            </div>
+            <div style="font-size:.9rem;color:var(--text-muted);line-height:1.6;">
+              <div style="margin-bottom:.5rem;"><strong id="modalRoomType" style="color:var(--text);">—</strong></div>
+              <div>ค่าเช่า: <strong style="color:var(--green-dark);font-size:1.1rem;" id="modalRoomRent">฿0</strong>/เดือน</div>
+            </div>
+          </div>
+          <span id="modalRoomStatus" style="padding:10px 18px;border-radius:25px;font-size:.85rem;background:#fff;color:var(--green-dark);font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.1);">🟢 ว่าง</span>
+        </div>
+      </div>
+
+      <!-- Tenant Information Section -->
+      <div style="margin-bottom:2.5rem;">
+        <div style="font-weight:700;font-size:1rem;color:var(--text);margin-bottom:1.3rem;display:flex;align-items:center;gap:10px;padding-bottom:1rem;border-bottom:3px solid var(--green-pale);">
+          <span style="font-size:1.3rem;">👤</span>
+          <span>ข้อมูลผู้เช่า</span>
+          <span id="modalOccupancyBadge" style="margin-left:auto;padding:5px 14px;font-size:.75rem;background:var(--blue-pale);color:var(--blue);border-radius:14px;font-weight:700;">ว่าง</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;">
+          <div>
+            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">ชื่อ-นามสกุล</label>
+            <input type="text" id="modalTenantName" placeholder="ชื่อผู้เช่า" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+          </div>
+          <div>
+            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📱 โทรศัพท์</label>
+            <input type="tel" id="modalTenantPhone" placeholder="0XX-XXX-XXXX" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">💬 Line ID</label>
+          <input type="text" id="modalTenantLineID" placeholder="line_id (ตัวอักษรเล็ก เครื่องหมายขีด)" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+        </div>
+      </div>
+
+      <!-- Contract Information Section -->
+      <div style="margin-bottom:2rem;">
+        <div style="font-weight:700;font-size:1rem;color:var(--text);margin-bottom:1.3rem;display:flex;align-items:center;gap:10px;padding-bottom:1rem;border-bottom:3px solid var(--accent-light);">
+          <span style="font-size:1.3rem;">📅</span>
+          <span>ข้อมูลสัญญา</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;">
+          <div>
+            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📍 วันเข้าพัก</label>
+            <input type="date" id="modalTenantMoveIn" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+          </div>
+          <div>
+            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">⏰ สัญญาสิ้นสุด</label>
+            <input type="date" id="modalTenantContractEnd" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">💰 มัดจำ (บาท)</label>
+          <input type="number" id="modalTenantDeposit" placeholder="0" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+        </div>
+      </div>
+
+      <!-- Additional Notes Section -->
+      <div>
+        <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📝 หมายเหตุเพิ่มเติม</label>
+        <textarea id="modalTenantNotes" placeholder="เช่น หมายเหตุพิเศษ เงื่อนไข ข้อตกลงอื่น..." rows="3" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;resize:vertical;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'"></textarea>
       </div>
     </div>
 
-    <!-- Action Buttons -->
-    <div style="display:flex;gap:10px;margin-top:1.5rem;">
-      <button onclick="saveTenantInfo()" style="flex:1;padding:12px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;">💾 บันทึก</button>
-      <button onclick="closeTenantModal()" style="flex:1;padding:12px;background:var(--border);color:var(--text);border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;">ปิด</button>
+    <!-- Modal Footer -->
+    <div style="padding:1.5rem 2rem;background:#f9fafb;border-top:1px solid var(--border);display:flex;gap:12px;flex-shrink:0;">
+      <button onclick="saveTenantInfo()" style="flex:1;padding:14px 24px;background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;box-shadow:0 4px 12px rgba(45,134,83,.2);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(45,134,83,.4)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(45,134,83,.2)'">💾 บันทึกข้อมูล</button>
+      <button onclick="closeTenantModal()" style="flex:1;padding:14px 24px;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;" onmouseover="this.style.background='#d0d7e0'" onmouseout="this.style.background='var(--border)'">ปิด</button>
     </div>
   </div>
 </div>

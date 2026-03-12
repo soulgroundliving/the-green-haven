@@ -342,24 +342,154 @@
       gap: 1rem;
     }
 
+    .form-section {
+      padding: 1.5rem;
+      background: linear-gradient(135deg, var(--green-pale) 0%, rgba(232,245,233,0.5) 100%);
+      border-radius: var(--radius-sm);
+      margin-bottom: 1.5rem;
+      border-left: 4px solid var(--green);
+    }
+
+    .form-section-title {
+      font-weight: 700;
+      font-size: .95rem;
+      color: var(--green-dark);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .error-message {
       background: var(--red-pale);
       color: var(--red);
-      padding: 12px;
+      padding: 12px 15px;
       border-radius: var(--radius-sm);
       margin-bottom: 1rem;
       border-left: 4px solid var(--red);
       display: none;
+      font-weight: 500;
     }
 
     .success-message {
       background: var(--green-pale);
       color: var(--green-dark);
-      padding: 12px;
+      padding: 12px 15px;
       border-radius: var(--radius-sm);
       margin-bottom: 1rem;
       border-left: 4px solid var(--green);
       display: none;
+      font-weight: 500;
+    }
+
+    .info-message {
+      background: var(--blue-pale);
+      color: var(--blue);
+      padding: 12px 15px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      border-left: 4px solid var(--blue);
+      display: none;
+      font-weight: 500;
+    }
+
+    .expense-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1.2rem;
+      margin-bottom: .8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all .2s;
+    }
+
+    .expense-card:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translateX(4px);
+    }
+
+    .expense-card-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: var(--green-pale);
+      margin-right: 1rem;
+    }
+
+    .expense-card-info {
+      flex: 1;
+    }
+
+    .expense-card-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: .25rem;
+    }
+
+    .expense-card-date {
+      font-size: .8rem;
+      color: var(--text-muted);
+    }
+
+    .expense-card-amount {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--green-dark);
+      text-align: right;
+    }
+
+    .quick-stat {
+      background: linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%);
+      padding: 1rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: .8rem;
+      border-left: 4px solid var(--green);
+    }
+
+    .quick-stat-label {
+      font-size: .8rem;
+      color: var(--text-muted);
+      margin-bottom: .4rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .quick-stat-value {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--green-dark);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .status-badge-paid {
+      background: var(--green-pale);
+      color: var(--green-dark);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+
+    .status-badge-pending {
+      background: var(--accent-light);
+      color: #e65100;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 700;
     }
 
     @media (max-width: 900px) {
