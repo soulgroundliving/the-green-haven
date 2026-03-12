@@ -1015,14 +1015,6 @@
       </button>
     </div>
 
-    <!-- People -->
-    <div class="sidebar-group">
-      <div class="sidebar-group-title">People</div>
-      <button class="sidebar-item" onclick="showPage('tenant', this)">
-        <span class="sidebar-item-icon">👥</span>ผู้เช่า & สัญญา
-      </button>
-    </div>
-
     <!-- Finance -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Finance</div>
@@ -1067,6 +1059,80 @@
   </div>
 </aside>
 
+<!-- ===== TENANT EDIT MODAL ===== -->
+<div class="modal" id="tenantModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <h2 style="margin:0;color:var(--text-dark);">📋 ข้อมูลห้อง & ผู้เช่า</h2>
+      <button onclick="closeTenantModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-muted);">✕</button>
+    </div>
+
+    <!-- Room Status -->
+    <div style="background:#f5f5f5;padding:1rem;border-radius:8px;margin-bottom:1.2rem;border-left:4px solid var(--green);">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:.5rem;display:flex;justify-content:space-between;">
+        <span id="modalRoomNumber">ห้อง —</span>
+        <span id="modalRoomStatus" style="padding:4px 10px;border-radius:4px;font-size:.8rem;background:var(--green-pale);color:var(--green-dark);">🟢 ว่าง</span>
+      </div>
+      <div style="font-size:.85rem;color:var(--text-muted);">
+        <div>ประเภท: <strong id="modalRoomType">—</strong></div>
+        <div>ค่าเช่า: <strong id="modalRoomRent">฿0</strong>/เดือน</div>
+      </div>
+    </div>
+
+    <!-- Tenant Information Form -->
+    <div style="margin-bottom:1.2rem;">
+      <div style="font-weight:700;font-size:.95rem;color:var(--text-dark);margin-bottom:1rem;display:flex;align-items:center;gap:8px;">
+        👤 ข้อมูลผู้เช่า
+        <span id="modalOccupancyBadge" style="padding:2px 8px;font-size:.7rem;background:#e3f2fd;color:#1565c0;border-radius:4px;font-weight:600;">ว่าง</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">ชื่อ-นามสกุล</label>
+          <input type="text" id="modalTenantName" placeholder="ชื่อผู้เช่า" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
+        </div>
+        <div>
+          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">เบอร์โทรศัพท์</label>
+          <input type="tel" id="modalTenantPhone" placeholder="0XX-XXX-XXXX" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Line ID</label>
+          <input type="text" id="modalTenantLineID" placeholder="Line ID" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
+        </div>
+        <div>
+          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">วันเข้าพัก</label>
+          <input type="date" id="modalTenantMoveIn" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">สัญญาสิ้นสุด</label>
+          <input type="date" id="modalTenantContractEnd" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
+        </div>
+        <div>
+          <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">มัดจำ (บาท)</label>
+          <input type="number" id="modalTenantDeposit" placeholder="0" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;">
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:.85rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">หมายเหตุ</label>
+        <textarea id="modalTenantNotes" placeholder="หมายเหตุเพิ่มเติม..." rows="3" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;resize:vertical;"></textarea>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display:flex;gap:10px;margin-top:1.5rem;">
+      <button onclick="saveTenantInfo()" style="flex:1;padding:12px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;">💾 บันทึก</button>
+      <button onclick="closeTenantModal()" style="flex:1;padding:12px;background:var(--border);color:var(--text);border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;">ปิด</button>
+    </div>
+  </div>
+</div>
+
 <div class="main">
 
 <!-- ===== DASHBOARD ===== -->
@@ -1081,7 +1147,7 @@
   <div class="kpi-grid">
     <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-label">รายได้รวมทั้งปี</div><div class="kpi-value green" id="kpi-total">฿0</div><div class="kpi-sub" id="kpi-total-sub"></div></div>
     <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
-    <div class="kpi-card blue" style="cursor:pointer;" onclick="showPage('tenant',document.querySelector('[onclick*=\'tenant\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (ห้องแถว)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
+    <div class="kpi-card blue" style="cursor:pointer;" onclick="showPage('rooms',document.querySelector('[onclick*=\'rooms\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (ห้องแถว)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
     <div class="kpi-card purple" style="cursor:pointer;" onclick="showPage('bill',document.querySelector('[onclick*=\'bill\']'))"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
   </div>
   <div class="charts-grid">
@@ -1207,11 +1273,11 @@
       </div>
     </div>
     <div class="floor-rooms">
-      <div class="new-room-pill daily"><div class="nr-num">101</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
-      <div class="new-room-pill daily"><div class="nr-num">102</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
-      <div class="new-room-pill daily"><div class="nr-num">103</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
-      <div class="new-room-pill studio"><div class="nr-num">104</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill studio"><div class="nr-num">105</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">101</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">102</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">103</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">104</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">105</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
     </div>
   </div>
 
@@ -1231,11 +1297,11 @@
       </div>
     </div>
     <div class="floor-rooms">
-      <div class="new-room-pill studio"><div class="nr-num">201</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill studio"><div class="nr-num">202</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill studio"><div class="nr-num">203</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill studio"><div class="nr-num">204</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill studio"><div class="nr-num">205</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">201</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">202</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">203</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">204</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">205</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
     </div>
   </div>
 
@@ -1255,11 +1321,11 @@
       </div>
     </div>
     <div class="floor-rooms">
-      <div class="new-room-pill pet"><div class="nr-num">301</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill pet"><div class="nr-num">302</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill pet"><div class="nr-num">303</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill pet"><div class="nr-num">304</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill pet"><div class="nr-num">305</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">301</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">302</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">303</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">304</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">305</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
     </div>
   </div>
 
@@ -1279,11 +1345,11 @@
       </div>
     </div>
     <div class="floor-rooms">
-      <div class="new-room-pill pet"><div class="nr-num">401</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill pet"><div class="nr-num">402</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill pet"><div class="nr-num">403</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill pet"><div class="nr-num">404</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill pet"><div class="nr-num">405</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">401</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">402</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">403</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">404</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">405</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
     </div>
   </div>
 
@@ -2105,13 +2171,18 @@ function initDashboardCharts(){
 
 // ===== ROOMS PAGE =====
 function initRoomsPage(){
+  const allTenants = loadTenants();
   const grid=document.getElementById('roomGrid');
-  grid.innerHTML=ROOMS_OLD.map(r=>`
-    <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}">
+  grid.innerHTML=ROOMS_OLD.map(r=>{
+    const tenant = allTenants[r.id];
+    const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
+    return `
+    <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" onclick="openTenantModal('${r.id}')" style="cursor:pointer;transition:transform 0.2s;">
       <div class="room-num">${r.id}</div>
       <div class="room-rent">฿${r.rent.toLocaleString()}/เดือน</div>
-      <div class="room-status">${r.type==='commercial'?'🏪 พาณิชย์':'✅ มีผู้เช่า'}</div>
-    </div>`).join('');
+      <div class="room-status">${r.type==='commercial'?'🏪 พาณิชย์':occupancyIcon + (tenant && tenant.name ? ' ' + tenant.name : ' ว่าง')}</div>
+    </div>`;
+  }).join('');
 
   const tbl=document.getElementById('roomTable');
   const rentT=ROOMS_OLD.filter(r=>r.type==='room').reduce((a,r)=>a+r.rent,0);
@@ -2143,16 +2214,24 @@ function initRoomsPage(){
 
 // ===== COMPACT ROOM GRID RENDERING =====
 function renderCompactRoomGrid(){
+  const allTenants = loadTenants();
   const searchInput=document.getElementById('roomCompactSearch');
   const searchTerm=(searchInput?.value||'').toLowerCase();
   const filtered=ROOMS_OLD.filter(r=>r.id.toString().toLowerCase().includes(searchTerm));
   const grid=document.getElementById('roomCompactGrid');
 
-  grid.innerHTML=filtered.map(r=>`
+  grid.innerHTML=filtered.map(r=>{
+    const tenant = allTenants[r.id];
+    const occupancyLabel = tenant && tenant.name ? `✅ ${tenant.name}` : '🚪 ว่าง';
+    return `
     <div class="compact-card ${r.type==='commercial'?'':''}" style="border-left-color:${r.type==='commercial'?'var(--blue)':'var(--green)'}">
       <div class="compact-card-header">
         <div class="compact-card-id">${r.id}</div>
         <span class="compact-card-type">${r.type==='commercial'?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
+      </div>
+      <div class="compact-card-info">
+        <span>ผู้เช่า</span>
+        <span class="compact-card-value">${occupancyLabel}</span>
       </div>
       <div class="compact-card-info">
         <span>ค่าเช่า</span>
@@ -2174,7 +2253,8 @@ function renderCompactRoomGrid(){
         <button class="compact-btn compact-btn-view" onclick="editRoom('${r.id}')">📝 แก้ไข</button>
         <button class="compact-btn compact-btn-edit" onclick="viewRoomDetails('${r.id}')">👁️ ดู</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   if(filtered.length===0){
     grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted);">ไม่พบห้องที่ค้นหา</div>';
@@ -2205,8 +2285,8 @@ function toggleRoomView(view, btn){
   }
 }
 
-function editRoom(roomId){alert('✏️ แก้ไขห้อง '+roomId);}
-function viewRoomDetails(roomId){alert('👁️ ดูรายละเอียดห้อง '+roomId);}
+function editRoom(roomId){openTenantModal(roomId);}
+function viewRoomDetails(roomId){openTenantModal(roomId);}
 
 // ===== MONTHLY PAGE =====
 let monthlyYear='67';
@@ -4437,6 +4517,128 @@ function renderAnalyticsPage(){
     }
   }
 }
+
+// ===== TENANT MODAL MANAGEMENT =====
+let currentEditRoomId = null;
+
+function openTenantModal(roomId) {
+  currentEditRoomId = roomId;
+  const modal = document.getElementById('tenantModal');
+
+  // Load current tenant data
+  const allTenants = loadTenants();
+  const tenant = allTenants[roomId] || {};
+
+  // Find room info - handle both old and new building
+  let room;
+  if (roomId.startsWith('N')) {
+    // New building room
+    room = ROOMS_NEW?.find(r => r.id === roomId) || {rent: 5600, type: 'studio'};
+  } else {
+    // Old building room
+    room = ROOMS_OLD?.find(r => r.id === roomId) || {rent: 1200, type: 'room'};
+  }
+
+  // Update room info
+  document.getElementById('modalRoomNumber').textContent = `ห้อง ${roomId}`;
+  const roomType = room.type === 'commercial' ? '🏪 พาณิชย์' : (room.petFriendly ? '🐾 Pet Friendly' : '🏠 ห้องพัก');
+  document.getElementById('modalRoomType').textContent = roomType;
+  document.getElementById('modalRoomRent').textContent = (room.rent || 0).toLocaleString();
+
+  // Determine occupancy status
+  const isOccupied = tenant && tenant.name;
+  const statusBadge = document.getElementById('modalRoomStatus');
+  const occupancyBadge = document.getElementById('modalOccupancyBadge');
+
+  if (isOccupied) {
+    statusBadge.textContent = '🟢 มีผู้เช่า';
+    statusBadge.style.background = 'var(--green-pale)';
+    statusBadge.style.color = 'var(--green-dark)';
+    occupancyBadge.textContent = 'มีผู้เช่า';
+    occupancyBadge.style.background = 'var(--green-pale)';
+    occupancyBadge.style.color = 'var(--green-dark)';
+  } else {
+    statusBadge.textContent = '🔴 ว่าง';
+    statusBadge.style.background = '#ffebee';
+    statusBadge.style.color = '#c62828';
+    occupancyBadge.textContent = 'ว่าง';
+    occupancyBadge.style.background = '#e3f2fd';
+    occupancyBadge.style.color = '#1565c0';
+  }
+
+  // Fill form with tenant data
+  document.getElementById('modalTenantName').value = tenant.name || '';
+  document.getElementById('modalTenantPhone').value = tenant.phone || '';
+  document.getElementById('modalTenantLineID').value = tenant.lineID || '';
+  document.getElementById('modalTenantMoveIn').value = tenant.moveInDate || '';
+  document.getElementById('modalTenantContractEnd').value = tenant.contractEnd || '';
+  document.getElementById('modalTenantDeposit').value = tenant.deposit || '';
+  document.getElementById('modalTenantNotes').value = tenant.notes || '';
+
+  // Show modal
+  modal.style.display = 'flex';
+}
+
+function closeTenantModal() {
+  document.getElementById('tenantModal').style.display = 'none';
+  currentEditRoomId = null;
+}
+
+function saveTenantInfo() {
+  if (!currentEditRoomId) return;
+
+  // Load current tenants
+  const allTenants = loadTenants();
+
+  const tenantData = {
+    name: document.getElementById('modalTenantName').value,
+    phone: document.getElementById('modalTenantPhone').value,
+    lineID: document.getElementById('modalTenantLineID').value,
+    moveInDate: document.getElementById('modalTenantMoveIn').value,
+    contractEnd: document.getElementById('modalTenantContractEnd').value,
+    deposit: parseFloat(document.getElementById('modalTenantDeposit').value) || 0,
+    notes: document.getElementById('modalTenantNotes').value
+  };
+
+  // Save to central data store
+  allTenants[currentEditRoomId] = tenantData;
+
+  // Persist to localStorage
+  localStorage.setItem('tenant_data', JSON.stringify(allTenants));
+
+  // Sync to Firebase if available
+  if (window.saveToFirebase) {
+    window.saveToFirebase('data/tenants', allTenants);
+  }
+
+  // Log the action
+  if (window.AuditLogger) {
+    AuditLogger.log('TENANT_UPDATED', {roomId: currentEditRoomId, changes: Object.keys(tenantData).filter(k => tenantData[k])});
+  }
+
+  // Close modal and refresh the current page
+  closeTenantModal();
+  const currentPage = document.querySelector('.page.active');
+  if (currentPage && currentPage.id === 'page-rooms') {
+    initRoomsPage();
+    renderCompactRoomGrid();
+  } else if (currentPage && currentPage.id === 'page-newbuild') {
+    // Refresh new building page
+    const activeBtn = document.querySelector('[onclick*="newbuild"]');
+    if (activeBtn) showPage('newbuild', activeBtn);
+  }
+
+  // Show success message
+  alert('✅ บันทึกข้อมูลสำเร็จ');
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('tenantModal');
+  if (modal && e.target === modal) {
+    closeTenantModal();
+  }
+});
 </script>
 
 <!-- ===== PAYMENT DETAIL MODAL ===== -->
