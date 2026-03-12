@@ -328,6 +328,13 @@
     window.database = database;
     window.firebaseDB = { ref, set, get };
 
+    // Export Firebase Auth functions to global scope
+    window.firebaseAuthFunctions = {
+      createUserWithEmailAndPassword: (email, password) => createUserWithEmailAndPassword(auth, email, password),
+      signInWithEmailAndPassword: (email, password) => signInWithEmailAndPassword(auth, email, password),
+      sendPasswordResetEmail: (email) => sendPasswordResetEmail(auth, email)
+    };
+
     console.log('✅ Firebase Auth initialized');
   </script>
 
@@ -487,7 +494,7 @@
           return;
         }
 
-        const userCredential = await window.auth.signInWithEmailAndPassword(email, password);
+        const userCredential = await window.firebaseAuthFunctions.signInWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
         // Get user data from database
@@ -616,7 +623,7 @@
 
       try {
         // Create auth user
-        const userCredential = await window.auth.createUserWithEmailAndPassword(email, password);
+        const userCredential = await window.firebaseAuthFunctions.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
         // Save user data
@@ -680,7 +687,7 @@
     function showForgotPassword() {
       const email = prompt('กรุณากรอกอีเมลของคุณ:');
       if (email) {
-        window.auth.sendPasswordResetEmail(email).then(() => {
+        window.firebaseAuthFunctions.sendPasswordResetEmail(email).then(() => {
           showMessage('ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว', false);
         }).catch(error => {
           showMessage(error.message);
