@@ -653,19 +653,40 @@
   </div>
   <nav class="header-nav">
     <button class="nav-btn active" onclick="showPage('dashboard',this)">📊 Dashboard</button>
-    <button class="nav-btn" onclick="showPage('rooms',this)">🏠 ห้องแถว</button>
-    <button class="nav-btn" onclick="showPage('newbuild',this)">🏗️ Nest</button>
-    <button class="nav-btn" onclick="showPage('tenant',this)">👥 ผู้เช่า</button>
-    <button class="nav-btn" onclick="showPage('monthly',this)">📅 รายเดือน</button>
-    <button class="nav-btn" onclick="showPage('bill',this)">🧾 ออกบิล <span class="nav-badge" id="billBadge" style="display:none">0</span></button>
-    <button class="nav-btn" onclick="showPage('payment-verify',this)">💳 ยืนยันการชำระ <span class="nav-badge" id="paymentBadge" style="display:none">0</span></button>
-    <button class="nav-btn" onclick="showPage('expense',this)">💸 ค่าใช้จ่าย</button>
-    <button class="nav-btn" onclick="showPage('maintenance',this)">🔧 แจ้งซ่อม <span class="nav-badge" id="mxBadge" style="display:none">0</span></button>
-    <button class="nav-btn" onclick="showPage('tenant-portal',this)">🏠 ข้อมูลผู้เช่า</button>
-    <button class="nav-btn" onclick="showPage('analytics',this)">📈 วิเคราะห์</button>
-    <button class="nav-btn" onclick="showPage('contract',this)">📄 สัญญา</button>
-    <button class="nav-btn" onclick="goToAccounting()">💰 บัญชี</button>
-    <button class="nav-btn" onclick="handleLogout()" style="background:rgba(255,76,76,0.2);color:#c62828;">🚪 Logout</button>
+
+    <!-- Rooms Group -->
+    <div class="nav-group" style="border-top:1px solid rgba(45,134,83,0.2);margin-top:4px;padding-top:4px;">
+      <button class="nav-btn" onclick="showPage('rooms',this)">🏠 ห้องแถว</button>
+      <button class="nav-btn" onclick="showPage('newbuild',this)" style="padding-left:32px;font-size:0.9rem;">└ Nest</button>
+    </div>
+
+    <!-- Tenants Group -->
+    <div class="nav-group" style="border-top:1px solid rgba(45,134,83,0.2);margin-top:4px;padding-top:4px;">
+      <button class="nav-btn" onclick="showPage('tenant',this)">👥 ผู้เช่า</button>
+      <button class="nav-btn" onclick="showPage('contract',this)" style="padding-left:32px;font-size:0.9rem;">└ สัญญา</button>
+      <button class="nav-btn" onclick="showPage('tenant-portal',this)" style="padding-left:32px;font-size:0.9rem;">└ ข้อมูลส่วนตัว</button>
+    </div>
+
+    <!-- Financial Group -->
+    <div class="nav-group" style="border-top:1px solid rgba(45,134,83,0.2);margin-top:4px;padding-top:4px;">
+      <button class="nav-btn" onclick="showPage('monthly',this)">📅 รายเดือน</button>
+      <button class="nav-btn" onclick="showPage('bill',this)" style="padding-left:32px;font-size:0.9rem;">└ ออกบิล <span class="nav-badge" id="billBadge" style="display:none">0</span></button>
+      <button class="nav-btn" onclick="showPage('payment-verify',this)" style="padding-left:32px;font-size:0.9rem;">└ ยืนยันการชำระ <span class="nav-badge" id="paymentBadge" style="display:none">0</span></button>
+      <button class="nav-btn" onclick="showPage('analytics',this)" style="padding-left:32px;font-size:0.9rem;">└ วิเคราะห์</button>
+    </div>
+
+    <!-- Operations Group -->
+    <div class="nav-group" style="border-top:1px solid rgba(45,134,83,0.2);margin-top:4px;padding-top:4px;">
+      <button class="nav-btn" onclick="showPage('maintenance',this)">🔧 แจ้งซ่อม <span class="nav-badge" id="mxBadge" style="display:none">0</span></button>
+      <button class="nav-btn" onclick="showPage('expense',this)" style="padding-left:32px;font-size:0.9rem;">└ ค่าใช้จ่าย</button>
+    </div>
+
+    <!-- Management Group -->
+    <div class="nav-group" style="border-top:1px solid rgba(45,134,83,0.2);margin-top:4px;padding-top:4px;">
+      <button class="nav-btn" onclick="goToAccounting()">💰 บัญชี</button>
+    </div>
+
+    <button class="nav-btn" onclick="handleLogout()" style="background:rgba(255,76,76,0.2);color:#c62828;border-top:1px solid rgba(255,76,76,0.2);margin-top:4px;padding-top:4px;">🚪 Logout</button>
   </nav>
 </div>
 
