@@ -1,5 +1,18 @@
 // ===== Change Password Feature =====
 
+function togglePasswordVisibility(fieldId) {
+  const input = document.getElementById(fieldId);
+  const icon = document.getElementById(`icon-${fieldId}`);
+
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.textContent = '👁️‍🗨️';
+  } else {
+    input.type = 'password';
+    icon.textContent = '👁️';
+  }
+}
+
 function openChangePasswordModal() {
   const modal = document.getElementById('changePasswordModal');
   if (modal) {
