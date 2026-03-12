@@ -86,7 +86,7 @@
 
     .user-type {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 12px;
       margin-bottom: 24px;
     }
@@ -225,6 +225,7 @@
       <!-- User Type Selection -->
       <div class="user-type">
         <button class="user-type-btn active" onclick="selectUserType('admin')">👨‍💼 Admin</button>
+        <button class="user-type-btn" onclick="selectUserType('accountant')">📊 บัญชี</button>
         <button class="user-type-btn" onclick="selectUserType('tenant')">👤 Tenant</button>
       </div>
 
