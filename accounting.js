@@ -1112,6 +1112,15 @@ function loadPaymentSlips() {
     const statusColor = slip.status === 'pending' ? '#ff9800' : slip.status === 'verified' ? '#4caf50' : '#c62828';
     const statusText = slip.status === 'pending' ? '⏳ รอตรวจสอบ' : slip.status === 'verified' ? '✅ ยืนยันแล้ว' : '❌ ปฏิเสธ';
 
+    let actionButton = '';
+    if (slip.status === 'pending') {
+      actionButton = `<button onclick="openSlipVerification('${slip.invoiceId}')" style="width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-family: 'Sarabun', sans-serif;">🔍 ตรวจสอบ</button>`;
+    } else if (slip.status === 'verified') {
+      actionButton = `<button onclick="openReceipt('${slip.invoiceId}')" style="width:100%;padding:10px;background:#1a5c38;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-family: 'Sarabun', sans-serif;">📄 ดูใบเสร็จ</button>`;
+    } else if (slip.status === 'rejected') {
+      actionButton = `<div style="background:#ffebee;padding:10px;border-radius:6px;text-align:center;color:#c62828;font-size:0.85rem;"><strong>เหตุผล:</strong> ${slip.rejectionReason || 'ไม่ชัดเจน'}</div>`;
+    }
+
     return `
       <div class="card" style="cursor:pointer;border-left:4px solid ${statusColor};">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
@@ -1124,9 +1133,8 @@ function loadPaymentSlips() {
             <div style="color:${statusColor};font-weight:700;font-size:.9rem;margin-top:.3rem;">${statusText}</div>
           </div>
         </div>
-        <button onclick="openSlipVerification('${slip.invoiceId}')" style="width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;">
-          🔍 ตรวจสอบ
-        </button>
+        ${slip.status === 'verified' && slip.receiptNumber ? `<div style="background:#e8f5e9;padding:8px;border-radius:4px;margin-bottom:10px;text-align:center;font-size:0.85rem;color:#2d8653;"><strong>เลขที่:</strong> ${slip.receiptNumber}</div>` : ''}
+        ${actionButton}
       </div>
     `;
   }).join('');
@@ -1217,10 +1225,23 @@ function approvePaymentSlip() {
   slips[slipIdx].notes = document.getElementById('verificationNotes').value;
 
   // Generate receipt number
-  slips[slipIdx].receiptNumber = `RCP-${slips[slipIdx].roomId}-${new Date().toLocaleDateString('th-TH', {year: '2-digit', month: '2-digit', day: '2-digit'}).replace(/\//g, '')}`;
+  const now = new Date();
+  const receiptDate = now.toLocaleDateString('th-TH', {year: '2-digit', month: '2-digit', day: '2-digit'}).replace(/\//g, '');
+  slips[slipIdx].receiptNumber = `RCP-${slips[slipIdx].roomId}-${receiptDate}`;
 
   // Save
   localStorage.setItem('tenant_slips', JSON.stringify(slips));
+
+  // Store receipt info in localStorage for receipt template
+  localStorage.setItem('currentReceiptInvoiceId', currentVerifyingSlip.invoiceId);
+  localStorage.setItem('lastReceipt', JSON.stringify({
+    invoiceId: currentVerifyingSlip.invoiceId,
+    roomId: slips[slipIdx].roomId,
+    receiptNumber: slips[slipIdx].receiptNumber,
+    amount: slips[slipIdx].amount,
+    approvedAt: slips[slipIdx].approvedAt
+  }));
+
   if (window.saveToFirebase) {
     const slipsObj = {};
     slips.forEach(s => {
@@ -1239,11 +1260,15 @@ function approvePaymentSlip() {
   }
 
   // Show success
-  showSuccess('ยืนยันการชำระแล้ว');
+  showSuccess('ยืนยันการชำระแล้ว ✅');
   setTimeout(() => {
     closeSlipModal();
     loadPaymentSlips();
     updatePaymentBadge();
+    // Show receipt generation option
+    setTimeout(() => {
+      showReceiptGeneration(slips[slipIdx].receiptNumber, slips[slipIdx].invoiceId);
+    }, 500);
   }, 1500);
 }
 
@@ -1307,6 +1332,105 @@ function updatePaymentBadge() {
   }
 }
 
+// ===== RECEIPT & BILL FUNCTIONS =====
+
+/**
+ * Show receipt generation dialog after approval
+ */
+function showReceiptGeneration(receiptNumber, invoiceId) {
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  `;
+
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 500px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  `;
+
+  content.innerHTML = `
+    <div style="text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 15px;">✅</div>
+      <h2 style="color: #1a5c38; margin-bottom: 10px;">ยืนยันการชำระเงินสำเร็จ</h2>
+      <p style="color: #666; margin-bottom: 20px; font-size: 14px;">เลขที่ใบเสร็จ: <strong>${receiptNumber}</strong></p>
+
+      <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #4caf50;">
+        <p style="color: #2d8653; font-size: 13px; margin: 0;">ระบบได้บันทึกการชำระเงินแล้ว</p>
+      </div>
+
+      <div style="display: flex; gap: 10px; flex-direction: column;">
+        <button onclick="openReceipt('${invoiceId}'); this.closest('div').closest('div').parentElement.remove();"
+          style="padding: 12px 20px; background: #1a5c38; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; font-family: 'Sarabun', sans-serif;">
+          🖨️ ดูและพิมพ์ใบเสร็จ
+        </button>
+        <button onclick="this.closest('div').closest('div').parentElement.remove();"
+          style="padding: 12px 20px; background: #e0e0e0; color: #333; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; font-family: 'Sarabun', sans-serif;">
+          ปิด
+        </button>
+      </div>
+    </div>
+  `;
+
+  dialog.appendChild(content);
+  document.body.appendChild(dialog);
+
+  // Close on backdrop click
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) {
+      dialog.remove();
+    }
+  });
+}
+
+/**
+ * Open receipt in new window
+ */
+function openReceipt(invoiceId) {
+  localStorage.setItem('currentReceiptInvoiceId', invoiceId);
+  window.open('receipt-template.html?invoiceId=' + invoiceId, 'receipt_' + invoiceId, 'width=900,height=1000');
+}
+
+/**
+ * Open cash bill in new window
+ */
+function openCashBill(roomId, invoiceId) {
+  localStorage.setItem('currentBillRoomId', roomId);
+  localStorage.setItem('currentBillInvoiceId', invoiceId);
+  window.open('bill-cash-template.html?room=' + roomId + '&invoiceId=' + invoiceId, 'bill_' + invoiceId, 'width=900,height=1000');
+}
+
+/**
+ * Generate cash bill from tenant payment page
+ */
+function generateCashBill(roomId) {
+  // Get bill data
+  const bills = JSON.parse(localStorage.getItem('bills') || '[]');
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+
+  const bill = bills.find(b => b.roomId === roomId && b.month === currentMonth && b.year === currentYear);
+
+  if (!bill) {
+    alert('❌ ไม่พบบิลสำหรับห้องนี้');
+    return;
+  }
+
+  openCashBill(roomId, bill.invoiceId);
+}
+
 // ===== INITIALIZATION =====
 
 console.log('✅ Accounting.js loaded');
@@ -1326,5 +1450,8 @@ window.AccountingSystem = {
   closeSlipModal,
   approvePaymentSlip,
   rejectPaymentSlip,
-  updatePaymentBadge
+  updatePaymentBadge,
+  openReceipt,
+  openCashBill,
+  generateCashBill
 };

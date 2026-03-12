@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บิลเงินสด - The Green Haven</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .bill-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      border: 2px dashed #ff8f00;
+      border-radius: 8px;
+      padding: 35px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .bill-container {
+        max-width: 100%;
+        border: 1px solid #999;
+        box-shadow: none;
+        page-break-after: always;
+      }
+      .btn-group {
+        display: none;
+      }
+    }
+
+    .bill-header {
+      text-align: center;
+      border-bottom: 3px solid #ff8f00;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+
+    .bill-header h1 {
+      font-size: 32px;
+      color: #ff8f00;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .bill-header .badge {
+      display: inline-block;
+      background: #fff8e1;
+      color: #ff8f00;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .bill-header .subtitle {
+      font-size: 18px;
+      color: #666;
+      font-weight: 600;
+    }
+
+    .bill-header .location {
+      font-size: 14px;
+      color: #888;
+      margin-top: 8px;
+    }
+
+    .bill-content {
+      margin-bottom: 30px;
+    }
+
+    .bill-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 15px;
+      align-items: center;
+    }
+
+    .bill-row.header {
+      font-weight: 600;
+      color: #fff;
+      background: #ff8f00;
+      padding: 12px 15px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      border: none;
+    }
+
+    .bill-row label {
+      font-weight: 600;
+      color: #333;
+      flex: 0 0 45%;
+    }
+
+    .bill-row .value {
+      text-align: right;
+      color: #555;
+      flex: 1;
+    }
+
+    .bill-row.total {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ff8f00;
+      border-bottom: 3px solid #ff8f00;
+      padding: 18px 0;
+    }
+
+    .bill-row.total label {
+      font-weight: 700;
+      color: #ff8f00;
+    }
+
+    .bill-row.total .value {
+      font-size: 24px;
+      color: #ff8f00;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #ff8f00;
+      text-transform: uppercase;
+      margin-top: 22px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #fff8e1;
+      letter-spacing: 0.5px;
+    }
+
+    .bill-details {
+      background: #fffbf0;
+      padding: 14px;
+      border-radius: 6px;
+      margin: 12px 0;
+      font-size: 14px;
+      border-left: 4px solid #ff8f00;
+    }
+
+    .bill-details .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .bill-details .row:last-child {
+      margin-bottom: 0;
+    }
+
+    .bill-details .label {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .bill-details .value {
+      color: #666;
+      text-align: right;
+      flex: 1;
+    }
+
+    .breakdown {
+      background: #f9f9f9;
+      padding: 14px;
+      border-radius: 6px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+
+    .breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .breakdown-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .breakdown-item .label {
+      color: #666;
+    }
+
+    .breakdown-item .value {
+      color: #333;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .qr-code-section {
+      text-align: center;
+      margin: 25px 0;
+      padding: 20px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      border: 2px dashed #ddd;
+    }
+
+    .qr-code-section label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .qr-code-section img {
+      max-width: 200px;
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .bill-footer {
+      margin-top: 30px;
+      border-top: 3px dashed #ff8f00;
+      padding-top: 20px;
+    }
+
+    .payment-instruction {
+      background: #fff8e1;
+      border-left: 4px solid #ff8f00;
+      padding: 14px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #666;
+    }
+
+    .payment-instruction strong {
+      color: #ff8f00;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .signature-area {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 35px;
+      text-align: center;
+    }
+
+    .signature-block {
+      flex: 1;
+    }
+
+    .signature-line {
+      border-bottom: 1px solid #333;
+      width: 140px;
+      height: 50px;
+      margin: 0 auto 6px;
+    }
+
+    .signature-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #333;
+      line-height: 1.3;
+    }
+
+    .bill-number {
+      text-align: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: #ff8f00;
+      margin: 25px 0;
+      letter-spacing: 1px;
+    }
+
+    .date-time {
+      text-align: center;
+      font-size: 12px;
+      color: #888;
+      margin: 15px 0;
+    }
+
+    .notes {
+      background: #ffebee;
+      border-left: 4px solid #c62828;
+      padding: 10px 12px;
+      margin-top: 15px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #666;
+      line-height: 1.4;
+    }
+
+    .btn-group {
+      text-align: center;
+      margin-top: 30px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    button {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-family: 'Sarabun', sans-serif;
+    }
+
+    .btn-print {
+      background: #ff8f00;
+      color: #fff;
+    }
+
+    .btn-print:hover {
+      background: #e67e00;
+    }
+
+    .btn-download {
+      background: #1976d2;
+      color: #fff;
+    }
+
+    .btn-download:hover {
+      background: #1565c0;
+    }
+
+    .btn-close {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .btn-close:hover {
+      background: #d0d0d0;
+    }
+
+    .thank-you {
+      text-align: center;
+      font-size: 15px;
+      font-weight: 600;
+      color: #ff8f00;
+      margin: 25px 0 15px 0;
+    }
+
+    @media print {
+      .btn-group {
+        display: none;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .bill-container {
+        padding: 25px;
+        border: 1px solid #999;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bill-container">
+    <!-- Header -->
+    <div class="bill-header">
+      <span class="badge">💰 เงินสด</span>
+      <h1>บิลเงินสด</h1>
+      <p class="subtitle">CASH BILL / RECEIPT</p>
+      <p class="location">The Green Haven Apartment</p>
+    </div>
+
+    <!-- Bill Number -->
+    <div class="bill-number" id="billNumber">BILL-XXXXXX</div>
+    <div class="date-time" id="dateTime"></div>
+
+    <!-- Content -->
+    <div class="bill-content">
+      <!-- Tenant Information -->
+      <div class="section-title">ข้อมูลผู้เช่า</div>
+      <div class="bill-details">
+        <div class="row">
+          <span class="label">ชื่อ-นามสกุล:</span>
+          <span class="value" id="tenantName">-</span>
+        </div>
+        <div class="row">
+          <span class="label">ห้องเลขที่:</span>
+          <span class="value" id="roomNumber">-</span>
+        </div>
+        <div class="row">
+          <span class="label">เบอร์โทรศัพท์:</span>
+          <span class="value" id="tenantPhone">-</span>
+        </div>
+      </div>
+
+      <!-- Invoice Details -->
+      <div class="section-title">รายละเอียดบิล</div>
+      <div class="bill-details">
+        <div class="row">
+          <span class="label">เลขที่บิล:</span>
+          <span class="value" id="invoiceId">-</span>
+        </div>
+        <div class="row">
+          <span class="label">ประจำเดือน:</span>
+          <span class="value" id="monthYear">-</span>
+        </div>
+        <div class="row">
+          <span class="label">วันออกบิล:</span>
+          <span class="value" id="billDate">-</span>
+        </div>
+      </div>
+
+      <!-- Amount Breakdown -->
+      <div class="section-title">รายละเอียดค่าใช้จ่าย</div>
+      <div class="breakdown">
+        <div class="breakdown-item">
+          <span class="label">ค่าเช่าห้อง:</span>
+          <span class="value" id="rentAmount">฿0.00</span>
+        </div>
+        <div class="breakdown-item">
+          <span class="label">ค่าไฟฟ้า:</span>
+          <span class="value" id="electricityAmount">฿0.00</span>
+        </div>
+        <div class="breakdown-item">
+          <span class="label">ค่าน้ำ:</span>
+          <span class="value" id="waterAmount">฿0.00</span>
+        </div>
+        <div class="breakdown-item" id="chargesRow" style="display:none;">
+          <span class="label">ค่าบริการอื่น:</span>
+          <span class="value" id="otherCharges">฿0.00</span>
+        </div>
+      </div>
+
+      <!-- Total Amount -->
+      <div class="bill-row total">
+        <label>รวมทั้งสิ้น (Total):</label>
+        <span class="value" id="totalAmount">฿0.00</span>
+      </div>
+
+      <!-- QR Code Section -->
+      <div class="section-title">ช่องทางการชำระเงิน</div>
+      <div class="qr-code-section">
+        <label>สแกน QR Code เพื่อชำระเงินผ่าน PromptPay</label>
+        <div id="qrCodeContainer"></div>
+        <p style="font-size: 11px; color: #999; margin-top: 10px;">วิธีการ: เปิดแอพธนาคาร → สแกน QR Code → ตรวจสอบจำนวนเงิน → ยืนยันการโอน</p>
+      </div>
+
+      <!-- Payment Method -->
+      <div class="section-title">หมายเหตุการชำระ</div>
+      <div class="payment-instruction">
+        <strong>✅ วิธีการชำระเงิน:</strong>
+        1. โปรดชำระเงินตามวันครบกำหนด<br>
+        2. สามารถโอนผ่าน PromptPay ได้ทันที<br>
+        3. เก็บใบเสร็จอย่างดี เป็นหลักฐานการชำระ<br>
+        4. หากมีข้อสงสัย โปรดติดต่อแอดมิน
+      </div>
+
+      <!-- Due Date -->
+      <div class="bill-details">
+        <div class="row">
+          <span class="label">วันครบกำหนด (Due Date):</span>
+          <span class="value" style="color: #c62828; font-weight: 700;" id="dueDate">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="bill-footer">
+      <div class="thank-you">🙏 ขอบคุณที่ชำระเงิน</div>
+
+      <div class="signature-area">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="signature-label">ชื่อผู้เช่า<br>(Tenant)</div>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="signature-label">ลงชื่อผู้รับ<br>(Officer)</div>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="signature-label">วันที่รับ<br>(Date)</div>
+        </div>
+      </div>
+
+      <div class="notes">
+        <strong>⚠️ สำคัญ:</strong> บิลนี้ใช้เป็นหลักฐานการชำระเงิน กรุณาเก็บไว้ ห้ามทำสำเนาหรือให้ผู้อื่นใช้
+      </div>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-group">
+    <button class="btn-print" onclick="window.print()">🖨️ พิมพ์ (Print)</button>
+    <button class="btn-download" onclick="downloadBill()">📥 ดาวน์โหลด (Download)</button>
+    <button class="btn-close" onclick="window.close()">✕ ปิด (Close)</button>
+  </div>
+
+  <script>
+    /**
+     * Initialize bill with data from localStorage or URL parameters
+     */
+    function initializeBill() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const roomId = params.get('room') || localStorage.getItem('currentBillRoomId');
+        const invoiceId = params.get('invoiceId') || localStorage.getItem('currentBillInvoiceId');
+
+        if (!roomId || !invoiceId) {
+          console.error('Missing roomId or invoiceId');
+          return;
+        }
+
+        // Get tenant data
+        const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '[]');
+        const tenant = tenantData.find(t => t.roomId == roomId);
+
+        // Get bill data
+        const bills = JSON.parse(localStorage.getItem('bills') || '[]');
+        const bill = bills.find(b => b.invoiceId === invoiceId);
+
+        if (!bill) {
+          console.error('No bill found for invoice:', invoiceId);
+          return;
+        }
+
+        // Populate bill
+        populateBill(bill, tenant, roomId);
+      } catch (error) {
+        console.error('Error initializing bill:', error);
+      }
+    }
+
+    /**
+     * Populate bill with data
+     */
+    function populateBill(bill, tenant, roomId) {
+      const billDate = new Date();
+      const billNumber = `BILL-${roomId}-${formatBillNumber(billDate)}`;
+
+      // Bill number
+      document.getElementById('billNumber').textContent = billNumber;
+
+      // Date
+      document.getElementById('dateTime').textContent = `วันที่ออกบิล: ${formatThaiDate(billDate)}`;
+
+      // Tenant information
+      document.getElementById('tenantName').textContent = tenant?.name || tenant?.firstName + ' ' + tenant?.lastName || '-';
+      document.getElementById('roomNumber').textContent = `ห้อง ${roomId}`;
+      document.getElementById('tenantPhone').textContent = tenant?.phone || '-';
+
+      // Invoice details
+      document.getElementById('invoiceId').textContent = bill.invoiceId || '-';
+
+      const billDateObj = new Date(bill.date || new Date());
+      document.getElementById('monthYear').textContent = formatThaiMonthYear(billDateObj);
+      document.getElementById('billDate').textContent = formatThaiDate(billDateObj);
+
+      // Amounts
+      const rent = parseFloat(bill.rent || 0);
+      const electricity = parseFloat(bill.electricity || 0);
+      const water = parseFloat(bill.water || 0);
+      const totalAmount = rent + electricity + water;
+
+      document.getElementById('rentAmount').textContent = '฿' + rent.toLocaleString('th-TH', {minimumFractionDigits: 2});
+      document.getElementById('electricityAmount').textContent = '฿' + electricity.toLocaleString('th-TH', {minimumFractionDigits: 2});
+      document.getElementById('waterAmount').textContent = '฿' + water.toLocaleString('th-TH', {minimumFractionDigits: 2});
+
+      document.getElementById('totalAmount').textContent = '฿' + totalAmount.toLocaleString('th-TH', {minimumFractionDigits: 2});
+
+      // Due date (30 days from bill date)
+      const dueDate = new Date(billDateObj);
+      dueDate.setDate(dueDate.getDate() + 30);
+      document.getElementById('dueDate').textContent = formatThaiDate(dueDate);
+
+      // Generate QR code
+      generateQRCode(totalAmount);
+    }
+
+    /**
+     * Generate QR Code for payment
+     */
+    function generateQRCode(amount) {
+      try {
+        const container = document.getElementById('qrCodeContainer');
+        const amountStr = Math.round(amount * 100);
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=00020101021129370016A000000677010111300712${amountStr}52040000530376454061200062110402121390713PROMPT%20PAY63041D61`;
+
+        const img = document.createElement('img');
+        img.src = qrUrl;
+        img.alt = 'QR Code for PromptPay';
+        container.innerHTML = '';
+        container.appendChild(img);
+      } catch (error) {
+        console.error('Error generating QR code:', error);
+      }
+    }
+
+    /**
+     * Format bill number (DDMMYYHHMM)
+     */
+    function formatBillNumber(date) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear()).slice(-2);
+      const hour = String(date.getHours()).padStart(2, '0');
+      const min = String(date.getMinutes()).padStart(2, '0');
+      return `${day}${month}${year}${hour}${min}`;
+    }
+
+    /**
+     * Format date in Thai
+     */
+    function formatThaiDate(date) {
+      const monthsTh = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+      const day = date.getDate();
+      const month = monthsTh[date.getMonth()];
+      const year = date.getFullYear() + 543;
+
+      return `${day} ${month} ${year}`;
+    }
+
+    /**
+     * Format month and year in Thai
+     */
+    function formatThaiMonthYear(date) {
+      const monthsTh = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+      const month = monthsTh[date.getMonth()];
+      const year = date.getFullYear() + 543;
+
+      return `${month} ${year}`;
+    }
+
+    /**
+     * Download bill
+     */
+    function downloadBill() {
+      const element = document.querySelector('.bill-container');
+      const html = element.outerHTML;
+      const link = document.createElement('a');
+      link.href = 'data:text/html;charset=UTF-8,' + encodeURIComponent(html);
+      link.download = `Bill-${document.getElementById('billNumber').textContent}.html`;
+      link.click();
+    }
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', initializeBill);
+  </script>
+</body>
+</html>
