@@ -652,13 +652,6 @@
   .ana-occ-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.72rem;background:var(--green-pale);color:var(--green-dark);font-weight:700;}
   @media(max-width:900px){.ana-kpi-grid{grid-template-columns:1fr 1fr;}.ana-charts-grid{grid-template-columns:1fr;}}
 
-  /* ===== TENANT TABS (CONSOLIDATED PAGE) ===== */
-  .tenant-tabs{display:flex;gap:8px;margin-bottom:1.5rem;border-bottom:2px solid var(--border);overflow-x:auto;}
-  .tenant-tab{padding:12px 18px;border:none;background:none;color:var(--text-muted);font-size:.95rem;font-weight:600;font-family:'Sarabun',sans-serif;cursor:pointer;border-bottom:3px solid transparent;transition:.2s ease;}
-  .tenant-tab:hover{color:var(--text);}
-  .tenant-tab.active{color:var(--green);border-bottom-color:var(--green);}
-  .tenant-tab-content{display:none;}
-  .tenant-tab-content.active{display:block;}
 
   /* ===== CONTRACT PAGE ===== */
   .ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.1rem;margin-top:1rem;}
@@ -1375,165 +1368,61 @@
   </div>
 </div>
 
-<!-- ===== TENANT MANAGEMENT (CONSOLIDATED PAGE) ===== -->
+<!-- ===== TENANT MANAGEMENT PAGE ===== -->
 <div class="page" id="page-tenant">
   <div class="section-title">👥 ผู้เช่า & สัญญา</div>
 
-  <!-- Tab Navigation -->
-  <div class="tenant-tabs" style="display:flex;gap:8px;margin-bottom:1.5rem;border-bottom:2px solid var(--border);overflow-x:auto;">
-    <button class="tenant-tab active" onclick="switchTenantTab('list', this)" style="padding:12px 18px;border:none;background:none;color:var(--text-muted);font-size:.95rem;font-weight:600;font-family:'Sarabun',sans-serif;cursor:pointer;border-bottom:3px solid transparent;transition:.2s;">
-      👥 รายชื่อผู้เช่า
-    </button>
-    <button class="tenant-tab" onclick="switchTenantTab('contract', this)" style="padding:12px 18px;border:none;background:none;color:var(--text-muted);font-size:.95rem;font-weight:600;font-family:'Sarabun',sans-serif;cursor:pointer;border-bottom:3px solid transparent;transition:.2s;">
-      📄 สัญญาเช่า
-    </button>
-    <button class="tenant-tab" onclick="switchTenantTab('personal', this)" style="padding:12px 18px;border:none;background:none;color:var(--text-muted);font-size:.95rem;font-weight:600;font-family:'Sarabun',sans-serif;cursor:pointer;border-bottom:3px solid transparent;transition:.2s;">
-      👤 ข้อมูลส่วนตัว
-    </button>
+  <!-- Building Selection -->
+  <div class="year-tabs" style="margin-bottom:1.2rem;">
+    <span class="year-tab-label">ตึก:</span>
+    <button class="year-tab active" onclick="setTenantBuilding('old',this)">🏠 ห้องแถว</button>
+    <button class="year-tab" onclick="setTenantBuilding('new',this)">🏗️ Nest</button>
   </div>
 
-  <!-- TAB 1: Tenant List -->
-  <div class="tenant-tab-content active" id="tenant-tab-list">
-    <div class="year-tabs" style="margin-bottom:1.2rem;">
-      <span class="year-tab-label">ตึก:</span>
-      <button class="year-tab active" onclick="setTenantBuilding('old',this)">🏠 ห้องแถว</button>
-      <button class="year-tab" onclick="setTenantBuilding('new',this)">🏗️ Nest</button>
-    </div>
-    <div class="kpi-grid" id="tenantKpiGrid" style="margin-bottom:1.2rem;"></div>
+  <!-- KPIs -->
+  <div class="kpi-grid" id="tenantKpiGrid" style="margin-bottom:1.2rem;"></div>
 
-    <!-- Tenant View Toggle -->
-    <div style="margin-bottom:1.2rem;">
-      <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
-        <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
-        <button onclick="toggleTenantView('cards', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--green);background:var(--green-pale);color:var(--green-dark);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">🃏 ไพ่ (Cards)</button>
-        <button onclick="toggleTenantView('table', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตาราง</button>
-        <input type="text" id="tenantSearch" placeholder="🔍 ค้นหาห้อง/ชื่อ..." style="margin-left:auto;padding:8px 14px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
-      </div>
-    </div>
-
-    <!-- Cards View (Default) -->
-    <div id="tenantViewCards">
-      <div class="tenant-grid" id="tenantGrid"></div>
-    </div>
-
-    <!-- Table View (Hidden) -->
-    <div id="tenantViewTable" style="display:none;">
-      <div class="card">
-        <div class="card-title">👥 รายชื่อผู้เช่า (ตารางแบบกระทัดรัด)</div>
-        <div class="scroll-x">
-          <table class="data-table" id="tenantTable" style="width:100%;border-collapse:collapse;">
-            <thead style="background:var(--green-pale);">
-              <tr>
-                <th style="padding:10px;text-align:left;border-bottom:2px solid var(--border);">ห้อง</th>
-                <th style="padding:10px;text-align:left;border-bottom:2px solid var(--border);">ชื่อ-นามสกุล</th>
-                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">เบอร์โทร</th>
-                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">เข้า</th>
-                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">สัญญา</th>
-                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">มัดจำ</th>
-                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">สถานะ</th>
-              </tr>
-            </thead>
-            <tbody id="tenantTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB 2: Contract Management -->
-  <div class="tenant-tab-content" id="tenant-tab-contract">
-    <div class="year-tabs" style="margin-bottom:1rem;">
-      <span class="year-tab-label">ตึก:</span>
-      <button class="year-tab active" onclick="setContractBuilding('old',this)">🏠 ห้องแถว</button>
-      <button class="year-tab" onclick="setContractBuilding('new',this)">🏗️ Nest</button>
-    </div>
-    <!-- KPIs -->
-    <div class="ana-kpi-grid" style="margin-bottom:1.2rem;">
-      <div class="ana-kpi"><div class="ana-kpi-val" id="ct-kpi-active" style="color:var(--green-dark);">0</div><div class="ana-kpi-label">✅ สัญญาที่ใช้งานอยู่</div></div>
-      <div class="ana-kpi orange"><div class="ana-kpi-val" id="ct-kpi-expiring" style="color:var(--orange);">—</div><div class="ana-kpi-label">⚠️ ใกล้หมดอายุ (60 วัน)</div></div>
-      <div class="ana-kpi" style="border-top-color:#e53935;"><div class="ana-kpi-val" id="ct-kpi-expired" style="color:#e53935;">—</div><div class="ana-kpi-label">🗑️ หมดอายุแล้ว</div></div>
-      <div class="ana-kpi blue"><div class="ana-kpi-val" id="ct-kpi-vacant" style="color:var(--blue);">—</div><div class="ana-kpi-label">🚪 ห้องว่าง</div></div>
-    </div>
-    <!-- Filter -->
-    <div class="ct-filter-bar">
-      <select id="ct-filter-status" onchange="initContractPage()" style="padding:8px 12px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;">
+  <!-- Tenant & Contract View Toggle -->
+  <div style="margin-bottom:1.2rem;">
+    <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+      <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
+      <button onclick="toggleTenantView('cards', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--green);background:var(--green-pale);color:var(--green-dark);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">🃏 ไพ่ (Cards)</button>
+      <button onclick="toggleTenantView('table', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตาราง</button>
+      <select id="ct-filter-status" onchange="initContractPage()" style="margin-left:auto;padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;background:#fff;cursor:pointer;">
         <option value="all">ทั้งหมด</option>
         <option value="active">✅ ใช้งานอยู่</option>
         <option value="expiring">⚠️ ใกล้หมดอายุ</option>
         <option value="expired">🗑️ หมดอายุ</option>
         <option value="vacant">🚪 ห้องว่าง</option>
       </select>
+      <input type="text" id="tenantSearch" placeholder="🔍 ค้นหาห้อง/ชื่อ..." style="padding:8px 14px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
     </div>
-    <!-- Contract Cards -->
-    <div class="ct-grid" id="ctGrid"></div>
   </div>
 
-  <!-- TAB 3: Personal Info -->
-  <div class="tenant-tab-content" id="tenant-tab-personal">
-    <!-- Tenant Profile Section -->
-    <div class="card" style="margin-bottom:1.5rem;">
-      <div class="card-title">👤 ข้อมูลส่วนตัวของผู้เช่า</div>
-      <div id="tenantProfileContent" style="padding:1rem;">
-        <div style="text-align:center;color:var(--text-muted);padding:2rem;">
-          🔄 กำลังโหลด...
-        </div>
-      </div>
-    </div>
+  <!-- Cards View (Default) - Shows both tenant list and contract info -->
+  <div id="tenantViewCards">
+    <div class="tenant-grid" id="tenantGrid"></div>
+  </div>
 
-    <!-- Resident Rules -->
-    <div class="card" style="margin-bottom:1.5rem;">
-      <div class="card-title">📋 ข้อบังคับของผู้เช่า</div>
-      <div style="border-radius:var(--radius);overflow:hidden;background:#f9f9f9;min-height:400px;">
-        <iframe src="https://drive.google.com/file/d/1H6dJYYYl3NKddT2faVXTz2-o2l6jee6w/preview"
-          width="100%" height="400" style="border:none;"></iframe>
-      </div>
-      <a href="https://drive.google.com/file/d/1H6dJYYYl3NKddT2faVXTz2-o2l6jee6w/view?usp=sharing" target="_blank" style="display:inline-block;margin-top:10px;padding:8px 16px;background:var(--blue);color:#fff;border-radius:6px;text-decoration:none;font-size:.9rem;font-weight:700;">📥 ดาวน์โหลด PDF</a>
-    </div>
-
-    <!-- Maintenance Request -->
+  <!-- Table View (Hidden) -->
+  <div id="tenantViewTable" style="display:none;">
     <div class="card">
-      <div class="card-title">🔧 แจ้งซ่อม / แจ้งปัญหา</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1rem;">
-        <div class="form-section">
-          <div class="form-section-title">📝 ข้อมูลการแจ้ง</div>
-          <div class="form-grid">
-            <div class="form-field">
-              <label>ห้องของท่าน</label>
-              <input type="text" id="tp-room" placeholder="เช่น ห้อง 15" style="padding:8px;border-radius:6px;border:1.5px solid var(--border);">
-            </div>
-            <div class="form-field">
-              <label>ลำดับความสำคัญ</label>
-              <select id="tp-priority" style="padding:8px;border-radius:6px;border:1.5px solid var(--border);">
-                <option value="low">🟢 ปกติ</option>
-                <option value="medium">🟡 ต้องการดำเนินการหน่วยเดือน</option>
-                <option value="high">🔴 เร่งด่วน</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-section" style="margin-top:1rem;">
-            <label>ประเภทปัญหา</label>
-            <select id="tp-type" style="padding:8px;border-radius:6px;border:1.5px solid var(--border);width:100%;">
-              <option value="">เลือกประเภท</option>
-              <option value="plumbing">🚿 ท่อน้ำ / ระบายน้ำ</option>
-              <option value="electrical">⚡ ไฟฟ้า</option>
-              <option value="appliance">🔌 เครื่องใช้ไฟฟ้า</option>
-              <option value="ac">❄️ แอร์</option>
-              <option value="door">🚪 ประตู / กุญแจ</option>
-              <option value="wall">🧱 ผนัง / ปูน</option>
-              <option value="other">📝 อื่นๆ</option>
-            </select>
-          </div>
-          <div class="form-section" style="margin-top:1rem;">
-            <label>รายละเอียดปัญหา</label>
-            <textarea id="tp-description" placeholder="บรรยายปัญหาที่คุณพบ..." style="padding:8px;border-radius:6px;border:1.5px solid var(--border);width:100%;height:120px;font-family:'Sarabun',sans-serif;font-size:.9rem;resize:vertical;"></textarea>
-          </div>
-          <button onclick="submitMaintenance()" style="width:100%;margin-top:1rem;padding:12px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;">✅ ส่งแจ้ง</button>
-        </div>
-
-        <div class="form-section">
-          <div class="form-section-title">📋 ประวัติการแจ้ง</div>
-          <div id="tp-list" style="max-height:500px;overflow-y:auto;"></div>
-        </div>
+      <div class="card-title">👥 รายชื่อผู้เช่า & สัญญา (ตารางแบบกระทัดรัด)</div>
+      <div class="scroll-x">
+        <table class="data-table" id="tenantTable" style="width:100%;border-collapse:collapse;">
+          <thead style="background:var(--green-pale);">
+            <tr>
+              <th style="padding:10px;text-align:left;border-bottom:2px solid var(--border);">ห้อง</th>
+              <th style="padding:10px;text-align:left;border-bottom:2px solid var(--border);">ชื่อ-นามสกุล</th>
+              <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">เบอร์โทร</th>
+              <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">เข้า</th>
+              <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">สัญญา</th>
+              <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">มัดจำ</th>
+              <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="tenantTableBody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -2143,37 +2032,6 @@ window.addEventListener('resize',function(){
   }
 });
 
-// ===== TENANT PAGE TAB SWITCHING =====
-function switchTenantTab(tabName, btnElement) {
-  // Hide all tab contents and remove active class
-  document.querySelectorAll('.tenant-tab-content').forEach(tab => {
-    tab.classList.remove('active');
-  });
-
-  // Remove active state from all tab buttons
-  document.querySelectorAll('.tenant-tab').forEach(btn => {
-    btn.classList.remove('active');
-  });
-
-  // Show selected tab content and add active class
-  const tabId = 'tenant-tab-' + tabName;
-  const tabContent = document.getElementById(tabId);
-  if (tabContent) {
-    tabContent.classList.add('active');
-  }
-
-  // Set active state on clicked button
-  if (btnElement) {
-    btnElement.classList.add('active');
-  }
-
-  // Initialize page data if needed
-  if (tabName === 'contract') {
-    initContractPage();
-  } else if (tabName === 'personal') {
-    initTenantPortal();
-  }
-}
 
 // ===== DASHBOARD =====
 let currentYear='67';
@@ -3427,7 +3285,7 @@ function renderTenantPage(){
 function renderTenantTable(){
   const searchInput=document.getElementById('tenantSearch');
   const searchTerm=(searchInput?.value||'').toLowerCase();
-  const rooms=currentTenantBuilding==='old'?ROOMS_OLD:ROOMS_NEW;
+  const rooms=tenantBuilding==='old'?ROOMS_OLD:ROOMS_NEW;
   const tenants=loadTenants();
   const tbody=document.getElementById('tenantTableBody');
   const today=new Date();
