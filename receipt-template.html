@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ใบเสร็จรับเงิน - The Green Haven</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .receipt-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      border: 2px solid #1a5c38;
+      border-radius: 8px;
+      padding: 40px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .receipt-container {
+        max-width: 100%;
+        border: 1px solid #999;
+        box-shadow: none;
+        page-break-after: always;
+      }
+      .btn-group {
+        display: none;
+      }
+    }
+
+    .receipt-header {
+      text-align: center;
+      border-bottom: 3px solid #1a5c38;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+
+    .receipt-header h1 {
+      font-size: 28px;
+      color: #1a5c38;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .receipt-header .subtitle {
+      font-size: 16px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .receipt-header .location {
+      font-size: 13px;
+      color: #888;
+      margin-top: 8px;
+    }
+
+    .receipt-content {
+      margin-bottom: 30px;
+    }
+
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 15px;
+    }
+
+    .receipt-row.header {
+      font-weight: 600;
+      color: #1a5c38;
+      border-bottom: 2px solid #1a5c38;
+      margin-bottom: 10px;
+    }
+
+    .receipt-row label {
+      font-weight: 600;
+      color: #333;
+      flex: 0 0 40%;
+    }
+
+    .receipt-row .value {
+      text-align: right;
+      color: #555;
+      flex: 1;
+    }
+
+    .receipt-row.total {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a5c38;
+      border-bottom: 2px solid #1a5c38;
+      padding: 16px 0;
+    }
+
+    .receipt-row.total label {
+      font-weight: 700;
+    }
+
+    .receipt-row.total .value {
+      font-size: 22px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a5c38;
+      text-transform: uppercase;
+      margin-top: 25px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .invoice-details {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+
+    .invoice-details .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .invoice-details .row:last-child {
+      margin-bottom: 0;
+    }
+
+    .invoice-details .label {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .invoice-details .value {
+      color: #666;
+      text-align: right;
+    }
+
+    .payment-method {
+      background: #e8f5e9;
+      padding: 12px 15px;
+      border-radius: 6px;
+      border-left: 4px solid #4caf50;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+
+    .payment-method .label {
+      font-weight: 600;
+      color: #1a5c38;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .payment-method .value {
+      color: #2d8653;
+    }
+
+    .receipt-footer {
+      margin-top: 40px;
+      border-top: 3px solid #1a5c38;
+      padding-top: 20px;
+    }
+
+    .signature-area {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 40px;
+      text-align: center;
+    }
+
+    .signature-block {
+      flex: 1;
+    }
+
+    .signature-line {
+      border-bottom: 1px solid #333;
+      width: 150px;
+      height: 60px;
+      margin: 0 auto 8px;
+    }
+
+    .signature-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .receipt-number {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: #1a5c38;
+      margin: 30px 0;
+      letter-spacing: 2px;
+    }
+
+    .date-time {
+      text-align: center;
+      font-size: 13px;
+      color: #888;
+      margin: 20px 0;
+    }
+
+    .notes {
+      background: #fff8e1;
+      border-left: 4px solid #ff8f00;
+      padding: 12px 15px;
+      margin-top: 20px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .btn-group {
+      text-align: center;
+      margin-top: 30px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    button {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-family: 'Sarabun', sans-serif;
+    }
+
+    .btn-print {
+      background: #1a5c38;
+      color: #fff;
+    }
+
+    .btn-print:hover {
+      background: #0d3520;
+    }
+
+    .btn-download {
+      background: #ff8f00;
+      color: #fff;
+    }
+
+    .btn-download:hover {
+      background: #e67e00;
+    }
+
+    .btn-close {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .btn-close:hover {
+      background: #d0d0d0;
+    }
+
+    .thank-you {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a5c38;
+      margin: 30px 0 20px 0;
+    }
+
+    @media print {
+      .btn-group {
+        display: none;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .receipt-container {
+        padding: 30px;
+        border: none;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt-container">
+    <!-- Header -->
+    <div class="receipt-header">
+      <h1>🏢 ใบเสร็จรับเงิน</h1>
+      <p class="subtitle">Receipt</p>
+      <p class="location">The Green Haven Apartment</p>
+    </div>
+
+    <!-- Receipt Number -->
+    <div class="receipt-number" id="receiptNumber">RCP-XX-XXXXXX</div>
+    <div class="date-time" id="dateTime"></div>
+
+    <!-- Content -->
+    <div class="receipt-content">
+      <!-- Tenant Information -->
+      <div class="section-title">ข้อมูลผู้ชำระเงิน</div>
+      <div class="invoice-details">
+        <div class="row">
+          <span class="label">ชื่อ:</span>
+          <span class="value" id="tenantName">-</span>
+        </div>
+        <div class="row">
+          <span class="label">ห้องเลขที่:</span>
+          <span class="value" id="roomNumber">-</span>
+        </div>
+        <div class="row">
+          <span class="label">เบอร์โทรศัพท์:</span>
+          <span class="value" id="tenantPhone">-</span>
+        </div>
+      </div>
+
+      <!-- Payment Details -->
+      <div class="section-title">รายละเอียดการชำระเงิน</div>
+      <div class="invoice-details">
+        <div class="row">
+          <span class="label">เลขที่บิล:</span>
+          <span class="value" id="invoiceId">-</span>
+        </div>
+        <div class="row">
+          <span class="label">เดือน/ปี:</span>
+          <span class="value" id="monthYear">-</span>
+        </div>
+        <div class="row">
+          <span class="label">วันที่แจ้งชำระ:</span>
+          <span class="value" id="invoiceDate">-</span>
+        </div>
+      </div>
+
+      <!-- Amount -->
+      <div class="receipt-row total">
+        <label>จำนวนเงินที่ชำระ:</label>
+        <span class="value" id="amount">฿0.00</span>
+      </div>
+
+      <!-- Payment Method -->
+      <div class="section-title">วิธีการชำระเงิน</div>
+      <div class="payment-method">
+        <span class="label">📱 PromptPay Transfer (โอนผ่าน PromptPay)</span>
+        <span class="value">ยืนยันสลิปการโอน</span>
+      </div>
+
+      <!-- Status -->
+      <div class="section-title">สถานะการชำระเงิน</div>
+      <div class="invoice-details">
+        <div class="row">
+          <span class="label">สถานะ:</span>
+          <span class="value" style="color: #4caf50; font-weight: 700;">✅ ยืนยันแล้ว</span>
+        </div>
+        <div class="row">
+          <span class="label">วันที่ยืนยัน:</span>
+          <span class="value" id="approvalDate">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="receipt-footer">
+      <div class="thank-you">ขอบคุณที่ชำระเงิน / Thank you for your payment</div>
+
+      <div class="signature-area">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="signature-label">ลงชื่อผู้ชำระเงิน<br>(Tenant's Signature)</div>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="signature-label">ลงชื่อผู้ยืนยัน<br>(Authorized Personnel)</div>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="signature-label">ตราประทับ<br>(Stamp)</div>
+        </div>
+      </div>
+
+      <div class="notes">
+        <strong>⚠️ หมายเหตุ:</strong> ใบเสร็จนี้เป็นเอกสารสำคัญ โปรดเก็บไว้เป็นการชำระหนี้ได้ ห้ามทำสำเนา
+      </div>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-group">
+    <button class="btn-print" onclick="window.print()">🖨️ พิมพ์ (Print)</button>
+    <button class="btn-download" onclick="downloadReceipt()">📥 ดาวน์โหลด (Download)</button>
+    <button class="btn-close" onclick="window.close()">✕ ปิด (Close)</button>
+  </div>
+
+  <script>
+    /**
+     * Initialize receipt with data from localStorage
+     */
+    function initializeReceipt() {
+      try {
+        // Get receipt data from URL parameters or localStorage
+        const params = new URLSearchParams(window.location.search);
+        const invoiceId = params.get('invoiceId') || localStorage.getItem('currentReceiptInvoiceId');
+
+        if (!invoiceId) {
+          console.error('No invoice ID provided');
+          return;
+        }
+
+        // Get payment slip data
+        const slips = JSON.parse(localStorage.getItem('tenant_slips') || '[]');
+        const slip = slips.find(s => s.invoiceId === invoiceId);
+
+        if (!slip) {
+          console.error('No slip found for invoice:', invoiceId);
+          return;
+        }
+
+        // Get tenant data
+        const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '[]');
+        const tenant = tenantData.find(t => t.roomId == slip.roomId);
+
+        if (!tenant) {
+          console.error('No tenant found for room:', slip.roomId);
+          return;
+        }
+
+        // Populate receipt
+        populateReceipt(slip, tenant);
+      } catch (error) {
+        console.error('Error initializing receipt:', error);
+      }
+    }
+
+    /**
+     * Populate receipt with data
+     */
+    function populateReceipt(slip, tenant) {
+      const receiptDate = new Date(slip.approvedAt || new Date());
+      const receiptNumber = slip.receiptNumber || `RCP-${slip.roomId}-${formatDateForReceipt(receiptDate)}`;
+
+      // Receipt number
+      document.getElementById('receiptNumber').textContent = receiptNumber;
+
+      // Date and time
+      const now = new Date();
+      document.getElementById('dateTime').textContent = `วันที่: ${formatThaiDate(now)}`;
+
+      // Tenant information
+      document.getElementById('tenantName').textContent = tenant.name || tenant.firstName + ' ' + tenant.lastName || '-';
+      document.getElementById('roomNumber').textContent = `ห้อง ${slip.roomId}`;
+      document.getElementById('tenantPhone').textContent = tenant.phone || '-';
+
+      // Payment details
+      document.getElementById('invoiceId').textContent = slip.invoiceId || '-';
+
+      const invoiceDate = new Date(slip.invoiceDate || new Date());
+      document.getElementById('monthYear').textContent = formatThaiMonthYear(invoiceDate);
+      document.getElementById('invoiceDate').textContent = formatThaiDate(invoiceDate);
+
+      // Amount
+      const amount = parseFloat(slip.amount || 0);
+      document.getElementById('amount').textContent = '฿' + amount.toLocaleString('th-TH', {minimumFractionDigits: 2});
+
+      // Approval date
+      document.getElementById('approvalDate').textContent = formatThaiDate(receiptDate);
+    }
+
+    /**
+     * Format date for receipt number (DDMMYY)
+     */
+    function formatDateForReceipt(date) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear()).slice(-2);
+      return `${day}${month}${year}`;
+    }
+
+    /**
+     * Format date in Thai format
+     */
+    function formatThaiDate(date) {
+      const monthsTh = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+      const day = date.getDate();
+      const month = monthsTh[date.getMonth()];
+      const year = date.getFullYear() + 543; // Buddhist calendar
+
+      return `${day} ${month} ${year}`;
+    }
+
+    /**
+     * Format month and year in Thai
+     */
+    function formatThaiMonthYear(date) {
+      const monthsTh = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+      const month = monthsTh[date.getMonth()];
+      const year = date.getFullYear() + 543;
+
+      return `${month} ${year}`;
+    }
+
+    /**
+     * Download receipt as PDF-like file
+     */
+    function downloadReceipt() {
+      const element = document.querySelector('.receipt-container');
+      const opt = {
+        margin: 10,
+        filename: `Receipt-${document.getElementById('receiptNumber').textContent}.html`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+      };
+
+      // Simple download as HTML
+      const html = element.outerHTML;
+      const link = document.createElement('a');
+      link.href = 'data:text/html;charset=UTF-8,' + encodeURIComponent(html);
+      link.download = `Receipt-${document.getElementById('receiptNumber').textContent}.html`;
+      link.click();
+    }
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', initializeReceipt);
+  </script>
+</body>
+</html>
