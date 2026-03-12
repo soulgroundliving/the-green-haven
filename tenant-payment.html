@@ -170,9 +170,57 @@
         </div>
       </div>
 
-      <!-- Confirm Payment -->
+      <!-- Slip Upload Section -->
+      <div style="margin-top:2rem;padding-top:2rem;border-top:2px solid var(--border);">
+        <div style="font-weight:700;margin-bottom:1rem;color:var(--text);">📸 ส่งสลิปการโอนเงิน</div>
+        <div style="font-size:.9rem;color:var(--text-muted);margin-bottom:1rem;">
+          ⚠️ ถ่ายรูปสลิปจากแอป Mobile Banking หรือ ATM
+        </div>
+
+        <!-- File Input -->
+        <div style="margin-bottom:1rem;">
+          <input type="file" id="slipImageInput" accept="image/*"
+            style="display:none;" onchange="handleSlipImageSelect(event)">
+          <button class="btn btn-secondary" onclick="document.getElementById('slipImageInput').click()"
+            style="width:100%;background:var(--blue);color:#fff;border:none;padding:12px;border-radius:8px;font-weight:700;cursor:pointer;">
+            📱 เลือกรูปสลิป
+          </button>
+        </div>
+
+        <!-- Image Preview -->
+        <div id="slipPreview" style="display:none;margin-bottom:1rem;">
+          <img id="previewImage" src="" alt="Slip Preview"
+            style="width:100%;max-height:300px;border-radius:8px;border:2px solid var(--border);object-fit:contain;">
+          <button style="width:100%;margin-top:0.5rem;padding:8px;background:#ffebee;color:var(--red);border:1px solid var(--red);border-radius:6px;cursor:pointer;font-size:.9rem;"
+            onclick="clearSlipImage()">❌ ลบรูปภาพ</button>
+        </div>
+
+        <!-- Upload Status -->
+        <div id="uploadStatus" style="display:none;padding:12px;margin-bottom:1rem;border-radius:8px;font-size:.9rem;">
+        </div>
+
+        <!-- Upload Button -->
+        <button id="uploadSlipBtn" class="btn btn-primary" onclick="uploadSlip()"
+          style="width:100%;display:none;background:var(--green);color:#fff;padding:12px;border:none;border-radius:8px;font-weight:700;cursor:pointer;">
+          🚀 ส่งสลิป
+        </button>
+
+        <!-- Already Uploaded Status -->
+        <div id="alreadyUploadedStatus" style="display:none;background:var(--green-pale);border-left:4px solid var(--green);padding:12px;border-radius:6px;color:var(--green-dark);font-size:.9rem;">
+          ✅ ส่งสลิปแล้ว<br>
+          <small id="uploadedTimeText"></small><br>
+          <small id="verificationStatusText" style="color:var(--text-muted);margin-top:0.5rem;display:block;"></small>
+        </div>
+      </div>
+
+      <!-- Confirm Payment Button -->
       <div style="margin-top:1.5rem;">
-        <button class="btn btn-primary" onclick="confirmPayment()">✅ โอนแล้ว - ส่งแจ้ง</button>
+        <button class="btn btn-primary" onclick="confirmPayment()" style="opacity:0.5;cursor:not-allowed;" disabled>
+          ✅ โอนแล้ว - ส่งแจ้ง
+        </button>
+        <small style="display:block;margin-top:0.5rem;color:var(--text-muted);text-align:center;">
+          👇 โปรดส่งสลิปการโอนด้านบนแทน
+        </small>
       </div>
     </div>
 
@@ -544,6 +592,154 @@ function shareApp() {
     alert('📋 ลิ้งค์:\n' + url);
   }
 }
+
+// ===== SLIP UPLOAD FUNCTIONS =====
+
+function handleSlipImageSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Validate file size (max 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    showUploadStatus('❌ ไฟล์ใหญ่เกินไป (สูงสุด 5MB)', 'error');
+    return;
+  }
+
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    showUploadStatus('❌ โปรดเลือกไฟล์รูปภาพ', 'error');
+    return;
+  }
+
+  // Preview image
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const preview = document.getElementById('slipPreview');
+    const img = document.getElementById('previewImage');
+    img.src = e.target.result;
+    preview.style.display = 'block';
+    document.getElementById('uploadSlipBtn').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearSlipImage() {
+  document.getElementById('slipImageInput').value = '';
+  document.getElementById('slipPreview').style.display = 'none';
+  document.getElementById('uploadSlipBtn').style.display = 'none';
+  document.getElementById('uploadStatus').style.display = 'none';
+}
+
+function showUploadStatus(message, type = 'info') {
+  const statusDiv = document.getElementById('uploadStatus');
+  statusDiv.style.display = 'block';
+  statusDiv.textContent = message;
+  statusDiv.style.background = type === 'error' ? '#ffebee' : type === 'success' ? 'var(--green-pale)' : '#e3f2fd';
+  statusDiv.style.color = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green-dark)' : 'var(--blue)';
+}
+
+async function uploadSlip() {
+  const file = document.getElementById('slipImageInput').files[0];
+  if (!file) {
+    showUploadStatus('❌ โปรดเลือกรูปภาพ', 'error');
+    return;
+  }
+
+  const uploadBtn = document.getElementById('uploadSlipBtn');
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = '⏳ กำลังส่ง...';
+
+  try {
+    // Convert image to base64 for storage
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Image = reader.result;
+
+      // Create slip record
+      const slipData = {
+        roomId: roomId,
+        invoiceId: `INV-${roomId}-${billData.month}${billData.year}`,
+        amount: billData.total,
+        slipImage: base64Image,
+        uploadedAt: new Date().toISOString(),
+        status: 'pending', // pending | verified | rejected
+        uploadedDate: new Date().toLocaleDateString('th-TH'),
+      };
+
+      // Save to localStorage
+      let slips = JSON.parse(localStorage.getItem('tenant_slips') || '[]');
+      slips = slips.filter(s => s.invoiceId !== slipData.invoiceId);
+      slips.push(slipData);
+      localStorage.setItem('tenant_slips', JSON.stringify(slips));
+
+      // Sync to Firebase if available
+      if (window.saveToFirebase) {
+        const slipsObj = {};
+        slips.forEach(s => {
+          slipsObj[s.invoiceId] = s;
+        });
+        await window.saveToFirebase('data/payment_slips', slipsObj);
+      }
+
+      // Update UI
+      showUploadStatus('✅ ส่งสลิปเรียบร้อย', 'success');
+      clearSlipImage();
+      checkSlipStatus();
+
+      // Show success
+      setTimeout(() => {
+        document.getElementById('paymentSection').style.display = 'none';
+        document.getElementById('successMessage').style.display = 'block';
+      }, 1500);
+    };
+    reader.readAsDataURL(file);
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    showUploadStatus('❌ เกิดข้อผิดพลาด: ' + error.message, 'error');
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = '🚀 ส่งสลิป';
+  }
+}
+
+function checkSlipStatus() {
+  const slips = JSON.parse(localStorage.getItem('tenant_slips') || '[]');
+  const currentSlip = slips.find(s => s.invoiceId === `INV-${roomId}-${billData.month}${billData.year}`);
+
+  const alreadyUploadedDiv = document.getElementById('alreadyUploadedStatus');
+  const uploadSection = document.getElementById('uploadSection');
+
+  if (currentSlip) {
+    // Show already uploaded status
+    alreadyUploadedDiv.style.display = 'block';
+    document.getElementById('uploadedTimeText').textContent = `อัปโหลดเมื่อ: ${currentSlip.uploadedDate}`;
+
+    if (currentSlip.status === 'verified') {
+      document.getElementById('verificationStatusText').textContent = '✅ ยืนยันแล้ว';
+      alreadyUploadedDiv.style.background = 'var(--green-pale)';
+      alreadyUploadedDiv.style.borderColor = 'var(--green)';
+    } else if (currentSlip.status === 'rejected') {
+      document.getElementById('verificationStatusText').textContent = '❌ ปฏิเสธ - โปรดส่งใหม่';
+      alreadyUploadedDiv.style.background = '#ffebee';
+      alreadyUploadedDiv.style.borderColor = 'var(--red)';
+    } else {
+      document.getElementById('verificationStatusText').textContent = '⏳ รอตรวจสอบ...';
+      alreadyUploadedDiv.style.background = '#fff3cd';
+      alreadyUploadedDiv.style.borderColor = '#ff9800';
+    }
+
+    // Show upload section but hide payment button
+    document.getElementById('paymentSection').style.display = 'block';
+  } else {
+    alreadyUploadedDiv.style.display = 'none';
+  }
+}
+
+// Initialize slip status on page load
+window.addEventListener('load', () => {
+  // Call checkSlipStatus after billData is loaded
+  setTimeout(checkSlipStatus, 500);
+});
 </script>
 
 </body>
