@@ -2115,8 +2115,8 @@ function getBillData(){
 }
 
 // ===== SLIPOK VERIFICATION =====
-const SLIPOK_URL = 'http://localhost:8080/api/slipok'; // ผ่าน proxy ใน server.ps1
-const SLIPOK_KEY = ''; // API key เก็บใน server.ps1 ฝั่ง server แทน
+const SLIPOK_URL = window.location.origin + '/api/slipok'; // Dynamic URL for local/production
+const SLIPOK_KEY = ''; // API key should be stored in environment variables, not code
 let slipVerified = false;
 let slipData = null;
 
@@ -3130,7 +3130,7 @@ function updateLinkPreview(){
     return;
   }
 
-  const paymentLink = `http://localhost:8080/tenant-payment.html?room=${room}`;
+  const paymentLink = `${window.location.origin}/tenant-payment.html?room=${room}`;
   const qrId = 'qr-' + room;
 
   document.getElementById('linkPreview').innerHTML = `
