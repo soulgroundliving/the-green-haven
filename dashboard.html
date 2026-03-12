@@ -328,6 +328,44 @@
   .room-pill .room-status{font-size:.67rem;font-weight:600;margin-top:3px;padding:2px 5px;border-radius:20px;display:inline-block;}
   .room-pill.occupied .room-status{background:var(--green-light);color:#fff;}
   .room-pill.commercial .room-status{background:var(--blue);color:#fff;}
+
+  /* ===== COMPACT GRID LISTS ===== */
+  .compact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.2rem;margin-top:1rem;}
+  .compact-card{background:#fff;border-radius:var(--radius);padding:16px 18px;border-left:4px solid var(--green);box-shadow:var(--shadow);transition:all .2s ease;}
+  .compact-card:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px);}
+  .compact-card.vacant{border-left-color:#ff9800;background:#fffbf0;}
+  .compact-card.expired{border-left-color:#e53935;opacity:.8;}
+  .compact-card-header{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px;}
+  .compact-card-id{font-size:1.3rem;font-weight:800;color:var(--green-dark);min-width:45px;}
+  .compact-card.vacant .compact-card-id{color:#ff9800;}
+  .compact-card.expired .compact-card-id{color:#e53935;}
+  .compact-card-type{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--green-pale);color:var(--green-dark);}
+  .compact-card.vacant .compact-card-type{background:#fff3e0;color:#e65100;}
+  .compact-card.expired .compact-card-type{background:#fce4ec;color:#c62828;}
+  .compact-card-info{font-size:.85rem;color:var(--text-muted);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+  .compact-card-label{font-weight:600;color:var(--text);}
+  .compact-card-value{color:var(--green-dark);font-weight:700;}
+  .compact-card.vacant .compact-card-value{color:#ff9800;}
+  .compact-card-actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
+  .compact-btn{padding:5px 10px;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:.15s;}
+  .compact-btn-view{background:var(--green-pale);color:var(--green-dark);}
+  .compact-btn-view:hover{background:var(--green);color:white;}
+  .compact-btn-edit{background:#e3f2fd;color:#1565c0;}
+  .compact-btn-edit:hover{background:#1976d2;color:white;}
+  .compact-btn-delete{background:#fce4ec;color:#c62828;}
+  .compact-btn-delete:hover{background:#e91e63;color:white;}
+
+  /* ===== COMPACT LIST FILTERS ===== */
+  .list-controls{display:flex;gap:10px;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center;}
+  .list-search{flex:1;min-width:200px;}
+  .list-search input{width:100%;padding:9px 14px;border-radius:8px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;}
+  .list-search input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(45,134,83,.08);}
+  .list-sort{padding:9px 12px;border-radius:8px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;background:#fff;cursor:pointer;}
+  .list-sort:focus{outline:none;border-color:var(--green);}
+
+  /* ===== RESPONSIVE COMPACT LISTS ===== */
+  @media(max-width:900px){.compact-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;}}
+  @media(max-width:600px){.compact-grid{grid-template-columns:1fr;}.list-controls{flex-direction:column;}.list-search{min-width:100%;}.list-sort{width:100%;}}
   .room-pill.pet .room-status{background:var(--purple);color:#fff;}
   .room-pill.daily .room-status{background:#f57c00;color:#fff;}
 
@@ -1113,17 +1151,40 @@
       </div>
     </div>
   </div>
-  <div class="card" style="margin-bottom:1.2rem;">
-    <div class="card-title">แผนผังห้องพัก</div>
-    <div class="room-grid" id="roomGrid"></div>
-    <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:.76rem;">
-      <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e8f5e9;border:2px solid #4caf50;border-radius:3px;display:inline-block"></span>ห้องพัก</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e3f2fd;border:2px solid #2196f3;border-radius:3px;display:inline-block"></span>พาณิชย์</span>
+  <!-- Room display options -->
+  <div style="margin-bottom:1.2rem;">
+    <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+      <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
+      <button onclick="toggleRoomView('grid', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--green);background:var(--green-pale);color:var(--green-dark);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📦 ตารางกระทัดรัด</button>
+      <button onclick="toggleRoomView('classic', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตารางแบบดั้งเดิม</button>
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">ตารางห้องพัก & อัตราค่าเช่า</div>
-    <div class="scroll-x"><table class="data-table" id="roomTable"></table></div>
+
+  <!-- Compact Grid View (Default) -->
+  <div id="roomViewCompact">
+    <div class="card" style="margin-bottom:1.2rem;">
+      <div class="card-title">🏠 ตารางแผนผัง</div>
+      <div class="room-grid" id="roomGrid"></div>
+      <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:.76rem;">
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e8f5e9;border:2px solid #4caf50;border-radius:3px;display:inline-block"></span>ห้องพัก</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e3f2fd;border:2px solid #2196f3;border-radius:3px;display:inline-block"></span>พาณิชย์</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span>📦 รายชื่อห้องพัก (ตารางกระทัดรัด)</span>
+        <input type="text" id="roomCompactSearch" placeholder="🔍 ค้นหาห้อง..." style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
+      </div>
+      <div class="compact-grid" id="roomCompactGrid"></div>
+    </div>
+  </div>
+
+  <!-- Classic Table View (Hidden by default) -->
+  <div id="roomViewClassic" style="display:none;">
+    <div class="card">
+      <div class="card-title">ตารางห้องพัก & อัตราค่าเช่า</div>
+      <div class="scroll-x"><table class="data-table" id="roomTable"></table></div>
+    </div>
   </div>
 </div>
 
@@ -1339,7 +1400,44 @@
       <button class="year-tab" onclick="setTenantBuilding('new',this)">🏗️ Nest</button>
     </div>
     <div class="kpi-grid" id="tenantKpiGrid" style="margin-bottom:1.2rem;"></div>
-    <div class="tenant-grid" id="tenantGrid"></div>
+
+    <!-- Tenant View Toggle -->
+    <div style="margin-bottom:1.2rem;">
+      <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+        <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
+        <button onclick="toggleTenantView('cards', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--green);background:var(--green-pale);color:var(--green-dark);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">🃏 ไพ่ (Cards)</button>
+        <button onclick="toggleTenantView('table', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตาราง</button>
+        <input type="text" id="tenantSearch" placeholder="🔍 ค้นหาห้อง/ชื่อ..." style="margin-left:auto;padding:8px 14px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
+      </div>
+    </div>
+
+    <!-- Cards View (Default) -->
+    <div id="tenantViewCards">
+      <div class="tenant-grid" id="tenantGrid"></div>
+    </div>
+
+    <!-- Table View (Hidden) -->
+    <div id="tenantViewTable" style="display:none;">
+      <div class="card">
+        <div class="card-title">👥 รายชื่อผู้เช่า (ตารางแบบกระทัดรัด)</div>
+        <div class="scroll-x">
+          <table class="data-table" id="tenantTable" style="width:100%;border-collapse:collapse;">
+            <thead style="background:var(--green-pale);">
+              <tr>
+                <th style="padding:10px;text-align:left;border-bottom:2px solid var(--border);">ห้อง</th>
+                <th style="padding:10px;text-align:left;border-bottom:2px solid var(--border);">ชื่อ-นามสกุล</th>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">เบอร์โทร</th>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">เข้า</th>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">สัญญา</th>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">มัดจำ</th>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="tenantTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- TAB 2: Contract Management -->
@@ -2175,7 +2273,82 @@ function initRoomsPage(){
       <td colspan="2">รวมห้องพัก (22 ห้อง)</td>
       <td>฿${rentT.toLocaleString()}</td><td colspan="4">—</td>
     </tr></tfoot>`;
+
+  renderCompactRoomGrid();
+
+  // Add search functionality
+  const searchInput=document.getElementById('roomCompactSearch');
+  if(searchInput){
+    searchInput.addEventListener('input',renderCompactRoomGrid);
+  }
 }
+
+// ===== COMPACT ROOM GRID RENDERING =====
+function renderCompactRoomGrid(){
+  const searchInput=document.getElementById('roomCompactSearch');
+  const searchTerm=(searchInput?.value||'').toLowerCase();
+  const filtered=ROOMS_OLD.filter(r=>r.id.toString().toLowerCase().includes(searchTerm));
+  const grid=document.getElementById('roomCompactGrid');
+
+  grid.innerHTML=filtered.map(r=>`
+    <div class="compact-card ${r.type==='commercial'?'':''}" style="border-left-color:${r.type==='commercial'?'var(--blue)':'var(--green)'}">
+      <div class="compact-card-header">
+        <div class="compact-card-id">${r.id}</div>
+        <span class="compact-card-type">${r.type==='commercial'?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
+      </div>
+      <div class="compact-card-info">
+        <span>ค่าเช่า</span>
+        <span class="compact-card-value">฿${r.rent.toLocaleString()}/เดือน</span>
+      </div>
+      <div class="compact-card-info">
+        <span>ค่าไฟ</span>
+        <span>฿${r.elecRate}/หน่วย</span>
+      </div>
+      <div class="compact-card-info">
+        <span>ค่าน้ำ</span>
+        <span>฿20/หน่วย</span>
+      </div>
+      <div class="compact-card-info">
+        <span>ค่าขยะ</span>
+        <span>฿${r.trashFee}</span>
+      </div>
+      <div class="compact-card-actions">
+        <button class="compact-btn compact-btn-view" onclick="editRoom('${r.id}')">📝 แก้ไข</button>
+        <button class="compact-btn compact-btn-edit" onclick="viewRoomDetails('${r.id}')">👁️ ดู</button>
+      </div>
+    </div>`).join('');
+
+  if(filtered.length===0){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted);">ไม่พบห้องที่ค้นหา</div>';
+  }
+}
+
+function toggleRoomView(view, btn){
+  const compactView=document.getElementById('roomViewCompact');
+  const classicView=document.getElementById('roomViewClassic');
+  const buttons=document.querySelectorAll('.view-btn');
+
+  buttons.forEach(b=>b.classList.remove('active'));
+  buttons.forEach(b=>b.style.background='none');
+  buttons.forEach(b=>b.style.color='var(--text)');
+  buttons.forEach(b=>b.style.border='1.5px solid var(--border)');
+
+  btn.classList.add('active');
+  btn.style.background='var(--green-pale)';
+  btn.style.color='var(--green-dark)';
+  btn.style.border='1.5px solid var(--green)';
+
+  if(view==='grid'){
+    compactView.style.display='block';
+    classicView.style.display='none';
+  }else{
+    compactView.style.display='none';
+    classicView.style.display='block';
+  }
+}
+
+function editRoom(roomId){alert('✏️ แก้ไขห้อง '+roomId);}
+function viewRoomDetails(roomId){alert('👁️ ดูรายละเอียดห้อง '+roomId);}
 
 // ===== MONTHLY PAGE =====
 let monthlyYear='67';
@@ -3188,7 +3361,18 @@ function setTenantBuilding(bld,btn){
   renderTenantPage();
 }
 
-function initTenantPage(){renderTenantPage();}
+function initTenantPage(){
+  renderTenantPage();
+  renderTenantTable();
+  // Add search functionality
+  const searchInput=document.getElementById('tenantSearch');
+  if(searchInput){
+    searchInput.addEventListener('input',()=>{
+      renderTenantPage();
+      renderTenantTable();
+    });
+  }
+}
 
 function renderTenantPage(){
   const rooms=tenantBuilding==='old'?ROOMS_OLD:ROOMS_NEW;
@@ -3237,6 +3421,69 @@ function renderTenantPage(){
       ${info}
     </div>`;
   }).join('');
+}
+
+// ===== COMPACT TENANT TABLE RENDERING =====
+function renderTenantTable(){
+  const searchInput=document.getElementById('tenantSearch');
+  const searchTerm=(searchInput?.value||'').toLowerCase();
+  const rooms=currentTenantBuilding==='old'?ROOMS_OLD:ROOMS_NEW;
+  const tenants=loadTenants();
+  const tbody=document.getElementById('tenantTableBody');
+  const today=new Date();
+
+  const rows=rooms.filter(r=>{
+    const t=tenants[r.id]||{};
+    const roomStr=r.id.toString().toLowerCase();
+    const nameStr=(t.name||'').toLowerCase();
+    return roomStr.includes(searchTerm)||nameStr.includes(searchTerm);
+  }).map(r=>{
+    const t=tenants[r.id]||{};
+    const isOcc=!!t?.name;
+    const isCom=r.type==='commercial';
+    const mi=t.moveIn?new Date(t.moveIn).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    const ce=t.contractEnd?new Date(t.contractEnd).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    const diff=t.contractEnd?Math.round((new Date(t.contractEnd)-today)/(1000*60*60*24)):null;
+    const status=isCom?'💼 พาณิชย์':!isOcc?'🚪 ว่าง':diff===null?'—':diff<0?'❌ หมด':diff<=30?`⚠️ ${diff}วัน`:'✅ ปกติ';
+    return`<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:10px;font-weight:700;color:var(--green-dark);">${r.id}</td>
+      <td style="padding:10px;">${isOcc?t.name:'<span style="color:var(--text-muted);">—</span>'}</td>
+      <td style="padding:10px;text-align:center;font-size:.85rem;">${t.phone||'—'}</td>
+      <td style="padding:10px;text-align:center;font-size:.85rem;">${mi}</td>
+      <td style="padding:10px;text-align:center;font-size:.85rem;">${ce}</td>
+      <td style="padding:10px;text-align:center;font-weight:700;color:var(--green-dark);">${t.deposit?'฿'+Number(t.deposit).toLocaleString():'—'}</td>
+      <td style="padding:10px;text-align:center;font-size:.85rem;font-weight:600;">${status}</td>
+    </tr>`;
+  });
+
+  tbody.innerHTML=rows.join('');
+  if(rows.length===0){
+    tbody.innerHTML=`<tr><td colspan="7" style="padding:2rem;text-align:center;color:var(--text-muted);">ไม่พบข้อมูลที่ค้นหา</td></tr>`;
+  }
+}
+
+function toggleTenantView(view, btn){
+  const cardsView=document.getElementById('tenantViewCards');
+  const tableView=document.getElementById('tenantViewTable');
+  const buttons=document.querySelectorAll('.view-btn');
+
+  buttons.forEach(b=>b.classList.remove('active'));
+  buttons.forEach(b=>b.style.background='none');
+  buttons.forEach(b=>b.style.color='var(--text)');
+  buttons.forEach(b=>b.style.border='1.5px solid var(--border)');
+
+  btn.classList.add('active');
+  btn.style.background='var(--green-pale)';
+  btn.style.color='var(--green-dark)';
+  btn.style.border='1.5px solid var(--green)';
+
+  if(view==='cards'){
+    cardsView.style.display='block';
+    tableView.style.display='none';
+  }else{
+    cardsView.style.display='none';
+    tableView.style.display='block';
+  }
 }
 
 let editingTenantRoom=null;
