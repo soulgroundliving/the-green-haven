@@ -529,12 +529,14 @@
         // Save secure session with timeout
         window.SecurityUtils.saveSecureSession(userData);
 
-        // Redirect
+        // Redirect based on user type
         setTimeout(() => {
-          if (userData.userType === 'admin') {
+          if (userData.userType === 'admin' || userData.userType === 'accountant') {
             window.location.href = 'dashboard.html';
-          } else {
+          } else if (userData.userType === 'tenant') {
             window.location.href = `tenant-payment.html?room=${userData.roomNumber}`;
+          } else {
+            window.location.href = 'dashboard.html'; // Default to dashboard
           }
         }, 1500);
 
@@ -658,12 +660,14 @@
         // Save secure session with timeout
         window.SecurityUtils.saveSecureSession(userData);
 
-        // Redirect
+        // Redirect based on user type
         setTimeout(() => {
-          if (currentUserType === 'admin') {
+          if (currentUserType === 'admin' || currentUserType === 'accountant') {
             window.location.href = 'dashboard.html';
-          } else {
+          } else if (currentUserType === 'tenant') {
             window.location.href = `tenant-payment.html?room=${userData.roomNumber}`;
+          } else {
+            window.location.href = 'dashboard.html'; // Default to dashboard
           }
         }, 1500);
 
