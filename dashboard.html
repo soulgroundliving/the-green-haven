@@ -1056,6 +1056,9 @@
   </nav>
 
   <div class="sidebar-footer">
+    <button class="sidebar-logout" onclick="openChangePasswordModal()">
+      <span class="sidebar-item-icon">🔐</span>เปลี่ยนรหัสผ่าน
+    </button>
     <button class="sidebar-logout" onclick="handleLogout()">
       <span class="sidebar-item-icon">🚪</span>Logout
     </button>
@@ -4926,5 +4929,70 @@ document.addEventListener('click', function(e) {
     <div class="pay-modal-footer" id="payModalFooter"></div>
   </div>
 </div>
+
+<!-- ===== CHANGE PASSWORD MODAL ===== -->
+<div id="changePasswordModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;padding:1rem;backdrop-filter:blur(2px);">
+  <div style="background:#fff;border-radius:var(--radius);max-width:420px;width:100%;max-height:95vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;">
+    <!-- Modal Header -->
+    <div style="background:linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <div>
+        <h2 style="margin:0;font-size:1.25rem;font-weight:700;">🔐 เปลี่ยนรหัสผ่าน</h2>
+        <small style="opacity:.85;font-size:.85rem;">อัปเดตรหัสผ่านของคุณ</small>
+      </div>
+      <button onclick="closeChangePasswordModal()" style="background:rgba(255,255,255,.2);border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:all .2s;">✕</button>
+    </div>
+
+    <!-- Modal Content -->
+    <div style="padding:2rem;overflow-y:auto;flex:1;">
+      <!-- Message Box -->
+      <div id="cpMessage" style="display:none;padding:1rem;border-radius:var(--radius-sm);margin-bottom:1.5rem;font-weight:600;font-size:.9rem;"></div>
+
+      <!-- Form -->
+      <form onsubmit="event.preventDefault();changePassword();" style="display:flex;flex-direction:column;gap:1.2rem;">
+        <!-- Old Password -->
+        <div style="display:flex;flex-direction:column;">
+          <label style="font-weight:600;font-size:.9rem;margin-bottom:.5rem;color:var(--text);">รหัสผ่านเดิม</label>
+          <input type="password" id="oldPassword" placeholder="กรอกรหัสผ่านเดิม"
+            style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;transition:all .2s;"
+            onkeypress="if(event.key==='Enter')changePassword()"
+            onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
+            onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+        </div>
+
+        <!-- New Password -->
+        <div style="display:flex;flex-direction:column;">
+          <label style="font-weight:600;font-size:.9rem;margin-bottom:.5rem;color:var(--text);">รหัสผ่านใหม่</label>
+          <input type="password" id="newPassword" placeholder="กรอกรหัสผ่านใหม่ (อย่างน้อย 6 ตัว)"
+            style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;transition:all .2s;"
+            onkeypress="if(event.key==='Enter')changePassword()"
+            onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
+            onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+        </div>
+
+        <!-- Confirm Password -->
+        <div style="display:flex;flex-direction:column;">
+          <label style="font-weight:600;font-size:.9rem;margin-bottom:.5rem;color:var(--text);">ยืนยันรหัสผ่านใหม่</label>
+          <input type="password" id="confirmPassword" placeholder="พิมพ์รหัสผ่านใหม่ซ้ำ"
+            style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;transition:all .2s;"
+            onkeypress="if(event.key==='Enter')changePassword()"
+            onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
+            onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+        </div>
+
+        <!-- Buttons -->
+        <div style="display:flex;gap:.8rem;margin-top:1.5rem;flex-wrap:wrap;">
+          <button type="submit" style="flex:1;padding:.9rem;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;font-size:.9rem;">
+            ✅ เปลี่ยนรหัสผ่าน
+          </button>
+          <button type="button" onclick="closeChangePasswordModal()" style="flex:1;padding:.9rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;font-size:.9rem;">
+            ✕ ยกเลิก
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="change-password.js"></script>
 </body>
 </html>
