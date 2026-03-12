@@ -255,9 +255,9 @@
     <div class="login-body">
       <!-- User Type Selection -->
       <div class="user-type">
-        <button class="user-type-btn active" onclick="selectUserType('admin')">👨‍💼 Admin</button>
-        <button class="user-type-btn" onclick="selectUserType('accountant')">📊 บัญชี</button>
-        <button class="user-type-btn" onclick="selectUserType('tenant')">👤 Tenant</button>
+        <button class="user-type-btn active" onclick="selectUserType('admin', this)">👨‍💼 Admin</button>
+        <button class="user-type-btn" onclick="selectUserType('accountant', this)">📊 บัญชี</button>
+        <button class="user-type-btn" onclick="selectUserType('tenant', this)">👤 Tenant</button>
       </div>
 
       <div id="errorMessage" class="error-message"></div>
@@ -267,14 +267,14 @@
       <form id="loginForm" class="form-mode active" onsubmit="handleLogin(event)">
         <div class="form-group">
           <label>Email</label>
-          <input type="email" id="loginEmail" required placeholder="your@email.com">
+          <input type="email" id="loginEmail" required placeholder="your@email.com" autocomplete="email">
         </div>
 
         <div class="form-group">
           <label>Password</label>
           <div class="password-wrapper">
-            <input type="password" id="loginPassword" required placeholder="••••••••">
-            <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)">👁️</button>
+            <input type="password" id="loginPassword" required placeholder="••••••••" autocomplete="password">
+            <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)" title="Show/Hide password">👁️</button>
           </div>
         </div>
 
@@ -290,24 +290,24 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
           <div class="form-group" style="margin-bottom:0;">
             <label>ชื่อ</label>
-            <input type="text" id="registerFirstName" required placeholder="ชื่อ">
+            <input type="text" id="registerFirstName" required placeholder="ชื่อ" autocomplete="given-name">
           </div>
           <div class="form-group" style="margin-bottom:0;">
             <label>นามสกุล</label>
-            <input type="text" id="registerLastName" placeholder="นามสกุล">
+            <input type="text" id="registerLastName" placeholder="นามสกุล" autocomplete="family-name">
           </div>
         </div>
 
         <div class="form-group">
           <label>Email</label>
-          <input type="email" id="registerEmail" required placeholder="your@email.com">
+          <input type="email" id="registerEmail" required placeholder="your@email.com" autocomplete="email">
         </div>
 
         <div class="form-group">
           <label>Password</label>
           <div class="password-wrapper">
-            <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6" oninput="updatePasswordStrength()">
-            <button type="button" class="password-toggle" onclick="togglePassword('registerPassword', this)">👁️</button>
+            <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6" autocomplete="new-password" oninput="updatePasswordStrength()">
+            <button type="button" class="password-toggle" onclick="togglePassword('registerPassword', this)" title="Show/Hide password">👁️</button>
           </div>
           <div id="passwordStrength" style="font-size:12px;margin-top:6px;padding:8px;background:#f5f5f5;border-radius:4px;display:none;">
             <div id="strengthFeedback">ตรวจสอบความแข็งแรง...</div>
@@ -323,8 +323,8 @@
         <div class="form-group">
           <label>ยืนยัน Password</label>
           <div class="password-wrapper">
-            <input type="password" id="registerPasswordConfirm" required placeholder="••••••••">
-            <button type="button" class="password-toggle" onclick="togglePassword('registerPasswordConfirm', this)">👁️</button>
+            <input type="password" id="registerPasswordConfirm" required placeholder="••••••••" autocomplete="new-password">
+            <button type="button" class="password-toggle" onclick="togglePassword('registerPasswordConfirm', this)" title="Show/Hide password">👁️</button>
           </div>
         </div>
 
@@ -389,10 +389,10 @@
     let currentUserType = 'admin';
     let isLoginMode = true;
 
-    function selectUserType(type) {
+    function selectUserType(type, button) {
       currentUserType = type;
       document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+      button.classList.add('active');
 
       const tenantFields = document.getElementById('tenantFields');
       if (type === 'tenant') {
