@@ -17,11 +17,13 @@ fi
 # Substitute placeholders in HTML files
 echo "Injecting Firebase API key..."
 
-# Update dashboard.html
-sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./pages/admin/dashboard.html
-
-# Update login.html
+# Update all HTML files that contain Firebase config
+sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./admin/dashboard.html
+sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./accounting/accounting.html
+sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./accounting/tax-filing.html
+sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./tenant/tenant-payment.html
+sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./tenant/meter.html
 sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./login.html
 
 echo "Build complete!"
-echo "✅ Environment variables have been injected"
+echo "✅ Environment variables have been injected into all files"
