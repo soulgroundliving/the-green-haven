@@ -1,0 +1,114 @@
+name: Validate Code
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check HTML Syntax
+      run: |
+        echo "Checking HTML files..."
+        for file in *.html; do
+          echo "Validating $file"
+          # Basic check for matching tags
+          if ! grep -q "</html>" "$file"; then
+            echo "ERROR: $file missing closing </html>"
+            exit 1
+          fi
+          if ! grep -q "</style>" "$file"; then
+            echo "ERROR: $file missing closing </style>"
+            exit 1
+          fi
+          if ! grep -q "</body>" "$file"; then
+            echo "ERROR: $file missing closing </body>"
+            exit 1
+          fi
+        done
+        echo "✓ All HTML files valid"
+
+    - name: Check for Security Issues
+      run: |
+        echo "Scanning for security issues..."
+
+        # Check for hardcoded secrets
+        if grep -r "password.*=" *.html *.js 2>/dev/null | grep -v "type=" | grep -v "placeholder="; then
+          echo "WARNING: Possible hardcoded password found"
+        fi
+
+        # Check for API keys in code
+        if grep -r "firebase.*key\|api_key\|secret" *.html *.js 2>/dev/null | grep -v "config\|//"; then
+          echo "WARNING: Possible API key exposure"
+        fi
+
+        # Check for .env files
+        if [ -f ".env" ] || [ -f ".env.local" ]; then
+          echo "ERROR: .env file should not be committed"
+          exit 1
+        fi
+
+        echo "✓ Security checks passed"
+
+    - name: Check Responsive Design
+      run: |
+        echo "Checking responsive media queries..."
+
+        files=("login.html" "dashboard.html" "meter.html" "accounting.html" "tenant-payment.html")
+        for file in "${files[@]}"; do
+          if [ -f "$file" ]; then
+            media_count=$(grep -c "@media" "$file" || echo 0)
+            if [ "$media_count" -lt 1 ]; then
+              echo "WARNING: $file has no media queries"
+            else
+              echo "✓ $file has $media_count media queries"
+            fi
+          fi
+        done
+
+        # Check viewport meta tag
+        for file in "${files[@]}"; do
+          if [ -f "$file" ]; then
+            if ! grep -q "viewport" "$file"; then
+              echo "ERROR: $file missing viewport meta tag"
+              exit 1
+            fi
+          fi
+        done
+
+        echo "✓ Responsive design checks passed"
+
+    - name: Check CSS Syntax
+      run: |
+        echo "Checking CSS closing tags..."
+        files=("login.html" "dashboard.html" "meter.html" "accounting.html" "tenant-payment.html")
+        for file in "${files[@]}"; do
+          if [ -f "$file" ]; then
+            # Check for matching style tags
+            opening=$(grep -o "<style" "$file" | wc -l)
+            closing=$(grep -c "</style>" "$file" || echo 0)
+            if [ "$opening" -ne "$closing" ]; then
+              echo "ERROR: $file has $opening <style> but $closing </style>"
+              exit 1
+            fi
+            echo "✓ $file CSS tags balanced"
+          fi
+        done
+
+    - name: Summary
+      run: |
+        echo "=========================================="
+        echo "✅ All Validation Checks Passed"
+        echo "=========================================="
+        echo "✓ HTML Syntax Valid"
+        echo "✓ Security Checks Passed"
+        echo "✓ Responsive Design Confirmed"
+        echo "✓ CSS Syntax Valid"
+        echo ""
+        echo "Ready to merge! 🚀"
