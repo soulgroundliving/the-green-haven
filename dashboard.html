@@ -5469,16 +5469,15 @@ function calculateOccupancy(buildingType = null) {
   let rooms = [];
 
   if (buildingType === 'nest') {
-    // Nest Building: N101-N505 (5 floors x 5 rooms = 25 rooms)
+    // Nest Building: N101-N405 (4 floors x 5 rooms = 20 rooms)
     rooms = ['N101', 'N102', 'N103', 'N104', 'N105',
              'N201', 'N202', 'N203', 'N204', 'N205',
              'N301', 'N302', 'N303', 'N304', 'N305',
-             'N401', 'N402', 'N403', 'N404', 'N405',
-             'N501', 'N502', 'N503', 'N504', 'N505'];
+             'N401', 'N402', 'N403', 'N404', 'N405'];
   } else {
-    // Old Building: 1-90 (rooms 01-90 and special rooms)
+    // Old Building: 01-22 (22 rooms total)
     rooms = [];
-    for (let i = 1; i <= 90; i++) {
+    for (let i = 1; i <= 22; i++) {
       rooms.push(i.toString().padStart(2, '0'));
     }
   }
@@ -5518,16 +5517,15 @@ function getExpiringLeases(buildingType = null) {
 
   let rooms = [];
   if (buildingType === 'nest') {
-    // Nest Building: N101-N505
+    // Nest Building: N101-N405 (20 rooms)
     rooms = ['N101', 'N102', 'N103', 'N104', 'N105',
              'N201', 'N202', 'N203', 'N204', 'N205',
              'N301', 'N302', 'N303', 'N304', 'N305',
-             'N401', 'N402', 'N403', 'N404', 'N405',
-             'N501', 'N502', 'N503', 'N504', 'N505'];
+             'N401', 'N402', 'N403', 'N404', 'N405'];
   } else {
-    // Old Building: 01-90
+    // Old Building: 01-22 (22 rooms)
     rooms = [];
-    for (let i = 1; i <= 90; i++) {
+    for (let i = 1; i <= 22; i++) {
       rooms.push(i.toString().padStart(2, '0'));
     }
   }
