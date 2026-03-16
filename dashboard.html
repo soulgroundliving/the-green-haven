@@ -522,6 +522,61 @@
   .pet .nr-tag{background:var(--purple);color:#fff;}
   .daily .nr-tag{background:#f57c00;color:#fff;}
 
+  /* Room Status Colors */
+  .new-room-pill.occupied {
+    background: #c8e6c9;
+    border-color: #4caf50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+  }
+  .new-room-pill.occupied::before {
+    content: "🟢";
+    display: block;
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+  }
+
+  .new-room-pill.vacant {
+    background: #f5f5f5;
+    border-color: #bdbdbd;
+    opacity: 0.7;
+  }
+  .new-room-pill.vacant::before {
+    content: "⚪";
+    display: block;
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+  }
+
+  .new-room-pill.overdue {
+    background: #ffcdd2;
+    border-color: #f44336;
+    box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.2);
+    animation: pulse 2s infinite;
+  }
+  .new-room-pill.overdue::before {
+    content: "🔴";
+    display: block;
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+  }
+
+  .new-room-pill.expiring {
+    background: #fff9c4;
+    border-color: #fbc02d;
+    box-shadow: 0 0 0 3px rgba(251, 192, 45, 0.2);
+  }
+  .new-room-pill.expiring::before {
+    content: "🟡";
+    display: block;
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
   .proj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;margin-bottom:1.3rem;}
   .proj-card{border-radius:var(--radius);padding:1.2rem;border-left:4px solid;}
   .proj-card.blue{background:var(--blue-pale);border-color:var(--blue);}
@@ -5038,6 +5093,9 @@ function saveTenantInfo() {
   // Persist to localStorage
   localStorage.setItem('tenant_data', JSON.stringify(allTenants));
 
+  // Update room status colors
+  updateRoomStatuses();
+
   // Sync to Firebase if available
   if (window.saveToFirebase) {
     window.saveToFirebase('data/tenants', allTenants);
@@ -5260,7 +5318,68 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+
+  // Initialize room status colors
+  updateRoomStatuses();
 });
+
+// ===== Room Status Color System =====
+function getRoomStatus(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenants = tenantData.tenants || {};
+  const tenant = tenants[roomId];
+
+  // No tenant = vacant
+  if (!tenant || !tenant.name) {
+    return 'vacant';
+  }
+
+  // Check for overdue payments
+  const invoices = tenantData.invoices || [];
+  const roomInvoices = invoices.filter(inv => inv.roomId === roomId);
+  const overdueInvoices = roomInvoices.filter(inv => {
+    if (inv.status === 'paid') return false;
+    const dueDate = new Date(inv.dueDate);
+    return new Date() > dueDate;
+  });
+
+  if (overdueInvoices.length > 0) {
+    return 'overdue';
+  }
+
+  // Check for expiring lease (< 30 days remaining)
+  if (tenant.contractEnd) {
+    const endDate = new Date(tenant.contractEnd);
+    const today = new Date();
+    const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+    if (daysLeft > 0 && daysLeft <= 30) {
+      return 'expiring';
+    }
+  }
+
+  // Has tenant and paying = occupied
+  return 'occupied';
+}
+
+function updateRoomStatuses() {
+  const roomPills = document.querySelectorAll('.new-room-pill');
+
+  roomPills.forEach(pill => {
+    const roomNum = pill.querySelector('.nr-num')?.textContent || '';
+    const roomId = 'N' + roomNum;
+    const status = getRoomStatus(roomId);
+
+    // Remove all status classes
+    pill.classList.remove('occupied', 'vacant', 'overdue', 'expiring');
+
+    // Add current status class
+    pill.classList.add(status);
+  });
+}
+
+// Update room statuses when tenant data changes
+window.updateRoomStatuses = updateRoomStatuses;
 </script>
 </body>
 </html>
