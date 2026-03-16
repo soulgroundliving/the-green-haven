@@ -9,7 +9,7 @@
   <script src="./shared/audit.js"></script>
   <script src="./shared/meter_data.js"></script>
   <script src="./shared/meter_system.js"></script>
-  <script src="./mock-tenant-data.js"></script>
+  <script src="./mock-rooms-data.js"></script>
 
   <style>
     * {
@@ -702,18 +702,25 @@
     </div>
   </div>
 
-  <script src="./meter.js"></script>
+  <script src="./meter-rooms.js"></script>
 
   <script>
-    // Redirect to meter selector on load
-    window.addEventListener('load', function() {
-      const user = JSON.parse(sessionStorage.getItem('user') || 'null');
-      if (!user) {
-        window.location.href = '/login';
-      } else {
-        window.location.href = '/meter-selector.html';
+    // Initialize meter page when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      // Load mock rooms data if not already in Firebase
+      if (!localStorage.getItem('rooms_data')) {
+        initMockRoomsData();
       }
+      initMeterPage();
     });
+
+    // Override logout in meter.js if needed
+    window.logout = function() {
+      if (confirm('ต้องการออกจากระบบหรือไม่?')) {
+        sessionStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    };
   </script>
 </body>
 </html>
