@@ -2534,6 +2534,8 @@ function initDashboardCharts(){
 
 // ===== ROOMS PAGE =====
 function initRoomsPage(){
+  updateOccupancyDashboard();
+  updateLeaseExpiryAlerts();
   const allTenants = loadTenants();
   const grid=document.getElementById('roomGrid');
   grid.innerHTML=ROOMS_OLD.map(r=>{
@@ -2873,6 +2875,8 @@ function renderNestCompactGrid(){
 
 // Initialize Nest compact grid when page loads
 function initNestPage(){
+  updateOccupancyDashboard();
+  updateLeaseExpiryAlerts();
   renderNestCompactGrid();
   const searchInput = document.getElementById('nestCompactSearch');
   if(searchInput){
