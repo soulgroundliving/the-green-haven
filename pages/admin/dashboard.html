@@ -2207,7 +2207,16 @@
 
 <!-- ===== MAINTENANCE ===== -->
 <div class="page" id="page-maintenance">
-  <div class="section-title">🔧 ระบบแจ้งซ่อม / ติดตามงาน</div>
+  <div class="section-title">🔧 Maintenance & Housekeeping System</div>
+
+  <!-- TAB NAVIGATION -->
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.5rem;">
+    <button class="dashboard-tab active" onclick="switchMaintenanceTab('maintenance', this)" style="padding:12px 24px;background:none;border:none;border-bottom:3px solid transparent;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.3s;font-size:0.95rem;font-family:'Sarabun',sans-serif;">🔧 Maintenance Requests</button>
+    <button class="dashboard-tab" onclick="switchMaintenanceTab('housekeeping', this)" style="padding:12px 24px;background:none;border:none;border-bottom:3px solid transparent;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.3s;font-size:0.95rem;font-family:'Sarabun',sans-serif;">🧹 Housekeeping Requests</button>
+  </div>
+
+  <!-- MAINTENANCE TAB -->
+  <div id="mx-maintenance-tab" class="dashboard-tab-content active">
   <div class="mx-kpi-grid">
     <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-pending" style="color:#e65100;">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
     <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
@@ -2264,6 +2273,66 @@
     <div class="card-title">📋 รายการงานซ่อมทั้งหมด</div>
     <div id="mxList"></div>
   </div>
+  </div><!-- END MAINTENANCE TAB -->
+
+  <!-- HOUSEKEEPING TAB -->
+  <div id="mx-housekeeping-tab" class="dashboard-tab-content">
+  <div class="mx-kpi-grid">
+    <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-pending" style="color:#e65100;">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
+    <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
+    <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
+  </div>
+  <div class="mx-layout">
+    <!-- Add Form -->
+    <div class="card mx-form">
+      <div class="card-title">➕ ขอบริการทำความสะอาดใหม่</div>
+      <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div><label>ห้อง</label><input type="text" id="hk-room" placeholder="เช่น 15ก, 22, Amazon"></div>
+        <div><label>วันที่ขอ</label><input type="date" id="hk-date"></div>
+      </div>
+      <div style="margin-bottom:10px;"><label>หมายเหตุพิเศษ</label><textarea id="hk-desc" rows="3" placeholder="เช่น ฝังหนามความสะอาด, บริเวณให้ความสำคัญ..." style="resize:vertical;"></textarea></div>
+      <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div><label>ประเภทบริการ</label>
+          <select id="hk-service">
+            <option value="standard">🧹 Standard (ทำความสะอาดมาตรฐาน)</option>
+            <option value="deep-clean">🧼 Deep-Clean (ทำความสะอาดเชิงลึก)</option>
+            <option value="linen-change">🛏️ Linen Change (เปลี่ยนผ้านวม/หมอน)</option>
+            <option value="urgent">⚡ Urgent (ด่วนพิเศษ)</option>
+          </select>
+        </div>
+        <div><label>ความสำคัญ</label>
+          <select id="hk-priority">
+            <option value="normal">🟡 ปกติ</option>
+            <option value="urgent">🔴 ด่วน</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="addHousekeepingRequest()" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:11px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;">📝 บันทึกการขอบริการ</button>
+    </div>
+    <!-- Filter panel -->
+    <div class="card" style="height:fit-content;">
+      <div class="card-title">🔍 กรองรายการ</div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">สถานะ</label>
+        <select id="hk-filter-status" onchange="renderHousekeepingList()" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.85rem;">
+          <option value="all">ทั้งหมด</option>
+          <option value="pending">⏳ รอดำเนินการ</option>
+          <option value="inprogress">🔨 กำลังดำเนินการ</option>
+          <option value="done">✅ เสร็จแล้ว</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">ห้อง</label>
+        <input type="text" id="hk-filter-room" oninput="renderHousekeepingList()" placeholder="ค้นหาห้อง..." style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.85rem;box-sizing:border-box;">
+      </div>
+    </div>
+  </div>
+  <!-- List -->
+  <div class="card">
+    <div class="card-title">📋 รายการบริการทำความสะอาดทั้งหมด</div>
+    <div id="hkList"></div>
+  </div>
+  </div><!-- END HOUSEKEEPING TAB -->
 </div>
 
 <!-- ===== BILL GENERATOR ===== -->
@@ -5413,10 +5482,23 @@ function loadMaintenance(){return JSON.parse(localStorage.getItem('maintenance_d
 function saveMaintenance(d){localStorage.setItem('maintenance_data',JSON.stringify(d));}
 
 function initMaintenancePage(){
+  // Initialize Maintenance tab as default
+  const maintTab = document.getElementById('mx-maintenance-tab');
+  const mxTabBtn = document.querySelector('#page-maintenance .dashboard-tab:nth-child(1)');
+  if(maintTab && mxTabBtn) {
+    maintTab.classList.add('active');
+    mxTabBtn.classList.add('active');
+    mxTabBtn.style.color = 'var(--green)';
+    mxTabBtn.style.borderBottomColor = 'var(--green)';
+  }
+
   const now=new Date();
   const md=document.getElementById('mx-date');
   if(md&&!md.value)md.value=now.toISOString().split('T')[0];
+  const hd=document.getElementById('hk-date');
+  if(hd&&!hd.value)hd.value=now.toISOString().split('T')[0];
   renderMaintenancePage();
+  renderHousekeepingList();
   updateMxBadge();
 }
 
@@ -5424,8 +5506,11 @@ function updateMxBadge(){
   const badge=document.getElementById('mxBadge');
   if(!badge)return;
   const mx=loadMaintenance();
-  const pending=mx.filter(x=>x.status==='pending'||x.status==='inprogress').length;
-  if(pending>0){badge.textContent=pending;badge.style.display='inline-block';}
+  const hk=loadHousekeeping();
+  const mxPending=mx.filter(x=>x.status==='pending'||x.status==='inprogress').length;
+  const hkPending=hk.filter(x=>x.status==='pending'||x.status==='inprogress').length;
+  const total=mxPending+hkPending;
+  if(total>0){badge.textContent=total;badge.style.display='inline-block';}
   else{badge.style.display='none';}
 }
 
@@ -5519,6 +5604,167 @@ function renderMaintenancePage(){
       </div>
       <div><button class="mx-btn mx-btn-del" onclick="deleteMaintenanceRequest(${x.id})">🗑️</button></div>
     </div>`).join('')}`;
+}
+
+// ===== HOUSEKEEPING REQUEST MANAGEMENT =====
+function loadHousekeeping(){return JSON.parse(localStorage.getItem('housekeeping_data')||'[]');}
+function saveHousekeeping(d){localStorage.setItem('housekeeping_data',JSON.stringify(d));}
+
+function initHousekeepingPage(){
+  const now=new Date();
+  const hd=document.getElementById('hk-date');
+  if(hd&&!hd.value)hd.value=now.toISOString().split('T')[0];
+  renderHousekeepingList();
+  updateMxBadge(); // Update combined badge
+}
+
+const HK_SERVICE_LABEL={
+  'standard':'🧹 Standard (ทำความสะอาดมาตรฐาน)',
+  'deep-clean':'🧼 Deep-Clean (ทำความสะอาดเชิงลึก)',
+  'linen-change':'🛏️ Linen Change (เปลี่ยนผ้านวม/หมอน)',
+  'urgent':'⚡ Urgent (ด่วนพิเศษ)'
+};
+const HK_STATUS_LABEL={'pending':'⏳ รอดำเนินการ','inprogress':'🔨 กำลังดำเนินการ','done':'✅ เสร็จแล้ว'};
+const HK_STATUS_CLASS={'pending':'mx-pending','inprogress':'mx-inprogress','done':'mx-done'};
+
+function addHousekeepingRequest(){
+  // Validate housekeeping form
+  const room=document.getElementById('hk-room')?.value?.trim()||'';
+  const service=document.getElementById('hk-service')?.value||'standard';
+  const priority=document.getElementById('hk-priority')?.value||'normal';
+  const desc=document.getElementById('hk-desc')?.value?.trim()||'';
+  const date=document.getElementById('hk-date')?.value||'';
+
+  // Validation
+  if(!room||room.length>10){alert('กรุณาป้อนหมายเลขห้องให้ถูกต้อง (สูงสุด 10 ตัว)');return;}
+  if(!date){alert('กรุณาเลือกวันที่');return;}
+  if(new Date(date)>new Date()){alert('ไม่สามารถเลือกวันในอนาคต');return;}
+  if(desc.length>200){alert('หมายเหตุต้องไม่เกิน 200 ตัวอักษร');return;}
+
+  // Sanitize inputs
+  const sanitizedRoom=window.SecurityUtils.sanitizeInput(room);
+  const sanitizedDesc=window.SecurityUtils.sanitizeInput(desc);
+
+  const hk=loadHousekeeping();
+  hk.unshift({
+    id:Date.now(),
+    room:sanitizedRoom,
+    service:service,
+    priority:priority,
+    description:sanitizedDesc,
+    status:'pending',
+    submittedAt:date,
+    updatedAt:date
+  });
+  saveHousekeeping(hk);
+
+  // Clear form
+  document.getElementById('hk-room').value='';
+  document.getElementById('hk-desc').value='';
+  document.getElementById('hk-service').value='standard';
+  document.getElementById('hk-priority').value='normal';
+
+  renderHousekeepingList();
+  updateMxBadge(); // Update combined badge
+
+  // Toast notification
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
+  t.textContent='✅ บันทึกการขอบริการแล้ว';
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2500);
+}
+
+function updateHousekeepingStatus(id,newStatus){
+  const hk=loadHousekeeping();
+  const item=hk.find(x=>x.id===id);
+  if(!item)return;
+  item.status=newStatus;
+  item.updatedAt=new Date().toISOString().split('T')[0];
+  saveHousekeeping(hk);
+  renderHousekeepingList();
+  updateMxBadge(); // Update combined badge
+}
+
+function deleteHousekeepingRequest(id){
+  if(!confirm('ลบรายการนี้?'))return;
+  saveHousekeeping(loadHousekeeping().filter(x=>x.id!==id));
+  renderHousekeepingList();
+  updateMxBadge(); // Update combined badge
+}
+
+function renderHousekeepingList(){
+  const hk=loadHousekeeping();
+  // Update KPIs
+  document.getElementById('hk-kpi-pending').textContent=hk.filter(x=>x.status==='pending').length;
+  document.getElementById('hk-kpi-inprogress').textContent=hk.filter(x=>x.status==='inprogress').length;
+  document.getElementById('hk-kpi-done').textContent=hk.filter(x=>x.status==='done').length;
+
+  // Filter
+  const fs=document.getElementById('hk-filter-status')?.value||'all';
+  const fr=(document.getElementById('hk-filter-room')?.value||'').toLowerCase();
+  let filtered=hk;
+  if(fs!=='all')filtered=filtered.filter(x=>x.status===fs);
+  if(fr)filtered=filtered.filter(x=>x.room.toLowerCase().includes(fr));
+
+  const el=document.getElementById('hkList');
+  if(!el)return;
+  if(!filtered.length){
+    el.innerHTML='<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:.9rem;">ไม่มีรายการ</div>';
+    return;
+  }
+
+  const fmt=d=>{
+    if(!d)return'—';
+    const p=d.split('-');
+    return`${parseInt(p[2])} ${['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][parseInt(p[1])]}`;
+  };
+
+  el.innerHTML=`
+    <div class="mx-row mx-head"><div>ห้อง</div><div>บริการ</div><div>หมายเหตุ</div><div>สถานะ</div><div>วันที่ขอ</div><div>เปลี่ยนสถานะ</div><div></div></div>
+    ${filtered.map(x=>`
+    <div class="mx-row" style="${x.status==='done'?'opacity:.65;':''}">
+      <div><strong>${x.room}</strong>${x.priority==='urgent'?'<span class="mx-urgent">ด่วน!</span>':''}</div>
+      <div style="font-size:.82rem;">${HK_SERVICE_LABEL[x.service]||x.service}</div>
+      <div style="font-size:.82rem;color:var(--text-muted);">${x.description||'—'}</div>
+      <div><span class="mx-status-pill ${HK_STATUS_CLASS[x.status]||'mx-pending'}">${HK_STATUS_LABEL[x.status]||x.status}</span></div>
+      <div style="font-size:.8rem;color:var(--text-muted);">${fmt(x.submittedAt)}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus(${x.id},'inprogress')">🔨 เริ่ม</button>`:''}
+        ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateHousekeepingStatus(${x.id},'done')">✅ เสร็จ</button>`:''}
+        ${x.status==='done'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus(${x.id},'pending')">↩ เปิดใหม่</button>`:''}
+      </div>
+      <div><button class="mx-btn mx-btn-del" onclick="deleteHousekeepingRequest(${x.id})">🗑️</button></div>
+    </div>`).join('')}`;
+}
+
+function switchMaintenanceTab(tabName, btn) {
+  // Hide all tabs
+  document.querySelectorAll('#page-maintenance .dashboard-tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+
+  // Remove active class from all buttons
+  document.querySelectorAll('#page-maintenance .dashboard-tab').forEach(button => {
+    button.classList.remove('active');
+    button.style.color = '';
+  });
+
+  // Show selected tab
+  const tabElement = document.getElementById('mx-' + tabName + '-tab');
+  if(tabElement) {
+    tabElement.classList.add('active');
+    btn.classList.add('active');
+    btn.style.color = 'var(--green)';
+    btn.style.borderBottomColor = 'var(--green)';
+
+    // Initialize tab data
+    if(tabName === 'housekeeping') {
+      initHousekeepingPage();
+    } else if(tabName === 'maintenance') {
+      initMaintenancePage();
+    }
+  }
 }
 
 // ===== CONTRACT MANAGEMENT =====
