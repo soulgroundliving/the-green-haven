@@ -2671,8 +2671,11 @@ function renderCompactRoomGrid(){
         <span>ค่าเช่า</span>
         <span class="compact-card-value">฿${r.rent.toLocaleString()}</span>
       </div>
-      <div class="compact-card-actions">
-        <button class="compact-btn compact-btn-view" onclick="editRoom('${r.id}')">📝 แก้ไข</button>
+      <div class="compact-card-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
+        <button class="compact-btn" onclick="viewContract('${r.id}')" title="ดูสัญญาเช่า" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
+        <button class="compact-btn" onclick="recordPayment('${r.id}')" title="บันทึกค่าเช่า" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">💰 ชำระ</button>
+        <button class="compact-btn" onclick="viewBills('${r.id}')" title="ดูบิล" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
+        <button class="compact-btn" onclick="reportMaintenance('${r.id}')" title="แจ้งซ่อม" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #7b1fa2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🔧 ซ่อม</button>
       </div>
     </div>`;
   }).join('');
@@ -5522,6 +5525,147 @@ function getPaymentStatus(roomId) {
 
   // All invoices are paid
   return 'paid';
+}
+
+// ===== Quick Action Functions =====
+function viewContract(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenant = tenantData.tenants?.[roomId];
+
+  if (!tenant || !tenant.name) {
+    alert('❌ ไม่มีข้อมูลผู้เช่า');
+    return;
+  }
+
+  const contractStart = tenant.contractStart || '—';
+  const contractEnd = tenant.contractEnd || '—';
+  const moveInDate = tenant.moveInDate || '—';
+
+  const contractInfo = `
+📄 สัญญาเช่า — ห้อง ${roomId}
+
+👤 ชื่อผู้เช่า: ${tenant.name}
+📱 โทรศัพท์: ${tenant.phone || '—'}
+🆔 เลขประชาชน: ${tenant.idNumber || '—'}
+
+📅 วันเข้าพัก: ${new Date(moveInDate).toLocaleDateString('th-TH') || '—'}
+📅 วันเริ่มสัญญา: ${new Date(contractStart).toLocaleDateString('th-TH') || '—'}
+📅 วันสิ้นสุดสัญญา: ${new Date(contractEnd).toLocaleDateString('th-TH') || '—'}
+
+💰 ค่าเช่า: ฿${tenant.rent?.toLocaleString() || '—'}
+💵 มัดจำ: ฿${tenant.deposit?.toLocaleString() || '0'}
+
+📝 หมายเหตุ: ${tenant.notes || 'ไม่มี'}
+  `;
+
+  alert(contractInfo);
+}
+
+function recordPayment(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenant = tenantData.tenants?.[roomId];
+
+  if (!tenant || !tenant.name) {
+    alert('❌ ไม่มีข้อมูลผู้เช่า');
+    return;
+  }
+
+  const amount = prompt(`💰 บันทึกค่าเช่า — ห้อง ${roomId}\n\nชื่อผู้เช่า: ${tenant.name}\nค่าเช่า: ฿${tenant.rent?.toLocaleString() || '0'}\n\nกรุณาระบุจำนวนเงินที่ชำระ:`);
+
+  if (amount === null) return;
+
+  const paymentAmount = parseFloat(amount);
+  if (isNaN(paymentAmount) || paymentAmount <= 0) {
+    alert('❌ กรุณาใส่จำนวนเงินที่ถูกต้อง');
+    return;
+  }
+
+  // Record payment in invoices
+  const invoices = tenantData.invoices || [];
+  const roomInvoices = invoices
+    .filter(inv => inv.roomId === roomId && inv.status !== 'paid')
+    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+  if (roomInvoices.length === 0) {
+    alert('✅ ไม่มีใบแจ้งหนี้ที่รอชำระ');
+    return;
+  }
+
+  let remainingAmount = paymentAmount;
+  roomInvoices.forEach(inv => {
+    if (remainingAmount <= 0) return;
+
+    const invoiceAmount = inv.amount;
+    if (remainingAmount >= invoiceAmount) {
+      inv.status = 'paid';
+      inv.paidDate = new Date().toISOString().split('T')[0];
+      remainingAmount -= invoiceAmount;
+    } else {
+      inv.amount -= remainingAmount;
+      inv.paidAmount = (inv.paidAmount || 0) + remainingAmount;
+      remainingAmount = 0;
+    }
+  });
+
+  // Save to localStorage
+  tenantData.invoices = invoices;
+  localStorage.setItem('tenant_data', JSON.stringify(tenantData));
+
+  alert(`✅ บันทึกการชำระเงินสำเร็จ\n\nจำนวนเงินที่ชำระ: ฿${paymentAmount.toLocaleString()}`);
+
+  // Refresh the display
+  renderCompactRoomGrid();
+}
+
+function viewBills(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const invoices = (tenantData.invoices || []).filter(inv => inv.roomId === roomId);
+
+  if (invoices.length === 0) {
+    alert(`📋 ไม่มีบิลสำหรับห้อง ${roomId}`);
+    return;
+  }
+
+  let billInfo = `📋 บิล — ห้อง ${roomId}\n\n`;
+  invoices.forEach(inv => {
+    const dueDate = new Date(inv.dueDate).toLocaleDateString('th-TH');
+    const paidDate = inv.paidDate ? new Date(inv.paidDate).toLocaleDateString('th-TH') : '—';
+    const status = inv.status === 'paid' ? '✅ จ่ายแล้ว' : '⏳ รอจ่าย';
+    billInfo += `${dueDate} | ฿${inv.amount.toLocaleString()} | ${status} | ${paidDate}\n`;
+  });
+
+  alert(billInfo);
+}
+
+function reportMaintenance(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenant = tenantData.tenants?.[roomId];
+
+  if (!tenant || !tenant.name) {
+    alert('❌ ไม่มีข้อมูลผู้เช่า');
+    return;
+  }
+
+  const issue = prompt(`🔧 แจ้งซ่อม — ห้อง ${roomId}\n\nชื่อผู้เช่า: ${tenant.name}\n\nกรุณาอธิบายปัญหา:`);
+
+  if (issue === null || !issue.trim()) return;
+
+  // Record maintenance request
+  const maintenanceReports = tenantData.maintenanceReports || [];
+  maintenanceReports.push({
+    id: Date.now().toString(),
+    roomId: roomId,
+    tenantName: tenant.name,
+    issue: issue,
+    date: new Date().toISOString().split('T')[0],
+    status: 'pending',
+    phone: tenant.phone || '—'
+  });
+
+  tenantData.maintenanceReports = maintenanceReports;
+  localStorage.setItem('tenant_data', JSON.stringify(tenantData));
+
+  alert(`✅ บันทึกการแจ้งซ่อมสำเร็จ\n\nเรื่อง: ${issue}\nวันที่แจ้ง: ${new Date().toLocaleDateString('th-TH')}`);
 }
 
 function updateRoomStatuses() {
