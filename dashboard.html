@@ -1459,6 +1459,17 @@
     </div>
   </div>
 
+  <!-- Lease Expiry Alerts -->
+  <div id="lease-expiry-alerts" style="display:none;margin-bottom:1.5rem;">
+    <div class="card" style="background:#fff9c4;border-left:6px solid #fbc02d;">
+      <div class="card-title" style="color:#f57f17;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.3em;">⚠️</span>
+        <span>หมดสัญญาใน 30 วัน</span>
+      </div>
+      <div id="lease-expiry-list" style="display:grid;gap:8px;"></div>
+    </div>
+  </div>
+
   <div class="section-title">🏠 ห้องแถว — ข้อมูลห้องพัก</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
     <div class="card" style="background:#fff3e0;border-left:4px solid var(--accent);">
@@ -1546,6 +1557,17 @@
       <div class="kpi-label">Occupancy Rate</div>
       <div class="kpi-value purple" id="nest-occupancy-rate">0%</div>
       <div class="kpi-sub">อัตราการใช้</div>
+    </div>
+  </div>
+
+  <!-- Lease Expiry Alerts -->
+  <div id="nest-lease-expiry-alerts" style="display:none;margin-bottom:1.5rem;">
+    <div class="card" style="background:#fff9c4;border-left:6px solid #fbc02d;">
+      <div class="card-title" style="color:#f57f17;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.3em;">⚠️</span>
+        <span>หมดสัญญาใน 30 วัน</span>
+      </div>
+      <div id="nest-lease-expiry-list" style="display:grid;gap:8px;"></div>
     </div>
   </div>
 
@@ -5489,16 +5511,111 @@ function updateOccupancyDashboard() {
   document.getElementById('nest-occupancy-rate').textContent = nestMetrics.rate + '%';
 }
 
-// Initialize occupancy dashboard on page load
+// ===== Lease Expiry Alerts =====
+function getExpiringLeases(buildingType = null) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenants = tenantData.tenants || {};
+
+  let rooms = [];
+  if (buildingType === 'nest') {
+    // Nest Building: N101-N505
+    rooms = ['N101', 'N102', 'N103', 'N104', 'N105',
+             'N201', 'N202', 'N203', 'N204', 'N205',
+             'N301', 'N302', 'N303', 'N304', 'N305',
+             'N401', 'N402', 'N403', 'N404', 'N405',
+             'N501', 'N502', 'N503', 'N504', 'N505'];
+  } else {
+    // Old Building: 01-90
+    rooms = [];
+    for (let i = 1; i <= 90; i++) {
+      rooms.push(i.toString().padStart(2, '0'));
+    }
+  }
+
+  const today = new Date();
+  const expiringLeases = [];
+
+  rooms.forEach(roomId => {
+    const tenant = tenants[roomId];
+    if (!tenant || !tenant.name || !tenant.contractEnd) return;
+
+    const endDate = new Date(tenant.contractEnd);
+    const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+    if (daysLeft > 0 && daysLeft <= 30) {
+      expiringLeases.push({
+        roomId: roomId,
+        tenantName: tenant.name,
+        endDate: tenant.contractEnd,
+        daysLeft: daysLeft
+      });
+    }
+  });
+
+  // Sort by days left (closest first)
+  return expiringLeases.sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
+function updateLeaseExpiryAlerts() {
+  // Update Old Building alerts
+  const oldExpiringLeases = getExpiringLeases('old');
+  const oldAlertsDiv = document.getElementById('lease-expiry-alerts');
+  const oldListDiv = document.getElementById('lease-expiry-list');
+
+  if (oldExpiringLeases.length > 0) {
+    oldAlertsDiv.style.display = 'block';
+    oldListDiv.innerHTML = oldExpiringLeases.map(lease => `
+      <div style="background:white;padding:10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid #fbc02d;">
+        <div>
+          <div style="font-weight:600;color:#333;">🟡 ห้อง ${lease.roomId} — ${lease.tenantName}</div>
+          <div style="font-size:.85rem;color:#666;margin-top:4px;">หมดสัญญา ${new Date(lease.endDate).toLocaleDateString('th-TH')}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:700;color:#f57f17;font-size:1.1rem;">${lease.daysLeft} วัน</div>
+          <div style="font-size:.75rem;color:#999;">เหลือเวลา</div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    oldAlertsDiv.style.display = 'none';
+  }
+
+  // Update Nest Building alerts
+  const nestExpiringLeases = getExpiringLeases('nest');
+  const nestAlertsDiv = document.getElementById('nest-lease-expiry-alerts');
+  const nestListDiv = document.getElementById('nest-lease-expiry-list');
+
+  if (nestExpiringLeases.length > 0) {
+    nestAlertsDiv.style.display = 'block';
+    nestListDiv.innerHTML = nestExpiringLeases.map(lease => `
+      <div style="background:white;padding:10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid #fbc02d;">
+        <div>
+          <div style="font-weight:600;color:#333;">🟡 ห้อง ${lease.roomId} — ${lease.tenantName}</div>
+          <div style="font-size:.85rem;color:#666;margin-top:4px;">หมดสัญญา ${new Date(lease.endDate).toLocaleDateString('th-TH')}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:700;color:#f57f17;font-size:1.1rem;">${lease.daysLeft} วัน</div>
+          <div style="font-size:.75rem;color:#999;">เหลือเวลา</div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    nestAlertsDiv.style.display = 'none';
+  }
+}
+
+// Initialize occupancy dashboard & lease alerts on page load
 document.addEventListener('DOMContentLoaded', function() {
   updateOccupancyDashboard();
+  updateLeaseExpiryAlerts();
 });
 
-// Update occupancy when room statuses are updated
+// Update occupancy and lease alerts when room statuses are updated
 const originalUpdateRoomStatuses = window.updateRoomStatuses;
 window.updateRoomStatuses = function() {
   originalUpdateRoomStatuses();
   updateOccupancyDashboard();
+  updateLeaseExpiryAlerts();
 };
 </script>
 </body>
