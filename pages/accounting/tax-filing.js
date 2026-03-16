@@ -1014,7 +1014,7 @@ function renderExpenseChart(year) {
 function showTaxPage(pageName, btn) {
   try {
     // Hide all pages
-    document.querySelectorAll('.tax-page').forEach(page => {
+    document.querySelectorAll('.page').forEach(page => {
       page.classList.remove('active');
     });
 
@@ -1023,10 +1023,16 @@ function showTaxPage(pageName, btn) {
       item.classList.remove('active');
     });
 
-    // Show selected page
-    const pageElement = document.getElementById(pageName);
+    // Show selected page - try both ID formats
+    let pageElement = document.getElementById(pageName + '-page');
+    if (!pageElement) {
+      pageElement = document.getElementById(pageName);
+    }
+
     if (pageElement) {
       pageElement.classList.add('active');
+    } else {
+      console.warn(`⚠️ Page element not found: ${pageName}-page or ${pageName}`);
     }
 
     // Add active class to clicked button
