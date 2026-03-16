@@ -11,7 +11,7 @@ let selectedMonths = 6;
 // ===== INITIALIZATION =====
 
 function initHistoryPage() {
-  checkAdminAccess();
+  // checkAdminAccess();  // Removed - allow all authenticated users
   populateRoomFilter();
   loadHistory();
 }
