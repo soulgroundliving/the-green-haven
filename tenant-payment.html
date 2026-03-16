@@ -92,13 +92,97 @@
     font-weight:700;font-size:.85rem;transition:.2s;}
   .footer-btn:active{background:var(--border);}
 
+  @media (max-width: 900px) {
+    .app-content { padding: 1.5rem 1rem; padding-bottom: 2rem; }
+    .payment-methods { grid-template-columns: 1fr; gap: 12px; }
+    .payment-method { padding: 12px; }
+    .qr-preview { max-width: 200px; }
+    .app-header { padding: 0.85rem 1rem; }
+  }
+
   @media (max-width: 600px) {
-    .app-content{padding:1rem;padding-bottom:1.5rem;}
-    .bill-box .amount{font-size:2rem;}
-    .bill-box .detail{grid-template-columns:1fr;}
-    .payment-methods{grid-template-columns:1fr;}
-    .app-header{padding:0.75rem 1rem;}
-    .app-header-title h1{font-size:1rem;}
+    .app-content { padding: 1rem; padding-bottom: 1.5rem; }
+    .bill-box { padding: 15px; border-radius: 10px; }
+    .bill-box .amount { font-size: 1.8rem; }
+    .bill-box .detail { grid-template-columns: 1fr; gap: 10px; }
+    .bill-box .detail-item { padding: 8px 0; font-size: 12px; }
+    .payment-methods { grid-template-columns: 1fr; gap: 10px; }
+    .payment-method { padding: 10px; border-radius: 8px; font-size: 12px; }
+    .method-icon { font-size: 20px; margin-bottom: 6px; }
+    .method-title { font-size: 12px; font-weight: 600; }
+    .method-desc { font-size: 11px; }
+    .app-header { padding: 0.75rem 1rem; }
+    .app-header-title h1 { font-size: 1rem; }
+    .app-header-subtitle { font-size: 11px; }
+    .bill-status { font-size: 11px; padding: 4px 8px; }
+    .qr-preview { max-width: 180px; max-height: 180px; }
+    .success-message { padding: 12px; font-size: 12px; }
+    .error-message { padding: 12px; font-size: 12px; }
+    .footer-btn { padding: 10px 12px; font-size: 12px; border-radius: 6px; }
+    .invoice-list { margin-top: 1rem; }
+    .invoice-item { padding: 10px; margin-bottom: 8px; border-radius: 6px; font-size: 12px; }
+    .invoice-room { font-size: 13px; font-weight: 600; }
+    .invoice-date { font-size: 11px; }
+    .invoice-amount { font-size: 14px; font-weight: 600; }
+  }
+
+  @media (max-width: 480px) {
+    .app-container { padding: 0; }
+    .app-header { padding: 0.6rem 0.8rem; gap: 8px; }
+    .app-header-title h1 { font-size: 0.9rem; }
+    .app-header-subtitle { font-size: 10px; }
+    .app-content { padding: 0.8rem; padding-bottom: 1rem; }
+    .bill-box { padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+    .bill-box .amount { font-size: 1.6rem; margin-bottom: 8px; }
+    .bill-box .detail { gap: 8px; }
+    .bill-box .detail-item { padding: 6px 0; font-size: 11px; }
+    .bill-box .detail-label { font-weight: 600; }
+    .bill-status { font-size: 10px; padding: 3px 6px; }
+    .payment-methods { gap: 8px; }
+    .payment-method { padding: 8px; gap: 8px; }
+    .method-icon { font-size: 18px; margin-bottom: 4px; }
+    .method-title { font-size: 11px; }
+    .method-desc { font-size: 10px; display: none; }
+    .qr-preview { max-width: 150px; max-height: 150px; }
+    .qr-label { font-size: 11px; margin-bottom: 8px; }
+    .success-message { padding: 10px; font-size: 11px; margin-bottom: 10px; border-radius: 6px; }
+    .error-message { padding: 10px; font-size: 11px; margin-bottom: 10px; border-radius: 6px; }
+    .footer { padding: 0.8rem; gap: 8px; }
+    .footer-btn { padding: 9px 10px; font-size: 11px; border-radius: 5px; flex: 1; }
+    .invoice-list { margin-top: 0.8rem; }
+    .invoice-item { padding: 8px; margin-bottom: 6px; border-radius: 5px; font-size: 11px; }
+    .invoice-room { font-size: 12px; }
+    .invoice-date { font-size: 10px; }
+    .invoice-amount { font-size: 13px; }
+  }
+
+  @media (max-width: 360px) {
+    .app-header { padding: 0.5rem 0.6rem; }
+    .app-header-title h1 { font-size: 0.8rem; }
+    .app-content { padding: 0.6rem; padding-bottom: 0.8rem; }
+    .bill-box { padding: 10px; margin-bottom: 10px; }
+    .bill-box .amount { font-size: 1.4rem; }
+    .bill-box .detail-item { font-size: 10px; }
+    .payment-method { padding: 6px; }
+    .method-icon { font-size: 16px; }
+    .method-title { font-size: 10px; }
+    .footer-btn { padding: 8px 9px; font-size: 10px; }
+    .invoice-item { padding: 7px; font-size: 10px; }
+  }
+
+  @media (orientation: landscape) and (max-width: 768px) {
+    .app-content { padding: 0.8rem; }
+    .bill-box { margin-bottom: 10px; }
+    .payment-methods { grid-template-columns: 2fr 1fr; }
+    .app-header { padding: 0.6rem; }
+  }
+
+  @media print {
+    .payment-methods { display: none; }
+    .footer { display: none; }
+    .app-header { display: none; }
+    .bill-box { page-break-inside: avoid; }
+    .app-content { padding: 20px; }
   }
 </style>
 </head>
