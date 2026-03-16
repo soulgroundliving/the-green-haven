@@ -1,0 +1,28 @@
+{
+  "buildCommand": "echo 'Static site, no build needed'",
+  "outputDirectory": ".",
+  "public": true,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/pages/:path*",
+      "destination": "/pages/:path*"
+    },
+    {
+      "source": "/shared/:path*",
+      "destination": "/shared/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    }
+  ]
+}
