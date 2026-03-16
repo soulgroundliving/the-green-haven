@@ -577,6 +577,38 @@
     50% { opacity: 0.7; }
   }
 
+  /* Payment Status Badges */
+  .payment-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .payment-status.paid {
+    background: #c8e6c9;
+    color: #2e7d32;
+  }
+  .payment-status.paid::before {
+    content: "🟢";
+  }
+  .payment-status.pending {
+    background: #fff9c4;
+    color: #f57f17;
+  }
+  .payment-status.pending::before {
+    content: "🟡";
+  }
+  .payment-status.overdue {
+    background: #ffcdd2;
+    color: #c62828;
+  }
+  .payment-status.overdue::before {
+    content: "🔴";
+  }
+
   .proj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;margin-bottom:1.3rem;}
   .proj-card{border-radius:var(--radius);padding:1.2rem;border-left:4px solid;}
   .proj-card.blue{background:var(--blue-pale);border-color:var(--blue);}
@@ -2592,12 +2624,22 @@ function renderCompactRoomGrid(){
       }
     }
 
+    // Get payment status
+    const paymentStatus = getPaymentStatus(r.id);
+    const paymentStatusLabel = paymentStatus === 'paid' ? 'จ่ายแล้ว' :
+                              paymentStatus === 'pending' ? 'รอจ่าย' :
+                              paymentStatus === 'overdue' ? 'ค้าง' : '—';
+    const paymentStatusHTML = paymentStatus ? `<span class="payment-status ${paymentStatus}">${paymentStatusLabel}</span>` : '';
+
     return `
     <div class="compact-card ${r.type==='commercial'?'':''}" style="border-left-color:${r.type==='commercial'?'var(--blue)':'var(--green)'}">
       <div class="compact-card-header">
         <div class="compact-card-id">${r.id}</div>
         <span class="compact-card-type">${r.type==='commercial'?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
-        <span style="margin-left:auto;font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOccupied?'var(--green-pale)':'#f3e5f5'};color:${isOccupied?'var(--green-dark)':'#6a1b9a'};font-weight:600;">${isOccupied?'มีผู้เช่า':'ว่าง'}</span>
+        <span style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+          <span style="font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOccupied?'var(--green-pale)':'#f3e5f5'};color:${isOccupied?'var(--green-dark)':'#6a1b9a'};font-weight:600;">${isOccupied?'มีผู้เช่า':'ว่าง'}</span>
+          ${paymentStatusHTML}
+        </span>
       </div>
       ${isOccupied ? `
       <div class="compact-card-info">
@@ -5440,6 +5482,46 @@ function getRoomStatus(roomId) {
 
   // Has tenant and paying = occupied
   return 'occupied';
+}
+
+// ===== Payment Status System =====
+function getPaymentStatus(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const invoices = tenantData.invoices || [];
+  const tenant = tenantData.tenants?.[roomId];
+
+  // No tenant = no payment status
+  if (!tenant || !tenant.name) {
+    return null;
+  }
+
+  // Get room's invoices
+  const roomInvoices = invoices.filter(inv => inv.roomId === roomId);
+  if (roomInvoices.length === 0) {
+    return null;
+  }
+
+  const today = new Date();
+
+  // Check for any overdue invoices (unpaid and past due date)
+  const overdueInvoices = roomInvoices.filter(inv => {
+    if (inv.status === 'paid') return false;
+    const dueDate = new Date(inv.dueDate);
+    return today > dueDate;
+  });
+
+  if (overdueInvoices.length > 0) {
+    return 'overdue';
+  }
+
+  // Check for unpaid invoices (pending payment)
+  const unpaidInvoices = roomInvoices.filter(inv => inv.status !== 'paid');
+  if (unpaidInvoices.length > 0) {
+    return 'pending';
+  }
+
+  // All invoices are paid
+  return 'paid';
 }
 
 function updateRoomStatuses() {
