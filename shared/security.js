@@ -223,7 +223,7 @@ function setSessionTimeout(timeoutMinutes = 30) {
     timeoutId = setTimeout(() => {
       console.warn('⚠️ Session timeout - logging out due to inactivity');
       sessionStorage.removeItem('user');
-      window.location.href = '/login.html';
+      window.location.href = '/login';
     }, timeoutMinutes * 60 * 1000);
   };
 
@@ -247,7 +247,7 @@ function secureLogout() {
   localStorage.removeItem('tenantData');
 
   console.log('✅ Secure logout completed');
-  window.location.href = '/login.html';
+  window.location.href = '/login';
 }
 
 // ===== SECURITY HEADERS =====
