@@ -2767,9 +2767,11 @@ function switchDashboardTab(tabName, btn) {
     tab.classList.remove('active');
   });
 
-  // Remove active class from all buttons
+  // Remove active class and inline styles from all buttons
   document.querySelectorAll('.dashboard-tab').forEach(button => {
     button.classList.remove('active');
+    button.style.color = '';
+    button.style.borderBottomColor = '';
   });
 
   // Show selected tab
@@ -2778,7 +2780,7 @@ function switchDashboardTab(tabName, btn) {
     tabElement.classList.add('active');
   }
 
-  // Add active class to button
+  // Add active class and styles to button
   if(btn) {
     btn.classList.add('active');
     btn.style.color = 'var(--green)';
