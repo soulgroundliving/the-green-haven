@@ -7,8 +7,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https: wss:;">
   <title>ระบบบัญชี - The Green Haven</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="security.js"></script>
-  <script src="audit.js"></script>
+  <script src="../../shared/security.js"></script>
+  <script src="../../shared/audit.js"></script>
   <script src="accounting.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
@@ -829,7 +829,7 @@
     <!-- Navigation Section -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Navigation</div>
-      <button class="sidebar-item" onclick="window.location.href='dashboard.html'">
+      <button class="sidebar-item" onclick="window.location.href='../admin/dashboard.html'">
         <span class="sidebar-item-icon">🏠</span>Dashboard หลัก
       </button>
     </div>
@@ -1179,13 +1179,13 @@
   function checkAccountingAuth() {
     const user = window.SecurityUtils.getSecureSession();
     if (!user) {
-      window.location.href = 'login.html';
+      window.location.href = '../../login.html';
       return;
     }
 
     if (user.userType !== 'admin' && user.userType !== 'accountant') {
       alert('เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบบัญชี');
-      window.location.href = 'login.html';
+      window.location.href = '../../login.html';
       return;
     }
 
