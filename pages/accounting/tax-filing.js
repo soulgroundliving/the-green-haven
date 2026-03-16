@@ -1732,16 +1732,8 @@ function updateChecklistStatus(itemId, status) {
   }
 }
 
-/**
- * Placeholder functions for export (will be implemented in tax-export.js)
- */
-function exportAnnualReportPDF() {
-  showError('ระบบ PDF Export กำลังพัฒนา - โปรดรอสักครู่');
-}
-
-function exportAnnualReportExcel() {
-  showError('ระบบ Excel Export กำลังพัฒนา - โปรดรอสักครู่');
-}
+// Export functions are defined in tax-export.js and will override these placeholders
+// They will be loaded after this file and take precedence
 
 // ===== UTILITY FUNCTIONS =====
 
