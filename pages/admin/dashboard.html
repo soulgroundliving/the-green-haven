@@ -1294,9 +1294,6 @@
       <button class="sidebar-item active" onclick="showPage('dashboard', this)">
         <span class="sidebar-item-icon">📊</span>Dashboard
       </button>
-      <button class="sidebar-item" onclick="showPage('analytics', this)">
-        <span class="sidebar-item-icon">📈</span>วิเคราะห์
-      </button>
     </div>
 
     <!-- Property -->
@@ -1511,7 +1508,6 @@
   <!-- Dashboard TAB NAVIGATION -->
   <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.5rem;flex-wrap:wrap;">
     <button class="dashboard-tab active" onclick="switchDashboardTab('overview', this)" style="padding:12px 24px;background:none;border:none;border-bottom:3px solid transparent;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.3s;font-size:0.95rem;font-family:'Sarabun',sans-serif;">📊 ภาพรวม</button>
-    <button class="dashboard-tab" onclick="switchDashboardTab('analytics', this)" style="padding:12px 24px;background:none;border:none;border-bottom:3px solid transparent;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.3s;font-size:0.95rem;font-family:'Sarabun',sans-serif;">📈 วิเคราะห์</button>
   </div>
 
   <!-- OVERVIEW TAB -->
@@ -1567,94 +1563,6 @@
     </div>
   </div>
   </div><!-- END OVERVIEW TAB -->
-
-  <!-- ANALYTICS TAB -->
-  <div id="dashboard-analytics-tab" class="dashboard-tab-content">
-    <div class="year-tabs" style="margin-bottom:1rem;">
-      <span class="year-tab-label">ปีงบประมาณ:</span>
-      <button class="year-tab" onclick="setYear('all',this)">ทั้งหมด</button>
-      <button class="year-tab active" onclick="setYear('67',this)">2567 (2024)</button>
-      <button class="year-tab" onclick="setYear('68',this)">2568 (2025)</button>
-      <button class="year-tab" onclick="setYear('69',this)">2569 (2026)</button>
-    </div>
-
-    <!-- Analytics Header -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;">
-      <div class="card">
-        <div style="font-size:0.9rem;color:var(--text-muted);margin-bottom:8px;">🎯 อัตราการเช่า</div>
-        <div style="font-size:2rem;font-weight:700;color:var(--green);" id="analytics-occupancy-rate">—</div>
-        <div style="font-size:0.8rem;color:var(--text-muted);">ห้องที่มีผู้เช่า</div>
-      </div>
-      <div class="card">
-        <div style="font-size:0.9rem;color:var(--text-muted);margin-bottom:8px;">📊 ห้องเปิด</div>
-        <div style="font-size:2rem;font-weight:700;color:var(--blue);" id="analytics-occupied-count">—</div>
-        <div style="font-size:0.8rem;color:var(--text-muted);">ห้องทั้งหมด</div>
-      </div>
-      <div class="card">
-        <div style="font-size:0.9rem;color:var(--text-muted);margin-bottom:8px;">💰 รายได้เดือนนี้</div>
-        <div style="font-size:2rem;font-weight:700;color:var(--accent);" id="analytics-monthly-revenue">—</div>
-        <div style="font-size:0.8rem;color:var(--text-muted);">บาท/เดือน</div>
-      </div>
-      <div class="card">
-        <div style="font-size:0.9rem;color:var(--text-muted);margin-bottom:8px;">📅 วันหมดสัญญา</div>
-        <div style="font-size:2rem;font-weight:700;color:#d32f2f;" id="analytics-contract-expiry">—</div>
-        <div style="font-size:0.8rem;color:var(--text-muted);">จำนวนห้อง</div>
-      </div>
-    </div>
-
-    <!-- Analytics Charts -->
-    <div class="charts-grid">
-      <div class="card">
-        <div class="card-title">📈 รายได้รายเดือน (ปีงบประมาณ)</div>
-        <div class="chart-wrap"><canvas id="chartAnalyticsRevenue"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-title">🏠 สถานะห้องพัก</div>
-        <div style="padding:1rem;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-            <div style="width:24px;height:24px;background:#4caf50;border-radius:4px;"></div>
-            <span style="font-size:0.9rem;">ห้องเปิด: <strong id="analytics-open-count">—</strong> ห้อง</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div style="width:24px;height:24px;background:#e0e0e0;border-radius:4px;"></div>
-            <span style="font-size:0.9rem;">ห้องว่าง: <strong id="analytics-vacant-count">—</strong> ห้อง</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Lease Expiry Table -->
-    <div class="card">
-      <div class="card-title">⏰ หมดสัญญาเช่าในเร็ว ๆ นี้</div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;font-size:0.9rem;">
-          <thead style="background:#f5f5f5;border-bottom:2px solid var(--border);">
-            <tr>
-              <th style="padding:12px;text-align:left;">ห้องเลขที่</th>
-              <th style="padding:12px;text-align:left;">ผู้เช่า</th>
-              <th style="padding:12px;text-align:left;">วันหมดสัญญา</th>
-              <th style="padding:12px;text-align:left;">สถานะ</th>
-            </tr>
-          </thead>
-          <tbody id="analytics-lease-expiry-table">
-            <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">กำลังโหลดข้อมูล...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Monthly Comparison -->
-    <div class="charts-grid">
-      <div class="card">
-        <div class="card-title">📊 เปรียบเทียบรายเดือน (3 ปี)</div>
-        <div class="chart-wrap"><canvas id="chartAnalyticsYears"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-title">⚡ ค่าไฟรายเดือน</div>
-        <div class="chart-wrap"><canvas id="chartAnalyticsElec"></canvas></div>
-      </div>
-    </div>
-  </div><!-- END ANALYTICS TAB -->
 </div>
 
 <!-- ===== ROOMS (OLD BUILDING) ===== -->
@@ -2355,44 +2263,6 @@
   <div class="card">
     <div class="card-title">📋 รายการงานซ่อมทั้งหมด</div>
     <div id="mxList"></div>
-  </div>
-</div>
-
-<!-- ===== OCCUPANCY ANALYTICS ===== -->
-<div class="page" id="page-analytics">
-  <div class="section-title">📈 วิเคราะห์การเข้าพัก & รายได้</div>
-  <div class="year-tabs" style="margin-bottom:1.2rem;">
-    <span class="year-tab-label">ตึก:</span>
-    <button class="year-tab active" onclick="setAnalyticsBuilding('old',this)">🏠 ห้องแถว</button>
-    <button class="year-tab" onclick="setAnalyticsBuilding('new',this)">🏗️ Nest</button>
-  </div>
-  <!-- KPI Row -->
-  <div class="ana-kpi-grid">
-    <div class="ana-kpi"><div class="ana-kpi-val green" id="ana-occupancy-rate" style="color:var(--green-dark);">—</div><div class="ana-kpi-label">🏘️ อัตราการเช่าปัจจุบัน</div></div>
-    <div class="ana-kpi orange"><div class="ana-kpi-val" id="ana-vacant-count" style="color:var(--orange);">—</div><div class="ana-kpi-label">🚪 ห้องว่างตอนนี้</div></div>
-    <div class="ana-kpi blue"><div class="ana-kpi-val" id="ana-avg-revenue" style="color:var(--blue);">—</div><div class="ana-kpi-label">💰 รายรับเฉลี่ย/เดือน (ปีนี้)</div></div>
-    <div class="ana-kpi purple"><div class="ana-kpi-val" id="ana-expiring" style="color:var(--purple);">—</div><div class="ana-kpi-label">⚠️ สัญญาหมดใน 60 วัน</div></div>
-  </div>
-  <!-- Charts Row -->
-  <div class="ana-charts-grid">
-    <div class="card">
-      <div class="card-title" id="anaChartTitle">📊 จำนวนห้องที่ชำระค่าเช่า (ทุกเดือน ปีนี้)</div>
-      <div class="chart-wrap"><canvas id="chartOccupancyMonthly"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">🚪 สถานะห้องทั้งหมด</div>
-      <div id="anaRoomStatus" style="max-height:340px;overflow-y:auto;"></div>
-    </div>
-  </div>
-  <!-- Revenue per room -->
-  <div class="card" style="margin-bottom:1.2rem;">
-    <div class="card-title">💵 รายรับสะสมต่อห้อง (ปีนี้)</div>
-    <div class="chart-wrap" style="height:220px;"><canvas id="chartRevenuePerRoom"></canvas></div>
-  </div>
-  <!-- Contract Expiry -->
-  <div class="card" id="anaContractCard" style="display:none;">
-    <div class="card-title">📅 สัญญาที่ใกล้หมดอายุ (ภายใน 90 วัน)</div>
-    <div id="anaContractList"></div>
   </div>
 </div>
 
