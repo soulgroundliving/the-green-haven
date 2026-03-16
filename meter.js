@@ -474,6 +474,135 @@ function logout() {
   }
 }
 
+// ===== BULK IMPORT FUNCTIONS =====
+
+function toggleBulkImport() {
+  const section = document.getElementById('bulkImportSection');
+  section.style.display = section.style.display === 'none' ? 'block' : 'none';
+}
+
+function downloadCSVTemplate() {
+  const roomList = NEST_ROOMS.map(room => `${room},,`).join('\n');
+
+  const csv = `Room,Water,Electric
+${roomList}`;
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute('href', url);
+  link.setAttribute('download', `meter_template_${currentMonth}.csv`);
+  link.style.visibility = 'hidden';
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  showAlert('✅ ดาวน์โหลดตัวอย่าง CSV สำเร็จ', 'success');
+}
+
+function importFromCSV() {
+  const fileInput = document.getElementById('csvFile');
+
+  if (!fileInput.files || fileInput.files.length === 0) {
+    showAlert('❌ กรุณาเลือกไฟล์ CSV', 'warning');
+    return;
+  }
+
+  const file = fileInput.files[0];
+
+  if (!file.name.endsWith('.csv')) {
+    showAlert('❌ กรุณาเลือกไฟล์ CSV เท่านั้น', 'warning');
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const csv = e.target.result;
+      const data = parseCSVFile(csv);
+
+      const validation = validateBulkReadings(data);
+
+      if (!validation.valid) {
+        let errorMsg = '❌ ข้อมูลไม่ถูกต้อง:\n';
+        validation.errors.forEach(error => {
+          errorMsg += `• ${error}\n`;
+        });
+        showAlert(errorMsg, 'warning');
+        return;
+      }
+
+      // Fill in the form
+      for (const room in data) {
+        if (document.getElementById(`water-current-${room}`)) {
+          document.getElementById(`water-current-${room}`).value = data[room].currentWater || '';
+          document.getElementById(`electric-current-${room}`).value = data[room].currentElectric || '';
+          updateMeterCard(room);
+        }
+      }
+
+      showAlert(`✅ นำเข้าข้อมูล ${Object.keys(data).length} ห้องสำเร็จ`, 'success');
+      toggleBulkImport();
+      fileInput.value = '';
+
+      logAudit('METER_IMPORTED_CSV', {
+        month: currentMonth,
+        roomsImported: Object.keys(data).length
+      });
+    } catch (error) {
+      showAlert(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'warning');
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+function exportMeterData() {
+  const monthKey = getMonthKey(currentMonth);
+  const readings = getMeterReadings(monthKey);
+  const rates = { current: currentRates };
+
+  if (Object.keys(readings).length === 0) {
+    showAlert('❌ ไม่มีข้อมูลที่จะส่งออก', 'warning');
+    return;
+  }
+
+  let csv = 'Room,Water Current,Electric Current,Water Previous,Electric Previous,Water Usage,Electric Usage,Water Charge,Electric Charge,Total\n';
+
+  for (const room in readings) {
+    const reading = readings[room];
+    const waterUsage = calculateWaterUsage(reading.currentWater, reading.previousWater);
+    const electricUsage = calculateElectricUsage(reading.currentElectric, reading.previousElectric);
+    const waterCharge = calculateWaterCharge(waterUsage, currentRates.water);
+    const electricCharge = calculateElectricCharge(electricUsage, currentRates.electric);
+    const totalCharge = waterCharge + electricCharge;
+
+    csv += `${room},${reading.currentWater},${reading.currentElectric},${reading.previousWater},${reading.previousElectric},${waterUsage},${electricUsage},${waterCharge},${electricCharge},${totalCharge}\n`;
+  }
+
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute('href', url);
+  link.setAttribute('download', `meter_readings_${currentMonth}.csv`);
+  link.style.visibility = 'hidden';
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  logAudit('METER_EXPORTED_CSV', {
+    month: currentMonth,
+    roomsExported: Object.keys(readings).length
+  });
+
+  showAlert('✅ ส่งออกข้อมูลสำเร็จ', 'success');
+}
+
 // ===== EVENT LISTENERS =====
 
 function attachEventListeners() {
@@ -483,6 +612,14 @@ function attachEventListeners() {
       currentMonth = e.target.value;
       resetForm();
       loadMeterData();
+    });
+  }
+
+  // CSV file input
+  const csvInput = document.getElementById('csvFile');
+  if (csvInput) {
+    csvInput.addEventListener('change', () => {
+      // Auto-import on file select (optional)
     });
   }
 }

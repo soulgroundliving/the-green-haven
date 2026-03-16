@@ -629,6 +629,7 @@
       </div>
     </div>
     <div class="header-nav">
+      <button class="nav-btn" onclick="window.location.href='/meter_history'">📈 ประวัติ</button>
       <button class="nav-btn" onclick="window.location.href='/dashboard'">🏠 หน้าหลัก</button>
       <button class="nav-btn" onclick="window.location.href='/accounting'">💳 บัญชี</button>
       <button class="logout-btn" onclick="logout()">🚪 ออกจากระบบ</button>
@@ -663,6 +664,27 @@
       <button class="btn-secondary" onclick="loadPreviousMonth()" style="height: 42px; width: auto;">
         ←  โหลดจากเดือนที่แล้ว
       </button>
+      <button class="btn-secondary" onclick="toggleBulkImport()" style="height: 42px; width: auto;">
+        📥 นำเข้าจาก CSV
+      </button>
+    </div>
+
+    <!-- Bulk Import Section (Hidden by default) -->
+    <div id="bulkImportSection" style="display: none; margin-bottom: 1.5rem;">
+      <div class="card" style="background: #fff8e1; border-left: 4px solid #ffc107;">
+        <div class="card-title">📥 นำเข้าข้อมูลมิเตอร์จาก CSV</div>
+        <p style="margin-bottom: 1rem; color: #6b7a8d;">
+          ไฟล์ CSV ต้องมีคอลัมน์: Room, Water, Electric
+        </p>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <input type="file" id="csvFile" accept=".csv" style="padding: 0.5rem;">
+        </div>
+        <div class="btn-group">
+          <button class="btn-primary" onclick="importFromCSV()">✅ นำเข้า</button>
+          <button class="btn-secondary" onclick="downloadCSVTemplate()">📥 ดาวน์โหลดตัวอย่าง</button>
+          <button class="btn-secondary" onclick="toggleBulkImport()">❌ ปิด</button>
+        </div>
+      </div>
     </div>
 
     <!-- Meter Input Grid -->
@@ -674,7 +696,7 @@
     <!-- Buttons -->
     <div class="btn-group">
       <button class="btn-primary" onclick="submitMeterReadings()">✅ บันทึกและสร้างใบวางบิล</button>
-      <button class="btn-secondary" onclick="loadPreviousMonth()" style="flex: 0.5; width: auto;">← โหลดจากเดือนที่แล้ว</button>
+      <button class="btn-secondary" onclick="exportMeterData()" style="flex: 0.5;">📤 ส่งออก CSV</button>
       <button class="btn-secondary" onclick="resetForm()">🔄 รีเซต</button>
     </div>
   </div>
