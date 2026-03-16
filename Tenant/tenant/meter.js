@@ -20,7 +20,8 @@ function initMeterPage() {
 }
 
 function checkAdminAccess() {
-  const userData = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  // Get user from sessionStorage (set by login page)
+  const userData = JSON.parse(sessionStorage.getItem('user') || '{}');
 
   // Flexible role checking: accept multiple variations
   const userType = userData.userType ? userData.userType.toLowerCase() : '';
@@ -29,9 +30,9 @@ function checkAdminAccess() {
   // Check if user has any allowed role
   const hasAccess = allowedRoles.some(role => userType.includes(role)) || userData.email?.includes('admin');
 
-  // If no currentUser at all, redirect to login
+  // If no user session at all, redirect to login
   if (!userData || !userData.email) {
-    console.warn('⚠️ No user data found. Redirecting to login.');
+    console.warn('⚠️ No user session found. Redirecting to login.');
     window.location.href = 'login.html';
     return;
   }
