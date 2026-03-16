@@ -628,7 +628,6 @@
     <button class="nav-btn" onclick="showPage('expenses')">💸 ค่าใช้จ่าย</button>
     <button class="nav-btn" onclick="showPage('payments')">💳 ตรวจสอบการชำระ<span id="paymentBadge" style="display:none;background:var(--red);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:.7rem;margin-left:.5rem;"></span></button>
     <button class="nav-btn" onclick="showPage('reports')">📄 รายงาน</button>
-    <button class="nav-btn" onclick="showPage('settings')">⚙️ ตั้งค่า</button>
     <button class="nav-btn" onclick="window.location.href='dashboard.html'" style="margin-left:auto;">🏠 กลับไปที่ระบบ</button>
     <button class="nav-btn logout-btn" onclick="handleLogout()">🚪 ออกจากระบบ</button>
   </div>
@@ -799,6 +798,19 @@
 
   <!-- REPORTS PAGE -->
   <div class="page" id="reports">
+    <div class="section-title">⚙️ ตั้งค่า</div>
+
+    <div class="card" style="max-width: 500px;">
+      <h3 style="margin-bottom: 1rem; color: var(--green);">ตั้งค่าอัตราภาษีหัก ณ ที่จ่าย</h3>
+
+      <div class="form-group">
+        <label>อัตราภาษีหัก (%)</label>
+        <input type="number" id="taxRate" value="10" min="0" max="100" step="0.5">
+        <small style="color: var(--text-muted); display: block; margin-top: .5rem;">ค่าเริ่มต้น: 10% (สำหรับรายได้ขั้นต่ำ)</small>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveTaxRate()">บันทึกตั้งค่า</button>
+    </div>
     <div class="section-title">📄 สร้างรายงาน</div>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
@@ -934,24 +946,6 @@
       <div id="verificationMessage" style="display:none;padding:1rem;border-radius:8px;margin-bottom:1rem;"></div>
     </div>
   </div>
-
-  <!-- SETTINGS PAGE -->
-  <div class="page" id="settings">
-    <div class="section-title">⚙️ ตั้งค่า</div>
-
-    <div class="card" style="max-width: 500px;">
-      <h3 style="margin-bottom: 1rem; color: var(--green);">ตั้งค่าอัตราภาษีหัก ณ ที่จ่าย</h3>
-
-      <div class="form-group">
-        <label>อัตราภาษีหัก (%)</label>
-        <input type="number" id="taxRate" value="10" min="0" max="100" step="0.5">
-        <small style="color: var(--text-muted); display: block; margin-top: .5rem;">ค่าเริ่มต้น: 10% (สำหรับรายได้ขั้นต่ำ)</small>
-      </div>
-
-      <button class="btn btn-primary" onclick="saveTaxRate()">บันทึกตั้งค่า</button>
-    </div>
-  </div>
-
 </div>
 
 <!-- JavaScript -->
