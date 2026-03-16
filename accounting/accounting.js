@@ -88,7 +88,7 @@ function showPage(pageName) {
 function handleLogout() {
   if (confirm('ยืนยันการออกจากระบบ?')) {
     localStorage.removeItem('currentUser');
-    window.location.href = 'login.html';
+    window.location.href = '/login';
   }
 }
 
@@ -147,6 +147,70 @@ function calculateMonthlyRevenue(month, year) {
   } catch (error) {
     console.error('Error calculating revenue:', error);
     return 0;
+  }
+}
+
+/**
+ * Calculate utility income from meter system (water + electric charges)
+ */
+function calculateUtilityIncome(month, year) {
+  try {
+    const monthKey = `${year}_${String(month).padStart(2, '0')}`;
+    const billsGenerated = JSON.parse(localStorage.getItem('billGenerated') || '{}');
+
+    if (!billsGenerated[monthKey]) {
+      return 0;
+    }
+
+    let total = 0;
+    const monthBills = billsGenerated[monthKey];
+
+    for (const roomId in monthBills) {
+      const bill = monthBills[roomId];
+      if (bill && bill.totalCharge) {
+        total += bill.totalCharge;
+      }
+    }
+
+    return total;
+  } catch (error) {
+    console.error('Error calculating utility income:', error);
+    return 0;
+  }
+}
+
+/**
+ * Get detailed utility income breakdown (water and electric separately)
+ */
+function getUtilityIncomeDetails(month, year) {
+  try {
+    const monthKey = `${year}_${String(month).padStart(2, '0')}`;
+    const billsGenerated = JSON.parse(localStorage.getItem('billGenerated') || '{}');
+
+    if (!billsGenerated[monthKey]) {
+      return { water: 0, electric: 0, total: 0 };
+    }
+
+    let waterIncome = 0;
+    let electricIncome = 0;
+    const monthBills = billsGenerated[monthKey];
+
+    for (const roomId in monthBills) {
+      const bill = monthBills[roomId];
+      if (bill) {
+        waterIncome += bill.waterCharge || 0;
+        electricIncome += bill.electricCharge || 0;
+      }
+    }
+
+    return {
+      water: waterIncome,
+      electric: electricIncome,
+      total: waterIncome + electricIncome
+    };
+  } catch (error) {
+    console.error('Error getting utility income details:', error);
+    return { water: 0, electric: 0, total: 0 };
   }
 }
 
