@@ -5475,11 +5475,9 @@ function calculateOccupancy(buildingType = null) {
              'N301', 'N302', 'N303', 'N304', 'N305',
              'N401', 'N402', 'N403', 'N404', 'N405'];
   } else {
-    // Old Building: 01-22 (22 rooms total)
-    rooms = [];
-    for (let i = 1; i <= 22; i++) {
-      rooms.push(i.toString().padStart(2, '0'));
-    }
+    // Old Building: 22 rooms (15ก + 13-33) + 1 Amazon cafe = 23 total
+    rooms = ['15ก', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22',
+             '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'Amazon'];
   }
 
   const occupied = rooms.filter(r => tenants[r] && tenants[r].name).length;
@@ -5523,11 +5521,9 @@ function getExpiringLeases(buildingType = null) {
              'N301', 'N302', 'N303', 'N304', 'N305',
              'N401', 'N402', 'N403', 'N404', 'N405'];
   } else {
-    // Old Building: 01-22 (22 rooms)
-    rooms = [];
-    for (let i = 1; i <= 22; i++) {
-      rooms.push(i.toString().padStart(2, '0'));
-    }
+    // Old Building: 22 rooms (15ก + 13-33) + 1 Amazon cafe = 23 total
+    rooms = ['15ก', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22',
+             '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'Amazon'];
   }
 
   const today = new Date();
