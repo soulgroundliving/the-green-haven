@@ -10,6 +10,7 @@
   <script src="./shared/meter_data.js"></script>
   <script src="./shared/meter_system.js"></script>
   <script src="./mock-tenant-data.js"></script>
+  <script src="./mock-meter-history.js"></script>
 
   <style>
     * {
@@ -710,6 +711,10 @@
       // Load mock tenant data if not already in Firebase
       if (!localStorage.getItem('tenant_data')) {
         initMockTenantData();
+      }
+      // Load mock meter history (previous month data)
+      if (!localStorage.getItem('METER_DATA')) {
+        initMeterHistory();
       }
       initMeterPage();
     });
