@@ -6,6 +6,14 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/dashboard",
+      "destination": "/pages/admin/dashboard.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    },
+    {
       "source": "/pages/:path*",
       "destination": "/pages/:path*"
     },
