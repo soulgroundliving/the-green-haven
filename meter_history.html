@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประวัติมิเตอร์ - The Green Haven</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="./shared/security.js"></script>
+  <script src="./shared/audit.js"></script>
+  <script src="./shared/meter_system.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --green-dark: #1a5c38;
+      --green: #2d8653;
+      --green-light: #4caf50;
+      --blue: #1976d2;
+      --red: #c62828;
+      --bg: #f4f6f8;
+      --card: #fff;
+      --text: #1a2332;
+      --text-muted: #6b7a8d;
+      --border: #e0e6ed;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 60%);
+      color: #fff;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 20px rgba(0,0,0,.25);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: .9rem 0;
+    }
+
+    .header-logo {
+      width: 40px;
+      height: 40px;
+      background: rgba(255,255,255,.15);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .header-nav {
+      display: flex;
+      gap: 3px;
+      flex-wrap: wrap;
+    }
+
+    .nav-btn {
+      padding: 7px 13px;
+      border: none;
+      background: rgba(255,255,255,.1);
+      color: #fff;
+      border-radius: 7px;
+      cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+      font-size: .85rem;
+      transition: all .2s;
+      font-weight: 500;
+    }
+
+    .nav-btn:hover {
+      background: rgba(255,255,255,.25);
+    }
+
+    .logout-btn {
+      background: rgba(198,40,40,0.2);
+      color: #c62828;
+      margin-left: auto;
+    }
+
+    .logout-btn:hover {
+      background: rgba(198,40,40,0.3);
+    }
+
+    .main {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    .filters {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 1.4rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .form-group {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: .4rem;
+      font-weight: 600;
+      font-size: .9rem;
+      color: var(--text);
+    }
+
+    input, select {
+      width: 100%;
+      padding: .7rem .9rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'Sarabun', sans-serif;
+      font-size: .9rem;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(45, 134, 83, 0.1);
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      padding: 1.4rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1.2rem;
+      color: var(--text);
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin-bottom: 1.5rem;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: var(--bg);
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+      color: var(--text-muted);
+      font-size: .9rem;
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: .9rem;
+    }
+
+    tr:hover {
+      background: var(--bg);
+    }
+
+    .stat-box {
+      background: var(--bg);
+      padding: 1.2rem;
+      border-radius: 8px;
+      border-left: 4px solid var(--green);
+    }
+
+    .stat-label {
+      font-size: .85rem;
+      color: var(--text-muted);
+      margin-bottom: .3rem;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--green-dark);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      padding: .8rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Sarabun', sans-serif;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .btn-primary {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--green-dark);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: #d0d6df;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .trend-up {
+      color: var(--green);
+    }
+
+    .trend-down {
+      color: var(--red);
+    }
+
+    @media (max-width: 768px) {
+      .main {
+        padding: 1rem;
+      }
+
+      .filters {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-container {
+        height: 250px;
+      }
+
+      table {
+        font-size: .8rem;
+      }
+
+      th, td {
+        padding: .7rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-brand">
+      <div class="header-logo">📈</div>
+      <div>
+        <h1>ประวัติและวิเคราะห์มิเตอร์</h1>
+        <small>The Green Haven - Meter History & Analytics</small>
+      </div>
+    </div>
+    <div class="header-nav">
+      <button class="nav-btn" onclick="window.location.href='/meter'">📊 บันทึกมิเตอร์</button>
+      <button class="nav-btn" onclick="window.location.href='/dashboard'">🏠 หน้าหลัก</button>
+      <button class="logout-btn" onclick="logout()">🚪 ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Filters -->
+    <div class="filters">
+      <div class="form-group">
+        <label>ห้อง</label>
+        <select id="roomFilter">
+          <option value="">-- ทั้งหมด --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>จำนวนเดือน</label>
+        <select id="monthsFilter">
+          <option value="3">3 เดือน</option>
+          <option value="6" selected>6 เดือน</option>
+          <option value="12">12 เดือน</option>
+        </select>
+      </div>
+      <div style="display: flex; align-items: flex-end; gap: 1rem;">
+        <button class="btn btn-primary" onclick="loadHistory()">🔍 ค้นหา</button>
+        <button class="btn btn-secondary" onclick="exportHistory()">📥 ดาวน์โหลด CSV</button>
+      </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="card">
+      <div class="card-title">📊 สรุปสถิติ</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-label">ค่าน้ำเฉลี่ย</div>
+          <div class="stat-value" id="avgWater">--- หน่วย</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">ค่าไฟเฉลี่ย</div>
+          <div class="stat-value" id="avgElectric">--- หน่วย</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">ค่าน้ำสูงสุด</div>
+          <div class="stat-value" id="maxWater">--- หน่วย</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">ค่าไฟสูงสุด</div>
+          <div class="stat-value" id="maxElectric">--- หน่วย</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="card">
+      <div class="card-title">📈 แนวโน้มการใช้งาน</div>
+      <div class="chart-container">
+        <canvas id="usageChart"></canvas>
+      </div>
+    </div>
+
+    <!-- History Table -->
+    <div class="card">
+      <div class="card-title">📋 ประวัติรายละเอียด</div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>เดือน</th>
+              <th>ค่าน้ำ (หน่วย)</th>
+              <th>ค่าไฟ (หน่วย)</th>
+              <th>ค่าน้ำ (บาท)</th>
+              <th>ค่าไฟ (บาท)</th>
+              <th>รวมทั้งสิ้น</th>
+              <th>บันทึกเมื่อ</th>
+            </tr>
+          </thead>
+          <tbody id="historyTable">
+            <tr>
+              <td colspan="7" style="text-align: center; color: #6b7a8d;">เลือกห้องและค้นหา</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Comparison -->
+    <div class="card">
+      <div class="card-title">📊 เปรียบเทียบเดือนต่อเดือน</div>
+      <div id="comparisonTable" style="text-align: center; color: #6b7a8d;">
+        เลือกห้องและค้นหาเพื่อดูเปรียบเทียบ
+      </div>
+    </div>
+  </div>
+
+  <script src="./meter_history.js"></script>
+</body>
+</html>
