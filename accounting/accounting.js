@@ -87,7 +87,7 @@ function showPage(pageName) {
 
 function handleLogout() {
   if (confirm('ยืนยันการออกจากระบบ?')) {
-    localStorage.removeItem('currentUser');
+    sessionStorage.removeItem('user');
     window.location.href = '/login';
   }
 }
