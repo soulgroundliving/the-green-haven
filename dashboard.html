@@ -2653,11 +2653,15 @@ function initRoomsPage(){
   grid.innerHTML=ROOMS_OLD.map(r=>{
     const tenant = allTenants[r.id];
     const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
+    const statusInfo = getRoomColorStatus(r.id, r);
+    const bgColor = r.type==='commercial'?'rgba(66,133,244,0.15)':statusInfo.color+'40';
+    const borderColor = r.type==='commercial'?'#4285f4':statusInfo.color;
     return `
-    <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" onclick="openTenantModal('${r.id}')" style="cursor:pointer;transition:transform 0.2s;">
+    <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" onclick="openTenantModal('${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${r.id}</div>
       <div class="room-rent">฿${r.rent.toLocaleString()}/เดือน</div>
       <div class="room-status">${r.type==='commercial'?'🏪 พาณิชย์':occupancyIcon + (tenant && tenant.name ? ' ' + tenant.name : ' ว่าง')}</div>
+      <div style="font-size:0.8rem;margin-top:4px;text-align:center;color:${borderColor};font-weight:600;">${statusInfo.icon} ${statusInfo.label}</div>
     </div>`;
   }).join('');
 
@@ -3031,11 +3035,15 @@ function initNestPage(){
     const tenant = allTenants[r.id];
     const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
     const typeIcon = r.type === 'daily' ? '📅' : (r.type === 'pet' ? '🐾' : '🏠');
+    const statusInfo = getRoomColorStatus(r.id, r);
+    const bgColor = statusInfo.color+'40';
+    const borderColor = statusInfo.color;
     return `
-    <div class="room-pill ${r.type === 'pet' ? 'pet' : (r.type === 'daily' ? 'daily' : 'studio')}" onclick="openTenantModal('${r.id}')" style="cursor:pointer;transition:transform 0.2s;">
+    <div class="room-pill ${r.type === 'pet' ? 'pet' : (r.type === 'daily' ? 'daily' : 'studio')}" onclick="openTenantModal('${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${r.id}</div>
       <div class="room-rent">฿${r.rent.toLocaleString()}/เดือน</div>
       <div class="room-status">${typeIcon} ${tenant && tenant.name ? tenant.name : 'ว่าง'}</div>
+      <div style="font-size:0.8rem;margin-top:4px;text-align:center;color:${borderColor};font-weight:600;">${statusInfo.icon} ${statusInfo.label}</div>
     </div>`;
   }).join('');
 
@@ -5779,6 +5787,36 @@ function getPaymentStatus(roomId) {
 
   // All invoices are paid
   return 'paid';
+}
+
+// ===== Room Color Status Function =====
+function getRoomColorStatus(roomId, room) {
+  const allTenants = loadTenants();
+  const tenant = allTenants[roomId];
+
+  // Vacant = gray
+  if (!tenant || !tenant.name) {
+    return { color: '#e0e0e0', icon: '⚪', label: 'ว่าง' };
+  }
+
+  // Check payment status
+  const paymentStatus = getPaymentStatus(roomId);
+  if (paymentStatus === 'overdue') {
+    return { color: '#d32f2f', icon: '🔴', label: 'ค้าง' };
+  }
+
+  // Check contract expiry (within 30 days)
+  const today = new Date();
+  const in30 = new Date(today.getTime() + 30*86400000);
+  if (tenant.contractEnd) {
+    const exp = new Date(tenant.contractEnd);
+    if (exp > today && exp <= in30) {
+      return { color: '#fbc02d', icon: '🟡', label: 'ใกล้หมด' };
+    }
+  }
+
+  // Occupied with good payment = green
+  return { color: '#4caf50', icon: '🟢', label: 'มี' };
 }
 
 // ===== Quick Action Functions =====
