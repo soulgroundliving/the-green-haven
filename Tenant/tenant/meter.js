@@ -279,7 +279,7 @@ async function submitMeterReadings() {
         dueDate: new Date(year, month, 5).toISOString(),
         status: 'unpaid',
         createdAt: new Date().toISOString(),
-        createdBy: JSON.parse(localStorage.getItem('currentUser')).email
+        createdBy: JSON.parse(sessionStorage.getItem('user')).email
       };
 
       if (existingIdx >= 0) {
@@ -304,7 +304,7 @@ async function submitMeterReadings() {
 
     // 4️⃣ Sync to Firebase
     const db = firebase.database();
-    const userEmail = JSON.parse(localStorage.getItem('currentUser')).email.replace(/[.@]/g, '_');
+    const userEmail = JSON.parse(sessionStorage.getItem('user')).email.replace(/[.@]/g, '_');
 
     await db.ref(`users/${userEmail}/invoices`).set(invoices);
     await db.ref(`users/${userEmail}/meter_readings/${monthKey}`).set(meterInputs);
