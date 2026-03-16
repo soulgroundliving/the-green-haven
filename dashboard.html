@@ -1585,6 +1585,12 @@
         <span>📦 รายชื่อห้องพัก (ตารางกระทัดรัด)</span>
         <input type="text" id="roomCompactSearch" placeholder="🔍 ค้นหาห้อง..." style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
       </div>
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="filter-btn active" onclick="setRoomFilter('all')" style="padding:6px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--green-dark);color:white;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ทั้งหมด</button>
+        <button class="filter-btn" onclick="setRoomFilter('occupied')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟢 มีผู้เช่า</button>
+        <button class="filter-btn" onclick="setRoomFilter('vacant')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #e0e0e0;background:white;color:#666;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚪ ว่าง</button>
+        <button class="filter-btn" onclick="setRoomFilter('overdue')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #d32f2f;background:white;color:#d32f2f;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🔴 ค้าง</button>
+      </div>
       <div class="compact-grid" id="roomCompactGrid"></div>
     </div>
   </div>
@@ -1704,6 +1710,12 @@
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
         <span>📦 รายชื่อห้องพัก (ตารางกระทัดรัด)</span>
         <input type="text" id="nestCompactSearch" placeholder="🔍 ค้นหาห้อง..." style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
+      </div>
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="filter-btn-nest active" onclick="setNestFilter('all')" style="padding:6px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--green-dark);color:white;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ทั้งหมด</button>
+        <button class="filter-btn-nest" onclick="setNestFilter('occupied')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟢 มีผู้เช่า</button>
+        <button class="filter-btn-nest" onclick="setNestFilter('vacant')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #e0e0e0;background:white;color:#666;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚪ ว่าง</button>
+        <button class="filter-btn-nest" onclick="setNestFilter('overdue')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #d32f2f;background:white;color:#d32f2f;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🔴 ค้าง</button>
       </div>
       <div class="compact-grid" id="nestCompactGrid"></div>
     </div>
@@ -2644,6 +2656,10 @@ function initDashboardCharts(){
   chartWater=mkChart('chartWater','line',{labels,datasets:[{label:'ค่าน้ำ',data:waters,borderColor:'#2196f3',backgroundColor:'rgba(33,150,243,.1)',fill:true,tension:.4,pointRadius:3}]},lineOpts('#2196f3'));
 }
 
+// ===== ROOM FILTER STATE =====
+let currentRoomFilter = 'all'; // all, occupied, vacant, overdue
+let currentNestFilter = 'all'; // all, occupied, vacant, overdue
+
 // ===== ROOMS PAGE =====
 function initRoomsPage(){
   updateOccupancyDashboard();
@@ -2693,12 +2709,49 @@ function initRoomsPage(){
   }
 }
 
+// ===== ROOM FILTER FUNCTION =====
+function setRoomFilter(filter) {
+  currentRoomFilter = filter;
+
+  // Update button styles
+  const buttons = document.querySelectorAll('.filter-btn');
+  buttons.forEach(btn => {
+    btn.classList.remove('active');
+    btn.style.background = 'white';
+    btn.style.color = btn.style.borderColor;
+  });
+
+  // Find and style the active button
+  const activeBtn = event.target;
+  activeBtn.classList.add('active');
+  activeBtn.style.background = activeBtn.style.borderColor || 'var(--green-dark)';
+  activeBtn.style.color = 'white';
+
+  renderCompactRoomGrid();
+}
+
 // ===== COMPACT ROOM GRID RENDERING =====
 function renderCompactRoomGrid(){
   const allTenants = loadTenants();
   const searchInput=document.getElementById('roomCompactSearch');
   const searchTerm=(searchInput?.value||'').toLowerCase();
-  const filtered=ROOMS_OLD.filter(r=>r.id.toString().toLowerCase().includes(searchTerm) || (allTenants[r.id]?.name||'').toLowerCase().includes(searchTerm));
+
+  // Apply search filter
+  let filtered=ROOMS_OLD.filter(r=>r.id.toString().toLowerCase().includes(searchTerm) || (allTenants[r.id]?.name||'').toLowerCase().includes(searchTerm));
+
+  // Apply status filter
+  filtered = filtered.filter(r => {
+    if (currentRoomFilter === 'all') return true;
+
+    const statusInfo = getRoomColorStatus(r.id, r);
+    const paymentStatus = getPaymentStatus(r.id);
+
+    if (currentRoomFilter === 'occupied') return statusInfo.label === 'มี';
+    if (currentRoomFilter === 'vacant') return statusInfo.label === 'ว่าง';
+    if (currentRoomFilter === 'overdue') return paymentStatus === 'overdue';
+
+    return true;
+  });
   const grid=document.getElementById('roomCompactGrid');
 
   // Calculate contract expiry summary
@@ -2872,15 +2925,53 @@ const NEST_ROOMS = [
   {id:'N405', floor:4, type:'pet', rent:5900, deposit:3000}
 ];
 
+// ===== SET NEST FILTER =====
+function setNestFilter(filter) {
+  currentNestFilter = filter;
+
+  // Update button styles
+  const buttons = document.querySelectorAll('.filter-btn-nest');
+  buttons.forEach(btn => {
+    btn.classList.remove('active');
+    btn.style.background = 'white';
+    btn.style.color = btn.style.borderColor;
+  });
+
+  // Find and style the active button
+  const activeBtn = event.target;
+  activeBtn.classList.add('active');
+  activeBtn.style.background = activeBtn.style.borderColor || 'var(--green-dark)';
+  activeBtn.style.color = 'white';
+
+  renderNestCompactGrid();
+}
+
 // ===== RENDER NEST COMPACT GRID =====
 function renderNestCompactGrid(){
   const allTenants = loadTenants();
   const searchInput = document.getElementById('nestCompactSearch');
   const searchTerm = (searchInput?.value || '').toLowerCase();
-  const filtered = NEST_ROOMS.filter(r =>
+
+  // Apply search filter
+  let filtered = NEST_ROOMS.filter(r =>
     r.id.toString().toLowerCase().includes(searchTerm) ||
     (allTenants[r.id]?.name || '').toLowerCase().includes(searchTerm)
   );
+
+  // Apply status filter
+  filtered = filtered.filter(r => {
+    if (currentNestFilter === 'all') return true;
+
+    const statusInfo = getRoomColorStatus(r.id, r);
+    const paymentStatus = getPaymentStatus(r.id);
+
+    if (currentNestFilter === 'occupied') return statusInfo.label === 'มี';
+    if (currentNestFilter === 'vacant') return statusInfo.label === 'ว่าง';
+    if (currentNestFilter === 'overdue') return paymentStatus === 'overdue';
+
+    return true;
+  });
+
   const grid = document.getElementById('nestCompactGrid');
 
   // Calculate contract expiry summary for Nest
