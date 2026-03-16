@@ -704,10 +704,15 @@
   <script src="./meter.js"></script>
 
   <script>
+    // Initialize meter page when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      initMeterPage();
+    });
+
     // Override logout in meter.js if needed
     window.logout = function() {
       if (confirm('ต้องการออกจากระบบหรือไม่?')) {
-        localStorage.removeItem('currentUser');
+        sessionStorage.removeItem('user');
         window.location.href = '/login';
       }
     };
