@@ -1431,6 +1431,34 @@
 
 <!-- ===== ROOMS (OLD BUILDING) ===== -->
 <div class="page" id="page-rooms">
+  <!-- Occupancy Dashboard -->
+  <div class="kpi-grid">
+    <div class="kpi-card green">
+      <div class="kpi-icon">🏠</div>
+      <div class="kpi-label">ห้องทั้งหมด</div>
+      <div class="kpi-value green" id="occupancy-total">0</div>
+      <div class="kpi-sub">ห้องพัก</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-icon">👤</div>
+      <div class="kpi-label">มีผู้เช่า</div>
+      <div class="kpi-value blue" id="occupancy-occupied">0</div>
+      <div class="kpi-sub">ห้อง</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-icon">🚪</div>
+      <div class="kpi-label">ว่าง</div>
+      <div class="kpi-value amber" id="occupancy-vacant">0</div>
+      <div class="kpi-sub">ห้อง</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-label">Occupancy Rate</div>
+      <div class="kpi-value purple" id="occupancy-rate">0%</div>
+      <div class="kpi-sub">อัตราการใช้</div>
+    </div>
+  </div>
+
   <div class="section-title">🏠 ห้องแถว — ข้อมูลห้องพัก</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
     <div class="card" style="background:#fff3e0;border-left:4px solid var(--accent);">
@@ -1492,6 +1520,35 @@
 <!-- ===== NEW BUILDING ===== -->
 <div class="page" id="page-newbuild">
   <div class="section-title">🏗️ Nest — The Green Haven 2</div>
+
+  <!-- Occupancy Dashboard -->
+  <div class="kpi-grid">
+    <div class="kpi-card green">
+      <div class="kpi-icon">🏠</div>
+      <div class="kpi-label">ห้องทั้งหมด</div>
+      <div class="kpi-value green" id="nest-occupancy-total">0</div>
+      <div class="kpi-sub">ห้องพัก</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-icon">👤</div>
+      <div class="kpi-label">มีผู้เช่า</div>
+      <div class="kpi-value blue" id="nest-occupancy-occupied">0</div>
+      <div class="kpi-sub">ห้อง</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-icon">🚪</div>
+      <div class="kpi-label">ว่าง</div>
+      <div class="kpi-value amber" id="nest-occupancy-vacant">0</div>
+      <div class="kpi-sub">ห้อง</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-label">Occupancy Rate</div>
+      <div class="kpi-value purple" id="nest-occupancy-rate">0%</div>
+      <div class="kpi-sub">อัตราการใช้</div>
+    </div>
+  </div>
+
   <div class="proj-grid">
     <div class="proj-card blue"><div class="proj-label">🏠 Studio (ชั้น 1-2)</div><div class="proj-value" style="color:var(--blue)">10 ห้อง</div><div style="font-size:.78rem;color:var(--text-muted);margin-top:2px;">฿5,600/เดือน · ค่าขยะ ฿40</div></div>
     <div class="proj-card purple"><div class="proj-label">🐾 Pet Friendly (ชั้น 3-4)</div><div class="proj-value" style="color:var(--purple)">10 ห้อง</div><div style="font-size:.78rem;color:var(--text-muted);margin-top:2px;">฿5,900/เดือน · ค่าขยะ ฿40</div></div>
@@ -5093,8 +5150,9 @@ function saveTenantInfo() {
   // Persist to localStorage
   localStorage.setItem('tenant_data', JSON.stringify(allTenants));
 
-  // Update room status colors
+  // Update room status colors and occupancy metrics
   updateRoomStatuses();
+  updateOccupancyDashboard();
 
   // Sync to Firebase if available
   if (window.saveToFirebase) {
@@ -5380,6 +5438,68 @@ function updateRoomStatuses() {
 
 // Update room statuses when tenant data changes
 window.updateRoomStatuses = updateRoomStatuses;
+
+// ===== Occupancy Dashboard =====
+function calculateOccupancy(buildingType = null) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenants = tenantData.tenants || {};
+
+  let rooms = [];
+
+  if (buildingType === 'nest') {
+    // Nest Building: N101-N505 (5 floors x 5 rooms = 25 rooms)
+    rooms = ['N101', 'N102', 'N103', 'N104', 'N105',
+             'N201', 'N202', 'N203', 'N204', 'N205',
+             'N301', 'N302', 'N303', 'N304', 'N305',
+             'N401', 'N402', 'N403', 'N404', 'N405',
+             'N501', 'N502', 'N503', 'N504', 'N505'];
+  } else {
+    // Old Building: 1-90 (rooms 01-90 and special rooms)
+    rooms = [];
+    for (let i = 1; i <= 90; i++) {
+      rooms.push(i.toString().padStart(2, '0'));
+    }
+  }
+
+  const occupied = rooms.filter(r => tenants[r] && tenants[r].name).length;
+  const vacant = rooms.length - occupied;
+  const rate = rooms.length > 0 ? Math.round((occupied / rooms.length) * 100) : 0;
+
+  return {
+    total: rooms.length,
+    occupied: occupied,
+    vacant: vacant,
+    rate: rate
+  };
+}
+
+function updateOccupancyDashboard() {
+  // Update Old Building (page-rooms)
+  const oldMetrics = calculateOccupancy('old');
+  document.getElementById('occupancy-total').textContent = oldMetrics.total;
+  document.getElementById('occupancy-occupied').textContent = oldMetrics.occupied;
+  document.getElementById('occupancy-vacant').textContent = oldMetrics.vacant;
+  document.getElementById('occupancy-rate').textContent = oldMetrics.rate + '%';
+
+  // Update Nest Building (page-newbuild)
+  const nestMetrics = calculateOccupancy('nest');
+  document.getElementById('nest-occupancy-total').textContent = nestMetrics.total;
+  document.getElementById('nest-occupancy-occupied').textContent = nestMetrics.occupied;
+  document.getElementById('nest-occupancy-vacant').textContent = nestMetrics.vacant;
+  document.getElementById('nest-occupancy-rate').textContent = nestMetrics.rate + '%';
+}
+
+// Initialize occupancy dashboard on page load
+document.addEventListener('DOMContentLoaded', function() {
+  updateOccupancyDashboard();
+});
+
+// Update occupancy when room statuses are updated
+const originalUpdateRoomStatuses = window.updateRoomStatuses;
+window.updateRoomStatuses = function() {
+  originalUpdateRoomStatuses();
+  updateOccupancyDashboard();
+};
 </script>
 </body>
 </html>
