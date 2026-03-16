@@ -1604,11 +1604,14 @@
         <span>📦 รายชื่อห้องพัก (ตารางกระทัดรัด)</span>
         <input type="text" id="roomCompactSearch" placeholder="🔍 ค้นหาห้อง..." style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
       </div>
-      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="filter-btn active" onclick="setRoomFilter('all')" style="padding:6px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--green-dark);color:white;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ทั้งหมด</button>
-        <button class="filter-btn" onclick="setRoomFilter('occupied')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟢 มีผู้เช่า</button>
-        <button class="filter-btn" onclick="setRoomFilter('vacant')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #e0e0e0;background:white;color:#666;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚪ ว่าง</button>
-        <button class="filter-btn" onclick="setRoomFilter('overdue')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #d32f2f;background:white;color:#d32f2f;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🔴 ค้าง</button>
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="filter-btn active" onclick="setRoomFilter('all')" style="padding:6px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--green-dark);color:white;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ทั้งหมด</button>
+          <button class="filter-btn" onclick="setRoomFilter('occupied')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟢 มีผู้เช่า</button>
+          <button class="filter-btn" onclick="setRoomFilter('vacant')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #e0e0e0;background:white;color:#666;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚪ ว่าง</button>
+          <button class="filter-btn" onclick="setRoomFilter('overdue')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #d32f2f;background:white;color:#d32f2f;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🔴 ค้าง</button>
+        </div>
+        <button onclick="openBatchRentAdjustmentModal()" style="padding:8px 14px;border-radius:6px;border:1.5px solid #9c27b0;background:#f3e5f5;color:#6a1b9a;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚙️ ปรับค่าเช่าแบบหลายห้อง</button>
       </div>
       <div class="compact-grid" id="roomCompactGrid"></div>
     </div>
@@ -1619,6 +1622,87 @@
     <div class="card">
       <div class="card-title">ตารางห้องพัก & อัตราค่าเช่า</div>
       <div class="scroll-x"><table class="data-table" id="roomTable"></table></div>
+    </div>
+  </div>
+
+  <!-- Batch Rent Adjustment Modal -->
+  <div id="batchRentModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px;flex-direction:column;">
+    <div style="background:white;border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h2 style="font-size:1.4rem;margin:0;color:#1b5e20;">⚙️ ปรับค่าเช่าแบบหลายห้อง</h2>
+        <button onclick="closeBatchRentAdjustmentModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;">✕</button>
+      </div>
+
+      <!-- Room Selection -->
+      <div style="margin-bottom:20px;">
+        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">📍 เลือกห้องพัก</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:8px;margin-bottom:12px;max-height:150px;overflow-y:auto;">
+          <!-- Room selection checkboxes will be rendered here -->
+          <div id="roomSelectionContainer" style="grid-column:1/-1;">
+            <p style="color:#999;text-align:center;">กำลังโหลด...</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button onclick="selectAllRooms()" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✓ เลือกทั้งหมด</button>
+          <button onclick="deselectAllRooms()" style="padding:6px 12px;border-radius:6px;border:1.5px solid #999;background:white;color:#999;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✗ ยกเลิกทั้งหมด</button>
+        </div>
+        <div style="font-size:0.85rem;color:#666;background:#f5f5f5;padding:10px;border-radius:6px;">
+          <strong id="roomSelectionCount">0</strong> ห้องได้รับการเลือก
+        </div>
+      </div>
+
+      <!-- Adjustment Type Selection -->
+      <div style="margin-bottom:20px;">
+        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">📊 วิธีการปรับค่าเช่า</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;" onchange="updateAdjustmentDisplay()">
+            <input type="radio" name="adjustType" value="fixed-increase" checked style="cursor:pointer;">
+            <span style="font-size:0.9rem;">เพิ่มเป็นจำนวนเงิน</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;" onchange="updateAdjustmentDisplay()">
+            <input type="radio" name="adjustType" value="percentage-increase" style="cursor:pointer;">
+            <span style="font-size:0.9rem;">เพิ่มเป็นเปอร์เซ็นต์</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;" onchange="updateAdjustmentDisplay()">
+            <input type="radio" name="adjustType" value="fixed-decrease" style="cursor:pointer;">
+            <span style="font-size:0.9rem;">ลดเป็นจำนวนเงิน</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;" onchange="updateAdjustmentDisplay()">
+            <input type="radio" name="adjustType" value="percentage-decrease" style="cursor:pointer;">
+            <span style="font-size:0.9rem;">ลดเป็นเปอร์เซ็นต์</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;grid-column:1/-1;" onchange="updateAdjustmentDisplay()">
+            <input type="radio" name="adjustType" value="set-fixed" style="cursor:pointer;">
+            <span style="font-size:0.9rem;">กำหนดเป็นค่าเช่าคงที่</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Adjustment Value Input -->
+      <div style="margin-bottom:20px;">
+        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">
+          <span id="adjustLabel">จำนวนที่เพิ่ม</span>
+        </h3>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="adjustSymbol" style="font-size:1.1rem;font-weight:600;color:#4caf50;">฿</span>
+          <input type="number" id="adjustmentValue" placeholder="0" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:6px;font-size:1rem;font-family:'Sarabun',sans-serif;">
+          <span id="adjustUnit" style="font-size:0.95rem;color:#666;font-weight:500;">บาท</span>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div style="margin-bottom:20px;padding:12px;background:#f5f5f5;border-radius:6px;max-height:120px;overflow-y:auto;">
+        <h3 style="font-size:0.9rem;font-weight:600;color:#333;margin:0 0 8px 0;">📋 ตัวอย่างผลลัพธ์</h3>
+        <div id="previewResult" style="font-size:0.85rem;color:#666;line-height:1.6;">
+          <p style="margin:0;color:#999;">เลือกห้องและค่าที่ต้องการปรับเพื่อดูตัวอย่าง</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="closeBatchRentAdjustmentModal()" style="padding:10px 20px;border-radius:6px;border:1.5px solid #999;background:white;color:#333;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ยกเลิก</button>
+        <button onclick="applyBatchRentAdjustment()" style="padding:10px 20px;border-radius:6px;border:none;background:#4caf50;color:white;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;display:flex;align-items:center;gap:6px;">✓ ปรับค่าเช่า</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2595,6 +2679,15 @@ document.addEventListener('click',function(e){
   if(!sidebar.contains(e.target) && !hamburger.contains(e.target) && window.innerWidth <= 600){
     closeSidebar();
   }
+
+  // Close batch rent modal if clicking outside
+  const batchModal = document.getElementById('batchRentModal');
+  if (batchModal && batchModal.style.display === 'flex') {
+    const modalContent = batchModal.querySelector('div[style*="background:white"]');
+    if (modalContent && !modalContent.contains(e.target)) {
+      closeBatchRentAdjustmentModal();
+    }
+  }
 });
 
 // Close sidebar on resize to desktop
@@ -2930,6 +3023,193 @@ function toggleRoomView(view, btn){
 
 function editRoom(roomId){openTenantModal(roomId);}
 function viewRoomDetails(roomId){openTenantModal(roomId);}
+
+// ===== BATCH RENT ADJUSTMENT FUNCTIONS =====
+let batchSelectedRooms = new Set();
+
+function openBatchRentAdjustmentModal() {
+  const modal = document.getElementById('batchRentModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  renderRoomSelectionCheckboxes();
+  updateAdjustmentDisplay();
+}
+
+function closeBatchRentAdjustmentModal() {
+  const modal = document.getElementById('batchRentModal');
+  if (modal) modal.style.display = 'none';
+  batchSelectedRooms.clear();
+}
+
+function renderRoomSelectionCheckboxes() {
+  const container = document.getElementById('roomSelectionContainer');
+  if (!container) return;
+
+  container.innerHTML = ROOMS_OLD.map(room => {
+    const currentRent = room.rent || 0;
+    return `
+      <label style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;background:white;" onclick="toggleBatchRoomSelection('${room.id}')">
+        <input type="checkbox" id="batchRoom_${room.id}" onchange="updateBatchRoomCount()" style="cursor:pointer;">
+        <span style="font-size:0.85rem;font-weight:600;color:#333;">${room.id}</span>
+        <span style="font-size:0.75rem;color:#666;">฿${currentRent}</span>
+      </label>
+    `;
+  }).join('');
+}
+
+function toggleBatchRoomSelection(roomId) {
+  const checkbox = document.getElementById(`batchRoom_${roomId}`);
+  if (!checkbox) return;
+  checkbox.checked = !checkbox.checked;
+  updateBatchRoomCount();
+}
+
+function updateBatchRoomCount() {
+  const checkboxes = document.querySelectorAll('#roomSelectionContainer input[type="checkbox"]:checked');
+  const countElement = document.getElementById('roomSelectionCount');
+  const count = checkboxes.length;
+  if (countElement) countElement.textContent = count;
+
+  batchSelectedRooms.clear();
+  checkboxes.forEach(cb => {
+    const roomId = cb.id.replace('batchRoom_', '');
+    batchSelectedRooms.add(roomId);
+  });
+
+  updatePreview();
+}
+
+function selectAllRooms() {
+  const checkboxes = document.querySelectorAll('#roomSelectionContainer input[type="checkbox"]');
+  checkboxes.forEach(cb => cb.checked = true);
+  updateBatchRoomCount();
+}
+
+function deselectAllRooms() {
+  const checkboxes = document.querySelectorAll('#roomSelectionContainer input[type="checkbox"]');
+  checkboxes.forEach(cb => cb.checked = false);
+  updateBatchRoomCount();
+}
+
+function updateAdjustmentDisplay() {
+  const adjustType = document.querySelector('input[name="adjustType"]:checked')?.value || 'fixed-increase';
+  const labelEl = document.getElementById('adjustLabel');
+  const symbolEl = document.getElementById('adjustSymbol');
+  const unitEl = document.getElementById('adjustUnit');
+
+  const labels = {
+    'fixed-increase': 'จำนวนที่เพิ่ม',
+    'percentage-increase': 'เปอร์เซ็นต์ที่เพิ่ม',
+    'fixed-decrease': 'จำนวนที่ลด',
+    'percentage-decrease': 'เปอร์เซ็นต์ที่ลด',
+    'set-fixed': 'ค่าเช่าคงที่'
+  };
+
+  const symbols = {
+    'fixed-increase': '฿',
+    'percentage-increase': '%',
+    'fixed-decrease': '฿',
+    'percentage-decrease': '%',
+    'set-fixed': '฿'
+  };
+
+  const units = {
+    'fixed-increase': 'บาท',
+    'percentage-increase': '%',
+    'fixed-decrease': 'บาท',
+    'percentage-decrease': '%',
+    'set-fixed': 'บาท/เดือน'
+  };
+
+  if (labelEl) labelEl.textContent = labels[adjustType];
+  if (symbolEl) symbolEl.textContent = symbols[adjustType];
+  if (unitEl) unitEl.textContent = units[adjustType];
+
+  updatePreview();
+}
+
+function updatePreview() {
+  if (batchSelectedRooms.size === 0) {
+    document.getElementById('previewResult').innerHTML = '<p style="margin:0;color:#999;">เลือกห้องเพื่อดูตัวอย่าง</p>';
+    return;
+  }
+
+  const adjustType = document.querySelector('input[name="adjustType"]:checked')?.value || 'fixed-increase';
+  const adjustValue = parseFloat(document.getElementById('adjustmentValue')?.value || 0);
+
+  if (isNaN(adjustValue) || adjustValue === 0) {
+    document.getElementById('previewResult').innerHTML = '<p style="margin:0;color:#999;">กรอกจำนวนที่ต้องการปรับ</p>';
+    return;
+  }
+
+  const selectedRooms = ROOMS_OLD.filter(r => batchSelectedRooms.has(r.id));
+  const preview = selectedRooms.map(room => {
+    let newRent = room.rent;
+
+    if (adjustType === 'fixed-increase') newRent = room.rent + adjustValue;
+    else if (adjustType === 'percentage-increase') newRent = Math.round(room.rent * (1 + adjustValue / 100));
+    else if (adjustType === 'fixed-decrease') newRent = room.rent - adjustValue;
+    else if (adjustType === 'percentage-decrease') newRent = Math.round(room.rent * (1 - adjustValue / 100));
+    else if (adjustType === 'set-fixed') newRent = adjustValue;
+
+    newRent = Math.max(0, newRent);
+    const change = newRent - room.rent;
+    const changePercent = ((change / room.rent) * 100).toFixed(1);
+    const arrow = change >= 0 ? '↑' : '↓';
+    const color = change > 0 ? '#4caf50' : (change < 0 ? '#d32f2f' : '#999');
+
+    return `<p style="margin:4px 0;font-size:0.8rem;"><strong>${room.id}</strong>: ฿${room.rent} <span style="color:${color};">→ ฿${newRent} ${arrow} ${Math.abs(changePercent)}%</span></p>`;
+  }).join('');
+
+  document.getElementById('previewResult').innerHTML = preview || '<p style="margin:0;color:#999;">ไม่มีการเปลี่ยนแปลง</p>';
+}
+
+function applyBatchRentAdjustment() {
+  if (batchSelectedRooms.size === 0) {
+    alert('กรุณาเลือกห้องพักอย่างน้อย 1 ห้อง');
+    return;
+  }
+
+  const adjustType = document.querySelector('input[name="adjustType"]:checked')?.value || 'fixed-increase';
+  const adjustValue = parseFloat(document.getElementById('adjustmentValue')?.value || 0);
+
+  if (isNaN(adjustValue) || adjustValue === 0) {
+    alert('กรุณากรอกจำนวนที่ต้องการปรับ');
+    return;
+  }
+
+  // Apply adjustments to ROOMS_OLD
+  ROOMS_OLD.forEach(room => {
+    if (batchSelectedRooms.has(room.id)) {
+      if (adjustType === 'fixed-increase') room.rent = room.rent + adjustValue;
+      else if (adjustType === 'percentage-increase') room.rent = Math.round(room.rent * (1 + adjustValue / 100));
+      else if (adjustType === 'fixed-decrease') room.rent = room.rent - adjustValue;
+      else if (adjustType === 'percentage-decrease') room.rent = Math.round(room.rent * (1 - adjustValue / 100));
+      else if (adjustType === 'set-fixed') room.rent = adjustValue;
+
+      room.rent = Math.max(0, room.rent);
+    }
+  });
+
+  // Log to audit
+  if (typeof AuditLogger !== 'undefined') {
+    AuditLogger.log('BATCH_RENT_ADJUSTMENT', {
+      roomCount: batchSelectedRooms.size,
+      adjustType: adjustType,
+      adjustValue: adjustValue,
+      affectedRooms: Array.from(batchSelectedRooms)
+    });
+  }
+
+  // Update UI
+  updateRoomDisplay();
+  updateDashboardLive();
+
+  // Show success message
+  alert(`✓ ปรับค่าเช่า ${batchSelectedRooms.size} ห้อง สำเร็จ!`);
+
+  closeBatchRentAdjustmentModal();
+}
 
 // ===== NEST BUILDING ROOMS DATA =====
 const NEST_ROOMS = [
