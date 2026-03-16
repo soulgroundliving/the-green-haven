@@ -5714,12 +5714,15 @@ function calculateOccupancy(buildingType = null) {
   const vacant = rooms.length - occupied;
   const rate = rooms.length > 0 ? Math.round((occupied / rooms.length) * 100) : 0;
 
-  return {
+  const result = {
     total: rooms.length,
     occupied: occupied,
     vacant: vacant,
     rate: rate
   };
+
+  console.log(`Occupancy for ${buildingType || 'old'}: ${result.total} total, ${result.occupied} occupied, ${result.vacant} vacant`);
+  return result;
 }
 
 function updateOccupancyDashboard() {
