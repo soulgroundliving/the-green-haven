@@ -1394,6 +1394,23 @@
           <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">💰 มัดจำ (บาท)</label>
           <input type="number" id="modalTenantDeposit" placeholder="0" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
         </div>
+
+        <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:2px solid var(--accent-light);">
+          <div style="font-weight:700;font-size:0.95rem;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1.2rem;">⚡💧</span>
+            <span>ค่ามิเตอร์เริ่มต้น</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;">
+            <div>
+              <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;">⚡ ไฟฟ้า (หน่วย)</label>
+              <input type="number" id="modalTenantElecMeter" placeholder="0" min="0" step="0.1" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            </div>
+            <div>
+              <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;">💧 น้ำ (หน่วย)</label>
+              <input type="number" id="modalTenantWaterMeter" placeholder="0" min="0" step="0.1" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Contract Document Upload Section -->
@@ -5501,6 +5518,8 @@ function openTenantModal(roomId) {
   document.getElementById('modalTenantMoveIn').value = tenant.moveInDate || '';
   document.getElementById('modalTenantContractEnd').value = tenant.contractEnd || '';
   document.getElementById('modalTenantDeposit').value = tenant.deposit || '';
+  document.getElementById('modalTenantElecMeter').value = tenant.elecMeterStart || '';
+  document.getElementById('modalTenantWaterMeter').value = tenant.waterMeterStart || '';
   document.getElementById('modalTenantNotes').value = tenant.notes || '';
 
   // Load contract document if exists
@@ -5541,6 +5560,8 @@ function saveTenantInfo() {
     moveInDate: document.getElementById('modalTenantMoveIn').value,
     contractEnd: document.getElementById('modalTenantContractEnd').value,
     deposit: parseFloat(document.getElementById('modalTenantDeposit').value) || 0,
+    elecMeterStart: parseFloat(document.getElementById('modalTenantElecMeter').value) || 0,
+    waterMeterStart: parseFloat(document.getElementById('modalTenantWaterMeter').value) || 0,
     notes: document.getElementById('modalTenantNotes').value,
     contractDocument: document.getElementById('modalContractDocument').value || allTenants[currentEditRoomId]?.contractDocument || ''
   };
