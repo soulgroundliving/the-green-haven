@@ -702,18 +702,25 @@
     </div>
   </div>
 
-  <script src="./meter.js"></script>
+  <script src="./meter-nest.js"></script>
 
   <script>
-    // Redirect to meter selector on load
-    window.addEventListener('load', function() {
-      const user = JSON.parse(sessionStorage.getItem('user') || 'null');
-      if (!user) {
-        window.location.href = '/login';
-      } else {
-        window.location.href = '/meter-selector.html';
+    // Initialize meter page when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      // Load mock tenant data if not already in Firebase
+      if (!localStorage.getItem('tenant_data')) {
+        initMockTenantData();
       }
+      initMeterPage();
     });
+
+    // Override logout in meter.js if needed
+    window.logout = function() {
+      if (confirm('ต้องการออกจากระบบหรือไม่?')) {
+        sessionStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    };
   </script>
 </body>
 </html>
