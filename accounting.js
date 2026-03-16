@@ -45,7 +45,7 @@ function showAccountingPage(pageName, btn) {
   });
 
   // Show selected page
-  const pageElement = document.getElementById(pageName + '-tab');
+  const pageElement = document.getElementById(pageName);
   if (pageElement) {
     pageElement.classList.add('active');
   }
@@ -64,6 +64,25 @@ function showAccountingPage(pageName, btn) {
   }
 
   console.log('📄 Switched to page: ' + pageName);
+}
+
+function showPage(pageName) {
+  // Find the corresponding button in header nav and call showAccountingPage
+  const buttons = document.querySelectorAll('.nav-btn');
+  buttons.forEach(btn => {
+    btn.classList.remove('active');
+  });
+
+  // Find and activate the clicked button
+  buttons.forEach(btn => {
+    if (btn.textContent.toLowerCase().includes(pageName.toLowerCase()) ||
+        btn.onclick.toString().includes(pageName)) {
+      btn.classList.add('active');
+    }
+  });
+
+  // Call the sidebar page switch function
+  showAccountingPage(pageName, null);
 }
 
 function handleLogout() {
