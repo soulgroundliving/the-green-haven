@@ -201,6 +201,22 @@
       alert('⛔ เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบบัญชี');
     }
   };
+
+  /**
+   * Navigate to Tax Filing Module
+   * @param {string} pageId - The page ID in tax-filing.html (e.g., 'dashboard', 'monthly-page')
+   */
+  window.goToTaxFiling = function(pageId) {
+    const user = window.SecurityUtils.getSecureSession();
+    if (user && (user.userType === 'admin' || user.userType === 'accountant')) {
+      // Store current page for potential back button in future
+      sessionStorage.setItem('previousPage', window.location.href);
+      // Navigate to tax-filing module with page ID
+      window.location.href = '../accounting/tax-filing.html#' + pageId;
+    } else {
+      alert('⛔ เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบยื่นแบบประเมิน');
+    }
+  };
 </script>
 
 <!-- Firebase Monitoring Panel Controller -->
@@ -922,6 +938,36 @@
     min-width: 20px;
   }
 
+  /* Subsection Styling for Finance & Accounting */
+  .sidebar-subsection {
+    margin: 8px 0;
+    padding: 4px 0;
+    padding-left: 8px;
+    border-left: 3px solid #4db8a8;
+  }
+
+  .sidebar-subsection-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #4db8a8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4px 12px;
+    margin-bottom: 4px;
+    opacity: 0.8;
+  }
+
+  .sidebar-item-indent {
+    padding-left: 28px !important;
+    font-size: 0.9rem;
+  }
+
+  .sidebar-item-indent .sidebar-item-icon {
+    font-size: 0.9rem;
+    width: 16px;
+    margin-right: 8px;
+  }
+
   .sidebar-badge {
     display: inline-block;
     margin-left: 6px;
@@ -1264,40 +1310,79 @@
       </button>
     </div>
 
-    <!-- Finance -->
+    <!-- Finance & Accounting -->
     <div class="sidebar-group">
-      <div class="sidebar-group-title">Finance</div>
-      <button class="sidebar-item" onclick="showPage('monthly', this)">
-        <span class="sidebar-item-icon">📅</span>รายเดือน
+      <div class="sidebar-group-title">💰 Finance & Accounting</div>
+
+      <!-- Data Entry Subsection -->
+      <div class="sidebar-subsection">
+        <div class="sidebar-subsection-title">📅 Data Entry</div>
+        <button class="sidebar-item sidebar-item-indent" onclick="window.location.href='../tenant/meter.html'">
+          <span class="sidebar-item-icon">📊</span>บันทึกมิเตอร์
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showPage('bill', this)">
+          <span class="sidebar-item-icon">💳</span>ออกบิล<span class="sidebar-badge" id="billBadge" style="display:none"></span>
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showPage('expense', this)">
+          <span class="sidebar-item-icon">💸</span>ค่าใช้จ่าย
+        </button>
+      </div>
+
+      <!-- Verification Subsection -->
+      <div class="sidebar-subsection">
+        <div class="sidebar-subsection-title">✓ Verification</div>
+        <button class="sidebar-item sidebar-item-indent" onclick="showPage('payment-verify', this)">
+          <span class="sidebar-item-icon">✓</span>ยืนยันการชำระ<span class="sidebar-badge" id="paymentBadge" style="display:none"></span>
+        </button>
+      </div>
+
+      <!-- Accounting Module -->
+      <button class="sidebar-item" onclick="goToAccounting()">
+        <span class="sidebar-item-icon">💾</span>Accounting Module
       </button>
-      <button class="sidebar-item" onclick="window.location.href='../tenant/meter.html'">
-        <span class="sidebar-item-icon">📊</span>บันทึกมิเตอร์
+    </div>
+
+    <!-- TAX FILING & REPORTING -->
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">🏛️ TAX FILING</div>
+      <button class="sidebar-item" onclick="goToTaxFiling('dashboard')">
+        <span class="sidebar-item-icon">📊</span>Tax Dashboard
       </button>
-      <button class="sidebar-item" onclick="showPage('bill', this)">
-        <span class="sidebar-item-icon">💳</span>ออกบิล<span class="sidebar-badge" id="billBadge" style="display:none"></span>
+      <button class="sidebar-item" onclick="goToTaxFiling('monthly-page')">
+        <span class="sidebar-item-icon">📅</span>Monthly Reports
       </button>
-      <button class="sidebar-item" onclick="showPage('payment-verify', this)">
-        <span class="sidebar-item-icon">✓</span>ยืนยันการชำระ<span class="sidebar-badge" id="paymentBadge" style="display:none"></span>
+      <button class="sidebar-item" onclick="goToTaxFiling('quarterly-page')">
+        <span class="sidebar-item-icon">📊</span>Quarterly Returns
+      </button>
+      <button class="sidebar-item" onclick="goToTaxFiling('annual-page')">
+        <span class="sidebar-item-icon">📈</span>Annual Returns
+      </button>
+      <button class="sidebar-item" onclick="goToTaxFiling('withholding-page')">
+        <span class="sidebar-item-icon">💳</span>Withholding
+      </button>
+      <button class="sidebar-item" onclick="goToTaxFiling('checklist-page')">
+        <span class="sidebar-item-icon">✓</span>Filing Checklist
+      </button>
+    </div>
+
+    <!-- Property (Updated) -->
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">🏠 Property</div>
+      <button class="sidebar-item" onclick="showPage('rooms', this)">
+        <span class="sidebar-item-icon">🏠</span>ห้องแถว
+      </button>
+      <button class="sidebar-item" onclick="showPage('newbuild', this)">
+        <span class="sidebar-item-icon">📦</span>Nest
+      </button>
+      <button class="sidebar-item" onclick="showPage('maintenance', this)">
+        <span class="sidebar-item-icon">🔧</span>แจ้งซ่อม<span class="sidebar-badge" id="mxBadge" style="display:none"></span>
       </button>
     </div>
 
     <!-- Operations -->
     <div class="sidebar-group">
-      <div class="sidebar-group-title">Operations</div>
-      <button class="sidebar-item" onclick="showPage('maintenance', this)">
-        <span class="sidebar-item-icon">🔧</span>แจ้งซ่อม<span class="sidebar-badge" id="mxBadge" style="display:none"></span>
-      </button>
-      <button class="sidebar-item" onclick="showPage('expense', this)">
-        <span class="sidebar-item-icon">💸</span>ค่าใช้จ่าย
-      </button>
-    </div>
-
-    <!-- Management -->
-    <div class="sidebar-group">
-      <div class="sidebar-group-title">Management</div>
-      <button class="sidebar-item" onclick="goToAccounting()">
-        <span class="sidebar-item-icon">💰</span>บัญชี
-      </button>
+      <div class="sidebar-group-title">⚙️ Operations</div>
+      <!-- Reserved for future operations items -->
     </div>
 
     <!-- Account Settings -->
