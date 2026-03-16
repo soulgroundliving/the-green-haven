@@ -23,12 +23,12 @@ function checkAdminAccess() {
   // Get user from sessionStorage (set by login page)
   const userData = JSON.parse(sessionStorage.getItem('user') || '{}');
 
-  // Flexible role checking: accept multiple variations
-  const userType = userData.userType ? userData.userType.toLowerCase() : '';
-  const allowedRoles = ['admin', 'owner', 'superadmin'];
-
-  // Check if user has any allowed role
-  const hasAccess = allowedRoles.some(role => userType.includes(role)) || userData.email?.includes('admin');
+  console.log('🔐 Permission Check Debug:', {
+    hasUserData: !!userData,
+    email: userData.email,
+    userType: userData.userType,
+    fullData: userData
+  });
 
   // If no user session at all, redirect to login
   if (!userData || !userData.email) {
@@ -37,9 +37,19 @@ function checkAdminAccess() {
     return;
   }
 
-  // If user exists but doesn't have admin access, show warning
-  if (!hasAccess) {
-    console.warn('⚠️ User does not have admin access. Role:', userType);
+  // Simple admin check: if email exists and user logged in, allow access
+  // (user had to authenticate through login to get here)
+  const userEmail = (userData.email || '').toLowerCase();
+  const userType = (userData.userType || '').toLowerCase();
+
+  // Allow if: email contains 'admin' OR userType contains 'admin/owner/superadmin'
+  const isAdmin = userEmail.includes('admin') ||
+                  userType.includes('admin') ||
+                  userType.includes('owner') ||
+                  userType.includes('superadmin');
+
+  if (!isAdmin) {
+    console.warn('⚠️ User access denied. Email:', userData.email, 'Role:', userData.userType);
     alert(`⚠️ สิทธิ์ไม่เพียงพอ\nบัญชี: ${userData.email}\nบทบาท: ${userData.userType || 'unknown'}\n\nติดต่อแอดมินเพื่อขออนุญาต`);
     window.location.href = 'login.html';
     return;
