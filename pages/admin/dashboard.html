@@ -20,8 +20,10 @@
   import { getAuth, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
   // Firebase configuration
+  // Environment variables are injected at build time by Vercel
+  // NEVER commit API keys to source code
   const firebaseConfig = {
-    apiKey: "AIzaSyCbOKefRd5mXh3ZxlBjhHkonwbWWBtlQmo",
+    apiKey: "__FIREBASE_API_KEY__",
     authDomain: "the-green-haven.firebaseapp.com",
     databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "the-green-haven",

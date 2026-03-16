@@ -1,5 +1,5 @@
 {
-  "buildCommand": "echo 'Static site, no build needed'",
+  "buildCommand": "bash build.sh",
   "outputDirectory": ".",
   "public": true,
   "cleanUrls": true,
