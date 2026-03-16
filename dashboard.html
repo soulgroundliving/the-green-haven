@@ -5725,6 +5725,9 @@ function calculateOccupancy(buildingType = null) {
   return result;
 }
 
+// Export to window for global access
+window.calculateOccupancy = calculateOccupancy;
+
 function updateOccupancyDashboard() {
   // Update Old Building (page-rooms)
   const oldMetrics = calculateOccupancy('old');
