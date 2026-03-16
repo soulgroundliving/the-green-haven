@@ -4622,6 +4622,13 @@ function goBillFromTable(roomId, year, month){
 
 // ===== DASHBOARD LIVE UPDATES =====
 function updateDashboardLive(){
+  // Ensure data is available
+  if(!ROOMS_OLD || ROOMS_OLD.length === 0) {
+    console.warn('⚠️ ROOMS_OLD data not available yet, retrying...');
+    setTimeout(updateDashboardLive, 200);
+    return;
+  }
+
   const now=new Date();
   const month=now.getMonth()+1;
   const year=now.getFullYear()+543;
@@ -5525,7 +5532,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Pre-select current month in meter table
   document.getElementById('mt-month').value=now.getMonth()+1;
   document.getElementById('mt-year').value=now.getFullYear()+543;
-  updateDashboardLive();
+  // Delay KPI updates to ensure data is loaded from localStorage
+  setTimeout(updateDashboardLive,100);
   setTimeout(initDashboardCharts,300);
 });
 
