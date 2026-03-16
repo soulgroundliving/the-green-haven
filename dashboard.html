@@ -5445,7 +5445,7 @@ function uploadContractDocument() {
   reader.onload = function(e) {
     const base64Data = e.target.result;
     document.getElementById('modalContractDocument').value = base64Data;
-    statusEl.textContent = `✅ อัพโหลด: ${file.name}`;
+    statusEl.innerHTML = `✅ อัพโหลด: ${file.name}<br><strong style="color:var(--orange);font-size:0.85rem;">⚠️ กรุณากดปุ่ม "บันทึกข้อมูล" เพื่อบันทึกถาวร</strong>`;
 
     // Also try to upload to Firebase if available
     if (window.firebaseRef && window.firebaseSet && window.firebaseDatabase && currentEditRoomId) {
@@ -5454,10 +5454,10 @@ function uploadContractDocument() {
         const docPath = `contracts/${currentEditRoomId}/${timestamp.replace(/[:.]/g, '-')}`;
         // Note: Firebase Realtime Database can't store large files directly
         // This should ideally use Firebase Storage, but for now we store metadata
-        statusEl.textContent = `✅ อัพโหลด: ${file.name} (บันทึกเรียบร้อย)`;
+        statusEl.innerHTML = `✅ อัพโหลด: ${file.name}<br><strong style="color:var(--orange);font-size:0.85rem;">⚠️ กรุณากดปุ่ม "บันทึกข้อมูล" เพื่อบันทึกถาวร</strong>`;
       } catch (error) {
         console.error('Firebase upload error:', error);
-        statusEl.textContent = `✅ อัพโหลด: ${file.name} (บันทึกเรียบร้อย)`;
+        statusEl.innerHTML = `✅ อัพโหลด: ${file.name}<br><strong style="color:var(--orange);font-size:0.85rem;">⚠️ กรุณากดปุ่ม "บันทึกข้อมูล" เพื่อบันทึกถาวร</strong>`;
       }
     }
   };
