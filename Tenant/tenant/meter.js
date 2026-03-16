@@ -1,7 +1,11 @@
 // ===== Meter Tracking System =====
 // เมื่อเจ้าของบันทึกมิเตอร์ → ระบบ AUTO-GENERATE ทุกอย่าง
 
-const NEST_ROOMS = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33'];
+// Updated room numbers to match actual tenant database
+const NEST_ROOMS = ['N101', 'N102', 'N103', 'N104', 'N105',
+                    'N201', 'N202', 'N203', 'N204', 'N205',
+                    'N301', 'N302', 'N303', 'N304', 'N305',
+                    'N401', 'N402', 'N403', 'N404', 'N405'];
 
 let currentRates = {
   water: 30,
