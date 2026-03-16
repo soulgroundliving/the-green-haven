@@ -321,16 +321,19 @@
   .room-pill:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);}
   .room-pill.occupied{background:var(--green-pale);border-color:var(--green-light);}
   .room-pill.commercial{background:var(--blue-pale);border-color:var(--blue);}
+  .room-pill.studio{background:var(--blue-pale);border-color:var(--blue);}
   .room-pill.pet{background:var(--purple-pale);border-color:var(--purple);}
   .room-pill.daily{background:#fff3e0;border-color:#f57c00;}
   .room-pill .room-num{font-size:1.05rem;font-weight:700;color:var(--green-dark);}
   .room-pill.commercial .room-num{color:var(--blue);}
+  .room-pill.studio .room-num{color:var(--blue);}
   .room-pill.pet .room-num{color:var(--purple);}
   .room-pill.daily .room-num{color:#e65100;}
   .room-pill .room-rent{font-size:.72rem;color:var(--text-muted);margin-top:2px;}
   .room-pill .room-status{font-size:.67rem;font-weight:600;margin-top:3px;padding:2px 5px;border-radius:20px;display:inline-block;}
   .room-pill.occupied .room-status{background:var(--green-light);color:#fff;}
   .room-pill.commercial .room-status{background:var(--blue);color:#fff;}
+  .room-pill.studio .room-status{background:var(--blue);color:#fff;}
 
   /* ===== COMPACT GRID LISTS ===== */
   .compact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.2rem;margin-top:1rem;}
@@ -380,8 +383,9 @@
   .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:600;}
   .badge-green{background:var(--green-pale);color:var(--green-dark);}
   .badge-blue{background:var(--blue-pale);color:#0d47a1;}
-  .badge-amber{background:var(--accent-light);color:#e65100;}
   .badge-purple{background:var(--purple-pale);color:var(--purple);}
+  .badge-orange{background:#fff3e0;color:#e65100;}
+  .badge-amber{background:var(--accent-light);color:#e65100;}
   .badge-red{background:var(--red-pale);color:var(--red);}
 
   .year-tabs{display:flex;gap:7px;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center;}
@@ -1615,12 +1619,75 @@
     </div>
   </div>
 
-  <div class="proj-grid">
-    <div class="proj-card blue"><div class="proj-label">🏠 Studio (ชั้น 1-2)</div><div class="proj-value" style="color:var(--blue)">10 ห้อง</div><div style="font-size:.78rem;color:var(--text-muted);margin-top:2px;">฿5,600/เดือน · ค่าขยะ ฿40</div></div>
-    <div class="proj-card purple"><div class="proj-label">🐾 Pet Friendly (ชั้น 3-4)</div><div class="proj-value" style="color:var(--purple)">10 ห้อง</div><div style="font-size:.78rem;color:var(--text-muted);margin-top:2px;">฿5,900/เดือน · ค่าขยะ ฿40</div></div>
-    <div class="proj-card amber"><div class="proj-label">📅 รายวัน (ชั้น 1 บางส่วน)</div><div class="proj-value" style="color:var(--accent)">5 ห้อง</div><div style="font-size:.78rem;color:var(--text-muted);margin-top:2px;">~฿400/คืน (ประมาณการ)</div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem;">
+    <div class="card" style="background:#e3f2fd;border-left:4px solid var(--blue);">
+      <div class="card-title" style="color:#1565c0;">🏠 Studio (ชั้น 1-2)</div>
+      <div style="font-size:.88rem;line-height:2;">
+        <div>💰 ค่าเช่า: <strong>฿5,600/เดือน</strong></div>
+        <div>⚡ อัตราค่าไฟ: <strong>8 บาท/หน่วย</strong></div>
+        <div>💧 อัตราค่าน้ำ: <strong>20 บาท/หน่วย</strong></div>
+        <div>🗑️ ค่าขยะ: <strong>40 บาท/เดือน</strong></div>
+      </div>
+    </div>
+    <div class="card" style="background:#f3e5f5;border-left:4px solid var(--purple);">
+      <div class="card-title" style="color:#6a1b9a;">🐾 Pet Friendly (ชั้น 3-4)</div>
+      <div style="font-size:.88rem;line-height:2;">
+        <div>💰 ค่าเช่า: <strong>฿5,900/เดือน</strong></div>
+        <div>⚡ อัตราค่าไฟ: <strong>8 บาท/หน่วย</strong></div>
+        <div>💧 อัตราค่าน้ำ: <strong>20 บาท/หน่วย</strong></div>
+        <div>🗑️ ค่าขยะ: <strong>40 บาท/เดือน</strong></div>
+      </div>
+    </div>
+    <div class="card" style="background:#fff3e0;border-left:4px solid var(--accent);">
+      <div class="card-title" style="color:#bf360c;">📅 รายวัน (ชั้น 1 บางส่วน)</div>
+      <div style="font-size:.88rem;line-height:2;">
+        <div>💰 ค่าเช่ารายเดือน: <strong>฿5,600</strong></div>
+        <div>📍 ค่ารายวัน: <strong>~฿400/คืน</strong></div>
+        <div>🗑️ ค่าขยะ: <strong>40 บาท/เดือน</strong></div>
+        <div>📞 ห้อง: <strong>101, 102, 103</strong></div>
+      </div>
+    </div>
   </div>
 
+  <!-- Room display options -->
+  <div style="margin-bottom:1.2rem;">
+    <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+      <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
+      <button onclick="toggleNestRoomView('grid', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--blue);background:#e3f2fd;color:#1565c0;border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📦 ตารางกระทัดรัด</button>
+      <button onclick="toggleNestRoomView('classic', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตารางแบบดั้งเดิม</button>
+    </div>
+  </div>
+
+  <!-- Compact Grid View (Default) -->
+  <div id="nestViewCompact">
+    <div class="card" style="margin-bottom:1.2rem;">
+      <div class="card-title">🏠 ตารางแผนผัง</div>
+      <div class="room-grid" id="nestRoomGrid"></div>
+      <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:.76rem;">
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e3f2fd;border:2px solid #2196f3;border-radius:3px;display:inline-block"></span>Studio</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#f3e5f5;border:2px solid #9c27b0;border-radius:3px;display:inline-block"></span>Pet Friendly</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#fff3e0;border:2px solid #ff8f00;border-radius:3px;display:inline-block"></span>รายวัน</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span>📦 รายชื่อห้องพัก (ตารางกระทัดรัด)</span>
+        <input type="text" id="nestCompactSearch" placeholder="🔍 ค้นหาห้อง..." style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
+      </div>
+      <div class="compact-grid" id="nestCompactGrid"></div>
+    </div>
+  </div>
+
+  <!-- Classic Table View (Hidden by default) -->
+  <div id="nestViewClassic" style="display:none;">
+    <div class="card">
+      <div class="card-title">ตารางห้องพัก & อัตราค่าเช่า</div>
+      <div class="scroll-x"><table class="data-table" id="nestRoomTable"></table></div>
+    </div>
+  </div>
+
+  <!-- Old Floor display (kept for reference) -->
+  <div id="nestFloorView" style="display:none;">
   <!-- Floor 1 -->
   <div class="floor-card">
     <div class="floor-header f1d">
@@ -2885,10 +2952,81 @@ function renderNestCompactGrid(){
   grid.innerHTML += summaryHtml;
 }
 
+// Toggle Nest room view between grid and classic table
+function toggleNestRoomView(view, btn){
+  const compactView = document.getElementById('nestViewCompact');
+  const classicView = document.getElementById('nestViewClassic');
+  const buttons = btn.parentElement.querySelectorAll('.view-btn');
+
+  buttons.forEach(b => {
+    b.classList.remove('active');
+    b.style.background = 'none';
+    b.style.color = 'var(--text)';
+    b.style.border = '1.5px solid var(--border)';
+  });
+
+  btn.classList.add('active');
+  btn.style.background = '#e3f2fd';
+  btn.style.color = '#1565c0';
+  btn.style.border = '1.5px solid #2196f3';
+
+  if(view === 'grid'){
+    compactView.style.display = 'block';
+    classicView.style.display = 'none';
+  } else {
+    compactView.style.display = 'none';
+    classicView.style.display = 'block';
+  }
+}
+
 // Initialize Nest compact grid when page loads
 function initNestPage(){
   updateOccupancyDashboard();
   updateLeaseExpiryAlerts();
+
+  // Populate room grid (visual layout)
+  const allTenants = loadTenants();
+  const grid = document.getElementById('nestRoomGrid');
+  grid.innerHTML = NEST_ROOMS.map(r => {
+    const tenant = allTenants[r.id];
+    const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
+    const typeIcon = r.type === 'daily' ? '📅' : (r.type === 'pet' ? '🐾' : '🏠');
+    return `
+    <div class="room-pill ${r.type === 'pet' ? 'pet' : (r.type === 'daily' ? 'daily' : 'studio')}" onclick="openTenantModal('${r.id}')" style="cursor:pointer;transition:transform 0.2s;">
+      <div class="room-num">${r.id}</div>
+      <div class="room-rent">฿${r.rent.toLocaleString()}/เดือน</div>
+      <div class="room-status">${typeIcon} ${tenant && tenant.name ? tenant.name : 'ว่าง'}</div>
+    </div>`;
+  }).join('');
+
+  // Populate classic table view
+  const tbl = document.getElementById('nestRoomTable');
+  const rentStudio = NEST_ROOMS.filter(r => r.type === 'studio').reduce((a, r) => a + r.rent, 0);
+  const rentPet = NEST_ROOMS.filter(r => r.type === 'pet').reduce((a, r) => a + r.rent, 0);
+  const rentDaily = NEST_ROOMS.filter(r => r.type === 'daily').reduce((a, r) => a + r.rent, 0);
+  const rentTotal = NEST_ROOMS.reduce((a, r) => a + r.rent, 0);
+
+  tbl.innerHTML = `
+    <thead><tr><th>ห้องเลขที่</th><th>ชั้น</th><th>ประเภท</th><th>ค่าเช่า</th><th>อัตราไฟ</th><th>ค่าขยะ</th><th>หมายเหตุ</th></tr></thead>
+    <tbody>${NEST_ROOMS.map(r => {
+      const typeLabel = r.type === 'daily' ? '📅 รายวัน' : (r.type === 'pet' ? '🐾 Pet Friendly' : '🏠 Studio');
+      return `<tr>
+        <td><strong>${r.id}</strong></td>
+        <td>ชั้น ${r.floor}</td>
+        <td><span class="badge ${r.type === 'pet' ? 'badge-purple' : (r.type === 'daily' ? 'badge-orange' : 'badge-blue')}">${typeLabel}</span></td>
+        <td style="font-weight:700;color:var(--green-dark)">฿${r.rent.toLocaleString()}</td>
+        <td>${r.elecRate} บาท/หน่วย</td>
+        <td>฿${r.trashFee}</td>
+        <td style="font-size:.8rem;color:var(--text-muted)">${r.note || '—'}</td>
+      </tr>`;
+    }).join('')}</tbody>
+    <tfoot><tr style="background:var(--blue-pale);font-weight:700;">
+      <td colspan="3">รวม (${NEST_ROOMS.length} ห้อง)</td>
+      <td>฿${rentTotal.toLocaleString()}</td>
+      <td colspan="3">—</td>
+    </tr></tfoot>`;
+
+  // Render compact grid and setup search
   renderNestCompactGrid();
   const searchInput = document.getElementById('nestCompactSearch');
   if(searchInput){
