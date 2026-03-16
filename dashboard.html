@@ -2802,6 +2802,11 @@ function renderCompactRoomGrid(){
                               paymentStatus === 'overdue' ? 'ค้าง' : '—';
     const paymentStatusHTML = paymentStatus ? `<span class="payment-status ${paymentStatus}">${paymentStatusLabel}</span>` : '';
 
+    // Get payment info (deadline and outstanding)
+    const paymentInfo = isOccupied ? getPaymentInfo(r.id) : { nextDueDate: null, overdueAmount: 0 };
+    const nextPaymentDate = paymentInfo.nextDueDate ? new Date(paymentInfo.nextDueDate).toLocaleDateString('th-TH', {month: 'short', day: 'numeric'}) : '—';
+    const overdueDisplay = paymentInfo.overdueAmount > 0 ? `฿${paymentInfo.overdueAmount.toLocaleString()}` : '—';
+
     return `
     <div class="compact-card ${r.type==='commercial'?'':''}" style="border-left-color:${r.type==='commercial'?'var(--blue)':'var(--green)'}">
       <div class="compact-card-header">
@@ -2833,6 +2838,16 @@ function renderCompactRoomGrid(){
         <span style="color:var(--text-muted);font-size:.75rem;">เหลือ</span>
         <span style="font-weight:700;color:${expiryColor};">${daysLeft === '—' ? '—' : daysLeft + ' วัน'}</span>
       </div>
+      <div class="compact-card-info" style="border-top:1px solid var(--border);padding-top:8px;margin-top:6px;">
+        <span style="color:var(--text-muted);font-size:.75rem;">ชำระครั้งต่อ</span>
+        <span style="font-size:.8rem;font-weight:600;">${nextPaymentDate}</span>
+      </div>
+      ${paymentInfo.overdueAmount > 0 ? `
+      <div class="compact-card-info">
+        <span style="color:#d32f2f;font-size:.75rem;">ค้างชำระ</span>
+        <span style="font-weight:700;color:#d32f2f;">฿${paymentInfo.overdueAmount.toLocaleString()}</span>
+      </div>
+      ` : ''}
       ` : `
       <div class="compact-card-info" style="text-align:center;padding:1rem 0;color:var(--text-muted);">
         <span style="font-size:.9rem;">🚪 ไม่มีผู้เช่า</span>
@@ -3050,6 +3065,22 @@ function renderNestCompactGrid(){
         <span style="color:var(--text-muted);font-size:.75rem;">เหลือ</span>
         <span style="font-weight:700;color:${expiryColor};">${daysLeft === '—' ? '—' : daysLeft + ' วัน'}</span>
       </div>
+      ${(() => {
+        const paymentInfo = getPaymentInfo(r.id);
+        const nextPaymentDate = paymentInfo.nextDueDate ? new Date(paymentInfo.nextDueDate).toLocaleDateString('th-TH', {month: 'short', day: 'numeric'}) : '—';
+        return `
+        <div class="compact-card-info" style="border-top:1px solid var(--border);padding-top:8px;margin-top:6px;">
+          <span style="color:var(--text-muted);font-size:.75rem;">ชำระครั้งต่อ</span>
+          <span style="font-size:.8rem;font-weight:600;">${nextPaymentDate}</span>
+        </div>
+        ${paymentInfo.overdueAmount > 0 ? `
+        <div class="compact-card-info">
+          <span style="color:#d32f2f;font-size:.75rem;">ค้างชำระ</span>
+          <span style="font-weight:700;color:#d32f2f;">฿${paymentInfo.overdueAmount.toLocaleString()}</span>
+        </div>
+        ` : ''}
+        `;
+      })()}
       ` : `
       <div class="compact-card-info" style="text-align:center;padding:1rem 0;color:var(--text-muted);">
         <span style="font-size:.9rem;">🚪 ไม่มีผู้เช่า</span>
@@ -5908,6 +5939,39 @@ function getRoomColorStatus(roomId, room) {
 
   // Occupied with good payment = green
   return { color: '#4caf50', icon: '🟢', label: 'มี' };
+}
+
+// ===== Get Payment Info Function =====
+function getPaymentInfo(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const invoices = tenantData.invoices || [];
+  const roomInvoices = invoices.filter(inv => inv.roomId === roomId);
+
+  let nextDueDate = null;
+  let overdueAmount = 0;
+
+  if (roomInvoices.length > 0) {
+    const today = new Date();
+
+    // Find the next unpaid invoice
+    const unpaidInvoices = roomInvoices.filter(inv => inv.status !== 'paid');
+    if (unpaidInvoices.length > 0) {
+      // Sort by due date and get the earliest
+      unpaidInvoices.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+      nextDueDate = unpaidInvoices[0].dueDate;
+    }
+
+    // Calculate overdue amount
+    const overdueInvoices = roomInvoices.filter(inv => {
+      if (inv.status === 'paid') return false;
+      const dueDate = new Date(inv.dueDate);
+      return today > dueDate;
+    });
+
+    overdueAmount = overdueInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+  }
+
+  return { nextDueDate, overdueAmount };
 }
 
 // ===== Quick Action Functions =====
