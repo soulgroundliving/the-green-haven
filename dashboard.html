@@ -397,8 +397,8 @@
   /* Dashboard Tab Styles */
   .dashboard-tab{color:var(--text-muted);}
   .dashboard-tab.active{color:var(--green);border-bottom-color:var(--green) !important;}
-  .dashboard-tab-content{display:none;}
-  .dashboard-tab-content.active{display:block;}
+  .dashboard-tab-content{display:none !important;}
+  .dashboard-tab-content.active{display:block !important;}
 
   /* ===== BILL FLOW ===== */
   .bill-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.8rem;}
@@ -1510,7 +1510,7 @@
   </div><!-- END OVERVIEW TAB -->
 
   <!-- ANALYTICS TAB -->
-  <div id="dashboard-analytics-tab" class="dashboard-tab-content" style="display:none;">
+  <div id="dashboard-analytics-tab" class="dashboard-tab-content">
     <div class="year-tabs" style="margin-bottom:1rem;">
       <span class="year-tab-label">ปีงบประมาณ:</span>
       <button class="year-tab" onclick="setYear('all',this)">ทั้งหมด</button>
