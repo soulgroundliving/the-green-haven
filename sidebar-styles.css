@@ -1,0 +1,391 @@
+/* ===== SIDEBAR STYLES ===== */
+/* Insert this into the <style> section of dashboard.html */
+
+/* Sidebar Container */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100vh;
+  background: #ffffff;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 95;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
+  transition: transform 0.3s ease, left 0.3s ease;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+  padding: 1.2rem 1rem;
+  border-bottom: 2px solid var(--green-pale);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #f8fffe, #f0fdf4);
+  flex-shrink: 0;
+}
+
+.sidebar-logo {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.sidebar-brand {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-brand h2 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--green-dark);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.sidebar-brand p {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+  font-weight: 500;
+}
+
+/* Sidebar Content (Scrollable) */
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.8rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.sidebar-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: #d0d5dc;
+}
+
+/* Navigation Group */
+.nav-group {
+  padding: 0;
+  margin: 0;
+}
+
+.nav-group + .nav-group {
+  border-top: 1px solid var(--border);
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+}
+
+/* Group Title */
+.nav-group-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 0.6rem 1.2rem 0.4rem;
+  margin: 0;
+  display: block;
+}
+
+/* Navigation Items */
+.nav-item {
+  display: block;
+  width: calc(100% - 0.8rem);
+  margin: 0.25rem 0.4rem;
+  padding: 0.65rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'Sarabun', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.nav-item:hover {
+  background: var(--green-pale);
+  color: var(--green-dark);
+}
+
+/* Active Navigation Item */
+.nav-item.active {
+  background: linear-gradient(90deg, var(--green-pale), #e8f5e9);
+  color: var(--green-dark);
+  font-weight: 600;
+  border-left: 3px solid var(--green);
+  padding-left: calc(1rem - 3px);
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--green);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Sub-item (Indented) */
+.nav-item.sub {
+  padding-left: 2rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.nav-item.sub:hover {
+  color: var(--green-dark);
+}
+
+.nav-item.sub.active {
+  color: var(--green-dark);
+  padding-left: calc(2rem - 3px);
+}
+
+/* Icon styling */
+.nav-item::before {
+  content: attr(data-icon);
+  font-size: 1.1rem;
+}
+
+/* Badge support */
+.nav-badge {
+  background: #ef5350;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  padding: 1rem 0.4rem;
+  border-top: 1px solid var(--border);
+  background: #f9fafb;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.sidebar-footer .nav-item {
+  background: rgba(198, 40, 40, 0.08);
+  color: #c62828;
+  margin: 0.25rem 0.4rem;
+}
+
+.sidebar-footer .nav-item:hover {
+  background: rgba(198, 40, 40, 0.15);
+}
+
+.sidebar-footer .nav-item.active {
+  border-left: 3px solid #c62828;
+  padding-left: calc(1rem - 3px);
+}
+
+/* User Info in Footer */
+.user-info {
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 8px;
+  padding: 8px 12px;
+  text-align: center;
+  border-top: 1px solid #eee;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* Main Content Adjustment */
+.main-with-sidebar {
+  margin-left: 280px;
+  width: calc(100% - 280px);
+  transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+/* Sidebar Toggle Button (Mobile Hamburger) */
+.sidebar-toggle {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 96;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(45, 134, 83, 0.2);
+}
+
+.sidebar-toggle:hover {
+  background: var(--green-dark);
+  box-shadow: 0 4px 12px rgba(45, 134, 83, 0.3);
+}
+
+.sidebar-toggle.close {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  width: 36px;
+  height: 36px;
+  background: #ffffff;
+  color: #666;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 20px;
+}
+
+/* Sidebar Mobile Overlay */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 94;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.show {
+  display: block;
+  opacity: 1;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: 240px;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.15);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-toggle {
+    display: flex;
+  }
+
+  .main-with-sidebar {
+    margin-left: 0;
+    width: 100%;
+    padding-top: 60px;
+  }
+
+  .main {
+    padding-top: 0 !important;
+  }
+
+  /* Adjust main content padding for hamburger button */
+  body.sidebar-open {
+    overflow: hidden;
+  }
+
+  .sidebar-overlay.show {
+    display: block;
+  }
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    width: 240px;
+  }
+
+  .sidebar-brand h2 {
+    font-size: 0.88rem;
+  }
+
+  .sidebar-brand p {
+    font-size: 0.6rem;
+  }
+
+  .nav-item {
+    font-size: 0.82rem;
+    padding: 0.55rem 0.85rem;
+  }
+
+  .nav-item.sub {
+    padding-left: 1.8rem;
+  }
+
+  .nav-group-title {
+    font-size: 0.65rem;
+    padding: 0.5rem 1rem 0.3rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .sidebar,
+  .sidebar-toggle,
+  .sidebar-overlay {
+    display: none !important;
+  }
+
+  .main-with-sidebar {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* Accessibility */
+.nav-item:focus {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.nav-item:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Smooth transitions */
+.sidebar,
+.main-with-sidebar,
+.sidebar-overlay {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Scrollbar for sidebar content */
+.sidebar-content {
+  scrollbar-gutter: stable;
+}

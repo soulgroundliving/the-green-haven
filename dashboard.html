@@ -975,6 +975,151 @@
   .nav-badge {
     display: none;
   }
+
+  /* ===== COMPREHENSIVE RESPONSIVE DESIGN ===== */
+  @media (max-width: 1024px) {
+    body { padding: 0 15px; }
+    .header { padding: 15px 20px; }
+    .header-brand { font-size: 18px; }
+    .main { padding: 20px; }
+    .sidebar { width: 60px; }
+    .sidebar-content { padding: 20px 5px; }
+    .nav-label { display: none; }
+    .nav-text { display: none; }
+    .sidebar-footer { flex-direction: column; gap: 8px; }
+    .sidebar-footer button { padding: 8px; font-size: 11px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+    .bill-layout { grid-template-columns: 1fr; }
+    .insights-grid { grid-template-columns: 1fr; }
+    .floor-rooms { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  }
+
+  @media (max-width: 768px) {
+    body { padding: 0 10px; }
+    header { display: none; }
+    .header-nav { display: none !important; }
+    .main { padding: 15px; }
+    .sidebar { position: fixed; left: -250px; width: 250px; height: 100vh; transition: left .3s; z-index: 1000; }
+    .sidebar.active { left: 0; }
+    .sidebar-content { padding: 20px 15px; }
+    .nav-label { display: inline; font-size: 12px; }
+    .nav-text { display: block; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .kpi-item { padding: 15px; }
+    .kpi-value { font-size: 24px; }
+    .kpi-label { font-size: 12px; }
+    .charts-grid { grid-template-columns: 1fr; gap: 15px; }
+    .chart-container { height: 250px; }
+    .bill-layout { grid-template-columns: 1fr; }
+    .bill-summary { padding: 15px; }
+    .bill-summary-item { padding: 8px 0; font-size: 13px; }
+    .insights-grid { grid-template-columns: 1fr; }
+    .floor-rooms { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .room-tile { padding: 10px; border-radius: 8px; font-size: 11px; }
+    .room-number { font-size: 16px; font-weight: 600; }
+    .room-status { font-size: 10px; padding: 3px 6px; }
+    .room-actions { gap: 4px; }
+    .room-actions button { padding: 4px 8px; font-size: 11px; }
+    .modal { padding: 15px; }
+    .modal-content { max-width: 95vw; max-height: 90vh; }
+    .modal-header { padding: 15px; }
+    .modal-title { font-size: 16px; }
+    .modal-close { font-size: 20px; }
+    .modal-body { padding: 15px; font-size: 13px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { font-size: 13px; margin-bottom: 5px; }
+    .form-group input, .form-group select, .form-group textarea { padding: 10px; font-size: 13px; }
+    .button-group { flex-direction: column; gap: 10px; }
+    .button { padding: 10px 15px; font-size: 13px; border-radius: 6px; width: 100%; }
+    .button.secondary { width: 100%; }
+    .compact-grid { grid-template-columns: 1fr; }
+    .list-controls { flex-direction: column; gap: 10px; }
+    .list-search { min-width: 100%; }
+    .list-search input { width: 100%; font-size: 13px; }
+    .list-sort { width: 100%; font-size: 13px; }
+    .data-table { font-size: 12px; }
+    .data-table th, .data-table td { padding: 8px 6px; }
+    .room-pill { padding: 10px; border-radius: 6px; }
+    .room-pill-number { font-size: 14px; }
+    .room-pill-status { font-size: 11px; }
+    .ct-card { padding: 12px; border-radius: 8px; }
+    .ct-card-room { font-size: 11px; }
+    .ct-card-name { font-size: 14px; }
+    .ct-card-info { font-size: 11px; }
+    .ct-actions button { padding: 6px 10px; font-size: 11px; }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 0 8px; }
+    .main { padding: 10px; }
+    .header-brand { font-size: 16px; }
+    .header-subtitle { font-size: 11px; }
+    .kpi-grid { grid-template-columns: 1fr; gap: 10px; }
+    .kpi-item { padding: 12px; }
+    .kpi-value { font-size: 20px; }
+    .kpi-label { font-size: 11px; }
+    .charts-grid { grid-template-columns: 1fr; gap: 12px; }
+    .chart-container { height: 200px; }
+    .bill-summary { padding: 12px; }
+    .bill-summary-item { padding: 6px 0; font-size: 12px; }
+    .floor-rooms { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .room-tile { padding: 8px; border-radius: 6px; font-size: 10px; }
+    .room-number { font-size: 14px; }
+    .room-status { font-size: 9px; padding: 2px 4px; }
+    .room-actions { gap: 3px; }
+    .room-actions button { padding: 3px 6px; font-size: 10px; }
+    .modal-header { padding: 12px; }
+    .modal-title { font-size: 15px; }
+    .modal-body { padding: 12px; font-size: 12px; }
+    .form-group label { font-size: 12px; }
+    .form-group input, .form-group select, .form-group textarea { padding: 8px; font-size: 12px; }
+    .button { padding: 9px 12px; font-size: 12px; }
+    .compact-grid { grid-template-columns: 1fr; }
+    .data-table { font-size: 11px; }
+    .data-table th, .data-table td { padding: 6px 4px; }
+    .room-pill { padding: 8px; }
+    .room-pill-number { font-size: 12px; }
+    .room-pill-status { font-size: 10px; }
+    .ct-card { padding: 10px; }
+    .ct-card-room { font-size: 10px; }
+    .ct-card-name { font-size: 13px; }
+    .modal { padding: 10px; }
+    .modal-content { max-height: 85vh; }
+    .sidebar { width: 200px; }
+    .nav-badge { display: inline !important; font-size: 10px; }
+    .sidebar-footer { flex-direction: column; gap: 6px; }
+    .sidebar-footer button { padding: 6px; font-size: 10px; }
+  }
+
+  @media (max-width: 360px) {
+    .header-brand { font-size: 14px; }
+    .kpi-value { font-size: 18px; }
+    .floor-rooms { grid-template-columns: 1fr; gap: 5px; }
+    .room-tile { padding: 6px; font-size: 9px; }
+    .room-number { font-size: 12px; }
+    .button { padding: 8px 10px; font-size: 11px; }
+    .data-table { font-size: 10px; }
+    .data-table th, .data-table td { padding: 4px 3px; }
+    .modal-body { font-size: 11px; padding: 10px; }
+    .form-group input, .form-group select { font-size: 11px; padding: 7px; }
+  }
+
+  @media (max-width: 1024px) and (orientation: landscape) {
+    .sidebar { position: fixed; left: -250px; width: 200px; }
+    .main { margin-left: 0; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media print {
+    .sidebar { display: none; }
+    .header-nav { display: none; }
+    .modal { display: none; }
+    .button { display: none; }
+    body { padding: 20px; }
+    .main { padding: 0; }
+  }
+
 </style>
 </head>
 <body>
@@ -4959,7 +5104,7 @@ document.addEventListener('click', function(e) {
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
             <button type="button" onclick="togglePasswordVisibility('oldPassword')" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
-              <span id="icon-oldPassword">🙈</span>
+              <span id="icon-oldPassword">👁️</span>
             </button>
           </div>
         </div>
@@ -4974,7 +5119,7 @@ document.addEventListener('click', function(e) {
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
             <button type="button" onclick="togglePasswordVisibility('newPassword')" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
-              <span id="icon-newPassword">🙈</span>
+              <span id="icon-newPassword">👁️</span>
             </button>
           </div>
         </div>
@@ -4989,7 +5134,7 @@ document.addEventListener('click', function(e) {
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
             <button type="button" onclick="togglePasswordVisibility('confirmPassword')" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
-              <span id="icon-confirmPassword">🙈</span>
+              <span id="icon-confirmPassword">👁️</span>
             </button>
           </div>
         </div>
@@ -5016,10 +5161,10 @@ function togglePasswordVisibility(fieldId) {
 
   if (input.type === 'password') {
     input.type = 'text';
-    icon.textContent = '👁️';
+    icon.textContent = '🙈';  // Now visible, show closed eye to close
   } else {
     input.type = 'password';
-    icon.textContent = '🙈';
+    icon.textContent = '👁️';  // Now hidden, show open eye to open
   }
 }
 </script>

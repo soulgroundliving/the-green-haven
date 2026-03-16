@@ -275,6 +275,283 @@
     .password-toggle:active {
       background: rgba(45, 134, 83, 0.15);
     }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      body {
+        padding: 15px;
+      }
+
+      .login-container {
+        max-width: 100%;
+        border-radius: 12px;
+      }
+
+      .login-header {
+        padding: 30px 20px;
+      }
+
+      .login-header h1 {
+        font-size: 24px;
+      }
+
+      .login-header p {
+        font-size: 13px;
+      }
+
+      .login-body {
+        padding: 25px 20px;
+      }
+
+      .user-type {
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .user-type-btn {
+        padding: 10px;
+        font-size: 13px;
+      }
+
+      .form-group {
+        margin-bottom: 18px;
+      }
+
+      .form-group label {
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+
+      .form-group input {
+        padding: 11px;
+        font-size: 14px;
+      }
+
+      .submit-btn {
+        padding: 12px;
+        font-size: 15px;
+        margin-bottom: 16px;
+      }
+
+      .signup-toggle {
+        font-size: 13px;
+      }
+
+      .password-strength {
+        font-size: 11px;
+      }
+
+      .error-message, .success-message {
+        font-size: 13px;
+        padding: 10px;
+        margin-bottom: 15px;
+      }
+
+      .loading {
+        font-size: 13px;
+      }
+
+      .password-toggle {
+        font-size: 16px;
+        padding: 6px 8px;
+        right: 10px;
+      }
+
+      .password-wrapper input {
+        padding-right: 36px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+      }
+
+      .login-container {
+        border-radius: 10px;
+        max-width: 100%;
+      }
+
+      .login-header {
+        padding: 25px 15px;
+      }
+
+      .login-header h1 {
+        font-size: 20px;
+        margin-bottom: 6px;
+      }
+
+      .login-header p {
+        font-size: 12px;
+      }
+
+      .login-body {
+        padding: 20px 15px;
+      }
+
+      .user-type {
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .user-type-btn {
+        padding: 8px;
+        font-size: 12px;
+        width: 100%;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      .form-group label {
+        font-size: 12px;
+        margin-bottom: 5px;
+      }
+
+      .form-group input {
+        padding: 10px;
+        font-size: 13px;
+        border-radius: 6px;
+      }
+
+      .password-wrapper {
+        border-radius: 6px;
+      }
+
+      .submit-btn {
+        padding: 11px;
+        font-size: 14px;
+        border-radius: 6px;
+        margin-bottom: 14px;
+      }
+
+      .signup-toggle {
+        font-size: 12px;
+        margin-top: 15px;
+      }
+
+      .signup-toggle a {
+        font-weight: 600;
+      }
+
+      .forgot-link {
+        font-size: 12px;
+      }
+
+      .error-message, .success-message {
+        font-size: 12px;
+        padding: 8px;
+        margin-bottom: 12px;
+        border-radius: 6px;
+      }
+
+      .loading {
+        font-size: 12px;
+      }
+
+      .password-toggle {
+        font-size: 15px;
+        padding: 5px 6px;
+        right: 8px;
+      }
+
+      .password-wrapper input {
+        padding-right: 34px;
+        font-size: 13px;
+      }
+
+      .password-strength {
+        font-size: 10px;
+        margin-top: 5px;
+        padding: 6px;
+      }
+
+      #req-length, #req-upper, #req-lower, #req-number {
+        font-size: 10px;
+        padding: 3px;
+      }
+
+      .register-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-group:has(label:contains("ชื่อ")) {
+        margin-bottom: 12px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .login-container {
+        border-radius: 8px;
+      }
+
+      .login-header {
+        padding: 20px 12px;
+      }
+
+      .login-header h1 {
+        font-size: 18px;
+      }
+
+      .login-body {
+        padding: 18px 12px;
+      }
+
+      .form-group input {
+        font-size: 12px;
+      }
+
+      .submit-btn {
+        font-size: 13px;
+        padding: 10px;
+      }
+
+      .user-type-btn {
+        font-size: 11px;
+        padding: 7px;
+      }
+    }
+
+    /* Tablet & Desktop - Landscape */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .login-header {
+        padding: 25px 20px;
+      }
+
+      .login-header h1 {
+        font-size: 22px;
+        margin-bottom: 6px;
+      }
+
+      .login-body {
+        padding: 20px;
+      }
+
+      .form-group {
+        margin-bottom: 14px;
+      }
+    }
+
+    /* Large Desktop */
+    @media (min-width: 1024px) {
+      .login-container {
+        max-width: 450px;
+      }
+
+      .login-header {
+        padding: 50px 35px;
+      }
+
+      .login-header h1 {
+        font-size: 32px;
+      }
+
+      .login-body {
+        padding: 45px 35px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -326,7 +603,7 @@
           </div>
           <div class="form-group" style="margin-bottom:0;">
             <label>นามสกุล</label>
-            <input type="text" id="registerLastName" placeholder="นามสกุล" autocomplete="family-name">
+            <input type="text" id="registerLastName" required placeholder="นามสกุล" autocomplete="family-name">
           </div>
         </div>
 

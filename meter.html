@@ -351,7 +351,8 @@
 
     @media (max-width: 768px) {
       .meter-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
       }
 
       .rate-input {
@@ -360,6 +361,259 @@
 
       .month-selector {
         flex-direction: column;
+        gap: 10px;
+      }
+
+      .header {
+        padding: 12px 15px;
+      }
+
+      .header-brand {
+        font-size: 16px;
+      }
+
+      .main {
+        padding: 15px;
+      }
+
+      .controls {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .meter-card {
+        padding: 12px;
+        border-radius: 8px;
+      }
+
+      .meter-label {
+        font-size: 12px;
+      }
+
+      .meter-value {
+        font-size: 16px;
+      }
+
+      .meter-input {
+        font-size: 13px;
+        padding: 10px;
+      }
+
+      .button {
+        padding: 10px 15px;
+        font-size: 13px;
+      }
+
+      .rate-config {
+        flex-direction: column;
+      }
+
+      .rate-group {
+        margin-bottom: 12px;
+      }
+
+      .rate-group label {
+        font-size: 12px;
+      }
+
+      .rate-group input {
+        font-size: 13px;
+        padding: 8px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+      }
+
+      .header {
+        padding: 10px 12px;
+      }
+
+      .header-brand {
+        font-size: 14px;
+      }
+
+      .header-subtitle {
+        font-size: 12px;
+      }
+
+      .main {
+        padding: 10px;
+      }
+
+      .controls {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .month-selector {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .month-selector input,
+      .month-selector button {
+        font-size: 12px;
+        padding: 8px;
+        width: 100%;
+      }
+
+      .meter-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+      }
+
+      .meter-card {
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 12px;
+      }
+
+      .meter-label {
+        font-size: 11px;
+      }
+
+      .meter-value {
+        font-size: 14px;
+      }
+
+      .meter-input {
+        font-size: 12px;
+        padding: 8px;
+        border-radius: 4px;
+      }
+
+      .button {
+        padding: 8px 12px;
+        font-size: 12px;
+        border-radius: 4px;
+        width: 100%;
+      }
+
+      .section-title {
+        font-size: 13px;
+        margin: 12px 0 10px 0;
+      }
+
+      .rate-config {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .rate-group {
+        margin-bottom: 10px;
+      }
+
+      .rate-group label {
+        font-size: 11px;
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .rate-group input {
+        font-size: 12px;
+        padding: 7px;
+        width: 100%;
+        border-radius: 4px;
+      }
+
+      .rate-input {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .success-message {
+        font-size: 12px;
+        padding: 10px;
+      }
+
+      .error-message {
+        font-size: 12px;
+        padding: 10px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      body {
+        padding: 8px;
+      }
+
+      .header {
+        padding: 8px 10px;
+      }
+
+      .header-brand {
+        font-size: 12px;
+      }
+
+      .header-subtitle {
+        font-size: 11px;
+      }
+
+      .main {
+        padding: 8px;
+      }
+
+      .meter-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 6px;
+      }
+
+      .meter-card {
+        padding: 8px;
+        font-size: 11px;
+      }
+
+      .meter-label {
+        font-size: 10px;
+      }
+
+      .meter-value {
+        font-size: 13px;
+      }
+
+      .button {
+        padding: 7px 10px;
+        font-size: 11px;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .meter-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 15px;
+      }
+
+      .main {
+        padding: 25px;
+      }
+
+      .header {
+        padding: 15px 25px;
+      }
+    }
+
+    @media print {
+      body {
+        padding: 0;
+      }
+
+      .header {
+        display: none;
+      }
+
+      .controls {
+        display: none;
+      }
+
+      .meter-grid {
+        break-inside: avoid;
+      }
+
+      .meter-card {
+        page-break-inside: avoid;
       }
     }
   </style>
