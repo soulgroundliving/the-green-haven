@@ -398,5 +398,20 @@
   </div>
 
   <script src="./meter_history.js"></script>
+
+  <script>
+    // Initialize meter history page when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      initHistoryPage();
+    });
+
+    // Logout function
+    function logout() {
+      if (confirm('ต้องการออกจากระบบหรือไม่?')) {
+        sessionStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    }
+  </script>
 </body>
 </html>
