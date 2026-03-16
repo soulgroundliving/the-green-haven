@@ -895,6 +895,9 @@ function loadTaxDashboard() {
     // Render charts
     renderTaxDashboardCharts(currentYear);
 
+    // Initialize checklist
+    initializeTaxFilingChecklist();
+
     console.log('✅ Tax dashboard loaded');
   } catch (error) {
     console.error('❌ Error loading tax dashboard:', error);
@@ -1381,14 +1384,14 @@ function displayAnnualReport() {
 /**
  * Reconcile and display withholding tax
  */
-function reconcileWithholding() {
+function displayWithholdingReconciliation() {
   try {
     const buddhYear = parseInt(document.getElementById('withholding-year').value) || 2567;
     const year = convertBuddhistToGregorian(buddhYear);
 
     const reconciliation = reconcileWithholding(year);
 
-    const contentDiv = document.getElementById('withholding-content');
+    const contentDiv = document.getElementById('withholding-report-content');
     if (!contentDiv) return;
 
     let html = `
@@ -1441,6 +1444,290 @@ function reconcileWithholding() {
     contentDiv.innerHTML = html;
   } catch (error) {
     console.error('❌ Error reconciling withholding:', error);
+    showError('เกิดข้อผิดพลาด: ' + error.message);
+  }
+}
+
+/**
+ * Initialize and display tax filing checklist
+ */
+function initializeTaxFilingChecklist() {
+  try {
+    const currentYear = new Date().getFullYear();
+    const nextYear = currentYear + 1;
+
+    const checklist = [
+      {
+        id: 'monthly-jan',
+        title: 'รายงานรายเดือน มกราคม',
+        description: 'Monthly tax report for January',
+        dueDate: `${currentYear}-02-15`,
+        type: 'MONTHLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'monthly-feb',
+        title: 'รายงานรายเดือน กุมภาพันธ์',
+        description: 'Monthly tax report for February',
+        dueDate: `${currentYear}-03-15`,
+        type: 'MONTHLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'q1-return',
+        title: 'แบบ ป.พ.6 ไตรมาส 1',
+        description: 'Quarterly VAT return for Q1 (Jan-Mar)',
+        dueDate: `${currentYear}-04-20`,
+        type: 'QUARTERLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'monthly-apr',
+        title: 'รายงานรายเดือน เมษายน',
+        description: 'Monthly tax report for April',
+        dueDate: `${currentYear}-05-15`,
+        type: 'MONTHLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'monthly-may',
+        title: 'รายงานรายเดือน พฤษภาคม',
+        description: 'Monthly tax report for May',
+        dueDate: `${currentYear}-06-15`,
+        type: 'MONTHLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'q2-return',
+        title: 'แบบ ป.พ.6 ไตรมาส 2',
+        description: 'Quarterly VAT return for Q2 (Apr-Jun)',
+        dueDate: `${currentYear}-07-20`,
+        type: 'QUARTERLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'monthly-jul',
+        title: 'รายงานรายเดือน กรกฎาคม',
+        description: 'Monthly tax report for July',
+        dueDate: `${currentYear}-08-15`,
+        type: 'MONTHLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'monthly-aug',
+        title: 'รายงานรายเดือน สิงหาคม',
+        description: 'Monthly tax report for August',
+        dueDate: `${currentYear}-09-15`,
+        type: 'MONTHLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'q3-return',
+        title: 'แบบ ป.พ.6 ไตรมาส 3',
+        description: 'Quarterly VAT return for Q3 (Jul-Sep)',
+        dueDate: `${currentYear}-10-20`,
+        type: 'QUARTERLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'monthly-oct',
+        title: 'รายงานรายเดือน ตุลาคม',
+        description: 'Monthly tax report for October',
+        dueDate: `${currentYear}-11-15`,
+        type: 'MONTHLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'monthly-nov',
+        title: 'รายงานรายเดือน พฤศจิกายน',
+        description: 'Monthly tax report for November',
+        dueDate: `${currentYear}-12-15`,
+        type: 'MONTHLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'q4-return',
+        title: 'แบบ ป.พ.6 ไตรมาส 4',
+        description: 'Quarterly VAT return for Q4 (Oct-Dec)',
+        dueDate: `${nextYear}-01-20`,
+        type: 'QUARTERLY',
+        status: 'PENDING'
+      },
+      {
+        id: 'annual-return',
+        title: 'แบบ ภ.ป.ภ. 50',
+        description: `Annual income tax return for year ${currentYear}`,
+        dueDate: `${nextYear}-03-20`,
+        type: 'ANNUAL',
+        status: 'PENDING'
+      },
+      {
+        id: 'withholding-cert',
+        title: 'ใบหักประจำปี',
+        description: `Annual withholding certificate (ใบหัก ณ ที่จ่าย) for year ${currentYear}`,
+        dueDate: `${nextYear}-02-15`,
+        type: 'WITHHOLDING',
+        status: 'PENDING'
+      }
+    ];
+
+    // Save to localStorage
+    localStorage.setItem(`tax_filing_checklist_${currentYear}`, JSON.stringify(checklist));
+
+    // Display the checklist
+    displayTaxFilingChecklist(checklist, currentYear);
+  } catch (error) {
+    console.error('❌ Error initializing checklist:', error);
+  }
+}
+
+/**
+ * Display tax filing checklist
+ */
+function displayTaxFilingChecklist(checklist, year) {
+  try {
+    const contentDiv = document.getElementById('checklist-content');
+    if (!contentDiv) return;
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    let html = `
+      <div style="padding: 15px;">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px;">
+          <div style="background: var(--blue); color: white; padding: 10px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 5px;">📋</div>
+            <div style="font-size: 1.2rem; font-weight: bold;">${checklist.length}</div>
+            <div style="font-size: 0.85rem;">รวมเอกสาร</div>
+          </div>
+          <div style="background: var(--green); color: white; padding: 10px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 5px;">✅</div>
+            <div style="font-size: 1.2rem; font-weight: bold;">${checklist.filter(c => c.status === 'COMPLETED').length}</div>
+            <div style="font-size: 0.85rem;">สำเร็จแล้ว</div>
+          </div>
+          <div style="background: var(--orange); color: white; padding: 10px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 5px;">⏰</div>
+            <div style="font-size: 1.2rem; font-weight: bold;">${checklist.filter(c => c.status === 'PENDING' && c.dueDate < todayStr).length}</div>
+            <div style="font-size: 0.85rem;">เกินกำหนด</div>
+          </div>
+          <div style="background: var(--purple); color: white; padding: 10px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 5px;">📅</div>
+            <div style="font-size: 1.2rem; font-weight: bold;">${checklist.filter(c => c.status === 'PENDING' && c.dueDate >= todayStr).length}</div>
+            <div style="font-size: 0.85rem;">รอดำเนิน</div>
+          </div>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background: var(--green); color: white;">
+              <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">เอกสาร</th>
+              <th style="padding: 12px; text-align: center; border: 1px solid #ddd;">ประเภท</th>
+              <th style="padding: 12px; text-align: center; border: 1px solid #ddd;">กำหนดส่ง</th>
+              <th style="padding: 12px; text-align: center; border: 1px solid #ddd;">สถานะ</th>
+              <th style="padding: 12px; text-align: center; border: 1px solid #ddd;">ดำเนิน</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    checklist.forEach(item => {
+      const dueDate = new Date(item.dueDate);
+      const isOverdue = dueDate < today && item.status === 'PENDING';
+      const isDueSoon = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24)) <= 7 && item.status === 'PENDING';
+
+      let statusBg = 'var(--blue)';
+      let statusText = 'รอดำเนิน';
+      let statusEmoji = '📋';
+
+      if (item.status === 'COMPLETED') {
+        statusBg = 'var(--green)';
+        statusText = '✅ สำเร็จ';
+        statusEmoji = '✅';
+      } else if (isOverdue) {
+        statusBg = 'var(--red)';
+        statusText = '⚠️ เกินกำหนด';
+        statusEmoji = '❌';
+      } else if (isDueSoon) {
+        statusBg = 'var(--orange)';
+        statusText = '⏰ ใกล้กำหนด';
+        statusEmoji = '⏰';
+      }
+
+      const typeEmoji = {
+        'MONTHLY': '📅',
+        'QUARTERLY': '📊',
+        'ANNUAL': '📄',
+        'WITHHOLDING': '🏷️'
+      }[item.type] || '📋';
+
+      html += `
+        <tr>
+          <td style="padding: 12px; border: 1px solid #ddd;">
+            <div style="font-weight: bold; color: var(--text);">${item.title}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${item.description}</div>
+          </td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">
+            <div>${typeEmoji} ${item.type}</div>
+          </td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">
+            <div style="font-weight: bold;">${item.dueDate}</div>
+          </td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">
+            <div style="background: ${statusBg}; color: white; padding: 5px 10px; border-radius: 4px; font-weight: bold; display: inline-block;">
+              ${statusText}
+            </div>
+          </td>
+          <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">
+            <button class="btn btn-sm" style="padding: 5px 10px; font-size: 0.85rem;" onclick="updateChecklistStatus('${item.id}', 'COMPLETED')">
+              ✓ ทำเสร็จ
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += `
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    contentDiv.innerHTML = html;
+    console.log('✅ Tax filing checklist displayed');
+  } catch (error) {
+    console.error('❌ Error displaying checklist:', error);
+  }
+}
+
+/**
+ * Update checklist item status
+ */
+function updateChecklistStatus(itemId, status) {
+  try {
+    const currentYear = new Date().getFullYear();
+    const checklistKey = `tax_filing_checklist_${currentYear}`;
+    const checklist = JSON.parse(localStorage.getItem(checklistKey) || '[]');
+
+    const item = checklist.find(c => c.id === itemId);
+    if (item) {
+      item.status = status;
+      localStorage.setItem(checklistKey, JSON.stringify(checklist));
+
+      // Log activity
+      if (window.AuditLogger) {
+        window.AuditLogger.log(
+          'CHECKLIST_UPDATED',
+          `อัปเดตสถานะเอกสาร: ${item.title}`,
+          { itemId, status, year: currentYear }
+        );
+      }
+
+      // Refresh display
+      initializeTaxFilingChecklist();
+      showSuccess('อัปเดตสถานะเรียบร้อย');
+    }
+  } catch (error) {
+    console.error('❌ Error updating checklist status:', error);
     showError('เกิดข้อผิดพลาด: ' + error.message);
   }
 }
