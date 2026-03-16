@@ -17,7 +17,7 @@
   // Import Firebase SDKs
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-  import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+  import { getAuth, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
   // Firebase configuration
   const firebaseConfig = {
@@ -42,6 +42,9 @@
   window.firebaseRef = ref;
   window.firebaseSet = set;
   window.firebaseGet = get;
+  window.firebaseAuthFunctions = {
+    EmailAuthProvider: EmailAuthProvider
+  };
 
   // Log Firebase connection status
   console.log('✅ Firebase initialized successfully');
@@ -1198,12 +1201,17 @@
         <span class="sidebar-item-icon">💰</span>บัญชี
       </button>
     </div>
+
+    <!-- Account Settings -->
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Account</div>
+      <button class="sidebar-item" onclick="openChangePasswordModal()">
+        <span class="sidebar-item-icon">🔐</span>เปลี่ยนรหัสผ่าน
+      </button>
+    </div>
   </nav>
 
   <div class="sidebar-footer">
-    <button class="sidebar-logout" onclick="openChangePasswordModal()">
-      <span class="sidebar-item-icon">🔐</span>เปลี่ยนรหัสผ่าน
-    </button>
     <button class="sidebar-logout" onclick="handleLogout()">
       <span class="sidebar-item-icon">🚪</span>Logout
     </button>
@@ -5154,6 +5162,79 @@ document.addEventListener('click', function(e) {
 </div>
 
 <script>
+// ===== Password Change Modal Functions =====
+function openChangePasswordModal() {
+  document.getElementById('changePasswordModal').style.display = 'flex';
+  document.getElementById('oldPassword').focus();
+}
+
+function closeChangePasswordModal() {
+  document.getElementById('changePasswordModal').style.display = 'none';
+  document.getElementById('oldPassword').value = '';
+  document.getElementById('newPassword').value = '';
+  document.getElementById('confirmPassword').value = '';
+}
+
+async function changePassword() {
+  const oldPassword = document.getElementById('oldPassword').value;
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    alert('กรุณากรอกรหัสผ่านทั้งหมด');
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    alert('รหัสผ่านใหม่ไม่ตรงกัน');
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
+    return;
+  }
+
+  try {
+    const user = window.auth.currentUser;
+    if (!user) {
+      alert('ไม่พบบัญชีผู้ใช้');
+      return;
+    }
+
+    // Reauthenticate
+    const credential = window.firebaseAuthFunctions.EmailAuthProvider?.credential(user.email, oldPassword);
+    if (!credential) {
+      alert('อีเมลหรือรหัสผ่านเก่าไม่ถูกต้อง');
+      return;
+    }
+
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPassword);
+
+    // Log audit
+    const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+    const audit = {
+      timestamp: new Date().toISOString(),
+      action: 'PASSWORD_CHANGED',
+      userId: user.uid,
+      userEmail: user.email,
+      userType: tenantData.userType
+    };
+
+    const auditLog = JSON.parse(localStorage.getItem('auditLog') || '[]');
+    auditLog.push(audit);
+    localStorage.setItem('auditLog', JSON.stringify(auditLog));
+
+    alert('✅ เปลี่ยนรหัสผ่านสำเร็จ');
+    closeChangePasswordModal();
+    setTimeout(() => handleLogout(), 1500);
+  } catch (error) {
+    console.error('Password change error:', error);
+    alert('เกิดข้อผิดพลาด: ' + error.message);
+  }
+}
+
 // ===== Password Visibility Toggle (Inline) =====
 function togglePasswordVisibility(fieldId) {
   const input = document.getElementById(fieldId);
@@ -5167,6 +5248,18 @@ function togglePasswordVisibility(fieldId) {
     icon.textContent = '👁️';  // Now hidden, show open eye to open
   }
 }
+
+// Close modal when clicking outside
+document.addEventListener('DOMContentLoaded', function() {
+  const changePasswordModal = document.getElementById('changePasswordModal');
+  if (changePasswordModal) {
+    changePasswordModal.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeChangePasswordModal();
+      }
+    });
+  }
+});
 </script>
 </body>
 </html>
