@@ -22,14 +22,30 @@ function initMeterPage() {
 
 function checkAdminAccess() {
   const userData = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  const allowedRoles = ['admin', 'owner'];
 
-  if (!userData.userType || !allowedRoles.includes(userData.userType)) {
-    showAlert('❌ เฉพาะเจ้าของและแอดมินเท่านั้น', 'warning');
-    setTimeout(() => {
-      window.location.href = '/login';
-    }, 1000);
+  // Flexible role checking: accept multiple variations
+  const userType = userData.userType ? userData.userType.toLowerCase() : '';
+  const allowedRoles = ['admin', 'owner', 'superadmin'];
+
+  // Check if user has any allowed role
+  const hasAccess = allowedRoles.some(role => userType.includes(role)) || userData.email?.includes('admin');
+
+  // If no currentUser at all, redirect to login
+  if (!userData || !userData.email) {
+    console.warn('⚠️ No user data found. Redirecting to login.');
+    window.location.href = '/login';
+    return;
   }
+
+  // If user exists but doesn't have admin access, show warning
+  if (!hasAccess) {
+    console.warn('⚠️ User does not have admin access. Role:', userType);
+    alert(`⚠️ สิทธิ์ไม่เพียงพอ\nบัญชี: ${userData.email}\nบทบาท: ${userData.userType || 'unknown'}\n\nติดต่อแอดมินเพื่อขออนุญาต`);
+    window.location.href = '/login';
+    return;
+  }
+
+  console.log('✅ Admin access granted for:', userData.email);
 }
 
 function setDefaultMonth() {
