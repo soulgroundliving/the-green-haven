@@ -5606,7 +5606,7 @@ function getPaymentStatus(roomId) {
 // ===== Quick Action Functions =====
 function viewContract(roomId) {
   const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
-  const tenant = tenantData.tenants?.[roomId];
+  const tenant = tenantData[roomId];
 
   if (!tenant || !tenant.name) {
     alert('❌ ไม่มีข้อมูลผู้เช่า');
@@ -5643,7 +5643,6 @@ function viewContract(roomId) {
   } else {
     alert(contractInfo + '\n\n❌ ยังไม่มีไฟล์สัญญา');
   }
-}
 }
 
 /**
