@@ -899,13 +899,13 @@
         // Redirect based on user type
         setTimeout(() => {
           if (userData.userType === 'accountant') {
-            window.location.href = '/accounting/accounting.html';
+            window.location.href = '/accounting.html';
           } else if (userData.userType === 'admin') {
-            window.location.href = '/admin/dashboard.html';
+            window.location.href = '/dashboard.html';
           } else if (userData.userType === 'tenant') {
-            window.location.href = `/tenant/tenant-payment.html?room=${userData.roomNumber}`;
+            window.location.href = `/payment.html?room=${userData.roomNumber}`;
           } else {
-            window.location.href = '/admin/dashboard.html'; // Default to dashboard
+            window.location.href = '/dashboard.html'; // Default to dashboard
           }
         }, 1500);
 
@@ -1038,13 +1038,13 @@
         // Redirect based on user type (use userData.userType instead of currentUserType)
         setTimeout(() => {
           if (userData.userType === 'accountant') {
-            window.location.href = '/accounting/accounting.html';
+            window.location.href = '/accounting.html';
           } else if (userData.userType === 'admin') {
-            window.location.href = '/admin/dashboard.html';
+            window.location.href = '/dashboard.html';
           } else if (userData.userType === 'tenant') {
-            window.location.href = `/tenant/tenant-payment.html?room=${userData.roomNumber}`;
+            window.location.href = `/payment.html?room=${userData.roomNumber}`;
           } else {
-            window.location.href = '/admin/dashboard.html'; // Default to dashboard
+            window.location.href = '/dashboard.html'; // Default to dashboard
           }
         }, 1500);
 

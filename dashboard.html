@@ -7,11 +7,11 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https: wss:;">
 <title>The Green Haven — ระบบจัดการอพาร์ทเมนต์</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="../shared/security.js"></script>
-<script src="../shared/audit.js"></script>
+<script src="./shared/security.js"></script>
+<script src="./shared/audit.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="../shared/meter_data.js"></script>
+<script src="./shared/meter_data.js"></script>
 <!-- Firebase Configuration & Integration -->
 <script type="module">
   // Import Firebase SDKs
@@ -198,7 +198,7 @@
   window.goToAccounting = function() {
     const user = window.SecurityUtils.getSecureSession();
     if (user && (user.userType === 'admin' || user.userType === 'accountant')) {
-      window.location.href = '/accounting/accounting.html';
+      window.location.href = '/accounting.html';
     } else {
       alert('⛔ เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบบัญชี');
     }
@@ -214,7 +214,7 @@
       // Store current page for potential back button in future
       sessionStorage.setItem('previousPage', window.location.href);
       // Navigate to tax-filing module with page ID
-      window.location.href = '/accounting/tax-filing.html#' + pageId;
+      window.location.href = '/tax-filing.html#' + pageId;
     } else {
       alert('⛔ เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบยื่นแบบประเมิน');
     }
@@ -1319,7 +1319,7 @@
       <!-- Data Entry Subsection -->
       <div class="sidebar-subsection">
         <div class="sidebar-subsection-title">📅 Data Entry</div>
-        <button class="sidebar-item sidebar-item-indent" onclick="window.location.href='/tenant/meter.html'">
+        <button class="sidebar-item sidebar-item-indent" onclick="window.location.href='/meter.html'">
           <span class="sidebar-item-icon">📊</span>บันทึกมิเตอร์
         </button>
         <button class="sidebar-item sidebar-item-indent" onclick="showPage('bill', this)">
@@ -5153,7 +5153,7 @@ function updateLinkPreview(){
     return;
   }
 
-  const paymentLink = `${window.location.origin}/tenant/tenant-payment.html?room=${room}`;
+  const paymentLink = `${window.location.origin}/payment.html?room=${room}`;
   const qrId = 'qr-' + room;
 
   document.getElementById('linkPreview').innerHTML = `
