@@ -1088,20 +1088,36 @@ function convertGregorianToBuddhist(year) {
  */
 function updateMonthlyReport() {
   try {
+    const contentDiv = document.getElementById('monthly-report-content');
+    if (!contentDiv) return;
+
+    // Show loading indicator
+    contentDiv.innerHTML = '<div style="padding: 20px; text-align: center;"><p>⏳ กำลังสร้างรายงาน...</p></div>';
+
     const month = parseInt(document.getElementById('monthly-month').value) || 3;
     const buddhYear = parseInt(document.getElementById('monthly-year').value) || 2567;
     const year = convertBuddhistToGregorian(buddhYear);
 
-    // Generate the report
-    const report = generateMonthlyTaxReport(month, year);
-    if (!report) {
-      showError('ไม่สามารถสร้างรายงานได้');
-      return;
-    }
+    // Use setTimeout to prevent blocking
+    setTimeout(() => {
+      try {
+        // Generate the report
+        const report = generateMonthlyTaxReport(month, year);
+        if (!report) {
+          contentDiv.innerHTML = '<div style="padding: 20px; color: var(--red);">❌ ไม่สามารถสร้างรายงานได้</div>';
+          showError('ไม่สามารถสร้างรายงานได้');
+          return;
+        }
 
-    // Display the report
-    displayMonthlyReport(report);
-    console.log(`✅ Monthly report updated for ${getMonthLabel(month, year)}`);
+        // Display the report
+        displayMonthlyReport(report);
+        console.log(`✅ Monthly report updated for ${getMonthLabel(month, year)}`);
+      } catch (error) {
+        console.error('❌ Error during report generation:', error);
+        contentDiv.innerHTML = '<div style="padding: 20px; color: var(--red);">❌ เกิดข้อผิดพลาด: ' + error.message + '</div>';
+        showError('เกิดข้อผิดพลาด: ' + error.message);
+      }
+    }, 100);
   } catch (error) {
     console.error('❌ Error updating monthly report:', error);
     showError('เกิดข้อผิดพลาด: ' + error.message);
@@ -1225,7 +1241,10 @@ function displayMonthlyReport(report) {
 function generateMonthlyReport() {
   try {
     updateMonthlyReport();
-    showSuccess('สร้างรายงานเดือนเรียบร้อย');
+    // Delay success message to allow async rendering
+    setTimeout(() => {
+      showSuccess('สร้างรายงานเดือนเรียบร้อย');
+    }, 500);
   } catch (error) {
     console.error('❌ Error generating monthly report:', error);
     showError('เกิดข้อผิดพลาด: ' + error.message);
@@ -1237,16 +1256,24 @@ function generateMonthlyReport() {
  */
 function displayQuarterlyReturn(quarter) {
   try {
-    const currentYear = new Date().getFullYear();
-    const report = generateQuarterlyReturn(quarter, currentYear);
-
-    if (!report) {
-      showError('ไม่สามารถสร้างแบบประเมิน ป.พ.6 ได้');
-      return;
-    }
-
     const contentDiv = document.getElementById('quarterly-report-content');
     if (!contentDiv) return;
+
+    // Show loading indicator
+    contentDiv.innerHTML = '<div style="padding: 20px; text-align: center;"><p>⏳ กำลังสร้างแบบประเมิน ป.พ.6...</p></div>';
+
+    const currentYear = new Date().getFullYear();
+
+    // Use setTimeout to prevent blocking
+    setTimeout(() => {
+      try {
+        const report = generateQuarterlyReturn(quarter, currentYear);
+
+        if (!report) {
+          contentDiv.innerHTML = '<div style="padding: 20px; color: var(--red);">❌ ไม่สามารถสร้างแบบประเมิน ป.พ.6 ได้</div>';
+          showError('ไม่สามารถสร้างแบบประเมิน ป.พ.6 ได้');
+          return;
+        }
 
     let html = `
       <div style="padding: 15px; background: #f9f9f9; border-radius: 8px;">
@@ -1290,10 +1317,16 @@ function displayQuarterlyReturn(quarter) {
       </div>
     `;
 
-    contentDiv.innerHTML = html;
-    showSuccess(`สร้างแบบประเมิน ป.พ.6 ไตรมาส ${quarter} เรียบร้อย`);
+        contentDiv.innerHTML = html;
+        showSuccess(`สร้างแบบประเมิน ป.พ.6 ไตรมาส ${quarter} เรียบร้อย`);
+      } catch (error) {
+        console.error('❌ Error during quarterly report generation:', error);
+        contentDiv.innerHTML = '<div style="padding: 20px; color: var(--red);">❌ เกิดข้อผิดพลาด: ' + error.message + '</div>';
+        showError('เกิดข้อผิดพลาด: ' + error.message);
+      }
+    }, 100);
   } catch (error) {
-    console.error('❌ Error generating quarterly return:', error);
+    console.error('❌ Error in displayQuarterlyReturn:', error);
     showError('เกิดข้อผิดพลาด: ' + error.message);
   }
 }
@@ -1303,18 +1336,25 @@ function displayQuarterlyReturn(quarter) {
  */
 function displayAnnualReport() {
   try {
+    const contentDiv = document.getElementById('annual-report-content');
+    if (!contentDiv) return;
+
+    // Show loading indicator
+    contentDiv.innerHTML = '<div style="padding: 20px; text-align: center;"><p>⏳ กำลังสร้างแบบประเมิน ภ.ป.ภ. 50...</p></div>';
+
     const buddhYear = parseInt(document.getElementById('annual-year').value) || 2567;
     const year = convertBuddhistToGregorian(buddhYear);
 
-    const report = generateAnnualReport(year);
+    // Use setTimeout to prevent blocking
+    setTimeout(() => {
+      try {
+        const report = generateAnnualReport(year);
 
-    if (!report) {
-      showError('ไม่สามารถสร้างแบบประเมิน ภ.ป.ภ. 50 ได้');
-      return;
-    }
-
-    const contentDiv = document.getElementById('annual-report-content');
-    if (!contentDiv) return;
+        if (!report) {
+          contentDiv.innerHTML = '<div style="padding: 20px; color: var(--red);">❌ ไม่สามารถสร้างแบบประเมิน ภ.ป.ภ. 50 ได้</div>';
+          showError('ไม่สามารถสร้างแบบประเมิน ภ.ป.ภ. 50 ได้');
+          return;
+        }
 
     let html = `
       <div style="padding: 15px; background: #f9f9f9; border-radius: 8px;">
@@ -1379,10 +1419,16 @@ function displayAnnualReport() {
       </div>
     `;
 
-    contentDiv.innerHTML = html;
-    showSuccess('สร้างแบบประเมิน ภ.ป.ภ. 50 เรียบร้อย');
+        contentDiv.innerHTML = html;
+        showSuccess('สร้างแบบประเมิน ภ.ป.ภ. 50 เรียบร้อย');
+      } catch (error) {
+        console.error('❌ Error during annual report generation:', error);
+        contentDiv.innerHTML = '<div style="padding: 20px; color: var(--red);">❌ เกิดข้อผิดพลาด: ' + error.message + '</div>';
+        showError('เกิดข้อผิดพลาด: ' + error.message);
+      }
+    }, 100);
   } catch (error) {
-    console.error('❌ Error generating annual report:', error);
+    console.error('❌ Error in displayAnnualReport:', error);
     showError('เกิดข้อผิดพลาด: ' + error.message);
   }
 }
