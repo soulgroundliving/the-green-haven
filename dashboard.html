@@ -5345,7 +5345,7 @@ function openTenantModal(roomId) {
   // Load contract document if exists
   if (tenant.contractDocument) {
     document.getElementById('modalContractDocument').value = tenant.contractDocument;
-    document.getElementById('contractDocStatus').textContent = '✅ มีไฟล์สัญญา (คลิกปุ่มดูเพื่อแสดง)';
+    document.getElementById('contractDocStatus').innerHTML = `✅ มีไฟล์สัญญา <button type="button" onclick="previewContractDocument('${roomId}')" style="margin-left:8px;padding:6px 12px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:'Sarabun',sans-serif;">👁️ ดูตัวอย่าง</button>`;
   } else {
     document.getElementById('modalContractDocument').value = '';
     document.getElementById('contractDocStatus').textContent = '';
@@ -5795,6 +5795,21 @@ function viewContract(roomId) {
 /**
  * Display contract document in a modal/window
  */
+/**
+ * Preview contract document from modal button click
+ */
+function previewContractDocument(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenant = tenantData[roomId];
+
+  if (!tenant || !tenant.contractDocument) {
+    alert('❌ ไม่มีไฟล์สัญญา');
+    return;
+  }
+
+  showContractDocument(roomId, tenant);
+}
+
 function showContractDocument(roomId, tenant) {
   if (!tenant.contractDocument) {
     alert('❌ ไม่มีไฟล์สัญญา');
