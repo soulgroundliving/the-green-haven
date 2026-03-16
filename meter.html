@@ -8,6 +8,7 @@
   <script src="./shared/security.js"></script>
   <script src="./shared/audit.js"></script>
   <script src="./shared/meter_data.js"></script>
+  <script src="./shared/meter_system.js"></script>
 
   <style>
     * {
@@ -628,8 +629,8 @@
       </div>
     </div>
     <div class="header-nav">
-      <button class="nav-btn" onclick="goToDashboard()">🏠 หน้าหลัก</button>
-      <button class="nav-btn" onclick="goToAccounting()">💳 บัญชี</button>
+      <button class="nav-btn" onclick="window.location.href='/dashboard'">🏠 หน้าหลัก</button>
+      <button class="nav-btn" onclick="window.location.href='/accounting'">💳 บัญชี</button>
       <button class="logout-btn" onclick="logout()">🚪 ออกจากระบบ</button>
     </div>
   </div>
@@ -643,11 +644,11 @@
       <div class="rate-input">
         <div class="form-group">
           <label>💧 อัตราค่าน้ำ (บาท/หน่วย)</label>
-          <input type="number" id="waterRate" value="30" step="0.01" min="0">
+          <input type="number" id="waterRate" value="18" step="0.01" min="0">
         </div>
         <div class="form-group">
           <label>⚡ อัตราค่าไฟ (บาท/หน่วย)</label>
-          <input type="number" id="electricRate" value="8.5" step="0.01" min="0">
+          <input type="number" id="electricRate" value="7" step="0.01" min="0">
         </div>
       </div>
       <button class="btn-secondary" onclick="saveRates()" style="margin-top: 1rem; width: auto;">💾 บันทึกอัตรา</button>
@@ -672,11 +673,22 @@
 
     <!-- Buttons -->
     <div class="btn-group">
-      <button class="btn-primary" onclick="submitMeterReadings()">✅ บันทึกข้อมูลมิเตอร์ทั้งหมด</button>
+      <button class="btn-primary" onclick="submitMeterReadings()">✅ บันทึกและสร้างใบวางบิล</button>
+      <button class="btn-secondary" onclick="loadPreviousMonth()" style="flex: 0.5; width: auto;">← โหลดจากเดือนที่แล้ว</button>
       <button class="btn-secondary" onclick="resetForm()">🔄 รีเซต</button>
     </div>
   </div>
 
-  <script src="meter.js"></script>
+  <script src="./meter.js"></script>
+
+  <script>
+    // Override logout in meter.js if needed
+    window.logout = function() {
+      if (confirm('ต้องการออกจากระบบหรือไม่?')) {
+        localStorage.removeItem('currentUser');
+        window.location.href = '/login';
+      }
+    };
+  </script>
 </body>
 </html>
