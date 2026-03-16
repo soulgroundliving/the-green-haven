@@ -396,7 +396,7 @@
 
   /* Dashboard Tab Styles */
   .dashboard-tab{color:var(--text-muted);}
-  .dashboard-tab.active{color:var(--green);border-bottom-color:var(--green) !important;}
+  .dashboard-tab.active{color:var(--green);}
   .dashboard-tab-content{display:none !important;}
   .dashboard-tab-content.active{display:block !important;}
 
@@ -2771,7 +2771,6 @@ function switchDashboardTab(tabName, btn) {
   document.querySelectorAll('.dashboard-tab').forEach(button => {
     button.classList.remove('active');
     button.style.color = '';
-    button.style.borderBottomColor = '';
   });
 
   // Show selected tab
@@ -2784,7 +2783,6 @@ function switchDashboardTab(tabName, btn) {
   if(btn) {
     btn.classList.add('active');
     btn.style.color = 'var(--green)';
-    btn.style.borderBottomColor = 'var(--green)';
   }
 
   // Initialize charts if analytics tab
