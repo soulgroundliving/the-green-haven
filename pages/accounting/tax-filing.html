@@ -10,6 +10,7 @@
   <script src="../../shared/security.js"></script>
   <script src="../../shared/audit.js"></script>
   <script src="tax-filing.js"></script>
+  <script src="tax-export.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -645,9 +646,17 @@
             <input type="number" id="monthly-year" value="2567" onchange="updateMonthlyReport()">
           </div>
         </div>
-        <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="generateMonthlyReport()">
-          <span>✨</span>สร้างรายงาน
-        </button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+          <button class="btn btn-primary" onclick="generateMonthlyReport()">
+            <span>✨</span>สร้าง
+          </button>
+          <button class="btn btn-secondary" onclick="exportMonthlyReportPDF()">
+            <span>📥</span>PDF
+          </button>
+          <button class="btn btn-secondary" onclick="exportMonthlyReportExcel()">
+            <span>📊</span>Excel
+          </button>
+        </div>
       </div>
 
       <div class="card">
@@ -693,6 +702,12 @@
       <p style="color: var(--text-muted); text-align: center; padding: 30px;">
         เลือกไตรมาสเพื่อสร้างรายงาน
       </p>
+    </div>
+
+    <div class="card" style="display: flex; gap: 10px; justify-content: center; padding: 15px;">
+      <button class="btn btn-secondary" onclick="exportQuarterlyReturnPDF()">
+        <span>📥</span>ส่งออก PDF
+      </button>
     </div>
   </div>
 
