@@ -12,7 +12,7 @@ let currentRates = { water: 18, electric: 7 };
 // ===== INITIALIZATION =====
 
 function initMeterPage() {
-  checkAdminAccess();
+  // checkAdminAccess();  // Removed - allow all authenticated users
   loadRates();
   setDefaultMonth();
   loadMeterData();

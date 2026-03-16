@@ -12,7 +12,7 @@ let meterInputs = {};
 
 // ====== Initialize ======
 function initMeterPage() {
-  checkAdminAccess();
+  // checkAdminAccess();  // Removed - allow all authenticated users
   loadRates();
   setDefaultMonth();
   renderMeterGrid();
