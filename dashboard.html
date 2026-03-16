@@ -1455,6 +1455,8 @@
     <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
     <div class="kpi-card blue" style="cursor:pointer;" onclick="showPage('rooms',document.querySelector('[onclick*=\'rooms\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (ห้องแถว)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
     <div class="kpi-card purple" style="cursor:pointer;" onclick="showPage('bill',document.querySelector('[onclick*=\'bill\']'))"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
+    <div class="kpi-card" style="background:linear-gradient(135deg, #e8f5e9, #f1f8e9); border-left: 4px solid #4caf50;"><div class="kpi-icon">📊</div><div class="kpi-label">รายได้คาดหวัง (เดือนนี้)</div><div class="kpi-value" id="kpi-expected" style="color:#2d8653;">฿0</div><div class="kpi-sub" id="kpi-expected-sub">จากห้องที่มีผู้เช่า</div></div>
+    <div class="kpi-card" style="background:linear-gradient(135deg, #ffebee, #fce4ec); border-left: 4px solid #d32f2f;"><div class="kpi-icon">⚠️</div><div class="kpi-label">ค้างชำระทั้งสิ้น</div><div class="kpi-value" id="kpi-overdue" style="color:#d32f2f;">฿0</div><div class="kpi-sub" id="kpi-overdue-sub">รอชำระเงินค้าง</div></div>
   </div>
   <div class="charts-grid">
     <div class="card"><div class="card-title">📈 รายได้รายเดือน (บาท)</div><div class="chart-wrap"><canvas id="chartRevenue"></canvas></div></div>
@@ -4167,6 +4169,27 @@ function updateDashboardLive(){
   const kpiOccS=document.getElementById('kpi-occupancy-sub');
   if(kpiOcc)kpiOcc.textContent=`${Math.round(occCount/totalRooms*100)}%`;
   if(kpiOccS)kpiOccS.textContent=`มีผู้เช่า ${occCount} · ว่าง ${totalRooms-occCount} ห้อง`;
+
+  // KPI: Expected Revenue (this month from occupied rooms)
+  const expectedRevenue=ROOMS_OLD.filter(r=>tenants[r.id]?.name).reduce((sum,r)=>sum+(r.rent||0),0);
+  const kpiExp=document.getElementById('kpi-expected');
+  const kpiExpS=document.getElementById('kpi-expected-sub');
+  if(kpiExp)kpiExp.textContent=`฿${expectedRevenue.toLocaleString()}`;
+  if(kpiExpS)kpiExpS.textContent=`จากห้องที่มีผู้เช่า ${occCount} ห้อง`;
+
+  // KPI: Overdue Rent (ค้างชำระทั้งสิ้น)
+  const allInvoices=JSON.parse(localStorage.getItem('tenant_data')||'{}').invoices||[];
+  const todayDate=new Date();
+  const overdueInvoices=allInvoices.filter(inv=>{
+    if(inv.status==='paid')return false;
+    const dueDate=new Date(inv.dueDate);
+    return todayDate>dueDate;
+  });
+  const totalOverdue=overdueInvoices.reduce((sum,inv)=>sum+(inv.amount||0),0);
+  const kpiOD=document.getElementById('kpi-overdue');
+  const kpiODS=document.getElementById('kpi-overdue-sub');
+  if(kpiOD)kpiOD.textContent=`฿${totalOverdue.toLocaleString()}`;
+  if(kpiODS)kpiODS.textContent=`${overdueInvoices.length} ใบแจ้งค้าง · รอชำระ`;
 
   // Quick payment panel
   const dashPay=document.getElementById('dashPaymentStatus');
