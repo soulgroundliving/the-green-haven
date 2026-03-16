@@ -187,8 +187,8 @@ function saveSecureSession(user) {
 
   sessionStorage.setItem('user', JSON.stringify(sessionData));
 
-  // Set session timeout
-  setSessionTimeout();
+  // Session timeout disabled - allow continuous access
+  // setSessionTimeout();
 
   console.log('✅ Secure session saved');
 }
