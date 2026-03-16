@@ -394,6 +394,12 @@
   .year-tab:hover,.year-tab.active{background:var(--green);border-color:var(--green);color:#fff;}
   .year-tab-label{font-size:.78rem;color:var(--text-muted);margin-right:3px;}
 
+  /* Dashboard Tab Styles */
+  .dashboard-tab{color:var(--text-muted);}
+  .dashboard-tab.active{color:var(--green);border-bottom-color:var(--green) !important;}
+  .dashboard-tab-content{display:none;}
+  .dashboard-tab-content.active{display:block;}
+
   /* ===== BILL FLOW ===== */
   .bill-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.8rem;}
   .bill-form{display:flex;flex-direction:column;gap:.9rem;}
@@ -1443,6 +1449,14 @@
 
 <!-- ===== DASHBOARD ===== -->
 <div class="page active" id="page-dashboard">
+  <!-- Dashboard TAB NAVIGATION -->
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.5rem;flex-wrap:wrap;">
+    <button class="dashboard-tab active" onclick="switchDashboardTab('overview', this)" style="padding:12px 24px;background:none;border:none;border-bottom:3px solid transparent;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.3s;font-size:0.95rem;font-family:'Sarabun',sans-serif;">📊 ภาพรวม</button>
+    <button class="dashboard-tab" onclick="switchDashboardTab('analytics', this)" style="padding:12px 24px;background:none;border:none;border-bottom:3px solid transparent;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.3s;font-size:0.95rem;font-family:'Sarabun',sans-serif;">📈 วิเคราะห์</button>
+  </div>
+
+  <!-- OVERVIEW TAB -->
+  <div id="dashboard-overview-tab" class="dashboard-tab-content active">
   <div class="year-tabs" style="margin-bottom:1rem;">
     <span class="year-tab-label">ปีงบประมาณ:</span>
     <button class="year-tab" onclick="setYear('all',this)">ทั้งหมด</button>
@@ -1493,6 +1507,95 @@
       <div class="proj-card amber"><div class="proj-label">รวมค่าเช่า/เดือน (เต็มที่)</div><div class="proj-value" style="color:var(--accent)">฿115,000+</div><div style="font-size:.75rem;color:var(--text-muted)">ยังไม่รวมค่าไฟ-น้ำ</div></div>
     </div>
   </div>
+  </div><!-- END OVERVIEW TAB -->
+
+  <!-- ANALYTICS TAB -->
+  <div id="dashboard-analytics-tab" class="dashboard-tab-content" style="display:none;">
+    <div class="year-tabs" style="margin-bottom:1rem;">
+      <span class="year-tab-label">ปีงบประมาณ:</span>
+      <button class="year-tab" onclick="setYear('all',this)">ทั้งหมด</button>
+      <button class="year-tab active" onclick="setYear('67',this)">2567 (2024)</button>
+      <button class="year-tab" onclick="setYear('68',this)">2568 (2025)</button>
+      <button class="year-tab" onclick="setYear('69',this)">2569 (2026)</button>
+    </div>
+
+    <!-- Analytics Header -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;">
+      <div class="card">
+        <div style="font-size:0.9rem;color:var(--text-muted);margin-bottom:8px;">🎯 อัตราการเช่า</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--green);" id="analytics-occupancy-rate">—</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);">ห้องที่มีผู้เช่า</div>
+      </div>
+      <div class="card">
+        <div style="font-size:0.9rem;color:var(--text-muted);margin-bottom:8px;">📊 ห้องเปิด</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--blue);" id="analytics-occupied-count">—</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);">ห้องทั้งหมด</div>
+      </div>
+      <div class="card">
+        <div style="font-size:0.9rem;color:var(--text-muted);margin-bottom:8px;">💰 รายได้เดือนนี้</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--accent);" id="analytics-monthly-revenue">—</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);">บาท/เดือน</div>
+      </div>
+      <div class="card">
+        <div style="font-size:0.9rem;color:var(--text-muted);margin-bottom:8px;">📅 วันหมดสัญญา</div>
+        <div style="font-size:2rem;font-weight:700;color:#d32f2f;" id="analytics-contract-expiry">—</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);">จำนวนห้อง</div>
+      </div>
+    </div>
+
+    <!-- Analytics Charts -->
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-title">📈 รายได้รายเดือน (ปีงบประมาณ)</div>
+        <div class="chart-wrap"><canvas id="chartAnalyticsRevenue"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏠 สถานะห้องพัก</div>
+        <div style="padding:1rem;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <div style="width:24px;height:24px;background:#4caf50;border-radius:4px;"></div>
+            <span style="font-size:0.9rem;">ห้องเปิด: <strong id="analytics-open-count">—</strong> ห้อง</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:24px;height:24px;background:#e0e0e0;border-radius:4px;"></div>
+            <span style="font-size:0.9rem;">ห้องว่าง: <strong id="analytics-vacant-count">—</strong> ห้อง</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lease Expiry Table -->
+    <div class="card">
+      <div class="card-title">⏰ หมดสัญญาเช่าในเร็ว ๆ นี้</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;font-size:0.9rem;">
+          <thead style="background:#f5f5f5;border-bottom:2px solid var(--border);">
+            <tr>
+              <th style="padding:12px;text-align:left;">ห้องเลขที่</th>
+              <th style="padding:12px;text-align:left;">ผู้เช่า</th>
+              <th style="padding:12px;text-align:left;">วันหมดสัญญา</th>
+              <th style="padding:12px;text-align:left;">สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="analytics-lease-expiry-table">
+            <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">กำลังโหลดข้อมูล...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Monthly Comparison -->
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-title">📊 เปรียบเทียบรายเดือน (3 ปี)</div>
+        <div class="chart-wrap"><canvas id="chartAnalyticsYears"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚡ ค่าไฟรายเดือน</div>
+        <div class="chart-wrap"><canvas id="chartAnalyticsElec"></canvas></div>
+      </div>
+    </div>
+  </div><!-- END ANALYTICS TAB -->
 </div>
 
 <!-- ===== ROOMS (OLD BUILDING) ===== -->
@@ -2655,6 +2758,41 @@ function showPage(page,btn){
   if(page==='payment-verify')initPaymentVerify();
   if(page==='analytics')initAnalyticsPage();
   if(page==='contract')initContractPage();
+}
+
+// Dashboard Tab Switching Function
+function switchDashboardTab(tabName, btn) {
+  // Hide all tabs
+  document.querySelectorAll('.dashboard-tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+
+  // Remove active class from all buttons
+  document.querySelectorAll('.dashboard-tab').forEach(button => {
+    button.classList.remove('active');
+  });
+
+  // Show selected tab
+  const tabElement = document.getElementById('dashboard-' + tabName + '-tab');
+  if(tabElement) {
+    tabElement.classList.add('active');
+  }
+
+  // Add active class to button
+  if(btn) {
+    btn.classList.add('active');
+    btn.style.color = 'var(--green)';
+    btn.style.borderBottomColor = 'var(--green)';
+  }
+
+  // Initialize charts if analytics tab
+  if(tabName === 'analytics') {
+    setTimeout(() => {
+      if(typeof initDashboardAnalyticsCharts === 'function') {
+        initDashboardAnalyticsCharts();
+      }
+    }, 100);
+  }
 }
 
 // ===== SIDEBAR FUNCTIONS =====
