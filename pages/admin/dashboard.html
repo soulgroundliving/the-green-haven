@@ -7,11 +7,11 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https: wss:;">
 <title>The Green Haven — ระบบจัดการอพาร์ทเมนต์</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="security.js"></script>
-<script src="audit.js"></script>
+<script src="../../shared/security.js"></script>
+<script src="../../shared/audit.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="meter_data.js"></script>
+<script src="../../shared/meter_data.js"></script>
 <!-- Firebase Configuration & Integration -->
 <script type="module">
   // Import Firebase SDKs
@@ -158,14 +158,14 @@
     const user = window.SecurityUtils.getSecureSession();
     if (!user) {
       // Not logged in or session expired - redirect to login
-      window.location.href = 'login.html';
+      window.location.href = '../../login.html';
       return;
     }
 
     // Check if user is admin
     if (user.userType !== 'admin') {
       alert('เฉพาะ Admin เท่านั้นที่สามารถเข้าถึง Dashboard');
-      window.location.href = 'login.html';
+      window.location.href = '../../login.html';
       return;
     }
 
@@ -196,7 +196,7 @@
   window.goToAccounting = function() {
     const user = window.SecurityUtils.getSecureSession();
     if (user && (user.userType === 'admin' || user.userType === 'accountant')) {
-      window.location.href = 'accounting.html';
+      window.location.href = '../accounting/accounting.html';
     } else {
       alert('⛔ เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบบัญชี');
     }
@@ -1270,7 +1270,7 @@
       <button class="sidebar-item" onclick="showPage('monthly', this)">
         <span class="sidebar-item-icon">📅</span>รายเดือน
       </button>
-      <button class="sidebar-item" onclick="window.location.href='meter.html'">
+      <button class="sidebar-item" onclick="window.location.href='../tenant/meter.html'">
         <span class="sidebar-item-icon">📊</span>บันทึกมิเตอร์
       </button>
       <button class="sidebar-item" onclick="showPage('bill', this)">

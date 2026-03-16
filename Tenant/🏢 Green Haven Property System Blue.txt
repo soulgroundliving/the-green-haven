@@ -1,0 +1,230 @@
+🏢 Green Haven Property System Blueprint
+1️⃣ System Core (แกนหลักของระบบ)
+
+ระบบทั้งหมดแบ่งเป็น 4 ฝั่ง
+
+Admin System
+Tenant App
+Automation System
+Infrastructure System
+Admin System
+
+ใช้โดยทีมงาน
+โมดูล
+-Dashboard
+-Rooms
+-Nest (Tenant Management)
+-Billing
+-Maintenance
+-Announcement
+-Reports
+-Settings
+
+2️⃣ Admin Dashboard Structure
+Dashboard
+ข้อมูลสำคัญ
+-Occupancy rate
+-ห้องว่าง
+-รายได้เดือนนี้
+-บิลค้าง
+-Maintenance pending
+-ผู้เช่าใหม่
+
+Rooms (หน้าห้อง)
+ข้อมูลที่ต้องมี
+Room number
+Building
+Floor
+Room type
+Rent price
+Status
+Tenant
+Contract
+
+สถานะ
+-Vacant
+-Occupied
+-Reserved
+-Maintenance
+
+Nest (Tenant Management)
+
+ข้อมูลผู้เช่า
+Name
+Phone
+Email
+ID card
+Emergency contact
+Room
+Contract
+Move in date
+Move out date
+
+Feature
+-ย้ายห้อง
+-ต่อสัญญา
+-Check out
+-Blacklist
+
+Billing
+ข้อมูล
+Month
+Room
+Rent
+Water
+Electric
+Other fees
+Total
+Status
+
+สถานะ
+-Unpaid
+-Pending
+-Paid
+-Overdue
+
+Maintenance
+Ticket-
+Room
+Tenant
+Problem
+Photo
+Status
+Technician
+Cost
+
+สถานะ
+Open
+In progress
+Completed
+Cancelled
+
+3️⃣ Tenant App Structure
+Flow หลัก
+
+Login
+↓
+Dashboard
+↓
+My Room
+↓
+Bills
+↓
+Payments
+↓
+Maintenance
+↓
+Announcements
+↓
+Profile
+
+
+Dashboard (Tenant)
+แสดง
+-ห้อง
+-บิลล่าสุด
+-ประกาศ
+-ปุ่มแจ้งซ่อม
+
+My Room
+ข้อมูล
+Room number
+Building
+Floor
+Rent
+Contract
+Move in date
+
+Bills
+แสดง
+Month
+Rent
+Water
+Electric
+Total
+Status
+
+Payment
+ผู้เช่า
+-ดูบิล
+-กดจ่าย
+-อัพโหลดสลิป + ยืนยันผ่าน SlipOK + รับบิลยืนยันทันที
+
+Admin
+-ตรวจสอบ
+-approve
+
+Maintenance
+ผู้เช่าแจ้ง
+Type
+Description
+Photo
+
+ระบบจะสร้าง
+Ticket ID
+Status
+
+⚙️ 4️⃣ Automation System
+
+ถ้าทำระบบนี้เพิ่ม ระบบจะ ฉลาดขึ้นเยอะ
+
+Monthly Billing
+ทุกวันที่ 1
+ระบบจะ
+
+generate rent
+generate water
+generate electric
+generate total bill
+Overdue System
+
+ถ้าค้าง
+Day 3 -> reminder
+Day 7 -> late fee
+Day 15 -> warning
+
+Notification
+ส่ง
+-LINE
+-Push
+-Email
+
+🧠 5️⃣ Database Structure (สำคัญมาก)
+ตารางหลัก
+properties
+buildings
+rooms
+tenants
+contracts
+bills
+payments
+maintenance
+announcements
+admins
+
+🚀 6️⃣ ระบบที่ควรเพิ่ม (ตัวโหด)
+ถ้าเพิ่มพวกนี้ ระบบคุณจะ เหนืออพาร์ตเมนต์ทั่วไป
+
+1️⃣ Meter System
+บันทึก
+water meter
+electric meter
+(เลือกเลขห้อง กรอกตัวเลข มีเลขมิเตอร์จากเดือนที่แล้วเทียบทันที)
+
+2️⃣ Parcel System
+ผู้เช่า
+-แจ้งพัสดุ
+
+Admin
+-scan
+-notify
+
+3️⃣ Visitor System
+ผู้เช่า
+ลงทะเบียนแขก
+
+4️⃣ Parking System
+จัดการ
+parking slot
+vehicle
+plate

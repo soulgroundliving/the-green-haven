@@ -9,7 +9,7 @@
 <title>ชำระค่าเช่า - The Green Haven</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="security.js"></script>
+<script src="../../shared/security.js"></script>
 <style>
   :root {
     --green-dark:#1a5c38;--green:#2d8653;--green-light:#4caf50;--green-pale:#e8f5e9;
@@ -380,14 +380,14 @@ function checkTenantAuth() {
   const user = window.SecurityUtils.getSecureSession();
   if (!user) {
     // Not logged in or session expired - redirect to login
-    window.location.href = 'login.html';
+    window.location.href = '../../login.html';
     return;
   }
 
   // Check if user is tenant
   if (user.userType !== 'tenant') {
     alert('เฉพาะผู้เช่าเท่านั้นที่สามารถเข้าถึง Payment Portal');
-    window.location.href = 'login.html';
+    window.location.href = '../../login.html';
     return;
   }
 

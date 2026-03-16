@@ -1,0 +1,667 @@
+โครงสร้างฐานข้อมูล (Database Structure) ของระบบ Tenant ทั้งหมด
+
+แบ่งเป็น 3 ชั้น
+
+Core Tables
+Operational Tables
+Community Tables
+
+1️⃣ Core Tables (ข้อมูลหลักของระบบ)
+
+นี่คือ หัวใจของระบบ
+
+👤 Tenant Table
+
+ข้อมูลผู้เช่า
+
+Tenant
+-------
+tenant_id (PK)
+first_name
+last_name
+phone
+email
+line_id
+id_card_number
+date_of_birth
+created_at
+status
+
+status
+
+active
+inactive
+blacklist
+🏢 Room Table
+
+ข้อมูลห้อง
+
+Room
+-------
+room_id (PK)
+room_number
+building_id
+floor
+room_type
+size
+rent_price
+status
+
+status
+
+available
+occupied
+maintenance
+🏢 Building Table
+Building
+--------
+building_id (PK)
+building_name
+floors
+total_rooms
+created_at
+
+ตัวอย่าง
+
+Green Haven A
+Green Haven B
+Green Haven C
+2️⃣ Lease / Contract System
+📄 Lease Table
+
+สัญญาเช่า
+
+Lease
+-------
+lease_id (PK)
+tenant_id (FK)
+room_id (FK)
+start_date
+end_date
+deposit_amount
+rent_price
+contract_status
+created_at
+
+contract_status
+
+active
+expired
+terminated
+3️⃣ Billing System
+💳 Bill Table
+
+บิลรายเดือน
+
+Bill
+-------
+bill_id (PK)
+tenant_id (FK)
+room_id (FK)
+billing_month
+rent_amount
+electric_amount
+water_amount
+common_fee
+total_amount
+due_date
+status
+created_at
+
+status
+
+unpaid
+paid
+overdue
+⚡ Utility Table
+
+เก็บมิเตอร์
+
+Utility
+--------
+utility_id (PK)
+room_id (FK)
+month
+electric_unit
+water_unit
+electric_price
+water_price
+electric_total
+water_total
+💰 Payment Table
+Payment
+--------
+payment_id (PK)
+bill_id (FK)
+tenant_id (FK)
+amount
+payment_method
+payment_date
+transaction_ref
+status
+created_at
+
+payment_method
+
+promptpay
+bank_transfer
+credit_card
+cash
+4️⃣ Maintenance System
+
+ระบบแจ้งซ่อม
+
+🛠 Maintenance Ticket
+Maintenance
+-----------
+ticket_id (PK)
+tenant_id (FK)
+room_id (FK)
+category
+description
+image_url
+status
+priority
+created_at
+
+status
+
+submitted
+checking
+in_progress
+completed
+
+priority
+
+low
+normal
+urgent
+👨‍🔧 Maintenance Log
+Maintenance_Log
+---------------
+log_id (PK)
+ticket_id (FK)
+staff_id
+note
+status_update
+created_at
+5️⃣ Announcement System
+Announcement
+-------------
+announcement_id (PK)
+title
+description
+building_id
+created_by
+created_at
+expire_date
+6️⃣ Notification System
+Notification
+-------------
+notification_id (PK)
+tenant_id (FK)
+title
+message
+type
+is_read
+created_at
+
+type
+
+billing
+maintenance
+announcement
+event
+7️⃣ Community System (สำคัญกับ Green Haven)
+
+เพราะคุณไม่ได้สร้างแค่หอ
+แต่สร้าง community
+
+🌿 Event Table
+Event
+------
+event_id (PK)
+title
+description
+location
+event_date
+capacity
+created_by
+created_at
+👥 Event Registration
+Event_Registration
+-------------------
+registration_id (PK)
+event_id (FK)
+tenant_id (FK)
+status
+created_at
+
+status
+
+registered
+cancelled
+attended
+8️⃣ Facilities Booking
+
+ถ้ามี
+
+Facility
+---------
+facility_id (PK)
+name
+location
+capacity
+status
+Facility_Booking
+-----------------
+booking_id (PK)
+facility_id (FK)
+tenant_id (FK)
+booking_date
+start_time
+end_time
+status
+created_at
+9️⃣ Move Out System
+Move_Out_Request
+----------------
+request_id (PK)
+tenant_id (FK)
+room_id (FK)
+request_date
+move_out_date
+status
+created_at
+
+status
+
+pending
+approved
+completed
+🔟 Document System
+Document
+--------
+document_id (PK)
+tenant_id (FK)
+document_type
+file_url
+created_at
+
+document_type
+
+contract
+receipt
+id_copy
+Database Relationship Map
+Tenant
+  │
+  ├── Lease
+  │       │
+  │       └── Room
+  │
+  ├── Bill
+  │       │
+  │       └── Payment
+  │
+  ├── Maintenance
+  │
+  ├── Notification
+  │
+  ├── Event_Registration
+  │
+  └── Facility_Booking
+จำนวน Table ทั้งระบบ
+Tenant
+Room
+Building
+Lease
+Bill
+Utility
+Payment
+Maintenance
+Maintenance_Log
+Announcement
+Notification
+Event
+Event_Registration
+Facility
+Facility_Booking
+Move_Out_Request
+Document
+
+รวม
+
+17 Tables
+
+ถ้าพัฒนาเต็มระบบจริง
+
+ระบบของคุณจะมี 4 Layer
+
+Owner System
+Admin System
+Tenant App
+Community System
+
+ซึ่งนี่คือ Property Tech Platform
+
+---------------------------------------
+Insight สำคัญสำหรับ The Green Haven 🌱
+
+ระบบของคุณมี ข้อได้เปรียบมากกว่าหอทั่วไป
+
+เพราะสามารถเพิ่ม
+
+Community Reputation
+Skill Sharing
+Resident Event
+
+ทำให้ผู้เช่าไม่ใช่แค่
+
+Tenant
+
+แต่เป็น
+
+Resident
+
+ใน ecosystem
+---------------------------------------------
+แตกเป็น 4 ส่วนใหญ่ ๆ
+
+1. ER Diagram (โครงสร้างความสัมพันธ์ Database)
+2. API Structure (Backend endpoints)
+3. System Architecture (โครงสร้างระบบ)
+4. Scale Strategy (รองรับหลายอาคาร / หลายเจ้าของ)
+1️⃣ ER Diagram (ความสัมพันธ์ฐานข้อมูล)
+
+ภาพรวมความสัมพันธ์หลักของระบบ
+
+Building
+   │
+   ├── Room
+   │      │
+   │      └── Lease
+   │             │
+   │             └── Tenant
+   │
+   ├── Announcement
+   │
+   └── Facility
+           │
+           └── Facility_Booking
+
+อีกฝั่งของระบบ
+
+Tenant
+  │
+  ├── Lease
+  │
+  ├── Bill
+  │       │
+  │       └── Payment
+  │
+  ├── Maintenance
+  │       │
+  │       └── Maintenance_Log
+  │
+  ├── Notification
+  │
+  ├── Event_Registration
+  │
+  └── Move_Out_Request
+
+สรุป concept
+
+Building → Room → Lease → Tenant
+
+ซึ่งเป็น Core chain ของอสังหา
+
+2️⃣ API Structure (Backend Endpoints)
+
+Backend ควรเป็น REST API หรือ GraphQL
+
+ผมจะยกตัวอย่างแบบ REST
+
+🔑 Auth
+POST /auth/login
+POST /auth/verify-otp
+POST /auth/logout
+GET  /auth/profile
+👤 Tenant
+GET    /tenants
+GET    /tenants/{id}
+POST   /tenants
+PATCH  /tenants/{id}
+DELETE /tenants/{id}
+🏢 Room
+GET    /rooms
+GET    /rooms/{id}
+POST   /rooms
+PATCH  /rooms/{id}
+DELETE /rooms/{id}
+📄 Lease
+GET   /leases
+POST  /leases
+GET   /leases/{id}
+PATCH /leases/{id}
+💳 Billing
+GET  /bills
+GET  /bills/{id}
+POST /bills/generate
+
+generate monthly bill
+
+💰 Payment
+POST /payments
+GET  /payments/history
+GET  /payments/{id}
+⚡ Utility
+POST /utilities/meter-reading
+GET  /utilities/history
+🛠 Maintenance
+GET  /maintenance
+POST /maintenance
+GET  /maintenance/{id}
+PATCH /maintenance/{id}
+🔔 Notification
+GET  /notifications
+PATCH /notifications/{id}/read
+🌿 Community
+Event
+GET  /events
+POST /events
+POST /events/{id}/register
+Facilities
+GET  /facilities
+POST /facilities/booking
+3️⃣ System Architecture
+
+โครงสร้างระบบจริง
+
+             Internet
+                 │
+          Cloud Load Balancer
+                 │
+        ┌───────────────┐
+        │  API Gateway   │
+        └───────────────┘
+                 │
+     ┌───────────┴───────────┐
+     │                       │
+Backend Service        Notification Service
+     │                       │
+     │                 Push / SMS / LINE
+     │
+Database Cluster
+     │
+Object Storage (images / documents)
+Frontend Layer
+
+ระบบจะมี 3 client
+
+Admin Dashboard
+Owner Dashboard
+Tenant Mobile App
+
+ทั้งหมดเรียก
+
+API Gateway
+Tech Stack ตัวอย่าง
+
+Backend
+
+Node.js / NestJS
+
+หรือ
+
+Python / FastAPI
+
+Database
+
+PostgreSQL
+
+Cache
+
+Redis
+
+Storage
+
+AWS S3
+
+Notification
+
+Firebase
+LINE API
+4️⃣ Multi-Building Architecture (สำคัญมาก)
+
+ถ้าจะ scale เป็น SaaS ต้องมี
+
+Organization
+
+เพิ่มเข้ามา
+
+Organization Table
+Organization
+-------------
+organization_id
+name
+owner_id
+created_at
+
+ทุก table จะมี
+
+organization_id
+
+เช่น
+
+Room
+
+room_id
+organization_id
+building_id
+room_number
+
+Tenant
+
+tenant_id
+organization_id
+name
+
+ผลคือ
+
+Owner A → อาคาร 5 หลัง
+Owner B → อาคาร 2 หลัง
+
+ใช้ระบบเดียวกันได้
+
+Data Isolation
+
+ระบบจะ query แบบนี้
+
+SELECT * FROM rooms
+WHERE organization_id = ?
+
+ทำให้
+
+แต่ละเจ้าของไม่เห็นข้อมูลกัน
+5️⃣ System Modules
+
+ระบบทั้งหมดจะมี module
+
+Auth
+Tenant
+Room
+Lease
+Billing
+Payment
+Utility
+Maintenance
+Notification
+Community
+Facility
+Analytics
+6️⃣ Analytics Engine
+
+Dashboard จะใช้
+
+Monthly Revenue
+Occupancy Rate
+Tenant Turnover
+Utility Usage
+
+ตัวอย่าง
+
+Occupancy Rate = Occupied Rooms / Total Rooms
+7️⃣ Automation System
+
+ระบบที่ทำงานอัตโนมัติ
+
+Generate monthly bill
+Send rent reminder
+Overdue notification
+Lease expiry alert
+
+ผ่าน
+
+Cron Jobs / Scheduler
+8️⃣ Green Haven Future Layer 🌱
+
+ระบบคุณมีศักยภาพเพิ่ม
+
+Community Reputation
+Resident Skill Exchange
+Event Economy
+
+เช่น
+
+Resident
+
+Skill: Yoga Teacher
+Skill: Music
+
+ทำ event ใน community
+
+ภาพรวม Platform
+
+สุดท้ายระบบจะกลายเป็น
+
+Green Haven Platform
+
+ประกอบด้วย
+
+Property Management
+Resident App
+Community System
+Event Platform
+Insight ที่สำคัญมาก
+
+ระบบที่คุณกำลังสร้าง
+
+ไม่ใช่แค่
+
+Apartment Software
+
+แต่สามารถ evolve เป็น
+
+Living Community Platform
+

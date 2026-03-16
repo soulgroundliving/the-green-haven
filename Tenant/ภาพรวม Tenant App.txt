@@ -1,0 +1,566 @@
+ภาพรวม Tenant App
+UI Structure + Flow จริงของ Tenant App ทั้งระบบ เลยนะ 🚀
+อันนี้จะเป็นระดับ Product Design จริง แบบที่เอาไปให้ dev ทำต่อได้ทันที
+
+ผมจะออกเป็น 3 ชั้น
+
+App Structure
+↓
+Screen (หน้าทั้งหมด)
+↓
+User Flow
+
+และจะออกแบบให้เข้ากับ The Green Haven ecosystem ของคุณด้วย
+
+1️⃣ App Structure (โครงสร้างแอป)
+
+Tenant App ควรแบ่งเป็น 5 แท็บหลัก
+
+Home
+Billing
+Services
+Community
+Profile
+
+นี่คือโครงสร้างที่ Property Tech ส่วนใหญ่ใช้ เพราะผู้เช่าเข้าใจง่าย
+
+2️⃣ Screen ทั้งหมดใน Tenant App
+🏠 1. Home (Dashboard)
+
+หน้าแรกของผู้เช่า
+
+แสดง
+
+Room Info
+Monthly Bill
+Quick Actions
+Announcements
+
+UI
+
+Room N301
+3rd Floor
+
+Next Payment
+6,880 บาท
+Due in 3 days
+
+[ Pay Now ]
+
+Quick action
+
+แจ้งซ่อม
+ดูบิล
+ติดต่อสำนักงาน
+💳 2. Billing
+
+โซนการเงินทั้งหมด
+
+Screens
+Billing Overview
+Bill Detail
+Payment
+Payment Success
+Payment History
+Receipt
+Billing Overview
+June 2026
+
+Rent        5,900
+Electric     820
+Water        120
+Common fee    40
+-----------------
+Total       6,880
+
+ปุ่ม
+
+Pay Now
+Payment Screen
+
+แสดง
+
+PromptPay QR
+Bank Transfer
+Credit Card
+Payment Success
+Payment Successful
+
+Receipt ID
+#GH-29382
+
+ปุ่ม
+
+Download Receipt
+🛠 3. Services
+
+ระบบบริการทั้งหมดของผู้เช่า
+
+Screens
+
+Maintenance
+Maintenance Detail
+Create Ticket
+Ticket Status
+Move Out Request
+Create Maintenance
+
+เลือก
+
+ไฟฟ้า
+น้ำ
+แอร์
+เฟอร์นิเจอร์
+อื่นๆ
+
+เพิ่ม
+
+รายละเอียด
+รูปภาพ
+Ticket Status
+Ticket #3421
+
+Status
+กำลังตรวจสอบ
+
+สถานะ
+
+Submitted
+Checking
+In Progress
+Completed
+🌿 4. Community
+
+อันนี้สำคัญมาก เพราะคุณกำลังสร้าง community
+
+Screens
+
+Announcements
+Events
+Facilities
+Community Chat
+Announcements
+แจ้งปิดน้ำ
+15 มิ.ย.
+10:00 - 14:00
+Events
+Movie Night
+Green Haven Garden
+Sat 20:00
+Facilities
+
+ผู้เช่าจองได้
+
+Co-working
+Garden
+Laundry
+Parking
+👤 5. Profile
+
+ข้อมูลผู้เช่า
+
+Screens
+
+Profile Info
+Contract
+Documents
+Settings
+Help
+Contract Screen
+Room N301
+
+Start
+1 Jan 2026
+
+End
+31 Dec 2026
+
+Deposit
+10,000
+Documents
+
+ผู้เช่าดูได้
+
+Rental Contract
+Payment Receipts
+House Rules
+3️⃣ Full Screen List
+
+Tenant App จะมีประมาณ
+
+Login
+OTP Verification
+
+Home
+Bill Overview
+Bill Detail
+Payment
+Payment Success
+Payment History
+Receipt
+
+Maintenance List
+Create Maintenance
+Maintenance Detail
+
+Announcements
+Events
+Facilities
+
+Profile
+Contract
+Documents
+Settings
+Help
+Move Out
+
+รวมประมาณ
+
+20–22 หน้า
+
+4️⃣ User Flow หลัก
+Flow 1
+
+จ่ายค่าเช่า
+
+Home
+↓
+Billing
+↓
+Bill Detail
+↓
+Pay Now
+↓
+Payment Success
+↓
+Receipt
+Flow 2
+
+แจ้งซ่อม
+
+Home
+↓
+Services
+↓
+Maintenance
+↓
+Create Ticket
+↓
+Ticket Status
+Flow 3
+
+ดูสัญญา
+
+Profile
+↓
+Contract
+Flow 4
+
+ย้ายออก
+
+Profile
+↓
+Move Out
+↓
+Select Date
+↓
+Submit
+
+5️⃣ Notification System
+
+ระบบแจ้งเตือนสำคัญมาก
+
+Event
+
+ค่าเช่าใกล้ครบกำหนด
+จ่ายเงินสำเร็จ
+ซ่อมเสร็จ
+ประกาศใหม่
+Event ใหม่
+
+ตัวอย่าง
+
+ค่าเช่าห้อง N301
+ครบกำหนดใน 3 วัน
+
+6️⃣ ระบบที่ต้องเชื่อม Backend
+
+Tenant App ต้องเชื่อม
+
+Tenant Database
+Billing System
+Payment Gateway
+Maintenance Ticket
+Notification System
+Contract System
+
+Tenant App มี 5 ระบบหลัก
+
+1. Dashboard ผู้เช่า
+2. บิล & การชำระเงิน
+3. สัญญา & ข้อมูลห้อง
+4. แจ้งซ่อม / แจ้งปัญหา
+5. การสื่อสารกับอาคาร
+FLOW หลักของผู้เช่า
+สมัคร → ยืนยันตัวตน → เข้าห้อง → ดูบิล → จ่ายเงิน → แจ้งซ่อม → ต่อสัญญา / ย้ายออก
+
+เดี๋ยวผมไล่ทีละขั้น
+
+1️⃣ Onboarding (ตอนผู้เช่าเข้าระบบครั้งแรก)
+Step 1
+
+เจ้าของหอเพิ่มผู้เช่าในระบบหลังบ้าน
+
+ชื่อ
+โทร
+ห้อง
+วันเริ่มสัญญา
+
+ระบบส่ง
+
+SMS / LINE
+
+ลิงก์เข้าระบบ
+
+Step 2
+
+ผู้เช่าเปิดแอป
+
+หน้าต้อนรับ
+
+ยินดีต้อนรับสู่
+The Green Haven
+
+กรอก
+
+เบอร์โทร
+OTP
+Step 3
+
+เชื่อมห้อง
+
+คุณกำลังอยู่ห้อง
+
+N301
+Pet Friendly
+ค่าเช่า 5,900
+
+กด
+
+ยืนยัน
+2️⃣ หน้า Dashboard ผู้เช่า
+
+นี่คือหน้าที่เปิดแอปแล้วเห็นทันที
+
+ข้อมูลหลัก
+
+ห้อง
+N301
+ชั้น 3
+Pet Friendly
+
+สถานะ
+
+ค่าเช่าเดือนนี้
+5,900 บาท
+
+ครบกำหนด
+5 มิ.ย.
+
+ปุ่มใหญ่
+
+[ จ่ายค่าเช่า ]
+
+ด้านล่าง
+
+แจ้งซ่อม
+ดูบิล
+ติดต่อสำนักงาน
+3️⃣ ระบบบิล (Billing)
+
+ผู้เช่าเปิด
+
+บิลเดือนนี้
+
+จะเห็น
+
+ค่าเช่า        5,900
+ค่าไฟ          820
+ค่าน้ำ          120
+ส่วนกลาง       40
+-------------------
+รวม          6,880 บาท
+
+สถานะ
+
+ยังไม่ชำระ
+ปุ่มจ่ายเงิน
+
+กด
+
+จ่ายเงิน
+
+ระบบแสดง
+
+QR PromptPay
+
+ผู้เช่า
+
+scan
+หลังจ่าย
+
+ระบบอัปเดต
+
+จ่ายแล้ว
+
+และแสดง
+
+ใบเสร็จ
+4️⃣ Payment History
+
+ผู้เช่าดูย้อนหลังได้
+
+May 2026   6,880 บาท
+April 2026 6,550 บาท
+March 2026 6,300 บาท
+5️⃣ ระบบแจ้งซ่อม
+
+ผู้เช่ากด
+
+แจ้งซ่อม
+
+เลือกหมวด
+
+ไฟฟ้า
+น้ำ
+แอร์
+เฟอร์นิเจอร์
+อื่นๆ
+
+กรอก
+
+รายละเอียด
+
+แนบ
+
+รูปภาพ
+
+กด
+
+ส่งคำขอ
+ระบบขึ้น Ticket
+เลขที่แจ้งซ่อม
+#4321
+
+สถานะ
+
+กำลังตรวจสอบ
+กำลังซ่อม
+เสร็จแล้ว
+6️⃣ ข้อมูลสัญญา
+
+ผู้เช่าดูได้
+
+วันเริ่มสัญญา
+วันหมดสัญญา
+เงินมัดจำ
+
+เช่น
+
+เริ่ม
+1 Jan 2026
+
+หมด
+31 Dec 2026
+ก่อนหมดสัญญา
+
+ระบบแจ้ง
+
+สัญญาจะหมดใน 30 วัน
+
+ปุ่ม
+
+ต่อสัญญา
+7️⃣ แจ้งข่าวจากอาคาร
+
+หน้าประกาศ
+
+เช่น
+
+แจ้งปิดน้ำ
+15 มิ.ย.
+10:00-14:00
+
+หรือ
+
+ทำความสะอาดใหญ่
+8️⃣ ข้อมูลส่วนตัวผู้เช่า
+
+ผู้เช่าแก้ไขได้
+
+ชื่อ
+โทร
+LINE
+9️⃣ ติดต่อสำนักงาน
+
+ผู้เช่ากด
+
+ติดต่อ
+
+เลือก
+
+LINE
+โทร
+Chat
+10️⃣ ย้ายออก
+
+ผู้เช่ากด
+
+แจ้งย้ายออก
+
+เลือกวัน
+
+30 Jun
+
+ระบบแจ้ง admin
+
+โครงสร้างหน้าทั้งหมด
+
+Tenant App มีประมาณ
+
+Dashboard
+Billing
+Payment History
+Maintenance
+Contract
+Announcements
+Profile
+Contact
+Move Out
+
+รวม
+
+9 หน้า
+
+Flow ใหญ่ของผู้เช่า
+Login
+↓
+Dashboard
+↓
+ดูบิล
+↓
+จ่ายเงิน
+↓
+แจ้งซ่อม
+↓
+ต่อสัญญา
+
+Feature ที่ทำให้ Tenant App "เทพ"
+
+5 อย่างนี้สำคัญมาก
+
+1️⃣ แจ้งเตือนค่าเช่าค่าเช่าครบกำหนดอีก 3 วัน
+2️⃣ Auto Receipt จ่ายเสร็จออกใบเสร็จทันที
+3️⃣ Chat กับ Admin เหมือน LINE
+4️⃣ Tracking แจ้งซ่อมเหมือน Grab Ticket
+5️⃣ Digital Contract เซ็นออนไลน์
