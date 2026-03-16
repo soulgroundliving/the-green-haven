@@ -24,6 +24,55 @@ function initializeAccounting() {
   console.log('✅ Accounting system initialized');
 }
 
+// ===== SIDEBAR & NAVIGATION FUNCTIONS =====
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const hamburger = document.getElementById('hamburger');
+  sidebar.classList.toggle('active');
+  hamburger.classList.toggle('active');
+}
+
+function showAccountingPage(pageName, btn) {
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(page => {
+    page.classList.remove('active');
+  });
+
+  // Remove active class from all sidebar items
+  document.querySelectorAll('.sidebar-item').forEach(item => {
+    item.classList.remove('active');
+  });
+
+  // Show selected page
+  const pageElement = document.getElementById(pageName + '-tab');
+  if (pageElement) {
+    pageElement.classList.add('active');
+  }
+
+  // Add active class to clicked button
+  if (btn) {
+    btn.classList.add('active');
+  }
+
+  // Close sidebar on mobile after selection
+  if (window.innerWidth <= 768) {
+    const sidebar = document.getElementById('sidebar');
+    const hamburger = document.getElementById('hamburger');
+    sidebar.classList.remove('active');
+    hamburger.classList.remove('active');
+  }
+
+  console.log('📄 Switched to page: ' + pageName);
+}
+
+function handleLogout() {
+  if (confirm('ยืนยันการออกจากระบบ?')) {
+    localStorage.removeItem('currentUser');
+    window.location.href = 'login.html';
+  }
+}
+
 // ===== DASHBOARD FUNCTIONS =====
 
 /**
