@@ -9,6 +9,7 @@
   <script src="./shared/audit.js"></script>
   <script src="./shared/meter_data.js"></script>
   <script src="./shared/meter_system.js"></script>
+  <script src="./mock-tenant-data.js"></script>
 
   <style>
     * {
@@ -706,6 +707,10 @@
   <script>
     // Initialize meter page when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
+      // Load mock tenant data if not already in Firebase
+      if (!localStorage.getItem('tenant_data')) {
+        initMockTenantData();
+      }
       initMeterPage();
     });
 
