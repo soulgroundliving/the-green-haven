@@ -357,3 +357,87 @@ function getThaiMonthName(month) {
 function formatBuddhistYear(year) {
   return `ปี ${year}`;
 }
+
+/**
+ * Validate that import is sequential (previous month must exist)
+ * @param {number} year - Buddhist year to import
+ * @param {number} month - Month to import (1-12)
+ * @returns {object} {isValid, message, nextMonthRequired}
+ */
+function validateSequentialImport(year, month) {
+  if (!window.METER_DATA) {
+    // First time import - January of first year is allowed
+    if (month === 1) {
+      return {
+        isValid: true,
+        message: 'เดือนแรกของการนำเข้า - อนุญาติ',
+        nextMonthRequired: null
+      };
+    } else {
+      return {
+        isValid: false,
+        message: `❌ ต้องเริ่มจากเดือนมกราคม (เดือนที่ 1) ก่อน`,
+        nextMonthRequired: 1
+      };
+    }
+  }
+
+  // Get the most recent imported month
+  const keys = Object.keys(window.METER_DATA).sort();
+  if (keys.length === 0) {
+    if (month === 1) {
+      return {
+        isValid: true,
+        message: 'เดือนแรกของการนำเข้า - อนุญาติ',
+        nextMonthRequired: null
+      };
+    } else {
+      return {
+        isValid: false,
+        message: `❌ ต้องเริ่มจากเดือนมกราคม (เดือนที่ 1) ก่อน`,
+        nextMonthRequired: 1
+      };
+    }
+  }
+
+  const lastKey = keys[keys.length - 1];
+  const [lastYear, lastMonth] = lastKey.split('_').map(Number);
+
+  // Determine next expected month
+  let expectedYear = lastYear;
+  let expectedMonth = lastMonth + 1;
+  if (expectedMonth > 12) {
+    expectedMonth = 1;
+    expectedYear += 1;
+  }
+
+  // Check if import is the next sequential month
+  if (year === expectedYear && month === expectedMonth) {
+    return {
+      isValid: true,
+      message: `✓ เดือนถัดไป - อนุญาติ`,
+      nextMonthRequired: null
+    };
+  }
+
+  // If trying to import same month/year as last
+  if (year === lastYear && month === lastMonth) {
+    return {
+      isValid: false,
+      message: `❌ เดือน ${month} ปี ${year} นำเข้าแล้ว`,
+      nextMonthRequired: expectedMonth
+    };
+  }
+
+  // If trying to skip months
+  const monthThaiNames = {
+    1: 'มกราคม', 2: 'กุมภาพันธ์', 3: 'มีนาคม', 4: 'เมษายน', 5: 'พฤษภาคม', 6: 'มิถุนายน',
+    7: 'กรกฎาคม', 8: 'สิงหาคม', 9: 'กันยายน', 10: 'ตุลาคม', 11: 'พฤศจิกายน', 12: 'ธันวาคม'
+  };
+
+  return {
+    isValid: false,
+    message: `❌ ต้องอัพโหลดเดือน ${monthThaiNames[expectedMonth]} ปี ${expectedYear} ก่อน (ไม่สามารถข้ามเดือน)`,
+    nextMonthRequired: expectedMonth
+  };
+}

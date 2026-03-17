@@ -3146,6 +3146,8 @@ function autoFillOldReadingsRooms() {
 
     const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
     const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
+    const eNewInput = document.getElementById(`meter-rooms-${room}-electric-new`);
+    const wNewInput = document.getElementById(`meter-rooms-${room}-water-new`);
 
     if (d) {
       if (d.eOld !== null && d.eOld !== undefined && eOldInput) {
@@ -3157,6 +3159,15 @@ function autoFillOldReadingsRooms() {
         wOldInput.value = d.wOld;
         wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
       }
+      // Load current/new readings (ปัจจุบัน) from METER_DATA
+      if (d.eNew !== null && d.eNew !== undefined && eNewInput) {
+        eNewInput.value = d.eNew;
+        eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (d.wNew !== null && d.wNew !== undefined && wNewInput) {
+        wNewInput.value = d.wNew;
+        wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     } else {
       // No data for this room, show "-"
       if (eOldInput) {
@@ -3166,6 +3177,14 @@ function autoFillOldReadingsRooms() {
       if (wOldInput) {
         wOldInput.value = '-';
         wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (eNewInput) {
+        eNewInput.value = '-';
+        eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (wNewInput) {
+        wNewInput.value = '-';
+        wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
       }
     }
   });
