@@ -2954,7 +2954,10 @@ function autoFillOldReadingsNest() {
 
   // Parse year-month and convert to key format
   const [year, month] = monthInput.split('-').map(Number);
-  const yy = year % 100; // Convert to 2-digit year (69, 70, etc.)
+  // Convert Gregorian year to Buddhist year (2-digit), then to 2-digit year
+  // 2026 (Gregorian) = 2569 (Buddhist) = 69 (2-digit)
+  const buddhistYear = year + 543;
+  const yy = buddhistYear % 100;
   const key = `${yy}_${month}`;
 
   const monthData = METER_DATA[key];
@@ -3070,7 +3073,10 @@ function autoFillOldReadingsRooms() {
 
   // Parse year-month and convert to key format
   const [year, month] = monthInput.split('-').map(Number);
-  const yy = year % 100; // Convert to 2-digit year (69, 70, etc.)
+  // Convert Gregorian year to Buddhist year (2-digit), then to 2-digit year
+  // 2026 (Gregorian) = 2569 (Buddhist) = 69 (2-digit)
+  const buddhistYear = year + 543;
+  const yy = buddhistYear % 100;
   const key = `${yy}_${month}`;
 
   const monthData = METER_DATA[key];
