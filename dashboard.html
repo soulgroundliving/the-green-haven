@@ -12,6 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="./shared/meter_data.js"></script>
+<script src="./shared/room-config.js"></script>
 <script src="./mock-tenant-data.js"></script>
 <script src="./mock-meter-history.js"></script>
 <!-- Firebase Configuration & Integration -->
@@ -2169,6 +2170,9 @@
     <button class="meter-tab" onclick="switchMeterTab('rooms', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
       🏠 Rooms Building
     </button>
+    <button class="meter-tab" onclick="switchMeterTab('room-config', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
+      ⚙️ จัดการห้อง
+    </button>
   </div>
 
   <!-- Tab Content: Nest Building -->
@@ -2252,6 +2256,70 @@
     <div style="display:flex;gap:0.8rem;margin-top:1.5rem;flex-wrap:wrap;">
       <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--green);color:#fff;flex:1;" onclick="saveRoomsMeterReadings()">✅ บันทึกและสร้างใบวางบิล</button>
       <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--border);color:var(--text);flex:0.5;" onclick="exportRoomsMeterCSV()">📤 ส่งออก CSV</button>
+    </div>
+  </div>
+
+  <!-- Tab Content: Room Configuration -->
+  <div id="meter-room-config-content" class="meter-tab-content" style="display:none;">
+    <div class="section-title">⚙️ จัดการห้องพัก และ ตั้งค่าอัตรา</div>
+
+    <!-- Building Selection -->
+    <div style="margin-bottom:1.5rem;">
+      <label style="font-weight:600;display:block;margin-bottom:0.5rem;color:var(--text);">เลือกอาคาร</label>
+      <select id="roomConfigBuilding" onchange="loadRoomConfigUI()" style="padding:0.7rem;margin-top:0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;width:100%;max-width:300px;">
+        <option value="rooms">ห้องแถว (Rooms Building)</option>
+        <option value="nest">Nest Building</option>
+      </select>
+    </div>
+
+    <!-- Room List Table -->
+    <div style="overflow-x:auto;margin-bottom:2rem;">
+      <table id="roomConfigTable" style="width:100%;border-collapse:collapse;background:white;">
+        <thead>
+          <tr style="background:#f5f5f5;border-bottom:2px solid var(--border);">
+            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ห้อง ID</th>
+            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ชื่อห้อง</th>
+            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">น้ำ (บาท/หน่วย)</th>
+            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ไฟ (บาท/หน่วย)</th>
+            <th style="border:1px solid var(--border);padding:0.8rem;text-align:center;font-weight:600;color:var(--text);">การกระทำ</th>
+          </tr>
+        </thead>
+        <tbody id="roomConfigBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Add New Room Form -->
+    <div style="margin-top:2rem;padding:1.5rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-secondary);">
+      <div style="font-weight:600;margin-bottom:1rem;color:var(--text);font-size:1rem;">➕ เพิ่มห้องพักใหม่</div>
+
+      <!-- Entry Mode Toggle -->
+      <div style="margin-bottom:1rem;display:flex;gap:1.5rem;">
+        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;color:var(--text);">
+          <input type="radio" name="addMode" value="manual" checked onchange="toggleAddMode('manual')"> ป้อนข้อมูลใหม่
+        </label>
+        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;color:var(--text);">
+          <input type="radio" name="addMode" value="copy" onchange="toggleAddMode('copy')"> Copy from template
+        </label>
+      </div>
+
+      <!-- Manual Entry Mode -->
+      <div id="manualEntryMode" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:1rem;margin-bottom:1rem;">
+        <input type="text" id="newRoomId" placeholder="ห้อง ID (เช่น 34)" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <input type="text" id="newRoomName" placeholder="ชื่อห้อง" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <input type="number" id="newRoomWater" placeholder="อัตราน้ำ" value="20" step="0.01" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <input type="number" id="newRoomElectric" placeholder="อัตราไฟ" value="8" step="0.01" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+      </div>
+
+      <!-- Copy Mode -->
+      <div id="copyEntryMode" style="display:none;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:1rem;margin-bottom:1rem;display:grid;">
+        <select id="templateRoomSelect" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+          <option value="">-- เลือกห้อง --</option>
+        </select>
+        <input type="text" id="newRoomIdCopy" placeholder="ห้อง ID ใหม่" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <input type="text" id="newRoomNameCopy" placeholder="ชื่อห้องใหม่" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+      </div>
+
+      <button onclick="addNewRoom()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">➕ เพิ่มห้อง</button>
     </div>
   </div>
 </div>
@@ -2890,6 +2958,8 @@ function switchMeterTab(tabName, btnElement) {
     initMeterNestTab();
   } else if (tabName === 'rooms') {
     initMeterRoomsTab();
+  } else if (tabName === 'room-config') {
+    loadRoomConfigUI();
   }
 }
 
@@ -3124,7 +3194,7 @@ function autoFillOldReadingsRooms() {
 
   console.log(`📊 Looking up METER_DATA[${key}] for ${monthInput}...`);
   const monthData = METER_DATA[key];
-  const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
+  const roomsRooms = RoomConfigManager.getAllRooms('rooms');
   let loadCount = 0;
 
   if (!monthData) {
@@ -3203,8 +3273,8 @@ function renderRoomsMeterGrid() {
   const gridEl = document.getElementById('roomsMeterGrid');
   if (!gridEl) return;
 
-  // Hardcoded Rooms Building rooms (22 rooms + AMAZON: 13-33, 15ก, AMAZON)
-  const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
+  // Load rooms from RoomConfigManager (dynamic instead of hardcoded)
+  const roomsRooms = RoomConfigManager.getAllRooms('rooms');
 
   gridEl.innerHTML = roomsRooms.map(room => `
     <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
@@ -3258,11 +3328,8 @@ function renderRoomsMeterGrid() {
     const updateElectric = () => {
       const eOld = parseFloat(eOldInput?.value || 0);
       const eNew = parseFloat(eNewInput?.value || 0);
-      // Use special rate for Amazon room, regular rate for others
-      let rate = parseFloat(document.getElementById('roomsElectricRate')?.value || 8);
-      if (room === 'AMAZON') {
-        rate = parseFloat(document.getElementById('amazonElectricRate')?.value || 6);
-      }
+      // Use per-room rate from RoomConfigManager
+      const rate = RoomConfigManager.getRoomRate('rooms', room, 'electric');
       const usage = Math.max(0, eNew - eOld);
       const charge = usage * rate;
       eDiff.textContent = usage.toFixed(2);
@@ -3272,7 +3339,8 @@ function renderRoomsMeterGrid() {
     const updateWater = () => {
       const wOld = parseFloat(wOldInput?.value || 0);
       const wNew = parseFloat(wNewInput?.value || 0);
-      const rate = parseFloat(document.getElementById('roomsWaterRate')?.value || 20);
+      // Use per-room rate from RoomConfigManager
+      const rate = RoomConfigManager.getRoomRate('rooms', room, 'water');
       const usage = Math.max(0, wNew - wOld);
       const charge = usage * rate;
       wDiff.textContent = usage.toFixed(2);
@@ -3406,7 +3474,7 @@ function loadPreviousMonthRooms() {
   }
 
   // Load data into form (use previous month's NEW readings as this month's OLD readings)
-  const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
+  const roomsRooms = RoomConfigManager.getAllRooms('rooms');
   let loadCount = 0;
 
   roomsRooms.forEach(room => {
@@ -3478,7 +3546,7 @@ function saveRoomsMeterReadings() {
   }
 
   const readings = {};
-  const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
+  const roomsRooms = RoomConfigManager.getAllRooms('rooms');
 
   roomsRooms.forEach(room => {
     const eOld = parseFloat(document.getElementById(`meter-rooms-${room}-electric-old`)?.value || 0);
@@ -3509,6 +3577,132 @@ function exportNestMeterCSV() {
 
 function exportRoomsMeterCSV() {
   alert('⏳ ฟีเจอร์นี้มาเร็ว ๆ');
+}
+
+// ===== ROOM CONFIGURATION FUNCTIONS =====
+function loadRoomConfigUI() {
+  const building = document.getElementById('roomConfigBuilding').value;
+  const config = RoomConfigManager.getRoomsConfig(building);
+  const tbody = document.getElementById('roomConfigBody');
+
+  tbody.innerHTML = config.rooms
+    .filter(room => !room.deleted)
+    .map(room => `
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="border:1px solid var(--border);padding:0.8rem;color:var(--text);">${room.id}</td>
+        <td style="border:1px solid var(--border);padding:0.8rem;">
+          <input type="text" value="${room.name}" onchange="updateRoomField('${building}', '${room.id}', 'name', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+        </td>
+        <td style="border:1px solid var(--border);padding:0.8rem;">
+          <input type="number" value="${room.waterRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'water', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+        </td>
+        <td style="border:1px solid var(--border);padding:0.8rem;">
+          <input type="number" value="${room.electricRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'electric', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+        </td>
+        <td style="border:1px solid var(--border);padding:0.8rem;text-align:center;">
+          <button onclick="deleteRoom('${building}', '${room.id}')" style="padding:0.4rem 0.8rem;background:#f44336;color:white;border:none;border-radius:4px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:0.85rem;">ลบ</button>
+        </td>
+      </tr>
+    `).join('');
+
+  populateTemplateSelect(building);
+}
+
+function populateTemplateSelect(building) {
+  const config = RoomConfigManager.getRoomsConfig(building);
+  const select = document.getElementById('templateRoomSelect');
+  select.innerHTML = '<option value="">-- เลือกห้อง --</option>' +
+    config.rooms
+      .filter(room => !room.deleted)
+      .map(room => `<option value="${room.id}">${room.id} - ${room.name}</option>`)
+      .join('');
+}
+
+function toggleAddMode(mode) {
+  document.getElementById('manualEntryMode').style.display = mode === 'manual' ? 'grid' : 'none';
+  document.getElementById('copyEntryMode').style.display = mode === 'copy' ? 'grid' : 'none';
+}
+
+function updateRoomField(building, roomId, fieldName, value) {
+  const config = RoomConfigManager.getRoomsConfig(building);
+  const room = config.rooms.find(r => r.id === roomId);
+  if (room) {
+    room[fieldName] = value;
+    RoomConfigManager.saveRoomsConfig(building, config);
+    console.log(`✅ อัปเดต ${fieldName} สำหรับ ${roomId}`);
+  }
+}
+
+function updateRoomRate(building, roomId, rateType, rate) {
+  RoomConfigManager.updateRoomRate(building, roomId, rateType, parseFloat(rate));
+  console.log(`✅ อัปเดตอัตรา ${rateType === 'water' ? 'น้ำ' : 'ไฟ'} สำหรับ ${roomId} = ${rate} บาท/หน่วย`);
+}
+
+function addNewRoom() {
+  const building = document.getElementById('roomConfigBuilding').value;
+  const mode = document.querySelector('input[name="addMode"]:checked').value;
+
+  let roomId, roomName, waterRate, electricRate;
+
+  if (mode === 'manual') {
+    roomId = document.getElementById('newRoomId').value.trim();
+    roomName = document.getElementById('newRoomName').value.trim();
+    waterRate = parseFloat(document.getElementById('newRoomWater').value);
+    electricRate = parseFloat(document.getElementById('newRoomElectric').value);
+
+    if (!roomId || !roomName) {
+      alert('⚠️ กรุณากรอก ID และชื่อห้อง');
+      return;
+    }
+  } else {
+    const templateId = document.getElementById('templateRoomSelect').value;
+    roomId = document.getElementById('newRoomIdCopy').value.trim();
+    roomName = document.getElementById('newRoomNameCopy').value.trim();
+
+    if (!templateId || !roomId || !roomName) {
+      alert('⚠️ กรุณาเลือก template และป้อน ID กับชื่อห้อง');
+      return;
+    }
+
+    const template = RoomConfigManager.getRoom(building, templateId);
+    waterRate = template.waterRate;
+    electricRate = template.electricRate;
+  }
+
+  const success = RoomConfigManager.addRoom(building, {
+    id: roomId,
+    name: roomName,
+    waterRate: waterRate,
+    electricRate: electricRate,
+    deleted: false
+  });
+
+  if (success) {
+    alert(`✅ เพิ่มห้อง ${roomId} สำเร็จ`);
+    document.getElementById('newRoomId').value = '';
+    document.getElementById('newRoomName').value = '';
+    document.getElementById('newRoomIdCopy').value = '';
+    document.getElementById('newRoomNameCopy').value = '';
+    document.getElementById('templateRoomSelect').value = '';
+    loadRoomConfigUI();
+    initMeterRoomsTab();
+  } else {
+    alert(`⚠️ ห้อง ${roomId} มีอยู่แล้ว`);
+  }
+}
+
+function deleteRoom(building, roomId) {
+  if (confirm(`คุณแน่ใจหรือว่าต้องการลบห้อง ${roomId}? (เก็บข้อมูลมิเตอร์ไว้)`)) {
+    const config = RoomConfigManager.getRoomsConfig(building);
+    const room = config.rooms.find(r => r.id === roomId);
+    if (room) {
+      room.deleted = true;
+      RoomConfigManager.saveRoomsConfig(building, config);
+      alert(`✅ ลบห้อง ${roomId} เรียบร้อย (ข้อมูลมิเตอร์ยังเก็บไว้)`);
+      loadRoomConfigUI();
+      initMeterRoomsTab();
+    }
+  }
 }
 
 // Dashboard Tab Switching Function
