@@ -2181,7 +2181,7 @@
           <input type="number" id="nestElectricRate" value="8" step="0.01" min="0" style="width:100%;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
         </div>
       </div>
-      <button style="background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);padding:0.8rem 1.5rem;font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;margin-top:1rem;width:auto;" onclick="alert('ยังไม่เปิดใช้งาน')">💾 บันทึกอัตรา</button>
+      <button style="background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);padding:0.8rem 1.5rem;font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;margin-top:1rem;width:auto;" onclick="saveNestRates()">💾 บันทึกอัตรา</button>
     </div>
 
     <!-- Month Selection -->
@@ -2190,7 +2190,7 @@
         <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.9rem;color:var(--text);">📅 เดือนที่จะบันทึก</label>
         <input type="month" id="nestMeterMonth" style="width:100%;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
       </div>
-      <button style="background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);padding:0.8rem 1.5rem;font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;height:42px;white-space:nowrap;">← โหลดจากเดือนที่แล้ว</button>
+      <button style="background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);padding:0.8rem 1.5rem;font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;height:42px;white-space:nowrap;" onclick="loadPreviousMonthNest()">← โหลดจากเดือนที่แล้ว</button>
     </div>
 
     <!-- Meter Input Grid -->
@@ -2201,8 +2201,8 @@
 
     <!-- Buttons -->
     <div style="display:flex;gap:0.8rem;margin-top:1.5rem;flex-wrap:wrap;">
-      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--green);color:#fff;flex:1;" onclick="alert('ยังไม่เปิดใช้งาน')">✅ บันทึกและสร้างใบวางบิล</button>
-      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--border);color:var(--text);flex:0.5;">📤 ส่งออก CSV</button>
+      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--green);color:#fff;flex:1;" onclick="saveNestMeterReadings()">✅ บันทึกและสร้างใบวางบิล</button>
+      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--border);color:var(--text);flex:0.5;" onclick="exportNestMeterCSV()">📤 ส่งออก CSV</button>
     </div>
   </div>
 
@@ -2221,7 +2221,7 @@
           <input type="number" id="roomsElectricRate" value="8" step="0.01" min="0" style="width:100%;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
         </div>
       </div>
-      <button style="background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);padding:0.8rem 1.5rem;font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;margin-top:1rem;width:auto;" onclick="alert('ยังไม่เปิดใช้งาน')">💾 บันทึกอัตรา</button>
+      <button style="background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);padding:0.8rem 1.5rem;font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;margin-top:1rem;width:auto;" onclick="saveRoomsRates()">💾 บันทึกอัตรา</button>
     </div>
 
     <!-- Month Selection -->
@@ -2230,7 +2230,7 @@
         <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.9rem;color:var(--text);">📅 เดือนที่จะบันทึก</label>
         <input type="month" id="roomsMeterMonth" style="width:100%;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
       </div>
-      <button style="background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);padding:0.8rem 1.5rem;font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;height:42px;white-space:nowrap;">← โหลดจากเดือนที่แล้ว</button>
+      <button style="background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);padding:0.8rem 1.5rem;font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;height:42px;white-space:nowrap;" onclick="loadPreviousMonthRooms()">← โหลดจากเดือนที่แล้ว</button>
     </div>
 
     <!-- Meter Input Grid -->
@@ -2241,8 +2241,8 @@
 
     <!-- Buttons -->
     <div style="display:flex;gap:0.8rem;margin-top:1.5rem;flex-wrap:wrap;">
-      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--green);color:#fff;flex:1;" onclick="alert('ยังไม่เปิดใช้งาน')">✅ บันทึกและสร้างใบวางบิล</button>
-      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--border);color:var(--text);flex:0.5;">📤 ส่งออก CSV</button>
+      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--green);color:#fff;flex:1;" onclick="saveRoomsMeterReadings()">✅ บันทึกและสร้างใบวางบิล</button>
+      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--border);color:var(--text);flex:0.5;" onclick="exportRoomsMeterCSV()">📤 ส่งออก CSV</button>
     </div>
   </div>
 </div>
@@ -2887,16 +2887,236 @@ function switchMeterTab(tabName, btnElement) {
 // Initialize Meter Pages
 function initMeterPage() {
   console.log('✅ Meter page initialized');
+  // Initialize Nest tab by default
+  initMeterNestTab();
 }
 
 function initMeterNestTab() {
   console.log('📊 Loading Nest Building meter...');
-  // Nest meter content will be loaded here
+  // Set current month if not set
+  const monthInput = document.getElementById('nestMeterMonth');
+  if (!monthInput.value) {
+    const today = new Date();
+    monthInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  // Populate meter grid
+  renderNestMeterGrid();
 }
 
 function initMeterRoomsTab() {
   console.log('📊 Loading Rooms Building meter...');
-  // Rooms meter content will be loaded here
+  // Set current month if not set
+  const monthInput = document.getElementById('roomsMeterMonth');
+  if (!monthInput.value) {
+    const today = new Date();
+    monthInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  // Populate meter grid
+  renderRoomsMeterGrid();
+}
+
+function renderNestMeterGrid() {
+  const gridEl = document.getElementById('nestMeterGrid');
+  if (!gridEl) return;
+
+  // Define Nest Building rooms
+  const nestRooms = ['N101', 'N102', 'N103', 'N104', 'N105', 'N201', 'N202', 'N203', 'N204', 'N205', 'N301', 'N302', 'N303', 'N304', 'N305', 'N401', 'N402', 'N403', 'N404', 'N405'];
+
+  gridEl.innerHTML = nestRooms.map(room => `
+    <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
+      <div style="font-weight:600;margin-bottom:0.8rem;color:var(--text);">🏠 ${room}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:0.8rem;">
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">⚡ ค่าไฟ (kWh)</label>
+          <input type="number" id="meter-nest-${room}-electric" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.9rem;">
+        </div>
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">💧 น้ำ (m³)</label>
+          <input type="number" id="meter-nest-${room}-water" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.9rem;">
+        </div>
+      </div>
+      <div style="font-size:0.8rem;color:var(--text-muted);background:#fff;padding:0.5rem;border-radius:4px;text-align:center;">
+        ค่าไฟ: <span id="calc-nest-${room}-electric" style="color:var(--green);font-weight:600;">฿0</span> |
+        น้ำ: <span id="calc-nest-${room}-water" style="color:var(--green);font-weight:600;">฿0</span>
+      </div>
+    </div>
+  `).join('');
+
+  // Add change listeners to calculate charges
+  nestRooms.forEach(room => {
+    const eInput = document.getElementById(`meter-nest-${room}-electric`);
+    const wInput = document.getElementById(`meter-nest-${room}-water`);
+    const eCalc = document.getElementById(`calc-nest-${room}-electric`);
+    const wCalc = document.getElementById(`calc-nest-${room}-water`);
+
+    if (eInput && eCalc) {
+      eInput.addEventListener('input', () => {
+        const rate = parseFloat(document.getElementById('nestElectricRate')?.value || 8);
+        const charge = parseFloat(eInput.value || 0) * rate;
+        eCalc.textContent = `฿${charge.toFixed(2)}`;
+      });
+    }
+
+    if (wInput && wCalc) {
+      wInput.addEventListener('input', () => {
+        const rate = parseFloat(document.getElementById('nestWaterRate')?.value || 20);
+        const charge = parseFloat(wInput.value || 0) * rate;
+        wCalc.textContent = `฿${charge.toFixed(2)}`;
+      });
+    }
+  });
+}
+
+function renderRoomsMeterGrid() {
+  const gridEl = document.getElementById('roomsMeterGrid');
+  if (!gridEl) return;
+
+  // Define Rooms Building rooms
+  const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
+
+  gridEl.innerHTML = roomsRooms.map(room => `
+    <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
+      <div style="font-weight:600;margin-bottom:0.8rem;color:var(--text);">🏠 ${room}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:0.8rem;">
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">⚡ ค่าไฟ (kWh)</label>
+          <input type="number" id="meter-rooms-${room}-electric" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.9rem;">
+        </div>
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">💧 น้ำ (m³)</label>
+          <input type="number" id="meter-rooms-${room}-water" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.9rem;">
+        </div>
+      </div>
+      <div style="font-size:0.8rem;color:var(--text-muted);background:#fff;padding:0.5rem;border-radius:4px;text-align:center;">
+        ค่าไฟ: <span id="calc-rooms-${room}-electric" style="color:var(--green);font-weight:600;">฿0</span> |
+        น้ำ: <span id="calc-rooms-${room}-water" style="color:var(--green);font-weight:600;">฿0</span>
+      </div>
+    </div>
+  `).join('');
+
+  // Add change listeners to calculate charges
+  roomsRooms.forEach(room => {
+    const eInput = document.getElementById(`meter-rooms-${room}-electric`);
+    const wInput = document.getElementById(`meter-rooms-${room}-water`);
+    const eCalc = document.getElementById(`calc-rooms-${room}-electric`);
+    const wCalc = document.getElementById(`calc-rooms-${room}-water`);
+
+    if (eInput && eCalc) {
+      eInput.addEventListener('input', () => {
+        const rate = parseFloat(document.getElementById('roomsElectricRate')?.value || 8);
+        const charge = parseFloat(eInput.value || 0) * rate;
+        eCalc.textContent = `฿${charge.toFixed(2)}`;
+      });
+    }
+
+    if (wInput && wCalc) {
+      wInput.addEventListener('input', () => {
+        const rate = parseFloat(document.getElementById('roomsWaterRate')?.value || 20);
+        const charge = parseFloat(wInput.value || 0) * rate;
+        wCalc.textContent = `฿${charge.toFixed(2)}`;
+      });
+    }
+  });
+}
+
+// Meter Form Handler Functions
+
+function saveNestRates() {
+  const rates = {
+    water: parseFloat(document.getElementById('nestWaterRate').value || 20),
+    electric: parseFloat(document.getElementById('nestElectricRate').value || 8)
+  };
+  localStorage.setItem('METER_RATES_NEST', JSON.stringify(rates));
+  alert('✅ บันทึกอัตราค่า Nest Building เรียบร้อย');
+}
+
+function saveRoomsRates() {
+  const rates = {
+    water: parseFloat(document.getElementById('roomsWaterRate').value || 20),
+    electric: parseFloat(document.getElementById('roomsElectricRate').value || 8)
+  };
+  localStorage.setItem('METER_RATES_ROOMS', JSON.stringify(rates));
+  alert('✅ บันทึกอัตราค่า Rooms Building เรียบร้อย');
+}
+
+function loadPreviousMonthNest() {
+  alert('⏳ ฟีเจอร์นี้มาเร็ว ๆ');
+}
+
+function loadPreviousMonthRooms() {
+  alert('⏳ ฟีเจอร์นี้มาเร็ว ๆ');
+}
+
+function saveNestMeterReadings() {
+  const month = document.getElementById('nestMeterMonth').value;
+  if (!month) {
+    alert('⚠️ กรุณาเลือกเดือน');
+    return;
+  }
+
+  const readings = {};
+  const nestRooms = ['N101', 'N102', 'N103', 'N104', 'N105', 'N201', 'N202', 'N203', 'N204', 'N205', 'N301', 'N302', 'N303', 'N304', 'N305', 'N401', 'N402', 'N403', 'N404', 'N405'];
+
+  nestRooms.forEach(room => {
+    const eVal = parseFloat(document.getElementById(`meter-nest-${room}-electric`)?.value || 0);
+    const wVal = parseFloat(document.getElementById(`meter-nest-${room}-water`)?.value || 0);
+    if (eVal > 0 || wVal > 0) {
+      readings[room] = { e: eVal, w: wVal };
+    }
+  });
+
+  const data = {
+    month,
+    readings,
+    timestamp: new Date().toISOString()
+  };
+
+  let allData = JSON.parse(localStorage.getItem('METER_READINGS_NEST') || '[]');
+  allData.push(data);
+  localStorage.setItem('METER_READINGS_NEST', JSON.stringify(allData));
+
+  alert(`✅ บันทึกค่ามิเตอร์ ${Object.keys(readings).length} ห้อง เรียบร้อย`);
+}
+
+function saveRoomsMeterReadings() {
+  const month = document.getElementById('roomsMeterMonth').value;
+  if (!month) {
+    alert('⚠️ กรุณาเลือกเดือน');
+    return;
+  }
+
+  const readings = {};
+  const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
+
+  roomsRooms.forEach(room => {
+    const eVal = parseFloat(document.getElementById(`meter-rooms-${room}-electric`)?.value || 0);
+    const wVal = parseFloat(document.getElementById(`meter-rooms-${room}-water`)?.value || 0);
+    if (eVal > 0 || wVal > 0) {
+      readings[room] = { e: eVal, w: wVal };
+    }
+  });
+
+  const data = {
+    month,
+    readings,
+    timestamp: new Date().toISOString()
+  };
+
+  let allData = JSON.parse(localStorage.getItem('METER_READINGS_ROOMS') || '[]');
+  allData.push(data);
+  localStorage.setItem('METER_READINGS_ROOMS', JSON.stringify(allData));
+
+  alert(`✅ บันทึกค่ามิเตอร์ ${Object.keys(readings).length} ห้อง เรียบร้อย`);
+}
+
+function exportNestMeterCSV() {
+  alert('⏳ ฟีเจอร์นี้มาเร็ว ๆ');
+}
+
+function exportRoomsMeterCSV() {
+  alert('⏳ ฟีเจอร์นี้มาเร็ว ๆ');
 }
 
 // Dashboard Tab Switching Function
