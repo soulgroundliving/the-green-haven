@@ -3059,11 +3059,99 @@ function saveRoomsRates() {
 }
 
 function loadPreviousMonthNest() {
-  alert('⏳ ฟีเจอร์นี้มาเร็ว ๆ');
+  const currentMonthInput = document.getElementById('nestMeterMonth').value;
+  if (!currentMonthInput) {
+    alert('⚠️ กรุณาเลือกเดือนก่อน');
+    return;
+  }
+
+  // Calculate previous month
+  const [year, month] = currentMonthInput.split('-').map(Number);
+  let prevMonth = month - 1;
+  let prevYear = year;
+  if (prevMonth < 1) {
+    prevMonth = 12;
+    prevYear -= 1;
+  }
+  const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+
+  // Get saved meter data
+  const allData = JSON.parse(localStorage.getItem('METER_READINGS_NEST') || '[]');
+  const prevMonthData = allData.find(d => d.month === prevMonthStr);
+
+  if (!prevMonthData) {
+    alert(`⚠️ ไม่มีข้อมูลมิเตอร์สำหรับเดือน ${prevMonthStr}`);
+    return;
+  }
+
+  // Load data into form
+  const nestRooms = ['N101', 'N102', 'N103', 'N104', 'N105', 'N201', 'N202', 'N203', 'N204', 'N205', 'N301', 'N302', 'N303', 'N304', 'N305', 'N401', 'N402', 'N403', 'N404', 'N405'];
+  let loadCount = 0;
+
+  nestRooms.forEach(room => {
+    const reading = prevMonthData.readings[room];
+    if (reading) {
+      const eInput = document.getElementById(`meter-nest-${room}-electric`);
+      const wInput = document.getElementById(`meter-nest-${room}-water`);
+      if (eInput) eInput.value = reading.e;
+      if (wInput) wInput.value = reading.w;
+
+      // Trigger calculation updates
+      if (eInput) eInput.dispatchEvent(new Event('input'));
+      if (wInput) wInput.dispatchEvent(new Event('input'));
+      loadCount++;
+    }
+  });
+
+  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เรียบร้อย (${loadCount} ห้อง)`);
 }
 
 function loadPreviousMonthRooms() {
-  alert('⏳ ฟีเจอร์นี้มาเร็ว ๆ');
+  const currentMonthInput = document.getElementById('roomsMeterMonth').value;
+  if (!currentMonthInput) {
+    alert('⚠️ กรุณาเลือกเดือนก่อน');
+    return;
+  }
+
+  // Calculate previous month
+  const [year, month] = currentMonthInput.split('-').map(Number);
+  let prevMonth = month - 1;
+  let prevYear = year;
+  if (prevMonth < 1) {
+    prevMonth = 12;
+    prevYear -= 1;
+  }
+  const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+
+  // Get saved meter data
+  const allData = JSON.parse(localStorage.getItem('METER_READINGS_ROOMS') || '[]');
+  const prevMonthData = allData.find(d => d.month === prevMonthStr);
+
+  if (!prevMonthData) {
+    alert(`⚠️ ไม่มีข้อมูลมิเตอร์สำหรับเดือน ${prevMonthStr}`);
+    return;
+  }
+
+  // Load data into form
+  const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
+  let loadCount = 0;
+
+  roomsRooms.forEach(room => {
+    const reading = prevMonthData.readings[room];
+    if (reading) {
+      const eInput = document.getElementById(`meter-rooms-${room}-electric`);
+      const wInput = document.getElementById(`meter-rooms-${room}-water`);
+      if (eInput) eInput.value = reading.e;
+      if (wInput) wInput.value = reading.w;
+
+      // Trigger calculation updates
+      if (eInput) eInput.dispatchEvent(new Event('input'));
+      if (wInput) wInput.dispatchEvent(new Event('input'));
+      loadCount++;
+    }
+  });
+
+  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เรียบร้อย (${loadCount} ห้อง)`);
 }
 
 function saveNestMeterReadings() {
