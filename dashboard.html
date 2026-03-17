@@ -2944,45 +2944,76 @@ function renderNestMeterGrid() {
   gridEl.innerHTML = nestRooms.map(room => `
     <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
       <div style="font-weight:600;margin-bottom:0.8rem;color:var(--text);">🏠 ${room}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:0.8rem;">
-        <div>
-          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">⚡ ค่าไฟ (kWh)</label>
-          <input type="number" id="meter-nest-${room}-electric" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.9rem;">
+
+      <!-- Electric Reading -->
+      <div style="margin-bottom:0.8rem;">
+        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">⚡ ค่าไฟ (kWh)</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
+          <div>
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เก่า</small>
+            <input type="number" id="meter-nest-${room}-electric-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+          </div>
+          <div>
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ปัจจุบัน</small>
+            <input type="number" id="meter-nest-${room}-electric-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+          </div>
         </div>
-        <div>
-          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">💧 น้ำ (m³)</label>
-          <input type="number" id="meter-nest-${room}-water" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.9rem;">
-        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-nest-${room}-electric">0</span> หน่วย = <span id="calc-nest-${room}-electric" style="color:var(--green);font-weight:600;">฿0</span></div>
       </div>
-      <div style="font-size:0.8rem;color:var(--text-muted);background:#fff;padding:0.5rem;border-radius:4px;text-align:center;">
-        ค่าไฟ: <span id="calc-nest-${room}-electric" style="color:var(--green);font-weight:600;">฿0</span> |
-        น้ำ: <span id="calc-nest-${room}-water" style="color:var(--green);font-weight:600;">฿0</span>
+
+      <!-- Water Reading -->
+      <div style="margin-bottom:0.8rem;">
+        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">💧 น้ำ (m³)</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
+          <div>
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เก่า</small>
+            <input type="number" id="meter-nest-${room}-water-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+          </div>
+          <div>
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ปัจจุบัน</small>
+            <input type="number" id="meter-nest-${room}-water-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+          </div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-nest-${room}-water">0</span> หน่วย = <span id="calc-nest-${room}-water" style="color:var(--green);font-weight:600;">฿0</span></div>
       </div>
     </div>
   `).join('');
 
-  // Add change listeners to calculate charges
+  // Add change listeners to calculate charges (New - Old) × Rate
   nestRooms.forEach(room => {
-    const eInput = document.getElementById(`meter-nest-${room}-electric`);
-    const wInput = document.getElementById(`meter-nest-${room}-water`);
+    const eOldInput = document.getElementById(`meter-nest-${room}-electric-old`);
+    const eNewInput = document.getElementById(`meter-nest-${room}-electric-new`);
+    const wOldInput = document.getElementById(`meter-nest-${room}-water-old`);
+    const wNewInput = document.getElementById(`meter-nest-${room}-water-new`);
     const eCalc = document.getElementById(`calc-nest-${room}-electric`);
     const wCalc = document.getElementById(`calc-nest-${room}-water`);
+    const eDiff = document.getElementById(`diff-nest-${room}-electric`);
+    const wDiff = document.getElementById(`diff-nest-${room}-water`);
 
-    if (eInput && eCalc) {
-      eInput.addEventListener('input', () => {
-        const rate = parseFloat(document.getElementById('nestElectricRate')?.value || 8);
-        const charge = parseFloat(eInput.value || 0) * rate;
-        eCalc.textContent = `฿${charge.toFixed(2)}`;
-      });
-    }
+    const updateElectric = () => {
+      const eOld = parseFloat(eOldInput?.value || 0);
+      const eNew = parseFloat(eNewInput?.value || 0);
+      const rate = parseFloat(document.getElementById('nestElectricRate')?.value || 8);
+      const usage = Math.max(0, eNew - eOld);
+      const charge = usage * rate;
+      eDiff.textContent = usage.toFixed(2);
+      eCalc.textContent = `฿${charge.toFixed(2)}`;
+    };
 
-    if (wInput && wCalc) {
-      wInput.addEventListener('input', () => {
-        const rate = parseFloat(document.getElementById('nestWaterRate')?.value || 20);
-        const charge = parseFloat(wInput.value || 0) * rate;
-        wCalc.textContent = `฿${charge.toFixed(2)}`;
-      });
-    }
+    const updateWater = () => {
+      const wOld = parseFloat(wOldInput?.value || 0);
+      const wNew = parseFloat(wNewInput?.value || 0);
+      const rate = parseFloat(document.getElementById('nestWaterRate')?.value || 20);
+      const usage = Math.max(0, wNew - wOld);
+      const charge = usage * rate;
+      wDiff.textContent = usage.toFixed(2);
+      wCalc.textContent = `฿${charge.toFixed(2)}`;
+    };
+
+    if (eOldInput) eOldInput.addEventListener('input', updateElectric);
+    if (eNewInput) eNewInput.addEventListener('input', updateElectric);
+    if (wOldInput) wOldInput.addEventListener('input', updateWater);
+    if (wNewInput) wNewInput.addEventListener('input', updateWater);
   });
 }
 
@@ -2996,45 +3027,76 @@ function renderRoomsMeterGrid() {
   gridEl.innerHTML = roomsRooms.map(room => `
     <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
       <div style="font-weight:600;margin-bottom:0.8rem;color:var(--text);">🏠 ${room}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:0.8rem;">
-        <div>
-          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">⚡ ค่าไฟ (kWh)</label>
-          <input type="number" id="meter-rooms-${room}-electric" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.9rem;">
+
+      <!-- Electric Reading -->
+      <div style="margin-bottom:0.8rem;">
+        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">⚡ ค่าไฟ (kWh)</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
+          <div>
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เก่า</small>
+            <input type="number" id="meter-rooms-${room}-electric-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+          </div>
+          <div>
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ปัจจุบัน</small>
+            <input type="number" id="meter-rooms-${room}-electric-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+          </div>
         </div>
-        <div>
-          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">💧 น้ำ (m³)</label>
-          <input type="number" id="meter-rooms-${room}-water" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.9rem;">
-        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-rooms-${room}-electric">0</span> หน่วย = <span id="calc-rooms-${room}-electric" style="color:var(--green);font-weight:600;">฿0</span></div>
       </div>
-      <div style="font-size:0.8rem;color:var(--text-muted);background:#fff;padding:0.5rem;border-radius:4px;text-align:center;">
-        ค่าไฟ: <span id="calc-rooms-${room}-electric" style="color:var(--green);font-weight:600;">฿0</span> |
-        น้ำ: <span id="calc-rooms-${room}-water" style="color:var(--green);font-weight:600;">฿0</span>
+
+      <!-- Water Reading -->
+      <div style="margin-bottom:0.8rem;">
+        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">💧 น้ำ (m³)</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
+          <div>
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เก่า</small>
+            <input type="number" id="meter-rooms-${room}-water-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+          </div>
+          <div>
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ปัจจุบัน</small>
+            <input type="number" id="meter-rooms-${room}-water-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+          </div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-rooms-${room}-water">0</span> หน่วย = <span id="calc-rooms-${room}-water" style="color:var(--green);font-weight:600;">฿0</span></div>
       </div>
     </div>
   `).join('');
 
-  // Add change listeners to calculate charges
+  // Add change listeners to calculate charges (New - Old) × Rate
   roomsRooms.forEach(room => {
-    const eInput = document.getElementById(`meter-rooms-${room}-electric`);
-    const wInput = document.getElementById(`meter-rooms-${room}-water`);
+    const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
+    const eNewInput = document.getElementById(`meter-rooms-${room}-electric-new`);
+    const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
+    const wNewInput = document.getElementById(`meter-rooms-${room}-water-new`);
     const eCalc = document.getElementById(`calc-rooms-${room}-electric`);
     const wCalc = document.getElementById(`calc-rooms-${room}-water`);
+    const eDiff = document.getElementById(`diff-rooms-${room}-electric`);
+    const wDiff = document.getElementById(`diff-rooms-${room}-water`);
 
-    if (eInput && eCalc) {
-      eInput.addEventListener('input', () => {
-        const rate = parseFloat(document.getElementById('roomsElectricRate')?.value || 8);
-        const charge = parseFloat(eInput.value || 0) * rate;
-        eCalc.textContent = `฿${charge.toFixed(2)}`;
-      });
-    }
+    const updateElectric = () => {
+      const eOld = parseFloat(eOldInput?.value || 0);
+      const eNew = parseFloat(eNewInput?.value || 0);
+      const rate = parseFloat(document.getElementById('roomsElectricRate')?.value || 8);
+      const usage = Math.max(0, eNew - eOld);
+      const charge = usage * rate;
+      eDiff.textContent = usage.toFixed(2);
+      eCalc.textContent = `฿${charge.toFixed(2)}`;
+    };
 
-    if (wInput && wCalc) {
-      wInput.addEventListener('input', () => {
-        const rate = parseFloat(document.getElementById('roomsWaterRate')?.value || 20);
-        const charge = parseFloat(wInput.value || 0) * rate;
-        wCalc.textContent = `฿${charge.toFixed(2)}`;
-      });
-    }
+    const updateWater = () => {
+      const wOld = parseFloat(wOldInput?.value || 0);
+      const wNew = parseFloat(wNewInput?.value || 0);
+      const rate = parseFloat(document.getElementById('roomsWaterRate')?.value || 20);
+      const usage = Math.max(0, wNew - wOld);
+      const charge = usage * rate;
+      wDiff.textContent = usage.toFixed(2);
+      wCalc.textContent = `฿${charge.toFixed(2)}`;
+    };
+
+    if (eOldInput) eOldInput.addEventListener('input', updateElectric);
+    if (eNewInput) eNewInput.addEventListener('input', updateElectric);
+    if (wOldInput) wOldInput.addEventListener('input', updateWater);
+    if (wNewInput) wNewInput.addEventListener('input', updateWater);
   });
 }
 
@@ -3084,26 +3146,36 @@ function loadPreviousMonthNest() {
     return;
   }
 
-  // Load data into form
+  // Load data into form (use previous month's NEW readings as this month's OLD readings)
   const nestRooms = ['N101', 'N102', 'N103', 'N104', 'N105', 'N201', 'N202', 'N203', 'N204', 'N205', 'N301', 'N302', 'N303', 'N304', 'N305', 'N401', 'N402', 'N403', 'N404', 'N405'];
   let loadCount = 0;
 
   nestRooms.forEach(room => {
     const reading = prevMonthData.readings[room];
     if (reading) {
-      const eInput = document.getElementById(`meter-nest-${room}-electric`);
-      const wInput = document.getElementById(`meter-nest-${room}-water`);
-      if (eInput) eInput.value = reading.e;
-      if (wInput) wInput.value = reading.w;
+      // Load as "old reading" using previous month's NEW readings
+      const eOldInput = document.getElementById(`meter-nest-${room}-electric-old`);
+      const wOldInput = document.getElementById(`meter-nest-${room}-water-old`);
+
+      // Handle both old data format (e, w) and new format (eOld, eNew, wOld, wNew)
+      if (reading.eNew !== undefined) {
+        // New format: use eNew as old reading for current month
+        if (eOldInput) eOldInput.value = reading.eNew;
+        if (wOldInput) wOldInput.value = reading.wNew;
+      } else {
+        // Old format: use e and w as old reading
+        if (eOldInput) eOldInput.value = reading.e || 0;
+        if (wOldInput) wOldInput.value = reading.w || 0;
+      }
 
       // Trigger calculation updates
-      if (eInput) eInput.dispatchEvent(new Event('input'));
-      if (wInput) wInput.dispatchEvent(new Event('input'));
+      if (eOldInput) eOldInput.dispatchEvent(new Event('input'));
+      if (wOldInput) wOldInput.dispatchEvent(new Event('input'));
       loadCount++;
     }
   });
 
-  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เรียบร้อย (${loadCount} ห้อง)`);
+  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เป็นค่าเก่า (${loadCount} ห้อง)`);
 }
 
 function loadPreviousMonthRooms() {
@@ -3132,26 +3204,36 @@ function loadPreviousMonthRooms() {
     return;
   }
 
-  // Load data into form
+  // Load data into form (use previous month's NEW readings as this month's OLD readings)
   const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
   let loadCount = 0;
 
   roomsRooms.forEach(room => {
     const reading = prevMonthData.readings[room];
     if (reading) {
-      const eInput = document.getElementById(`meter-rooms-${room}-electric`);
-      const wInput = document.getElementById(`meter-rooms-${room}-water`);
-      if (eInput) eInput.value = reading.e;
-      if (wInput) wInput.value = reading.w;
+      // Load as "old reading" using previous month's NEW readings
+      const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
+      const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
+
+      // Handle both old data format (e, w) and new format (eOld, eNew, wOld, wNew)
+      if (reading.eNew !== undefined) {
+        // New format: use eNew as old reading for current month
+        if (eOldInput) eOldInput.value = reading.eNew;
+        if (wOldInput) wOldInput.value = reading.wNew;
+      } else {
+        // Old format: use e and w as old reading
+        if (eOldInput) eOldInput.value = reading.e || 0;
+        if (wOldInput) wOldInput.value = reading.w || 0;
+      }
 
       // Trigger calculation updates
-      if (eInput) eInput.dispatchEvent(new Event('input'));
-      if (wInput) wInput.dispatchEvent(new Event('input'));
+      if (eOldInput) eOldInput.dispatchEvent(new Event('input'));
+      if (wOldInput) wOldInput.dispatchEvent(new Event('input'));
       loadCount++;
     }
   });
 
-  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เรียบร้อย (${loadCount} ห้อง)`);
+  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เป็นค่าเก่า (${loadCount} ห้อง)`);
 }
 
 function saveNestMeterReadings() {
@@ -3165,10 +3247,12 @@ function saveNestMeterReadings() {
   const nestRooms = ['N101', 'N102', 'N103', 'N104', 'N105', 'N201', 'N202', 'N203', 'N204', 'N205', 'N301', 'N302', 'N303', 'N304', 'N305', 'N401', 'N402', 'N403', 'N404', 'N405'];
 
   nestRooms.forEach(room => {
-    const eVal = parseFloat(document.getElementById(`meter-nest-${room}-electric`)?.value || 0);
-    const wVal = parseFloat(document.getElementById(`meter-nest-${room}-water`)?.value || 0);
-    if (eVal > 0 || wVal > 0) {
-      readings[room] = { e: eVal, w: wVal };
+    const eOld = parseFloat(document.getElementById(`meter-nest-${room}-electric-old`)?.value || 0);
+    const eNew = parseFloat(document.getElementById(`meter-nest-${room}-electric-new`)?.value || 0);
+    const wOld = parseFloat(document.getElementById(`meter-nest-${room}-water-old`)?.value || 0);
+    const wNew = parseFloat(document.getElementById(`meter-nest-${room}-water-new`)?.value || 0);
+    if (eNew > 0 || wNew > 0) {
+      readings[room] = { eOld, eNew, wOld, wNew };
     }
   });
 
@@ -3196,10 +3280,12 @@ function saveRoomsMeterReadings() {
   const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
 
   roomsRooms.forEach(room => {
-    const eVal = parseFloat(document.getElementById(`meter-rooms-${room}-electric`)?.value || 0);
-    const wVal = parseFloat(document.getElementById(`meter-rooms-${room}-water`)?.value || 0);
-    if (eVal > 0 || wVal > 0) {
-      readings[room] = { e: eVal, w: wVal };
+    const eOld = parseFloat(document.getElementById(`meter-rooms-${room}-electric-old`)?.value || 0);
+    const eNew = parseFloat(document.getElementById(`meter-rooms-${room}-electric-new`)?.value || 0);
+    const wOld = parseFloat(document.getElementById(`meter-rooms-${room}-water-old`)?.value || 0);
+    const wNew = parseFloat(document.getElementById(`meter-rooms-${room}-water-new`)?.value || 0);
+    if (eNew > 0 || wNew > 0) {
+      readings[room] = { eOld, eNew, wOld, wNew };
     }
   });
 
