@@ -2919,6 +2919,9 @@ function initMeterNestTab() {
 
   // Populate meter grid
   renderNestMeterGrid();
+
+  // Load old readings from METER_DATA
+  autoFillOldReadingsNest();
 }
 
 function initMeterRoomsTab() {
@@ -2932,6 +2935,42 @@ function initMeterRoomsTab() {
 
   // Populate meter grid
   renderRoomsMeterGrid();
+
+  // Load old readings from METER_DATA
+  autoFillOldReadingsRooms();
+}
+
+// Auto-fill Old readings from METER_DATA (Nest Building)
+function autoFillOldReadingsNest() {
+  if (typeof METER_DATA === 'undefined') {
+    console.log('⚠️ METER_DATA not available');
+    return;
+  }
+
+  const monthInput = document.getElementById('nestMeterMonth').value;
+  if (!monthInput) return;
+
+  // Parse year-month and convert to key format
+  const [year, month] = monthInput.split('-').map(Number);
+  const yy = year % 100; // Convert to 2-digit year (69, 70, etc.)
+  const key = `${yy}_${month}`;
+
+  const monthData = METER_DATA[key];
+  if (!monthData) {
+    console.log(`⚠️ No data for ${key}`);
+    return;
+  }
+
+  // Nest rooms mapping (N101-N405 in Nest Building)
+  const nestRooms = ['N101', 'N102', 'N103', 'N104', 'N105', 'N201', 'N202', 'N203', 'N204', 'N205', 'N301', 'N302', 'N303', 'N304', 'N305', 'N401', 'N402', 'N403', 'N404', 'N405'];
+  let loadCount = 0;
+
+  nestRooms.forEach(room => {
+    // Nest rooms don't exist in METER_DATA (which is for Rooms Building only)
+    // Skip this for Nest Building
+  });
+
+  console.log(`📊 Nest Building old readings ready`);
 }
 
 function renderNestMeterGrid() {
@@ -3015,6 +3054,55 @@ function renderNestMeterGrid() {
     if (wOldInput) wOldInput.addEventListener('input', updateWater);
     if (wNewInput) wNewInput.addEventListener('input', updateWater);
   });
+}
+
+// Auto-fill Old readings from METER_DATA (Rooms Building)
+function autoFillOldReadingsRooms() {
+  if (typeof METER_DATA === 'undefined') {
+    console.log('⚠️ METER_DATA not available');
+    return;
+  }
+
+  const monthInput = document.getElementById('roomsMeterMonth').value;
+  if (!monthInput) return;
+
+  // Parse year-month and convert to key format
+  const [year, month] = monthInput.split('-').map(Number);
+  const yy = year % 100; // Convert to 2-digit year (69, 70, etc.)
+  const key = `${yy}_${month}`;
+
+  const monthData = METER_DATA[key];
+  if (!monthData) {
+    console.log(`⚠️ No data for ${key}`);
+    return;
+  }
+
+  // Rooms Building rooms - map to METER_DATA keys
+  const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
+  let loadCount = 0;
+
+  roomsRooms.forEach(room => {
+    // Map room names to METER_DATA keys
+    const lookupId = room === 'AMAZON' ? 'ร้านใหญ่' : room;
+    const d = monthData[lookupId];
+
+    if (d) {
+      const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
+      const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
+
+      if (d.eOld !== null && d.eOld !== undefined && eOldInput) {
+        eOldInput.value = d.eOld;
+        eOldInput.dispatchEvent(new Event('input'));
+        loadCount++;
+      }
+      if (d.wOld !== null && d.wOld !== undefined && wOldInput) {
+        wOldInput.value = d.wOld;
+        wOldInput.dispatchEvent(new Event('input'));
+      }
+    }
+  });
+
+  console.log(`✅ Loaded old readings for ${loadCount} rooms from METER_DATA`);
 }
 
 function renderRoomsMeterGrid() {
