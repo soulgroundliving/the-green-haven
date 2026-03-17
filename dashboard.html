@@ -3856,13 +3856,41 @@ function initDashboardCharts(){
 let currentRoomFilter = 'all'; // all, occupied, vacant, overdue
 let currentNestFilter = 'all'; // all, occupied, vacant, overdue
 
+// ===== HELPER: Get active rooms with merged metadata =====
+function getActiveRoomsWithMetadata(building, metadataArray) {
+  // Get full room config from RoomConfigManager
+  const config = RoomConfigManager.getRoomsConfig(building);
+  const activeRooms = config.rooms.filter(r => !r.deleted);
+
+  // Merge RoomConfigManager data with metadata (rent, type, trashFee, etc.)
+  return activeRooms.map(r => {
+    const metadata = metadataArray.find(m => m.id === r.id);
+    // Return merged object with all properties
+    return {
+      id: r.id,
+      name: r.name,
+      waterRate: r.waterRate,
+      electricRate: r.electricRate,
+      deleted: r.deleted,
+      rent: metadata?.rent || 1500,
+      type: metadata?.type || 'room',
+      trashFee: metadata?.trashFee || 20,
+      elecRate: metadata?.elecRate || r.electricRate,
+      floor: metadata?.floor,
+      note: metadata?.note,
+      dailyRate: metadata?.dailyRate
+    };
+  });
+}
+
 // ===== ROOMS PAGE =====
 function initRoomsPage(){
   updateOccupancyDashboard();
   updateLeaseExpiryAlerts();
   const allTenants = loadTenants();
+  const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
   const grid=document.getElementById('roomGrid');
-  grid.innerHTML=ROOMS_OLD.map(r=>{
+  grid.innerHTML=rooms.map(r=>{
     const tenant = allTenants[r.id];
     const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
     const statusInfo = getRoomColorStatus(r.id, r);
@@ -3878,11 +3906,11 @@ function initRoomsPage(){
   }).join('');
 
   const tbl=document.getElementById('roomTable');
-  const rentT=ROOMS_OLD.filter(r=>r.type==='room').reduce((a,r)=>a+r.rent,0);
+  const rentT=rooms.filter(r=>r.type==='room').reduce((a,r)=>a+r.rent,0);
   const avgE=Math.round(12500/22),avgW=Math.round(3200/22);
   tbl.innerHTML=`
     <thead><tr><th>ห้องเลขที่</th><th>ประเภท</th><th>ค่าเช่า</th><th>อัตราไฟ</th><th>ค่าขยะ</th><th>สถานะ</th><th>หมายเหตุ</th></tr></thead>
-    <tbody>${ROOMS_OLD.map(r=>`<tr>
+    <tbody>${rooms.map(r=>`<tr>
       <td><strong>${r.id}</strong></td>
       <td><span class="badge ${r.type==='commercial'?'badge-blue':'badge-green'}">${r.type==='commercial'?'🏪 พาณิชย์':'🏠 ที่พัก'}</span></td>
       <td style="font-weight:700;color:var(--green-dark)">฿${r.rent.toLocaleString()}</td>
@@ -3892,7 +3920,7 @@ function initRoomsPage(){
       <td style="font-size:.8rem;color:var(--text-muted)">${r.note||'—'}</td>
     </tr>`).join('')}</tbody>
     <tfoot><tr style="background:var(--green-pale);font-weight:700;">
-      <td colspan="2">รวมห้องพัก (22 ห้อง)</td>
+      <td colspan="2">รวมห้องพัก (${rooms.length} ห้อง)</td>
       <td>฿${rentT.toLocaleString()}</td><td colspan="4">—</td>
     </tr></tfoot>`;
 
@@ -3931,9 +3959,10 @@ function renderCompactRoomGrid(){
   const allTenants = loadTenants();
   const searchInput=document.getElementById('roomCompactSearch');
   const searchTerm=(searchInput?.value||'').toLowerCase();
+  const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
 
   // Apply search filter
-  let filtered=ROOMS_OLD.filter(r=>r.id.toString().toLowerCase().includes(searchTerm) || (allTenants[r.id]?.name||'').toLowerCase().includes(searchTerm));
+  let filtered=rooms.filter(r=>r.id.toString().toLowerCase().includes(searchTerm) || (allTenants[r.id]?.name||'').toLowerCase().includes(searchTerm));
 
   // Apply status filter
   filtered = filtered.filter(r => {
@@ -3955,14 +3984,14 @@ function renderCompactRoomGrid(){
   const in30 = new Date(today.getTime() + 30*86400000);
   const in60 = new Date(today.getTime() + 60*86400000);
 
-  const expiring30 = ROOMS_OLD.filter(r => {
+  const expiring30 = rooms.filter(r => {
     const t = allTenants[r.id];
     if(!t?.contractEnd) return false;
     const exp = new Date(t.contractEnd);
     return exp > today && exp <= in30;
   }).length;
 
-  const expiring60 = ROOMS_OLD.filter(r => {
+  const expiring60 = rooms.filter(r => {
     const t = allTenants[r.id];
     if(!t?.contractEnd) return false;
     const exp = new Date(t.contractEnd);
@@ -4073,8 +4102,8 @@ function renderCompactRoomGrid(){
     <div style="display:flex;gap:2rem;flex-wrap:wrap;font-size:.85rem;">
       <div>⚠️ <strong>${expiring30}</strong> ห้อง หมดภายใน 30 วัน</div>
       <div>⏳ <strong>${expiring60}</strong> ห้อง หมดใน 30-60 วัน</div>
-      <div>✅ <strong>${ROOMS_OLD.filter(r => allTenants[r.id]?.name).length}</strong> ห้องมีผู้เช่า</div>
-      <div>🚪 <strong>${ROOMS_OLD.filter(r => !allTenants[r.id]?.name).length}</strong> ห้องว่าง</div>
+      <div>✅ <strong>${rooms.filter(r => allTenants[r.id]?.name).length}</strong> ห้องมีผู้เช่า</div>
+      <div>🚪 <strong>${rooms.filter(r => !allTenants[r.id]?.name).length}</strong> ห้องว่าง</div>
     </div>
   </div>`;
 
@@ -4129,7 +4158,8 @@ function renderRoomSelectionCheckboxes() {
   const container = document.getElementById('roomSelectionContainer');
   if (!container) return;
 
-  container.innerHTML = ROOMS_OLD.map(room => {
+  const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
+  container.innerHTML = rooms.map(room => {
     const currentRent = room.rent || 0;
     return `
       <label style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;background:white;" onclick="toggleBatchRoomSelection('${room.id}')">
@@ -4226,7 +4256,8 @@ function updatePreview() {
     return;
   }
 
-  const selectedRooms = ROOMS_OLD.filter(r => batchSelectedRooms.has(r.id));
+  const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
+  const selectedRooms = rooms.filter(r => batchSelectedRooms.has(r.id));
   const preview = selectedRooms.map(room => {
     let newRent = room.rent;
 
@@ -4349,9 +4380,10 @@ function renderNestCompactGrid(){
   const allTenants = loadTenants();
   const searchInput = document.getElementById('nestCompactSearch');
   const searchTerm = (searchInput?.value || '').toLowerCase();
+  const rooms = getActiveRoomsWithMetadata('nest', NEST_ROOMS);
 
   // Apply search filter
-  let filtered = NEST_ROOMS.filter(r =>
+  let filtered = rooms.filter(r =>
     r.id.toString().toLowerCase().includes(searchTerm) ||
     (allTenants[r.id]?.name || '').toLowerCase().includes(searchTerm)
   );
@@ -4377,14 +4409,14 @@ function renderNestCompactGrid(){
   const in30 = new Date(today.getTime() + 30*86400000);
   const in60 = new Date(today.getTime() + 60*86400000);
 
-  const expiring30 = NEST_ROOMS.filter(r => {
+  const expiring30 = rooms.filter(r => {
     const t = allTenants[r.id];
     if(!t?.contractEnd) return false;
     const exp = new Date(t.contractEnd);
     return exp > today && exp <= in30;
   }).length;
 
-  const expiring60 = NEST_ROOMS.filter(r => {
+  const expiring60 = rooms.filter(r => {
     const t = allTenants[r.id];
     if(!t?.contractEnd) return false;
     const exp = new Date(t.contractEnd);
@@ -4493,8 +4525,8 @@ function renderNestCompactGrid(){
     <div style="display:flex;gap:2rem;flex-wrap:wrap;font-size:.85rem;">
       <div>⚠️ <strong>${expiring30}</strong> ห้อง หมดภายใน 30 วัน</div>
       <div>⏳ <strong>${expiring60}</strong> ห้อง หมดใน 30-60 วัน</div>
-      <div>✅ <strong>${NEST_ROOMS.filter(r => allTenants[r.id]?.name).length}</strong> ห้องมีผู้เช่า</div>
-      <div>🚪 <strong>${NEST_ROOMS.filter(r => !allTenants[r.id]?.name).length}</strong> ห้องว่าง</div>
+      <div>✅ <strong>${rooms.filter(r => allTenants[r.id]?.name).length}</strong> ห้องมีผู้เช่า</div>
+      <div>🚪 <strong>${rooms.filter(r => !allTenants[r.id]?.name).length}</strong> ห้องว่าง</div>
     </div>
   </div>`;
 
@@ -4535,8 +4567,9 @@ function initNestPage(){
 
   // Populate room grid (visual layout)
   const allTenants = loadTenants();
+  const rooms = getActiveRoomsWithMetadata('nest', NEST_ROOMS);
   const grid = document.getElementById('nestRoomGrid');
-  grid.innerHTML = NEST_ROOMS.map(r => {
+  grid.innerHTML = rooms.map(r => {
     const tenant = allTenants[r.id];
     const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
     const typeIcon = r.type === 'daily' ? '📅' : (r.type === 'pet' ? '🐾' : '🏠');
@@ -4554,14 +4587,14 @@ function initNestPage(){
 
   // Populate classic table view
   const tbl = document.getElementById('nestRoomTable');
-  const rentStudio = NEST_ROOMS.filter(r => r.type === 'studio').reduce((a, r) => a + r.rent, 0);
-  const rentPet = NEST_ROOMS.filter(r => r.type === 'pet').reduce((a, r) => a + r.rent, 0);
-  const rentDaily = NEST_ROOMS.filter(r => r.type === 'daily').reduce((a, r) => a + r.rent, 0);
-  const rentTotal = NEST_ROOMS.reduce((a, r) => a + r.rent, 0);
+  const rentStudio = rooms.filter(r => r.type === 'studio').reduce((a, r) => a + r.rent, 0);
+  const rentPet = rooms.filter(r => r.type === 'pet').reduce((a, r) => a + r.rent, 0);
+  const rentDaily = rooms.filter(r => r.type === 'daily').reduce((a, r) => a + r.rent, 0);
+  const rentTotal = rooms.reduce((a, r) => a + r.rent, 0);
 
   tbl.innerHTML = `
     <thead><tr><th>ห้องเลขที่</th><th>ชั้น</th><th>ประเภท</th><th>ค่าเช่า</th><th>อัตราไฟ</th><th>ค่าขยะ</th><th>หมายเหตุ</th></tr></thead>
-    <tbody>${NEST_ROOMS.map(r => {
+    <tbody>${rooms.map(r => {
       const typeLabel = r.type === 'daily' ? '📅 รายวัน' : (r.type === 'pet' ? '🐾 Pet Friendly' : '🏠 Studio');
       return `<tr>
         <td><strong>${r.id}</strong></td>
@@ -4574,7 +4607,7 @@ function initNestPage(){
       </tr>`;
     }).join('')}</tbody>
     <tfoot><tr style="background:var(--blue-pale);font-weight:700;">
-      <td colspan="3">รวม (${NEST_ROOMS.length} ห้อง)</td>
+      <td colspan="3">รวม (${rooms.length} ห้อง)</td>
       <td>฿${rentTotal.toLocaleString()}</td>
       <td colspan="3">—</td>
     </tr></tfoot>`;
@@ -4648,14 +4681,17 @@ function onBuildingChange(){
 }
 
 function populateRoomDropdown(){
-  const rooms=currentBuilding==='old'?ROOMS_OLD:ROOMS_NEW;
-  const sel=document.getElementById('f-room');
-  sel.innerHTML='<option value="">-- เลือกห้อง --</option>'+
-    rooms.map(r=>{
-      const tag=r.type==='daily'?'📅 ':r.type==='pet'?'🐾 ':r.type==='commercial'?'☕ ':'';
-      return`<option value="${r.id}" data-rent="${r.rent}" data-elec="${r.elecRate}" data-trash="${r.trashFee}" data-daily="${r.dailyRate||0}" data-type="${r.type}">${tag}ห้อง ${r.id} — ฿${r.rent.toLocaleString()}/เดือน</option>`;
+  // Map building names: 'old' -> 'rooms', 'new' -> 'nest'
+  const rmcBuilding = currentBuilding === 'old' ? 'rooms' : 'nest';
+  const metadataArray = currentBuilding === 'old' ? ROOMS_OLD : ROOMS_NEW;
+  const rooms = getActiveRoomsWithMetadata(rmcBuilding, metadataArray);
+  const sel = document.getElementById('f-room');
+  sel.innerHTML = '<option value="">-- เลือกห้อง --</option>' +
+    rooms.map(r => {
+      const tag = r.type === 'daily' ? '📅 ' : r.type === 'pet' ? '🐾 ' : r.type === 'commercial' ? '☕ ' : '';
+      return `<option value="${r.id}" data-rent="${r.rent}" data-elec="${r.elecRate}" data-trash="${r.trashFee}" data-daily="${r.dailyRate || 0}" data-type="${r.type}">${tag}ห้อง ${r.id} — ฿${r.rent.toLocaleString()}/เดือน</option>`;
     }).join('');
-  document.getElementById('f-rent').value='';
+  document.getElementById('f-rent').value = '';
 }
 
 function onRoomChange(){
@@ -5306,7 +5342,10 @@ function renderPaymentStatus(){
   const ps=loadPS();
   const key=`${year}_${month}`;
   const paid=ps[key]||{};
-  const rooms=currentBuilding==='old'?ROOMS_OLD:ROOMS_NEW;
+  // Map building names and get active rooms
+  const rmcBuilding = currentBuilding === 'old' ? 'rooms' : 'nest';
+  const metadataArray = currentBuilding === 'old' ? ROOMS_OLD : ROOMS_NEW;
+  const rooms = getActiveRoomsWithMetadata(rmcBuilding, metadataArray);
   const monthName=MONTHS_FULL[month]||month;
   const countPaid=Object.keys(paid).length;
   el.innerHTML=`<div style="font-size:.8rem;font-weight:700;color:var(--text-muted);margin-bottom:6px;">
@@ -5441,7 +5480,8 @@ function renderMeterTable(){
   const paid=ps[psKey]||{};
   let totalPaid=0, totalPending=0, totalAmt=0;
 
-  const rows=ROOMS_OLD.map(r=>{
+  const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
+  const rows=rooms.map(r=>{
     const lookupId=r.id==='Amazon ☕'?'ร้านใหญ่':r.id;
     const md=(typeof METER_DATA!=='undefined'&&METER_DATA[mdKey])?METER_DATA[mdKey][lookupId]:null;
     const p=paid[r.id];
@@ -5523,7 +5563,9 @@ function updateDashboardLive(){
   const key=`${year}_${month}`;
   const paid=ps[key]||{};
   const paidCount=Object.keys(paid).length;
-  const totalRooms=ROOMS_OLD.length;
+  // Use active rooms from RoomConfigManager
+  const activeRooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
+  const totalRooms=activeRooms.length;
   const pendingCount=totalRooms-paidCount;
   const totalCollected=Object.values(paid).reduce((a,p)=>a+(p.amount||0),0);
 
@@ -5535,14 +5577,14 @@ function updateDashboardLive(){
 
   // KPI: occupancy from tenant data
   const tenants=loadTenants();
-  const occCount=ROOMS_OLD.filter(r=>tenants[r.id]?.name).length;
+  const occCount=activeRooms.filter(r=>tenants[r.id]?.name).length;
   const kpiOcc=document.getElementById('kpi-occupancy');
   const kpiOccS=document.getElementById('kpi-occupancy-sub');
   if(kpiOcc)kpiOcc.textContent=`${Math.round(occCount/totalRooms*100)}%`;
   if(kpiOccS)kpiOccS.textContent=`มีผู้เช่า ${occCount} · ว่าง ${totalRooms-occCount} ห้อง`;
 
   // KPI: Expected Revenue (this month from occupied rooms)
-  const expectedRevenue=ROOMS_OLD.filter(r=>tenants[r.id]?.name).reduce((sum,r)=>sum+(r.rent||0),0);
+  const expectedRevenue=activeRooms.filter(r=>tenants[r.id]?.name).reduce((sum,r)=>sum+(r.rent||0),0);
   const kpiExp=document.getElementById('kpi-expected');
   const kpiExpS=document.getElementById('kpi-expected-sub');
   if(kpiExp)kpiExp.textContent=`฿${expectedRevenue.toLocaleString()}`;
@@ -5565,7 +5607,7 @@ function updateDashboardLive(){
   // Quick payment panel
   const dashPay=document.getElementById('dashPaymentStatus');
   if(dashPay){
-    const pendingRooms=ROOMS_OLD.filter(r=>!paid[r.id]).map(r=>r.id);
+    const pendingRooms=activeRooms.filter(r=>!paid[r.id]).map(r=>r.id);
     dashPay.innerHTML=`
       <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
         <div><div style="font-size:1.5rem;font-weight:800;color:var(--green)">${paidCount}</div><div style="font-size:.72rem;color:var(--text-muted)">จ่ายแล้ว</div></div>
@@ -5581,8 +5623,8 @@ function updateDashboardLive(){
   const dashTen=document.getElementById('dashTenantStatus');
   if(dashTen){
     const today=new Date();
-    const vacantRooms=ROOMS_OLD.filter(r=>!tenants[r.id]?.name).map(r=>r.id);
-    const soon=ROOMS_OLD.filter(r=>{
+    const vacantRooms=activeRooms.filter(r=>!tenants[r.id]?.name).map(r=>r.id);
+    const soon=activeRooms.filter(r=>{
       const t=tenants[r.id];
       if(!t?.contractEnd)return false;
       const diff=(new Date(t.contractEnd)-today)/(1000*60*60*24);
@@ -5609,7 +5651,8 @@ function updateNavBadge(){
   const ps=loadPS();
   const key=`${now.getFullYear()+543}_${now.getMonth()+1}`;
   const paid=ps[key]||{};
-  const pending=ROOMS_OLD.length-Object.keys(paid).length;
+  const activeRooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
+  const pending=activeRooms.length-Object.keys(paid).length;
   if(pending>0){badge.textContent=pending;badge.style.display='inline-block';}
   else{badge.style.display='none';}
 }
