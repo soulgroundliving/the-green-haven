@@ -1,0 +1,164 @@
+================================================================================
+EXCEL FILE EXTRACTION SUMMARY
+File: บิลปี69.xlsx (Year 69 - Buddhist Calendar = 2025 AD)
+================================================================================
+
+FILE OVERVIEW
+=============
+Filename: บิลปี69.xlsx
+Purpose: Utility Bill Tracking for "The Green Haven" Rental Property
+Period: Year 69 (12 monthly billing sheets + 1 example sheet)
+Total Sheets: 13
+Structure: Monthly billing records for electricity, water, waste disposal, and rent
+
+SHEET STRUCTURE
+===============
+All 13 sheets contain the same format and room data:
+
+Sheet 1:  "EX" (Example/Sample Sheet)
+Sheet 2:  "มค69" (มีนาคม/March Year 69 - March 2026)
+Sheet 3:  "กพ69" (กุมภาพันธ์/February Year 69 - February 2026)
+Sheet 4:  "มีค" (มีนาคม/March)
+Sheet 5:  "เมษา" (เมษายน/April)
+Sheet 6:  "พฤษ" (พฤษภาคม/May)
+Sheet 7:  "มิถุน" (มิถุนายน/June)
+Sheet 8:  "กรก" (กรกฎาคม/July)
+Sheet 9:  "สิงห" (สิงหาคม/August)
+Sheet 10: "กันย" (กันยายน/September)
+Sheet 11: "ตุลา" (ตุลาคม/October)
+Sheet 12: "พยค" (พฤศจิกายน/November)
+Sheet 13: "ธันว" (ธันวาคม/December)
+
+COLUMN HEADERS (Common across all sheets)
+=========================================
+Column 1:  "ห้อง" - Room Number
+Column 2:  "ไฟ" - Electricity Current Reading
+Column 3:  "น้ำ" - Water Current Reading
+Column 4:  [BLANK] - Rental Amount Field Header
+Column 5:  [BLANK] - Separator
+Column 6:  "ไฟล่าสุด" - Latest Electricity Reading
+Column 7:  "ไฟเดิม" - Previous Electricity Reading
+Column 8:  [BLANK] - Electricity Usage (Calculated: Latest - Previous)
+Column 9:  "/หน่วย" - Price per Unit (Electricity)
+Column 10: "บาท" - Electricity Cost (Usage × Unit Price)
+Column 11: [BLANK] - Separator
+Column 12: "น้ำล่าสุด" - Latest Water Reading
+Column 13: "น้ำเดิม" - Previous Water Reading
+Column 14: [BLANK] - Water Usage (Calculated: Latest - Previous)
+Column 15: "/หน่วย" - Price per Unit (Water)
+Column 16: "บาท" - Water Cost (Usage × Unit Price)
+Column 17: [BLANK] - Separator
+Column 18: "รวม" - Total Charges (Rent + Electricity + Water)
+Column 19: "ขยะ" - Waste/Garbage Disposal Fee
+Column 20: "บาท" - Total Bill (Total Charges + Garbage Fee)
+
+ROOMS/TENANTS FOUND (All Sheets)
+================================
+Total Regular Rooms: 22 units
+
+Room Numbers:
+  15ก (Room 15A, labeled as "15ก")
+  13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0
+  21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0
+  29.0, 30.0, 31.0, 32.0, 33.0
+
+Plus 1 Commercial Unit:
+  "ร้านใหญ่" (Large Shop/Store)
+
+RENTAL AMOUNTS BY ROOM
+======================
+Standard Monthly Rent (Baht):
+  Rooms 13, 17-23, 25, 27-32: 1,500 ฿
+  Rooms 14, 15: 1,200 ฿
+  Rooms 16, 24, 26: 2,000 ฿
+  Room 33: 1,400 ฿
+  Large Shop: 15,000 ฿
+
+Total Regular Room Rent: 33,800 ฿
+Large Shop Rent: 15,000 ฿
+Combined Total Rent: 48,800 ฿
+
+UTILITY PRICING (Consistent across all months)
+===============================================
+Electricity: 8.0 Baht per unit (kWh)
+Water: 20.0 Baht per unit (cubic meters/m³)
+Waste/Garbage: 20.0 Baht per unit (appears to be fixed charge per room)
+
+SAMPLE DATA PATTERN (Sheet 2 - March Year 69)
+==============================================
+Example Room 13:
+  - Room Number: 13.0
+  - Monthly Rent: 1,500 ฿
+  - Electricity Reading (Current): 3,291 units
+  - Electricity Reading (Previous): 3,267 units
+  - Electricity Usage: 24 units
+  - Electricity Cost: 24 × 8 = 192 ฿
+  - Water Reading (Current): 1,710 units
+  - Water Reading (Previous): 1,707 units
+  - Water Usage: 3 units
+  - Water Cost: 3 × 20 = 60 ฿
+  - Garbage Fee: 20 ฿
+  - Total Bill: 1,500 + 192 + 60 + 20 = 1,772 ฿
+
+Example - Large Shop (March Year 69):
+  - Room/Unit: "ร้านใหญ่"
+  - Monthly Rent: 15,000 ฿
+  - Electricity Usage: 402 units
+  - Electricity Cost: 402 × 8 = 3,216 ฿
+  - Water Usage: 6 units
+  - Water Cost: 6 × 20 = 120 ฿
+  - Garbage Fee: 20 ฿
+  - Total Bill: 15,000 + 3,216 + 120 + 20 = 18,356 ฿
+
+SUMMARY ROWS (Found at bottom of each sheet)
+==============================================
+Each sheet contains summary calculations:
+  - "รวมค่าห้อง" (Total Room Rent): Sum of all room rentals
+  - "รวมค่าไฟ" (Total Electricity Charges): Sum of all electricity costs
+  - "รวมค่าน้ำ" (Total Water Charges): Sum of all water costs
+  - "รวมค่่าใช้จ่าย" (Total Charges): Grand total before garbage fees
+  - "รวมค่าห้องทั้งหมด" (Total Room Revenue): Grand total including all fees
+
+DATA VALIDATION NOTES
+=====================
+1. All rooms appear in every sheet (consistent inventory)
+2. Monthly electricity and water readings vary by month (expected usage)
+3. Monthly rent appears to be fixed across all sheets (no monthly changes)
+4. Garbage fee is consistent at 20 baht per room/unit
+5. Unit prices are consistent: 8 ฿/kWh for electricity, 20 ฿/m³ for water
+6. All 22 regular rooms + 1 large shop are billed each month
+7. Data appears well-maintained with proper calculations
+
+FILES GENERATED
+===============
+CSV exports of all 13 sheets have been created for reference:
+  sheet_01_EX.csv
+  sheet_02_มค69.csv
+  sheet_03_กพ69.csv
+  sheet_04_มีค.csv
+  sheet_05_เมษา.csv
+  sheet_06_พฤษ.csv
+  sheet_07_มิถุน.csv
+  sheet_08_กรก.csv
+  sheet_09_สิงห.csv
+  sheet_10_กันย.csv
+  sheet_11_ตุลา.csv
+  sheet_12_พยค.csv
+  sheet_13_ธันว.csv
+
+METER TRACKING INFORMATION
+===========================
+For meter tracking purposes:
+- Electricity meters are tracked with readings from previous month to current month
+- Water meters are tracked with readings from previous month to current month
+- Usage is calculated as: Current Reading - Previous Reading
+- Costs are calculated as: Usage × Unit Price
+- Each room/unit has independent meter readings
+
+Key Identifiers for Tracking:
+  - Room identifiers: 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 15ก
+  - Commercial unit: "ร้านใหญ่" (Large Shop)
+  - No tenant names in the spreadsheet; only room numbers/units
+  - No phone numbers recorded in the spreadsheet
+
+================================================================================
