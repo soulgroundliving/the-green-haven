@@ -2938,15 +2938,8 @@ function renderNestMeterGrid() {
   const gridEl = document.getElementById('nestMeterGrid');
   if (!gridEl) return;
 
-  // Get Nest Building rooms (N101-N405) - extract from tenant_data keys
-  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
-  const nestRooms = Object.keys(tenantData)
-    .filter(room => String(room).startsWith('N'))
-    .sort((a, b) => {
-      const aNum = parseInt(a.substring(1));
-      const bNum = parseInt(b.substring(1));
-      return aNum - bNum;
-    });
+  // Hardcoded Nest Building rooms (20 rooms: N101-N105, N201-N205, N301-N305, N401-N405)
+  const nestRooms = ['N101', 'N102', 'N103', 'N104', 'N105', 'N201', 'N202', 'N203', 'N204', 'N205', 'N301', 'N302', 'N303', 'N304', 'N305', 'N401', 'N402', 'N403', 'N404', 'N405'];
 
   gridEl.innerHTML = nestRooms.map(room => `
     <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
@@ -2997,21 +2990,8 @@ function renderRoomsMeterGrid() {
   const gridEl = document.getElementById('roomsMeterGrid');
   if (!gridEl) return;
 
-  // Get Rooms Building rooms (non-N rooms: 13, 14, 15, etc.) from tenant_data
-  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
-  const roomsRooms = Object.keys(tenantData)
-    .filter(room => !String(room).startsWith('N'))
-    .sort((a, b) => {
-      // Custom sort: numbers first (by value), then special rooms (AMAZON, etc)
-      const aStr = String(a);
-      const bStr = String(b);
-      const aNum = parseInt(aStr);
-      const bNum = parseInt(bStr);
-      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-      if (!isNaN(aNum)) return -1;
-      if (!isNaN(bNum)) return 1;
-      return aStr.localeCompare(bStr);
-    });
+  // Hardcoded Rooms Building rooms (22 rooms + AMAZON: 13-33, 15ก, AMAZON)
+  const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
 
   gridEl.innerHTML = roomsRooms.map(room => `
     <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
