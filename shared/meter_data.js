@@ -1,4 +1,4 @@
-﻿const METER_DATA = {
+const METER_DATA = {
   '67_1': {
     '13':{eNew:2628,eOld:2616,wNew:1577,wOld:1575},
     '14':{eNew:7744,eOld:7633,wNew:2924,wOld:2904},

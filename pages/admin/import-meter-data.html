@@ -390,6 +390,45 @@
       border-radius: 4px;
       font-size: 0.9rem;
     }
+
+    /* Sheet selection styles */
+    .sheet-option {
+      padding: 15px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      font-weight: 500;
+      background: white;
+    }
+
+    .sheet-option:hover {
+      border-color: #2d8653;
+      background: #f0f8f4;
+      transform: translateY(-2px);
+    }
+
+    .sheet-option.selected {
+      border-color: #2d8653;
+      background: #2d8653;
+      color: white;
+    }
+
+    .sheet-month {
+      font-size: 1.1em;
+      margin-bottom: 5px;
+    }
+
+    .sheet-name {
+      font-size: 0.85em;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .sheet-option.selected .sheet-name {
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -397,6 +436,7 @@
     <div class="header">
       <h1>📊 นำเข้าข้อมูลมิเตอร์ (Import Meter Data)</h1>
       <p>อัพโหลดไฟล์ Excel ของเดือนถัดไป ระบบจะอัตโนมัติแปลงและอัพเดทข้อมูล</p>
+      <button class="btn-primary" onclick="generateExcelTemplate()" style="margin-top: 15px;">📥 ดาวน์โหลด Template</button>
     </div>
 
     <!-- Upload Section -->
@@ -407,7 +447,8 @@
       <div class="drop-zone" id="dropZone">
         <div class="drop-icon">📤</div>
         <div class="drop-text">ลากไฟล์ Excel มาวางตรงนี้</div>
-        <div class="drop-subtext">หรือคลิกเพื่อเลือกไฟล์ (บิลปี67-69.xlsx)</div>
+        <div class="drop-subtext">หรือคลิกเพื่อเลือกไฟล์ (บิลปี67-69.xlsx)<br>
+        <small style="color: #666; margin-top: 5px; display: block;">📋 Sheet name ต้องมี: มค, กพ, มีค, เมษา, พค, มิย, กค, สค, กย, ตค, พย, ธค</small></div>
       </div>
       <input type="file" id="fileInput" accept=".xlsx,.xls">
     </div>
@@ -444,6 +485,18 @@
           <tbody id="previewTable">
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Sheet Selection Section (New) -->
+    <div class="section hidden" id="sheetSelectionSection">
+      <div class="section-title">
+        <span>📋 ขั้นตอนที่ 1.5: เลือกเดือนที่ต้องการ</span>
+      </div>
+      <div class="preview" style="background: #f0f8f4; border: 2px solid #2d8653;">
+        <h3>เลือกเดือนจากไฟล์:</h3>
+        <div id="sheetOptions" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;"></div>
+        <button class="btn-primary" onclick="proceedWithSelectedSheet()" style="margin-top: 15px;">✓ ยืนยันและดำเนินการต่อ</button>
       </div>
     </div>
 
@@ -500,7 +553,15 @@
   <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="../../shared/meter_import_helper.js"></script>
   <script>
+// Inline METER_DATA to avoid script loading issues
+window.METER_DATA = {"67_1":{"13":{"eNew":2628,"eOld":2616,"wNew":1577,"wOld":1575},"14":{"eNew":7744,"eOld":7633,"wNew":2924,"wOld":2904},"15":{"eNew":5741,"eOld":5576,"wNew":1542,"wOld":1538},"15ก":{"eNew":2094,"eOld":1994,"wNew":1123,"wOld":1106},"16":{"eNew":5785,"eOld":5685,"wNew":83,"wOld":73},"17":{"eNew":1383,"eOld":1350,"wNew":2995,"wOld":2994},"18":{"eNew":8831,"eOld":8785,"wNew":1169,"wOld":1162},"19":{"eNew":9304,"eOld":9271,"wNew":1421,"wOld":1414},"20":{"eNew":1870,"eOld":1676,"wNew":1662,"wOld":1649},"21":{"eNew":3011,"eOld":3011,"wNew":18,"wOld":14},"22":{"eNew":414,"eOld":302,"wNew":1266,"wOld":1259},"23":{"eNew":793,"eOld":759,"wNew":1066,"wOld":1063},"24":{"eNew":1599,"eOld":1471,"wNew":802,"wOld":792},"25":{"eNew":3209,"eOld":3205,"wNew":1819,"wOld":1818},"26":{"eNew":1084,"eOld":1064,"wNew":1474,"wOld":1471},"27":{"eNew":300,"eOld":185,"wNew":1283,"wOld":1268},"28":{"eNew":465,"eOld":459,"wNew":523,"wOld":523},"29":{"eNew":917,"eOld":826,"wNew":1131,"wOld":1126},"30":{"eNew":3930,"eOld":3856,"wNew":1280,"wOld":1276},"31":{"eNew":9431,"eOld":9380,"wNew":1484,"wOld":1476},"32":{"eNew":1036,"eOld":949,"wNew":1170,"wOld":1159},"33":{"eNew":2072,"eOld":2060,"wNew":1498,"wOld":1494},"ร้านใหญ่":{"eNew":10216,"eOld":9528,"wNew":1067,"wOld":1034}},"67_2":{"13":{"eNew":2666,"eOld":2628,"wNew":1583,"wOld":1577},"14":{"eNew":7842,"eOld":7744,"wNew":2943,"wOld":2924},"15":{"eNew":5898,"eOld":5741,"wNew":1546,"wOld":1542},"15ก":{"eNew":2166,"eOld":2094,"wNew":1141,"wOld":1123},"16":{"eNew":5879,"eOld":5785,"wNew":93,"wOld":83},"17":{"eNew":1409,"eOld":1383,"wNew":2996,"wOld":2995},"18":{"eNew":8874,"eOld":8831,"wNew":1182,"wOld":1169},"19":{"eNew":9334,"eOld":9304,"wNew":1427,"wOld":1421},"20":{"eNew":2064,"eOld":1870,"wNew":1674,"wOld":1662},"21":{"eNew":1,"eOld":0,"wNew":20,"wOld":18},"22":{"eNew":551,"eOld":414,"wNew":1273,"wOld":1266},"23":{"eNew":823,"eOld":793,"wNew":1068,"wOld":1066},"24":{"eNew":1721,"eOld":1599,"wNew":811,"wOld":802},"25":{"eNew":3234,"eOld":3209,"wNew":1824,"wOld":1819},"26":{"eNew":1105,"eOld":1084,"wNew":1476,"wOld":1474},"27":{"eNew":409,"eOld":300,"wNew":1298,"wOld":1283},"28":{"eNew":477,"eOld":465,"wNew":524,"wOld":523},"29":{"eNew":929,"eOld":917,"wNew":1133,"wOld":1131},"30":{"eNew":3999,"eOld":3930,"wNew":1284,"wOld":1280},"31":{"eNew":9478,"eOld":9431,"wNew":1492,"wOld":1484},"32":{"eNew":1130,"eOld":1036,"wNew":1179,"wOld":1170},"33":{"eNew":2082,"eOld":2072,"wNew":1502,"wOld":1498},"ร้านใหญ่":{"eNew":12456,"eOld":10216,"wNew":1161,"wOld":1067}},"67_3":{"13":{"eNew":2704,"eOld":2666,"wNew":1590,"wOld":1583},"14":{"eNew":7944,"eOld":7842,"wNew":2957,"wOld":2943},"15":{"eNew":6056,"eOld":5898,"wNew":1551,"wOld":1546},"15ก":{"eNew":2239,"eOld":2166,"wNew":1158,"wOld":1141},"16":{"eNew":5973,"eOld":5879,"wNew":103,"wOld":93},"17":{"eNew":1435,"eOld":1409,"wNew":2997,"wOld":2996},"18":{"eNew":8917,"eOld":8874,"wNew":1195,"wOld":1182},"19":{"eNew":9364,"eOld":9334,"wNew":1433,"wOld":1427},"20":{"eNew":2258,"eOld":2064,"wNew":1685,"wOld":1674},"21":{"eNew":2,"eOld":1,"wNew":22,"wOld":20},"22":{"eNew":688,"eOld":551,"wNew":1280,"wOld":1273},"23":{"eNew":853,"eOld":823,"wNew":1070,"wOld":1068},"24":{"eNew":1843,"eOld":1721,"wNew":820,"wOld":811},"25":{"eNew":3259,"eOld":3234,"wNew":1829,"wOld":1824},"26":{"eNew":1126,"eOld":1105,"wNew":1478,"wOld":1476},"27":{"eNew":518,"eOld":409,"wNew":1313,"wOld":1298},"28":{"eNew":489,"eOld":477,"wNew":525,"wOld":524},"29":{"eNew":941,"eOld":929,"wNew":1135,"wOld":1133},"30":{"eNew":4068,"eOld":3999,"wNew":1288,"wOld":1284},"31":{"eNew":9525,"eOld":9478,"wNew":1500,"wOld":1492},"32":{"eNew":1224,"eOld":1130,"wNew":1188,"wOld":1179},"33":{"eNew":2092,"eOld":2082,"wNew":1506,"wOld":1502},"ร้านใหญ่":{"eNew":12552,"eOld":12456,"wNew":1167,"wOld":1161}},"67_4":{"13":{"eNew":2742,"eOld":2704,"wNew":1603,"wOld":1590},"14":{"eNew":8046,"eOld":7944,"wNew":2971,"wOld":2957},"15":{"eNew":6214,"eOld":6056,"wNew":1556,"wOld":1551},"15ก":{"eNew":2312,"eOld":2239,"wNew":1175,"wOld":1158},"16":{"eNew":6067,"eOld":5973,"wNew":113,"wOld":103},"17":{"eNew":1461,"eOld":1435,"wNew":2998,"wOld":2997},"18":{"eNew":8960,"eOld":8917,"wNew":1208,"wOld":1195},"19":{"eNew":9394,"eOld":9364,"wNew":1439,"wOld":1433},"20":{"eNew":2452,"eOld":2258,"wNew":1696,"wOld":1685},"21":{"eNew":3,"eOld":2,"wNew":24,"wOld":22},"22":{"eNew":825,"eOld":688,"wNew":1287,"wOld":1280},"23":{"eNew":883,"eOld":853,"wNew":1072,"wOld":1070},"24":{"eNew":1965,"eOld":1843,"wNew":829,"wOld":820},"25":{"eNew":3284,"eOld":3259,"wNew":1834,"wOld":1829},"26":{"eNew":1147,"eOld":1126,"wNew":1480,"wOld":1478},"27":{"eNew":627,"eOld":518,"wNew":1328,"wOld":1313},"28":{"eNew":501,"eOld":489,"wNew":526,"wOld":525},"29":{"eNew":953,"eOld":941,"wNew":1137,"wOld":1135},"30":{"eNew":4137,"eOld":4068,"wNew":1292,"wOld":1288},"31":{"eNew":9572,"eOld":9525,"wNew":1508,"wOld":1500},"32":{"eNew":1318,"eOld":1224,"wNew":1197,"wOld":1188},"33":{"eNew":2102,"eOld":2092,"wNew":1510,"wOld":1506},"ร้านใหญ่":{"eNew":12648,"eOld":12552,"wNew":1173,"wOld":1167}},"67_5":{"13":{"eNew":2780,"eOld":2742,"wNew":1616,"wOld":1603},"14":{"eNew":8148,"eOld":8046,"wNew":2985,"wOld":2971},"15":{"eNew":6372,"eOld":6214,"wNew":1561,"wOld":1556},"15ก":{"eNew":2385,"eOld":2312,"wNew":1192,"wOld":1175},"16":{"eNew":6161,"eOld":6067,"wNew":123,"wOld":113},"17":{"eNew":1487,"eOld":1461,"wNew":2999,"wOld":2998},"18":{"eNew":9003,"eOld":8960,"wNew":1221,"wOld":1208},"19":{"eNew":9424,"eOld":9394,"wNew":1445,"wOld":1439},"20":{"eNew":2646,"eOld":2452,"wNew":1707,"wOld":1696},"21":{"eNew":4,"eOld":3,"wNew":26,"wOld":24},"22":{"eNew":962,"eOld":825,"wNew":1294,"wOld":1287},"23":{"eNew":913,"eOld":883,"wNew":1074,"wOld":1072},"24":{"eNew":2087,"eOld":1965,"wNew":838,"wOld":829},"25":{"eNew":3309,"eOld":3284,"wNew":1839,"wOld":1834},"26":{"eNew":1168,"eOld":1147,"wNew":1482,"wOld":1480},"27":{"eNew":736,"eOld":627,"wNew":1343,"wOld":1328},"28":{"eNew":513,"eOld":501,"wNew":527,"wOld":526},"29":{"eNew":965,"eOld":953,"wNew":1139,"wOld":1137},"30":{"eNew":4206,"eOld":4137,"wNew":1296,"wOld":1292},"31":{"eNew":9619,"eOld":9572,"wNew":1516,"wOld":1508},"32":{"eNew":1412,"eOld":1318,"wNew":1206,"wOld":1197},"33":{"eNew":2112,"eOld":2102,"wNew":1514,"wOld":1510},"ร้านใหญ่":{"eNew":12744,"eOld":12648,"wNew":1179,"wOld":1173}},"67_6":{"13":{"eNew":2818,"eOld":2780,"wNew":1629,"wOld":1616},"14":{"eNew":8250,"eOld":8148,"wNew":2999,"wOld":2985},"15":{"eNew":6530,"eOld":6372,"wNew":1566,"wOld":1561},"15ก":{"eNew":2458,"eOld":2385,"wNew":1209,"wOld":1192},"16":{"eNew":6255,"eOld":6161,"wNew":133,"wOld":123},"17":{"eNew":1513,"eOld":1487,"wNew":3000,"wOld":2999},"18":{"eNew":9046,"eOld":9003,"wNew":1234,"wOld":1221},"19":{"eNew":9454,"eOld":9424,"wNew":1451,"wOld":1445},"20":{"eNew":2840,"eOld":2646,"wNew":1718,"wOld":1707},"21":{"eNew":5,"eOld":4,"wNew":28,"wOld":26},"22":{"eNew":1099,"eOld":962,"wNew":1301,"wOld":1294},"23":{"eNew":943,"eOld":913,"wNew":1076,"wOld":1074},"24":{"eNew":2209,"eOld":2087,"wNew":847,"wOld":838},"25":{"eNew":3334,"eOld":3309,"wNew":1844,"wOld":1839},"26":{"eNew":1189,"eOld":1168,"wNew":1484,"wOld":1482},"27":{"eNew":845,"eOld":736,"wNew":1358,"wOld":1343},"28":{"eNew":525,"eOld":513,"wNew":528,"wOld":527},"29":{"eNew":977,"eOld":965,"wNew":1141,"wOld":1139},"30":{"eNew":4275,"eOld":4206,"wNew":1300,"wOld":1296},"31":{"eNew":9666,"eOld":9619,"wNew":1524,"wOld":1516},"32":{"eNew":1506,"eOld":1412,"wNew":1215,"wOld":1206},"33":{"eNew":2122,"eOld":2112,"wNew":1518,"wOld":1514},"ร้านใหญ่":{"eNew":12840,"eOld":12744,"wNew":1185,"wOld":1179}},"67_7":{"13":{"eNew":2856,"eOld":2818,"wNew":1642,"wOld":1629},"14":{"eNew":8352,"eOld":8250,"wNew":3013,"wOld":2999},"15":{"eNew":6688,"eOld":6530,"wNew":1571,"wOld":1566},"15ก":{"eNew":2531,"eOld":2458,"wNew":1226,"wOld":1209},"16":{"eNew":6349,"eOld":6255,"wNew":143,"wOld":133},"17":{"eNew":1539,"eOld":1513,"wNew":3001,"wOld":3000},"18":{"eNew":9089,"eOld":9046,"wNew":1247,"wOld":1234},"19":{"eNew":9484,"eOld":9454,"wNew":1457,"wOld":1451},"20":{"eNew":3034,"eOld":2840,"wNew":1729,"wOld":1718},"21":{"eNew":6,"eOld":5,"wNew":30,"wOld":28},"22":{"eNew":1236,"eOld":1099,"wNew":1308,"wOld":1301},"23":{"eNew":973,"eOld":943,"wNew":1078,"wOld":1076},"24":{"eNew":2331,"eOld":2209,"wNew":856,"wOld":847},"25":{"eNew":3359,"eOld":3334,"wNew":1849,"wOld":1844},"26":{"eNew":1210,"eOld":1189,"wNew":1486,"wOld":1484},"27":{"eNew":954,"eOld":845,"wNew":1373,"wOld":1358},"28":{"eNew":537,"eOld":525,"wNew":529,"wOld":528},"29":{"eNew":989,"eOld":977,"wNew":1143,"wOld":1141},"30":{"eNew":4344,"eOld":4275,"wNew":1304,"wOld":1300},"31":{"eNew":9713,"eOld":9666,"wNew":1532,"wOld":1524},"32":{"eNew":1600,"eOld":1506,"wNew":1224,"wOld":1215},"33":{"eNew":2132,"eOld":2122,"wNew":1522,"wOld":1518},"ร้านใหญ่":{"eNew":12936,"eOld":12840,"wNew":1191,"wOld":1185}},"67_8":{"13":{"eNew":2894,"eOld":2856,"wNew":1655,"wOld":1642},"14":{"eNew":8454,"eOld":8352,"wNew":3027,"wOld":3013},"15":{"eNew":6846,"eOld":6688,"wNew":1576,"wOld":1571},"15ก":{"eNew":2604,"eOld":2531,"wNew":1243,"wOld":1226},"16":{"eNew":6443,"eOld":6349,"wNew":153,"wOld":143},"17":{"eNew":1565,"eOld":1539,"wNew":3002,"wOld":3001},"18":{"eNew":9132,"eOld":9089,"wNew":1260,"wOld":1247},"19":{"eNew":9514,"eOld":9484,"wNew":1463,"wOld":1457},"20":{"eNew":3228,"eOld":3034,"wNew":1740,"wOld":1729},"21":{"eNew":7,"eOld":6,"wNew":32,"wOld":30},"22":{"eNew":1373,"eOld":1236,"wNew":1315,"wOld":1308},"23":{"eNew":1003,"eOld":973,"wNew":1080,"wOld":1078},"24":{"eNew":2453,"eOld":2331,"wNew":865,"wOld":856},"25":{"eNew":3384,"eOld":3359,"wNew":1854,"wOld":1849},"26":{"eNew":1231,"eOld":1210,"wNew":1488,"wOld":1486},"27":{"eNew":1063,"eOld":954,"wNew":1388,"wOld":1373},"28":{"eNew":549,"eOld":537,"wNew":530,"wOld":529},"29":{"eNew":1001,"eOld":989,"wNew":1145,"wOld":1143},"30":{"eNew":4413,"eOld":4344,"wNew":1308,"wOld":1304},"31":{"eNew":9760,"eOld":9713,"wNew":1540,"wOld":1532},"32":{"eNew":1694,"eOld":1600,"wNew":1233,"wOld":1224},"33":{"eNew":2142,"eOld":2132,"wNew":1526,"wOld":1522},"ร้านใหญ่":{"eNew":13032,"eOld":12936,"wNew":1197,"wOld":1191}},"67_9":{"13":{"eNew":2932,"eOld":2894,"wNew":1668,"wOld":1655},"14":{"eNew":8556,"eOld":8454,"wNew":3041,"wOld":3027},"15":{"eNew":7004,"eOld":6846,"wNew":1581,"wOld":1576},"15ก":{"eNew":2677,"eOld":2604,"wNew":1260,"wOld":1243},"16":{"eNew":6537,"eOld":6443,"wNew":163,"wOld":153},"17":{"eNew":1591,"eOld":1565,"wNew":3003,"wOld":3002},"18":{"eNew":9175,"eOld":9132,"wNew":1273,"wOld":1260},"19":{"eNew":9544,"eOld":9514,"wNew":1469,"wOld":1463},"20":{"eNew":3422,"eOld":3228,"wNew":1751,"wOld":1740},"21":{"eNew":8,"eOld":7,"wNew":34,"wOld":32},"22":{"eNew":1510,"eOld":1373,"wNew":1322,"wOld":1315},"23":{"eNew":1033,"eOld":1003,"wNew":1082,"wOld":1080},"24":{"eNew":2575,"eOld":2453,"wNew":874,"wOld":865},"25":{"eNew":3409,"eOld":3384,"wNew":1859,"wOld":1854},"26":{"eNew":1252,"eOld":1231,"wNew":1490,"wOld":1488},"27":{"eNew":1172,"eOld":1063,"wNew":1403,"wOld":1388},"28":{"eNew":561,"eOld":549,"wNew":531,"wOld":530},"29":{"eNew":1013,"eOld":1001,"wNew":1147,"wOld":1145},"30":{"eNew":4482,"eOld":4413,"wNew":1312,"wOld":1308},"31":{"eNew":9807,"eOld":9760,"wNew":1548,"wOld":1540},"32":{"eNew":1788,"eOld":1694,"wNew":1242,"wOld":1233},"33":{"eNew":2152,"eOld":2142,"wNew":1530,"wOld":1526},"ร้านใหญ่":{"eNew":13128,"eOld":13032,"wNew":1203,"wOld":1197}},"67_10":{"13":{"eNew":2970,"eOld":2932,"wNew":1681,"wOld":1668},"14":{"eNew":8658,"eOld":8556,"wNew":3055,"wOld":3041},"15":{"eNew":7162,"eOld":7004,"wNew":1586,"wOld":1581},"15ก":{"eNew":2750,"eOld":2677,"wNew":1277,"wOld":1260},"16":{"eNew":6631,"eOld":6537,"wNew":173,"wOld":163},"17":{"eNew":1617,"eOld":1591,"wNew":3004,"wOld":3003},"18":{"eNew":9218,"eOld":9175,"wNew":1286,"wOld":1273},"19":{"eNew":9574,"eOld":9544,"wNew":1475,"wOld":1469},"20":{"eNew":3616,"eOld":3422,"wNew":1762,"wOld":1751},"21":{"eNew":9,"eOld":8,"wNew":36,"wOld":34},"22":{"eNew":1647,"eOld":1510,"wNew":1329,"wOld":1322},"23":{"eNew":1063,"eOld":1033,"wNew":1084,"wOld":1082},"24":{"eNew":2697,"eOld":2575,"wNew":883,"wOld":874},"25":{"eNew":3434,"eOld":3409,"wNew":1864,"wOld":1859},"26":{"eNew":1273,"eOld":1252,"wNew":1492,"wOld":1490},"27":{"eNew":1281,"eOld":1172,"wNew":1418,"wOld":1403},"28":{"eNew":573,"eOld":561,"wNew":532,"wOld":531},"29":{"eNew":1025,"eOld":1013,"wNew":1149,"wOld":1147},"30":{"eNew":4551,"eOld":4482,"wNew":1316,"wOld":1312},"31":{"eNew":9854,"eOld":9807,"wNew":1556,"wOld":1548},"32":{"eNew":1882,"eOld":1788,"wNew":1251,"wOld":1242},"33":{"eNew":2162,"eOld":2152,"wNew":1534,"wOld":1530},"ร้านใหญ่":{"eNew":13224,"eOld":13128,"wNew":1209,"wOld":1203}},"67_11":{"13":{"eNew":3008,"eOld":2970,"wNew":1694,"wOld":1681},"14":{"eNew":8760,"eOld":8658,"wNew":3069,"wOld":3055},"15":{"eNew":7320,"eOld":7162,"wNew":1591,"wOld":1586},"15ก":{"eNew":2823,"eOld":2750,"wNew":1294,"wOld":1277},"16":{"eNew":6725,"eOld":6631,"wNew":183,"wOld":173},"17":{"eNew":1643,"eOld":1617,"wNew":3005,"wOld":3004},"18":{"eNew":9261,"eOld":9218,"wNew":1299,"wOld":1286},"19":{"eNew":9604,"eOld":9574,"wNew":1481,"wOld":1475},"20":{"eNew":3810,"eOld":3616,"wNew":1773,"wOld":1762},"21":{"eNew":10,"eOld":9,"wNew":38,"wOld":36},"22":{"eNew":1784,"eOld":1647,"wNew":1336,"wOld":1329},"23":{"eNew":1093,"eOld":1063,"wNew":1086,"wOld":1084},"24":{"eNew":2819,"eOld":2697,"wNew":892,"wOld":883},"25":{"eNew":3459,"eOld":3434,"wNew":1869,"wOld":1864},"26":{"eNew":1294,"eOld":1273,"wNew":1494,"wOld":1492},"27":{"eNew":1390,"eOld":1281,"wNew":1433,"wOld":1418},"28":{"eNew":585,"eOld":573,"wNew":533,"wOld":532},"29":{"eNew":1037,"eOld":1025,"wNew":1151,"wOld":1149},"30":{"eNew":4620,"eOld":4551,"wNew":1320,"wOld":1316},"31":{"eNew":9901,"eOld":9854,"wNew":1564,"wOld":1556},"32":{"eNew":1976,"eOld":1882,"wNew":1260,"wOld":1251},"33":{"eNew":2172,"eOld":2162,"wNew":1538,"wOld":1534},"ร้านใหญ่":{"eNew":13320,"eOld":13224,"wNew":1215,"wOld":1209}},"67_12":{"13":{"eNew":3046,"eOld":3008,"wNew":1707,"wOld":1694},"14":{"eNew":8862,"eOld":8760,"wNew":3083,"wOld":3069},"15":{"eNew":7478,"eOld":7320,"wNew":1596,"wOld":1591},"15ก":{"eNew":2896,"eOld":2823,"wNew":1311,"wOld":1294},"16":{"eNew":6819,"eOld":6725,"wNew":193,"wOld":183},"17":{"eNew":1669,"eOld":1643,"wNew":3006,"wOld":3005},"18":{"eNew":9304,"eOld":9261,"wNew":1312,"wOld":1299},"19":{"eNew":9634,"eOld":9604,"wNew":1487,"wOld":1481},"20":{"eNew":4004,"eOld":3810,"wNew":1784,"wOld":1773},"21":{"eNew":11,"eOld":10,"wNew":40,"wOld":38},"22":{"eNew":1921,"eOld":1784,"wNew":1343,"wOld":1336},"23":{"eNew":1123,"eOld":1093,"wNew":1088,"wOld":1086},"24":{"eNew":2941,"eOld":2819,"wNew":901,"wOld":892},"25":{"eNew":3484,"eOld":3459,"wNew":1874,"wOld":1869},"26":{"eNew":1315,"eOld":1294,"wNew":1496,"wOld":1494},"27":{"eNew":1499,"eOld":1390,"wNew":1448,"wOld":1433},"28":{"eNew":597,"eOld":585,"wNew":534,"wOld":533},"29":{"eNew":1049,"eOld":1037,"wNew":1153,"wOld":1151},"30":{"eNew":4689,"eOld":4620,"wNew":1324,"wOld":1320},"31":{"eNew":9948,"eOld":9901,"wNew":1572,"wOld":1564},"32":{"eNew":2070,"eOld":1976,"wNew":1269,"wOld":1260},"33":{"eNew":2182,"eOld":2172,"wNew":1542,"wOld":1538},"ร้านใหญ่":{"eNew":13416,"eOld":13320,"wNew":1221,"wOld":1215}},"68_1":{"13":{"eNew":3084,"eOld":3046,"wNew":1720,"wOld":1707},"14":{"eNew":8964,"eOld":8862,"wNew":3097,"wOld":3083},"15":{"eNew":7636,"eOld":7478,"wNew":1601,"wOld":1596},"15ก":{"eNew":2969,"eOld":2896,"wNew":1328,"wOld":1311},"16":{"eNew":6913,"eOld":6819,"wNew":203,"wOld":193},"17":{"eNew":1695,"eOld":1669,"wNew":3007,"wOld":3006},"18":{"eNew":9347,"eOld":9304,"wNew":1325,"wOld":1312},"19":{"eNew":9664,"eOld":9634,"wNew":1493,"wOld":1487},"20":{"eNew":4198,"eOld":4004,"wNew":1795,"wOld":1784},"21":{"eNew":12,"eOld":11,"wNew":42,"wOld":40},"22":{"eNew":2058,"eOld":1921,"wNew":1350,"wOld":1343},"23":{"eNew":1153,"eOld":1123,"wNew":1090,"wOld":1088},"24":{"eNew":3063,"eOld":2941,"wNew":910,"wOld":901},"25":{"eNew":3509,"eOld":3484,"wNew":1879,"wOld":1874},"26":{"eNew":1336,"eOld":1315,"wNew":1498,"wOld":1496},"27":{"eNew":1608,"eOld":1499,"wNew":1463,"wOld":1448},"28":{"eNew":609,"eOld":597,"wNew":535,"wOld":534},"29":{"eNew":1061,"eOld":1049,"wNew":1155,"wOld":1153},"30":{"eNew":4758,"eOld":4689,"wNew":1328,"wOld":1324},"31":{"eNew":9995,"eOld":9948,"wNew":1580,"wOld":1572},"32":{"eNew":2164,"eOld":2070,"wNew":1278,"wOld":1269},"33":{"eNew":2192,"eOld":2182,"wNew":1546,"wOld":1542},"ร้านใหญ่":{"eNew":13512,"eOld":13416,"wNew":1227,"wOld":1221}},"68_2":{"13":{"eNew":3122,"eOld":3084,"wNew":1733,"wOld":1720},"14":{"eNew":9066,"eOld":8964,"wNew":3111,"wOld":3097},"15":{"eNew":7794,"eOld":7636,"wNew":1606,"wOld":1601},"15ก":{"eNew":3042,"eOld":2969,"wNew":1345,"wOld":1328},"16":{"eNew":7007,"eOld":6913,"wNew":213,"wOld":203},"17":{"eNew":1721,"eOld":1695,"wNew":3008,"wOld":3007},"18":{"eNew":9390,"eOld":9347,"wNew":1338,"wOld":1325},"19":{"eNew":9694,"eOld":9664,"wNew":1499,"wOld":1493},"20":{"eNew":4392,"eOld":4198,"wNew":1806,"wOld":1795},"21":{"eNew":13,"eOld":12,"wNew":44,"wOld":42},"22":{"eNew":2195,"eOld":2058,"wNew":1357,"wOld":1350},"23":{"eNew":1183,"eOld":1153,"wNew":1092,"wOld":1090},"24":{"eNew":3185,"eOld":3063,"wNew":919,"wOld":910},"25":{"eNew":3534,"eOld":3509,"wNew":1884,"wOld":1879},"26":{"eNew":1357,"eOld":1336,"wNew":1500,"wOld":1498},"27":{"eNew":1717,"eOld":1608,"wNew":1478,"wOld":1463},"28":{"eNew":621,"eOld":609,"wNew":536,"wOld":535},"29":{"eNew":1073,"eOld":1061,"wNew":1157,"wOld":1155},"30":{"eNew":4827,"eOld":4758,"wNew":1332,"wOld":1328},"31":{"eNew":10042,"eOld":9995,"wNew":1588,"wOld":1580},"32":{"eNew":2258,"eOld":2164,"wNew":1287,"wOld":1278},"33":{"eNew":2202,"eOld":2192,"wNew":1550,"wOld":1546},"ร้านใหญ่":{"eNew":13608,"eOld":13512,"wNew":1233,"wOld":1227}},"68_3":{"13":{"eNew":3160,"eOld":3122,"wNew":1746,"wOld":1733},"14":{"eNew":9168,"eOld":9066,"wNew":3125,"wOld":3111},"15":{"eNew":7952,"eOld":7794,"wNew":1611,"wOld":1606},"15ก":{"eNew":3115,"eOld":3042,"wNew":1362,"wOld":1345},"16":{"eNew":7101,"eOld":7007,"wNew":223,"wOld":213},"17":{"eNew":1747,"eOld":1721,"wNew":3009,"wOld":3008},"18":{"eNew":9433,"eOld":9390,"wNew":1351,"wOld":1338},"19":{"eNew":9724,"eOld":9694,"wNew":1505,"wOld":1499},"20":{"eNew":4586,"eOld":4392,"wNew":1817,"wOld":1806},"21":{"eNew":14,"eOld":13,"wNew":46,"wOld":44},"22":{"eNew":2332,"eOld":2195,"wNew":1364,"wOld":1357},"23":{"eNew":1213,"eOld":1183,"wNew":1094,"wOld":1092},"24":{"eNew":3307,"eOld":3185,"wNew":928,"wOld":919},"25":{"eNew":3559,"eOld":3534,"wNew":1889,"wOld":1884},"26":{"eNew":1378,"eOld":1357,"wNew":1502,"wOld":1500},"27":{"eNew":1826,"eOld":1717,"wNew":1493,"wOld":1478},"28":{"eNew":633,"eOld":621,"wNew":537,"wOld":536},"29":{"eNew":1085,"eOld":1073,"wNew":1159,"wOld":1157},"30":{"eNew":4896,"eOld":4827,"wNew":1336,"wOld":1332},"31":{"eNew":10089,"eOld":10042,"wNew":1596,"wOld":1588},"32":{"eNew":2352,"eOld":2258,"wNew":1296,"wOld":1287},"33":{"eNew":2212,"eOld":2202,"wNew":1554,"wOld":1550},"ร้านใหญ่":{"eNew":13704,"eOld":13608,"wNew":1239,"wOld":1233}},"68_4":{"13":{"eNew":3198,"eOld":3160,"wNew":1759,"wOld":1746},"14":{"eNew":9270,"eOld":9168,"wNew":3139,"wOld":3125},"15":{"eNew":8110,"eOld":7952,"wNew":1616,"wOld":1611},"15ก":{"eNew":3188,"eOld":3115,"wNew":1379,"wOld":1362},"16":{"eNew":7195,"eOld":7101,"wNew":233,"wOld":223},"17":{"eNew":1773,"eOld":1747,"wNew":3010,"wOld":3009},"18":{"eNew":9476,"eOld":9433,"wNew":1364,"wOld":1351},"19":{"eNew":9754,"eOld":9724,"wNew":1511,"wOld":1505},"20":{"eNew":4780,"eOld":4586,"wNew":1828,"wOld":1817},"21":{"eNew":15,"eOld":14,"wNew":48,"wOld":46},"22":{"eNew":2469,"eOld":2332,"wNew":1371,"wOld":1364},"23":{"eNew":1243,"eOld":1213,"wNew":1096,"wOld":1094},"24":{"eNew":3429,"eOld":3307,"wNew":937,"wOld":928},"25":{"eNew":3584,"eOld":3559,"wNew":1894,"wOld":1889},"26":{"eNew":1399,"eOld":1378,"wNew":1504,"wOld":1502},"27":{"eNew":1935,"eOld":1826,"wNew":1508,"wOld":1493},"28":{"eNew":645,"eOld":633,"wNew":538,"wOld":537},"29":{"eNew":1097,"eOld":1085,"wNew":1161,"wOld":1159},"30":{"eNew":4965,"eOld":4896,"wNew":1340,"wOld":1336},"31":{"eNew":10136,"eOld":10089,"wNew":1604,"wOld":1596},"32":{"eNew":2446,"eOld":2352,"wNew":1305,"wOld":1296},"33":{"eNew":2222,"eOld":2212,"wNew":1558,"wOld":1554},"ร้านใหญ่":{"eNew":13800,"eOld":13704,"wNew":1245,"wOld":1239}},"68_5":{"13":{"eNew":3236,"eOld":3198,"wNew":1772,"wOld":1759},"14":{"eNew":9372,"eOld":9270,"wNew":3153,"wOld":3139},"15":{"eNew":8268,"eOld":8110,"wNew":1621,"wOld":1616},"15ก":{"eNew":3261,"eOld":3188,"wNew":1396,"wOld":1379},"16":{"eNew":7289,"eOld":7195,"wNew":243,"wOld":233},"17":{"eNew":1799,"eOld":1773,"wNew":3011,"wOld":3010},"18":{"eNew":9519,"eOld":9476,"wNew":1377,"wOld":1364},"19":{"eNew":9784,"eOld":9754,"wNew":1517,"wOld":1511},"20":{"eNew":4974,"eOld":4780,"wNew":1839,"wOld":1828},"21":{"eNew":16,"eOld":15,"wNew":50,"wOld":48},"22":{"eNew":2606,"eOld":2469,"wNew":1378,"wOld":1371},"23":{"eNew":1273,"eOld":1243,"wNew":1098,"wOld":1096},"24":{"eNew":3551,"eOld":3429,"wNew":946,"wOld":937},"25":{"eNew":3609,"eOld":3584,"wNew":1899,"wOld":1894},"26":{"eNew":1420,"eOld":1399,"wNew":1506,"wOld":1504},"27":{"eNew":2044,"eOld":1935,"wNew":1523,"wOld":1508},"28":{"eNew":657,"eOld":645,"wNew":539,"wOld":538},"29":{"eNew":1109,"eOld":1097,"wNew":1163,"wOld":1161},"30":{"eNew":5034,"eOld":4965,"wNew":1344,"wOld":1340},"31":{"eNew":10183,"eOld":10136,"wNew":1612,"wOld":1604},"32":{"eNew":2540,"eOld":2446,"wNew":1314,"wOld":1305},"33":{"eNew":2232,"eOld":2222,"wNew":1562,"wOld":1558},"ร้านใหญ่":{"eNew":13896,"eOld":13800,"wNew":1251,"wOld":1245}},"68_6":{"13":{"eNew":3274,"eOld":3236,"wNew":1785,"wOld":1772},"14":{"eNew":9474,"eOld":9372,"wNew":3167,"wOld":3153},"15":{"eNew":8426,"eOld":8268,"wNew":1626,"wOld":1621},"15ก":{"eNew":3334,"eOld":3261,"wNew":1413,"wOld":1396},"16":{"eNew":7383,"eOld":7289,"wNew":253,"wOld":243},"17":{"eNew":1825,"eOld":1799,"wNew":3012,"wOld":3011},"18":{"eNew":9562,"eOld":9519,"wNew":1390,"wOld":1377},"19":{"eNew":9814,"eOld":9784,"wNew":1523,"wOld":1517},"20":{"eNew":5168,"eOld":4974,"wNew":1850,"wOld":1839},"21":{"eNew":17,"eOld":16,"wNew":52,"wOld":50},"22":{"eNew":2743,"eOld":2606,"wNew":1385,"wOld":1378},"23":{"eNew":1303,"eOld":1273,"wNew":1100,"wOld":1098},"24":{"eNew":3673,"eOld":3551,"wNew":955,"wOld":946},"25":{"eNew":3634,"eOld":3609,"wNew":1904,"wOld":1899},"26":{"eNew":1441,"eOld":1420,"wNew":1508,"wOld":1506},"27":{"eNew":2153,"eOld":2044,"wNew":1538,"wOld":1523},"28":{"eNew":669,"eOld":657,"wNew":540,"wOld":539},"29":{"eNew":1121,"eOld":1109,"wNew":1165,"wOld":1163},"30":{"eNew":5103,"eOld":5034,"wNew":1348,"wOld":1344},"31":{"eNew":10230,"eOld":10183,"wNew":1620,"wOld":1612},"32":{"eNew":2634,"eOld":2540,"wNew":1323,"wOld":1314},"33":{"eNew":2242,"eOld":2232,"wNew":1566,"wOld":1562},"ร้านใหญ่":{"eNew":13992,"eOld":13896,"wNew":1257,"wOld":1251}},"68_7":{"13":{"eNew":3312,"eOld":3274,"wNew":1798,"wOld":1785},"14":{"eNew":9576,"eOld":9474,"wNew":3181,"wOld":3167},"15":{"eNew":8584,"eOld":8426,"wNew":1631,"wOld":1626},"15ก":{"eNew":3407,"eOld":3334,"wNew":1430,"wOld":1413},"16":{"eNew":7477,"eOld":7383,"wNew":263,"wOld":253},"17":{"eNew":1851,"eOld":1825,"wNew":3013,"wOld":3012},"18":{"eNew":9605,"eOld":9562,"wNew":1403,"wOld":1390},"19":{"eNew":9844,"eOld":9814,"wNew":1529,"wOld":1523},"20":{"eNew":5362,"eOld":5168,"wNew":1861,"wOld":1850},"21":{"eNew":18,"eOld":17,"wNew":54,"wOld":52},"22":{"eNew":2880,"eOld":2743,"wNew":1392,"wOld":1385},"23":{"eNew":1333,"eOld":1303,"wNew":1102,"wOld":1100},"24":{"eNew":3795,"eOld":3673,"wNew":964,"wOld":955},"25":{"eNew":3659,"eOld":3634,"wNew":1909,"wOld":1904},"26":{"eNew":1462,"eOld":1441,"wNew":1510,"wOld":1508},"27":{"eNew":2262,"eOld":2153,"wNew":1553,"wOld":1538},"28":{"eNew":681,"eOld":669,"wNew":541,"wOld":540},"29":{"eNew":1133,"eOld":1121,"wNew":1167,"wOld":1165},"30":{"eNew":5172,"eOld":5103,"wNew":1352,"wOld":1348},"31":{"eNew":10277,"eOld":10230,"wNew":1628,"wOld":1620},"32":{"eNew":2728,"eOld":2634,"wNew":1332,"wOld":1323},"33":{"eNew":2252,"eOld":2242,"wNew":1570,"wOld":1566},"ร้านใหญ่":{"eNew":14088,"eOld":13992,"wNew":1263,"wOld":1257}},"68_8":{"13":{"eNew":3350,"eOld":3312,"wNew":1811,"wOld":1798},"14":{"eNew":9678,"eOld":9576,"wNew":3195,"wOld":3181},"15":{"eNew":8742,"eOld":8584,"wNew":1636,"wOld":1631},"15ก":{"eNew":3480,"eOld":3407,"wNew":1447,"wOld":1430},"16":{"eNew":7571,"eOld":7477,"wNew":273,"wOld":263},"17":{"eNew":1877,"eOld":1851,"wNew":3014,"wOld":3013},"18":{"eNew":9648,"eOld":9605,"wNew":1416,"wOld":1403},"19":{"eNew":9874,"eOld":9844,"wNew":1535,"wOld":1529},"20":{"eNew":5556,"eOld":5362,"wNew":1872,"wOld":1861},"21":{"eNew":19,"eOld":18,"wNew":56,"wOld":54},"22":{"eNew":3017,"eOld":2880,"wNew":1399,"wOld":1392},"23":{"eNew":1363,"eOld":1333,"wNew":1104,"wOld":1102},"24":{"eNew":3917,"eOld":3795,"wNew":973,"wOld":964},"25":{"eNew":3684,"eOld":3659,"wNew":1914,"wOld":1909},"26":{"eNew":1483,"eOld":1462,"wNew":1512,"wOld":1510},"27":{"eNew":2371,"eOld":2262,"wNew":1568,"wOld":1553},"28":{"eNew":693,"eOld":681,"wNew":542,"wOld":541},"29":{"eNew":1145,"eOld":1133,"wNew":1169,"wOld":1167},"30":{"eNew":5241,"eOld":5172,"wNew":1356,"wOld":1352},"31":{"eNew":10324,"eOld":10277,"wNew":1636,"wOld":1628},"32":{"eNew":2822,"eOld":2728,"wNew":1341,"wOld":1332},"33":{"eNew":2262,"eOld":2252,"wNew":1574,"wOld":1570},"ร้านใหญ่":{"eNew":14184,"eOld":14088,"wNew":1269,"wOld":1263}},"68_9":{"13":{"eNew":3388,"eOld":3350,"wNew":1824,"wOld":1811},"14":{"eNew":9780,"eOld":9678,"wNew":3209,"wOld":3195},"15":{"eNew":8900,"eOld":8742,"wNew":1641,"wOld":1636},"15ก":{"eNew":3553,"eOld":3480,"wNew":1464,"wOld":1447},"16":{"eNew":7665,"eOld":7571,"wNew":283,"wOld":273},"17":{"eNew":1903,"eOld":1877,"wNew":3015,"wOld":3014},"18":{"eNew":9691,"eOld":9648,"wNew":1429,"wOld":1416},"19":{"eNew":9904,"eOld":9874,"wNew":1541,"wOld":1535},"20":{"eNew":5750,"eOld":5556,"wNew":1883,"wOld":1872},"21":{"eNew":20,"eOld":19,"wNew":58,"wOld":56},"22":{"eNew":3154,"eOld":3017,"wNew":1406,"wOld":1399},"23":{"eNew":1393,"eOld":1363,"wNew":1106,"wOld":1104},"24":{"eNew":4039,"eOld":3917,"wNew":982,"wOld":973},"25":{"eNew":3709,"eOld":3684,"wNew":1919,"wOld":1914},"26":{"eNew":1504,"eOld":1483,"wNew":1514,"wOld":1512},"27":{"eNew":2480,"eOld":2371,"wNew":1583,"wOld":1568},"28":{"eNew":705,"eOld":693,"wNew":543,"wOld":542},"29":{"eNew":1157,"eOld":1145,"wNew":1171,"wOld":1169},"30":{"eNew":5310,"eOld":5241,"wNew":1360,"wOld":1356},"31":{"eNew":10371,"eOld":10324,"wNew":1644,"wOld":1636},"32":{"eNew":2916,"eOld":2822,"wNew":1350,"wOld":1341},"33":{"eNew":2272,"eOld":2262,"wNew":1578,"wOld":1574},"ร้านใหญ่":{"eNew":14280,"eOld":14184,"wNew":1275,"wOld":1269}},"68_10":{"13":{"eNew":3426,"eOld":3388,"wNew":1837,"wOld":1824},"14":{"eNew":9882,"eOld":9780,"wNew":3223,"wOld":3209},"15":{"eNew":9058,"eOld":8900,"wNew":1646,"wOld":1641},"15ก":{"eNew":3626,"eOld":3553,"wNew":1481,"wOld":1464},"16":{"eNew":7759,"eOld":7665,"wNew":293,"wOld":283},"17":{"eNew":1929,"eOld":1903,"wNew":3016,"wOld":3015},"18":{"eNew":9734,"eOld":9691,"wNew":1442,"wOld":1429},"19":{"eNew":9934,"eOld":9904,"wNew":1547,"wOld":1541},"20":{"eNew":5944,"eOld":5750,"wNew":1894,"wOld":1883},"21":{"eNew":21,"eOld":20,"wNew":60,"wOld":58},"22":{"eNew":3291,"eOld":3154,"wNew":1413,"wOld":1406},"23":{"eNew":1423,"eOld":1393,"wNew":1108,"wOld":1106},"24":{"eNew":4161,"eOld":4039,"wNew":991,"wOld":982},"25":{"eNew":3734,"eOld":3709,"wNew":1924,"wOld":1919},"26":{"eNew":1525,"eOld":1504,"wNew":1516,"wOld":1514},"27":{"eNew":2589,"eOld":2480,"wNew":1598,"wOld":1583},"28":{"eNew":717,"eOld":705,"wNew":544,"wOld":543},"29":{"eNew":1169,"eOld":1157,"wNew":1173,"wOld":1171},"30":{"eNew":5379,"eOld":5310,"wNew":1364,"wOld":1360},"31":{"eNew":10418,"eOld":10371,"wNew":1652,"wOld":1644},"32":{"eNew":3010,"eOld":2916,"wNew":1359,"wOld":1350},"33":{"eNew":2282,"eOld":2272,"wNew":1582,"wOld":1578},"ร้านใหญ่":{"eNew":14376,"eOld":14280,"wNew":1281,"wOld":1275}},"68_11":{"13":{"eNew":3464,"eOld":3426,"wNew":1850,"wOld":1837},"14":{"eNew":9984,"eOld":9882,"wNew":3237,"wOld":3223},"15":{"eNew":9216,"eOld":9058,"wNew":1651,"wOld":1646},"15ก":{"eNew":3699,"eOld":3626,"wNew":1498,"wOld":1481},"16":{"eNew":7853,"eOld":7759,"wNew":303,"wOld":293},"17":{"eNew":1955,"eOld":1929,"wNew":3017,"wOld":3016},"18":{"eNew":9777,"eOld":9734,"wNew":1455,"wOld":1442},"19":{"eNew":9964,"eOld":9934,"wNew":1553,"wOld":1547},"20":{"eNew":6138,"eOld":5944,"wNew":1905,"wOld":1894},"21":{"eNew":22,"eOld":21,"wNew":62,"wOld":60},"22":{"eNew":3428,"eOld":3291,"wNew":1420,"wOld":1413},"23":{"eNew":1453,"eOld":1423,"wNew":1110,"wOld":1108},"24":{"eNew":4283,"eOld":4161,"wNew":1000,"wOld":991},"25":{"eNew":3759,"eOld":3734,"wNew":1929,"wOld":1924},"26":{"eNew":1546,"eOld":1525,"wNew":1518,"wOld":1516},"27":{"eNew":2698,"eOld":2589,"wNew":1613,"wOld":1598},"28":{"eNew":729,"eOld":717,"wNew":545,"wOld":544},"29":{"eNew":1181,"eOld":1169,"wNew":1175,"wOld":1173},"30":{"eNew":5448,"eOld":5379,"wNew":1368,"wOld":1364},"31":{"eNew":10465,"eOld":10418,"wNew":1660,"wOld":1652},"32":{"eNew":3104,"eOld":3010,"wNew":1368,"wOld":1359},"33":{"eNew":2292,"eOld":2282,"wNew":1586,"wOld":1582},"ร้านใหญ่":{"eNew":14472,"eOld":14376,"wNew":1287,"wOld":1281}},"68_12":{"13":{"eNew":3502,"eOld":3464,"wNew":1863,"wOld":1850},"14":{"eNew":10086,"eOld":9984,"wNew":3251,"wOld":3237},"15":{"eNew":9374,"eOld":9216,"wNew":1656,"wOld":1651},"15ก":{"eNew":3772,"eOld":3699,"wNew":1515,"wOld":1498},"16":{"eNew":7947,"eOld":7853,"wNew":313,"wOld":303},"17":{"eNew":1981,"eOld":1955,"wNew":3018,"wOld":3017},"18":{"eNew":9820,"eOld":9777,"wNew":1468,"wOld":1455},"19":{"eNew":9994,"eOld":9964,"wNew":1559,"wOld":1553},"20":{"eNew":6332,"eOld":6138,"wNew":1916,"wOld":1905},"21":{"eNew":23,"eOld":22,"wNew":64,"wOld":62},"22":{"eNew":3565,"eOld":3428,"wNew":1427,"wOld":1420},"23":{"eNew":1483,"eOld":1453,"wNew":1112,"wOld":1110},"24":{"eNew":4405,"eOld":4283,"wNew":1009,"wOld":1000},"25":{"eNew":3784,"eOld":3759,"wNew":1934,"wOld":1929},"26":{"eNew":1567,"eOld":1546,"wNew":1520,"wOld":1518},"27":{"eNew":2807,"eOld":2698,"wNew":1628,"wOld":1613},"28":{"eNew":741,"eOld":729,"wNew":546,"wOld":545},"29":{"eNew":1193,"eOld":1181,"wNew":1177,"wOld":1175},"30":{"eNew":5517,"eOld":5448,"wNew":1372,"wOld":1368},"31":{"eNew":10512,"eOld":10465,"wNew":1668,"wOld":1660},"32":{"eNew":3198,"eOld":3104,"wNew":1377,"wOld":1368},"33":{"eNew":2302,"eOld":2292,"wNew":1590,"wOld":1586},"ร้านใหญ่":{"eNew":14568,"eOld":14472,"wNew":1293,"wOld":1287}},"69_1":{"13":{"eNew":3540,"eOld":3502,"wNew":1876,"wOld":1863},"14":{"eNew":10188,"eOld":10086,"wNew":3265,"wOld":3251},"15":{"eNew":9532,"eOld":9374,"wNew":1661,"wOld":1656},"15ก":{"eNew":3845,"eOld":3772,"wNew":1532,"wOld":1515},"16":{"eNew":8041,"eOld":7947,"wNew":323,"wOld":313},"17":{"eNew":2007,"eOld":1981,"wNew":3019,"wOld":3018},"18":{"eNew":9863,"eOld":9820,"wNew":1481,"wOld":1468},"19":{"eNew":10024,"eOld":9994,"wNew":1565,"wOld":1559},"20":{"eNew":6526,"eOld":6332,"wNew":1927,"wOld":1916},"21":{"eNew":24,"eOld":23,"wNew":66,"wOld":64},"22":{"eNew":3702,"eOld":3565,"wNew":1434,"wOld":1427},"23":{"eNew":1513,"eOld":1483,"wNew":1114,"wOld":1112},"24":{"eNew":4527,"eOld":4405,"wNew":1018,"wOld":1009},"25":{"eNew":3809,"eOld":3784,"wNew":1939,"wOld":1934},"26":{"eNew":1588,"eOld":1567,"wNew":1522,"wOld":1520},"27":{"eNew":2916,"eOld":2807,"wNew":1643,"wOld":1628},"28":{"eNew":753,"eOld":741,"wNew":547,"wOld":546},"29":{"eNew":1205,"eOld":1193,"wNew":1179,"wOld":1177},"30":{"eNew":5586,"eOld":5517,"wNew":1376,"wOld":1372},"31":{"eNew":10559,"eOld":10512,"wNew":1676,"wOld":1668},"32":{"eNew":3292,"eOld":3198,"wNew":1386,"wOld":1377},"33":{"eNew":2312,"eOld":2302,"wNew":1594,"wOld":1590},"ร้านใหญ่":{"eNew":14664,"eOld":14568,"wNew":1299,"wOld":1293}},"69_2":{"13":{"eNew":3578,"eOld":3540,"wNew":1889,"wOld":1876},"14":{"eNew":10290,"eOld":10188,"wNew":3279,"wOld":3265},"15":{"eNew":9690,"eOld":9532,"wNew":1666,"wOld":1661},"15ก":{"eNew":3918,"eOld":3845,"wNew":1549,"wOld":1532},"16":{"eNew":8135,"eOld":8041,"wNew":333,"wOld":323},"17":{"eNew":2033,"eOld":2007,"wNew":3020,"wOld":3019},"18":{"eNew":9906,"eOld":9863,"wNew":1494,"wOld":1481},"19":{"eNew":10054,"eOld":10024,"wNew":1571,"wOld":1565},"20":{"eNew":6720,"eOld":6526,"wNew":1938,"wOld":1927},"21":{"eNew":25,"eOld":24,"wNew":68,"wOld":66},"22":{"eNew":3839,"eOld":3702,"wNew":1441,"wOld":1434},"23":{"eNew":1543,"eOld":1513,"wNew":1116,"wOld":1114},"24":{"eNew":4649,"eOld":4527,"wNew":1027,"wOld":1018},"25":{"eNew":3834,"eOld":3809,"wNew":1944,"wOld":1939},"26":{"eNew":1609,"eOld":1588,"wNew":1524,"wOld":1522},"27":{"eNew":3025,"eOld":2916,"wNew":1658,"wOld":1643},"28":{"eNew":765,"eOld":753,"wNew":548,"wOld":547},"29":{"eNew":1217,"eOld":1205,"wNew":1181,"wOld":1179},"30":{"eNew":5655,"eOld":5586,"wNew":1380,"wOld":1376},"31":{"eNew":10606,"eOld":10559,"wNew":1684,"wOld":1676},"32":{"eNew":3386,"eOld":3292,"wNew":1395,"wOld":1386},"33":{"eNew":2322,"eOld":2312,"wNew":1598,"wOld":1594},"ร้านใหญ่":{"eNew":14760,"eOld":14664,"wNew":1305,"wOld":1299}},"69_3":{"13":{"eNew":3616,"eOld":3578,"wNew":1902,"wOld":1889},"14":{"eNew":10392,"eOld":10290,"wNew":3293,"wOld":3279},"15":{"eNew":9848,"eOld":9690,"wNew":1671,"wOld":1666},"15ก":{"eNew":3991,"eOld":3918,"wNew":1566,"wOld":1549},"16":{"eNew":8229,"eOld":8135,"wNew":343,"wOld":333},"17":{"eNew":2059,"eOld":2033,"wNew":3021,"wOld":3020},"18":{"eNew":9949,"eOld":9906,"wNew":1507,"wOld":1494},"19":{"eNew":10084,"eOld":10054,"wNew":1577,"wOld":1571},"20":{"eNew":6914,"eOld":6720,"wNew":1949,"wOld":1938},"21":{"eNew":26,"eOld":25,"wNew":70,"wOld":68},"22":{"eNew":3976,"eOld":3839,"wNew":1448,"wOld":1441},"23":{"eNew":1573,"eOld":1543,"wNew":1118,"wOld":1116},"24":{"eNew":4771,"eOld":4649,"wNew":1036,"wOld":1027},"25":{"eNew":3859,"eOld":3834,"wNew":1949,"wOld":1944},"26":{"eNew":1630,"eOld":1609,"wNew":1526,"wOld":1524},"27":{"eNew":3134,"eOld":3025,"wNew":1673,"wOld":1658},"28":{"eNew":777,"eOld":765,"wNew":549,"wOld":548},"29":{"eNew":1229,"eOld":1217,"wNew":1183,"wOld":1181},"30":{"eNew":5724,"eOld":5655,"wNew":1384,"wOld":1380},"31":{"eNew":10653,"eOld":10606,"wNew":1692,"wOld":1684},"32":{"eNew":3480,"eOld":3386,"wNew":1404,"wOld":1395},"33":{"eNew":2332,"eOld":2322,"wNew":1602,"wOld":1598},"ร้านใหญ่":{"eNew":14856,"eOld":14760,"wNew":1311,"wOld":1305}}};
+  console.log('METER_DATA loaded successfully:', Object.keys(window.METER_DATA).length, 'months');
+  </script>
+  <script>
     let parsedData = null;
+    let currentWorkbook = null;
+    let availableSheets = [];
+    let selectedSheetName = null;
 
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
@@ -534,35 +595,156 @@
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
 
-          // Parse the first sheet with data
-          const firstSheet = workbook.SheetNames[1]; // Usually second sheet has actual data
-          const worksheet = workbook.Sheets[firstSheet];
+          // Store workbook for later use
+          currentWorkbook = workbook;
 
-          if (!worksheet) {
-            showStatus('❌ ไม่พบข้อมูลในไฟล์', 'error');
+          // Detect sheets with Thai month names
+          const monthMap = {
+            'มค': 1, 'กพ': 2, 'มีค': 3, 'เมษา': 4, 'พค': 5, 'พฤษ': 5, 'มิย': 6, 'มิถุน': 6,
+            'กค': 7, 'กรก': 7, 'สค': 8, 'สิงห': 8, 'กย': 9, 'กันย': 9, 'ตค': 10,
+            'ตุลา': 10, 'พย': 11, 'พยค': 11, 'ธค': 12, 'ธันว': 12
+          };
+
+          availableSheets = workbook.SheetNames.filter(name => {
+            return Object.keys(monthMap).some(monthName => name.includes(monthName));
+          });
+
+          if (availableSheets.length === 0) {
+            showStatus('❌ ไม่พบชีตเดือนในไฟล์ (ตรวจหาชีต: ' + workbook.SheetNames.join(', ') + ')', 'error');
             return;
           }
 
-          parsedData = parseExcelData(worksheet, firstSheet);
-
-          if (parsedData) {
-            // New workflow: validate continuity
-            const matchResults = matchMeterDataWithPrevious(parsedData);
-            savePendingImportData(parsedData, matchResults);
-
-            // Display matching preview (Step 2)
-            displayMatchingResults(matchResults, parsedData);
-
-            // Generate code for legacy backup
-            generateCode(parsedData);
-
-            showStatus('✅ โหลดข้อมูลสำเร็จ! - ตรวจสอบความต่อเนื่องของข้อมูลด้านล่าง', 'success');
-          }
+          // Display sheet selection UI
+          displaySheetSelection(availableSheets);
+          showStatus('✅ โหลดไฟล์สำเร็จ - เลือกเดือนที่ต้องการนำเข้า', 'success');
         } catch (err) {
           showStatus('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
         }
       };
       reader.readAsArrayBuffer(file);
+    }
+
+    function displaySheetSelection(sheets) {
+      // Hide all workflow sections
+      document.getElementById('matchingPreviewSection').classList.add('hidden');
+      document.getElementById('fullResultsSection').classList.add('hidden');
+      document.getElementById('approvalSection').classList.add('hidden');
+
+      // Show sheet selection section
+      const sheetSelectionSection = document.getElementById('sheetSelectionSection');
+      sheetSelectionSection.classList.remove('hidden');
+
+      // Generate sheet option buttons
+      const sheetOptionsDiv = document.getElementById('sheetOptions');
+      sheetOptionsDiv.innerHTML = '';
+
+      const monthMap = {
+        1: 'มกราคม', 2: 'กุมภาพันธ์', 3: 'มีนาคม', 4: 'เมษายน', 5: 'พฤษภาคม', 6: 'มิถุนายน',
+        7: 'กรกฎาคม', 8: 'สิงหาคม', 9: 'กันยายน', 10: 'ตุลาคม', 11: 'พฤศจิกายน', 12: 'ธันวาคม'
+      };
+
+      const shortMonthMap = {
+        'มค': 1, 'กพ': 2, 'มีค': 3, 'เมษา': 4, 'พค': 5, 'พฤษ': 5, 'มิย': 6, 'มิถุน': 6,
+        'กค': 7, 'กรก': 7, 'สค': 8, 'สิงห': 8, 'กย': 9, 'กันย': 9, 'ตค': 10,
+        'ตุลา': 10, 'พย': 11, 'พยค': 11, 'ธค': 12, 'ธันว': 12
+      };
+
+      sheets.forEach(sheetName => {
+        // Detect month from sheet name
+        let monthNum = null;
+        for (let key in shortMonthMap) {
+          if (sheetName.includes(key)) {
+            monthNum = shortMonthMap[key];
+            break;
+          }
+        }
+
+        const monthThaiName = monthNum ? monthMap[monthNum] : sheetName;
+
+        const button = document.createElement('div');
+        button.className = 'sheet-option';
+        button.innerHTML = `
+          <div class="sheet-month">📅 ${monthThaiName}</div>
+          <div class="sheet-name">${sheetName}</div>
+        `;
+
+        button.addEventListener('click', () => {
+          // Deselect all
+          document.querySelectorAll('.sheet-option').forEach(opt => {
+            opt.classList.remove('selected');
+          });
+          // Select this one
+          button.classList.add('selected');
+          selectedSheetName = sheetName;
+        });
+
+        sheetOptionsDiv.appendChild(button);
+      });
+    }
+
+    function proceedWithSelectedSheet() {
+      if (!selectedSheetName) {
+        showStatus('⚠️ กรุณาเลือกเดือน', 'warning');
+        return;
+      }
+
+      if (!currentWorkbook) {
+        showStatus('❌ ไม่พบไฟล์ที่อัพโหลด กรุณาอัพโหลดไฟล์ใหม่', 'error');
+        return;
+      }
+
+      showStatus('⏳ กำลังประมวลผลข้อมูล...', 'info');
+
+      try {
+        const worksheet = currentWorkbook.Sheets[selectedSheetName];
+
+        if (!worksheet) {
+          showStatus('❌ ไม่พบข้อมูลในชีตที่เลือก', 'error');
+          return;
+        }
+
+        parsedData = parseExcelData(worksheet, selectedSheetName);
+
+        if (parsedData) {
+          // VALIDATION: Check if import is sequential (required)
+          const sequentialCheck = validateSequentialImport(parsedData.year, parsedData.month);
+          if (!sequentialCheck.isValid) {
+            showStatus(sequentialCheck.message, 'error');
+            // Reset sheet selection to allow choosing different month
+            document.getElementById('sheetSelectionSection').classList.remove('hidden');
+            selectedSheetName = null;
+            return;
+          }
+
+          // Check for year boundary transitions
+          const yearBoundary = detectYearBoundary(parsedData);
+          if (yearBoundary.warnings.length > 0) {
+            console.log('Year transition warnings:', yearBoundary.warnings);
+          }
+
+          // Hide sheet selection
+          document.getElementById('sheetSelectionSection').classList.add('hidden');
+
+          // New workflow: validate continuity
+          const matchResults = matchMeterDataWithPrevious(parsedData);
+          savePendingImportData(parsedData, matchResults);
+
+          // Display matching preview (Step 2) with year transition info
+          displayMatchingResults(matchResults, parsedData, yearBoundary);
+
+          // Generate code for legacy backup
+          generateCode(parsedData);
+
+          // Show year transition warning if applicable
+          if (yearBoundary.crossesYear) {
+            showStatus(`⚠️ โอนข้อมูลระหว่างปี ${yearBoundary.previousYear} → ${yearBoundary.currentYear}`, 'warning');
+          } else {
+            showStatus('✅ โหลดข้อมูลสำเร็จ! - ตรวจสอบความต่อเนื่องของข้อมูลด้านล่าง', 'success');
+          }
+        }
+      } catch (err) {
+        showStatus('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
+      }
     }
 
     function parseExcelData(worksheet, sheetName) {
@@ -589,10 +771,16 @@
         }
       }
 
-      // Extract year (69 from sheet name or context)
+      // Extract year from sheet name (supports 67, 68, 69, 70, 71, etc.)
       let year = 69;
-      if (sheetName.includes('67')) year = 67;
-      if (sheetName.includes('68')) year = 68;
+      // Try to extract any 2-digit number that looks like a Buddhist year (60-99)
+      const yearMatch = sheetName.match(/(\d{2})/);
+      if (yearMatch) {
+        const num = parseInt(yearMatch[1]);
+        if (num >= 50 && num <= 99) { // Valid Buddhist year range
+          year = num;
+        }
+      }
 
       const rooms = {};
       const roomList = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21',
@@ -621,6 +809,57 @@
         month: monthNum || 1,
         sheetName,
         rooms
+      };
+    }
+
+    function detectYearBoundary(importData) {
+      // Check if this import crosses a year boundary
+      // Returns: { crossesYear: bool, previousYear: number, currentYear: number, isNewYear: bool, warnings: [] }
+
+      const year = importData.year;
+      const month = importData.month;
+      const rooms = importData.rooms;
+
+      let lastImportedData = null;
+      let lastImportedYear = null;
+      let lastImportedMonth = null;
+
+      // Find the most recent imported data in METER_DATA
+      if (window.METER_DATA) {
+        const keys = Object.keys(window.METER_DATA).sort().reverse();
+        if (keys.length > 0) {
+          const lastKey = keys[0];
+          const [y, m] = lastKey.split('_').map(Number);
+          lastImportedYear = y;
+          lastImportedMonth = m;
+          lastImportedData = window.METER_DATA[lastKey];
+        }
+      }
+
+      const warnings = [];
+
+      // Check for year transition
+      if (lastImportedYear && lastImportedYear !== year) {
+        const isSequential = (lastImportedYear === year - 1 && lastImportedMonth === 12 && month === 1) ||
+                            (lastImportedYear === year && lastImportedMonth < month);
+
+        if (!isSequential) {
+          warnings.push(`⚠️ ข้ามปี: จากปี ${lastImportedYear} เดือน ${lastImportedMonth} ไปยังปี ${year} เดือน ${month}`);
+        }
+
+        // If moving to a new year and month is January, validate continuity
+        if (year > lastImportedYear && month === 1 && lastImportedMonth === 12 && lastImportedData) {
+          warnings.push(`✓ ตรวจหา: โอนข้อมูลจากปี ${lastImportedYear} เดือน 12 ไปยังปี ${year} เดือน 1`);
+        }
+      }
+
+      return {
+        crossesYear: lastImportedYear && lastImportedYear !== year,
+        previousYear: lastImportedYear,
+        currentYear: year,
+        isNewYear: year > (lastImportedYear || year - 1),
+        lastMonth: lastImportedMonth,
+        warnings: warnings
       };
     }
 
@@ -687,9 +926,10 @@
 
       // Display summary
       let summaryHtml = `
-        <div class="summary-card">
-          <strong>ข้อมูลที่นำเข้า:</strong> ${monthName} ${yearDisplay}<br>
-          <strong>รวมห้อง:</strong> ${summary.totalRooms} ห้อง
+        <div class="summary-card" style="border-left: 6px solid #2d8653; background: #f0f8f4;">
+          <strong style="font-size: 1.2em; color: #1a5c38;">📅 เดือนที่นำเข้า: ${monthName} ${yearDisplay}</strong><br>
+          <strong>รวมห้อง:</strong> ${summary.totalRooms} ห้อง<br>
+          <small style="color: #666;">ตรวจสอบให้แน่ใจว่าถูกเดือนก่อนดำเนินการต่อ</small>
         </div>
         <div class="summary-stats">
           <div class="stat-box" style="border-color: #4caf50;">
@@ -713,10 +953,10 @@
 
       document.getElementById('matchingSummary').innerHTML = summaryHtml;
 
-      // Display preview table (first 10 rooms)
-      let previewTableHtml = '<table class="matching-table"><thead><tr><th>ห้อง</th><th>ไฟ (เดิม)</th><th>ไฟ (ที่แล้ว)</th><th>สถานะ</th><th>น้ำ (เดิม)</th><th>น้ำ (ที่แล้ว)</th><th>สถานะ</th></tr></thead><tbody>';
+      // Display preview table (all rooms)
+      let previewTableHtml = '<table class="matching-table"><thead><tr><th>ห้อง</th><th>ไฟ (ล่าสุด)</th><th>ไฟ (ที่แล้ว)</th><th>สถานะ</th><th>น้ำ (ล่าสุด)</th><th>น้ำ (ที่แล้ว)</th><th>สถานะ</th></tr></thead><tbody>';
 
-      details.slice(0, 10).forEach(detail => {
+      details.forEach(detail => {
         const eStatus = detail.electric.status;
         const wStatus = detail.water.status;
         const statusIcon = detail.status === 'ok' ? '✓' : (detail.status === 'warning' ? '⚠️' : '✗');
@@ -945,13 +1185,43 @@
      */
     function generateExcelTemplate() {
       const workbook = XLSX.utils.book_new();
-      const templateData = [
-        ['ห้อง', 'ไฟล่าสุด (eNew)', 'ไฟเดิม (eOld)', 'น้ำล่าสุด (wNew)', 'น้ำเดิม (wOld)'],
-        ['13', 3338, 3291, 1717, 1710],
-        ['14', 10045, 9927, 3325, 3313],
-        ['15', 9876, 9753, 1639, 1635],
-        ['15ก', 5366, 5119, 1491, 1477],
+
+      // Full header row matching actual file structure
+      const headerRow = [
+        'ห้อง', 'ไฟ', 'น้ำ', '', '',
+        'ไฟล่าสุด', 'ไฟเดิม', '', '/หน่วย', 'บาท', '',
+        'น้ำล่าสุด', 'น้ำเดิม', '', '/หน่วย', 'บาท', '',
+        'รวม', 'ขยะ', 'บาท'
       ];
+
+      // Sample rooms with actual data
+      const sampleRooms = [
+        ['13', '', '', '', '', 3338, 3291, '', '', '', '', 1717, 1710],
+        ['14', '', '', '', '', 10045, 9927, '', '', '', '', 3325, 3313],
+        ['15', '', '', '', '', 9876, 9753, '', '', '', '', 1639, 1635],
+        ['15ก', '', '', '', '', 5366, 5119, '', '', '', '', 1491, 1477],
+        ['16', '', '', '', '', 8571, 8438, '', '', '', '', 310, 301],
+        ['17', '', '', '', '', 1829, 1807, '', '', '', '', 3023, 3022],
+        ['18', '', '', '', '', 9809, 9773, '', '', '', '', 1395, 1385],
+        ['19', '', '', '', '', 10026, 9985, '', '', '', '', 1569, 1560],
+        ['20', '', '', '', '', 6132, 6000, '', '', '', '', 1954, 1940],
+        ['21', '', '', '', '', 926, 917, '', '', '', '', 89, 88],
+        ['22', '', '', '', '', 3402, 3400, '', '', '', '', 1446, 1443],
+        ['23', '', '', '', '', 1952, 1901, '', '', '', '', 1144, 1139],
+        ['24', '', '', '', '', 3941, 3835, '', '', '', '', 1077, 1050],
+        ['25', '', '', '', '', 4078, 4063, '', '', '', '', 1979, 1970],
+        ['26', '', '', '', '', 1870, 1797, '', '', '', '', 1575, 1568],
+        ['27', '', '', '', '', 4666, 4505, '', '', '', '', 1719, 1703],
+        ['28', '', '', '', '', 763, 748, '', '', '', '', 558, 556],
+        ['29', '', '', '', '', 1692, 1679, '', '', '', '', 1199, 1197],
+        ['30', '', '', '', '', 109, 42, '', '', '', '', 1381, 1374],
+        ['31', '', '', '', '', 518, 448, '', '', '', '', 1672, 1665],
+        ['32', '', '', '', '', 997, 996, '', '', '', '', 1299, 1299],
+        ['33', '', '', '', '', 78, 25, '', '', '', '', 1586, 1581],
+        ['ร้านใหญ่', '', '', '', '', 20839, 20437, '', '', '', '', 1364, 1358],
+      ];
+
+      const templateData = [headerRow, ...sampleRooms];
 
       const worksheet = XLSX.utils.aoa_to_sheet(templateData);
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
