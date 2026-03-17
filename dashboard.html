@@ -2921,11 +2921,15 @@ function renderNestMeterGrid() {
   const gridEl = document.getElementById('nestMeterGrid');
   if (!gridEl) return;
 
-  // Get Nest Building rooms from tenant_data
+  // Get Nest Building rooms (N101-N405) - extract from tenant_data keys
   const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
-  const nestRooms = Object.keys(tenantData.rooms || {})
+  const nestRooms = Object.keys(tenantData)
     .filter(room => String(room).startsWith('N'))
-    .sort((a, b) => parseInt(a.substring(1)) - parseInt(b.substring(1)));
+    .sort((a, b) => {
+      const aNum = parseInt(a.substring(1));
+      const bNum = parseInt(b.substring(1));
+      return aNum - bNum;
+    });
 
   gridEl.innerHTML = nestRooms.map(room => `
     <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
@@ -2976,18 +2980,20 @@ function renderRoomsMeterGrid() {
   const gridEl = document.getElementById('roomsMeterGrid');
   if (!gridEl) return;
 
-  // Get Rooms Building rooms from tenant_data (all non-N rooms)
+  // Get Rooms Building rooms (non-N rooms: 13, 14, 15, etc.) from tenant_data
   const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
-  const roomsRooms = Object.keys(tenantData.rooms || {})
+  const roomsRooms = Object.keys(tenantData)
     .filter(room => !String(room).startsWith('N'))
     .sort((a, b) => {
-      // Custom sort: numbers first (by value), then special rooms (13ก, Amazon, etc)
-      const aNum = parseInt(a);
-      const bNum = parseInt(b);
+      // Custom sort: numbers first (by value), then special rooms (AMAZON, etc)
+      const aStr = String(a);
+      const bStr = String(b);
+      const aNum = parseInt(aStr);
+      const bNum = parseInt(bStr);
       if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
       if (!isNaN(aNum)) return -1;
       if (!isNaN(bNum)) return 1;
-      return String(a).localeCompare(String(b));
+      return aStr.localeCompare(bStr);
     });
 
   gridEl.innerHTML = roomsRooms.map(room => `
