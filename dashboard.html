@@ -2886,9 +2886,24 @@ function switchMeterTab(tabName, btnElement) {
 
 // Initialize Meter Pages
 function initMeterPage() {
+  // Load mock tenant data if not already loaded
+  if (!localStorage.getItem('tenant_data')) {
+    // Load from global mockTenantData if available
+    if (typeof mockTenantData !== 'undefined') {
+      localStorage.setItem('tenant_data', JSON.stringify(mockTenantData));
+    }
+  }
+
+  // Load mock meter history if not already loaded
+  if (!localStorage.getItem('METER_DATA')) {
+    if (typeof METER_DATA !== 'undefined') {
+      localStorage.setItem('METER_DATA', JSON.stringify(METER_DATA));
+    }
+  }
+
   console.log('✅ Meter page initialized');
   // Initialize Nest tab by default
-  initMeterNestTab();
+  setTimeout(() => initMeterNestTab(), 100);
 }
 
 function initMeterNestTab() {
