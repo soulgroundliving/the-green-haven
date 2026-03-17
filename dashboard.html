@@ -3020,12 +3020,12 @@ function renderNestMeterGrid() {
         <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">⚡ ค่าไฟ (kWh)</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
           <div>
-            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เก่า</small>
-            <input type="number" id="meter-nest-${room}-electric-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ล่าสุด</small>
+            <input type="number" id="meter-nest-${room}-electric-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
           <div>
-            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ปัจจุบัน</small>
-            <input type="number" id="meter-nest-${room}-electric-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เดิม</small>
+            <input type="number" id="meter-nest-${room}-electric-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-nest-${room}-electric">0</span> หน่วย = <span id="calc-nest-${room}-electric" style="color:var(--green);font-weight:600;">฿0</span></div>
@@ -3036,12 +3036,12 @@ function renderNestMeterGrid() {
         <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">💧 น้ำ (m³)</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
           <div>
-            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เก่า</small>
-            <input type="number" id="meter-nest-${room}-water-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ล่าสุด</small>
+            <input type="number" id="meter-nest-${room}-water-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
           <div>
-            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ปัจจุบัน</small>
-            <input type="number" id="meter-nest-${room}-water-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เดิม</small>
+            <input type="number" id="meter-nest-${room}-water-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-nest-${room}-water">0</span> หน่วย = <span id="calc-nest-${room}-water" style="color:var(--green);font-weight:600;">฿0</span></div>
@@ -3208,12 +3208,12 @@ function renderRoomsMeterGrid() {
         <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">⚡ ค่าไฟ (kWh)</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
           <div>
-            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เก่า</small>
-            <input type="number" id="meter-rooms-${room}-electric-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ล่าสุด</small>
+            <input type="number" id="meter-rooms-${room}-electric-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
           <div>
-            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ปัจจุบัน</small>
-            <input type="number" id="meter-rooms-${room}-electric-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เดิม</small>
+            <input type="number" id="meter-rooms-${room}-electric-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-rooms-${room}-electric">0</span> หน่วย = <span id="calc-rooms-${room}-electric" style="color:var(--green);font-weight:600;">฿0</span></div>
@@ -3223,13 +3223,13 @@ function renderRoomsMeterGrid() {
       <div style="margin-bottom:0.8rem;">
         <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">💧 น้ำ (m³)</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
-          <div>
-            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เก่า</small>
-            <input type="number" id="meter-rooms-${room}-water-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+          <div> 
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ล่าสุด</small>
+            <input type="number" id="meter-rooms-${room}-water-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
           <div>
-            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ปัจจุบัน</small>
-            <input type="number" id="meter-rooms-${room}-water-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เดิม</small>
+            <input type="number" id="meter-rooms-${room}-water-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-rooms-${room}-water">0</span> หน่วย = <span id="calc-rooms-${room}-water" style="color:var(--green);font-weight:600;">฿0</span></div>
@@ -3350,7 +3350,7 @@ function loadPreviousMonthNest() {
     }
   });
 
-  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เป็นค่าเก่า (${loadCount} ห้อง)`);
+  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เป็นค่าเดิม (${loadCount} ห้อง)`);
 }
 
 function loadPreviousMonthRooms() {
@@ -3408,7 +3408,7 @@ function loadPreviousMonthRooms() {
     }
   });
 
-  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เป็นค่าเก่า (${loadCount} ห้อง)`);
+  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เป็นค่าเดิม (${loadCount} ห้อง)`);
 }
 
 function saveNestMeterReadings() {
