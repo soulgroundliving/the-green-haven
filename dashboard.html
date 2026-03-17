@@ -2925,9 +2925,13 @@ function initMeterNestTab() {
   // Load old readings from METER_DATA
   autoFillOldReadingsNest();
 
-  // Add event listener to reload data when month changes
+  // Add event listener to reload data when month changes (both 'change' and 'input')
   monthInput.addEventListener('change', () => {
     console.log('📅 Month changed, reloading old readings from METER_DATA...');
+    autoFillOldReadingsNest();
+  });
+  monthInput.addEventListener('input', () => {
+    console.log('📅 Month input detected, reloading old readings from METER_DATA...');
     autoFillOldReadingsNest();
   });
 }
@@ -2947,9 +2951,13 @@ function initMeterRoomsTab() {
   // Load old readings from METER_DATA
   autoFillOldReadingsRooms();
 
-  // Add event listener to reload data when month changes
+  // Add event listener to reload data when month changes (both 'change' and 'input')
   monthInput.addEventListener('change', () => {
     console.log('📅 Month changed, reloading old readings from METER_DATA...');
+    autoFillOldReadingsRooms();
+  });
+  monthInput.addEventListener('input', () => {
+    console.log('📅 Month input detected, reloading old readings from METER_DATA...');
     autoFillOldReadingsRooms();
   });
 }
