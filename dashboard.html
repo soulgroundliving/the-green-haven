@@ -2896,11 +2896,13 @@ function initMeterPage() {
     }
   }
 
-  // Load mock meter history if not already loaded
-  if (!localStorage.getItem('METER_DATA')) {
-    if (typeof METER_DATA !== 'undefined') {
-      localStorage.setItem('METER_DATA', JSON.stringify(METER_DATA));
-    }
+  // Load METER_DATA from Excel (always refresh to get latest data)
+  if (typeof METER_DATA !== 'undefined') {
+    localStorage.setItem('METER_DATA', JSON.stringify(METER_DATA));
+    // Clear old test data to ensure we use actual Excel data
+    localStorage.removeItem('METER_READINGS_NEST');
+    localStorage.removeItem('METER_READINGS_ROOMS');
+    console.log('✅ Loaded Excel meter data (METER_DATA)');
   }
 
   console.log('✅ Meter page initialized');
