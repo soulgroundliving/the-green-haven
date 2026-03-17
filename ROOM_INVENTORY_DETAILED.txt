@@ -1,0 +1,216 @@
+================================================================================
+COMPLETE ROOM/TENANT INVENTORY & METER TRACKING DATABASE
+The Green Haven - บิลปี69.xlsx
+================================================================================
+
+BUILDING INVENTORY SUMMARY
+==========================
+Property Name: The Green Haven
+Billing Year: ปี 69 (Buddhist Year 69 = 2025-2026 AD)
+Total Rental Units: 23 (22 residential rooms + 1 commercial shop)
+Billing Frequency: Monthly
+Utility Types Tracked: Electricity, Water, Waste/Garbage Fee
+
+================================================================================
+COMPLETE ROOM ROSTER WITH RENTAL RATES
+================================================================================
+
+RESIDENTIAL UNITS (22 rooms):
+=============================
+
+Room 15ก (Room 15A/Alpha)
+  Monthly Rent: 1,500 Baht
+  Electricity Meter: Individual (tracked per month)
+  Water Meter: Individual (tracked per month)
+  Garbage Fee: 20 Baht/month (fixed)
+  Status: Active in all billing months
+  Tenant Information: NOT PROVIDED IN SPREADSHEET
+
+Room 13: 1,500 Baht/month
+Room 14: 1,200 Baht/month
+Room 15: 1,200 Baht/month
+Room 16: 2,000 Baht/month
+Room 17: 1,500 Baht/month
+Room 18: 1,500 Baht/month
+Room 19: 1,500 Baht/month
+Room 20: 1,500 Baht/month
+Room 21: 1,500 Baht/month
+Room 22: 1,500 Baht/month
+Room 23: 1,500 Baht/month
+Room 24: 2,000 Baht/month
+Room 25: 1,500 Baht/month
+Room 26: 2,000 Baht/month
+Room 27: 1,500 Baht/month
+Room 28: 1,500 Baht/month
+Room 29: 1,500 Baht/month
+Room 30: 1,500 Baht/month
+Room 31: 1,500 Baht/month
+Room 32: 1,500 Baht/month
+Room 33: 1,400 Baht/month
+
+All rooms have:
+  - Individual electricity meter (tracked monthly)
+  - Individual water meter (tracked monthly)
+  - Fixed garbage fee: 20 Baht/month
+  - Consistent billing across all 12 months
+  - Tenant information: NOT PROVIDED
+
+COMMERCIAL UNITS (1 unit):
+==========================
+
+ร้านใหญ่ (Large Shop/Store)
+  Monthly Rent: 15,000 Baht
+  Electricity Meter: Individual (tracked per month)
+  Water Meter: Individual (tracked per month)
+  Garbage Fee: 20 Baht/month (fixed)
+  Status: Active in all billing months
+  Tenant Information: NOT PROVIDED IN SPREADSHEET
+  Usage Characteristics: Higher electricity and water consumption vs. residential
+
+================================================================================
+FINANCIAL SUMMARY
+================================================================================
+
+Monthly Rent Breakdown:
+  - Rooms at 1,200 Baht: Rooms 14, 15 (2 rooms × 1,200 = 2,400 Baht)
+  - Rooms at 1,400 Baht: Room 33 (1 room × 1,400 = 1,400 Baht)
+  - Rooms at 1,500 Baht: 18 rooms × 1,500 = 27,000 Baht
+  - Rooms at 2,000 Baht: Rooms 16, 24, 26 (3 rooms × 2,000 = 6,000 Baht)
+  - Large Shop: 15,000 Baht
+
+Total Monthly Residential Rent: 33,800 Baht
+Total Monthly Commercial Rent: 15,000 Baht
+Combined Total Monthly Rent: 48,800 Baht
+
+Garbage Fees (Fixed):
+  23 units × 20 Baht = 460 Baht per month
+
+Estimated Annual Revenue (Rent + Garbage only):
+  (48,800 + 460) × 12 = 591,120 Baht per year
+
+Note: Actual monthly totals vary based on electricity and water consumption
+
+================================================================================
+UTILITY RATE SCHEDULE (Fixed across all billing months)
+================================================================================
+
+Electricity Rates:
+  Unit Price: 8.0 Baht per kWh (kilowatt-hour)
+  Meter Reading: Individual meter per unit
+  Monthly Calculation: (Current Reading - Previous Reading) × 8.0 Baht
+
+Water Rates:
+  Unit Price: 20.0 Baht per cubic meter (m³)
+  Meter Reading: Individual meter per unit
+  Monthly Calculation: (Current Reading - Previous Reading) × 20.0 Baht
+
+Waste/Garbage Disposal Fee:
+  Unit Price: 20.0 Baht per unit per month (appears fixed, not variable)
+  Applies To: All rooms and commercial units
+  Monthly Calculation: 20 Baht × number of occupied units
+
+================================================================================
+MONTHLY BILLING SCHEDULE (Sheets 2-13)
+================================================================================
+
+Sheet 1: "EX" (Example/Template Sheet - Sample data with zero usage)
+Sheet 2:  "มค69" - มีนาคม (March Year 69) = March 2026
+Sheet 3:  "กพ69" - กุมภาพันธ์ (February Year 69) = February 2026
+Sheet 4:  "มีค" - มีนาคม (March)
+Sheet 5:  "เมษา" - เมษายน (April)
+Sheet 6:  "พฤษ" - พฤษภาคม (May)
+Sheet 7:  "มิถุน" - มิถุนายน (June)
+Sheet 8:  "กรก" - กรกฎาคม (July)
+Sheet 9:  "สิงห" - สิงหาคม (August)
+Sheet 10: "กันย" - กันยายน (September)
+Sheet 11: "ตุลา" - ตุลาคม (October)
+Sheet 12: "พยค" - พฤศจิกายน (November)
+Sheet 13: "ธันว" - ธันวาคม (December)
+
+================================================================================
+METER TRACKING METHODOLOGY
+================================================================================
+
+Data Points Tracked Per Room/Month:
+1. Room Identifier (ห้อง)
+2. Electricity Current Reading (ไฟล่าสุด)
+3. Electricity Previous Reading (ไฟเดิม)
+4. Electricity Usage (Difference)
+5. Electricity Cost (Usage × 8.0 Baht)
+6. Water Current Reading (น้ำล่าสุด)
+7. Water Previous Reading (น้ำเดิม)
+8. Water Usage (Difference)
+9. Water Cost (Usage × 20.0 Baht)
+10. Monthly Rent (ค่าห้อง)
+11. Garbage Fee (ขยะ = 20 Baht fixed)
+12. Total Monthly Bill (Rent + Electricity + Water + Garbage)
+
+Usage Calculation Formula:
+  Usage = Current Month Reading - Previous Month Reading
+  Cost = Usage × Unit Price
+
+Example Calculation (Room 13, March Year 69):
+  Electricity: (3,291 - 3,267) × 8 = 24 × 8 = 192 Baht
+  Water: (1,710 - 1,707) × 20 = 3 × 20 = 60 Baht
+  Total Bill: 1,500 (rent) + 192 (electricity) + 60 (water) + 20 (garbage) = 1,772 Baht
+
+Example Calculation (Large Shop, March Year 69):
+  Rent: 15,000 Baht
+  Electricity: (20,839 - 20,437) × 8 = 402 × 8 = 3,216 Baht
+  Water: (1,364 - 1,358) × 20 = 6 × 20 = 120 Baht
+  Garbage Fee: 20 Baht
+  Total Bill: 15,000 + 3,216 + 120 + 20 = 18,356 Baht
+
+================================================================================
+DATA INTEGRITY NOTES
+================================================================================
+
+✓ All 23 units (22 rooms + 1 shop) consistently billed across all 12 months
+✓ Rent amounts are fixed and consistent (no mid-lease changes)
+✓ Unit prices remain constant (8 ฿/kWh electricity, 20 ฿/m³ water)
+✓ Garbage fee is uniform across all units (20 Baht/month)
+✓ Monthly readings show realistic variation (expected consumption fluctuation)
+✓ Summary calculations appear accurate based on formula verification
+✓ No duplicate or missing room entries in any month
+✓ Spreadsheet is structured for easy reference and billing automation
+
+================================================================================
+INFORMATION GAPS
+================================================================================
+
+The following information is NOT contained in the Excel file:
+  - Tenant names or identities
+  - Tenant contact phone numbers
+  - Email addresses
+  - Move-in/move-out dates
+  - Lease agreement terms
+  - Meter serial numbers or locations
+  - Building address or location details
+  - Property manager contact information
+  - Payment status or history
+  - Deposit amounts or refund information
+  - Room types or amenities
+  - Square footage or room dimensions
+  - Utilities included in rent
+
+================================================================================
+SUMMARY STATISTICS
+================================================================================
+
+Total Records in Spreadsheet: 13 sheets × 23 units = 299 billing records
+Total Time Period: 12 months (Year 69)
+Total Rooms: 22 residential + 1 commercial = 23 units
+Occupancy Rate: 100% (all units active every month)
+
+Monthly Rent Range:
+  Minimum: 1,200 Baht (Rooms 14, 15)
+  Maximum: 15,000 Baht (Large Shop)
+  Most Common: 1,500 Baht (18 residential rooms)
+
+Estimated Annual Rent Revenue (Minimum): 48,800 × 12 = 585,600 Baht
+Estimated Annual Garbage Fees: 460 × 12 = 5,520 Baht
+Estimated Total Base Annual Revenue: 591,120 Baht
+
+Note: Actual annual revenue will be higher when including variable electricity and water charges
+
+================================================================================
