@@ -1321,6 +1321,9 @@
       <!-- Data Entry Subsection -->
       <div class="sidebar-subsection">
         <div class="sidebar-subsection-title">📅 Data Entry</div>
+        <button class="sidebar-item sidebar-item-indent" onclick="window.location.href='/pages/admin/import-meter-data.html'">
+          <span class="sidebar-item-icon">📥</span>นำเข้าข้อมูลมิเตอร์
+        </button>
         <button class="sidebar-item sidebar-item-indent" onclick="showPage('meter', this)">
           <span class="sidebar-item-icon">📊</span>บันทึกมิเตอร์
         </button>
@@ -2925,15 +2928,26 @@ function initMeterNestTab() {
   // Load old readings from METER_DATA
   autoFillOldReadingsNest();
 
-  // Add event listener to reload data when month changes (both 'change' and 'input')
-  monthInput.addEventListener('change', () => {
-    console.log('📅 Month changed, reloading old readings from METER_DATA...');
+  // Add robust event listeners to reload data when month changes
+  // Use 'change', 'input', and 'blur' to catch all types of changes
+  const handleMonthChange = () => {
+    console.log('📅 Month changed to:', monthInput.value, ' - reloading old readings from METER_DATA...');
     autoFillOldReadingsNest();
-  });
-  monthInput.addEventListener('input', () => {
-    console.log('📅 Month input detected, reloading old readings from METER_DATA...');
-    autoFillOldReadingsNest();
-  });
+  };
+
+  monthInput.addEventListener('change', handleMonthChange);
+  monthInput.addEventListener('input', handleMonthChange);
+  monthInput.addEventListener('blur', handleMonthChange);
+
+  // Also watch for value changes via setInterval (catches programmatic changes)
+  let lastMonthValue = monthInput.value;
+  setInterval(() => {
+    if (monthInput.value !== lastMonthValue) {
+      console.log('📅 Month value changed (detected via polling):', monthInput.value);
+      lastMonthValue = monthInput.value;
+      autoFillOldReadingsNest();
+    }
+  }, 500);
 }
 
 function initMeterRoomsTab() {
@@ -2951,15 +2965,26 @@ function initMeterRoomsTab() {
   // Load old readings from METER_DATA
   autoFillOldReadingsRooms();
 
-  // Add event listener to reload data when month changes (both 'change' and 'input')
-  monthInput.addEventListener('change', () => {
-    console.log('📅 Month changed, reloading old readings from METER_DATA...');
+  // Add robust event listeners to reload data when month changes
+  // Use 'change', 'input', and 'blur' to catch all types of changes
+  const handleMonthChange = () => {
+    console.log('📅 Month changed to:', monthInput.value, ' - reloading old readings from METER_DATA...');
     autoFillOldReadingsRooms();
-  });
-  monthInput.addEventListener('input', () => {
-    console.log('📅 Month input detected, reloading old readings from METER_DATA...');
-    autoFillOldReadingsRooms();
-  });
+  };
+
+  monthInput.addEventListener('change', handleMonthChange);
+  monthInput.addEventListener('input', handleMonthChange);
+  monthInput.addEventListener('blur', handleMonthChange);
+
+  // Also watch for value changes via setInterval (catches programmatic changes)
+  let lastMonthValue = monthInput.value;
+  setInterval(() => {
+    if (monthInput.value !== lastMonthValue) {
+      console.log('📅 Month value changed (detected via polling):', monthInput.value);
+      lastMonthValue = monthInput.value;
+      autoFillOldReadingsRooms();
+    }
+  }, 500);
 }
 
 // Auto-fill Old readings from METER_DATA (Nest Building)
@@ -3069,29 +3094,46 @@ function autoFillOldReadingsRooms() {
     return;
   }
 
-  const monthInput = document.getElementById('roomsMeterMonth').value;
-  if (!monthInput) return;
+  const monthInputEl = document.getElementById('roomsMeterMonth');
+  if (!monthInputEl || !monthInputEl.value) {
+    console.log('⚠️ Month input field not found or empty');
+    return;
+  }
+
+  const monthInput = monthInputEl.value;
 
   // Parse year-month and convert to key format
   const [year, month] = monthInput.split('-').map(Number);
+  if (!year || !month) {
+    console.log('⚠️ Invalid month format:', monthInput);
+    return;
+  }
+
   // Convert Gregorian year to Buddhist year (2-digit), then to 2-digit year
   // 2026 (Gregorian) = 2569 (Buddhist) = 69 (2-digit)
   const buddhistYear = year + 543;
   const yy = buddhistYear % 100;
   const key = `${yy}_${month}`;
 
+  console.log(`📊 Looking up METER_DATA[${key}] for ${monthInput}...`);
   const monthData = METER_DATA[key];
   const roomsRooms = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON'];
   let loadCount = 0;
 
   if (!monthData) {
-    console.log(`⚠️ No data for ${key}, clearing fields...`);
+    console.log(`⚠️ No data for ${key}, clearing fields and showing "-"...`);
     // Clear all old readings and show "-"
     roomsRooms.forEach(room => {
       const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
       const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
-      if (eOldInput) eOldInput.value = '-';
-      if (wOldInput) wOldInput.value = '-';
+      if (eOldInput) {
+        eOldInput.value = '-';
+        eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (wOldInput) {
+        wOldInput.value = '-';
+        wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     return;
   }
@@ -3108,21 +3150,27 @@ function autoFillOldReadingsRooms() {
     if (d) {
       if (d.eOld !== null && d.eOld !== undefined && eOldInput) {
         eOldInput.value = d.eOld;
-        eOldInput.dispatchEvent(new Event('input'));
+        eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
         loadCount++;
       }
       if (d.wOld !== null && d.wOld !== undefined && wOldInput) {
         wOldInput.value = d.wOld;
-        wOldInput.dispatchEvent(new Event('input'));
+        wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
       }
     } else {
       // No data for this room, show "-"
-      if (eOldInput) eOldInput.value = '-';
-      if (wOldInput) wOldInput.value = '-';
+      if (eOldInput) {
+        eOldInput.value = '-';
+        eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (wOldInput) {
+        wOldInput.value = '-';
+        wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }
   });
 
-  console.log(`✅ Loaded old readings for ${loadCount} rooms from METER_DATA`);
+  console.log(`✅ Loaded old readings for ${loadCount} rooms from METER_DATA[${key}]`);
 }
 
 function renderRoomsMeterGrid() {
