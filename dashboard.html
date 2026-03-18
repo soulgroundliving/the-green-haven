@@ -3592,10 +3592,11 @@ function loadRoomConfigUI() {
   tbody.innerHTML = config.rooms
     .filter(room => !room.deleted)
     .map(room => {
-      // Get rent from RoomConfigManager or fallback to ROOMS_OLD
+      // Get rent: use RoomConfigManager if explicitly set, fallback to metadata, then default
       const metadataArray = building === 'rooms' ? ROOMS_OLD : ROOMS_NEW;
       const metadata = metadataArray.find(m => m.id === room.id);
-      const rent = room.rent || metadata?.rent || 1500;
+      // Prefer explicit room.rent from RoomConfigManager, but only if it was actually saved (not 0 or undefined)
+      const rent = (room.rent && room.rent > 0) ? room.rent : (metadata?.rent || 1500);
       return `
       <tr style="border-bottom:1px solid var(--border);">
         <td style="border:1px solid var(--border);padding:0.8rem;color:var(--text);">${room.id}</td>
@@ -7962,19 +7963,12 @@ function calculateOccupancy(buildingType = null) {
   const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
   const tenants = tenantData.tenants || {};
 
-  let rooms = [];
-
-  if (buildingType === 'nest') {
-    // Nest Building: N101-N405 (4 floors x 5 rooms = 20 rooms)
-    rooms = ['N101', 'N102', 'N103', 'N104', 'N105',
-             'N201', 'N202', 'N203', 'N204', 'N205',
-             'N301', 'N302', 'N303', 'N304', 'N305',
-             'N401', 'N402', 'N403', 'N404', 'N405'];
-  } else {
-    // Old Building: 22 rooms (15ก + 13-33) + 1 Amazon cafe = 23 total
-    rooms = ['15ก', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22',
-             '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'Amazon'];
-  }
+  // Use RoomConfigManager to get dynamic room list
+  const building = buildingType === 'nest' ? 'nest' : 'rooms';
+  const config = RoomConfigManager.getRoomsConfig(building);
+  const rooms = config.rooms
+    .filter(r => !r.deleted)
+    .map(r => r.id);
 
   const occupied = rooms.filter(r => tenants[r] && tenants[r].name).length;
   const vacant = rooms.length - occupied;
@@ -8015,18 +8009,12 @@ function getExpiringLeases(buildingType = null) {
   const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
   const tenants = tenantData.tenants || {};
 
-  let rooms = [];
-  if (buildingType === 'nest') {
-    // Nest Building: N101-N405 (20 rooms)
-    rooms = ['N101', 'N102', 'N103', 'N104', 'N105',
-             'N201', 'N202', 'N203', 'N204', 'N205',
-             'N301', 'N302', 'N303', 'N304', 'N305',
-             'N401', 'N402', 'N403', 'N404', 'N405'];
-  } else {
-    // Old Building: 22 rooms (15ก + 13-33) + 1 Amazon cafe = 23 total
-    rooms = ['15ก', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22',
-             '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', 'Amazon'];
-  }
+  // Use RoomConfigManager to get dynamic room list
+  const building = buildingType === 'nest' ? 'nest' : 'rooms';
+  const config = RoomConfigManager.getRoomsConfig(building);
+  const rooms = config.rooms
+    .filter(r => !r.deleted)
+    .map(r => r.id);
 
   const today = new Date();
   const expiringLeases = [];
