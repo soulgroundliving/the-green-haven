@@ -3203,7 +3203,7 @@ function displayImportPreview(importData, matchResults) {
         </tr>
       </thead>
       <tbody>
-        ${matchResults.matches.slice(0, 5).map(result => `
+        ${matchResults.details.slice(0, 5).map(result => `
           <tr style="border-bottom:1px solid var(--border);">
             <td style="padding:0.5rem;font-weight:600;">${result.room}</td>
             <td style="padding:0.5rem;text-align:right;">${result.eNew}</td>
