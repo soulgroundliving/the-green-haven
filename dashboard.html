@@ -3190,6 +3190,12 @@ function parseImportExcelData(workbook, building) {
 }
 
 function displayImportPreview(importData, matchResults) {
+  // Guard against undefined matchResults
+  if (!matchResults || !matchResults.details) {
+    showImportStatus('❌ เกิดข้อผิดพลาด: ไม่สามารถประมวลผลข้อมูลได้', 'error');
+    return;
+  }
+
   const previewHtml = `
     <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
       <thead>
