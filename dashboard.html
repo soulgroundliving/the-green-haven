@@ -4885,8 +4885,14 @@ function autoFillMeters(){
     }
   }
 
-  // If current month has no data yet, try to get old reading from previous month's new reading
-  if(!d){
+  // Normalize data structure - เพื่อให้ใช้ logic เดียวกัน
+  let meterData=null;
+
+  if(d){
+    // Case 1: Current month has data
+    meterData=d;
+  } else {
+    // Case 2: Current month has no data, try previous month
     const prevMonth=month===1?12:month-1;
     const prevYear=month===1?year-1:year;
     const prevYy=prevYear%100;
@@ -4909,31 +4915,29 @@ function autoFillMeters(){
       }
     }
 
-    // If we found previous month data, use its NEW readings as current month's OLD readings
     if(prevD){
-      document.getElementById('f-elec-new').value='';
-      document.getElementById('f-water-new').value='';
-      document.getElementById('f-elec-old').value=(prevD.eNew!=null?prevD.eNew:'');
-      document.getElementById('f-water-old').value=(prevD.wNew!=null?prevD.wNew:'');
-      calcBill();
-      return;
-    } else {
-      // No previous month data found either, clear all fields
-      document.getElementById('f-elec-new').value='';
-      document.getElementById('f-elec-old').value='';
-      document.getElementById('f-water-new').value='';
-      document.getElementById('f-water-old').value='';
-      calcBill();
-      return;
+      // Normalize: เลขเก่า = prev month ending, เลขใหม่ = empty
+      meterData={
+        eNew:'',           // Not recorded yet
+        eOld:prevD.eNew,   // Use previous month's ending
+        wNew:'',
+        wOld:prevD.wNew
+      };
     }
   }
 
-  // If we found current month's data, use it
-  if(d){
-    if(d.eNew!==null&&d.eNew!==undefined)document.getElementById('f-elec-new').value=d.eNew;
-    if(d.eOld!==null&&d.eOld!==undefined)document.getElementById('f-elec-old').value=d.eOld;
-    if(d.wNew!==null&&d.wNew!==undefined)document.getElementById('f-water-new').value=d.wNew;
-    if(d.wOld!==null&&d.wOld!==undefined)document.getElementById('f-water-old').value=d.wOld;
+  // Apply SAME logic for both cases
+  if(meterData){
+    document.getElementById('f-elec-new').value=(meterData.eNew!=null?meterData.eNew:'');
+    document.getElementById('f-elec-old').value=(meterData.eOld!=null?meterData.eOld:'');
+    document.getElementById('f-water-new').value=(meterData.wNew!=null?meterData.wNew:'');
+    document.getElementById('f-water-old').value=(meterData.wOld!=null?meterData.wOld:'');
+  } else {
+    // ไม่เจอ data เลย
+    document.getElementById('f-elec-new').value='';
+    document.getElementById('f-elec-old').value='';
+    document.getElementById('f-water-new').value='';
+    document.getElementById('f-water-old').value='';
   }
 
   calcBill();
