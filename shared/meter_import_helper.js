@@ -7,26 +7,34 @@
  * Load previous month's meter data from METER_DATA
  * @param {number} year - Buddhist year (69)
  * @param {number} month - Month number (1-12)
+ * @param {string} building - Building name ('rooms', 'nest', etc.) - optional for backward compatibility
  * @returns {object} Previous month's readings or {} if not found
  */
-function getPreviousMonthReadings(year, month) {
+function getPreviousMonthReadings(year, month, building = null) {
   if (!window.METER_DATA) return {};
 
   const prevMonth = month === 1 ? 12 : month - 1;
   const prevYear = month === 1 ? year - 1 : year;
   const key = `${prevYear}_${prevMonth}`;
 
+  // If building specified, use new building-aware structure
+  if (building) {
+    if (!window.METER_DATA[building]) return {};
+    return METER_DATA[building][key] || {};
+  }
+
+  // Fallback to old structure for backward compatibility
   return METER_DATA[key] || {};
 }
 
 /**
  * Validate meter data continuity by comparing with previous month
- * @param {object} importedData - Current month import {year, month, rooms}
+ * @param {object} importedData - Current month import {year, month, rooms, building?}
  * @returns {object} Match results {summary, details, mismatches, canProceed}
  */
 function matchMeterDataWithPrevious(importedData) {
-  const { year, month, rooms } = importedData;
-  const previousData = getPreviousMonthReadings(year, month);
+  const { year, month, rooms, building = null } = importedData;
+  const previousData = getPreviousMonthReadings(year, month, building);
 
   const results = {
     summary: {
@@ -301,12 +309,29 @@ function approvePendingImportViaLocalStorage(acknowledgeWarnings = false) {
   // Store to METER_DATA (if available)
   if (window.METER_DATA) {
     const key = `${importData.year}_${importData.month}`;
-    METER_DATA[key] = importData.rooms;
+    const building = importData.building || 'rooms'; // Default to rooms for backward compatibility
+
+    // Initialize building namespace if not exists
+    if (!METER_DATA[building]) {
+      METER_DATA[building] = {};
+    }
+
+    // Store in building-specific namespace
+    METER_DATA[building][key] = importData.rooms;
+
+    // Persist to localStorage
+    try {
+      localStorage.setItem('METER_DATA', JSON.stringify(window.METER_DATA));
+      console.log(`✅ Saved METER_DATA to localStorage - ${building}/${key}`);
+    } catch (e) {
+      console.warn('⚠️ Failed to save METER_DATA to localStorage:', e);
+    }
 
     // Log to audit
     if (window.AuditLogger) {
       AuditLogger.log('METER_DATA_IMPORTED', {
         key: key,
+        building: building,
         roomCount: Object.keys(importData.rooms).length,
         matchStats: matchResults.summary,
         mismatchCount: matchResults.mismatches.length,
@@ -320,6 +345,7 @@ function approvePendingImportViaLocalStorage(acknowledgeWarnings = false) {
   return {
     success: true,
     key: `${importData.year}_${importData.month}`,
+    building: importData.building || 'rooms',
     message: `Successfully imported ${Object.keys(importData.rooms).length} rooms`,
     roomsImported: Object.keys(importData.rooms).length,
     storageMethod: window.METER_DATA ? 'METER_DATA' : 'localStorage'

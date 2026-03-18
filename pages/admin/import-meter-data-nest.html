@@ -492,11 +492,26 @@
   <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="../../shared/meter_import_helper.js"></script>
   <script>
-// Nest Building METER_DATA - separate from Rooms Building
-window.METER_DATA_NEST = window.METER_DATA_NEST || {};
-console.log('METER_DATA_NEST initialized for Nest Building');
-
+// Building-aware METER_DATA structure initialization
 const BUILDING = 'nest';
+
+// Initialize METER_DATA with building namespace support
+if (!window.METER_DATA) {
+  window.METER_DATA = {};
+}
+
+// Initialize 'nest' namespace if not exists
+if (!window.METER_DATA['nest']) {
+  window.METER_DATA['nest'] = {};
+}
+
+// Backward compatibility: migrate METER_DATA_NEST to METER_DATA.nest if exists
+if (window.METER_DATA_NEST && Object.keys(window.METER_DATA_NEST).length > 0) {
+  Object.assign(window.METER_DATA['nest'], window.METER_DATA_NEST);
+  console.log('Migrated METER_DATA_NEST to METER_DATA.nest');
+}
+
+console.log('METER_DATA.nest initialized for Nest Building');
 
 let parsedData = null;
 let currentWorkbook = null;
@@ -726,7 +741,8 @@ function matchMeterDataWithPrevious(importData) {
   const prevYear = importData.month === 1 ? importData.year - 1 : importData.year;
   const prevKey = `${prevYear}_${prevMonth}`;
 
-  const previousData = window.METER_DATA_NEST && window.METER_DATA_NEST[prevKey];
+  // Read from building-namespaced METER_DATA structure (METER_DATA.nest.{key})
+  const previousData = window.METER_DATA && window.METER_DATA['nest'] && window.METER_DATA['nest'][prevKey];
 
   const results = {
     matches: [],
@@ -915,7 +931,7 @@ function approveAndStore() {
   btn.textContent = '⏳ กำลังบันทึก...';
 
   try {
-    const result = approvePendingImportViaLocalStorageNest(acknowledgeWarnings);
+    const result = approvePendingImportViaLocalStorage(acknowledgeWarnings);
     showStatus(`✅ ${result.message}`, 'success');
 
     document.getElementById('previewSection').classList.add('hidden');
@@ -931,27 +947,6 @@ function approveAndStore() {
     btn.disabled = false;
     btn.textContent = '✅ อนุมัติและบันทึกข้อมูล';
   }
-}
-
-function approvePendingImportViaLocalStorageNest(acknowledgeWarnings) {
-  const session = getPendingImportSession();
-  if (!session) throw new Error('ไม่พบข้อมูลการนำเข้า');
-
-  const { importData } = session;
-  const key = `${importData.year}_${importData.month}`;
-
-  // Store in METER_DATA_NEST instead of global METER_DATA
-  if (!window.METER_DATA_NEST) {
-    window.METER_DATA_NEST = {};
-  }
-
-  window.METER_DATA_NEST[key] = importData.rooms;
-  localStorage.setItem(`METER_DATA_NEST`, JSON.stringify(window.METER_DATA_NEST));
-
-  return {
-    success: true,
-    message: `บันทึกข้อมูล Nest Building ${importData.year}-${importData.month} สำเร็จ`
-  };
 }
 
 function cancelImport() {

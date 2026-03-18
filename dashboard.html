@@ -3091,8 +3091,9 @@ function autoFillOldReadingsNest() {
   const yy = buddhistYear % 100;
   const key = `${yy}_${month}`;
 
-  console.log(`📊 Looking up Nest month ${key}...`);
-  let monthData = METER_DATA[key];
+  console.log(`📊 Looking up METER_DATA['nest'][${key}]...`);
+  // Read from building-namespaced METER_DATA (METER_DATA.nest.{key})
+  let monthData = METER_DATA['nest'] && METER_DATA['nest'][key];
   const nestRooms = RoomConfigManager.getAllRooms('nest');
 
   if (!monthData) {
@@ -3104,7 +3105,8 @@ function autoFillOldReadingsNest() {
     const prevYy = prevBuddhistYear % 100;
     const prevKey = `${prevYy}_${prevMonth}`;
 
-    const prevMonthData = METER_DATA[prevKey];
+    // Read from building-namespaced structure
+    const prevMonthData = METER_DATA['nest'] && METER_DATA['nest'][prevKey];
     if (prevMonthData) {
       console.log(`📊 Found previous month data ${prevKey}, using eNew/wNew as old readings for current month...`);
       // Use previous month's NEW readings as current month's OLD readings
@@ -3321,8 +3323,9 @@ function autoFillOldReadingsRooms() {
   const yy = buddhistYear % 100;
   const key = `${yy}_${month}`;
 
-  console.log(`📊 Looking up METER_DATA[${key}] for ${monthInput}...`);
-  let monthData = METER_DATA[key];
+  console.log(`📊 Looking up METER_DATA['rooms'][${key}] for ${monthInput}...`);
+  // Read from building-namespaced METER_DATA (METER_DATA.rooms.{key})
+  let monthData = METER_DATA['rooms'] && METER_DATA['rooms'][key];
   const roomsRooms = RoomConfigManager.getAllRooms('rooms');
   let loadCount = 0;
 
@@ -3335,7 +3338,8 @@ function autoFillOldReadingsRooms() {
     const prevYy = prevBuddhistYear % 100;
     const prevKey = `${prevYy}_${prevMonth}`;
 
-    const prevMonthData = METER_DATA[prevKey];
+    // Read from building-namespaced structure
+    const prevMonthData = METER_DATA['rooms'] && METER_DATA['rooms'][prevKey];
     if (prevMonthData) {
       console.log(`📊 Found previous month data ${prevKey}, using eNew/wNew as old readings for current month...`);
       // Use previous month's NEW readings as current month's OLD readings
@@ -4949,7 +4953,8 @@ function checkVacant(){
   const month=parseInt(document.getElementById('vc-month').value);
   const yy=parseInt(monthlyYear||'69');
   const key=`${yy}_${month}`;
-  const md=METER_DATA[key];
+  // Read from building-namespaced METER_DATA (Rooms Building)
+  const md=METER_DATA['rooms'] && METER_DATA['rooms'][key];
   if(!md){
     document.getElementById('vc-result').innerHTML=`<span style="color:var(--text-muted);">ไม่มีข้อมูลเดือนนี้ในปี ${yy+2500}</span>`;
     return;
@@ -4994,10 +4999,11 @@ function autoFillMeters(){
   const key=`${yy}_${month}`;
   const psKey=`${year}_${month}`;
 
-  // Try METER_DATA first (static file)
+  // Try METER_DATA first (static file) - use building-namespaced structure
   let d=null;
-  if(typeof METER_DATA!=='undefined'&&METER_DATA[key]){
-    const monthData=METER_DATA[key];
+  const meterDataBuilding = currentBuilding === 'old' ? 'rooms' : 'nest';
+  if(typeof METER_DATA!=='undefined'&&METER_DATA[meterDataBuilding]&&METER_DATA[meterDataBuilding][key]){
+    const monthData=METER_DATA[meterDataBuilding][key];
     const lookupId=roomId==='Amazon ☕'?'ร้านใหญ่':roomId;
     d=monthData[lookupId];
   }
@@ -5025,9 +5031,9 @@ function autoFillMeters(){
     const prevPsKey=`${prevYear}_${prevMonth}`;
     let prevD=null;
 
-    // Try previous month in METER_DATA
-    if(typeof METER_DATA!=='undefined'&&METER_DATA[prevKey]){
-      const monthData=METER_DATA[prevKey];
+    // Try previous month in METER_DATA - use building-namespaced structure
+    if(typeof METER_DATA!=='undefined'&&METER_DATA[meterDataBuilding]&&METER_DATA[meterDataBuilding][prevKey]){
+      const monthData=METER_DATA[meterDataBuilding][prevKey];
       const lookupId=roomId==='Amazon ☕'?'ร้านใหญ่':roomId;
       prevD=monthData[lookupId];
     }
@@ -5767,7 +5773,8 @@ function renderMeterTable(){
   const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
   const rows=rooms.map(r=>{
     const lookupId=r.id==='Amazon ☕'?'ร้านใหญ่':r.id;
-    const md=(typeof METER_DATA!=='undefined'&&METER_DATA[mdKey])?METER_DATA[mdKey][lookupId]:null;
+    // Read from building-namespaced METER_DATA (Rooms Building)
+    const md=(typeof METER_DATA!=='undefined'&&METER_DATA['rooms']&&METER_DATA['rooms'][mdKey])?METER_DATA['rooms'][mdKey][lookupId]:null;
     const p=paid[r.id];
     // Prefer saved payment data, then METER_DATA, then —
     const eNew=p?.eNew!=null?p.eNew:(md?.eNew!=null?md.eNew:'—');
