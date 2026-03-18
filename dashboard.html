@@ -3594,7 +3594,9 @@ function loadRoomConfigUI() {
     .map(room => {
       // Get rent: use RoomConfigManager if explicitly set, fallback to metadata, then default
       const metadataArray = building === 'rooms' ? ROOMS_OLD : ROOMS_NEW;
-      const metadata = metadataArray.find(m => m.id === room.id);
+      // For Nest rooms, strip 'N' prefix to match ROOMS_NEW IDs (N101 -> 101)
+      const searchId = building === 'nest' ? room.id.replace(/^N/, '') : room.id;
+      const metadata = metadataArray.find(m => m.id === searchId);
       // Prefer explicit room.rent from RoomConfigManager, but only if it was actually saved (not 0 or undefined)
       const rent = (room.rent && room.rent > 0) ? room.rent : (metadata?.rent || 1500);
       return `
