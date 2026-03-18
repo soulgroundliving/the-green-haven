@@ -13,6 +13,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="./shared/meter_data.js"></script>
 <script src="./shared/room-config.js"></script>
+<script src="./shared/meter_import_helper.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="./mock-tenant-data.js"></script>
 <script src="./mock-meter-history.js"></script>
 <!-- Firebase Configuration & Integration -->
@@ -1322,12 +1324,6 @@
       <!-- Data Entry Subsection -->
       <div class="sidebar-subsection">
         <div class="sidebar-subsection-title">📅 Data Entry</div>
-        <button class="sidebar-item sidebar-item-indent" onclick="window.location.href='/pages/admin/import-meter-data.html'">
-          <span class="sidebar-item-icon">📥</span>นำเข้า Rooms Building
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="window.location.href='/pages/admin/import-meter-data-nest.html'">
-          <span class="sidebar-item-icon">📥</span>นำเข้า Nest Building
-        </button>
         <button class="sidebar-item sidebar-item-indent" onclick="showPage('meter', this)">
           <span class="sidebar-item-icon">📊</span>บันทึกมิเตอร์
         </button>
@@ -2176,6 +2172,9 @@
     <button class="meter-tab" onclick="switchMeterTab('room-config', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
       ⚙️ จัดการห้อง
     </button>
+    <button class="meter-tab" onclick="switchMeterTab('import-meter', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
+      📥 นำเข้าข้อมูล
+    </button>
   </div>
 
   <!-- Tab Content: Nest Building -->
@@ -2326,6 +2325,74 @@
       </div>
 
       <button onclick="addNewRoom()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">➕ เพิ่มห้อง</button>
+    </div>
+  </div>
+
+  <!-- Tab Content: Import Meter Data -->
+  <div id="meter-import-meter-content" class="meter-tab-content" style="display:none;">
+    <div class="section-title">📥 นำเข้าข้อมูลมิเตอร์</div>
+
+    <!-- Building Selection -->
+    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;">
+      <p style="color:var(--text);margin-bottom:1.5rem;font-size:0.95rem;">
+        เลือก "Rooms Building" หรือ "Nest Building" เพื่อนำเข้าข้อมูลมิเตอร์รายเดือน
+      </p>
+
+      <!-- Building Selector -->
+      <div style="margin-bottom:1.5rem;">
+        <label style="display:block;margin-bottom:0.5rem;font-weight:600;font-size:0.9rem;color:var(--text);">🏢 เลือกอาคาร:</label>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;padding:0.8rem 1rem;background:var(--bg-secondary);border-radius:var(--radius-sm);border:2px solid transparent;transition:all 0.3s ease;">
+            <input type="radio" name="importBuilding" value="rooms" onchange="updateImportBuilding('rooms')" style="cursor:pointer;">
+            <span>🏠 Rooms Building (ห้องเช่า)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;padding:0.8rem 1rem;background:var(--bg-secondary);border-radius:var(--radius-sm);border:2px solid transparent;transition:all 0.3s ease;">
+            <input type="radio" name="importBuilding" value="nest" onchange="updateImportBuilding('nest')" style="cursor:pointer;">
+            <span>🏢 Nest Building</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- File Upload -->
+      <div style="margin-bottom:1.5rem;">
+        <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📤 อัพโหลดไฟล์ Excel:</label>
+        <div class="import-drop-zone" id="importDropZone"
+             style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
+             ondragover="event.preventDefault();this.style.background='var(--border)';"
+             ondragleave="this.style.background='var(--accent-light)';"
+             ondrop="handleImportDrop(event);">
+          <div style="font-size:2rem;margin-bottom:0.5rem;">📊</div>
+          <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์มาวางที่นี่ หรือคลิก</div>
+          <div style="color:var(--text-muted);font-size:0.85rem;">ไฟล์ Excel (.xlsx, .xls)</div>
+        </div>
+        <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event);">
+      </div>
+
+      <!-- Status Messages -->
+      <div id="importStatusMessage" style="margin-bottom:1.5rem;"></div>
+
+      <!-- Import Results -->
+      <div id="importResultsSection" style="display:none;margin-bottom:1.5rem;">
+        <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;">
+          <h3 style="color:var(--text);margin-bottom:1rem;font-size:0.95rem;">✅ ตรวจสอบข้อมูล</h3>
+          <div id="importPreviewData" style="background:white;padding:1rem;border-radius:var(--radius-sm);max-height:300px;overflow-y:auto;"></div>
+        </div>
+        <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
+          <button onclick="approveImportData()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
+          <button onclick="cancelImportProcess()" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">❌ ยกเลิก</button>
+        </div>
+      </div>
+
+      <!-- Instructions -->
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:1rem;color:var(--text-muted);font-size:0.85rem;">
+        <strong>ขั้นตอน:</strong>
+        <ol style="margin:0.5rem 0 0 1.5rem;padding:0;">
+          <li>เลือกอาคาร (Rooms หรือ Nest)</li>
+          <li>อัพโหลดไฟล์ Excel</li>
+          <li>ตรวจสอบข้อมูลตรวจสอบความต่อเนื่องจากเดือนที่แล้ว</li>
+          <li>อนุมัติและบันทึกข้อมูล</li>
+        </ol>
+      </div>
     </div>
   </div>
 
@@ -2968,7 +3035,257 @@ function switchMeterTab(tabName, btnElement) {
     initMeterRoomsTab();
   } else if (tabName === 'room-config') {
     loadRoomConfigUI();
+  } else if (tabName === 'import-meter') {
+    initImportMeterTab();
   }
+}
+
+// ===== IMPORT METER DATA FUNCTIONS =====
+let currentImportBuilding = 'rooms';
+let currentImportData = null;
+let currentImportMatchResults = null;
+
+function initImportMeterTab() {
+  // Reset import state when tab opens
+  document.getElementById('importFileInput').value = '';
+  document.getElementById('importStatusMessage').innerHTML = '';
+  document.getElementById('importResultsSection').style.display = 'none';
+  document.getElementById('importDropZone').onclick = () => document.getElementById('importFileInput').click();
+}
+
+function updateImportBuilding(building) {
+  currentImportBuilding = building;
+  console.log('Selected building:', building);
+}
+
+function handleImportDrop(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  const files = event.dataTransfer.files;
+  if (files.length > 0) {
+    handleImportFileProcess(files[0]);
+  }
+}
+
+function handleImportFile(event) {
+  const files = event.target.files;
+  if (files.length > 0) {
+    handleImportFileProcess(files[0]);
+  }
+}
+
+function handleImportFileProcess(file) {
+  if (!currentImportBuilding) {
+    showImportStatus('⚠️ กรุณาเลือกอาคารก่อน', 'warning');
+    return;
+  }
+
+  showImportStatus('⏳ กำลังโหลด...', 'info');
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+
+      // Parse the data based on selected building
+      const importData = parseImportExcelData(workbook, currentImportBuilding);
+
+      if (importData) {
+        currentImportData = importData;
+
+        // Get match results
+        const matchResults = matchMeterDataWithPrevious(importData);
+        currentImportMatchResults = matchResults;
+
+        // Display preview
+        displayImportPreview(importData, matchResults);
+        showImportStatus('✅ โหลดข้อมูลสำเร็จ!', 'success');
+      }
+    } catch (err) {
+      showImportStatus('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseImportExcelData(workbook, building) {
+  const monthMap = {
+    'มค': 1, 'กพ': 2, 'มีค': 3, 'เมษา': 4, 'พค': 5, 'พฤษ': 5, 'มิย': 6, 'มิถุน': 6,
+    'กค': 7, 'กรก': 7, 'สค': 8, 'สิงห': 8, 'กย': 9, 'กันย': 9, 'ตค': 10,
+    'ตุลา': 10, 'พย': 11, 'พยค': 11, 'ธค': 12, 'ธันว': 12
+  };
+
+  // Find month from sheet names
+  let selectedSheet = null;
+  let selectedMonth = null;
+
+  for (let sheetName of workbook.SheetNames) {
+    for (let key in monthMap) {
+      if (sheetName.includes(key)) {
+        selectedSheet = sheetName;
+        selectedMonth = monthMap[key];
+        break;
+      }
+    }
+    if (selectedSheet) break;
+  }
+
+  if (!selectedSheet) {
+    showImportStatus('❌ ไม่พบชีตเดือนในไฟล์', 'error');
+    return null;
+  }
+
+  const worksheet = workbook.Sheets[selectedSheet];
+  const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+  // Get year from filename (from file input)
+  let year = 69;
+  const fileInput = document.getElementById('importFileInput');
+  if (fileInput.files.length > 0) {
+    const filename = fileInput.files[0].name;
+    const yearMatch = filename.match(/(\d{2})/);
+    if (yearMatch) {
+      const num = parseInt(yearMatch[1]);
+      if (num >= 50 && num <= 99) year = num;
+    }
+  }
+
+  // Get room list based on building
+  let roomList = [];
+  if (building === 'rooms') {
+    roomList = ['R201', 'R202', 'R203', 'R204', 'R205', 'R206', 'R207', 'R208', 'R209', 'R210',
+                'R211', 'R212', 'R213', 'R214', 'R215', 'R216', 'R217', 'R218', 'R219', 'R220',
+                'R221', 'R222', 'R223', 'R224'];
+  } else if (building === 'nest') {
+    roomList = ['N101', 'N102', 'N103', 'N104', 'N105',
+                'N201', 'N202', 'N203', 'N204', 'N205',
+                'N301', 'N302', 'N303', 'N304', 'N305',
+                'N401', 'N402', 'N403', 'N404', 'N405'];
+  }
+
+  const rooms = {};
+  for (let i = 2; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+
+    const roomNum = String(row[0]).trim();
+    if (roomList.includes(roomNum)) {
+      rooms[roomNum] = {
+        eNew: parseInt(row[5]) || 0,
+        eOld: parseInt(row[6]) || 0,
+        wNew: parseInt(row[11]) || 0,
+        wOld: parseInt(row[12]) || 0
+      };
+    }
+  }
+
+  return {
+    year,
+    month: selectedMonth || 1,
+    sheetName: selectedSheet,
+    rooms,
+    building: building
+  };
+}
+
+function displayImportPreview(importData, matchResults) {
+  const previewHtml = `
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+      <thead>
+        <tr style="background:var(--accent-light);">
+          <th style="padding:0.5rem;text-align:left;border-bottom:1px solid var(--border);">ห้อง</th>
+          <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">⚡ New</th>
+          <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">⚡ Old</th>
+          <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">💧 New</th>
+          <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">💧 Old</th>
+          <th style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--border);">สถานะ</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${matchResults.matches.slice(0, 5).map(result => `
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:0.5rem;font-weight:600;">${result.room}</td>
+            <td style="padding:0.5rem;text-align:right;">${result.eNew}</td>
+            <td style="padding:0.5rem;text-align:right;">${result.eOld}</td>
+            <td style="padding:0.5rem;text-align:right;">${result.wNew}</td>
+            <td style="padding:0.5rem;text-align:right;">${result.wOld}</td>
+            <td style="padding:0.5rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.8rem;font-weight:600;">✓</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div style="margin-top:1rem;font-size:0.85rem;color:var(--text-muted);">
+      ปี: <strong>${importData.year}</strong> | เดือน: <strong>${importData.month}</strong> | ห้องทั้งหมด: <strong>${Object.keys(importData.rooms).length}</strong>
+    </div>
+  `;
+
+  document.getElementById('importPreviewData').innerHTML = previewHtml;
+  document.getElementById('importResultsSection').style.display = 'block';
+}
+
+function approveImportData() {
+  if (!currentImportData) {
+    showImportStatus('❌ ไม่มีข้อมูลให้บันทึก', 'error');
+    return;
+  }
+
+  try {
+    // Store import data in sessionStorage for the helper function to use
+    sessionStorage.setItem('pendingImportData', JSON.stringify({
+      importData: currentImportData,
+      matchResults: currentImportMatchResults,
+      timestamp: new Date().toISOString()
+    }));
+
+    // Use the shared function to approve and store
+    const result = approvePendingImportViaLocalStorage(true);
+    showImportStatus(`✅ ${result.message}`, 'success');
+
+    // Reset form
+    setTimeout(() => {
+      document.getElementById('importFileInput').value = '';
+      document.getElementById('importResultsSection').style.display = 'none';
+      document.getElementById('importPreviewData').innerHTML = '';
+      currentImportData = null;
+      currentImportMatchResults = null;
+    }, 2000);
+  } catch (error) {
+    showImportStatus(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
+    console.error(error);
+  }
+}
+
+function cancelImportProcess() {
+  document.getElementById('importFileInput').value = '';
+  document.getElementById('importResultsSection').style.display = 'none';
+  document.getElementById('importPreviewData').innerHTML = '';
+  document.getElementById('importStatusMessage').innerHTML = '';
+  currentImportData = null;
+  currentImportMatchResults = null;
+}
+
+function showImportStatus(message, type) {
+  const statusDiv = document.getElementById('importStatusMessage');
+  let bgColor = 'var(--accent-light)';
+  let borderColor = 'var(--accent)';
+
+  if (type === 'success') {
+    bgColor = '#e8f5e9';
+    borderColor = '#2e7d32';
+  } else if (type === 'error') {
+    bgColor = '#ffebee';
+    borderColor = '#c62828';
+  } else if (type === 'warning') {
+    bgColor = '#fff3e0';
+    borderColor = '#e65100';
+  } else if (type === 'info') {
+    bgColor = '#e3f2fd';
+    borderColor = '#1565c0';
+  }
+
+  statusDiv.innerHTML = `<div style="background:${bgColor};border-left:4px solid ${borderColor};padding:1rem;border-radius:4px;color:var(--text);">${message}</div>`;
 }
 
 // Initialize Meter Pages
