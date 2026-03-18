@@ -3177,24 +3177,15 @@ function parseImportExcelData(workbook, building) {
 
     const roomNum = String(row[0]).trim();
     if (roomList.includes(roomNum)) {
-      // Debug: Log first room to understand column mapping
-      if (Object.keys(rooms).length === 0) {
-        console.log('📍 First room row data:', row);
-        console.log('   All indices:');
-        for (let j = 0; j < Math.min(20, row.length); j++) {
-          console.log(`   row[${j}]=${row[j]}`);
-        }
-      }
-
-      // Column mapping (accounting for XLSX skipping empty columns E and K):
+      // Column mapping (XLSX includes empty columns):
       // A(0)=room, B(1)=e_total, C(2)=w_total, D(3)=rent,
-      // F(4)=eNew, G(5)=eOld, H(6)=e_diff, I(7)=e_rate, J(8)=e_charge,
-      // L(9)=wNew, M(10)=wOld, N(11)=w_diff, O(12)=w_rate, P(13)=w_charge
+      // E(4)=empty, F(5)=eNew, G(6)=eOld, H(7)=e_diff, I(8)=e_rate, J(9)=e_charge,
+      // K(10)=empty, L(11)=wNew, M(12)=wOld, N(13)=w_diff, O(14)=w_rate, P(15)=w_charge
       rooms[roomNum] = {
-        eNew: parseInt(row[4]) || 0,  // Column F
-        eOld: parseInt(row[5]) || 0,  // Column G
-        wNew: parseInt(row[9]) || 0,  // Column L
-        wOld: parseInt(row[10]) || 0  // Column M
+        eNew: parseInt(row[5]) || 0,  // Column F
+        eOld: parseInt(row[6]) || 0,  // Column G
+        wNew: parseInt(row[11]) || 0, // Column L
+        wOld: parseInt(row[12]) || 0  // Column M
       };
     }
   }
