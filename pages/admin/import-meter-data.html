@@ -546,7 +546,7 @@
 
     <!-- Action Buttons -->
     <div class="buttons" id="buttonSection">
-      <button class="btn-secondary" onclick="location.href='/'">← กลับหน้า Dashboard</button>
+      <button class="btn-secondary" onclick="location.href='/dashboard'">← กลับหน้า Dashboard</button>
     </div>
   </div>
 
@@ -1142,7 +1142,7 @@ window.METER_DATA = {"67_1":{"13":{"eNew":2628,"eOld":2616,"wNew":1577,"wOld":15
         document.getElementById('approvalSection').classList.add('hidden');
 
         setTimeout(() => {
-          location.href = '/';
+          location.href = '/dashboard';
         }, 2000);
       } catch (error) {
         console.error('Backend error:', error);
@@ -1157,7 +1157,7 @@ window.METER_DATA = {"67_1":{"13":{"eNew":2628,"eOld":2616,"wNew":1577,"wOld":15
           document.getElementById('codeSection').classList.remove('hidden');
 
           setTimeout(() => {
-            location.href = '/';
+            location.href = '/dashboard';
           }, 3000);
         } catch (fallbackError) {
           showStatus(`❌ เกิดข้อผิดพลาด: ${fallbackError.message}`, 'error');

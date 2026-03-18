@@ -485,7 +485,7 @@
 
     <!-- Action Buttons -->
     <div class="buttons" id="buttonSection">
-      <button class="btn-secondary" onclick="location.href='/'">← กลับหน้า Dashboard</button>
+      <button class="btn-secondary" onclick="location.href='/dashboard'">← กลับหน้า Dashboard</button>
     </div>
   </div>
 
@@ -940,7 +940,7 @@ function approveAndStore() {
     document.getElementById('approvalSection').classList.add('hidden');
 
     setTimeout(() => {
-      location.href = '/';
+      location.href = '/dashboard';
     }, 2000);
   } catch (error) {
     showStatus(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
@@ -950,7 +950,7 @@ function approveAndStore() {
 }
 
 function cancelImport() {
-  location.href = '/';
+  location.href = '/dashboard';
 }
 
 function generateCode(data) {
