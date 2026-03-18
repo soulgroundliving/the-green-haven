@@ -2279,6 +2279,7 @@
           <tr style="background:#f5f5f5;border-bottom:2px solid var(--border);">
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ห้อง ID</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ชื่อห้อง</th>
+            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ราคา (บาท/เดือน)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">น้ำ (บาท/หน่วย)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ไฟ (บาท/หน่วย)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:center;font-weight:600;color:var(--text);">การกระทำ</th>
@@ -2306,6 +2307,7 @@
       <div id="manualEntryMode" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:1rem;margin-bottom:1rem;">
         <input type="text" id="newRoomId" placeholder="ห้อง ID (เช่น 34)" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
         <input type="text" id="newRoomName" placeholder="ชื่อห้อง" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <input type="number" id="newRoomRent" placeholder="ราคาห้องพัก" value="1500" step="1" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
         <input type="number" id="newRoomWater" placeholder="อัตราน้ำ" value="20" step="0.01" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
         <input type="number" id="newRoomElectric" placeholder="อัตราไฟ" value="8" step="0.01" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
       </div>
@@ -2317,6 +2319,7 @@
         </select>
         <input type="text" id="newRoomIdCopy" placeholder="ห้อง ID ใหม่" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
         <input type="text" id="newRoomNameCopy" placeholder="ชื่อห้องใหม่" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <input type="number" id="newRoomRentCopy" placeholder="ราคาห้องพัก" value="1500" step="1" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
       </div>
 
       <button onclick="addNewRoom()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">➕ เพิ่มห้อง</button>
@@ -3588,11 +3591,19 @@ function loadRoomConfigUI() {
 
   tbody.innerHTML = config.rooms
     .filter(room => !room.deleted)
-    .map(room => `
+    .map(room => {
+      // Get rent from RoomConfigManager or fallback to ROOMS_OLD
+      const metadataArray = building === 'rooms' ? ROOMS_OLD : ROOMS_NEW;
+      const metadata = metadataArray.find(m => m.id === room.id);
+      const rent = room.rent || metadata?.rent || 1500;
+      return `
       <tr style="border-bottom:1px solid var(--border);">
         <td style="border:1px solid var(--border);padding:0.8rem;color:var(--text);">${room.id}</td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
           <input type="text" value="${room.name}" onchange="updateRoomField('${building}', '${room.id}', 'name', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+        </td>
+        <td style="border:1px solid var(--border);padding:0.8rem;">
+          <input type="number" value="${rent}" onchange="updateRoomField('${building}', '${room.id}', 'rent', parseInt(this.value))" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
           <input type="number" value="${room.waterRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'water', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
@@ -3604,7 +3615,7 @@ function loadRoomConfigUI() {
           <button onclick="deleteRoom('${building}', '${room.id}')" style="padding:0.4rem 0.8rem;background:#f44336;color:white;border:none;border-radius:4px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:0.85rem;">ลบ</button>
         </td>
       </tr>
-    `).join('');
+    `}).join('');
 
   populateTemplateSelect(building);
 }
@@ -3643,11 +3654,12 @@ function addNewRoom() {
   const building = document.getElementById('roomConfigBuilding').value;
   const mode = document.querySelector('input[name="addMode"]:checked').value;
 
-  let roomId, roomName, waterRate, electricRate;
+  let roomId, roomName, rent, waterRate, electricRate;
 
   if (mode === 'manual') {
     roomId = document.getElementById('newRoomId').value.trim();
     roomName = document.getElementById('newRoomName').value.trim();
+    rent = parseInt(document.getElementById('newRoomRent').value) || 1500;
     waterRate = parseFloat(document.getElementById('newRoomWater').value);
     electricRate = parseFloat(document.getElementById('newRoomElectric').value);
 
@@ -3659,6 +3671,7 @@ function addNewRoom() {
     const templateId = document.getElementById('templateRoomSelect').value;
     roomId = document.getElementById('newRoomIdCopy').value.trim();
     roomName = document.getElementById('newRoomNameCopy').value.trim();
+    rent = parseInt(document.getElementById('newRoomRentCopy').value) || 1500;
 
     if (!templateId || !roomId || !roomName) {
       alert('⚠️ กรุณาเลือก template และป้อน ID กับชื่อห้อง');
@@ -3673,6 +3686,7 @@ function addNewRoom() {
   const success = RoomConfigManager.addRoom(building, {
     id: roomId,
     name: roomName,
+    rent: rent,
     waterRate: waterRate,
     electricRate: electricRate,
     deleted: false
@@ -3682,8 +3696,10 @@ function addNewRoom() {
     alert(`✅ เพิ่มห้อง ${roomId} สำเร็จ`);
     document.getElementById('newRoomId').value = '';
     document.getElementById('newRoomName').value = '';
+    document.getElementById('newRoomRent').value = '1500';
     document.getElementById('newRoomIdCopy').value = '';
     document.getElementById('newRoomNameCopy').value = '';
+    document.getElementById('newRoomRentCopy').value = '1500';
     document.getElementById('templateRoomSelect').value = '';
     loadRoomConfigUI();
     initMeterRoomsTab();
@@ -3866,6 +3882,8 @@ function getActiveRoomsWithMetadata(building, metadataArray) {
   // Merge RoomConfigManager data with metadata (rent, type, trashFee, etc.)
   return activeRooms.map(r => {
     const metadata = metadataArray.find(m => m.id === r.id);
+    // Prioritize rent from RoomConfigManager, fall back to metadata or default
+    const rent = r.rent !== undefined ? r.rent : (metadata?.rent || 1500);
     // Return merged object with all properties
     return {
       id: r.id,
@@ -3873,7 +3891,7 @@ function getActiveRoomsWithMetadata(building, metadataArray) {
       waterRate: r.waterRate,
       electricRate: r.electricRate,
       deleted: r.deleted,
-      rent: metadata?.rent || 1500,
+      rent: rent,
       type: metadata?.type || 'room',
       trashFee: metadata?.trashFee || 20,
       elecRate: metadata?.elecRate || r.electricRate,
