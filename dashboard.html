@@ -3197,26 +3197,99 @@ function autoFillOldReadingsRooms() {
   const key = `${yy}_${month}`;
 
   console.log(`📊 Looking up METER_DATA[${key}] for ${monthInput}...`);
-  const monthData = METER_DATA[key];
+  let monthData = METER_DATA[key];
   const roomsRooms = RoomConfigManager.getAllRooms('rooms');
   let loadCount = 0;
 
   if (!monthData) {
-    console.log(`⚠️ No data for ${key}, clearing fields and showing "-"...`);
-    // Clear all old readings and show "-"
-    roomsRooms.forEach(room => {
-      const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
-      const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
-      if (eOldInput) {
-        eOldInput.value = '-';
-        eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (wOldInput) {
-        wOldInput.value = '-';
-        wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    });
-    return;
+    console.log(`⚠️ No data for ${key}, trying previous month as fallback...`);
+    // For unrecorded months, try to get previous month's data
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const prevBuddhistYear = prevYear + 543;
+    const prevYy = prevBuddhistYear % 100;
+    const prevKey = `${prevYy}_${prevMonth}`;
+
+    const prevMonthData = METER_DATA[prevKey];
+    if (prevMonthData) {
+      console.log(`📊 Found previous month data ${prevKey}, using eNew/wNew as old readings for current month...`);
+      // Use previous month's NEW readings as current month's OLD readings
+      roomsRooms.forEach(room => {
+        const lookupId = room === 'AMAZON' ? 'ร้านใหญ่' : room;
+        const prevD = prevMonthData[lookupId];
+
+        const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
+        const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
+        const eNewInput = document.getElementById(`meter-rooms-${room}-electric-new`);
+        const wNewInput = document.getElementById(`meter-rooms-${room}-water-new`);
+
+        if (prevD) {
+          // Set old readings from previous month's new readings
+          if (prevD.eNew !== null && prevD.eNew !== undefined && eOldInput) {
+            eOldInput.value = prevD.eNew;
+            eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (prevD.wNew !== null && prevD.wNew !== undefined && wOldInput) {
+            wOldInput.value = prevD.wNew;
+            wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          // Clear new readings (not recorded yet)
+          if (eNewInput) {
+            eNewInput.value = '';
+            eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (wNewInput) {
+            wNewInput.value = '';
+            wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        } else {
+          // No previous month data either, show "-"
+          if (eOldInput) {
+            eOldInput.value = '-';
+            eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (wOldInput) {
+            wOldInput.value = '-';
+            wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (eNewInput) {
+            eNewInput.value = '-';
+            eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (wNewInput) {
+            wNewInput.value = '-';
+            wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }
+      });
+      return;
+    } else {
+      // No current or previous month data, show "-"
+      console.log(`⚠️ No data for previous month ${prevKey} either, showing "-"...`);
+      roomsRooms.forEach(room => {
+        const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
+        const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
+        const eNewInput = document.getElementById(`meter-rooms-${room}-electric-new`);
+        const wNewInput = document.getElementById(`meter-rooms-${room}-water-new`);
+        if (eOldInput) {
+          eOldInput.value = '-';
+          eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (wOldInput) {
+          wOldInput.value = '-';
+          wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (eNewInput) {
+          eNewInput.value = '-';
+          eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (wNewInput) {
+          wNewInput.value = '-';
+          wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+      return;
+    }
   }
 
   // Load data from METER_DATA
@@ -4786,23 +4859,81 @@ function checkVacant(){
 
 function autoFillMeters(){
   renderPaymentStatus();
-  if(typeof METER_DATA==='undefined')return;
   const roomId=document.getElementById('f-room').value;
   if(!roomId)return;
   const month=parseInt(document.getElementById('f-month').value);
   const year=parseInt(document.getElementById('f-year').value);
   const yy=year%100;
   const key=`${yy}_${month}`;
-  const monthData=METER_DATA[key];
-  if(!monthData)return;
-  // Amazon ☕ in dropdown → ร้านใหญ่ in METER_DATA
-  const lookupId=roomId==='Amazon ☕'?'ร้านใหญ่':roomId;
-  const d=monthData[lookupId];
-  if(!d)return;
-  if(d.eNew!==null&&d.eNew!==undefined)document.getElementById('f-elec-new').value=d.eNew;
-  if(d.eOld!==null&&d.eOld!==undefined)document.getElementById('f-elec-old').value=d.eOld;
-  if(d.wNew!==null&&d.wNew!==undefined)document.getElementById('f-water-new').value=d.wNew;
-  if(d.wOld!==null&&d.wOld!==undefined)document.getElementById('f-water-old').value=d.wOld;
+  const psKey=`${year}_${month}`;
+
+  // Try METER_DATA first (static file)
+  let d=null;
+  if(typeof METER_DATA!=='undefined'&&METER_DATA[key]){
+    const monthData=METER_DATA[key];
+    const lookupId=roomId==='Amazon ☕'?'ร้านใหญ่':roomId;
+    d=monthData[lookupId];
+  }
+
+  // If not in METER_DATA, check localStorage payment_status (recorded meter data)
+  if(!d){
+    const ps=JSON.parse(localStorage.getItem('payment_status')||'{}');
+    if(ps[psKey]&&ps[psKey][roomId]){
+      d=ps[psKey][roomId];
+    }
+  }
+
+  // If current month has no data yet, try to get old reading from previous month's new reading
+  if(!d){
+    const prevMonth=month===1?12:month-1;
+    const prevYear=month===1?year-1:year;
+    const prevYy=prevYear%100;
+    const prevKey=`${prevYy}_${prevMonth}`;
+    const prevPsKey=`${prevYear}_${prevMonth}`;
+    let prevD=null;
+
+    // Try previous month in METER_DATA
+    if(typeof METER_DATA!=='undefined'&&METER_DATA[prevKey]){
+      const monthData=METER_DATA[prevKey];
+      const lookupId=roomId==='Amazon ☕'?'ร้านใหญ่':roomId;
+      prevD=monthData[lookupId];
+    }
+
+    // If not found, try localStorage
+    if(!prevD){
+      const ps=JSON.parse(localStorage.getItem('payment_status')||'{}');
+      if(ps[prevPsKey]&&ps[prevPsKey][roomId]){
+        prevD=ps[prevPsKey][roomId];
+      }
+    }
+
+    // If we found previous month data, use its NEW readings as current month's OLD readings
+    if(prevD){
+      document.getElementById('f-elec-old').value=(prevD.eNew!=null?prevD.eNew:'');
+      document.getElementById('f-water-old').value=(prevD.wNew!=null?prevD.wNew:'');
+      document.getElementById('f-elec-new').value='';
+      document.getElementById('f-water-new').value='';
+      calcBill();
+      return;
+    } else {
+      // No previous month data found either, clear all fields
+      document.getElementById('f-elec-new').value='';
+      document.getElementById('f-elec-old').value='';
+      document.getElementById('f-water-new').value='';
+      document.getElementById('f-water-old').value='';
+      calcBill();
+      return;
+    }
+  }
+
+  // If we found current month's data, use it
+  if(d){
+    if(d.eNew!==null&&d.eNew!==undefined)document.getElementById('f-elec-new').value=d.eNew;
+    if(d.eOld!==null&&d.eOld!==undefined)document.getElementById('f-elec-old').value=d.eOld;
+    if(d.wNew!==null&&d.wNew!==undefined)document.getElementById('f-water-new').value=d.wNew;
+    if(d.wOld!==null&&d.wOld!==undefined)document.getElementById('f-water-old').value=d.wOld;
+  }
+
   calcBill();
 }
 
