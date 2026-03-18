@@ -28,6 +28,7 @@ const DEFAULT_ROOMS_CONFIG = {
       { id: '31', name: 'ห้อง 31', waterRate: 20, electricRate: 8, deleted: false },
       { id: '32', name: 'ห้อง 32', waterRate: 20, electricRate: 8, deleted: false },
       { id: '33', name: 'ห้อง 33', waterRate: 20, electricRate: 8, deleted: false },
+      { id: '35', name: 'ห้อง 35', waterRate: 20, electricRate: 8, deleted: false },
       { id: 'AMAZON', name: 'ร้าน Amazon', waterRate: 20, electricRate: 6, deleted: false }
     ]
   },
