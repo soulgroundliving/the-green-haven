@@ -3177,6 +3177,12 @@ function parseImportExcelData(workbook, building) {
 
     const roomNum = String(row[0]).trim();
     if (roomList.includes(roomNum)) {
+      // Debug: Log first room to understand column mapping
+      if (Object.keys(rooms).length === 0) {
+        console.log('📍 First room row data:', row);
+        console.log('   row[0]=' + row[0], 'row[4]=' + row[4], 'row[5]=' + row[5], 'row[9]=' + row[9], 'row[10]=' + row[10]);
+      }
+
       // Column mapping (accounting for XLSX skipping empty columns E and K):
       // A(0)=room, B(1)=e_total, C(2)=w_total, D(3)=rent,
       // F(4)=eNew, G(5)=eOld, H(6)=e_diff, I(7)=e_rate, J(8)=e_charge,
