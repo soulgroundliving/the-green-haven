@@ -3070,19 +3070,141 @@ function initMeterRoomsTab() {
 
 // Auto-fill Old readings from METER_DATA (Nest Building)
 function autoFillOldReadingsNest() {
-  // Nest Building rooms (N101-N405) don't have data in METER_DATA
-  // METER_DATA only contains Rooms Building data (13-33, AMAZON)
-  // Clear fields and show "-" for Nest Building
-  const nestRooms = ['N101', 'N102', 'N103', 'N104', 'N105', 'N201', 'N202', 'N203', 'N204', 'N205', 'N301', 'N302', 'N303', 'N304', 'N305', 'N401', 'N402', 'N403', 'N404', 'N405'];
+  // Use same fallback logic as Rooms Building
+  const monthInputEl = document.getElementById('nestMonthInput');
+  if (!monthInputEl || !monthInputEl.value) {
+    console.log('⚠️ Month input field not found or empty');
+    return;
+  }
 
+  const monthInput = monthInputEl.value;
+  const [year, month] = monthInput.split('-').map(Number);
+  if (!year || !month) {
+    console.log('⚠️ Invalid month format:', monthInput);
+    return;
+  }
+
+  const buddhistYear = year + 543;
+  const yy = buddhistYear % 100;
+  const key = `${yy}_${month}`;
+
+  console.log(`📊 Looking up Nest month ${key}...`);
+  let monthData = METER_DATA[key];
+  const nestRooms = RoomConfigManager.getAllRooms('nest');
+
+  if (!monthData) {
+    console.log(`⚠️ No data for ${key}, trying previous month as fallback...`);
+    // For unrecorded months, try to get previous month's data
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const prevBuddhistYear = prevYear + 543;
+    const prevYy = prevBuddhistYear % 100;
+    const prevKey = `${prevYy}_${prevMonth}`;
+
+    const prevMonthData = METER_DATA[prevKey];
+    if (prevMonthData) {
+      console.log(`📊 Found previous month data ${prevKey}, using eNew/wNew as old readings for current month...`);
+      // Use previous month's NEW readings as current month's OLD readings
+      nestRooms.forEach(room => {
+        const lookupId = room === 'AMAZON' ? 'ร้านใหญ่' : room;
+        const prevD = prevMonthData[lookupId];
+
+        const eOldInput = document.getElementById(`meter-nest-${room}-electric-old`);
+        const wOldInput = document.getElementById(`meter-nest-${room}-water-old`);
+        const eNewInput = document.getElementById(`meter-nest-${room}-electric-new`);
+        const wNewInput = document.getElementById(`meter-nest-${room}-water-new`);
+
+        if (prevD) {
+          // Set old readings from previous month's new readings
+          if (prevD.eNew !== null && prevD.eNew !== undefined && eOldInput) {
+            eOldInput.value = prevD.eNew;
+            eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (prevD.wNew !== null && prevD.wNew !== undefined && wOldInput) {
+            wOldInput.value = prevD.wNew;
+            wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          // Clear new readings field (not recorded yet)
+          if (eNewInput) {
+            eNewInput.value = '';
+            eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (wNewInput) {
+            wNewInput.value = '';
+            wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        } else {
+          // No previous month data either, show "-"
+          if (eOldInput) {
+            eOldInput.value = '-';
+            eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (wOldInput) {
+            wOldInput.value = '-';
+            wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (eNewInput) {
+            eNewInput.value = '-';
+            eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (wNewInput) {
+            wNewInput.value = '-';
+            wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }
+      });
+      return;
+    } else {
+      // No previous month data found either, show "-" for all
+      nestRooms.forEach(room => {
+        const eOldInput = document.getElementById(`meter-nest-${room}-electric-old`);
+        const wOldInput = document.getElementById(`meter-nest-${room}-water-old`);
+        const eNewInput = document.getElementById(`meter-nest-${room}-electric-new`);
+        const wNewInput = document.getElementById(`meter-nest-${room}-water-new`);
+        if (eOldInput) eOldInput.value = '-';
+        if (wOldInput) wOldInput.value = '-';
+        if (eNewInput) eNewInput.value = '-';
+        if (wNewInput) wNewInput.value = '-';
+      });
+      return;
+    }
+  }
+
+  // If current month has data, use it
   nestRooms.forEach(room => {
+    const lookupId = room === 'AMAZON' ? 'ร้านใหญ่' : room;
+    const d = monthData[lookupId];
+
     const eOldInput = document.getElementById(`meter-nest-${room}-electric-old`);
     const wOldInput = document.getElementById(`meter-nest-${room}-water-old`);
-    if (eOldInput) eOldInput.value = '-';
-    if (wOldInput) wOldInput.value = '-';
-  });
+    const eNewInput = document.getElementById(`meter-nest-${room}-electric-new`);
+    const wNewInput = document.getElementById(`meter-nest-${room}-water-new`);
 
-  console.log(`📊 Nest Building: No historical data available (showing "-")`);
+    if (d) {
+      if (d.eNew !== null && d.eNew !== undefined && eNewInput) {
+        eNewInput.value = d.eNew;
+        eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (d.eOld !== null && d.eOld !== undefined && eOldInput) {
+        eOldInput.value = d.eOld;
+        eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (d.wNew !== null && d.wNew !== undefined && wNewInput) {
+        wNewInput.value = d.wNew;
+        wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (d.wOld !== null && d.wOld !== undefined && wOldInput) {
+        wOldInput.value = d.wOld;
+        wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    } else {
+      // No data for this room
+      if (eOldInput) eOldInput.value = '-';
+      if (wOldInput) wOldInput.value = '-';
+      if (eNewInput) eNewInput.value = '-';
+      if (wNewInput) wNewInput.value = '-';
+    }
+  });
 }
 
 function renderNestMeterGrid() {
