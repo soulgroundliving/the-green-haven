@@ -13,7 +13,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="./shared/meter_data.js"></script>
 <script src="./shared/room-config.js"></script>
-<script src="./shared/meter_import_helper.js"></script>
 <script src="./mock-tenant-data.js"></script>
 <script src="./mock-meter-history.js"></script>
 <!-- Firebase Configuration & Integration -->
@@ -2177,9 +2176,6 @@
     <button class="meter-tab" onclick="switchMeterTab('room-config', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
       ⚙️ จัดการห้อง
     </button>
-    <button class="meter-tab" onclick="switchMeterTab('import-data', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;margin-left:auto;">
-      📥 นำเข้าข้อมูล
-    </button>
   </div>
 
   <!-- Tab Content: Nest Building -->
@@ -2333,36 +2329,6 @@
     </div>
   </div>
 
-  <!-- Tab Content: Import Data -->
-  <div id="meter-import-data-content" class="meter-tab-content" style="display:none;">
-    <div class="section-title">📥 นำเข้าข้อมูลมิเตอร์</div>
-
-    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;">
-      <p style="color:var(--text);margin-bottom:1.5rem;font-size:0.95rem;">
-        เลือก "Rooms Building" หรือ "Nest Building" เพื่อนำเข้าข้อมูลมิเตอร์รายเดือน
-      </p>
-
-      <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-        <a href="./pages/admin/import-meter-data.html" style="padding:1rem 1.5rem;background:var(--green);color:white;text-decoration:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem;font-family:'Sarabun',sans-serif;">
-          📊 Rooms Building (ห้องเช่า)
-        </a>
-        <a href="./pages/admin/import-meter-data-nest.html" style="padding:1rem 1.5rem;background:var(--accent);color:white;text-decoration:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem;font-family:'Sarabun',sans-serif;">
-          🏢 Nest Building
-        </a>
-      </div>
-
-      <div style="margin-top:2rem;padding:1rem;background:var(--bg-secondary);border-radius:var(--radius-sm);color:var(--text-muted);font-size:0.9rem;">
-        <strong>ขั้นตอน:</strong>
-        <ol style="margin:0.5rem 0 0 1.5rem;padding:0;">
-          <li>เลือกอาคาร (Rooms หรือ Nest)</li>
-          <li>ดาวน์โหลด Template ไฟล์ Excel</li>
-          <li>กรอกข้อมูลมิเตอร์เดือนปัจจุบัน</li>
-          <li>ระบบจะตรวจสอบความต่อเนื่องจากเดือนที่แล้ว</li>
-          <li>อนุมัติและบันทึกข้อมูล</li>
-        </ol>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- ===== EXPENSE TRACKING ===== -->
@@ -3002,9 +2968,6 @@ function switchMeterTab(tabName, btnElement) {
     initMeterRoomsTab();
   } else if (tabName === 'room-config') {
     loadRoomConfigUI();
-  } else if (tabName === 'import-data') {
-    // Import data tab - just display the content
-    console.log('📥 Import Data tab opened');
   }
 }
 
