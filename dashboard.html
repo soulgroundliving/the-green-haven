@@ -4911,10 +4911,10 @@ function autoFillMeters(){
 
     // If we found previous month data, use its NEW readings as current month's OLD readings
     if(prevD){
-      document.getElementById('f-elec-new').value=(prevD.eNew!=null?prevD.eNew:'');
-      document.getElementById('f-water-new').value=(prevD.wNew!=null?prevD.wNew:'');
-      document.getElementById('f-elec-old').value='';
-      document.getElementById('f-water-old').value='';
+      document.getElementById('f-elec-new').value='';
+      document.getElementById('f-water-new').value='';
+      document.getElementById('f-elec-old').value=(prevD.eNew!=null?prevD.eNew:'');
+      document.getElementById('f-water-old').value=(prevD.wNew!=null?prevD.wNew:'');
       calcBill();
       return;
     } else {
