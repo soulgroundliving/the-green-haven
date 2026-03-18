@@ -3180,7 +3180,10 @@ function parseImportExcelData(workbook, building) {
       // Debug: Log first room to understand column mapping
       if (Object.keys(rooms).length === 0) {
         console.log('📍 First room row data:', row);
-        console.log('   row[0]=' + row[0], 'row[4]=' + row[4], 'row[5]=' + row[5], 'row[9]=' + row[9], 'row[10]=' + row[10]);
+        console.log('   All indices:');
+        for (let j = 0; j < Math.min(20, row.length); j++) {
+          console.log(`   row[${j}]=${row[j]}`);
+        }
       }
 
       // Column mapping (accounting for XLSX skipping empty columns E and K):
