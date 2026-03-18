@@ -3089,17 +3089,22 @@ function handleImportFileProcess(file) {
 
       // Parse the data based on selected building
       const importData = parseImportExcelData(workbook, currentImportBuilding);
+      console.log('📊 Parsed import data:', importData);
 
       if (importData) {
         currentImportData = importData;
 
         // Get match results
+        console.log('🔍 Calling matchMeterDataWithPrevious...');
         const matchResults = matchMeterDataWithPrevious(importData);
+        console.log('📋 Match results:', matchResults);
         currentImportMatchResults = matchResults;
 
         // Display preview
         displayImportPreview(importData, matchResults);
         showImportStatus('✅ โหลดข้อมูลสำเร็จ!', 'success');
+      } else {
+        console.error('❌ importData is null or undefined');
       }
     } catch (err) {
       showImportStatus('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
