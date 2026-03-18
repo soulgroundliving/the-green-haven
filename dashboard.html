@@ -3226,22 +3226,22 @@ function autoFillOldReadingsRooms() {
         if (prevD) {
           // Set old readings from previous month's new readings
           // For unrecorded months (e.g., April): place March's ending values in the right field (เดิม/old)
-          if (prevD.eNew !== null && prevD.eNew !== undefined && eNewInput) {
-            eNewInput.value = prevD.eNew;
-            eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (prevD.wNew !== null && prevD.wNew !== undefined && wNewInput) {
-            wNewInput.value = prevD.wNew;
-            wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          // Clear old readings field (not recorded yet)
-          if (eOldInput) {
-            eOldInput.value = '';
+          if (prevD.eNew !== null && prevD.eNew !== undefined && eOldInput) {
+            eOldInput.value = prevD.eNew;
             eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
           }
-          if (wOldInput) {
-            wOldInput.value = '';
+          if (prevD.wNew !== null && prevD.wNew !== undefined && wOldInput) {
+            wOldInput.value = prevD.wNew;
             wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          // Clear new readings field (not recorded yet)
+          if (eNewInput) {
+            eNewInput.value = '';
+            eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (wNewInput) {
+            wNewInput.value = '';
+            wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
           }
         } else {
           // No previous month data either, show "-"
