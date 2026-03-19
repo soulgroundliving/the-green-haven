@@ -3480,7 +3480,7 @@ function displayMatchSummary(matchResults) {
   summaryDiv.innerHTML = html;
 }
 
-function approveImportData() {
+async function approveImportData() {
   // Check if there's any pending import at all
   if (!currentImportData && !getPendingImportSession()) {
     showImportStatus('❌ ต้องอัพโหลดไฟล์ Excel และตรวจสอบข้อมูลก่อน', 'error');
@@ -3524,15 +3524,15 @@ function approveImportData() {
     showDuplicateConfirmDialog(
       `เดือน ${monthName} ปี ${capturedImportData.year} มีข้อมูลแล้ว`,
       `ต้องการแทนที่ข้อมูลเก่าด้วยข้อมูลใหม่หรือไม่?`
-    ).then((confirmed) => {
+    ).then(async (confirmed) => {
       if (confirmed) {
         console.log(`🔄 ผู้ใช้ยืนยันการแทนที่ข้อมูล ${building}/${key}`);
         console.log('📊 Import data to be saved:', capturedImportData);
         console.log('🔧 About to call performDataReplacement() with captured data');
         try {
           // Use captured data to ensure we have the correct values
-          performDataReplacementWithData(capturedImportData, capturedMatchResults);
-          console.log('✅ performDataReplacement() called successfully');
+          await performDataReplacementWithData(capturedImportData, capturedMatchResults);
+          console.log('✅ performDataReplacement() completed successfully');
         } catch (err) {
           console.error('❌ Error calling performDataReplacement():', err);
           showImportStatus(`❌ เกิดข้อผิดพลาด: ${err.message}`, 'error');
@@ -3544,11 +3544,12 @@ function approveImportData() {
     return;
   } else {
     // No existing data, proceed normally
-    performDataReplacement();
+    await performDataReplacement();
   }
 
   // Modified version that accepts data as parameters to avoid stale references
-  function performDataReplacementWithData(importData, matchResults) {
+  // Now async to support Firebase synchronization
+  async function performDataReplacementWithData(importData, matchResults) {
     try {
       // Store import data in localStorage for the helper function to use
       localStorage.setItem('pendingMeterImport', JSON.stringify({
@@ -3559,8 +3560,9 @@ function approveImportData() {
         userApproval: null
       }));
 
-      // Use the shared function to approve and store
-      const result = approvePendingImportViaLocalStorage(true);
+      // Use the shared function to approve and store to BOTH localStorage AND Firebase
+      console.log(`💾 Saving meter data to localStorage and Firebase...`);
+      const result = await approvePendingImportWithFirebase(importData, matchResults, true);
 
       // Verify data was actually stored
       const verifyKey = `${importData.year}_${importData.month}`;
@@ -3571,7 +3573,8 @@ function approveImportData() {
 
       if (stored) {
         console.log(`✅ ยืนยันการบันทึก ${verifyBuilding}/${verifyKey}: ${Object.keys(stored).length} ห้อง`);
-        showImportStatus(`✅ ${result.message}`, 'success');
+        console.log(`📤 Firebase sync status: ${result.firebaseSync ? '✅ สำเร็จ' : '⚠️ ไม่สำเร็จ'}`);
+        showImportStatus(`✅ ${result.message} (${result.storageMethod})`, 'success');
       } else {
         console.warn(`⚠️ ข้อมูลไม่ได้บันทึกลงในระบบ`);
         showImportStatus(`⚠️ ข้อมูลนี้อาจไม่ได้บันทึก กรุณารีเฟรชหน้าเพื่อตรวจสอบ`, 'warning');
@@ -3591,9 +3594,9 @@ function approveImportData() {
     }
   }
 
-  function performDataReplacement() {
+  async function performDataReplacement() {
     // Original function for non-duplicate imports - uses global currentImportData
-    performDataReplacementWithData(currentImportData, currentImportMatchResults);
+    await performDataReplacementWithData(currentImportData, currentImportMatchResults);
   }
 }
 

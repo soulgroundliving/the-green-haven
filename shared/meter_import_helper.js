@@ -375,6 +375,89 @@ function approvePendingImportViaLocalStorage(acknowledgeWarnings = false) {
 }
 
 /**
+ * Save meter data to Firebase Firestore
+ * Stores in meter_data collection: meter_data/{building}_{year}_{month}_{roomId}
+ * @param {object} importData - {year, month, building, rooms}
+ * @returns {Promise} Resolves when saved to Firebase
+ */
+async function saveMeterDataToFirebase(importData) {
+  if (!window.firebase || !window.firebase.firestore) {
+    console.warn('⚠️ Firebase not initialized, skipping Firebase save');
+    return null;
+  }
+
+  const { year, month, building, rooms } = importData;
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+  const yearMonth = `${year}_${month}`;
+
+  try {
+    // Save each room's meter data individually to Firebase
+    let savedCount = 0;
+    for (const roomId in rooms) {
+      const roomData = rooms[roomId];
+      const docId = `${building}_${yearMonth}_${roomId}`;
+      const docRef = fs.doc(fs.collection(db, 'meter_data'), docId);
+
+      await fs.setDoc(docRef, {
+        building: building,
+        yearMonth: yearMonth,
+        year: year,
+        month: month,
+        roomId: roomId,
+        eOld: roomData.eOld || 0,
+        eNew: roomData.eNew || 0,
+        wOld: roomData.wOld || 0,
+        wNew: roomData.wNew || 0,
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+      savedCount++;
+    }
+
+    console.log(`✅ Saved ${savedCount} meter readings to Firebase (${building}/${yearMonth})`);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to save meter data to Firebase:', error);
+    // Don't throw - allow operation to continue even if Firebase fails
+    return false;
+  }
+}
+
+/**
+ * Approve import and save to BOTH localStorage AND Firebase
+ * @param {object} importData - Parsed import data
+ * @param {object} matchResults - Validation results
+ * @param {boolean} acknowledgeWarnings - User acknowledged warnings
+ * @returns {Promise<object>} Success response with both storage methods
+ */
+async function approvePendingImportWithFirebase(importData, matchResults, acknowledgeWarnings = false) {
+  const { year, month, building = 'rooms', rooms } = importData;
+
+  // Block if any errors
+  if (matchResults.summary.errorCount > 0) {
+    throw new Error('Cannot import - errors detected in data');
+  }
+
+  // Store to localStorage first
+  const localStorageResult = approvePendingImportViaLocalStorage(acknowledgeWarnings);
+
+  // Then sync to Firebase
+  console.log(`📤 Syncing meter data for ${building}/${year}_${month} to Firebase...`);
+  const firebaseResult = await saveMeterDataToFirebase(importData);
+
+  return {
+    success: true,
+    key: `${year}_${month}`,
+    building: building,
+    message: localStorageResult.message,
+    roomsImported: Object.keys(rooms).length,
+    storageMethod: `localStorage + ${firebaseResult ? 'Firebase' : 'localStorage only'}`,
+    firebaseSync: firebaseResult
+  };
+}
+
+/**
  * Format month number to Thai month name
  * @param {number} month - Month number (1-12)
  * @returns {string} Thai month name
