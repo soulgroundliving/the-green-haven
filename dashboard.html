@@ -3319,7 +3319,14 @@ function displayImportPreview(importData, matchResults) {
     </div>
   `;
 
-  document.getElementById('importPreviewData').innerHTML = previewHtml;
+  const previewDataDiv = document.getElementById('importPreviewData');
+  previewDataDiv.innerHTML = previewHtml;
+  // Force remove scroll constraints
+  previewDataDiv.style.maxHeight = 'none';
+  previewDataDiv.style.height = 'auto';
+  previewDataDiv.style.overflow = 'visible';
+  previewDataDiv.style.overflowX = 'visible';
+  previewDataDiv.style.overflowY = 'visible';
   document.getElementById('importResultsSection').style.display = 'block';
 }
 
