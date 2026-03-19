@@ -43,6 +43,13 @@ function matchMeterDataWithPrevious(importedData) {
                          !window.METER_DATA[buildingKey] ||
                          Object.keys(window.METER_DATA[buildingKey]).length === 0);
 
+  console.log(`🔍 matchMeterDataWithPrevious: building=${buildingKey}, month=${month}, isFirstImport=${isFirstImport}`, {
+    previousDataEmpty: Object.keys(previousData).length === 0,
+    meterDataExists: !!window.METER_DATA,
+    buildingDataExists: window.METER_DATA && !!window.METER_DATA[buildingKey],
+    buildingDataLength: window.METER_DATA && window.METER_DATA[buildingKey] ? Object.keys(window.METER_DATA[buildingKey]).length : 'N/A'
+  });
+
   const results = {
     summary: {
       totalRooms: Object.keys(rooms).length,
@@ -123,25 +130,17 @@ function matchMeterDataWithPrevious(importedData) {
 function compareValues(imported, previous, fieldType, isFirstImport = false) {
   // Missing previous month data
   if (previous === undefined || previous === null) {
-    if (isFirstImport) {
-      // For first import, missing previous data is expected
-      return {
-        status: 'ok',
-        delta: null,
-        message: '✓ เดือนแรกของการนำเข้า (ไม่มีเดือนที่แล้ว)',
-        imported: imported,
-        previous: previous
-      };
-    } else {
-      // For subsequent imports, missing previous data is an error
-      return {
-        status: 'missing',
-        delta: null,
-        message: 'ไม่พบข้อมูลเดือนที่แล้ว',
-        imported: imported,
-        previous: previous
-      };
-    }
+    const result = {
+      status: isFirstImport ? 'ok' : 'missing',
+      delta: null,
+      message: isFirstImport
+        ? '✓ เดือนแรกของการนำเข้า (ไม่มีเดือนที่แล้ว)'
+        : 'ไม่พบข้อมูลเดือนที่แล้ว',
+      imported: imported,
+      previous: previous
+    };
+    console.log(`📊 compareValues: ${fieldType}, isFirstImport=${isFirstImport} → status=${result.status}`);
+    return result;
   }
 
   // Invalid imported value
