@@ -3231,9 +3231,9 @@ function parseImportExcelData(workbook, building) {
   // Get room list based on building
   let roomList = [];
   if (building === 'rooms') {
-    // Rooms Building: 13-33 and AMAZON shop
-    roomList = ['13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25',
-                '26', '27', '28', '29', '30', '31', '32', '33', '35', 'AMAZON'];
+    // Rooms Building: 13-33, 15ก, ร้านใหญ่
+    roomList = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25',
+                '26', '27', '28', '29', '30', '31', '32', '33', '35', 'AMAZON', 'ร้านใหญ่'];
   } else if (building === 'nest') {
     // Nest Building: N101-N405
     roomList = ['N101', 'N102', 'N103', 'N104', 'N105',
