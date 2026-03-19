@@ -32,10 +32,12 @@ async function saveOpeningBalance(building, roomId, year, eOld, wOld) {
   }
 
   const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
   const docId = `${building}_${year}_${roomId}`;
 
   try {
-    await db.collection('opening_balances').doc(docId).set({
+    const docRef = fs.doc(fs.collection(db, 'opening_balances'), docId);
+    await fs.setDoc(docRef, {
       building: building,
       roomId: roomId,
       year: year,
@@ -67,12 +69,14 @@ async function getOpeningBalance(building, roomId, year) {
   }
 
   const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
   const docId = `${building}_${year}_${roomId}`;
 
   try {
-    const doc = await db.collection('opening_balances').doc(docId).get();
-    if (doc.exists) {
-      const data = doc.data();
+    const docRef = fs.doc(fs.collection(db, 'opening_balances'), docId);
+    const docSnapshot = await fs.getDoc(docRef);
+    if (docSnapshot.exists()) {
+      const data = docSnapshot.data();
       console.log(`✅ Found opening balance for ${building}/${roomId}: eOld=${data.eOld}, wOld=${data.wOld}`);
       return {
         eNew: data.eOld, // Use eOld as the "previous" reading for month 1
@@ -101,16 +105,20 @@ async function getAllOpeningBalances(building, year) {
   }
 
   const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
 
   try {
-    const snapshot = await db.collection('opening_balances')
-      .where('building', '==', building)
-      .where('year', '==', year)
-      .get();
+    const q = fs.query(
+      fs.collection(db, 'opening_balances'),
+      fs.where('building', '==', building),
+      fs.where('year', '==', year)
+    );
+
+    const snapshot = await fs.getDocs(q);
 
     const balances = {};
-    snapshot.forEach(doc => {
-      const data = doc.data();
+    snapshot.forEach(docSnapshot => {
+      const data = docSnapshot.data();
       balances[data.roomId] = {
         eOld: data.eOld,
         wOld: data.wOld,
@@ -158,10 +166,12 @@ async function deleteOpeningBalance(building, roomId, year) {
   }
 
   const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
   const docId = `${building}_${year}_${roomId}`;
 
   try {
-    await db.collection('opening_balances').doc(docId).delete();
+    const docRef = fs.doc(fs.collection(db, 'opening_balances'), docId);
+    await fs.deleteDoc(docRef);
     console.log(`✅ Deleted opening balance for ${building}/${roomId}`);
     return true;
   } catch (error) {
