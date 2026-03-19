@@ -2405,8 +2405,22 @@
           <h3 style="color:var(--text);margin-bottom:1rem;font-size:0.95rem;">✅ ตรวจสอบข้อมูล</h3>
           <div id="importPreviewData" style="background:white;padding:1.2rem;border-radius:var(--radius-sm);"></div>
         </div>
+
+        <!-- Data Continuity Verification -->
+        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;">
+          <div style="display:flex;align-items:flex-start;gap:0.8rem;">
+            <input type="checkbox" id="importVerifyCheckbox" onchange="toggleApproveButton()" style="margin-top:0.3rem;cursor:pointer;">
+            <label for="importVerifyCheckbox" style="cursor:pointer;color:var(--text);font-size:0.9rem;">
+              <strong>✓ ฉันตรวจสอบแล้วว่า:</strong><br/>
+              เลขมิเตอร์เก่า (Old) ในไฟล์ที่นำเข้า<br/>
+              <strong>ตรงกับ</strong> เลขมิเตอร์ใหม่ (New) ของเดือนก่อนหน้าในระบบแล้ว<br/>
+              <span style="color:#d32f2f;font-size:0.85rem;">(เพื่อให้มั่นใจในความต่อเนื่องของข้อมูล)</span>
+            </label>
+          </div>
+        </div>
+
         <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
-          <button onclick="approveImportData()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
+          <button id="approveImportBtn" onclick="approveImportData()" disabled style="padding:0.8rem 1.5rem;background:#ccc;color:#666;border:none;border-radius:var(--radius-sm);cursor:not-allowed;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;opacity:0.6;">✅ อนุมัติและบันทึก</button>
           <button onclick="cancelImportProcess()" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">❌ ยกเลิก</button>
         </div>
       </div>
@@ -3328,9 +3342,44 @@ function displayImportPreview(importData, matchResults) {
   previewDataDiv.style.overflowX = 'visible';
   previewDataDiv.style.overflowY = 'visible';
   document.getElementById('importResultsSection').style.display = 'block';
+  // Reset checkbox when new data is loaded
+  const checkbox = document.getElementById('importVerifyCheckbox');
+  if (checkbox) {
+    checkbox.checked = false;
+    toggleApproveButton();
+  }
+}
+
+// Toggle approve button based on verification checkbox
+function toggleApproveButton() {
+  const checkbox = document.getElementById('importVerifyCheckbox');
+  const approveBtn = document.getElementById('approveImportBtn');
+
+  if (!approveBtn) return;
+
+  if (checkbox && checkbox.checked) {
+    approveBtn.disabled = false;
+    approveBtn.style.background = 'var(--green)';
+    approveBtn.style.color = 'white';
+    approveBtn.style.cursor = 'pointer';
+    approveBtn.style.opacity = '1';
+  } else {
+    approveBtn.disabled = true;
+    approveBtn.style.background = '#ccc';
+    approveBtn.style.color = '#666';
+    approveBtn.style.cursor = 'not-allowed';
+    approveBtn.style.opacity = '0.6';
+  }
 }
 
 function approveImportData() {
+  // Check if user verified data continuity
+  const checkbox = document.getElementById('importVerifyCheckbox');
+  if (!checkbox || !checkbox.checked) {
+    showImportStatus('❌ กรุณายืนยันว่าเลขมิเตอร์เก่าตรงกับระบบก่อนทำการบันทึก', 'error');
+    return;
+  }
+
   if (!currentImportData) {
     showImportStatus('❌ ไม่มีข้อมูลให้บันทึก', 'error');
     return;
