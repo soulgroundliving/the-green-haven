@@ -382,7 +382,6 @@ function approvePendingImportViaLocalStorage(acknowledgeWarnings = false) {
  */
 async function saveMeterDataToFirebase(importData) {
   if (!window.firebase || !window.firebase.firestore) {
-    console.warn('⚠️ Firebase not initialized, skipping Firebase save');
     return null;
   }
 
@@ -392,8 +391,6 @@ async function saveMeterDataToFirebase(importData) {
   const yearMonth = `${year}_${month}`;
 
   try {
-    // Save each room's meter data individually to Firebase
-    let savedCount = 0;
     for (const roomId in rooms) {
       const roomData = rooms[roomId];
       const docId = `${building}_${yearMonth}_${roomId}`;
@@ -412,14 +409,9 @@ async function saveMeterDataToFirebase(importData) {
         updatedAt: new Date().toISOString(),
         createdAt: new Date().toISOString()
       }, { merge: true });
-      savedCount++;
     }
-
-    console.log(`✅ Saved ${savedCount} meter readings to Firebase (${building}/${yearMonth})`);
     return true;
   } catch (error) {
-    console.error('❌ Failed to save meter data to Firebase:', error);
-    // Don't throw - allow operation to continue even if Firebase fails
     return false;
   }
 }
@@ -434,16 +426,11 @@ async function saveMeterDataToFirebase(importData) {
 async function approvePendingImportWithFirebase(importData, matchResults, acknowledgeWarnings = false) {
   const { year, month, building = 'rooms', rooms } = importData;
 
-  // Block if any errors
   if (matchResults.summary.errorCount > 0) {
     throw new Error('Cannot import - errors detected in data');
   }
 
-  // Store to localStorage first
   const localStorageResult = approvePendingImportViaLocalStorage(acknowledgeWarnings);
-
-  // Then sync to Firebase
-  console.log(`📤 Syncing meter data for ${building}/${year}_${month} to Firebase...`);
   const firebaseResult = await saveMeterDataToFirebase(importData);
 
   return {

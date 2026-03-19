@@ -3512,29 +3512,18 @@ async function approveImportData() {
                        window.METER_DATA[building][key];
 
   if (existingData) {
-    const thaiMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-                        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-    const monthName = thaiMonths[currentImportData.month] || `เดือน ${currentImportData.month}`;
-
-    // IMPORTANT: Capture the import data NOW (before async callback) to avoid stale references
+    const monthName = getThaiMonthName(currentImportData.month);
     const capturedImportData = JSON.parse(JSON.stringify(currentImportData));
     const capturedMatchResults = JSON.parse(JSON.stringify(currentImportMatchResults));
 
-    // Use custom modal instead of native confirm
     showDuplicateConfirmDialog(
       `เดือน ${monthName} ปี ${capturedImportData.year} มีข้อมูลแล้ว`,
       `ต้องการแทนที่ข้อมูลเก่าด้วยข้อมูลใหม่หรือไม่?`
     ).then(async (confirmed) => {
       if (confirmed) {
-        console.log(`🔄 ผู้ใช้ยืนยันการแทนที่ข้อมูล ${building}/${key}`);
-        console.log('📊 Import data to be saved:', capturedImportData);
-        console.log('🔧 About to call performDataReplacement() with captured data');
         try {
-          // Use captured data to ensure we have the correct values
           await performDataReplacementWithData(capturedImportData, capturedMatchResults);
-          console.log('✅ performDataReplacement() completed successfully');
         } catch (err) {
-          console.error('❌ Error calling performDataReplacement():', err);
           showImportStatus(`❌ เกิดข้อผิดพลาด: ${err.message}`, 'error');
         }
       } else {
@@ -3543,61 +3532,48 @@ async function approveImportData() {
     });
     return;
   } else {
-    // No existing data, proceed normally
     await performDataReplacement();
   }
+}
 
-  // Modified version that accepts data as parameters to avoid stale references
-  // Now async to support Firebase synchronization
-  async function performDataReplacementWithData(importData, matchResults) {
-    try {
-      // Store import data in localStorage for the helper function to use
-      localStorage.setItem('pendingMeterImport', JSON.stringify({
-        sessionId: `imp_${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        importData: importData,
-        matchResults: matchResults,
-        userApproval: null
-      }));
+async function performDataReplacementWithData(importData, matchResults) {
+  try {
+    localStorage.setItem('pendingMeterImport', JSON.stringify({
+      sessionId: `imp_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      importData: importData,
+      matchResults: matchResults,
+      userApproval: null
+    }));
 
-      // Use the shared function to approve and store to BOTH localStorage AND Firebase
-      console.log(`💾 Saving meter data to localStorage and Firebase...`);
-      const result = await approvePendingImportWithFirebase(importData, matchResults, true);
+    const result = await approvePendingImportWithFirebase(importData, matchResults, true);
 
-      // Verify data was actually stored
-      const verifyKey = `${importData.year}_${importData.month}`;
-      const verifyBuilding = importData.building || 'rooms';
-      const stored = window.METER_DATA &&
-                     window.METER_DATA[verifyBuilding] &&
-                     window.METER_DATA[verifyBuilding][verifyKey];
+    const verifyKey = `${importData.year}_${importData.month}`;
+    const verifyBuilding = importData.building || 'rooms';
+    const stored = window.METER_DATA &&
+                   window.METER_DATA[verifyBuilding] &&
+                   window.METER_DATA[verifyBuilding][verifyKey];
 
-      if (stored) {
-        console.log(`✅ ยืนยันการบันทึก ${verifyBuilding}/${verifyKey}: ${Object.keys(stored).length} ห้อง`);
-        console.log(`📤 Firebase sync status: ${result.firebaseSync ? '✅ สำเร็จ' : '⚠️ ไม่สำเร็จ'}`);
-        showImportStatus(`✅ ${result.message} (${result.storageMethod})`, 'success');
-      } else {
-        console.warn(`⚠️ ข้อมูลไม่ได้บันทึกลงในระบบ`);
-        showImportStatus(`⚠️ ข้อมูลนี้อาจไม่ได้บันทึก กรุณารีเฟรชหน้าเพื่อตรวจสอบ`, 'warning');
-      }
-
-      // Reset form
-      setTimeout(() => {
-        document.getElementById('importFileInput').value = '';
-        document.getElementById('importResultsSection').style.display = 'none';
-        document.getElementById('importPreviewData').innerHTML = '';
-        currentImportData = null;
-        currentImportMatchResults = null;
-      }, 2000);
-    } catch (error) {
-      showImportStatus(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
-      console.error(error);
+    if (stored) {
+      showImportStatus(`✅ ${result.message} (${result.storageMethod})`, 'success');
+    } else {
+      showImportStatus(`⚠️ ข้อมูลนี้อาจไม่ได้บันทึก กรุณารีเฟรชหน้าเพื่อตรวจสอบ`, 'warning');
     }
-  }
 
-  async function performDataReplacement() {
-    // Original function for non-duplicate imports - uses global currentImportData
-    await performDataReplacementWithData(currentImportData, currentImportMatchResults);
+    setTimeout(() => {
+      document.getElementById('importFileInput').value = '';
+      document.getElementById('importResultsSection').style.display = 'none';
+      document.getElementById('importPreviewData').innerHTML = '';
+      currentImportData = null;
+      currentImportMatchResults = null;
+    }, 2000);
+  } catch (error) {
+    showImportStatus(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
   }
+}
+
+async function performDataReplacement() {
+  await performDataReplacementWithData(currentImportData, currentImportMatchResults);
 }
 
 function cancelImportProcess() {
