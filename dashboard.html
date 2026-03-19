@@ -3504,11 +3504,13 @@ function approveImportData() {
   }
 
   try {
-    // Store import data in sessionStorage for the helper function to use
-    sessionStorage.setItem('pendingImportData', JSON.stringify({
+    // Store import data in localStorage for the helper function to use
+    localStorage.setItem('pendingMeterImport', JSON.stringify({
+      sessionId: `imp_${Date.now()}`,
+      timestamp: new Date().toISOString(),
       importData: currentImportData,
       matchResults: currentImportMatchResults,
-      timestamp: new Date().toISOString()
+      userApproval: null
     }));
 
     // Use the shared function to approve and store
