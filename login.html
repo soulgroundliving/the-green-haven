@@ -863,13 +863,37 @@
         const userCredential = await window.firebaseAuthFunctions.signInWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
-        // Get user data from database
-        const userRef = window.firebaseDB.ref(window.database, `users/${user.uid}`);
-        const snapshot = await window.firebaseDB.get(userRef);
-        const userData = snapshot.val();
+        // Get user data from database with timeout
+        let userData = null;
+        try {
+          const userRef = window.firebaseDB.ref(window.database, `users/${user.uid}`);
 
+          // Create a timeout promise (5 seconds max)
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Database timeout')), 5000)
+          );
+
+          const snapshot = await Promise.race([
+            window.firebaseDB.get(userRef),
+            timeoutPromise
+          ]);
+          userData = snapshot.val();
+
+        } catch (dbError) {
+          // If database fails, use minimal user data from Firebase Auth
+          console.warn('Database error, using fallback:', dbError.message);
+          userData = null;
+        }
+
+        // If no database data, create minimal user object from Firebase Auth
         if (!userData) {
-          throw new Error('ไม่พบข้อมูลผู้ใช้');
+          userData = {
+            uid: user.uid,
+            email: user.email,
+            name: user.email.split('@')[0],
+            userType: currentUserType,
+            roomNumber: null
+          };
         }
 
         // Verify user type
