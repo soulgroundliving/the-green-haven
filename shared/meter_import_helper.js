@@ -67,6 +67,10 @@ function matchMeterDataWithPrevious(importedData) {
 
     results.details.push({
       room: roomId,
+      eNew: imported.eNew,
+      eOld: imported.eOld,
+      wNew: imported.wNew,
+      wOld: imported.wOld,
       electric: electricMatch,
       water: waterMatch,
       status: overallStatus
