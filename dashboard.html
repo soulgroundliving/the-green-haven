@@ -3740,7 +3740,7 @@ function initMeterRoomsTab() {
 
 // Auto-fill Old readings from METER_DATA (Nest Building)
 async function autoFillOldReadingsNest() {
-  const monthInputEl = document.getElementById('nestMonthInput');
+  const monthInputEl = document.getElementById('nestMeterMonth');
   if (!monthInputEl || !monthInputEl.value) {
     console.log('⚠️ Month input field not found or empty');
     return;
