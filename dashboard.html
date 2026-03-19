@@ -3516,17 +3516,22 @@ function approveImportData() {
                         'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
     const monthName = thaiMonths[currentImportData.month] || `เดือน ${currentImportData.month}`;
 
+    // IMPORTANT: Capture the import data NOW (before async callback) to avoid stale references
+    const capturedImportData = JSON.parse(JSON.stringify(currentImportData));
+    const capturedMatchResults = JSON.parse(JSON.stringify(currentImportMatchResults));
+
     // Use custom modal instead of native confirm
     showDuplicateConfirmDialog(
-      `เดือน ${monthName} ปี ${currentImportData.year} มีข้อมูลแล้ว`,
+      `เดือน ${monthName} ปี ${capturedImportData.year} มีข้อมูลแล้ว`,
       `ต้องการแทนที่ข้อมูลเก่าด้วยข้อมูลใหม่หรือไม่?`
     ).then((confirmed) => {
       if (confirmed) {
         console.log(`🔄 ผู้ใช้ยืนยันการแทนที่ข้อมูล ${building}/${key}`);
-        console.log('📊 Import data to be saved:', currentImportData);
-        console.log('🔧 About to call performDataReplacement()');
+        console.log('📊 Import data to be saved:', capturedImportData);
+        console.log('🔧 About to call performDataReplacement() with captured data');
         try {
-          performDataReplacement();
+          // Use captured data to ensure we have the correct values
+          performDataReplacementWithData(capturedImportData, capturedMatchResults);
           console.log('✅ performDataReplacement() called successfully');
         } catch (err) {
           console.error('❌ Error calling performDataReplacement():', err);
@@ -3542,14 +3547,15 @@ function approveImportData() {
     performDataReplacement();
   }
 
-  function performDataReplacement() {
+  // Modified version that accepts data as parameters to avoid stale references
+  function performDataReplacementWithData(importData, matchResults) {
     try {
       // Store import data in localStorage for the helper function to use
       localStorage.setItem('pendingMeterImport', JSON.stringify({
         sessionId: `imp_${Date.now()}`,
         timestamp: new Date().toISOString(),
-        importData: currentImportData,
-        matchResults: currentImportMatchResults,
+        importData: importData,
+        matchResults: matchResults,
         userApproval: null
       }));
 
@@ -3557,8 +3563,8 @@ function approveImportData() {
       const result = approvePendingImportViaLocalStorage(true);
 
       // Verify data was actually stored
-      const verifyKey = `${currentImportData.year}_${currentImportData.month}`;
-      const verifyBuilding = currentImportData.building || 'rooms';
+      const verifyKey = `${importData.year}_${importData.month}`;
+      const verifyBuilding = importData.building || 'rooms';
       const stored = window.METER_DATA &&
                      window.METER_DATA[verifyBuilding] &&
                      window.METER_DATA[verifyBuilding][verifyKey];
@@ -3583,6 +3589,11 @@ function approveImportData() {
       showImportStatus(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
       console.error(error);
     }
+  }
+
+  function performDataReplacement() {
+    // Original function for non-duplicate imports - uses global currentImportData
+    performDataReplacementWithData(currentImportData, currentImportMatchResults);
   }
 }
 
