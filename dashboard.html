@@ -3523,6 +3523,7 @@ function approveImportData() {
     ).then((confirmed) => {
       if (confirmed) {
         console.log(`🔄 ผู้ใช้ยืนยันการแทนที่ข้อมูล ${building}/${key}`);
+        console.log('📊 Import data to be saved:', currentImportData);
         // User confirmed - proceed with replacement
         performDataReplacement();
       } else {
