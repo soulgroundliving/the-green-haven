@@ -9019,21 +9019,7 @@ async function loadOpeningBalanceUI() {
     const eOld = balance ? balance.eOld : '';
     const wOld = balance ? balance.wOld : '';
 
-    return `
-      <tr style="border-bottom:1px solid var(--border);">
-        <td style="border:1px solid var(--border);padding:0.8rem;">${roomId}</td>
-        <td style="border:1px solid var(--border);padding:0.8rem;">${room ? room.name : 'N/A'}</td>
-        <td style="border:1px solid var(--border);padding:0.8rem;">
-          <input type="number" value="${eOld}" data-building="${building}" data-roomid="${roomId}" data-field="eOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;">
-        </td>
-        <td style="border:1px solid var(--border);padding:0.8rem;">
-          <input type="number" value="${wOld}" data-building="${building}" data-roomid="${roomId}" data-field="wOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;">
-        </td>
-        <td style="border:1px solid var(--border);padding:0.8rem;text-align:center;">
-          ${balance ? '✅' : '⏳'}
-        </td>
-      </tr>
-    `;
+    return `<tr style="border-bottom:1px solid var(--border);"><td style="border:1px solid var(--border);padding:0.8rem;">${roomId}</td><td style="border:1px solid var(--border);padding:0.8rem;">${room ? room.name : 'N/A'}</td><td style="border:1px solid var(--border);padding:0.8rem;"><input type="number" value="${eOld}" data-building="${building}" data-roomid="${roomId}" data-field="eOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"></td><td style="border:1px solid var(--border);padding:0.8rem;"><input type="number" value="${wOld}" data-building="${building}" data-roomid="${roomId}" data-field="wOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"></td><td style="border:1px solid var(--border);padding:0.8rem;text-align:center;">${balance ? '✅' : '⏳'}</td></tr>`;
   }).join('');
 }
 
