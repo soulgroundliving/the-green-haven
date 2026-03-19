@@ -3252,7 +3252,7 @@ function parseImportExcelData(workbook, building) {
   }
 
   const rooms = {};
-  for (let i = 2; i < data.length; i++) {
+  for (let i = 1; i < data.length; i++) {
     const row = data[i];
     if (!row[0]) continue;
 
