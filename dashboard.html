@@ -2394,7 +2394,7 @@
       <div id="importResultsSection" style="display:none;margin-bottom:1.5rem;">
         <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;">
           <h3 style="color:var(--text);margin-bottom:1rem;font-size:0.95rem;">✅ ตรวจสอบข้อมูล</h3>
-          <div id="importPreviewData" style="background:white;padding:1rem;border-radius:var(--radius-sm);"></div>
+          <div id="importPreviewData" style="background:white;padding:1.2rem;border-radius:var(--radius-sm);overflow-x:auto;"></div>
         </div>
         <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
           <button onclick="approveImportData()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
@@ -3279,34 +3279,34 @@ function displayImportPreview(importData, matchResults) {
   }
 
   const previewHtml = `
-    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);">
+    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;">
       <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-        <thead style="background:var(--accent-light);">
+        <thead style="background:var(--accent-light);position:sticky;top:0;z-index:10;">
           <tr>
-            <th style="padding:0.5rem;text-align:left;border-bottom:1px solid var(--border);">ห้อง</th>
-            <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">⚡ New</th>
-            <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">⚡ Old</th>
-            <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">💧 New</th>
-            <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">💧 Old</th>
-            <th style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--border);">สถานะ</th>
+            <th style="padding:0.7rem;text-align:left;border-bottom:2px solid var(--border);">ห้อง</th>
+            <th style="padding:0.7rem;text-align:right;border-bottom:2px solid var(--border);">⚡ New</th>
+            <th style="padding:0.7rem;text-align:right;border-bottom:2px solid var(--border);">⚡ Old</th>
+            <th style="padding:0.7rem;text-align:right;border-bottom:2px solid var(--border);">💧 New</th>
+            <th style="padding:0.7rem;text-align:right;border-bottom:2px solid var(--border);">💧 Old</th>
+            <th style="padding:0.7rem;text-align:center;border-bottom:2px solid var(--border);">สถานะ</th>
           </tr>
         </thead>
         <tbody>
-          ${matchResults.details.map(result => `
-            <tr style="border-bottom:1px solid var(--border);">
-              <td style="padding:0.5rem;font-weight:600;">${result.room}</td>
-              <td style="padding:0.5rem;text-align:right;">${result.eNew}</td>
-              <td style="padding:0.5rem;text-align:right;">${result.eOld}</td>
-              <td style="padding:0.5rem;text-align:right;">${result.wNew}</td>
-              <td style="padding:0.5rem;text-align:right;">${result.wOld}</td>
-              <td style="padding:0.5rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.8rem;font-weight:600;">✓</span></td>
+          ${matchResults.details.map((result, idx) => `
+            <tr style="border-bottom:1px solid var(--border);background:${idx % 2 === 0 ? 'white' : 'rgba(0,0,0,0.01)'};">
+              <td style="padding:0.7rem;font-weight:600;">${result.room}</td>
+              <td style="padding:0.7rem;text-align:right;">${result.eNew}</td>
+              <td style="padding:0.7rem;text-align:right;">${result.eOld}</td>
+              <td style="padding:0.7rem;text-align:right;">${result.wNew}</td>
+              <td style="padding:0.7rem;text-align:right;">${result.wOld}</td>
+              <td style="padding:0.7rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
             </tr>
           `).join('')}
         </tbody>
       </table>
     </div>
-    <div style="margin-top:1rem;font-size:0.85rem;color:var(--text-muted);">
-      ปี: <strong>${importData.year}</strong> | เดือน: <strong>${importData.month}</strong> | ห้องทั้งหมด: <strong>${Object.keys(importData.rooms).length}</strong>
+    <div style="margin-top:1rem;padding:0.8rem;background:var(--bg-secondary);border-radius:var(--radius-sm);font-size:0.85rem;color:var(--text-muted);text-align:center;">
+      <strong style="color:var(--text);">ปี ${importData.year}</strong> | เดือน <strong style="color:var(--text);">${importData.month}</strong> | ห้องทั้งหมด: <strong style="color:var(--text);">${Object.keys(importData.rooms).length}</strong>
     </div>
   `;
 
