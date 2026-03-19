@@ -3503,31 +3503,73 @@ function approveImportData() {
     return;
   }
 
-  try {
-    // Store import data in localStorage for the helper function to use
-    localStorage.setItem('pendingMeterImport', JSON.stringify({
-      sessionId: `imp_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      importData: currentImportData,
-      matchResults: currentImportMatchResults,
-      userApproval: null
-    }));
+  // Check for duplicate month upload
+  const key = `${currentImportData.year}_${currentImportData.month}`;
+  const building = currentImportData.building || 'rooms';
 
-    // Use the shared function to approve and store
-    const result = approvePendingImportViaLocalStorage(true);
-    showImportStatus(`✅ ${result.message}`, 'success');
+  const existingData = window.METER_DATA &&
+                       window.METER_DATA[building] &&
+                       window.METER_DATA[building][key];
 
-    // Reset form
-    setTimeout(() => {
-      document.getElementById('importFileInput').value = '';
-      document.getElementById('importResultsSection').style.display = 'none';
-      document.getElementById('importPreviewData').innerHTML = '';
-      currentImportData = null;
-      currentImportMatchResults = null;
-    }, 2000);
-  } catch (error) {
-    showImportStatus(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
-    console.error(error);
+  if (existingData) {
+    const thaiMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    const monthName = thaiMonths[currentImportData.month] || `เดือน ${currentImportData.month}`;
+
+    if (confirm(`⚠️ เดือน ${monthName} ปี ${currentImportData.year} มีข้อมูลแล้ว\n\nต้องการแทนที่ข้อมูลเก่าด้วยข้อมูลใหม่หรือไม่?`)) {
+      console.log(`🔄 ผู้ใช้ยืนยันการแทนที่ข้อมูล ${building}/${key}`);
+      // User confirmed - proceed with replacement
+      performDataReplacement();
+    } else {
+      showImportStatus('⏸️ ยกเลิกการอัพโหลด', 'info');
+      return;
+    }
+  } else {
+    // No existing data, proceed normally
+    performDataReplacement();
+  }
+
+  function performDataReplacement() {
+    try {
+      // Store import data in localStorage for the helper function to use
+      localStorage.setItem('pendingMeterImport', JSON.stringify({
+        sessionId: `imp_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        importData: currentImportData,
+        matchResults: currentImportMatchResults,
+        userApproval: null
+      }));
+
+      // Use the shared function to approve and store
+      const result = approvePendingImportViaLocalStorage(true);
+
+      // Verify data was actually stored
+      const verifyKey = `${currentImportData.year}_${currentImportData.month}`;
+      const verifyBuilding = currentImportData.building || 'rooms';
+      const stored = window.METER_DATA &&
+                     window.METER_DATA[verifyBuilding] &&
+                     window.METER_DATA[verifyBuilding][verifyKey];
+
+      if (stored) {
+        console.log(`✅ ยืนยันการบันทึก ${verifyBuilding}/${verifyKey}: ${Object.keys(stored).length} ห้อง`);
+        showImportStatus(`✅ ${result.message}`, 'success');
+      } else {
+        console.warn(`⚠️ ข้อมูลไม่ได้บันทึกลงในระบบ`);
+        showImportStatus(`⚠️ ข้อมูลนี้อาจไม่ได้บันทึก กรุณารีเฟรชหน้าเพื่อตรวจสอบ`, 'warning');
+      }
+
+      // Reset form
+      setTimeout(() => {
+        document.getElementById('importFileInput').value = '';
+        document.getElementById('importResultsSection').style.display = 'none';
+        document.getElementById('importPreviewData').innerHTML = '';
+        currentImportData = null;
+        currentImportMatchResults = null;
+      }, 2000);
+    } catch (error) {
+      showImportStatus(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
+      console.error(error);
+    }
   }
 }
 
