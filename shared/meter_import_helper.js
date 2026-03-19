@@ -30,11 +30,18 @@ function getPreviousMonthReadings(year, month, building = null) {
 /**
  * Validate meter data continuity by comparing with previous month
  * @param {object} importedData - Current month import {year, month, rooms, building?}
- * @returns {object} Match results {summary, details, mismatches, canProceed}
+ * @returns {object} Match results {summary, details, mismatches, canProceed, isFirstImport}
  */
 function matchMeterDataWithPrevious(importedData) {
   const { year, month, rooms, building = null } = importedData;
   const previousData = getPreviousMonthReadings(year, month, building);
+
+  // Determine if this is the first import ever for this building
+  const buildingKey = building || 'rooms';
+  const isFirstImport = Object.keys(previousData).length === 0 &&
+                        (!window.METER_DATA ||
+                         !window.METER_DATA[buildingKey] ||
+                         Object.keys(window.METER_DATA[buildingKey]).length === 0);
 
   const results = {
     summary: {
@@ -46,7 +53,8 @@ function matchMeterDataWithPrevious(importedData) {
     },
     details: [],
     mismatches: [],
-    canProceed: true
+    canProceed: true,
+    isFirstImport: isFirstImport
   };
 
   // For each room in imported data
@@ -54,8 +62,8 @@ function matchMeterDataWithPrevious(importedData) {
     const imported = rooms[roomId];
     const previous = previousData[roomId] || {};
 
-    const electricMatch = compareValues(imported.eOld, previous.eNew, 'electric');
-    const waterMatch = compareValues(imported.wOld, previous.wNew, 'water');
+    const electricMatch = compareValues(imported.eOld, previous.eNew, 'electric', isFirstImport);
+    const waterMatch = compareValues(imported.wOld, previous.wNew, 'water', isFirstImport);
 
     const overallStatus = determineStatus([electricMatch, waterMatch]);
     results.summary[`${overallStatus}Count`]++;
@@ -76,7 +84,7 @@ function matchMeterDataWithPrevious(importedData) {
       status: overallStatus
     });
 
-    // Collect mismatches for detailed view
+    // Collect mismatches for detailed view (but not for first import 'ok' status)
     if (electricMatch.status !== 'ok') {
       results.mismatches.push({
         room: roomId,
@@ -109,18 +117,31 @@ function matchMeterDataWithPrevious(importedData) {
  * @param {number} imported - Imported old reading
  * @param {number} previous - Previous new reading
  * @param {string} fieldType - 'electric' or 'water'
+ * @param {boolean} isFirstImport - Whether this is the first import for the building
  * @returns {object} {status: 'ok'|'warning'|'error'|'missing', delta, message}
  */
-function compareValues(imported, previous, fieldType) {
+function compareValues(imported, previous, fieldType, isFirstImport = false) {
   // Missing previous month data
   if (previous === undefined || previous === null) {
-    return {
-      status: 'missing',
-      delta: null,
-      message: 'ไม่พบข้อมูลเดือนที่แล้ว',
-      imported: imported,
-      previous: previous
-    };
+    if (isFirstImport) {
+      // For first import, missing previous data is expected
+      return {
+        status: 'ok',
+        delta: null,
+        message: '✓ เดือนแรกของการนำเข้า (ไม่มีเดือนที่แล้ว)',
+        imported: imported,
+        previous: previous
+      };
+    } else {
+      // For subsequent imports, missing previous data is an error
+      return {
+        status: 'missing',
+        delta: null,
+        message: 'ไม่พบข้อมูลเดือนที่แล้ว',
+        imported: imported,
+        previous: previous
+      };
+    }
   }
 
   // Invalid imported value
