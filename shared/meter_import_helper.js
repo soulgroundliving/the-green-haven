@@ -36,12 +36,10 @@ function matchMeterDataWithPrevious(importedData) {
   const { year, month, rooms, building = null } = importedData;
   const previousData = getPreviousMonthReadings(year, month, building);
 
-  // Determine if this is the first import ever for this building
+  // Determine if this is the first import for this specific month
+  // (no need to check if other months exist - if previous month is empty, it's first import for this month)
   const buildingKey = building || 'rooms';
-  const isFirstImport = Object.keys(previousData).length === 0 &&
-                        (!window.METER_DATA ||
-                         !window.METER_DATA[buildingKey] ||
-                         Object.keys(window.METER_DATA[buildingKey]).length === 0);
+  const isFirstImport = Object.keys(previousData).length === 0;
 
   console.log(`🔍 matchMeterDataWithPrevious: building=${buildingKey}, month=${month}, isFirstImport=${isFirstImport}`, {
     previousDataEmpty: Object.keys(previousData).length === 0,
