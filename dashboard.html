@@ -3290,9 +3290,9 @@ function displayImportPreview(importData, matchResults) {
           <th style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--border);">สถานะ</th>
         </tr>
       </thead>
-      <tbody>
-        ${matchResults.details.slice(0, 5).map(result => `
-          <tr style="border-bottom:1px solid var(--border);">
+      <tbody style="max-height:400px;overflow-y:auto;display:block;">
+        ${matchResults.details.map(result => `
+          <tr style="border-bottom:1px solid var(--border);display:table;width:100%;">
             <td style="padding:0.5rem;font-weight:600;">${result.room}</td>
             <td style="padding:0.5rem;text-align:right;">${result.eNew}</td>
             <td style="padding:0.5rem;text-align:right;">${result.eOld}</td>
