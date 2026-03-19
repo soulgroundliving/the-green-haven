@@ -2367,6 +2367,26 @@
         <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event);">
       </div>
 
+      <!-- Month Selector (Optional manual selection) -->
+      <div style="margin-bottom:1.5rem;">
+        <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📅 เลือกเดือน (ถ้าไม่อัตโนมัติ):</label>
+        <select id="importMonthSelect" style="width:100%;padding:0.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-secondary);color:var(--text);font-size:0.9rem;cursor:pointer;">
+          <option value="">-- อัตโนมัติ (จากชื่อไฟล์) --</option>
+          <option value="1">มกราคม (January)</option>
+          <option value="2">กุมภาพันธ์ (February)</option>
+          <option value="3">มีนาคม (March)</option>
+          <option value="4">เมษายน (April)</option>
+          <option value="5">พฤษภาคม (May)</option>
+          <option value="6">มิถุนายน (June)</option>
+          <option value="7">กรกฎาคม (July)</option>
+          <option value="8">สิงหาคม (August)</option>
+          <option value="9">กันยายน (September)</option>
+          <option value="10">ตุลาคม (October)</option>
+          <option value="11">พฤศจิกายน (November)</option>
+          <option value="12">ธันวาคม (December)</option>
+        </select>
+      </div>
+
       <!-- Status Messages -->
       <div id="importStatusMessage" style="margin-bottom:1.5rem;"></div>
 
@@ -3121,23 +3141,38 @@ function parseImportExcelData(workbook, building) {
     'ตุลา': 10, 'พย': 11, 'พยค': 11, 'ธค': 12, 'ธันว': 12
   };
 
-  // Find month from sheet names
-  let selectedSheet = null;
+  // Check for manual month selection first
   let selectedMonth = null;
+  const manualMonth = document.getElementById('importMonthSelect').value;
+  if (manualMonth) {
+    selectedMonth = parseInt(manualMonth);
+  }
 
-  for (let sheetName of workbook.SheetNames) {
-    for (let key in monthMap) {
-      if (sheetName.includes(key)) {
-        selectedSheet = sheetName;
-        selectedMonth = monthMap[key];
-        break;
+  // Find month from sheet names (if not manually selected)
+  let selectedSheet = null;
+  if (!selectedMonth) {
+    for (let sheetName of workbook.SheetNames) {
+      for (let key in monthMap) {
+        if (sheetName.includes(key)) {
+          selectedSheet = sheetName;
+          selectedMonth = monthMap[key];
+          break;
+        }
       }
+      if (selectedSheet) break;
     }
-    if (selectedSheet) break;
+  } else {
+    // If manual month selected, use first sheet with data
+    selectedSheet = workbook.SheetNames.find(name => name !== 'EX');
   }
 
   if (!selectedSheet) {
-    showImportStatus('❌ ไม่พบชีตเดือนในไฟล์', 'error');
+    showImportStatus('❌ ไม่พบชีตที่มีข้อมูลในไฟล์', 'error');
+    return null;
+  }
+
+  if (!selectedMonth) {
+    showImportStatus('❌ กรุณาเลือกเดือน หรือใช้ชีตที่มีชื่อเดือนภาษาไทย', 'error');
     return null;
   }
 
