@@ -3141,6 +3141,15 @@ function parseImportExcelData(workbook, building) {
     'ตุลา': 10, 'พย': 11, 'พยค': 11, 'ธค': 12, 'ธันว': 12
   };
 
+  // Create reverse month map (number to Thai abbreviation)
+  const reverseMonthMap = {};
+  for (let thai in monthMap) {
+    const monthNum = monthMap[thai];
+    if (!reverseMonthMap[monthNum]) {
+      reverseMonthMap[monthNum] = thai;
+    }
+  }
+
   // Check for manual month selection first
   let selectedMonth = null;
   const manualMonth = document.getElementById('importMonthSelect').value;
@@ -3148,9 +3157,17 @@ function parseImportExcelData(workbook, building) {
     selectedMonth = parseInt(manualMonth);
   }
 
-  // Find month from sheet names (if not manually selected)
+  // Find the sheet based on selected month
   let selectedSheet = null;
-  if (!selectedMonth) {
+
+  if (selectedMonth) {
+    // Manual month selected - find sheet with this month
+    const thaiMonthAbbr = reverseMonthMap[selectedMonth];
+    if (thaiMonthAbbr) {
+      selectedSheet = workbook.SheetNames.find(name => name.includes(thaiMonthAbbr));
+    }
+  } else {
+    // Auto-detect from sheet names
     for (let sheetName of workbook.SheetNames) {
       for (let key in monthMap) {
         if (sheetName.includes(key)) {
@@ -3161,9 +3178,6 @@ function parseImportExcelData(workbook, building) {
       }
       if (selectedSheet) break;
     }
-  } else {
-    // If manual month selected, use first sheet with data
-    selectedSheet = workbook.SheetNames.find(name => name !== 'EX');
   }
 
   if (!selectedSheet) {
