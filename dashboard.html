@@ -13,6 +13,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="./shared/meter_data.js"></script>
 <script src="./shared/room-config.js"></script>
+<script src="./shared/shared-config.js"></script>
 <script src="./shared/meter_import_helper.js"></script>
 <script src="./shared/opening_balance_manager.js"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -3028,8 +3029,9 @@
 <button id="firebaseToggleBtn" onclick="toggleFirebasePanel()" style="position:fixed;bottom:20px;right:20px;width:50px;height:50px;background:#2d8653;color:white;border:none;border-radius:50%;cursor:pointer;font-size:24px;box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:9998;display:flex;align-items:center;justify-content:center;">🔥</button>
 
 <script>
-const MONTHS_TH=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-const MONTHS_FULL=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+// Use CONFIG from shared-config.js instead
+const MONTHS_TH = CONFIG.months.short;
+const MONTHS_FULL = CONFIG.months.full;
 
 // ===== OLD BUILDING ROOMS (โรงน้ำแข็ง removed, Amazon updated) =====
 const ROOMS_OLD = [
@@ -5562,6 +5564,14 @@ function initMonthlyPage(){
 let currentBuilding='old';
 let invoiceData=null;
 
+// Helper: Convert legacy building names to Firebase config + metadata
+function getBuildingInfo(legacyBuilding) {
+  const firebaseBuilding = CONFIG.getBuildingConfig(legacyBuilding);
+  const metadataArray = legacyBuilding === 'old' ? ROOMS_OLD : ROOMS_NEW;
+  const displayName = legacyBuilding === 'old' ? 'เดอะ กรีน เฮฟเว่น' : 'Nest · เดอะ กรีน เฮฟเว่น';
+  return { firebaseBuilding, metadataArray, displayName };
+}
+
 function onBuildingChange(){
   currentBuilding=document.getElementById('f-building').value;
   populateRoomDropdown();
@@ -5572,10 +5582,8 @@ function onBuildingChange(){
 }
 
 function populateRoomDropdown(){
-  // Map building names: 'old' -> 'rooms', 'new' -> 'nest'
-  const rmcBuilding = currentBuilding === 'old' ? 'rooms' : 'nest';
-  const metadataArray = currentBuilding === 'old' ? ROOMS_OLD : ROOMS_NEW;
-  const rooms = getActiveRoomsWithMetadata(rmcBuilding, metadataArray);
+  const bldgInfo = getBuildingInfo(currentBuilding);
+  const rooms = getActiveRoomsWithMetadata(bldgInfo.firebaseBuilding, bldgInfo.metadataArray);
   const sel = document.getElementById('f-room');
   sel.innerHTML = '<option value="">-- เลือกห้อง --</option>' +
     rooms.map(r => {
@@ -5624,7 +5632,7 @@ function checkVacant(){
     document.getElementById('vc-result').innerHTML=`<span style="color:var(--text-muted);">ไม่มีข้อมูลเดือนนี้ในปี ${yy+2500}</span>`;
     return;
   }
-  const monthNames=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const monthNames=CONFIG.months.short;
   // ALL rooms in old building
   const allRooms=['15ก','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','ร้านใหญ่'];
   const vacant=[], occupied=[], noData=[];
@@ -5666,7 +5674,7 @@ function autoFillMeters(){
 
   // Try METER_DATA first (static file) - use building-namespaced structure
   let d=null;
-  const meterDataBuilding = currentBuilding === 'old' ? 'rooms' : 'nest';
+  const meterDataBuilding = getBuildingInfo(currentBuilding).firebaseBuilding;
   if(typeof METER_DATA!=='undefined'&&METER_DATA[meterDataBuilding]&&METER_DATA[meterDataBuilding][key]){
     const monthData=METER_DATA[meterDataBuilding][key];
     const lookupId=roomId==='Amazon ☕'?'ร้านใหญ่':roomId;
@@ -5967,7 +5975,7 @@ function getBillData(){
   const month=parseInt(document.getElementById('f-month').value);
   const year=document.getElementById('f-year').value;
   const note=document.getElementById('f-note').value;
-  const building=currentBuilding==='new'?'Nest · เดอะ กรีน เฮฟเว่น':'เดอะ กรีน เฮฟเว่น';
+  const building=getBuildingInfo(currentBuilding).displayName;
   const now=new Date();
   const no=`TGH-${year}${String(month).padStart(2,'0')}-${room.replace(/[^0-9ก-๙A-Za-z]/g,'')}-${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
   const dateStr=now.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
@@ -6298,9 +6306,8 @@ function renderPaymentStatus(){
   const key=`${year}_${month}`;
   const paid=ps[key]||{};
   // Map building names and get active rooms
-  const rmcBuilding = currentBuilding === 'old' ? 'rooms' : 'nest';
-  const metadataArray = currentBuilding === 'old' ? ROOMS_OLD : ROOMS_NEW;
-  const rooms = getActiveRoomsWithMetadata(rmcBuilding, metadataArray);
+  const bldgInfo = getBuildingInfo(currentBuilding);
+  const rooms = getActiveRoomsWithMetadata(bldgInfo.firebaseBuilding, bldgInfo.metadataArray);
   const monthName=MONTHS_FULL[month]||month;
   const countPaid=Object.keys(paid).length;
   el.innerHTML=`<div style="font-size:.8rem;font-weight:700;color:var(--text-muted);margin-bottom:6px;">
@@ -7736,10 +7743,10 @@ function getContractStatus(t,now){
 }
 
 function renderContractPage(){
-  const rooms=contractBuilding==='old'?ROOMS_OLD:ROOMS_NEW;
+  const rooms=getBuildingInfo(contractBuilding).metadataArray;
   const tenants=loadTenants();
   const now=new Date();
-  const monthNames=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const monthNames=CONFIG.months.short.slice(1);
   const fmtDate=d=>{if(!d)return'—';const p=new Date(d);return`${p.getDate()} ${monthNames[p.getMonth()]} ${p.getFullYear()+543}`;};
 
   // KPIs
@@ -7814,10 +7821,10 @@ function renewContract(roomId){
 function printContract(roomId){
   const t=loadTenants()[roomId];
   if(!t?.name){alert('ไม่พบข้อมูลผู้เช่า');return;}
-  const rooms=contractBuilding==='old'?ROOMS_OLD:ROOMS_NEW;
-  const room=rooms.find(r=>r.id===roomId)||{id:roomId};
-  const building=contractBuilding==='old'?'เดอะ กรีน เฮฟเว่น':'Nest · เดอะ กรีน เฮฟเว่น';
-  const monthNames=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const bldgInfo=getBuildingInfo(contractBuilding);
+  const room=bldgInfo.metadataArray.find(r=>r.id===roomId)||{id:roomId};
+  const building=bldgInfo.displayName;
+  const monthNames=CONFIG.months.short.slice(1);
   const fmtDate=d=>{if(!d)return'—';const p=new Date(d);return`${p.getDate()} ${monthNames[p.getMonth()]} ${p.getFullYear()+543}`;};
   const w=window.open('','_blank','width=720,height=900,scrollbars=yes');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>สัญญาเช่า ห้อง ${roomId}</title>
@@ -7914,7 +7921,7 @@ function renderAnalyticsPage(){
   document.getElementById('ana-expiring').textContent=expiringRooms.length;
 
   // ---- Monthly occupancy chart ----
-  const monthLabels=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const monthLabels = CONFIG.months.short.slice(1);
   const roomIds=rooms.map(r=>r.id);
   const paidCountByMonth=Array.from({length:12},(_,i)=>{
     const key=`${thYear}_${i+1}`;
