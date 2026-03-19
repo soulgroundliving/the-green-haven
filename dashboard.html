@@ -9008,19 +9008,29 @@ window.updateRoomStatuses = function() {
 
 // ===== OPENING BALANCE FUNCTIONS =====
 async function loadOpeningBalanceUI() {
-  const building = document.getElementById('openingBalanceBuilding').value;
-  const roomIds = RoomConfigManager.getAllRooms(building);
-  const tbody = document.getElementById('openingBalanceBody');
-  const balances = await getAllOpeningBalances(building, 69);
+  try {
+    const building = document.getElementById('openingBalanceBuilding').value;
+    const roomIds = RoomConfigManager.getAllRooms(building);
+    const tbody = document.getElementById('openingBalanceBody');
+    console.log('🔄 loadOpeningBalanceUI start - building:', building, 'roomIds:', roomIds.length);
 
-  tbody.innerHTML = roomIds.map(roomId => {
-    const room = RoomConfigManager.getRoom(building, roomId);
-    const balance = balances[roomId];
-    const eOld = balance ? balance.eOld : '';
-    const wOld = balance ? balance.wOld : '';
+    const balances = await getAllOpeningBalances(building, 69);
+    console.log('✅ getAllOpeningBalances returned:', Object.keys(balances).length, 'items');
 
-    return `<tr style="border-bottom:1px solid var(--border);"><td style="border:1px solid var(--border);padding:0.8rem;">${roomId}</td><td style="border:1px solid var(--border);padding:0.8rem;">${room ? room.name : 'N/A'}</td><td style="border:1px solid var(--border);padding:0.8rem;"><input type="number" value="${eOld}" data-building="${building}" data-roomid="${roomId}" data-field="eOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"></td><td style="border:1px solid var(--border);padding:0.8rem;"><input type="number" value="${wOld}" data-building="${building}" data-roomid="${roomId}" data-field="wOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"></td><td style="border:1px solid var(--border);padding:0.8rem;text-align:center;">${balance ? '✅' : '⏳'}</td></tr>`;
-  }).join('');
+    const html = roomIds.map(roomId => {
+      const room = RoomConfigManager.getRoom(building, roomId);
+      const balance = balances[roomId];
+      const eOld = balance ? balance.eOld : '';
+      const wOld = balance ? balance.wOld : '';
+      return `<tr style="border-bottom:1px solid var(--border);"><td style="border:1px solid var(--border);padding:0.8rem;">${roomId}</td><td style="border:1px solid var(--border);padding:0.8rem;">${room ? room.name : 'N/A'}</td><td style="border:1px solid var(--border);padding:0.8rem;"><input type="number" value="${eOld}" data-building="${building}" data-roomid="${roomId}" data-field="eOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"></td><td style="border:1px solid var(--border);padding:0.8rem;"><input type="number" value="${wOld}" data-building="${building}" data-roomid="${roomId}" data-field="wOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"></td><td style="border:1px solid var(--border);padding:0.8rem;text-align:center;">${balance ? '✅' : '⏳'}</td></tr>`;
+    }).join('');
+
+    console.log('📝 Generated HTML length:', html.length, 'tbody element:', tbody);
+    tbody.innerHTML = html;
+    console.log('✅ tbody.innerHTML set, rows now:', tbody.querySelectorAll('tr').length);
+  } catch (error) {
+    console.error('❌ loadOpeningBalanceUI error:', error);
+  }
 }
 
 async function saveAllOpeningBalances() {
