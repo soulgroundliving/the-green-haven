@@ -27,9 +27,9 @@
   import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
   // Firebase configuration
-  // Using the correct Firebase project from .env.local
+  // Firebase config from environment - API Key must be set via build process
   const firebaseConfig = {
-    apiKey: "__FIREBASE_API_KEY__",
+    apiKey: typeof FIREBASE_API_KEY !== 'undefined' ? FIREBASE_API_KEY : "",
     authDomain: "the-green-haven-d9b20.firebaseapp.com",
     databaseURL: "https://the-green-haven-d9b20-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "the-green-haven-d9b20",
@@ -196,12 +196,22 @@
     // Show user info in header and sidebar
     const userInfoEl = document.getElementById('userInfo');
     const sidebarUserInfoEl = document.getElementById('sidebarUserInfo');
-    const userDisplay = `👤 ${window.SecurityUtils.sanitizeInput(user.name)}<br><small style="opacity:0.7;">(Admin)</small>`;
+    const sanitizedName = window.SecurityUtils.sanitizeInput(user.name);
+
     if (userInfoEl) {
-      userInfoEl.innerHTML = `👤 ${window.SecurityUtils.sanitizeInput(user.name)} (Admin)`;
+      userInfoEl.textContent = `👤 ${sanitizedName} (Admin)`;
     }
     if (sidebarUserInfoEl) {
-      sidebarUserInfoEl.innerHTML = userDisplay;
+      sidebarUserInfoEl.innerHTML = '';
+      const span1 = document.createElement('span');
+      span1.textContent = `👤 ${sanitizedName}`;
+      const small = document.createElement('small');
+      small.style.opacity = '0.7';
+      small.textContent = '(Admin)';
+      sidebarUserInfoEl.appendChild(span1);
+      const br = document.createElement('br');
+      sidebarUserInfoEl.appendChild(br);
+      sidebarUserInfoEl.appendChild(small);
     }
 
     // Set session timeout for auto-logout on inactivity
@@ -233,9 +243,7 @@
   window.goToTaxFiling = function(pageId) {
     const user = window.SecurityUtils.getSecureSession();
     if (user && (user.userType === 'admin' || user.userType === 'accountant')) {
-      // Store current page for potential back button in future
-      sessionStorage.setItem('previousPage', window.location.href);
-      // Navigate to tax-filing module with page ID
+      sessionStorage.setItem('returnPath', '/dashboard.html');
       window.location.href = '/tax-filing.html#' + pageId;
     } else {
       alert('⛔ เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบยื่นแบบประเมิน');
@@ -3362,6 +3370,11 @@ function displayImportPreview(importData, matchResults) {
     return;
   }
 
+  function escapeHtml(text) {
+    const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+  }
+
   const previewHtml = `
     <div style="border:1px solid var(--border);border-radius:var(--radius-sm);">
       <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
@@ -3378,11 +3391,11 @@ function displayImportPreview(importData, matchResults) {
         <tbody>
           ${matchResults.details.map((result, idx) => `
             <tr style="border-bottom:1px solid var(--border);background:${idx % 2 === 0 ? 'white' : 'rgba(0,0,0,0.01)'};">
-              <td style="padding:0.7rem;font-weight:600;">${result.room}</td>
-              <td style="padding:0.7rem;text-align:right;">${result.eNew}</td>
-              <td style="padding:0.7rem;text-align:right;">${result.eOld}</td>
-              <td style="padding:0.7rem;text-align:right;">${result.wNew}</td>
-              <td style="padding:0.7rem;text-align:right;">${result.wOld}</td>
+              <td style="padding:0.7rem;font-weight:600;">${escapeHtml(result.room)}</td>
+              <td style="padding:0.7rem;text-align:right;">${escapeHtml(result.eNew)}</td>
+              <td style="padding:0.7rem;text-align:right;">${escapeHtml(result.eOld)}</td>
+              <td style="padding:0.7rem;text-align:right;">${escapeHtml(result.wNew)}</td>
+              <td style="padding:0.7rem;text-align:right;">${escapeHtml(result.wOld)}</td>
               <td style="padding:0.7rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
             </tr>
           `).join('')}
@@ -3390,7 +3403,7 @@ function displayImportPreview(importData, matchResults) {
       </table>
     </div>
     <div style="margin-top:1rem;padding:0.8rem;background:var(--bg-secondary);border-radius:var(--radius-sm);font-size:0.85rem;color:var(--text-muted);text-align:center;">
-      <strong style="color:var(--text);">ปี ${importData.year}</strong> | เดือน <strong style="color:var(--text);">${importData.month}</strong> | ห้องทั้งหมด: <strong style="color:var(--text);">${Object.keys(importData.rooms).length}</strong>
+      <strong style="color:var(--text);">ปี ${escapeHtml(importData.year)}</strong> | เดือน <strong style="color:var(--text);">${escapeHtml(importData.month)}</strong> | ห้องทั้งหมด: <strong style="color:var(--text);">${escapeHtml(Object.keys(importData.rooms).length)}</strong>
     </div>
   `;
 
@@ -3418,25 +3431,30 @@ function displayMatchSummary(matchResults) {
   const { summary, canProceed, mismatches } = matchResults;
   const { okCount, warningCount, errorCount } = summary;
 
+  function escapeHtml(text) {
+    const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+  }
+
   let html = '<div style="font-weight:600;margin-bottom:0.8rem;">🔍 ตรวจสอบความต่อเนื่องของข้อมูล:</div>';
 
   html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem;">';
 
   // OK Status
   html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid #4caf50;">
-    <div style="font-size:1.2rem;font-weight:bold;color:#4caf50;">${okCount}</div>
+    <div style="font-size:1.2rem;font-weight:bold;color:#4caf50;">${escapeHtml(okCount)}</div>
     <div style="font-size:0.85rem;color:#666;">✅ ตรงกัน</div>
   </div>`;
 
   // Warning Status
   html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid #ff9800;">
-    <div style="font-size:1.2rem;font-weight:bold;color:#ff9800;">${warningCount}</div>
+    <div style="font-size:1.2rem;font-weight:bold;color:#ff9800;">${escapeHtml(warningCount)}</div>
     <div style="font-size:0.85rem;color:#666;">⚠️ ต่างเล็กน้อย</div>
   </div>`;
 
   // Error Status
   html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid #f44336;">
-    <div style="font-size:1.2rem;font-weight:bold;color:#f44336;">${errorCount}</div>
+    <div style="font-size:1.2rem;font-weight:bold;color:#f44336;">${escapeHtml(errorCount)}</div>
     <div style="font-size:0.85rem;color:#666;">❌ ต่างมาก</div>
   </div>`;
 
@@ -3450,8 +3468,8 @@ function displayMatchSummary(matchResults) {
     mismatches.forEach(m => {
       const icon = m.status === 'error' ? '❌' : '⚠️';
       html += `<div style="padding:0.3rem;color:#666;">
-        ${icon} ห้อง <strong>${m.room}</strong> (${m.fieldLabel}):
-        นำเข้า ${m.imported} / ระบบ ${m.expected} (ต่างกัน ${m.delta})
+        ${icon} ห้อง <strong>${escapeHtml(m.room)}</strong> (${escapeHtml(m.fieldLabel)}):
+        นำเข้า ${escapeHtml(m.imported)} / ระบบ ${escapeHtml(m.expected)} (ต่างกัน ${escapeHtml(m.delta)})
       </div>`;
     });
     html += '</div></div>';
@@ -3481,13 +3499,17 @@ function displayMatchSummary(matchResults) {
 }
 
 async function approveImportData() {
-  // Check if there's any pending import at all
+  const user = window.SecurityUtils.getSecureSession();
+  if (!user || (user.userType !== 'admin' && user.userType !== 'accountant')) {
+    showImportStatus('❌ คุณไม่มีสิทธิ์ในการอัพโหลดข้อมูล', 'error');
+    return;
+  }
+
   if (!currentImportData && !getPendingImportSession()) {
     showImportStatus('❌ ต้องอัพโหลดไฟล์ Excel และตรวจสอบข้อมูลก่อน', 'error');
     return;
   }
 
-  // Check if match results show no errors
   if (!currentImportMatchResults || !currentImportMatchResults.canProceed) {
     showImportStatus('❌ มีข้อมูลที่ไม่ตรงกับระบบ ไม่สามารถบันทึกได้', 'error');
     return;
@@ -3606,7 +3628,11 @@ function showImportStatus(message, type) {
     borderColor = '#1565c0';
   }
 
-  statusDiv.innerHTML = `<div style="background:${bgColor};border-left:4px solid ${borderColor};padding:1rem;border-radius:4px;color:var(--text);">${message}</div>`;
+  const msgDiv = document.createElement('div');
+  msgDiv.style.cssText = `background:${bgColor};border-left:4px solid ${borderColor};padding:1rem;border-radius:4px;color:var(--text);`;
+  msgDiv.textContent = message;
+  statusDiv.innerHTML = '';
+  statusDiv.appendChild(msgDiv);
 }
 
 // Initialize Meter Pages
