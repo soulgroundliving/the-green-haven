@@ -3063,13 +3063,33 @@ function switchMeterTab(tabName, btnElement) {
 let currentImportBuilding = 'rooms';
 let currentImportData = null;
 let currentImportMatchResults = null;
+let currentImportWorkbook = null; // Store workbook for month changes
 
 function initImportMeterTab() {
   // Reset import state when tab opens
   document.getElementById('importFileInput').value = '';
   document.getElementById('importStatusMessage').innerHTML = '';
   document.getElementById('importResultsSection').style.display = 'none';
+  document.getElementById('importMonthSelect').value = ''; // Reset month selector
   document.getElementById('importDropZone').onclick = () => document.getElementById('importFileInput').click();
+
+  // Add month selector change listener
+  const monthSelect = document.getElementById('importMonthSelect');
+  if (monthSelect) {
+    monthSelect.onchange = () => {
+      if (currentImportWorkbook) {
+        // Re-parse with new month selection
+        const importData = parseImportExcelData(currentImportWorkbook, currentImportBuilding);
+        if (importData) {
+          currentImportData = importData;
+          const matchResults = window.matchMeterDataWithPrevious(importData);
+          currentImportMatchResults = matchResults;
+          displayImportPreview(importData, matchResults);
+          showImportStatus('✅ อัพเดตข้อมูลเดือนแล้ว!', 'success');
+        }
+      }
+    };
+  }
 }
 
 function updateImportBuilding(building) {
@@ -3106,6 +3126,9 @@ function handleImportFileProcess(file) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
+
+      // Store workbook for month selector changes
+      currentImportWorkbook = workbook;
 
       // Parse the data based on selected building
       const importData = parseImportExcelData(workbook, currentImportBuilding);
@@ -3326,8 +3349,10 @@ function cancelImportProcess() {
   document.getElementById('importResultsSection').style.display = 'none';
   document.getElementById('importPreviewData').innerHTML = '';
   document.getElementById('importStatusMessage').innerHTML = '';
+  document.getElementById('importMonthSelect').value = '';
   currentImportData = null;
   currentImportMatchResults = null;
+  currentImportWorkbook = null;
 }
 
 function showImportStatus(message, type) {
