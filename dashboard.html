@@ -3279,30 +3279,32 @@ function displayImportPreview(importData, matchResults) {
   }
 
   const previewHtml = `
-    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-      <thead>
-        <tr style="background:var(--accent-light);">
-          <th style="padding:0.5rem;text-align:left;border-bottom:1px solid var(--border);">ห้อง</th>
-          <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">⚡ New</th>
-          <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">⚡ Old</th>
-          <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">💧 New</th>
-          <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">💧 Old</th>
-          <th style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--border);">สถานะ</th>
-        </tr>
-      </thead>
-      <tbody style="max-height:400px;overflow-y:auto;display:block;">
-        ${matchResults.details.map(result => `
-          <tr style="border-bottom:1px solid var(--border);display:table;width:100%;">
-            <td style="padding:0.5rem;font-weight:600;">${result.room}</td>
-            <td style="padding:0.5rem;text-align:right;">${result.eNew}</td>
-            <td style="padding:0.5rem;text-align:right;">${result.eOld}</td>
-            <td style="padding:0.5rem;text-align:right;">${result.wNew}</td>
-            <td style="padding:0.5rem;text-align:right;">${result.wOld}</td>
-            <td style="padding:0.5rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.8rem;font-weight:600;">✓</span></td>
+    <div style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);">
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+        <thead style="position:sticky;top:0;background:var(--accent-light);">
+          <tr>
+            <th style="padding:0.5rem;text-align:left;border-bottom:1px solid var(--border);">ห้อง</th>
+            <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">⚡ New</th>
+            <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">⚡ Old</th>
+            <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">💧 New</th>
+            <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">💧 Old</th>
+            <th style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--border);">สถานะ</th>
           </tr>
-        `).join('')}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          ${matchResults.details.map(result => `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:0.5rem;font-weight:600;">${result.room}</td>
+              <td style="padding:0.5rem;text-align:right;">${result.eNew}</td>
+              <td style="padding:0.5rem;text-align:right;">${result.eOld}</td>
+              <td style="padding:0.5rem;text-align:right;">${result.wNew}</td>
+              <td style="padding:0.5rem;text-align:right;">${result.wOld}</td>
+              <td style="padding:0.5rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.8rem;font-weight:600;">✓</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
     <div style="margin-top:1rem;font-size:0.85rem;color:var(--text-muted);">
       ปี: <strong>${importData.year}</strong> | เดือน: <strong>${importData.month}</strong> | ห้องทั้งหมด: <strong>${Object.keys(importData.rooms).length}</strong>
     </div>
