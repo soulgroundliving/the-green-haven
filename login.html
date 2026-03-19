@@ -868,9 +868,9 @@
         try {
           const userRef = window.firebaseDB.ref(window.database, `users/${user.uid}`);
 
-          // Create a timeout promise (5 seconds max)
+          // Create a timeout promise (2 seconds max - fallback faster)
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Database timeout')), 5000)
+            setTimeout(() => reject(new Error('Database timeout')), 2000)
           );
 
           const snapshot = await Promise.race([
