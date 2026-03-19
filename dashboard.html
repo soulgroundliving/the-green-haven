@@ -3516,14 +3516,20 @@ function approveImportData() {
                         'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
     const monthName = thaiMonths[currentImportData.month] || `เดือน ${currentImportData.month}`;
 
-    if (confirm(`⚠️ เดือน ${monthName} ปี ${currentImportData.year} มีข้อมูลแล้ว\n\nต้องการแทนที่ข้อมูลเก่าด้วยข้อมูลใหม่หรือไม่?`)) {
-      console.log(`🔄 ผู้ใช้ยืนยันการแทนที่ข้อมูล ${building}/${key}`);
-      // User confirmed - proceed with replacement
-      performDataReplacement();
-    } else {
-      showImportStatus('⏸️ ยกเลิกการอัพโหลด', 'info');
-      return;
-    }
+    // Use custom modal instead of native confirm
+    showDuplicateConfirmDialog(
+      `เดือน ${monthName} ปี ${currentImportData.year} มีข้อมูลแล้ว`,
+      `ต้องการแทนที่ข้อมูลเก่าด้วยข้อมูลใหม่หรือไม่?`
+    ).then((confirmed) => {
+      if (confirmed) {
+        console.log(`🔄 ผู้ใช้ยืนยันการแทนที่ข้อมูล ${building}/${key}`);
+        // User confirmed - proceed with replacement
+        performDataReplacement();
+      } else {
+        showImportStatus('⏸️ ยกเลิกการอัพโหลด', 'info');
+      }
+    });
+    return;
   } else {
     // No existing data, proceed normally
     performDataReplacement();
@@ -9137,6 +9143,131 @@ async function saveAllOpeningBalances() {
     statusEl.style.borderLeft = '4px solid #f44336';
     statusEl.innerHTML = `❌ เกิดข้อผิดพลาด: ${error.message}`;
   }
+}
+
+/**
+ * Custom confirmation modal for duplicate month detection
+ */
+function showDuplicateConfirmDialog(title, message) {
+  return new Promise((resolve) => {
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'confirm-modal-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    `;
+
+    // Create modal container
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 420px;
+      overflow: hidden;
+      animation: modalIn 0.18s ease;
+    `;
+
+    // Modal header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      padding: 1rem 1.3rem 0.85rem;
+      background: #fff3e0;
+      border-bottom: 1px solid #ffe0b2;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    `;
+    header.innerHTML = `
+      <span style="font-size: 1.5rem;">⚠️</span>
+      <div style="font-size: 0.95rem; font-weight: 700; color: #e65100;">${title}</div>
+    `;
+
+    // Modal body
+    const body = document.createElement('div');
+    body.style.cssText = `
+      padding: 1.1rem 1.3rem;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 0.95rem;
+      color: #333;
+      line-height: 1.5;
+    `;
+    body.textContent = message;
+
+    // Modal footer
+    const footer = document.createElement('div');
+    footer.style.cssText = `
+      padding: 0.85rem 1.3rem;
+      background: #fafafa;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 0.8rem;
+      justify-content: flex-end;
+    `;
+
+    // Cancel button
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '❌ ยกเลิก';
+    cancelBtn.style.cssText = `
+      padding: 0.6rem 1.2rem;
+      background: #e0e0e0;
+      color: #333;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    `;
+    cancelBtn.onmouseover = () => cancelBtn.style.background = '#d0d0d0';
+    cancelBtn.onmouseout = () => cancelBtn.style.background = '#e0e0e0';
+    cancelBtn.onclick = () => {
+      overlay.remove();
+      resolve(false);
+    };
+
+    // Confirm button
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '✅ ตกลง แทนที่ข้อมูล';
+    confirmBtn.style.cssText = `
+      padding: 0.6rem 1.2rem;
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    `;
+    confirmBtn.onmouseover = () => confirmBtn.style.background = '#45a049';
+    confirmBtn.onmouseout = () => confirmBtn.style.background = '#4caf50';
+    confirmBtn.onclick = () => {
+      overlay.remove();
+      resolve(true);
+    };
+
+    // Assemble modal
+    footer.appendChild(cancelBtn);
+    footer.appendChild(confirmBtn);
+    modal.appendChild(header);
+    modal.appendChild(body);
+    modal.appendChild(footer);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Focus confirm button for keyboard navigation
+    confirmBtn.focus();
+  });
 }
 </script>
 </body>
