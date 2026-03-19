@@ -3524,8 +3524,14 @@ function approveImportData() {
       if (confirmed) {
         console.log(`🔄 ผู้ใช้ยืนยันการแทนที่ข้อมูล ${building}/${key}`);
         console.log('📊 Import data to be saved:', currentImportData);
-        // User confirmed - proceed with replacement
-        performDataReplacement();
+        console.log('🔧 About to call performDataReplacement()');
+        try {
+          performDataReplacement();
+          console.log('✅ performDataReplacement() called successfully');
+        } catch (err) {
+          console.error('❌ Error calling performDataReplacement():', err);
+          showImportStatus(`❌ เกิดข้อผิดพลาด: ${err.message}`, 'error');
+        }
       } else {
         showImportStatus('⏸️ ยกเลิกการอัพโหลด', 'info');
       }
