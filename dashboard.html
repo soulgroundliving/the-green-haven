@@ -2406,21 +2406,11 @@
           <div id="importPreviewData" style="background:white;padding:1.2rem;border-radius:var(--radius-sm);"></div>
         </div>
 
-        <!-- Data Continuity Verification -->
-        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;">
-          <div style="display:flex;align-items:flex-start;gap:0.8rem;">
-            <input type="checkbox" id="importVerifyCheckbox" onchange="toggleApproveButton()" style="margin-top:0.3rem;cursor:pointer;">
-            <label for="importVerifyCheckbox" style="cursor:pointer;color:var(--text);font-size:0.9rem;">
-              <strong>✓ ฉันตรวจสอบแล้วว่า:</strong><br/>
-              เลขมิเตอร์เก่า (Old) ในไฟล์ที่นำเข้า<br/>
-              <strong>ตรงกับ</strong> เลขมิเตอร์ใหม่ (New) ของเดือนก่อนหน้าในระบบแล้ว<br/>
-              <span style="color:#d32f2f;font-size:0.85rem;">(เพื่อให้มั่นใจในความต่อเนื่องของข้อมูล)</span>
-            </label>
-          </div>
-        </div>
+        <!-- Data Continuity Validation Results -->
+        <div id="importMatchSummary" style="background:#e8f5e9;border:1px solid #4caf50;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;"></div>
 
         <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
-          <button id="approveImportBtn" onclick="approveImportData()" disabled style="padding:0.8rem 1.5rem;background:#ccc;color:#666;border:none;border-radius:var(--radius-sm);cursor:not-allowed;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;opacity:0.6;">✅ อนุมัติและบันทึก</button>
+          <button id="approveImportBtn" onclick="approveImportData()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
           <button onclick="cancelImportProcess()" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">❌ ยกเลิก</button>
         </div>
       </div>
@@ -3342,41 +3332,92 @@ function displayImportPreview(importData, matchResults) {
   previewDataDiv.style.overflowX = 'visible';
   previewDataDiv.style.overflowY = 'visible';
   document.getElementById('importResultsSection').style.display = 'block';
-  // Reset checkbox when new data is loaded
-  const checkbox = document.getElementById('importVerifyCheckbox');
-  if (checkbox) {
-    checkbox.checked = false;
-    toggleApproveButton();
-  }
+
+  // Display match summary
+  displayMatchSummary(matchResults);
 }
 
-// Toggle approve button based on verification checkbox
-function toggleApproveButton() {
-  const checkbox = document.getElementById('importVerifyCheckbox');
+// Display data continuity validation results
+function displayMatchSummary(matchResults) {
+  const summaryDiv = document.getElementById('importMatchSummary');
   const approveBtn = document.getElementById('approveImportBtn');
 
-  if (!approveBtn) return;
+  if (!summaryDiv || !matchResults) return;
 
-  if (checkbox && checkbox.checked) {
-    approveBtn.disabled = false;
-    approveBtn.style.background = 'var(--green)';
-    approveBtn.style.color = 'white';
-    approveBtn.style.cursor = 'pointer';
-    approveBtn.style.opacity = '1';
-  } else {
-    approveBtn.disabled = true;
-    approveBtn.style.background = '#ccc';
-    approveBtn.style.color = '#666';
-    approveBtn.style.cursor = 'not-allowed';
-    approveBtn.style.opacity = '0.6';
+  const { summary, canProceed, mismatches } = matchResults;
+  const { okCount, warningCount, errorCount } = summary;
+
+  let html = '<div style="font-weight:600;margin-bottom:0.8rem;">🔍 ตรวจสอบความต่อเนื่องของข้อมูล:</div>';
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem;">';
+
+  // OK Status
+  html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid #4caf50;">
+    <div style="font-size:1.2rem;font-weight:bold;color:#4caf50;">${okCount}</div>
+    <div style="font-size:0.85rem;color:#666;">✅ ตรงกัน</div>
+  </div>`;
+
+  // Warning Status
+  html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid #ff9800;">
+    <div style="font-size:1.2rem;font-weight:bold;color:#ff9800;">${warningCount}</div>
+    <div style="font-size:0.85rem;color:#666;">⚠️ ต่างเล็กน้อย</div>
+  </div>`;
+
+  // Error Status
+  html += `<div style="text-align:center;padding:0.8rem;background:white;border-radius:4px;border-left:4px solid #f44336;">
+    <div style="font-size:1.2rem;font-weight:bold;color:#f44336;">${errorCount}</div>
+    <div style="font-size:0.85rem;color:#666;">❌ ต่างมาก</div>
+  </div>`;
+
+  html += '</div>';
+
+  // Show mismatches if any
+  if (mismatches && mismatches.length > 0) {
+    html += '<div style="background:white;padding:0.8rem;border-radius:4px;margin-bottom:0.8rem;max-height:200px;overflow-y:auto;">';
+    html += '<strong style="display:block;margin-bottom:0.5rem;font-size:0.9rem;">ห้องที่ต่างกัน:</strong>';
+    html += '<div style="font-size:0.85rem;">';
+    mismatches.forEach(m => {
+      const icon = m.status === 'error' ? '❌' : '⚠️';
+      html += `<div style="padding:0.3rem;color:#666;">
+        ${icon} ห้อง <strong>${m.room}</strong> (${m.fieldLabel}):
+        นำเข้า ${m.imported} / ระบบ ${m.expected} (ต่างกัน ${m.delta})
+      </div>`;
+    });
+    html += '</div></div>';
   }
+
+  // Status message
+  if (canProceed) {
+    if (errorCount === 0) {
+      html += '<div style="color:#4caf50;font-weight:600;padding:0.5rem;">✅ ข้อมูลสามารถบันทึกได้</div>';
+      approveBtn.disabled = false;
+      approveBtn.style.opacity = '1';
+      approveBtn.style.cursor = 'pointer';
+    } else {
+      html += '<div style="color:#ff9800;font-weight:600;padding:0.5rem;">⚠️ มีข้อมูลที่ต่างกัน ตรวจสอบอีกครั้ง</div>';
+      approveBtn.disabled = true;
+      approveBtn.style.opacity = '0.5';
+      approveBtn.style.cursor = 'not-allowed';
+    }
+  } else {
+    html += '<div style="color:#f44336;font-weight:600;padding:0.5rem;">❌ มีข้อผิดพลาดในข้อมูล ไม่สามารถบันทึกได้</div>';
+    approveBtn.disabled = true;
+    approveBtn.style.opacity = '0.5';
+    approveBtn.style.cursor = 'not-allowed';
+  }
+
+  summaryDiv.innerHTML = html;
 }
 
 function approveImportData() {
-  // Check if user verified data continuity
-  const checkbox = document.getElementById('importVerifyCheckbox');
-  if (!checkbox || !checkbox.checked) {
-    showImportStatus('❌ กรุณายืนยันว่าเลขมิเตอร์เก่าตรงกับระบบก่อนทำการบันทึก', 'error');
+  // Check if match results show no errors
+  if (!currentImportMatchResults || !currentImportMatchResults.canProceed) {
+    showImportStatus('❌ มีข้อมูลที่ไม่ตรงกับระบบ ไม่สามารถบันทึกได้', 'error');
+    return;
+  }
+
+  if (currentImportMatchResults.summary.errorCount > 0) {
+    showImportStatus('❌ พบข้อผิดพลาดในการตรวจสอบข้อมูล ไม่สามารถบันทึกได้', 'error');
     return;
   }
 
