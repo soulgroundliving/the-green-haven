@@ -3279,9 +3279,9 @@ function displayImportPreview(importData, matchResults) {
   }
 
   const previewHtml = `
-    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;">
+    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);max-height:500px;overflow-y:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-        <thead style="background:var(--accent-light);">
+        <thead style="background:var(--accent-light);position:sticky;top:0;">
           <tr>
             <th style="padding:0.5rem;text-align:left;border-bottom:1px solid var(--border);">ห้อง</th>
             <th style="padding:0.5rem;text-align:right;border-bottom:1px solid var(--border);">⚡ New</th>
@@ -3291,15 +3291,15 @@ function displayImportPreview(importData, matchResults) {
             <th style="padding:0.5rem;text-align:center;border-bottom:1px solid var(--border);">สถานะ</th>
           </tr>
         </thead>
-        <tbody style="max-height:400px;overflow-y:auto;display:block;">
+        <tbody>
           ${matchResults.details.map(result => `
-            <tr style="border-bottom:1px solid var(--border);display:table;width:100%;">
-              <td style="padding:0.5rem;font-weight:600;width:10%;">ห้อง ${result.room}</td>
-              <td style="padding:0.5rem;text-align:right;width:18%;">${result.eNew}</td>
-              <td style="padding:0.5rem;text-align:right;width:18%;">${result.eOld}</td>
-              <td style="padding:0.5rem;text-align:right;width:18%;">${result.wNew}</td>
-              <td style="padding:0.5rem;text-align:right;width:18%;">${result.wOld}</td>
-              <td style="padding:0.5rem;text-align:center;width:18%;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.8rem;font-weight:600;">✓</span></td>
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:0.5rem;font-weight:600;">${result.room}</td>
+              <td style="padding:0.5rem;text-align:right;">${result.eNew}</td>
+              <td style="padding:0.5rem;text-align:right;">${result.eOld}</td>
+              <td style="padding:0.5rem;text-align:right;">${result.wNew}</td>
+              <td style="padding:0.5rem;text-align:right;">${result.wOld}</td>
+              <td style="padding:0.5rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.8rem;font-weight:600;">✓</span></td>
             </tr>
           `).join('')}
         </tbody>
