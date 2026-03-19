@@ -3481,6 +3481,12 @@ function displayMatchSummary(matchResults) {
 }
 
 function approveImportData() {
+  // Check if there's any pending import at all
+  if (!currentImportData && !getPendingImportSession()) {
+    showImportStatus('❌ ต้องอัพโหลดไฟล์ Excel และตรวจสอบข้อมูลก่อน', 'error');
+    return;
+  }
+
   // Check if match results show no errors
   if (!currentImportMatchResults || !currentImportMatchResults.canProceed) {
     showImportStatus('❌ มีข้อมูลที่ไม่ตรงกับระบบ ไม่สามารถบันทึกได้', 'error');
