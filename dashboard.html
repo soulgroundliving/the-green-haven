@@ -9014,20 +9014,33 @@ async function loadOpeningBalanceUI() {
     const tbody = document.getElementById('openingBalanceBody');
     console.log('🔄 loadOpeningBalanceUI start - building:', building, 'roomIds:', roomIds.length);
 
-    const balances = await getAllOpeningBalances(building, 69);
-    console.log('✅ getAllOpeningBalances returned:', Object.keys(balances).length, 'items');
-
+    // First render the table without waiting for balances (they may take time)
     const html = roomIds.map(roomId => {
       const room = RoomConfigManager.getRoom(building, roomId);
-      const balance = balances[roomId];
-      const eOld = balance ? balance.eOld : '';
-      const wOld = balance ? balance.wOld : '';
-      return `<tr style="border-bottom:1px solid var(--border);"><td style="border:1px solid var(--border);padding:0.8rem;">${roomId}</td><td style="border:1px solid var(--border);padding:0.8rem;">${room ? room.name : 'N/A'}</td><td style="border:1px solid var(--border);padding:0.8rem;"><input type="number" value="${eOld}" data-building="${building}" data-roomid="${roomId}" data-field="eOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"></td><td style="border:1px solid var(--border);padding:0.8rem;"><input type="number" value="${wOld}" data-building="${building}" data-roomid="${roomId}" data-field="wOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"></td><td style="border:1px solid var(--border);padding:0.8rem;text-align:center;">${balance ? '✅' : '⏳'}</td></tr>`;
+      return `<tr style="border-bottom:1px solid var(--border);"><td style="border:1px solid var(--border);padding:0.8rem;">${roomId}</td><td style="border:1px solid var(--border);padding:0.8rem;">${room ? room.name : 'N/A'}</td><td style="border:1px solid var(--border);padding:0.8rem;"><input type="number" value="" data-building="${building}" data-roomid="${roomId}" data-field="eOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"></td><td style="border:1px solid var(--border);padding:0.8rem;"><input type="number" value="" data-building="${building}" data-roomid="${roomId}" data-field="wOld" placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"></td><td style="border:1px solid var(--border);padding:0.8rem;text-align:center;">⏳</td></tr>`;
     }).join('');
 
-    console.log('📝 Generated HTML length:', html.length, 'tbody element:', tbody);
     tbody.innerHTML = html;
-    console.log('✅ tbody.innerHTML set, rows now:', tbody.querySelectorAll('tr').length);
+    console.log('✅ Initial table rendered, rows:', tbody.querySelectorAll('tr').length);
+
+    // Load balances asynchronously in background (don't block UI)
+    getAllOpeningBalances(building, 69).then(balances => {
+      console.log('✅ getAllOpeningBalances returned:', Object.keys(balances).length, 'items');
+      // Update table with balance data
+      for (const roomId of roomIds) {
+        const balance = balances[roomId];
+        if (balance) {
+          const eInput = tbody.querySelector(`input[data-roomid="${roomId}"][data-field="eOld"]`);
+          const wInput = tbody.querySelector(`input[data-roomid="${roomId}"][data-field="wOld"]`);
+          const statusCell = tbody.querySelector(`tr:has(td:contains(${roomId})) td:last-child`);
+          if (eInput) eInput.value = balance.eOld;
+          if (wInput) wInput.value = balance.wOld;
+          // Update status icon would go here if we had a better way to select it
+        }
+      }
+    }).catch(error => {
+      console.warn('⚠️ Failed to load balance data:', error);
+    });
   } catch (error) {
     console.error('❌ loadOpeningBalanceUI error:', error);
   }
