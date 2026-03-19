@@ -3739,8 +3739,7 @@ function initMeterRoomsTab() {
 }
 
 // Auto-fill Old readings from METER_DATA (Nest Building)
-function autoFillOldReadingsNest() {
-  // Use same fallback logic as Rooms Building
+async function autoFillOldReadingsNest() {
   const monthInputEl = document.getElementById('nestMonthInput');
   if (!monthInputEl || !monthInputEl.value) {
     console.log('⚠️ Month input field not found or empty');
@@ -3754,14 +3753,78 @@ function autoFillOldReadingsNest() {
     return;
   }
 
+  // Try to load from Firebase first
+  console.log(`🔄 Loading meter data from Firebase for Nest ${monthInput}...`);
+  const nestRooms = RoomConfigManager.getAllRooms('nest');
+
+  try {
+    const fb = window.firebase;
+    if (fb && fb.firestore) {
+      const firestore = fb.firestore();
+      const fs = fb.firestoreFunctions;
+      const buddhistYear = year + 543;
+      const yy = buddhistYear % 100;
+
+      // Try to load current month data from Firebase
+      let foundData = false;
+      for (const room of nestRooms) {
+        const docId = `nest_${yy}_${month}_${room}`;
+        try {
+          const docRef = fs.doc(fs.collection(firestore, 'meter_data'), docId);
+          const docSnapshot = await fs.getDoc(docRef);
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            const eOldInput = document.getElementById(`meter-nest-${room}-electric-old`);
+            const wOldInput = document.getElementById(`meter-nest-${room}-water-old`);
+            const eNewInput = document.getElementById(`meter-nest-${room}-electric-new`);
+            const wNewInput = document.getElementById(`meter-nest-${room}-water-new`);
+
+            if (eNewInput && data.eNew !== null && data.eNew !== undefined) {
+              eNewInput.value = data.eNew;
+              eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (wNewInput && data.wNew !== null && data.wNew !== undefined) {
+              wNewInput.value = data.wNew;
+              wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (eOldInput && data.eOld !== null && data.eOld !== undefined) {
+              eOldInput.value = data.eOld;
+              eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (wOldInput && data.wOld !== null && data.wOld !== undefined) {
+              wOldInput.value = data.wOld;
+              wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            foundData = true;
+            console.log(`✅ Loaded Firebase data for room ${room}`);
+          }
+        } catch (err) {
+          console.log(`⚠️ No Firebase data for ${room}: ${err.message}`);
+        }
+      }
+
+      if (foundData) {
+        console.log('✅ Loaded data from Firebase successfully');
+        return;
+      }
+    }
+  } catch (firebaseErr) {
+    console.log('⚠️ Firebase loading failed:', firebaseErr.message);
+  }
+
+  // Fallback to METER_DATA if Firebase fails
+  if (typeof METER_DATA === 'undefined') {
+    console.log('⚠️ METER_DATA not available');
+    return;
+  }
+
   const buddhistYear = year + 543;
   const yy = buddhistYear % 100;
   const key = `${yy}_${month}`;
 
-  console.log(`📊 Looking up METER_DATA['nest'][${key}]...`);
+  console.log(`📊 Fallback: Looking up METER_DATA['nest'][${key}]...`);
   // Read from building-namespaced METER_DATA (METER_DATA.nest.{key})
   let monthData = METER_DATA['nest'] && METER_DATA['nest'][key];
-  const nestRooms = RoomConfigManager.getAllRooms('nest');
 
   if (!monthData) {
     console.log(`⚠️ No data for ${key}, trying previous month as fallback...`);
@@ -3963,7 +4026,80 @@ function renderNestMeterGrid() {
 }
 
 // Auto-fill Old readings from METER_DATA (Rooms Building)
-function autoFillOldReadingsRooms() {
+async function autoFillOldReadingsRooms() {
+  const monthInputEl = document.getElementById('roomsMeterMonth');
+  if (!monthInputEl || !monthInputEl.value) {
+    console.log('⚠️ Month input field not found or empty');
+    return;
+  }
+
+  const monthInput = monthInputEl.value;
+  const [year, month] = monthInput.split('-').map(Number);
+  if (!year || !month) {
+    console.log('⚠️ Invalid month format:', monthInput);
+    return;
+  }
+
+  // Try to load from Firebase first
+  console.log(`🔄 Loading meter data from Firebase for ${monthInput}...`);
+  const roomsRooms = RoomConfigManager.getAllRooms('rooms');
+
+  try {
+    const fb = window.firebase;
+    if (fb && fb.firestore) {
+      const firestore = fb.firestore();
+      const fs = fb.firestoreFunctions;
+      const buddhistYear = year + 543;
+      const yy = buddhistYear % 100;
+
+      // Try to load current month data from Firebase
+      let foundData = false;
+      for (const room of roomsRooms) {
+        const docId = `rooms_${yy}_${month}_${room}`;
+        try {
+          const docRef = fs.doc(fs.collection(firestore, 'meter_data'), docId);
+          const docSnapshot = await fs.getDoc(docRef);
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
+            const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
+            const eNewInput = document.getElementById(`meter-rooms-${room}-electric-new`);
+            const wNewInput = document.getElementById(`meter-rooms-${room}-water-new`);
+
+            if (eNewInput && data.eNew !== null && data.eNew !== undefined) {
+              eNewInput.value = data.eNew;
+              eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (wNewInput && data.wNew !== null && data.wNew !== undefined) {
+              wNewInput.value = data.wNew;
+              wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (eOldInput && data.eOld !== null && data.eOld !== undefined) {
+              eOldInput.value = data.eOld;
+              eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (wOldInput && data.wOld !== null && data.wOld !== undefined) {
+              wOldInput.value = data.wOld;
+              wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            foundData = true;
+            console.log(`✅ Loaded Firebase data for room ${room}`);
+          }
+        } catch (err) {
+          console.log(`⚠️ No Firebase data for ${room}: ${err.message}`);
+        }
+      }
+
+      if (foundData) {
+        console.log('✅ Loaded data from Firebase successfully');
+        return;
+      }
+    }
+  } catch (firebaseErr) {
+    console.log('⚠️ Firebase loading failed:', firebaseErr.message);
+  }
+
+  // Fallback to METER_DATA if Firebase fails
   if (typeof METER_DATA === 'undefined') {
     console.log('⚠️ METER_DATA not available');
     return;
