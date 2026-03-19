@@ -2394,7 +2394,7 @@
       <div id="importResultsSection" style="display:none;margin-bottom:1.5rem;">
         <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;">
           <h3 style="color:var(--text);margin-bottom:1rem;font-size:0.95rem;">✅ ตรวจสอบข้อมูล</h3>
-          <div id="importPreviewData" style="background:white;padding:1.2rem;border-radius:var(--radius-sm);overflow-x:auto;"></div>
+          <div id="importPreviewData" style="background:white;padding:1.2rem;border-radius:var(--radius-sm);"></div>
         </div>
         <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
           <button onclick="approveImportData()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
@@ -3279,9 +3279,9 @@ function displayImportPreview(importData, matchResults) {
   }
 
   const previewHtml = `
-    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;">
+    <div style="border:1px solid var(--border);border-radius:var(--radius-sm);">
       <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-        <thead style="background:var(--accent-light);position:sticky;top:0;z-index:10;">
+        <thead style="background:var(--accent-light);">
           <tr>
             <th style="padding:0.7rem;text-align:left;border-bottom:2px solid var(--border);">ห้อง</th>
             <th style="padding:0.7rem;text-align:right;border-bottom:2px solid var(--border);">⚡ New</th>
