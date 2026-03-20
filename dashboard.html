@@ -9416,32 +9416,30 @@ async function getDecemberDataForYear(building, year) {
     const yy = buddhistYear % 100;
     const key = `${yy}_12`; // December is month 12
 
-    const docId = `${building}_${key}_meter_summary`;
-    const docRef = fs.doc(fs.collection(db, 'meter_data'), docId);
-    const docSnapshot = await fs.getDoc(docRef);
+    // Query for all documents matching pattern: building_12_*
+    const q = fs.query(
+      fs.collection(db, 'meter_data'),
+      fs.where('building', '==', building),
+      fs.where('year', '==', yy),
+      fs.where('month', '==', 12)
+    );
 
-    if (docSnapshot.exists()) {
+    const querySnapshot = await fs.getDocs(q);
+    const result = {};
+
+    // Extract December readings for each room
+    querySnapshot.forEach(docSnapshot => {
       const data = docSnapshot.data();
-      const result = {};
-
-      // Extract December readings for each room
-      if (data.rooms) {
-        Object.entries(data.rooms).forEach(([roomId, readings]) => {
-          if (readings) {
-            result[roomId] = {
-              eNew: readings.eNew || 0,
-              wNew: readings.wNew || 0
-            };
-          }
-        });
+      if (data.roomId) {
+        result[data.roomId] = {
+          eNew: data.eNew || 0,
+          wNew: data.wNew || 0
+        };
       }
+    });
 
-      console.log('✅ December data found for', Object.keys(result).length, 'rooms');
-      return result;
-    } else {
-      console.log('⚠️ No December data found for', building, year);
-      return {};
-    }
+    console.log('✅ December data found for', Object.keys(result).length, 'rooms');
+    return result;
   } catch (error) {
     console.log('⚠️ Error fetching December data:', error.message);
     return {}; // Return empty if error
