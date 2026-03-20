@@ -24,7 +24,7 @@
   // Import Firebase SDKs
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-  import { getAuth, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+  import { getAuth, signInAnonymously, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
   import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
   // Firebase configuration
@@ -164,6 +164,16 @@
   // Initialize Firebase on page load
   window.addEventListener('load', async () => {
     console.log('🚀 Initializing Firebase integration...');
+
+    // Sign in anonymously for Firestore access
+    try {
+      const userCred = await signInAnonymously(auth);
+      console.log('✅ Firebase Anonymous Auth: SUCCESS (UID:', userCred.user.uid.substring(0, 8) + '...)');
+    } catch (error) {
+      console.error('⚠️ Anonymous Auth Error:', error.message);
+      console.log('💡 Continuing without Firestore access...');
+    }
+
     await window.testFirebaseConnection();
   });
 
