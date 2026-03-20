@@ -385,6 +385,7 @@ function approvePendingImportViaLocalStorage(acknowledgeWarnings = false) {
  */
 async function saveMeterDataToFirebase(importData) {
   if (!window.firebase || !window.firebase.firestore) {
+    console.error('❌ Firebase not initialized');
     return null;
   }
 
@@ -393,8 +394,14 @@ async function saveMeterDataToFirebase(importData) {
   const fs = window.firebase.firestoreFunctions;
   const yearMonth = `${year}_${month}`;
 
-  try {
-    for (const roomId in rooms) {
+  let successCount = 0;
+  let failureCount = 0;
+  const failedRooms = [];
+
+  console.log(`📤 Saving ${building} ${yearMonth} (${Object.keys(rooms).length} rooms)...`);
+
+  for (const roomId in rooms) {
+    try {
       const roomData = rooms[roomId];
       const docId = `${building}_${yearMonth}_${roomId}`;
       const docRef = fs.doc(fs.collection(db, 'meter_data'), docId);
@@ -412,12 +419,22 @@ async function saveMeterDataToFirebase(importData) {
         updatedAt: new Date().toISOString(),
         createdAt: new Date().toISOString()
       }, { merge: true });
+
+      successCount++;
+      console.log(`  ✅ ${building}/${yearMonth}/${roomId}`);
+    } catch (error) {
+      failureCount++;
+      failedRooms.push(roomId);
+      console.error(`  ❌ ${building}/${yearMonth}/${roomId}: ${error.message}`);
     }
-    console.log('✅ Saved all meter data to Firebase');
+  }
+
+  if (failureCount === 0) {
+    console.log(`✅ Saved ${building} ${yearMonth}: ${successCount}/${successCount} rooms success`);
     return true;
-  } catch (error) {
-    console.error('❌ Firebase save error:', error);
-    return false;
+  } else {
+    console.warn(`⚠️ Saved ${building} ${yearMonth}: ${successCount} success, ${failureCount} failed (${failedRooms.join(', ')})`);
+    return successCount > 0; // Return true if at least some rooms were saved
   }
 }
 
