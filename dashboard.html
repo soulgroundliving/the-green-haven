@@ -165,13 +165,19 @@
   window.addEventListener('load', async () => {
     console.log('🚀 Initializing Firebase integration...');
 
-    // Sign in anonymously for Firestore access
-    try {
-      const userCred = await signInAnonymously(auth);
-      console.log('✅ Firebase Anonymous Auth: SUCCESS (UID:', userCred.user.uid.substring(0, 8) + '...)');
-    } catch (error) {
-      console.error('⚠️ Anonymous Auth Error:', error.message);
-      console.log('💡 Continuing without Firestore access...');
+    // Check if user is already authenticated
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      console.log('✅ Firebase using existing auth (UID:', currentUser.uid.substring(0, 8) + '..., Email:', currentUser.email || 'unknown', ')');
+    } else {
+      // Try anonymous sign-in if no user is logged in
+      try {
+        const userCred = await signInAnonymously(auth);
+        console.log('✅ Firebase Anonymous Auth: SUCCESS (UID:', userCred.user.uid.substring(0, 8) + '...)');
+      } catch (error) {
+        console.error('⚠️ Anonymous Auth Error:', error.message);
+        console.log('💡 Firebase auth initialization failed - Firestore reads may fail');
+      }
     }
 
     await window.testFirebaseConnection();
