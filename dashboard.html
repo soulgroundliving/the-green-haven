@@ -309,6 +309,30 @@
   window.addEventListener('load', () => {
     setTimeout(updateFirebaseMonitorPanel, 500);
   });
+
+  // Global function references (will be reassigned when actual functions are defined)
+  window.showPage = function(page, btn) {
+    // Queue the call if the real showPage isn't ready yet
+    if (window._showPageImpl) {
+      return window._showPageImpl(page, btn);
+    }
+    // Retry after a short delay
+    setTimeout(() => window.showPage(page, btn), 50);
+  };
+
+  window.closeSidebar = function() {
+    if (window._closeSidebarImpl) {
+      return window._closeSidebarImpl();
+    }
+    setTimeout(() => window.closeSidebar(), 50);
+  };
+
+  window.switchMeterTab = function(tabName, btnElement) {
+    if (window._switchMeterTabImpl) {
+      return window._switchMeterTabImpl(tabName, btnElement);
+    }
+    setTimeout(() => window.switchMeterTab(tabName, btnElement), 50);
+  };
 </script>
 
 <style>
@@ -1334,7 +1358,7 @@
     <!-- Main -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Main</div>
-      <button class="sidebar-item active" onclick="showPage('dashboard', this)">
+      <button class="sidebar-item active" onclick="window.showPage('dashboard', this)">
         <span class="sidebar-item-icon">📊</span>Dashboard
       </button>
     </div>
@@ -1342,13 +1366,13 @@
     <!-- Property -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">🏠 Property</div>
-      <button class="sidebar-item" onclick="showPage('rooms', this)">
+      <button class="sidebar-item" onclick="window.showPage('rooms', this)">
         <span class="sidebar-item-icon">🏠</span>ห้องแถว
       </button>
-      <button class="sidebar-item" onclick="showPage('newbuild', this)">
+      <button class="sidebar-item" onclick="window.showPage('newbuild', this)">
         <span class="sidebar-item-icon">📦</span>Nest
       </button>
-      <button class="sidebar-item" onclick="showPage('maintenance', this)">
+      <button class="sidebar-item" onclick="window.showPage('maintenance', this)">
         <span class="sidebar-item-icon">🔧</span>แจ้งซ่อม<span class="sidebar-badge" id="mxBadge" style="display:none"></span>
       </button>
     </div>
@@ -1360,13 +1384,13 @@
       <!-- Data Entry Subsection -->
       <div class="sidebar-subsection">
         <div class="sidebar-subsection-title">📅 Data Entry</div>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPage('meter', this)">
+        <button class="sidebar-item sidebar-item-indent" onclick="window.showPage('meter', this)">
           <span class="sidebar-item-icon">📊</span>บันทึกมิเตอร์
         </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPage('bill', this)">
+        <button class="sidebar-item sidebar-item-indent" onclick="window.showPage('bill', this)">
           <span class="sidebar-item-icon">💳</span>ออกบิล<span class="sidebar-badge" id="billBadge" style="display:none"></span>
         </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPage('expense', this)">
+        <button class="sidebar-item sidebar-item-indent" onclick="window.showPage('expense', this)">
           <span class="sidebar-item-icon">💸</span>ค่าใช้จ่าย
         </button>
       </div>
@@ -1374,7 +1398,7 @@
       <!-- Verification Subsection -->
       <div class="sidebar-subsection">
         <div class="sidebar-subsection-title">✓ Verification</div>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPage('payment-verify', this)">
+        <button class="sidebar-item sidebar-item-indent" onclick="window.showPage('payment-verify', this)">
           <span class="sidebar-item-icon">✓</span>ยืนยันการชำระ<span class="sidebar-badge" id="paymentBadge" style="display:none"></span>
         </button>
       </div>
@@ -1562,8 +1586,8 @@
   <div class="kpi-grid">
     <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-label">รายได้รวมทั้งปี</div><div class="kpi-value green" id="kpi-total">฿0</div><div class="kpi-sub" id="kpi-total-sub"></div></div>
     <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
-    <div class="kpi-card blue" style="cursor:pointer;" onclick="showPage('rooms',document.querySelector('[onclick*=\'rooms\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (ห้องแถว)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
-    <div class="kpi-card purple" style="cursor:pointer;" onclick="showPage('bill',document.querySelector('[onclick*=\'bill\']'))"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
+    <div class="kpi-card blue" style="cursor:pointer;" onclick="window.showPage('rooms',document.querySelector('[onclick*=\'rooms\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (ห้องแถว)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
+    <div class="kpi-card purple" style="cursor:pointer;" onclick="window.showPage('bill',document.querySelector('[onclick*=\'bill\']'))"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
     <div class="kpi-card" style="background:linear-gradient(135deg, #e8f5e9, #f1f8e9); border-left: 4px solid #4caf50;"><div class="kpi-icon">📊</div><div class="kpi-label">รายได้คาดหวัง (เดือนนี้)</div><div class="kpi-value" id="kpi-expected" style="color:#2d8653;">฿0</div><div class="kpi-sub" id="kpi-expected-sub">จากห้องที่มีผู้เช่า</div></div>
     <div class="kpi-card" style="background:linear-gradient(135deg, #ffebee, #fce4ec); border-left: 4px solid #d32f2f;"><div class="kpi-icon">⚠️</div><div class="kpi-label">ค้างชำระทั้งสิ้น</div><div class="kpi-value" id="kpi-overdue" style="color:#d32f2f;">฿0</div><div class="kpi-sub" id="kpi-overdue-sub">รอชำระเงินค้าง</div></div>
   </div>
@@ -2199,19 +2223,19 @@
 
   <!-- Meter Tabs -->
   <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:2px solid #eee;flex-wrap:wrap;">
-    <button class="meter-tab active" onclick="switchMeterTab('nest', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#2d8653;border-bottom:3px solid #2d8653;margin-bottom:-2px;">
+    <button class="meter-tab active" onclick="window.switchMeterTab('nest', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#2d8653;border-bottom:3px solid #2d8653;margin-bottom:-2px;">
       🏢 Nest Building
     </button>
-    <button class="meter-tab" onclick="switchMeterTab('rooms', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
+    <button class="meter-tab" onclick="window.switchMeterTab('rooms', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
       🏠 Rooms Building
     </button>
-    <button class="meter-tab" onclick="switchMeterTab('room-config', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
+    <button class="meter-tab" onclick="window.switchMeterTab('room-config', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
       ⚙️ จัดการห้อง
     </button>
-    <button class="meter-tab" onclick="switchMeterTab('import-meter', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
+    <button class="meter-tab" onclick="window.switchMeterTab('import-meter', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
       📥 นำเข้าข้อมูล
     </button>
-    <button class="meter-tab" onclick="switchMeterTab('opening-balance', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
+    <button class="meter-tab" onclick="window.switchMeterTab('opening-balance', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
       🏷️ ตั้งค่ายอดยกมา
     </button>
   </div>
@@ -3093,7 +3117,7 @@ const DATA = {
 };
 
 // ===== NAV =====
-function showPage(page,btn){
+window._showPageImpl = function(page,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.sidebar-item').forEach(b=>b.classList.remove('active'));
@@ -3101,7 +3125,7 @@ function showPage(page,btn){
   if(btn)btn.classList.add('active');
   // Close sidebar on mobile after navigation
   if(window.innerWidth <= 600){
-    closeSidebar();
+    window._closeSidebarImpl();
   }
   if(page==='dashboard'){setTimeout(initDashboardCharts,100);updateDashboardLive();}
   if(page==='rooms')initRoomsPage();
@@ -3115,10 +3139,12 @@ function showPage(page,btn){
   if(page==='analytics')initAnalyticsPage();
   if(page==='contract')initContractPage();
   if(page==='meter')initMeterPage();
-}
+};
+// Assign to global scope after definition
+window.showPage = window._showPageImpl;
 
 // Meter Tab Switching Function
-function switchMeterTab(tabName, btnElement) {
+window._switchMeterTabImpl = function(tabName, btnElement) {
   // Hide all tabs
   document.querySelectorAll('.meter-tab-content').forEach(el => el.style.display = 'none');
 
@@ -3152,7 +3178,9 @@ function switchMeterTab(tabName, btnElement) {
   } else if (tabName === 'opening-balance') {
     loadOpeningBalanceUI();
   }
-}
+};
+// Assign to global scope
+window.switchMeterTab = window._switchMeterTabImpl;
 
 // ===== IMPORT METER DATA FUNCTIONS =====
 let currentImportBuilding = 'rooms';
@@ -4106,7 +4134,7 @@ async function autoFillOldReadingsRooms() {
     return;
   }
 
-  const monthInputEl = document.getElementById('roomsMeterMonth');
+  // monthInputEl already defined above, just verify it's still valid
   if (!monthInputEl || !monthInputEl.value) {
     console.log('⚠️ Month input field not found or empty');
     return;
@@ -4776,19 +4804,21 @@ function toggleSidebar(){
   hamburger.classList.toggle('active');
 }
 
-function closeSidebar(){
+window._closeSidebarImpl = function(){
   const sidebar=document.getElementById('sidebar');
   const hamburger=document.getElementById('hamburger');
   sidebar.classList.remove('visible');
   hamburger.classList.remove('active');
-}
+};
+// Assign to global scope
+window.closeSidebar = window._closeSidebarImpl;
 
 // Close sidebar when clicking outside
 document.addEventListener('click',function(e){
   const sidebar=document.getElementById('sidebar');
   const hamburger=document.getElementById('hamburger');
   if(!sidebar.contains(e.target) && !hamburger.contains(e.target) && window.innerWidth <= 600){
-    closeSidebar();
+    window.closeSidebar();
   }
 
   // Close batch rent modal if clicking outside
