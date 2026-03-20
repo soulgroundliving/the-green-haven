@@ -413,8 +413,10 @@ async function saveMeterDataToFirebase(importData) {
         createdAt: new Date().toISOString()
       }, { merge: true });
     }
+    console.log('✅ Saved all meter data to Firebase');
     return true;
   } catch (error) {
+    console.error('❌ Firebase save error:', error);
     return false;
   }
 }
