@@ -3576,18 +3576,13 @@ async function performDataReplacementWithData(importData, matchResults) {
 
     const result = await approvePendingImportWithFirebase(importData, matchResults, true);
 
-    const verifyKey = `${importData.year}_${importData.month}`;
-    const verifyBuilding = importData.building || 'rooms';
-    const stored = window.METER_DATA &&
-                   window.METER_DATA[verifyBuilding] &&
-                   window.METER_DATA[verifyBuilding][verifyKey];
-
-    if (stored) {
+    // Use the result from the import function - it's more reliable than checking METER_DATA
+    if (result.success) {
       // Get month name for display
       const monthName = MONTHS_FULL[importData.month] || `เดือน ${importData.month}`;
       const displayYear = importData.year;
 
-      showImportStatus(`✅ บันทึกข้อมูล ${monthName} ปี ${displayYear} สำเร็จ! 🎉 Dashboard อัพเดทแล้ว 📊 (${result.message})`, 'success');
+      showImportStatus(`✅ บันทึกข้อมูล ${monthName} ปี ${displayYear} สำเร็จ! 🎉 Dashboard อัพเดทแล้ว 📊`, 'success');
 
       // Refresh dashboard in background
       console.log('🔄 Refreshing dashboard after import...');
@@ -3597,7 +3592,8 @@ async function performDataReplacementWithData(importData, matchResults) {
           if (window.METER_DATA) {
             console.log('📊 Reloading dashboard data...');
             // If dashboard is currently open, refresh the charts
-            if (document.getElementById('page-dashboard').classList.contains('active')) {
+            const dashboardPage = document.getElementById('page-dashboard');
+            if (dashboardPage && dashboardPage.classList.contains('active')) {
               setTimeout(() => {
                 initDashboardCharts();
                 updateDashboardLive();
@@ -3610,7 +3606,7 @@ async function performDataReplacementWithData(importData, matchResults) {
         }
       }, 500);
     } else {
-      showImportStatus(`⚠️ ข้อมูลนี้อาจไม่ได้บันทึก กรุณารีเฟรชหน้าเพื่อตรวจสอบ`, 'warning');
+      showImportStatus(`❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${result.message || 'Unknown error'}`, 'error');
     }
 
     setTimeout(() => {
