@@ -4151,7 +4151,7 @@ async function autoFillOldReadingsRooms() {
   console.log(`📊 Looking up METER_DATA['rooms'][${key}] for ${monthInput}...`);
   // Read from building-namespaced METER_DATA (METER_DATA.rooms.{key})
   let monthData = METER_DATA['rooms'] && METER_DATA['rooms'][key];
-  const roomsRooms = RoomConfigManager.getAllRooms('rooms');
+  // roomsRooms already declared above, reuse it
   let loadCount = 0;
 
   if (!monthData) {
