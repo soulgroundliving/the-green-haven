@@ -3058,57 +3058,8 @@
 const MONTHS_TH = CONFIG.months.short;
 const MONTHS_FULL = CONFIG.months.full;
 
-// ===== OLD BUILDING ROOMS (โรงน้ำแข็ง removed, Amazon updated) =====
-const ROOMS_OLD = [
-  {id:'15ก',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'13',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'14',rent:1200,type:'room',elecRate:8,trashFee:20},
-  {id:'15',rent:1200,type:'room',elecRate:8,trashFee:20},
-  {id:'16',rent:2000,type:'room',elecRate:8,trashFee:20},
-  {id:'17',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'18',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'19',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'20',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'21',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'22',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'23',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'24',rent:2000,type:'room',elecRate:8,trashFee:20},
-  {id:'25',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'26',rent:2000,type:'room',elecRate:8,trashFee:20},
-  {id:'27',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'28',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'29',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'30',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'31',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'32',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'33',rent:1200,type:'room',elecRate:8,trashFee:20},
-  {id:'35',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'Amazon ☕',rent:15000,type:'commercial',elecRate:6,trashFee:20,note:'ค่าเช่า 15,000 · ไฟ 6บ./หน่วย'},
-];
-
-// ===== NEW BUILDING ROOMS =====
-const ROOMS_NEW = [
-  {id:'101',rent:5600,type:'daily',floor:1,elecRate:8,trashFee:40,dailyRate:400,note:'รายวัน/รายเดือน'},
-  {id:'102',rent:5600,type:'daily',floor:1,elecRate:8,trashFee:40,dailyRate:400,note:'รายวัน/รายเดือน'},
-  {id:'103',rent:5600,type:'daily',floor:1,elecRate:8,trashFee:40,dailyRate:400,note:'รายวัน/รายเดือน'},
-  {id:'104',rent:5600,type:'studio',floor:1,elecRate:8,trashFee:40},
-  {id:'105',rent:5600,type:'studio',floor:1,elecRate:8,trashFee:40},
-  {id:'201',rent:5600,type:'studio',floor:2,elecRate:8,trashFee:40},
-  {id:'202',rent:5600,type:'studio',floor:2,elecRate:8,trashFee:40},
-  {id:'203',rent:5600,type:'studio',floor:2,elecRate:8,trashFee:40},
-  {id:'204',rent:5600,type:'studio',floor:2,elecRate:8,trashFee:40},
-  {id:'205',rent:5600,type:'studio',floor:2,elecRate:8,trashFee:40},
-  {id:'301',rent:5900,type:'pet',floor:3,elecRate:8,trashFee:40},
-  {id:'302',rent:5900,type:'pet',floor:3,elecRate:8,trashFee:40},
-  {id:'303',rent:5900,type:'pet',floor:3,elecRate:8,trashFee:40},
-  {id:'304',rent:5900,type:'pet',floor:3,elecRate:8,trashFee:40},
-  {id:'305',rent:5900,type:'pet',floor:3,elecRate:8,trashFee:40},
-  {id:'401',rent:5900,type:'pet',floor:4,elecRate:8,trashFee:40},
-  {id:'402',rent:5900,type:'pet',floor:4,elecRate:8,trashFee:40},
-  {id:'403',rent:5900,type:'pet',floor:4,elecRate:8,trashFee:40},
-  {id:'404',rent:5900,type:'pet',floor:4,elecRate:8,trashFee:40},
-  {id:'405',rent:5900,type:'pet',floor:4,elecRate:8,trashFee:40},
-];
+// ROOMS_OLD and ROOMS_NEW are now defined in shared-config.js
+// Use CONFIG.rooms_old and CONFIG.rooms_new instead
 
 const DATA = {
   '67':{label:'ปี 2567 (2024)',months:[[33600,12224,3120,100568],[33600,null,null,99904],[33600,null,null,102820],[33600,13344,2800,102416],[33600,14288,3200,105436],[33600,14088,3100,103072],[33600,14424,3460,103368],[33800,12768,3460,99828],[33800,12512,3040,94812],[33800,13344,3280,98576],[33800,12664,3200,96768],[33800,12648,2940,98524]]},
