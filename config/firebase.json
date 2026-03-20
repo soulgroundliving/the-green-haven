@@ -2,13 +2,17 @@
   "database": {
     "rules": "database.rules.json"
   },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "hosting": {
     "public": ".",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
-      "database.rules.json"
+      "database.rules.json",
+      "firestore.rules"
     ],
     "rewrites": [
       {
