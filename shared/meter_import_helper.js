@@ -328,38 +328,41 @@ function approvePendingImportViaLocalStorage(acknowledgeWarnings = false) {
     throw new Error('Cannot import - errors detected in data');
   }
 
-  // Store to METER_DATA (if available)
-  if (window.METER_DATA) {
-    const key = `${importData.year}_${importData.month}`;
-    const building = importData.building || 'rooms'; // Default to rooms for backward compatibility
+  const key = `${importData.year}_${importData.month}`;
+  const building = importData.building || 'rooms'; // Default to rooms for backward compatibility
 
-    // Initialize building namespace if not exists
-    if (!METER_DATA[building]) {
-      METER_DATA[building] = {};
-    }
+  // Initialize METER_DATA if not exists
+  if (!window.METER_DATA) {
+    window.METER_DATA = {};
+    console.log('📊 Initialized window.METER_DATA');
+  }
 
-    // Store in building-specific namespace
-    METER_DATA[building][key] = importData.rooms;
+  // Initialize building namespace if not exists
+  if (!METER_DATA[building]) {
+    METER_DATA[building] = {};
+  }
 
-    // Persist to localStorage
-    try {
-      localStorage.setItem('METER_DATA', JSON.stringify(window.METER_DATA));
-      console.log(`✅ Saved METER_DATA to localStorage - ${building}/${key}`);
-    } catch (e) {
-      console.warn('⚠️ Failed to save METER_DATA to localStorage:', e);
-    }
+  // Store in building-specific namespace
+  METER_DATA[building][key] = importData.rooms;
 
-    // Log to audit
-    if (window.AuditLogger) {
-      AuditLogger.log('METER_DATA_IMPORTED', {
-        key: key,
-        building: building,
-        roomCount: Object.keys(importData.rooms).length,
-        matchStats: matchResults.summary,
-        mismatchCount: matchResults.mismatches.length,
-        storageMethod: 'localStorage'
-      });
-    }
+  // Persist to localStorage
+  try {
+    localStorage.setItem('METER_DATA', JSON.stringify(window.METER_DATA));
+    console.log(`✅ Saved METER_DATA to localStorage - ${building}/${key}`);
+  } catch (e) {
+    console.warn('⚠️ Failed to save METER_DATA to localStorage:', e);
+  }
+
+  // Log to audit
+  if (window.AuditLogger) {
+    AuditLogger.log('METER_DATA_IMPORTED', {
+      key: key,
+      building: building,
+      roomCount: Object.keys(importData.rooms).length,
+      matchStats: matchResults.summary,
+      mismatchCount: matchResults.mismatches.length,
+      storageMethod: 'localStorage'
+    });
   }
 
   clearPendingImportSession();
