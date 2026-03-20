@@ -3583,7 +3583,32 @@ async function performDataReplacementWithData(importData, matchResults) {
                    window.METER_DATA[verifyBuilding][verifyKey];
 
     if (stored) {
-      showImportStatus(`✅ ${result.message} (${result.storageMethod})`, 'success');
+      // Get month name for display
+      const monthName = MONTHS_FULL[importData.month] || `เดือน ${importData.month}`;
+      const displayYear = importData.year;
+
+      showImportStatus(`✅ บันทึกข้อมูล ${monthName} ปี ${displayYear} สำเร็จ! 🎉 Dashboard อัพเดทแล้ว 📊 (${result.message})`, 'success');
+
+      // Refresh dashboard in background
+      console.log('🔄 Refreshing dashboard after import...');
+      setTimeout(async () => {
+        try {
+          // Refresh METER_DATA from localStorage
+          if (window.METER_DATA) {
+            console.log('📊 Reloading dashboard data...');
+            // If dashboard is currently open, refresh the charts
+            if (document.getElementById('page-dashboard').classList.contains('active')) {
+              setTimeout(() => {
+                initDashboardCharts();
+                updateDashboardLive();
+                console.log('✅ Dashboard refreshed with new data');
+              }, 500);
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Error refreshing dashboard:', error);
+        }
+      }, 500);
     } else {
       showImportStatus(`⚠️ ข้อมูลนี้อาจไม่ได้บันทึก กรุณารีเฟรชหน้าเพื่อตรวจสอบ`, 'warning');
     }
