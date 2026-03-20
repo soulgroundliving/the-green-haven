@@ -9428,15 +9428,12 @@ async function getDecemberDataForYear(building, year) {
   try {
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
-    const buddhistYear = year + 543;
-    const yy = buddhistYear % 100;
-    const key = `${yy}_12`; // December is month 12
 
-    // Query for all documents matching pattern: building_12_*
+    // Query for all documents matching: building, year, month=12
     const q = fs.query(
       fs.collection(db, 'meter_data'),
       fs.where('building', '==', building),
-      fs.where('year', '==', yy),
+      fs.where('year', '==', year),
       fs.where('month', '==', 12)
     );
 
