@@ -4258,9 +4258,9 @@ function renderRoomsMeterGrid() {
   if (!gridEl) return;
 
   // Load rooms from RoomConfigManager (dynamic instead of hardcoded)
-  const roomsRooms = RoomConfigManager.getAllRooms('rooms');
+  const rooms_grid_list = RoomConfigManager.getAllRooms('rooms');
 
-  gridEl.innerHTML = roomsRooms.map(room => `
+  gridEl.innerHTML = rooms_grid_list.map(room => `
     <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
       <div style="font-weight:600;margin-bottom:0.8rem;color:var(--text);">🏠 ${room}</div>
 
@@ -4299,7 +4299,7 @@ function renderRoomsMeterGrid() {
   `).join('');
 
   // Add change listeners to calculate charges (New - Old) × Rate
-  roomsRooms.forEach(room => {
+  rooms_grid_list.forEach(room => {
     const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
     const eNewInput = document.getElementById(`meter-rooms-${room}-electric-new`);
     const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
@@ -4458,10 +4458,10 @@ function loadPreviousMonthRooms() {
   }
 
   // Load data into form (use previous month's NEW readings as this month's OLD readings)
-  const roomsRooms = RoomConfigManager.getAllRooms('rooms');
+  const previous_rooms_list = RoomConfigManager.getAllRooms('rooms');
   let loadCount = 0;
 
-  roomsRooms.forEach(room => {
+  previous_rooms_list.forEach(room => {
     const reading = prevMonthData.readings[room];
     if (reading) {
       // Load as "old reading" using previous month's NEW readings
@@ -4530,9 +4530,9 @@ function saveRoomsMeterReadings() {
   }
 
   const readings = {};
-  const roomsRooms = RoomConfigManager.getAllRooms('rooms');
+  const save_rooms_list = RoomConfigManager.getAllRooms('rooms');
 
-  roomsRooms.forEach(room => {
+  save_rooms_list.forEach(room => {
     const eOld = parseFloat(document.getElementById(`meter-rooms-${room}-electric-old`)?.value || 0);
     const eNew = parseFloat(document.getElementById(`meter-rooms-${room}-electric-new`)?.value || 0);
     const wOld = parseFloat(document.getElementById(`meter-rooms-${room}-water-old`)?.value || 0);
