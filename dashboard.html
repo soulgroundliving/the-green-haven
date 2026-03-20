@@ -4795,22 +4795,129 @@ function setYear(yr,btn){
   initDashboardCharts();
 }
 
-function initDashboardCharts(){
+// Load dashboard data from Firebase - aggregates meter readings into monthly totals
+async function loadDashboardDataFromFirebase() {
+  try {
+    // Get reference to Firestore
+    const db = getFirestore();
+
+    // Query all meter_data documents from both buildings
+    const meterDocsSnapshot = await getDocs(collection(db, 'meter_data'));
+
+    // Initialize data structure
+    const aggregated = {};
+
+    // Process each meter document
+    meterDocsSnapshot.forEach(doc => {
+      const data = doc.data();
+      const building = data.building; // 'rooms' or 'nest'
+      const yearMonth = data.yearMonth; // format: '67_1', '67_2', etc.
+
+      if (!yearMonth) return; // Skip if no yearMonth
+
+      const [year, monthStr] = yearMonth.split('_');
+      const month = parseInt(monthStr);
+
+      if (!aggregated[year]) {
+        aggregated[year] = { label: `ปี ${parseInt(year)} (${parseInt(year) - 543})`, months: Array(12).fill(null) };
+      }
+
+      // Get existing month data or create new
+      let monthData = aggregated[year].months[month - 1];
+      if (!monthData) {
+        monthData = [0, 0, 0, 0]; // [rent, electric, water, total]
+      }
+
+      // Get active rooms for this building
+      const activeRooms = RoomConfigManager ? RoomConfigManager.getAllRooms(building) : [];
+      const tenants = loadTenants();
+
+      // Aggregate rent from active rooms (only count occupied rooms)
+      let rentTotal = 0;
+      activeRooms.forEach(roomId => {
+        if (tenants[roomId]?.name) { // Only count occupied rooms
+          const room = RoomConfigManager ? RoomConfigManager.getRoom(building, roomId) : null;
+          rentTotal += (room?.rent || 0);
+        }
+      });
+
+      // Aggregate electricity and water from meter readings
+      let elecTotal = 0;
+      let waterTotal = 0;
+
+      // data contains { roomId: { eNew, eOld, wNew, wOld }, ... }
+      Object.entries(data.rooms || {}).forEach(([roomId, readings]) => {
+        if (readings && typeof readings === 'object') {
+          const eUsage = (readings.eNew || 0) - (readings.eOld || 0);
+          const wUsage = (readings.wNew || 0) - (readings.wOld || 0);
+
+          // Get room rates
+          const room = RoomConfigManager ? RoomConfigManager.getRoom(building, roomId) : null;
+          const elecRate = room?.electricRate || 8;
+          const waterRate = room?.waterRate || 20;
+
+          elecTotal += eUsage * elecRate;
+          waterTotal += wUsage * waterRate;
+        }
+      });
+
+      // Update month data
+      monthData[0] = Math.round(rentTotal); // rent
+      monthData[1] = Math.round(elecTotal); // electricity
+      monthData[2] = Math.round(waterTotal); // water
+      monthData[3] = monthData[0] + monthData[1] + monthData[2]; // total
+
+      aggregated[year].months[month - 1] = monthData;
+    });
+
+    // Format to match DATA structure
+    const result = {};
+    Object.entries(aggregated).forEach(([year, data]) => {
+      result[year] = data;
+    });
+
+    return Object.keys(result).length > 0 ? result : null;
+  } catch(err) {
+    console.error('Error loading Firebase data:', err);
+    return null;
+  }
+}
+
+async function initDashboardCharts(){
   const yr=currentYear;
   let labels,totals,elecs,waters,rents;
+
+  // Try to load from Firebase first
+  let firebaseData = null;
+  try {
+    if(window.firebase && window.firebase.firestore) {
+      firebaseData = await loadDashboardDataFromFirebase();
+      console.log('✅ Loaded dashboard data from Firebase');
+    }
+  } catch(err) {
+    console.log('⚠️ Firebase dashboard load failed:', err.message);
+  }
+
+  // Use Firebase data if available, otherwise fall back to hardcoded DATA
+  const dataSource = firebaseData || DATA;
+
   if(yr==='all'){
-    labels=['67','68','69'].flatMap(y=>DATA[y].months.map((_,i)=>MONTHS_TH[i+1]+"'"+y));
-    totals=['67','68','69'].flatMap(y=>DATA[y].months.map(m=>m?m[3]:null));
-    elecs=['67','68','69'].flatMap(y=>DATA[y].months.map(m=>m?m[1]:null));
-    waters=['67','68','69'].flatMap(y=>DATA[y].months.map(m=>m?m[2]:null));
-    rents=['67','68','69'].flatMap(y=>DATA[y].months.map(m=>m?m[0]:null));
+    labels=['67','68','69'].flatMap(y=>dataSource[y]?.months.map((_,i)=>MONTHS_TH[i+1]+"'"+y) || []);
+    totals=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[3]:null) || []);
+    elecs=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[1]:null) || []);
+    waters=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[2]:null) || []);
+    rents=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[0]:null) || []);
   } else {
-    const d=DATA[yr];
-    labels=d.months.map((_,i)=>MONTHS_TH[i+1]);
-    totals=d.months.map(m=>m?m[3]:null);
-    elecs=d.months.map(m=>m?m[1]:null);
-    waters=d.months.map(m=>m?m[2]:null);
-    rents=d.months.map(m=>m?m[0]:null);
+    const d=dataSource[yr];
+    if(d){
+      labels=d.months.map((_,i)=>MONTHS_TH[i+1]);
+      totals=d.months.map(m=>m?m[3]:null);
+      elecs=d.months.map(m=>m?m[1]:null);
+      waters=d.months.map(m=>m?m[2]:null);
+      rents=d.months.map(m=>m?m[0]:null);
+    } else {
+      labels=[]; totals=[]; elecs=[]; waters=[]; rents=[];
+    }
   }
 
   const valid=totals.filter(Boolean);
