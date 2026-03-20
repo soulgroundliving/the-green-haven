@@ -4847,11 +4847,17 @@ function setYear(yr,btn){
 // Load dashboard data from Firebase - aggregates meter readings into monthly totals
 async function loadDashboardDataFromFirebase() {
   try {
-    // Get reference to Firestore
-    const db = getFirestore();
+    // Get Firestore references
+    if (!window.firebase || !window.firebase.firestore) {
+      console.warn('Firebase not initialized, returning empty data');
+      return {};
+    }
+
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
 
     // Query all meter_data documents from both buildings
-    const meterDocsSnapshot = await getDocs(collection(db, 'meter_data'));
+    const meterDocsSnapshot = await fs.getDocs(fs.collection(db, 'meter_data'));
 
     // Initialize data structure
     const aggregated = {};
