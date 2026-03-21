@@ -11,7 +11,7 @@
 <script src="./shared/audit.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="./shared/meter_data.js"></script>
+<script src="./shared/meter-firebase.js"></script>
 <script src="./shared/room-config.js"></script>
 <script src="./shared/owner-config.js"></script>
 <script src="./shared/tenant-config.js"></script>
@@ -78,6 +78,41 @@
   console.log('✅ Firebase initialized successfully');
   console.log('📊 Database URL:', firebaseConfig.databaseURL);
   console.log('🔐 Auth:', auth);
+
+  // Load METER_DATA from Firebase on initialization
+  async function initializeMeterDataFromFirebase() {
+    console.log('📥 Loading meter data from Firebase...');
+    window.METER_DATA = { rooms: {}, nest: {} };
+
+    // Load for both buildings
+    for (const building of ['rooms', 'nest']) {
+      try {
+        const meterCollection = collection(firestore, `meter_data/${building}`);
+        const months = await getDocs(meterCollection);
+
+        months.forEach(monthDoc => {
+          const monthId = monthDoc.id;
+          if (monthId === 'data') return; // Skip metadata
+
+          // Get all rooms for this month
+          const monthData = monthDoc.data();
+          if (!window.METER_DATA[building]) window.METER_DATA[building] = {};
+          window.METER_DATA[building][monthId] = monthData;
+        });
+
+        console.log(`✅ Loaded ${Object.keys(window.METER_DATA[building]).length} months for ${building}`);
+      } catch (error) {
+        console.warn(`⚠️ Failed to load meter data for ${building}:`, error);
+        window.METER_DATA[building] = {};
+      }
+    }
+  }
+
+  // Initialize meter data when Firebase is ready
+  initializeMeterDataFromFirebase().catch(error => {
+    console.error('❌ Failed to initialize meter data:', error);
+    window.METER_DATA = { rooms: {}, nest: {} };
+  });
 
   // ===== FIREBASE FUNCTIONS =====
 
