@@ -19,15 +19,16 @@ class FirebaseMeterHelper {
       }
 
       const db = window.firebase.firestore();
-      const docRef = window.firebase.firestoreFunctions.doc(
-        window.firebase.firestoreFunctions.collection(db, `meter_data/${building}/${yearMonth}`),
-        'data'
-      );
+      const fs = window.firebase.firestoreFunctions;
 
-      const docSnap = await window.firebase.firestoreFunctions.getDoc(docRef);
+      // Load from data/meter_data document
+      const docRef = fs.doc(fs.collection(db, 'data'), 'meter_data');
+      const docSnap = await fs.getDoc(docRef);
 
       if (docSnap.exists()) {
-        return docSnap.data();
+        const allData = docSnap.data();
+        // Structure: {rooms: {67_1: {...}, 67_2: {...}}, nest: {...}}
+        return allData[building] && allData[building][yearMonth] ? allData[building][yearMonth] : null;
       }
 
       return null;

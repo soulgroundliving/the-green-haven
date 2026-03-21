@@ -84,27 +84,26 @@
     console.log('📥 Loading meter data from Firebase...');
     window.METER_DATA = { rooms: {}, nest: {} };
 
-    // Load for both buildings
-    for (const building of ['rooms', 'nest']) {
-      try {
-        const meterCollection = collection(firestore, `meter_data/${building}`);
-        const months = await getDocs(meterCollection);
+    try {
+      // Load from data/meter_data document
+      const docRef = doc(firestore, 'data', 'meter_data');
+      const docSnap = await getDoc(docRef);
 
-        months.forEach(monthDoc => {
-          const monthId = monthDoc.id;
-          if (monthId === 'data') return; // Skip metadata
+      if (docSnap.exists()) {
+        const allData = docSnap.data();
+        window.METER_DATA = allData || { rooms: {}, nest: {} };
 
-          // Get all rooms for this month
-          const monthData = monthDoc.data();
-          if (!window.METER_DATA[building]) window.METER_DATA[building] = {};
-          window.METER_DATA[building][monthId] = monthData;
-        });
+        const roomsMonths = Object.keys(window.METER_DATA.rooms || {}).length;
+        const nestMonths = Object.keys(window.METER_DATA.nest || {}).length;
 
-        console.log(`✅ Loaded ${Object.keys(window.METER_DATA[building]).length} months for ${building}`);
-      } catch (error) {
-        console.warn(`⚠️ Failed to load meter data for ${building}:`, error);
-        window.METER_DATA[building] = {};
+        console.log(`✅ Loaded meter data: rooms=${roomsMonths} months, nest=${nestMonths} months`);
+      } else {
+        console.warn('⚠️ No meter data found in Firebase');
+        window.METER_DATA = { rooms: {}, nest: {} };
       }
+    } catch (error) {
+      console.warn(`⚠️ Failed to load meter data from Firebase:`, error);
+      window.METER_DATA = { rooms: {}, nest: {} };
     }
   }
 
