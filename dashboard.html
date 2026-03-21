@@ -5176,8 +5176,8 @@ function getActiveRoomsWithMetadata(building, metadataArray) {
   // Merge RoomConfigManager data with metadata (rent, type, trashFee, etc.)
   return activeRooms.map(r => {
     const metadata = metadataArray.find(m => m.id === r.id);
-    // Prioritize rent from RoomConfigManager, fall back to metadata or default
-    const rent = r.rent !== undefined ? r.rent : (metadata?.rent || 1500);
+    // Prioritize rentPrice from RoomConfigManager, fall back to metadata or default
+    const rent = (r.rentPrice && r.rentPrice > 0) ? r.rentPrice : (metadata?.rent || 1500);
     // Return merged object with all properties
     return {
       id: r.id,
