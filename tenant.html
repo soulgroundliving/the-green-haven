@@ -839,26 +839,10 @@
     </nav>
   </div>
 
-  <!-- Scripts: Load config managers with safety check to prevent re-declaration errors -->
-  <script>
-    // Dynamically load config managers if not already available
-    function loadConfigScriptsIfNeeded() {
-      const scripts = [
-        { src: './shared/room-config.js', check: () => typeof RoomConfigManager === 'undefined' },
-        { src: './shared/tenant-config.js', check: () => typeof TenantConfigManager === 'undefined' },
-        { src: './shared/lease-config.js', check: () => typeof LeaseAgreementManager === 'undefined' }
-      ];
-
-      scripts.forEach(script => {
-        if (script.check()) {
-          const el = document.createElement('script');
-          el.src = script.src;
-          document.head.appendChild(el);
-        }
-      });
-    }
-    loadConfigScriptsIfNeeded();
-  </script>
+  <!-- Scripts: Load config managers with async safety check -->
+  <script src="./shared/room-config.js"></script>
+  <script src="./shared/tenant-config.js"></script>
+  <script src="./shared/lease-config.js"></script>
   <script src="./shared/tenant-manager.js"></script>
 
   <script>
