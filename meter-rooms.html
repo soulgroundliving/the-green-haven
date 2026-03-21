@@ -800,6 +800,17 @@
 
       // Then initialize meter data from Firebase (with localStorage fallback)
       await initializeMeterDataFromFirebase();
+
+      // Ensure localStorage data is available if Firebase returned nothing
+      if (!window.METER_DATA.rooms || Object.keys(window.METER_DATA.rooms).length === 0) {
+        const roomsData = localStorage.getItem('METER_DATA_ROOMS');
+        if (roomsData) {
+          window.METER_DATA.rooms = JSON.parse(roomsData);
+          const roomsMonths = Object.keys(window.METER_DATA.rooms || {}).length;
+          console.log(`✅ Loaded meter data from localStorage (fallback): rooms=${roomsMonths} months`);
+        }
+      }
+
       initMeterPage();
     });
 
