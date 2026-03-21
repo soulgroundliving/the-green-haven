@@ -15,5 +15,20 @@ service cloud.firestore {
     match /opening_balances/{document=**} {
       allow read, write: if request.auth != null;
     }
+
+    // Owner info (single document)
+    match /owner_info/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Tenants by building
+    match /tenants/{building}/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Leases by building
+    match /leases/{building}/{document=**} {
+      allow read, write: if request.auth != null;
+    }
   }
 }

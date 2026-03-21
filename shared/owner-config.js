@@ -63,4 +63,61 @@ class OwnerConfigManager {
     localStorage.removeItem('owner_info');
     console.log('✅ Owner info cleared');
   }
+
+  static async saveOwnerInfoWithFirebase(data) {
+    // 1. Save to localStorage (always succeeds)
+    const success = this.saveOwnerInfo(data);
+
+    // 2. Try Firebase in parallel (don't block on failure)
+    try {
+      if (!window.firebase) {
+        console.warn('⚠️ Firebase not loaded');
+        return success;
+      }
+
+      const db = window.firebase.firestore();
+      const docRef = window.firebase.firestoreFunctions.doc(
+        window.firebase.firestoreFunctions.collection(db, 'owner_info'),
+        'main'
+      );
+      await window.firebase.firestoreFunctions.setDoc(docRef, {
+        ...data,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      console.log('✅ Owner info synced to Firebase');
+    } catch (error) {
+      console.warn('⚠️ Firebase sync failed (using localStorage):', error.message);
+    }
+
+    return success;
+  }
+
+  static async loadOwnerInfoFromFirebase() {
+    try {
+      if (!window.firebase) {
+        console.warn('⚠️ Firebase not loaded');
+        return this.getOwnerInfo();
+      }
+
+      const db = window.firebase.firestore();
+      const docRef = window.firebase.firestoreFunctions.doc(
+        window.firebase.firestoreFunctions.collection(db, 'owner_info'),
+        'main'
+      );
+      const docSnap = await window.firebase.firestoreFunctions.getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        // Save to localStorage as backup
+        this.saveOwnerInfo(data);
+        console.log('✅ Owner info loaded from Firebase');
+        return data;
+      }
+    } catch (error) {
+      console.warn('⚠️ Firebase load failed (using localStorage):', error.message);
+    }
+
+    // Fallback to localStorage
+    return this.getOwnerInfo();
+  }
 }
