@@ -1,6 +1,7 @@
 // Flexible Room & Rate Management System
 // Centralized configuration for rooms and utility rates
 
+if (typeof DEFAULT_ROOMS_CONFIG === 'undefined' && typeof RoomConfigManager === 'undefined') {
 const DEFAULT_ROOMS_CONFIG = {
   'rooms': {
     name: 'ห้องแถว (Rooms Building)',
@@ -169,4 +170,5 @@ class RoomConfigManager {
     }
     return false;
   }
+}
 }
