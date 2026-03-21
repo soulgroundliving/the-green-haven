@@ -85,13 +85,38 @@
     window.METER_DATA = { rooms: {}, nest: {} };
 
     try {
-      // Load from data/meter_data document
-      const docRef = doc(firestore, 'data', 'meter_data');
-      const docSnap = await getDoc(docRef);
+      // Query all documents from meter_data collection
+      const meterCollection = collection(firestore, 'meter_data');
+      const allDocs = await getDocs(meterCollection);
 
-      if (docSnap.exists()) {
-        const allData = docSnap.data();
-        window.METER_DATA = allData || { rooms: {}, nest: {} };
+      console.log(`📊 Found ${allDocs.size} meter readings in Firebase`);
+
+      if (allDocs.size > 0) {
+        // Reconstruct METER_DATA structure from individual documents
+        allDocs.forEach(doc => {
+          const data = doc.data();
+          const building = data.building;
+          const yearMonth = data.yearMonth;
+          const roomId = data.roomId;
+
+          // Initialize building structure if needed
+          if (!window.METER_DATA[building]) {
+            window.METER_DATA[building] = {};
+          }
+
+          // Initialize month structure if needed
+          if (!window.METER_DATA[building][yearMonth]) {
+            window.METER_DATA[building][yearMonth] = {};
+          }
+
+          // Add room reading
+          window.METER_DATA[building][yearMonth][roomId] = {
+            eNew: data.eNew,
+            eOld: data.eOld,
+            wNew: data.wNew,
+            wOld: data.wOld
+          };
+        });
 
         const roomsMonths = Object.keys(window.METER_DATA.rooms || {}).length;
         const nestMonths = Object.keys(window.METER_DATA.nest || {}).length;

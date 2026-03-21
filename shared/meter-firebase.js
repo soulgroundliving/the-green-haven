@@ -1,14 +1,15 @@
 /**
  * Firebase Meter Data Helper
  * Replaces hardcoded METER_DATA with cloud-based storage
- * Structure: /meter_data/{building}/{year_month}/{roomId}/{eNew, eOld, wNew, wOld}
+ * Structure: /meter_data/{building}_{year}_{month}_{roomId} documents
+ * Each document has: {building, year, month, yearMonth, roomId, eNew, eOld, wNew, wOld}
  */
 
 class FirebaseMeterHelper {
   /**
    * Get meter readings for a specific building and month
    * @param {string} building - 'rooms' or 'nest'
-   * @param {string} yearMonth - Format: '67_1' (year_month)
+   * @param {string} yearMonth - Format: '67_1' (year_month) or '67_10'
    * @returns {Promise<Object>} - {roomId: {eNew, eOld, wNew, wOld}, ...}
    */
   static async getMeterDataForMonth(building, yearMonth) {
@@ -21,14 +22,28 @@ class FirebaseMeterHelper {
       const db = window.firebase.firestore();
       const fs = window.firebase.firestoreFunctions;
 
-      // Load from data/meter_data document
-      const docRef = fs.doc(fs.collection(db, 'data'), 'meter_data');
-      const docSnap = await fs.getDoc(docRef);
+      // Query meter_data collection for this building and yearMonth
+      const q = fs.query(
+        fs.collection(db, 'meter_data'),
+        fs.where('building', '==', building),
+        fs.where('yearMonth', '==', yearMonth)
+      );
 
-      if (docSnap.exists()) {
-        const allData = docSnap.data();
-        // Structure: {rooms: {67_1: {...}, 67_2: {...}}, nest: {...}}
-        return allData[building] && allData[building][yearMonth] ? allData[building][yearMonth] : null;
+      const querySnap = await fs.getDocs(q);
+
+      if (querySnap.size > 0) {
+        // Reconstruct: {roomId: {eNew, eOld, wNew, wOld}, ...}
+        const monthData = {};
+        querySnap.forEach(doc => {
+          const data = doc.data();
+          monthData[data.roomId] = {
+            eNew: data.eNew,
+            eOld: data.eOld,
+            wNew: data.wNew,
+            wOld: data.wOld
+          };
+        });
+        return monthData;
       }
 
       return null;
