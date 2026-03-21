@@ -1065,42 +1065,68 @@
     }
 
     function loadBillsData() {
-      // Mock bills - in real implementation, query from Firebase or API
-      currentBills = [
-        {
-          month: 'June',
-          year: 2026,
-          rent: 5900,
-          electric: 820,
-          water: 120,
-          trash: 40,
-          total: 6880,
-          status: 'pending',
-          dueDate: '2026-06-05'
-        },
-        {
-          month: 'May',
-          year: 2026,
-          rent: 5900,
-          electric: 750,
-          water: 100,
-          trash: 40,
-          total: 6790,
-          status: 'paid',
-          dueDate: '2026-05-05'
-        },
-        {
-          month: 'April',
-          year: 2026,
-          rent: 5900,
-          electric: 690,
-          water: 110,
-          trash: 40,
-          total: 6740,
-          status: 'paid',
-          dueDate: '2026-04-05'
+      // Load bills from meter data + rates + lease info
+      currentBills = [];
+
+      try {
+        if (typeof TenantManager === 'undefined') {
+          console.warn('⚠️ TenantManager not loaded');
+          return;
         }
+
+        // Get all bills for this room
+        const allMeters = JSON.parse(localStorage.getItem('meter_data') || '{}');
+
+        // Extract bills for current room
+        for (const [key, meterData] of Object.entries(allMeters)) {
+          // Check if this meter reading is for current room
+          if (key.includes(`${currentBuilding}_${currentRoom}_`)) {
+            const bill = TenantManager.calculateBillFromMeters(
+              currentBuilding,
+              currentRoom,
+              meterData.yearMonth
+            );
+
+            if (bill) {
+              // Format for display
+              currentBills.push({
+                billId: bill.billId,
+                month: this.getThaiMonthName(bill.month),
+                year: bill.year + 543, // Convert to Buddhist year
+                yearMonth: bill.yearMonth,
+                rent: bill.charges.rent,
+                electric: bill.charges.electricity,
+                water: bill.charges.water,
+                trash: bill.charges.trash,
+                total: bill.charges.total,
+                electricity: bill.electricity,
+                water: bill.water,
+                tenant: bill.tenant,
+                lease: bill.lease,
+                createdAt: bill.createdAt,
+                status: 'pending', // Will be updated based on payment records
+                dueDate: `${bill.day || 5} ${this.getThaiMonthName(bill.month)} ${bill.year + 543}`
+              });
+            }
+          }
+        }
+
+        // Sort by yearMonth (newest first)
+        currentBills.sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
+
+        console.log(`✅ Loaded ${currentBills.length} bills with meter calculations`);
+      } catch (error) {
+        console.warn('⚠️ Error loading bills from meters:', error.message);
+        currentBills = [];
+      }
+    }
+
+    function getThaiMonthName(monthNum) {
+      const months = [
+        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
       ];
+      return months[monthNum - 1] || 'เดือนไม่ทราบ';
     }
 
     function goToPage(pageName) {

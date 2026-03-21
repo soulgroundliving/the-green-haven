@@ -370,6 +370,152 @@ class TenantManager {
       return null;
     }
   }
+
+  /**
+   * Calculate bill from meter data, rates, and lease info
+   * Combines: meter readings + rates + rent + tenant info into a complete bill
+   */
+  static calculateBillFromMeters(building, roomId, yearMonth) {
+    try {
+      // 1. Get meter data
+      const meterKey = `${building}_${roomId}_${yearMonth}`;
+      const allMeters = JSON.parse(localStorage.getItem('meter_data') || '{}');
+      const meterData = allMeters[meterKey];
+
+      if (!meterData) {
+        console.warn(`⚠️ No meter data found for ${meterKey}`);
+        return null;
+      }
+
+      // 2. Get lease info (for rent)
+      const lease = typeof LeaseAgreementManager !== 'undefined'
+        ? LeaseAgreementManager.getActiveLease(building, roomId)
+        : null;
+
+      if (!lease) {
+        console.warn(`⚠️ No active lease for ${building}/${roomId}`);
+        return null;
+      }
+
+      // 3. Get room rates
+      const room = typeof RoomConfigManager !== 'undefined'
+        ? RoomConfigManager.getRoom(building, roomId)
+        : null;
+
+      const electricRate = room?.electricRate || 8; // Default fallback
+      const waterRate = room?.waterRate || 20; // Default fallback
+
+      // 4. Get tenant info
+      const tenant = typeof TenantConfigManager !== 'undefined'
+        ? TenantConfigManager.getTenant(lease.tenantId)
+        : null;
+
+      // 5. Calculate usage and charges
+      const eUsage = meterData.eNew - meterData.eOld;
+      const wUsage = meterData.wNew - meterData.wOld;
+
+      const eCharge = eUsage * electricRate;
+      const wCharge = wUsage * waterRate;
+      const rent = lease.rentAmount || 1500;
+      const trash = 40; // Fixed trash fee
+
+      const total = rent + eCharge + wCharge + trash;
+
+      // 6. Build complete bill object
+      return {
+        // Bill meta
+        billId: meterKey,
+        building,
+        roomId,
+        year: meterData.year,
+        month: meterData.month,
+        yearMonth: meterData.yearMonth,
+
+        // Meter readings
+        electricity: {
+          old: meterData.eOld,
+          new: meterData.eNew,
+          usage: eUsage,
+          rate: electricRate,
+          charge: eCharge
+        },
+        water: {
+          old: meterData.wOld,
+          new: meterData.wNew,
+          usage: wUsage,
+          rate: waterRate,
+          charge: wCharge
+        },
+
+        // Charges breakdown
+        charges: {
+          rent,
+          electricity: eCharge,
+          water: wCharge,
+          trash,
+          total
+        },
+
+        // Tenant info
+        tenant: {
+          id: lease.tenantId,
+          name: tenant?.name || 'ผู้เช่า',
+          phone: tenant?.phone || '-',
+          email: tenant?.email || '-',
+          address: tenant?.address || '-'
+        },
+
+        // Lease info
+        lease: {
+          startDate: lease.moveInDate,
+          endDate: lease.moveOutDate,
+          deposit: lease.deposit,
+          rentAmount: lease.rentAmount
+        },
+
+        // Metadata
+        createdAt: meterData.createdAt,
+        updatedAt: meterData.updatedAt,
+        status: 'pending' // pending, paid, overdue
+      };
+    } catch (error) {
+      console.error('Error calculating bill from meters:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all bills for a room (for a date range or month)
+   */
+  static getBillsForRoom(building, roomId, year, month) {
+    try {
+      const bills = [];
+      const yearMonth = `${year}_${String(month).padStart(2, '0')}`;
+      const meterKey = `${building}_${roomId}_${yearMonth}`;
+
+      // Get meter data
+      const allMeters = JSON.parse(localStorage.getItem('meter_data') || '{}');
+
+      // If specific month requested
+      if (year && month) {
+        const bill = this.calculateBillFromMeters(building, roomId, yearMonth);
+        if (bill) bills.push(bill);
+      } else {
+        // Get all bills for this room
+        for (const [key, meterData] of Object.entries(allMeters)) {
+          if (key.includes(`${building}_${roomId}`)) {
+            const bill = this.calculateBillFromMeters(building, roomId, meterData.yearMonth);
+            if (bill) bills.push(bill);
+          }
+        }
+      }
+
+      return bills.sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
+    } catch (error) {
+      console.error('Error getting bills for room:', error);
+      return [];
+    }
+  }
 }
 
 // Export for use in other files
