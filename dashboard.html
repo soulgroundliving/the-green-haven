@@ -15,7 +15,6 @@
 <script src="./shared/room-config.js"></script>
 <script src="./shared/shared-config.js"></script>
 <script src="./shared/meter_import_helper.js"></script>
-<script src="./shared/opening_balance_manager.js"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="./mock-tenant-data.js"></script>
 <script src="./mock-meter-history.js"></script>
@@ -57,7 +56,6 @@
     EmailAuthProvider: EmailAuthProvider
   };
 
-  // Firestore support for opening_balance_manager.js
   window.firebase = {
     firestore: () => firestore,
     firestoreFunctions: {
@@ -2251,9 +2249,6 @@
     <button class="meter-tab" onclick="window.switchMeterTab('import-meter', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
       📥 นำเข้าข้อมูล
     </button>
-    <button class="meter-tab" onclick="window.switchMeterTab('opening-balance', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
-      🏷️ ตั้งค่ายอดยกมา
-    </button>
   </div>
 
   <!-- Tab Content: Nest Building -->
@@ -2499,77 +2494,6 @@
     </div>
   </div>
 
-  <!-- Tab Content: Opening Balance -->
-  <div id="meter-opening-balance-content" class="meter-tab-content" style="display:none;">
-    <div class="section-title">🏷️ ตั้งค่ายอดยกมา (Opening Balance)</div>
-
-    <!-- Building Selection -->
-    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;">
-      <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.95rem;color:var(--text);">🏢 เลือกอาคาร:</label>
-      <select id="openingBalanceBuilding" onchange="loadOpeningBalanceUI()" style="width:100%;max-width:400px;padding:0.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;">
-        <option value="rooms">🏠 Rooms Building (ห้องเช่า)</option>
-        <option value="nest">🏢 Nest Building</option>
-      </select>
-    </div>
-
-    <!-- Year Selection for Verification -->
-    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;">
-      <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.95rem;color:var(--text);">📅 เลือกปีที่ต้องการตั้งค่า:</label>
-      <select id="openingBalanceYear" onchange="loadOpeningBalanceUI()" style="width:100%;max-width:300px;padding:0.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.95rem;">
-        <option value="69">ปี 2569 (2026) - ตรวจสอบกับ Dec 2568</option>
-        <option value="68">ปี 2568 (2025) - ตรวจสอบกับ Dec 2567</option>
-        <option value="67">ปี 2567 (2024) - ไม่มี Dec ปีก่อน</option>
-      </select>
-    </div>
-
-    <!-- Opening Balance Input Table with Verification -->
-    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;">
-      <div style="font-weight:600;margin-bottom:1rem;font-size:0.95rem;color:var(--text);">📝 ตั้งค่ายอดยกมา + ตรวจสอบกับเดือนธันวาปีที่แล้ว:</div>
-      <div style="overflow-x:auto;">
-        <table id="openingBalanceTable" style="width:100%;border-collapse:collapse;font-size:0.9rem;">
-          <thead>
-            <tr style="background:#f5f5f5;border-bottom:2px solid var(--border);">
-              <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;">ห้อง ID</th>
-              <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;">ชื่อห้อง</th>
-              <th style="border:1px solid var(--border);padding:0.8rem;text-align:center;font-weight:600;">⚡ ไฟ Jan (ยกมา)</th>
-              <th style="border:1px solid var(--border);padding:0.8rem;text-align:center;font-weight:600;">⚡ ไฟ Dec ปีก่อน</th>
-              <th style="border:1px solid var(--border);padding:0.8rem;text-align:center;font-weight:600;">💧 น้ำ Jan (ยกมา)</th>
-              <th style="border:1px solid var(--border);padding:0.8rem;text-align:center;font-weight:600;">💧 น้ำ Dec ปีก่อน</th>
-              <th style="border:1px solid var(--border);padding:0.8rem;text-align:center;font-weight:600;">✅ ตรวจสอบ</th>
-            </tr>
-          </thead>
-          <tbody id="openingBalanceBody">
-            <!-- Populated by loadOpeningBalanceUI() -->
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Verification Info Box -->
-      <div style="margin-top:1rem;padding:1rem;background:#e8f5e9;border-left:4px solid #4caf50;border-radius:4px;">
-        <div style="font-size:0.85rem;color:#2e7d32;">
-          <strong>💡 วิธีตรวจสอบ:</strong>
-          <ul style="margin:0.5rem 0;padding-left:1.5rem;">
-            <li>✅ สีเขียว = ยอดตรงกัน (ถูกต้อง)</li>
-            <li>⚠️ สีเหลือง = ยอดไม่ตรง (ตรวจสอบอีกครั้ง)</li>
-            <li>❌ สีแดง = ไม่มี Dec ปีก่อน (ใส่เอง)</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- Save Button -->
-    <div style="display:flex;gap:1rem;">
-      <button onclick="saveAllOpeningBalances()" style="padding:0.9rem 1.8rem;background:#4caf50;color:white;border:none;border-radius:var(--radius);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.95rem;">
-        💾 บันทึกยอดยกมา
-      </button>
-      <button onclick="loadOpeningBalanceUI()" style="padding:0.9rem 1.8rem;background:#2196F3;color:white;border:none;border-radius:var(--radius);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.95rem;">
-        🔄 โหลดข้อมูล
-      </button>
-    </div>
-
-    <!-- Status Message -->
-    <div id="openingBalanceStatus" style="margin-top:1rem;padding:1rem;border-radius:var(--radius);display:none;"></div>
-  </div>
 
 </div>
 
@@ -3166,8 +3090,6 @@ window._switchMeterTabImpl = function(tabName, btnElement) {
     loadRoomConfigUI();
   } else if (tabName === 'import-meter') {
     initImportMeterTab();
-  } else if (tabName === 'opening-balance') {
-    loadOpeningBalanceUI();
   }
 };
 // Assign to global scope
@@ -9408,221 +9330,6 @@ window.updateRoomStatuses = function() {
   updateLeaseExpiryAlerts();
 };
 
-// ===== OPENING BALANCE FUNCTIONS WITH VERIFICATION =====
-async function loadOpeningBalanceUI() {
-  try {
-    const building = document.getElementById('openingBalanceBuilding').value;
-    const year = parseInt(document.getElementById('openingBalanceYear').value) || 69;
-    const prevYear = year - 1; // Get previous year for December comparison
-    const roomIds = RoomConfigManager.getAllRooms(building);
-    const tbody = document.getElementById('openingBalanceBody');
-    console.log('🔄 loadOpeningBalanceUI - building:', building, 'year:', year, 'prevYear:', prevYear);
-
-    // Load Opening Balance for current year (Jan)
-    const openingBalances = await getAllOpeningBalances(building, year);
-
-    // Load December data from previous year for verification
-    let decemberData = {};
-    if (year > 67) { // Can only verify if previous year exists
-      decemberData = await getDecemberDataForYear(building, prevYear);
-      console.log('📊 December data loaded:', Object.keys(decemberData).length, 'rooms');
-    }
-
-    // Build table rows
-    const html = roomIds.map(roomId => {
-      const room = RoomConfigManager.getRoom(building, roomId);
-      const openingBalance = openingBalances[roomId];
-      const decData = decemberData[roomId];
-
-      // Verification logic
-      let verificationStatus = '❌ ไม่มี'; // Default: no previous data
-      let verificationColor = '#ffcdd2'; // Red background
-      let decEDisplay = '-';
-      let decWDisplay = '-';
-
-      if (decData) {
-        decEDisplay = decData.eNew;
-        decWDisplay = decData.wNew;
-
-        if (openingBalance && openingBalance.eOld === decData.eNew && openingBalance.wOld === decData.wNew) {
-          verificationStatus = '✅ ตรง'; // Match
-          verificationColor = '#c8e6c9'; // Green background
-        } else if (openingBalance) {
-          verificationStatus = '⚠️ ไม่ตรง'; // Mismatch
-          verificationColor = '#fff9c4'; // Yellow background
-        } else {
-          verificationStatus = '⚠️ รอตั้งค่า';
-          verificationColor = '#fff9c4';
-        }
-      }
-
-      return `<tr style="border-bottom:1px solid var(--border);">
-        <td style="border:1px solid var(--border);padding:0.8rem;">${roomId}</td>
-        <td style="border:1px solid var(--border);padding:0.8rem;">${room ? room.name : 'N/A'}</td>
-        <td style="border:1px solid var(--border);padding:0.8rem;">
-          <input type="number" value="${openingBalance ? openingBalance.eOld : ''}"
-                 data-building="${building}" data-roomid="${roomId}" data-field="eOld"
-                 placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"
-                 onchange="updateVerificationStatus('${roomId}', '${building}')">
-        </td>
-        <td style="border:1px solid var(--border);padding:0.8rem;text-align:center;background:#f5f5f5;font-weight:600;color:#666;">${decEDisplay}</td>
-        <td style="border:1px solid var(--border);padding:0.8rem;">
-          <input type="number" value="${openingBalance ? openingBalance.wOld : ''}"
-                 data-building="${building}" data-roomid="${roomId}" data-field="wOld"
-                 placeholder="0" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:4px;text-align:center;"
-                 onchange="updateVerificationStatus('${roomId}', '${building}')">
-        </td>
-        <td style="border:1px solid var(--border);padding:0.8rem;text-align:center;background:#f5f5f5;font-weight:600;color:#666;">${decWDisplay}</td>
-        <td style="border:1px solid var(--border);padding:0.8rem;text-align:center;background:${verificationColor};border-radius:4px;font-weight:600;"
-            id="verify-${roomId}">${verificationStatus}</td>
-      </tr>`;
-    }).join('');
-
-    tbody.innerHTML = html;
-    console.log('✅ Verification table rendered with', roomIds.length, 'rooms');
-  } catch (error) {
-    console.error('❌ loadOpeningBalanceUI error:', error);
-  }
-}
-
-// Helper function to get December data from previous year
-async function getDecemberDataForYear(building, year) {
-  try {
-    const db = window.firebase.firestore();
-    const fs = window.firebase.firestoreFunctions;
-
-    // Query for all documents matching: building, year, month=12
-    const q = fs.query(
-      fs.collection(db, 'meter_data'),
-      fs.where('building', '==', building),
-      fs.where('year', '==', year),
-      fs.where('month', '==', 12)
-    );
-
-    const querySnapshot = await fs.getDocs(q);
-    const result = {};
-
-    // Extract December readings for each room
-    querySnapshot.forEach(docSnapshot => {
-      const data = docSnapshot.data();
-      if (data.roomId) {
-        result[data.roomId] = {
-          eNew: data.eNew || 0,
-          wNew: data.wNew || 0
-        };
-      }
-    });
-
-    console.log('✅ December data found for', Object.keys(result).length, 'rooms');
-    return result;
-  } catch (error) {
-    console.log('⚠️ Error fetching December data:', error.message);
-    return {}; // Return empty if error
-  }
-}
-
-// Update verification status when input changes
-async function updateVerificationStatus(roomId, building) {
-  const year = parseInt(document.getElementById('openingBalanceYear').value) || 69;
-  const prevYear = year - 1;
-
-  const eInput = document.querySelector(`input[data-roomid="${roomId}"][data-field="eOld"]`);
-  const wInput = document.querySelector(`input[data-roomid="${roomId}"][data-field="wOld"]`);
-  const verifyCell = document.getElementById(`verify-${roomId}`);
-
-  if (!eInput || !wInput || !verifyCell) return;
-
-  const eValue = parseFloat(eInput.value) || 0;
-  const wValue = parseFloat(wInput.value) || 0;
-
-  try {
-    const decemberData = await getDecemberDataForYear(building, prevYear);
-    const decData = decemberData[roomId];
-
-    if (decData && year > 67) {
-      if (eValue === decData.eNew && wValue === decData.wNew) {
-        verifyCell.innerHTML = '✅ ตรง';
-        verifyCell.style.background = '#c8e6c9';
-      } else {
-        verifyCell.innerHTML = '⚠️ ไม่ตรง';
-        verifyCell.style.background = '#fff9c4';
-      }
-    } else {
-      verifyCell.innerHTML = '❌ ไม่มี Dec';
-      verifyCell.style.background = '#ffcdd2';
-    }
-  } catch (error) {
-    console.error('Error updating verification:', error);
-  }
-}
-
-async function saveAllOpeningBalances() {
-  const statusEl = document.getElementById('openingBalanceStatus');
-  const building = document.getElementById('openingBalanceBuilding').value;
-  const year = parseInt(document.getElementById('openingBalanceYear').value) || 69;
-
-  try {
-    const inputs = document.querySelectorAll('#openingBalanceTable input[type="number"]');
-    let savedCount = 0;
-    let mismatchCount = 0;
-    let mismatches = [];
-
-    for (const input of inputs) {
-      const roomId = input.getAttribute('data-roomid');
-
-      // Collect eOld and wOld for each room
-      const eOldInput = document.querySelector(`input[data-roomid="${roomId}"][data-field="eOld"]`);
-      const wOldInput = document.querySelector(`input[data-roomid="${roomId}"][data-field="wOld"]`);
-
-      if (eOldInput && wOldInput) {
-        const eOld = parseFloat(eOldInput.value) || 0;
-        const wOld = parseFloat(wOldInput.value) || 0;
-
-        // Save only if both values are set
-        if (eOld > 0 && wOld > 0) {
-          // Check verification status
-          const verifyCell = document.getElementById(`verify-${roomId}`);
-          if (verifyCell && verifyCell.innerHTML.includes('⚠️ ไม่ตรง')) {
-            mismatches.push(`${roomId}: ไฟ ${eOld} (Dec: ${decemberData[roomId]?.eNew}), น้ำ ${wOld} (Dec: ${decemberData[roomId]?.wNew})`);
-            mismatchCount++;
-          }
-
-          await saveOpeningBalance(building, roomId, year, eOld, wOld);
-          savedCount++;
-        }
-      }
-    }
-
-    // Show result message
-    statusEl.style.display = 'block';
-
-    if (mismatchCount > 0) {
-      // Warning about mismatches
-      statusEl.style.background = '#fff3e0';
-      statusEl.style.color = '#e65100';
-      statusEl.style.borderLeft = '4px solid #ff9800';
-      statusEl.innerHTML = `⚠️ บันทึกแล้ว (${savedCount} ห้อง) แต่พบ ${mismatchCount} ห้องที่ยอดไม่ตรงกับ December<br><small>${mismatches.join('<br>')}</small>`;
-    } else {
-      // Success message
-      statusEl.style.background = '#c8e6c9';
-      statusEl.style.color = '#2e7d32';
-      statusEl.style.borderLeft = '4px solid #4caf50';
-      statusEl.innerHTML = `✅ บันทึกยอดยกมาแล้ว (${savedCount} ห้อง) - ทั้งหมดตรวจสอบถูกต้อง!`;
-    }
-
-    // Reload UI to show saved status
-    setTimeout(() => {
-      loadOpeningBalanceUI();
-    }, 500);
-  } catch (error) {
-    console.error('❌ Error saving opening balances:', error);
-    statusEl.style.display = 'block';
-    statusEl.style.background = '#ffcdd2';
-    statusEl.style.color = '#c62828';
-    statusEl.style.borderLeft = '4px solid #f44336';
-    statusEl.innerHTML = `❌ เกิดข้อผิดพลาด: ${error.message}`;
-  }
-}
 
 /**
  * Custom confirmation modal for duplicate month detection
