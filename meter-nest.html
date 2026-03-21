@@ -725,7 +725,7 @@
     const app = initializeApp(firebaseConfig);
     const firestore = getFirestore(app);
 
-    // Load meter data from Firebase
+    // Load meter data from Firebase with localStorage fallback
     async function initializeMeterDataFromFirebase() {
       console.log('📥 Loading meter data from Firebase...');
       window.METER_DATA = { rooms: {}, nest: {} };
@@ -737,6 +737,7 @@
         console.log(`📊 Found ${allDocs.size} meter readings in Firebase`);
 
         if (allDocs.size > 0) {
+          // Load from Firebase
           allDocs.forEach(doc => {
             const data = doc.data();
             const building = data.building;
@@ -760,14 +761,26 @@
           });
 
           const nestMonths = Object.keys(window.METER_DATA.nest || {}).length;
-          console.log(`✅ Loaded meter data: nest=${nestMonths} months`);
+          console.log(`✅ Loaded meter data from Firebase: nest=${nestMonths} months`);
         } else {
-          console.warn('⚠️ No meter data found in Firebase');
-          window.METER_DATA = { rooms: {}, nest: {} };
+          console.warn('⚠️ No meter data in Firebase, loading from localStorage...');
+          // Fallback to localStorage
+          const nestData = localStorage.getItem('METER_DATA');
+          if (nestData) {
+            window.METER_DATA.nest = JSON.parse(nestData);
+            const nestMonths = Object.keys(window.METER_DATA.nest || {}).length;
+            console.log(`✅ Loaded meter data from localStorage: nest=${nestMonths} months`);
+          }
         }
       } catch (error) {
         console.warn(`⚠️ Failed to load meter data from Firebase:`, error);
-        window.METER_DATA = { rooms: {}, nest: {} };
+        // Try localStorage fallback
+        const nestData = localStorage.getItem('METER_DATA');
+        if (nestData) {
+          window.METER_DATA.nest = JSON.parse(nestData);
+          const nestMonths = Object.keys(window.METER_DATA.nest || {}).length;
+          console.log(`✅ Loaded meter data from localStorage: nest=${nestMonths} months`);
+        }
       }
     }
 
