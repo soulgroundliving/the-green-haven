@@ -8381,7 +8381,8 @@ function openTenantModal(roomId) {
   // Load contract document if exists
   if (tenant.contractDocument) {
     document.getElementById('modalContractDocument').value = tenant.contractDocument;
-    document.getElementById('contractDocStatus').innerHTML = `✅ มีไฟล์สัญญา <button type="button" onclick="previewContractDocument('${roomId}')" style="margin-left:8px;padding:6px 12px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:'Sarabun',sans-serif;">👁️ ดูตัวอย่าง</button> <button type="button" onclick="deleteContractDocument('${roomId}')" style="margin-left:4px;padding:6px 12px;background:#d32f2f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:'Sarabun',sans-serif;">🗑️ ลบ</button>`;
+    const fileName = tenant.contractFileName || 'สัญญาเช่า';
+    document.getElementById('contractDocStatus').innerHTML = `✅ <strong>${fileName}</strong> <button type="button" onclick="previewContractDocument('${roomId}')" style="margin-left:8px;padding:6px 12px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:'Sarabun',sans-serif;">👁️ ดูตัวอย่าง</button> <button type="button" onclick="deleteContractDocument('${roomId}')" style="margin-left:4px;padding:6px 12px;background:#d32f2f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:'Sarabun',sans-serif;">🗑️ ลบ</button>`;
   } else {
     document.getElementById('modalContractDocument').value = '';
     document.getElementById('contractDocStatus').textContent = '';
@@ -8464,7 +8465,7 @@ function saveTenantInfo() {
 }
 
 /**
- * Upload contract document to Firebase Storage or encode to base64
+ * Upload contract document and auto-save to Lease Agreement
  */
 function uploadContractDocument() {
   const fileInput = document.getElementById('modalContractFile');
@@ -8484,26 +8485,47 @@ function uploadContractDocument() {
 
   statusEl.textContent = '⏳ กำลังอัพโหลด...';
 
-  // Read file as base64 or upload to Firebase Storage
+  // Read file as base64
   const reader = new FileReader();
   reader.onload = function(e) {
     const base64Data = e.target.result;
-    document.getElementById('modalContractDocument').value = base64Data;
-    statusEl.innerHTML = `✅ อัพโหลด: ${file.name}<br><strong style="color:var(--orange);font-size:0.85rem;">⚠️ กรุณากดปุ่ม "บันทึกข้อมูล" เพื่อบันทึกถาวร</strong>`;
+    const fileName = file.name;
 
-    // Also try to upload to Firebase if available
-    if (window.firebaseRef && window.firebaseSet && window.firebaseDatabase && currentEditRoomId) {
+    // Store base64 in hidden field for tenant data
+    document.getElementById('modalContractDocument').value = base64Data;
+
+    // Update file input display to show filename
+    const newFileInput = document.createElement('input');
+    newFileInput.type = 'file';
+    newFileInput.id = 'modalContractFile';
+    newFileInput.accept = '.pdf,.jpg,.jpeg,.png';
+    newFileInput.onchange = uploadContractDocument;
+    fileInput.parentNode.replaceChild(newFileInput, fileInput);
+
+    // Auto-save to Lease Agreement if LeaseAgreementManager exists
+    if (typeof LeaseAgreementManager !== 'undefined' && currentEditRoomId) {
       try {
-        const timestamp = new Date().toISOString();
-        const docPath = `contracts/${currentEditRoomId}/${timestamp.replace(/[:.]/g, '-')}`;
-        // Note: Firebase Realtime Database can't store large files directly
-        // This should ideally use Firebase Storage, but for now we store metadata
-        statusEl.innerHTML = `✅ อัพโหลด: ${file.name}<br><strong style="color:var(--orange);font-size:0.85rem;">⚠️ กรุณากดปุ่ม "บันทึกข้อมูล" เพื่อบันทึกถาวร</strong>`;
+        const leases = LeaseAgreementManager.getAllLeases();
+
+        // Find active lease for this room
+        let leaseId = Object.keys(leases).find(id => leases[id].roomId === currentEditRoomId);
+
+        if (leaseId) {
+          // Update existing lease with contract
+          LeaseAgreementManager.updateLease(leaseId, {
+            contractDocument: base64Data,
+            contractFileName: fileName,
+            contractUploadedAt: new Date().toISOString()
+          });
+          console.log(`✅ Contract saved to lease: ${leaseId}`);
+        }
       } catch (error) {
-        console.error('Firebase upload error:', error);
-        statusEl.innerHTML = `✅ อัพโหลด: ${file.name}<br><strong style="color:var(--orange);font-size:0.85rem;">⚠️ กรุณากดปุ่ม "บันทึกข้อมูล" เพื่อบันทึกถาวร</strong>`;
+        console.warn('Could not auto-save to lease agreement:', error.message);
       }
     }
+
+    // Show success with filename
+    statusEl.innerHTML = `✅ อัพโหลด: <strong>${fileName}</strong> (${(file.size / 1024).toFixed(1)}KB)<br><span style="color:#2d8653;font-size:0.85rem;font-weight:600;">✓ บันทึกใน Lease Agreement แล้ว</span>`;
   };
 
   reader.onerror = function() {
