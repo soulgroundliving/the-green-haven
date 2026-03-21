@@ -3330,16 +3330,60 @@ function parseImportExcelData(workbook, building) {
   const worksheet = workbook.Sheets[selectedSheet];
   const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-  // Get year from filename (from file input)
-  let year = 69;
+  // Get year from filename or sheet name (from file input)
+  let year = null;
+
+  // Try filename first
   const fileInput = document.getElementById('importFileInput');
   if (fileInput.files.length > 0) {
     const filename = fileInput.files[0].name;
-    const yearMatch = filename.match(/(\d{2})/);
-    if (yearMatch) {
-      const num = parseInt(yearMatch[1]);
-      if (num >= 50 && num <= 99) year = num;
+    // Support formats: "68_...", "...68", "... 68" etc
+    const yearPatterns = [
+      /(\d{2})$/,           // End of string: "..68"
+      /^(\d{2})[_\-]/,      // Start with dash/underscore: "68_..."
+      /[_\-\s](\d{2})$/,    // Before end with separator: "..._68"
+      /(\d{2})[_\-\s]/      // Followed by separator: "68_..."
+    ];
+
+    for (let pattern of yearPatterns) {
+      const match = filename.match(pattern);
+      if (match) {
+        const num = parseInt(match[1]);
+        if (num >= 50 && num <= 99) {
+          year = num;
+          console.log(`📄 Detected year ${year} from filename: ${filename}`);
+          break;
+        }
+      }
     }
+  }
+
+  // Try sheet name if filename didn't work
+  if (!year && selectedSheet) {
+    const yearPatterns = [
+      /(\d{2})$/,           // End: "สค68"
+      /^(\d{2})[_\-]/,      // Start: "68_สค"
+      /[_\-\s](\d{2})$/,    // Before end: "สค_68"
+      /(\d{2})[_\-\s]/      // Followed: "68_สค"
+    ];
+
+    for (let pattern of yearPatterns) {
+      const match = selectedSheet.match(pattern);
+      if (match) {
+        const num = parseInt(match[1]);
+        if (num >= 50 && num <= 99) {
+          year = num;
+          console.log(`📋 Detected year ${year} from sheet name: ${selectedSheet}`);
+          break;
+        }
+      }
+    }
+  }
+
+  // Default to 69 only if nothing found
+  if (!year) {
+    console.warn('⚠️ Could not detect year - defaulting to 69');
+    year = 69;
   }
 
   // Get room list based on building
