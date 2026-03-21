@@ -11,10 +11,6 @@
   <script src="./mock-tenant-data.js"></script>
   <script src="./mock-meter-history.js"></script>
 
-  <!-- Firebase Libraries -->
-  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js"></script>
 
   <style>
     * {
@@ -709,7 +705,7 @@
 
   <script src="./meter-nest.js"></script>
 
-  <script>
+  <script type="module">
     // Firebase Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyC0xJqCw4cXEE0JzCu0VjMd5h1tZ7W3mL0",
@@ -721,9 +717,13 @@
       appId: "1:823282889273:web:8f5b21edb25fe19f72f5db"
     };
 
+    // Import Firebase modules (modular SDK)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
     // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const firestore = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const firestore = getFirestore(app);
 
     // Load meter data from Firebase
     async function initializeMeterDataFromFirebase() {
@@ -731,8 +731,8 @@
       window.METER_DATA = { rooms: {}, nest: {} };
 
       try {
-        const meterCollection = firestore.collection('meter_data');
-        const allDocs = await meterCollection.get();
+        const meterCollection = collection(firestore, 'meter_data');
+        const allDocs = await getDocs(meterCollection);
 
         console.log(`📊 Found ${allDocs.size} meter readings in Firebase`);
 
@@ -770,6 +770,9 @@
         window.METER_DATA = { rooms: {}, nest: {} };
       }
     }
+
+    // Export for use in non-module script
+    window.initializeMeterDataFromFirebase = initializeMeterDataFromFirebase;
 
     // Initialize meter page when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
