@@ -11,6 +11,11 @@
   <script src="./mock-rooms-data.js"></script>
   <script src="./mock-meter-history.js"></script>
 
+  <!-- Firebase Libraries -->
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js"></script>
+
   <style>
     * {
       margin: 0;
@@ -705,17 +710,81 @@
   <script src="./meter-rooms.js"></script>
 
   <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyC0xJqCw4cXEE0JzCu0VjMd5h1tZ7W3mL0",
+      authDomain: "the-green-haven-cbb67.firebaseapp.com",
+      databaseURL: "https://the-green-haven-cbb67-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "the-green-haven-cbb67",
+      storageBucket: "the-green-haven-cbb67.firebasestorage.app",
+      messagingSenderId: "823282889273",
+      appId: "1:823282889273:web:8f5b21edb25fe19f72f5db"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const firestore = firebase.firestore();
+
+    // Load meter data from Firebase
+    async function initializeMeterDataFromFirebase() {
+      console.log('📥 Loading meter data from Firebase...');
+      window.METER_DATA = { rooms: {}, nest: {} };
+
+      try {
+        const meterCollection = firestore.collection('meter_data');
+        const allDocs = await meterCollection.get();
+
+        console.log(`📊 Found ${allDocs.size} meter readings in Firebase`);
+
+        if (allDocs.size > 0) {
+          allDocs.forEach(doc => {
+            const data = doc.data();
+            const building = data.building;
+            const yearMonth = data.yearMonth;
+            const roomId = data.roomId;
+
+            if (!window.METER_DATA[building]) {
+              window.METER_DATA[building] = {};
+            }
+
+            if (!window.METER_DATA[building][yearMonth]) {
+              window.METER_DATA[building][yearMonth] = {};
+            }
+
+            window.METER_DATA[building][yearMonth][roomId] = {
+              eNew: data.eNew,
+              eOld: data.eOld,
+              wNew: data.wNew,
+              wOld: data.wOld
+            };
+          });
+
+          const roomsMonths = Object.keys(window.METER_DATA.rooms || {}).length;
+          console.log(`✅ Loaded meter data: rooms=${roomsMonths} months`);
+        } else {
+          console.warn('⚠️ No meter data found in Firebase');
+          window.METER_DATA = { rooms: {}, nest: {} };
+        }
+      } catch (error) {
+        console.warn(`⚠️ Failed to load meter data from Firebase:`, error);
+        window.METER_DATA = { rooms: {}, nest: {} };
+      }
+    }
+
     // Initialize meter page when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
-      // Load mock rooms data if not already in Firebase
-      if (!localStorage.getItem('rooms_data')) {
-        initMockRoomsData();
-      }
-      // Load mock meter history (previous month data)
-      if (!localStorage.getItem('METER_DATA_ROOMS')) {
-        initMeterHistory();
-      }
-      initMeterPage();
+      // Initialize meter data from Firebase first
+      initializeMeterDataFromFirebase().then(() => {
+        // Load mock rooms data if not already in Firebase
+        if (!localStorage.getItem('rooms_data')) {
+          initMockRoomsData();
+        }
+        // Load mock meter history (previous month data)
+        if (!localStorage.getItem('METER_DATA_ROOMS')) {
+          initMeterHistory();
+        }
+        initMeterPage();
+      });
     });
 
     // Override logout in meter.js if needed
