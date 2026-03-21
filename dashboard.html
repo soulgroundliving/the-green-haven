@@ -8543,8 +8543,7 @@ function openTenantModal(building, roomId) {
   document.getElementById('modalTenantMoveIn').value = tenant.moveInDate || '';
   document.getElementById('modalTenantContractEnd').value = tenant.contractEnd || '';
   document.getElementById('modalTenantDeposit').value = tenant.deposit || '';
-  document.getElementById('modalTenantElecMeter').value = tenant.elecMeterStart || '';
-  document.getElementById('modalTenantWaterMeter').value = tenant.waterMeterStart || '';
+  // Meter fields removed - no longer used
   document.getElementById('modalTenantNotes').value = tenant.notes || '';
 
 
@@ -8622,8 +8621,8 @@ function saveTenantInfo() {
     moveInDate: document.getElementById('modalTenantMoveIn').value,
     moveOutDate: document.getElementById('modalTenantContractEnd').value,
     deposit: parseFloat(document.getElementById('modalTenantDeposit').value) || 0,
-    elecMeterStart: parseFloat(document.getElementById('modalTenantElecMeter').value) || 0,
-    waterMeterStart: parseFloat(document.getElementById('modalTenantWaterMeter').value) || 0,
+    // Meter fields removed - no longer used
+    // elecMeterStart and waterMeterStart now managed by Firebase only
     notes: document.getElementById('modalTenantNotes').value,
     contractDocument: document.getElementById('modalContractDocument').value || '',
     contractFileName: document.getElementById('modalContractFileName').value || ''
