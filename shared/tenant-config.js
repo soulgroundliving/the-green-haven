@@ -165,4 +165,57 @@ class TenantConfigManager {
     // Fallback to localStorage
     return this.getAllTenants();
   }
+
+  static async updateTenantWithFirebase(tenantId, building, updates) {
+    // 1. Update in localStorage
+    const success = this.updateTenant(tenantId, updates);
+
+    // 2. Try Firebase in parallel
+    try {
+      if (!window.firebase) {
+        console.warn('⚠️ Firebase not loaded');
+        return success;
+      }
+
+      const db = window.firebase.firestore();
+      const docRef = window.firebase.firestoreFunctions.doc(
+        window.firebase.firestoreFunctions.collection(db, `tenants/${building}/list`),
+        tenantId
+      );
+      await window.firebase.firestoreFunctions.updateDoc(docRef, {
+        ...updates,
+        updatedAt: new Date().toISOString()
+      });
+      console.log(`✅ Tenant ${tenantId} updated in Firebase`);
+    } catch (error) {
+      console.warn(`⚠️ Firebase update failed for tenant ${tenantId}:`, error.message);
+    }
+
+    return success;
+  }
+
+  static async deleteTenantWithFirebase(tenantId, building) {
+    // 1. Delete from localStorage
+    const success = this.deleteTenant(tenantId);
+
+    // 2. Try Firebase in parallel
+    try {
+      if (!window.firebase) {
+        console.warn('⚠️ Firebase not loaded');
+        return success;
+      }
+
+      const db = window.firebase.firestore();
+      const docRef = window.firebase.firestoreFunctions.doc(
+        window.firebase.firestoreFunctions.collection(db, `tenants/${building}/list`),
+        tenantId
+      );
+      await window.firebase.firestoreFunctions.deleteDoc(docRef);
+      console.log(`✅ Tenant ${tenantId} deleted from Firebase`);
+    } catch (error) {
+      console.warn(`⚠️ Firebase delete failed for tenant ${tenantId}:`, error.message);
+    }
+
+    return success;
+  }
 }

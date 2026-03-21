@@ -17,18 +17,52 @@ service cloud.firestore {
     }
 
     // Owner info (single document)
-    match /owner_info/{document=**} {
+    match /owner_info/main {
       allow read, write: if request.auth != null;
     }
 
     // Tenants by building
-    match /tenants/{building}/{document=**} {
+    match /tenants/{building}/{tenantId} {
       allow read, write: if request.auth != null;
     }
 
     // Leases by building
-    match /leases/{building}/{document=**} {
+    match /leases/{building}/{leaseId} {
       allow read, write: if request.auth != null;
+    }
+
+    // User data (for tenant profile and sync)
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    // Bills per tenant
+    match /bills/{userId}/{billId} {
+      allow read, write: if request.auth.uid == userId;
+      allow read, write: if request.auth != null && resource.data.building != null;
+    }
+
+    // Maintenance tickets
+    match /maintenance/{building}/{ticketId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Announcements (read-only for tenants, write for admin)
+    match /announcements/{building}/{announcementId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Payment history
+    match /payments/{userId}/{paymentId} {
+      allow read, write: if request.auth.uid == userId;
+      allow read: if request.auth != null;
+    }
+
+    // Room configuration
+    match /rooms/{building}/{roomId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
     }
   }
 }
