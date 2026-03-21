@@ -1,7 +1,9 @@
 // Tenant Manager - Tenant-specific data loading utilities
 // Provides helper functions for the Tenant App (tenant.html)
 
-class TenantManager {
+// Prevent re-declaration errors when script is loaded multiple times
+if (typeof TenantManager === 'undefined') {
+  class TenantManager {
   /**
    * Load full tenant data for a specific room
    * Returns: { tenant, lease, room, building }
@@ -516,6 +518,7 @@ class TenantManager {
       return [];
     }
   }
+}
 }
 
 // Export for use in other files
