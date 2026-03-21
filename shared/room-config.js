@@ -45,16 +45,16 @@ const DEFAULT_ROOMS_CONFIG = {
       { id: 'N203', name: 'Nest N203', floor: 2, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
       { id: 'N204', name: 'Nest N204', floor: 2, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
       { id: 'N205', name: 'Nest N205', floor: 2, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N301', name: 'Nest N301', floor: 3, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N302', name: 'Nest N302', floor: 3, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N303', name: 'Nest N303', floor: 3, type: 'pet', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N304', name: 'Nest N304', floor: 3, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N305', name: 'Nest N305', floor: 3, type: 'pet', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N401', name: 'Nest N401', floor: 4, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N402', name: 'Nest N402', floor: 4, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N403', name: 'Nest N403', floor: 4, type: 'pet', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N404', name: 'Nest N404', floor: 4, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N405', name: 'Nest N405', floor: 4, type: 'pet', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false }
+      { id: 'N301', name: 'Nest N301', floor: 3, type: 'studio', rentPrice: 5900, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N302', name: 'Nest N302', floor: 3, type: 'studio', rentPrice: 5900, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N303', name: 'Nest N303', floor: 3, type: 'pet', rentPrice: 5900, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N304', name: 'Nest N304', floor: 3, type: 'studio', rentPrice: 5900, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N305', name: 'Nest N305', floor: 3, type: 'pet', rentPrice: 5900, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N401', name: 'Nest N401', floor: 4, type: 'studio', rentPrice: 5900, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N402', name: 'Nest N402', floor: 4, type: 'studio', rentPrice: 5900, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N403', name: 'Nest N403', floor: 4, type: 'pet', rentPrice: 5900, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N404', name: 'Nest N404', floor: 4, type: 'studio', rentPrice: 5900, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N405', name: 'Nest N405', floor: 4, type: 'pet', rentPrice: 5900, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false }
     ]
   }
 };
