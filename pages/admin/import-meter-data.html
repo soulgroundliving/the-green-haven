@@ -666,11 +666,12 @@ window.METER_DATA = {"67_1":{"13":{"eNew":2628,"eOld":2616,"wNew":1577,"wOld":15
         }
 
         const monthThaiName = monthNum ? monthMap[monthNum] : sheetName;
+        const monthDisplay = monthNum ? `เดือนที่ ${monthNum} - ${monthThaiName}` : monthThaiName;
 
         const button = document.createElement('div');
         button.className = 'sheet-option';
         button.innerHTML = `
-          <div class="sheet-month">📅 ${monthThaiName}</div>
+          <div class="sheet-month">📅 ${monthDisplay}</div>
           <div class="sheet-name">${sheetName}</div>
         `;
 
