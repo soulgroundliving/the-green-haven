@@ -13,6 +13,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="./shared/meter_data.js"></script>
 <script src="./shared/room-config.js"></script>
+<script src="./shared/owner-config.js"></script>
+<script src="./shared/tenant-config.js"></script>
+<script src="./shared/lease-config.js"></script>
 <script src="./shared/shared-config.js"></script>
 <script src="./shared/meter_import_helper.js"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1435,6 +1438,20 @@
     <div class="sidebar-group">
       <div class="sidebar-group-title">⚙️ Operations</div>
       <!-- Reserved for future operations items -->
+    </div>
+
+    <!-- Management -->
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">👤 Management</div>
+      <button class="sidebar-item" onclick="window.showPage('owner-info', this)">
+        <span class="sidebar-item-icon">🏢</span>Owner Info
+      </button>
+      <button class="sidebar-item" onclick="window.showPage('tenant-master', this)">
+        <span class="sidebar-item-icon">👥</span>Tenant Master
+      </button>
+      <button class="sidebar-item" onclick="window.showPage('lease-agreements', this)">
+        <span class="sidebar-item-icon">📋</span>Lease Agreements
+      </button>
     </div>
 
     <!-- Account Settings -->
@@ -2954,6 +2971,24 @@
   </div>
 </div>
 
+<!-- Owner Info Page -->
+<div class="page" id="page-owner-info">
+  <div class="section-title">🏢 ข้อมูลเจ้าของ</div>
+  <div id="ownerInfoContainer"></div>
+</div>
+
+<!-- Tenant Master Page -->
+<div class="page" id="page-tenant-master">
+  <div class="section-title">👥 จัดการผู้เช่า</div>
+  <div id="tenantMasterContainer"></div>
+</div>
+
+<!-- Lease Agreements Page -->
+<div class="page" id="page-lease-agreements">
+  <div class="section-title">📋 สัญญาเช่า</div>
+  <div id="leaseAgreementsContainer"></div>
+</div>
+
 </div><!-- end main -->
 
 <!-- Firebase Monitoring Panel -->
@@ -3035,6 +3070,9 @@ window._showPageImpl = function(page,btn){
   if(page==='analytics')initAnalyticsPage();
   if(page==='contract')initContractPage();
   if(page==='meter')initMeterPage();
+  if(page==='owner-info')initOwnerInfoPage();
+  if(page==='tenant-master')initTenantMasterPage();
+  if(page==='lease-agreements')initLeaseAgreementsPage();
 };
 // Assign to global scope after definition
 window.showPage = window._showPageImpl;
@@ -9449,6 +9487,435 @@ function showDuplicateConfirmDialog(title, message) {
     // Focus confirm button for keyboard navigation
     confirmBtn.focus();
   });
+}
+
+// ===== OWNER INFO PAGE =====
+function initOwnerInfoPage() {
+  renderOwnerInfoPage();
+}
+
+function renderOwnerInfoPage() {
+  const container = document.getElementById('ownerInfoContainer');
+  if (!container) return;
+
+  const owner = OwnerConfigManager.getOwnerInfo();
+
+  container.innerHTML = `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+      <!-- Left column -->
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ชื่อ-นามสกุล *</label>
+        <input type="text" id="ownerName" value="${owner.name || ''}" placeholder="ชื่อเจ้าของ" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขประจำตัวประชาชน *</label>
+        <input type="text" id="ownerIdCard" value="${owner.idCardNumber || ''}" placeholder="เลขประจำตัวประชาชน" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เบอร์โทรศัพท์</label>
+        <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">อีเมล</label>
+        <input type="email" id="ownerEmail" value="${owner.email || ''}" placeholder="อีเมล" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ที่อยู่</label>
+        <input type="text" id="ownerAddress" value="${owner.address || ''}" placeholder="ที่อยู่" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">แขวง/ตำบล</label>
+        <input type="text" id="ownerSubDistrict" value="${owner.subDistrict || ''}" placeholder="แขวง/ตำบล" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เขต/อำเภอ</label>
+        <input type="text" id="ownerDistrict" value="${owner.district || ''}" placeholder="เขต/อำเภอ" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">จังหวัด</label>
+        <input type="text" id="ownerProvince" value="${owner.province || ''}" placeholder="จังหวัด" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">รหัสไปรษณีย์</label>
+        <input type="text" id="ownerPostalCode" value="${owner.postalCode || ''}" placeholder="รหัสไปรษณีย์" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขประจำตัวผู้เสียภาษี</label>
+        <input type="text" id="ownerTaxId" value="${owner.taxId || ''}" placeholder="เลขประจำตัวผู้เสียภาษี" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ชื่อธนาคาร</label>
+        <input type="text" id="ownerBankName" value="${owner.bankName || ''}" placeholder="ชื่อธนาคาร" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขบัญชี</label>
+        <input type="text" id="ownerBankAccount" value="${owner.bankAccount || ''}" placeholder="เลขบัญชี" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+      <button onclick="saveOwnerInfo()" style="padding: 0.8rem 2rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+        💾 บันทึกข้อมูล
+      </button>
+      <button onclick="clearOwnerInfo()" style="padding: 0.8rem 2rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+        🗑️ ลบข้อมูล
+      </button>
+    </div>
+  `;
+}
+
+function saveOwnerInfo() {
+  const name = document.getElementById('ownerName').value.trim();
+  if (!name) {
+    alert('⚠️ กรุณากรอกชื่อเจ้าของ');
+    return;
+  }
+
+  const ownerData = {
+    name: name,
+    idCardNumber: document.getElementById('ownerIdCard').value.trim(),
+    phone: document.getElementById('ownerPhone').value.trim(),
+    email: document.getElementById('ownerEmail').value.trim(),
+    address: document.getElementById('ownerAddress').value.trim(),
+    subDistrict: document.getElementById('ownerSubDistrict').value.trim(),
+    district: document.getElementById('ownerDistrict').value.trim(),
+    province: document.getElementById('ownerProvince').value.trim(),
+    postalCode: document.getElementById('ownerPostalCode').value.trim(),
+    taxId: document.getElementById('ownerTaxId').value.trim(),
+    bankName: document.getElementById('ownerBankName').value.trim(),
+    bankAccount: document.getElementById('ownerBankAccount').value.trim()
+  };
+
+  if (OwnerConfigManager.saveOwnerInfo(ownerData)) {
+    alert('✅ บันทึกข้อมูลเจ้าของสำเร็จ');
+    renderOwnerInfoPage();
+  }
+}
+
+function clearOwnerInfo() {
+  if (confirm('คุณแน่ใจหรือว่าต้องการลบข้อมูลเจ้าของทั้งหมด?')) {
+    OwnerConfigManager.clearOwnerInfo();
+    alert('✅ ลบข้อมูลเรียบร้อย');
+    renderOwnerInfoPage();
+  }
+}
+
+// ===== TENANT MASTER PAGE =====
+function initTenantMasterPage() {
+  renderTenantMasterPage();
+}
+
+function renderTenantMasterPage() {
+  const container = document.getElementById('tenantMasterContainer');
+  if (!container) return;
+
+  const tenants = TenantConfigManager.getTenantList();
+
+  container.innerHTML = `
+    <div style="margin-top: 1.5rem;">
+      <!-- Add Tenant Form -->
+      <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+        <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">➕ เพิ่มผู้เช่าใหม่</div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">รหัสผู้เช่า *</label>
+            <input type="text" id="newTenantId" placeholder="เช่น T001, T002" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ชื่อ-นามสกุล *</label>
+            <input type="text" id="newTenantName" placeholder="ชื่อผู้เช่า" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขประจำตัวประชาชน/Passport</label>
+            <input type="text" id="newTenantIdCard" placeholder="เลขประจำตัว" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เบอร์โทรศัพท์</label>
+            <input type="tel" id="newTenantPhone" placeholder="เบอร์โทรศัพท์" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">อีเมล</label>
+            <input type="email" id="newTenantEmail" placeholder="อีเมล" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ที่อยู่</label>
+            <input type="text" id="newTenantAddress" placeholder="ที่อยู่" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <button onclick="addNewTenant()" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+          ➕ เพิ่มผู้เช่า
+        </button>
+      </div>
+
+      <!-- Tenant List -->
+      <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">📋 รายชื่อผู้เช่า (${tenants.length} คน)</div>
+      ${tenants.length === 0 ? '<div style="padding: 1.5rem; text-align: center; color: #999;">ยังไม่มีผู้เช่า</div>' : ''}
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background: #f0f0f0;">
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">รหัส</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ชื่อ</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">เบอร์โทร</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">อีเมล</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">การกระทำ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tenants.map(tenant => `
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.id}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.name}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.phone || '-'}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.email || '-'}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">
+                  <button onclick="editTenant('${tenant.id}')" style="padding: 0.4rem 0.8rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">📝</button>
+                  <button onclick="deleteTenant('${tenant.id}')" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function addNewTenant() {
+  const id = document.getElementById('newTenantId').value.trim();
+  const name = document.getElementById('newTenantName').value.trim();
+
+  if (!id || !name) {
+    alert('⚠️ กรุณากรอกรหัสและชื่อผู้เช่า');
+    return;
+  }
+
+  const tenantData = {
+    id: id,
+    name: name,
+    idCardNumber: document.getElementById('newTenantIdCard').value.trim(),
+    phone: document.getElementById('newTenantPhone').value.trim(),
+    email: document.getElementById('newTenantEmail').value.trim(),
+    address: document.getElementById('newTenantAddress').value.trim()
+  };
+
+  if (TenantConfigManager.addTenant(tenantData)) {
+    alert(`✅ เพิ่มผู้เช่า ${name} สำเร็จ`);
+    // Clear inputs
+    document.getElementById('newTenantId').value = '';
+    document.getElementById('newTenantName').value = '';
+    document.getElementById('newTenantIdCard').value = '';
+    document.getElementById('newTenantPhone').value = '';
+    document.getElementById('newTenantEmail').value = '';
+    document.getElementById('newTenantAddress').value = '';
+    renderTenantMasterPage();
+  } else {
+    alert(`⚠️ ผู้เช่า ${id} มีอยู่แล้ว`);
+  }
+}
+
+function deleteTenant(tenantId) {
+  if (confirm(`คุณแน่ใจหรือว่าต้องการลบผู้เช่า ${tenantId}?`)) {
+    if (TenantConfigManager.deleteTenant(tenantId)) {
+      alert('✅ ลบผู้เช่าเรียบร้อย');
+      renderTenantMasterPage();
+    }
+  }
+}
+
+function editTenant(tenantId) {
+  alert('🔨 ฟีเจอร์แก้ไขผู้เช่ากำลังพัฒนา');
+}
+
+// ===== LEASE AGREEMENTS PAGE =====
+function initLeaseAgreementsPage() {
+  renderLeaseAgreementsPage();
+}
+
+function renderLeaseAgreementsPage() {
+  const container = document.getElementById('leaseAgreementsContainer');
+  if (!container) return;
+
+  const leases = LeaseAgreementManager.getAllLeasesList();
+  const rooms = RoomConfigManager.getRoomsConfig('rooms').rooms;
+  const nestRooms = RoomConfigManager.getRoomsConfig('nest').rooms;
+  const allRooms = [...rooms, ...nestRooms];
+  const tenants = TenantConfigManager.getTenantList();
+
+  const buildingOptions = '<option value="rooms">ห้องแถว</option><option value="nest">Nest Building</option>';
+  const roomOptions = allRooms.map(r => `<option value="${r.id}">${r.id} - ${r.name}</option>`).join('');
+  const tenantOptions = tenants.map(t => `<option value="${t.id}">${t.id} - ${t.name}</option>`).join('');
+
+  container.innerHTML = `
+    <div style="margin-top: 1.5rem;">
+      <!-- Add Lease Form -->
+      <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+        <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">➕ สร้างสัญญาเช่าใหม่</div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">อาคาร *</label>
+            <select id="leaseBuilding" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+              ${buildingOptions}
+            </select>
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ห้อง *</label>
+            <select id="leaseRoom" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+              <option value="">-- เลือกห้อง --</option>
+              ${roomOptions}
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ผู้เช่า *</label>
+            <select id="leaseTenant" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+              <option value="">-- เลือกผู้เช่า --</option>
+              ${tenantOptions}
+            </select>
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">วันเข้าเช่า *</label>
+            <input type="date" id="leaseMoveIn" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ค่าเช่า/เดือน (บาท) *</label>
+            <input type="number" id="leaseRent" placeholder="0" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">มัดจำ (บาท)</label>
+            <input type="number" id="leaseDeposit" placeholder="0" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <button onclick="createNewLease()" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+          ➕ สร้างสัญญา
+        </button>
+      </div>
+
+      <!-- Lease List -->
+      <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">📋 สัญญาเช่าทั้งหมด (${leases.length})</div>
+      ${leases.length === 0 ? '<div style="padding: 1.5rem; text-align: center; color: #999;">ยังไม่มีสัญญาเช่า</div>' : ''}
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background: #f0f0f0;">
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">อาคาร</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ห้อง</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ผู้เช่า</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">วันเข้า</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ค่าเช่า</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">สถานะ</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">การกระทำ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${leases.map(lease => `
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${lease.building === 'rooms' ? 'ห้องแถว' : 'Nest'}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${lease.roomId}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${lease.tenantName || lease.tenantId}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${new Date(lease.moveInDate).toLocaleDateString('th-TH')}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: right;">฿${lease.rentAmount?.toLocaleString() || '-'}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">
+                  <span style="padding: 0.3rem 0.8rem; border-radius: 4px; background: ${lease.status === 'active' ? '#c8e6c9' : '#f5f5f5'}; color: ${lease.status === 'active' ? '#2e7d32' : '#999'}; font-weight: 600;">
+                    ${lease.status === 'active' ? '✅ กำลังเช่า' : '❌ เลิกเช่า'}
+                  </span>
+                </td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">
+                  ${lease.status === 'active' ? `<button onclick="endLease('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;">🚪</button>` : ''}
+                  <button onclick="deleteLease('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function createNewLease() {
+  const building = document.getElementById('leaseBuilding').value;
+  const roomId = document.getElementById('leaseRoom').value;
+  const tenantId = document.getElementById('leaseTenant').value;
+  const moveInDate = document.getElementById('leaseMoveIn').value;
+  const rentAmount = parseFloat(document.getElementById('leaseRent').value);
+  const deposit = parseFloat(document.getElementById('leaseDeposit').value) || 0;
+
+  if (!building || !roomId || !tenantId || !moveInDate || !rentAmount) {
+    alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน');
+    return;
+  }
+
+  const tenant = TenantConfigManager.getTenant(tenantId);
+  const leaseData = {
+    building: building,
+    roomId: roomId,
+    tenantId: tenantId,
+    tenantName: tenant ? tenant.name : tenantId,
+    moveInDate: new Date(moveInDate).toISOString(),
+    moveOutDate: null,
+    rentAmount: rentAmount,
+    deposit: deposit,
+    status: 'active'
+  };
+
+  const leaseId = LeaseAgreementManager.createLease(leaseData);
+  if (leaseId) {
+    alert(`✅ สร้างสัญญาเช่าสำเร็จ`);
+    // Clear inputs
+    document.getElementById('leaseBuilding').value = 'rooms';
+    document.getElementById('leaseRoom').value = '';
+    document.getElementById('leaseTenant').value = '';
+    document.getElementById('leaseMoveIn').value = '';
+    document.getElementById('leaseRent').value = '';
+    document.getElementById('leaseDeposit').value = '';
+    renderLeaseAgreementsPage();
+  }
+}
+
+function endLease(leaseId) {
+  if (confirm('คุณแน่ใจหรือว่าต้องการสิ้นสุดสัญญาเช่า?')) {
+    if (LeaseAgreementManager.endLease(leaseId)) {
+      alert('✅ สิ้นสุดสัญญาเช่าเรียบร้อย');
+      renderLeaseAgreementsPage();
+    }
+  }
+}
+
+function deleteLease(leaseId) {
+  if (confirm('คุณแน่ใจหรือว่าต้องการลบสัญญาเช่า?')) {
+    if (LeaseAgreementManager.deleteLease(leaseId)) {
+      alert('✅ ลบสัญญาเช่าเรียบร้อย');
+      renderLeaseAgreementsPage();
+    }
+  }
 }
 </script>
 </body>

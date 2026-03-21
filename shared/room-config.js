@@ -6,55 +6,55 @@ const DEFAULT_ROOMS_CONFIG = {
     name: 'ห้องแถว (Rooms Building)',
     building: 'rooms',
     rooms: [
-      { id: '15ก', name: 'ห้อง 15ก', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '13', name: 'ห้อง 13', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '14', name: 'ห้อง 14', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '15', name: 'ห้อง 15', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '16', name: 'ห้อง 16', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '17', name: 'ห้อง 17', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '18', name: 'ห้อง 18', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '19', name: 'ห้อง 19', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '20', name: 'ห้อง 20', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '21', name: 'ห้อง 21', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '22', name: 'ห้อง 22', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '23', name: 'ห้อง 23', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '24', name: 'ห้อง 24', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '25', name: 'ห้อง 25', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '26', name: 'ห้อง 26', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '27', name: 'ห้อง 27', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '28', name: 'ห้อง 28', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '29', name: 'ห้อง 29', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '30', name: 'ห้อง 30', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '31', name: 'ห้อง 31', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '32', name: 'ห้อง 32', waterRate: 20, electricRate: 8, deleted: false },
-      { id: '33', name: 'ห้อง 33', waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'Amazon ☕', name: 'ร้าน Amazon', waterRate: 20, electricRate: 6, deleted: false }
+      { id: '15ก', name: 'ห้อง 15ก', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '13', name: 'ห้อง 13', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '14', name: 'ห้อง 14', rentPrice: 1200, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '15', name: 'ห้อง 15', rentPrice: 1200, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '16', name: 'ห้อง 16', rentPrice: 2000, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '17', name: 'ห้อง 17', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '18', name: 'ห้อง 18', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '19', name: 'ห้อง 19', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '20', name: 'ห้อง 20', rentPrice: 1200, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '21', name: 'ห้อง 21', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '22', name: 'ห้อง 22', rentPrice: 1200, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '23', name: 'ห้อง 23', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '24', name: 'ห้อง 24', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '25', name: 'ห้อง 25', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '26', name: 'ห้อง 26', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '27', name: 'ห้อง 27', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '28', name: 'ห้อง 28', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '29', name: 'ห้อง 29', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '30', name: 'ห้อง 30', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '31', name: 'ห้อง 31', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '32', name: 'ห้อง 32', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: '33', name: 'ห้อง 33', rentPrice: 1500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'Amazon ☕', name: 'ร้าน Amazon', rentPrice: 15000, waterRate: 20, electricRate: 6, deleted: false }
     ]
   },
   'nest': {
     name: 'Nest Building',
     building: 'nest',
     rooms: [
-      { id: 'N101', name: 'Nest N101', floor: 1, type: 'daily', rent: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N102', name: 'Nest N102', floor: 1, type: 'daily', rent: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N103', name: 'Nest N103', floor: 1, type: 'daily', rent: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N104', name: 'Nest N104', floor: 1, type: 'daily', rent: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N105', name: 'Nest N105', floor: 1, type: 'daily', rent: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N201', name: 'Nest N201', floor: 2, type: 'daily', rent: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N202', name: 'Nest N202', floor: 2, type: 'daily', rent: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N203', name: 'Nest N203', floor: 2, type: 'daily', rent: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N204', name: 'Nest N204', floor: 2, type: 'daily', rent: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N205', name: 'Nest N205', floor: 2, type: 'daily', rent: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N301', name: 'Nest N301', floor: 3, type: 'studio', rent: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N302', name: 'Nest N302', floor: 3, type: 'studio', rent: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N303', name: 'Nest N303', floor: 3, type: 'pet', rent: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N304', name: 'Nest N304', floor: 3, type: 'studio', rent: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N305', name: 'Nest N305', floor: 3, type: 'pet', rent: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N401', name: 'Nest N401', floor: 4, type: 'studio', rent: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N402', name: 'Nest N402', floor: 4, type: 'studio', rent: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N403', name: 'Nest N403', floor: 4, type: 'pet', rent: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N404', name: 'Nest N404', floor: 4, type: 'studio', rent: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
-      { id: 'N405', name: 'Nest N405', floor: 4, type: 'pet', rent: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false }
+      { id: 'N101', name: 'Nest N101', floor: 1, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N102', name: 'Nest N102', floor: 1, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N103', name: 'Nest N103', floor: 1, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N104', name: 'Nest N104', floor: 1, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N105', name: 'Nest N105', floor: 1, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N201', name: 'Nest N201', floor: 2, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N202', name: 'Nest N202', floor: 2, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N203', name: 'Nest N203', floor: 2, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N204', name: 'Nest N204', floor: 2, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N205', name: 'Nest N205', floor: 2, type: 'daily', rentPrice: 5600, deposit: 3000, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N301', name: 'Nest N301', floor: 3, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N302', name: 'Nest N302', floor: 3, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N303', name: 'Nest N303', floor: 3, type: 'pet', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N304', name: 'Nest N304', floor: 3, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N305', name: 'Nest N305', floor: 3, type: 'pet', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N401', name: 'Nest N401', floor: 4, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N402', name: 'Nest N402', floor: 4, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N403', name: 'Nest N403', floor: 4, type: 'pet', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N404', name: 'Nest N404', floor: 4, type: 'studio', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false },
+      { id: 'N405', name: 'Nest N405', floor: 4, type: 'pet', rentPrice: 4500, deposit: 2500, waterRate: 20, electricRate: 8, deleted: false }
     ]
   }
 };
@@ -134,6 +134,37 @@ class RoomConfigManager {
     if (room) {
       room.deleted = false;
       this.saveRoomsConfig(building, config);
+      return true;
+    }
+    return false;
+  }
+
+  static getRentPrice(building, roomId) {
+    const room = this.getRoom(building, roomId);
+    return room ? room.rentPrice : 1500; // Fallback to 1500
+  }
+
+  static updateRentPrice(building, roomId, price) {
+    const config = this.getRoomsConfig(building);
+    const room = config.rooms.find(r => r.id === roomId);
+    if (room) {
+      room.rentPrice = price;
+      this.saveRoomsConfig(building, config);
+      console.log(`✅ Room ${roomId} rent price updated to ${price}`);
+      return true;
+    }
+    console.warn(`⚠️ Room ${roomId} not found`);
+    return false;
+  }
+
+  static updateRoomField(building, roomId, fieldName, value) {
+    // Generic update for any room field
+    const config = this.getRoomsConfig(building);
+    const room = config.rooms.find(r => r.id === roomId);
+    if (room) {
+      room[fieldName] = value;
+      this.saveRoomsConfig(building, config);
+      console.log(`✅ Room ${roomId} ${fieldName} updated to ${value}`);
       return true;
     }
     return false;
