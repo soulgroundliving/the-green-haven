@@ -927,7 +927,7 @@
           } else if (userData.userType === 'admin') {
             window.location.href = '/dashboard.html';
           } else if (userData.userType === 'tenant') {
-            window.location.href = `/payment.html?room=${userData.roomNumber}`;
+            window.location.href = `/tenant.html?room=${userData.roomNumber}`;
           } else {
             window.location.href = '/dashboard.html'; // Default to dashboard
           }
@@ -1066,7 +1066,7 @@
           } else if (userData.userType === 'admin') {
             window.location.href = '/dashboard.html';
           } else if (userData.userType === 'tenant') {
-            window.location.href = `/payment.html?room=${userData.roomNumber}`;
+            window.location.href = `/tenant.html?room=${userData.roomNumber}`;
           } else {
             window.location.href = '/dashboard.html'; // Default to dashboard
           }

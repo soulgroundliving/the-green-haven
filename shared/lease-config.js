@@ -234,4 +234,57 @@ class LeaseAgreementManager {
     // Fallback to localStorage
     return this.getAllLeases();
   }
+
+  static async updateLeaseWithFirebase(leaseId, building, updates) {
+    // 1. Update in localStorage
+    const success = this.updateLease(leaseId, updates);
+
+    // 2. Try Firebase in parallel
+    try {
+      if (!window.firebase) {
+        console.warn('⚠️ Firebase not loaded');
+        return success;
+      }
+
+      const db = window.firebase.firestore();
+      const docRef = window.firebase.firestoreFunctions.doc(
+        window.firebase.firestoreFunctions.collection(db, `leases/${building}/list`),
+        leaseId
+      );
+      await window.firebase.firestoreFunctions.updateDoc(docRef, {
+        ...updates,
+        updatedAt: new Date().toISOString()
+      });
+      console.log(`✅ Lease ${leaseId} updated in Firebase`);
+    } catch (error) {
+      console.warn(`⚠️ Firebase update failed for lease ${leaseId}:`, error.message);
+    }
+
+    return success;
+  }
+
+  static async deleteLeaseWithFirebase(leaseId, building) {
+    // 1. Delete from localStorage
+    const success = this.deleteLease(leaseId);
+
+    // 2. Try Firebase in parallel
+    try {
+      if (!window.firebase) {
+        console.warn('⚠️ Firebase not loaded');
+        return success;
+      }
+
+      const db = window.firebase.firestore();
+      const docRef = window.firebase.firestoreFunctions.doc(
+        window.firebase.firestoreFunctions.collection(db, `leases/${building}/list`),
+        leaseId
+      );
+      await window.firebase.firestoreFunctions.deleteDoc(docRef);
+      console.log(`✅ Lease ${leaseId} deleted from Firebase`);
+    } catch (error) {
+      console.warn(`⚠️ Firebase delete failed for lease ${leaseId}:`, error.message);
+    }
+
+    return success;
+  }
 }
