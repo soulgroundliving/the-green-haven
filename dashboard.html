@@ -1651,6 +1651,7 @@
           <div>
             <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📱 โทรศัพท์</label>
             <input type="tel" id="modalTenantPhone" placeholder="0XX-XXX-XXXX" maxlength="10" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <small id="modalTenantPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
           </div>
           <div>
             <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">💬 Line ID</label>
@@ -7130,7 +7131,7 @@ function showTenantModal(roomId){
   const footer=document.getElementById('payModalFooter');
   body.innerHTML=`
     <div class="pm-row"><span class="pm-label">ชื่อ-นามสกุล</span><input class="pm-input" id="tm-name" style="width:185px" type="text" value="${t.name||''}" placeholder="สมชาย ใจดี"></div>
-    <div class="pm-row"><span class="pm-label">เบอร์โทรศัพท์</span><input class="pm-input" id="tm-phone" style="width:145px" type="text" value="${t.phone||''}" placeholder="081-234-5678" maxlength="10"></div>
+    <div class="pm-row"><span class="pm-label">เบอร์โทรศัพท์</span><div style="display:flex;flex-direction:column;"><input class="pm-input" id="tm-phone" style="width:145px" type="text" value="${t.phone||''}" placeholder="081-234-5678" maxlength="10"><small id="tmPhoneError" style="display:none;color:#d32f2f;font-size:0.8rem;margin-top:2px;"></small></div></div>
     <div class="pm-row"><span class="pm-label">Line ID</span><input class="pm-input" id="tm-line" style="width:145px" type="text" value="${t.lineId||''}" placeholder="@username"></div>
     <div class="pm-row"><span class="pm-label">วันที่เข้าอยู่</span><input class="pm-input" id="tm-moveIn" style="width:145px" type="date" value="${t.moveInDate||''}"></div>
     <div class="pm-row"><span class="pm-label">วันหมดสัญญา</span><input class="pm-input" id="tm-contractEnd" style="width:145px" type="date" value="${t.contractEnd||''}"></div>
@@ -7141,6 +7142,11 @@ function showTenantModal(roomId){
     ${t.name?`<button class="pm-btn red" onclick="deleteTenant('${roomId}')">🗑️ ลบผู้เช่า</button>`:''}
     <button class="pm-btn gray" onclick="closePayModal()">ปิด</button>`;
   document.getElementById('payModalOverlay').classList.add('show');
+
+  // Initialize phone validation for the modal
+  setTimeout(function() {
+    initPhoneValidation();
+  }, 100);
 }
 
 function saveTenant(){
@@ -8575,6 +8581,11 @@ function openTenantModal(building, roomId) {
 
   // Show modal
   modal.style.display = 'flex';
+
+  // Initialize phone validation for the modal
+  setTimeout(function() {
+    initPhoneValidation();
+  }, 100);
 }
 
 function closeTenantModal() {
@@ -9853,6 +9864,7 @@ function renderOwnerInfoPage() {
       <div>
         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เบอร์โทรศัพท์</label>
         <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" maxlength="10" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <small id="ownerPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
       </div>
       <div>
         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">อีเมล</label>
@@ -9991,6 +10003,7 @@ function renderTenantMasterPage() {
           <div>
             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เบอร์โทรศัพท์</label>
             <input type="tel" id="newTenantPhone" placeholder="เบอร์โทรศัพท์" maxlength="10" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <small id="newTenantPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
           </div>
         </div>
 
@@ -10280,6 +10293,110 @@ function deleteLease(leaseId) {
     }
   }
 }
+
+// Phone Number Validation Function
+// Handles: format, validation, error messages, auto-formatting
+function validatePhoneNumber(inputElement, errorElementId) {
+  const input = inputElement.value;
+  const errorEl = errorElementId ? document.getElementById(errorElementId) : null;
+
+  // Remove all non-digit characters for processing
+  const cleanedInput = input.replace(/\D/g, '');
+
+  // Initialize error message as empty
+  let errorMsg = '';
+  let isValid = true;
+
+  // Validation rules:
+  // 1. Must contain only numbers
+  if (input !== cleanedInput && input.length > 0) {
+    // Allow dashes and spaces but clean them
+    if (!/^[0-9\s\-]*$/.test(input)) {
+      errorMsg = '❌ เบอร์โทรต้องเป็นตัวเลขเท่านั้น (0-9, dash, space)';
+      isValid = false;
+    }
+  }
+
+  // 2. Must be exactly 10 digits
+  if (cleanedInput.length > 0 && cleanedInput.length !== 10) {
+    errorMsg = '❌ กรุณากรอกเบอร์โทร 10 หลัก';
+    isValid = false;
+  }
+
+  // 3. Must start with 0
+  if (cleanedInput.length > 0 && !cleanedInput.startsWith('0')) {
+    errorMsg = '❌ เบอร์โทรต้องขึ้นต้นด้วย 0';
+    isValid = false;
+  }
+
+  // Update input value with cleaned version (store without dashes)
+  inputElement.value = cleanedInput;
+
+  // Display formatted version for user (with dashes) - optional
+  // Format: 081-234-5678
+  if (cleanedInput.length === 10) {
+    const formatted = cleanedInput.slice(0, 3) + '-' + cleanedInput.slice(3, 6) + '-' + cleanedInput.slice(6);
+    inputElement.placeholder = formatted;
+  }
+
+  // Show/hide error message
+  if (errorEl) {
+    if (errorMsg) {
+      errorEl.style.display = 'block';
+      errorEl.textContent = errorMsg;
+      errorEl.style.color = '#d32f2f';
+      errorEl.style.fontSize = '0.85rem';
+      errorEl.style.marginTop = '4px';
+    } else {
+      errorEl.style.display = 'none';
+      errorEl.textContent = '';
+    }
+  }
+
+  // Update input styling based on validation
+  if (cleanedInput.length === 10 && isValid) {
+    inputElement.style.borderColor = '#4caf50'; // Green for valid
+    inputElement.style.boxShadow = '0 0 10px rgba(76,175,80,0.2)';
+  } else if (cleanedInput.length > 0 && !isValid) {
+    inputElement.style.borderColor = '#d32f2f'; // Red for invalid
+    inputElement.style.boxShadow = '0 0 10px rgba(211,47,47,0.2)';
+  } else {
+    inputElement.style.borderColor = 'var(--border)';
+    inputElement.style.boxShadow = 'none';
+  }
+
+  return isValid && cleanedInput.length === 10;
+}
+
+// Attach validation to phone input fields
+function initPhoneValidation() {
+  const phoneFields = [
+    { id: 'modalTenantPhone', errorId: 'modalTenantPhoneError' },
+    { id: 'tm-phone', errorId: 'tmPhoneError' },
+    { id: 'ownerPhone', errorId: 'ownerPhoneError' },
+    { id: 'newTenantPhone', errorId: 'newTenantPhoneError' }
+  ];
+
+  phoneFields.forEach(field => {
+    const input = document.getElementById(field.id);
+    if (input) {
+      // Real-time validation on input
+      input.addEventListener('input', function() {
+        validatePhoneNumber(this, field.errorId);
+      });
+
+      // Validate on blur
+      input.addEventListener('blur', function() {
+        validatePhoneNumber(this, field.errorId);
+      });
+    }
+  });
+}
+
+// Call this when page loads or modals open
+document.addEventListener('DOMContentLoaded', function() {
+  initPhoneValidation();
+});
 </script>
 </body>
 </html>
