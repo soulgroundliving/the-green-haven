@@ -5027,7 +5027,7 @@ async function loadDashboardDataFromFirebase() {
       activeRooms.forEach(roomId => {
         if (tenants[roomId]?.name) { // Only count occupied rooms
           const room = RoomConfigManager ? RoomConfigManager.getRoom(building, roomId) : null;
-          rentTotal += (room?.rent || 0);
+          rentTotal += (room?.rentPrice || 0);
         }
       });
 
@@ -5200,21 +5200,21 @@ function initRoomsPage(){
     return `
     <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" onclick="openTenantModal('rooms', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${r.id}</div>
-      <div class="room-rent">฿${r.rent.toLocaleString()}/เดือน</div>
+      <div class="room-rent">฿${r.rentPrice.toLocaleString()}/เดือน</div>
       <div class="room-status">${r.type==='commercial'?'🏪 พาณิชย์':occupancyIcon + (tenant && tenant.name ? ' ' + tenant.name : ' ว่าง')}</div>
       <div style="font-size:0.8rem;margin-top:4px;text-align:center;color:${borderColor};font-weight:600;">${statusInfo.icon} ${statusInfo.label}</div>
     </div>`;
   }).join('');
 
   const tbl=document.getElementById('roomTable');
-  const rentT=rooms.filter(r=>r.type==='room').reduce((a,r)=>a+r.rent,0);
+  const rentT=rooms.filter(r=>r.type==='room').reduce((a,r)=>a+r.rentPrice,0);
   const avgE=Math.round(12500/22),avgW=Math.round(3200/22);
   tbl.innerHTML=`
     <thead><tr><th>ห้องเลขที่</th><th>ประเภท</th><th>ค่าเช่า</th><th>อัตราไฟ</th><th>ค่าขยะ</th><th>สถานะ</th><th>หมายเหตุ</th></tr></thead>
     <tbody>${rooms.map(r=>`<tr>
       <td><strong>${r.id}</strong></td>
       <td><span class="badge ${r.type==='commercial'?'badge-blue':'badge-green'}">${r.type==='commercial'?'🏪 พาณิชย์':'🏠 ที่พัก'}</span></td>
-      <td style="font-weight:700;color:var(--green-dark)">฿${r.rent.toLocaleString()}</td>
+      <td style="font-weight:700;color:var(--green-dark)">฿${r.rentPrice.toLocaleString()}</td>
       <td>${r.elecRate} บาท/หน่วย</td>
       <td>฿${r.trashFee}</td>
       <td><span class="badge badge-green">✅ มีผู้เช่า</span></td>
@@ -5381,7 +5381,7 @@ function renderCompactRoomGrid(){
       `}
       <div class="compact-card-info" style="border-top:1px solid var(--border);padding-top:8px;margin-top:6px;">
         <span>ค่าเช่า</span>
-        <span class="compact-card-value">฿${r.rent.toLocaleString()}</span>
+        <span class="compact-card-value">฿${r.rentPrice.toLocaleString()}</span>
       </div>
       <div class="compact-card-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
         <button class="compact-btn" onclick="editRoom('${r.id}')" title="แก้ไขสัญญาเช่า" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
@@ -5461,7 +5461,7 @@ function renderRoomSelectionCheckboxes() {
 
   const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
   container.innerHTML = rooms.map(room => {
-    const currentRent = room.rent || 0;
+    const currentRent = room.rentPrice || 0;
     return `
       <label style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;background:white;" onclick="toggleBatchRoomSelection('${room.id}')">
         <input type="checkbox" id="batchRoom_${room.id}" onchange="updateBatchRoomCount()" style="cursor:pointer;">
@@ -5560,21 +5560,21 @@ function updatePreview() {
   const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
   const selectedRooms = rooms.filter(r => batchSelectedRooms.has(r.id));
   const preview = selectedRooms.map(room => {
-    let newRent = room.rent;
+    let newRent = room.rentPrice;
 
-    if (adjustType === 'fixed-increase') newRent = room.rent + adjustValue;
-    else if (adjustType === 'percentage-increase') newRent = Math.round(room.rent * (1 + adjustValue / 100));
-    else if (adjustType === 'fixed-decrease') newRent = room.rent - adjustValue;
-    else if (adjustType === 'percentage-decrease') newRent = Math.round(room.rent * (1 - adjustValue / 100));
+    if (adjustType === 'fixed-increase') newRent = room.rentPrice + adjustValue;
+    else if (adjustType === 'percentage-increase') newRent = Math.round(room.rentPrice * (1 + adjustValue / 100));
+    else if (adjustType === 'fixed-decrease') newRent = room.rentPrice - adjustValue;
+    else if (adjustType === 'percentage-decrease') newRent = Math.round(room.rentPrice * (1 - adjustValue / 100));
     else if (adjustType === 'set-fixed') newRent = adjustValue;
 
     newRent = Math.max(0, newRent);
-    const change = newRent - room.rent;
-    const changePercent = ((change / room.rent) * 100).toFixed(1);
+    const change = newRent - room.rentPrice;
+    const changePercent = ((change / room.rentPrice) * 100).toFixed(1);
     const arrow = change >= 0 ? '↑' : '↓';
     const color = change > 0 ? '#4caf50' : (change < 0 ? '#d32f2f' : '#999');
 
-    return `<p style="margin:4px 0;font-size:0.8rem;"><strong>${room.id}</strong>: ฿${room.rent} <span style="color:${color};">→ ฿${newRent} ${arrow} ${Math.abs(changePercent)}%</span></p>`;
+    return `<p style="margin:4px 0;font-size:0.8rem;"><strong>${room.id}</strong>: ฿${room.rentPrice} <span style="color:${color};">→ ฿${newRent} ${arrow} ${Math.abs(changePercent)}%</span></p>`;
   }).join('');
 
   document.getElementById('previewResult').innerHTML = preview || '<p style="margin:0;color:#999;">ไม่มีการเปลี่ยนแปลง</p>';
@@ -5597,13 +5597,13 @@ function applyBatchRentAdjustment() {
   // Apply adjustments to ROOMS_OLD
   ROOMS_OLD.forEach(room => {
     if (batchSelectedRooms.has(room.id)) {
-      if (adjustType === 'fixed-increase') room.rent = room.rent + adjustValue;
-      else if (adjustType === 'percentage-increase') room.rent = Math.round(room.rent * (1 + adjustValue / 100));
-      else if (adjustType === 'fixed-decrease') room.rent = room.rent - adjustValue;
-      else if (adjustType === 'percentage-decrease') room.rent = Math.round(room.rent * (1 - adjustValue / 100));
-      else if (adjustType === 'set-fixed') room.rent = adjustValue;
+      if (adjustType === 'fixed-increase') room.rentPrice = room.rentPrice + adjustValue;
+      else if (adjustType === 'percentage-increase') room.rentPrice = Math.round(room.rentPrice * (1 + adjustValue / 100));
+      else if (adjustType === 'fixed-decrease') room.rentPrice = room.rentPrice - adjustValue;
+      else if (adjustType === 'percentage-decrease') room.rentPrice = Math.round(room.rentPrice * (1 - adjustValue / 100));
+      else if (adjustType === 'set-fixed') room.rentPrice = adjustValue;
 
-      room.rent = Math.max(0, room.rent);
+      room.rentPrice = Math.max(0, room.rentPrice);
     }
   });
 
@@ -5733,7 +5733,7 @@ function renderNestCompactGrid(){
       </div>
       <div class="compact-card-info">
         <span style="font-size:.8rem;color:var(--text-muted);">${typeLabel}</span>
-        <span class="compact-card-value">฿${r.rent.toLocaleString()}</span>
+        <span class="compact-card-value">฿${r.rentPrice.toLocaleString()}</span>
       </div>
       ${isOccupied ? `
       <div class="compact-card-info">
@@ -5779,7 +5779,7 @@ function renderNestCompactGrid(){
       `}
       <div class="compact-card-info" style="border-top:1px solid var(--border);padding-top:8px;margin-top:6px;">
         <span>ค่าเช่า</span>
-        <span class="compact-card-value">฿${r.rent.toLocaleString()}</span>
+        <span class="compact-card-value">฿${r.rentPrice.toLocaleString()}</span>
       </div>
       <div class="compact-card-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
         <button class="compact-btn" onclick="editRoom('${r.id}')" title="แก้ไขสัญญาเช่า" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
@@ -5855,7 +5855,7 @@ function initNestPage(){
     return `
     <div class="room-pill ${r.type === 'pet' ? 'pet' : (r.type === 'daily' ? 'daily' : 'studio')}" onclick="openTenantModal('nest', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${r.id}</div>
-      <div class="room-rent">฿${r.rent.toLocaleString()}/เดือน</div>
+      <div class="room-rent">฿${r.rentPrice.toLocaleString()}/เดือน</div>
       <div class="room-status">${typeIcon} ${tenant && tenant.name ? tenant.name : 'ว่าง'}</div>
       <div style="font-size:0.8rem;margin-top:4px;text-align:center;color:${borderColor};font-weight:600;">${statusInfo.icon} ${statusInfo.label}</div>
     </div>`;
@@ -5876,7 +5876,7 @@ function initNestPage(){
         <td><strong>${r.id}</strong></td>
         <td>ชั้น ${r.floor}</td>
         <td><span class="badge ${r.type === 'pet' ? 'badge-purple' : (r.type === 'daily' ? 'badge-orange' : 'badge-blue')}">${typeLabel}</span></td>
-        <td style="font-weight:700;color:var(--green-dark)">฿${r.rent.toLocaleString()}</td>
+        <td style="font-weight:700;color:var(--green-dark)">฿${r.rentPrice.toLocaleString()}</td>
         <td>${r.elecRate} บาท/หน่วย</td>
         <td>฿${r.trashFee}</td>
         <td style="font-size:.8rem;color:var(--text-muted)">${r.note || '—'}</td>
