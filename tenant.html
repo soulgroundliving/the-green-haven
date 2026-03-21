@@ -843,6 +843,9 @@
   <script src="./shared/room-config.js"></script>
   <script src="./shared/tenant-config.js"></script>
   <script src="./shared/lease-config.js"></script>
+  <script src="./shared/room-config.js"></script>
+  <script src="./shared/tenant-config.js"></script>
+  <script src="./shared/lease-config.js"></script>
   <script src="./shared/tenant-manager.js"></script>
 
   <script>
@@ -856,8 +859,169 @@
     let currentPaymentAmount = 0;
     let currentPaymentMonth = '';
 
+    // ===== MOCK DATA INITIALIZATION =====
+    function initializeMockData() {
+      // Create mock tenants and leases for all rooms if they don't exist
+      const mockTenants = {};
+      const mockLeases = {};
+
+      // Generate mock data for Rooms Building (13-33)
+      for (let i = 13; i <= 33; i++) {
+        const roomId = i.toString();
+        const tenantId = `tenant_room_${i}`;
+
+        mockTenants[tenantId] = {
+          id: tenantId,
+          name: `ผู้เช่าห้อง ${i}`,
+          idCardNumber: '1234567890123',
+          phone: `089-xxx-${String(i).padStart(4, '0')}`,
+          email: `tenant.${i}@greenhaven.local`,
+          address: `ห้อง ${i} The Green Haven`,
+          createdDate: new Date().toISOString()
+        };
+
+        const leaseId = `lease_rooms_${i}_${tenantId}`;
+        mockLeases[leaseId] = {
+          id: leaseId,
+          building: 'rooms',
+          roomId: roomId,
+          tenantId: tenantId,
+          tenantName: `ผู้เช่าห้อง ${i}`,
+          moveInDate: '2024-01-01',
+          moveOutDate: null,
+          rentAmount: (1000 + (i * 50)),
+          deposit: 3000,
+          status: 'active',
+          createdDate: new Date().toISOString()
+        };
+      }
+
+      // Generate mock data for Nest Building (101-405)
+      for (let i = 101; i <= 405; i++) {
+        const roomId = `N${i}`;
+        const tenantId = `tenant_nest_${i}`;
+
+        mockTenants[tenantId] = {
+          id: tenantId,
+          name: `ผู้เช่า Nest ${i}`,
+          idCardNumber: '1234567890123',
+          phone: `089-yyy-${String(i).padStart(4, '0')}`,
+          email: `tenant.nest.${i}@greenhaven.local`,
+          address: `Nest ${i} The Green Haven`,
+          createdDate: new Date().toISOString()
+        };
+
+        const leaseId = `lease_nest_${i}_${tenantId}`;
+        mockLeases[leaseId] = {
+          id: leaseId,
+          building: 'nest',
+          roomId: roomId,
+          tenantId: tenantId,
+          tenantName: `ผู้เช่า Nest ${i}`,
+          moveInDate: '2024-01-01',
+          moveOutDate: null,
+          rentAmount: (3000 + ((i - 101) * 50)),
+          deposit: 5000,
+          status: 'active',
+          createdDate: new Date().toISOString()
+        };
+      }
+
+      // Save to localStorage if not already set
+      if (!localStorage.getItem('tenant_master_data')) {
+        localStorage.setItem('tenant_master_data', JSON.stringify(mockTenants));
+        console.log('✅ Mock tenant data initialized (localStorage)');
+      }
+
+      if (!localStorage.getItem('lease_agreements_data')) {
+        localStorage.setItem('lease_agreements_data', JSON.stringify(mockLeases));
+        console.log('✅ Mock lease data initialized (localStorage)');
+      }
+
+      // Sync to Firebase in background
+      syncMockDataToFirebase(mockTenants, mockLeases);
+    }
+
+    // ===== DUAL SYNC: localStorage + Firebase =====
+    async function dualSync(dataType, building, key, data) {
+      // 1. Save to localStorage immediately
+      try {
+        const storageKey = dataType === 'tenant' ? 'tenant_master_data' : 'lease_agreements_data';
+        const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        stored[key] = data;
+        localStorage.setItem(storageKey, JSON.stringify(stored));
+        console.log(`✅ ${dataType} saved to localStorage`);
+      } catch (e) {
+        console.warn(`⚠️ localStorage save failed:`, e.message);
+      }
+
+      // 2. Try Firebase in parallel (non-blocking)
+      try {
+        if (!window.firebase?.firestore) {
+          console.warn('⚠️ Firebase not available, using localStorage only');
+          return;
+        }
+
+        const db = window.firebase.firestore();
+        let collectionPath;
+
+        if (dataType === 'tenant') {
+          collectionPath = `tenants/${building}`;
+        } else {
+          collectionPath = `leases/${building}`;
+        }
+
+        const docRef = window.firebase.firestoreFunctions.doc(
+          window.firebase.firestoreFunctions.collection(db, collectionPath),
+          key
+        );
+
+        await window.firebase.firestoreFunctions.setDoc(docRef, {
+          ...data,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+
+        console.log(`✅ ${dataType} synced to Firebase`);
+      } catch (error) {
+        console.warn(`⚠️ Firebase sync failed (data in localStorage):`, error.message);
+      }
+    }
+
+    // Sync mock data to Firebase
+    async function syncMockDataToFirebase(mockTenants, mockLeases) {
+      try {
+        if (!window.firebase?.firestore) return;
+
+        // Sync tenants
+        for (const [tenantId, tenantData] of Object.entries(mockTenants)) {
+          const db = window.firebase.firestore();
+          const docRef = window.firebase.firestoreFunctions.doc(
+            window.firebase.firestoreFunctions.collection(db, 'tenants/rooms'),
+            tenantId
+          );
+          await window.firebase.firestoreFunctions.setDoc(docRef, tenantData, { merge: true });
+        }
+
+        // Sync leases
+        for (const [leaseId, leaseData] of Object.entries(mockLeases)) {
+          const building = leaseData.building;
+          const db = window.firebase.firestore();
+          const docRef = window.firebase.firestoreFunctions.doc(
+            window.firebase.firestoreFunctions.collection(db, `leases/${building}`),
+            leaseId
+          );
+          await window.firebase.firestoreFunctions.setDoc(docRef, leaseData, { merge: true });
+        }
+
+        console.log('✅ Mock data synced to Firebase');
+      } catch (error) {
+        console.warn('⚠️ Firebase mock sync failed:', error.message);
+      }
+    }
+
     // Initialize app on load
     window.addEventListener('DOMContentLoaded', function() {
+      initializeMockData();
       initTenantApp();
     });
 
@@ -874,7 +1038,7 @@
       const params = new URLSearchParams(window.location.search);
       const roomNumber = params.get('room') || currentUser?.roomNumber;
 
-      if (!roomNumber) {
+      if (!roomNumber || roomNumber === 'null') {
         console.error('❌ ข้อมูลห้องพักไม่ถูกต้อง');
         window.location.href = '/login.html';
         return;
