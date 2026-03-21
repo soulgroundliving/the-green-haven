@@ -4752,7 +4752,7 @@ function loadRoomConfigUI() {
           <input type="text" value="${room.name}" onchange="updateRoomField('${building}', '${room.id}', 'name', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
-          <input type="number" value="${rent}" onchange="updateRoomField('${building}', '${room.id}', 'rent', parseInt(this.value))" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="number" value="${rent}" onchange="updateRoomField('${building}', '${room.id}', 'rentPrice', parseInt(this.value))" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
           <input type="number" value="${room.waterRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'water', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
