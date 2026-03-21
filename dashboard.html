@@ -5343,6 +5343,10 @@ function renderCompactRoomGrid(){
           ${paymentStatusHTML}
         </span>
       </div>
+      <div class="compact-card-info">
+        <span style="font-size:.8rem;color:var(--text-muted);">${r.type==='commercial'?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
+        <span class="compact-card-value">฿${r.rentPrice.toLocaleString()}</span>
+      </div>
       ${isOccupied ? `
       <div class="compact-card-info">
         <span style="font-weight:600;color:var(--text);">ชื่อ</span>
@@ -7052,7 +7056,7 @@ function renderTenantPage(){
     const cls=isCom?'com':isOcc?'occ':'vac';
     let info='';
     if(isOcc){
-      const mi=t.moveIn?new Date(t.moveIn).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}):'—';
+      const mi=(t.moveInDate||t.moveIn)?new Date(t.moveInDate||t.moveIn).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}):'—';
       const ce=t.contractEnd?new Date(t.contractEnd).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}):'—';
       const diff=t.contractEnd?Math.round((new Date(t.contractEnd)-today)/(1000*60*60*24)):null;
       const tag=diff===null?''
@@ -7088,7 +7092,7 @@ function renderTenantTable(){
     const t=tenants[r.id]||{};
     const isOcc=!!t?.name;
     const isCom=r.type==='commercial';
-    const mi=t.moveIn?new Date(t.moveIn).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    const mi=(t.moveInDate||t.moveIn)?new Date(t.moveInDate||t.moveIn).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const ce=t.contractEnd?new Date(t.contractEnd).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const diff=t.contractEnd?Math.round((new Date(t.contractEnd)-today)/(1000*60*60*24)):null;
     const status=isCom?'💼 พาณิชย์':!isOcc?'🚪 ว่าง':diff===null?'—':diff<0?'❌ หมด':diff<=30?`⚠️ ${diff}วัน`:'✅ ปกติ';
@@ -7144,7 +7148,7 @@ function showTenantModal(roomId){
     <div class="pm-row"><span class="pm-label">ชื่อ-นามสกุล</span><input class="pm-input" id="tm-name" style="width:185px" type="text" value="${t.name||''}" placeholder="สมชาย ใจดี"></div>
     <div class="pm-row"><span class="pm-label">เบอร์โทรศัพท์</span><input class="pm-input" id="tm-phone" style="width:145px" type="text" value="${t.phone||''}" placeholder="081-234-5678"></div>
     <div class="pm-row"><span class="pm-label">Line ID</span><input class="pm-input" id="tm-line" style="width:145px" type="text" value="${t.lineId||''}" placeholder="@username"></div>
-    <div class="pm-row"><span class="pm-label">วันที่เข้าอยู่</span><input class="pm-input" id="tm-moveIn" style="width:145px" type="date" value="${t.moveIn||''}"></div>
+    <div class="pm-row"><span class="pm-label">วันที่เข้าอยู่</span><input class="pm-input" id="tm-moveIn" style="width:145px" type="date" value="${t.moveInDate||''}"></div>
     <div class="pm-row"><span class="pm-label">วันหมดสัญญา</span><input class="pm-input" id="tm-contractEnd" style="width:145px" type="date" value="${t.contractEnd||''}"></div>
     <div class="pm-row"><span class="pm-label">เงินมัดจำ (บาท)</span><input class="pm-input" id="tm-deposit" type="number" value="${t.deposit||0}"></div>
     <div class="pm-row"><span class="pm-label">หมายเหตุ</span><input class="pm-input" id="tm-note" style="width:185px" type="text" value="${t.note||''}" placeholder="เช่น มีสัตว์เลี้ยง..."></div>`;
@@ -7163,7 +7167,7 @@ function saveTenant(){
     tenants[editingTenantRoom]={
       name,phone:document.getElementById('tm-phone').value.trim(),
       lineId:document.getElementById('tm-line').value.trim(),
-      moveIn:document.getElementById('tm-moveIn').value,
+      moveInDate:document.getElementById('tm-moveIn').value,
       contractEnd:document.getElementById('tm-contractEnd').value,
       deposit:parseFloat(document.getElementById('tm-deposit').value)||0,
       note:document.getElementById('tm-note').value.trim(),
@@ -8163,7 +8167,7 @@ function renderContractPage(){
       <div class="ct-card-name">${t?.name||'<span style="color:var(--text-muted);font-weight:400;">ห้องว่าง</span>'}</div>
       <span class="ct-badge ${badgeClass}">${badgeText}${daysLeft!==null&&daysLeft>=0?' (เหลือ '+daysLeft+' วัน)':''}</span>
       ${t?.phone?`<div class="ct-card-info">📞 ${t.phone}${t.lineId?' · LINE: '+t.lineId:''}</div>`:''}
-      ${t?.moveIn?`<div class="ct-card-info">📅 เข้าอยู่: ${fmtDate(t.moveIn)}</div>`:''}
+      ${(t?.moveInDate||t?.moveIn)?`<div class="ct-card-info">📅 เข้าอยู่: ${fmtDate(t.moveInDate||t.moveIn)}</div>`:''}
       ${t?.contractEnd?`<div class="ct-card-info">⏰ หมดสัญญา: <strong>${fmtDate(t.contractEnd)}</strong></div>`:''}
       ${t?.deposit?`<div class="ct-card-info">💰 มัดจำ: ฿${Number(t.deposit).toLocaleString()}</div>`:''}
       ${t?.note?`<div class="ct-card-info" style="color:var(--text-muted);font-style:italic;">📝 ${t.note}</div>`:''}
@@ -8223,7 +8227,7 @@ function printContract(roomId){
     <tr><td>ชื่อ-นามสกุลผู้เช่า</td><td>${t.name}</td></tr>
     <tr><td>เบอร์โทรศัพท์</td><td>${t.phone||'—'}</td></tr>
     <tr><td>Line ID</td><td>${t.lineId||'—'}</td></tr>
-    <tr><td>วันที่เข้าอยู่</td><td>${fmtDate(t.moveIn)}</td></tr>
+    <tr><td>วันที่เข้าอยู่</td><td>${fmtDate(t.moveInDate||t.moveIn)}</td></tr>
     <tr><td>วันหมดสัญญา</td><td>${fmtDate(t.contractEnd)}</td></tr>
     <tr><td>เงินมัดจำ</td><td>฿${Number(t.deposit||0).toLocaleString()} บาท</td></tr>
   </table></div>
