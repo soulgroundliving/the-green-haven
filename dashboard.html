@@ -15,6 +15,7 @@
 <script src="./shared/room-config.js"></script>
 <script src="./shared/owner-config.js"></script>
 <script src="./shared/tenant-config.js"></script>
+<script src="./shared/tenant-lookup.js"></script>
 <script src="./shared/lease-config.js"></script>
 <script src="./shared/shared-config.js"></script>
 <script src="./shared/meter_import_helper.js"></script>
@@ -2017,11 +2018,11 @@
       </div>
     </div>
     <div class="floor-rooms">
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">101</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">102</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">103</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">104</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">105</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">101</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">102</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">103</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">104</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">105</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
     </div>
   </div>
 
@@ -2041,11 +2042,11 @@
       </div>
     </div>
     <div class="floor-rooms">
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">201</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">202</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">203</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">204</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">205</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">201</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">202</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">203</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">204</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">205</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
     </div>
   </div>
 
@@ -2065,11 +2066,11 @@
       </div>
     </div>
     <div class="floor-rooms">
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">301</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">302</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">303</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">304</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">305</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">301</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">302</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">303</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">304</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">305</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
     </div>
   </div>
 
@@ -2089,11 +2090,11 @@
       </div>
     </div>
     <div class="floor-rooms">
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">401</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">402</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">403</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">404</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">405</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">401</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">402</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">403</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">404</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
+      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">405</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
     </div>
   </div>
 
@@ -5093,7 +5094,7 @@ function initRoomsPage(){
     const bgColor = r.type==='commercial'?'rgba(66,133,244,0.15)':statusInfo.color+'40';
     const borderColor = r.type==='commercial'?'#4285f4':statusInfo.color;
     return `
-    <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" onclick="openTenantModal('${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
+    <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" onclick="openTenantModal('rooms', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${r.id}</div>
       <div class="room-rent">฿${r.rent.toLocaleString()}/เดือน</div>
       <div class="room-status">${r.type==='commercial'?'🏪 พาณิชย์':occupancyIcon + (tenant && tenant.name ? ' ' + tenant.name : ' ว่าง')}</div>
@@ -5748,7 +5749,7 @@ function initNestPage(){
     const bgColor = statusInfo.color+'40';
     const borderColor = statusInfo.color;
     return `
-    <div class="room-pill ${r.type === 'pet' ? 'pet' : (r.type === 'daily' ? 'daily' : 'studio')}" onclick="openTenantModal('${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
+    <div class="room-pill ${r.type === 'pet' ? 'pet' : (r.type === 'daily' ? 'daily' : 'studio')}" onclick="openTenantModal('nest', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${r.id}</div>
       <div class="room-rent">฿${r.rent.toLocaleString()}/เดือน</div>
       <div class="room-status">${typeIcon} ${tenant && tenant.name ? tenant.name : 'ว่าง'}</div>
@@ -8310,30 +8311,91 @@ function renderAnalyticsPage(){
 
 // ===== TENANT MODAL MANAGEMENT =====
 let currentEditRoomId = null;
+let currentEditBuilding = null;
+let currentEditTenantId = null;
 
-function openTenantModal(roomId) {
-  currentEditRoomId = roomId;
-  const modal = document.getElementById('tenantModal');
+// Real-time sync event system
+const TenantDataEvents = {
+  listeners: {},
 
-  // Load current tenant data
-  const allTenants = loadTenants();
-  const tenant = allTenants[roomId] || {};
+  on(event, callback) {
+    if (!this.listeners[event]) {
+      this.listeners[event] = [];
+    }
+    this.listeners[event].push(callback);
+  },
 
-  // Find room info - handle both old and new building
-  let room;
-  let building = 'rooms'; // default
-  if (roomId.startsWith('N')) {
-    // New building room
-    building = 'nest';
-    room = ROOMS_NEW?.find(r => r.id === roomId) || {rent: 5600, type: 'studio'};
-  } else {
-    // Old building room
-    room = ROOMS_OLD?.find(r => r.id === roomId) || {rent: 1200, type: 'room'};
+  emit(event, data) {
+    if (this.listeners[event]) {
+      this.listeners[event].forEach(cb => {
+        try {
+          cb(data);
+        } catch (e) {
+          console.error(`Error in event listener for ${event}:`, e);
+        }
+      });
+    }
+  },
+
+  clear() {
+    this.listeners = {};
+  }
+};
+
+// Subscribe to tenant data changes
+TenantDataEvents.on('TENANT_UPDATED', (data) => {
+  const {building, roomId, tenantId} = data;
+
+  // Refresh room display if visible
+  if (typeof refreshRoomTenantDisplay === 'function') {
+    try {
+      refreshRoomTenantDisplay(building, roomId);
+    } catch (e) {
+      console.warn('Could not refresh room display:', e.message);
+    }
   }
 
-  // Get correct rent from RoomConfigManager if available
-  let rentPrice = room.rent || 0;
-  if (typeof RoomConfigManager !== 'undefined') {
+  // Reload modal if currently open with same room
+  const tenantModal = document.getElementById('tenantModal');
+  if (tenantModal && tenantModal.style.display !== 'none' && currentEditRoomId === roomId) {
+    setTimeout(() => {
+      openTenantModal(building, roomId);
+    }, 500);
+  }
+});
+
+// Make TenantDataEvents globally available
+window.TenantDataEvents = TenantDataEvents;
+
+// Helper function to detect building from room ID (fallback)
+function detectBuildingFromRoomId(roomId) {
+  return roomId.startsWith('N') ? 'nest' : 'rooms';
+}
+
+function openTenantModal(building, roomId) {
+  // Support both old signature (single param) and new signature (building, roomId)
+  if (typeof building === 'string' && !roomId) {
+    // Old signature: openTenantModal(roomId)
+    roomId = building;
+    building = detectBuildingFromRoomId(roomId);
+  }
+
+  currentEditRoomId = roomId;
+  currentEditBuilding = building;
+  const modal = document.getElementById('tenantModal');
+
+  // Use TenantLookup to get room occupancy info
+  const occupancyInfo = TenantLookup.getRoomOccupancyInfo(building, roomId);
+  const tenant = occupancyInfo.tenant || {};
+  const lease = occupancyInfo.lease || {};
+  const room = occupancyInfo.room || {};
+
+  // Set tenant ID for this edit session
+  currentEditTenantId = lease.tenantId || null;
+
+  // Get correct rent from RoomConfigManager
+  let rentPrice = room.rentPrice || 0;
+  if (!rentPrice && typeof RoomConfigManager !== 'undefined') {
     const rmConfigRoom = RoomConfigManager.getRoom(building, roomId);
     if (rmConfigRoom && rmConfigRoom.rentPrice) {
       rentPrice = rmConfigRoom.rentPrice;
@@ -8342,9 +8404,14 @@ function openTenantModal(roomId) {
 
   // Update room info
   document.getElementById('modalRoomNumber').textContent = `ห้อง ${roomId}`;
-  const roomType = room.type === 'commercial' ? '🏪 พาณิชย์' : (room.petFriendly ? '🐾 Pet Friendly' : '🏠 ห้องพัก');
-  document.getElementById('modalRoomType').textContent = roomType;
-  document.getElementById('modalRoomRent').textContent = `฿${rentPrice.toLocaleString()}`;
+  const roomType = room.type === 'commercial' ? '🏪 พาณิชย์' : (room.type === 'pet' ? '🐾 Pet Friendly' : '🏠 ห้องพัก');
+  document.getElementById('modalRoomType').textContent = roomType || '🏠 ห้องพัก';
+  document.getElementById('modalRoomRent').textContent = `฿${rentPrice.toLocaleString('th-TH')}`;
+
+  // Store rent in modal for editing
+  if (document.getElementById('modalRentPrice')) {
+    document.getElementById('modalRentPrice').value = rentPrice || '';
+  }
 
   // Determine occupancy status
   const isOccupied = tenant && tenant.name;
@@ -8390,27 +8457,25 @@ function openTenantModal(roomId) {
   document.getElementById('modalTenantWaterMeter').value = tenant.waterMeterStart || '';
   document.getElementById('modalTenantNotes').value = tenant.notes || '';
 
-  // Load contract document - check both sources
-  let contractData = tenant.contractDocument ? tenant : null;
+  // Load contract document - check both tenant and lease sources
+  let contractData = null;
+  let contractFileName = '';
 
-  // Also check LeaseAgreementManager for contracts saved by new system
-  if (!contractData && typeof LeaseAgreementManager !== 'undefined') {
-    try {
-      const leases = LeaseAgreementManager.getAllLeases();
-      const lease = Object.values(leases).find(l => l.roomId === roomId);
-      if (lease && lease.contractDocument) {
-        contractData = lease;
-      }
-    } catch (e) {
-      console.warn('Could not load from LeaseAgreementManager:', e.message);
-    }
+  // Check tenant data first
+  if (tenant && tenant.contractDocument) {
+    contractData = tenant.contractDocument;
+    contractFileName = tenant.contractFileName || 'สัญญาเช่า';
+  }
+  // Also check lease for contracts
+  else if (lease && lease.contractDocument) {
+    contractData = lease.contractDocument;
+    contractFileName = lease.contractFileName || 'สัญญาเช่า';
   }
 
-  if (contractData && contractData.contractDocument) {
-    document.getElementById('modalContractDocument').value = contractData.contractDocument;
-    document.getElementById('modalContractFileName').value = contractData.contractFileName || '';
-    const fileName = contractData.contractFileName || 'สัญญาเช่า';
-    document.getElementById('contractDocStatus').innerHTML = `✅ <strong>${fileName}</strong> <button type="button" onclick="previewContractDocument('${roomId}')" style="margin-left:8px;padding:6px 12px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:'Sarabun',sans-serif;">👁️ ดูตัวอย่าง</button> <button type="button" onclick="deleteContractDocument('${roomId}')" style="margin-left:4px;padding:6px 12px;background:#d32f2f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:'Sarabun',sans-serif;">🗑️ ลบ</button>`;
+  if (contractData) {
+    document.getElementById('modalContractDocument').value = contractData;
+    document.getElementById('modalContractFileName').value = contractFileName;
+    document.getElementById('contractDocStatus').innerHTML = `✅ <strong>${contractFileName}</strong> <button type="button" onclick="previewContractDocument('${building}', '${roomId}')" style="margin-left:8px;padding:6px 12px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:'Sarabun',sans-serif;">👁️ ดูตัวอย่าง</button> <button type="button" onclick="deleteContractDocument('${building}', '${roomId}')" style="margin-left:4px;padding:6px 12px;background:#d32f2f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:'Sarabun',sans-serif;">🗑️ ลบ</button>`;
   } else {
     document.getElementById('modalContractDocument').value = '';
     document.getElementById('modalContractFileName').value = '';
@@ -8433,60 +8498,150 @@ function closeTenantModal() {
 }
 
 function saveTenantInfo() {
-  if (!currentEditRoomId) return;
+  if (!currentEditRoomId || !currentEditBuilding) return;
 
-  // Load current tenants
-  const allTenants = loadTenants();
+  const building = currentEditBuilding;
+  const roomId = currentEditRoomId;
 
-  // Read separate firstName and lastName
+  // Read form data
   const firstName = document.getElementById('modalTenantFirstName').value.trim();
   const lastName = document.getElementById('modalTenantLastName').value.trim();
   const fullName = firstName && lastName ? `${firstName} ${lastName}` : (firstName || lastName || '');
 
+  // Validate data
+  if (!fullName) {
+    alert('❌ กรุณากรอกชื่อผู้เช่า');
+    return;
+  }
+
   const tenantData = {
+    name: fullName,
     firstName: firstName,
     lastName: lastName,
-    name: fullName, // Keep combined name for backward compatibility and display
     phone: document.getElementById('modalTenantPhone').value,
+    idCardNumber: document.getElementById('modalTenantIdCard')?.value || '',
+    email: document.getElementById('modalTenantEmail')?.value || '',
+    address: document.getElementById('modalTenantAddress')?.value || '',
     lineID: document.getElementById('modalTenantLineID').value,
     moveInDate: document.getElementById('modalTenantMoveIn').value,
-    contractEnd: document.getElementById('modalTenantContractEnd').value,
+    moveOutDate: document.getElementById('modalTenantContractEnd').value,
     deposit: parseFloat(document.getElementById('modalTenantDeposit').value) || 0,
     elecMeterStart: parseFloat(document.getElementById('modalTenantElecMeter').value) || 0,
     waterMeterStart: parseFloat(document.getElementById('modalTenantWaterMeter').value) || 0,
     notes: document.getElementById('modalTenantNotes').value,
-    contractDocument: document.getElementById('modalContractDocument').value || allTenants[currentEditRoomId]?.contractDocument || '',
-    contractFileName: document.getElementById('modalContractFileName').value || allTenants[currentEditRoomId]?.contractFileName || ''
+    contractDocument: document.getElementById('modalContractDocument').value || '',
+    contractFileName: document.getElementById('modalContractFileName').value || ''
   };
 
-  // Save to central data store
-  allTenants[currentEditRoomId] = tenantData;
+  // Generate or reuse tenant ID
+  const tenantId = currentEditTenantId || `TENANT_${Date.now()}_${roomId}`;
 
-  // Persist to localStorage
+  // Save to TenantConfigManager (single source of truth)
+  const saved = currentEditTenantId
+    ? TenantConfigManager.updateTenant(building, tenantId, tenantData)
+    : TenantConfigManager.addTenant(building, tenantId, tenantData);
+
+  if (!saved && !currentEditTenantId) {
+    alert('❌ ไม่สามารถบันทึกข้อมูลได้');
+    return;
+  }
+
+  // Update or create lease agreement
+  const currentLease = LeaseAgreementManager.getActiveLease(building, roomId);
+  let leaseId;
+
+  if (currentLease) {
+    // Update existing lease
+    const rentPrice = RoomConfigManager.getRentPrice(building, roomId);
+    LeaseAgreementManager.updateLease(currentLease.id, {
+      tenantName: fullName,
+      tenantId: tenantId,
+      moveInDate: tenantData.moveInDate,
+      moveOutDate: tenantData.moveOutDate || null,
+      rentAmount: rentPrice,
+      deposit: tenantData.deposit,
+      status: 'active',
+      contractFileName: tenantData.contractFileName,
+      contractDocument: tenantData.contractDocument
+    });
+    leaseId = currentLease.id;
+  } else {
+    // Create new lease
+    const rentPrice = RoomConfigManager.getRentPrice(building, roomId);
+    leaseId = LeaseAgreementManager.createLease({
+      building: building,
+      roomId: roomId,
+      tenantId: tenantId,
+      tenantName: fullName,
+      moveInDate: tenantData.moveInDate,
+      moveOutDate: tenantData.moveOutDate || null,
+      rentAmount: rentPrice,
+      deposit: tenantData.deposit,
+      status: 'active',
+      contractFileName: tenantData.contractFileName,
+      contractDocument: tenantData.contractDocument
+    });
+    currentEditTenantId = tenantId; // Update for future edits
+  }
+
+  // Handle rent price editing
+  const modalRentPrice = document.getElementById('modalRentPrice');
+  if (modalRentPrice && modalRentPrice.value) {
+    const newRent = parseFloat(modalRentPrice.value);
+    const currentRent = RoomConfigManager.getRentPrice(building, roomId);
+    if (newRent !== currentRent) {
+      RoomConfigManager.updateRentPrice(building, roomId, newRent);
+      if (currentLease) {
+        LeaseAgreementManager.updateLease(currentLease.id, {rentAmount: newRent});
+      }
+    }
+  }
+
+  // Also save to legacy tenant_data for backward compatibility
+  const allTenants = loadTenants();
+  allTenants[roomId] = tenantData;
   localStorage.setItem('tenant_data', JSON.stringify(allTenants));
 
-  // Update room status colors and occupancy metrics
-  updateRoomStatuses();
-  updateOccupancyDashboard();
-
-  // Sync to Firebase if available
-  if (window.saveToFirebase) {
-    window.saveToFirebase('data/tenants', allTenants);
+  // Firebase sync (async, non-blocking)
+  if (typeof TenantConfigManager.saveTenantToFirebase === 'function') {
+    TenantConfigManager.saveTenantToFirebase(building, tenantId, tenantData);
+  }
+  if (typeof LeaseAgreementManager.createLeaseWithFirebase === 'function' && !currentLease) {
+    LeaseAgreementManager.createLeaseWithFirebase(LeaseAgreementManager.getLease(leaseId));
   }
 
   // Log the action
   if (window.AuditLogger) {
-    AuditLogger.log('TENANT_UPDATED', {roomId: currentEditRoomId, changes: Object.keys(tenantData).filter(k => tenantData[k])});
+    AuditLogger.log('TENANT_UPDATED', {
+      building: building,
+      roomId: roomId,
+      tenantId: tenantId,
+      changes: Object.keys(tenantData).filter(k => tenantData[k])
+    });
   }
 
-  // Close modal and refresh the current page
+  // Emit event for real-time sync
+  if (window.TenantDataEvents) {
+    TenantDataEvents.emit('TENANT_UPDATED', {
+      building: building,
+      roomId: roomId,
+      tenantId: tenantId
+    });
+  }
+
+  // Close modal
   closeTenantModal();
+
+  // Refresh UI
+  updateRoomStatuses();
+  updateOccupancyDashboard();
+
+  // Refresh current page
   const currentPage = document.querySelector('.page.active');
   if (currentPage && currentPage.id === 'page-rooms') {
     initRoomsPage();
     renderCompactRoomGrid();
   } else if (currentPage && currentPage.id === 'page-newbuild') {
-    // Refresh new building page
     initNestPage();
   }
 
@@ -8958,9 +9113,24 @@ function viewContract(roomId) {
 /**
  * Preview contract document from modal button click
  */
-function previewContractDocument(roomId) {
-  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
-  const tenant = tenantData[roomId];
+function previewContractDocument(building, roomId) {
+  // Support both old signature (single param) and new signature (building, roomId)
+  if (typeof building === 'string' && !roomId) {
+    roomId = building;
+    building = currentEditBuilding || detectBuildingFromRoomId(roomId);
+  }
+
+  // Try to get tenant from TenantConfigManager first
+  let tenant = null;
+  if (currentEditTenantId && typeof TenantConfigManager !== 'undefined') {
+    tenant = TenantConfigManager.getTenant(building, currentEditTenantId);
+  }
+
+  // Fallback to legacy tenant_data
+  if (!tenant) {
+    const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+    tenant = tenantData[roomId];
+  }
 
   if (!tenant || !tenant.contractDocument) {
     alert('❌ ไม่มีไฟล์สัญญา');
@@ -8973,24 +9143,51 @@ function previewContractDocument(roomId) {
 /**
  * Delete contract document
  */
-function deleteContractDocument(roomId) {
+function deleteContractDocument(building, roomId) {
+  // Support both old signature (single param) and new signature (building, roomId)
+  if (typeof building === 'string' && !roomId) {
+    roomId = building;
+    building = currentEditBuilding || detectBuildingFromRoomId(roomId);
+  }
+
   if (!confirm('❓ คุณแน่ใจหรือว่าต้องการลบไฟล์สัญญา?\n\nการดำเนินการนี้ไม่สามารถยกเลิกได้')) {
     return;
   }
 
+  // Delete from TenantConfigManager
+  if (currentEditTenantId && typeof TenantConfigManager !== 'undefined') {
+    const tenant = TenantConfigManager.getTenant(building, currentEditTenantId);
+    if (tenant) {
+      TenantConfigManager.updateTenant(building, currentEditTenantId, {
+        contractDocument: '',
+        contractFileName: ''
+      });
+    }
+  }
+
+  // Also delete from legacy tenant_data for compatibility
   const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
   if (tenantData[roomId]) {
-    tenantData[roomId].contractDocument = ''; // Clear the contract
-    tenantData[roomId].contractFileName = ''; // Clear the filename
+    tenantData[roomId].contractDocument = '';
+    tenantData[roomId].contractFileName = '';
     localStorage.setItem('tenant_data', JSON.stringify(tenantData));
-
-    // Update UI
-    document.getElementById('modalContractDocument').value = '';
-    document.getElementById('modalContractFileName').value = '';
-    document.getElementById('contractDocStatus').textContent = '';
-
-    alert('✅ ลบไฟล์สัญญาแล้ว');
   }
+
+  // Delete from lease if exists
+  const lease = LeaseAgreementManager.getActiveLease(building, roomId);
+  if (lease) {
+    LeaseAgreementManager.updateLease(lease.id, {
+      contractDocument: '',
+      contractFileName: ''
+    });
+  }
+
+  // Update UI
+  document.getElementById('modalContractDocument').value = '';
+  document.getElementById('modalContractFileName').value = '';
+  document.getElementById('contractDocStatus').textContent = '';
+
+  alert('✅ ลบไฟล์สัญญาแล้ว');
 }
 
 function showContractDocument(roomId, tenant) {

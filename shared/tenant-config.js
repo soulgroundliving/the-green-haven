@@ -2,76 +2,94 @@
 // Centralized storage for all tenant information
 
 class TenantConfigManager {
-  static getAllTenants() {
+  // Get all tenants from a specific building
+  static getAllTenants(building) {
+    const stored = localStorage.getItem('tenant_master_data');
+    const data = stored ? JSON.parse(stored) : {};
+    return data[building] || {};
+  }
+
+  // Get all data (all buildings)
+  static getAllTenantsRaw() {
     const stored = localStorage.getItem('tenant_master_data');
     return stored ? JSON.parse(stored) : {};
   }
 
-  static saveTenants(data) {
-    localStorage.setItem('tenant_master_data', JSON.stringify(data));
-    console.log('✅ Tenant data saved');
+  // Save tenants for specific building
+  static saveTenants(building, data) {
+    const allData = this.getAllTenantsRaw();
+    allData[building] = data;
+    localStorage.setItem('tenant_master_data', JSON.stringify(allData));
+    console.log(`✅ Tenant data saved for ${building}`);
   }
 
-  static addTenant(tenantData) {
-    // tenantData: {id, name, idCardNumber, phone, email, address}
-    if (!tenantData.id || !tenantData.name) {
-      console.warn('⚠️ Tenant ID and name are required');
+  // Add tenant to specific building
+  static addTenant(building, tenantId, tenantData) {
+    if (!building || !tenantId || !tenantData.name) {
+      console.warn('⚠️ Building, tenant ID, and name are required');
       return false;
     }
 
-    const tenants = this.getAllTenants();
-    if (tenants[tenantData.id]) {
-      console.warn(`⚠️ Tenant ${tenantData.id} already exists`);
+    const tenants = this.getAllTenants(building);
+    if (tenants[tenantId]) {
+      console.warn(`⚠️ Tenant ${tenantId} already exists in ${building}`);
       return false;
     }
 
-    tenants[tenantData.id] = {
+    tenants[tenantId] = {
       ...tenantData,
+      id: tenantId,
+      building: building,
       createdDate: new Date().toISOString()
     };
-    this.saveTenants(tenants);
-    console.log(`✅ Tenant ${tenantData.id} added: ${tenantData.name}`);
+
+    this.saveTenants(building, tenants);
+    console.log(`✅ Tenant ${tenantId} added to ${building}: ${tenantData.name}`);
     return true;
   }
 
-  static getTenant(tenantId) {
-    const tenants = this.getAllTenants();
+  // Get tenant from specific building
+  static getTenant(building, tenantId) {
+    const tenants = this.getAllTenants(building);
     return tenants[tenantId] || null;
   }
 
-  static getTenantList() {
-    const tenants = this.getAllTenants();
-    return Object.values(tenants).sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  // Get all tenants from a building as list
+  static getTenantList(building) {
+    const tenants = this.getAllTenants(building);
+    return Object.values(tenants).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'th'));
   }
 
-  static updateTenant(tenantId, updates) {
-    const tenants = this.getAllTenants();
+  // Update tenant in specific building
+  static updateTenant(building, tenantId, updates) {
+    const tenants = this.getAllTenants(building);
     if (!tenants[tenantId]) {
-      console.warn(`⚠️ Tenant ${tenantId} not found`);
+      console.warn(`⚠️ Tenant ${tenantId} not found in ${building}`);
       return false;
     }
 
     tenants[tenantId] = { ...tenants[tenantId], ...updates };
-    this.saveTenants(tenants);
-    console.log(`✅ Tenant ${tenantId} updated`);
+    this.saveTenants(building, tenants);
+    console.log(`✅ Tenant ${tenantId} in ${building} updated`);
     return true;
   }
 
-  static deleteTenant(tenantId) {
-    const tenants = this.getAllTenants();
+  // Delete tenant from specific building
+  static deleteTenant(building, tenantId) {
+    const tenants = this.getAllTenants(building);
     if (!tenants[tenantId]) {
-      console.warn(`⚠️ Tenant ${tenantId} not found`);
+      console.warn(`⚠️ Tenant ${tenantId} not found in ${building}`);
       return false;
     }
 
     delete tenants[tenantId];
-    this.saveTenants(tenants);
-    console.log(`✅ Tenant ${tenantId} deleted`);
+    this.saveTenants(building, tenants);
+    console.log(`✅ Tenant ${tenantId} deleted from ${building}`);
     return true;
   }
 
+  // Get tenants in building via leases (for reference purposes)
   static getTenantsByBuilding(building) {
-    // Get all leases for building, extract unique tenants
     if (typeof LeaseAgreementManager === 'undefined') {
       console.warn('⚠️ LeaseAgreementManager not loaded yet');
       return [];
@@ -87,23 +105,30 @@ class TenantConfigManager {
     });
 
     return Array.from(tenantIds)
-      .map(id => this.getTenant(id))
+      .map(id => this.getTenant(building, id))
       .filter(Boolean)
-      .sort((a, b) => a.name.localeCompare(b.name, 'th'));
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'th'));
   }
 
-  static getTenantCount() {
-    return Object.keys(this.getAllTenants()).length;
+  static getTenantCount(building) {
+    return Object.keys(this.getAllTenants(building)).length;
   }
 
-  static searchTenants(keyword) {
-    const tenants = this.getTenantList();
+  static searchTenants(building, keyword) {
+    const tenants = this.getTenantList(building);
     const lowerKeyword = keyword.toLowerCase();
     return tenants.filter(t =>
-      t.name.toLowerCase().includes(lowerKeyword) ||
-      t.idCardNumber.includes(keyword) ||
-      t.phone.includes(keyword)
+      (t.name || '').toLowerCase().includes(lowerKeyword) ||
+      (t.idCardNumber || '').includes(keyword) ||
+      (t.phone || '').includes(keyword)
     );
+  }
+
+  // Get tenant by ID across any building (search helper)
+  static getTenantByIdAnyBuilding(tenantId) {
+    const rooms = this.getAllTenants('rooms');
+    const nest = this.getAllTenants('nest');
+    return rooms[tenantId] || nest[tenantId] || null;
   }
 
   static async saveTenantToFirebase(building, tenantId, tenantData) {
