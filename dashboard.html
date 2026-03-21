@@ -5080,6 +5080,9 @@ function getActiveRoomsWithMetadata(building, metadataArray) {
 
 // ===== ROOMS PAGE =====
 function initRoomsPage(){
+  // Initialize mock tenant data if not already set (for dashboard independent use)
+  initializeMockTenantData();
+
   updateOccupancyDashboard();
   updateLeaseExpiryAlerts();
   const allTenants = loadTenants();
@@ -6899,6 +6902,56 @@ function updateNavBadge(){
 
 // ===== TENANT MANAGEMENT =====
 function loadTenants(){return JSON.parse(localStorage.getItem('tenant_data')||'{}');}
+
+// Initialize mock tenant data for dashboard (indexed by room ID)
+function initializeMockTenantData(){
+  if(localStorage.getItem('tenant_data'))return; // Already initialized
+
+  const tenantData={};
+
+  // Rooms Building (13-33)
+  for(let i=13;i<=33;i++){
+    const roomId=i.toString();
+    const nameParts=`ผู้เช่าห้อง ${i}`.split(' ');
+    tenantData[roomId]={
+      firstName:nameParts[0]||'',
+      lastName:nameParts.slice(1).join(' ')||'',
+      name:`ผู้เช่าห้อง ${i}`,
+      phone:`089-xxx-${String(i).padStart(4,'0')}`,
+      lineID:'',
+      moveInDate:'2024-01-01',
+      contractEnd:'2025-01-01',
+      deposit:3000,
+      elecMeterStart:1000,
+      waterMeterStart:500,
+      notes:'Mock data - ผู้เช่าห้องแถว',
+      contractDocument:null
+    };
+  }
+
+  // Nest Building (101-405)
+  for(let i=101;i<=405;i++){
+    const roomId=`N${i}`;
+    const nameParts=`ผู้เช่า Nest ${i}`.split(' ');
+    tenantData[roomId]={
+      firstName:nameParts[0]||'',
+      lastName:nameParts.slice(1).join(' ')||'',
+      name:`ผู้เช่า Nest ${i}`,
+      phone:`089-yyy-${String(i).padStart(4,'0')}`,
+      lineID:'',
+      moveInDate:'2024-01-01',
+      contractEnd:'2025-01-01',
+      deposit:5000,
+      elecMeterStart:2000,
+      waterMeterStart:1000,
+      notes:'Mock data - ผู้เช่า Nest',
+      contractDocument:null
+    };
+  }
+
+  localStorage.setItem('tenant_data',JSON.stringify(tenantData));
+  console.log('✅ Mock tenant data initialized in dashboard');
+}
 function saveTenants(t){localStorage.setItem('tenant_data',JSON.stringify(t));}
 let tenantBuilding='old';
 
