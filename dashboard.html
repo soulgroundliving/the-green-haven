@@ -6929,6 +6929,38 @@ function initializeMockTenantData(){
     };
   }
 
+  // Special Room: 15ก
+  tenantData['15ก']={
+    firstName:'ผู้เช่า',
+    lastName:'ห้อง 15ก',
+    name:'ผู้เช่าห้อง 15ก',
+    phone:'089-xxx-0015',
+    lineID:'',
+    moveInDate:'2024-01-01',
+    contractEnd:'2025-01-01',
+    deposit:3000,
+    elecMeterStart:1000,
+    waterMeterStart:500,
+    notes:'Mock data - ห้อง 15ก',
+    contractDocument:null
+  };
+
+  // Special Room: Amazon (Shop)
+  tenantData['Amazon ☕']={
+    firstName:'ผู้ประกอบการ',
+    lastName:'Amazon',
+    name:'ผู้ประกอบการ Amazon',
+    phone:'089-shop-0001',
+    lineID:'',
+    moveInDate:'2024-01-01',
+    contractEnd:'2025-01-01',
+    deposit:10000,
+    elecMeterStart:5000,
+    waterMeterStart:2000,
+    notes:'Mock data - ร้านค้า Amazon',
+    contractDocument:null
+  };
+
   // Nest Building (101-405)
   for(let i=101;i<=405;i++){
     const roomId=`N${i}`;
