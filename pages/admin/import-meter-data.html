@@ -562,6 +562,7 @@ window.METER_DATA = {"67_1":{"13":{"eNew":2628,"eOld":2616,"wNew":1577,"wOld":15
     let currentWorkbook = null;
     let availableSheets = [];
     let selectedSheetName = null;
+    let detectedYearForFile = null; // เก็บปีที่ตรวจจับได้ในไฟล์ปัจจุบัน
 
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
@@ -588,6 +589,11 @@ window.METER_DATA = {"67_1":{"13":{"eNew":2628,"eOld":2616,"wNew":1577,"wOld":15
       if (!file) return;
 
       showStatus('⏳ กำลังโหลด...', 'info');
+
+      // Reset state for new file upload
+      detectedYearForFile = null;
+      selectedSheetName = null;
+      parsedData = null;
 
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -772,7 +778,7 @@ window.METER_DATA = {"67_1":{"13":{"eNew":2628,"eOld":2616,"wNew":1577,"wOld":15
       }
 
       // Extract year from sheet name (supports 67, 68, 69, 70, 71, etc.)
-      // First try sheet name, then fall back to data analysis
+      // First try sheet name, then fall back to data analysis, then use cached year from file
       let year = null;
 
       // Try to extract from sheet name
@@ -781,6 +787,7 @@ window.METER_DATA = {"67_1":{"13":{"eNew":2628,"eOld":2616,"wNew":1577,"wOld":15
         const num = parseInt(yearMatch[1]);
         if (num >= 50 && num <= 99) { // Valid Buddhist year range
           year = num;
+          console.log(`Detected year ${year} from sheet name: ${sheetName}`);
         }
       }
 
@@ -804,10 +811,20 @@ window.METER_DATA = {"67_1":{"13":{"eNew":2628,"eOld":2616,"wNew":1577,"wOld":15
         }
       }
 
+      // If still not found, use cached year from this file (if another sheet was already processed)
+      if (!year && detectedYearForFile) {
+        year = detectedYearForFile;
+        console.log(`Using cached year ${year} from previously processed sheet in this file`);
+      }
+
       // Default to 69 only if absolutely nothing found (LOG WARNING)
       if (!year) {
         console.warn('⚠️ Could not detect year from sheet name or data - defaulting to 69');
         year = 69;
+      } else if (!detectedYearForFile) {
+        // Cache the detected year for other sheets in this file
+        detectedYearForFile = year;
+        console.log(`Cached year ${year} for file: ${detectedYearForFile}`);
       }
 
       const rooms = {};
