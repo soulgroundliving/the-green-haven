@@ -3335,8 +3335,10 @@ function parseImportExcelData(workbook, building) {
 
   // Try filename first
   const fileInput = document.getElementById('importFileInput');
-  if (fileInput.files.length > 0) {
+  if (fileInput && fileInput.files && fileInput.files.length > 0) {
     const filename = fileInput.files[0].name;
+    console.log(`🔍 [Year Detection] Filename: "${filename}"`);
+
     // Support formats: "68_...", "...68", "... 68" etc
     const yearPatterns = [
       /(\d{2})$/,           // End of string: "..68"
@@ -3345,21 +3347,30 @@ function parseImportExcelData(workbook, building) {
       /(\d{2})[_\-\s]/      // Followed by separator: "68_..."
     ];
 
-    for (let pattern of yearPatterns) {
+    for (let i = 0; i < yearPatterns.length; i++) {
+      const pattern = yearPatterns[i];
       const match = filename.match(pattern);
+      console.log(`  Pattern ${i}: ${pattern} → ${match ? 'MATCHED: ' + match[1] : 'no match'}`);
+
       if (match) {
         const num = parseInt(match[1]);
+        console.log(`    Parsed as number: ${num} (valid: ${num >= 50 && num <= 99})`);
+
         if (num >= 50 && num <= 99) {
           year = num;
-          console.log(`📄 Detected year ${year} from filename: ${filename}`);
+          console.log(`✅ Detected year ${year} from filename: ${filename}`);
           break;
         }
       }
     }
+  } else {
+    console.warn(`⚠️ [Year Detection] No file in input. fileInput=${!!fileInput}, files=${fileInput?.files?.length}`);
   }
 
   // Try sheet name if filename didn't work
   if (!year && selectedSheet) {
+    console.log(`🔍 [Year Detection] Sheet name: "${selectedSheet}"`);
+
     const yearPatterns = [
       /(\d{2})$/,           // End: "สค68"
       /^(\d{2})[_\-]/,      // Start: "68_สค"
@@ -3367,13 +3378,18 @@ function parseImportExcelData(workbook, building) {
       /(\d{2})[_\-\s]/      // Followed: "68_สค"
     ];
 
-    for (let pattern of yearPatterns) {
+    for (let i = 0; i < yearPatterns.length; i++) {
+      const pattern = yearPatterns[i];
       const match = selectedSheet.match(pattern);
+      console.log(`  Pattern ${i}: ${pattern} → ${match ? 'MATCHED: ' + match[1] : 'no match'}`);
+
       if (match) {
         const num = parseInt(match[1]);
+        console.log(`    Parsed as number: ${num} (valid: ${num >= 50 && num <= 99})`);
+
         if (num >= 50 && num <= 99) {
           year = num;
-          console.log(`📋 Detected year ${year} from sheet name: ${selectedSheet}`);
+          console.log(`✅ Detected year ${year} from sheet name: ${selectedSheet}`);
           break;
         }
       }
@@ -3384,6 +3400,8 @@ function parseImportExcelData(workbook, building) {
   if (!year) {
     console.warn('⚠️ Could not detect year - defaulting to 69');
     year = 69;
+  } else {
+    console.log(`✅ Final year: ${year}`);
   }
 
   // Get room list based on building
