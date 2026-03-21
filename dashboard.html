@@ -8387,6 +8387,12 @@ function openTenantModal(roomId) {
     document.getElementById('contractDocStatus').textContent = '';
   }
 
+  // IMPORTANT: Clear file input to prevent showing previous room's file
+  const fileInput = document.getElementById('modalContractFile');
+  if (fileInput) {
+    fileInput.value = '';
+  }
+
   // Show modal
   modal.style.display = 'flex';
 }
@@ -9307,47 +9313,6 @@ function updateLeaseExpiryAlerts() {
   } else {
     nestAlertsDiv.style.display = 'none';
   }
-}
-
-/**
- * Upload and encode contract document to base64
- */
-function uploadContractDocument() {
-  const fileInput = document.getElementById('modalContractFile');
-  const file = fileInput.files[0];
-
-  if (!file) {
-    document.getElementById('contractDocStatus').textContent = '';
-    return;
-  }
-
-  // Validate file size (max 5MB)
-  const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-  if (file.size > maxSize) {
-    document.getElementById('contractDocStatus').textContent = '❌ ไฟล์ใหญ่เกินไป (สูงสุด 5MB)';
-    fileInput.value = '';
-    return;
-  }
-
-  // Validate file type
-  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-  if (!allowedTypes.includes(file.type)) {
-    document.getElementById('contractDocStatus').textContent = '❌ ประเภทไฟล์ไม่ถูกต้อง (PDF, JPG, PNG เท่านั้น)';
-    fileInput.value = '';
-    return;
-  }
-
-  // Read file and convert to base64
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const base64Data = e.target.result;
-    document.getElementById('modalContractDocument').value = base64Data;
-    document.getElementById('contractDocStatus').textContent = `✅ อัพโหลดสำเร็จ: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`;
-  };
-  reader.onerror = function() {
-    document.getElementById('contractDocStatus').textContent = '❌ เกิดข้อผิดพลาดในการอ่านไฟล์';
-  };
-  reader.readAsDataURL(file);
 }
 
 // ===== FIREBASE CLOUD DATA INITIALIZATION =====
