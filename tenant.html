@@ -935,6 +935,55 @@
         console.log('✅ Mock lease data initialized (localStorage)');
       }
 
+      // IMPORTANT: Also save tenant data in dashboard format (indexed by room ID)
+      // Dashboard expects: tenant_data key with tenants indexed by roomId
+      if (!localStorage.getItem('tenant_data')) {
+        const tenantDataForDashboard = {};
+
+        // Index by room ID for Rooms Building
+        for (let i = 13; i <= 33; i++) {
+          const roomId = i.toString();
+          const nameParts = `ผู้เช่าห้อง ${i}`.split(' ');
+          tenantDataForDashboard[roomId] = {
+            firstName: nameParts[0] || '',
+            lastName: nameParts.slice(1).join(' ') || '',
+            name: `ผู้เช่าห้อง ${i}`,
+            phone: `089-xxx-${String(i).padStart(4, '0')}`,
+            lineID: '',
+            moveInDate: '2024-01-01',
+            contractEnd: '2025-01-01',
+            deposit: 3000,
+            elecMeterStart: 1000,
+            waterMeterStart: 500,
+            notes: 'Mock data - ผู้เช่าห้องแถว',
+            contractDocument: null
+          };
+        }
+
+        // Index by room ID for Nest Building
+        for (let i = 101; i <= 405; i++) {
+          const roomId = `N${i}`;
+          const nameParts = `ผู้เช่า Nest ${i}`.split(' ');
+          tenantDataForDashboard[roomId] = {
+            firstName: nameParts[0] || '',
+            lastName: nameParts.slice(1).join(' ') || '',
+            name: `ผู้เช่า Nest ${i}`,
+            phone: `089-yyy-${String(i).padStart(4, '0')}`,
+            lineID: '',
+            moveInDate: '2024-01-01',
+            contractEnd: '2025-01-01',
+            deposit: 5000,
+            elecMeterStart: 2000,
+            waterMeterStart: 1000,
+            notes: 'Mock data - ผู้เช่า Nest',
+            contractDocument: null
+          };
+        }
+
+        localStorage.setItem('tenant_data', JSON.stringify(tenantDataForDashboard));
+        console.log('✅ Dashboard tenant data initialized (indexed by room ID)');
+      }
+
       // Sync to Firebase in background
       syncMockDataToFirebase(mockTenants, mockLeases);
     }
