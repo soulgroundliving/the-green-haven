@@ -789,16 +789,17 @@
 
     // Initialize meter page when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
-      // Initialize meter data from Firebase first
+      // Initialize mock data FIRST before loading meter data
+      if (!localStorage.getItem('tenant_data')) {
+        initMockTenantData();
+      }
+      // Load mock meter history (previous month data)
+      if (!localStorage.getItem('METER_DATA')) {
+        initMeterHistory();
+      }
+
+      // Then initialize meter data from Firebase (with localStorage fallback)
       initializeMeterDataFromFirebase().then(() => {
-        // Load mock tenant data if not already in Firebase
-        if (!localStorage.getItem('tenant_data')) {
-          initMockTenantData();
-        }
-        // Load mock meter history (previous month data)
-        if (!localStorage.getItem('METER_DATA')) {
-          initMeterHistory();
-        }
         initMeterPage();
       });
     });
