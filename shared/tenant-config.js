@@ -1,7 +1,6 @@
 // Tenant Master Data Manager
 // Centralized storage for all tenant information
 
-if (typeof TenantConfigManager === 'undefined') {
 class TenantConfigManager {
   static getAllTenants() {
     const stored = localStorage.getItem('tenant_master_data');
@@ -219,5 +218,4 @@ class TenantConfigManager {
 
     return success;
   }
-}
 }

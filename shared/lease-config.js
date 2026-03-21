@@ -1,7 +1,6 @@
 // Lease Agreement Manager
 // Centralized storage for all rental contracts
 
-if (typeof LeaseAgreementManager === 'undefined') {
 class LeaseAgreementManager {
   static getAllLeases() {
     const stored = localStorage.getItem('lease_agreements_data');
@@ -288,5 +287,4 @@ class LeaseAgreementManager {
 
     return success;
   }
-}
 }
