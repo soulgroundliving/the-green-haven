@@ -1650,7 +1650,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;">
           <div>
             <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📱 โทรศัพท์</label>
-            <input type="tel" id="modalTenantPhone" placeholder="0XX-XXX-XXXX" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="tel" id="modalTenantPhone" placeholder="0XX-XXX-XXXX" maxlength="10" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
           <div>
             <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">💬 Line ID</label>
@@ -9879,7 +9879,7 @@ function renderOwnerInfoPage() {
       </div>
       <div>
         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เบอร์โทรศัพท์</label>
-        <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" maxlength="10" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
       </div>
       <div>
         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">อีเมล</label>
@@ -10017,7 +10017,7 @@ function renderTenantMasterPage() {
           </div>
           <div>
             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เบอร์โทรศัพท์</label>
-            <input type="tel" id="newTenantPhone" placeholder="เบอร์โทรศัพท์" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <input type="tel" id="newTenantPhone" placeholder="เบอร์โทรศัพท์" maxlength="10" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
           </div>
         </div>
 
