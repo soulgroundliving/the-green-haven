@@ -5165,7 +5165,7 @@ function getActiveRoomsWithMetadata(building, metadataArray) {
   return activeRooms.map(r => {
     const metadata = metadataArray.find(m => m.id === r.id);
     // Prioritize rentPrice from RoomConfigManager, fall back to metadata or default
-    const rent = (r.rentPrice && r.rentPrice > 0) ? r.rentPrice : (metadata?.rent || 1500);
+    const rentPrice = (r.rentPrice && r.rentPrice > 0) ? r.rentPrice : (metadata?.rent || 1500);
     // Return merged object with all properties
     return {
       id: r.id,
@@ -5173,7 +5173,7 @@ function getActiveRoomsWithMetadata(building, metadataArray) {
       waterRate: r.waterRate,
       electricRate: r.electricRate,
       deleted: r.deleted,
-      rent: rent,
+      rentPrice: rentPrice,
       type: metadata?.type || 'room',
       trashFee: metadata?.trashFee || 20,
       elecRate: metadata?.elecRate || r.electricRate,
