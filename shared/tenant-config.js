@@ -1,9 +1,7 @@
 // Tenant Master Data Manager
 // Centralized storage for all tenant information
 
-// Prevent re-declaration errors when script is loaded multiple times
-if (typeof TenantConfigManager === 'undefined') {
-  class TenantConfigManager {
+class TenantConfigManager {
   static getAllTenants() {
     const stored = localStorage.getItem('tenant_master_data');
     return stored ? JSON.parse(stored) : {};
@@ -220,5 +218,4 @@ if (typeof TenantConfigManager === 'undefined') {
 
     return success;
   }
-}
 }
