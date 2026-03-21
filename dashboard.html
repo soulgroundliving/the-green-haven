@@ -2412,21 +2412,6 @@
         เลือก "Rooms Building" หรือ "Nest Building" เพื่อนำเข้าข้อมูลมิเตอร์รายเดือน
       </p>
 
-      <!-- Building Selector -->
-      <div style="margin-bottom:1.5rem;">
-        <label style="display:block;margin-bottom:0.5rem;font-weight:600;font-size:0.9rem;color:var(--text);">🏢 เลือกอาคาร:</label>
-        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;padding:0.8rem 1rem;background:var(--bg-secondary);border-radius:var(--radius-sm);border:2px solid transparent;transition:all 0.3s ease;">
-            <input type="radio" name="importBuilding" value="rooms" onchange="updateImportBuilding('rooms')" style="cursor:pointer;">
-            <span>🏠 Rooms Building (ห้องเช่า)</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;padding:0.8rem 1rem;background:var(--bg-secondary);border-radius:var(--radius-sm);border:2px solid transparent;transition:all 0.3s ease;">
-            <input type="radio" name="importBuilding" value="nest" onchange="updateImportBuilding('nest')" style="cursor:pointer;">
-            <span>🏢 Nest Building</span>
-          </label>
-        </div>
-      </div>
-
       <!-- File Upload -->
       <div style="margin-bottom:1.5rem;">
         <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📤 อัพโหลดไฟล์ Excel:</label>
@@ -2485,8 +2470,7 @@
       <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:1rem;color:var(--text-muted);font-size:0.85rem;">
         <strong>ขั้นตอน:</strong>
         <ol style="margin:0.5rem 0 0 1.5rem;padding:0;">
-          <li>เลือกอาคาร (Rooms หรือ Nest)</li>
-          <li>อัพโหลดไฟล์ Excel</li>
+          <li>อัพโหลดไฟล์ Excel (ระบบอ่านอาคารจากชื่อห้องอัตโนมัติ)</li>
           <li>ตรวจสอบข้อมูลตรวจสอบความต่อเนื่องจากเดือนที่แล้ว</li>
           <li>อนุมัติและบันทึกข้อมูล</li>
         </ol>
@@ -3096,7 +3080,6 @@ window._switchMeterTabImpl = function(tabName, btnElement) {
 window.switchMeterTab = window._switchMeterTabImpl;
 
 // ===== IMPORT METER DATA FUNCTIONS =====
-let currentImportBuilding = 'rooms';
 let currentImportData = null;
 let currentImportMatchResults = null;
 let currentImportWorkbook = null; // Store workbook for month changes
@@ -3113,9 +3096,11 @@ function initImportMeterTab() {
   const monthSelect = document.getElementById('importMonthSelect');
   if (monthSelect) {
     monthSelect.onchange = () => {
-      if (currentImportWorkbook) {
+      if (currentImportWorkbook && currentImportData) {
+        // Get building from current data
+        const building = currentImportData.building || 'rooms';
         // Re-parse with new month selection
-        const importData = parseImportExcelData(currentImportWorkbook, currentImportBuilding);
+        const importData = parseImportExcelData(currentImportWorkbook, building);
         if (importData) {
           currentImportData = importData;
           const matchResults = window.matchMeterDataWithPrevious(importData);
@@ -3126,11 +3111,6 @@ function initImportMeterTab() {
       }
     };
   }
-}
-
-function updateImportBuilding(building) {
-  currentImportBuilding = building;
-  console.log('Selected building:', building);
 }
 
 function handleImportDrop(event) {
@@ -3150,11 +3130,6 @@ function handleImportFile(event) {
 }
 
 function handleImportFileProcess(file) {
-  if (!currentImportBuilding) {
-    showImportStatus('⚠️ กรุณาเลือกอาคารก่อน', 'warning');
-    return;
-  }
-
   showImportStatus('⏳ กำลังโหลด...', 'info');
 
   const reader = new FileReader();
@@ -3166,11 +3141,20 @@ function handleImportFileProcess(file) {
       // Store workbook for month selector changes
       currentImportWorkbook = workbook;
 
-      // Parse the data based on selected building
-      const importData = parseImportExcelData(workbook, currentImportBuilding);
+      // Parse the data (building will be detected from room names)
+      let importData = parseImportExcelData(workbook, 'rooms'); // Parse as rooms first
       console.log('📊 Parsed import data:', importData);
 
       if (importData) {
+        // Auto-detect building from room names
+        const detectedBuilding = detectBuildingFromRooms(Object.keys(importData.rooms));
+        console.log(`🏢 Auto-detected building: ${detectedBuilding}`);
+
+        // Re-parse with correct building if needed
+        if (detectedBuilding === 'nest') {
+          importData = parseImportExcelData(workbook, 'nest');
+        }
+
         currentImportData = importData;
 
         // Get match results
@@ -3181,7 +3165,7 @@ function handleImportFileProcess(file) {
 
         // Display preview
         displayImportPreview(importData, matchResults);
-        showImportStatus('✅ โหลดข้อมูลสำเร็จ!', 'success');
+        showImportStatus('✅ โหลดข้อมูลสำเร็จ! (อาคาร: ' + (detectedBuilding === 'nest' ? 'Nest Building' : 'Rooms Building') + ')', 'success');
       } else {
         console.error('❌ importData is null or undefined');
       }
@@ -3191,6 +3175,20 @@ function handleImportFileProcess(file) {
     }
   };
   reader.readAsArrayBuffer(file);
+}
+
+/**
+ * Auto-detect building from room names
+ * Nest rooms start with 'N' (e.g., N101, N102, ...)
+ * Rooms building rooms are numbered (e.g., 13, 14, ...)
+ */
+function detectBuildingFromRooms(roomIds) {
+  if (!roomIds || roomIds.length === 0) return 'rooms'; // Default to rooms
+
+  // Check if any room ID starts with 'N' (Nest Building)
+  const hasNestRooms = roomIds.some(id => String(id).toUpperCase().startsWith('N'));
+
+  return hasNestRooms ? 'nest' : 'rooms';
 }
 
 function parseImportExcelData(workbook, building) {
