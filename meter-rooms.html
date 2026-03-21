@@ -788,7 +788,7 @@
     window.initializeMeterDataFromFirebase = initializeMeterDataFromFirebase;
 
     // Initialize meter page when DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', async function() {
       // Initialize mock data FIRST before loading meter data
       if (!localStorage.getItem('rooms_data')) {
         initMockRoomsData();
@@ -799,9 +799,8 @@
       }
 
       // Then initialize meter data from Firebase (with localStorage fallback)
-      initializeMeterDataFromFirebase().then(() => {
-        initMeterPage();
-      });
+      await initializeMeterDataFromFirebase();
+      initMeterPage();
     });
 
     // Override logout in meter.js if needed
