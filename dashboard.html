@@ -9349,10 +9349,46 @@ function uploadContractDocument() {
   reader.readAsDataURL(file);
 }
 
+// ===== FIREBASE CLOUD DATA INITIALIZATION =====
+async function initializeCloudData() {
+  try {
+    // Check if Firebase is ready
+    if (!window.firebaseApp || !window.firebase) {
+      console.warn('⚠️ Firebase not ready for cloud data initialization');
+      return;
+    }
+
+    console.log('🔄 Initializing cloud data from Firebase...');
+
+    // Load owner info
+    if (typeof OwnerConfigManager !== 'undefined' && typeof OwnerConfigManager.loadOwnerInfoFromFirebase === 'function') {
+      await OwnerConfigManager.loadOwnerInfoFromFirebase();
+    }
+
+    // Load tenants for both buildings
+    if (typeof TenantConfigManager !== 'undefined' && typeof TenantConfigManager.loadTenantsFromFirebase === 'function') {
+      await TenantConfigManager.loadTenantsFromFirebase('rooms');
+      await TenantConfigManager.loadTenantsFromFirebase('nest');
+    }
+
+    // Load leases for both buildings
+    if (typeof LeaseAgreementManager !== 'undefined' && typeof LeaseAgreementManager.loadLeasesFromFirebase === 'function') {
+      await LeaseAgreementManager.loadLeasesFromFirebase('rooms');
+      await LeaseAgreementManager.loadLeasesFromFirebase('nest');
+    }
+
+    console.log('✅ Cloud data initialization complete');
+  } catch (error) {
+    console.warn('⚠️ Cloud data initialization failed:', error.message);
+  }
+}
+
 // Initialize occupancy dashboard & lease alerts on page load
 document.addEventListener('DOMContentLoaded', function() {
   updateOccupancyDashboard();
   updateLeaseExpiryAlerts();
+  // Initialize cloud data from Firebase
+  initializeCloudData();
 });
 
 // Update occupancy and lease alerts when room statuses are updated
@@ -9598,10 +9634,14 @@ function saveOwnerInfo() {
     bankAccount: document.getElementById('ownerBankAccount').value.trim()
   };
 
-  if (OwnerConfigManager.saveOwnerInfo(ownerData)) {
-    alert('✅ บันทึกข้อมูลเจ้าของสำเร็จ');
-    renderOwnerInfoPage();
+  // Use Firebase-enabled save if available
+  if (typeof OwnerConfigManager.saveOwnerInfoWithFirebase === 'function') {
+    OwnerConfigManager.saveOwnerInfoWithFirebase(ownerData);
+  } else {
+    OwnerConfigManager.saveOwnerInfo(ownerData);
   }
+  alert('✅ บันทึกข้อมูลเจ้าของสำเร็จ');
+  renderOwnerInfoPage();
 }
 
 function clearOwnerInfo() {
@@ -9719,7 +9759,12 @@ function addNewTenant() {
     address: document.getElementById('newTenantAddress').value.trim()
   };
 
-  if (TenantConfigManager.addTenant(tenantData)) {
+  // Use Firebase-enabled save if available
+  const saveSuccess = typeof TenantConfigManager.saveTenantToFirebase === 'function'
+    ? (TenantConfigManager.saveTenantToFirebase('rooms', id, tenantData), TenantConfigManager.getTenant(id) !== undefined)
+    : TenantConfigManager.addTenant(tenantData);
+
+  if (saveSuccess) {
     alert(`✅ เพิ่มผู้เช่า ${name} สำเร็จ`);
     // Clear inputs
     document.getElementById('newTenantId').value = '';
@@ -9886,7 +9931,11 @@ function createNewLease() {
     status: 'active'
   };
 
-  const leaseId = LeaseAgreementManager.createLease(leaseData);
+  // Use Firebase-enabled create if available
+  const leaseId = typeof LeaseAgreementManager.createLeaseWithFirebase === 'function'
+    ? LeaseAgreementManager.createLeaseWithFirebase(leaseData)
+    : LeaseAgreementManager.createLease(leaseData);
+
   if (leaseId) {
     alert(`✅ สร้างสัญญาเช่าสำเร็จ`);
     // Clear inputs
@@ -9902,7 +9951,18 @@ function createNewLease() {
 
 function endLease(leaseId) {
   if (confirm('คุณแน่ใจหรือว่าต้องการสิ้นสุดสัญญาเช่า?')) {
-    if (LeaseAgreementManager.endLease(leaseId)) {
+    const lease = LeaseAgreementManager.getLease(leaseId);
+    const moveOutDate = new Date().toISOString();
+
+    // Use Firebase-enabled update if available
+    const success = typeof LeaseAgreementManager.updateLeaseWithFirebase === 'function'
+      ? LeaseAgreementManager.updateLeaseWithFirebase(leaseId, lease.building, {
+          moveOutDate: moveOutDate,
+          status: 'inactive'
+        })
+      : LeaseAgreementManager.endLease(leaseId);
+
+    if (success) {
       alert('✅ สิ้นสุดสัญญาเช่าเรียบร้อย');
       renderLeaseAgreementsPage();
     }
