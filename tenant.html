@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https: wss:; frame-src 'self';">
+  <meta name="theme-color" content="#2d8653">
+  <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%232d8653' width='192' height='192'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='100' font-family='Arial' fill='white' font-weight='bold'>🏡</text></svg>">
+  <title>The Green Haven - Tenant App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="./shared/security.js"></script>
+  <style>
+    :root {
+      --green-dark: #1a5c38;
+      --green: #2d8653;
+      --green-light: #4caf50;
+      --green-pale: #e8f5e9;
+      --accent: #ff8f00;
+      --accent-light: #fff8e1;
+      --blue: #1976d2;
+      --blue-pale: #e3f2fd;
+      --red: #c62828;
+      --red-pale: #ffebee;
+      --bg: #f4f6f8;
+      --card: #fff;
+      --text: #1a2332;
+      --text-muted: #6b7a8d;
+      --border: #e0e6ed;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      font-family: 'Sarabun', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100%;
+      width: 100%;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: var(--bg);
+      max-width: 1920px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* App Header */
+    .app-header {
+      background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);
+      color: #fff;
+      padding: 1rem 1.5rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .15);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-top: max(1rem, env(safe-area-inset-top));
+    }
+
+    .app-header-title {
+      flex: 1;
+    }
+
+    .app-header-title h1 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .app-header-title p {
+      font-size: .75rem;
+      opacity: .85;
+      margin: .2rem 0 0 0;
+    }
+
+    .app-header-user {
+      font-size: 2rem;
+    }
+
+    /* Main Content */
+    .app-content {
+      flex: 1;
+      padding: 1.5rem;
+      overflow-y: auto;
+      padding-bottom: 5rem;
+    }
+
+    /* Page visibility */
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, .08);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    /* Room Info Card */
+    .room-card {
+      background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .15);
+    }
+
+    .room-number {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+
+    .room-details {
+      font-size: 1rem;
+      line-height: 1.8;
+      opacity: 0.95;
+    }
+
+    .room-details-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 0.5rem 0;
+    }
+
+    /* Bill Card */
+    .bill-card {
+      background: #fff;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .bill-card-left {
+      flex: 1;
+    }
+
+    .bill-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .bill-card-details {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .bill-card-amount {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--green);
+      margin-bottom: 0.5rem;
+    }
+
+    .bill-status-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .bill-status-badge.pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .bill-status-badge.paid {
+      background: var(--green-pale);
+      color: var(--green-dark);
+    }
+
+    .bill-status-badge.overdue {
+      background: var(--red-pale);
+      color: var(--red);
+    }
+
+    .bill-card-action {
+      text-align: right;
+    }
+
+    .bill-card-action button {
+      padding: 0.6rem 1.2rem;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.9rem;
+      transition: 0.2s;
+    }
+
+    .bill-card-action button:hover {
+      background: var(--green-dark);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .quick-action-btn {
+      background: #fff;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s;
+      font-family: 'Sarabun', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .quick-action-btn:hover {
+      border-color: var(--green);
+      background: var(--green-pale);
+    }
+
+    .quick-action-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    /* Form Elements */
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="date"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'Sarabun', sans-serif;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      transition: 0.2s;
+    }
+
+    input[type="text"]:focus,
+    input[type="email"]:focus,
+    input[type="tel"]:focus,
+    input[type="date"]:focus,
+    input[type="number"]:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--green-pale);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 1rem;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'Sarabun', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-bottom: 0.5rem;
+    }
+
+    .btn-primary {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--green-dark);
+    }
+
+    .btn-primary:active {
+      transform: scale(.98);
+    }
+
+    .btn-secondary {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .btn-secondary:hover {
+      background: #1565c0;
+    }
+
+    .btn-danger {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .btn-danger:hover {
+      background: #a01f23;
+    }
+
+    /* QR Code Section */
+    .qr-section {
+      background: #f5f5f5;
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    .qr-box {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1rem;
+      display: inline-block;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .1);
+    }
+
+    .qr-box canvas,
+    .qr-box img {
+      max-width: 100%;
+      width: 250px;
+      height: 250px;
+    }
+
+    /* Maintenance Ticket */
+    .ticket-card {
+      background: #fff;
+      border-left: 4px solid var(--blue);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .ticket-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    .ticket-id {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .ticket-status {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .ticket-status.pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .ticket-status.in-progress {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .ticket-status.completed {
+      background: var(--green-pale);
+      color: var(--green-dark);
+    }
+
+    .ticket-details {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    /* Announcement */
+    .announcement-card {
+      background: var(--accent-light);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .announcement-date {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .announcement-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .announcement-content {
+      font-size: 0.95rem;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .announcement-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    /* App Footer Navigation */
+    .app-footer {
+      background: #fff;
+      border-top: 1px solid var(--border);
+      padding: 0.5rem;
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+      gap: 0;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-width: 1920px;
+      margin: 0 auto;
+      width: 100%;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, .08);
+    }
+
+    .nav-item {
+      padding: 0.8rem 0.5rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+      font-weight: 700;
+      font-size: 0.75rem;
+      transition: 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+      color: var(--text-muted);
+    }
+
+    .nav-item.active {
+      color: var(--green);
+    }
+
+    .nav-item-icon {
+      font-size: 1.5rem;
+    }
+
+    .nav-item-label {
+      font-size: 0.7rem;
+    }
+
+    /* Success/Error Boxes */
+    .success-box {
+      background: var(--green-pale);
+      border-left: 4px solid var(--green);
+      padding: 1rem;
+      border-radius: var(--radius-sm);
+      color: var(--green-dark);
+      line-height: 1.6;
+      margin: 1rem 0;
+    }
+
+    .error-box {
+      background: var(--red-pale);
+      border-left: 4px solid var(--red);
+      padding: 1rem;
+      border-radius: var(--radius-sm);
+      color: var(--red);
+      line-height: 1.6;
+      margin: 1rem 0;
+    }
+
+    .info-box {
+      background: var(--blue-pale);
+      border-left: 4px solid var(--blue);
+      padding: 1rem;
+      border-radius: var(--radius-sm);
+      color: var(--blue);
+      line-height: 1.6;
+      margin: 1rem 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .app-content {
+        padding: 1rem;
+        padding-bottom: 5rem;
+      }
+
+      .quick-actions {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .room-number {
+        font-size: 2.5rem;
+      }
+
+      .section-title {
+        font-size: 1.2rem;
+      }
+    }
+
+    @media (min-width: 901px) {
+      .app-footer {
+        display: none;
+      }
+
+      .app-content {
+        padding-bottom: 1.5rem;
+      }
+
+      .quick-actions {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="app-header-title">
+        <h1>🏡 The Green Haven</h1>
+        <p id="headerSubtitle">Tenant App</p>
+      </div>
+      <div class="app-header-user">👤</div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="app-content">
+      <!-- HOME PAGE -->
+      <div class="page active" id="page-home">
+        <div class="room-card">
+          <div class="room-number" id="homeRoomId">-</div>
+          <div class="room-details" id="homeRoomDetails">-</div>
+        </div>
+
+        <div class="card">
+          <div style="text-align: center;">
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">ค่าเช่าครบกำหนด</p>
+            <div style="font-size: 2.5rem; font-weight: 800; color: var(--green); margin-bottom: 1rem;" id="nextPaymentAmount">-</div>
+            <p style="color: var(--text-muted); font-size: 0.9rem;" id="nextPaymentDate">-</p>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          <button class="quick-action-btn" onclick="goToPage('bills')">
+            <span class="quick-action-icon">💳</span>
+            <span>ดูบิล</span>
+          </button>
+          <button class="quick-action-btn" onclick="goToPage('services')">
+            <span class="quick-action-icon">🔧</span>
+            <span>แจ้งซ่อม</span>
+          </button>
+          <button class="quick-action-btn" onclick="goToPage('community')">
+            <span class="quick-action-icon">📢</span>
+            <span>ประกาศ</span>
+          </button>
+          <button class="quick-action-btn" onclick="goToPage('profile')">
+            <span class="quick-action-icon">👤</span>
+            <span>โปรไฟล์</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- BILLS PAGE -->
+      <div class="page" id="page-bills">
+        <div class="section-title">💳 บิลรายเดือน</div>
+        <div id="billsList"></div>
+      </div>
+
+      <!-- PAYMENT PAGE -->
+      <div class="page" id="page-payment">
+        <!-- Step Indicator -->
+        <div style="display: flex; justify-content: space-between; margin-bottom: 2rem; position: relative;">
+          <div style="position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: var(--border); z-index: 0;"></div>
+          <div id="step1" style="flex: 1; text-align: center; position: relative; z-index: 1;">
+            <div style="display: inline-block; width: 36px; height: 36px; border-radius: 50%; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 0.5rem;">1</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">📄 ใบวางบิล</div>
+          </div>
+          <div id="step2" style="flex: 1; text-align: center; position: relative; z-index: 1;">
+            <div style="display: inline-block; width: 36px; height: 36px; border-radius: 50%; background: #ddd; color: #666; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 0.5rem;">2</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">📸 ยืนยันการชำระ</div>
+          </div>
+          <div id="step3" style="flex: 1; text-align: center; position: relative; z-index: 1;">
+            <div style="display: inline-block; width: 36px; height: 36px; border-radius: 50%; background: #ddd; color: #666; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 0.5rem;">3</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">✅ ใบเสร็จ</div>
+          </div>
+        </div>
+
+        <!-- STEP 1: INVOICE PAGE -->
+        <div id="invoiceSection" style="display: block;">
+          <div class="section-title">📄 ใบวางบิล / Invoice</div>
+
+          <!-- Invoice Document -->
+          <div class="card" style="border: 2px dashed var(--blue); background: #f9f9f9;">
+            <div id="invoiceContent"></div>
+          </div>
+
+          <button class="btn btn-primary" onclick="proceedToPayment()">📸 อัปโหลดสลิป</button>
+        </div>
+
+        <!-- STEP 2: SLIP UPLOAD & VERIFICATION -->
+        <div id="slipSection" style="display: none;">
+          <div class="section-title">📸 ยืนยันการชำระเงิน</div>
+
+          <div class="card">
+            <div class="card-title">อัปโหลดสลิปการโอนเงิน</div>
+            <div style="background: var(--blue-pale); border: 2px dashed var(--blue); border-radius: var(--radius-sm); padding: 2rem; text-align: center; cursor: pointer; margin-bottom: 1rem;"
+                 id="dropZone" onclick="document.getElementById('slipFile').click()">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📸</div>
+              <p style="margin: 0; color: var(--text); font-weight: 700;">แตะเพื่ออัปโหลดสลิป</p>
+              <p style="margin: 0.5rem 0 0 0; color: var(--text-muted); font-size: 0.9rem;">หรือลากมาวางที่นี่</p>
+              <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">✅ SlipOK ตรวจสอบ ชื่อ ยอด วันเวลา ภายใน 3 วินาที</p>
+            </div>
+            <input type="file" id="slipFile" accept="image/*" style="display: none;" onchange="handleSlipFile()">
+
+            <div id="slipPreview" style="margin-bottom: 1rem; text-align: center; display: none;">
+              <img id="slipImage" style="max-width: 100%; height: auto; border-radius: var(--radius-sm); border: 3px solid var(--green);">
+              <p style="margin: 0.5rem 0 0 0; font-weight: 700; color: var(--green);">✅ สลิปพร้อม</p>
+            </div>
+
+            <div id="slipVerifyResult" style="display: none;">
+              <div class="success-box" id="slipVerifySuccess" style="display: none;">
+                ✅ <strong>ยืนยันสำเร็จ!</strong><br>
+                ชื่อผู้โอน: <span id="slipSender">-</span><br>
+                จำนวน: <span id="slipAmount">-</span> บาท<br>
+                เวลา: <span id="slipTime">-</span>
+              </div>
+              <div class="error-box" id="slipVerifyError" style="display: none;">
+                ❌ <strong>ยืนยันไม่สำเร็จ</strong><br>
+                <span id="slipErrorMsg">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <button class="btn btn-secondary" onclick="goToPage('bills')">← ยกเลิก</button>
+            <button class="btn btn-primary" id="generateReceiptBtn" onclick="generateReceipt()" style="display: none;">✅ ออกใบเสร็จ</button>
+          </div>
+        </div>
+
+        <!-- STEP 3: RECEIPT -->
+        <div id="receiptSection" style="display: none;">
+          <div class="section-title">✅ ใบเสร็จรับเงิน / Receipt</div>
+
+          <!-- Receipt Document -->
+          <div class="card" style="border: 2px dashed var(--green); background: #f9f9f9;">
+            <div id="receiptContent"></div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <button class="btn btn-secondary" onclick="printReceipt()">🖨️ พิมพ์</button>
+            <button class="btn btn-primary" onclick="goToPage('bills')">← กลับไปบิล</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAYMENT HISTORY PAGE -->
+      <div class="page" id="page-payment-history">
+        <div class="section-title">📜 ประวัติการชำระเงิน</div>
+        <div id="paymentHistoryList"></div>
+      </div>
+
+      <!-- SERVICES PAGE -->
+      <div class="page" id="page-services">
+        <div class="section-title">🔧 แจ้งซ่อม</div>
+        <button class="btn btn-primary" onclick="goToPage('create-maintenance')" style="margin-bottom: 1.5rem;">➕ แจ้งปัญหา</button>
+        <div id="ticketsList"></div>
+      </div>
+
+      <!-- CREATE MAINTENANCE PAGE -->
+      <div class="page" id="page-create-maintenance">
+        <div class="section-title">➕ แจ้งปัญหาใหม่</div>
+        <div class="card">
+          <form onsubmit="submitMaintenance(event)">
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">ประเภทปัญหา *</label>
+            <select id="maintenanceCategory" required>
+              <option value="">เลือกประเภท</option>
+              <option value="electric">⚡ ไฟฟ้า</option>
+              <option value="water">💧 น้ำ</option>
+              <option value="aircon">❄️ แอร์</option>
+              <option value="furniture">🪑 เฟอร์นิเจอร์</option>
+              <option value="other">📝 อื่นๆ</option>
+            </select>
+
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อธิบายปัญหา *</label>
+            <textarea id="maintenanceDescription" placeholder="เขียนอธิบายปัญหาโดยละเอียด..." required></textarea>
+
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
+            <input type="file" id="maintenancePhoto" accept="image/*" style="margin-bottom: 1rem;">
+            <div id="maintenancePhotoPreview" style="margin-bottom: 1rem; text-align: center; display: none;">
+              <img id="maintenancePhotoImg" style="max-width: 100%; height: auto; border-radius: var(--radius-sm);">
+            </div>
+
+            <button type="submit" class="btn btn-primary">📤 ส่งคำขอ</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- COMMUNITY PAGE -->
+      <div class="page" id="page-community">
+        <div class="section-title">📢 ประกาศจากอาคาร</div>
+        <div id="announcementsList"></div>
+      </div>
+
+      <!-- CONTRACT PAGE -->
+      <div class="page" id="page-contract">
+        <div class="section-title">📋 สัญญาเช่า</div>
+        <div class="card" id="contractInfo"></div>
+      </div>
+
+      <!-- PROFILE PAGE -->
+      <div class="page" id="page-profile">
+        <div class="section-title">👤 โปรไฟล์ของฉัน</div>
+        <div class="card">
+          <form id="profileForm">
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">ชื่อ</label>
+            <input type="text" id="profileName" readonly style="background: var(--bg);">
+
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">เบอร์โทรศัพท์</label>
+            <input type="tel" id="profilePhone" placeholder="เบอร์โทรศัพท์">
+
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อีเมล</label>
+            <input type="email" id="profileEmail" placeholder="อีเมล">
+
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">ที่อยู่ (ถ้าต่างจากห้องพัก)</label>
+            <input type="text" id="profileAddress" placeholder="ที่อยู่">
+
+            <button type="submit" class="btn btn-primary">💾 บันทึก</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- SETTINGS PAGE -->
+      <div class="page" id="page-settings">
+        <div class="section-title">⚙️ การตั้งค่า</div>
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--border);">
+            <span>🔔 เปิดใจเตือน</span>
+            <input type="checkbox" id="notificationsToggle" checked>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0;">
+            <span>🌙 โหมดมืด</span>
+            <input type="checkbox" id="darkModeToggle">
+          </div>
+        </div>
+
+        <div class="card">
+          <button class="btn btn-danger" onclick="logout()">🚪 ออกจากระบบ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Navigation -->
+    <nav class="app-footer">
+      <button class="nav-item active" onclick="goToPage('home')">
+        <span class="nav-item-icon">🏠</span>
+        <span class="nav-item-label">หน้าแรก</span>
+      </button>
+      <button class="nav-item" onclick="goToPage('bills')">
+        <span class="nav-item-icon">💳</span>
+        <span class="nav-item-label">บิล</span>
+      </button>
+      <button class="nav-item" onclick="goToPage('services')">
+        <span class="nav-item-icon">🔧</span>
+        <span class="nav-item-label">ซ่อม</span>
+      </button>
+      <button class="nav-item" onclick="goToPage('community')">
+        <span class="nav-item-icon">📢</span>
+        <span class="nav-item-label">ประกาศ</span>
+      </button>
+      <button class="nav-item" onclick="goToPage('profile')">
+        <span class="nav-item-icon">👤</span>
+        <span class="nav-item-label">โปรไฟล์</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Scripts -->
+  <script src="./shared/room-config.js"></script>
+  <script src="./shared/tenant-config.js"></script>
+  <script src="./shared/lease-config.js"></script>
+  <script src="./shared/tenant-manager.js"></script>
+
+  <script>
+    // Global state
+    let currentUser = null;
+    let currentTenant = null;
+    let currentLease = null;
+    let currentBuilding = null;
+    let currentRoom = null;
+    let currentBills = [];
+    let currentPaymentAmount = 0;
+    let currentPaymentMonth = '';
+
+    // Initialize app on load
+    window.addEventListener('DOMContentLoaded', function() {
+      initTenantApp();
+    });
+
+    function initTenantApp() {
+      // Check authentication
+      currentUser = window.SecurityUtils?.getSecureSession ? window.SecurityUtils.getSecureSession() : JSON.parse(sessionStorage.getItem('user') || '{}');
+
+      if (!currentUser?.uid || currentUser?.userType !== 'tenant') {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      // Get room number from query param or session
+      const params = new URLSearchParams(window.location.search);
+      const roomNumber = params.get('room') || currentUser?.roomNumber;
+
+      if (!roomNumber) {
+        console.error('❌ ข้อมูลห้องพักไม่ถูกต้อง');
+        window.location.href = '/login.html';
+        return;
+      }
+
+      // Determine building
+      const numRoom = parseInt(roomNumber);
+      currentBuilding = (numRoom >= 101 && numRoom <= 405) ? 'nest' : 'rooms';
+      currentRoom = roomNumber;
+
+      // Load tenant data
+      loadTenantData();
+      renderHomePage();
+    }
+
+    function loadTenantData() {
+      // Get active lease for this room
+      if (typeof LeaseAgreementManager !== 'undefined') {
+        currentLease = LeaseAgreementManager.getActiveLease(currentBuilding, currentRoom);
+        if (currentLease?.tenantId) {
+          currentTenant = TenantConfigManager?.getTenant(currentLease.tenantId);
+        }
+      }
+
+      // Load bills (mock for now)
+      loadBillsData();
+    }
+
+    function loadBillsData() {
+      // Mock bills - in real implementation, query from Firebase or API
+      currentBills = [
+        {
+          month: 'June',
+          year: 2026,
+          rent: 5900,
+          electric: 820,
+          water: 120,
+          trash: 40,
+          total: 6880,
+          status: 'pending',
+          dueDate: '2026-06-05'
+        },
+        {
+          month: 'May',
+          year: 2026,
+          rent: 5900,
+          electric: 750,
+          water: 100,
+          trash: 40,
+          total: 6790,
+          status: 'paid',
+          dueDate: '2026-05-05'
+        },
+        {
+          month: 'April',
+          year: 2026,
+          rent: 5900,
+          electric: 690,
+          water: 110,
+          trash: 40,
+          total: 6740,
+          status: 'paid',
+          dueDate: '2026-04-05'
+        }
+      ];
+    }
+
+    function goToPage(pageName) {
+      // Hide all pages
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+      // Show target page
+      const page = document.getElementById(`page-${pageName}`);
+      if (page) {
+        page.classList.add('active');
+      }
+
+      // Update nav highlight
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      event?.target?.parentElement?.classList?.add('active');
+      if (event?.target?.classList?.contains('nav-item')) {
+        event.target.classList.add('active');
+      }
+
+      // Load page data
+      if (typeof window[`load${capitalize(pageName)}`] === 'function') {
+        window[`load${capitalize(pageName)}`]();
+      }
+    }
+
+    function capitalize(str) {
+      return str.replace(/-/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
+    }
+
+    // HOME PAGE
+    function renderHomePage() {
+      const roomConfig = typeof RoomConfigManager !== 'undefined' ? RoomConfigManager.getRoom(currentBuilding, currentRoom) : null;
+      const roomName = roomConfig?.name || `ห้อง ${currentRoom}`;
+      const rentPrice = roomConfig?.rentPrice || 5900;
+      const floor = Math.floor(parseInt(currentRoom.replace(/[^0-9]/g, '')) / 100) || 1;
+
+      document.getElementById('homeRoomId').textContent = currentRoom;
+      document.getElementById('homeRoomDetails').innerHTML = `
+        <div class="room-details-item">
+          <span>ชื่อ</span>
+          <span>${roomName}</span>
+        </div>
+        <div class="room-details-item">
+          <span>ชั้น</span>
+          <span>${floor}</span>
+        </div>
+        <div class="room-details-item">
+          <span>ค่าเช่า</span>
+          <span>${rentPrice.toLocaleString('th-TH')} บาท</span>
+        </div>
+        <div class="room-details-item">
+          <span>สถานะ</span>
+          <span>✅ เช่าอยู่</span>
+        </div>
+      `;
+
+      // Find next pending bill
+      const nextBill = currentBills.find(b => b.status === 'pending');
+      if (nextBill) {
+        document.getElementById('nextPaymentAmount').textContent = `${nextBill.total.toLocaleString('th-TH')} บาท`;
+        document.getElementById('nextPaymentDate').textContent = `ครบกำหนด: ${new Date(nextBill.dueDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+      }
+
+      // Update header
+      document.querySelector('.app-header-title p').textContent = currentTenant?.name || 'ผู้เช่า';
+    }
+
+    // BILLS PAGE
+    function loadBillsPage() {
+      renderBillsList();
+    }
+
+    function renderBillsList() {
+      const container = document.getElementById('billsList');
+      container.innerHTML = currentBills.map((bill, index) => `
+        <div class="bill-card">
+          <div class="bill-card-left">
+            <h3>${bill.month} ${bill.year}</h3>
+            <div class="bill-card-details">
+              <div>ค่าเช่า: ${bill.rent.toLocaleString('th-TH')} บาท</div>
+              <div>ค่าไฟ: ${bill.electric.toLocaleString('th-TH')} บาท</div>
+              <div>ค่าน้ำ: ${bill.water.toLocaleString('th-TH')} บาท</div>
+              <div>ค่ากลาง: ${bill.trash.toLocaleString('th-TH')} บาท</div>
+            </div>
+            <div class="bill-card-amount">รวม: ${bill.total.toLocaleString('th-TH')} บาท</div>
+            <span class="bill-status-badge ${bill.status}">
+              ${bill.status === 'paid' ? '✅ จ่ายแล้ว' : bill.status === 'overdue' ? '⚠️逾期' : '⏳ รอชำระ'}
+            </span>
+          </div>
+          <div class="bill-card-action">
+            ${bill.status === 'pending' ? `<button onclick="goToPayment('${bill.month}', ${bill.total})">จ่ายเงิน</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    let slipVerified = false;
+    let slipData = null;
+    let invoiceData = null;
+
+    function goToPayment(month, amount) {
+      currentPaymentMonth = month;
+      currentPaymentAmount = amount;
+      slipVerified = false;
+      slipData = null;
+
+      // Reset to step 1: Invoice
+      document.getElementById('step1').style.background = 'var(--green)';
+      document.getElementById('step2').style.background = '#ddd';
+      document.getElementById('step3').style.background = '#ddd';
+      document.getElementById('invoiceSection').style.display = 'block';
+      document.getElementById('slipSection').style.display = 'none';
+      document.getElementById('receiptSection').style.display = 'none';
+
+      generateInvoice(month, amount);
+      goToPage('payment');
+    }
+
+    // STEP 1: Generate Invoice
+    function generateInvoice(month, amount) {
+      const billNo = 'INV-' + Date.now();
+      const today = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      const roomInfo = typeof RoomConfigManager !== 'undefined' ? RoomConfigManager.getRoom(currentBuilding, currentRoom) : null;
+      const roomName = roomInfo?.name || `ห้อง ${currentRoom}`;
+
+      const invoiceHTML = `
+        <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--blue); padding-bottom: 1rem;">
+          <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 0.3rem;">🌿 The Green Haven</div>
+          <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">อพาร์ทเมนต์ ${currentBuilding === 'nest' ? 'Nest Building' : 'ห้องแถว'}</div>
+          <div style="font-size: 1.3rem; font-weight: 700; color: var(--blue); margin-bottom: 0.2rem;">ใบวางบิล / Invoice</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">เลขที่: ${billNo}</div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f0f7ff; border-radius: 8px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ห้องเลขที่</div>
+              <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);">${roomName}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ประจำเดือน</div>
+              <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">${month} 2026</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">วันที่ออกบิล</div>
+            <div style="font-size: 0.95rem; color: var(--text);">${today}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+          <div style="background: var(--blue); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดค่าใช้จ่าย</div>
+          <div style="padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
+              <span style="color: var(--text);">ค่าเช่า (ประจำเดือน)</span>
+              <span style="font-weight: 700; color: var(--text);">฿${amount.toLocaleString('th-TH')}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--blue);">
+              <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
+              <span style="font-weight: 800; font-size: 1.3rem; color: var(--blue);">฿${amount.toLocaleString('th-TH')}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: var(--blue-pale); border: 2px dashed var(--blue); border-radius: 8px; padding: 1rem; text-align: center; margin-bottom: 1rem;">
+          <div style="font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.8rem;">📲 สแกน QR Code เพื่อชำระเงิน</div>
+          <div id="qrCode" style="display: flex; justify-content: center; margin-bottom: 0.5rem;"></div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">พร้อมเพย์: 089-1234567<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
+        </div>
+
+        <div style="background: #fffacd; border-left: 4px solid var(--accent); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+          <div style="font-weight: 700; color: var(--accent); margin-bottom: 0.5rem;">⏰ กรุณาชำระภายใน 5 วันถัดไป</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">หากผ่านกำหนด อาจมีค่าปรับ</div>
+        </div>
+
+        <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+          ⏳ <strong>รอชำระ</strong> — กรุณาอัปโหลดสลิปเพื่อยืนยันการชำระเงิน
+        </div>
+      `;
+
+      document.getElementById('invoiceContent').innerHTML = invoiceHTML;
+      invoiceData = { month, amount, billNo };
+
+      // Generate QR Code
+      generateQRCode();
+    }
+
+    function generateQRCode() {
+      document.getElementById('qrCode').innerHTML = '';
+      const qrData = `00020126360014th.co.bpmit.promptpay0015089000000000155020000000000010702061050000000005303764540${currentPaymentAmount.toString().padStart(10, '0')}520463031789530376454061300070K`;
+
+      new QRCode(document.getElementById('qrCode'), {
+        text: qrData,
+        width: 200,
+        height: 200,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    // STEP 2: Upload Slip & Verify
+    function proceedToPayment() {
+      document.getElementById('invoiceSection').style.display = 'none';
+      document.getElementById('slipSection').style.display = 'block';
+      document.getElementById('step1').style.background = '#ddd';
+      document.getElementById('step1').style.color = '#666';
+      document.getElementById('step2').style.background = 'var(--green)';
+      document.getElementById('step2').style.color = '#fff';
+      slipVerified = false;
+      document.getElementById('slipPreview').style.display = 'none';
+      document.getElementById('slipVerifyResult').style.display = 'none';
+      document.getElementById('generateReceiptBtn').style.display = 'none';
+    }
+
+    function handleSlipFile() {
+      const file = document.getElementById('slipFile').files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('slipPreview').style.display = 'block';
+        document.getElementById('slipImage').src = e.target.result;
+
+        // Simulate SlipOK verification
+        setTimeout(() => verifySlip(), 1500);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function verifySlip() {
+      // Mock SlipOK verification
+      slipVerified = true;
+      slipData = {
+        sender: 'Alice Johnson',
+        amount: currentPaymentAmount,
+        tDate: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      };
+
+      document.getElementById('slipVerifyResult').style.display = 'block';
+      document.getElementById('slipVerifySuccess').style.display = 'block';
+      document.getElementById('slipVerifyError').style.display = 'none';
+      document.getElementById('slipSender').textContent = slipData.sender;
+      document.getElementById('slipAmount').textContent = slipData.amount.toLocaleString('th-TH');
+      document.getElementById('slipTime').textContent = slipData.tDate;
+
+      document.getElementById('generateReceiptBtn').style.display = 'block';
+
+      // Notify admin
+      console.log(`✅ Admin notification: Slip verified for room ${currentRoom}, amount ฿${currentPaymentAmount}, from ${slipData.sender}`);
+    }
+
+    // STEP 3: Generate Receipt
+    function generateReceipt() {
+      if (!slipVerified) {
+        alert('⚠️ กรุณายืนยันสลิปก่อน');
+        return;
+      }
+
+      const payDate = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+      const receiptNo = 'RCP-' + Date.now();
+
+      const roomInfo = typeof RoomConfigManager !== 'undefined' ? RoomConfigManager.getRoom(currentBuilding, currentRoom) : null;
+      const roomName = roomInfo?.name || `ห้อง ${currentRoom}`;
+
+      const receiptHTML = `
+        <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--green); padding-bottom: 1rem;">
+          <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 0.3rem;">🌿 The Green Haven</div>
+          <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">อพาร์ทเมนต์ ${currentBuilding === 'nest' ? 'Nest Building' : 'ห้องแถว'}</div>
+          <div style="font-size: 1.3rem; font-weight: 700; color: var(--green); margin-bottom: 0.2rem;">✅ ใบเสร็จรับเงิน / Receipt</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">เลขที่: ${receiptNo}</div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f0fff4; border-radius: 8px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ห้องเลขที่</div>
+              <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);">${roomName}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ประจำเดือน</div>
+              <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">${currentPaymentMonth} 2026</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">วันที่ชำระเงิน</div>
+            <div style="font-size: 0.95rem; color: var(--text);">${payDate}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+          <div style="background: var(--green); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดการชำระ</div>
+          <div style="padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
+              <span style="color: var(--text);">ค่าเช่า</span>
+              <span style="font-weight: 700; color: var(--text);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--green);">
+              <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
+              <span style="font-weight: 800; font-size: 1.3rem; color: var(--green);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: var(--green-pale); border: 2px solid var(--green); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+          <div style="font-weight: 700; color: var(--green-dark); margin-bottom: 0.5rem;">✅ ยืนยันด้วย SlipOK</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+            <div>ผู้โอน: ${slipData.sender}</div>
+            <div>จำนวน: ฿${slipData.amount.toLocaleString('th-TH')}</div>
+            <div>เวลา: ${slipData.tDate}</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: var(--green-dark); font-size: 0.8rem; padding: 1rem; border-top: 1px solid var(--border); background: var(--green-pale); border-radius: 8px;">
+          <div style="font-weight: 700; margin-bottom: 0.3rem;">✅ ชำระแล้ว</div>
+          <div style="font-size: 0.75rem;">ขอบคุณที่ชำระค่าเช่าตรงเวลา</div>
+        </div>
+      `;
+
+      document.getElementById('receiptContent').innerHTML = receiptHTML;
+      document.getElementById('slipSection').style.display = 'none';
+      document.getElementById('receiptSection').style.display = 'block';
+      document.getElementById('step2').style.background = '#ddd';
+      document.getElementById('step2').style.color = '#666';
+      document.getElementById('step3').style.background = 'var(--green)';
+      document.getElementById('step3').style.color = '#fff';
+    }
+
+    function printReceipt() {
+      window.print();
+    }
+
+    // PAYMENT HISTORY PAGE
+    function loadPaymentHistoryPage() {
+      renderPaymentHistory();
+    }
+
+    function renderPaymentHistory() {
+      const container = document.getElementById('paymentHistoryList');
+      const paidBills = currentBills.filter(b => b.status === 'paid');
+
+      if (paidBills.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">ยังไม่มีประวัติการชำระเงิน</p>';
+        return;
+      }
+
+      container.innerHTML = paidBills.map(bill => `
+        <div class="bill-card">
+          <div class="bill-card-left">
+            <h3>${bill.month} ${bill.year}</h3>
+            <div class="bill-card-details">
+              <div>รวม: ${bill.total.toLocaleString('th-TH')} บาท</div>
+              <div>ชำระเมื่อ: ${new Date(bill.dueDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            </div>
+          </div>
+          <div class="bill-card-action">
+            <span class="bill-status-badge paid">✅ จ่ายแล้ว</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // SERVICES PAGE
+    function loadServicesPage() {
+      renderTicketsList();
+    }
+
+    function renderTicketsList() {
+      const container = document.getElementById('ticketsList');
+      const tickets = getMaintenanceTickets();
+
+      if (tickets.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">ยังไม่มีรายการแจ้งซ่อม</p>';
+        return;
+      }
+
+      container.innerHTML = tickets.map(ticket => `
+        <div class="ticket-card">
+          <div class="ticket-header">
+            <div>
+              <div class="ticket-id">🎟️ ${ticket.id}</div>
+              <div class="ticket-details">${ticket.date}</div>
+            </div>
+            <span class="ticket-status ${ticket.status}">
+              ${ticket.status === 'pending' ? '⏳ รอประมาณการ' : ticket.status === 'in-progress' ? '🔧 กำลังซ่อม' : '✅ เสร็จสิ้น'}
+            </span>
+          </div>
+          <div class="ticket-details" style="margin-top: 1rem;">
+            <div style="margin-bottom: 0.5rem;"><strong>ประเภท:</strong> ${ticket.category}</div>
+            <div><strong>รายละเอียด:</strong> ${ticket.description}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function getMaintenanceTickets() {
+      const stored = localStorage.getItem('tenant_maintenance_tickets');
+      return stored ? JSON.parse(stored) : [];
+    }
+
+    function submitMaintenance(event) {
+      event.preventDefault();
+
+      const category = document.getElementById('maintenanceCategory').value;
+      const description = document.getElementById('maintenanceDescription').value;
+
+      if (!category || !description) {
+        alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน');
+        return;
+      }
+
+      const ticket = {
+        id: `T${Date.now()}`,
+        date: new Date().toLocaleDateString('th-TH'),
+        category: getCategoryName(category),
+        description: description,
+        status: 'pending',
+        submittedDate: new Date().toISOString()
+      };
+
+      let tickets = getMaintenanceTickets();
+      tickets.push(ticket);
+      localStorage.setItem('tenant_maintenance_tickets', JSON.stringify(tickets));
+
+      alert('✅ แจ้งปัญหาสำเร็จ');
+      document.getElementById('maintenanceCategory').value = '';
+      document.getElementById('maintenanceDescription').value = '';
+      document.getElementById('maintenancePhoto').value = '';
+      document.getElementById('maintenancePhotoPreview').style.display = 'none';
+
+      goToPage('services');
+    }
+
+    function getCategoryName(cat) {
+      const categories = {
+        'electric': '⚡ ไฟฟ้า',
+        'water': '💧 น้ำ',
+        'aircon': '❄️ แอร์',
+        'furniture': '🪑 เฟอร์นิเจอร์',
+        'other': '📝 อื่นๆ'
+      };
+      return categories[cat] || cat;
+    }
+
+    // Handle photo preview
+    document.addEventListener('change', function(e) {
+      if (e.target.id === 'maintenancePhoto') {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(ev) {
+            document.getElementById('maintenancePhotoImg').src = ev.target.result;
+            document.getElementById('maintenancePhotoPreview').style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    });
+
+    // COMMUNITY PAGE
+    function loadCommunityPage() {
+      renderAnnouncements();
+    }
+
+    function renderAnnouncements() {
+      // Mock announcements
+      const announcements = [
+        {
+          title: 'แจ้งปิดน้ำ',
+          date: '15 June 2026',
+          time: '10:00 - 14:00',
+          icon: '💧',
+          content: 'มีการดำเนินการซ่อมท่อน้ำในอาคารจึงต้องปิดน้ำ'
+        },
+        {
+          title: 'ทำความสะอาดใหญ่',
+          date: '20 June 2026',
+          time: 'all day',
+          icon: '🧹',
+          content: 'การทำความสะอาดสถานที่ทั่วไปในอาคาร'
+        },
+        {
+          title: 'ซ่อมลิฟต์',
+          date: '22 June 2026',
+          time: '08:00 - 12:00',
+          icon: '🔧',
+          content: 'การตรวจสอบและบำรุงรักษาระบบลิฟต์'
+        }
+      ];
+
+      const container = document.getElementById('announcementsList');
+      container.innerHTML = announcements.map(ann => `
+        <div class="announcement-card">
+          <div class="announcement-icon">${ann.icon}</div>
+          <div class="announcement-title">${ann.title}</div>
+          <div class="announcement-date">${ann.date} | ${ann.time}</div>
+          <div class="announcement-content">${ann.content}</div>
+        </div>
+      `).join('');
+    }
+
+    // PROFILE PAGE
+    function loadProfilePage() {
+      if (currentTenant) {
+        document.getElementById('profileName').value = currentTenant.name || '';
+        document.getElementById('profilePhone').value = currentTenant.phone || '';
+        document.getElementById('profileEmail').value = currentTenant.email || '';
+        document.getElementById('profileAddress').value = currentTenant.address || '';
+      }
+    }
+
+    document.getElementById('profileForm')?.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const updates = {
+        phone: document.getElementById('profilePhone').value,
+        email: document.getElementById('profileEmail').value,
+        address: document.getElementById('profileAddress').value
+      };
+
+      if (typeof TenantConfigManager !== 'undefined' && currentTenant?.id) {
+        TenantConfigManager.updateTenant(currentTenant.id, updates);
+        alert('✅ บันทึกข้อมูลสำเร็จ');
+      }
+    });
+
+    // LOGOUT
+    function logout() {
+      if (confirm('คุณแน่ใจว่าต้องการออกจากระบบ?')) {
+        sessionStorage.removeItem('user');
+        window.location.href = '/login.html';
+      }
+    }
+  </script>
+</body>
+</html>
