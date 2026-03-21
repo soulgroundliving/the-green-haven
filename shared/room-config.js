@@ -1,7 +1,11 @@
 // Flexible Room & Rate Management System
 // Centralized configuration for rooms and utility rates
 
-const DEFAULT_ROOMS_CONFIG = {
+// Prevent re-declaration errors when script is loaded multiple times
+if (typeof DEFAULT_ROOMS_CONFIG !== 'undefined' && typeof RoomConfigManager !== 'undefined') {
+  // Already loaded, skip re-initialization
+} else {
+  const DEFAULT_ROOMS_CONFIG = {
   'rooms': {
     name: 'ห้องแถว (Rooms Building)',
     building: 'rooms',
@@ -169,4 +173,5 @@ class RoomConfigManager {
     }
     return false;
   }
+}
 }
