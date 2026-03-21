@@ -105,4 +105,64 @@ class TenantConfigManager {
       t.phone.includes(keyword)
     );
   }
+
+  static async saveTenantToFirebase(building, tenantId, tenantData) {
+    // 1. Save to localStorage
+    const success = this.addTenant(tenantData);
+
+    // 2. Try Firebase in parallel
+    try {
+      if (!window.firebase) {
+        console.warn('⚠️ Firebase not loaded');
+        return success;
+      }
+
+      const db = window.firebase.firestore();
+      const docRef = window.firebase.firestoreFunctions.doc(
+        window.firebase.firestoreFunctions.collection(db, `tenants/${building}/list`),
+        tenantId
+      );
+      await window.firebase.firestoreFunctions.setDoc(docRef, {
+        ...tenantData,
+        building,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      console.log(`✅ Tenant ${tenantId} synced to Firebase`);
+    } catch (error) {
+      console.warn(`⚠️ Firebase sync failed for tenant ${tenantId}:`, error.message);
+    }
+
+    return success;
+  }
+
+  static async loadTenantsFromFirebase(building) {
+    try {
+      if (!window.firebase) {
+        console.warn('⚠️ Firebase not loaded');
+        return this.getAllTenants();
+      }
+
+      const db = window.firebase.firestore();
+      const collectionRef = window.firebase.firestoreFunctions.collection(db, `tenants/${building}/list`);
+      const querySnap = await window.firebase.firestoreFunctions.getDocs(collectionRef);
+
+      if (querySnap.size > 0) {
+        const tenants = {};
+        querySnap.forEach(doc => {
+          tenants[doc.id] = doc.data();
+        });
+        // Save to localStorage as backup
+        const stored = JSON.parse(localStorage.getItem('tenant_master_data') || '{}');
+        stored[building] = tenants;
+        localStorage.setItem('tenant_master_data', JSON.stringify(stored));
+        console.log(`✅ Tenants for ${building} loaded from Firebase (${querySnap.size} items)`);
+        return tenants;
+      }
+    } catch (error) {
+      console.warn(`⚠️ Firebase load failed for tenants:`, error.message);
+    }
+
+    // Fallback to localStorage
+    return this.getAllTenants();
+  }
 }
