@@ -8321,19 +8321,30 @@ function openTenantModal(roomId) {
 
   // Find room info - handle both old and new building
   let room;
+  let building = 'rooms'; // default
   if (roomId.startsWith('N')) {
     // New building room
+    building = 'nest';
     room = ROOMS_NEW?.find(r => r.id === roomId) || {rent: 5600, type: 'studio'};
   } else {
     // Old building room
     room = ROOMS_OLD?.find(r => r.id === roomId) || {rent: 1200, type: 'room'};
   }
 
+  // Get correct rent from RoomConfigManager if available
+  let rentPrice = room.rent || 0;
+  if (typeof RoomConfigManager !== 'undefined') {
+    const rmConfigRoom = RoomConfigManager.getRoom(building, roomId);
+    if (rmConfigRoom && rmConfigRoom.rentPrice) {
+      rentPrice = rmConfigRoom.rentPrice;
+    }
+  }
+
   // Update room info
   document.getElementById('modalRoomNumber').textContent = `ห้อง ${roomId}`;
   const roomType = room.type === 'commercial' ? '🏪 พาณิชย์' : (room.petFriendly ? '🐾 Pet Friendly' : '🏠 ห้องพัก');
   document.getElementById('modalRoomType').textContent = roomType;
-  document.getElementById('modalRoomRent').textContent = (room.rent || 0).toLocaleString();
+  document.getElementById('modalRoomRent').textContent = `฿${rentPrice.toLocaleString()}`;
 
   // Determine occupancy status
   const isOccupied = tenant && tenant.name;
