@@ -781,13 +781,24 @@ window.METER_DATA = {"67_1":{"13":{"eNew":2628,"eOld":2616,"wNew":1577,"wOld":15
       // First try sheet name, then fall back to data analysis, then use cached year from file
       let year = null;
 
-      // Try to extract from sheet name
-      const yearMatch = sheetName.match(/(\d{2})/);
-      if (yearMatch) {
-        const num = parseInt(yearMatch[1]);
-        if (num >= 50 && num <= 99) { // Valid Buddhist year range
-          year = num;
-          console.log(`Detected year ${year} from sheet name: ${sheetName}`);
+      // Try to extract from sheet name (supports formats like "68_มค", "มค68", "มีค 68")
+      // Look for 2-digit year (50-99) in the sheet name
+      const yearPatterns = [
+        /(\d{2})$/,           // End of string: "มค68"
+        /^(\d{2})[_\-]/,      // Start with dash/underscore: "68_มค"
+        /[_\-\s](\d{2})$/,    // Before end with separator: "มค_68" or "มค 68"
+        /(\d{2})[_\-\s]/      // Followed by separator: "68_มค"
+      ];
+
+      for (let pattern of yearPatterns) {
+        const match = sheetName.match(pattern);
+        if (match) {
+          const num = parseInt(match[1]);
+          if (num >= 50 && num <= 99) { // Valid Buddhist year range
+            year = num;
+            console.log(`Detected year ${year} from sheet name: ${sheetName} (pattern: ${pattern})`);
+            break;
+          }
         }
       }
 
