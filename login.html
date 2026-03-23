@@ -936,19 +936,23 @@
 
         // ✅ If no database data, create minimal fallback
         if (!userData) {
+          const params = new URLSearchParams(window.location.search);
+          const urlRoomNumber = params.get('room');
+
           userData = {
             uid: user.uid,
             email: user.email,
             name: user.email.split('@')[0],
             userType: currentUserType,  // Use what user selected on login
-            roomNumber: null,
+            roomNumber: urlRoomNumber || null,  // Try to get from URL parameter
             isFromFallback: true  // Mark as fallback for tracking
           };
-          console.warn('⚠️ Using fallback userData due to database unavailability');
+          console.warn('⚠️ Using fallback userData due to database unavailability', { roomNumber: userData.roomNumber });
         }
 
-        // ✅ SECURITY: Verify user type matches what they registered as
-        if (userData.userType !== currentUserType) {
+        // ✅ SECURITY: Verify user type matches what they selected
+        // For fallback userData, trust the currentUserType since we can't access database
+        if (!userData.isFromFallback && userData.userType !== currentUserType) {
           await safeSignOut();
           const typeLabel = currentUserType === 'admin' ? 'Admin' : currentUserType === 'accountant' ? 'Accountant (บัญชี)' : 'Tenant';
           throw new Error(`❌ บัญชีนี้ไม่ใช่ ${typeLabel} (สมัครไว้เป็น ${userData.userType})`);
