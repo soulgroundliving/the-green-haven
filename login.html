@@ -859,6 +859,31 @@
       }
     };
 
+    // ✅ Helper to ensure firebaseAuthFunctions is available
+    async function ensureFirebaseReady() {
+      let retries = 0;
+      while (!window.firebaseAuthFunctions && retries < 10) {
+        console.warn('Waiting for Firebase to initialize...', retries);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+      }
+      if (!window.firebaseAuthFunctions) {
+        throw new Error('Firebase initialization failed');
+      }
+    }
+
+    // ✅ Safe signOut wrapper
+    async function safeSignOut() {
+      try {
+        await ensureFirebaseReady();
+        if (window.firebaseAuthFunctions && window.firebaseAuthFunctions.signOut) {
+          await safeSignOut();
+        }
+      } catch (error) {
+        console.error('Sign out error:', error);
+      }
+    }
+
     async function handleLogin(event) {
       event.preventDefault();
       clearMessages();
@@ -906,19 +931,19 @@
         } catch (dbError) {
           // If database fails, reject login - don't allow fallback
           console.warn('Database error, user data not found:', dbError.message);
-          await window.firebaseAuthFunctions.signOut();
+          await safeSignOut();
           throw new Error('ไม่สามารถตรวจสอบข้อมูลผู้ใช้ได้ กรุณาลองใหม่');
         }
 
         // ✅ SECURITY: userData must exist from database
         if (!userData) {
-          await window.firebaseAuthFunctions.signOut();
+          await safeSignOut();
           throw new Error('ไม่พบข้อมูลผู้ใช้ในระบบ โปรดติดต่อผู้ดูแลระบบ');
         }
 
         // ✅ SECURITY: Verify user type matches what they registered as
         if (userData.userType !== currentUserType) {
-          await window.firebaseAuthFunctions.signOut();
+          await safeSignOut();
           const typeLabel = currentUserType === 'admin' ? 'Admin' : currentUserType === 'accountant' ? 'Accountant (บัญชี)' : 'Tenant';
           throw new Error(`❌ บัญชีนี้ไม่ใช่ ${typeLabel} (สมัครไว้เป็น ${userData.userType})`);
         }
