@@ -977,14 +977,26 @@
 
         // Redirect based on user type
         setTimeout(() => {
+          console.log('🔍 DEBUG: Redirect Logic', {
+            userType: userData.userType,
+            roomNumber: userData.roomNumber,
+            isFromFallback: userData.isFromFallback,
+            email: userData.email
+          });
+
           if (userData.userType === 'accountant') {
+            console.log('➡️ Redirecting to: /accounting.html');
             window.location.href = '/accounting.html';
           } else if (userData.userType === 'admin') {
+            console.log('➡️ Redirecting to: /dashboard.html');
             window.location.href = '/dashboard.html';
           } else if (userData.userType === 'tenant') {
-            window.location.href = `/tenant.html?room=${userData.roomNumber}`;
+            const tenantUrl = `/tenant.html?room=${userData.roomNumber}`;
+            console.log('➡️ Redirecting to:', tenantUrl);
+            window.location.href = tenantUrl;
           } else {
-            window.location.href = '/dashboard.html'; // Default to dashboard
+            console.warn('⚠️ Unknown userType, defaulting to dashboard:', userData.userType);
+            window.location.href = '/dashboard.html';
           }
         }, 1500);
 
