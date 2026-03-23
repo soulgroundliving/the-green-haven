@@ -35,7 +35,7 @@ class TenantFirebaseSync {
 
   /**
    * Load tenant lease information from Firebase
-   * Path: data/{building}/{room}
+   * Tries multiple possible paths for flexibility
    */
   static async loadLease() {
     try {
@@ -54,17 +54,31 @@ class TenantFirebaseSync {
         return null;
       }
 
-      const leaseRef = window.firebaseRef(this.database,
-        `data/${this.currentBuilding}/${this.currentRoom}`);
-      const snapshot = await window.firebaseGet(leaseRef);
+      // Try multiple possible paths
+      const possiblePaths = [
+        `data/${this.currentBuilding}/${this.currentRoom}`,
+        `${this.currentBuilding}/${this.currentRoom}`,
+        `tenants/${this.currentBuilding}/${this.currentRoom}`,
+        `rooms/${this.currentBuilding}/${this.currentRoom}`
+      ];
 
-      if (snapshot.exists()) {
-        const leaseData = snapshot.val();
-        console.log('✅ Loaded lease from Firebase:', leaseData);
-        return leaseData;
+      for (const path of possiblePaths) {
+        try {
+          console.log(`🔍 Checking Firebase path: ${path}`);
+          const leaseRef = window.firebaseRef(this.database, path);
+          const snapshot = await window.firebaseGet(leaseRef);
+
+          if (snapshot.exists()) {
+            const leaseData = snapshot.val();
+            console.log(`✅ Loaded lease from Firebase at ${path}:`, leaseData);
+            return leaseData;
+          }
+        } catch (e) {
+          console.debug(`  Path ${path} failed:`, e.message);
+        }
       }
 
-      console.log(`ℹ️ No lease found at data/${this.currentBuilding}/${this.currentRoom}`);
+      console.log(`ℹ️ No lease data found in Firebase for ${this.currentBuilding}/${this.currentRoom}`);
       return null;
     } catch (error) {
       console.error('❌ Error loading lease:', error);
