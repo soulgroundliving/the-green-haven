@@ -18,6 +18,10 @@
 <script src="./shared/tenant-lookup.js"></script>
 <script src="./shared/lease-config.js"></script>
 <script src="./shared/invoice-receipt-manager.js"></script>
+<script src="./shared/bill-generator.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="./shared/invoice-pdf-generator.js"></script>
 <script src="./shared/shared-config.js"></script>
 <script src="./shared/meter_import_helper.js"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -2993,12 +2997,39 @@
     </div>
   </div>
 
+  <!-- Bill Generation Section -->
+  <div class="card" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-left: 4px solid #ff9800; margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <div style="font-weight: 700; color: #e65100; margin-bottom: 0.3rem;">📄 สร้างใบวางบิลประจำเดือน</div>
+        <div style="font-size: 0.85rem; color: #bf360c;">กด "สร้างบิล" เพื่อสร้างใบวางบิล (ใบแจ้งหนี้) ให้ลูกบ้านทั้งหมด</div>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button onclick="generateMonthlyBillsUI()" style="padding: 0.6rem 1.2rem; background: #ff9800; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: 'Sarabun', sans-serif;">📋 สร้างบิล</button>
+        <button onclick="downloadInvoicesPDF()" style="padding: 0.6rem 1.2rem; background: #2196f3; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: 'Sarabun', sans-serif;">📥 ดาวน์โหลด PDF</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Tabs -->
   <div style="margin-bottom:1.5rem;display:flex;gap:.5rem;flex-wrap:wrap;">
     <button class="year-tab active" onclick="filterPaymentStatus('all')">📋 ทั้งหมด</button>
     <button class="year-tab" onclick="filterPaymentStatus('pending')">⏳ รอการยืนยัน</button>
     <button class="year-tab" onclick="filterPaymentStatus('verified')">✅ ยืนยันแล้ว</button>
     <button class="year-tab" onclick="filterPaymentStatus('rejected')">❌ ไม่อนุมัติ</button>
+  </div>
+
+  <!-- Real-Time Payment Notifications -->
+  <div class="card" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-left: 4px solid #4caf50; margin-bottom: 1.5rem;">
+    <div style="font-weight: 700; color: #2e7d32; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+      <span>📬 การชำระเงินล่าสุด</span>
+      <button onclick="clearPaymentNotifications()" style="padding: 0.3rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">ล้าง</button>
+    </div>
+    <div id="paymentNotificationsList" style="max-height: 300px; overflow-y: auto;">
+      <div style="text-align: center; color: #999; padding: 2rem;">
+        📭 ยังไม่มีการชำระเงิน
+      </div>
+    </div>
   </div>
 
   <!-- Payment List -->
@@ -7632,11 +7663,76 @@ function verifyPayment(paymentId, status){
 
   payment.status = status;
   payment.verifiedAt = new Date().toLocaleString('th-TH');
+
+  // NEW: Generate receipt if payment is verified
+  if(status === 'verified' && typeof InvoiceReceiptManager !== 'undefined'){
+    try {
+      // Determine building from payment data
+      const building = payment.building || 'rooms';
+      const roomId = payment.room || payment.roomId;
+      const month = new Date().toLocaleString('th-TH', {year: 'numeric', month: '2-digit'}).replace(/\D/g, '').slice(-2);
+      const year = new Date().toLocaleString('th-TH', {year: 'numeric'}).slice(-2);
+
+      // Create invoice ID
+      const invoiceId = `INV-${roomId}-2569_${month}`;
+
+      // Create receipt from invoice
+      const receipt = InvoiceReceiptManager.createReceipt(building, invoiceId, {
+        amount: payment.amount,
+        paymentMethod: 'slip',
+        slipData: payment.slipData || {sender: payment.reporter || 'ผู้เช่า', date: payment.reportedAt},
+        slipOkVerified: true,
+        verifiedBy: 'admin1'
+      });
+
+      console.log('✅ Receipt generated:', receipt?.id);
+      payment.receiptId = receipt?.id;
+    } catch(error) {
+      console.warn('⚠️ Receipt generation skipped:', error);
+    }
+  }
+
   saveTenantPayments(payments);
 
   renderPaymentStats();
   renderPaymentList('all');
-  alert('✅ อัปเดตสถานะเรียบร้อย');
+  alert(status === 'verified' ? '✅ ยืนยันการชำระแล้ว และสร้างใบเสร็จ' : '✅ ปฏิเสธการชำระแล้ว');
+}
+
+// ===== INVOICE/RECEIPT HISTORY =====
+function showInvoiceHistory(roomId, building = 'rooms'){
+  if(typeof InvoiceReceiptManager === 'undefined') {
+    alert('❌ InvoiceReceiptManager ยังไม่โหลด');
+    return;
+  }
+
+  const history = InvoiceReceiptManager.getInvoiceReceiptHistory(building, roomId);
+
+  let html = `<div style="padding:15px;background:#f9f9f9;border-radius:8px;max-height:300px;overflow-y:auto;">`;
+  html += `<h4>📋 ประวัติการชำระ - ห้อง ${roomId}</h4>`;
+
+  if(history.length === 0) {
+    html += `<p style="color:#999;">ยังไม่มีประวัติ</p>`;
+  } else {
+    history.forEach(item => {
+      const date = new Date(item.createdAt).toLocaleString('th-TH');
+      const icon = item.type === 'invoice' ? '📄' : '✅';
+      const label = item.type === 'invoice' ? `ใบวางบิล (฿${item.amount?.toLocaleString()})` : `ใบเสร็จรับเงิน (฿${item.amount?.toLocaleString()})`;
+      html += `<div style="padding:10px;background:#fff;margin:5px 0;border-radius:4px;border-left:3px solid ${item.type === 'invoice' ? '#ff9800' : '#4caf50'};">
+        ${icon} ${label}<br/>
+        <small style="color:#666;">${date}</small>
+      </div>`;
+    });
+  }
+
+  html += `</div>`;
+
+  const modal = document.createElement('div');
+  modal.innerHTML = html;
+  modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:10000;max-width:400px;';
+  document.body.appendChild(modal);
+
+  setTimeout(() => modal.remove(), 5000);
 }
 
 // ===== ADMIN UPLOAD SLIP =====
@@ -10405,6 +10501,459 @@ function initPhoneValidation() {
 document.addEventListener('DOMContentLoaded', function() {
   initPhoneValidation();
 });
+
+// ============== BILL GENERATION SYSTEM ==============
+
+/**
+ * Generate monthly invoices for all rooms
+ */
+function generateMonthlyBillsUI() {
+  const building = prompt('เลือกอาคาร:\n1. rooms (ห้องแถว)\n2. nest (Nest Building)', '1');
+  if (!building) return;
+
+  const buildingName = building === '2' ? 'nest' : 'rooms';
+  const month = prompt('เดือน (1-12):', new Date().getMonth() + 1);
+  const year = prompt('ปี (ค.ศ.)', new Date().getFullYear() + 543);
+
+  if (!month || !year) return;
+
+  try {
+    const buddhistYear = parseInt(year) - 543;
+    const monthNum = parseInt(month);
+
+    if (monthNum < 1 || monthNum > 12) {
+      alert('❌ เดือนไม่ถูกต้อง');
+      return;
+    }
+
+    // Generate bills
+    const result = BillGenerator.generateMonthlyBills(buildingName, buddhistYear, monthNum);
+
+    if (result.success) {
+      alert(`✅ สร้างใบวางบิลสำเร็จ!\n\nจำนวน: ${result.count} ใบ\nอาคาร: ${buildingName}\nเดือน: ${monthNum}/${buddhistYear}`);
+
+      // Show generated invoice list
+      showGeneratedInvoices(buildingName, result.invoiceIds);
+
+      // Update dashboard
+      updateOccupancyDashboard();
+    } else {
+      alert(`❌ เกิดข้อผิดพลาด: ไม่สามารถสร้างใบวางบิล`);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+  }
+}
+
+/**
+ * Display list of generated invoices
+ */
+function showGeneratedInvoices(building, invoiceIds) {
+  let invoiceList = `📋 สร้างใบวางบิล ${invoiceIds.length} ใบ\n\n`;
+
+  invoiceIds.slice(0, 10).forEach((id, idx) => {
+    invoiceList += `${idx + 1}. ${id}\n`;
+  });
+
+  if (invoiceIds.length > 10) {
+    invoiceList += `\n... และอีก ${invoiceIds.length - 10} ใบ`;
+  }
+
+  console.log(invoiceList);
+}
+
+/**
+ * Download all invoices as PDF
+ */
+function downloadInvoicesPDF() {
+  const building = prompt('เลือกอาคาร:\n1. rooms\n2. nest', '1');
+  if (!building) return;
+
+  const buildingName = building === '2' ? 'nest' : 'rooms';
+  const allInvoices = InvoiceReceiptManager.getAllInvoices(buildingName);
+
+  if (allInvoices.length === 0) {
+    alert('❌ ไม่มีใบวางบิล');
+    return;
+  }
+
+  alert(`📥 ดาวน์โหลด ${allInvoices.length} ใบวางบิล\n\n(ระบบจะดาวน์โหลดแต่ละไฟล์)`)
+
+ allInvoices.forEach((invoice, idx) => {
+    setTimeout(() => {
+      const pdf = InvoicePDFGenerator.generateInvoicePDF(invoice);
+      if (pdf) {
+        InvoicePDFGenerator.downloadPDF(pdf, `INV-${invoice.id}.pdf`);
+      }
+    }, idx * 500);  // Delay to avoid browser blocking
+  });
+}
+
+/**
+ * Listen for new invoice notifications
+ */
+function listenForInvoiceNotifications() {
+  window.addEventListener('new_invoices_generated', function() {
+    console.log('🔔 New invoices generated!');
+    showNotification('📄 สร้างใบวางบิลใหม่เข้ามา', 'success');
+  });
+
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'invoice_notifications') {
+      const notifications = JSON.parse(e.newValue || '[]');
+      if (notifications.length > 0) {
+        const latest = notifications[notifications.length - 1];
+        showNotification(`📄 มีใบวางบิลใหม่ ${latest.count} ใบ`, 'info');
+      }
+    }
+  });
+}
+
+/**
+ * Show notification on dashboard
+ */
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'success' ? '#4caf50' : '#2196f3'};
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 10000;
+    animation: slideIn 0.3s ease-out;
+  `;
+
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease-in';
+    setTimeout(() => notification.remove(), 300);
+  }, 4000);
+}
+
+// Add notification styles
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from { transform: translateX(400px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(400px); opacity: 0; }
+  }
+`;
+document.head.appendChild(style);
+
+// Initialize listeners on page load
+listenForInvoiceNotifications();
+listenForPaymentNotifications();
+
+/**
+ * Listen for payment notifications from tenant app
+ */
+function listenForPaymentNotifications() {
+  // Listen for payment verified event
+  window.addEventListener('payment_verified', function() {
+    console.log('🔔 Payment verified from tenant app!');
+    showNotification('✅ ได้รับเงินจากผู้เช่า', 'success');
+    loadPaymentNotifications();
+  });
+
+  // Listen for receipt generated event
+  window.addEventListener('receipt_generated', function() {
+    console.log('🔔 Receipt generated!');
+    showNotification('📄 ใบเสร็จรับเงินถูกสร้าง', 'success');
+    loadPaymentNotifications();
+  });
+
+  // Listen for storage changes (for cross-tab sync)
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'payment_notifications') {
+      const notifications = JSON.parse(e.newValue || '[]');
+      if (notifications.length > 0) {
+        const latest = notifications[notifications.length - 1];
+        if (latest.type === 'payment_verified') {
+          showNotification(`✅ ห้อง ${latest.room} - โอนเงิน ฿${latest.amount.toLocaleString('th-TH')}`, 'success');
+        } else if (latest.type === 'receipt_generated') {
+          showNotification(`📄 ห้อง ${latest.room} - ใบเสร็จ ${latest.receiptId}`, 'success');
+        }
+      }
+    }
+  });
+
+  // Load initial notifications
+  loadPaymentNotifications();
+}
+
+/**
+ * Load and display payment notifications
+ */
+function loadPaymentNotifications() {
+  try {
+    const notifications = JSON.parse(localStorage.getItem('payment_notifications') || '[]');
+
+    if (notifications.length === 0) {
+      console.log('📭 No payment notifications');
+      const notifPanel = document.getElementById('paymentNotificationsList');
+      if (notifPanel) {
+        notifPanel.innerHTML = '<div style="text-align: center; color: #999; padding: 2rem;">📭 ยังไม่มีการชำระเงิน</div>';
+      }
+      return;
+    }
+
+    // Update notifications panel on payment verification page
+    updatePaymentNotificationsPanel(notifications);
+
+    // Display latest 5 notifications in console
+    const recent = notifications.slice(-5).reverse();
+    console.log('💳 Recent Payment Notifications:');
+    recent.forEach((notif, idx) => {
+      console.log(`${idx + 1}. [${notif.type}] ห้อง ${notif.room} - ฿${notif.amount?.toLocaleString('th-TH')} (${new Date(notif.timestamp).toLocaleString('th-TH')})`);
+
+      // Update dashboard UI if payment verification section exists
+      if (notif.type === 'payment_verified') {
+        updatePaymentVerificationUI(notif);
+      } else if (notif.type === 'receipt_generated') {
+        updateReceiptGenerationUI(notif);
+      }
+    });
+
+    // Update payment notification badge if it exists
+    updatePaymentNotificationBadge(notifications.length);
+  } catch (error) {
+    console.warn('⚠️ Error loading payment notifications:', error);
+  }
+}
+
+/**
+ * Update payment notifications panel display
+ */
+function updatePaymentNotificationsPanel(notifications) {
+  try {
+    const notifPanel = document.getElementById('paymentNotificationsList');
+    if (!notifPanel) return;
+
+    // Show latest 10 notifications, newest first
+    const recent = notifications.slice(-10).reverse();
+
+    notifPanel.innerHTML = recent.map((notif, idx) => {
+      const timeStr = new Date(notif.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+      const dateStr = new Date(notif.timestamp).toLocaleDateString('th-TH');
+
+      if (notif.type === 'payment_verified') {
+        return `
+          <div style="background: white; border-left: 4px solid #4caf50; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.9rem;">
+            <div style="font-weight: 600; color: #2e7d32;">✅ ห้อง ${notif.room} - โอนเงิน ฿${notif.amount?.toLocaleString('th-TH')}</div>
+            <div style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+              ${dateStr} ${timeStr} | SlipID: ${notif.slipId?.substring(0, 10) || 'N/A'}...
+            </div>
+          </div>
+        `;
+      } else if (notif.type === 'receipt_generated') {
+        return `
+          <div style="background: white; border-left: 4px solid #1976d2; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.9rem;">
+            <div style="font-weight: 600; color: #1565c0;">📄 ห้อง ${notif.room} - ใบเสร็จ ฿${notif.amount?.toLocaleString('th-TH')}</div>
+            <div style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+              ${dateStr} ${timeStr} | ReceiptID: ${notif.receiptId?.substring(0, 10) || 'N/A'}... | Verified: ${notif.verified ? '✅' : '❌'}
+            </div>
+          </div>
+        `;
+      }
+      return '';
+    }).join('');
+  } catch (error) {
+    console.warn('⚠️ Error updating notifications panel:', error);
+  }
+}
+
+/**
+ * Update payment verification UI in admin dashboard
+ */
+function updatePaymentVerificationUI(notification) {
+  try {
+    // Find payment section in dashboard
+    const paymentSection = document.querySelector('[data-section="payment-verification"]');
+    if (!paymentSection) return;
+
+    // Add notification item to payment list
+    const notifItem = document.createElement('div');
+    notifItem.className = 'payment-notification-item';
+    notifItem.style.cssText = `
+      background: #e8f5e9;
+      border-left: 4px solid #4caf50;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    `;
+
+    const timeStr = new Date(notification.timestamp).toLocaleTimeString('th-TH');
+    notifItem.innerHTML = `
+      <div style="font-weight: 600; color: #2e7d32;">
+        ✅ ห้อง ${notification.room} - โอนเงิน ฿${notification.amount?.toLocaleString('th-TH')}
+      </div>
+      <div style="font-size: 12px; color: #666; margin-top: 4px;">
+        เวลา: ${timeStr} | SlipID: ${notification.slipId || 'N/A'}
+      </div>
+    `;
+
+    // Insert at top of payment list
+    const paymentList = paymentSection.querySelector('.payment-list') || paymentSection;
+    if (paymentList.firstChild) {
+      paymentList.insertBefore(notifItem, paymentList.firstChild);
+    } else {
+      paymentList.appendChild(notifItem);
+    }
+
+    // Keep only last 10 items
+    const items = paymentList.querySelectorAll('.payment-notification-item');
+    if (items.length > 10) {
+      items[items.length - 1].remove();
+    }
+  } catch (error) {
+    console.warn('⚠️ Error updating payment verification UI:', error);
+  }
+}
+
+/**
+ * Update receipt generation UI in admin dashboard
+ */
+function updateReceiptGenerationUI(notification) {
+  try {
+    // Find receipt section in dashboard
+    const receiptSection = document.querySelector('[data-section="receipt-list"]');
+    if (!receiptSection) return;
+
+    // Add receipt item
+    const receiptItem = document.createElement('div');
+    receiptItem.className = 'receipt-notification-item';
+    receiptItem.style.cssText = `
+      background: #e3f2fd;
+      border-left: 4px solid #1976d2;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    `;
+
+    const timeStr = new Date(notification.timestamp).toLocaleTimeString('th-TH');
+    receiptItem.innerHTML = `
+      <div style="font-weight: 600; color: #1565c0;">
+        📄 ใบเสร็จ ห้อง ${notification.room} - ฿${notification.amount?.toLocaleString('th-TH')}
+      </div>
+      <div style="font-size: 12px; color: #666; margin-top: 4px;">
+        เวลา: ${timeStr} | ReceiptID: ${notification.receiptId || 'N/A'} | Verified: ${notification.verified ? '✅' : '❌'}
+      </div>
+    `;
+
+    // Insert at top of receipt list
+    const receiptList = receiptSection.querySelector('.receipt-list') || receiptSection;
+    if (receiptList.firstChild) {
+      receiptList.insertBefore(receiptItem, receiptList.firstChild);
+    } else {
+      receiptList.appendChild(receiptItem);
+    }
+
+    // Keep only last 10 items
+    const items = receiptList.querySelectorAll('.receipt-notification-item');
+    if (items.length > 10) {
+      items[items.length - 1].remove();
+    }
+  } catch (error) {
+    console.warn('⚠️ Error updating receipt generation UI:', error);
+  }
+}
+
+/**
+ * Update payment notification badge
+ */
+function updatePaymentNotificationBadge(count) {
+  try {
+    let badge = document.querySelector('[data-badge="payment-count"]');
+    if (!badge) {
+      // Create badge if doesn't exist
+      badge = document.createElement('span');
+      badge.setAttribute('data-badge', 'payment-count');
+      badge.style.cssText = `
+        display: inline-block;
+        background: #f44336;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        text-align: center;
+        line-height: 24px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-left: 4px;
+      `;
+      const paymentTab = document.querySelector('[data-nav="💳"]') || document.querySelector('button:contains("💳")');
+      if (paymentTab) {
+        paymentTab.appendChild(badge);
+      }
+    }
+
+    if (badge && count > 0) {
+      badge.textContent = count > 99 ? '99+' : count;
+      badge.style.display = 'inline-block';
+    } else if (badge) {
+      badge.style.display = 'none';
+    }
+  } catch (error) {
+    console.warn('⚠️ Error updating payment notification badge:', error);
+  }
+}
+
+/**
+ * Get payment notification summary
+ */
+function getPaymentNotificationSummary() {
+  try {
+    const notifications = JSON.parse(localStorage.getItem('payment_notifications') || '[]');
+    const verified = notifications.filter(n => n.type === 'payment_verified');
+    const receipts = notifications.filter(n => n.type === 'receipt_generated');
+
+    const totalVerified = verified.reduce((sum, n) => sum + (n.amount || 0), 0);
+    const totalReceipts = receipts.length;
+
+    return {
+      totalPaymentsVerified: verified.length,
+      totalReceiptsGenerated: receipts.length,
+      totalAmountVerified: totalVerified,
+      lastPaymentTime: verified.length > 0 ? verified[verified.length - 1].timestamp : null,
+      lastReceiptTime: receipts.length > 0 ? receipts[receipts.length - 1].timestamp : null
+    };
+  } catch (error) {
+    console.warn('⚠️ Error getting payment summary:', error);
+    return {
+      totalPaymentsVerified: 0,
+      totalReceiptsGenerated: 0,
+      totalAmountVerified: 0,
+      lastPaymentTime: null,
+      lastReceiptTime: null
+    };
+  }
+}
+
+/**
+ * Clear payment notifications (admin function)
+ */
+function clearPaymentNotifications() {
+  if (confirm('คุณแน่ใจที่จะล้างประวัติการชำระเงินทั้งหมด?')) {
+    localStorage.setItem('payment_notifications', '[]');
+    showNotification('✅ ล้างประวัติเรียบร้อย', 'success');
+    loadPaymentNotifications();
+  }
+}
 </script>
 </body>
 </html>
