@@ -11,6 +11,17 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="./shared/security.js"></script>
   <script src="./shared/access-control.js"></script>
+  <script src="./mock-tenant-data.js"></script>
+  <script src="./mock-meter-history.js"></script>
+  <script src="./init-test-data.js"></script>
+  <script>
+    // Initialize test data when tenant app loads
+    if (typeof mockTenantData !== 'undefined' && typeof initializeTestData === 'function') {
+      if (!localStorage.getItem('meter_data')) {
+        initializeTestData();
+      }
+    }
+  </script>
   <script src="./shared/invoice-receipt-manager.js"></script>
   <script src="./shared/room-config.js"></script>
   <script src="./shared/tenant-config.js"></script>
