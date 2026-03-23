@@ -70,8 +70,22 @@ const DEFAULT_ROOMS_CONFIG = {
 
 class RoomConfigManager {
   static getRoomsConfig(building) {
+    // Validate building parameter
+    if (!building) {
+      console.warn('⚠️ RoomConfigManager: Invalid building parameter');
+      return DEFAULT_ROOMS_CONFIG['rooms']; // Default fallback
+    }
+
     const stored = localStorage.getItem(`rooms_config_${building}`);
-    return stored ? JSON.parse(stored) : DEFAULT_ROOMS_CONFIG[building];
+    const config = stored ? JSON.parse(stored) : DEFAULT_ROOMS_CONFIG[building];
+
+    // Ensure config has rooms array
+    if (!config || !config.rooms) {
+      console.warn(`⚠️ RoomConfigManager: No config found for building "${building}"`);
+      return DEFAULT_ROOMS_CONFIG[building] || DEFAULT_ROOMS_CONFIG['rooms'];
+    }
+
+    return config;
   }
 
   static saveRoomsConfig(building, config) {
