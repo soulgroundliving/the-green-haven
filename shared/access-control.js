@@ -59,14 +59,24 @@ class AccessControl {
    */
   static getCurrentUser() {
     try {
-      // Try SecurityUtils first
-      if (window.SecurityUtils && typeof window.SecurityUtils.getSecureSession === 'function') {
-        return window.SecurityUtils.getSecureSession();
+      // Try sessionStorage first (most reliable)
+      const sessionUser = sessionStorage.getItem('user');
+      if (sessionUser) {
+        const user = JSON.parse(sessionUser);
+        if (user && user.uid) {
+          return user;
+        }
       }
 
-      // Fallback to sessionStorage
-      const user = sessionStorage.getItem('user');
-      return user ? JSON.parse(user) : null;
+      // Try SecurityUtils as fallback
+      if (window.SecurityUtils && typeof window.SecurityUtils.getSecureSession === 'function') {
+        const secureUser = window.SecurityUtils.getSecureSession();
+        if (secureUser && secureUser.uid) {
+          return secureUser;
+        }
+      }
+
+      return null;
     } catch (error) {
       console.error('Error getting current user:', error);
       return null;
