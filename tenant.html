@@ -956,10 +956,27 @@
       }
       AccessControl.logAccessAttempt('/tenant.html', true);
 
-      // Check authentication
-      currentUser = window.SecurityUtils?.getSecureSession ? window.SecurityUtils.getSecureSession() : JSON.parse(sessionStorage.getItem('user') || '{}');
-
-      if (!currentUser?.uid || currentUser?.userType !== 'tenant') {
+      // Check authentication - prioritize sessionStorage (more reliable)
+      try {
+        const sessionUser = sessionStorage.getItem('user');
+        if (sessionUser) {
+          currentUser = JSON.parse(sessionUser);
+          if (currentUser && currentUser.uid && currentUser.userType === 'tenant') {
+            // ✓ Valid session found
+          } else {
+            throw new Error('Invalid session data');
+          }
+        } else {
+          // Fallback to SecurityUtils
+          if (window.SecurityUtils?.getSecureSession) {
+            currentUser = window.SecurityUtils.getSecureSession();
+          }
+          if (!currentUser?.uid || currentUser?.userType !== 'tenant') {
+            throw new Error('No valid session');
+          }
+        }
+      } catch (e) {
+        console.error('❌ Authentication check failed:', e.message);
         window.location.href = '/login.html';
         return;
       }
