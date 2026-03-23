@@ -706,6 +706,26 @@
       document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
 
+      // ✅ Clear form fields and errors when switching role
+      if (isLoginMode) {
+        document.getElementById('loginEmail').value = '';
+        document.getElementById('loginPassword').value = '';
+      } else {
+        document.getElementById('registerFirstName').value = '';
+        document.getElementById('registerLastName').value = '';
+        document.getElementById('registerEmail').value = '';
+        document.getElementById('registerPassword').value = '';
+        document.getElementById('registerPasswordConfirm').value = '';
+        document.getElementById('roomNumber').value = '';
+      }
+
+      // ✅ Clear error messages
+      const messageDiv = document.getElementById('message');
+      if (messageDiv) {
+        messageDiv.textContent = '';
+        messageDiv.style.display = 'none';
+      }
+
       const tenantFields = document.getElementById('tenantFields');
       if (type === 'tenant') {
         tenantFields.style.display = 'block';
@@ -882,19 +902,19 @@
         } catch (dbError) {
           // If database fails, reject login - don't allow fallback
           console.warn('Database error, user data not found:', dbError.message);
-          await window.firebaseAuthFunctions.signOut();
+          await window.firebaseAuth.signOut();
           throw new Error('ไม่สามารถตรวจสอบข้อมูลผู้ใช้ได้ กรุณาลองใหม่');
         }
 
         // ✅ SECURITY: userData must exist from database
         if (!userData) {
-          await window.firebaseAuthFunctions.signOut();
+          await window.firebaseAuth.signOut();
           throw new Error('ไม่พบข้อมูลผู้ใช้ในระบบ โปรดติดต่อผู้ดูแลระบบ');
         }
 
         // ✅ SECURITY: Verify user type matches what they registered as
         if (userData.userType !== currentUserType) {
-          await window.firebaseAuthFunctions.signOut();
+          await window.firebaseAuth.signOut();
           const typeLabel = currentUserType === 'admin' ? 'Admin' : currentUserType === 'accountant' ? 'Accountant (บัญชี)' : 'Tenant';
           throw new Error(`❌ บัญชีนี้ไม่ใช่ ${typeLabel} (สมัครไว้เป็น ${userData.userType})`);
         }
