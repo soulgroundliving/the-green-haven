@@ -939,15 +939,25 @@
           const params = new URLSearchParams(window.location.search);
           const urlRoomNumber = params.get('room');
 
+          // For tenant accounts, try to extract room number from email (e.g., "tenant15@test.com" → 15)
+          let extractedRoom = null;
+          if (currentUserType === 'tenant') {
+            const emailMatch = email.match(/tenant(\d+)@/);
+            if (emailMatch) {
+              extractedRoom = emailMatch[1];
+              console.log(`✅ Extracted room number ${extractedRoom} from email: ${email}`);
+            }
+          }
+
           userData = {
             uid: user.uid,
             email: user.email,
             name: user.email.split('@')[0],
             userType: currentUserType,  // Use what user selected on login
-            roomNumber: urlRoomNumber || null,  // Try to get from URL parameter
+            roomNumber: urlRoomNumber || extractedRoom || null,  // Try URL param first, then extract from email, then fallback to null
             isFromFallback: true  // Mark as fallback for tracking
           };
-          console.warn('⚠️ Using fallback userData due to database unavailability', { roomNumber: userData.roomNumber });
+          console.warn('⚠️ Using fallback userData due to database unavailability', { roomNumber: userData.roomNumber, userType: currentUserType });
         }
 
         // ✅ SECURITY: Verify user type matches what they selected
