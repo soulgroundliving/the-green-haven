@@ -28,6 +28,16 @@
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="./mock-tenant-data.js"></script>
 <script src="./mock-meter-history.js"></script>
+<script src="./init-test-data.js"></script>
+<script>
+  // Initialize test data in localStorage if mock data exists
+  if (typeof mockTenantData !== 'undefined' && typeof initializeTestData === 'function') {
+    // Check if already initialized
+    if (!localStorage.getItem('meter_data')) {
+      initializeTestData();
+    }
+  }
+</script>
 <!-- Firebase Configuration & Integration -->
 <script type="module">
   // Import Firebase SDKs
