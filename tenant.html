@@ -1178,9 +1178,16 @@
       const floor = Math.floor(parseInt(currentRoom.replace(/[^0-9]/g, '')) / 100) || 1;
 
       document.getElementById('homeRoomId').textContent = currentRoom;
+      // Get tenant name
+      const tenantNameDisplay = currentTenant?.name || currentLease?.tenantName || 'ไม่ระบุ';
+
       document.getElementById('homeRoomDetails').innerHTML = `
         <div class="room-details-item">
-          <span>ชื่อ</span>
+          <span>ผู้เช่า</span>
+          <span>${tenantNameDisplay}</span>
+        </div>
+        <div class="room-details-item">
+          <span>ห้อง</span>
           <span>${roomName}</span>
         </div>
         <div class="room-details-item">
@@ -1204,8 +1211,9 @@
         document.getElementById('nextPaymentDate').textContent = `ครบกำหนด: ${new Date(nextBill.dueDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}`;
       }
 
-      // Update header
-      document.querySelector('.app-header-title p').textContent = currentTenant?.name || 'ผู้เช่า';
+      // Update header with tenant name
+      const tenantName = currentTenant?.name || (currentLease?.tenantName) || 'ผู้เช่า';
+      document.querySelector('.app-header-title p').textContent = tenantName;
     }
 
     // BILLS PAGE
