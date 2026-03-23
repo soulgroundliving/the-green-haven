@@ -880,27 +880,23 @@
           userData = snapshot.val();
 
         } catch (dbError) {
-          // If database fails, use minimal user data from Firebase Auth
-          console.warn('Database error, using fallback:', dbError.message);
-          userData = null;
+          // If database fails, reject login - don't allow fallback
+          console.warn('Database error, user data not found:', dbError.message);
+          await window.firebaseAuthFunctions.signOut();
+          throw new Error('ไม่สามารถตรวจสอบข้อมูลผู้ใช้ได้ กรุณาลองใหม่');
         }
 
-        // If no database data, create minimal user object from Firebase Auth
+        // ✅ SECURITY: userData must exist from database
         if (!userData) {
-          userData = {
-            uid: user.uid,
-            email: user.email,
-            name: user.email.split('@')[0],
-            userType: currentUserType,
-            roomNumber: null
-          };
+          await window.firebaseAuthFunctions.signOut();
+          throw new Error('ไม่พบข้อมูลผู้ใช้ในระบบ โปรดติดต่อผู้ดูแลระบบ');
         }
 
-        // Verify user type
+        // ✅ SECURITY: Verify user type matches what they registered as
         if (userData.userType !== currentUserType) {
-          await window.auth.signOut();
+          await window.firebaseAuthFunctions.signOut();
           const typeLabel = currentUserType === 'admin' ? 'Admin' : currentUserType === 'accountant' ? 'Accountant (บัญชี)' : 'Tenant';
-          throw new Error(`บัญชีนี้ไม่ใช่ ${typeLabel}`);
+          throw new Error(`❌ บัญชีนี้ไม่ใช่ ${typeLabel} (สมัครไว้เป็น ${userData.userType})`);
         }
 
         // ===== SUCCESS: RESET RATE LIMITER =====
@@ -1049,12 +1045,18 @@
         }
 
         const userRef = window.firebaseDB.ref(window.database, `users/${user.uid}`);
-        await window.firebaseDB.set(userRef, userData);
+        try {
+          await window.firebaseDB.set(userRef, userData);
+        } catch (dbError) {
+          // If save fails, delete the auth account to maintain consistency
+          await user.delete();
+          throw new Error('ไม่สามารถบันทึกข้อมูลผู้ใช้ได้ กรุณาลองใหม่');
+        }
 
         // ===== SUCCESS: RESET RATE LIMITER FOR REGISTRATION =====
         RateLimiter.resetAttempts(email);
 
-        showMessage('สมัครสมาชิกสำเร็จ! กำลังเข้าสู่ระบบ...', false);
+        showMessage('✅ สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ ' + sanitizedName, false);
 
         // Save secure session with timeout
         window.SecurityUtils.saveSecureSession(userData);
