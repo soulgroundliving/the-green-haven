@@ -997,10 +997,26 @@
       }
     }
 
-    // Initialize app on load
+    // Initialize app on load (with Firebase ready check)
     window.addEventListener('DOMContentLoaded', function() {
-      initializeMockData();
-      initTenantApp();
+      // Wait for Firebase to initialize (max 5 seconds)
+      let firebaseReady = !!window.firebaseDatabase;
+      let waitCount = 0;
+      const firebaseCheck = setInterval(() => {
+        firebaseReady = !!window.firebaseDatabase;
+        waitCount++;
+        if (firebaseReady) {
+          clearInterval(firebaseCheck);
+          console.log('✅ Firebase ready, initializing tenant app');
+          initializeMockData();
+          initTenantApp();
+        } else if (waitCount >= 50) { // 5 seconds (50 * 100ms)
+          clearInterval(firebaseCheck);
+          console.warn('⚠️ Firebase not ready after 5 seconds, proceeding anyway (fallback to localStorage)');
+          initializeMockData();
+          initTenantApp();
+        }
+      }, 100);
     });
 
     function initTenantApp() {
