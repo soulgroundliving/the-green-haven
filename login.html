@@ -877,7 +877,7 @@
       try {
         await ensureFirebaseReady();
         if (window.firebaseAuthFunctions && window.firebaseAuthFunctions.signOut) {
-          await safeSignOut();
+          await window.firebaseAuthFunctions.signOut();
         }
       } catch (error) {
         console.error('Sign out error:', error);
