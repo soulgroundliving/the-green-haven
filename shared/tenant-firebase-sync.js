@@ -1,10 +1,11 @@
 /**
  * Tenant App Firebase Sync System
  * Fetches all tenant data from Firebase Realtime Database
+ * Structure: data/{building}/{room} contains tenant lease info
  */
 
 class TenantFirebaseSync {
-  static db = null;
+  static database = null;
   static currentUser = null;
   static currentBuilding = null;
   static currentRoom = null;
@@ -14,12 +15,12 @@ class TenantFirebaseSync {
    */
   static initialize(user, building, room) {
     try {
-      if (!window.firebaseDB || !window.firebaseDB.ref) {
-        console.warn('⚠️ Firebase Database not initialized');
+      if (!window.firebaseDatabase) {
+        console.warn('⚠️ Firebase Database not initialized. Waiting for Firebase module...');
         return false;
       }
 
-      this.db = window.firebaseDB;
+      this.database = window.firebaseDatabase;
       this.currentUser = user;
       this.currentBuilding = building;
       this.currentRoom = room;
@@ -33,11 +34,12 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Load tenant lease information
+   * Load tenant lease information from Firebase
+   * Path: data/{building}/{room}
    */
   static async loadLease() {
     try {
-      // Try to get from LeaseAgreementManager first (localStorage)
+      // Try to get from LeaseAgreementManager first (localStorage - faster)
       if (typeof LeaseAgreementManager !== 'undefined') {
         const lease = LeaseAgreementManager.getActiveLease(this.currentBuilding, this.currentRoom);
         if (lease) {
@@ -46,12 +48,15 @@ class TenantFirebaseSync {
         }
       }
 
-      // Fallback: load from Firebase
-      if (!this.db) return null;
+      // Load from Firebase Realtime Database
+      if (!this.database || !window.firebaseRef || !window.firebaseGet) {
+        console.warn('⚠️ Firebase functions not available');
+        return null;
+      }
 
-      const leaseRef = this.db.ref(window.firebaseDB,
-        `leases/${this.currentBuilding}/${this.currentRoom}`);
-      const snapshot = await this.db.get(leaseRef);
+      const leaseRef = window.firebaseRef(this.database,
+        `data/${this.currentBuilding}/${this.currentRoom}`);
+      const snapshot = await window.firebaseGet(leaseRef);
 
       if (snapshot.exists()) {
         const leaseData = snapshot.val();
@@ -59,6 +64,7 @@ class TenantFirebaseSync {
         return leaseData;
       }
 
+      console.log(`ℹ️ No lease found at data/${this.currentBuilding}/${this.currentRoom}`);
       return null;
     } catch (error) {
       console.error('❌ Error loading lease:', error);
@@ -67,7 +73,8 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Load tenant personal information
+   * Load tenant personal information from Firebase
+   * Path: data/{building}/{room}
    */
   static async loadTenant(tenantId) {
     try {
@@ -80,17 +87,13 @@ class TenantFirebaseSync {
         }
       }
 
-      // Fallback: load from Firebase
-      if (!this.db) return null;
-
-      const tenantRef = this.db.ref(window.firebaseDB,
-        `tenants/${this.currentBuilding}/${tenantId}`);
-      const snapshot = await this.db.get(tenantRef);
-
-      if (snapshot.exists()) {
-        const tenantData = snapshot.val();
-        console.log('✅ Loaded tenant from Firebase:', tenantData);
-        return tenantData;
+      // For tenant app, tenant data is in the room object at data/{building}/{room}
+      // So we load it when we load the lease
+      const lease = await this.loadLease();
+      if (lease) {
+        // The lease object contains tenant info (name, phone, email, etc.)
+        console.log('✅ Loaded tenant from lease data:', lease);
+        return lease;
       }
 
       return null;
@@ -101,7 +104,8 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Load room configuration (rates, rent)
+   * Load room configuration (rates, rent) from Firebase
+   * Path: rooms_config/{building}/{room}
    */
   static async loadRoom() {
     try {
@@ -114,12 +118,14 @@ class TenantFirebaseSync {
         }
       }
 
-      // Fallback: load from Firebase
-      if (!this.db) return null;
+      // Load from Firebase
+      if (!this.database || !window.firebaseRef || !window.firebaseGet) {
+        return null;
+      }
 
-      const roomRef = this.db.ref(window.firebaseDB,
-        `rooms/${this.currentBuilding}/${this.currentRoom}`);
-      const snapshot = await this.db.get(roomRef);
+      const roomRef = window.firebaseRef(this.database,
+        `rooms_config/${this.currentBuilding}/${this.currentRoom}`);
+      const snapshot = await window.firebaseGet(roomRef);
 
       if (snapshot.exists()) {
         const roomData = snapshot.val();
@@ -135,25 +141,27 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Load bills and invoices
+   * Load bills from localStorage or calculated from meter data
    */
   static async loadBills() {
     try {
-      // Try InvoiceReceiptManager first (localStorage)
-      if (typeof InvoiceReceiptManager !== 'undefined') {
-        const bills = InvoiceReceiptManager.getInvoiceReceiptHistory(this.currentBuilding, this.currentRoom);
+      // Try TenantManager first (calculates from meter data)
+      if (typeof TenantManager !== 'undefined') {
+        const bills = TenantManager.getBillsForRoom(this.currentBuilding, this.currentRoom);
         if (bills && bills.length > 0) {
-          console.log(`✅ Loaded ${bills.length} bills from localStorage`);
+          console.log(`✅ Loaded ${bills.length} bills from TenantManager`);
           return bills;
         }
       }
 
-      // Fallback: load from Firebase
-      if (!this.db) return [];
+      // Fallback: load from Firebase bills collection
+      if (!this.database || !window.firebaseRef || !window.firebaseGet) {
+        return [];
+      }
 
-      const billsRef = this.db.ref(window.firebaseDB,
-        `bills/${this.currentBuilding}/${this.currentRoom}/list`);
-      const snapshot = await this.db.get(billsRef);
+      const billsRef = window.firebaseRef(this.database,
+        `bills/${this.currentBuilding}/${this.currentRoom}`);
+      const snapshot = await window.firebaseGet(billsRef);
 
       if (snapshot.exists()) {
         const billsData = Object.values(snapshot.val() || {});
@@ -169,15 +177,17 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Load payment history
+   * Load payment history from Firebase
    */
   static async loadPaymentHistory() {
     try {
-      if (!this.db) return [];
+      if (!this.database || !window.firebaseRef || !window.firebaseGet) {
+        return [];
+      }
 
-      const paymentsRef = this.db.ref(window.firebaseDB,
-        `payments/${this.currentBuilding}/${this.currentRoom}/list`);
-      const snapshot = await this.db.get(paymentsRef);
+      const paymentsRef = window.firebaseRef(this.database,
+        `payments/${this.currentBuilding}/${this.currentRoom}`);
+      const snapshot = await window.firebaseGet(paymentsRef);
 
       if (snapshot.exists()) {
         const paymentsData = Object.values(snapshot.val() || {});
@@ -195,15 +205,17 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Load maintenance tickets
+   * Load maintenance tickets from Firebase
    */
   static async loadMaintenanceTickets() {
     try {
-      if (!this.db) return [];
+      if (!this.database || !window.firebaseRef || !window.firebaseGet) {
+        return [];
+      }
 
-      const ticketsRef = this.db.ref(window.firebaseDB,
-        `maintenance/${this.currentBuilding}/${this.currentRoom}/list`);
-      const snapshot = await this.db.get(ticketsRef);
+      const ticketsRef = window.firebaseRef(this.database,
+        `maintenance/${this.currentBuilding}/${this.currentRoom}`);
+      const snapshot = await window.firebaseGet(ticketsRef);
 
       if (snapshot.exists()) {
         const ticketsData = Object.values(snapshot.val() || {});
@@ -221,15 +233,17 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Load building announcements
+   * Load building announcements from Firebase
    */
   static async loadAnnouncements() {
     try {
-      if (!this.db) return [];
+      if (!this.database || !window.firebaseRef || !window.firebaseGet) {
+        return [];
+      }
 
-      const announcementsRef = this.db.ref(window.firebaseDB,
+      const announcementsRef = window.firebaseRef(this.database,
         `announcements/${this.currentBuilding}`);
-      const snapshot = await this.db.get(announcementsRef);
+      const snapshot = await window.firebaseGet(announcementsRef);
 
       if (snapshot.exists()) {
         const announcementsData = Object.values(snapshot.val() || {});
@@ -268,7 +282,7 @@ class TenantFirebaseSync {
    */
   static async loadAllData() {
     try {
-      console.log('🔄 Loading all tenant data...');
+      console.log('🔄 Loading all tenant data from Firebase...');
 
       const [lease, room, bills, payments, tickets, announcements] =
         await Promise.all([
@@ -280,9 +294,13 @@ class TenantFirebaseSync {
           this.loadAnnouncements()
         ]);
 
-      let tenant = null;
-      if (lease?.tenantId) {
-        tenant = await this.loadTenant(lease.tenantId);
+      // Tenant info comes from the lease object
+      let tenant = lease; // Use lease data as tenant data since they're in same Firebase object
+      if (lease?.tenantId && typeof this.loadTenant === 'function') {
+        const explicitTenant = await this.loadTenant(lease.tenantId);
+        if (explicitTenant) {
+          tenant = explicitTenant;
+        }
       }
 
       const allData = {
@@ -295,7 +313,15 @@ class TenantFirebaseSync {
         announcements: announcements || []
       };
 
-      console.log('✅ All tenant data loaded:', allData);
+      console.log('✅ All tenant data loaded:', {
+        hasLease: !!lease,
+        hasTenant: !!tenant,
+        hasRoom: !!room,
+        billCount: (bills || []).length,
+        paymentCount: (payments || []).length,
+        ticketCount: (tickets || []).length,
+        announcementCount: (announcements || []).length
+      });
       return allData;
     } catch (error) {
       console.error('❌ Error loading all data:', error);
@@ -316,24 +342,16 @@ class TenantFirebaseSync {
    */
   static async saveMaintenanceTicket(ticketData) {
     try {
-      if (!this.db) {
+      if (!this.database || !window.firebaseRef || !window.firebaseSet) {
         console.warn('⚠️ Firebase not available, saving to localStorage only');
-        // Save to localStorage as fallback
-        const tickets = JSON.parse(localStorage.getItem('tenant_maintenance_tickets') || '[]');
-        tickets.push({
-          ...ticketData,
-          id: `T${Date.now()}`,
-          createdAt: new Date().toISOString()
-        });
-        localStorage.setItem('tenant_maintenance_tickets', JSON.stringify(tickets));
-        return ticketData.id;
+        return null;
       }
 
       const ticketId = `T${Date.now()}`;
-      const ticketRef = this.db.ref(window.firebaseDB,
-        `maintenance/${this.currentBuilding}/${this.currentRoom}/list/${ticketId}`);
+      const ticketRef = window.firebaseRef(this.database,
+        `maintenance/${this.currentBuilding}/${this.currentRoom}/${ticketId}`);
 
-      await this.db.set(ticketRef, {
+      await window.firebaseSet(ticketRef, {
         ...ticketData,
         id: ticketId,
         createdAt: new Date().toISOString()
@@ -352,15 +370,15 @@ class TenantFirebaseSync {
    */
   static async updatePayment(billId, paymentData) {
     try {
-      if (!this.db) {
-        console.warn('⚠️ Firebase not available, updating localStorage only');
+      if (!this.database || !window.firebaseRef || !window.firebaseSet) {
+        console.warn('⚠️ Firebase not available');
         return false;
       }
 
-      const paymentRef = this.db.ref(window.firebaseDB,
-        `payments/${this.currentBuilding}/${this.currentRoom}/list/${billId}`);
+      const paymentRef = window.firebaseRef(this.database,
+        `payments/${this.currentBuilding}/${this.currentRoom}/${billId}`);
 
-      await this.db.set(paymentRef, {
+      await window.firebaseSet(paymentRef, {
         ...paymentData,
         billId,
         updatedAt: new Date().toISOString()
@@ -379,21 +397,23 @@ class TenantFirebaseSync {
    */
   static listenToRealTimeUpdates(callback) {
     try {
-      if (!this.db) return null;
+      if (!this.database || !window.firebaseRef || !window.firebaseOnValue) {
+        return null;
+      }
 
-      // Listen to bills changes
-      const billsRef = this.db.ref(window.firebaseDB,
-        `bills/${this.currentBuilding}/${this.currentRoom}/list`);
+      // Listen to lease changes
+      const leaseRef = window.firebaseRef(this.database,
+        `data/${this.currentBuilding}/${this.currentRoom}`);
 
-      const unsubscribe = this.db.onValue(billsRef, (snapshot) => {
+      const unsubscribe = window.firebaseOnValue(leaseRef, (snapshot) => {
         if (snapshot.exists()) {
-          const bills = Object.values(snapshot.val());
-          console.log('📡 Real-time bill update:', bills.length, 'bills');
-          callback({ type: 'bills', data: bills });
+          const data = snapshot.val();
+          console.log('📡 Real-time lease update:', data);
+          callback({ type: 'lease', data: data });
         }
       });
 
-      console.log('📡 Real-time listener active for bills');
+      console.log('📡 Real-time listener active for lease data');
       return unsubscribe;
     } catch (error) {
       console.error('❌ Error setting up real-time listener:', error);
@@ -401,12 +421,3 @@ class TenantFirebaseSync {
     }
   }
 }
-
-// Initialize when Firebase is ready
-if (window.firebaseDB) {
-  console.log('✅ TenantFirebaseSync loaded');
-} else {
-  console.warn('⚠️ Firebase Database not ready, TenantFirebaseSync will use localStorage fallback');
-}
-
-window.TenantFirebaseSync = TenantFirebaseSync;

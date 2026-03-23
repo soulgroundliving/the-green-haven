@@ -34,6 +34,45 @@
   <script src="./shared/lease-config.js"></script>
   <script src="./shared/tenant-manager.js"></script>
   <script src="./shared/tenant-firebase-sync.js"></script>
+  <!-- Firebase Configuration -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+    import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM",
+      authDomain: "the-green-haven.firebaseapp.com",
+      databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "the-green-haven",
+      storageBucket: "the-green-haven.firebasestorage.app",
+      messagingSenderId: "523697750767",
+      appId: "1:523697750767:web:89b253f92d8d5cfe8a111a",
+      measurementId: "G-93J1CBN1BZ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    const auth = getAuth(app);
+    const firestore = getFirestore(app);
+
+    // Expose globals for TenantFirebaseSync
+    window.firebaseApp = app;
+    window.firebaseDatabase = database;
+    window.firebaseAuth = auth;
+    window.firebaseRef = ref;
+    window.firebaseGet = get;
+    window.firebaseSet = set;
+    window.firebaseOnValue = onValue;
+    window.firebaseDB = database; // Alias for TenantFirebaseSync compatibility
+
+    window.firebase = {
+      firestore: () => firestore
+    };
+
+    console.log('✅ Firebase initialized for tenant app');
+  </script>
   <style>
     :root {
       --green-dark: #1a5c38;
