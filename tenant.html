@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="./shared/security.js"></script>
+  <script src="./shared/invoice-receipt-manager.js"></script>
   <style>
     :root {
       --green-dark: #1a5c38;
@@ -1123,6 +1124,78 @@
 
     function renderBillsList() {
       const container = document.getElementById('billsList');
+
+      // Try to load from InvoiceReceiptManager if available
+      if (typeof InvoiceReceiptManager !== 'undefined' && currentBuilding && currentRoom) {
+        try {
+          const history = InvoiceReceiptManager.getInvoiceReceiptHistory(currentBuilding, currentRoom);
+
+          if (history && history.length > 0) {
+            // Render timeline from InvoiceReceiptManager
+            container.innerHTML = history.map(item => {
+              if (item.type === 'invoice') {
+                return `
+                  <div class="bill-card" style="border-left: 4px solid var(--blue);">
+                    <div class="bill-card-left">
+                      <h3>${item.icon} ${item.displayStatus}</h3>
+                      <div class="bill-card-details">
+                        <div>เลขที่: ${item.id}</div>
+                        <div>เดือน: ${item.month}</div>
+                        <div>จำนวน: ${item.amount.toLocaleString('th-TH')} บาท</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">
+                          ${new Date(item.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </div>
+                      </div>
+                      <div class="bill-card-amount">รวม: ${item.amount.toLocaleString('th-TH')} บาท</div>
+                      ${item.breakdown ? `
+                        <div class="bill-card-details" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                          <div>• ค่าเช่า: ${(item.breakdown.rent || 0).toLocaleString('th-TH')} บาท</div>
+                          <div>• ค่าไฟ: ${(item.breakdown.electric || 0).toLocaleString('th-TH')} บาท</div>
+                          <div>• ค่าน้ำ: ${(item.breakdown.water || 0).toLocaleString('th-TH')} บาท</div>
+                          <div>• ค่ากลาง: ${(item.breakdown.trash || 0).toLocaleString('th-TH')} บาท</div>
+                        </div>
+                      ` : ''}
+                      <span class="bill-status-badge ${item.status}">
+                        ${item.status === 'paid' ? '✅ จ่ายแล้ว' : item.status === 'overdue' ? '⚠️逾期' : '⏳ รอชำระ'}
+                      </span>
+                    </div>
+                    <div class="bill-card-action">
+                      ${item.status === 'pending' ? `<button onclick="goToPayment('${item.month}', ${item.amount})">จ่ายเงิน</button>` : ''}
+                    </div>
+                  </div>
+                `;
+              } else if (item.type === 'receipt') {
+                return `
+                  <div class="bill-card" style="border-left: 4px solid var(--green);">
+                    <div class="bill-card-left">
+                      <h3>${item.icon} ${item.displayStatus}</h3>
+                      <div class="bill-card-details">
+                        <div>เลขที่: ${item.id}</div>
+                        <div>อ้างอิง Invoice: ${item.invoiceId}</div>
+                        <div>วิธีชำระ: ${item.paymentMethod === 'slip' ? '📸 สลิป' : item.paymentMethod === 'cash' ? '💵 เงินสด' : item.paymentMethod}</div>
+                        <div>จำนวน: ${item.amount.toLocaleString('th-TH')} บาท</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">
+                          ${new Date(item.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </div>
+                        ${item.slipOkVerified ? `<div style="color: var(--green); font-weight: 700; margin-top: 0.3rem;">✅ ตรวจสอบโดย SlipOK</div>` : ''}
+                      </div>
+                      <div class="bill-card-amount">รวม: ${item.amount.toLocaleString('th-TH')} บาท</div>
+                      <span class="bill-status-badge paid">✅ จ่ายแล้ว</span>
+                    </div>
+                  </div>
+                `;
+              }
+              return '';
+            }).join('');
+
+            return;
+          }
+        } catch (error) {
+          console.warn('⚠️ Error loading from InvoiceReceiptManager:', error);
+        }
+      }
+
+      // Fallback: render mock bills from currentBills
       container.innerHTML = currentBills.map((bill, index) => `
         <div class="bill-card">
           <div class="bill-card-left">
