@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https: wss:;">
+  <title>📋 Audit Log Viewer - The Green Haven</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="./shared/security.js"></script>
+  <script src="./shared/access-control.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --green-dark: #1a5c38;
+      --green: #2d8653;
+      --green-light: #4caf50;
+      --blue: #1976d2;
+      --red: #c62828;
+      --yellow: #f57f17;
+      --bg: #f4f6f8;
+      --card: #fff;
+      --text: #1a2332;
+      --text-muted: #6b7a8d;
+      --border: #e0e6ed;
+      --shadow: 0 2px 12px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);
+      color: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      box-shadow: var(--shadow);
+    }
+
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .controls {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-group label {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .control-group input,
+    .control-group select {
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 13px;
+    }
+
+    .control-group input:focus,
+    .control-group select:focus {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 8px rgba(45, 134, 83, 0.1);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      grid-column: 1 / -1;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Sarabun', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--green-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(45, 134, 83, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .btn-secondary:hover {
+      background: #1565c0;
+    }
+
+    .btn-warning {
+      background: var(--yellow);
+      color: #fff;
+    }
+
+    .btn-warning:hover {
+      background: #f57c00;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .logs-container {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .logs-header {
+      background: var(--bg);
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logs-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .logs-table {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      background: var(--bg);
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 700;
+      color: var(--text);
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:hover {
+      background: rgba(45, 134, 83, 0.05);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    .status-success {
+      background: rgba(76, 175, 80, 0.2);
+      color: #2e7d32;
+    }
+
+    .status-denied {
+      background: rgba(244, 67, 54, 0.2);
+      color: #c62828;
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 11px;
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .timestamp {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .no-logs {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 20px;
+      background: var(--bg);
+    }
+
+    .pagination button {
+      padding: 8px 12px;
+      background: var(--border);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .pagination button.active {
+      background: var(--green);
+      color: #fff;
+      border-color: var(--green);
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .export-menu {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      background-color: var(--card);
+      min-width: 200px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      z-index: 1;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .dropdown-content a {
+      color: var(--text);
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+      cursor: pointer;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dropdown-content a:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-content a:hover {
+      background-color: var(--bg);
+      color: var(--green);
+    }
+
+    .export-menu.active .dropdown-content {
+      display: block;
+    }
+
+    .info-box {
+      background: #e3f2fd;
+      border-left: 4px solid var(--blue);
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #1565c0;
+    }
+
+    @media (max-width: 768px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .button-group {
+        grid-column: 1;
+      }
+
+      table {
+        font-size: 12px;
+      }
+
+      th, td {
+        padding: 8px 10px;
+      }
+
+      .stat-value {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>📋 Audit Log Viewer</h1>
+      <p>Track all system access and actions across Green Haven</p>
+    </div>
+
+    <!-- Info Box -->
+    <div class="info-box">
+      ℹ️ This page shows all access attempts and system actions. Click "Back to Dashboard" to return to the admin panel.
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="control-group">
+        <label>Filter by Date</label>
+        <input type="date" id="filterDate">
+      </div>
+
+      <div class="control-group">
+        <label>Filter by User Email</label>
+        <input type="email" id="filterEmail" placeholder="user@email.com">
+      </div>
+
+      <div class="control-group">
+        <label>Filter by Role</label>
+        <select id="filterRole">
+          <option value="">All Roles</option>
+          <option value="admin">Admin</option>
+          <option value="accountant">Accountant</option>
+          <option value="tenant">Tenant</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Filter by Status</label>
+        <select id="filterStatus">
+          <option value="">All Statuses</option>
+          <option value="SUCCESS">✅ Success</option>
+          <option value="DENIED">❌ Denied</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Filter by Page</label>
+        <input type="text" id="filterPage" placeholder="/dashboard.html">
+      </div>
+
+      <div class="button-group">
+        <button class="btn-primary" onclick="applyFilters()">🔍 Apply Filters</button>
+        <button class="btn-secondary" onclick="clearFilters()">↻ Clear</button>
+        <div class="export-menu">
+          <button class="btn-warning" onclick="toggleExportMenu()">📥 Export</button>
+          <div class="dropdown-content" id="exportMenu">
+            <a onclick="exportToCSV()">📊 Export as CSV</a>
+            <a onclick="exportToJSON()">📄 Export as JSON</a>
+            <a onclick="printLogs()">🖨️ Print</a>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="goBackToDashboard()">← Back to Dashboard</button>
+      </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats" id="stats"></div>
+
+    <!-- Logs Table -->
+    <div class="logs-container">
+      <div class="logs-header">
+        <h2>Access Logs</h2>
+        <span id="logCount">Total: 0</span>
+      </div>
+      <div class="logs-table">
+        <table id="logsTable">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>User Email</th>
+              <th>Role</th>
+              <th>Page/Action</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="logsBody">
+            <tr><td colspan="5" class="no-logs">ไม่มีข้อมูล</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allLogs = [];
+    let filteredLogs = [];
+    let currentPage = 1;
+    const logsPerPage = 20;
+
+    // ===== ACCESS CONTROL =====
+    document.addEventListener('DOMContentLoaded', () => {
+      // Protect audit log viewer - admin only
+      if (!AccessControl.protectPage('admin')) {
+        console.error('❌ Access denied: Only admin can view audit logs');
+        AccessControl.logAccessAttempt('/audit-log-viewer.html', false);
+        window.location.href = '/dashboard.html';
+        return;
+      }
+      AccessControl.logAccessAttempt('/audit-log-viewer.html', true);
+
+      // Load logs
+      loadLogs();
+      displayStats();
+      renderLogs();
+    });
+
+    /**
+     * Load all access logs from localStorage
+     */
+    function loadLogs() {
+      try {
+        const logs = JSON.parse(localStorage.getItem('access_logs') || '[]');
+        allLogs = logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        filteredLogs = [...allLogs];
+      } catch (error) {
+        console.error('Error loading logs:', error);
+        allLogs = [];
+        filteredLogs = [];
+      }
+    }
+
+    /**
+     * Display statistics about the logs
+     */
+    function displayStats() {
+      const totalAccess = allLogs.length;
+      const successfulAccess = allLogs.filter(l => l.result === 'SUCCESS').length;
+      const deniedAccess = allLogs.filter(l => l.result === 'DENIED').length;
+      const uniqueUsers = new Set(allLogs.map(l => l.userEmail)).size;
+
+      document.getElementById('stats').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-label">Total Access</div>
+          <div class="stat-value">${totalAccess}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">✅ Successful</div>
+          <div class="stat-value" style="color: var(--green-light)">${successfulAccess}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">❌ Denied</div>
+          <div class="stat-value" style="color: var(--red)">${deniedAccess}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">👥 Unique Users</div>
+          <div class="stat-value" style="color: var(--blue)">${uniqueUsers}</div>
+        </div>
+      `;
+    }
+
+    /**
+     * Apply filters to logs
+     */
+    function applyFilters() {
+      const date = document.getElementById('filterDate').value;
+      const email = document.getElementById('filterEmail').value.toLowerCase();
+      const role = document.getElementById('filterRole').value;
+      const status = document.getElementById('filterStatus').value;
+      const page = document.getElementById('filterPage').value.toLowerCase();
+
+      filteredLogs = allLogs.filter(log => {
+        if (date && !log.timestamp.startsWith(date)) return false;
+        if (email && !log.userEmail.toLowerCase().includes(email)) return false;
+        if (role && log.userRole !== role) return false;
+        if (status && log.result !== status) return false;
+        if (page && !log.attemptedPage.toLowerCase().includes(page)) return false;
+        return true;
+      });
+
+      currentPage = 1;
+      renderLogs();
+    }
+
+    /**
+     * Clear all filters
+     */
+    function clearFilters() {
+      document.getElementById('filterDate').value = '';
+      document.getElementById('filterEmail').value = '';
+      document.getElementById('filterRole').value = '';
+      document.getElementById('filterStatus').value = '';
+      document.getElementById('filterPage').value = '';
+
+      filteredLogs = [...allLogs];
+      currentPage = 1;
+      renderLogs();
+    }
+
+    /**
+     * Render logs table
+     */
+    function renderLogs() {
+      const tbody = document.getElementById('logsBody');
+      const logCount = document.getElementById('logCount');
+
+      if (filteredLogs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="no-logs">ไม่มีข้อมูลตรงกับเงื่อนไข</td></tr>';
+        logCount.textContent = `Total: 0`;
+        return;
+      }
+
+      const startIndex = (currentPage - 1) * logsPerPage;
+      const endIndex = startIndex + logsPerPage;
+      const logsToShow = filteredLogs.slice(startIndex, endIndex);
+
+      tbody.innerHTML = logsToShow.map(log => `
+        <tr>
+          <td class="timestamp">${new Date(log.timestamp).toLocaleString('th-TH')}</td>
+          <td>${log.userEmail}</td>
+          <td><span class="role-badge">${log.userRole || 'none'}</span></td>
+          <td>${log.attemptedPage}</td>
+          <td>
+            <span class="status-badge ${log.result === 'SUCCESS' ? 'status-success' : 'status-denied'}">
+              ${log.result === 'SUCCESS' ? '✅ Success' : '❌ Denied'}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+
+      logCount.textContent = `Total: ${filteredLogs.length}`;
+    }
+
+    /**
+     * Toggle export dropdown menu
+     */
+    function toggleExportMenu() {
+      document.getElementById('exportMenu').parentElement.classList.toggle('active');
+    }
+
+    /**
+     * Export logs to CSV
+     */
+    function exportToCSV() {
+      const headers = ['Timestamp', 'User Email', 'Role', 'Page', 'Status'];
+      const rows = filteredLogs.map(log => [
+        new Date(log.timestamp).toLocaleString('th-TH'),
+        log.userEmail,
+        log.userRole,
+        log.attemptedPage,
+        log.result
+      ]);
+
+      const csv = [headers, ...rows]
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `audit-logs-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      alert('✅ CSV exported successfully');
+    }
+
+    /**
+     * Export logs to JSON
+     */
+    function exportToJSON() {
+      const json = JSON.stringify(filteredLogs, null, 2);
+      const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `audit-logs-${new Date().toISOString().split('T')[0]}.json`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      alert('✅ JSON exported successfully');
+    }
+
+    /**
+     * Print logs
+     */
+    function printLogs() {
+      const printWindow = window.open('', '_blank');
+      const html = `
+        <html>
+          <head>
+            <title>Audit Logs - The Green Haven</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h1 { color: #2d8653; }
+              table { width: 100%; border-collapse: collapse; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #e8f5e9; }
+            </style>
+          </head>
+          <body>
+            <h1>📋 Audit Logs - The Green Haven</h1>
+            <p>Generated: ${new Date().toLocaleString('th-TH')}</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>User Email</th>
+                  <th>Role</th>
+                  <th>Page</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredLogs.map(log => `
+                  <tr>
+                    <td>${new Date(log.timestamp).toLocaleString('th-TH')}</td>
+                    <td>${log.userEmail}</td>
+                    <td>${log.userRole}</td>
+                    <td>${log.attemptedPage}</td>
+                    <td>${log.result}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.print();
+    }
+
+    /**
+     * Go back to dashboard
+     */
+    function goBackToDashboard() {
+      window.location.href = '/dashboard.html';
+    }
+  </script>
+</body>
+</html>

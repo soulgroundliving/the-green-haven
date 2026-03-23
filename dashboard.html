@@ -8,6 +8,7 @@
 <title>The Green Haven — ระบบจัดการอพาร์ทเมนต์</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="./shared/security.js"></script>
+<script src="./shared/access-control.js"></script>
 <script src="./shared/audit.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -1569,7 +1570,9 @@
     <!-- Operations -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">⚙️ Operations</div>
-      <!-- Reserved for future operations items -->
+      <button class="sidebar-item" onclick="window.location.href='/audit-log-viewer.html'">
+        <span class="sidebar-item-icon">📋</span>Audit Logs
+      </button>
     </div>
 
     <!-- Management -->
@@ -7885,6 +7888,15 @@ function approvePayment(){
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded',()=>{
+  // ===== ACCESS CONTROL =====
+  // Protect dashboard - admin only
+  if (!AccessControl.protectPage('admin')) {
+    console.error('❌ Access denied: This page is for admin only');
+    AccessControl.logAccessAttempt('/dashboard.html', false);
+    return;
+  }
+  AccessControl.logAccessAttempt('/dashboard.html', true);
+
   populateRoomDropdown();
   const now=new Date();
   document.getElementById('f-month').value=now.getMonth()+1;

@@ -18,6 +18,16 @@ let currentMonth = new Date();
 // ===== INITIALIZATION =====
 
 function initializeAccounting() {
+  // ===== ACCESS CONTROL =====
+  // Protect accounting - accountant and admin only
+  if (!window.AccessControl.hasAnyRole(['accountant', 'admin'])) {
+    console.error('❌ Access denied: This page is for accountant/admin only');
+    window.AccessControl.logAccessAttempt('/accounting.html', false);
+    window.AccessControl.redirectToHomepage();
+    return;
+  }
+  window.AccessControl.logAccessAttempt('/accounting.html', true);
+
   loadDashboard();
   loadExpenses();
   renderFinancialCharts();
