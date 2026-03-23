@@ -12,6 +12,10 @@
   <script src="./shared/security.js"></script>
   <script src="./shared/access-control.js"></script>
   <script src="./shared/invoice-receipt-manager.js"></script>
+  <script src="./shared/room-config.js"></script>
+  <script src="./shared/tenant-config.js"></script>
+  <script src="./shared/lease-config.js"></script>
+  <script src="./shared/tenant-firebase-sync.js"></script>
   <style>
     :root {
       --green-dark: #1a5c38;
@@ -996,22 +1000,61 @@
       currentBuilding = (numRoom >= 101 && numRoom <= 405) ? 'nest' : 'rooms';
       currentRoom = roomNumber;
 
+      // Initialize Firebase sync
+      if (typeof TenantFirebaseSync !== 'undefined') {
+        TenantFirebaseSync.initialize(currentUser, currentBuilding, currentRoom);
+      }
+
       // Load tenant data
       loadTenantData();
       renderHomePage();
     }
 
-    function loadTenantData() {
-      // Get active lease for this room
-      if (typeof LeaseAgreementManager !== 'undefined') {
-        currentLease = LeaseAgreementManager.getActiveLease(currentBuilding, currentRoom);
-        if (currentLease?.tenantId) {
-          currentTenant = TenantConfigManager?.getTenant(currentLease.tenantId);
-        }
-      }
+    // Store loaded data globally
+    let tenantFirebaseData = {
+      lease: null,
+      tenant: null,
+      room: null,
+      bills: [],
+      payments: [],
+      tickets: [],
+      announcements: []
+    };
 
-      // Load bills (mock for now)
-      loadBillsData();
+    async function loadTenantData() {
+      try {
+        // Load from Firebase (with localStorage fallback)
+        if (typeof TenantFirebaseSync !== 'undefined') {
+          tenantFirebaseData = await TenantFirebaseSync.loadAllData();
+          console.log('📦 Tenant data loaded from Firebase:', tenantFirebaseData);
+
+          currentLease = tenantFirebaseData.lease;
+          currentTenant = tenantFirebaseData.tenant;
+          currentRoom = tenantFirebaseData.room;
+          currentBills = tenantFirebaseData.bills || [];
+
+          console.log('✅ Tenant data initialized from Firebase');
+        } else {
+          // Fallback: use localStorage-based managers
+          if (typeof LeaseAgreementManager !== 'undefined') {
+            currentLease = LeaseAgreementManager.getActiveLease(currentBuilding, currentRoom);
+            if (currentLease?.tenantId) {
+              currentTenant = TenantConfigManager?.getTenant(currentLease.tenantId);
+            }
+          }
+          loadBillsData();
+        }
+      } catch (error) {
+        console.error('❌ Error loading tenant data:', error);
+        // Use localStorage fallback
+        if (typeof LeaseAgreementManager !== 'undefined') {
+          currentLease = LeaseAgreementManager.getActiveLease(currentBuilding, currentRoom);
+          if (currentLease?.tenantId) {
+            currentTenant = TenantConfigManager?.getTenant(currentLease.tenantId);
+          }
+        }
+        loadBillsData();
+      }
     }
 
     function loadBillsData() {
@@ -1628,27 +1671,49 @@
 
     function renderPaymentHistory() {
       const container = document.getElementById('paymentHistoryList');
-      const paidBills = currentBills.filter(b => b.status === 'paid');
 
-      if (paidBills.length === 0) {
+      // Use Firebase payment data first
+      let payments = tenantFirebaseData.payments || [];
+
+      // Fallback to paid bills
+      if (payments.length === 0) {
+        payments = currentBills.filter(b => b.status === 'paid');
+      }
+
+      if (payments.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">ยังไม่มีประวัติการชำระเงิน</p>';
+        console.log('✅ No payment history found');
         return;
       }
 
-      container.innerHTML = paidBills.map(bill => `
-        <div class="bill-card">
-          <div class="bill-card-left">
-            <h3>${bill.month} ${bill.year}</h3>
-            <div class="bill-card-details">
-              <div>รวม: ${bill.total.toLocaleString('th-TH')} บาท</div>
-              <div>ชำระเมื่อ: ${new Date(bill.dueDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      container.innerHTML = payments.map(payment => {
+        const displayDate = payment.createdAt
+          ? new Date(payment.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+          : payment.dueDate;
+
+        const monthYear = payment.month && payment.year
+          ? `${payment.month} ${payment.year}`
+          : payment.billId || 'ไม่ระบุ';
+
+        return `
+          <div class="bill-card">
+            <div class="bill-card-left">
+              <h3>${monthYear}</h3>
+              <div class="bill-card-details">
+                <div>จำนวน: ${(payment.total || payment.amount || 0).toLocaleString('th-TH')} บาท</div>
+                <div>วิธีชำระ: ${payment.paymentMethod === 'slip' ? '📸 สลิป' : payment.paymentMethod === 'cash' ? '💵 เงินสด' : 'อื่นๆ'}</div>
+                <div>ชำระเมื่อ: ${displayDate}</div>
+                ${payment.slipOkVerified ? '<div style="color: var(--green); font-weight: 700;">✅ ตรวจสอบโดย SlipOK</div>' : ''}
+              </div>
+            </div>
+            <div class="bill-card-action">
+              <span class="bill-status-badge paid">✅ จ่ายแล้ว</span>
             </div>
           </div>
-          <div class="bill-card-action">
-            <span class="bill-status-badge paid">✅ จ่ายแล้ว</span>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+
+      console.log(`✅ Rendered ${payments.length} payment records`);
     }
 
     // SERVICES PAGE
@@ -1658,30 +1723,44 @@
 
     function renderTicketsList() {
       const container = document.getElementById('ticketsList');
-      const tickets = getMaintenanceTickets();
+      // Use Firebase data first, fallback to localStorage
+      let tickets = tenantFirebaseData.tickets || [];
+
+      if (tickets.length === 0) {
+        tickets = getMaintenanceTickets();
+      }
 
       if (tickets.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">ยังไม่มีรายการแจ้งซ่อม</p>';
+        console.log('✅ No maintenance tickets found');
         return;
       }
 
-      container.innerHTML = tickets.map(ticket => `
-        <div class="ticket-card">
-          <div class="ticket-header">
-            <div>
-              <div class="ticket-id">🎟️ ${ticket.id}</div>
-              <div class="ticket-details">${ticket.date}</div>
+      container.innerHTML = tickets.map(ticket => {
+        const displayDate = ticket.createdAt
+          ? new Date(ticket.createdAt).toLocaleDateString('th-TH')
+          : ticket.date;
+
+        return `
+          <div class="ticket-card">
+            <div class="ticket-header">
+              <div>
+                <div class="ticket-id">🎟️ ${ticket.id}</div>
+                <div class="ticket-details">${displayDate}</div>
+              </div>
+              <span class="ticket-status ${ticket.status}">
+                ${ticket.status === 'pending' ? '⏳ รอประมาณการ' : ticket.status === 'checking' ? '👀 ตรวจสอบ' : ticket.status === 'in-progress' ? '🔧 กำลังซ่อม' : '✅ เสร็จสิ้น'}
+              </span>
             </div>
-            <span class="ticket-status ${ticket.status}">
-              ${ticket.status === 'pending' ? '⏳ รอประมาณการ' : ticket.status === 'in-progress' ? '🔧 กำลังซ่อม' : '✅ เสร็จสิ้น'}
-            </span>
+            <div class="ticket-details" style="margin-top: 1rem;">
+              <div style="margin-bottom: 0.5rem;"><strong>ประเภท:</strong> ${ticket.category || 'ไม่ระบุ'}</div>
+              <div><strong>รายละเอียด:</strong> ${ticket.description || ticket.title || ''}</div>
+            </div>
           </div>
-          <div class="ticket-details" style="margin-top: 1rem;">
-            <div style="margin-bottom: 0.5rem;"><strong>ประเภท:</strong> ${ticket.category}</div>
-            <div><strong>รายละเอียด:</strong> ${ticket.description}</div>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+
+      console.log(`✅ Rendered ${tickets.length} maintenance tickets`);
     }
 
     function getMaintenanceTickets() {
@@ -1689,7 +1768,7 @@
       return stored ? JSON.parse(stored) : [];
     }
 
-    function submitMaintenance(event) {
+    async function submitMaintenance(event) {
       event.preventDefault();
 
       const category = document.getElementById('maintenanceCategory').value;
@@ -1709,9 +1788,16 @@
         submittedDate: new Date().toISOString()
       };
 
-      let tickets = getMaintenanceTickets();
-      tickets.push(ticket);
-      localStorage.setItem('tenant_maintenance_tickets', JSON.stringify(tickets));
+      // Save to Firebase
+      if (typeof TenantFirebaseSync !== 'undefined') {
+        await TenantFirebaseSync.saveMaintenanceTicket(ticket);
+        console.log('✅ Maintenance ticket saved to Firebase');
+      } else {
+        // Fallback to localStorage
+        let tickets = getMaintenanceTickets();
+        tickets.push(ticket);
+        localStorage.setItem('tenant_maintenance_tickets', JSON.stringify(tickets));
+      }
 
       alert('✅ แจ้งปัญหาสำเร็จ');
       document.getElementById('maintenanceCategory').value = '';
@@ -1719,6 +1805,8 @@
       document.getElementById('maintenancePhoto').value = '';
       document.getElementById('maintenancePhotoPreview').style.display = 'none';
 
+      // Reload tickets
+      loadServicesPage();
       goToPage('services');
     }
 
@@ -1753,41 +1841,56 @@
       renderAnnouncements();
     }
 
-    function renderAnnouncements() {
-      // Mock announcements
-      const announcements = [
-        {
-          title: 'แจ้งปิดน้ำ',
-          date: '15 June 2026',
-          time: '10:00 - 14:00',
-          icon: '💧',
-          content: 'มีการดำเนินการซ่อมท่อน้ำในอาคารจึงต้องปิดน้ำ'
-        },
-        {
-          title: 'ทำความสะอาดใหญ่',
-          date: '20 June 2026',
-          time: 'all day',
-          icon: '🧹',
-          content: 'การทำความสะอาดสถานที่ทั่วไปในอาคาร'
-        },
-        {
-          title: 'ซ่อมลิฟต์',
-          date: '22 June 2026',
-          time: '08:00 - 12:00',
-          icon: '🔧',
-          content: 'การตรวจสอบและบำรุงรักษาระบบลิฟต์'
-        }
-      ];
+    async function renderAnnouncements() {
+      // Load from Firebase first
+      let announcements = tenantFirebaseData.announcements || [];
+
+      if (announcements.length === 0) {
+        // Mock announcements if no data
+        announcements = [
+          {
+            title: 'แจ้งปิดน้ำ',
+            date: '15 June 2026',
+            time: '10:00 - 14:00',
+            icon: '💧',
+            content: 'มีการดำเนินการซ่อมท่อน้ำในอาคารจึงต้องปิดน้ำ'
+          },
+          {
+            title: 'ทำความสะอาดใหญ่',
+            date: '20 June 2026',
+            time: 'all day',
+            icon: '🧹',
+            content: 'การทำความสะอาดสถานที่ทั่วไปในอาคาร'
+          },
+          {
+            title: 'ซ่อมลิฟต์',
+            date: '22 June 2026',
+            time: '08:00 - 12:00',
+            icon: '🔧',
+            content: 'การตรวจสอบและบำรุงรักษาระบบลิฟต์'
+          }
+        ];
+      }
 
       const container = document.getElementById('announcementsList');
-      container.innerHTML = announcements.map(ann => `
-        <div class="announcement-card">
-          <div class="announcement-icon">${ann.icon}</div>
-          <div class="announcement-title">${ann.title}</div>
-          <div class="announcement-date">${ann.date} | ${ann.time}</div>
-          <div class="announcement-content">${ann.content}</div>
-        </div>
-      `).join('');
+      if (!container) return;
+
+      container.innerHTML = announcements.map(ann => {
+        const displayDate = ann.createdAt
+          ? new Date(ann.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+          : ann.date;
+
+        return `
+          <div class="announcement-card">
+            <div class="announcement-icon">${ann.icon || '📢'}</div>
+            <div class="announcement-title">${ann.title}</div>
+            <div class="announcement-date">${displayDate} ${ann.time ? '| ' + ann.time : ''}</div>
+            <div class="announcement-content">${ann.content || ann.description || ''}</div>
+          </div>
+        `;
+      }).join('');
+
+      console.log(`✅ Rendered ${announcements.length} announcements`);
     }
 
     // PROFILE PAGE
