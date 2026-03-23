@@ -8,39 +8,59 @@ function initializeTestData() {
   console.log('🔄 Initializing test data...');
 
   // 1. Load meter data (required for bills calculation)
-  const meterDataFormatted = {};
+  // CHECK: If real meter data already exists, use it!
+  let meterDataFormatted = {};
 
-  // Format: "rooms_15_2026_01" = { eOld, eNew, wOld, wNew, month, year, yearMonth }
-  if (typeof METER_DATA_ROOMS !== 'undefined') {
-    for (const [monthKey, roomData] of Object.entries(METER_DATA_ROOMS)) {
-      const [year, month] = monthKey.split('_');
-      for (const [roomId, readings] of Object.entries(roomData)) {
-        const key = `rooms_${roomId}_${year}_${month}`;
-        meterDataFormatted[key] = {
-          ...readings,
-          month: parseInt(month),
-          year: parseInt(year),
-          yearMonth: `${year}_${month}`,
-          createdAt: new Date(`${year}-${month}-01`).toISOString(),
-          updatedAt: new Date(`${year}-${month}-28`).toISOString()
-        };
-      }
+  const existingMeterData = localStorage.getItem('meter_data');
+  if (existingMeterData && existingMeterData !== '{}') {
+    try {
+      meterDataFormatted = JSON.parse(existingMeterData);
+      console.log(`✅ Using existing meter data (${Object.keys(meterDataFormatted).length} records)`);
+    } catch (e) {
+      console.warn('⚠️ Could not parse existing meter_data, loading mock data');
+      meterDataFormatted = {};
     }
   }
 
-  if (typeof METER_DATA_NEST !== 'undefined') {
-    for (const [monthKey, roomData] of Object.entries(METER_DATA_NEST)) {
-      const [year, month] = monthKey.split('_');
-      for (const [roomId, readings] of Object.entries(roomData)) {
-        const key = `nest_${roomId}_${year}_${month}`;
-        meterDataFormatted[key] = {
-          ...readings,
-          month: parseInt(month),
-          year: parseInt(year),
-          yearMonth: `${year}_${month}`,
-          createdAt: new Date(`${year}-${month}-01`).toISOString(),
-          updatedAt: new Date(`${year}-${month}-28`).toISOString()
-        };
+  // If no existing data, load mock data
+  if (Object.keys(meterDataFormatted).length === 0) {
+
+    // Format: "rooms_15_2026_01" = { eOld, eNew, wOld, wNew, month, year, yearMonth }
+    if (typeof METER_DATA_ROOMS !== 'undefined') {
+      for (const [monthKey, roomData] of Object.entries(METER_DATA_ROOMS)) {
+        const [year, month] = monthKey.split('_');
+        for (const [roomId, readings] of Object.entries(roomData)) {
+          const key = `rooms_${roomId}_${year}_${month}`;
+          if (!meterDataFormatted[key]) {  // Don't overwrite existing data
+            meterDataFormatted[key] = {
+              ...readings,
+              month: parseInt(month),
+              year: parseInt(year),
+              yearMonth: `${year}_${month}`,
+              createdAt: new Date(`${year}-${month}-01`).toISOString(),
+              updatedAt: new Date(`${year}-${month}-28`).toISOString()
+            };
+          }
+        }
+      }
+    }
+
+    if (typeof METER_DATA_NEST !== 'undefined') {
+      for (const [monthKey, roomData] of Object.entries(METER_DATA_NEST)) {
+        const [year, month] = monthKey.split('_');
+        for (const [roomId, readings] of Object.entries(roomData)) {
+          const key = `nest_${roomId}_${year}_${month}`;
+          if (!meterDataFormatted[key]) {  // Don't overwrite existing data
+            meterDataFormatted[key] = {
+              ...readings,
+              month: parseInt(month),
+              year: parseInt(year),
+              yearMonth: `${year}_${month}`,
+              createdAt: new Date(`${year}-${month}-01`).toISOString(),
+              updatedAt: new Date(`${year}-${month}-28`).toISOString()
+            };
+          }
+        }
       }
     }
   }
