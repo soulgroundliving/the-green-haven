@@ -17,8 +17,14 @@
   <script>
     // Initialize test data when tenant app loads
     if (typeof mockTenantData !== 'undefined' && typeof initializeTestData === 'function') {
-      if (!localStorage.getItem('meter_data')) {
-        initializeTestData();
+      try {
+        const meterData = localStorage.getItem('meter_data');
+        if (!meterData || meterData === '{}') {
+          console.log('🔄 Initializing test data for tenant app...');
+          initializeTestData();
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not initialize test data:', e);
       }
     }
   </script>
