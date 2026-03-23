@@ -686,11 +686,15 @@
     window.database = database;
     window.firebaseDB = { ref, set, get };
 
+    // Import signOut function
+    import { signOut } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+
     // Export Firebase Auth functions to global scope
     window.firebaseAuthFunctions = {
       createUserWithEmailAndPassword: (email, password) => createUserWithEmailAndPassword(auth, email, password),
       signInWithEmailAndPassword: (email, password) => signInWithEmailAndPassword(auth, email, password),
-      sendPasswordResetEmail: (email) => sendPasswordResetEmail(auth, email)
+      sendPasswordResetEmail: (email) => sendPasswordResetEmail(auth, email),
+      signOut: () => signOut(auth)
     };
 
     console.log('✅ Firebase Auth initialized');
@@ -902,19 +906,19 @@
         } catch (dbError) {
           // If database fails, reject login - don't allow fallback
           console.warn('Database error, user data not found:', dbError.message);
-          await window.firebaseAuth.signOut();
+          await window.firebaseAuthFunctions.signOut();
           throw new Error('ไม่สามารถตรวจสอบข้อมูลผู้ใช้ได้ กรุณาลองใหม่');
         }
 
         // ✅ SECURITY: userData must exist from database
         if (!userData) {
-          await window.firebaseAuth.signOut();
+          await window.firebaseAuthFunctions.signOut();
           throw new Error('ไม่พบข้อมูลผู้ใช้ในระบบ โปรดติดต่อผู้ดูแลระบบ');
         }
 
         // ✅ SECURITY: Verify user type matches what they registered as
         if (userData.userType !== currentUserType) {
-          await window.firebaseAuth.signOut();
+          await window.firebaseAuthFunctions.signOut();
           const typeLabel = currentUserType === 'admin' ? 'Admin' : currentUserType === 'accountant' ? 'Accountant (บัญชี)' : 'Tenant';
           throw new Error(`❌ บัญชีนี้ไม่ใช่ ${typeLabel} (สมัครไว้เป็น ${userData.userType})`);
         }
