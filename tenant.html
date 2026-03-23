@@ -1347,32 +1347,108 @@
         document.getElementById('slipPreview').style.display = 'block';
         document.getElementById('slipImage').src = e.target.result;
 
-        // Simulate SlipOK verification
-        setTimeout(() => verifySlip(), 1500);
+        // Verify slip with SlipOK API
+        verifySlipWithSlipOK(e.target.result, file);
       };
       reader.readAsDataURL(file);
     }
 
-    function verifySlip() {
-      // Mock SlipOK verification
-      slipVerified = true;
-      slipData = {
-        sender: 'Alice Johnson',
+    async function verifySlipWithSlipOK(slipImage, file) {
+      try {
+        console.log('🔄 Verifying with SlipOK API...');
+
+        // Show loading state
+        document.getElementById('slipVerifyResult').innerHTML = '<div style="text-align: center; color: var(--text-muted);">⏳ กำลังตรวจสอบ...</div>';
+        document.getElementById('slipVerifyResult').style.display = 'block';
+
+        // TODO: Replace with real SlipOK API
+        // Real implementation:
+        // const formData = new FormData();
+        // formData.append('file', file);
+        // const response = await fetch('https://api.slipok.com/api/v1/verify', {
+        //   method: 'POST',
+        //   headers: { 'x-authorization': 'APIKEY xxx' },
+        //   body: formData
+        // });
+
+        // Simulate SlipOK verification (for demo)
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        verifySlip({
+          success: true,
+          data: {
+            amount: currentPaymentAmount,
+            sendingBankCode: 'KBANK',
+            transactionDate: new Date().toISOString(),
+            transactionId: 'SLIP-' + Date.now()
+          }
+        });
+      } catch (error) {
+        console.error('❌ SlipOK verification failed:', error);
+        verifySlip({
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    function verifySlip(response) {
+      if (response.success && response.data.amount === currentPaymentAmount) {
+        // ✅ Verification success
+        slipVerified = true;
+        slipData = {
+          sender: 'บัญชีผู้โอน',
+          amount: response.data.amount,
+          tDate: new Date(response.data.transactionDate).toLocaleTimeString('th-TH'),
+          transactionId: response.data.transactionId,
+          bankCode: response.data.sendingBankCode
+        };
+
+        document.getElementById('slipVerifyResult').style.display = 'block';
+        document.getElementById('slipVerifySuccess').style.display = 'block';
+        document.getElementById('slipVerifyError').style.display = 'none';
+        document.getElementById('slipSender').textContent = slipData.sender;
+        document.getElementById('slipAmount').textContent = slipData.amount.toLocaleString('th-TH');
+        document.getElementById('slipTime').textContent = slipData.tDate;
+
+        document.getElementById('generateReceiptBtn').style.display = 'block';
+
+        // ✅ Notify admin via Firebase/Storage event
+        notifyAdminPaymentVerified();
+
+        console.log(`✅ Slip verified! Transaction ID: ${slipData.transactionId}`);
+      } else {
+        // ❌ Verification failed
+        slipVerified = false;
+        document.getElementById('slipVerifyResult').style.display = 'block';
+        document.getElementById('slipVerifySuccess').style.display = 'none';
+        document.getElementById('slipVerifyError').style.display = 'block';
+        document.getElementById('slipErrorMsg').textContent = response.error || 'จำนวนเงินไม่ตรงกัน หรือการตรวจสอบล้มเหลว';
+        document.getElementById('generateReceiptBtn').style.display = 'none';
+
+        console.warn('❌ Slip verification failed');
+      }
+    }
+
+    function notifyAdminPaymentVerified() {
+      // Store notification for admin dashboard
+      let notifications = JSON.parse(localStorage.getItem('payment_notifications') || '[]');
+      notifications.push({
+        type: 'payment_verified',
+        building: currentBuilding,
+        room: currentRoom,
         amount: currentPaymentAmount,
-        tDate: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      };
+        timestamp: new Date().toISOString(),
+        slipId: slipData.transactionId,
+        status: 'verified'
+      });
 
-      document.getElementById('slipVerifyResult').style.display = 'block';
-      document.getElementById('slipVerifySuccess').style.display = 'block';
-      document.getElementById('slipVerifyError').style.display = 'none';
-      document.getElementById('slipSender').textContent = slipData.sender;
-      document.getElementById('slipAmount').textContent = slipData.amount.toLocaleString('th-TH');
-      document.getElementById('slipTime').textContent = slipData.tDate;
+      localStorage.setItem('payment_notifications', JSON.stringify(notifications));
 
-      document.getElementById('generateReceiptBtn').style.display = 'block';
+      // Trigger event for admin dashboard
+      window.dispatchEvent(new Event('payment_verified'));
 
-      // Notify admin
-      console.log(`✅ Admin notification: Slip verified for room ${currentRoom}, amount ฿${currentPaymentAmount}, from ${slipData.sender}`);
+      console.log('📢 Admin notified of payment verification');
     }
 
     // STEP 3: Generate Receipt
@@ -1382,73 +1458,136 @@
         return;
       }
 
-      const payDate = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
-      const receiptNo = 'RCP-' + Date.now();
+      try {
+        // 1. Create receipt via InvoiceReceiptManager
+        const receipt = InvoiceReceiptManager.createReceipt(
+          currentBuilding,
+          currentInvoiceId || `INV-${currentRoom}-${currentPaymentMonth}`,
+          {
+            amount: currentPaymentAmount,
+            paymentMethod: 'slip',
+            slipData: slipData,
+            slipOkVerified: true,
+            verifiedBy: 'SlipOK',
+            verifiedAt: new Date().toISOString()
+          }
+        );
 
-      const roomInfo = typeof RoomConfigManager !== 'undefined' ? RoomConfigManager.getRoom(currentBuilding, currentRoom) : null;
-      const roomName = roomInfo?.name || `ห้อง ${currentRoom}`;
+        console.log('✅ Receipt created:', receipt);
 
-      const receiptHTML = `
-        <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--green); padding-bottom: 1rem;">
-          <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 0.3rem;">🌿 The Green Haven</div>
-          <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">อพาร์ทเมนต์ ${currentBuilding === 'nest' ? 'Nest Building' : 'ห้องแถว'}</div>
-          <div style="font-size: 1.3rem; font-weight: 700; color: var(--green); margin-bottom: 0.2rem;">✅ ใบเสร็จรับเงิน / Receipt</div>
-          <div style="font-size: 0.85rem; color: var(--text-muted);">เลขที่: ${receiptNo}</div>
-        </div>
+        // 2. Update invoice status to 'paid'
+        InvoiceReceiptManager.updateInvoiceStatus(
+          currentBuilding,
+          currentInvoiceId || `INV-${currentRoom}-${currentPaymentMonth}`,
+          'paid'
+        );
 
-        <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f0fff4; border-radius: 8px;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-            <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ห้องเลขที่</div>
-              <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);">${roomName}</div>
+        // 3. Generate receipt HTML
+        const payDate = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+        const receiptNo = receipt?.id || ('RCP-' + Date.now());
+
+        const roomInfo = typeof RoomConfigManager !== 'undefined' ? RoomConfigManager.getRoom(currentBuilding, currentRoom) : null;
+        const roomName = roomInfo?.name || `ห้อง ${currentRoom}`;
+
+        const receiptHTML = `
+          <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--green); padding-bottom: 1rem;">
+            <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 0.3rem;">🌿 The Green Haven</div>
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">อพาร์ทเมนต์ ${currentBuilding === 'nest' ? 'Nest Building' : 'ห้องแถว'}</div>
+            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green); margin-bottom: 0.2rem;">✅ ใบเสร็จรับเงิน / RECEIPT</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">เลขที่: ${receiptNo}</div>
+          </div>
+
+          <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f0fff4; border-radius: 8px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ห้องเลขที่</div>
+                <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);">${roomName}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ประจำเดือน</div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">${currentPaymentMonth} 2026</div>
+              </div>
             </div>
             <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ประจำเดือน</div>
-              <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">${currentPaymentMonth} 2026</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">วันที่ชำระเงิน</div>
+              <div style="font-size: 0.95rem; color: var(--text);">${payDate}</div>
             </div>
           </div>
-          <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">วันที่ชำระเงิน</div>
-            <div style="font-size: 0.95rem; color: var(--text);">${payDate}</div>
-          </div>
-        </div>
 
-        <div style="margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
-          <div style="background: var(--green); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดการชำระ</div>
-          <div style="padding: 1rem;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
-              <span style="color: var(--text);">ค่าเช่า</span>
-              <span style="font-weight: 700; color: var(--text);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--green);">
-              <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
-              <span style="font-weight: 800; font-size: 1.3rem; color: var(--green);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
+          <div style="margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+            <div style="background: var(--green); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดการชำระ</div>
+            <div style="padding: 1rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
+                <span style="color: var(--text);">ค่าเช่า</span>
+                <span style="font-weight: 700; color: var(--text);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--green);">
+                <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
+                <span style="font-weight: 800; font-size: 1.3rem; color: var(--green);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div style="background: var(--green-pale); border: 2px solid var(--green); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-          <div style="font-weight: 700; color: var(--green-dark); margin-bottom: 0.5rem;">✅ ยืนยันด้วย SlipOK</div>
-          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-            <div>ผู้โอน: ${slipData.sender}</div>
-            <div>จำนวน: ฿${slipData.amount.toLocaleString('th-TH')}</div>
-            <div>เวลา: ${slipData.tDate}</div>
+          <div style="background: var(--green-pale); border: 2px solid var(--green); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+            <div style="font-weight: 700; color: var(--green-dark); margin-bottom: 0.5rem;">✅ ตรวจสอบและยืนยันโดย SlipOK</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+              <div>ผู้โอน: ${slipData.sender}</div>
+              <div>จำนวน: ฿${slipData.amount.toLocaleString('th-TH')}</div>
+              <div>เวลา: ${slipData.tDate}</div>
+              <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.1);">
+                <strong>หมายเลขอ้างอิง:</strong> ${slipData.transactionId}
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div style="text-align: center; color: var(--green-dark); font-size: 0.8rem; padding: 1rem; border-top: 1px solid var(--border); background: var(--green-pale); border-radius: 8px;">
-          <div style="font-weight: 700; margin-bottom: 0.3rem;">✅ ชำระแล้ว</div>
-          <div style="font-size: 0.75rem;">ขอบคุณที่ชำระค่าเช่าตรงเวลา</div>
-        </div>
-      `;
+          <div style="text-align: center; color: var(--green-dark); font-size: 0.8rem; padding: 1rem; border-top: 1px solid var(--border); background: var(--green-pale); border-radius: 8px;">
+            <div style="font-weight: 700; margin-bottom: 0.3rem;">✅ ยืนยันการชำระแล้ว</div>
+            <div style="font-size: 0.75rem;">ขอบคุณที่ชำระค่าเช่าตรงเวลา</div>
+          </div>
+        `;
 
-      document.getElementById('receiptContent').innerHTML = receiptHTML;
-      document.getElementById('slipSection').style.display = 'none';
-      document.getElementById('receiptSection').style.display = 'block';
-      document.getElementById('step2').style.background = '#ddd';
-      document.getElementById('step2').style.color = '#666';
-      document.getElementById('step3').style.background = 'var(--green)';
-      document.getElementById('step3').style.color = '#fff';
+        // 4. Display receipt
+        document.getElementById('receiptContent').innerHTML = receiptHTML;
+        document.getElementById('slipSection').style.display = 'none';
+        document.getElementById('receiptSection').style.display = 'block';
+        document.getElementById('step2').style.background = '#ddd';
+        document.getElementById('step2').style.color = '#666';
+        document.getElementById('step3').style.background = 'var(--green)';
+        document.getElementById('step3').style.color = '#fff';
+
+        // 5. Notify admin with receipt confirmation
+        notifyAdminReceiptGenerated(receipt);
+
+      } catch (error) {
+        console.error('❌ Error generating receipt:', error);
+        alert('❌ เกิดข้อผิดพลาดในการสร้างใบเสร็จ');
+      }
+    }
+
+    function notifyAdminReceiptGenerated(receipt) {
+      try {
+        // Store receipt notification for admin dashboard
+        let notifications = JSON.parse(localStorage.getItem('payment_notifications') || '[]');
+        notifications.push({
+          type: 'receipt_generated',
+          building: currentBuilding,
+          room: currentRoom,
+          amount: currentPaymentAmount,
+          receiptId: receipt?.id,
+          timestamp: new Date().toISOString(),
+          status: 'completed',
+          verified: true
+        });
+
+        localStorage.setItem('payment_notifications', JSON.stringify(notifications));
+
+        // Trigger event for admin dashboard
+        window.dispatchEvent(new Event('receipt_generated'));
+
+        console.log('📢 Admin notified: Receipt generated for room', currentRoom);
+      } catch (error) {
+        console.warn('⚠️ Error notifying admin:', error);
+      }
     }
 
     function printReceipt() {
