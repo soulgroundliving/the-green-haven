@@ -962,13 +962,15 @@
         RateLimiter.resetAttempts(email);
 
         // Save session
-        sessionStorage.setItem('user', JSON.stringify({
+        const sessionData = {
           uid: user.uid,
           email: user.email,
           name: userData.name,
           userType: userData.userType,
           roomNumber: userData.roomNumber || null
-        }));
+        };
+        console.log('💾 Saving to sessionStorage:', sessionData);
+        sessionStorage.setItem('user', JSON.stringify(sessionData));
 
         showMessage(`เข้าสู่ระบบสำเร็จ! (${userData.name})`, false);
 
