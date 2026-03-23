@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="./shared/security.js"></script>
+  <script src="./shared/access-control.js"></script>
   <script src="./shared/invoice-receipt-manager.js"></script>
   <style>
     :root {
@@ -946,6 +947,15 @@
     });
 
     function initTenantApp() {
+      // ===== ACCESS CONTROL =====
+      // Protect tenant app - tenant only
+      if (!AccessControl.protectPage('tenant')) {
+        console.error('❌ Access denied: This page is for tenants only');
+        AccessControl.logAccessAttempt('/tenant.html', false);
+        return;
+      }
+      AccessControl.logAccessAttempt('/tenant.html', true);
+
       // Check authentication
       currentUser = window.SecurityUtils?.getSecureSession ? window.SecurityUtils.getSecureSession() : JSON.parse(sessionStorage.getItem('user') || '{}');
 
