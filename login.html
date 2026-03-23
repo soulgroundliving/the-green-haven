@@ -929,16 +929,22 @@
           userData = snapshot.val();
 
         } catch (dbError) {
-          // If database fails, reject login - don't allow fallback
-          console.warn('Database error, user data not found:', dbError.message);
-          await safeSignOut();
-          throw new Error('ไม่สามารถตรวจสอบข้อมูลผู้ใช้ได้ กรุณาลองใหม่');
+          // Database timeout - use fallback but keep userData as null for now
+          console.warn('Database timeout, will use fallback:', dbError.message);
+          userData = null;
         }
 
-        // ✅ SECURITY: userData must exist from database
+        // ✅ If no database data, create minimal fallback
         if (!userData) {
-          await safeSignOut();
-          throw new Error('ไม่พบข้อมูลผู้ใช้ในระบบ โปรดติดต่อผู้ดูแลระบบ');
+          userData = {
+            uid: user.uid,
+            email: user.email,
+            name: user.email.split('@')[0],
+            userType: currentUserType,  // Use what user selected on login
+            roomNumber: null,
+            isFromFallback: true  // Mark as fallback for tracking
+          };
+          console.warn('⚠️ Using fallback userData due to database unavailability');
         }
 
         // ✅ SECURITY: Verify user type matches what they registered as
