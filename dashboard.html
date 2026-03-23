@@ -6029,9 +6029,16 @@ function checkVacant(){
 function autoFillMeters(){
   renderPaymentStatus();
   const roomId=document.getElementById('f-room').value;
-  if(!roomId)return;
+  // Allow month/year selection without room first
+  // if(!roomId)return;
   const month=parseInt(document.getElementById('f-month').value);
   const year=parseInt(document.getElementById('f-year').value);
+
+  // If no room selected, just return (don't fill data yet)
+  if(!roomId){
+    console.log('⏳ Waiting for room selection...');
+    return;
+  }
   const yy=year%100;
   const key=`${yy}_${month}`;
   const psKey=`${year}_${month}`;
