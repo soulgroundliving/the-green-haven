@@ -5952,7 +5952,7 @@ function populateRoomDropdown(){
   sel.innerHTML = '<option value="">-- เลือกห้อง --</option>' +
     rooms.map(r => {
       const tag = r.type === 'daily' ? '📅 ' : r.type === 'pet' ? '🐾 ' : r.type === 'commercial' ? '☕ ' : '';
-      const rent = r.rent || 0;  // Fallback to 0 if rent is undefined
+      const rent = r.rentPrice || 0;  // Use rentPrice from getActiveRoomsWithMetadata
       return `<option value="${r.id}" data-rent="${rent}" data-elec="${r.elecRate || 8}" data-trash="${r.trashFee || 20}" data-daily="${r.dailyRate || 0}" data-type="${r.type}">${tag}ห้อง ${r.id} — ฿${rent.toLocaleString()}/เดือน</option>`;
     }).join('');
   document.getElementById('f-rent').value = '';
