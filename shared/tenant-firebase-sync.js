@@ -164,17 +164,24 @@ class TenantFirebaseSync {
       const currentDate = new Date();
       const currentBudYear = currentDate.getFullYear() + 543;
       const yearsToLoad = [currentBudYear - 2, currentBudYear - 1, currentBudYear];
+      // Also support short format (69 instead of 2569)
+      const yearsToLoadShort = yearsToLoad.map(y => y % 100);
 
       console.log(`🔄 TenantFirebaseSync: Loading meter data from Firebase for building='${this.currentBuilding}'...`);
+      console.log(`   Trying year formats: full=${yearsToLoad.join(', ')} short=${yearsToLoadShort.join(', ')}`);
 
-      // Load meter data from Firebase
-      const success = await MeterDataManager.loadFromFirebase(this.currentBuilding, yearsToLoad);
+      // Load meter data from Firebase (try full format first, then short format)
+      let success = await MeterDataManager.loadFromFirebase(this.currentBuilding, yearsToLoad);
+      if (!success) {
+        console.log('   Retrying with short year format (69, 68, 67)...');
+        success = await MeterDataManager.loadFromFirebase(this.currentBuilding, yearsToLoadShort);
+      }
 
       if (success) {
         console.log('✅ TenantFirebaseSync: Meter data loaded from Firebase');
         return true;
       } else {
-        console.warn('⚠️ TenantFirebaseSync: Failed to load meter data from Firebase');
+        console.warn('⚠️ TenantFirebaseSync: Failed to load meter data from Firebase with either format');
         return false;
       }
     } catch (error) {
