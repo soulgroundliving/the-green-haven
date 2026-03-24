@@ -150,6 +150,40 @@ class TenantFirebaseSync {
   }
 
   /**
+   * Load meter data from Firebase and populate localStorage
+   * This ensures meter readings are available for billing calculations
+   */
+  static async loadMeterData() {
+    try {
+      if (typeof MeterDataManager === 'undefined') {
+        console.warn('⚠️ MeterDataManager not available');
+        return false;
+      }
+
+      // Determine which years to load (current and previous years)
+      const currentDate = new Date();
+      const currentBudYear = currentDate.getFullYear() + 543;
+      const yearsToLoad = [currentBudYear - 2, currentBudYear - 1, currentBudYear];
+
+      console.log(`🔄 TenantFirebaseSync: Loading meter data from Firebase for building='${this.currentBuilding}'...`);
+
+      // Load meter data from Firebase
+      const success = await MeterDataManager.loadFromFirebase(this.currentBuilding, yearsToLoad);
+
+      if (success) {
+        console.log('✅ TenantFirebaseSync: Meter data loaded from Firebase');
+        return true;
+      } else {
+        console.warn('⚠️ TenantFirebaseSync: Failed to load meter data from Firebase');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error loading meter data:', error);
+      return false;
+    }
+  }
+
+  /**
    * Load bills from localStorage or calculated from meter data
    */
   static async loadBills() {
@@ -293,6 +327,9 @@ class TenantFirebaseSync {
     try {
       console.log('🔄 Loading all tenant data from Firebase...');
       console.log('   Building:', this.currentBuilding, 'Room:', this.currentRoom);
+
+      // Load meter data first (needed for billing calculations)
+      await this.loadMeterData().catch(e => { console.warn('Warning loading meter data:', e); });
 
       // Load data in parallel
       const [lease, room, bills, payments, tickets, announcements] =

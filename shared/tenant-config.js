@@ -133,7 +133,7 @@ class TenantConfigManager {
 
   static async saveTenantToFirebase(building, tenantId, tenantData) {
     // 1. Save to localStorage
-    const success = this.addTenant(tenantData);
+    const success = this.addTenant(building, tenantId, tenantData);
 
     // 2. Try Firebase in parallel
     try {
@@ -191,9 +191,9 @@ class TenantConfigManager {
     return this.getAllTenants();
   }
 
-  static async updateTenantWithFirebase(tenantId, building, updates) {
+  static async updateTenantWithFirebase(building, tenantId, updates) {
     // 1. Update in localStorage
-    const success = this.updateTenant(tenantId, updates);
+    const success = this.updateTenant(building, tenantId, updates);
 
     // 2. Try Firebase in parallel
     try {
@@ -219,9 +219,9 @@ class TenantConfigManager {
     return success;
   }
 
-  static async deleteTenantWithFirebase(tenantId, building) {
+  static async deleteTenantWithFirebase(building, tenantId) {
     // 1. Delete from localStorage
-    const success = this.deleteTenant(tenantId);
+    const success = this.deleteTenant(building, tenantId);
 
     // 2. Try Firebase in parallel
     try {

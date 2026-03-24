@@ -34,6 +34,8 @@
   <script src="./shared/lease-config.js"></script>
   <script src="./shared/tenant-manager.js"></script>
   <script src="./shared/tenant-firebase-sync.js"></script>
+  <!-- Initialize Real Bills from JSON file -->
+  <script src="./init-real-bills.js"></script>
   <!-- Billing System -->
   <script src="./shared/billing-calculator.js"></script>
   <script src="./shared/meter-data-manager.js"></script>
@@ -1718,7 +1720,7 @@
               </div>
               <div>
                 <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ประจำเดือน</div>
-                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">${currentPaymentMonth} 2026</div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">${currentPaymentMonth} ${currentBillYear}</div>
               </div>
             </div>
             <div>
@@ -2142,9 +2144,52 @@
           return b.month - a.month;
         });
 
+        // TENANT APP: Filter to last 12 months for mobile UX convenience
+        // Calculate 12-month cutoff (using Thai Buddhist years and months)
+        const now = new Date();
+        const currentThaiYear = now.getFullYear() - 2500;  // Convert Gregorian to Thai Buddhist year (2026 - 2500 = -474, so use raw year instead)
+        // Actually, bills are in Thai year format (67, 68, 69 for 2567, 2568, 2569)
+        // So we need to find cutoff in Thai year format too
+
+        // Current date
+        const currentGregorianYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;  // 1-indexed
+
+        // Convert current date to Thai Buddhist year
+        const currentThaiYearFull = currentGregorianYear - 1943; // 2026 - 1943 = 83, but we use 2567-2500=67
+        const currentThaiYearShort = currentGregorianYear % 100;  // Get last 2 digits
+
+        // 12 months ago in Thai calendar
+        let cutoffThaiYear = currentThaiYearShort;
+        let cutoffMonth = currentMonth - 12;
+        if (cutoffMonth <= 0) {
+          cutoffMonth += 12;
+          cutoffThaiYear -= 1;
+        }
+
+        // Filter bills to only include those from last 12 months
+        const filteredBills = sortedBills.filter(bill => {
+          // Compare by year first, then month
+          if (bill.year > cutoffThaiYear) return true;
+          if (bill.year < cutoffThaiYear) return false;
+          // Same year, check month
+          return bill.month >= cutoffMonth;
+        });
+
+        // If no bills in last 12 months after filtering, show message
+        if (filteredBills.length === 0 && sortedBills.length > 0) {
+          container.innerHTML = `
+            <div class="info-box" style="text-align: center;">
+              <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">📋 ไม่มีบิลในช่วง 12 เดือนที่ผ่านมา</div>
+              <p style="margin: 0;">ก่อนหน้านี้มีบิล ${sortedBills.length} รายการ</p>
+            </div>
+          `;
+          return;
+        }
+
         // Group bills by year for better organization
         const billsByYear = {};
-        sortedBills.forEach(bill => {
+        filteredBills.forEach(bill => {
           if (!billsByYear[bill.year]) billsByYear[bill.year] = [];
           billsByYear[bill.year].push(bill);
         });
@@ -2188,8 +2233,8 @@
                   <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 1rem;">
                     <div style="text-align: right;">
                       <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem;">รวม</div>
-                      <div style="font-size: 1.5rem; font-weight: 800; color: ${statusColor};">
-                        ฿${(bill.totalCharge || 0).toLocaleString('th-TH')}
+                      <div style="font-size: 1.5rem; font-weight: 800; color: ${statusColor}; white-space: nowrap; direction: ltr;">
+                        ฿${Math.round(bill.totalCharge || 0).toLocaleString('th-TH')}
                       </div>
                     </div>
 
@@ -2201,6 +2246,10 @@
                       <button onclick="goToBillPayment('${bill.billId}', ${bill.totalCharge}, '${monthName} ${year}')" style="padding: 0.6rem 1.2rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem; white-space: nowrap;">
                         💳 ชำระเงิน
                       </button>
+                    ` : bill.status === 'paid' ? `
+                      <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.6rem 1.2rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem; white-space: nowrap;">
+                        📋 ดูใบเสร็จ
+                      </button>
                     ` : ''}
                   </div>
                 </div>
@@ -2211,7 +2260,7 @@
           });
 
         container.innerHTML = html;
-        console.log(`✅ Bills page loaded: ${sortedBills.length} bills for room ${currentRoom}`);
+        console.log(`✅ Bills page loaded: ${filteredBills.length} bills (last 12 months) for room ${currentRoom}${sortedBills.length > filteredBills.length ? ` - Filtered from ${sortedBills.length} total bills` : ''}`);
 
       } catch (error) {
         console.error('❌ Error loading bills:', error);
@@ -2227,29 +2276,258 @@
     // Navigate to bill payment page with selected bill
     function goToBillPayment(billId, amount, monthYear) {
       currentPaymentAmount = amount;
-      currentPaymentMonth = monthYear;
 
-      // Update invoice content
-      const invoiceContent = document.getElementById('invoiceContent');
-      if (invoiceContent) {
-        invoiceContent.innerHTML = `
-          <div style="padding: 2rem; text-align: center; border-radius: 8px; background: #f9f9f9;">
-            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">ใบวางบิล / Invoice</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-              ${billId}<br>
-              ${monthYear}
+      try {
+        // Get all bills for this room
+        const bills = typeof BillingCalculator !== 'undefined'
+          ? BillingCalculator.getBillsByRoom(currentRoom) || []
+          : [];
+
+        // Find the specific bill
+        const bill = bills.find(b => b.billId === billId);
+        if (!bill) {
+          alert('❌ ไม่พบข้อมูลบิล: ' + billId);
+          return;
+        }
+
+        // Extract month name from bill
+        const monthNames = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const monthName = monthNames[bill.month] || 'เดือน ' + bill.month;
+
+        // Set global payment variables for receipt generation
+        currentPaymentMonth = monthName;
+        currentBillMonth = bill.month;  // Actual month number for data operations
+        currentBillYear = bill.year;     // Actual year for data operations
+        currentInvoiceId = bill.billId;
+        currentBuilding = bill.building || 'rooms';
+
+        // Build detailed invoice HTML
+        const invoiceHTML = `
+          <div style="padding: 2rem; background: #fff; border-radius: 8px; border: 1px solid #e0e0e0;">
+            <!-- Header -->
+            <div style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid var(--green); padding-bottom: 1rem;">
+              <h2 style="margin: 0 0 0.5rem 0; color: var(--green); font-size: 1.3rem;">ใบวางบิล</h2>
+              <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted);">Invoice</p>
             </div>
-            <div style="font-size: 2rem; font-weight: 800; color: var(--green); margin-bottom: 1rem;">
-              ฿${amount.toLocaleString('th-TH')}
+
+            <!-- Bill Info -->
+            <div style="margin-bottom: 1.5rem;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.95rem;">
+                <div>
+                  <div style="color: var(--text-muted); font-weight: 600;">เลขที่บิล</div>
+                  <div style="font-weight: 700; color: var(--text);">${bill.billId}</div>
+                </div>
+                <div>
+                  <div style="color: var(--text-muted); font-weight: 600;">วันที่</div>
+                  <div style="font-weight: 700; color: var(--text);">${monthName} ${bill.year}</div>
+                </div>
+                <div>
+                  <div style="color: var(--text-muted); font-weight: 600;">ห้องเลขที่</div>
+                  <div style="font-weight: 700; color: var(--text);">${bill.roomId}</div>
+                </div>
+                <div>
+                  <div style="color: var(--text-muted); font-weight: 600;">สถานะ</div>
+                  <div style="font-weight: 700; color: #ff9800;">⏳ รอชำระ</div>
+                </div>
+              </div>
             </div>
-            <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">
-              กรุณาชำระเงินตามจำนวนดังกล่าว
-            </p>
+
+            <!-- Charges Breakdown -->
+            <div style="margin-bottom: 1.5rem; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; padding: 1rem 0;">
+              <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">รายละเอียดค่าใช้</h3>
+              <div style="font-size: 0.9rem; line-height: 2;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span>💰 ค่าเช่า</span>
+                  <span>฿${(bill.charges.rent || 0).toLocaleString('th-TH')}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>⚡ ค่าไฟ (${(bill.charges.electric.usage || 0).toFixed(1)} หน่วย @ ฿${(bill.charges.electric.rate || 0).toFixed(1)}/หน่วย)</span>
+                  <span>฿${(bill.charges.electric.cost || 0).toLocaleString('th-TH')}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>💧 ค่าน้ำ (${(bill.charges.water.usage || 0).toFixed(1)} หน่วย @ ฿${(bill.charges.water.rate || 0).toFixed(1)}/หน่วย)</span>
+                  <span>฿${(bill.charges.water.cost || 0).toLocaleString('th-TH')}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>🗑️ ค่ากลาง</span>
+                  <span>฿${(bill.charges.trash || 0).toLocaleString('th-TH')}</span>
+                </div>
+                ${bill.charges.common > 0 ? `<div style="display: flex; justify-content: space-between;">
+                  <span>🏢 ค่าใช้ส่วนกลาง</span>
+                  <span>฿${(bill.charges.common || 0).toLocaleString('th-TH')}</span>
+                </div>` : ''}
+              </div>
+            </div>
+
+            <!-- Total -->
+            <div style="text-align: right; margin-bottom: 2rem;">
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">รวมทั้งสิ้น</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--green);">
+                ฿${(bill.totalCharge || 0).toLocaleString('th-TH')}
+              </div>
+            </div>
+
+            <!-- Meter Readings -->
+            ${bill.meterReadings ? `
+            <div style="background: #f9f9f9; padding: 1rem; border-radius: 6px; font-size: 0.9rem;">
+              <h4 style="margin: 0 0 0.8rem 0; font-size: 0.95rem;">สถานะมิเตอร์</h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <div style="color: var(--text-muted); margin-bottom: 0.3rem;">⚡ ไฟฟ้า</div>
+                  <div style="color: var(--text-muted); font-size: 0.85rem;">เดิม: ${(bill.meterReadings.electric?.previous || 0).toLocaleString('th-TH')}</div>
+                  <div style="color: var(--text-muted); font-size: 0.85rem;">ปัจจุบัน: ${(bill.meterReadings.electric?.current || 0).toLocaleString('th-TH')}</div>
+                  <div style="font-weight: 600; color: var(--green);">ใช้: ${(bill.meterReadings.electric?.usage || 0).toFixed(1)} หน่วย</div>
+                </div>
+                <div>
+                  <div style="color: var(--text-muted); margin-bottom: 0.3rem;">💧 น้ำ</div>
+                  <div style="color: var(--text-muted); font-size: 0.85rem;">เดิม: ${(bill.meterReadings.water?.previous || 0).toLocaleString('th-TH')}</div>
+                  <div style="color: var(--text-muted); font-size: 0.85rem;">ปัจจุบัน: ${(bill.meterReadings.water?.current || 0).toLocaleString('th-TH')}</div>
+                  <div style="font-weight: 600; color: var(--green);">ใช้: ${(bill.meterReadings.water?.usage || 0).toFixed(1)} หน่วย</div>
+                </div>
+              </div>
+            </div>
+            ` : ''}
+
+            <!-- QR Code Section -->
+            <div style="background: #e3f2fd; border: 2px dashed var(--green); padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 2rem;">
+              <div style="font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 1rem;">💳 สแกน QR Code เพื่อชำระเงิน</div>
+              <div id="qrCode" style="display: flex; justify-content: center; margin-bottom: 1rem;"></div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">พร้อมเพย์: 089-1234567<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
+            </div>
+
+            <div style="background: #fffacd; border-left: 4px solid var(--accent); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+              <div style="font-weight: 700; color: var(--accent); margin-bottom: 0.5rem;">⏰ กรุณาชำระภายใน 5 วันถัดไป</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">หากผ่านกำหนด อาจมีค่าปรับ</div>
+            </div>
+
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+              ⏳ <strong>รอชำระ</strong> — กรุณาอัปโหลดสลิปเพื่อยืนยันการชำระเงิน
+            </div>
           </div>
         `;
+
+        // Display in modal/overlay
+        const invoiceContent = document.getElementById('invoiceContent');
+        if (invoiceContent) {
+          invoiceContent.innerHTML = invoiceHTML;
+        }
+
+        // Show invoice section and hide payment
+        const invoiceSection = document.getElementById('invoiceSection');
+        const receiptSection = document.getElementById('receiptSection');
+        if (invoiceSection) invoiceSection.style.display = 'block';
+        if (receiptSection) receiptSection.style.display = 'none';
+
+        // Generate QR Code
+        setTimeout(generateQRCode, 100); // Small delay to ensure DOM is ready
+
+      } catch (error) {
+        console.error('❌ Error loading payment:', error);
+        alert('❌ เกิดข้อผิดพลาด: ' + error.message);
       }
 
       goToPage('payment');
+    }
+
+    // View bill receipt (if payment completed)
+    function viewBillReceipt(billId, monthName, year) {
+      try {
+        // Get all bills for this room
+        const bills = typeof BillingCalculator !== 'undefined'
+          ? BillingCalculator.getBillsByRoom(currentRoom) || []
+          : [];
+
+        // Find the specific bill
+        const bill = bills.find(b => b.billId === billId);
+        if (!bill) {
+          alert('❌ ไม่พบข้อมูลบิล: ' + billId);
+          return;
+        }
+
+        if (bill.status !== 'paid') {
+          alert('❌ บิลนี้ยังไม่ได้ชำระเงิน');
+          return;
+        }
+
+        // Build receipt HTML
+        const receiptHTML = `
+          <div style="padding: 2rem; background: #fff; border-radius: 8px; border: 2px dashed #2d8653;">
+            <!-- Header -->
+            <div style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid var(--green); padding-bottom: 1rem;">
+              <h2 style="margin: 0 0 0.5rem 0; color: var(--green); font-size: 1.3rem;">ใบเสร็จรับเงิน</h2>
+              <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted);">Receipt</p>
+              <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--green); font-weight: 700;">✅ ชำระเงินแล้ว</div>
+            </div>
+
+            <!-- Receipt Info -->
+            <div style="margin-bottom: 1.5rem;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.95rem;">
+                <div>
+                  <div style="color: var(--text-muted); font-weight: 600;">อ้างอิงบิลที่</div>
+                  <div style="font-weight: 700; color: var(--text);">${bill.billId}</div>
+                </div>
+                <div>
+                  <div style="color: var(--text-muted); font-weight: 600;">วันที่</div>
+                  <div style="font-weight: 700; color: var(--text);">${monthName} ${year}</div>
+                </div>
+                <div>
+                  <div style="color: var(--text-muted); font-weight: 600;">ห้องเลขที่</div>
+                  <div style="font-weight: 700; color: var(--text);">${bill.roomId}</div>
+                </div>
+                <div>
+                  <div style="color: var(--text-muted); font-weight: 600;">วิธีชำระเงิน</div>
+                  <div style="font-weight: 700; color: var(--text);">ธนาคาร / PromptPay</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Details -->
+            <div style="margin-bottom: 1.5rem; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; padding: 1rem 0;">
+              <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">รายละเอียดการชำระ</h3>
+              <div style="font-size: 0.9rem; line-height: 2;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span>จำนวนเงิน</span>
+                  <span style="font-weight: 700;">฿${(bill.totalCharge || 0).toLocaleString('th-TH')}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted);">
+                  <span style="font-size: 0.85rem;">วันที่ชำระ</span>
+                  <span style="font-size: 0.85rem;">${new Date().toLocaleDateString('th-TH')}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Confirmation -->
+            <div style="background: #e8f5e9; padding: 1rem; border-radius: 6px; text-align: center; color: var(--green); font-weight: 600;">
+              ✅ ได้รับชำระเงินแล้ว<br>
+              <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: 400;">ขอบคุณที่ชำระเงินตรงเวลา</span>
+            </div>
+
+            <!-- Footer -->
+            <div style="text-align: center; margin-top: 2rem; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid #e0e0e0; padding-top: 1rem;">
+              <p style="margin: 0;">ใบเสร็จฉบับนี้ใช้เป็นหลักฐานการชำระเงิน</p>
+              <p style="margin: 0.5rem 0 0 0;">The Green Haven Co., Ltd.</p>
+            </div>
+          </div>
+        `;
+
+        // Display in modal/overlay
+        const receiptContent = document.getElementById('receiptContent');
+        if (receiptContent) {
+          receiptContent.innerHTML = receiptHTML;
+        }
+
+        // Show receipt section and hide invoice
+        const invoiceSection = document.getElementById('invoiceSection');
+        const receiptSection = document.getElementById('receiptSection');
+        if (invoiceSection) invoiceSection.style.display = 'none';
+        if (receiptSection) receiptSection.style.display = 'block';
+
+        goToPage('payment');
+
+      } catch (error) {
+        console.error('❌ Error displaying receipt:', error);
+        alert('❌ เกิดข้อผิดพลาดในการแสดงใบเสร็จ: ' + error.message);
+      }
     }
 
     // PROFILE PAGE
