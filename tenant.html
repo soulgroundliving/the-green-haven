@@ -39,7 +39,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
     import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
     import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM",
@@ -69,7 +69,17 @@
       window.firebaseDB = database;
 
       window.firebase = {
-        firestore: () => firestore
+        firestore: () => firestore,
+        firestoreFunctions: {
+          collection: collection,
+          doc: doc,
+          setDoc: setDoc,
+          getDoc: getDoc,
+          getDocs: getDocs,
+          query: query,
+          where: where,
+          deleteDoc: deleteDoc
+        }
       };
 
       // Signal that Firebase is ready
@@ -78,6 +88,7 @@
 
       console.log('✅ Firebase initialized successfully');
       console.log('📊 Database URL:', firebaseConfig.databaseURL);
+      console.log('📁 Firestore functions exposed:', Object.keys(window.firebase.firestoreFunctions));
     } catch (error) {
       console.error('❌ Firebase initialization failed:', error);
       window.firebaseReady = false;
