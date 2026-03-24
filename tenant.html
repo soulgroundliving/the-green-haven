@@ -1671,12 +1671,52 @@
           // Check if bill already exists
           const billExists = allBills.some(b => b.year === year && b.month === month);
           if (!billExists) {
-            // Generate new bill
+            // Generate new bill with actual meter data if available
             const rent = currentLease.rentAmount || 5000;
-            const electric = 1200;
-            const water = 300;
             const trash = 20;
-            const totalCharge = rent + electric + water + trash;
+
+            // Try to get actual meter readings from MeterDataManager
+            let meterData = null;
+            let electricCost = 1200;
+            let waterCost = 300;
+            let electricUsage = 50;
+            let waterUsage = 40;
+            let meterReadingsObj = {};
+
+            if (typeof MeterDataManager !== 'undefined') {
+              try {
+                meterData = MeterDataManager.getMeterReading(year, month, currentRoom);
+                if (meterData && (meterData.eNew || meterData.wNew)) {
+                  console.log(`📊 Found meter data for ${year}-${month}: ${JSON.stringify(meterData)}`);
+
+                  // Calculate electric cost from meter readings
+                  if (meterData.eNew !== undefined && meterData.eOld !== undefined) {
+                    electricUsage = Math.max(0, meterData.eNew - meterData.eOld);
+                    electricCost = electricUsage * 8;
+                    meterReadingsObj.electric = {
+                      previous: meterData.eOld,
+                      current: meterData.eNew,
+                      usage: electricUsage
+                    };
+                  }
+
+                  // Calculate water cost from meter readings
+                  if (meterData.wNew !== undefined && meterData.wOld !== undefined) {
+                    waterUsage = Math.max(0, meterData.wNew - meterData.wOld);
+                    waterCost = waterUsage * 20;
+                    meterReadingsObj.water = {
+                      previous: meterData.wOld,
+                      current: meterData.wNew,
+                      usage: waterUsage
+                    };
+                  }
+                }
+              } catch (e) {
+                console.warn(`⚠️ Error reading meter data for ${year}-${month}:`, e);
+              }
+            }
+
+            const totalCharge = rent + electricCost + waterCost + trash;
 
             const newBill = {
               billId: `BILL-${year}-${month.toString().padStart(2, '0')}-${Date.now()}`,
@@ -1685,20 +1725,20 @@
               year: year,
               month: month,
               rent: rent,
-              electric: electric,
-              water: water,
+              electric: electricCost,
+              water: waterCost,
               trash: trash,
               totalCharge: totalCharge,
               charges: {
                 rent: rent,
-                electric: { cost: electric, usage: 50, rate: 8 },
-                water: { cost: water, usage: 40, rate: 20 },
+                electric: { cost: electricCost, usage: electricUsage, rate: 8 },
+                water: { cost: waterCost, usage: waterUsage, rate: 20 },
                 trash: trash,
                 common: 0
               },
               status: 'pending',
               createdAt: new Date().toISOString(),
-              meterReadings: {}
+              meterReadings: meterReadingsObj
             };
 
             allBills.push(newBill);
