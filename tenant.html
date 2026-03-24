@@ -955,9 +955,15 @@
       <!-- PAYMENT PAGE -->
       <div class="page" id="page-payment">
         <!-- Payment Page Header -->
-        <div style="margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--green);">
-          <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--green);">💳 ชำระเงิน</h1>
-          <p style="margin: 0.5rem 0 0 0; color: var(--text-muted); font-size: 0.95rem;">ทำตามขั้นตอนด้านล่างเพื่อชำระเงินค่าบิล</p>
+        <div style="margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--green); display: flex; align-items: flex-start; justify-content: space-between;">
+          <button onclick="goToPage('bills')" style="padding: 0.6rem 1.2rem; background: #f0f0f0; color: #333; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; white-space: nowrap; height: fit-content;">
+            ← ย้อนกลับ
+          </button>
+          <div style="flex: 1; text-align: center;">
+            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--green);">💳 ชำระเงิน</h1>
+            <p style="margin: 0.5rem 0 0 0; color: var(--text-muted); font-size: 0.95rem;">ทำตามขั้นตอนด้านล่างเพื่อชำระเงินค่าบิล</p>
+          </div>
+          <div style="width: 120px;"></div>
         </div>
 
         <!-- Step Indicator -->
