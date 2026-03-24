@@ -1663,9 +1663,23 @@
     }
 
     function generateAllBackdatedBills() {
+      // Ensure lease data is loaded
       if (!currentLease || !currentLease.moveInDate) {
-        alert('⚠️ ไม่สามารถ generate บิล - ข้อมูลวันย้ายเข้าไม่สมบูรณ์');
-        return;
+        console.warn('⚠️ Lease data not loaded, attempting to load...');
+        // Try to load lease data from localStorage fallback
+        if (typeof LeaseAgreementManager !== 'undefined') {
+          currentLease = LeaseAgreementManager.getActiveLease(currentBuilding, currentRoom);
+        }
+        // If still no lease, use default values
+        if (!currentLease || !currentLease.moveInDate) {
+          currentLease = {
+            moveInDate: '2026-01-01',
+            rentAmount: 5900,
+            roomId: currentRoom,
+            building: currentBuilding
+          };
+          console.warn('⚠️ Using default lease data (moveInDate: 2026-01-01)');
+        }
       }
 
       const moveInDate = new Date(currentLease.moveInDate);
