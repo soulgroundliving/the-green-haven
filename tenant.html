@@ -140,7 +140,7 @@
           const fullYear = bill.year < 100 ? bill.year + 2500 : bill.year;
           const monthKey = `${fullYear}-${String(bill.month).padStart(2, '0')}`;
           const storageKey = `meter_data_${fullYear}`;
-          const cacheKey = `${fullYear}_${bill.month}_${bill.roomId}`;
+          const cacheKey = `${fullYear}_${bill.month}_${String(bill.roomId)}`;
 
           if (!meterDataByYear[storageKey]) {
             meterDataByYear[storageKey] = {};
@@ -3142,9 +3142,13 @@
                   let meterData = null;
 
                   // Try global cache first (from extraction)
-                  const cacheKey = `${year}_${bill.month}_${currentRoom}`;
+                  const cacheKey = `${year}_${bill.month}_${String(currentRoom)}`;
                   if (window.correctMeterReadings && window.correctMeterReadings[cacheKey]) {
                     meterData = window.correctMeterReadings[cacheKey];
+                    if (!meterData.logged) {
+                      console.log(`✅ Using cached meter data for ${cacheKey}:`, meterData);
+                      meterData.logged = true;
+                    }
                   }
 
                   // Fallback to MeterDataManager
