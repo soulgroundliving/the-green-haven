@@ -1539,22 +1539,8 @@
         return b.month - a.month;
       });
 
-      // Filter to 12 months for tenant app
-      const now = new Date();
-      const currentGregorianYear = now.getFullYear();
-      const currentMonth = now.getMonth() + 1;
-      let cutoffThaiYear = currentGregorianYear % 100;
-      let cutoffMonth = currentMonth - 12;
-      if (cutoffMonth <= 0) {
-        cutoffMonth += 12;
-        cutoffThaiYear -= 1;
-      }
-
-      const filteredBills = sortedBills.filter(bill => {
-        if (bill.year > cutoffThaiYear) return true;
-        if (bill.year === cutoffThaiYear && bill.month >= cutoffMonth) return true;
-        return false;
-      });
+      // Show ALL historical bills (no 12-month filter)
+      const filteredBills = sortedBills;
 
       // Render bills with real data structure
       container.innerHTML = filteredBills.map((bill, index) => {
@@ -1625,18 +1611,26 @@
         return;
       }
 
-      // Clear all old bills
-      console.log('🗑️ Clearing old bills...');
+      console.log('🗑️ Clearing ALL old bill data...');
+
+      // Clear old bills (bills_YYYY format)
       for (const year of [2567, 2568, 2569, 2570]) {
         localStorage.removeItem(`bills_${year}`);
       }
 
-      // Clear receipts too
+      // Clear receipts
       for (const year of [2567, 2568, 2569, 2570]) {
         localStorage.removeItem(`receipts_${year}`);
       }
 
-      console.log('✅ Old bills cleared');
+      // Clear meter data (this has wrong readings and old rates!)
+      localStorage.removeItem('meter_data');
+
+      // Clear any other old bill formats
+      localStorage.removeItem('billing_data');
+      localStorage.removeItem('current_bills');
+
+      console.log('✅ All old bill data cleared');
 
       // Regenerate with new rates
       generateAllBackdatedBills();
