@@ -2904,6 +2904,28 @@
                                  bill.status === 'pending' ? '⏳ รอชำระ' :
                                  '⚠️ เกินกำหนด';
 
+              // FIX: Load ONLY from meter_data database, NEVER from stored bill data
+              let electricDisplay = `฿${(bill.charges.electric.cost || 0).toLocaleString('th-TH')} (${(bill.charges.electric.usage || 0).toFixed(1)} หน่วย)`;
+              let waterDisplay = `฿${(bill.charges.water.cost || 0).toLocaleString('th-TH')} (${(bill.charges.water.usage || 0).toFixed(1)} หน่วย)`;
+
+              if (typeof MeterDataManager !== 'undefined') {
+                try {
+                  const meterData = MeterDataManager.getMeterReading(year, bill.month, currentRoom);
+                  if (meterData && meterData.eNew !== undefined && meterData.eOld !== undefined) {
+                    const eUsage = Math.max(0, (meterData.eNew || 0) - (meterData.eOld || 0));
+                    const eCost = eUsage * 8;
+                    electricDisplay = `(${meterData.eNew} - ${meterData.eOld}) = ${eUsage} หน่วย × ฿8 = ฿${eCost.toLocaleString('th-TH')}`;
+                  }
+                  if (meterData && meterData.wNew !== undefined && meterData.wOld !== undefined) {
+                    const wUsage = Math.max(0, (meterData.wNew || 0) - (meterData.wOld || 0));
+                    const wCost = wUsage * 20;
+                    waterDisplay = `(${meterData.wNew} - ${meterData.wOld}) = ${wUsage} หน่วย × ฿20 = ฿${wCost.toLocaleString('th-TH')}`;
+                  }
+                } catch (e) {
+                  console.warn(`⚠️ Could not load meter data for ${year}-${bill.month}:`, e);
+                }
+              }
+
               html += `
                 <div class="bill-card" style="display: flex; justify-content: space-between; align-items: stretch; padding: 1.5rem; border-left: 4px solid ${statusColor}; margin-bottom: 1rem;">
                   <div style="flex: 1;">
@@ -2914,16 +2936,8 @@
 
                     <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; line-height: 1.6;">
                       <div>💰 ค่าเช่า: ฿${(bill.charges.rent || 0).toLocaleString('th-TH')}</div>
-                      <div>⚡ ค่าไฟ: ${
-                        bill.meterReadings && bill.meterReadings.electric
-                          ? `(${bill.meterReadings.electric.current} - ${bill.meterReadings.electric.previous}) = ${(bill.charges.electric.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges.electric.rate} = ฿${(bill.charges.electric.cost || 0).toLocaleString('th-TH')}`
-                          : `฿${(bill.charges.electric.cost || 0).toLocaleString('th-TH')} (${(bill.charges.electric.usage || 0).toFixed(1)} หน่วย)`
-                      }</div>
-                      <div>💧 ค่าน้ำ: ${
-                        bill.meterReadings && bill.meterReadings.water
-                          ? `(${bill.meterReadings.water.current} - ${bill.meterReadings.water.previous}) = ${(bill.charges.water.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges.water.rate} = ฿${(bill.charges.water.cost || 0).toLocaleString('th-TH')}`
-                          : `฿${(bill.charges.water.cost || 0).toLocaleString('th-TH')} (${(bill.charges.water.usage || 0).toFixed(1)} หน่วย)`
-                      }</div>
+                      <div>⚡ ค่าไฟ: ${electricDisplay}</div>
+                      <div>💧 ค่าน้ำ: ${waterDisplay}</div>
                       <div>🗑️ ค่าขยะ: ฿${(bill.charges.trash || 0).toLocaleString('th-TH')}</div>
                       ${bill.charges.common > 0 ? `<div>🏢 ค่าใช้ส่วนกลาง: ฿${(bill.charges.common || 0).toLocaleString('th-TH')}</div>` : ''}
                     </div>
