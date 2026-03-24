@@ -2268,6 +2268,146 @@
       alert(`📋 ใบเสร็จ ${billId}\nเดือน: ${monthName} ${year}\n\n(ฟีเจอร์ดาวน์โหลด PDF กำลังพัฒนา)`);
     }
 
+    function generateReceiptForBill(billId, monthName, year) {
+      try {
+        // Find the bill data
+        let billData = null;
+        const buildingYear = parseInt(year) - 543; // Convert to Gregorian year
+
+        // Search through all bill years
+        for (const searchYear of [2567, 2568, 2569, 2570]) {
+          const billsKey = `bills_${searchYear}`;
+          const billsData = localStorage.getItem(billsKey);
+          if (billsData) {
+            const bills = JSON.parse(billsData);
+            billData = bills.find(b => b.billId === billId && b.building === currentBuilding && b.roomId === currentRoom);
+            if (billData) break;
+          }
+        }
+
+        if (!billData) {
+          alert('⚠️ ไม่พบข้อมูลบิล');
+          return;
+        }
+
+        // Create a simple receipt document
+        const receiptHTML = `
+          <!DOCTYPE html>
+          <html lang="th">
+          <head>
+            <meta charset="UTF-8">
+            <title>ใบเสร็จ ${billId}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
+              .header { text-align: center; margin-bottom: 2rem; border-bottom: 2px solid #333; padding-bottom: 1rem; }
+              .title { font-size: 24px; font-weight: bold; }
+              .subtitle { color: #666; margin-top: 0.5rem; }
+              .info-section { margin: 1.5rem 0; }
+              .info-row { display: flex; justify-content: space-between; margin: 0.5rem 0; }
+              .label { font-weight: bold; color: #333; }
+              .value { text-align: right; }
+              .charges-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+              .charges-table th, .charges-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #ddd; }
+              .charges-table th { background: #f5f5f5; font-weight: bold; }
+              .charges-table .amount { text-align: right; }
+              .total-row { font-weight: bold; font-size: 18px; background: #f5f5f5; }
+              .footer { text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: 12px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="title">✅ ใบเสร็จรับเงิน</div>
+              <div class="subtitle">Receipt</div>
+            </div>
+
+            <div class="info-section">
+              <div class="info-row">
+                <span class="label">เลขที่ใบเสร็จ:</span>
+                <span class="value">${billId}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">ห้อง:</span>
+                <span class="value">${currentRoom}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">อาคาร:</span>
+                <span class="value">${currentBuilding === 'rooms' ? 'ตึก A (Rooms)' : 'ตึก B (Nest)'}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">ผู้เช่า:</span>
+                <span class="value">${currentTenant?.name || currentLease?.tenantName || '—'}</span>
+              </div>
+            </div>
+
+            <div class="info-section">
+              <div class="info-row">
+                <span class="label">เดือน:</span>
+                <span class="value">${monthName} ${year}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">วันที่:</span>
+                <span class="value">${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+              </div>
+            </div>
+
+            <table class="charges-table">
+              <thead>
+                <tr>
+                  <th>รายการ</th>
+                  <th class="amount">จำนวน (บาท)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>💰 ค่าเช่า</td>
+                  <td class="amount">฿${(billData.charges.rent || 0).toLocaleString('th-TH')}</td>
+                </tr>
+                <tr>
+                  <td>⚡ ค่าไฟฟ้า</td>
+                  <td class="amount">฿${(billData.charges.electric?.cost || billData.charges.electricity || 0).toLocaleString('th-TH')}</td>
+                </tr>
+                <tr>
+                  <td>💧 ค่าน้ำ</td>
+                  <td class="amount">฿${(billData.charges.water?.cost || 0).toLocaleString('th-TH')}</td>
+                </tr>
+                <tr>
+                  <td>🗑️ ค่าขยะ</td>
+                  <td class="amount">฿${(billData.charges.trash || 0).toLocaleString('th-TH')}</td>
+                </tr>
+                ${billData.charges.common > 0 ? `<tr>
+                  <td>🏢 ค่าใช้ส่วนกลาง</td>
+                  <td class="amount">฿${(billData.charges.common || 0).toLocaleString('th-TH')}</td>
+                </tr>` : ''}
+                <tr class="total-row">
+                  <td>รวมทั้งสิ้น</td>
+                  <td class="amount">฿${Math.round(billData.totalCharge || 0).toLocaleString('th-TH')}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="footer">
+              <p>ขอบคุณที่ชำระค่าบิลตรงเวลา</p>
+              <p>Thank you for prompt payment</p>
+              <p>พิมพ์วันที่: ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+          </body>
+          </html>
+        `;
+
+        // Open print dialog
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(receiptHTML);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+
+        console.log(`✅ Generated receipt for ${billId}`);
+      } catch (error) {
+        console.error('❌ Error generating receipt:', error);
+        alert('⚠️ เกิดข้อผิดพลาดในการสร้างใบเสร็จ');
+      }
+    }
+
     function goToPayment(month, amount) {
       currentPaymentMonth = month;
       currentPaymentAmount = amount;
@@ -3448,9 +3588,14 @@
                     </span>
 
                     ${bill.status === 'paid' ? `
-                      <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 1.2rem 2.4rem; background: var(--green); color: #fff; border: none; border-radius: 12px; cursor: pointer; font-weight: 800; font-size: 1.3rem; white-space: nowrap; box-shadow: 0 4px 12px rgba(45, 134, 83, 0.3);">
-                        📋 ดูใบเสร็จ
-                      </button>
+                      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.8rem 1.6rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem; white-space: nowrap; box-shadow: 0 2px 8px rgba(45, 134, 83, 0.2);">
+                          📋 ดูใบเสร็จ
+                        </button>
+                        <button onclick="generateReceiptForBill('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.8rem 1.6rem; background: var(--blue); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem; white-space: nowrap; box-shadow: 0 2px 8px rgba(63, 81, 181, 0.2);">
+                          ⬇️ ดาวน์โหลด
+                        </button>
+                      </div>
                     ` : bill.status === 'pending' ? `
                       <button onclick="goToBillPaymentWithFullData('${encodeURIComponent(JSON.stringify({...bill, monthName, year}))}', '${monthName} ${year}')" style="padding: 1.2rem 2.4rem; background: var(--green); color: #fff; border: none; border-radius: 12px; cursor: pointer; font-weight: 800; font-size: 1.3rem; white-space: nowrap; box-shadow: 0 4px 12px rgba(45, 134, 83, 0.3);">
                         ชำระเงิน
