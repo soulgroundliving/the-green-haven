@@ -108,6 +108,87 @@
         console.error('❌ Error migrating meter data:', e);
       }
     })();
+
+    // Extract meter data from real bills JSON to ensure we have CORRECT meter readings
+    (async function extractMeterFromBills() {
+      try {
+        // Load the real bills JSON which has correct meter readings
+        const response = await fetch('./real-bills-generated.json');
+        if (!response.ok) {
+          console.log('ℹ️ Could not load real bills JSON for meter extraction');
+          return;
+        }
+
+        const data = await response.json();
+        if (!data.bills || data.bills.length === 0) {
+          console.log('ℹ️ No bills in JSON for meter extraction');
+          return;
+        }
+
+        console.log('🔄 Extracting meter data from real bills JSON...');
+
+        const meterDataByYear = {};
+
+        // Extract meter readings from bills
+        data.bills.forEach(bill => {
+          if (!bill.meterReadings || !bill.month) return;
+
+          // Convert short year to full Buddhist year (67->2567, 68->2568, etc.)
+          const fullYear = bill.year < 100 ? bill.year + 2500 : bill.year;
+          const monthKey = `${fullYear}-${String(bill.month).padStart(2, '0')}`;
+          const storageKey = `meter_data_${fullYear}`;
+
+          if (!meterDataByYear[storageKey]) {
+            meterDataByYear[storageKey] = {};
+          }
+
+          const roomId = String(bill.roomId);
+          const mr = bill.meterReadings;
+
+          // Extract meter readings from bill's meterReadings object
+          // Format: {water: {current, previous}, electric: {current, previous}}
+          if (mr.water && mr.electric) {
+            meterDataByYear[storageKey][monthKey] = meterDataByYear[storageKey][monthKey] || {};
+            meterDataByYear[storageKey][monthKey][roomId] = {
+              wNew: mr.water.current || 0,
+              wOld: mr.water.previous || 0,
+              eNew: mr.electric.current || 0,
+              eOld: mr.electric.previous || 0,
+              currentWater: mr.water.current || 0,
+              waterStart: mr.water.previous || 0,
+              currentElectric: mr.electric.current || 0,
+              electricStart: mr.electric.previous || 0,
+              recordedDate: bill.billDate || new Date().toISOString()
+            };
+          }
+        });
+
+        // Save to localStorage, MERGING with existing data (don't overwrite)
+        let addedCount = 0;
+        Object.entries(meterDataByYear).forEach(([storageKey, monthData]) => {
+          const existing = JSON.parse(localStorage.getItem(storageKey) || '{}');
+
+          Object.entries(monthData).forEach(([monthKey, roomData]) => {
+            if (!existing[monthKey]) {
+              existing[monthKey] = {};
+            }
+            Object.entries(roomData).forEach(([roomId, reading]) => {
+              if (!existing[monthKey][roomId]) {
+                existing[monthKey][roomId] = reading;
+                addedCount++;
+              }
+            });
+          });
+
+          localStorage.setItem(storageKey, JSON.stringify(existing));
+        });
+
+        console.log(`✅ Extracted ${addedCount} correct meter readings from bills JSON`);
+
+      } catch (e) {
+        console.error('❌ Error extracting meter data from bills:', e);
+      }
+    })();
   </script>
   <!-- Firebase Configuration -->
   <script type="module">
@@ -3005,17 +3086,27 @@
                   const mr = billObj.meterReadings;
                   // Check if format is {water: {previous, current}, electric: {previous, current}}
                   if (mr.water && mr.electric && mr.water.current !== undefined && mr.electric.current !== undefined) {
-                    // Check if swapped: electric.current/previous should be larger than water values
-                    const eNew = mr.electric.current;
-                    const eOld = mr.electric.previous;
-                    const wNew = mr.water.current;
-                    const wOld = mr.water.previous;
+                    let eNew = mr.electric.current;
+                    let eOld = mr.electric.previous;
+                    let wNew = mr.water.current;
+                    let wOld = mr.water.previous;
 
-                    // If electric values are suspiciously similar to water values, might be swapped
-                    const isLikelySwapped = (eNew < 2000 && eNew > 0) && (wNew > 1000 && wOld > 1000);
-                    if (isLikelySwapped && eNew === wNew) {
-                      // Don't use - appears swapped
-                      return null;
+                    // CRITICAL FIX: Detect swapped readings
+                    // Pattern: electric.previous == water.current (swap happened)
+                    if (eOld === wNew) {
+                      // Swap detected! ePrevious got set to wCurrent
+                      // This means the correct ePrevious is missing, need to estimate from usage
+                      // But we can at least know that electric.previous is wrong
+                      // Check if we can recover from stored charges
+                      if (billObj.charges && billObj.charges.electric && billObj.charges.electric.usage) {
+                        const eUsage = billObj.charges.electric.usage;
+                        const correctEOld = eNew - eUsage;
+                        eOld = correctEOld;
+                        console.log(`🔧 Fixed swapped meter: eOld was ${mr.electric.previous}, calculated as ${correctEOld}`);
+                      } else {
+                        // Can't fix - indicate by returning null
+                        return null;
+                      }
                     }
 
                     return { eNew, eOld, wNew, wOld };
