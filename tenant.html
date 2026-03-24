@@ -2998,6 +2998,34 @@
                 return null;
               }
 
+              // Try to get meter data from stored meterReadings (if not swapped)
+              function getMeterDataFromBill(billObj) {
+                if (!billObj.meterReadings) return null;
+                try {
+                  const mr = billObj.meterReadings;
+                  // Check if format is {water: {previous, current}, electric: {previous, current}}
+                  if (mr.water && mr.electric && mr.water.current !== undefined && mr.electric.current !== undefined) {
+                    // Check if swapped: electric.current/previous should be larger than water values
+                    const eNew = mr.electric.current;
+                    const eOld = mr.electric.previous;
+                    const wNew = mr.water.current;
+                    const wOld = mr.water.previous;
+
+                    // If electric values are suspiciously similar to water values, might be swapped
+                    const isLikelySwapped = (eNew < 2000 && eNew > 0) && (wNew > 1000 && wOld > 1000);
+                    if (isLikelySwapped && eNew === wNew) {
+                      // Don't use - appears swapped
+                      return null;
+                    }
+
+                    return { eNew, eOld, wNew, wOld };
+                  }
+                } catch (e) {
+                  // Silent fail
+                }
+                return null;
+              }
+
               if (typeof MeterDataManager !== 'undefined') {
                 try {
                   let meterData = MeterDataManager.getMeterReading(year, bill.month, currentRoom);
@@ -3005,6 +3033,11 @@
                   // Fallback to old meter_data format
                   if (!meterData) {
                     meterData = getMeterDataFromOld(year, bill.month, currentRoom);
+                  }
+
+                  // Fallback to bill's own meterReadings if they look valid
+                  if (!meterData) {
+                    meterData = getMeterDataFromBill(bill);
                   }
 
                   if (meterData && meterData.eNew !== undefined && meterData.eOld !== undefined) {
