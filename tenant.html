@@ -3204,14 +3204,14 @@
                   if (meterData && meterData.eNew !== undefined && meterData.eOld !== undefined) {
                     const eUsage = Math.max(0, (meterData.eNew || 0) - (meterData.eOld || 0));
                     const eCost = eUsage * 8;
-                    // Show meter readings with labels + calculation
-                    electricDisplay = `ปัจจุบัน: ${meterData.eNew}, เดิม: ${meterData.eOld} (ใช้: ${eUsage} หน่วย × ฿8 = ฿${eCost.toLocaleString('th-TH')})`;
+                    // Show calculation: current - previous = usage × rate = cost
+                    electricDisplay = `${meterData.eNew} - ${meterData.eOld} = ${eUsage} หน่วย × 8 = ฿${eCost.toLocaleString('th-TH')}`;
                   }
                   if (meterData && meterData.wNew !== undefined && meterData.wOld !== undefined) {
                     const wUsage = Math.max(0, (meterData.wNew || 0) - (meterData.wOld || 0));
                     const wCost = wUsage * 20;
-                    // Show meter readings with labels + calculation
-                    waterDisplay = `ปัจจุบัน: ${meterData.wNew}, เดิม: ${meterData.wOld} (ใช้: ${wUsage} หน่วย × ฿20 = ฿${wCost.toLocaleString('th-TH')})`;
+                    // Show calculation: current - previous = usage × rate = cost
+                    waterDisplay = `${meterData.wNew} - ${meterData.wOld} = ${wUsage} หน่วย × 20 = ฿${wCost.toLocaleString('th-TH')}`;
                   }
                 } catch (e) {
                   console.warn(`⚠️ Could not load meter data for ${year}-${bill.month}:`, e);
