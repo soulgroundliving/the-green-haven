@@ -187,6 +187,67 @@
 
         console.log(`✅ Extracted ${addedCount} correct meter readings from bills JSON`);
 
+        // CRITICAL: Also update the stored bills_YYYY to have correct meterReadings
+        // This ensures bill.meterReadings has correct values when display code falls back to it
+        let billsFixedCount = 0;
+        data.bills.forEach(bill => {
+          const fullYear = bill.year < 100 ? bill.year + 2500 : bill.year;
+          const storageKey = `bills_${fullYear}`;
+          const billsData = localStorage.getItem(storageKey);
+
+          if (billsData && bill.meterReadings) {
+            try {
+              const storedBills = JSON.parse(billsData);
+              const matchingIndex = storedBills.findIndex(b => b.billId === bill.billId);
+
+              if (matchingIndex >= 0) {
+                const storedBill = storedBills[matchingIndex];
+                // Update only if the stored reading looks swapped
+                if (storedBill.meterReadings &&
+                    storedBill.meterReadings.electric &&
+                    storedBill.meterReadings.water &&
+                    storedBill.meterReadings.electric.previous === storedBill.meterReadings.water.current) {
+                  // Update to correct readings from JSON
+                  storedBill.meterReadings = {
+                    water: {
+                      current: bill.meterReadings.water?.current || 0,
+                      previous: bill.meterReadings.water?.previous || 0,
+                      usage: bill.meterReadings.water?.usage || 0
+                    },
+                    electric: {
+                      current: bill.meterReadings.electric?.current || 0,
+                      previous: bill.meterReadings.electric?.previous || 0,
+                      usage: bill.meterReadings.electric?.usage || 0
+                    }
+                  };
+                  billsFixedCount++;
+                }
+              }
+            } catch (e) {
+              // Silent fail
+            }
+          }
+        });
+
+        // Save fixed bills back to localStorage
+        if (billsFixedCount > 0) {
+          const billsByYear = {};
+          for (const bill of data.bills) {
+            const fullYear = bill.year < 100 ? bill.year + 2500 : bill.year;
+            const storageKey = `bills_${fullYear}`;
+
+            if (!billsByYear[storageKey]) {
+              billsByYear[storageKey] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            }
+          }
+
+          Object.entries(billsByYear).forEach(([storageKey, bills]) => {
+            localStorage.setItem(storageKey, JSON.stringify(bills));
+          });
+
+          console.log(`✅ Fixed ${billsFixedCount} bills with correct meter readings`);
+        }
+
         // Return success so callers know extraction is done
         return true;
 
