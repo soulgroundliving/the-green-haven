@@ -34,43 +34,35 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Load tenant lease information from Firebase
-   * Tries multiple possible paths for flexibility
-   * Priority: Firebase FIRST → localStorage FALLBACK
+   * Load tenant lease information from Firestore meta_data collection
+   * Priority: Firestore FIRST → localStorage FALLBACK
    */
   static async loadLease() {
     try {
-      // Load from Firebase Realtime Database FIRST (for actual data)
-      if (this.database && window.firebaseRef && window.firebaseGet) {
-        // Try multiple possible paths
-        const possiblePaths = [
-          `${this.currentBuilding}/${this.currentRoom}`,
-          `data/${this.currentBuilding}/${this.currentRoom}`,
-          `tenants/${this.currentBuilding}/${this.currentRoom}`,
-          `rooms/${this.currentBuilding}/${this.currentRoom}`
-        ];
+      // Load from Firestore meta_data collection FIRST (for actual data)
+      if (window.firebase?.firestore) {
+        try {
+          console.log(`🔍 TenantFirebaseSync: Checking Firestore meta_data/${this.currentRoom}`);
+          const db = window.firebase.firestore();
+          const fs = window.firebase.firestoreFunctions;
 
-        for (const path of possiblePaths) {
-          try {
-            console.log(`🔍 TenantFirebaseSync: Checking Firebase path: ${path}`);
-            const leaseRef = window.firebaseRef(this.database, path);
-            const snapshot = await window.firebaseGet(leaseRef);
+          const docRef = fs.doc(fs.collection(db, 'meta_data'), this.currentRoom);
+          const docSnap = await fs.getDoc(docRef);
 
-            if (snapshot.exists()) {
-              const leaseData = snapshot.val();
-              console.log(`✅ TenantFirebaseSync: Loaded lease from Firebase at ${path}:`, leaseData);
-              return leaseData;
-            } else {
-              console.log(`   ℹ️ No data at Firebase path: ${path}`);
-            }
-          } catch (e) {
-            console.debug(`  ❌ Firebase path ${path} failed:`, e.message);
+          if (docSnap.exists()) {
+            const leaseData = docSnap.data();
+            console.log(`✅ TenantFirebaseSync: Loaded lease from Firestore meta_data:`, leaseData);
+            return leaseData;
+          } else {
+            console.log(`   ℹ️ No data in Firestore meta_data/${this.currentRoom}`);
           }
+        } catch (e) {
+          console.debug(`  ❌ Firestore query failed:`, e.message);
         }
 
-        console.log(`ℹ️ No lease data found in Firebase, falling back to localStorage`);
+        console.log(`ℹ️ No lease data found in Firestore, falling back to localStorage`);
       } else {
-        console.warn('⚠️ Firebase not available, using localStorage fallback');
+        console.warn('⚠️ Firestore not available, using localStorage fallback');
       }
 
       // Fallback: Try to get from LeaseAgreementManager (localStorage)
