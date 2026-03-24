@@ -3850,7 +3850,7 @@
       }
 
       // ✅ Load Lease Agreement Information
-      if (currentLease && currentLease.contractDocument) {
+      if (currentLease) {
         const leaseCard = document.getElementById('leaseAgreementCard');
         if (leaseCard) {
           leaseCard.style.display = 'block';
@@ -3870,17 +3870,20 @@
           }
           document.getElementById('leaseAgreementDate').textContent = contractDate;
 
-          // Show view/download buttons
-          document.getElementById('viewLeaseBtn').style.display = 'inline-block';
-          document.getElementById('downloadLeaseBtn').style.display = 'inline-block';
-
-          // Store contract URL for later use
-          window.currentContractDocument = currentLease.contractDocument;
-
-          console.log('✅ Lease agreement card displayed');
+          // Show view/download buttons only if document exists
+          if (currentLease.contractDocument) {
+            document.getElementById('viewLeaseBtn').style.display = 'inline-block';
+            document.getElementById('downloadLeaseBtn').style.display = 'inline-block';
+            window.currentContractDocument = currentLease.contractDocument;
+            console.log('✅ Lease agreement card displayed with document');
+          } else {
+            document.getElementById('viewLeaseBtn').style.display = 'none';
+            document.getElementById('downloadLeaseBtn').style.display = 'none';
+            console.log('✅ Lease agreement card displayed (no document)');
+          }
         }
       } else {
-        // Hide lease agreement card if no contract
+        // Hide lease agreement card if no lease data
         const leaseCard = document.getElementById('leaseAgreementCard');
         if (leaseCard) leaseCard.style.display = 'none';
       }
