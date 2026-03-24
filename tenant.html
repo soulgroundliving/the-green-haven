@@ -726,6 +726,9 @@
           <button onclick="generateAllBackdatedBills()" style="padding: 0.7rem 1.2rem; background: #ff9800; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
             📅 Generate ย้อนหลัง
           </button>
+          <button onclick="clearAndRegenerateBills()" style="padding: 0.7rem 1.2rem; background: #e74c3c; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
+            🔄 ล้างและ Regenerate
+          </button>
           <button onclick="markAllBillsAsPaid()" style="padding: 0.7rem 1.2rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
             ✅ จ่ายครบทุกเดือน
           </button>
@@ -1615,6 +1618,29 @@
     let invoiceData = null;
 
     // ===== BILL GENERATION FUNCTIONS =====
+
+    // Clear old bills and regenerate with correct rates
+    function clearAndRegenerateBills() {
+      if (!confirm('⚠️ นี่จะลบบิลทั้งหมดและ regenerate ใหม่ด้วย rate ที่ถูก\n\nคุณแน่ใจไหม?')) {
+        return;
+      }
+
+      // Clear all old bills
+      console.log('🗑️ Clearing old bills...');
+      for (const year of [2567, 2568, 2569, 2570]) {
+        localStorage.removeItem(`bills_${year}`);
+      }
+
+      // Clear receipts too
+      for (const year of [2567, 2568, 2569, 2570]) {
+        localStorage.removeItem(`receipts_${year}`);
+      }
+
+      console.log('✅ Old bills cleared');
+
+      // Regenerate with new rates
+      generateAllBackdatedBills();
+    }
 
     function generateAllBackdatedBills() {
       if (!currentLease || !currentLease.moveInDate) {
