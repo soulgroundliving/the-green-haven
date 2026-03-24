@@ -63,15 +63,16 @@ class MeterDataExtractor:
 
                     # Extract meter readings
                     # Column A (index 0) = Room ID
-                    # Column B (index 1) = Water Current
-                    # Column C (index 2) = Water Previous
-                    # Column L (index 11) = Electric Current (formula =C, but we use index 2)
-                    # Column M (index 12) = Electric Previous
+                    # Column B (index 1) = Water Current (New)
+                    # Column C (index 2) = Water Previous (Old)
+                    # Column L (index 11) = Electric Current (New)
+                    # Column M (index 12) = Electric Previous (Old)
 
                     water_new = self._get_numeric_value(row[1])
                     water_old = self._get_numeric_value(row[2])
 
-                    # Electric previous is in column M (index 12)
+                    # Electric readings from columns L and M
+                    electric_new = self._get_numeric_value(row[11]) if len(row) > 11 else None
                     electric_old = self._get_numeric_value(row[12]) if len(row) > 12 else None
 
                     # Skip if no valid water readings
@@ -90,7 +91,7 @@ class MeterDataExtractor:
                         'wOld': water_old,
                         'wNew': water_new,
                         'eOld': electric_old if electric_old else 0,
-                        'eNew': water_old,  # Using water_old as fallback for electric_new
+                        'eNew': electric_new if electric_new else 0,  # FIXED: Use actual electric_new from column L, not water_old
                         'createdAt': datetime.now(timezone.utc).isoformat(),
                         'updatedAt': datetime.now(timezone.utc).isoformat(),
                     }
