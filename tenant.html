@@ -11,15 +11,26 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="./shared/security.js"></script>
   <script src="./shared/access-control.js"></script>
+  <script src="./shared/invoice-receipt-manager.js"></script>
+  <script src="./shared/room-config.js"></script>
+  <script src="./shared/tenant-config.js"></script>
+  <script src="./shared/lease-config.js"></script>
+  <script src="./shared/tenant-manager.js"></script>
+  <script src="./shared/tenant-firebase-sync.js"></script>
+  <!-- Initialize Real Bills from JSON file (BEFORE test data) -->
+  <script src="./init-real-bills.js"></script>
+  <!-- Mock data for fallback -->
   <script src="./mock-tenant-data.js"></script>
   <script src="./mock-meter-history.js"></script>
   <script src="./init-test-data.js"></script>
   <script>
-    // Initialize test data when tenant app loads
+    // Initialize test data when tenant app loads (only if real bills not loaded)
     if (typeof mockTenantData !== 'undefined' && typeof initializeTestData === 'function') {
       try {
+        const realBillsInitialized = localStorage.getItem('real_bills_initialized');
         const meterData = localStorage.getItem('meter_data');
-        if (!meterData || meterData === '{}') {
+        // Only initialize test data if real bills haven't been loaded yet
+        if (!realBillsInitialized && (!meterData || meterData === '{}')) {
           console.log('🔄 Initializing test data for tenant app...');
           initializeTestData();
         }
@@ -28,14 +39,6 @@
       }
     }
   </script>
-  <script src="./shared/invoice-receipt-manager.js"></script>
-  <script src="./shared/room-config.js"></script>
-  <script src="./shared/tenant-config.js"></script>
-  <script src="./shared/lease-config.js"></script>
-  <script src="./shared/tenant-manager.js"></script>
-  <script src="./shared/tenant-firebase-sync.js"></script>
-  <!-- Initialize Real Bills from JSON file -->
-  <script src="./init-real-bills.js"></script>
   <!-- Billing System -->
   <script src="./shared/billing-calculator.js"></script>
   <script src="./shared/meter-data-manager.js"></script>
