@@ -1,0 +1,202 @@
+========================================================================================================================
+COLUMN STRUCTURE ANALYSIS: บิลปี69.xlsx
+========================================================================================================================
+
+TOTAL SHEETS: 13 (One sheet per month in Year 69)
+TOTAL COLUMNS: 20 (A to T)
+
+COLUMN BREAKDOWN:
+------------------------------------------------------------------------------------------------------------------------
+
+Column A:
+  Header:       ห้อง
+  Thai:         ห้องที่
+  Function:     Room Number
+  Description:  e.g., 13, 14, 15ก, N101, AMAZON
+  Sample (EX):  15ก
+
+Column B:
+  Header:       ไฟ
+  Thai:         ?
+  Function:     Previous Water Reading
+  Description:  Water meter - before
+  Sample (EX):  (empty)
+
+Column C:
+  Header:       น้ำ
+  Thai:         ?
+  Function:     Previous Electric Reading
+  Description:  Electric meter - before
+  Sample (EX):  (empty)
+
+Column D:
+  Header:       (empty)
+  Thai:         ค่าเช่า
+  Function:     Rent
+  Description:  Monthly rent charge
+  Sample (EX):  1500.0
+
+Column E:
+  Header:       (empty)
+  Thai:         —
+  Function:     Unused
+  Description:  Empty
+  Sample (EX):  (empty)
+
+Column F:
+  Header:       ไฟล่าสุด
+  Thai:         =B
+  Function:     Formula
+  Description:  Repeats B value
+  Sample (EX):  =B2
+
+Column G:
+  Header:       ไฟเดิม
+  Thai:         ?
+  Function:     Water Previous
+  Description:  Previous water meter value
+  Sample (EX):  (empty)
+
+Column H:
+  Header:       (empty)
+  Thai:         =F-G
+  Function:     Formula
+  Description:  Water usage (previous - current)
+  Sample (EX):  =F2-G2
+
+Column I:
+  Header:       /หน่วย
+  Thai:         /Unit
+  Function:     Water Rate
+  Description:  Baht per unit (8)
+  Sample (EX):  8.0
+
+Column J:
+  Header:       บาท
+  Thai:         =H*I
+  Function:     Formula
+  Description:  Water cost = usage × rate
+  Sample (EX):  =H2*I2
+
+Column K:
+  Header:       (empty)
+  Thai:         —
+  Function:     Unused
+  Description:  Empty
+  Sample (EX):  (empty)
+
+Column L:
+  Header:       น้ำล่าสุด
+  Thai:         =C
+  Function:     Formula
+  Description:  Repeats C value
+  Sample (EX):  =C2
+
+Column M:
+  Header:       น้ำเดิม
+  Thai:         ?
+  Function:     Electric Previous
+  Description:  Previous electric meter value
+  Sample (EX):  (empty)
+
+Column N:
+  Header:       (empty)
+  Thai:         =L-M
+  Function:     Formula
+  Description:  Electric usage (previous - current)
+  Sample (EX):  =L2-M2
+
+Column O:
+  Header:       /หน่วย
+  Thai:         /Unit
+  Function:     Electric Rate
+  Description:  Baht per unit (20)
+  Sample (EX):  20.0
+
+Column P:
+  Header:       บาท
+  Thai:         =N*O
+  Function:     Formula
+  Description:  Electric cost = usage × rate
+  Sample (EX):  =N2*O2
+
+Column Q:
+  Header:       (empty)
+  Thai:         —
+  Function:     Unused
+  Description:  Empty
+  Sample (EX):  (empty)
+
+Column R:
+  Header:       รวม
+  Thai:         =J+P+D
+  Function:     Formula
+  Description:  Subtotal (water + electric + rent)
+  Sample (EX):  =J2+P2+D2
+
+Column S:
+  Header:       ขยะ
+  Thai:         ค่าสำเร็จ
+  Function:     Trash/Common Fee
+  Description:  Fixed amount (20)
+  Sample (EX):  20.0
+
+Column T:
+  Header:       บาท
+  Thai:         =R+S
+  Function:     Formula
+  Description:  TOTAL BILL
+  Sample (EX):  =R2+S2
+
+
+========================================================================================================================
+CALCULATION LOGIC
+========================================================================================================================
+
+WATER CHARGES:
+  Column B (Previous Water Reading) → F (Formula =B)
+  Column G (Water Meter Previous Value)
+  Column H (Formula =F-G) = Water Usage
+  Column I (Rate: 8 baht/unit)
+  Column J (Formula =H*I) = WATER COST
+
+ELECTRIC CHARGES:
+  Column C (Previous Electric Reading) → L (Formula =C)
+  Column M (Electric Meter Previous Value)
+  Column N (Formula =L-M) = Electric Usage
+  Column O (Rate: 20 baht/unit)
+  Column P (Formula =N*O) = ELECTRIC COST
+
+RENT & FEES:
+  Column D = RENT (fixed amount, e.g., 1500)
+  Column S = TRASH/COMMON FEE (fixed amount, e.g., 20)
+
+TOTAL:
+  Column R (Formula =J+P+D) = Subtotal
+  Column T (Formula =R+S) = GRAND TOTAL
+
+
+========================================================================================================================
+EXAMPLE: Room 13 Data (First Sheet)
+========================================================================================================================
+
+Column A: 15ก
+Column B: 5366.0
+Column C: 1491.0
+Column D: 1500.0
+Column E: (empty)
+Column F: =B2
+Column G: 5119.0
+Column H: =F2-G2
+Column I: 8.0
+Column J: =H2*I2
+Column K: (empty)
+Column L: =C2
+Column M: 1477.0
+Column N: =L2-M2
+Column O: 20.0
+Column P: =N2*O2
+Column Q: (empty)
+Column R: =J2+P2+D2
+Column S: 20.0
+Column T: =R2+S2

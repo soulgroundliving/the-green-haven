@@ -1,0 +1,22 @@
+================================================================================
+VERIFICATION 1: Verify New Rates Calculation (water=8, electric=20)
+================================================================================
+
+Room 13, January 2569:
+Water Reading:    Current=3291, Previous=3267
+Electric Reading: Current=1710, Previous=1707
+
+Calculations:
+  Water Usage:    3291 - 3267 = 24 units
+  Electric Usage: 1710 - 1707 = 3 units
+
+  Water Cost:     24 x 8 = 192 baht
+  Electric Cost:  3 x 20 = 60 baht
+  Rent:           1500 baht
+  ────────────────────────────────
+  Subtotal:       1752 baht
+  Trash Fee:      20 baht
+  ════════════════════════════════
+  TOTAL:          1772 baht
+
+Status: OK - Matches Excel Template
