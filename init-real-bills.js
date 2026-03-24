@@ -5,11 +5,14 @@
 
 async function initializeRealBills() {
   try {
-    // Check if already initialized
-    const check = localStorage.getItem('real_bills_initialized');
-    if (check === 'true') {
-      console.log('✅ Real bills already initialized');
-      return;
+    // Check if bills are already loaded (more reliable than flag check)
+    const bills2569 = localStorage.getItem('bills_2569');
+    if (bills2569) {
+      const count = JSON.parse(bills2569).length;
+      if (count > 10) {
+        console.log(`✅ Real bills already initialized (${count} bills)`);
+        return;
+      }
     }
 
     console.log('📥 Loading real bills from real-bills-generated.json...');
