@@ -1793,7 +1793,21 @@
 
 <!-- ===== ROOMS (OLD BUILDING) ===== -->
 <div class="page" id="page-rooms">
-  <div class="section-title">🏠 ห้องแถว — ข้อมูลห้องพัก</div>
+  <div class="section-title">📊 ข้อมูลห้องพัก</div>
+
+  <!-- Building Tabs -->
+  <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:2px solid #eee;flex-wrap:wrap;">
+    <button class="building-tab active" onclick="window.switchBuildingTab('nest', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#2d8653;border-bottom:3px solid #2d8653;margin-bottom:-2px;">
+      🏢 Nest Building
+    </button>
+    <button class="building-tab" onclick="window.switchBuildingTab('rooms', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
+      🏠 Rooms Building
+    </button>
+  </div>
+
+  
+
+  <div id="rooms-content" class="section-title" style="display:none;">🏠 ห้องแถว — ข้อมูลห้องพัก</div>
   
   <!-- Occupancy Dashboard -->
   <div class="kpi-grid">
@@ -1839,9 +1853,9 @@
     <div class="card" style="background:#e8f5e9;border-left:4px solid #4caf50;">
       <div class="card-title" style="color:#1b5e20;">🏠 ห้องพัก (22 ห้อง)</div>
       <div style="font-size:.88rem;line-height:2;">
-        <div>💰 ค่าเช่า: <strong>฿1,200 - ฿2,000/เดือน</strong></div>
+        <div>💰 ค่าเช่า: <strong>฿1,200 / ฿1,500 / ฿2,000/เดือน</strong></div>
         <div>⚡ อัตราค่าไฟ: <strong>8 บาท/หน่วย</strong></div>
-        <div>💧 อัตราค่าน้ำ: <strong>ตามมิเตอร์</strong></div>
+        <div>💧 อัตราค่าน้ำ: <strong>20 บาท/หน่วย</strong></div>
         <div>🗑️ ค่าขยะ: <strong>20 บาท/เดือน</strong></div>
       </div>
     </div>
@@ -2005,7 +2019,7 @@
 
 <!-- ===== NEW BUILDING ===== -->
 <div class="page" id="page-newbuild">
-  <div class="section-title">🏗️ Nest — ข้อมูลห้องพัก</div>
+  <div id="rooms-content" class="section-title" style="display:none;">🏗️ Nest — ข้อมูลห้องพัก</div>
 
   <!-- Occupancy Dashboard -->
   <div class="kpi-grid">
