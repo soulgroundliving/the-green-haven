@@ -2069,9 +2069,11 @@
         const billsKey = `bills_${year}`;
         const yearBills = allBills.filter(b => b.year === year);
         localStorage.setItem(billsKey, JSON.stringify(yearBills));
+        console.log(`✅ Saved ${yearBills.length} bills to ${billsKey} (including ${yearBills.filter(b => b.status === 'paid').length} paid bills)`);
       }
 
       alert(`✅ จ่ายครบเรียบร้อย\n💰 จ่าย ${paidCount} บิล\n📋 ระบบสร้างใบเสร็จอัตโนมัติ`);
+      console.log(`📋 Reloading bill list after payment...`);
       loadBillsPage();
     }
 
@@ -3079,10 +3081,13 @@
 
         // ✅ SHOW ALL BILLS - No time limit filter
         // Display all bills from all available years for complete history
+        // Include both pending and paid bills - nothing is hidden
         const filteredBills = sortedBills;
 
         // Display info
-        console.log(`📋 Showing all ${filteredBills.length} bills for ${currentRoom}`);
+        const paidCount = filteredBills.filter(b => b.status === 'paid').length;
+        const pendingCount = filteredBills.filter(b => b.status !== 'paid').length;
+        console.log(`📋 Showing all ${filteredBills.length} bills for room ${currentRoom} (✅ ${paidCount} paid, ⏳ ${pendingCount} pending)`);
         if (filteredBills.length === 0 && sortedBills.length === 0) {
           container.innerHTML = `
             <div class="info-box" style="text-align: center;">
@@ -3109,9 +3114,13 @@
             html += `<div style="margin-bottom: 2rem;">`;
             html += `<h3 style="font-size: 1.1rem; font-weight: 700; color: var(--green); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--green-pale);">ปี ${year}</h3>`;
 
-            billsByYear[year].forEach(bill => {
+            billsByYear[year].forEach((bill, billIndex) => {
               const monthNames = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
               const monthName = monthNames[bill.month] || 'เดือน ' + bill.month;
+              // IMPORTANT: All bills are being rendered, including paid bills - nothing is filtered out
+              if (bill.status === 'paid') {
+                console.log(`✅ Rendering paid bill: ${bill.billId}`);
+              }
               const statusColor = bill.status === 'paid' ? 'var(--green)' :
                                   bill.status === 'pending' ? '#ff9800' :
                                   '#c62828';
