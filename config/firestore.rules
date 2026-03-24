@@ -6,6 +6,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // Meta data (tenant lease info) - allow public read for tenant app
+    match /meta_data/{roomId} {
+      allow read: if true;  // Allow public read for tenant app
+      allow write: if request.auth != null;  // Only authenticated users can write
+    }
+
     // Specific rules for meter_data collection
     match /meter_data/{document=**} {
       allow read, write: if request.auth != null;
