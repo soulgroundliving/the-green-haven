@@ -1827,13 +1827,23 @@
               <span style="color: var(--text);">💰 ค่าเช่า</span>
               <span style="font-weight: 700; color: var(--text);">฿${rent.toLocaleString('th-TH')}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; padding-bottom: 0.6rem; border-bottom: 1px solid #eee;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; padding-bottom: 0.6rem; border-bottom: 1px solid #eee; font-size: 0.9rem;">
               <span style="color: var(--text);">⚡ ค่าไฟ</span>
-              <span style="font-weight: 700; color: var(--text);">฿${electric.toLocaleString('th-TH')}</span>
+              <span style="font-weight: 700; color: var(--text); text-align: right;">
+                ${bill.meterReadings && bill.meterReadings.electric
+                  ? `(${bill.meterReadings.electric.current} - ${bill.meterReadings.electric.previous}) × ฿${bill.charges?.electric?.rate || 24} = ฿${electric.toLocaleString('th-TH')}`
+                  : `฿${electric.toLocaleString('th-TH')}`
+                }
+              </span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; padding-bottom: 0.6rem; border-bottom: 1px solid #eee;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; padding-bottom: 0.6rem; border-bottom: 1px solid #eee; font-size: 0.9rem;">
               <span style="color: var(--text);">💧 ค่าน้ำ</span>
-              <span style="font-weight: 700; color: var(--text);">฿${water.toLocaleString('th-TH')}</span>
+              <span style="font-weight: 700; color: var(--text); text-align: right;">
+                ${bill.meterReadings && bill.meterReadings.water
+                  ? `(${bill.meterReadings.water.current} - ${bill.meterReadings.water.previous}) × ฿${bill.charges?.water?.rate || 8} = ฿${water.toLocaleString('th-TH')}`
+                  : `฿${water.toLocaleString('th-TH')}`
+                }
+              </span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; padding-bottom: 0.6rem; border-bottom: 1px solid #eee;">
               <span style="color: var(--text);">🗑️ ค่าขยะ</span>
