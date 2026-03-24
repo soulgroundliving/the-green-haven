@@ -1,0 +1,50 @@
+{
+  "rules": {
+    "data": {
+      "$building": {
+        "$roomId": {
+          ".read": true,
+          ".write": "auth != null"
+        }
+      }
+    },
+    "bills": {
+      "$building": {
+        "$roomId": {
+          ".read": true,
+          ".write": "auth != null"
+        }
+      }
+    },
+    "payments": {
+      "$building": {
+        "$roomId": {
+          ".read": true,
+          ".write": "auth != null"
+        }
+      }
+    },
+    "maintenance": {
+      "$building": {
+        "$roomId": {
+          ".read": true,
+          ".write": "auth != null"
+        }
+      }
+    },
+    "announcements": {
+      "$building": {
+        ".read": true,
+        ".write": "auth != null"
+      }
+    },
+    "meter_data": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "rooms_config": {
+      ".read": true,
+      ".write": "auth != null"
+    }
+  }
+}

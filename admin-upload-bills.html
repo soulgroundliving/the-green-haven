@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>อัปโหลดบิลจริง - Green Haven Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Sarabun', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e5631 0%, #2d6a4f 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            color: #1e5631;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .info-box {
+            background: #f0f8f0;
+            border-left: 4px solid #1e5631;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #333;
+            line-height: 1.6;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-family: 'Sarabun', Arial, sans-serif;
+        }
+        .btn-primary {
+            background: #1e5631;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2d6a4f;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(30,86,49,0.3);
+        }
+        .btn-secondary {
+            background: #e8e8e8;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+        #status {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #333;
+            max-height: 300px;
+            overflow-y: auto;
+            min-height: 100px;
+            margin-top: 20px;
+        }
+        .log-line {
+            margin: 4px 0;
+            padding: 2px 0;
+        }
+        .log-success { color: #27ae60; }
+        .log-error { color: #e74c3c; }
+        .log-info { color: #2980b9; }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1e5631, #2d6a4f);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .summary-box {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .summary-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .summary-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e5631;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>อัปโหลดบิลจริง</h1>
+        <p class="subtitle">Upload 594 real bills to Firebase Realtime Database</p>
+
+        <div class="info-box">
+            <strong>ข้อมูล:</strong><br>
+            • บิลทั้งหมด: 594 บิล<br>
+            • ปี 67: 264 บิล (สมบูรณ์)<br>
+            • ปี 68: 264 บิล (สมบูรณ์)<br>
+            • ปี 69: 66 บิล (เฉพาะเดือน 1-3)
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="uploadBills()">เริ่มอัปโหลด</button>
+            <button class="btn-secondary" onclick="verifyBills()">ตรวจสอบ</button>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div id="status"></div>
+
+        <div class="summary" id="summary" style="display: none;">
+            <div class="summary-box">
+                <div class="summary-label">สำเร็จ</div>
+                <div class="summary-value" id="successCount">0</div>
+            </div>
+            <div class="summary-box">
+                <div class="summary-label">ล้มเหลว</div>
+                <div class="summary-value" id="errorCount">0</div>
+            </div>
+            <div class="summary-box">
+                <div class="summary-label">รวม</div>
+                <div class="summary-value" id="totalCount">0</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
+        import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM",
+            authDomain: "the-green-haven.firebaseapp.com",
+            databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "the-green-haven",
+            storageBucket: "the-green-haven.firebasestorage.app",
+            messagingSenderId: "523697750767",
+            appId: "1:523697750767:web:89b253f92d8d5cfe8a111a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        window.uploadBills = async function() {
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = '';
+
+            function log(message, type = 'info') {
+                const line = document.createElement('div');
+                line.className = `log-line log-${type}`;
+                line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                statusEl.appendChild(line);
+                statusEl.scrollTop = statusEl.scrollHeight;
+            }
+
+            try {
+                log('กำลังดาวน์โหลดข้อมูลบิล...', 'info');
+                const response = await fetch('./real-bills-generated.json');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const billsData = await response.json();
+                const bills = billsData.bills;
+                log(`โหลด ${bills.length} บิลสำเร็จ`, 'success');
+
+                // Group bills
+                const billsByBuildingRoom = {};
+                bills.forEach(bill => {
+                    const building = bill.building;
+                    const roomId = bill.roomId;
+                    if (!billsByBuildingRoom[building]) billsByBuildingRoom[building] = {};
+                    if (!billsByBuildingRoom[building][roomId]) billsByBuildingRoom[building][roomId] = [];
+                    billsByBuildingRoom[building][roomId].push(bill);
+                });
+
+                log(`จัดกลุ่มตามอาคาร/ห้อง...`, 'info');
+                let uploadedCount = 0;
+                let errorCount = 0;
+                const startTime = Date.now();
+
+                let roomIndex = 0;
+                let totalRooms = 0;
+                for (const b in billsByBuildingRoom) {
+                    totalRooms += Object.keys(billsByBuildingRoom[b]).length;
+                }
+
+                // Upload each building/room's bills
+                for (const building in billsByBuildingRoom) {
+                    for (const roomId in billsByBuildingRoom[building]) {
+                        const roomBills = billsByBuildingRoom[building][roomId];
+                        const billsPayload = {};
+
+                        roomBills.forEach(bill => {
+                            billsPayload[bill.billId] = bill;
+                        });
+
+                        try {
+                            const billsRef = ref(database, `bills/${building}/${roomId}`);
+                            await set(billsRef, billsPayload);
+                            uploadedCount++;
+                            roomIndex++;
+
+                            log(`✓ ${building}/${roomId} (${roomBills.length} บิล)`, 'success');
+
+                            // Update progress bar
+                            const progress = (roomIndex / totalRooms) * 100;
+                            document.getElementById('progressFill').style.width = progress + '%';
+                        } catch (error) {
+                            errorCount++;
+                            roomIndex++;
+                            log(`✗ ${building}/${roomId}: ${error.message}`, 'error');
+                        }
+                    }
+                }
+
+                const elapsedMs = Date.now() - startTime;
+                log(`\n=== อัปโหลดเสร็จสิ้น ===`, 'info');
+                log(`สำเร็จ: ${uploadedCount}`, 'success');
+                log(`ล้มเหลว: ${errorCount}`, errorCount > 0 ? 'error' : 'info');
+                log(`รวมบิล: ${bills.length}`, 'info');
+                log(`เวลา: ${(elapsedMs / 1000).toFixed(1)}s`, 'info');
+
+                // Show summary
+                document.getElementById('summary').style.display = 'grid';
+                document.getElementById('successCount').textContent = uploadedCount;
+                document.getElementById('errorCount').textContent = errorCount;
+                document.getElementById('totalCount').textContent = bills.length;
+                document.getElementById('progressFill').style.width = '100%';
+
+            } catch (error) {
+                log(`ล้มเหลว: ${error.message}`, 'error');
+            }
+        };
+
+        window.verifyBills = async function() {
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = '';
+
+            function log(message, type = 'info') {
+                const line = document.createElement('div');
+                line.className = `log-line log-${type}`;
+                line.textContent = message;
+                statusEl.appendChild(line);
+                statusEl.scrollTop = statusEl.scrollHeight;
+            }
+
+            try {
+                const response = await fetch('./real-bills-generated.json');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const billsData = await response.json();
+                log(`ข้อมูลบิล: ${billsData.totalBills} บิล`, 'success');
+                log(`ปี 67: ${billsData.billsByYear[67]} บิล`, 'info');
+                log(`ปี 68: ${billsData.billsByYear[68]} บิล`, 'info');
+                log(`ปี 69: ${billsData.billsByYear[69]} บิล`, 'info');
+            } catch (error) {
+                log(`ล้มเหลว: ${error.message}`, 'error');
+            }
+        };
+    </script>
+</body>
+</html>
