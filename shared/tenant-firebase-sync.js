@@ -36,52 +36,52 @@ class TenantFirebaseSync {
   /**
    * Load tenant lease information from Firebase
    * Tries multiple possible paths for flexibility
+   * Priority: Firebase FIRST → localStorage FALLBACK
    */
   static async loadLease() {
     try {
-      // Try to get from LeaseAgreementManager first (localStorage - faster)
+      // Load from Firebase Realtime Database FIRST (for actual data)
+      if (this.database && window.firebaseRef && window.firebaseGet) {
+        // Try multiple possible paths
+        const possiblePaths = [
+          `${this.currentBuilding}/${this.currentRoom}`,
+          `data/${this.currentBuilding}/${this.currentRoom}`,
+          `tenants/${this.currentBuilding}/${this.currentRoom}`,
+          `rooms/${this.currentBuilding}/${this.currentRoom}`
+        ];
+
+        for (const path of possiblePaths) {
+          try {
+            console.log(`🔍 TenantFirebaseSync: Checking Firebase path: ${path}`);
+            const leaseRef = window.firebaseRef(this.database, path);
+            const snapshot = await window.firebaseGet(leaseRef);
+
+            if (snapshot.exists()) {
+              const leaseData = snapshot.val();
+              console.log(`✅ TenantFirebaseSync: Loaded lease from Firebase at ${path}:`, leaseData);
+              return leaseData;
+            } else {
+              console.log(`   ℹ️ No data at Firebase path: ${path}`);
+            }
+          } catch (e) {
+            console.debug(`  ❌ Firebase path ${path} failed:`, e.message);
+          }
+        }
+
+        console.log(`ℹ️ No lease data found in Firebase, falling back to localStorage`);
+      } else {
+        console.warn('⚠️ Firebase not available, using localStorage fallback');
+      }
+
+      // Fallback: Try to get from LeaseAgreementManager (localStorage)
       if (typeof LeaseAgreementManager !== 'undefined') {
         const lease = LeaseAgreementManager.getActiveLease(this.currentBuilding, this.currentRoom);
         if (lease) {
-          console.log('✅ Loaded lease from localStorage:', lease);
+          console.log('✅ Loaded lease from localStorage (fallback):', lease);
           return lease;
         }
       }
 
-      // Load from Firebase Realtime Database
-      if (!this.database || !window.firebaseRef || !window.firebaseGet) {
-        console.warn('⚠️ Firebase functions not available');
-        return null;
-      }
-
-      // Try multiple possible paths
-      const possiblePaths = [
-        `data/${this.currentBuilding}/${this.currentRoom}`,
-        `${this.currentBuilding}/${this.currentRoom}`,
-        `tenants/${this.currentBuilding}/${this.currentRoom}`,
-        `rooms/${this.currentBuilding}/${this.currentRoom}`
-      ];
-
-      for (const path of possiblePaths) {
-        try {
-          console.log(`🔍 Checking Firebase path: ${path}`);
-          const leaseRef = window.firebaseRef(this.database, path);
-          const snapshot = await window.firebaseGet(leaseRef);
-
-          if (snapshot.exists()) {
-            const leaseData = snapshot.val();
-            console.log(`✅ Loaded lease from Firebase at ${path}:`, leaseData);
-            console.log(`   Building: ${this.currentBuilding}, Room: ${this.currentRoom}`);
-            return leaseData;
-          } else {
-            console.log(`   No data at ${path}`);
-          }
-        } catch (e) {
-          console.debug(`  ❌ Path ${path} failed:`, e.message);
-        }
-      }
-
-      console.log(`ℹ️ No lease data found in Firebase for ${this.currentBuilding}/${this.currentRoom}`);
       return null;
     } catch (error) {
       console.error('❌ Error loading lease:', error);
