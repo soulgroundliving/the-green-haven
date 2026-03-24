@@ -34,6 +34,9 @@
   <script src="./shared/lease-config.js"></script>
   <script src="./shared/tenant-manager.js"></script>
   <script src="./shared/tenant-firebase-sync.js"></script>
+  <!-- Billing System -->
+  <script src="./shared/billing-calculator.js"></script>
+  <script src="./shared/meter-data-manager.js"></script>
   <!-- Firebase Configuration -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
@@ -1146,10 +1149,13 @@
 
           currentLease = tenantFirebaseData.lease;
           currentTenant = tenantFirebaseData.tenant;
-          currentRoom = tenantFirebaseData.room;
+          // Keep the roomNumber (string) that was already extracted, not the room object
+          if (tenantFirebaseData.room && tenantFirebaseData.room.id) {
+            currentRoom = tenantFirebaseData.room.id; // Extract ID if it's an object
+          }
           currentBills = tenantFirebaseData.bills || [];
 
-          console.log('✅ Tenant data initialized from Firebase');
+          console.log('✅ Tenant data initialized from Firebase (currentRoom=' + currentRoom + ')');
         } else {
           // Fallback: use localStorage-based managers
           if (typeof LeaseAgreementManager !== 'undefined') {
@@ -2107,6 +2113,143 @@
       `;
 
       console.log('✅ Contract page loaded');
+    }
+
+    // ===== BILLS PAGE - Display all historical bills =====
+    function loadBills() {
+      const container = document.getElementById('billsList');
+
+      try {
+        // Get all bills for this room using BillingCalculator
+        const bills = typeof BillingCalculator !== 'undefined'
+          ? BillingCalculator.getBillsByRoom(currentRoom) || []
+          : [];
+
+        if (!bills || bills.length === 0) {
+          container.innerHTML = `
+            <div class="info-box" style="text-align: center;">
+              <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">📋 ยังไม่มีบิล</div>
+              <p style="margin: 0;">ระบบยังไม่มีข้อมูลบิลสำหรับห้องนี้</p>
+            </div>
+          `;
+          console.warn('ℹ️ No bills found for room:', currentRoom);
+          return;
+        }
+
+        // Sort bills by year descending, then month descending (newest first)
+        const sortedBills = [...bills].sort((a, b) => {
+          if (b.year !== a.year) return b.year - a.year;
+          return b.month - a.month;
+        });
+
+        // Group bills by year for better organization
+        const billsByYear = {};
+        sortedBills.forEach(bill => {
+          if (!billsByYear[bill.year]) billsByYear[bill.year] = [];
+          billsByYear[bill.year].push(bill);
+        });
+
+        // Render bills organized by year
+        let html = '';
+
+        Object.keys(billsByYear)
+          .sort((a, b) => b - a) // Years descending
+          .forEach(year => {
+            html += `<div style="margin-bottom: 2rem;">`;
+            html += `<h3 style="font-size: 1.1rem; font-weight: 700; color: var(--green); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--green-pale);">ปี ${year}</h3>`;
+
+            billsByYear[year].forEach(bill => {
+              const monthNames = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+              const monthName = monthNames[bill.month] || 'เดือน ' + bill.month;
+              const statusColor = bill.status === 'paid' ? 'var(--green)' :
+                                  bill.status === 'pending' ? '#ff9800' :
+                                  '#c62828';
+              const statusText = bill.status === 'paid' ? '✅ จ่ายแล้ว' :
+                                 bill.status === 'pending' ? '⏳ รอชำระ' :
+                                 '⚠️ เกินกำหนด';
+
+              html += `
+                <div class="bill-card" style="display: flex; justify-content: space-between; align-items: stretch; padding: 1.5rem; border-left: 4px solid ${statusColor}; margin-bottom: 1rem;">
+                  <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: 0.5rem; color: var(--text);">
+                      ${monthName} ${year}
+                      <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 400;">${bill.billId}</span>
+                    </div>
+
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; line-height: 1.6;">
+                      <div>💰 ค่าเช่า: ฿${(bill.charges.rent || 0).toLocaleString('th-TH')}</div>
+                      <div>⚡ ค่าไฟ: ฿${(bill.charges.electric.cost || 0).toLocaleString('th-TH')} (${(bill.charges.electric.usage || 0).toFixed(1)} หน่วย)</div>
+                      <div>💧 ค่าน้ำ: ฿${(bill.charges.water.cost || 0).toLocaleString('th-TH')} (${(bill.charges.water.usage || 0).toFixed(1)} หน่วย)</div>
+                      <div>🗑️ ค่ากลาง: ฿${(bill.charges.trash || 0).toLocaleString('th-TH')}</div>
+                      ${bill.charges.common > 0 ? `<div>🏢 ค่าใช้ส่วนกลาง: ฿${(bill.charges.common || 0).toLocaleString('th-TH')}</div>` : ''}
+                    </div>
+                  </div>
+
+                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 1rem;">
+                    <div style="text-align: right;">
+                      <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem;">รวม</div>
+                      <div style="font-size: 1.5rem; font-weight: 800; color: ${statusColor};">
+                        ฿${(bill.totalCharge || 0).toLocaleString('th-TH')}
+                      </div>
+                    </div>
+
+                    <span style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; background: ${statusColor}20; color: ${statusColor};">
+                      ${statusText}
+                    </span>
+
+                    ${bill.status === 'pending' ? `
+                      <button onclick="goToBillPayment('${bill.billId}', ${bill.totalCharge}, '${monthName} ${year}')" style="padding: 0.6rem 1.2rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem; white-space: nowrap;">
+                        💳 ชำระเงิน
+                      </button>
+                    ` : ''}
+                  </div>
+                </div>
+              `;
+            });
+
+            html += `</div>`;
+          });
+
+        container.innerHTML = html;
+        console.log(`✅ Bills page loaded: ${sortedBills.length} bills for room ${currentRoom}`);
+
+      } catch (error) {
+        console.error('❌ Error loading bills:', error);
+        container.innerHTML = `
+          <div class="error-box">
+            <strong>⚠️ เกิดข้อผิดพลาด</strong><br>
+            ไม่สามารถโหลดข้อมูลบิลได้: ${error.message}
+          </div>
+        `;
+      }
+    }
+
+    // Navigate to bill payment page with selected bill
+    function goToBillPayment(billId, amount, monthYear) {
+      currentPaymentAmount = amount;
+      currentPaymentMonth = monthYear;
+
+      // Update invoice content
+      const invoiceContent = document.getElementById('invoiceContent');
+      if (invoiceContent) {
+        invoiceContent.innerHTML = `
+          <div style="padding: 2rem; text-align: center; border-radius: 8px; background: #f9f9f9;">
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">ใบวางบิล / Invoice</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+              ${billId}<br>
+              ${monthYear}
+            </div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--green); margin-bottom: 1rem;">
+              ฿${amount.toLocaleString('th-TH')}
+            </div>
+            <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">
+              กรุณาชำระเงินตามจำนวนดังกล่าว
+            </p>
+          </div>
+        `;
+      }
+
+      goToPage('payment');
     }
 
     // PROFILE PAGE
