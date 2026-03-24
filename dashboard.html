@@ -2604,6 +2604,31 @@
         </ol>
       </div>
     </div>
+
+    <!-- Upload Real Bills from Generated Data -->
+    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-top:2rem;">
+      <div class="section-title" style="font-size:1rem;margin-bottom:1rem;">📤 อัปโหลดบิลที่คำนวณแล้ว</div>
+      <p style="color:var(--text-muted);margin-bottom:1rem;">อัปโหลด 594 บิลที่คำนวณจากข้อมูลมิเตอร์ไปยัง Firebase</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div>
+          <label style="display:block;margin-bottom:0.5rem;font-weight:600;">เลือกอาคาร</label>
+          <select id="billsUploadBuilding" style="width:100%;padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);">
+            <option value="rooms">ห้องแถว (Rooms)</option>
+            <option value="nest">Nest</option>
+          </select>
+        </div>
+        <div>
+          <button onclick="uploadRealBillsToFirebase()" style="padding:0.7rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-size:0.9rem;width:100%;margin-top:1.75rem;">
+            📤 เริ่มอัปโหลด
+          </button>
+        </div>
+      </div>
+
+      <div id="billsUploadStatus" style="padding:1rem;background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius-sm);color:var(--text-muted);font-size:0.9rem;">
+        พร้อมที่จะอัปโหลด - เลือกอาคารแล้วคลิก "📤 เริ่มอัปโหลด"
+      </div>
+    </div>
   </div>
 
 
@@ -10102,10 +10127,20 @@ function renderTenantMasterPage() {
   const container = document.getElementById('tenantMasterContainer');
   if (!container) return;
 
-  const tenants = TenantConfigManager.getTenantList();
+  const building = window.currentTenantMasterBuilding || 'rooms';
+  const tenants = TenantConfigManager.getTenantList(building);
 
   container.innerHTML = `
     <div style="margin-top: 1.5rem;">
+      <!-- Building Selector -->
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลือกอาคาร</label>
+        <select id="tenantMasterBuilding" onchange="window.currentTenantMasterBuilding = this.value; renderTenantMasterPage();" style="padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px;">
+          <option value="rooms" ${(window.currentTenantMasterBuilding || 'rooms') === 'rooms' ? 'selected' : ''}>ห้องแถว (Rooms)</option>
+          <option value="nest" ${(window.currentTenantMasterBuilding || 'rooms') === 'nest' ? 'selected' : ''}>Nest</option>
+        </select>
+      </div>
+
       <!-- Add Tenant Form -->
       <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
         <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">➕ เพิ่มผู้เช่าใหม่</div>
@@ -10184,6 +10219,7 @@ function renderTenantMasterPage() {
 }
 
 function addNewTenant() {
+  const building = window.currentTenantMasterBuilding || 'rooms';
   const id = document.getElementById('newTenantId').value.trim();
   const name = document.getElementById('newTenantName').value.trim();
 
@@ -10203,8 +10239,8 @@ function addNewTenant() {
 
   // Use Firebase-enabled save if available
   const saveSuccess = typeof TenantConfigManager.saveTenantToFirebase === 'function'
-    ? (TenantConfigManager.saveTenantToFirebase('rooms', id, tenantData), TenantConfigManager.getTenant(id) !== undefined)
-    : TenantConfigManager.addTenant(tenantData);
+    ? (TenantConfigManager.saveTenantToFirebase(building, id, tenantData), TenantConfigManager.getTenant(building, id) !== null)
+    : TenantConfigManager.addTenant(building, id, tenantData);
 
   if (saveSuccess) {
     alert(`✅ เพิ่มผู้เช่า ${name} สำเร็จ`);
@@ -10222,8 +10258,12 @@ function addNewTenant() {
 }
 
 function deleteTenant(tenantId) {
+  const building = window.currentTenantMasterBuilding || 'rooms';
   if (confirm(`คุณแน่ใจหรือว่าต้องการลบผู้เช่า ${tenantId}?`)) {
-    if (TenantConfigManager.deleteTenant(tenantId)) {
+    const deleteSuccess = typeof TenantConfigManager.deleteTenantWithFirebase === 'function'
+      ? (TenantConfigManager.deleteTenantWithFirebase(building, tenantId), true)
+      : TenantConfigManager.deleteTenant(building, tenantId);
+    if (deleteSuccess) {
       alert('✅ ลบผู้เช่าเรียบร้อย');
       renderTenantMasterPage();
     }
@@ -10417,6 +10457,62 @@ function deleteLease(leaseId) {
       alert('✅ ลบสัญญาเช่าเรียบร้อย');
       renderLeaseAgreementsPage();
     }
+  }
+}
+
+// ===== UPLOAD REAL BILLS PAGE (ADMIN ONLY) =====
+async function uploadRealBillsToFirebase() {
+  const building = document.getElementById('billsUploadBuilding')?.value || 'rooms';
+  const statusEl = document.getElementById('billsUploadStatus');
+  if (!statusEl) return;
+
+  statusEl.innerHTML = '<p style="color:#2980b9;">กำลังดาวน์โหลดข้อมูลบิล...</p>';
+
+  try {
+    // Fetch real bills
+    const response = await fetch('./real-bills-generated.json');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const billsData = await response.json();
+    const bills = billsData.bills.filter(b => b.building === building);
+
+    if (bills.length === 0) {
+      statusEl.innerHTML = '<p style="color:#e74c3c;">❌ ไม่พบบิลสำหรับอาคาร ' + building + '</p>';
+      return;
+    }
+
+    statusEl.innerHTML = `<p style="color:#2980b9;">กำลังอัปโหลด ${bills.length} บิล...</p>`;
+
+    // Group by room
+    const billsByRoom = {};
+    bills.forEach(bill => {
+      const roomId = bill.roomId;
+      if (!billsByRoom[roomId]) billsByRoom[roomId] = [];
+      billsByRoom[roomId].push(bill);
+    });
+
+    let uploadedCount = 0;
+    const { ref: firebaseRef, set: firebaseSet } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
+
+    // Upload each room's bills
+    for (const roomId in billsByRoom) {
+      const roomBills = billsByRoom[roomId];
+      const billsPayload = {};
+      roomBills.forEach(bill => {
+        billsPayload[bill.billId] = bill;
+      });
+
+      try {
+        const billsRef = firebaseRef(window.firebaseDatabase, `bills/${building}/${roomId}`);
+        await firebaseSet(billsRef, billsPayload);
+        uploadedCount++;
+      } catch (e) {
+        console.error(`Error uploading ${building}/${roomId}:`, e);
+      }
+    }
+
+    statusEl.innerHTML = `<p style="color:#27ae60;">✅ อัปโหลดสำเร็จ: ${uploadedCount} ห้อง, ${bills.length} บิล</p>`;
+  } catch (error) {
+    statusEl.innerHTML = `<p style="color:#e74c3c;">❌ ล้มเหลว: ${error.message}</p>`;
   }
 }
 

@@ -5,6 +5,117 @@
  */
 
 class MeterDataManager {
+  static isLoadingFromFirebase = false;
+  static firebaseLoadComplete = false;
+  /**
+   * Load meter data from Firebase Firestore for tenant app
+   * Queries meter_data collection and populates localStorage keys: meter_data_2567, meter_data_2568, etc.
+   * @param {string} building - Building name ('rooms', 'nest')
+   * @param {number[]} years - Array of years to load (e.g., [2567, 2568, 2569])
+   * @returns {Promise<boolean>} - True if data loaded successfully
+   */
+  static async loadFromFirebase(building, years = [2567, 2568, 2569]) {
+    if (this.isLoadingFromFirebase) {
+      console.log('⏳ Firebase meter data load already in progress...');
+      return false;
+    }
+
+    try {
+      if (!window.firebase?.firestore) {
+        console.warn('⚠️ Firebase Firestore not initialized');
+        return false;
+      }
+
+      this.isLoadingFromFirebase = true;
+      const db = window.firebase.firestore();
+      const fs = window.firebase.firestoreFunctions;
+
+      console.log(`🔄 Loading meter data from Firebase for building='${building}'...`);
+
+      let totalLoaded = 0;
+
+      // Load meter data for each year
+      for (const year of years) {
+        try {
+          // Query meter_data collection for this building and year
+          // Documents are structured as: building_year_month_roomId
+          const q = fs.query(
+            fs.collection(db, 'meter_data'),
+            fs.where('building', '==', building),
+            fs.where('year', '==', year)
+          );
+
+          const querySnap = await fs.getDocs(q);
+
+          if (querySnap.size > 0) {
+            // Reconstruct data in format: {monthKey: {roomId: {eNew, eOld, wNew, wOld}}}
+            const yearData = {};
+
+            querySnap.forEach(doc => {
+              const data = doc.data();
+              const monthKey = `${year}-${String(data.month).padStart(2, '0')}`;
+              const roomId = data.roomId;
+
+              if (!yearData[monthKey]) {
+                yearData[monthKey] = {};
+              }
+
+              yearData[monthKey][roomId] = {
+                currentWater: data.wNew || 0,
+                currentElectric: data.eNew || 0,
+                waterStart: data.wOld || 0,
+                electricStart: data.eOld || 0,
+                eOld: data.eOld || 0,
+                eNew: data.eNew || 0,
+                wOld: data.wOld || 0,
+                wNew: data.wNew || 0,
+                recordedDate: data.updatedAt || data.createdAt || new Date().toISOString()
+              };
+            });
+
+            // Store in localStorage with key meter_data_{year}
+            if (Object.keys(yearData).length > 0) {
+              const dataKey = `meter_data_${year}`;
+              const existingData = JSON.parse(localStorage.getItem(dataKey) || '{}');
+
+              // Merge Firebase data with existing localStorage data (don't overwrite)
+              Object.keys(yearData).forEach((monthKey) => {
+                if (!existingData[monthKey]) {
+                  existingData[monthKey] = {};
+                }
+
+                Object.keys(yearData[monthKey]).forEach((roomId) => {
+                  if (!existingData[monthKey][roomId]) {
+                    existingData[monthKey][roomId] = yearData[monthKey][roomId];
+                  }
+                });
+              });
+
+              localStorage.setItem(dataKey, JSON.stringify(existingData));
+              const monthCount = Object.keys(yearData).length;
+              const readingCount = Object.values(yearData).reduce((sum, month) => sum + Object.keys(month).length, 0);
+              console.log(`  ✅ Loaded ${readingCount} readings across ${monthCount} months for year ${year}`);
+              totalLoaded += readingCount;
+            }
+          } else {
+            console.log(`  ℹ️ No meter data found for year ${year}`);
+          }
+        } catch (error) {
+          console.warn(`  ⚠️ Error loading year ${year}:`, error.message);
+        }
+      }
+
+      console.log(`✅ Firebase meter data sync complete - ${totalLoaded} readings loaded`);
+      this.firebaseLoadComplete = true;
+      return true;
+    } catch (error) {
+      console.error('❌ Error loading meter data from Firebase:', error);
+      return false;
+    } finally {
+      this.isLoadingFromFirebase = false;
+    }
+  }
+
   /**
    * Get all meter data stored locally
    * @returns {object} - Meter data structure
