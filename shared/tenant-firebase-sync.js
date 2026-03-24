@@ -71,10 +71,13 @@ class TenantFirebaseSync {
           if (snapshot.exists()) {
             const leaseData = snapshot.val();
             console.log(`✅ Loaded lease from Firebase at ${path}:`, leaseData);
+            console.log(`   Building: ${this.currentBuilding}, Room: ${this.currentRoom}`);
             return leaseData;
+          } else {
+            console.log(`   No data at ${path}`);
           }
         } catch (e) {
-          console.debug(`  Path ${path} failed:`, e.message);
+          console.debug(`  ❌ Path ${path} failed:`, e.message);
         }
       }
 
@@ -297,15 +300,17 @@ class TenantFirebaseSync {
   static async loadAllData() {
     try {
       console.log('🔄 Loading all tenant data from Firebase...');
+      console.log('   Building:', this.currentBuilding, 'Room:', this.currentRoom);
 
+      // Load data in parallel
       const [lease, room, bills, payments, tickets, announcements] =
         await Promise.all([
-          this.loadLease(),
-          this.loadRoom(),
-          this.loadBills(),
-          this.loadPaymentHistory(),
-          this.loadMaintenanceTickets(),
-          this.loadAnnouncements()
+          this.loadLease().catch(e => { console.error('Error loading lease:', e); return null; }),
+          this.loadRoom().catch(e => { console.error('Error loading room:', e); return null; }),
+          this.loadBills().catch(e => { console.error('Error loading bills:', e); return []; }),
+          this.loadPaymentHistory().catch(e => { console.error('Error loading payments:', e); return []; }),
+          this.loadMaintenanceTickets().catch(e => { console.error('Error loading tickets:', e); return []; }),
+          this.loadAnnouncements().catch(e => { console.error('Error loading announcements:', e); return []; })
         ]);
 
       // Tenant info comes from the lease object
@@ -329,7 +334,9 @@ class TenantFirebaseSync {
 
       console.log('✅ All tenant data loaded:', {
         hasLease: !!lease,
+        leaseDetails: lease ? Object.keys(lease) : 'none',
         hasTenant: !!tenant,
+        tenantName: tenant?.name || 'N/A',
         hasRoom: !!room,
         billCount: (bills || []).length,
         paymentCount: (payments || []).length,
@@ -404,6 +411,53 @@ class TenantFirebaseSync {
       console.error('❌ Error updating payment:', error);
       return false;
     }
+  }
+
+  /**
+   * Debug: List all paths and structure in Firebase
+   * Call from console: TenantFirebaseSync.debugFirebaseStructure()
+   */
+  static async debugFirebaseStructure() {
+    if (!this.database || !window.firebaseRef || !window.firebaseGet) {
+      console.error('❌ Firebase not available');
+      return;
+    }
+
+    console.log('🔍 === DEBUG: Firebase Structure ===');
+    console.log('Building:', this.currentBuilding);
+    console.log('Room:', this.currentRoom);
+
+    // Try root
+    try {
+      console.log('\n📍 Checking root:');
+      const rootRef = window.firebaseRef(this.database, '');
+      const rootSnapshot = await window.firebaseGet(rootRef);
+      if (rootSnapshot.exists()) {
+        const keys = Object.keys(rootSnapshot.val());
+        console.log('   Root keys:', keys);
+
+        // For each key, try to get data for this building/room
+        for (const key of keys) {
+          console.log(`\n📍 Checking /${key}/${this.currentBuilding}/${this.currentRoom}:`);
+          try {
+            const ref = window.firebaseRef(this.database,
+              `${key}/${this.currentBuilding}/${this.currentRoom}`);
+            const snapshot = await window.firebaseGet(ref);
+            if (snapshot.exists()) {
+              console.log(`   ✅ DATA FOUND:`, snapshot.val());
+            } else {
+              console.log(`   No data`);
+            }
+          } catch (e) {
+            console.log(`   Error: ${e.message}`);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error checking root:', e);
+    }
+
+    console.log('\n✅ Debug complete');
   }
 
   /**
