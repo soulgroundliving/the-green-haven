@@ -1433,9 +1433,10 @@
 
     // BILLS PAGE
     function loadBillsPage() {
-      renderBillsList();
+      loadBills();
     }
 
+    // Old renderBillsList deprecated in favor of loadBills()
     function renderBillsList() {
       const container = document.getElementById('billsList');
 
