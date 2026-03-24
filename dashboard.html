@@ -2499,6 +2499,7 @@
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ราคา (บาท/เดือน)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">น้ำ (บาท/หน่วย)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ไฟ (บาท/หน่วย)</th>
+            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ขยะ (บาท)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:center;font-weight:600;color:var(--text);">การกระทำ</th>
           </tr>
         </thead>
@@ -4901,6 +4902,9 @@ function loadRoomConfigUI() {
         <td style="border:1px solid var(--border);padding:0.8rem;">
           <input type="number" value="${room.electricRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'electric', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
+        <td style="border:1px solid var(--border);padding:0.8rem;">
+          <input type="number" value="${room.trashRate || 20}" step="1" onchange="updateTrashRate('${building}', '${room.id}', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+        </td>
         <td style="border:1px solid var(--border);padding:0.8rem;text-align:center;">
           <button onclick="deleteRoom('${building}', '${room.id}')" style="padding:0.4rem 0.8rem;background:#f44336;color:white;border:none;border-radius:4px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:0.85rem;">ลบ</button>
         </td>
@@ -4968,6 +4972,14 @@ function updateRoomRate(building, roomId, rateType, rate) {
   const rateLabel = rateType === 'water' ? 'อัตราน้ำ' : 'อัตราไฟฟ้า';
   showToast(`✅ บันทึก${rateLabel}สำหรับห้อง ${roomId} = ${rate} บาท/หน่วย`, 'success', 2500);
   console.log(`✅ อัปเดตอัตรา ${rateType === 'water' ? 'น้ำ' : 'ไฟ'} สำหรับ ${roomId} = ${rate} บาท/หน่วย`);
+}
+
+function updateTrashRate(building, roomId, rate) {
+  RoomConfigManager.updateTrashRate(building, roomId, parseInt(rate));
+
+  // Show save confirmation
+  showToast(`✅ บันทึกค่าขยะสำหรับห้อง ${roomId} = ${rate} บาท`, 'success', 2500);
+  console.log(`✅ อัปเดตค่าขยะสำหรับ ${roomId} = ${rate} บาท`);
 }
 
 function addNewRoom() {
