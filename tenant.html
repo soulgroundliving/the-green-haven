@@ -52,26 +52,36 @@
       measurementId: "G-93J1CBN1BZ"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
-    const auth = getAuth(app);
-    const firestore = getFirestore(app);
+    try {
+      const app = initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+      const auth = getAuth(app);
+      const firestore = getFirestore(app);
 
-    // Expose globals for TenantFirebaseSync
-    window.firebaseApp = app;
-    window.firebaseDatabase = database;
-    window.firebaseAuth = auth;
-    window.firebaseRef = ref;
-    window.firebaseGet = get;
-    window.firebaseSet = set;
-    window.firebaseOnValue = onValue;
-    window.firebaseDB = database; // Alias for TenantFirebaseSync compatibility
+      // Expose globals for TenantFirebaseSync
+      window.firebaseApp = app;
+      window.firebaseDatabase = database;
+      window.firebaseAuth = auth;
+      window.firebaseRef = ref;
+      window.firebaseGet = get;
+      window.firebaseSet = set;
+      window.firebaseOnValue = onValue;
+      window.firebaseDB = database;
 
-    window.firebase = {
-      firestore: () => firestore
-    };
+      window.firebase = {
+        firestore: () => firestore
+      };
 
-    console.log('✅ Firebase initialized for tenant app');
+      // Signal that Firebase is ready
+      window.firebaseReady = true;
+      window.dispatchEvent(new Event('firebaseInitialized'));
+
+      console.log('✅ Firebase initialized successfully');
+      console.log('📊 Database URL:', firebaseConfig.databaseURL);
+    } catch (error) {
+      console.error('❌ Firebase initialization failed:', error);
+      window.firebaseReady = false;
+    }
   </script>
   <style>
     :root {
@@ -998,25 +1008,42 @@
     }
 
     // Initialize app on load (with Firebase ready check)
+    function initializeApp() {
+      console.log('🚀 initializeApp called');
+      initializeMockData();
+      initTenantApp();
+    }
+
+    // Listen for Firebase initialization event
+    window.addEventListener('firebaseInitialized', function() {
+      console.log('✅ Firebase initialized event fired, starting app');
+      initializeApp();
+    });
+
+    // Also hook into DOMContentLoaded as backup
     window.addEventListener('DOMContentLoaded', function() {
-      // Wait for Firebase to initialize (max 5 seconds)
-      let firebaseReady = !!window.firebaseDatabase;
-      let waitCount = 0;
-      const firebaseCheck = setInterval(() => {
-        firebaseReady = !!window.firebaseDatabase;
-        waitCount++;
-        if (firebaseReady) {
-          clearInterval(firebaseCheck);
-          console.log('✅ Firebase ready, initializing tenant app');
-          initializeMockData();
-          initTenantApp();
-        } else if (waitCount >= 50) { // 5 seconds (50 * 100ms)
-          clearInterval(firebaseCheck);
-          console.warn('⚠️ Firebase not ready after 5 seconds, proceeding anyway (fallback to localStorage)');
-          initializeMockData();
-          initTenantApp();
-        }
-      }, 100);
+      console.log('📋 DOMContentLoaded fired, Firebase ready:', !!window.firebaseDatabase);
+
+      // If Firebase already initialized, start app immediately
+      if (window.firebaseReady) {
+        console.log('✅ Firebase already ready at DOMContentLoaded');
+        initializeApp();
+      } else {
+        // Wait for Firebase initialization (max 5 seconds)
+        let waitCount = 0;
+        const firebaseCheck = setInterval(() => {
+          waitCount++;
+          if (window.firebaseReady) {
+            clearInterval(firebaseCheck);
+            console.log('✅ Firebase became ready after', waitCount * 100, 'ms');
+            initializeApp();
+          } else if (waitCount >= 50) { // 5 seconds (50 * 100ms)
+            clearInterval(firebaseCheck);
+            console.warn('⚠️ Firebase not ready after 5 seconds, proceeding with localStorage fallback');
+            initializeApp();
+          }
+        }, 100);
+      }
     });
 
     function initTenantApp() {
