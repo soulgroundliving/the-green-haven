@@ -110,6 +110,9 @@
     })();
 
     // Extract meter data from real bills JSON to ensure we have CORRECT meter readings
+    // Also create a global cache for immediate synchronous access
+    window.correctMeterReadings = {};
+
     (async function extractMeterFromBills() {
       try {
         // Load the real bills JSON which has correct meter readings
@@ -137,6 +140,7 @@
           const fullYear = bill.year < 100 ? bill.year + 2500 : bill.year;
           const monthKey = `${fullYear}-${String(bill.month).padStart(2, '0')}`;
           const storageKey = `meter_data_${fullYear}`;
+          const cacheKey = `${fullYear}_${bill.month}_${bill.roomId}`;
 
           if (!meterDataByYear[storageKey]) {
             meterDataByYear[storageKey] = {};
@@ -149,7 +153,7 @@
           // Format: {water: {current, previous}, electric: {current, previous}}
           if (mr.water && mr.electric) {
             meterDataByYear[storageKey][monthKey] = meterDataByYear[storageKey][monthKey] || {};
-            meterDataByYear[storageKey][monthKey][roomId] = {
+            const reading = {
               wNew: mr.water.current || 0,
               wOld: mr.water.previous || 0,
               eNew: mr.electric.current || 0,
@@ -160,6 +164,10 @@
               electricStart: mr.electric.previous || 0,
               recordedDate: bill.billDate || new Date().toISOString()
             };
+            meterDataByYear[storageKey][monthKey][roomId] = reading;
+
+            // ALSO cache in global for immediate access
+            window.correctMeterReadings[cacheKey] = reading;
           }
         });
 
@@ -184,6 +192,18 @@
         });
 
         console.log(`✅ Extracted ${addedCount} correct meter readings from bills JSON`);
+
+        // After extraction, refresh bills display if bills page is active
+        setTimeout(() => {
+          const billsContainer = document.getElementById('billsList');
+          if (billsContainer && billsContainer.innerHTML && billsContainer.innerHTML !== '') {
+            console.log('🔄 Refreshing bills display with corrected meter readings...');
+            // Re-trigger the bills loading to pick up the new cache data
+            if (typeof loadBills === 'function') {
+              loadBills();
+            }
+          }
+        }, 500);
 
       } catch (e) {
         console.error('❌ Error extracting meter data from bills:', e);
@@ -3119,7 +3139,18 @@
 
               if (typeof MeterDataManager !== 'undefined') {
                 try {
-                  let meterData = MeterDataManager.getMeterReading(year, bill.month, currentRoom);
+                  let meterData = null;
+
+                  // Try global cache first (from extraction)
+                  const cacheKey = `${year}_${bill.month}_${currentRoom}`;
+                  if (window.correctMeterReadings && window.correctMeterReadings[cacheKey]) {
+                    meterData = window.correctMeterReadings[cacheKey];
+                  }
+
+                  // Fallback to MeterDataManager
+                  if (!meterData) {
+                    meterData = MeterDataManager.getMeterReading(year, bill.month, currentRoom);
+                  }
 
                   // Fallback to old meter_data format
                   if (!meterData) {
