@@ -1092,9 +1092,18 @@
       }
 
       // Determine building
-      const numRoom = parseInt(roomNumber);
-      currentBuilding = (numRoom >= 101 && numRoom <= 405) ? 'nest' : 'rooms';
+      // Check if room starts with 'N' for Nest building, or extract number if numeric
+      let currentBuilding_temp;
+      if (roomNumber.toString().startsWith('N') || roomNumber.toString().startsWith('n')) {
+        currentBuilding_temp = 'nest';
+      } else {
+        const numRoom = parseInt(roomNumber);
+        currentBuilding_temp = (numRoom >= 101 && numRoom <= 405) ? 'nest' : 'rooms';
+      }
+      currentBuilding = currentBuilding_temp;
       currentRoom = roomNumber;
+
+      console.log(`📍 Building detection: room='${roomNumber}' → building='${currentBuilding}'`);
 
       // Initialize Firebase sync
       if (typeof TenantFirebaseSync !== 'undefined') {
