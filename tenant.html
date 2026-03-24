@@ -1637,6 +1637,31 @@
       generateAllBackdatedBills();
     }
 
+    // Helper: Validate and fix swapped meter readings
+    function validateAndFixMeterData(meterData) {
+      if (!meterData) return null;
+
+      // Check for obviously swapped values (bug in extraction script)
+      const eNew = meterData.eNew || 0;
+      const eOld = meterData.eOld || 0;
+      const wNew = meterData.wNew || 0;
+      const wOld = meterData.wOld || 0;
+
+      // Detect swap: if eNew matches wOld, readings are likely swapped
+      if (eNew === wOld && eOld < 100 && wNew > 1000) {
+        console.warn(`⚠️ Detected swapped meter readings! Fixing: eNew(${eNew})←→wOld(${wOld})`);
+        return {
+          ...meterData,
+          eNew: wNew,
+          eOld: wOld,
+          wNew: eNew,
+          wOld: eOld
+        };
+      }
+
+      return meterData;
+    }
+
     function generateAllBackdatedBills() {
       if (!currentLease || !currentLease.moveInDate) {
         alert('⚠️ ไม่สามารถ generate บิล - ข้อมูลวันย้ายเข้าไม่สมบูรณ์');
@@ -1687,8 +1712,11 @@
             if (typeof MeterDataManager !== 'undefined') {
               try {
                 meterData = MeterDataManager.getMeterReading(year, month, currentRoom);
+                // FIX: Validate and correct swapped readings from extraction script bug
+                meterData = validateAndFixMeterData(meterData);
+
                 if (meterData && (meterData.eNew || meterData.wNew)) {
-                  console.log(`📊 Found meter data for ${year}-${month}: ${JSON.stringify(meterData)}`);
+                  console.log(`📊 Found meter data for ${year}-${month}: eNew=${meterData.eNew}, eOld=${meterData.eOld}, wNew=${meterData.wNew}, wOld=${meterData.wOld}`);
 
                   // Calculate electric cost from meter readings
                   if (meterData.eNew !== undefined && meterData.eOld !== undefined) {
