@@ -912,6 +912,72 @@
           </div>
         </div>
 
+        <!-- Outstanding Balance Card -->
+        <div class="card" id="outstandingCard" style="display: none;">
+          <div style="text-align: center;">
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">ยอดค้างชำระทั้งหมด</p>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--red); margin-bottom: 1rem;" id="outstandingAmount">-</div>
+            <p style="color: var(--text-muted); font-size: 0.85rem;" id="pendingBillCount">-</p>
+          </div>
+        </div>
+
+        <!-- Meter Readings Card -->
+        <div class="card" id="meterReadingsCard" style="display: none;">
+          <div class="card-title" style="margin-bottom: 1rem;">⚡💧 มิเตอร์ปัจจุบัน</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="text-align: center; padding: 1rem; background: var(--blue-pale); border-radius: 8px;">
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">⚡ ไฟฟ้า</div>
+              <div style="font-size: 1.8rem; font-weight: 800; color: var(--blue);" id="meterElectric">-</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">หน่วย</div>
+            </div>
+            <div style="text-align: center; padding: 1rem; background: var(--blue-pale); border-radius: 8px; opacity: 0.8;">
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">💧 น้ำ</div>
+              <div style="font-size: 1.8rem; font-weight: 800; color: var(--blue);" id="meterWater">-</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">หน่วย</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bill Summary Card -->
+        <div class="card" id="billSummaryCard" style="display: none;">
+          <div class="card-title" style="margin-bottom: 1rem;">📊 สถานะบิล</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div style="text-align: center; padding: 1rem; background: var(--green-pale); border-radius: 8px;">
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">✅ ชำระแล้ว</div>
+              <div style="font-size: 1.8rem; font-weight: 800; color: var(--green);" id="billPaidCount">0</div>
+            </div>
+            <div style="text-align: center; padding: 1rem; background: #fff3cd; border-radius: 8px;">
+              <div style="font-size: 0.9rem; color: #856404; margin-bottom: 0.5rem;">⏳ รอชำระ</div>
+              <div style="font-size: 1.8rem; font-weight: 800; color: #856404;" id="billPendingCount">0</div>
+            </div>
+            <div style="text-align: center; padding: 1rem; background: var(--red-pale); border-radius: 8px;">
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">⚠️ เกินกำหนด</div>
+              <div style="font-size: 1.8rem; font-weight: 800; color: var(--red);" id="billOverdueCount">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Latest Announcement Card -->
+        <div class="card" id="latestAnnouncementCard" style="display: none;">
+          <div class="card-title">📢 ประกาศล่าสุด</div>
+          <div id="latestAnnouncementContent"></div>
+        </div>
+
+        <!-- Lease Information Card -->
+        <div class="card" id="leaseInfoCard" style="display: none;">
+          <div class="card-title" style="margin-bottom: 1rem;">📋 ข้อมูลสัญญา</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">เงินมัดจำ</div>
+              <div style="font-size: 1.2rem; font-weight: 700; color: var(--text);" id="homeDeposit">-</div>
+            </div>
+            <div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">วันเข้าเช่า</div>
+              <div style="font-size: 1rem; font-weight: 600; color: var(--text);" id="homeMoveInDate">-</div>
+            </div>
+          </div>
+        </div>
+
         <div class="quick-actions">
           <button class="quick-action-btn" onclick="goToPage('bills')">
             <span class="quick-action-icon">💳</span>
@@ -1651,6 +1717,110 @@
       if (nextBill) {
         document.getElementById('nextPaymentAmount').textContent = `${nextBill.total.toLocaleString('th-TH')} บาท`;
         document.getElementById('nextPaymentDate').textContent = `ครบกำหนด: ${new Date(nextBill.dueDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+      } else {
+        document.getElementById('nextPaymentAmount').textContent = '-';
+        document.getElementById('nextPaymentDate').textContent = '-';
+      }
+
+      // Calculate outstanding balance
+      const outstandingBills = currentBills.filter(b => b.status === 'pending' || b.status === 'overdue');
+      const totalOutstanding = outstandingBills.reduce((sum, bill) => sum + (bill.total || 0), 0);
+      if (totalOutstanding > 0) {
+        document.getElementById('outstandingCard').style.display = 'block';
+        document.getElementById('outstandingAmount').textContent = `${totalOutstanding.toLocaleString('th-TH')} บาท`;
+        document.getElementById('pendingBillCount').textContent = `${outstandingBills.length} บิล`;
+      }
+
+      // Display meter readings (latest)
+      try {
+        // Try to get meter data from TenantManager
+        let meterData = null;
+        if (typeof TenantManager !== 'undefined') {
+          const meters = TenantManager.getMeterReadingsForRoom(currentBuilding, currentRoom);
+          if (meters && meters.length > 0) {
+            // Get the latest (first) reading
+            meterData = meters[0];
+          }
+        }
+
+        // Fallback: load from localStorage
+        if (!meterData) {
+          const now = new Date();
+          const currentYear = now.getFullYear();
+          const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+          const meterKey = `meter_data_${currentYear}`;
+          const meterStorage = JSON.parse(localStorage.getItem(meterKey) || '{}');
+          const monthKey = `${currentYear}-${currentMonth}`;
+          if (meterStorage[monthKey] && meterStorage[monthKey][currentRoom]) {
+            meterData = meterStorage[monthKey][currentRoom];
+          }
+        }
+
+        if (meterData && (meterData.eNew || meterData.currentElectric)) {
+          document.getElementById('meterReadingsCard').style.display = 'block';
+          document.getElementById('meterElectric').textContent = (meterData.eNew || meterData.currentElectric || 0).toLocaleString('th-TH');
+          document.getElementById('meterWater').textContent = (meterData.wNew || meterData.currentWater || 0).toLocaleString('th-TH');
+        }
+      } catch (e) {
+        console.warn('⚠️ Error loading meter data for home page:', e);
+      }
+
+      // Display bill summary stats
+      if (currentBills && currentBills.length > 0) {
+        document.getElementById('billSummaryCard').style.display = 'block';
+        const paidBills = currentBills.filter(b => b.status === 'paid').length;
+        const pendingBills = currentBills.filter(b => b.status === 'pending').length;
+        const overdueBills = currentBills.filter(b => b.status === 'overdue').length;
+
+        document.getElementById('billPaidCount').textContent = paidBills;
+        document.getElementById('billPendingCount').textContent = pendingBills;
+        document.getElementById('billOverdueCount').textContent = overdueBills;
+      }
+
+      // Display latest announcement
+      try {
+        let announcements = [];
+
+        // PRIORITY 1: Load from admin dashboard announcements_data
+        try {
+          const announcementsData = JSON.parse(localStorage.getItem('announcements_data') || '[]');
+          if (announcementsData.length > 0) {
+            announcements = announcementsData.filter(ann => {
+              const annBuilding = ann.building || 'rooms';
+              return !ann.building || annBuilding === currentBuilding || ann.building === 'all';
+            });
+          }
+        } catch (e) {
+          console.warn('⚠️ Error loading announcements from storage:', e);
+        }
+
+        // PRIORITY 2: Load from Firebase if available
+        if (announcements.length === 0 && typeof tenantFirebaseData !== 'undefined' && tenantFirebaseData.announcements) {
+          announcements = tenantFirebaseData.announcements;
+        }
+
+        if (announcements && announcements.length > 0) {
+          const latest = announcements[0];
+          document.getElementById('latestAnnouncementCard').style.display = 'block';
+          document.getElementById('latestAnnouncementContent').innerHTML = `
+            <div style="padding: 1rem; background: var(--green-pale); border-radius: 8px; border-left: 4px solid var(--green);">
+              <div style="font-weight: 700; color: var(--text); margin-bottom: 0.5rem;">${latest.title || '-'}</div>
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">${latest.content || '-'}</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">
+                ${latest.date ? (typeof latest.date === 'string' ? latest.date : new Date(latest.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })) : '-'}
+              </div>
+            </div>
+          `;
+        }
+      } catch (e) {
+        console.warn('⚠️ Error displaying latest announcement:', e);
+      }
+
+      // Display lease information
+      if (currentLease) {
+        document.getElementById('leaseInfoCard').style.display = 'block';
+        document.getElementById('homeDeposit').textContent = `${(currentLease.deposit || 0).toLocaleString('th-TH')} บาท`;
+        document.getElementById('homeMoveInDate').textContent = currentLease.moveInDate ? new Date(currentLease.moveInDate).toLocaleDateString('th-TH') : '-';
       }
 
       // Update header with tenant name
