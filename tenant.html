@@ -2772,6 +2772,42 @@
       console.log('✅ Contract page loaded');
     }
 
+    // Helper: Fix swapped meterReadings in existing bills from corrupted data
+    function fixSwappedBillMeterReadings(bill) {
+      if (!bill.meterReadings || !bill.meterReadings.electric || !bill.meterReadings.water) {
+        return bill;
+      }
+
+      const elec = bill.meterReadings.electric;
+      const water = bill.meterReadings.water;
+
+      // Detect swap: if electric is small (water value range) and water is large (electric value range)
+      const isSwapped = (
+        (elec.current < 2000 && elec.previous < 2000) &&  // electric values too small
+        (water.current > 3000 && water.previous > 1000)     // water values too large
+      );
+
+      if (isSwapped) {
+        console.log(`🔄 Fixing swapped meter readings in ${bill.billId}`);
+        // Swap them back
+        return {
+          ...bill,
+          meterReadings: {
+            electric: water,
+            water: elec
+          },
+          // Also swap charges if they exist
+          charges: bill.charges ? {
+            ...bill.charges,
+            electric: bill.charges.water,
+            water: bill.charges.electric
+          } : bill.charges
+        };
+      }
+
+      return bill;
+    }
+
     // ===== BILLS PAGE - Display all historical bills =====
     function loadBills() {
       const container = document.getElementById('billsList');
@@ -2787,15 +2823,19 @@
           if (billsData) {
             const yearBills = JSON.parse(billsData)
               .filter(b => b.building === currentBuilding && b.roomId === currentRoom)
-              .map(b => ({
-                billId: b.billId,
-                month: b.month,
-                year: b.year,
-                charges: b.charges,
-                totalCharge: b.totalCharge,
-                status: b.status || 'pending',
-                meterReadings: b.meterReadings
-              }));
+              .map(b => {
+                const bill = {
+                  billId: b.billId,
+                  month: b.month,
+                  year: b.year,
+                  charges: b.charges,
+                  totalCharge: b.totalCharge,
+                  status: b.status || 'pending',
+                  meterReadings: b.meterReadings
+                };
+                // FIX: Detect and correct swapped meter readings from corrupted data
+                return fixSwappedBillMeterReadings(bill);
+              });
             bills.push(...yearBills);
           }
         }
