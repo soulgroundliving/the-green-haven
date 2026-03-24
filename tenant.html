@@ -1512,7 +1512,7 @@
 
       // Fallback: Try to load real bills from localStorage
       let realBills = [];
-      for (const year of [2567, 2568, 2569]) {
+      for (const year of [2567, 2568, 2569, 2570]) {
         const billsKey = `bills_${year}`;
         const billsData = localStorage.getItem(billsKey);
         if (billsData) {
@@ -2738,9 +2738,9 @@
         // Get all bills for this room - try real bills from localStorage first
         let bills = [];
 
-        // Load real bills from localStorage (populated by init-real-bills.js)
-        for (const year of [2567, 2568, 2569]) {
-          const billsKey = `bills_${year}`;  // bills_2567, bills_2568, bills_2569
+        // Load real bills from localStorage (populated by init-real-bills.js and generateAllBackdatedBills)
+        for (const year of [2567, 2568, 2569, 2570]) {
+          const billsKey = `bills_${year}`;  // bills_2567, bills_2568, bills_2569, bills_2570
           const billsData = localStorage.getItem(billsKey);
           if (billsData) {
             const yearBills = JSON.parse(billsData)
