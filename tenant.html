@@ -2963,21 +2963,7 @@
     }
 
     // ===== BILLS PAGE - Display all historical bills =====
-    async function loadBills() {
-      // Wait for meter data extraction to complete BEFORE rendering bills
-      if (window.meterExtractionPromise) {
-        try {
-          await window.meterExtractionPromise;
-          console.log('✅ Meter extraction complete, rendering bills...');
-        } catch (e) {
-          console.warn('⚠️ Meter extraction error, continuing anyway:', e);
-        }
-      }
-
-      return loadBillsActual();
-    }
-
-    function loadBillsActual() {
+    function loadBills() {
       const container = document.getElementById('billsList');
 
       try {
