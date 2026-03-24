@@ -330,6 +330,64 @@ class InvoiceReceiptManager {
       return null;
     }
   }
+
+  /**
+   * Sync all invoices and receipts to Dashboard (Firebase)
+   * Called after payment to ensure dashboard has latest data
+   */
+  static syncToDashboard(building) {
+    try {
+      if (!window.firebase || !window.firebase.firestore) {
+        console.warn('⚠️ Firebase not initialized, skipping dashboard sync');
+        return false;
+      }
+
+      const db = window.firebase.firestore();
+      const allInvoices = this.getAllInvoices(building);
+      const allReceipts = this.getAllReceipts(building);
+
+      // Sync all invoices to centralized dashboard collection
+      const dashboardInvoicesRef = window.firebase.firestoreFunctions.doc(
+        db,
+        `dashboard_data/${building}/invoices_summary`
+      );
+
+      window.firebase.firestoreFunctions.setDoc(dashboardInvoicesRef, {
+        building: building,
+        invoices: allInvoices,
+        total_count: allInvoices.length,
+        last_sync: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }, { merge: true }).then(() => {
+        console.log(`✅ Invoices synced to Dashboard: ${allInvoices.length} invoices`);
+      }).catch(err => {
+        console.warn(`⚠️ Dashboard invoice sync failed:`, err);
+      });
+
+      // Sync all receipts to centralized dashboard collection
+      const dashboardReceiptsRef = window.firebase.firestoreFunctions.doc(
+        db,
+        `dashboard_data/${building}/receipts_summary`
+      );
+
+      window.firebase.firestoreFunctions.setDoc(dashboardReceiptsRef, {
+        building: building,
+        receipts: allReceipts,
+        total_count: allReceipts.length,
+        last_sync: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }, { merge: true }).then(() => {
+        console.log(`✅ Receipts synced to Dashboard: ${allReceipts.length} receipts`);
+      }).catch(err => {
+        console.warn(`⚠️ Dashboard receipt sync failed:`, err);
+      });
+
+      return true;
+    } catch (error) {
+      console.warn('⚠️ Dashboard sync error (non-critical):', error);
+      return false;
+    }
+  }
 }
 
 console.log('✅ InvoiceReceiptManager loaded');

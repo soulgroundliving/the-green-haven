@@ -2460,6 +2460,10 @@
           'paid'
         );
 
+        // 2.5. Sync to Dashboard
+        InvoiceReceiptManager.syncToDashboard(currentBuilding);
+        console.log('📊 Invoice and Receipt synced to Dashboard');
+
         // 3. Generate receipt HTML
         const payDate = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
         const receiptNo = receipt?.id || ('RCP-' + Date.now());
