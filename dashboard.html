@@ -1535,6 +1535,9 @@
       <button class="sidebar-item" onclick="window.showPage('maintenance', this)">
         <span class="sidebar-item-icon">🔧</span>แจ้งซ่อม<span class="sidebar-badge" id="mxBadge" style="display:none"></span>
       </button>
+      <button class="sidebar-item" onclick="window.showPage('announcements', this)">
+        <span class="sidebar-item-icon">📢</span>ประกาศ
+      </button>
     </div>
 
     <!-- Finance & Accounting -->
@@ -1609,6 +1612,9 @@
   </nav>
 
   <div class="sidebar-footer">
+    <button onclick="showDebugPage()" style="padding:8px;background:#444;color:#fff;border:1px solid #666;border-radius:4px;cursor:pointer;font-size:12px;width:100%;">
+      <span>🔍 DEBUG</span>
+    </button>
     <button class="sidebar-logout" onclick="handleLogout()">
       <span class="sidebar-item-icon">🚪</span>Logout
     </button>
@@ -2816,6 +2822,83 @@
   </div><!-- END HOUSEKEEPING TAB -->
 </div>
 
+<!-- ===== ANNOUNCEMENTS ===== -->
+<div class="page" id="page-announcements">
+  <div class="section-title">📢 ประกาศและข้อมูลข่าวสาร</div>
+
+  <!-- Building Selection -->
+  <div class="year-tabs" style="margin-bottom:1.2rem;">
+    <span class="year-tab-label">ตึก:</span>
+    <button class="year-tab active" onclick="setAnnouncementBuilding('rooms', this)">🏠 ห้องแถว</button>
+    <button class="year-tab" onclick="setAnnouncementBuilding('nest', this)">🏢 Nest</button>
+  </div>
+
+  <!-- Create Form -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <div class="card-title">➕ สร้างประกาศใหม่</div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+      <div>
+        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">หัวข้อ *</label>
+        <input type="text" id="ann-title" placeholder="เช่น แจ้งปิดน้ำ" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+      </div>
+
+      <div>
+        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">ไอคอน Emoji</label>
+        <input type="text" id="ann-icon" placeholder="💧 🧹 🔧" maxlength="2" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun'; font-size: 1.2rem;">
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1rem;">
+      <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เนื้อหา *</label>
+      <textarea id="ann-content" rows="4" placeholder="รายละเอียดประกาศ..." style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun'; resize: vertical;"></textarea>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+      <div>
+        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">วันที่ (optional)</label>
+        <input type="date" id="ann-date" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px;">
+      </div>
+
+      <div>
+        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เวลา (optional)</label>
+        <input type="text" id="ann-time" placeholder="เช่น 10:00 - 14:00" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+      </div>
+    </div>
+
+    <button onclick="saveAnnouncement()" style="width: 100%; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun'; font-size: 0.95rem;">📢 สร้างประกาศ</button>
+  </div>
+
+  <!-- List of Announcements -->
+  <div class="card">
+    <div class="card-title">📋 รายการประกาศทั้งหมด</div>
+    <div id="announcementsList" style="min-height: 200px;"></div>
+  </div>
+</div>
+
+<!-- ===== DEBUG PAGE ===== -->
+<div class="page" id="page-debug">
+  <div class="section-title">🔍 DEBUG: localStorage Inspector</div>
+
+  <div class="card">
+    <div class="card-title">🔧 Maintenance Data (maintenance_data)</div>
+    <button onclick="debugShowMaintenance()" class="btn-primary" style="margin-bottom:12px;">🔄 Refresh Data</button>
+    <pre id="debugMaintenanceOutput" style="background:#1a1a1a;color:#0f0;padding:12px;border-radius:8px;font-size:11px;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all;"></pre>
+  </div>
+
+  <div class="card" style="margin-top:12px;">
+    <div class="card-title">📢 Announcements Data (announcements_data)</div>
+    <button onclick="debugShowAnnouncements()" class="btn-primary" style="margin-bottom:12px;">🔄 Refresh Data</button>
+    <pre id="debugAnnouncementsOutput" style="background:#1a1a1a;color:#0f0;padding:12px;border-radius:8px;font-size:11px;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all;"></pre>
+  </div>
+
+  <div class="card" style="margin-top:12px;">
+    <div class="card-title">💾 All localStorage Keys</div>
+    <button onclick="debugShowAllKeys()" class="btn-primary" style="margin-bottom:12px;">🔄 Refresh Data</button>
+    <pre id="debugAllKeysOutput" style="background:#1a1a1a;color:#0f0;padding:12px;border-radius:8px;font-size:11px;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all;"></pre>
+  </div>
+</div>
+
 <!-- ===== BILL GENERATOR ===== -->
 <div class="page" id="page-bill">
   <div class="section-title">🧾 ออกบิล — ระบบ 2 ขั้นตอน</div>
@@ -3231,6 +3314,7 @@ window._showPageImpl = function(page,btn){
   if(page==='tenant')initTenantPage();
   if(page==='expense')initExpensePage();
   if(page==='maintenance')initMaintenancePage();
+  if(page==='announcements')initAnnouncementsPage();
   if(page==='tenant-portal')initTenantPortal();
   if(page==='payment-verify')initPaymentVerify();
   if(page==='analytics')initAnalyticsPage();
@@ -7953,8 +8037,19 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 // ===== MAINTENANCE SYSTEM =====
-function loadMaintenance(){return JSON.parse(localStorage.getItem('maintenance_data')||'[]');}
-function saveMaintenance(d){localStorage.setItem('maintenance_data',JSON.stringify(d));}
+function loadMaintenance(){
+  // ✅ Load from localStorage (admin dashboard primary source)
+  const localData = JSON.parse(localStorage.getItem('maintenance_data')||'[]');
+  console.log(`📋 Loaded ${localData.length} maintenance requests from localStorage`);
+
+  // Note: Firebase sync would happen via tenant app → updates localStorage
+  // For real-time updates, integrate Firebase listener here in future
+  return localData;
+}
+function saveMaintenance(d){
+  localStorage.setItem('maintenance_data',JSON.stringify(d));
+  console.log('✅ Maintenance saved to localStorage');
+}
 
 function initMaintenancePage(){
   // Initialize Maintenance tab as default
@@ -7989,7 +8084,18 @@ function updateMxBadge(){
   else{badge.style.display='none';}
 }
 
-const MX_CAT_LABEL={'electrical':'⚡ ไฟฟ้า','plumbing':'🚿 ประปา/น้ำ','repair':'🔧 ซ่อมแซม','ac':'❄️ แอร์/พัดลม','other':'📦 อื่นๆ'};
+// Fixed to match tenant.html category names
+const MX_CAT_LABEL={
+  'electric':'⚡ ไฟฟ้า',
+  'electrical':'⚡ ไฟฟ้า',
+  'water':'💧 น้ำ',
+  'plumbing':'🚿 ประปา/น้ำ',
+  'aircon':'❄️ แอร์',
+  'ac':'❄️ แอร์/พัดลม',
+  'furniture':'🪑 เฟอร์นิเจอร์',
+  'repair':'🔧 ซ่อมแซม',
+  'other':'📝 อื่นๆ'
+};
 const MX_STATUS_LABEL={'pending':'⏳ รอดำเนินการ','inprogress':'🔨 กำลังดำเนินการ','done':'✅ เสร็จแล้ว'};
 const MX_STATUS_CLASS={'pending':'mx-pending','inprogress':'mx-inprogress','done':'mx-done'};
 
@@ -8240,6 +8346,136 @@ function switchMaintenanceTab(tabName, btn) {
       initMaintenancePage();
     }
   }
+}
+
+// ===== ANNOUNCEMENTS MANAGEMENT =====
+let announcementBuilding = 'rooms';
+
+function setAnnouncementBuilding(bld, btn) {
+  document.querySelectorAll('#page-announcements .year-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  announcementBuilding = bld;
+  renderAnnouncementsList();
+}
+
+function initAnnouncementsPage() {
+  // Set default date to today
+  const today = new Date().toISOString().split('T')[0];
+  const dateInput = document.getElementById('ann-date');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = today;
+  }
+  renderAnnouncementsList();
+}
+
+function loadAnnouncements() {
+  return JSON.parse(localStorage.getItem('announcements_data') || '[]');
+}
+
+function saveAnnouncementsData(data) {
+  localStorage.setItem('announcements_data', JSON.stringify(data));
+  console.log('✅ Announcements saved to localStorage');
+}
+
+function saveAnnouncement() {
+  const title = document.getElementById('ann-title')?.value?.trim();
+  const content = document.getElementById('ann-content')?.value?.trim();
+  const icon = document.getElementById('ann-icon')?.value?.trim() || '📢';
+  const date = document.getElementById('ann-date')?.value || new Date().toISOString().split('T')[0];
+  const time = document.getElementById('ann-time')?.value?.trim() || '';
+
+  if (!title || !content) {
+    alert('⚠️ กรุณากรอกหัวข้อและเนื้อหา');
+    return;
+  }
+
+  const announcement = {
+    id: `ANN${Date.now()}`,
+    building: announcementBuilding,
+    title: title,
+    content: content,
+    icon: icon,
+    date: date,
+    time: time,
+    createdAt: new Date().toISOString(),
+    createdBy: '📌 Admin' // TODO: Get actual admin name
+  };
+
+  // Save to localStorage (for now)
+  let announcements = loadAnnouncements();
+  announcements.unshift(announcement);
+  saveAnnouncementsData(announcements);
+
+  // TODO: Save to Firebase: announcements/{building}/{id}
+  console.log('📢 Announcement saved:', announcement);
+
+  // Clear form
+  document.getElementById('ann-title').value = '';
+  document.getElementById('ann-content').value = '';
+  document.getElementById('ann-icon').value = '📢';
+  document.getElementById('ann-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('ann-time').value = '';
+
+  // Show toast
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
+  toast.textContent = '✅ สร้างประกาศแล้ว';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+
+  renderAnnouncementsList();
+}
+
+function deleteAnnouncement(id) {
+  if (!confirm('ลบประกาศนี้?')) return;
+
+  let announcements = loadAnnouncements();
+  announcements = announcements.filter(a => a.id !== id);
+  saveAnnouncementsData(announcements);
+
+  renderAnnouncementsList();
+}
+
+function renderAnnouncementsList() {
+  const announcements = loadAnnouncements();
+  const filtered = announcements.filter(a => a.building === announcementBuilding);
+
+  const container = document.getElementById('announcementsList');
+  if (!container) return;
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="text-align: center; padding: 32px; color: var(--text-muted);">ไม่มีประกาศ</div>';
+    return;
+  }
+
+  const monthNames = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const fmtDate = d => {
+    if (!d) return '';
+    const parts = d.split('-');
+    const year = parseInt(parts[0]) + 543;
+    const month = monthNames[parseInt(parts[1])];
+    const day = parts[2];
+    return `${day} ${month} ${year}`;
+  };
+
+  container.innerHTML = filtered
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .map(ann => `
+      <div style="padding: 1.5rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div style="flex: 1;">
+            <div style="font-size: 1.3rem; margin-bottom: 0.5rem;">${ann.icon}</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem;">${ann.title}</div>
+            <div style="color: var(--text-muted); margin-bottom: 0.5rem; font-size: 0.85rem;">
+              📅 ${fmtDate(ann.date)} ${ann.time ? '⏰ ' + ann.time : ''}
+            </div>
+            <div style="color: var(--text); line-height: 1.6; white-space: pre-wrap;">${ann.content}</div>
+          </div>
+          <button onclick="deleteAnnouncement('${ann.id}')" style="padding: 6px 12px; background: #ffebee; color: var(--red); border: 1px solid var(--red); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">🗑️ ลบ</button>
+        </div>
+      </div>
+    `)
+    .join('');
 }
 
 // ===== CONTRACT MANAGEMENT =====
@@ -11071,6 +11307,54 @@ function clearPaymentNotifications() {
     showNotification('✅ ล้างประวัติเรียบร้อย', 'success');
     loadPaymentNotifications();
   }
+}
+
+// ===== DEBUG FUNCTIONS =====
+function debugShowMaintenance() {
+  try {
+    const data = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
+    const output = document.getElementById('debugMaintenanceOutput');
+    output.textContent = '📊 maintenance_data (' + data.length + ' items)\n\n' + JSON.stringify(data, null, 2);
+    console.log('🔍 DEBUG: maintenance_data =', data);
+  } catch (e) {
+    document.getElementById('debugMaintenanceOutput').textContent = '❌ Error: ' + e.message;
+  }
+}
+
+function debugShowAnnouncements() {
+  try {
+    const data = JSON.parse(localStorage.getItem('announcements_data') || '[]');
+    const output = document.getElementById('debugAnnouncementsOutput');
+    output.textContent = '📊 announcements_data (' + data.length + ' items)\n\n' + JSON.stringify(data, null, 2);
+    console.log('🔍 DEBUG: announcements_data =', data);
+  } catch (e) {
+    document.getElementById('debugAnnouncementsOutput').textContent = '❌ Error: ' + e.message;
+  }
+}
+
+function debugShowAllKeys() {
+  try {
+    const keys = [];
+    const output = document.getElementById('debugAllKeysOutput');
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      const value = localStorage.getItem(key);
+      const size = new Blob([value]).size;
+      keys.push({ key: key, size: size + ' bytes' });
+    }
+    output.textContent = '📊 All localStorage keys (' + keys.length + ' items)\n\n' + JSON.stringify(keys, null, 2);
+    console.log('🔍 DEBUG: All localStorage keys =', keys);
+  } catch (e) {
+    document.getElementById('debugAllKeysOutput').textContent = '❌ Error: ' + e.message;
+  }
+}
+
+// Show debug page on demand
+function showDebugPage() {
+  window.showPage('debug');
+  debugShowMaintenance();
+  debugShowAnnouncements();
+  debugShowAllKeys();
 }
 </script>
 </body>

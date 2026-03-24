@@ -720,6 +720,17 @@
       <!-- BILLS PAGE -->
       <div class="page" id="page-bills">
         <div class="section-title">💳 บิลรายเดือน</div>
+
+        <!-- Bill Control Buttons -->
+        <div style="display: flex; gap: 0.8rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <button onclick="generateAllBackdatedBills()" style="padding: 0.7rem 1.2rem; background: #ff9800; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
+            📅 Generate ย้อนหลัง
+          </button>
+          <button onclick="markAllBillsAsPaid()" style="padding: 0.7rem 1.2rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
+            ✅ จ่ายครบทุกเดือน
+          </button>
+        </div>
+
         <div id="billsList"></div>
       </div>
 
@@ -867,22 +878,99 @@
       <!-- PROFILE PAGE -->
       <div class="page" id="page-profile">
         <div class="section-title">👤 โปรไฟล์ของฉัน</div>
+
+        <!-- ✅ Tenant Information Card (Read-only) -->
         <div class="card">
-          <form id="profileForm">
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">ชื่อ</label>
-            <input type="text" id="profileName" readonly style="background: var(--bg);">
+          <div class="card-title" style="margin-bottom: 1.5rem;">📋 ข้อมูลส่วนตัว</div>
 
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">เบอร์โทรศัพท์</label>
-            <input type="tel" id="profilePhone" placeholder="เบอร์โทรศัพท์">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">ชื่อ-นามสกุล</label>
+              <input type="text" id="profileName" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px; font-weight: 600;">
+            </div>
 
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อีเมล</label>
-            <input type="email" id="profileEmail" placeholder="อีเมล">
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">เบอร์โทรศัพท์</label>
+              <input type="tel" id="profilePhone" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
+            </div>
 
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">ที่อยู่ (ถ้าต่างจากห้องพัก)</label>
-            <input type="text" id="profileAddress" placeholder="ที่อยู่">
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">อีเมล</label>
+              <input type="email" id="profileEmail" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
+            </div>
 
-            <button type="submit" class="btn btn-primary">💾 บันทึก</button>
-          </form>
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">ที่อยู่</label>
+              <input type="text" id="profileAddress" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- ✅ Room & Lease Information Card (Read-only) -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom: 1.5rem;">🏠 ข้อมูลห้องพัก & สัญญา</div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">ห้องเลขที่</label>
+              <input type="text" id="profileRoom" readonly style="background: var(--green-pale); border: 1px solid var(--green); padding: 0.75rem; border-radius: 6px; font-weight: 700; color: var(--green-dark);">
+            </div>
+
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">ชั้น</label>
+              <input type="text" id="profileFloor" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
+            </div>
+
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">วันเข้าเช่า</label>
+              <input type="text" id="profileMoveIn" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
+            </div>
+
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">วันสิ้นสุดสัญญา</label>
+              <input type="text" id="profileMoveOut" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
+            </div>
+
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">ค่าเช่ารายเดือน</label>
+              <input type="text" id="profileRent" readonly style="background: var(--blue-pale); border: 1px solid var(--blue); padding: 0.75rem; border-radius: 6px; font-weight: 700; color: var(--blue);">
+            </div>
+
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">เงินมัดจำ</label>
+              <input type="text" id="profileDeposit" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- ✅ Lease Agreement Card -->
+        <div class="card" id="leaseAgreementCard" style="display: none;">
+          <div class="card-title" style="margin-bottom: 1.5rem;">📄 สัญญาเช่า</div>
+
+          <div style="padding: 1.5rem; background: var(--green-pale); border-radius: 8px; border-left: 4px solid var(--green);">
+            <div style="margin-bottom: 1rem;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.5rem;">เลขที่สัญญา</div>
+              <div style="font-size: 1rem; color: var(--text); font-weight: 600;" id="leaseAgreementNumber">—</div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.5rem;">ลงนามเมื่อ</div>
+              <div style="font-size: 1rem; color: var(--text);" id="leaseAgreementDate">—</div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+              <button onclick="viewLeaseAgreement()" id="viewLeaseBtn" style="display: none; padding: 0.7rem 1.2rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
+                👁️ ดูเอกสาร
+              </button>
+              <button onclick="downloadLeaseAgreement()" id="downloadLeaseBtn" style="display: none; padding: 0.7rem 1.2rem; background: var(--blue); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
+                ⬇️ ดาวน์โหลด
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">
+          ℹ️ ข้อมูลส่วนตัวอัพเดตโดย Admin เท่านั้น
         </div>
       </div>
 
@@ -1129,9 +1217,14 @@
         TenantFirebaseSync.initialize(currentUser, currentBuilding, currentRoom);
       }
 
-      // Load tenant data
-      loadTenantData();
-      renderHomePage();
+      // ✅ Load tenant data and wait for it to complete before rendering
+      loadTenantData().then(() => {
+        console.log('✅ Data loaded, rendering home page...');
+        renderHomePage();
+      }).catch(e => {
+        console.error('⚠️ Error loading data, rendering with fallback:', e);
+        renderHomePage(); // Render anyway with whatever data is available
+      });
     }
 
     // Store loaded data globally
@@ -1370,7 +1463,7 @@
                           <div>• ค่าเช่า: ${(item.breakdown.rent || 0).toLocaleString('th-TH')} บาท</div>
                           <div>• ค่าไฟ: ${(item.breakdown.electric || 0).toLocaleString('th-TH')} บาท</div>
                           <div>• ค่าน้ำ: ${(item.breakdown.water || 0).toLocaleString('th-TH')} บาท</div>
-                          <div>• ค่ากลาง: ${(item.breakdown.trash || 0).toLocaleString('th-TH')} บาท</div>
+                          <div>• ค่าขยะ: ${(item.breakdown.trash || 0).toLocaleString('th-TH')} บาท</div>
                         </div>
                       ` : ''}
                       <span class="bill-status-badge ${item.status}">
@@ -1413,32 +1506,260 @@
         }
       }
 
-      // Fallback: render mock bills from currentBills
-      container.innerHTML = currentBills.map((bill, index) => `
-        <div class="bill-card">
-          <div class="bill-card-left">
-            <h3>${bill.month} ${bill.year}</h3>
-            <div class="bill-card-details">
-              <div>ค่าเช่า: ${bill.rent.toLocaleString('th-TH')} บาท</div>
-              <div>ค่าไฟ: ${bill.electric.toLocaleString('th-TH')} บาท</div>
-              <div>ค่าน้ำ: ${bill.water.toLocaleString('th-TH')} บาท</div>
-              <div>ค่ากลาง: ${bill.trash.toLocaleString('th-TH')} บาท</div>
+      // Fallback: Try to load real bills from localStorage
+      let realBills = [];
+      for (const year of [2567, 2568, 2569]) {
+        const billsKey = `bills_${year}`;
+        const billsData = localStorage.getItem(billsKey);
+        if (billsData) {
+          const yearBills = JSON.parse(billsData)
+            .filter(b => b.building === currentBuilding && b.roomId === currentRoom)
+            .map(b => ({
+              billId: b.billId,
+              month: b.month,
+              year: b.year,
+              charges: b.charges,
+              totalCharge: b.totalCharge,
+              status: b.status || 'pending',
+              meterReadings: b.meterReadings
+            }));
+          realBills.push(...yearBills);
+        }
+      }
+
+      // If still no bills, use mock bills
+      const billsToDisplay = realBills.length > 0 ? realBills : currentBills;
+
+      // Sort bills by year descending, then month descending
+      const sortedBills = [...billsToDisplay].sort((a, b) => {
+        if (b.year !== a.year) return b.year - a.year;
+        return b.month - a.month;
+      });
+
+      // Filter to 12 months for tenant app
+      const now = new Date();
+      const currentGregorianYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      let cutoffThaiYear = currentGregorianYear % 100;
+      let cutoffMonth = currentMonth - 12;
+      if (cutoffMonth <= 0) {
+        cutoffMonth += 12;
+        cutoffThaiYear -= 1;
+      }
+
+      const filteredBills = sortedBills.filter(bill => {
+        if (bill.year > cutoffThaiYear) return true;
+        if (bill.year === cutoffThaiYear && bill.month >= cutoffMonth) return true;
+        return false;
+      });
+
+      // Render bills with real data structure
+      container.innerHTML = filteredBills.map((bill, index) => {
+        const getThaiMonthName = (month) => {
+          const months = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+          return months[month] || month;
+        };
+        const monthName = getThaiMonthName(bill.month);
+        const year = bill.year + 2500;
+        const statusColor = bill.status === 'paid' ? 'var(--green)' : bill.status === 'overdue' ? '#ff9800' : '#2196f3';
+        const statusText = bill.status === 'paid' ? '✅ จ่ายแล้ว' : bill.status === 'overdue' ? '⚠️逾期' : '⏳ รอชำระ';
+
+        return `
+          <div class="bill-card">
+            <div class="bill-card-left">
+              <h3>${monthName} ${bill.year}</h3>
+              <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 400;">${bill.billId || ''}</span>
+
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; line-height: 1.6;">
+                <div>💰 ค่าเช่า: ฿${(bill.charges?.rent || bill.rent || 0).toLocaleString('th-TH')}</div>
+                <div>⚡ ค่าไฟ: ${
+                  bill.meterReadings && bill.meterReadings.electric
+                    ? `(${bill.meterReadings.electric.current} - ${bill.meterReadings.electric.previous}) = ${(bill.charges?.electric?.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges?.electric?.rate || 20} = ฿${(bill.charges?.electric?.cost || 0).toLocaleString('th-TH')}`
+                    : `฿${(bill.charges?.electric?.cost || bill.electric || 0).toLocaleString('th-TH')} (${(bill.charges?.electric?.usage || 0).toFixed(1)} หน่วย)`
+                }</div>
+                <div>💧 ค่าน้ำ: ${
+                  bill.meterReadings && bill.meterReadings.water
+                    ? `(${bill.meterReadings.water.current} - ${bill.meterReadings.water.previous}) = ${(bill.charges?.water?.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges?.water?.rate || 8} = ฿${(bill.charges?.water?.cost || 0).toLocaleString('th-TH')}`
+                    : `฿${(bill.charges?.water?.cost || bill.water || 0).toLocaleString('th-TH')} (${(bill.charges?.water?.usage || 0).toFixed(1)} หน่วย)`
+                }</div>
+                <div>🗑️ ค่าขยะ: ฿${(bill.charges?.trash || bill.trash || 0).toLocaleString('th-TH')}</div>
+                ${bill.charges?.common > 0 ? `<div>🏢 ค่าใช้ส่วนกลาง: ฿${(bill.charges.common || 0).toLocaleString('th-TH')}</div>` : ''}
+              </div>
             </div>
-            <div class="bill-card-amount">รวม: ${bill.total.toLocaleString('th-TH')} บาท</div>
-            <span class="bill-status-badge ${bill.status}">
-              ${bill.status === 'paid' ? '✅ จ่ายแล้ว' : bill.status === 'overdue' ? '⚠️逾期' : '⏳ รอชำระ'}
-            </span>
+
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 1rem;">
+              <div style="text-align: right;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem;">รวม</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: ${statusColor}; white-space: nowrap; direction: ltr;">
+                  ฿${Math.round(bill.totalCharge || bill.total || 0).toLocaleString('th-TH')}
+                </div>
+              </div>
+
+              <span style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; background: ${statusColor}20; color: ${statusColor};">
+                ${statusText}
+              </span>
+
+              ${bill.status === 'pending' || bill.status === 'paid' ? `
+                <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.6rem 1.2rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem; white-space: nowrap;">
+                  📋 ดูใบเสร็จ
+                </button>
+              ` : ''}
+            </div>
           </div>
-          <div class="bill-card-action">
-            ${bill.status === 'pending' ? `<button onclick="goToPayment('${bill.month}', ${bill.total})">จ่ายเงิน</button>` : ''}
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     let slipVerified = false;
     let slipData = null;
     let invoiceData = null;
+
+    // ===== BILL GENERATION FUNCTIONS =====
+
+    function generateAllBackdatedBills() {
+      if (!currentLease || !currentLease.moveInDate) {
+        alert('⚠️ ไม่สามารถ generate บิล - ข้อมูลวันย้ายเข้าไม่สมบูรณ์');
+        return;
+      }
+
+      const moveInDate = new Date(currentLease.moveInDate);
+      const today = new Date();
+      const startMonth = moveInDate.getMonth() + 1;
+      const startYear = moveInDate.getFullYear() + 543; // Convert to Thai year
+      const endMonth = today.getMonth() + 1;
+      const endYear = today.getFullYear() + 543;
+
+      let generatedCount = 0;
+      let allBills = [];
+
+      // Collect all bills from localStorage first
+      for (const year of [2567, 2568, 2569, 2570]) {
+        const billsKey = `bills_${year}`;
+        const billsData = localStorage.getItem(billsKey);
+        if (billsData) {
+          const yearBills = JSON.parse(billsData).filter(b => b.building === currentBuilding && b.roomId === currentRoom);
+          allBills.push(...yearBills);
+        }
+      }
+
+      // Generate missing bills for each month from moveIn to now
+      for (let year = startYear; year <= endYear; year++) {
+        const monthStart = (year === startYear) ? startMonth : 1;
+        const monthEnd = (year === endYear) ? endMonth : 12;
+
+        for (let month = monthStart; month <= monthEnd; month++) {
+          // Check if bill already exists
+          const billExists = allBills.some(b => b.year === year && b.month === month);
+          if (!billExists) {
+            // Generate new bill
+            const rent = currentLease.rentAmount || 5000;
+            const electric = 1200;
+            const water = 300;
+            const trash = 100;
+            const totalCharge = rent + electric + water + trash;
+
+            const newBill = {
+              billId: `BILL-${year}-${month.toString().padStart(2, '0')}-${Date.now()}`,
+              building: currentBuilding,
+              roomId: currentRoom,
+              year: year,
+              month: month,
+              rent: rent,
+              electric: electric,
+              water: water,
+              trash: trash,
+              totalCharge: totalCharge,
+              charges: {
+                rent: rent,
+                electric: { cost: electric, usage: 50, rate: 24 },
+                water: { cost: water, usage: 40, rate: 8 },
+                trash: trash,
+                common: 0
+              },
+              status: 'pending',
+              createdAt: new Date().toISOString(),
+              meterReadings: {}
+            };
+
+            allBills.push(newBill);
+            generatedCount++;
+          }
+        }
+      }
+
+      // Save updated bills back to localStorage
+      for (const year of [...new Set(allBills.map(b => b.year))]) {
+        const billsKey = `bills_${year}`;
+        const yearBills = allBills.filter(b => b.year === year);
+        localStorage.setItem(billsKey, JSON.stringify(yearBills));
+      }
+
+      alert(`✅ สร้างบิลสำเร็จ\n📊 เพิ่มเติม ${generatedCount} บิล\n💾 บันทึกเรียบร้อย`);
+      loadBillsPage();
+    }
+
+    function markAllBillsAsPaid() {
+      if (!confirm('คุณต้องการจ่ายครบทุกเดือน? การกระทำนี้จะไม่สามารถยกเลิก')) {
+        return;
+      }
+
+      let allBills = [];
+      let paidCount = 0;
+      const today = new Date();
+
+      // Collect all bills
+      for (const year of [2567, 2568, 2569, 2570]) {
+        const billsKey = `bills_${year}`;
+        const billsData = localStorage.getItem(billsKey);
+        if (billsData) {
+          const yearBills = JSON.parse(billsData).filter(b => b.building === currentBuilding && b.roomId === currentRoom);
+          allBills.push(...yearBills);
+        }
+      }
+
+      // Mark all as paid and generate receipts
+      allBills = allBills.map(bill => {
+        if (bill.status !== 'paid') {
+          bill.status = 'paid';
+          bill.paidDate = today.toISOString();
+          bill.paidMethod = 'admin_mark';
+          paidCount++;
+
+          // Generate receipt
+          const receiptId = `RCP-${bill.year}-${bill.month.toString().padStart(2, '0')}-${Date.now()}`;
+          const receipt = {
+            receiptId: receiptId,
+            billId: bill.billId,
+            amount: bill.totalCharge,
+            paymentMethod: 'admin_mark',
+            paidDate: today.toISOString(),
+            verifiedAt: today.toISOString(),
+            status: 'verified'
+          };
+
+          // Store receipt
+          const receiptsKey = `receipts_${bill.year}`;
+          let receipts = JSON.parse(localStorage.getItem(receiptsKey) || '[]');
+          receipts.push(receipt);
+          localStorage.setItem(receiptsKey, JSON.stringify(receipts));
+        }
+        return bill;
+      });
+
+      // Save updated bills back to localStorage
+      for (const year of [...new Set(allBills.map(b => b.year))]) {
+        const billsKey = `bills_${year}`;
+        const yearBills = allBills.filter(b => b.year === year);
+        localStorage.setItem(billsKey, JSON.stringify(yearBills));
+      }
+
+      alert(`✅ จ่ายครบเรียบร้อย\n💰 จ่าย ${paidCount} บิล\n📋 ระบบสร้างใบเสร็จอัตโนมัติ`);
+      loadBillsPage();
+    }
+
+    function viewBillReceipt(billId, monthName, year) {
+      alert(`📋 ใบเสร็จ ${billId}\nเดือน: ${monthName} ${year}\n\n(ฟีเจอร์ดาวน์โหลด PDF กำลังพัฒนา)`);
+    }
 
     function goToPayment(month, amount) {
       currentPaymentMonth = month;
@@ -1927,33 +2248,103 @@
         return;
       }
 
+      // Create ticket ID
+      const ticketId = `T${Date.now()}`;
+      const reportedDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format for admin dashboard
+
+      // Ticket structure compatible with both Tenant and Admin Dashboard
       const ticket = {
-        id: `T${Date.now()}`,
+        id: ticketId,
+        room: currentRoom,
+        building: currentBuilding,
         date: new Date().toLocaleDateString('th-TH'),
-        category: getCategoryName(category),
-        description: description,
+        category: category, // Use code (electric, water, etc.) not full name
+        categoryLabel: getCategoryName(category), // Full name with emoji
+        desc: description, // Use 'desc' field for admin compatibility
+        description: description, // Keep both for compatibility
         status: 'pending',
-        submittedDate: new Date().toISOString()
+        reportedAt: reportedDate, // For admin dashboard
+        submittedDate: new Date().toISOString(),
+        priority: 'normal'
       };
 
-      // Save to Firebase
-      if (typeof TenantFirebaseSync !== 'undefined') {
-        await TenantFirebaseSync.saveMaintenanceTicket(ticket);
-        console.log('✅ Maintenance ticket saved to Firebase');
-      } else {
-        // Fallback to localStorage
-        let tickets = getMaintenanceTickets();
-        tickets.push(ticket);
-        localStorage.setItem('tenant_maintenance_tickets', JSON.stringify(tickets));
+      console.log('📤 Submitting maintenance ticket:', ticket);
+
+      let saveSuccess = false;
+
+      // ✅ STEP 1: Save to Firebase (for real-time sync with admin)
+      if (typeof TenantFirebaseSync !== 'undefined' && TenantFirebaseSync.database) {
+        try {
+          const firebaseTicket = {
+            ...ticket,
+            updatedAt: new Date().toISOString()
+          };
+          await TenantFirebaseSync.saveMaintenanceTicket(firebaseTicket);
+          console.log('✅ Maintenance ticket saved to Firebase');
+          saveSuccess = true;
+        } catch (e) {
+          console.warn('⚠️ Firebase save failed:', e.message);
+        }
       }
 
-      alert('✅ แจ้งปัญหาสำเร็จ');
+      // ✅ STEP 2: ALWAYS save to localStorage for fallback (admin dashboard reads here)
+      try {
+        // Format for admin dashboard compatibility (EXACT match with admin structure)
+        const adminFormattedTicket = {
+          id: ticket.id,
+          room: ticket.room,           // Use string room ID (e.g., "13", "N101")
+          desc: ticket.description,     // Description field
+          category: ticket.category,    // Category code (electric, water, etc.)
+          priority: ticket.priority,    // Priority level
+          status: ticket.status,        // Status (pending, inprogress, done)
+          reportedAt: ticket.reportedAt, // Date in YYYY-MM-DD format
+          updatedAt: new Date().toISOString().split('T')[0]
+        };
+
+        console.log('📝 Admin formatted ticket:', adminFormattedTicket);
+
+        // Load existing maintenance data from admin localStorage
+        let adminMaintenance = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
+
+        // Check if ticket already exists (avoid duplicates)
+        const existingIndex = adminMaintenance.findIndex(t => t.id === ticket.id);
+        if (existingIndex >= 0) {
+          adminMaintenance[existingIndex] = adminFormattedTicket;
+          console.log('✅ Ticket updated in admin maintenance_data');
+        } else {
+          adminMaintenance.unshift(adminFormattedTicket);
+          console.log('✅ Ticket added to admin maintenance_data');
+        }
+
+        localStorage.setItem('maintenance_data', JSON.stringify(adminMaintenance));
+        console.log('💾 Admin maintenance_data:', adminMaintenance);
+
+        // Also save to tenant-specific tickets for tenant view
+        let tenantTickets = getMaintenanceTickets();
+        tenantTickets.unshift(ticket);
+        localStorage.setItem('tenant_maintenance_tickets', JSON.stringify(tenantTickets));
+        console.log('💾 Tenant tickets saved:', tenantTickets);
+
+        saveSuccess = true;
+      } catch (e) {
+        console.error('❌ localStorage save failed:', e);
+      }
+
+      if (saveSuccess) {
+        alert('✅ แจ้งปัญหาสำเร็จ - ข้อมูลถูกส่งไปยัง Admin แล้ว');
+      } else {
+        alert('⚠️ บันทึกไม่สำเร็จ - กรุณาลองใหม่');
+        return;
+      }
+
+      // Clear form
       document.getElementById('maintenanceCategory').value = '';
       document.getElementById('maintenanceDescription').value = '';
       document.getElementById('maintenancePhoto').value = '';
       document.getElementById('maintenancePhotoPreview').style.display = 'none';
 
-      // Reload tickets
+      // Reload tickets and navigate
+      await new Promise(resolve => setTimeout(resolve, 500)); // Wait for data to sync
       loadServicesPage();
       goToPage('services');
     }
@@ -1968,6 +2359,19 @@
       };
       return categories[cat] || cat;
     }
+
+    // ✅ WRAPPER FUNCTIONS — Fix goToPage() function name mismatch
+    // These wrappers ensure goToPage() can find the correct data-loading functions
+    function loadHome() { renderHomePage(); }
+    function loadBills() { loadBillsPage(); } // Fallback if the main loadBills() at line 2209 isn't called
+    function loadServices() { loadServicesPage(); }
+    function loadCommunity() { loadCommunityPage(); }
+    function loadProfile() { loadProfilePage(); }
+    function loadPaymentHistory() { loadPaymentHistoryPage(); }
+    function loadContract() { loadContractPage(); }
+    function loadSettings() { /* placeholder - settings page exists but no loader */ }
+    function loadPayment() { /* payment page is accessed via goToPayment() not goToPage() */ }
+    function loadCreateMaintenance() { /* accessed from services page */ }
 
     // Handle photo preview
     document.addEventListener('change', function(e) {
@@ -1990,11 +2394,33 @@
     }
 
     async function renderAnnouncements() {
-      // Load from Firebase first
-      let announcements = tenantFirebaseData.announcements || [];
+      // PRIORITY 1: Load from admin dashboard announcements_data (real data)
+      let announcements = [];
+      try {
+        const announcementsData = JSON.parse(localStorage.getItem('announcements_data') || '[]');
 
+        // Filter announcements by building (if specified in announcement)
+        if (announcementsData.length > 0) {
+          announcements = announcementsData.filter(ann => {
+            // Show if: no building specified, or building matches currentBuilding
+            const annBuilding = ann.building || 'rooms';
+            return !ann.building || annBuilding === currentBuilding || ann.building === 'all';
+          });
+
+          console.log(`✅ Loaded ${announcements.length} announcements from admin dashboard`);
+        }
+      } catch (e) {
+        console.warn('⚠️ Error loading announcements from admin:', e.message);
+      }
+
+      // PRIORITY 2: Load from Firebase if admin data not available
+      if (announcements.length === 0 && tenantFirebaseData.announcements) {
+        announcements = tenantFirebaseData.announcements;
+        console.log(`✅ Loaded ${announcements.length} announcements from Firebase`);
+      }
+
+      // PRIORITY 3: Use mock announcements as fallback
       if (announcements.length === 0) {
-        // Mock announcements if no data
         announcements = [
           {
             title: 'แจ้งปิดน้ำ',
@@ -2018,27 +2444,43 @@
             content: 'การตรวจสอบและบำรุงรักษาระบบลิฟต์'
           }
         ];
+        console.log('ℹ️ Using mock announcements (no real data found)');
       }
 
       const container = document.getElementById('announcementsList');
       if (!container) return;
 
-      container.innerHTML = announcements.map(ann => {
-        const displayDate = ann.createdAt
-          ? new Date(ann.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
-          : ann.date;
+      if (announcements.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">📢 ยังไม่มีประกาศใหม่</div>';
+        return;
+      }
+
+      container.innerHTML = announcements.map((ann, index) => {
+        // Format date - handle both createdAt and date fields
+        let displayDate = '';
+        if (ann.createdAt) {
+          const date = new Date(ann.createdAt);
+          displayDate = date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+          const time = date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+          displayDate += ` ${time}`;
+        } else if (ann.date) {
+          displayDate = ann.date;
+          if (ann.time) displayDate += ` | ${ann.time}`;
+        } else {
+          displayDate = 'วันที่ไม่ระบุ';
+        }
 
         return `
-          <div class="announcement-card">
+          <div class="announcement-card" style="animation: slideIn 0.3s ease-out ${index * 0.1}s both;">
             <div class="announcement-icon">${ann.icon || '📢'}</div>
-            <div class="announcement-title">${ann.title}</div>
-            <div class="announcement-date">${displayDate} ${ann.time ? '| ' + ann.time : ''}</div>
+            <div class="announcement-title">${ann.title || ann.name || 'ประกาศ'}</div>
+            <div class="announcement-date">${displayDate}</div>
             <div class="announcement-content">${ann.content || ann.description || ''}</div>
           </div>
         `;
       }).join('');
 
-      console.log(`✅ Rendered ${announcements.length} announcements`);
+      console.log(`✅ Rendered ${announcements.length} announcements from ${announcements[0]?.source || 'unknown source'}`);
     }
 
     // CONTRACT PAGE
@@ -2125,10 +2567,33 @@
       const container = document.getElementById('billsList');
 
       try {
-        // Get all bills for this room using BillingCalculator
-        const bills = typeof BillingCalculator !== 'undefined'
-          ? BillingCalculator.getBillsByRoom(currentRoom) || []
-          : [];
+        // Get all bills for this room - try real bills from localStorage first
+        let bills = [];
+
+        // Load real bills from localStorage (populated by init-real-bills.js)
+        for (const year of [2567, 2568, 2569]) {
+          const billsKey = `bills_${year}`;  // bills_2567, bills_2568, bills_2569
+          const billsData = localStorage.getItem(billsKey);
+          if (billsData) {
+            const yearBills = JSON.parse(billsData)
+              .filter(b => b.building === currentBuilding && b.roomId === currentRoom)
+              .map(b => ({
+                billId: b.billId,
+                month: b.month,
+                year: b.year,
+                charges: b.charges,
+                totalCharge: b.totalCharge,
+                status: b.status || 'pending',
+                meterReadings: b.meterReadings
+              }));
+            bills.push(...yearBills);
+          }
+        }
+
+        // Fallback to BillingCalculator if no real bills found
+        if (bills.length === 0 && typeof BillingCalculator !== 'undefined') {
+          bills = BillingCalculator.getBillsByRoom(currentRoom) || [];
+        }
 
         if (!bills || bills.length === 0) {
           container.innerHTML = `
@@ -2147,44 +2612,17 @@
           return b.month - a.month;
         });
 
-        // TENANT APP: Filter to last 12 months for mobile UX convenience
-        // Calculate 12-month cutoff (using Thai Buddhist years and months)
-        const now = new Date();
-        const currentThaiYear = now.getFullYear() - 2500;  // Convert Gregorian to Thai Buddhist year (2026 - 2500 = -474, so use raw year instead)
-        // Actually, bills are in Thai year format (67, 68, 69 for 2567, 2568, 2569)
-        // So we need to find cutoff in Thai year format too
+        // ✅ SHOW ALL BILLS - No time limit filter
+        // Display all bills from all available years for complete history
+        const filteredBills = sortedBills;
 
-        // Current date
-        const currentGregorianYear = now.getFullYear();
-        const currentMonth = now.getMonth() + 1;  // 1-indexed
-
-        // Convert current date to Thai Buddhist year
-        const currentThaiYearFull = currentGregorianYear - 1943; // 2026 - 1943 = 83, but we use 2567-2500=67
-        const currentThaiYearShort = currentGregorianYear % 100;  // Get last 2 digits
-
-        // 12 months ago in Thai calendar
-        let cutoffThaiYear = currentThaiYearShort;
-        let cutoffMonth = currentMonth - 12;
-        if (cutoffMonth <= 0) {
-          cutoffMonth += 12;
-          cutoffThaiYear -= 1;
-        }
-
-        // Filter bills to only include those from last 12 months
-        const filteredBills = sortedBills.filter(bill => {
-          // Compare by year first, then month
-          if (bill.year > cutoffThaiYear) return true;
-          if (bill.year < cutoffThaiYear) return false;
-          // Same year, check month
-          return bill.month >= cutoffMonth;
-        });
-
-        // If no bills in last 12 months after filtering, show message
-        if (filteredBills.length === 0 && sortedBills.length > 0) {
+        // Display info
+        console.log(`📋 Showing all ${filteredBills.length} bills for ${currentRoom}`);
+        if (filteredBills.length === 0 && sortedBills.length === 0) {
           container.innerHTML = `
             <div class="info-box" style="text-align: center;">
-              <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">📋 ไม่มีบิลในช่วง 12 เดือนที่ผ่านมา</div>
-              <p style="margin: 0;">ก่อนหน้านี้มีบิล ${sortedBills.length} รายการ</p>
+              <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">📋 ไม่มีข้อมูลบิล</div>
+              <p style="margin: 0;">ยังไม่มีบิลสำหรับห้องนี้</p>
             </div>
           `;
           return;
@@ -2226,9 +2664,17 @@
 
                     <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; line-height: 1.6;">
                       <div>💰 ค่าเช่า: ฿${(bill.charges.rent || 0).toLocaleString('th-TH')}</div>
-                      <div>⚡ ค่าไฟ: ฿${(bill.charges.electric.cost || 0).toLocaleString('th-TH')} (${(bill.charges.electric.usage || 0).toFixed(1)} หน่วย)</div>
-                      <div>💧 ค่าน้ำ: ฿${(bill.charges.water.cost || 0).toLocaleString('th-TH')} (${(bill.charges.water.usage || 0).toFixed(1)} หน่วย)</div>
-                      <div>🗑️ ค่ากลาง: ฿${(bill.charges.trash || 0).toLocaleString('th-TH')}</div>
+                      <div>⚡ ค่าไฟ: ${
+                        bill.meterReadings && bill.meterReadings.electric
+                          ? `(${bill.meterReadings.electric.current} - ${bill.meterReadings.electric.previous}) = ${(bill.charges.electric.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges.electric.rate} = ฿${(bill.charges.electric.cost || 0).toLocaleString('th-TH')}`
+                          : `฿${(bill.charges.electric.cost || 0).toLocaleString('th-TH')} (${(bill.charges.electric.usage || 0).toFixed(1)} หน่วย)`
+                      }</div>
+                      <div>💧 ค่าน้ำ: ${
+                        bill.meterReadings && bill.meterReadings.water
+                          ? `(${bill.meterReadings.water.current} - ${bill.meterReadings.water.previous}) = ${(bill.charges.water.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges.water.rate} = ฿${(bill.charges.water.cost || 0).toLocaleString('th-TH')}`
+                          : `฿${(bill.charges.water.cost || 0).toLocaleString('th-TH')} (${(bill.charges.water.usage || 0).toFixed(1)} หน่วย)`
+                      }</div>
+                      <div>🗑️ ค่าขยะ: ฿${(bill.charges.trash || 0).toLocaleString('th-TH')}</div>
                       ${bill.charges.common > 0 ? `<div>🏢 ค่าใช้ส่วนกลาง: ฿${(bill.charges.common || 0).toLocaleString('th-TH')}</div>` : ''}
                     </div>
                   </div>
@@ -2344,15 +2790,23 @@
                   <span>฿${(bill.charges.rent || 0).toLocaleString('th-TH')}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
-                  <span>⚡ ค่าไฟ (${(bill.charges.electric.usage || 0).toFixed(1)} หน่วย @ ฿${(bill.charges.electric.rate || 0).toFixed(1)}/หน่วย)</span>
+                  <span>⚡ ค่าไฟ ${
+                    bill.meterReadings && bill.meterReadings.electric
+                      ? `(${bill.meterReadings.electric.current} - ${bill.meterReadings.electric.previous} = ${(bill.charges.electric.usage || 0).toFixed(0)}) × ฿${bill.charges.electric.rate}`
+                      : `(${(bill.charges.electric.usage || 0).toFixed(1)} หน่วย @ ฿${(bill.charges.electric.rate || 0).toFixed(1)}/หน่วย)`
+                  }</span>
                   <span>฿${(bill.charges.electric.cost || 0).toLocaleString('th-TH')}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
-                  <span>💧 ค่าน้ำ (${(bill.charges.water.usage || 0).toFixed(1)} หน่วย @ ฿${(bill.charges.water.rate || 0).toFixed(1)}/หน่วย)</span>
+                  <span>💧 ค่าน้ำ ${
+                    bill.meterReadings && bill.meterReadings.water
+                      ? `(${bill.meterReadings.water.current} - ${bill.meterReadings.water.previous} = ${(bill.charges.water.usage || 0).toFixed(0)}) × ฿${bill.charges.water.rate}`
+                      : `(${(bill.charges.water.usage || 0).toFixed(1)} หน่วย @ ฿${(bill.charges.water.rate || 0).toFixed(1)}/หน่วย)`
+                  }</span>
                   <span>฿${(bill.charges.water.cost || 0).toLocaleString('th-TH')}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
-                  <span>🗑️ ค่ากลาง</span>
+                  <span>🗑️ ค่าขยะ</span>
                   <span>฿${(bill.charges.trash || 0).toLocaleString('th-TH')}</span>
                 </div>
                 ${bill.charges.common > 0 ? `<div style="display: flex; justify-content: space-between;">
@@ -2535,37 +2989,132 @@
 
     // PROFILE PAGE
     function loadProfilePage() {
+      // ✅ Load Personal Information from Tenant Data
       if (currentTenant) {
-        document.getElementById('profileName').value = currentTenant.name || '';
-        document.getElementById('profilePhone').value = currentTenant.phone || '';
-        document.getElementById('profileEmail').value = currentTenant.email || '';
-        document.getElementById('profileAddress').value = currentTenant.address || '';
+        document.getElementById('profileName').value = currentTenant.name || '—';
+        document.getElementById('profilePhone').value = currentTenant.phone || '—';
+        document.getElementById('profileEmail').value = currentTenant.email || '—';
+        document.getElementById('profileAddress').value = currentTenant.address || '—';
       }
-    }
 
-    // Profile form submit handler
-    function handleProfileSubmit(e) {
-      e?.preventDefault();
+      // ✅ Load Room & Lease Information from currentLease
+      if (currentLease) {
+        // Room number
+        document.getElementById('profileRoom').value = currentRoom || '—';
 
-      const phone = document.getElementById('profilePhone')?.value;
-      const email = document.getElementById('profileEmail')?.value;
-      const address = document.getElementById('profileAddress')?.value;
-
-      const updates = { phone, email, address };
-
-      try {
-        if (typeof TenantConfigManager !== 'undefined' && currentTenant?.id) {
-          TenantConfigManager.updateTenant(currentBuilding, currentTenant.id, updates);
-          console.log('✅ บันทึกข้อมูลโปรไฟล์สำเร็จ');
-          alert('✅ บันทึกข้อมูลสำเร็จ');
+        // Calculate floor from room number
+        try {
+          const roomNum = parseInt(currentRoom.replace(/[^0-9]/g, ''));
+          const floor = Math.floor(roomNum / 100) || 1;
+          document.getElementById('profileFloor').value = floor > 0 ? `ชั้น ${floor}` : 'ชั้น 1';
+        } catch (e) {
+          document.getElementById('profileFloor').value = '—';
         }
-      } catch (error) {
-        console.error('❌ Error updating profile:', error);
-        alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+
+        // Move-in date
+        if (currentLease.moveInDate) {
+          const moveInDate = new Date(currentLease.moveInDate);
+          document.getElementById('profileMoveIn').value = moveInDate.toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+        } else {
+          document.getElementById('profileMoveIn').value = '—';
+        }
+
+        // Move-out date
+        if (currentLease.moveOutDate) {
+          const moveOutDate = new Date(currentLease.moveOutDate);
+          document.getElementById('profileMoveOut').value = moveOutDate.toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+        } else {
+          document.getElementById('profileMoveOut').value = 'ไม่มีกำหนด (เช่าต่อเนื่อง)';
+        }
+
+        // Rent amount
+        const rent = currentLease.rentAmount || 0;
+        document.getElementById('profileRent').value = rent > 0 ? `฿${rent.toLocaleString('th-TH')}` : '—';
+
+        // Deposit
+        const deposit = currentLease.deposit || 0;
+        document.getElementById('profileDeposit').value = deposit > 0 ? `฿${deposit.toLocaleString('th-TH')}` : '—';
+      } else {
+        // Fallback if no lease data
+        ['profileRoom', 'profileFloor', 'profileMoveIn', 'profileMoveOut', 'profileRent', 'profileDeposit'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '—';
+        });
+      }
+
+      // ✅ Load Lease Agreement Information
+      if (currentLease && currentLease.contractDocument) {
+        const leaseCard = document.getElementById('leaseAgreementCard');
+        if (leaseCard) {
+          leaseCard.style.display = 'block';
+
+          // Display contract number (if available)
+          const contractNumber = currentLease.contractNumber || currentLease.id || `LEASE-${currentBuilding}-${currentRoom}`;
+          document.getElementById('leaseAgreementNumber').textContent = contractNumber;
+
+          // Display contract date
+          let contractDate = '—';
+          if (currentLease.createdAt) {
+            const date = new Date(currentLease.createdAt);
+            contractDate = date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+          } else if (currentLease.moveInDate) {
+            const date = new Date(currentLease.moveInDate);
+            contractDate = date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+          }
+          document.getElementById('leaseAgreementDate').textContent = contractDate;
+
+          // Show view/download buttons
+          document.getElementById('viewLeaseBtn').style.display = 'inline-block';
+          document.getElementById('downloadLeaseBtn').style.display = 'inline-block';
+
+          // Store contract URL for later use
+          window.currentContractDocument = currentLease.contractDocument;
+
+          console.log('✅ Lease agreement card displayed');
+        }
+      } else {
+        // Hide lease agreement card if no contract
+        const leaseCard = document.getElementById('leaseAgreementCard');
+        if (leaseCard) leaseCard.style.display = 'none';
+      }
+
+      console.log('✅ Profile page loaded with lease data');
+    }
+
+    // View lease agreement document
+    function viewLeaseAgreement() {
+      if (window.currentContractDocument) {
+        window.open(window.currentContractDocument, '_blank');
+      } else {
+        alert('⚠️ ไม่มีเอกสารสัญญาเช่า');
       }
     }
 
-    document.getElementById('profileForm')?.addEventListener('submit', handleProfileSubmit);
+    // Download lease agreement document
+    function downloadLeaseAgreement() {
+      if (window.currentContractDocument) {
+        const link = document.createElement('a');
+        link.href = window.currentContractDocument;
+        link.download = `lease-agreement-${currentBuilding}-${currentRoom}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        alert('⚠️ ไม่มีเอกสารสัญญาเช่า');
+      }
+    }
+
+    // Profile form is now READ-ONLY
+    // All fields are populated from lease data and cannot be edited by tenant
+    // Admin updates profile through Admin Dashboard only
 
     // LOGOUT
     function logout() {
