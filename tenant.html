@@ -42,6 +42,73 @@
   <!-- Billing System -->
   <script src="./shared/billing-calculator.js"></script>
   <script src="./shared/meter-data-manager.js"></script>
+  <!-- Migrate old meter_data format to new MeterDataManager format -->
+  <script>
+    (function migrateMeterData() {
+      try {
+        const oldData = JSON.parse(localStorage.getItem('meter_data') || '{}');
+        if (Object.keys(oldData).length === 0) {
+          console.log('ℹ️ No old meter_data to migrate');
+          return;
+        }
+
+        console.log('🔄 Migrating meter data from old format to MeterDataManager format...');
+        const migratedKeys = {};
+
+        Object.entries(oldData).forEach(([key, value]) => {
+          // Parse key: "rooms_13_2026_03" -> { building: 'rooms', roomId: 13, year: 2026, month: 3 }
+          const parts = key.split('_');
+          if (parts.length < 4) return;
+
+          const building = parts[0]; // 'rooms' or 'nest'
+          const roomId = parts[1];
+          const year = parseInt(parts[2]);
+          const month = parseInt(parts[3]);
+
+          // Convert Gregorian to Buddhist year
+          const buddhistYear = year + 543;
+
+          // Create new format keys
+          const newDataKey = `meter_data_${buddhistYear}`;
+          const monthKey = `${buddhistYear}-${String(month).padStart(2, '0')}`;
+
+          if (!migratedKeys[newDataKey]) {
+            migratedKeys[newDataKey] = {};
+          }
+          if (!migratedKeys[newDataKey][monthKey]) {
+            migratedKeys[newDataKey][monthKey] = {};
+          }
+
+          // Store meter reading with proper field names
+          migratedKeys[newDataKey][monthKey][roomId] = {
+            currentWater: value.wNew || 0,
+            currentElectric: value.eNew || 0,
+            waterStart: value.wOld || 0,
+            electricStart: value.eOld || 0,
+            eOld: value.eOld || 0,
+            eNew: value.eNew || 0,
+            wOld: value.wOld || 0,
+            wNew: value.wNew || 0,
+            recordedDate: value.recordedDate || value.updatedAt || value.createdAt || new Date().toISOString()
+          };
+        });
+
+        // Save all migrated data
+        Object.entries(migratedKeys).forEach(([key, data]) => {
+          // Merge with existing data instead of overwriting
+          const existingData = JSON.parse(localStorage.getItem(key) || '{}');
+          const mergedData = { ...existingData, ...data };
+          localStorage.setItem(key, JSON.stringify(mergedData));
+          console.log(`  ✅ ${key}: ${Object.keys(data).length} months`);
+        });
+
+        console.log(`✅ Migrated ${Object.keys(oldData).length} meter readings to new format (${Object.keys(migratedKeys).length} year keys)`);
+
+      } catch (e) {
+        console.error('❌ Error migrating meter data:', e);
+      }
+    })();
+  </script>
   <!-- Firebase Configuration -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
@@ -2908,9 +2975,38 @@
               let electricDisplay = `฿${(bill.charges.electric.cost || 0).toLocaleString('th-TH')} (${(bill.charges.electric.usage || 0).toFixed(1)} หน่วย)`;
               let waterDisplay = `฿${(bill.charges.water.cost || 0).toLocaleString('th-TH')} (${(bill.charges.water.usage || 0).toFixed(1)} หน่วย)`;
 
+              // Helper function to get meter data from OLD format
+              function getMeterDataFromOld(year, month, roomId) {
+                const oldData = localStorage.getItem('meter_data');
+                if (!oldData) return null;
+                try {
+                  const data = JSON.parse(oldData);
+                  // Try different key formats
+                  // Format 1: "rooms_13_2026_03"
+                  const gregorianYear = year - 543;
+                  const keys = [
+                    `rooms_${roomId}_${gregorianYear}_${month}`,
+                    `nest_${roomId}_${gregorianYear}_${month}`,
+                    `${currentBuilding}_${roomId}_${gregorianYear}_${month}`,
+                  ];
+                  for (const key of keys) {
+                    if (data[key]) return data[key];
+                  }
+                } catch (e) {
+                  // Silent fail
+                }
+                return null;
+              }
+
               if (typeof MeterDataManager !== 'undefined') {
                 try {
-                  const meterData = MeterDataManager.getMeterReading(year, bill.month, currentRoom);
+                  let meterData = MeterDataManager.getMeterReading(year, bill.month, currentRoom);
+
+                  // Fallback to old meter_data format
+                  if (!meterData) {
+                    meterData = getMeterDataFromOld(year, bill.month, currentRoom);
+                  }
+
                   if (meterData && meterData.eNew !== undefined && meterData.eOld !== undefined) {
                     const eUsage = Math.max(0, (meterData.eNew || 0) - (meterData.eOld || 0));
                     const eCost = eUsage * 8;
