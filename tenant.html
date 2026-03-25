@@ -1920,11 +1920,16 @@
       // 📊 BILL STATUS SECTION - Show payment deadline and penalty
       let billStatusHTML = '';
 
-      // Get latest bill - load directly from localStorage if currentBills is empty
-      let latestBill = currentBills.length > 0 ? currentBills[0] : null;
+      // Get latest bill - Always prefer raw bill object from localStorage for payment matching
+      let latestBill = null;
 
-      // Fallback: Load latest bill from localStorage
-      if (!latestBill) {
+      // First, try to get from currentBills if it has billId property
+      if (currentBills.length > 0 && currentBills[0].billId) {
+        latestBill = currentBills[0];
+      }
+
+      // If not found or missing billId, load from localStorage
+      if (!latestBill || !latestBill.billId) {
         const currentYear = new Date().getFullYear();
         const budYear = currentYear + 543;
 
@@ -1937,7 +1942,7 @@
             const roomBill = bills.find(b => b.roomId === currentRoom && b.building === currentBuilding);
             if (roomBill) {
               latestBill = roomBill;
-              console.log(`💡 Loaded latest bill from localStorage: ${roomBill.billId}`);
+              console.log(`💡 Loaded bill from localStorage: ${roomBill.billId}`);
               break;
             }
           }
