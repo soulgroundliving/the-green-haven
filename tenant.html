@@ -1156,6 +1156,9 @@
           <button onclick="markAllBillsAsPaid()" style="padding: 0.7rem 1.2rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
             ✅ จ่ายครบทุกเดือน
           </button>
+          <button onclick="goToPage('template')" style="padding: 0.7rem 1.2rem; background: #2196F3; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
+            📄 ดูเทมเพลท
+          </button>
         </div>
 
         <div id="billsList"></div>
@@ -1435,6 +1438,100 @@
 
         <div class="card">
           <button class="btn btn-danger" onclick="logout()">🚪 ออกจากระบบ</button>
+        </div>
+      </div>
+
+      <!-- BILL TEMPLATE PAGE -->
+      <div class="page" id="page-template">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <button onclick="goToPage('bills')" style="padding: 0.6rem 1.2rem; background: #f0f0f0; color: #333; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem;">← บิล</button>
+          <h2 style="margin: 0; font-size: 1.3rem; color: var(--text);">📄 ใบวางบิล</h2>
+          <div style="width: 120px;"></div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <button class="btn btn-success" onclick="downloadBillTemplate()">⬇️ ดาวน์โหลด</button>
+        </div>
+
+        <!-- Bill Template Preview -->
+        <div id="billTemplatePreview" style="background: white; border: 2px dashed #2d8653; border-radius: 8px; padding: 2rem; margin-bottom: 2rem;">
+          <div style="text-align: center; margin-bottom: 2rem;">
+            <h2 style="color: #2d8653; margin: 0 0 0.5rem 0; font-size: 1.5rem;">ใบวางบิล</h2>
+            <p style="color: var(--text-muted); margin: 0; font-size: 0.9rem;">Bill / Invoice</p>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 1.5rem 0;">
+
+          <!-- Bill Info -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+            <div>
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.3rem;">เลขที่บิล</div>
+              <div style="font-weight: 700; font-size: 1rem; color: var(--text);">BILL-69-03-rooms-15</div>
+            </div>
+            <div>
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.3rem;">วันที่</div>
+              <div style="font-weight: 700; font-size: 1rem; color: var(--text);">มีนาคม 2569</div>
+            </div>
+          </div>
+
+          <!-- Room Info -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; padding: 1rem; background: #f9f9f9; border-radius: 6px;">
+            <div>
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.3rem;">ห้องพัก</div>
+              <div style="font-weight: 700; font-size: 1rem; color: var(--text);">15</div>
+            </div>
+            <div>
+              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.3rem;">ช่วงเวลา</div>
+              <div style="font-weight: 700; font-size: 1rem; color: var(--text);">1 - 31 มีนาคม 2569</div>
+            </div>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 1.5rem 0;">
+
+          <!-- Charges Breakdown -->
+          <div style="margin-bottom: 2rem;">
+            <h3 style="font-size: 1rem; color: #2d8653; margin: 0 0 1rem 0; padding: 0.8rem; background: #e8f5e9; border-radius: 6px;">รายละเอียดการคำนวณค่าใช้งาน</h3>
+
+            <div style="padding: 1rem 0;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; padding-bottom: 0.8rem; border-bottom: 1px solid #eee;">
+                <span style="color: var(--text);">🏠 ค่าเช่า</span>
+                <span style="font-weight: 600; color: var(--text);">฿1,200</span>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; padding-bottom: 0.8rem; border-bottom: 1px solid #eee;">
+                <span style="color: var(--text);">⚡ ค่าไฟฟ้า (150 หน่วย × ฿8)</span>
+                <span style="font-weight: 600; color: var(--text);">฿1,200</span>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; padding-bottom: 0.8rem; border-bottom: 1px solid #eee;">
+                <span style="color: var(--text);">💧 ค่าน้ำ (10 หน่วย × ฿20)</span>
+                <span style="font-weight: 600; color: var(--text);">฿200</span>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; padding-bottom: 0.8rem; border-bottom: 1px solid #eee;">
+                <span style="color: var(--text);">🗑️ ค่าขยะ</span>
+                <span style="font-weight: 600; color: var(--text);">฿40</span>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-top: 2px solid var(--green); margin-top: 0.8rem;">
+                <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
+                <span style="font-weight: 800; font-size: 1.3rem; color: var(--green);">฿2,640</span>
+              </div>
+            </div>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 1.5rem 0;">
+
+          <!-- Footer -->
+          <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+            <p>ใบวางบิลนี้เป็นเพียงตัวอย่าง</p>
+            <p style="margin-bottom: 0;">The Green Haven Co., Ltd.</p>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 1rem; background: #f5f5f5; border-radius: 8px; margin-top: 2rem;">
+          <p>📝 ใบวางบิลนี้แสดงรูปแบบมาตรฐานของบิลค่าเช่า</p>
+          <p style="margin: 0;">คุณสามารถดาวน์โหลดเป็นไฟล์ HTML เพื่อใช้เป็นอ้างอิง</p>
         </div>
       </div>
     </div>
@@ -3504,6 +3601,232 @@
       } catch (error) {
         console.error('❌ Error downloading receipt:', error);
         alert('⚠️ เกิดข้อผิดพลาดในการดาวน์โหลดใบเสร็จ: ' + error.message);
+      }
+    }
+
+    // BILL TEMPLATE DOWNLOAD
+    function downloadBillTemplate() {
+      try {
+        const templateContent = document.getElementById('billTemplatePreview').innerHTML;
+
+        const htmlContent = `<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ใบวางบิล - The Green Haven</title>
+  <style>
+    body {
+      font-family: 'Sarabun', Arial, sans-serif;
+      padding: 2rem;
+      background: #f5f5f5;
+      max-width: 1000px;
+      margin: 0 auto;
+      color: #333;
+    }
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #e0e0e0;
+      margin: 1.5rem 0;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .header h2 {
+      color: #2d8653;
+      margin: 0 0 0.5rem 0;
+      font-size: 1.5rem;
+    }
+    .header p {
+      color: #999;
+      margin: 0;
+      font-size: 0.9rem;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .info-label {
+      font-size: 0.9rem;
+      color: #999;
+      margin-bottom: 0.3rem;
+    }
+    .info-value {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #333;
+    }
+    .section {
+      margin-bottom: 2rem;
+    }
+    .section-title {
+      font-size: 1rem;
+      color: #2d8653;
+      margin: 0 0 1rem 0;
+      padding: 0.8rem;
+      background: #e8f5e9;
+      border-radius: 6px;
+    }
+    .charge-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.8rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid #eee;
+    }
+    .charge-label {
+      color: #333;
+    }
+    .charge-value {
+      font-weight: 600;
+      color: #333;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.8rem 0;
+      border-top: 2px solid #2d8653;
+      margin-top: 0.8rem;
+      font-weight: 700;
+    }
+    .total-label {
+      font-size: 1.1rem;
+      color: #333;
+    }
+    .total-value {
+      font-weight: 800;
+      font-size: 1.3rem;
+      color: #2d8653;
+    }
+    .footer {
+      text-align: center;
+      color: #999;
+      font-size: 0.85rem;
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e0e0e0;
+    }
+    .note {
+      text-align: center;
+      color: #999;
+      font-size: 0.9rem;
+      padding: 1rem;
+      background: #f5f5f5;
+      border-radius: 8px;
+      margin-top: 2rem;
+    }
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        margin: 0;
+      }
+      .note {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>ใบวางบิล</h2>
+      <p>Bill / Invoice</p>
+    </div>
+
+    <hr>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">เลขที่บิล</div>
+        <div class="info-value">BILL-69-03-rooms-15</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">วันที่</div>
+        <div class="info-value">มีนาคม 2569</div>
+      </div>
+    </div>
+
+    <div class="info-grid" style="background: #f9f9f9; padding: 1rem; border-radius: 6px;">
+      <div class="info-item">
+        <div class="info-label">ห้องพัก</div>
+        <div class="info-value">15</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">ช่วงเวลา</div>
+        <div class="info-value">1 - 31 มีนาคม 2569</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">รายละเอียดการคำนวณค่าใช้งาน</div>
+
+      <div class="charge-row">
+        <span class="charge-label">🏠 ค่าเช่า</span>
+        <span class="charge-value">฿1,200</span>
+      </div>
+
+      <div class="charge-row">
+        <span class="charge-label">⚡ ค่าไฟฟ้า (150 หน่วย × ฿8)</span>
+        <span class="charge-value">฿1,200</span>
+      </div>
+
+      <div class="charge-row">
+        <span class="charge-label">💧 ค่าน้ำ (10 หน่วย × ฿20)</span>
+        <span class="charge-value">฿200</span>
+      </div>
+
+      <div class="charge-row">
+        <span class="charge-label">🗑️ ค่าขยะ</span>
+        <span class="charge-value">฿40</span>
+      </div>
+
+      <div class="total-row">
+        <span class="total-label">รวมทั้งสิ้น</span>
+        <span class="total-value">฿2,640</span>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="footer">
+      <p>ใบวางบิลนี้เป็นเพียงตัวอย่าง</p>
+      <p style="margin-bottom: 0;">The Green Haven Co., Ltd.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <p>📝 ใบวางบิลนี้แสดงรูปแบบมาตรฐานของบิลค่าเช่า</p>
+    <p style="margin: 0;">คุณสามารถพิมพ์หรือบันทึกเอกสารนี้เพื่อใช้เป็นอ้างอิง</p>
+  </div>
+</body>
+</html>`;
+
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'bill-template-the-green-haven.html';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error('Error downloading template:', error);
+        alert('⚠️ เกิดข้อผิดพลาดในการดาวน์โหลดเทมเพลท: ' + error.message);
       }
     }
 
