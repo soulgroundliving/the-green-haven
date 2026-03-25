@@ -880,28 +880,77 @@
   .cat-other{background:#f5f5f5;color:var(--text-muted);}
 
   /* ===== MAINTENANCE PAGE ===== */
-  .mx-layout{display:grid;grid-template-columns:1fr 320px;gap:1.2rem;margin-bottom:1.2rem;}
-  .mx-form label{font-size:.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;}
-  .mx-form input,.mx-form select,.mx-form textarea{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 11px;font-family:'Sarabun',sans-serif;font-size:.88rem;width:100%;background:#fff;}
-  .mx-form input:focus,.mx-form select:focus,.mx-form textarea:focus{outline:none;border-color:var(--green);}
-  .mx-form .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
-  .mx-status-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;cursor:default;}
-  .mx-pending{background:#fff3e0;color:#e65100;}
-  .mx-inprogress{background:var(--blue-pale);color:var(--blue);}
-  .mx-done{background:var(--green-pale);color:var(--green-dark);}
-  .mx-urgent{background:#fce4ec;color:#c62828;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:4px;}
-  .mx-row{display:grid;grid-template-columns:70px 1fr 80px 90px 90px 100px 60px;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);font-size:.84rem;}
-  .mx-row:last-child{border-bottom:none;}
-  .mx-head{background:var(--green-pale);font-weight:700;font-size:.78rem;color:var(--green-dark);border-radius:var(--radius-sm) var(--radius-sm) 0 0;}
-  .mx-btn{border:none;border-radius:6px;padding:4px 9px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;}
-  .mx-btn-next{background:var(--blue-pale);color:var(--blue);}
-  .mx-btn-done{background:var(--green-pale);color:var(--green-dark);}
-  .mx-btn-del{background:#fce4ec;color:#c62828;}
-  .mx-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;}
-  .mx-kpi{background:#fff;border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);}
-  .mx-kpi-val{font-size:2rem;font-weight:800;line-height:1.1;margin-bottom:2px;}
-  .mx-kpi-label{font-size:.78rem;color:var(--text-muted);}
-  @media(max-width:900px){.mx-layout{grid-template-columns:1fr;}.mx-row{grid-template-columns:60px 1fr 75px 85px;}.mx-row>:nth-child(5),.mx-row>:nth-child(7){display:none;}}
+  /* Layout */
+  .mx-layout{display:grid;grid-template-columns:1fr 340px;gap:1.5rem;margin-bottom:1.5rem;}
+
+  /* Form Styling */
+  .mx-form label{font-size:.8rem;font-weight:700;color:#2d8653;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;}
+  .mx-form input,.mx-form select,.mx-form textarea{border:1.5px solid #e0e0e0;border-radius:10px;padding:12px 14px;font-family:'Sarabun',sans-serif;font-size:.9rem;width:100%;background:#fff;transition:all 0.3s ease;}
+  .mx-form input:focus,.mx-form select:focus,.mx-form textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(76, 175, 80, 0.1);background:#fafafa;}
+  .mx-form textarea{min-height:120px;resize:vertical;}
+  .mx-form .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+
+  /* KPI Cards with Gradients */
+  .mx-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin-bottom:1.5rem;}
+  .mx-kpi{background:#fff;border-radius:14px;padding:24px 20px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.3s ease;border:1px solid #f0f0f0;}
+  .mx-kpi:hover{transform:translateY(-4px);box-shadow:0 8px 20px rgba(0,0,0,0.12);}
+  .mx-kpi-val{font-size:2.4rem;font-weight:900;line-height:1;margin-bottom:4px;}
+  .mx-kpi-label{font-size:.85rem;color:var(--text-muted);font-weight:600;}
+
+  /* KPI Color Schemes */
+  .mx-kpi:has(#mx-kpi-pending),.mx-kpi:has(#hk-kpi-pending){background:linear-gradient(135deg, #fff8e1 0%, #ffe082 100%);border-color:#ffd54f;}
+  .mx-kpi:has(#mx-kpi-pending) .mx-kpi-val,.mx-kpi:has(#hk-kpi-pending) .mx-kpi-val{color:#f57c00;}
+  .mx-kpi:has(#mx-kpi-inprogress),.mx-kpi:has(#hk-kpi-inprogress){background:linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);border-color:#64b5f6;}
+  .mx-kpi:has(#mx-kpi-inprogress) .mx-kpi-val,.mx-kpi:has(#hk-kpi-inprogress) .mx-kpi-val{color:#1565c0;}
+  .mx-kpi:has(#mx-kpi-done),.mx-kpi:has(#hk-kpi-done){background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);border-color:#81c784;}
+  .mx-kpi:has(#mx-kpi-done) .mx-kpi-val,.mx-kpi:has(#hk-kpi-done) .mx-kpi-val{color:#2e7d32;}
+
+  /* Status Pills */
+  .mx-status-pill{display:inline-block;padding:6px 14px;border-radius:20px;font-size:.75rem;font-weight:700;cursor:default;font-family:'Sarabun',sans-serif;}
+  .mx-pending{background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;}
+  .mx-inprogress{background:#e3f2fd;color:#1565c0;border:1px solid #bbdefb;}
+  .mx-done{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;}
+  .mx-urgent{background:#ffebee;color:#c62828;font-size:.7rem;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid #ffcdd2;margin-left:6px;}
+
+  /* Card-Based List Items */
+  .mx-row{display:grid;grid-template-columns:1fr;gap:12px;padding:16px;border-radius:12px;border:1px solid #f0f0f0;background:#fff;margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,0.05);transition:all 0.3s ease;}
+  .mx-row:hover{box-shadow:0 6px 16px rgba(0,0,0,0.1);transform:translateY(-2px);}
+  .mx-row:last-child{margin-bottom:0;}
+
+  /* Row content structure */
+  .mx-row > :first-child{display:grid;grid-template-columns:60px 1fr;gap:12px;align-items:flex-start;}
+  .mx-row-header{font-weight:700;color:#1a1a1a;font-size:.95rem;margin-bottom:4px;}
+  .mx-row-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:.8rem;color:var(--text-muted);margin-top:8px;padding-top:8px;border-top:1px solid #f5f5f5;}
+  .mx-row-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+
+  /* Buttons with Gradients */
+  .mx-btn{border:none;border-radius:8px;padding:8px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.3s ease;display:inline-flex;align-items:center;gap:4px;}
+  .mx-btn:hover{transform:scale(1.05);box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+  .mx-btn-next{background:linear-gradient(135deg, #2196f3 0%, #1976d2 100%);color:#fff;}
+  .mx-btn-done{background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;}
+  .mx-btn-reopen{background:linear-gradient(135deg, #2196f3 0%, #1976d2 100%);color:#fff;}
+  .mx-btn-del{background:linear-gradient(135deg, #f44336 0%, #d32f2f 100%);color:#fff;}
+
+  /* Notification Banner */
+  #mx-notification-banner{background:linear-gradient(135deg, #fff9c4, #ffe082) !important;border-left:5px solid #fbc02d !important;padding:16px !important;margin-bottom:1.5rem !important;border-radius:12px !important;box-shadow:0 4px 12px rgba(251, 192, 45, 0.2) !important;}
+  #mx-notification-banner > div{color:#f57f17 !important;font-weight:700 !important;font-size:1rem !important;font-family:'Sarabun',sans-serif !important;}
+
+  /* Filter Panel */
+  .mx-filter-panel{border:1px solid #f0f0f0;padding:16px;border-radius:12px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.05);}
+  .mx-filter-panel label{font-size:.8rem;font-weight:700;color:#2d8653;display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;}
+  .mx-filter-panel input,.mx-filter-panel select{width:100%;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;margin-bottom:12px;transition:all 0.3s ease;}
+  .mx-filter-panel input:focus,.mx-filter-panel select:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(76, 175, 80, 0.1);}
+
+  /* Responsive Design */
+  @media(max-width:900px){
+    .mx-layout{grid-template-columns:1fr;}
+    .mx-row{grid-template-columns:1fr;}
+    .mx-row-meta{grid-template-columns:1fr;}
+  }
+  @media(max-width:600px){
+    .mx-kpi-grid{grid-template-columns:1fr;}
+    .mx-form .form-grid{grid-template-columns:1fr;}
+  }
 
   /* ===== ANALYTICS PAGE ===== */
   .ana-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.2rem;}
@@ -2729,12 +2778,12 @@
     <!-- Add Form -->
     <div class="card mx-form">
       <div class="card-title">➕ แจ้งซ่อมใหม่</div>
-      <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div class="form-grid">
         <div><label>ห้อง</label><input type="text" id="mx-room" placeholder="เช่น 15ก, 22, Amazon"></div>
         <div><label>วันที่แจ้ง</label><input type="date" id="mx-date"></div>
       </div>
-      <div style="margin-bottom:10px;"><label>รายละเอียดปัญหา</label><textarea id="mx-desc" rows="3" placeholder="เช่น ประตูปิดไม่สนิท, น้ำรั้ว, แอร์ไม่เย็น..." style="resize:vertical;"></textarea></div>
-      <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div style="margin-bottom:12px;"><label>รายละเอียดปัญหา</label><textarea id="mx-desc" placeholder="เช่น ประตูปิดไม่สนิท, น้ำรั้ว, แอร์ไม่เย็น..."></textarea></div>
+      <div class="form-grid">
         <div><label>หมวดหมู่</label>
           <select id="mx-category">
             <option value="electrical">⚡ ไฟฟ้า</option>
@@ -2751,14 +2800,14 @@
           </select>
         </div>
       </div>
-      <button onclick="addMaintenanceRequest()" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:11px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;">📝 บันทึกงานซ่อม</button>
+      <button onclick="addMaintenanceRequest()" style="width:100%;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:14px 16px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(76, 175, 80, 0.2);">📝 บันทึกงานซ่อม</button>
     </div>
     <!-- Filter panel -->
-    <div class="card" style="height:fit-content;">
-      <div class="card-title">🔍 กรองรายการ</div>
-      <div style="margin-bottom:10px;">
-        <label style="font-size:.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">สถานะ</label>
-        <select id="mx-filter-status" onchange="renderMaintenancePage()" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.85rem;">
+    <div class="mx-filter-panel">
+      <div class="card-title" style="margin-bottom:16px;">🔍 กรองรายการ</div>
+      <div>
+        <label>สถานะ</label>
+        <select id="mx-filter-status" onchange="renderMaintenancePage()">
           <option value="all">ทั้งหมด</option>
           <option value="pending">⏳ รอดำเนินการ</option>
           <option value="inprogress">🔨 กำลังดำเนินการ</option>
@@ -2766,8 +2815,8 @@
         </select>
       </div>
       <div>
-        <label style="font-size:.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">ห้อง</label>
-        <input type="text" id="mx-filter-room" oninput="renderMaintenancePage()" placeholder="ค้นหาห้อง..." style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.85rem;box-sizing:border-box;">
+        <label>ห้อง</label>
+        <input type="text" id="mx-filter-room" oninput="renderMaintenancePage()" placeholder="ค้นหาห้อง...">
       </div>
     </div>
   </div>
@@ -2789,12 +2838,12 @@
     <!-- Add Form -->
     <div class="card mx-form">
       <div class="card-title">➕ ขอบริการทำความสะอาดใหม่</div>
-      <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div class="form-grid">
         <div><label>ห้อง</label><input type="text" id="hk-room" placeholder="เช่น 15ก, 22, Amazon"></div>
         <div><label>วันที่ขอ</label><input type="date" id="hk-date"></div>
       </div>
-      <div style="margin-bottom:10px;"><label>หมายเหตุพิเศษ</label><textarea id="hk-desc" rows="3" placeholder="เช่น ฝังหนามความสะอาด, บริเวณให้ความสำคัญ..." style="resize:vertical;"></textarea></div>
-      <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div style="margin-bottom:12px;"><label>หมายเหตุพิเศษ</label><textarea id="hk-desc" placeholder="เช่น ฝังหนามความสะอาด, บริเวณให้ความสำคัญ..."></textarea></div>
+      <div class="form-grid">
         <div><label>ประเภทบริการ</label>
           <select id="hk-service">
             <option value="standard">🧹 Standard (ทำความสะอาดมาตรฐาน)</option>
@@ -2810,14 +2859,14 @@
           </select>
         </div>
       </div>
-      <button onclick="addHousekeepingRequest()" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:11px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;">📝 บันทึกการขอบริการ</button>
+      <button onclick="addHousekeepingRequest()" style="width:100%;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:14px 16px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(76, 175, 80, 0.2);">📝 บันทึกการขอบริการ</button>
     </div>
     <!-- Filter panel -->
-    <div class="card" style="height:fit-content;">
-      <div class="card-title">🔍 กรองรายการ</div>
-      <div style="margin-bottom:10px;">
-        <label style="font-size:.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">สถานะ</label>
-        <select id="hk-filter-status" onchange="renderHousekeepingList()" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.85rem;">
+    <div class="mx-filter-panel">
+      <div class="card-title" style="margin-bottom:16px;">🔍 กรองรายการ</div>
+      <div>
+        <label>สถานะ</label>
+        <select id="hk-filter-status" onchange="renderHousekeepingList()">
           <option value="all">ทั้งหมด</option>
           <option value="pending">⏳ รอดำเนินการ</option>
           <option value="inprogress">🔨 กำลังดำเนินการ</option>
@@ -2825,8 +2874,8 @@
         </select>
       </div>
       <div>
-        <label style="font-size:.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">ห้อง</label>
-        <input type="text" id="hk-filter-room" oninput="renderHousekeepingList()" placeholder="ค้นหาห้อง..." style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.85rem;box-sizing:border-box;">
+        <label>ห้อง</label>
+        <input type="text" id="hk-filter-room" oninput="renderHousekeepingList()" placeholder="ค้นหาห้อง...">
       </div>
     </div>
   </div>
@@ -8572,29 +8621,36 @@ function renderMaintenancePage(){
   if(fr)filtered=filtered.filter(x=>x.room.toLowerCase().includes(fr));
   const el=document.getElementById('mxList');
   if(!el)return;
-  if(!filtered.length){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:.9rem;">ไม่มีรายการ</div>';return;}
+  if(!filtered.length){el.innerHTML='<div style="text-align:center;padding:40px 32px;color:var(--text-muted);font-size:.95rem;">ไม่มีรายการ</div>';return;}
   const fmt=d=>{if(!d)return'—';const p=d.split('-');return`${parseInt(p[2])} ${['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][parseInt(p[1])]}`;};
-  el.innerHTML=`
-    <div class="mx-row mx-head"><div>ห้อง</div><div>รายละเอียด</div><div>หมวด</div><div>ผู้รับผิดชอบ</div><div>สถานะ</div><div>วันที่แจ้ง</div><div>เวลาทำงาน</div><div>เปลี่ยนสถานะ</div><div></div></div>
-    ${filtered.map(x=>`
-    <div class="mx-row" style="${x.status==='done'?'opacity:.65;':''}">
-      <div><strong>${x.room}</strong>${x.priority==='urgent'?'<span class="mx-urgent">ด่วน!</span>':''}</div>
-      <div style="font-size:.82rem;">
-        ${x.desc}
-        ${x.beforePhoto||x.afterPhoto?'<div style="margin-top:6px;"><span style="font-size:.7rem;color:var(--blue);">📸 มีรูปภาพ</span></div>':''}
+  el.innerHTML=filtered.map(x=>`
+    <div class="mx-row" style="${x.status==='done'?'opacity:.7;':''}">
+      <div>
+        <div style="width:60px;height:60px;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;flex-shrink:0;box-shadow:0 2px 8px rgba(76, 175, 80, 0.3);">
+          ${x.room.substring(0,2)}
+        </div>
+        <div>
+          <div class="mx-row-header">${x.room} ${x.priority==='urgent'?'<span class="mx-urgent">ด่วน!</span>':''}</div>
+          <div style="font-size:.85rem;color:#555;line-height:1.5;margin-bottom:6px;">${x.desc}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <span class="mx-status-pill ${MX_STATUS_CLASS[x.status]||'mx-pending'}">${MX_STATUS_LABEL[x.status]||x.status}</span>
+            ${x.beforePhoto||x.afterPhoto?'<span style="font-size:.75rem;color:var(--blue);background:#e3f2fd;padding:4px 10px;border-radius:20px;">📸 มีรูปภาพ</span>':''}
+            ${x.assignedTo?'<span style="font-size:.75rem;color:#5e35b1;background:#e8e4f3;padding:4px 10px;border-radius:20px;">👤 '+x.assignedTo+'</span>':''}
+          </div>
+          <div class="mx-row-meta">
+            <div><strong>หมวด:</strong> ${MX_CAT_LABEL[x.category]||x.category}</div>
+            <div><strong>วันที่แจ้ง:</strong> ${fmt(x.reportedAt)}</div>
+            <div><strong>เวลาทำงาน:</strong> ${x.startedAt&&x.completedAt?'⏱️ '+calculateDuration(x.startedAt,x.completedAt):'—'}</div>
+          </div>
+          <div class="mx-row-actions">
+            ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus('${x.id}','inprogress')">🔨 รับงาน</button>`:''}
+            ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateMaintenanceStatus('${x.id}','done')">✅ เสร็จ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','assign')">📝 ผู้รับผิดชอบ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','notes')">📋 หมายเหตุ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','photos')">📷 รูปภาพ</button>`:''}
+            ${x.status==='done'?`<button class="mx-btn mx-btn-reopen" onclick="updateMaintenanceStatus('${x.id}','pending')">↩ เปิดใหม่</button>`:''}
+            <button class="mx-btn mx-btn-del" onclick="deleteMaintenanceRequest('${x.id}')">🗑️ ลบ</button>
+          </div>
+        </div>
       </div>
-      <div style="font-size:.78rem;color:var(--text-muted);">${MX_CAT_LABEL[x.category]||x.category}</div>
-      <div style="font-size:.82rem;">${x.assignedTo?'👤 '+x.assignedTo:'<span style="color:var(--text-muted);">ยังไม่มี</span>'}</div>
-      <div><span class="mx-status-pill ${MX_STATUS_CLASS[x.status]||'mx-pending'}">${MX_STATUS_LABEL[x.status]||x.status}</span></div>
-      <div style="font-size:.8rem;color:var(--text-muted);">${fmt(x.reportedAt)}</div>
-      <div style="font-size:.78rem;color:var(--text-muted);">${x.startedAt&&x.completedAt?'⏱️ '+calculateDuration(x.startedAt,x.completedAt):'—'}</div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;">
-        ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus('${x.id}','inprogress')">🔨 รับงาน</button>`:''}
-        ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateMaintenanceStatus('${x.id}','done')">✅ เสร็จ</button><button class="mx-btn" style="background:#e0e0e0;color:#333;padding:4px 8px;font-size:.7rem;" onclick="editMaintenance('${x.id}','assign')">📝 ผู้รับผิดชอบ</button><button class="mx-btn" style="background:#e8e4f3;color:#5e35b1;padding:4px 8px;font-size:.7rem;" onclick="editMaintenance('${x.id}','notes')">📋 หมายเหตุ</button><button class="mx-btn" style="background:#e1f5fe;color:#0277bd;padding:4px 8px;font-size:.7rem;" onclick="editMaintenance('${x.id}','photos')">📷 รูปภาพ</button>`:''}
-        ${x.status==='done'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus('${x.id}','pending')">↩ เปิดใหม่</button>`:''}
-      </div>
-      <div><button class="mx-btn mx-btn-del" onclick="deleteMaintenanceRequest('${x.id}')">🗑️</button></div>
-    </div>`).join('')}`;
+    </div>`).join('');
 }
 
 // ===== HOUSEKEEPING REQUEST MANAGEMENT =====
@@ -8711,22 +8767,33 @@ function renderHousekeepingList(){
     return`${parseInt(p[2])} ${['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][parseInt(p[1])]}`;
   };
 
-  el.innerHTML=`
-    <div class="mx-row mx-head"><div>ห้อง</div><div>บริการ</div><div>หมายเหตุ</div><div>สถานะ</div><div>วันที่ขอ</div><div>เปลี่ยนสถานะ</div><div></div></div>
-    ${filtered.map(x=>`
-    <div class="mx-row" style="${x.status==='done'?'opacity:.65;':''}">
-      <div><strong>${x.room}</strong>${x.priority==='urgent'?'<span class="mx-urgent">ด่วน!</span>':''}</div>
-      <div style="font-size:.82rem;">${HK_SERVICE_LABEL[x.service]||x.service}</div>
-      <div style="font-size:.82rem;color:var(--text-muted);">${x.description||'—'}</div>
-      <div><span class="mx-status-pill ${HK_STATUS_CLASS[x.status]||'mx-pending'}">${HK_STATUS_LABEL[x.status]||x.status}</span></div>
-      <div style="font-size:.8rem;color:var(--text-muted);">${fmt(x.submittedAt)}</div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;">
-        ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus('${x.id}','inprogress')">🔨 เริ่ม</button>`:''}
-        ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateHousekeepingStatus('${x.id}','done')">✅ เสร็จ</button>`:''}
-        ${x.status==='done'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus('${x.id}','pending')">↩ เปิดใหม่</button>`:''}
+  el.innerHTML=filtered.map(x=>`
+    <div class="mx-row" style="${x.status==='done'?'opacity:.7;':''}">
+      <div>
+        <div style="width:60px;height:60px;background:linear-gradient(135deg, #2196f3 0%, #1976d2 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;flex-shrink:0;box-shadow:0 2px 8px rgba(33, 150, 243, 0.3);">
+          ${x.room.substring(0,2)}
+        </div>
+        <div>
+          <div class="mx-row-header">${x.room} ${x.priority==='urgent'?'<span class="mx-urgent">ด่วน!</span>':''}</div>
+          <div style="font-size:.85rem;color:#555;line-height:1.5;margin-bottom:6px;">${HK_SERVICE_LABEL[x.service]||x.service}</div>
+          ${x.description?'<div style="font-size:.8rem;color:var(--text-muted);margin-bottom:6px;">หมายเหตุ: '+x.description+'</div>':''}
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <span class="mx-status-pill ${HK_STATUS_CLASS[x.status]||'mx-pending'}">${HK_STATUS_LABEL[x.status]||x.status}</span>
+          </div>
+          <div class="mx-row-meta">
+            <div><strong>วันที่ขอ:</strong> ${fmt(x.submittedAt)}</div>
+            <div><strong>ประเภท:</strong> ${x.service}</div>
+            <div><strong>สถานะ:</strong> ${HK_STATUS_LABEL[x.status]||x.status}</div>
+          </div>
+          <div class="mx-row-actions">
+            ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus('${x.id}','inprogress')">🔨 เริ่มทำความสะอาด</button>`:''}
+            ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateHousekeepingStatus('${x.id}','done')">✅ เสร็จสิ้น</button>`:''}
+            ${x.status==='done'?`<button class="mx-btn mx-btn-reopen" onclick="updateHousekeepingStatus('${x.id}','pending')">↩ เปิดใหม่</button>`:''}
+            <button class="mx-btn mx-btn-del" onclick="deleteHousekeepingRequest('${x.id}')">🗑️ ลบ</button>
+          </div>
+        </div>
       </div>
-      <div><button class="mx-btn mx-btn-del" onclick="deleteHousekeepingRequest('${x.id}')">🗑️</button></div>
-    </div>`).join('')}`;
+    </div>`).join('');
 }
 
 function switchMaintenanceTab(tabName, btn) {
