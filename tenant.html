@@ -1842,8 +1842,9 @@
         }
         document.getElementById('nextPaymentDate').textContent = dueText !== '-' ? `ครบกำหนด: ${dueText}` : '-';
       } else {
-        document.getElementById('nextPaymentAmount').textContent = '1,200';
-        document.getElementById('nextPaymentDate').textContent = 'ครบกำหนด: 5 เมษายน 2569';
+        // Use room rent as fallback
+        document.getElementById('nextPaymentAmount').textContent = `${rentPrice.toLocaleString('th-TH')} บาท`;
+        document.getElementById('nextPaymentDate').textContent = '-';
       }
 
       // Calculate outstanding balance
