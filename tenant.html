@@ -1588,6 +1588,19 @@
     let currentPaymentAmount = 0;
     let currentPaymentMonth = '';
 
+    // ===== HELPER: Get owner info once, reuse everywhere =====
+    function getOwnerInfoData() {
+      return typeof OwnerConfigManager !== 'undefined' ? OwnerConfigManager.getOwnerInfo() : {};
+    }
+
+    function getOwnerName() {
+      return getOwnerInfoData()?.name || 'The Green Haven Co., Ltd.';
+    }
+
+    function getBuildingDisplayName() {
+      return currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า';
+    }
+
     // ===== MOCK DATA INITIALIZATION =====
     function initializeMockData() {
       // Mock data initialization removed - users must manually enter tenant data
@@ -3280,9 +3293,8 @@
         const roomInfo = typeof RoomConfigManager !== 'undefined' ? RoomConfigManager.getRoom(currentBuilding, currentRoom) : null;
         const roomName = roomInfo?.name || `ห้อง ${currentRoom}`;
 
-        const receiptOwnerInfo = typeof OwnerConfigManager !== 'undefined' ? OwnerConfigManager.getOwnerInfo() : {};
-        const receiptOwnerName = receiptOwnerInfo?.name || 'The Green Haven Co., Ltd.';
-        const receiptBuildingDisplayName = currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า';
+        const receiptOwnerName = getOwnerName();
+        const receiptBuildingDisplayName = getBuildingDisplayName();
 
         const receiptHTML = `
           <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--green); padding-bottom: 1rem;">
@@ -3624,9 +3636,8 @@
     // BILL TEMPLATE DOWNLOAD
     function downloadBillTemplate() {
       // Get owner info for download (used throughout function)
-      const billOwnerInfo = typeof OwnerConfigManager !== 'undefined' ? OwnerConfigManager.getOwnerInfo() : {};
-      const billOwnerName = billOwnerInfo?.name || 'The Green Haven Co., Ltd.';
-      const billBuildingName = currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า';
+      const billOwnerName = getOwnerName();
+      const billBuildingName = getBuildingDisplayName();
 
       try {
         const templateContent = document.getElementById('billTemplatePreview').innerHTML;
@@ -3777,7 +3788,7 @@
         const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        const fileName = billOwnerInfo?.name?.replace(/\s+/g, '-').toLowerCase() || 'the-green-haven';
+        const fileName = getOwnerName().replace(/\s+/g, '-').toLowerCase();
         link.download = `bill-template-${fileName}.html`;
         document.body.appendChild(link);
         link.click();
@@ -3795,9 +3806,8 @@
 
     function updateBillTemplateWithOwnerInfo() {
       // Get owner information
-      const templateOwnerInfo = typeof OwnerConfigManager !== 'undefined' ? OwnerConfigManager.getOwnerInfo() : {};
-      const templateOwnerName = templateOwnerInfo?.name || 'The Green Haven Co., Ltd.';
-      const templateBuildingName = currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า';
+      const templateOwnerName = getOwnerName();
+      const templateBuildingName = getBuildingDisplayName();
 
       // Update template elements
       const companyNameEl = document.getElementById('billTemplateCompanyName');
