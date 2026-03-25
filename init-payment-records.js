@@ -40,11 +40,12 @@ function initializePaymentRecords() {
         // Create payment record - mark all as paid
         // Payment date = 5th of the month (or earlier as paid)
         const billMonth = bill.month;
-        const billYear = bill.year;
+        const billYear = bill.year; // Use short format (67, 68, 69)
 
         // Generate payment date - assume paid on 3rd of the month (before deadline)
+        const fullYear = billYear + 2500; // Convert short year to full year (69 -> 2569)
         const paymentDate = new Date(
-          billYear === 69 ? 2026 : (billYear === 68 ? 2025 : 2024),
+          fullYear - 543, // Convert Buddhist year to CE year (2569 -> 2026)
           billMonth - 1,
           3
         ).toISOString();
