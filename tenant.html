@@ -19,6 +19,8 @@
   <script src="./shared/tenant-firebase-sync.js"></script>
   <!-- Initialize Real Bills from JSON file (BEFORE test data) -->
   <script src="./init-real-bills.js"></script>
+  <!-- Initialize Payment Records for all bills -->
+  <script src="./init-payment-records.js"></script>
   <!-- Mock data for fallback -->
   <script src="./mock-tenant-data.js"></script>
   <script src="./mock-meter-history.js"></script>
@@ -1922,39 +1924,60 @@
       let latestBill = currentBills.length > 0 ? currentBills[0] : null;
 
       if (latestBill) {
-        // Calculate deadline: 5th of next month
-        const billDate = new Date(latestBill.dueDate || latestBill.billDate || new Date());
-        const billMonth = billDate.getMonth();
-        const billYear = billDate.getFullYear();
+        // 💳 Check if bill has been paid
+        const paymentKey = `payment_${currentBuilding}_${currentRoom}`;
+        const paymentData = localStorage.getItem(paymentKey);
+        const payments = paymentData ? JSON.parse(paymentData) : [];
 
-        // Deadline is 5th of the next month after bill date
-        const deadlineDate = new Date(billYear, billMonth + 1, 5);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        deadlineDate.setHours(0, 0, 0, 0);
+        // Find payment for latest bill
+        const billPayment = payments.find(p =>
+          p.billId === latestBill.billId ||
+          (p.month === latestBill.month && p.year === latestBill.year)
+        );
 
-        // Calculate days
-        const daysUntilDeadline = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
-        const isOverdue = daysUntilDeadline < 0;
-        const daysOverdue = Math.abs(daysUntilDeadline);
-
-        // Calculate penalty if overdue
-        const penalty = isOverdue ? daysOverdue * 100 : 0;
-        const totalWithPenalty = (latestBill.total || 0) + penalty;
-
-        // Format status message
         let statusMsg = '';
         let statusClass = '';
-        if (isOverdue) {
-          statusMsg = `⚠️ สายแล้ว ${daysOverdue} วัน`;
-          statusClass = 'status-overdue';
-        } else if (daysUntilDeadline <= 3) {
-          statusMsg = `⏰ ใกล้หมดเขต ${daysUntilDeadline} วัน`;
-          statusClass = 'status-warning';
-        } else {
-          statusMsg = `✅ ยังไม่หมดเขต`;
+        let penalty = 0;
+
+        // 🎯 If bill is paid, show paid status
+        if (billPayment && billPayment.status === 'paid') {
+          const paidDate = new Date(billPayment.paymentDate);
+          const paidDateStr = `${paidDate.getDate()}/${paidDate.getMonth() + 1}/${paidDate.getFullYear()}`;
+          statusMsg = `✅ ชำระแล้ว ${paidDateStr}`;
           statusClass = 'status-ok';
+        } else {
+          // 📅 If not paid, calculate deadline and status
+          const billDate = new Date(latestBill.dueDate || latestBill.billDate || new Date());
+          const billMonth = billDate.getMonth();
+          const billYear = billDate.getFullYear();
+
+          // Deadline is 5th of the next month after bill date
+          const deadlineDate = new Date(billYear, billMonth + 1, 5);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          deadlineDate.setHours(0, 0, 0, 0);
+
+          // Calculate days
+          const daysUntilDeadline = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
+          const isOverdue = daysUntilDeadline < 0;
+          const daysOverdue = Math.abs(daysUntilDeadline);
+
+          // Calculate penalty if overdue
+          penalty = isOverdue ? daysOverdue * 100 : 0;
+
+          if (isOverdue) {
+            statusMsg = `⚠️ สายแล้ว ${daysOverdue} วัน`;
+            statusClass = 'status-overdue';
+          } else if (daysUntilDeadline <= 3) {
+            statusMsg = `⏰ ใกล้หมดเขต ${daysUntilDeadline} วัน`;
+            statusClass = 'status-warning';
+          } else {
+            statusMsg = `⏳ รอชำระ`;
+            statusClass = 'status-ok';
+          }
         }
+
+        const totalWithPenalty = (latestBill.total || 0) + penalty;
 
         // Status Badge - Compact inline format
         billStatusHTML = `
