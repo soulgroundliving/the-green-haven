@@ -8440,6 +8440,11 @@ function updateMaintenanceStatus(id,newStatus){
   else t.textContent='✅ อัปเดตสถานะแล้ว';
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),2500);
+
+  // Broadcast to tenants (tenant.html listening)
+  window.dispatchEvent(new CustomEvent('maintenance_status_updated', {
+    detail: { id, status: newStatus, ticket: item }
+  }));
 }
 
 // ===== MODAL FUNCTIONS FOR MAINTENANCE =====
