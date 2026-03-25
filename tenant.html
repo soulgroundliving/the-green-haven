@@ -2430,6 +2430,7 @@
     function generateInvoiceWithDetails(bill, monthYear) {
       const billNo = bill.billId || ('INV-' + Date.now());
       const today = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+      const ppNumber = localStorage.getItem('promptpay') || '0977826153';
 
       const roomInfo = typeof RoomConfigManager !== 'undefined' ? RoomConfigManager.getRoom(currentBuilding, currentRoom) : null;
       const roomName = roomInfo?.name || `ห้อง ${currentRoom}`;
@@ -2512,7 +2513,7 @@
         <div style="background: var(--blue-pale); border: 2px dashed var(--blue); border-radius: 8px; padding: 1rem; text-align: center; margin-bottom: 1rem;">
           <div style="font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.8rem;">📲 สแกน QR Code เพื่อชำระเงิน</div>
           <div id="qrCode" style="display: flex; justify-content: center; margin-bottom: 0.5rem;"></div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">พร้อมเพย์: 089-1234567<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">พร้อมเพย์: ${ppNumber}<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
         </div>
 
         <div style="background: #fffacd; border-left: 4px solid var(--accent); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
@@ -2537,6 +2538,7 @@
     function generateInvoice(month, amount) {
       const billNo = 'INV-' + Date.now();
       const today = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+      const ppNumber = localStorage.getItem('promptpay') || '0977826153';
 
       const roomInfo = typeof RoomConfigManager !== 'undefined' ? RoomConfigManager.getRoom(currentBuilding, currentRoom) : null;
       const roomName = roomInfo?.name || `ห้อง ${currentRoom}`;
@@ -2583,7 +2585,7 @@
         <div style="background: var(--blue-pale); border: 2px dashed var(--blue); border-radius: 8px; padding: 1rem; text-align: center; margin-bottom: 1rem;">
           <div style="font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.8rem;">📲 สแกน QR Code เพื่อชำระเงิน</div>
           <div id="qrCode" style="display: flex; justify-content: center; margin-bottom: 0.5rem;"></div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">พร้อมเพย์: 089-1234567<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">พร้อมเพย์: ${ppNumber}<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
         </div>
 
         <div style="background: #fffacd; border-left: 4px solid var(--accent); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
@@ -2603,12 +2605,42 @@
       generateQRCode();
     }
 
+    function crc16(str){
+      let c=0xFFFF;
+      for(let i=0;i<str.length;i++){c^=str.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=(c&0x8000)?((c<<1)^0x1021):(c<<1);}
+      return(c&0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+    }
+
+    function buildPromptPayPayload(phone,amount){
+      phone=phone.replace(/[-\s]/g,'');
+      let tag,num;
+      if(phone.startsWith('0')&&phone.length<=10){
+        num='0066'+phone.slice(1); tag='01';
+      } else if(/^\d{13}$/.test(phone)){
+        num=phone; tag='02';
+      } else {
+        num=phone; tag='01';
+      }
+      const pTag=tag+String(num.length).padStart(2,'0')+num;
+      const acct='0016A000000677010111'+pTag;
+      const mTag='29'+String(acct.length).padStart(2,'0')+acct;
+      let p='000201010212'+mTag+'520400005303764';
+      if(amount>0){const a=amount.toFixed(2);p+='54'+String(a.length).padStart(2,'0')+a;}
+      p+='5802TH6304';
+      return p+crc16(p);
+    }
+
     function generateQRCode() {
       document.getElementById('qrCode').innerHTML = '';
-      const qrData = `00020126360014th.co.bpmit.promptpay0015089000000000155020000000000010702061050000000005303764540${currentPaymentAmount.toString().padStart(10, '0')}520463031789530376454061300070K`;
+
+      // Get PromptPay number from localStorage (default: 0977826153)
+      const ppNumber = localStorage.getItem('promptpay') || '0977826153';
+
+      // Build PromptPay QR payload using proper EMV format with CRC
+      const qrPayload = buildPromptPayPayload(ppNumber, currentPaymentAmount);
 
       new QRCode(document.getElementById('qrCode'), {
-        text: qrData,
+        text: qrPayload,
         width: 200,
         height: 200,
         colorDark: '#000000',
@@ -2654,28 +2686,36 @@
         document.getElementById('slipVerifyResult').innerHTML = '<div style="text-align: center; color: var(--text-muted);">⏳ กำลังตรวจสอบ...</div>';
         document.getElementById('slipVerifyResult').style.display = 'block';
 
-        // TODO: Replace with real SlipOK API
-        // Real implementation:
-        // const formData = new FormData();
-        // formData.append('file', file);
-        // const response = await fetch('https://api.slipok.com/api/v1/verify', {
-        //   method: 'POST',
-        //   headers: { 'x-authorization': 'APIKEY xxx' },
-        //   body: formData
-        // });
+        // Prepare FormData for SlipOK API
+        const formData = new FormData();
+        formData.append('file', file);
 
-        // Simulate SlipOK verification (for demo)
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        verifySlip({
-          success: true,
-          data: {
-            amount: currentPaymentAmount,
-            sendingBankCode: 'KBANK',
-            transactionDate: new Date().toISOString(),
-            transactionId: 'SLIP-' + Date.now()
-          }
+        // Real SlipOK API call
+        const response = await fetch('https://api.slipok.com/api/line/apikey/62328', {
+          method: 'POST',
+          headers: {
+            'x-authorization': 'SLIPOK8P4B99Z'
+          },
+          body: formData
         });
+
+        const data = await response.json();
+        console.log('✅ SlipOK Response:', data);
+
+        // Validate response
+        if (data.success && data.data) {
+          verifySlip({
+            success: true,
+            data: {
+              amount: data.data.amount,
+              sendingBankCode: data.data.sendingBankCode || 'UNKNOWN',
+              transactionDate: data.data.transactionDate,
+              transactionId: data.data.transactionId
+            }
+          });
+        } else {
+          throw new Error(data.message || 'SlipOK verification failed');
+        }
       } catch (error) {
         console.error('❌ SlipOK verification failed:', error);
         verifySlip({
@@ -2704,12 +2744,16 @@
         document.getElementById('slipAmount').textContent = slipData.amount.toLocaleString('th-TH');
         document.getElementById('slipTime').textContent = slipData.tDate;
 
-        document.getElementById('generateReceiptBtn').style.display = 'block';
-
         // ✅ Notify admin via Firebase/Storage event
         notifyAdminPaymentVerified();
 
         console.log(`✅ Slip verified! Transaction ID: ${slipData.transactionId}`);
+
+        // ✅ Auto-generate receipt after SlipOK verification (no admin approval needed)
+        setTimeout(() => {
+          console.log('🔄 Auto-generating receipt after SlipOK verification...');
+          generateReceipt();
+        }, 1500);
       } else {
         // ❌ Verification failed
         slipVerified = false;
@@ -3778,7 +3822,7 @@
             <div style="background: #e3f2fd; border: 2px dashed var(--green); padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 2rem;">
               <div style="font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 1rem;">💳 สแกน QR Code เพื่อชำระเงิน</div>
               <div id="qrCode" style="display: flex; justify-content: center; margin-bottom: 1rem;"></div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">พร้อมเพย์: 089-1234567<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">พร้อมเพย์: ${ppNumber}<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
             </div>
 
             <div style="background: #fffacd; border-left: 4px solid var(--accent); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
