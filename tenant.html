@@ -2010,6 +2010,14 @@
           return false;
         });
 
+        // DEBUG: Log payment matching result
+        if (typeof console !== 'undefined') {
+          console.log(`🔍 Payment matching: billMonth=${billMonth}, billYear=${billYear}, found=${!!billPayment}`);
+          if (billPayment) {
+            console.log(`   Payment status: ${billPayment.status}, date: ${billPayment.paymentDate}`);
+          }
+        }
+
         let statusMsg = '';
         let statusClass = '';
         let penalty = 0;
