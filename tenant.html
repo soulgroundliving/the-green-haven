@@ -433,6 +433,13 @@
       padding: 1.5rem;
       margin-bottom: 1.5rem;
       box-shadow: 0 2px 12px rgba(0, 0, 0, .08);
+      transition: all 0.2s ease;
+      border: 1px solid #f0f0f0;
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, .12);
+      border-color: #e0e0e0;
     }
 
     .card-title {
@@ -473,7 +480,7 @@
     /* Bill Card */
     .bill-card {
       background: #fff;
-      border: 2px solid var(--border);
+      border: 1px solid #f0f0f0;
       border-radius: var(--radius-sm);
       padding: 1.5rem;
       margin-bottom: 1rem;
@@ -481,6 +488,13 @@
       justify-content: space-between;
       align-items: flex-start;
       gap: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+      transition: all 0.2s ease;
+    }
+
+    .bill-card:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .10);
+      border-color: #e0e0e0;
     }
 
     .bill-card-left {
@@ -559,20 +573,23 @@
 
     .quick-action-btn {
       background: #fff;
-      border: 2px solid var(--border);
+      border: 1px solid #f0f0f0;
       border-radius: var(--radius-sm);
       padding: 1.5rem;
       text-align: center;
       cursor: pointer;
-      transition: 0.2s;
+      transition: all 0.2s ease;
       font-family: 'Sarabun', sans-serif;
       font-weight: 700;
       font-size: 0.95rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
     }
 
     .quick-action-btn:hover {
       border-color: var(--green);
       background: var(--green-pale);
+      box-shadow: 0 4px 16px rgba(45, 134, 83, 0.15);
+      transform: translateY(-2px);
     }
 
     .quick-action-icon {
@@ -694,6 +711,17 @@
       border-radius: var(--radius-sm);
       padding: 1.5rem;
       margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+      transition: all 0.2s ease;
+      border: 1px solid #f0f0f0;
+      border-left: 4px solid var(--blue);
+    }
+
+    .ticket-card:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .10);
+      border-top-color: #e0e0e0;
+      border-right-color: #e0e0e0;
+      border-bottom-color: #e0e0e0;
     }
 
     .ticket-header {
@@ -804,6 +832,7 @@
       align-items: center;
       gap: 0.3rem;
       color: var(--text-muted);
+      position: relative;
     }
 
     .nav-item.active {
@@ -816,6 +845,23 @@
 
     .nav-item-label {
       font-size: 0.7rem;
+    }
+
+    .nav-badge {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: var(--red);
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      margin-top: -2px;
     }
 
     /* Success/Error Boxes */
@@ -1300,18 +1346,22 @@
       <button class="nav-item active" onclick="goToPage('home')">
         <span class="nav-item-icon">🏠</span>
         <span class="nav-item-label">หน้าแรก</span>
+        <span class="nav-badge" id="home-badge" style="display: none;"></span>
       </button>
       <button class="nav-item" onclick="goToPage('bills')">
         <span class="nav-item-icon">💳</span>
         <span class="nav-item-label">บิล</span>
+        <span class="nav-badge" id="bills-badge" style="display: none;"></span>
       </button>
       <button class="nav-item" onclick="goToPage('services')">
         <span class="nav-item-icon">🔧</span>
         <span class="nav-item-label">ซ่อม</span>
+        <span class="nav-badge" id="services-badge" style="display: none;"></span>
       </button>
       <button class="nav-item" onclick="goToPage('community')">
         <span class="nav-item-icon">📢</span>
         <span class="nav-item-label">ประกาศ</span>
+        <span class="nav-badge" id="community-badge" style="display: none;"></span>
       </button>
       <button class="nav-item" onclick="goToPage('profile')">
         <span class="nav-item-icon">👤</span>
@@ -1544,9 +1594,11 @@
       loadTenantData().then(() => {
         console.log('✅ Data loaded, rendering home page...');
         renderHomePage();
+        updateNavBadges(); // Update badge counts after data loads
       }).catch(e => {
         console.error('⚠️ Error loading data, rendering with fallback:', e);
         renderHomePage(); // Render anyway with whatever data is available
+        updateNavBadges(); // Update badges even with fallback data
       });
     }
 
@@ -1703,6 +1755,31 @@
 
     function capitalize(str) {
       return str.replace(/-/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
+    }
+
+    // Update navigation badges with counts
+    function updateNavBadges() {
+      // Count unpaid bills
+      const bills = currentBills || [];
+      const unpaidBills = bills.filter(b => b.status === 'pending' || b.status === 'overdue').length;
+      const billsBadge = document.getElementById('bills-badge');
+      if (unpaidBills > 0) {
+        billsBadge.textContent = unpaidBills;
+        billsBadge.style.display = 'flex';
+      } else {
+        billsBadge.style.display = 'none';
+      }
+
+      // Count pending maintenance tickets
+      const tickets = getMaintenanceTickets();
+      const pendingTickets = tickets.filter(t => t.status === 'pending' || t.status === 'inprogress').length;
+      const servicesBadge = document.getElementById('services-badge');
+      if (pendingTickets > 0) {
+        servicesBadge.textContent = pendingTickets;
+        servicesBadge.style.display = 'flex';
+      } else {
+        servicesBadge.style.display = 'none';
+      }
     }
 
     // HOME PAGE
@@ -3052,6 +3129,9 @@
       }).join('');
 
       console.log(`✅ Rendered ${tickets.length} maintenance tickets`);
+
+      // Update badges after tickets are rendered
+      updateNavBadges();
     }
 
     function getMaintenanceTickets() {
@@ -3685,6 +3765,10 @@
           </div>
         `;
       }
+
+      // Update badges after bills are loaded
+      currentBills = bills || currentBills || [];
+      updateNavBadges();
     }
 
     // Navigate to bill payment page with full bill data (from card click)
