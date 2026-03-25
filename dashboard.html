@@ -8382,6 +8382,17 @@ function updateMaintenanceStatus(id,newStatus){
 
   item.updatedAt=new Date().toISOString().split('T')[0];
   saveMaintenance(mx);
+
+  // Sync to tenant's maintenance tickets
+  const tenantTickets=JSON.parse(localStorage.getItem('tenant_maintenance_tickets')||'[]');
+  const tenantTicket=tenantTickets.find(t=>t.id===id);
+  if(tenantTicket){
+    tenantTicket.status=item.status;
+    tenantTicket.updatedAt=item.updatedAt;
+    localStorage.setItem('tenant_maintenance_tickets',JSON.stringify(tenantTickets));
+    console.log('🔄 Synced ticket',id,'to tenant_maintenance_tickets');
+  }
+
   renderMaintenancePage();
   updateMxBadge();
   updateMaintenanceBadge();
@@ -8810,6 +8821,12 @@ function updateHousekeepingStatus(id,newStatus){
   item.status=newStatus;
   item.updatedAt=new Date().toISOString().split('T')[0];
   saveHousekeeping(hk);
+
+  // Broadcast to tenants if maintenance status changed
+  window.dispatchEvent(new CustomEvent('housekeeping_status_updated', {
+    detail: { id, status: newStatus, ticket: item }
+  }));
+
   renderHousekeepingList();
   updateMxBadge(); // Update combined badge
 }
