@@ -1956,25 +1956,32 @@
         const payments = paymentData ? JSON.parse(paymentData) : [];
 
         // Extract numeric month and short year from latestBill for comparison
-        // latestBill.month is Thai name (เมษายน), need to convert back to numeric
-        // latestBill.year is Buddhist year (2569), need to convert to short year (69)
+        // latestBill.month is Thai name, latestBill.year is Buddhist year (2569)
+        // Payment records use: month=numeric, year=short year (69)
         let billMonth = null;
         let billYear = null;
 
         if (latestBill.yearMonth) {
-          // Try parsing from yearMonth format (year_month format)
+          // Parse from yearMonth format (can be either CE year or short year)
           const [yearPart, monthPart] = latestBill.yearMonth.split('_');
           billMonth = parseInt(monthPart, 10);
-          billYear = parseInt(yearPart, 10);
+          const parsedYear = parseInt(yearPart, 10);
+
+          // Convert CE year to short year if needed (2026 → 26, 2025 → 25, etc)
+          if (parsedYear > 100) {
+            billYear = parsedYear - 2000; // 2026 → 26, 2025 → 25
+          } else {
+            billYear = parsedYear; // Already short year (69, 68, etc)
+          }
         }
 
-        // Find payment for latest bill - match by month and year (numeric, short year format)
+        // Find payment for latest bill - match by month and year
         const billPayment = payments.find(p => {
-          // Try exact billId match first
+          // Try exact billId match first (format: BILL-69-01-rooms-15)
           if (p.billId && latestBill.billId && p.billId === latestBill.billId) {
             return true;
           }
-          // Fallback: match by month/year (both should be numeric/short format)
+          // Fallback: match by month/year (payment uses numeric month and short year like 69)
           if (billMonth && billYear && p.month === billMonth && p.year === billYear) {
             return true;
           }
