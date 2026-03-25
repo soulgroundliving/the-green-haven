@@ -3016,12 +3016,10 @@
 
     function renderTicketsList() {
       const container = document.getElementById('ticketsList');
-      // Use Firebase data first, fallback to localStorage
-      let tickets = tenantFirebaseData.tickets || [];
+      // Always read fresh from localStorage (don't cache tenantFirebaseData)
+      let tickets = getMaintenanceTickets();
 
-      if (tickets.length === 0) {
-        tickets = getMaintenanceTickets();
-      }
+      console.log('📋 renderTicketsList - loaded',tickets.length,'tickets from storage');
 
       if (tickets.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">ยังไม่มีรายการแจ้งซ่อม</p>';
