@@ -1956,11 +1956,12 @@
         const payments = paymentData ? JSON.parse(paymentData) : [];
 
         // Extract numeric month and short year from latestBill for comparison
-        // latestBill.month is Thai name, latestBill.year is Buddhist year (2569)
+        // latestBill may have: Thai month name + Buddhist year, or yearMonth format
         // Payment records use: month=numeric, year=short year (69)
         let billMonth = null;
         let billYear = null;
 
+        // Try to extract from yearMonth if available
         if (latestBill.yearMonth) {
           // Parse from yearMonth format (can be either CE year or short year)
           const [yearPart, monthPart] = latestBill.yearMonth.split('_');
@@ -1975,6 +1976,25 @@
           } else {
             billYear = parsedYear; // Already short year (69, 68, etc)
           }
+        } else if (latestBill.month && latestBill.year) {
+          // Fallback: extract from Thai month name and Buddhist year
+          // latestBill.month is Thai name like 'กุมภาพันธ์', latestBill.year is 2569
+          const thaiMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                              'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+          // Find numeric month from Thai name
+          billMonth = thaiMonths.indexOf(latestBill.month);
+          if (billMonth === 0) {
+            // If not found, try to extract from yearMonth in latestBill
+            if (latestBill.yearMonth) {
+              const [_, monthPart] = latestBill.yearMonth.split('_');
+              billMonth = parseInt(monthPart, 10);
+            }
+          }
+
+          // Convert Buddhist year to short year
+          // 2569 → 69 (take last 2 digits)
+          billYear = latestBill.year % 100;
         }
 
         // Find payment for latest bill - match by month and year
