@@ -9,7 +9,7 @@ const DEFAULT_ROOMS_CONFIG = {
       { id: '15ก', name: 'ห้อง 15ก', rentPrice: 1500, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
       { id: '13', name: 'ห้อง 13', rentPrice: 1500, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
       { id: '14', name: 'ห้อง 14', rentPrice: 1200, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
-      { id: '15', name: 'ห้อง 15', rentPrice: 2736, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
+      { id: '15', name: 'ห้อง 15', rentPrice: 1200, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
       { id: '16', name: 'ห้อง 16', rentPrice: 2000, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
       { id: '17', name: 'ห้อง 17', rentPrice: 1500, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
       { id: '18', name: 'ห้อง 18', rentPrice: 1500, waterRate: 20, electricRate: 8, trashRate: 20, deleted: false },
