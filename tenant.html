@@ -1967,9 +1967,11 @@
           billMonth = parseInt(monthPart, 10);
           const parsedYear = parseInt(yearPart, 10);
 
-          // Convert CE year to short year if needed (2026 → 26, 2025 → 25, etc)
+          // Convert CE year to short year if needed
+          // CE 2026 → Buddhist 2569 → short year 69
+          // Formula: (CE year + 543) % 100 = short year
           if (parsedYear > 100) {
-            billYear = parsedYear - 2000; // 2026 → 26, 2025 → 25
+            billYear = (parsedYear + 543) % 100; // 2026 → 69, 2025 → 68, etc
           } else {
             billYear = parsedYear; // Already short year (69, 68, etc)
           }
