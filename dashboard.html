@@ -8393,12 +8393,16 @@ function updateMaintenanceStatus(id,newStatus){
 
   // Sync to tenant's maintenance tickets
   const tenantTickets=JSON.parse(localStorage.getItem('tenant_maintenance_tickets')||'[]');
+  console.log('🔍 Looking for ticket',id,'in tenant_maintenance_tickets:', tenantTickets.map(t=>t.id));
   const tenantTicket=tenantTickets.find(t=>t.id===id);
   if(tenantTicket){
+    console.log('✅ Found ticket, updating status from',tenantTicket.status,'to',item.status);
     tenantTicket.status=item.status;
     tenantTicket.updatedAt=item.updatedAt;
     localStorage.setItem('tenant_maintenance_tickets',JSON.stringify(tenantTickets));
     console.log('🔄 Synced ticket',id,'to tenant_maintenance_tickets');
+  } else {
+    console.log('❌ Ticket not found in tenant_maintenance_tickets');
   }
 
   renderMaintenancePage();
