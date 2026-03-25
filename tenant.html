@@ -1818,6 +1818,7 @@
 
       // Priority 1: Find pending bill
       let nextBill = currentBills.find(b => b.status === 'pending' || b.status === 'overdue');
+      console.log(`🔍 Looking for next payment bill... currentBills count: ${currentBills.length}`);
 
       // Priority 2: Get the latest bill by date (from actual bills data)
       if (!nextBill && currentBills.length > 0) {
@@ -1828,10 +1829,12 @@
           return dateB - dateA; // Most recent first
         });
         nextBill = sortedBills[0];
+        console.log(`📄 Latest bill found:`, nextBill);
       }
 
       if (nextBill && nextBill.total) {
         const amount = nextBill.total || 0;
+        console.log(`✅ Displaying bill total: ${amount}`);
         document.getElementById('nextPaymentAmount').textContent = `${amount.toLocaleString('th-TH')} บาท`;
 
         // Try to format dueDate if it's a valid date
@@ -1849,6 +1852,7 @@
         document.getElementById('nextPaymentDate').textContent = dueText !== '-' ? `ครบกำหนด: ${dueText}` : '-';
       } else {
         // Priority 3: Fallback to room rent if no bills available
+        console.log(`⚠️ No bill found, falling back to room rent: ${rentPrice}`);
         document.getElementById('nextPaymentAmount').textContent = `${rentPrice.toLocaleString('th-TH')} บาท`;
         document.getElementById('nextPaymentDate').textContent = '-';
       }
