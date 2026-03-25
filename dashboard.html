@@ -8276,7 +8276,22 @@ function addMaintenanceRequest(){
   const sanitizedRoom = window.SecurityUtils.sanitizeInput(room);
   const sanitizedDesc = window.SecurityUtils.sanitizeInput(desc);
   const mx=loadMaintenance();
-  mx.unshift({id:'T'+Date.now(),room:sanitizedRoom,desc:sanitizedDesc,category:cat,priority:pri,status:'pending',reportedAt:date,updatedAt:date});
+  mx.unshift({
+    id:'T'+Date.now(),
+    room:sanitizedRoom,
+    desc:sanitizedDesc,
+    category:cat,
+    priority:pri,
+    status:'pending',
+    reportedAt:date,
+    updatedAt:date,
+    assignedTo:null,
+    startedAt:null,
+    workNotes:null,
+    completedAt:null,
+    beforePhoto:null,
+    afterPhoto:null
+  });
   saveMaintenance(mx);
 
   // ===== AUDIT LOGGING =====
@@ -8302,6 +8317,17 @@ function updateMaintenanceStatus(id,newStatus){
   const mx=loadMaintenance();
   const item=mx.find(x=>x.id===id);
   if(!item)return;
+
+  // Show modal for assign or completion
+  if(newStatus==='inprogress'){
+    showAssignModal(id);
+    return;
+  }
+  if(newStatus==='done'){
+    showCompletionModal(id);
+    return;
+  }
+
   item.status=newStatus;
   item.updatedAt=new Date().toISOString().split('T')[0];
   saveMaintenance(mx);
@@ -8310,12 +8336,192 @@ function updateMaintenanceStatus(id,newStatus){
   updateMaintenanceBadge();
 }
 
+// ===== MODAL FUNCTIONS FOR MAINTENANCE =====
+function showAssignModal(id){
+  const mx=loadMaintenance();
+  const item=mx.find(x=>x.id===id);
+  if(!item)return;
+
+  const modal=document.createElement('div');
+  modal.id='mx-assign-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+
+  const content=document.createElement('div');
+  content.style.cssText='background:#fff;border-radius:12px;padding:24px;width:90%;max-width:450px;box-shadow:0 8px 24px rgba(0,0,0,.2);font-family:"Sarabun",sans-serif;';
+  content.innerHTML=`
+    <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">👤 เลือกผู้รับผิดชอบ</h2>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">ชื่อช่าง/ชื่อคน</label>
+      <input type="text" id="assigned-name" placeholder="เช่น สมชาย, นายช่างสมบูรณ์" value="${item.assignedTo||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">📸 ถ่ายรูปก่อน (Before)</label>
+      <input type="file" id="before-photo-input" accept="image/*" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;">
+      ${item.beforePhoto?'<div style="margin-top:8px;"><img src="'+item.beforePhoto+'" style="max-width:100%;height:120px;object-fit:cover;border-radius:6px;"></div>':''}
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="assignMaintenanceWorker(${id})" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ ยืนยัน</button>
+      <button onclick="closeAssignModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
+    </div>
+  `;
+
+  modal.appendChild(content);
+  modal.onclick=function(e){
+    if(e.target===modal)closeAssignModal();
+  };
+  document.body.appendChild(modal);
+
+  const photoInput=document.getElementById('before-photo-input');
+  if(photoInput){
+    photoInput.onchange=function(e){
+      const file=e.target.files[0];
+      if(file)handlePhotoUpload(file,'beforePhoto',id);
+    };
+  }
+}
+
+function showCompletionModal(id){
+  const mx=loadMaintenance();
+  const item=mx.find(x=>x.id===id);
+  if(!item)return;
+
+  const modal=document.createElement('div');
+  modal.id='mx-completion-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;overflow-y:auto;';
+
+  const content=document.createElement('div');
+  content.style.cssText='background:#fff;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 8px 24px rgba(0,0,0,.2);font-family:"Sarabun",sans-serif;margin:20px auto;';
+  content.innerHTML=`
+    <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">✅ บันทึกการเสร็จสิ้น</h2>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">📝 หมายเหตุการทำงาน</label>
+      <textarea id="work-notes" placeholder="อธิบายสิ่งที่ทำแล้ว เช่น ซ่อมแซมไฟฟ้า เปลี่ยนสวิตช์..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;resize:vertical;min-height:80px;">${item.workNotes||''}</textarea>
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">📸 ถ่ายรูปหลัง (After)</label>
+      <input type="file" id="after-photo-input" accept="image/*" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;">
+      ${item.afterPhoto?'<div style="margin-top:8px;"><img src="'+item.afterPhoto+'" style="max-width:100%;height:120px;object-fit:cover;border-radius:6px;"></div>':''}
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="completeMaintenanceTicket(${id})" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ เสร็จสิ้น</button>
+      <button onclick="closeCompletionModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
+    </div>
+  `;
+
+  modal.appendChild(content);
+  modal.onclick=function(e){
+    if(e.target===modal)closeCompletionModal();
+  };
+  document.body.appendChild(modal);
+
+  const photoInput=document.getElementById('after-photo-input');
+  if(photoInput){
+    photoInput.onchange=function(e){
+      const file=e.target.files[0];
+      if(file)handlePhotoUpload(file,'afterPhoto',id);
+    };
+  }
+}
+
+function handlePhotoUpload(file, fieldName, id){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const base64=e.target.result;
+    const mx=loadMaintenance();
+    const item=mx.find(x=>x.id===id);
+    if(!item)return;
+    item[fieldName]=base64;
+    saveMaintenance(mx);
+    renderMaintenancePage();
+  };
+  reader.readAsDataURL(file);
+}
+
+function assignMaintenanceWorker(id){
+  const assignedName=document.getElementById('assigned-name').value.trim();
+  if(!assignedName){
+    alert('กรุณากรอกชื่อผู้รับผิดชอบ');
+    return;
+  }
+  const mx=loadMaintenance();
+  const item=mx.find(x=>x.id===id);
+  if(!item)return;
+  item.assignedTo=assignedName;
+  item.status='inprogress';
+  item.startedAt=new Date().toISOString();
+  item.updatedAt=new Date().toISOString().split('T')[0];
+  saveMaintenance(mx);
+  closeAssignModal();
+  renderMaintenancePage();
+  updateMxBadge();
+  updateMaintenanceBadge();
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
+  t.textContent='✅ บันทึกผู้รับผิดชอบแล้ว';
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2500);
+}
+
+function completeMaintenanceTicket(id){
+  const workNotes=document.getElementById('work-notes').value.trim();
+  if(!workNotes){
+    alert('กรุณากรอกหมายเหตุการทำงาน');
+    return;
+  }
+  const mx=loadMaintenance();
+  const item=mx.find(x=>x.id===id);
+  if(!item)return;
+  item.workNotes=workNotes;
+  item.status='done';
+  item.completedAt=new Date().toISOString();
+  item.updatedAt=new Date().toISOString().split('T')[0];
+  saveMaintenance(mx);
+  closeCompletionModal();
+  renderMaintenancePage();
+  updateMxBadge();
+  updateMaintenanceBadge();
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
+  t.textContent='✅ บันทึกการเสร็จสิ้นแล้ว';
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2500);
+}
+
+function editMaintenance(id, field){
+  if(field==='assign'){
+    showAssignModal(id);
+  }
+}
+
+function closeAssignModal(){
+  const modal=document.getElementById('mx-assign-modal');
+  if(modal)modal.remove();
+}
+
+function closeCompletionModal(){
+  const modal=document.getElementById('mx-completion-modal');
+  if(modal)modal.remove();
+}
+
 function deleteMaintenanceRequest(id){
   if(!confirm('ลบรายการนี้?'))return;
   saveMaintenance(loadMaintenance().filter(x=>x.id!==id));
   renderMaintenancePage();
   updateMxBadge();
   updateMaintenanceBadge();
+}
+
+function calculateDuration(startedAt, completedAt){
+  if(!startedAt||!completedAt)return null;
+  const start=new Date(startedAt);
+  const end=new Date(completedAt);
+  const ms=end-start;
+  const mins=Math.floor(ms/60000);
+  const hours=Math.floor(mins/60);
+  const remMins=mins%60;
+  if(hours===0)return`${remMins} นาที`;
+  if(remMins===0)return`${hours} ชั่วโมง`;
+  return`${hours} ชั่วโมง ${remMins} นาที`;
 }
 
 function renderMaintenancePage(){
@@ -8337,17 +8543,22 @@ function renderMaintenancePage(){
   if(!filtered.length){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:.9rem;">ไม่มีรายการ</div>';return;}
   const fmt=d=>{if(!d)return'—';const p=d.split('-');return`${parseInt(p[2])} ${['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][parseInt(p[1])]}`;};
   el.innerHTML=`
-    <div class="mx-row mx-head"><div>ห้อง</div><div>รายละเอียด</div><div>หมวด</div><div>สถานะ</div><div>วันที่แจ้ง</div><div>เปลี่ยนสถานะ</div><div></div></div>
+    <div class="mx-row mx-head"><div>ห้อง</div><div>รายละเอียด</div><div>หมวด</div><div>ผู้รับผิดชอบ</div><div>สถานะ</div><div>วันที่แจ้ง</div><div>เวลาทำงาน</div><div>เปลี่ยนสถานะ</div><div></div></div>
     ${filtered.map(x=>`
     <div class="mx-row" style="${x.status==='done'?'opacity:.65;':''}">
       <div><strong>${x.room}</strong>${x.priority==='urgent'?'<span class="mx-urgent">ด่วน!</span>':''}</div>
-      <div style="font-size:.82rem;">${x.desc}</div>
+      <div style="font-size:.82rem;">
+        ${x.desc}
+        ${x.beforePhoto||x.afterPhoto?'<div style="margin-top:6px;"><span style="font-size:.7rem;color:var(--blue);">📸 มีรูปภาพ</span></div>':''}
+      </div>
       <div style="font-size:.78rem;color:var(--text-muted);">${MX_CAT_LABEL[x.category]||x.category}</div>
+      <div style="font-size:.82rem;">${x.assignedTo?'👤 '+x.assignedTo:'<span style="color:var(--text-muted);">ยังไม่มี</span>'}</div>
       <div><span class="mx-status-pill ${MX_STATUS_CLASS[x.status]||'mx-pending'}">${MX_STATUS_LABEL[x.status]||x.status}</span></div>
       <div style="font-size:.8rem;color:var(--text-muted);">${fmt(x.reportedAt)}</div>
+      <div style="font-size:.78rem;color:var(--text-muted);">${x.startedAt&&x.completedAt?'⏱️ '+calculateDuration(x.startedAt,x.completedAt):'—'}</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;">
         ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus(${x.id},'inprogress')">🔨 รับงาน</button>`:''}
-        ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateMaintenanceStatus(${x.id},'done')">✅ เสร็จ</button>`:''}
+        ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateMaintenanceStatus(${x.id},'done')">✅ เสร็จ</button><button class="mx-btn" style="background:#e0e0e0;color:#333;padding:4px 8px;font-size:.7rem;" onclick="editMaintenance(${x.id},'assign')">📝 อัปเดตผู้รับผิดชอบ</button>`:''}
         ${x.status==='done'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus(${x.id},'pending')">↩ เปิดใหม่</button>`:''}
       </div>
       <div><button class="mx-btn mx-btn-del" onclick="deleteMaintenanceRequest(${x.id})">🗑️</button></div>
