@@ -1032,13 +1032,8 @@
           <div class="room-details" id="homeRoomDetails">-</div>
         </div>
 
-        <div class="card">
-          <div style="text-align: center;">
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">ค่าเช่าครบกำหนด</p>
-            <div style="font-size: 2.5rem; font-weight: 800; color: var(--green); margin-bottom: 1rem;" id="nextPaymentAmount">-</div>
-            <p style="color: var(--text-muted); font-size: 0.9rem;" id="nextPaymentDate">-</p>
-          </div>
-        </div>
+        <!-- Bill Status Card (replaced dynamically) -->
+        <div id="billStatusContainer" style="display: contents;"></div>
 
         <!-- Outstanding Balance Card -->
         <div class="card" id="outstandingCard" style="display: none;">
@@ -1985,7 +1980,7 @@
         `;
       }
 
-      document.getElementById('nextPaymentAmount').innerHTML = billStatusHTML;
+      document.getElementById('billStatusContainer').innerHTML = billStatusHTML;
 
       // Calculate outstanding balance
       const outstandingBills = currentBills.filter(b => b.status === 'pending' || b.status === 'overdue');
