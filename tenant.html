@@ -564,52 +564,68 @@
       background: linear-gradient(to right, rgba(244, 67, 54, 0.02), transparent);
     }
 
-    .bill-status-header {
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      color: var(--text);
-    }
-
-    .bill-status-content {
-      font-size: 0.95rem;
-    }
-
-    .status-item {
+    /* Status Badge Style - Compact Horizontal */
+    .bill-status-badge-container {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid #f5f5f5;
+      gap: 0.75rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+      background: #fff;
+      border: 2px solid #ddd;
+      transition: all 0.2s ease;
     }
 
-    .status-item:last-child {
-      border-bottom: none;
+    .bill-status-badge-container.status-ok {
+      border-color: var(--green);
+      background: linear-gradient(to right, rgba(76, 175, 80, 0.05), transparent);
     }
 
-    .status-item .label {
-      color: var(--text-muted);
-      font-weight: 500;
+    .bill-status-badge-container.status-warning {
+      border-color: #ff9800;
+      background: linear-gradient(to right, rgba(255, 152, 0, 0.05), transparent);
     }
 
-    .status-item .value {
-      font-weight: 600;
+    .bill-status-badge-container.status-overdue {
+      border-color: #f44336;
+      background: linear-gradient(to right, rgba(244, 67, 54, 0.05), transparent);
+    }
+
+    .badge-status {
+      font-weight: 700;
+      flex: 1;
+      white-space: nowrap;
+    }
+
+    .badge-status.status-ok {
+      color: var(--green);
+    }
+
+    .badge-status.status-warning {
+      color: #ff9800;
+    }
+
+    .badge-status.status-overdue {
+      color: #f44336;
+    }
+
+    .badge-amount {
+      font-weight: 700;
       color: var(--text);
+      white-space: nowrap;
     }
 
-    .status-item.penalty {
-      background: #fffcf5;
-      padding: 0.75rem;
-      border-radius: 4px;
-      margin-top: 0.5rem;
+    .badge-amount.with-penalty {
+      position: relative;
     }
 
-    .status-item.total {
-      background: #f5f5f5;
-      padding: 0.75rem;
-      border-radius: 4px;
-      margin-top: 0.5rem;
-      font-size: 1.05rem;
+    .badge-penalty-info {
+      font-size: 0.85rem;
+      color: #f44336;
+      font-weight: 600;
+      white-space: nowrap;
     }
 
     .text-success {
@@ -1940,42 +1956,20 @@
           statusClass = 'status-ok';
         }
 
+        // Status Badge - Compact inline format
         billStatusHTML = `
-          <div class="bill-status-card ${statusClass}">
-            <div class="bill-status-header">📊 สถานะบิล</div>
-            <div class="bill-status-content">
-              <div class="status-item">
-                <span class="label">วันชำระ</span>
-                <span class="value">ก่อนวันที่ 5 ของทุกเดือน</span>
-              </div>
-              <div class="status-item">
-                <span class="label">สถานะ</span>
-                <span class="value ${isOverdue ? 'text-danger' : 'text-success'}">${statusMsg}</span>
-              </div>
-              <div class="status-item">
-                <span class="label">จำนวนเงิน</span>
-                <span class="value">${(latestBill.total || 0).toLocaleString('th-TH')} บาท</span>
-              </div>
-              ${penalty > 0 ? `
-              <div class="status-item penalty">
-                <span class="label">ค่าปรับ (${daysOverdue} วัน × 100)</span>
-                <span class="value text-danger">${penalty.toLocaleString('th-TH')} บาท</span>
-              </div>
-              <div class="status-item total">
-                <span class="label"><strong>รวมจำนวน</strong></span>
-                <span class="value"><strong>${totalWithPenalty.toLocaleString('th-TH')} บาท</strong></span>
-              </div>
-              ` : ''}
+          <div class="bill-status-badge-container ${statusClass}">
+            <div class="badge-status ${statusClass}">${statusMsg}</div>
+            <div class="badge-amount ${penalty > 0 ? 'with-penalty' : ''}">
+              ${(latestBill.total || 0).toLocaleString('th-TH')} บาท
+              ${penalty > 0 ? `<div class="badge-penalty-info">+ ${penalty.toLocaleString('th-TH')} ปรับ</div>` : ''}
             </div>
           </div>
         `;
       } else {
         billStatusHTML = `
-          <div class="bill-status-card status-ok">
-            <div class="bill-status-header">📊 สถานะบิล</div>
-            <div class="bill-status-content">
-              <p style="text-align: center; color: #999;">ไม่มีข้อมูลบิล</p>
-            </div>
+          <div class="bill-status-badge-container status-ok">
+            <div class="badge-status status-ok">ℹ️ ไม่มีข้อมูลบิล</div>
           </div>
         `;
       }
