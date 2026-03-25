@@ -1812,7 +1812,8 @@
       bills: [],
       payments: [],
       tickets: [],
-      announcements: []
+      announcements: [],
+      meterData: {}
     };
 
     async function loadTenantData() {
@@ -2180,18 +2181,29 @@
         document.getElementById('pendingBillCount').textContent = `${outstandingBills.length} บิล`;
       }
 
-      // Display meter readings (latest)
+      // Display meter readings (latest from Firebase)
       try {
-        // Load from localStorage
         let meterData = null;
         const now = new Date();
         const currentYear = now.getFullYear();
         const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-        const meterKey = `meter_data_${currentYear}`;
-        const meterStorage = JSON.parse(localStorage.getItem(meterKey) || '{}');
         const monthKey = `${currentYear}-${currentMonth}`;
-        if (meterStorage[monthKey] && meterStorage[monthKey][currentRoom]) {
-          meterData = meterStorage[monthKey][currentRoom];
+
+        // Try to load from Firebase meter data first
+        if (tenantFirebaseData.meterData && tenantFirebaseData.meterData[currentYear]) {
+          const yearData = tenantFirebaseData.meterData[currentYear];
+          if (yearData[monthKey] && yearData[monthKey][currentRoom]) {
+            meterData = yearData[monthKey][currentRoom];
+          }
+        }
+
+        // Fallback to localStorage if Firebase data not available
+        if (!meterData) {
+          const meterKey = `meter_data_${currentYear}`;
+          const meterStorage = JSON.parse(localStorage.getItem(meterKey) || '{}');
+          if (meterStorage[monthKey] && meterStorage[monthKey][currentRoom]) {
+            meterData = meterStorage[monthKey][currentRoom];
+          }
         }
 
         if (meterData && (meterData.eNew || meterData.currentElectric)) {

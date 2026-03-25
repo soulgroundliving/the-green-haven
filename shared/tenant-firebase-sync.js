@@ -150,43 +150,84 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Load meter data from Firebase and populate localStorage
-   * This ensures meter readings are available for billing calculations
+   * Load meter data directly from Firebase
+   * Returns structure: {year: {monthKey: {roomId: {eNew, wNew, ...}}}}
    */
-  static async loadMeterData() {
+  static async loadMeterDataFromFirebase() {
     try {
-      if (typeof MeterDataManager === 'undefined') {
-        console.warn('⚠️ MeterDataManager not available');
-        return false;
+      if (!window.firebase?.firestore) {
+        console.warn('⚠️ Firebase Firestore not initialized');
+        return {};
       }
 
       // Determine which years to load (current and previous years)
       const currentDate = new Date();
       const currentBudYear = currentDate.getFullYear() + 543;
       const yearsToLoad = [currentBudYear - 2, currentBudYear - 1, currentBudYear];
-      // Also support short format (69 instead of 2569)
       const yearsToLoadShort = yearsToLoad.map(y => y % 100);
 
       console.log(`🔄 TenantFirebaseSync: Loading meter data from Firebase for building='${this.currentBuilding}'...`);
-      console.log(`   Trying year formats: full=${yearsToLoad.join(', ')} short=${yearsToLoadShort.join(', ')}`);
 
-      // Load meter data from Firebase (try full format first, then short format)
-      let success = await MeterDataManager.loadFromFirebase(this.currentBuilding, yearsToLoad);
-      if (!success) {
-        console.log('   Retrying with short year format (69, 68, 67)...');
-        success = await MeterDataManager.loadFromFirebase(this.currentBuilding, yearsToLoadShort);
+      const db = window.firebase.firestore();
+      const fs = window.firebase.firestoreFunctions;
+      const allMeterData = {};
+
+      // Try to load meter data for all years
+      for (const year of yearsToLoad.concat(yearsToLoadShort)) {
+        try {
+          const q = fs.query(
+            fs.collection(db, 'meter_data'),
+            fs.where('building', '==', this.currentBuilding),
+            fs.where('year', '==', year)
+          );
+
+          const querySnap = await fs.getDocs(q);
+
+          if (querySnap.size > 0) {
+            const yearKey = String(year).length === 2 ? (2500 + year) : year;
+            if (!allMeterData[yearKey]) {
+              allMeterData[yearKey] = {};
+            }
+
+            querySnap.forEach(doc => {
+              const data = doc.data();
+              const monthKey = `${yearKey}-${String(data.month).padStart(2, '0')}`;
+              const roomId = data.roomId;
+
+              if (!allMeterData[yearKey][monthKey]) {
+                allMeterData[yearKey][monthKey] = {};
+              }
+
+              allMeterData[yearKey][monthKey][roomId] = {
+                currentWater: data.wNew || 0,
+                currentElectric: data.eNew || 0,
+                waterStart: data.wOld || 0,
+                electricStart: data.eOld || 0,
+                eOld: data.eOld || 0,
+                eNew: data.eNew || 0,
+                wOld: data.wOld || 0,
+                wNew: data.wNew || 0,
+                recordedDate: data.updatedAt || data.createdAt || new Date().toISOString()
+              };
+            });
+
+            console.log(`   ✅ Loaded meter data for year ${year}`);
+          }
+        } catch (e) {
+          console.debug(`   ℹ️ No meter data for year ${year}: ${e.message}`);
+        }
       }
 
-      if (success) {
+      if (Object.keys(allMeterData).length > 0) {
         console.log('✅ TenantFirebaseSync: Meter data loaded from Firebase');
-        return true;
+        return allMeterData;
       } else {
-        console.warn('⚠️ TenantFirebaseSync: Failed to load meter data from Firebase with either format');
-        return false;
+        console.warn('⚠️ TenantFirebaseSync: No meter data found in Firebase');
+        return {};
       }
     } catch (error) {
-      console.error('❌ Error loading meter data:', error);
-      return false;
+      console.error('❌ Error loading meter data from Firebase:', error);
+      return {};
     }
   }
 
@@ -335,18 +376,16 @@ class TenantFirebaseSync {
       console.log('🔄 Loading all tenant data from Firebase...');
       console.log('   Building:', this.currentBuilding, 'Room:', this.currentRoom);
 
-      // Load meter data first (needed for billing calculations)
-      await this.loadMeterData().catch(e => { console.warn('Warning loading meter data:', e); });
-
-      // Load data in parallel
-      const [lease, room, bills, payments, tickets, announcements] =
+      // Load data in parallel (including meter data)
+      const [lease, room, bills, payments, tickets, announcements, meterData] =
         await Promise.all([
           this.loadLease().catch(e => { console.error('Error loading lease:', e); return null; }),
           this.loadRoom().catch(e => { console.error('Error loading room:', e); return null; }),
           this.loadBills().catch(e => { console.error('Error loading bills:', e); return []; }),
           this.loadPaymentHistory().catch(e => { console.error('Error loading payments:', e); return []; }),
           this.loadMaintenanceTickets().catch(e => { console.error('Error loading tickets:', e); return []; }),
-          this.loadAnnouncements().catch(e => { console.error('Error loading announcements:', e); return []; })
+          this.loadAnnouncements().catch(e => { console.error('Error loading announcements:', e); return []; }),
+          this.loadMeterDataFromFirebase().catch(e => { console.warn('Warning loading meter data:', e); return {}; })
         ]);
 
       // Tenant info comes from the lease object
@@ -365,7 +404,8 @@ class TenantFirebaseSync {
         bills: bills || [],
         payments: payments || [],
         tickets: tickets || [],
-        announcements: announcements || []
+        announcements: announcements || [],
+        meterData: meterData || {}
       };
 
       console.log('✅ All tenant data loaded:', {
@@ -377,7 +417,8 @@ class TenantFirebaseSync {
         billCount: (bills || []).length,
         paymentCount: (payments || []).length,
         ticketCount: (tickets || []).length,
-        announcementCount: (announcements || []).length
+        announcementCount: (announcements || []).length,
+        meterDataYears: Object.keys(meterData || {})
       });
       return allData;
     } catch (error) {
@@ -389,7 +430,8 @@ class TenantFirebaseSync {
         bills: [],
         payments: [],
         tickets: [],
-        announcements: []
+        announcements: [],
+        meterData: {}
       };
     }
   }
