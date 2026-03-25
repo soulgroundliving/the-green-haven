@@ -1526,11 +1526,8 @@
     <!-- Property -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">🏠 Property</div>
-      <button class="sidebar-item" onclick="window.showPage('rooms', this)">
-        <span class="sidebar-item-icon">🏠</span>ห้องแถว
-      </button>
-      <button class="sidebar-item" onclick="window.showPage('newbuild', this)">
-        <span class="sidebar-item-icon">📦</span>Nest
+      <button class="sidebar-item" onclick="window.showPage('property', this)">
+        <span class="sidebar-item-icon">📊</span>ข้อมูลห้องพัก
       </button>
       <button class="sidebar-item" onclick="window.showPage('maintenance', this)">
         <span class="sidebar-item-icon">🔧</span>แจ้งซ่อม<span class="sidebar-badge" id="mxBadge" style="display:none"></span>
@@ -1754,7 +1751,7 @@
   <div class="kpi-grid">
     <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-label">รายได้รวมทั้งปี</div><div class="kpi-value green" id="kpi-total">฿0</div><div class="kpi-sub" id="kpi-total-sub"></div></div>
     <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
-    <div class="kpi-card blue" style="cursor:pointer;" onclick="window.showPage('rooms',document.querySelector('[onclick*=\'rooms\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (ห้องแถว)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
+    <div class="kpi-card blue" style="cursor:pointer;" onclick="window.showPage('property',document.querySelector('[onclick*=\'property\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (ห้องแถว)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
     <div class="kpi-card purple" style="cursor:pointer;" onclick="window.showPage('bill',document.querySelector('[onclick*=\'bill\']'))"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
     <div class="kpi-card" style="background:linear-gradient(135deg, #e8f5e9, #f1f8e9); border-left: 4px solid #4caf50;"><div class="kpi-icon">📊</div><div class="kpi-label">รายได้คาดหวัง (เดือนนี้)</div><div class="kpi-value" id="kpi-expected" style="color:#2d8653;">฿0</div><div class="kpi-sub" id="kpi-expected-sub">จากห้องที่มีผู้เช่า</div></div>
     <div class="kpi-card" style="background:linear-gradient(135deg, #ffebee, #fce4ec); border-left: 4px solid #d32f2f;"><div class="kpi-icon">⚠️</div><div class="kpi-label">ค้างชำระทั้งสิ้น</div><div class="kpi-value" id="kpi-overdue" style="color:#d32f2f;">฿0</div><div class="kpi-sub" id="kpi-overdue-sub">รอชำระเงินค้าง</div></div>
@@ -1798,21 +1795,21 @@
 </div>
 
 <!-- ===== ROOMS (OLD BUILDING) ===== -->
-<div class="page" id="page-rooms">
+<div class="page" id="page-property">
   <div class="section-title">📊 ข้อมูลห้องพัก</div>
 
-  <!-- Building Tabs 
+  <!-- Building Tabs -->
   <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:2px solid #eee;flex-wrap:wrap;">
-    <button class="building-tab active" onclick="window.switchBuildingTab('newbuild', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#2d8653;border-bottom:3px solid #2d8653;margin-bottom:-2px;">
+    <button class="property-tab" id="tab-newbuild" onclick="window.switchPropertyTab('nest', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
       🏢 Nest Building
     </button>
-    <button class="building-tab" onclick="window.switchBuildingTab('rooms', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
+    <button class="property-tab active" id="tab-rooms" onclick="window.switchPropertyTab('rooms', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#2d8653;border-bottom:3px solid #2d8653;margin-bottom:-2px;">
       🏠 Rooms Building
     </button>
-  </div> -->
+  </div>
 
-  
-
+  <!-- Rooms Building Content -->
+  <div id="property-rooms-section">
   <div class="section-title" style="display:none;">🏠 ห้องแถว — ข้อมูลห้องพัก</div>
   
   <!-- Occupancy Dashboard -->
@@ -2021,10 +2018,10 @@
       </div>
     </div>
   </div>
-</div>
+  </div>
 
-<!-- ===== NEW BUILDING ===== -->
-<div class="page" id="page-newbuild">
+  <!-- Nest Building Content -->
+  <div id="property-nest-section" style="display:none;">
   <div id="rooms-content" class="section-title" style="display:none;">🏗️ Nest — ข้อมูลห้องพัก</div>
 
   <!-- Occupancy Dashboard -->
@@ -2282,7 +2279,7 @@
     <div class="compact-grid" id="nestCompactGrid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin-top:1rem;"></div>
   </div>
   </div>
-
+  </div>
 </div>
 
 <!-- ===== MONTHLY ===== -->
@@ -3323,8 +3320,7 @@ window._showPageImpl = function(page,btn){
     window._closeSidebarImpl();
   }
   if(page==='dashboard'){setTimeout(initDashboardCharts,100);updateDashboardLive();}
-  if(page==='rooms')initRoomsPage();
-  if(page==='newbuild')initNestPage();
+  if(page==='property')initPropertyPage();
   if(page==='monthly')initMonthlyPage();
   if(page==='tenant')initTenantPage();
   if(page==='expense')initExpensePage();
@@ -3378,6 +3374,47 @@ window._switchMeterTabImpl = function(tabName, btnElement) {
 };
 // Assign to global scope
 window.switchMeterTab = window._switchMeterTabImpl;
+
+window.switchPropertyTab = function(tab, el) {
+  // Hide all sections
+  const roomsSection = document.getElementById('property-rooms-section');
+  const nestSection = document.getElementById('property-nest-section');
+
+  if (roomsSection) roomsSection.style.display = 'none';
+  if (nestSection) nestSection.style.display = 'none';
+
+  // Remove active state from all tabs
+  document.querySelectorAll('.property-tab').forEach(btn => {
+    btn.style.color = '#999';
+    btn.style.borderBottom = '3px solid transparent';
+  });
+
+  // Show selected section and set active tab
+  if (tab === 'rooms') {
+    if (roomsSection) roomsSection.style.display = 'block';
+    if (el) {
+      el.style.color = '#2d8653';
+      el.style.borderBottom = '3px solid #2d8653';
+    }
+    // Initialize rooms page if needed
+    if (typeof initRoomsPage === 'function') {
+      initRoomsPage();
+    }
+  } else if (tab === 'nest') {
+    if (nestSection) nestSection.style.display = 'block';
+    if (el) {
+      el.style.color = '#2d8653';
+      el.style.borderBottom = '3px solid #2d8653';
+    }
+    // Initialize nest page if needed
+    if (typeof initNestPage === 'function') {
+      initNestPage();
+    }
+  }
+};
+
+// Keep old function name for backward compatibility
+window.switchBuildingTab = window.switchPropertyTab;
 
 // ===== IMPORT METER DATA FUNCTIONS =====
 let currentImportData = null;
@@ -6057,6 +6094,16 @@ function initNestPage(){
   }
 }
 
+// ===== PROPERTY PAGE (COMBINED ROOMS & NEST) =====
+function initPropertyPage(){
+  // Initialize the active tab based on current state
+  const roomsSection = document.getElementById('property-rooms-section');
+  const nestSection = document.getElementById('property-nest-section');
+
+  if(roomsSection) initRoomsPage();
+  if(nestSection) initNestPage();
+}
+
 // ===== MONTHLY PAGE =====
 let monthlyYear='67';
 function setMonthlyYear(yr,btn){
@@ -6535,8 +6582,8 @@ function getBillData(){
 }
 
 // ===== SLIPOK VERIFICATION =====
-const SLIPOK_URL = window.location.origin + '/api/slipok'; // Dynamic URL for local/production
-const SLIPOK_KEY = ''; // API key should be stored in environment variables, not code
+const SLIPOK_URL = 'https://api.slipok.com/api/line/apikey/62328';
+const SLIPOK_KEY = 'SLIPOK8P4B99Z';
 let slipVerified = false;
 let slipData = null;
 
@@ -6623,7 +6670,7 @@ function enableReceiptBtn(){
 }
 
 // ===== PROMPTPAY QR =====
-let PROMPTPAY_NUMBER = localStorage.getItem('promptpay') || '';
+let PROMPTPAY_NUMBER = localStorage.getItem('promptpay') || '0977826153';
 
 function crc16(str){
   let c=0xFFFF;
@@ -6654,11 +6701,17 @@ function buildPromptPayPayload(phone,amount){
 }
 
 function savePromptPay(){
-  const v=document.getElementById('pp-input').value.trim();
-  if(!v){alert('กรุณาใส่เลขพร้อมเพย์ เช่น 0XX-XXX-XXXX');return;}
-  PROMPTPAY_NUMBER=v;
-  localStorage.setItem('promptpay',v);
-  document.getElementById('pp-status').textContent='✅ บันทึกแล้ว: '+v;
+  try{
+    const v=document.getElementById('pp-input').value.trim();
+    if(!v){alert('กรุณาใส่เลขพร้อมเพย์ เช่น 0XX-XXX-XXXX');return;}
+    PROMPTPAY_NUMBER=v;
+    localStorage.setItem('promptpay',v);
+    document.getElementById('pp-status').textContent='✅ บันทึกแล้ว: '+v;
+    console.log('✅ PromptPay saved:',v);
+  }catch(e){
+    console.error('❌ Error saving PromptPay:',e);
+    alert('เกิดข้อผิดพลาด: '+e.message);
+  }
 }
 
 function renderQR(imgId,amount){
@@ -7816,39 +7869,11 @@ function verifyPayment(paymentId, status){
   payment.status = status;
   payment.verifiedAt = new Date().toLocaleString('th-TH');
 
-  // NEW: Generate receipt if payment is verified
-  if(status === 'verified' && typeof InvoiceReceiptManager !== 'undefined'){
-    try {
-      // Determine building from payment data
-      const building = payment.building || 'rooms';
-      const roomId = payment.room || payment.roomId;
-      const month = new Date().toLocaleString('th-TH', {year: 'numeric', month: '2-digit'}).replace(/\D/g, '').slice(-2);
-      const year = new Date().toLocaleString('th-TH', {year: 'numeric'}).slice(-2);
-
-      // Create invoice ID
-      const invoiceId = `INV-${roomId}-2569_${month}`;
-
-      // Create receipt from invoice
-      const receipt = InvoiceReceiptManager.createReceipt(building, invoiceId, {
-        amount: payment.amount,
-        paymentMethod: 'slip',
-        slipData: payment.slipData || {sender: payment.reporter || 'ผู้เช่า', date: payment.reportedAt},
-        slipOkVerified: true,
-        verifiedBy: 'admin1'
-      });
-
-      console.log('✅ Receipt generated:', receipt?.id);
-      payment.receiptId = receipt?.id;
-    } catch(error) {
-      console.warn('⚠️ Receipt generation skipped:', error);
-    }
-  }
-
   saveTenantPayments(payments);
 
   renderPaymentStats();
   renderPaymentList('all');
-  alert(status === 'verified' ? '✅ ยืนยันการชำระแล้ว และสร้างใบเสร็จ' : '✅ ปฏิเสธการชำระแล้ว');
+  alert(status === 'verified' ? '✅ ยืนยันการชำระแล้ว (คลิก ⬇️ ดาวน์โหลดใบเสร็จ)' : '✅ ปฏิเสธการชำระแล้ว');
 }
 
 function generateAdminReceipt(roomId, amount, verifiedAt) {
@@ -8134,6 +8159,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Pre-select current month in vacant room checker
   document.getElementById('vc-month').value=now.getMonth()+1;
   renderPaymentStatus();
+  // Ensure default PromptPay number is set
+  if(!localStorage.getItem('promptpay')){
+    localStorage.setItem('promptpay','0977826153');
+    PROMPTPAY_NUMBER='0977826153';
+  }
   // Restore saved PromptPay number
   if(PROMPTPAY_NUMBER){
     document.getElementById('pp-input').value=PROMPTPAY_NUMBER;
@@ -9232,11 +9262,15 @@ function saveTenantInfo() {
 
   // Refresh current page
   const currentPage = document.querySelector('.page.active');
-  if (currentPage && currentPage.id === 'page-rooms') {
-    initRoomsPage();
-    renderCompactRoomGrid();
-  } else if (currentPage && currentPage.id === 'page-newbuild') {
-    initNestPage();
+  if (currentPage && currentPage.id === 'page-property') {
+    // Check which section is visible and refresh accordingly
+    const nestSection = document.getElementById('property-nest-section');
+    if (nestSection && nestSection.style.display !== 'none') {
+      initNestPage();
+    } else {
+      initRoomsPage();
+      renderCompactRoomGrid();
+    }
   }
 
   // Show success message
@@ -10062,14 +10096,14 @@ function calculateOccupancy(buildingType = null) {
 window.calculateOccupancy = calculateOccupancy;
 
 function updateOccupancyDashboard() {
-  // Update Old Building (page-rooms)
+  // Update Old Building (page-property - rooms section)
   const oldMetrics = calculateOccupancy('old');
   document.getElementById('occupancy-total').textContent = oldMetrics.total;
   document.getElementById('occupancy-occupied').textContent = oldMetrics.occupied;
   document.getElementById('occupancy-vacant').textContent = oldMetrics.vacant;
   document.getElementById('occupancy-rate').textContent = oldMetrics.rate + '%';
 
-  // Update Nest Building (page-newbuild)
+  // Update Nest Building (page-property - nest section)
   const nestMetrics = calculateOccupancy('nest');
   document.getElementById('nest-occupancy-total').textContent = nestMetrics.total;
   document.getElementById('nest-occupancy-occupied').textContent = nestMetrics.occupied;
