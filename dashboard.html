@@ -8256,8 +8256,9 @@ function addMaintenanceRequest(){
   const sanitizedRoom = window.SecurityUtils.sanitizeInput(room);
   const sanitizedDesc = window.SecurityUtils.sanitizeInput(desc);
   const mx=loadMaintenance();
-  mx.unshift({
-    id:'T'+Date.now(),
+  const ticketId='T'+Date.now();
+  const newTicket={
+    id:ticketId,
     room:sanitizedRoom,
     desc:sanitizedDesc,
     category:cat,
@@ -8271,8 +8272,15 @@ function addMaintenanceRequest(){
     completedAt:null,
     beforePhoto:null,
     afterPhoto:null
-  });
+  };
+  mx.unshift(newTicket);
   saveMaintenance(mx);
+
+  // Also save to tenant_maintenance_tickets for realtime sync
+  const tenantTickets=JSON.parse(localStorage.getItem('tenant_maintenance_tickets')||'[]');
+  tenantTickets.unshift({...newTicket});
+  localStorage.setItem('tenant_maintenance_tickets',JSON.stringify(tenantTickets));
+  console.log('💾 Added new ticket to tenant_maintenance_tickets:', ticketId);
 
   // ===== AUDIT LOGGING =====
   if (window.logMaintenanceCreated) {
