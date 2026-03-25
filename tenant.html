@@ -1816,18 +1816,18 @@
         </div>
       `;
 
-      // Find next pending bill (or any unpaid bill)
+      // Priority 1: Find pending bill
       let nextBill = currentBills.find(b => b.status === 'pending' || b.status === 'overdue');
 
-      // If no pending bill, try to get the latest bill by date
+      // Priority 2: Get the latest bill by date (from actual bills data)
       if (!nextBill && currentBills.length > 0) {
-        // Find the bill with the most recent dueDate or billDate
-        nextBill = currentBills.reduce((latest, bill) => {
-          if (!latest) return bill;
-          const latestDate = new Date(latest.dueDate || latest.billDate || 0);
-          const billDate = new Date(bill.dueDate || bill.billDate || 0);
-          return billDate > latestDate ? bill : latest;
-        }, null);
+        // Sort bills by dueDate/billDate descending and get the most recent one
+        const sortedBills = [...currentBills].sort((a, b) => {
+          const dateA = new Date(a.dueDate || a.billDate || 0);
+          const dateB = new Date(b.dueDate || b.billDate || 0);
+          return dateB - dateA; // Most recent first
+        });
+        nextBill = sortedBills[0];
       }
 
       if (nextBill && nextBill.total) {
@@ -1848,20 +1848,8 @@
         }
         document.getElementById('nextPaymentDate').textContent = dueText !== '-' ? `ครบกำหนด: ${dueText}` : '-';
       } else {
-        // Fallback: Calculate expected total (rent + utilities)
-        // Use room configuration to calculate expected charges
-        let fallbackTotal = rentPrice || 0;
-        if (currentRoom && typeof RoomConfigManager !== 'undefined') {
-          const room = RoomConfigManager.getRoom(currentBuilding, currentRoom);
-          if (room) {
-            // Add water, electric, trash rates to rent
-            fallbackTotal = (room.rentPrice || rentPrice || 0)
-              + (room.waterRate || 8)
-              + (room.electricRate || 20)
-              + (room.trashRate || 20);
-          }
-        }
-        document.getElementById('nextPaymentAmount').textContent = `${fallbackTotal.toLocaleString('th-TH')} บาท`;
+        // Priority 3: Fallback to room rent if no bills available
+        document.getElementById('nextPaymentAmount').textContent = `${rentPrice.toLocaleString('th-TH')} บาท`;
         document.getElementById('nextPaymentDate').textContent = '-';
       }
 
