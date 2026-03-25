@@ -95,7 +95,7 @@ const ROOMS_OLD = [
   {id:'15ก',rent:1500,type:'room',elecRate:8,trashFee:20},
   {id:'13',rent:1500,type:'room',elecRate:8,trashFee:20},
   {id:'14',rent:1500,type:'room',elecRate:8,trashFee:20},
-  {id:'15',rent:2736,type:'room',elecRate:8,trashFee:20},
+  {id:'15',rent:1200,type:'room',elecRate:8,trashFee:20},
   {id:'16',rent:1500,type:'room',elecRate:8,trashFee:20},
   {id:'17',rent:1500,type:'room',elecRate:8,trashFee:20},
   {id:'18',rent:1500,type:'room',elecRate:8,trashFee:20},
