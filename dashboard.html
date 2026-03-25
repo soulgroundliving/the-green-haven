@@ -8372,6 +8372,10 @@ function updateMaintenanceStatus(id,newStatus){
     item.status='inprogress';
     item.startedAt=new Date().toISOString();
   } else if(newStatus==='done'){
+    // Ensure startedAt exists before marking done
+    if(!item.startedAt){
+      item.startedAt=new Date().toISOString(); // Auto-set if missing
+    }
     item.status='done';
     item.completedAt=new Date().toISOString();
   } else {
@@ -8596,7 +8600,11 @@ function calculateDuration(startedAt, completedAt){
   if(!startedAt||!completedAt)return null;
   const start=new Date(startedAt);
   const end=new Date(completedAt);
-  const ms=end-start;
+  let ms=end-start;
+
+  // Fix negative duration (from timezone or wrong order)
+  if(ms<0)ms=0;
+
   const mins=Math.floor(ms/60000);
   const hours=Math.floor(mins/60);
   const remMins=mins%60;
