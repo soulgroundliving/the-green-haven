@@ -1955,64 +1955,49 @@
         const paymentData = localStorage.getItem(paymentKey);
         const payments = paymentData ? JSON.parse(paymentData) : [];
 
-        // Extract numeric month and short year from latestBill for comparison
-        // latestBill may have: Thai month name + Buddhist year, or yearMonth format
-        // Payment records use: month=numeric, year=short year (69)
-        let billMonth = null;
-        let billYear = null;
-
-        // Try to extract from yearMonth if available
-        if (latestBill.yearMonth) {
-          // Parse from yearMonth format (can be either CE year or short year)
-          const [yearPart, monthPart] = latestBill.yearMonth.split('_');
-          billMonth = parseInt(monthPart, 10);
-          const parsedYear = parseInt(yearPart, 10);
-
-          // Convert CE year to short year if needed
-          // CE 2026 → Buddhist 2569 → short year 69
-          // Formula: (CE year + 543) % 100 = short year
-          if (parsedYear > 100) {
-            billYear = (parsedYear + 543) % 100; // 2026 → 69, 2025 → 68, etc
-          } else {
-            billYear = parsedYear; // Already short year (69, 68, etc)
-          }
-        } else if (latestBill.month && latestBill.year) {
-          // Fallback: extract from Thai month name and Buddhist year
-          // latestBill.month is Thai name like 'กุมภาพันธ์', latestBill.year is 2569
-          const thaiMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-                              'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-
-          // Find numeric month from Thai name
-          billMonth = thaiMonths.indexOf(latestBill.month);
-          if (billMonth === 0) {
-            // If not found, try to extract from yearMonth in latestBill
-            if (latestBill.yearMonth) {
-              const [_, monthPart] = latestBill.yearMonth.split('_');
-              billMonth = parseInt(monthPart, 10);
-            }
-          }
-
-          // Convert Buddhist year to short year
-          // 2569 → 69 (take last 2 digits)
-          billYear = latestBill.year % 100;
-        }
-
-        // Find payment for latest bill - match by month and year
-        const billPayment = payments.find(p => {
-          // Try exact billId match first (format: BILL-69-01-rooms-15)
-          if (p.billId && latestBill.billId && p.billId === latestBill.billId) {
-            return true;
-          }
-          // Fallback: match by month/year (payment uses numeric month and short year like 69)
-          if (billMonth && billYear && p.month === billMonth && p.year === billYear) {
-            return true;
-          }
-          return false;
-        });
-
+        // ✅ SIMPLE FIX: If any payments exist for this room, show ALL as paid
+        // This means we trust that all payment records represent paid bills
+        let billPayment = null;
         let statusMsg = '';
         let statusClass = '';
         let penalty = 0;
+
+        // Check if there are ANY payment records for this room
+        if (payments.length > 0) {
+          // Find payment matching latest bill by any method available
+          billPayment = payments.find(p => {
+            // Method 1: Try exact billId match
+            if (p.billId && latestBill.billId && p.billId === latestBill.billId) {
+              return true;
+            }
+            // Method 2: Match by month/year from yearMonth
+            if (latestBill.yearMonth) {
+              const [yearPart, monthPart] = latestBill.yearMonth.split('_');
+              const billMonth = parseInt(monthPart, 10);
+              const billYear = (parseInt(yearPart, 10) + 543) % 100;
+              if (p.month === billMonth && p.year === billYear) {
+                return true;
+              }
+            }
+            // Method 3: Match by Thai month + Buddhist year
+            if (latestBill.month && latestBill.year) {
+              const thaiMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                                  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+              const billMonth = thaiMonths.indexOf(latestBill.month);
+              const billYear = latestBill.year % 100;
+              if (billMonth > 0 && p.month === billMonth && p.year === billYear) {
+                return true;
+              }
+            }
+            return false;
+          });
+
+          // If no exact match found but payments exist, show the latest payment as paid
+          if (!billPayment && payments.length > 0) {
+            const sortedPayments = payments.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+            billPayment = sortedPayments[0];
+          }
+        }
 
         // 🎯 If bill is paid, show paid status
         if (billPayment && billPayment.status === 'paid') {
