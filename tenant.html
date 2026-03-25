@@ -538,6 +538,88 @@
       color: var(--green-dark);
     }
 
+    /* Bill Status Card */
+    .bill-status-card {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, .08);
+      border-left: 5px solid #999;
+      transition: all 0.2s ease;
+    }
+
+    .bill-status-card.status-ok {
+      border-left-color: var(--green);
+      background: linear-gradient(to right, rgba(76, 175, 80, 0.02), transparent);
+    }
+
+    .bill-status-card.status-warning {
+      border-left-color: #ff9800;
+      background: linear-gradient(to right, rgba(255, 152, 0, 0.02), transparent);
+    }
+
+    .bill-status-card.status-overdue {
+      border-left-color: #f44336;
+      background: linear-gradient(to right, rgba(244, 67, 54, 0.02), transparent);
+    }
+
+    .bill-status-header {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    .bill-status-content {
+      font-size: 0.95rem;
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    .status-item:last-child {
+      border-bottom: none;
+    }
+
+    .status-item .label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .status-item .value {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .status-item.penalty {
+      background: #fffcf5;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+    }
+
+    .status-item.total {
+      background: #f5f5f5;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+      font-size: 1.05rem;
+    }
+
+    .text-success {
+      color: var(--green) !important;
+    }
+
+    .text-danger {
+      color: #f44336 !important;
+    }
+
     .bill-status-badge.overdue {
       background: var(--red-pale);
       color: var(--red);
@@ -1822,46 +1904,88 @@
         </div>
       `;
 
-      // Priority 1: Find pending bill
-      let nextBill = currentBills.find(b => b.status === 'pending' || b.status === 'overdue');
-      console.log(`🔍 Looking for next payment bill... currentBills count: ${currentBills.length}`);
+      // 📊 BILL STATUS SECTION - Show payment deadline and penalty
+      let billStatusHTML = '';
 
-      // Priority 2: Get the latest bill by date (from actual bills data)
-      if (!nextBill && currentBills.length > 0) {
-        // Sort bills by dueDate/billDate descending and get the most recent one
-        const sortedBills = [...currentBills].sort((a, b) => {
-          const dateA = new Date(a.dueDate || a.billDate || 0);
-          const dateB = new Date(b.dueDate || b.billDate || 0);
-          return dateB - dateA; // Most recent first
-        });
-        nextBill = sortedBills[0];
-        console.log(`📄 Latest bill found:`, nextBill);
-      }
+      // Get latest bill
+      let latestBill = currentBills.length > 0 ? currentBills[0] : null;
 
-      if (nextBill && nextBill.total) {
-        const amount = nextBill.total || 0;
-        console.log(`✅ Displaying bill total: ${amount}`);
-        document.getElementById('nextPaymentAmount').textContent = `${amount.toLocaleString('th-TH')} บาท`;
+      if (latestBill) {
+        // Calculate deadline: 5th of next month
+        const billDate = new Date(latestBill.dueDate || latestBill.billDate || new Date());
+        const billMonth = billDate.getMonth();
+        const billYear = billDate.getFullYear();
 
-        // Try to format dueDate if it's a valid date
-        let dueText = '-';
-        try {
-          if (nextBill.dueDate) {
-            const dueDate = new Date(nextBill.dueDate);
-            if (!isNaN(dueDate.getTime())) {
-              dueText = dueDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-            }
-          }
-        } catch (e) {
-          console.log('Error formatting due date:', e);
+        // Deadline is 5th of the next month after bill date
+        const deadlineDate = new Date(billYear, billMonth + 1, 5);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        deadlineDate.setHours(0, 0, 0, 0);
+
+        // Calculate days
+        const daysUntilDeadline = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
+        const isOverdue = daysUntilDeadline < 0;
+        const daysOverdue = Math.abs(daysUntilDeadline);
+
+        // Calculate penalty if overdue
+        const penalty = isOverdue ? daysOverdue * 100 : 0;
+        const totalWithPenalty = (latestBill.total || 0) + penalty;
+
+        // Format status message
+        let statusMsg = '';
+        let statusClass = '';
+        if (isOverdue) {
+          statusMsg = `⚠️ สายแล้ว ${daysOverdue} วัน`;
+          statusClass = 'status-overdue';
+        } else if (daysUntilDeadline <= 3) {
+          statusMsg = `⏰ ใกล้หมดเขต ${daysUntilDeadline} วัน`;
+          statusClass = 'status-warning';
+        } else {
+          statusMsg = `✅ ยังไม่หมดเขต`;
+          statusClass = 'status-ok';
         }
-        document.getElementById('nextPaymentDate').textContent = dueText !== '-' ? `ครบกำหนด: ${dueText}` : '-';
+
+        billStatusHTML = `
+          <div class="bill-status-card ${statusClass}">
+            <div class="bill-status-header">📊 สถานะบิล</div>
+            <div class="bill-status-content">
+              <div class="status-item">
+                <span class="label">วันชำระ</span>
+                <span class="value">ก่อนวันที่ 5 ของทุกเดือน</span>
+              </div>
+              <div class="status-item">
+                <span class="label">สถานะ</span>
+                <span class="value ${isOverdue ? 'text-danger' : 'text-success'}">${statusMsg}</span>
+              </div>
+              <div class="status-item">
+                <span class="label">จำนวนเงิน</span>
+                <span class="value">${(latestBill.total || 0).toLocaleString('th-TH')} บาท</span>
+              </div>
+              ${penalty > 0 ? `
+              <div class="status-item penalty">
+                <span class="label">ค่าปรับ (${daysOverdue} วัน × 100)</span>
+                <span class="value text-danger">${penalty.toLocaleString('th-TH')} บาท</span>
+              </div>
+              <div class="status-item total">
+                <span class="label"><strong>รวมจำนวน</strong></span>
+                <span class="value"><strong>${totalWithPenalty.toLocaleString('th-TH')} บาท</strong></span>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
       } else {
-        // Priority 3: Fallback to room rent if no bills available
-        console.log(`⚠️ No bill found, falling back to room rent: ${rentPrice}`);
-        document.getElementById('nextPaymentAmount').textContent = `${rentPrice.toLocaleString('th-TH')} บาท`;
-        document.getElementById('nextPaymentDate').textContent = '-';
+        billStatusHTML = `
+          <div class="bill-status-card status-ok">
+            <div class="bill-status-header">📊 สถานะบิล</div>
+            <div class="bill-status-content">
+              <p style="text-align: center; color: #999;">ไม่มีข้อมูลบิล</p>
+            </div>
+          </div>
+        `;
       }
+
+      document.getElementById('nextPaymentAmount').innerHTML = billStatusHTML;
 
       // Calculate outstanding balance
       const outstandingBills = currentBills.filter(b => b.status === 'pending' || b.status === 'overdue');
