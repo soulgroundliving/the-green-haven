@@ -2774,6 +2774,11 @@
     <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
     <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
   </div>
+  <!-- List -->
+  <div class="card">
+    <div class="card-title">📋 รายการงานซ่อมทั้งหมด</div>
+    <div id="mxList"></div>
+  </div>
   <div class="mx-layout">
     <!-- Add Form Button -->
     <div style="margin-bottom:1rem;">
@@ -2797,11 +2802,6 @@
       </div>
     </div>
   </div>
-  <!-- List -->
-  <div class="card">
-    <div class="card-title">📋 รายการงานซ่อมทั้งหมด</div>
-    <div id="mxList"></div>
-  </div>
   </div><!-- END MAINTENANCE TAB -->
 
   <!-- HOUSEKEEPING TAB -->
@@ -2810,6 +2810,11 @@
     <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-pending" style="color:#e65100;">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
     <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
     <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
+  </div>
+  <!-- List -->
+  <div class="card">
+    <div class="card-title">📋 รายการบริการทำความสะอาดทั้งหมด</div>
+    <div id="hkList"></div>
   </div>
   <div class="mx-layout">
     <!-- Add Form -->
@@ -2855,11 +2860,6 @@
         <input type="text" id="hk-filter-room" oninput="renderHousekeepingList()" placeholder="ค้นหาห้อง...">
       </div>
     </div>
-  </div>
-  <!-- List -->
-  <div class="card">
-    <div class="card-title">📋 รายการบริการทำความสะอาดทั้งหมด</div>
-    <div id="hkList"></div>
   </div>
   </div><!-- END HOUSEKEEPING TAB -->
 </div>
