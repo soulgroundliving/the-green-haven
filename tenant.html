@@ -1454,14 +1454,25 @@
       }
     });
 
-    // Listen for maintenance status updates from admin dashboard
+    // Listen for maintenance status updates from admin dashboard (via custom event OR storage change)
     window.addEventListener('maintenance_status_updated', function(event) {
-      console.log('🔄 Maintenance status updated from admin:', event.detail);
-      // Refresh the ticket list if the services page is visible
+      console.log('🔄 Maintenance status updated from admin (event):', event.detail);
       const servicesPage = document.getElementById('page-services');
-      if (servicesPage && servicesPage.style.display !== 'none' && servicesPage.offsetParent !== null) {
+      if (servicesPage && servicesPage.style.display !== 'none') {
         console.log('📱 Services page visible, refreshing tickets...');
         renderTicketsList();
+      }
+    });
+
+    // Also listen for localStorage changes (works across browser tabs)
+    window.addEventListener('storage', function(event) {
+      if (event.key === 'tenant_maintenance_tickets') {
+        console.log('🔄 tenant_maintenance_tickets changed, refreshing...');
+        const servicesPage = document.getElementById('page-services');
+        if (servicesPage && servicesPage.style.display !== 'none') {
+          console.log('📱 Services page visible, rendering updated tickets...');
+          renderTicketsList();
+        }
       }
     });
 
