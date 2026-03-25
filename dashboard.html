@@ -8557,11 +8557,11 @@ function renderMaintenancePage(){
       <div style="font-size:.8rem;color:var(--text-muted);">${fmt(x.reportedAt)}</div>
       <div style="font-size:.78rem;color:var(--text-muted);">${x.startedAt&&x.completedAt?'⏱️ '+calculateDuration(x.startedAt,x.completedAt):'—'}</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;">
-        ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus(${x.id},'inprogress')">🔨 รับงาน</button>`:''}
-        ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateMaintenanceStatus(${x.id},'done')">✅ เสร็จ</button><button class="mx-btn" style="background:#e0e0e0;color:#333;padding:4px 8px;font-size:.7rem;" onclick="editMaintenance(${x.id},'assign')">📝 อัปเดตผู้รับผิดชอบ</button>`:''}
-        ${x.status==='done'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus(${x.id},'pending')">↩ เปิดใหม่</button>`:''}
+        ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus('${x.id}','inprogress')">🔨 รับงาน</button>`:''}
+        ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateMaintenanceStatus('${x.id}','done')">✅ เสร็จ</button><button class="mx-btn" style="background:#e0e0e0;color:#333;padding:4px 8px;font-size:.7rem;" onclick="editMaintenance('${x.id}','assign')">📝 อัปเดตผู้รับผิดชอบ</button>`:''}
+        ${x.status==='done'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus('${x.id}','pending')">↩ เปิดใหม่</button>`:''}
       </div>
-      <div><button class="mx-btn mx-btn-del" onclick="deleteMaintenanceRequest(${x.id})">🗑️</button></div>
+      <div><button class="mx-btn mx-btn-del" onclick="deleteMaintenanceRequest('${x.id}')">🗑️</button></div>
     </div>`).join('')}`;
 }
 
@@ -8689,11 +8689,11 @@ function renderHousekeepingList(){
       <div><span class="mx-status-pill ${HK_STATUS_CLASS[x.status]||'mx-pending'}">${HK_STATUS_LABEL[x.status]||x.status}</span></div>
       <div style="font-size:.8rem;color:var(--text-muted);">${fmt(x.submittedAt)}</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;">
-        ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus(${x.id},'inprogress')">🔨 เริ่ม</button>`:''}
-        ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateHousekeepingStatus(${x.id},'done')">✅ เสร็จ</button>`:''}
-        ${x.status==='done'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus(${x.id},'pending')">↩ เปิดใหม่</button>`:''}
+        ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus('${x.id}','inprogress')">🔨 เริ่ม</button>`:''}
+        ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateHousekeepingStatus('${x.id}','done')">✅ เสร็จ</button>`:''}
+        ${x.status==='done'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus('${x.id}','pending')">↩ เปิดใหม่</button>`:''}
       </div>
-      <div><button class="mx-btn mx-btn-del" onclick="deleteHousekeepingRequest(${x.id})">🗑️</button></div>
+      <div><button class="mx-btn mx-btn-del" onclick="deleteHousekeepingRequest('${x.id}')">🗑️</button></div>
     </div>`).join('')}`;
 }
 
