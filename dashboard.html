@@ -2716,6 +2716,10 @@
 
   <!-- MAINTENANCE TAB -->
   <div id="mx-maintenance-tab" class="dashboard-tab-content active">
+  <!-- NOTIFICATION BANNER -->
+  <div id="mx-notification-banner" style="display:none;background:#fff9c4;border-left:6px solid #fbc02d;padding:1rem;margin-bottom:1rem;border-radius:6px;">
+    <div style="color:#f57f17;font-weight:700;font-size:0.95rem;font-family:'Sarabun',sans-serif;">⚠️ <span id="mx-pending-count">0</span> รายการแจ้งซ่อม รอการตรวจสอบ</div>
+  </div>
   <div class="mx-kpi-grid">
     <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-pending" style="color:#e65100;">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
     <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
@@ -8211,6 +8215,7 @@ function initMaintenancePage(){
   renderMaintenancePage();
   renderHousekeepingList();
   updateMxBadge();
+  updateMaintenanceBadge();
 }
 
 function updateMxBadge(){
@@ -8223,6 +8228,20 @@ function updateMxBadge(){
   const total=mxPending+hkPending;
   if(total>0){badge.textContent=total;badge.style.display='inline-block';}
   else{badge.style.display='none';}
+}
+
+function updateMaintenanceBadge(){
+  const banner=document.getElementById('mx-notification-banner');
+  const pendingCount=document.getElementById('mx-pending-count');
+  if(!banner||!pendingCount)return;
+  const mx=loadMaintenance();
+  const pendingTickets=mx.filter(x=>x.status==='pending').length;
+  if(pendingTickets>0){
+    pendingCount.textContent=pendingTickets;
+    banner.style.display='block';
+  }else{
+    banner.style.display='none';
+  }
 }
 
 // Fixed to match tenant.html category names
@@ -8270,6 +8289,9 @@ function addMaintenanceRequest(){
   document.getElementById('mx-priority').value='normal';
   renderMaintenancePage();
   updateMxBadge();
+  updateMaintenanceBadge();
+  // Dispatch event for tenant app
+  window.dispatchEvent(new CustomEvent('maintenance_ticket_submitted', {detail:{room:sanitizedRoom,category:cat}}));
   // toast
   const t=document.createElement('div');
   t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
@@ -8285,6 +8307,7 @@ function updateMaintenanceStatus(id,newStatus){
   saveMaintenance(mx);
   renderMaintenancePage();
   updateMxBadge();
+  updateMaintenanceBadge();
 }
 
 function deleteMaintenanceRequest(id){
@@ -8292,6 +8315,7 @@ function deleteMaintenanceRequest(id){
   saveMaintenance(loadMaintenance().filter(x=>x.id!==id));
   renderMaintenancePage();
   updateMxBadge();
+  updateMaintenanceBadge();
 }
 
 function renderMaintenancePage(){
@@ -8300,6 +8324,8 @@ function renderMaintenancePage(){
   document.getElementById('mx-kpi-pending').textContent=mx.filter(x=>x.status==='pending').length;
   document.getElementById('mx-kpi-inprogress').textContent=mx.filter(x=>x.status==='inprogress').length;
   document.getElementById('mx-kpi-done').textContent=mx.filter(x=>x.status==='done').length;
+  // Update notification banner
+  updateMaintenanceBadge();
   // Filter
   const fs=document.getElementById('mx-filter-status')?.value||'all';
   const fr=(document.getElementById('mx-filter-room')?.value||'').toLowerCase();
@@ -8487,6 +8513,29 @@ function switchMaintenanceTab(tabName, btn) {
       initMaintenancePage();
     }
   }
+}
+
+// ===== TEST FUNCTION FOR MAINTENANCE NOTIFICATION =====
+function testMaintenanceNotification(){
+  const newTicket={
+    id:'T'+Date.now(),
+    room:'N101',
+    category:'electrical',
+    desc:'ไฟฟ้าช่วงไม่สว่าง',
+    status:'pending',
+    reportedAt:new Date().toISOString().split('T')[0],
+    priority:'normal'
+  };
+  const mx=loadMaintenance();
+  mx.unshift(newTicket);
+  saveMaintenance(mx);
+  renderMaintenancePage();
+  updateMxBadge();
+  updateMaintenanceBadge();
+  window.dispatchEvent(new CustomEvent('maintenance_ticket_submitted',{detail:{room:newTicket.room,category:newTicket.category}}));
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--blue);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
+  t.textContent='✅ Test ticket added: '+newTicket.room;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
 }
 
 // ===== ANNOUNCEMENTS MANAGEMENT =====
