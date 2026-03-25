@@ -100,3 +100,54 @@ if (!localStorage.getItem('payment_records_initialized')) {
 } else {
   console.log('✅ Payment records already initialized');
 }
+
+// ===== UPDATE STATUS BADGE TO SHOW PAID =====
+function updateStatusBadgeIfPaid() {
+  try {
+    // Get room from URL or data
+    const urlParams = new URLSearchParams(window.location.search);
+    const room = urlParams.get('room') || (typeof currentRoom !== 'undefined' ? currentRoom : null);
+    const building = room ? (room.includes('N') ? 'nest' : 'rooms') : 'rooms';
+
+    if (!room) return;
+
+    // Check if payment records exist for this room
+    const paymentKey = `payment_${building}_${room}`;
+    const paymentData = localStorage.getItem(paymentKey);
+
+    if (paymentData) {
+      const payments = JSON.parse(paymentData);
+      if (payments.length > 0) {
+        // Find latest payment
+        const latestPayment = payments.sort((a, b) =>
+          new Date(b.paymentDate) - new Date(a.paymentDate)
+        )[0];
+
+        if (latestPayment && latestPayment.status === 'paid') {
+          // Update badge
+          const badge = document.querySelector('.badge-status');
+          if (badge) {
+            const paidDate = new Date(latestPayment.paymentDate);
+            const paidDateStr = `${paidDate.getDate()}/${paidDate.getMonth() + 1}/${paidDate.getFullYear()}`;
+            badge.textContent = `✅ ชำระแล้ว ${paidDateStr}`;
+            badge.className = 'badge-status status-ok';
+
+            const container = document.querySelector('.bill-status-badge-container');
+            if (container) {
+              container.className = 'bill-status-badge-container status-ok';
+            }
+
+            console.log('✅ Updated bill status badge to PAID');
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.log('⚠️ Could not update status badge:', error.message);
+  }
+}
+
+// Update badge on page load
+document.addEventListener('DOMContentLoaded', updateStatusBadgeIfPaid);
+// Also try to update immediately in case page is already loaded
+setTimeout(updateStatusBadgeIfPaid, 500);
