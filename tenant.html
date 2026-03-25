@@ -2180,24 +2180,17 @@
         document.getElementById('pendingBillCount').textContent = `${outstandingBills.length} บิล`;
       }
 
-      // Display meter readings (latest)
+      // Display meter readings (latest) - from Firebase
       try {
-        // Load from localStorage
-        let meterData = null;
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-        const meterKey = `meter_data_${currentYear}`;
-        const meterStorage = JSON.parse(localStorage.getItem(meterKey) || '{}');
-        const monthKey = `${currentYear}-${currentMonth}`;
-        if (meterStorage[monthKey] && meterStorage[monthKey][currentRoom]) {
-          meterData = meterStorage[monthKey][currentRoom];
-        }
-
-        if (meterData && (meterData.eNew || meterData.currentElectric)) {
-          document.getElementById('meterReadingsCard').style.display = 'block';
-          document.getElementById('meterElectric').textContent = (meterData.eNew || meterData.currentElectric || 0).toLocaleString('th-TH');
-          document.getElementById('meterWater').textContent = (meterData.wNew || meterData.currentWater || 0).toLocaleString('th-TH');
+        // Get latest meter reading from Firebase data
+        if (tenantFirebaseData && tenantFirebaseData.meterData) {
+          const meterData = tenantFirebaseData.meterData;
+          if (meterData && (meterData.eNew || meterData.currentElectric)) {
+            document.getElementById('meterReadingsCard').style.display = 'block';
+            document.getElementById('meterElectric').textContent = (meterData.eNew || meterData.currentElectric || 0).toLocaleString('th-TH');
+            document.getElementById('meterWater').textContent = (meterData.wNew || meterData.currentWater || 0).toLocaleString('th-TH');
+            console.log('✅ Meter data loaded from Firebase');
+          }
         }
       } catch (e) {
         console.warn('⚠️ Error loading meter data for home page:', e);
