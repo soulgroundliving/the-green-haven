@@ -19,6 +19,8 @@
   <script src="./shared/tenant-firebase-sync.js"></script>
   <!-- Initialize Real Bills from JSON file (BEFORE test data) -->
   <script src="./init-real-bills.js"></script>
+  <!-- Mark old bills as paid (start fresh from today) -->
+  <script src="./mark-bills-paid.js"></script>
   <!-- Initialize Payment Records for all bills -->
   <script src="./init-payment-records.js"></script>
   <!-- Mock data for fallback -->
@@ -1051,7 +1053,7 @@
         </div>
 
         <!-- Bill Status Card (replaced dynamically) -->
-        <div id="billStatusContainer" style="display: contents;"></div>
+        <div id="billStatusContainer"></div>
 
         <!-- Outstanding Balance Card -->
         <div class="card" id="outstandingCard" style="display: none;">
@@ -1251,8 +1253,9 @@
             <div id="receiptContent"></div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
             <button class="btn btn-secondary" onclick="printReceipt()">🖨️ พิมพ์</button>
+            <button class="btn btn-success" onclick="downloadReceipt()">⬇️ ดาวน์โหลด</button>
             <button class="btn btn-primary" onclick="goToPage('bills')">← กลับไปบิล</button>
           </div>
         </div>
@@ -1951,57 +1954,62 @@
 
       if (latestBill) {
         // 💳 Check if bill has been paid
-        const paymentKey = `payment_${currentBuilding}_${currentRoom}`;
-        const paymentData = localStorage.getItem(paymentKey);
-        const payments = paymentData ? JSON.parse(paymentData) : [];
-
-        // ✅ SIMPLE FIX: If any payments exist for this room, show ALL as paid
-        // This means we trust that all payment records represent paid bills
         let billPayment = null;
         let statusMsg = '';
         let statusClass = '';
         let penalty = 0;
 
-        // Check if there are ANY payment records for this room
-        if (payments.length > 0) {
-          // Find payment matching latest bill by any method available
-          billPayment = payments.find(p => {
-            // Method 1: Try exact billId match
-            if (p.billId && latestBill.billId && p.billId === latestBill.billId) {
-              return true;
-            }
-            // Method 2: Match by month/year from yearMonth
-            if (latestBill.yearMonth) {
-              const [yearPart, monthPart] = latestBill.yearMonth.split('_');
-              const billMonth = parseInt(monthPart, 10);
-              const billYear = (parseInt(yearPart, 10) + 543) % 100;
-              if (p.month === billMonth && p.year === billYear) {
-                return true;
-              }
-            }
-            // Method 3: Match by Thai month + Buddhist year
-            if (latestBill.month && latestBill.year) {
-              const thaiMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-                                  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-              const billMonth = thaiMonths.indexOf(latestBill.month);
-              const billYear = latestBill.year % 100;
-              if (billMonth > 0 && p.month === billMonth && p.year === billYear) {
-                return true;
-              }
-            }
-            return false;
-          });
+        // First check: Bill status (for old bills marked as paid)
+        if (latestBill.status === 'paid') {
+          statusMsg = `✅ ชำระแล้ว`;
+          statusClass = 'status-ok';
+          billPayment = { status: 'paid' }; // Mark as found
+        } else {
+          // Second check: Payment records (for new bills with payment tracking)
+          const paymentKey = `payment_${currentBuilding}_${currentRoom}`;
+          const paymentData = localStorage.getItem(paymentKey);
+          const payments = paymentData ? JSON.parse(paymentData) : [];
 
-          // If no exact match found but payments exist, show the latest payment as paid
-          if (!billPayment && payments.length > 0) {
-            const sortedPayments = payments.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
-            billPayment = sortedPayments[0];
+          if (payments.length > 0) {
+            // Find payment matching latest bill by any method available
+            billPayment = payments.find(p => {
+              // Method 1: Try exact billId match
+              if (p.billId && latestBill.billId && p.billId === latestBill.billId) {
+                return true;
+              }
+              // Method 2: Match by month/year from yearMonth
+              if (latestBill.yearMonth) {
+                const [yearPart, monthPart] = latestBill.yearMonth.split('_');
+                const billMonth = parseInt(monthPart, 10);
+                const billYear = (parseInt(yearPart, 10) + 543) % 100;
+                if (p.month === billMonth && p.year === billYear) {
+                  return true;
+                }
+              }
+              // Method 3: Match by Thai month + Buddhist year
+              if (latestBill.month && latestBill.year) {
+                const thaiMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                                    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+                const billMonth = thaiMonths.indexOf(latestBill.month);
+                const billYear = latestBill.year % 100;
+                if (billMonth > 0 && p.month === billMonth && p.year === billYear) {
+                  return true;
+                }
+              }
+              return false;
+            });
+
+            // If no exact match found but payments exist, show the latest payment as paid
+            if (!billPayment && payments.length > 0) {
+              const sortedPayments = payments.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+              billPayment = sortedPayments[0];
+            }
           }
         }
 
         // 🎯 If bill is paid, show paid status
         if (billPayment && billPayment.status === 'paid') {
-          const paidDate = new Date(billPayment.paymentDate);
+          const paidDate = billPayment.paymentDate ? new Date(billPayment.paymentDate) : new Date();
           const paidDateStr = `${paidDate.getDate()}/${paidDate.getMonth() + 1}/${paidDate.getFullYear()}`;
           statusMsg = `✅ ชำระแล้ว ${paidDateStr}`;
           statusClass = 'status-ok';
@@ -3190,14 +3198,67 @@
           <div style="margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
             <div style="background: var(--green); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดการชำระ</div>
             <div style="padding: 1rem;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
-                <span style="color: var(--text);">ค่าเช่า</span>
-                <span style="font-weight: 700; color: var(--text);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--green);">
-                <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
-                <span style="font-weight: 800; font-size: 1.3rem; color: var(--green);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
-              </div>
+              ${(() => {
+                // Try to find bill data to show breakdown
+                let billData = null;
+                for (const y of [2567, 2568, 2569, 2570]) {
+                  const billsKey = `bills_${y}`;
+                  const billsData = localStorage.getItem(billsKey);
+                  if (billsData) {
+                    const yearBills = JSON.parse(billsData);
+                    const found = yearBills.find(b => b.roomId === currentRoom && b.building === currentBuilding &&
+                      ((b.month == currentBillMonth && b.year == currentBillYear) ||
+                       (b.month && currentPaymentMonth && b.month.toString().includes(currentPaymentMonth))));
+                    if (found) {
+                      billData = found;
+                      break;
+                    }
+                  }
+                }
+
+                if (billData && billData.charges) {
+                  return `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
+                      <span style="color: var(--text);">🏠 ค่าเช่า</span>
+                      <span style="font-weight: 600; color: var(--text);">฿${(billData.charges.rent || 0).toLocaleString('th-TH')}</span>
+                    </div>
+                    ${billData.charges.electric?.cost ? `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
+                      <span style="color: var(--text);">⚡ ค่าไฟฟ้า (${billData.charges.electric.usage || 0} หน่วย × ฿${billData.charges.electric.rate})</span>
+                      <span style="font-weight: 600; color: var(--text);">฿${billData.charges.electric.cost.toLocaleString('th-TH')}</span>
+                    </div>
+                    ` : ''}
+                    ${billData.charges.water?.cost ? `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
+                      <span style="color: var(--text);">💧 ค่าน้ำ (${billData.charges.water.usage || 0} หน่วย × ฿${billData.charges.water.rate})</span>
+                      <span style="font-weight: 600; color: var(--text);">฿${billData.charges.water.cost.toLocaleString('th-TH')}</span>
+                    </div>
+                    ` : ''}
+                    ${billData.charges.trash ? `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
+                      <span style="color: var(--text);">🗑️ ค่าขยะ</span>
+                      <span style="font-weight: 600; color: var(--text);">฿${billData.charges.trash.toLocaleString('th-TH')}</span>
+                    </div>
+                    ` : ''}
+                    <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--green);">
+                      <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
+                      <span style="font-weight: 800; font-size: 1.3rem; color: var(--green);">฿${(billData.totalCharge || currentPaymentAmount).toLocaleString('th-TH')}</span>
+                    </div>
+                  `;
+                } else {
+                  // Fallback: show total only
+                  return `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
+                      <span style="color: var(--text);">ค่าเช่า</span>
+                      <span style="font-weight: 700; color: var(--text);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--green);">
+                      <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
+                      <span style="font-weight: 800; font-size: 1.3rem; color: var(--green);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
+                    </div>
+                  `;
+                }
+              })()}
             </div>
           </div>
 
@@ -3265,6 +3326,185 @@
 
     function printReceipt() {
       window.print();
+    }
+
+    function downloadReceipt() {
+      try {
+        // Get receipt content
+        const receiptContent = document.getElementById('receiptContent').innerHTML;
+
+        if (!receiptContent) {
+          alert('⚠️ ไม่พบข้อมูลใบเสร็จ');
+          return;
+        }
+
+        // Create HTML document
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html lang="th">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>ใบเสร็จรับเงิน</title>
+            <style>
+              body {
+                font-family: 'Sarabun', Arial, sans-serif;
+                padding: 2rem;
+                background: #f5f5f5;
+                max-width: 1000px;
+                margin: 0 auto;
+              }
+              .receipt-container {
+                background: white;
+                padding: 2rem;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+              }
+              @media print {
+                body { background: white; padding: 0; }
+                .receipt-container { box-shadow: none; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="receipt-container">
+              ${receiptContent}
+            </div>
+          </body>
+          </html>
+        `;
+
+        // Create blob and download
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const link = document.createElement('a');
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '');
+
+        link.href = URL.createObjectURL(blob);
+        link.download = `receipt-${currentRoom}-${dateStr}-${timeStr}.html`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+        console.log('✅ Receipt downloaded successfully');
+      } catch (error) {
+        console.error('❌ Error downloading receipt:', error);
+        alert('⚠️ เกิดข้อผิดพลาดในการดาวน์โหลดใบเสร็จ: ' + error.message);
+      }
+    }
+
+    function downloadReceiptForBill(billId, monthName, year) {
+      try {
+        // Get bill from localStorage
+        let bill = null;
+        for (const y of [2567, 2568, 2569, 2570]) {
+          const billsKey = `bills_${y}`;
+          const billsData = localStorage.getItem(billsKey);
+          if (billsData) {
+            const yearBills = JSON.parse(billsData);
+            const found = yearBills.find(b => b.billId === billId);
+            if (found) {
+              bill = found;
+              break;
+            }
+          }
+        }
+
+        if (!bill) {
+          alert('❌ ไม่พบข้อมูลบิล: ' + billId);
+          return;
+        }
+
+        // Build receipt HTML (same as viewBillReceipt)
+        const receiptHTML = `
+          <div style="padding: 2rem; background: #fff; border-radius: 8px; border: 2px dashed #2d8653;">
+            <!-- Header -->
+            <div style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid var(--green); padding-bottom: 1rem;">
+              <h2 style="margin: 0 0 0.5rem 0; color: var(--green); font-size: 1.3rem;">ใบเสร็จรับเงิน</h2>
+              <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted);">Receipt</p>
+              <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--green); font-weight: 700;">✅ ชำระเงินแล้ว</div>
+            </div>
+
+            <!-- Receipt Info -->
+            <div style="margin-bottom: 1.5rem;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.95rem;">
+                <div>
+                  <div style="color: var(--text-muted); font-weight: 600;">อ้างอิงบิลที่</div>
+                  <div style="font-weight: 700; color: var(--text);">${bill.billId}</div>
+                </div>
+                <div>
+                  <div style="color: var(--text-muted); font-weight: 600;">ห้องเช่า</div>
+                  <div style="font-weight: 700; color: var(--text);">${currentRoom}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Amount -->
+            <div style="background: #f0fff4; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;">
+              <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">ยอดชำระเงิน</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--green);">฿${(bill.totalCharge || 0).toLocaleString('th-TH')}</div>
+            </div>
+
+            <!-- Date -->
+            <div style="margin-bottom: 1.5rem; font-size: 0.9rem;">
+              <div style="color: var(--text-muted); margin-bottom: 0.3rem;">วันที่ชำระ</div>
+              <div style="font-weight: 700; color: var(--text);">${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+            </div>
+
+            <!-- Footer -->
+            <div style="text-align: center; margin-top: 2rem; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid #e0e0e0; padding-top: 1rem;">
+              <p style="margin: 0;">ใบเสร็จฉบับนี้ใช้เป็นหลักฐานการชำระเงิน</p>
+              <p style="margin: 0.5rem 0 0 0;">The Green Haven Co., Ltd.</p>
+            </div>
+          </div>
+        `;
+
+        // Create HTML document
+        const fullHTML = `
+          <!DOCTYPE html>
+          <html lang="th">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>ใบเสร็จรับเงิน ${billId}</title>
+            <style>
+              body {
+                font-family: 'Sarabun', Arial, sans-serif;
+                padding: 2rem;
+                background: #f5f5f5;
+                max-width: 1000px;
+                margin: 0 auto;
+              }
+              @media print {
+                body { background: white; padding: 0; }
+              }
+            </style>
+          </head>
+          <body>
+            ${receiptHTML}
+          </body>
+          </html>
+        `;
+
+        // Create blob and download
+        const blob = new Blob([fullHTML], { type: 'text/html;charset=utf-8' });
+        const link = document.createElement('a');
+        const dateStr = new Date().toISOString().split('T')[0];
+
+        link.href = URL.createObjectURL(blob);
+        link.download = `receipt-${currentRoom}-${billId}-${dateStr}.html`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+        console.log('✅ Receipt for ' + billId + ' downloaded successfully');
+      } catch (error) {
+        console.error('❌ Error downloading receipt:', error);
+        alert('⚠️ เกิดข้อผิดพลาดในการดาวน์โหลดใบเสร็จ: ' + error.message);
+      }
     }
 
     // PAYMENT HISTORY PAGE
@@ -3971,7 +4211,7 @@
                         <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.8rem 1.6rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem; white-space: nowrap; box-shadow: 0 2px 8px rgba(45, 134, 83, 0.2);">
                           📋 ดูใบเสร็จ
                         </button>
-                        <button onclick="generateReceiptForBill('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.8rem 1.6rem; background: var(--blue); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem; white-space: nowrap; box-shadow: 0 2px 8px rgba(63, 81, 181, 0.2);">
+                        <button onclick="downloadReceiptForBill('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.8rem 1.6rem; background: var(--blue); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem; white-space: nowrap; box-shadow: 0 2px 8px rgba(63, 81, 181, 0.2);">
                           ⬇️ ดาวน์โหลด
                         </button>
                       </div>
