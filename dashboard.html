@@ -8405,6 +8405,24 @@ function updateMaintenanceStatus(id,newStatus){
     console.log('❌ Ticket not found in tenant_maintenance_tickets');
   }
 
+  // Sync to Firebase for tenant app to see
+  if(window.firebaseRef && window.firebaseUpdate && window.firebaseDatabase) {
+    try {
+      // Update in Firebase at maintenance/{building}/{room}/{id}
+      const room = item.room;
+      const maintenanceRef = window.firebaseRef(window.firebaseDatabase, `maintenance/rooms/${room}/${id}`);
+      window.firebaseUpdate(maintenanceRef, {
+        status: item.status,
+        updatedAt: item.updatedAt,
+        startedAt: item.startedAt,
+        completedAt: item.completedAt
+      });
+      console.log('🔥 Updated Firebase maintenance ticket:', id);
+    } catch(e) {
+      console.log('⚠️ Firebase update failed (fallback to localStorage only):', e.message);
+    }
+  }
+
   renderMaintenancePage();
   updateMxBadge();
   updateMaintenanceBadge();
