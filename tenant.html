@@ -1920,9 +1920,6 @@
       // 📊 BILL STATUS SECTION - Show payment deadline and penalty
       let billStatusHTML = '';
 
-      // DEBUG: Check if we're entering the bill status section
-      console.log('🔎 [BILL STATUS] renderHomePage called, currentBills=' + (currentBills ? currentBills.length : 'undefined'));
-
       // Get latest bill - Always prefer raw bill object from localStorage for payment matching
       let latestBill = null;
 
@@ -2012,14 +2009,6 @@
           }
           return false;
         });
-
-        // DEBUG: Log payment matching result
-        if (typeof console !== 'undefined') {
-          console.log(`🔍 Payment matching: billMonth=${billMonth}, billYear=${billYear}, found=${!!billPayment}`);
-          if (billPayment) {
-            console.log(`   Payment status: ${billPayment.status}, date: ${billPayment.paymentDate}`);
-          }
-        }
 
         let statusMsg = '';
         let statusClass = '';
