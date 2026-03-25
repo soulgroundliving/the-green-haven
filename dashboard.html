@@ -8394,16 +8394,32 @@ function updateMaintenanceStatus(id,newStatus){
   // Sync to tenant's maintenance tickets
   const tenantTickets=JSON.parse(localStorage.getItem('tenant_maintenance_tickets')||'[]');
   console.log('🔍 Looking for ticket',id,'in tenant_maintenance_tickets:', tenantTickets.map(t=>t.id));
-  const tenantTicket=tenantTickets.find(t=>t.id===id);
+  let tenantTicket=tenantTickets.find(t=>t.id===id);
+
   if(tenantTicket){
     console.log('✅ Found ticket, updating status from',tenantTicket.status,'to',item.status);
     tenantTicket.status=item.status;
     tenantTicket.updatedAt=item.updatedAt;
-    localStorage.setItem('tenant_maintenance_tickets',JSON.stringify(tenantTickets));
-    console.log('🔄 Synced ticket',id,'to tenant_maintenance_tickets');
   } else {
-    console.log('❌ Ticket not found in tenant_maintenance_tickets');
+    // If not found, add it with current data (for tickets that existed before tenant_maintenance_tickets)
+    console.log('⚠️ Ticket not found in tenant_maintenance_tickets, adding it now');
+    tenantTicket={
+      id: item.id,
+      room: item.room,
+      category: item.category,
+      title: item.title,
+      description: item.description,
+      status: item.status,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      startedAt: item.startedAt,
+      completedAt: item.completedAt
+    };
+    tenantTickets.unshift(tenantTicket);
   }
+
+  localStorage.setItem('tenant_maintenance_tickets',JSON.stringify(tenantTickets));
+  console.log('🔄 Synced ticket',id,'to tenant_maintenance_tickets with status:',tenantTicket.status);
 
   // Sync to Firebase for tenant app to see
   if(window.firebaseRef && window.firebaseUpdate && window.firebaseDatabase) {
