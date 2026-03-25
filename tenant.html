@@ -3545,6 +3545,8 @@
             </div>
           `;
           console.warn('ℹ️ No bills found for room:', currentRoom);
+          currentBills = [];
+          updateNavBadges();
           return;
         }
 
@@ -3756,6 +3758,10 @@
         container.innerHTML = html;
         console.log(`✅ Bills page loaded: ${filteredBills.length} bills (last 12 months) for room ${currentRoom}${sortedBills.length > filteredBills.length ? ` - Filtered from ${sortedBills.length} total bills` : ''}`);
 
+        // Update badges after bills are rendered
+        currentBills = filteredBills || bills || [];
+        updateNavBadges();
+
       } catch (error) {
         console.error('❌ Error loading bills:', error);
         container.innerHTML = `
@@ -3764,11 +3770,11 @@
             ไม่สามารถโหลดข้อมูลบิลได้: ${error.message}
           </div>
         `;
-      }
 
-      // Update badges after bills are loaded
-      currentBills = bills || currentBills || [];
-      updateNavBadges();
+        // Update badges even on error
+        currentBills = [];
+        updateNavBadges();
+      }
     }
 
     // Navigate to bill payment page with full bill data (from card click)
