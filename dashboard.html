@@ -8648,7 +8648,11 @@ function renderMaintenancePage(){
           <div class="mx-row-meta">
             <div><strong>หมวด:</strong> ${MX_CAT_LABEL[x.category]||x.category}</div>
             <div><strong>วันที่แจ้ง:</strong> ${fmt(x.reportedAt)}</div>
-            <div><strong>เวลาทำงาน:</strong> ${x.startedAt&&x.completedAt?'⏱️ '+calculateDuration(x.startedAt,x.completedAt):'—'}</div>
+            <div><strong>เวลาทำงาน:</strong> ${(() => {
+              if(!x.startedAt||!x.completedAt)return'—';
+              const dur = calculateDuration(x.startedAt,x.completedAt);
+              return dur==='0 นาที'?'ภายใน 1-2 วัน':'⏱️ '+dur;
+            })()}</div>
           </div>
           <div class="mx-row-actions">
             ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus('${x.id}','inprogress')">🔨 รับงาน</button>`:''}
