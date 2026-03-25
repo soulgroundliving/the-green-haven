@@ -1629,6 +1629,12 @@
           currentBills = tenantFirebaseData.bills || [];
 
           console.log('✅ Tenant data initialized from Firebase (currentRoom=' + currentRoom + ')');
+
+          // ⚠️ If Firebase didn't provide bills, load them from TenantManager
+          if (currentBills.length === 0) {
+            console.log('⚠️ No bills from Firebase, loading from TenantManager...');
+            loadBillsData();
+          }
         } else {
           // Fallback: use localStorage-based managers
           if (typeof LeaseAgreementManager !== 'undefined') {
