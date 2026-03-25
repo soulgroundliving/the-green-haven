@@ -1819,9 +1819,15 @@
       // Find next pending bill (or any unpaid bill)
       let nextBill = currentBills.find(b => b.status === 'pending' || b.status === 'overdue');
 
-      // If no pending bill, try to get the first bill (fallback)
+      // If no pending bill, try to get the latest bill by date
       if (!nextBill && currentBills.length > 0) {
-        nextBill = currentBills[0];
+        // Find the bill with the most recent dueDate or billDate
+        nextBill = currentBills.reduce((latest, bill) => {
+          if (!latest) return bill;
+          const latestDate = new Date(latest.dueDate || latest.billDate || 0);
+          const billDate = new Date(bill.dueDate || bill.billDate || 0);
+          return billDate > latestDate ? bill : latest;
+        }, null);
       }
 
       if (nextBill && nextBill.total) {
@@ -1842,8 +1848,20 @@
         }
         document.getElementById('nextPaymentDate').textContent = dueText !== '-' ? `ครบกำหนด: ${dueText}` : '-';
       } else {
-        // Use room rent as fallback
-        document.getElementById('nextPaymentAmount').textContent = `${rentPrice.toLocaleString('th-TH')} บาท`;
+        // Fallback: Calculate expected total (rent + utilities)
+        // Use room configuration to calculate expected charges
+        let fallbackTotal = rentPrice || 0;
+        if (currentRoom && typeof RoomConfigManager !== 'undefined') {
+          const room = RoomConfigManager.getRoom(currentBuilding, currentRoom);
+          if (room) {
+            // Add water, electric, trash rates to rent
+            fallbackTotal = (room.rentPrice || rentPrice || 0)
+              + (room.waterRate || 8)
+              + (room.electricRate || 20)
+              + (room.trashRate || 20);
+          }
+        }
+        document.getElementById('nextPaymentAmount').textContent = `${fallbackTotal.toLocaleString('th-TH')} บาท`;
         document.getElementById('nextPaymentDate').textContent = '-';
       }
 
