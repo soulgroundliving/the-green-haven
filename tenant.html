@@ -3618,13 +3618,13 @@
 
     // BILL TEMPLATE DOWNLOAD
     function downloadBillTemplate() {
+      // Get owner info for download (used throughout function)
+      const ownerInfo = typeof OwnerConfigManager !== 'undefined' ? OwnerConfigManager.getOwnerInfo() : {};
+      const ownerName = ownerInfo?.name || 'The Green Haven Co., Ltd.';
+      const buildingName = currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า';
+
       try {
         const templateContent = document.getElementById('billTemplatePreview').innerHTML;
-
-        // Get owner info for download
-        const ownerInfo = typeof OwnerConfigManager !== 'undefined' ? OwnerConfigManager.getOwnerInfo() : {};
-        const ownerName = ownerInfo?.name || 'The Green Haven Co., Ltd.';
-        const buildingName = currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า';
 
         const htmlContent = `<!DOCTYPE html>
 <html lang="th">
@@ -3772,7 +3772,6 @@
         const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        const ownerInfo = typeof OwnerConfigManager !== 'undefined' ? OwnerConfigManager.getOwnerInfo() : {};
         const fileName = ownerInfo?.name?.replace(/\s+/g, '-').toLowerCase() || 'the-green-haven';
         link.download = `bill-template-${fileName}.html`;
         document.body.appendChild(link);
