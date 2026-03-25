@@ -2182,27 +2182,16 @@
 
       // Display meter readings (latest)
       try {
-        // Try to get meter data from TenantManager
+        // Load from localStorage
         let meterData = null;
-        if (typeof TenantManager !== 'undefined') {
-          const meters = TenantManager.getMeterReadingsForRoom(currentBuilding, currentRoom);
-          if (meters && meters.length > 0) {
-            // Get the latest (first) reading
-            meterData = meters[0];
-          }
-        }
-
-        // Fallback: load from localStorage
-        if (!meterData) {
-          const now = new Date();
-          const currentYear = now.getFullYear();
-          const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-          const meterKey = `meter_data_${currentYear}`;
-          const meterStorage = JSON.parse(localStorage.getItem(meterKey) || '{}');
-          const monthKey = `${currentYear}-${currentMonth}`;
-          if (meterStorage[monthKey] && meterStorage[monthKey][currentRoom]) {
-            meterData = meterStorage[monthKey][currentRoom];
-          }
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const meterKey = `meter_data_${currentYear}`;
+        const meterStorage = JSON.parse(localStorage.getItem(meterKey) || '{}');
+        const monthKey = `${currentYear}-${currentMonth}`;
+        if (meterStorage[monthKey] && meterStorage[monthKey][currentRoom]) {
+          meterData = meterStorage[monthKey][currentRoom];
         }
 
         if (meterData && (meterData.eNew || meterData.currentElectric)) {
