@@ -8276,7 +8276,7 @@ function addMaintenanceRequest(){
   const sanitizedRoom = window.SecurityUtils.sanitizeInput(room);
   const sanitizedDesc = window.SecurityUtils.sanitizeInput(desc);
   const mx=loadMaintenance();
-  mx.unshift({id:Date.now(),room:sanitizedRoom,desc:sanitizedDesc,category:cat,priority:pri,status:'pending',reportedAt:date,updatedAt:date});
+  mx.unshift({id:'T'+Date.now(),room:sanitizedRoom,desc:sanitizedDesc,category:cat,priority:pri,status:'pending',reportedAt:date,updatedAt:date});
   saveMaintenance(mx);
 
   // ===== AUDIT LOGGING =====
@@ -8395,7 +8395,7 @@ function addHousekeepingRequest(){
 
   const hk=loadHousekeeping();
   hk.unshift({
-    id:Date.now(),
+    id:'HK'+Date.now(),
     room:sanitizedRoom,
     service:service,
     priority:priority,
