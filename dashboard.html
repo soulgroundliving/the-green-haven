@@ -2775,32 +2775,9 @@
     <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
   </div>
   <div class="mx-layout">
-    <!-- Add Form -->
-    <div class="card mx-form">
-      <div class="card-title">➕ แจ้งซ่อมใหม่</div>
-      <div class="form-grid">
-        <div><label>ห้อง</label><input type="text" id="mx-room" placeholder="เช่น 15ก, 22, Amazon"></div>
-        <div><label>วันที่แจ้ง</label><input type="date" id="mx-date"></div>
-      </div>
-      <div style="margin-bottom:12px;"><label>รายละเอียดปัญหา</label><textarea id="mx-desc" placeholder="เช่น ประตูปิดไม่สนิท, น้ำรั้ว, แอร์ไม่เย็น..."></textarea></div>
-      <div class="form-grid">
-        <div><label>หมวดหมู่</label>
-          <select id="mx-category">
-            <option value="electrical">⚡ ไฟฟ้า</option>
-            <option value="plumbing">🚿 ประปา/น้ำ</option>
-            <option value="repair">🔧 ซ่อมแซมทั่วไป</option>
-            <option value="ac">❄️ แอร์/พัดลม</option>
-            <option value="other">📦 อื่นๆ</option>
-          </select>
-        </div>
-        <div><label>ความสำคัญ</label>
-          <select id="mx-priority">
-            <option value="normal">🟡 ปกติ</option>
-            <option value="urgent">🔴 ด่วน</option>
-          </select>
-        </div>
-      </div>
-      <button onclick="addMaintenanceRequest()" style="width:100%;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:14px 16px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(76, 175, 80, 0.2);">📝 บันทึกงานซ่อม</button>
+    <!-- Add Form Button -->
+    <div style="margin-bottom:1rem;">
+      <button onclick="showAddMaintenanceModal()" style="width:100%;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:14px 16px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(76, 175, 80, 0.2);">➕ แจ้งซ่อมใหม่</button>
     </div>
     <!-- Filter panel -->
     <div class="mx-filter-panel">
@@ -8360,6 +8337,73 @@ function addMaintenanceRequest(){
   const t=document.createElement('div');
   t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
   t.textContent='✅ บันทึกงานซ่อมแล้ว';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
+  closeAddMaintenanceModal();
+}
+
+function showAddMaintenanceModal(){
+  const modal=document.createElement('div');
+  modal.id='mx-add-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+  modal.innerHTML=`<div style="background:#fff;border-radius:12px;padding:2rem;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <div style="font-size:1.3rem;font-weight:700;margin-bottom:1.5rem;color:var(--text);">➕ แจ้งซ่อมใหม่</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ห้อง</label><input type="text" id="mx-room-modal" placeholder="เช่น 15ก, 22, Amazon" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
+      <div><label style="font-weight:600;display:block;margin-bottom:6px;">วันที่แจ้ง</label><input type="date" id="mx-date-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
+    </div>
+    <div style="margin-bottom:1.5rem;"><label style="font-weight:600;display:block;margin-bottom:6px;">รายละเอียดปัญหา</label><textarea id="mx-desc-modal" placeholder="เช่น ประตูปิดไม่สนิท, น้ำรั้ว, แอร์ไม่เย็น..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;min-height:80px;resize:vertical;"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+      <div><label style="font-weight:600;display:block;margin-bottom:6px;">หมวดหมู่</label>
+        <select id="mx-category-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+          <option value="electrical">⚡ ไฟฟ้า</option>
+          <option value="plumbing">🚿 ประปา/น้ำ</option>
+          <option value="repair">🔧 ซ่อมแซมทั่วไป</option>
+          <option value="ac">❄️ แอร์/พัดลม</option>
+          <option value="other">📦 อื่นๆ</option>
+        </select>
+      </div>
+      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ความสำคัญ</label>
+        <select id="mx-priority-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+          <option value="normal">🟡 ปกติ</option>
+          <option value="urgent">🔴 ด่วน</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="addMaintenanceRequestFromModal()" style="flex:1;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกงานซ่อม</button>
+      <button onclick="closeAddMaintenanceModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">ยกเลิก</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click',e=>{if(e.target.id==='mx-add-modal')closeAddMaintenanceModal();});
+  // Set today's date
+  document.getElementById('mx-date-modal').valueAsDate=new Date();
+}
+
+function closeAddMaintenanceModal(){
+  const modal=document.getElementById('mx-add-modal');
+  if(modal)modal.remove();
+}
+
+function addMaintenanceRequestFromModal(){
+  const room=document.getElementById('mx-room-modal').value.trim();
+  const desc=document.getElementById('mx-desc-modal').value.trim();
+  const date=document.getElementById('mx-date-modal').value;
+  const cat=document.getElementById('mx-category-modal').value;
+  const pri=document.getElementById('mx-priority-modal').value;
+
+  if(!room||!desc||!date){
+    alert('กรุณากรอกข้อมูลให้ครบ');
+    return;
+  }
+
+  // Temporarily set form inputs for addMaintenanceRequest
+  document.getElementById('mx-room').value=room;
+  document.getElementById('mx-desc').value=desc;
+  document.getElementById('mx-date').value=date;
+  document.getElementById('mx-category').value=cat;
+  document.getElementById('mx-priority').value=pri;
+
+  addMaintenanceRequest();
 }
 
 function updateMaintenanceStatus(id,newStatus){
