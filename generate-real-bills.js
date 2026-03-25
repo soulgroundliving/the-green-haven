@@ -11,7 +11,7 @@ const ROOM_RATES = {
   'rooms': {
     '13': { rent: 1500, water: 8, electric: 20, common: 0, trash: 40 },
     '14': { rent: 1200, water: 8, electric: 20, common: 0, trash: 40 },
-    '15': { rent: 2736, water: 8, electric: 20, common: 0, trash: 40 },
+    '15': { rent: 1200, water: 8, electric: 20, common: 0, trash: 40 },
     '15ก': { rent: 1200, water: 8, electric: 20, common: 0, trash: 40 },
     '16': { rent: 1500, water: 8, electric: 20, common: 0, trash: 40 },
     '17': { rent: 1200, water: 8, electric: 20, common: 0, trash: 40 },
