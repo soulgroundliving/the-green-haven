@@ -2774,33 +2774,21 @@
     <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
     <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
   </div>
+  <!-- Action Bar -->
+  <div style="display:flex;gap:12px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
+    <input type="text" id="mx-filter-room" oninput="renderMaintenancePage()" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
+    <select id="mx-filter-status" onchange="renderMaintenancePage()" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
+      <option value="all">📋 ทั้งหมด</option>
+      <option value="pending">⏳ รอดำเนินการ</option>
+      <option value="inprogress">🔨 กำลังดำเนินการ</option>
+      <option value="done">✅ เสร็จแล้ว</option>
+    </select>
+    <button onclick="showAddMaintenanceModal()" style="padding:10px 18px;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s ease;box-shadow:0 2px 8px rgba(76, 175, 80, 0.2);white-space:nowrap;">➕ แจ้งซ่อมใหม่</button>
+  </div>
   <!-- List -->
   <div class="card">
     <div class="card-title">📋 รายการงานซ่อมทั้งหมด</div>
     <div id="mxList"></div>
-  </div>
-  <div class="mx-layout">
-    <!-- Add Form Button -->
-    <div style="margin-bottom:1rem;">
-      <button onclick="showAddMaintenanceModal()" style="width:100%;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:14px 16px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(76, 175, 80, 0.2);">➕ แจ้งซ่อมใหม่</button>
-    </div>
-    <!-- Filter panel -->
-    <div class="mx-filter-panel">
-      <div class="card-title" style="margin-bottom:16px;">🔍 กรองรายการ</div>
-      <div>
-        <label>สถานะ</label>
-        <select id="mx-filter-status" onchange="renderMaintenancePage()">
-          <option value="all">ทั้งหมด</option>
-          <option value="pending">⏳ รอดำเนินการ</option>
-          <option value="inprogress">🔨 กำลังดำเนินการ</option>
-          <option value="done">✅ เสร็จแล้ว</option>
-        </select>
-      </div>
-      <div>
-        <label>ห้อง</label>
-        <input type="text" id="mx-filter-room" oninput="renderMaintenancePage()" placeholder="ค้นหาห้อง...">
-      </div>
-    </div>
   </div>
   </div><!-- END MAINTENANCE TAB -->
 
@@ -2811,55 +2799,21 @@
     <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
     <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
   </div>
+  <!-- Action Bar -->
+  <div style="display:flex;gap:12px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
+    <input type="text" id="hk-filter-room" oninput="renderHousekeepingList()" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
+    <select id="hk-filter-status" onchange="renderHousekeepingList()" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
+      <option value="all">📋 ทั้งหมด</option>
+      <option value="pending">⏳ รอดำเนินการ</option>
+      <option value="inprogress">🔨 กำลังดำเนินการ</option>
+      <option value="done">✅ เสร็จแล้ว</option>
+    </select>
+    <button onclick="showAddHousekeepingModal()" style="padding:10px 18px;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s ease;box-shadow:0 2px 8px rgba(76, 175, 80, 0.2);white-space:nowrap;">➕ ขอบริการใหม่</button>
+  </div>
   <!-- List -->
   <div class="card">
     <div class="card-title">📋 รายการบริการทำความสะอาดทั้งหมด</div>
     <div id="hkList"></div>
-  </div>
-  <div class="mx-layout">
-    <!-- Add Form -->
-    <div class="card mx-form">
-      <div class="card-title">➕ ขอบริการทำความสะอาดใหม่</div>
-      <div class="form-grid">
-        <div><label>ห้อง</label><input type="text" id="hk-room" placeholder="เช่น 15ก, 22, Amazon"></div>
-        <div><label>วันที่ขอ</label><input type="date" id="hk-date"></div>
-      </div>
-      <div style="margin-bottom:12px;"><label>หมายเหตุพิเศษ</label><textarea id="hk-desc" placeholder="เช่น ฝังหนามความสะอาด, บริเวณให้ความสำคัญ..."></textarea></div>
-      <div class="form-grid">
-        <div><label>ประเภทบริการ</label>
-          <select id="hk-service">
-            <option value="standard">🧹 Standard (ทำความสะอาดมาตรฐาน)</option>
-            <option value="deep-clean">🧼 Deep-Clean (ทำความสะอาดเชิงลึก)</option>
-            <option value="linen-change">🛏️ Linen Change (เปลี่ยนผ้านวม/หมอน)</option>
-            <option value="urgent">⚡ Urgent (ด่วนพิเศษ)</option>
-          </select>
-        </div>
-        <div><label>ความสำคัญ</label>
-          <select id="hk-priority">
-            <option value="normal">🟡 ปกติ</option>
-            <option value="urgent">🔴 ด่วน</option>
-          </select>
-        </div>
-      </div>
-      <button onclick="addHousekeepingRequest()" style="width:100%;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:14px 16px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(76, 175, 80, 0.2);">📝 บันทึกการขอบริการ</button>
-    </div>
-    <!-- Filter panel -->
-    <div class="mx-filter-panel">
-      <div class="card-title" style="margin-bottom:16px;">🔍 กรองรายการ</div>
-      <div>
-        <label>สถานะ</label>
-        <select id="hk-filter-status" onchange="renderHousekeepingList()">
-          <option value="all">ทั้งหมด</option>
-          <option value="pending">⏳ รอดำเนินการ</option>
-          <option value="inprogress">🔨 กำลังดำเนินการ</option>
-          <option value="done">✅ เสร็จแล้ว</option>
-        </select>
-      </div>
-      <div>
-        <label>ห้อง</label>
-        <input type="text" id="hk-filter-room" oninput="renderHousekeepingList()" placeholder="ค้นหาห้อง...">
-      </div>
-    </div>
   </div>
   </div><!-- END HOUSEKEEPING TAB -->
 </div>
@@ -8735,6 +8689,71 @@ const HK_SERVICE_LABEL={
 const HK_STATUS_LABEL={'pending':'⏳ รอดำเนินการ','inprogress':'🔨 กำลังดำเนินการ','done':'✅ เสร็จแล้ว'};
 const HK_STATUS_CLASS={'pending':'mx-pending','inprogress':'mx-inprogress','done':'mx-done'};
 
+function showAddHousekeepingModal(){
+  const modal=document.createElement('div');
+  modal.id='hk-add-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+  modal.innerHTML=`<div style="background:#fff;border-radius:12px;padding:2rem;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <div style="font-size:1.3rem;font-weight:700;margin-bottom:1.5rem;color:var(--text);">➕ ขอบริการทำความสะอาดใหม่</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ห้อง</label><input type="text" id="hk-room-modal" placeholder="เช่น 15ก, 22, Amazon" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
+      <div><label style="font-weight:600;display:block;margin-bottom:6px;">วันที่ขอ</label><input type="date" id="hk-date-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
+    </div>
+    <div style="margin-bottom:1.5rem;"><label style="font-weight:600;display:block;margin-bottom:6px;">หมายเหตุพิเศษ</label><textarea id="hk-desc-modal" placeholder="เช่น ฝังหนามความสะอาด, บริเวณให้ความสำคัญ..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;min-height:80px;resize:vertical;"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ประเภทบริการ</label>
+        <select id="hk-service-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+          <option value="standard">🧹 Standard</option>
+          <option value="deep-clean">🧼 Deep-Clean</option>
+          <option value="linen-change">🛏️ Linen Change</option>
+          <option value="urgent">⚡ Urgent</option>
+        </select>
+      </div>
+      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ความสำคัญ</label>
+        <select id="hk-priority-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+          <option value="normal">🟡 ปกติ</option>
+          <option value="urgent">🔴 ด่วน</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="addHousekeepingRequestFromModal()" style="flex:1;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกการขอบริการ</button>
+      <button onclick="closeAddHousekeepingModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">ยกเลิก</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click',e=>{if(e.target.id==='hk-add-modal')closeAddHousekeepingModal();});
+  // Set today's date
+  document.getElementById('hk-date-modal').valueAsDate=new Date();
+}
+
+function closeAddHousekeepingModal(){
+  const modal=document.getElementById('hk-add-modal');
+  if(modal)modal.remove();
+}
+
+function addHousekeepingRequestFromModal(){
+  const room=document.getElementById('hk-room-modal').value.trim();
+  const desc=document.getElementById('hk-desc-modal').value.trim();
+  const date=document.getElementById('hk-date-modal').value;
+  const service=document.getElementById('hk-service-modal').value;
+  const priority=document.getElementById('hk-priority-modal').value;
+
+  if(!room||!date){
+    alert('กรุณากรอกข้อมูลให้ครบ');
+    return;
+  }
+
+  // Temporarily set form inputs for addHousekeepingRequest
+  document.getElementById('hk-room').value=room;
+  document.getElementById('hk-desc').value=desc;
+  document.getElementById('hk-date').value=date;
+  document.getElementById('hk-service').value=service;
+  document.getElementById('hk-priority').value=priority;
+
+  addHousekeepingRequest();
+}
+
 function addHousekeepingRequest(){
   // Validate housekeeping form
   const room=document.getElementById('hk-room')?.value?.trim()||'';
@@ -8781,6 +8800,7 @@ function addHousekeepingRequest(){
   t.textContent='✅ บันทึกการขอบริการแล้ว';
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),2500);
+  closeAddHousekeepingModal();
 }
 
 function updateHousekeepingStatus(id,newStatus){
