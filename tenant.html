@@ -3040,7 +3040,7 @@
                 <div class="ticket-details">${displayDate}</div>
               </div>
               <span class="ticket-status ${ticket.status}">
-                ${ticket.status === 'pending' ? '⏳ รอประมาณการ' : ticket.status === 'checking' ? '👀 ตรวจสอบ' : ticket.status === 'in-progress' ? '🔧 กำลังซ่อม' : '✅ เสร็จสิ้น'}
+                ${ticket.status === 'pending' ? '⏳ รอประมาณการ' : ticket.status === 'inprogress' ? '🔧 กำลังซ่อม' : ticket.status === 'done' ? '✅ เสร็จสิ้น' : '⏳ รอประมาณการ'}
               </span>
             </div>
             <div class="ticket-details" style="margin-top: 1rem;">
