@@ -1955,11 +1955,31 @@
         const paymentData = localStorage.getItem(paymentKey);
         const payments = paymentData ? JSON.parse(paymentData) : [];
 
-        // Find payment for latest bill
-        const billPayment = payments.find(p =>
-          p.billId === latestBill.billId ||
-          (p.month === latestBill.month && p.year === latestBill.year)
-        );
+        // Extract numeric month and short year from latestBill for comparison
+        // latestBill.month is Thai name (เมษายน), need to convert back to numeric
+        // latestBill.year is Buddhist year (2569), need to convert to short year (69)
+        let billMonth = null;
+        let billYear = null;
+
+        if (latestBill.yearMonth) {
+          // Try parsing from yearMonth format (year_month format)
+          const [yearPart, monthPart] = latestBill.yearMonth.split('_');
+          billMonth = parseInt(monthPart, 10);
+          billYear = parseInt(yearPart, 10);
+        }
+
+        // Find payment for latest bill - match by month and year (numeric, short year format)
+        const billPayment = payments.find(p => {
+          // Try exact billId match first
+          if (p.billId && latestBill.billId && p.billId === latestBill.billId) {
+            return true;
+          }
+          // Fallback: match by month/year (both should be numeric/short format)
+          if (billMonth && billYear && p.month === billMonth && p.year === billYear) {
+            return true;
+          }
+          return false;
+        });
 
         let statusMsg = '';
         let statusClass = '';
@@ -1974,11 +1994,11 @@
         } else {
           // 📅 If not paid, calculate deadline and status
           const billDate = new Date(latestBill.dueDate || latestBill.billDate || new Date());
-          const billMonth = billDate.getMonth();
-          const billYear = billDate.getFullYear();
+          const billDateMonth = billDate.getMonth();
+          const billDateYear = billDate.getFullYear();
 
           // Deadline is 5th of the next month after bill date
-          const deadlineDate = new Date(billYear, billMonth + 1, 5);
+          const deadlineDate = new Date(billDateYear, billDateMonth + 1, 5);
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           deadlineDate.setHours(0, 0, 0, 0);
