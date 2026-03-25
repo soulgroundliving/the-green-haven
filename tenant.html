@@ -15,6 +15,8 @@
   <script src="./shared/room-config.js"></script>
   <script src="./shared/tenant-config.js"></script>
   <script src="./shared/lease-config.js"></script>
+  <script src="./shared/owner-config.js"></script>
+  <script src="./shared/expense-manager.js"></script>
   <script src="./shared/tenant-manager.js"></script>
   <script src="./shared/tenant-firebase-sync.js"></script>
   <!-- Initialize Real Bills from JSON file (BEFORE test data) -->
@@ -1456,9 +1458,9 @@
         <!-- Bill Template Preview -->
         <div id="billTemplatePreview" style="background: white; border: 2px dashed #2d8653; border-radius: 8px; padding: 2rem; margin-bottom: 2rem;">
           <div style="text-align: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--green);">
-            <div style="font-size: 1.6rem; font-weight: 800; color: var(--text); margin-bottom: 0.2rem;">🌿 The Green Haven Co., Ltd.</div>
+            <div style="font-size: 1.6rem; font-weight: 800; color: var(--text); margin-bottom: 0.2rem;">🌿 <span id="billTemplateCompanyName">The Green Haven Co., Ltd.</span></div>
             <div style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.5rem;">โครงการ Nature Haven</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">อพาร์ทเมนต์ Nest</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">อพาร์ทเมนต์ <span id="billTemplateBuildingName">Nest</span></div>
             <div style="font-size: 1.2rem; font-weight: 700; color: var(--green); margin-bottom: 0.2rem;">📄 ใบวางบิล</div>
             <p style="color: var(--text-muted); margin: 0.3rem 0 0 0; font-size: 0.9rem;">Bill / Invoice</p>
           </div>
@@ -1528,7 +1530,7 @@
           <!-- Footer -->
           <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
             <p>ใบวางบิลนี้เป็นเพียงตัวอย่าง</p>
-            <p style="margin-bottom: 0;">The Green Haven Co., Ltd.</p>
+            <p style="margin-bottom: 0;"><span id="billTemplateFooterCompany">The Green Haven Co., Ltd.</span></p>
           </div>
         </div>
 
@@ -1793,10 +1795,12 @@
         console.log('✅ Data loaded, rendering home page...');
         renderHomePage();
         updateNavBadges(); // Update badge counts after data loads
+        updateBillTemplateWithOwnerInfo(); // Update bill template with owner info on startup
       }).catch(e => {
         console.error('⚠️ Error loading data, rendering with fallback:', e);
         renderHomePage(); // Render anyway with whatever data is available
         updateNavBadges(); // Update badges even with fallback data
+        updateBillTemplateWithOwnerInfo(); // Update bill template even with fallback
       });
     }
 
@@ -3270,10 +3274,14 @@
         const roomInfo = typeof RoomConfigManager !== 'undefined' ? RoomConfigManager.getRoom(currentBuilding, currentRoom) : null;
         const roomName = roomInfo?.name || `ห้อง ${currentRoom}`;
 
+        const ownerInfo = typeof OwnerConfigManager !== 'undefined' ? OwnerConfigManager.getOwnerInfo() : {};
+        const ownerName = ownerInfo?.name || 'The Green Haven Co., Ltd.';
+        const buildingDisplayName = currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า';
+
         const receiptHTML = `
           <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--green); padding-bottom: 1rem;">
-            <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 0.3rem;">🌿 The Green Haven Co., Ltd.</div>
-            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">อพาร์ทเมนต์ ${currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า'}</div>
+            <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 0.3rem;">🌿 ${ownerName}</div>
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">อพาร์ทเมนต์ ${buildingDisplayName}</div>
             <div style="font-size: 1.3rem; font-weight: 700; color: var(--green); margin-bottom: 0.2rem;">✅ ใบเสร็จรับเงิน / RECEIPT</div>
             <div style="font-size: 0.85rem; color: var(--text-muted);">เลขที่: ${receiptNo}</div>
           </div>
@@ -3612,12 +3620,17 @@
       try {
         const templateContent = document.getElementById('billTemplatePreview').innerHTML;
 
+        // Get owner info for download
+        const ownerInfo = typeof OwnerConfigManager !== 'undefined' ? OwnerConfigManager.getOwnerInfo() : {};
+        const ownerName = ownerInfo?.name || 'The Green Haven Co., Ltd.';
+        const buildingName = currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า';
+
         const htmlContent = `<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ใบวางบิล - The Green Haven</title>
+  <title>ใบวางบิล - ${ownerName}</title>
   <style>
     body {
       font-family: 'Sarabun', Arial, sans-serif;
@@ -3745,75 +3758,7 @@
 </head>
 <body>
   <div class="container">
-    <div style="text-align: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #2d8653;">
-      <div style="font-size: 1.6rem; font-weight: 800; color: #333; margin-bottom: 0.2rem;">🌿 The Green Haven Co., Ltd.</div>
-      <div style="font-size: 0.95rem; color: #999; margin-bottom: 0.5rem;">โครงการ Nature Haven</div>
-      <div style="font-size: 0.85rem; color: #999; margin-bottom: 1rem;">อพาร์ทเมนต์ Nest</div>
-      <div style="font-size: 1.2rem; font-weight: 700; color: #2d8653; margin-bottom: 0.2rem;">📄 ใบวางบิล</div>
-      <p style="color: #999; margin: 0.3rem 0 0 0; font-size: 0.9rem;">Bill / Invoice</p>
-    </div>
-
-    <hr>
-
-    <div class="info-grid">
-      <div class="info-item">
-        <div class="info-label">เลขที่บิล</div>
-        <div class="info-value">BILL-69-03-rooms-15</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">วันที่</div>
-        <div class="info-value">มีนาคม 2569</div>
-      </div>
-    </div>
-
-    <div class="info-grid" style="background: #f9f9f9; padding: 1rem; border-radius: 6px;">
-      <div class="info-item">
-        <div class="info-label">ห้องพัก</div>
-        <div class="info-value">15</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">ช่วงเวลา</div>
-        <div class="info-value">1 - 31 มีนาคม 2569</div>
-      </div>
-    </div>
-
-    <hr>
-
-    <div class="section">
-      <div class="section-title">รายละเอียดการคำนวณค่าใช้งาน</div>
-
-      <div class="charge-row">
-        <span class="charge-label">🏠 ค่าเช่า</span>
-        <span class="charge-value">฿1,200</span>
-      </div>
-
-      <div class="charge-row">
-        <span class="charge-label">⚡ ค่าไฟฟ้า (150 หน่วย × ฿8)</span>
-        <span class="charge-value">฿1,200</span>
-      </div>
-
-      <div class="charge-row">
-        <span class="charge-label">💧 ค่าน้ำ (10 หน่วย × ฿20)</span>
-        <span class="charge-value">฿200</span>
-      </div>
-
-      <div class="charge-row">
-        <span class="charge-label">🗑️ ค่าขยะ</span>
-        <span class="charge-value">฿40</span>
-      </div>
-
-      <div class="total-row">
-        <span class="total-label">รวมทั้งสิ้น</span>
-        <span class="total-value">฿2,640</span>
-      </div>
-    </div>
-
-    <hr>
-
-    <div class="footer">
-      <p>ใบวางบิลนี้เป็นเพียงตัวอย่าง</p>
-      <p style="margin-bottom: 0;">The Green Haven Co., Ltd.</p>
-    </div>
+    ${templateContent}
   </div>
 
   <div class="note">
@@ -3826,7 +3771,9 @@
         const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = 'bill-template-the-green-haven.html';
+        const ownerInfo = typeof OwnerConfigManager !== 'undefined' ? OwnerConfigManager.getOwnerInfo() : {};
+        const fileName = ownerInfo?.name?.replace(/\s+/g, '-').toLowerCase() || 'the-green-haven';
+        link.download = `bill-template-${fileName}.html`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -3834,6 +3781,29 @@
         console.error('Error downloading template:', error);
         alert('⚠️ เกิดข้อผิดพลาดในการดาวน์โหลดเทมเพลท: ' + error.message);
       }
+    }
+
+    // BILL TEMPLATE PAGE
+    function loadTemplate() {
+      updateBillTemplateWithOwnerInfo();
+    }
+
+    function updateBillTemplateWithOwnerInfo() {
+      // Get owner information
+      const ownerInfo = typeof OwnerConfigManager !== 'undefined' ? OwnerConfigManager.getOwnerInfo() : {};
+      const ownerName = ownerInfo?.name || 'The Green Haven Co., Ltd.';
+      const buildingName = currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า';
+
+      // Update template elements
+      const companyNameEl = document.getElementById('billTemplateCompanyName');
+      const buildingNameEl = document.getElementById('billTemplateBuildingName');
+      const footerCompanyEl = document.getElementById('billTemplateFooterCompany');
+
+      if (companyNameEl) companyNameEl.textContent = ownerName;
+      if (buildingNameEl) buildingNameEl.textContent = buildingName;
+      if (footerCompanyEl) footerCompanyEl.textContent = ownerName;
+
+      console.log('✅ Updated bill template with owner info:', ownerName, buildingName);
     }
 
     // PAYMENT HISTORY PAGE

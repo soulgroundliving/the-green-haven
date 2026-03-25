@@ -2,6 +2,7 @@
 // Centralized storage for property owner details
 
 const DEFAULT_OWNER_CONFIG = {
+  // ===== BASIC INFO =====
   id: '',
   name: '',
   idCardNumber: '',
@@ -12,9 +13,16 @@ const DEFAULT_OWNER_CONFIG = {
   district: '',
   province: '',
   postalCode: '',
+
+  // ===== TAX & BANKING =====
   taxId: '',
+  bankName: '',
   bankAccount: '',
-  bankName: ''
+
+  // ===== ACCOUNTING INFO =====
+  operationStartDate: '',  // วันเริ่มดำเนินการ (YYYY-MM-DD)
+  businessType: 'residential_rental',  // ประเภทธุรกิจ
+  businessCategory: ''  // หมวดหมู่ธุรกิจตามภาษี
 };
 
 class OwnerConfigManager {
