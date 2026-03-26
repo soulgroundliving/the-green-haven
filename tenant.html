@@ -3814,23 +3814,56 @@
       if (photoInput && photoInput.files && photoInput.files[0]) {
         try {
           const file = photoInput.files[0];
+
+          // Check file size (max 10MB)
+          const maxSize = 10 * 1024 * 1024; // 10MB
+          if (file.size > maxSize) {
+            showErrorNotification('⚠️ ไฟล์ใหญ่เกินไป\nขนาดสูงสุด 10MB');
+            return;
+          }
+
+          console.log(`📸 Processing file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+
           const reader = new FileReader();
+          let readTimeout;
+
           reader.onload = async function(e) {
+            clearTimeout(readTimeout); // Cancel timeout since load completed
             const photoData = e.target.result; // Base64 data URL
+            console.log('✅ File read as Base64');
             ticket.photo = photoData; // Store photo as base64
             ticket.photoFileName = file.name;
 
             // Save after photo is processed
             await saveMaintenanceTicket(ticket, reportedDate);
           };
+
           reader.onerror = function() {
-            alert('❌ ไม่สามารถอ่านไฟล์ได้');
+            clearTimeout(readTimeout);
+            showErrorNotification('❌ ไม่สามารถอ่านไฟล์ได้\nกรุณาลองใหม่');
+            console.error('❌ FileReader error:', reader.error);
           };
+
+          reader.onprogress = function(event) {
+            if (event.lengthComputable) {
+              const progress = Math.round((event.loaded / event.total) * 100);
+              console.log(`📊 Reading file: ${progress}%`);
+            }
+          };
+
+          // Set timeout for file reading (max 30 seconds)
+          readTimeout = setTimeout(() => {
+            reader.abort(); // Stop reading
+            showErrorNotification('⏱️ หมดเวลาอ่านไฟล์\nลองใหม่หรือเลือกไฟล์ที่เล็กกว่า');
+            console.error('❌ FileReader timeout - file too large or slow device');
+          }, 30000);
+
+          console.log('🔄 Starting to read file as Base64...');
           reader.readAsDataURL(file);
           return; // Don't continue until photo is loaded
         } catch (error) {
           console.error('❌ Error processing file:', error);
-          alert('❌ เกิดข้อผิดพลาดในการอัพโหลดไฟล์');
+          showErrorNotification('❌ เกิดข้อผิดพลาด\nกรุณาลองใหม่');
           return;
         }
       } else {
