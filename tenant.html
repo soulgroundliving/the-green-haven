@@ -3663,6 +3663,29 @@
           ? new Date(ticket.createdAt).toLocaleDateString('th-TH')
           : ticket.date;
 
+        const statusText = ticket.status === 'pending' ? '⏳ รอประมาณการ' :
+                          ticket.status === 'inprogress' ? '🔧 กำลังซ่อม' :
+                          ticket.status === 'done' ? '✅ เสร็จสิ้น' : '⏳ รอประมาณการ';
+
+        // Completion details (when done)
+        const completionHTML = ticket.status === 'done' ? `
+          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #eee;">
+            <div style="font-weight: 700; color: var(--green); margin-bottom: 1rem;">✅ ข้อมูลการซ่อมเสร็จ</div>
+            ${ticket.assignedTo ? `<div style="margin-bottom: 0.8rem;"><strong>👤 ผู้รับผิดชอบ:</strong> ${ticket.assignedTo}</div>` : ''}
+            ${ticket.notes ? `<div style="margin-bottom: 0.8rem;"><strong>📝 หมายเหตุ:</strong> ${ticket.notes}</div>` : ''}
+            ${ticket.completedAt ? `<div style="margin-bottom: 0.8rem;"><strong>📅 วันที่เสร็จ:</strong> ${new Date(ticket.completedAt).toLocaleDateString('th-TH')}</div>` : ''}
+            ${ticket.beforePhoto || ticket.afterPhoto ? `
+              <div style="margin-bottom: 0.8rem;">
+                <strong>📸 รูปภาพ:</strong>
+                <div style="display: flex; gap: 1rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                  ${ticket.beforePhoto ? `<img src="${ticket.beforePhoto}" alt="Before" style="max-width: 150px; max-height: 150px; border-radius: 6px; border: 1px solid #ddd;">` : ''}
+                  ${ticket.afterPhoto ? `<img src="${ticket.afterPhoto}" alt="After" style="max-width: 150px; max-height: 150px; border-radius: 6px; border: 1px solid #ddd;">` : ''}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        ` : '';
+
         return `
           <div class="ticket-card">
             <div class="ticket-header">
@@ -3671,13 +3694,14 @@
                 <div class="ticket-details">${displayDate}</div>
               </div>
               <span class="ticket-status ${ticket.status}">
-                ${ticket.status === 'pending' ? '⏳ รอประมาณการ' : ticket.status === 'inprogress' ? '🔧 กำลังซ่อม' : ticket.status === 'done' ? '✅ เสร็จสิ้น' : '⏳ รอประมาณการ'}
+                ${statusText}
               </span>
             </div>
             <div class="ticket-details" style="margin-top: 1rem;">
               <div style="margin-bottom: 0.5rem;"><strong>ประเภท:</strong> ${ticket.category || 'ไม่ระบุ'}</div>
               <div><strong>รายละเอียด:</strong> ${ticket.description || ticket.title || ''}</div>
             </div>
+            ${completionHTML}
           </div>
         `;
       }).join('');
