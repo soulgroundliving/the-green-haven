@@ -3939,16 +3939,16 @@
 
       let saveSuccess = false;
 
-      // ✅ STEP 0.5: Prepare photo (stored as Base64)
-      if (ticket.photo) {
+      // ✅ STEP 0.5: Prepare photo (stored as Base64) - beforePhoto is tenant's "before" photo
+      if (ticket.beforePhoto) {
         console.log('🖼️ Processing photo...');
-        const photoData = await uploadPhotoToStorage(ticket.photo, ticket.id);
+        const photoData = await uploadPhotoToStorage(ticket.beforePhoto, ticket.id);
         if (photoData) {
           console.log('📝 Photo stored as compressed Base64');
-          ticket.photo = photoData; // Keep as base64
+          ticket.beforePhoto = photoData; // Keep as base64
         } else {
           console.warn('⚠️ Photo processing failed, continuing without photo');
-          delete ticket.photo; // Remove photo data if processing failed
+          delete ticket.beforePhoto; // Remove photo data if processing failed
         }
       }
 
