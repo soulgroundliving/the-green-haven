@@ -1284,7 +1284,7 @@
             <textarea id="maintenanceDescription" required placeholder="เขียนรายละเอียดปัญหา..." style="width: 100%; margin-bottom: 1rem; padding: 0.8rem; border: 1px solid var(--border); border-radius: 6px; min-height: 80px; font-family: inherit;"></textarea>
 
             <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
-            <input type="file" id="maintenancePhoto" accept="image/*" style="margin-bottom: 1rem;">
+            <input type="file" id="maintenancePhoto" accept="image/*" style="margin-bottom: 1rem;" onchange="handleMaintenancePhotoChange('maintenancePhoto', 'maintenancePhotoPreview', 'maintenancePhotoImg')">
             <div id="maintenancePhotoPreview" style="margin-bottom: 1rem; text-align: center; display: none;">
               <img id="maintenancePhotoImg" style="max-width: 100%; height: auto; border-radius: 6px;">
             </div>
@@ -1315,7 +1315,7 @@
             <textarea id="maintenanceDescription" placeholder="เขียนอธิบายปัญหาโดยละเอียด..." required></textarea>
 
             <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
-            <input type="file" id="maintenancePhoto" accept="image/*" style="margin-bottom: 1rem;">
+            <input type="file" id="maintenancePhoto" accept="image/*" style="margin-bottom: 1rem;" onchange="handleMaintenancePhotoChange('maintenancePhoto', 'maintenancePhotoPreview', 'maintenancePhotoImg')">
             <div id="maintenancePhotoPreview" style="margin-bottom: 1rem; text-align: center; display: none;">
               <img id="maintenancePhotoImg" style="max-width: 100%; height: auto; border-radius: var(--radius-sm);">
             </div>
@@ -3729,7 +3729,13 @@
             </div>
             <div class="ticket-details" style="margin-top: 1rem;">
               <div style="margin-bottom: 0.5rem;"><strong>ประเภท:</strong> ${ticket.category || 'ไม่ระบุ'}</div>
-              <div><strong>รายละเอียด:</strong> ${ticket.description || ticket.title || ''}</div>
+              <div style="margin-bottom: 0.5rem;"><strong>รายละเอียด:</strong> ${ticket.description || ticket.title || ''}</div>
+              ${ticket.photo ? `
+                <div style="margin-top: 0.8rem;">
+                  <strong>📸 หลักฐาน:</strong>
+                  <img src="${ticket.photo}" alt="Maintenance photo" style="max-width: 200px; max-height: 200px; margin-top: 0.5rem; border-radius: 6px; border: 1px solid #ddd;">
+                </div>
+              ` : ''}
             </div>
             ${completionHTML}
           </div>
@@ -3747,11 +3753,31 @@
       return stored ? JSON.parse(stored) : [];
     }
 
+    // Handle maintenance photo preview
+    function handleMaintenancePhotoChange(inputId, previewId, imgId) {
+      const fileInput = document.getElementById(inputId);
+      const preview = document.getElementById(previewId);
+      const img = document.getElementById(imgId);
+
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          img.src = e.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+
     async function submitMaintenance(event) {
       event.preventDefault();
 
       const category = document.getElementById('maintenanceCategory').value;
       const description = document.getElementById('maintenanceDescription').value;
+      const photoInput = document.getElementById('maintenancePhoto');
 
       if (!category || !description) {
         alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน');
@@ -3777,6 +3803,37 @@
         submittedDate: new Date().toISOString(),
         priority: 'normal'
       };
+
+      // Handle file upload if provided
+      if (photoInput && photoInput.files && photoInput.files[0]) {
+        try {
+          const file = photoInput.files[0];
+          const reader = new FileReader();
+          reader.onload = async function(e) {
+            const photoData = e.target.result; // Base64 data URL
+            ticket.photo = photoData; // Store photo as base64
+            ticket.photoFileName = file.name;
+
+            // Save after photo is processed
+            await saveMaintenanceTicket(ticket, reportedDate);
+          };
+          reader.onerror = function() {
+            alert('❌ ไม่สามารถอ่านไฟล์ได้');
+          };
+          reader.readAsDataURL(file);
+          return; // Don't continue until photo is loaded
+        } catch (error) {
+          console.error('❌ Error processing file:', error);
+          alert('❌ เกิดข้อผิดพลาดในการอัพโหลดไฟล์');
+          return;
+        }
+      } else {
+        // No file provided, save directly
+        await saveMaintenanceTicket(ticket, reportedDate);
+      }
+    }
+
+    async function saveMaintenanceTicket(ticket, reportedDate) {
 
       console.log('📤 Submitting maintenance ticket:', ticket);
 
@@ -3808,7 +3865,9 @@
           priority: ticket.priority,    // Priority level
           status: ticket.status,        // Status (pending, inprogress, done)
           reportedAt: ticket.reportedAt, // Date in YYYY-MM-DD format
-          updatedAt: new Date().toISOString().split('T')[0]
+          updatedAt: new Date().toISOString().split('T')[0],
+          photo: ticket.photo,          // Include photo if provided
+          photoFileName: ticket.photoFileName
         };
 
         console.log('📝 Admin formatted ticket:', adminFormattedTicket);
