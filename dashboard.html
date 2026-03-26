@@ -8478,7 +8478,7 @@ function showAssignModal(id){
       <input type="text" id="assigned-name" placeholder="เช่น สมชาย, นายช่างสมบูรณ์" value="${item.assignedTo||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
     </div>
     <div style="display:flex;gap:10px;">
-      <button onclick="assignMaintenanceWorker(${id})" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ ยืนยัน</button>
+      <button onclick="assignMaintenanceWorker('${id}')" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ ยืนยัน</button>
       <button onclick="closeAssignModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
     </div>
   `;
@@ -8508,7 +8508,7 @@ function showNotesModal(id){
       <textarea id="work-notes" placeholder="อธิบายสิ่งที่ทำแล้ว เช่น ซ่อมแซมไฟฟ้า เปลี่ยนสวิตช์..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;resize:vertical;min-height:100px;">${item.workNotes||''}</textarea>
     </div>
     <div style="display:flex;gap:10px;">
-      <button onclick="saveWorkNotes(${id})" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
+      <button onclick="saveWorkNotes('${id}')" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
       <button onclick="closeNotesModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
     </div>
   `;
