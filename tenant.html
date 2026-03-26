@@ -3878,7 +3878,7 @@
             console.log('🗜️ Compressing image...');
             photoData = await compressImage(photoData, 1280, 1280, 0.75);
 
-            ticket.photo = photoData; // Store photo as compressed base64
+            ticket.beforePhoto = photoData; // Store photo as compressed base64 (shown as "before" in admin)
             ticket.photoFileName = file.name;
 
             // Save after photo is processed
@@ -3981,6 +3981,7 @@
           updatedAt: new Date().toISOString().split('T')[0],
           photoUrl: ticket.photoUrl,    // Firebase Storage URL for the photo
           photo: ticket.photo,          // Base64 encoded photo data (compressed)
+          beforePhoto: ticket.beforePhoto, // Tenant-uploaded "before" photo
           photoFileName: ticket.photoFileName
         };
 
