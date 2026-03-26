@@ -3921,14 +3921,32 @@
 
     async function uploadPhotoToStorage(base64Data, ticketId) {
       try {
-        if (!base64Data || !window.firebaseStorage || !window.firebaseStorageRef || !window.firebaseUploadBytes || !window.firebaseGetDownloadURL) {
-          console.warn('⚠️ Firebase Storage not initialized');
-          return null; // No photo or Firebase Storage not available
+        // Check if Firebase Storage is available
+        if (!base64Data) {
+          console.warn('⚠️ No photo data provided');
+          return null;
         }
+
+        if (!window.firebaseStorage) {
+          console.warn('⚠️ Firebase Storage not available - saving photo locally');
+          return base64Data; // Fall back to storing base64 locally
+        }
+
+        if (!window.firebaseStorageRef || !window.firebaseUploadBytes || !window.firebaseGetDownloadURL) {
+          console.warn('⚠️ Firebase Storage functions not initialized - saving photo locally');
+          return base64Data; // Fall back to storing base64 locally
+        }
+
+        console.log('📤 Uploading photo to Firebase Storage...');
 
         // Convert base64 to blob
         const arr = base64Data.split(',');
-        const mime = arr[0].match(/:(.*?);/)[1];
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        if (!mimeMatch) {
+          throw new Error('Invalid base64 format');
+        }
+
+        const mime = mimeMatch[1];
         const bstr = atob(arr[1]);
         const n = bstr.length;
         const u8arr = new Uint8Array(n);
@@ -3937,18 +3955,24 @@
         }
         const blob = new Blob([u8arr], { type: mime });
 
+        console.log(`📦 Blob size: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+
         // Upload to Firebase Storage
         const fileName = `maintenance_${currentBuilding}_${currentRoom}_${ticketId}_${Date.now()}.jpg`;
         const photoRef = window.firebaseStorageRef(window.firebaseStorage, `maintenance/${currentBuilding}/${currentRoom}/${fileName}`);
 
+        console.log('⏳ Uploading...');
         await window.firebaseUploadBytes(photoRef, blob);
+        console.log('✅ Upload complete, getting download URL...');
+
         const downloadUrl = await window.firebaseGetDownloadURL(photoRef);
 
         console.log('✅ Photo uploaded to Firebase Storage:', downloadUrl);
         return downloadUrl;
       } catch (error) {
-        console.warn('⚠️ Photo upload failed:', error.message);
-        return null;
+        console.error('❌ Photo upload to Firebase failed:', error.message, error);
+        console.warn('⚠️ Falling back to local storage...');
+        return base64Data; // Store photo locally as fallback
       }
     }
 
@@ -3961,10 +3985,23 @@
       // ✅ STEP 0.5: Upload photo to Firebase Storage if provided
       let photoUrl = null;
       if (ticket.photo) {
+        console.log('🖼️ Processing photo...');
         photoUrl = await uploadPhotoToStorage(ticket.photo, ticket.id);
         if (photoUrl) {
-          ticket.photoUrl = photoUrl; // Store the URL instead of base64
-          delete ticket.photo; // Remove large base64 data
+          if (photoUrl.startsWith('data:')) {
+            // Photo is stored as base64 (fallback)
+            console.log('📝 Photo stored as base64 (local fallback)');
+            ticket.photo = photoUrl; // Keep as base64
+          } else {
+            // Photo is uploaded to Firebase Storage
+            console.log('☁️ Photo stored in Firebase Storage');
+            ticket.photoUrl = photoUrl; // Store the Firebase URL
+            delete ticket.photo; // Remove large base64 data
+          }
+        } else {
+          // Photo processing failed completely
+          console.warn('⚠️ Photo processing failed, continuing without photo');
+          delete ticket.photo; // Remove photo data if processing failed
         }
       }
 
