@@ -26,7 +26,7 @@ async function populateRoom15Data() {
       tenantEmail: 'tenant15@test.com',
       moveInDate: '2026-01-01',
       moveOutDate: null,
-      rentAmount: 5900,
+      rentAmount: 1200,
       deposit: 3000,
       status: 'active',
       contractStartDate: '2026-01-01',
