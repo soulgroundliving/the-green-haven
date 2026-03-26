@@ -3949,22 +3949,107 @@
       }
 
       if (saveSuccess) {
-        alert('✅ แจ้งปัญหาสำเร็จ - ข้อมูลถูกส่งไปยัง Admin แล้ว');
+        // Show success notification
+        showSuccessNotification('✅ แจ้งปัญหาสำเร็จ!\nข้อมูลถูกส่งไปยัง Admin แล้ว');
+
+        // Clear form
+        document.getElementById('maintenanceCategory').value = '';
+        document.getElementById('maintenanceDescription').value = '';
+        document.getElementById('maintenancePhoto').value = '';
+        document.getElementById('maintenancePhotoPreview').style.display = 'none';
+
+        // Reload tickets and navigate after 2 seconds
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        loadServicesPage();
+        goToPage('services');
       } else {
-        alert('⚠️ บันทึกไม่สำเร็จ - กรุณาลองใหม่');
+        showErrorNotification('⚠️ บันทึกไม่สำเร็จ\nกรุณาลองใหม่อีกครั้ง');
         return;
       }
+    }
 
-      // Clear form
-      document.getElementById('maintenanceCategory').value = '';
-      document.getElementById('maintenanceDescription').value = '';
-      document.getElementById('maintenancePhoto').value = '';
-      document.getElementById('maintenancePhotoPreview').style.display = 'none';
+    // Notification functions
+    function showSuccessNotification(message) {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 10000;
+        animation: slideInRight 0.3s ease-out;
+        white-space: pre-line;
+        max-width: 300px;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
 
-      // Reload tickets and navigate
-      await new Promise(resolve => setTimeout(resolve, 500)); // Wait for data to sync
-      loadServicesPage();
-      goToPage('services');
+      setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+      }, 4000);
+    }
+
+    function showErrorNotification(message) {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 10000;
+        animation: slideInRight 0.3s ease-out;
+        white-space: pre-line;
+        max-width: 300px;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+      }, 5000);
+    }
+
+    // Add animation styles
+    if (!document.getElementById('notificationStyles')) {
+      const style = document.createElement('style');
+      style.id = 'notificationStyles';
+      style.textContent = `
+        @keyframes slideInRight {
+          from {
+            transform: translateX(400px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        @keyframes slideOutRight {
+          from {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateX(400px);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
     }
 
     function getCategoryName(cat) {
