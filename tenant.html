@@ -3730,10 +3730,10 @@
             <div class="ticket-details" style="margin-top: 1rem;">
               <div style="margin-bottom: 0.5rem;"><strong>ประเภท:</strong> ${ticket.category || 'ไม่ระบุ'}</div>
               <div style="margin-bottom: 0.5rem;"><strong>รายละเอียด:</strong> ${ticket.description || ticket.title || ''}</div>
-              ${ticket.photo ? `
+              ${ticket.photoUrl || ticket.photo ? `
                 <div style="margin-top: 0.8rem;">
                   <strong>📸 หลักฐาน:</strong>
-                  <img src="${ticket.photo}" alt="Maintenance photo" style="max-width: 200px; max-height: 200px; margin-top: 0.5rem; border-radius: 6px; border: 1px solid #ddd;">
+                  <img src="${ticket.photoUrl || ticket.photo}" alt="Maintenance photo" style="max-width: 200px; max-height: 200px; margin-top: 0.5rem; border-radius: 6px; border: 1px solid #ddd;">
                 </div>
               ` : ''}
             </div>
@@ -3833,11 +3833,54 @@
       }
     }
 
+    async function uploadPhotoToStorage(base64Data, ticketId) {
+      try {
+        if (!base64Data || !window.firebase?.storage) {
+          return null; // No photo or Firebase Storage not available
+        }
+
+        // Convert base64 to blob
+        const arr = base64Data.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        const n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        for (let i = 0; i < n; i++) {
+          u8arr[i] = bstr.charCodeAt(i);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+
+        // Upload to Firebase Storage
+        const storage = window.firebase.storage();
+        const fileName = `maintenance_${currentBuilding}_${currentRoom}_${ticketId}_${Date.now()}.jpg`;
+        const storageRef = window.firebase.ref(storage, `maintenance/${currentBuilding}/${currentRoom}/${fileName}`);
+
+        await window.firebase.uploadBytes(storageRef, blob);
+        const downloadUrl = await window.firebase.getDownloadURL(storageRef);
+
+        console.log('✅ Photo uploaded to Firebase Storage:', downloadUrl);
+        return downloadUrl;
+      } catch (error) {
+        console.warn('⚠️ Photo upload failed:', error.message);
+        return null;
+      }
+    }
+
     async function saveMaintenanceTicket(ticket, reportedDate) {
 
       console.log('📤 Submitting maintenance ticket:', ticket);
 
       let saveSuccess = false;
+
+      // ✅ STEP 0.5: Upload photo to Firebase Storage if provided
+      let photoUrl = null;
+      if (ticket.photo) {
+        photoUrl = await uploadPhotoToStorage(ticket.photo, ticket.id);
+        if (photoUrl) {
+          ticket.photoUrl = photoUrl; // Store the URL instead of base64
+          delete ticket.photo; // Remove large base64 data
+        }
+      }
 
       // ✅ STEP 1: Save to Firebase (for real-time sync with admin)
       if (typeof TenantFirebaseSync !== 'undefined' && TenantFirebaseSync.database) {
@@ -3866,7 +3909,7 @@
           status: ticket.status,        // Status (pending, inprogress, done)
           reportedAt: ticket.reportedAt, // Date in YYYY-MM-DD format
           updatedAt: new Date().toISOString().split('T')[0],
-          photo: ticket.photo,          // Include photo if provided
+          photoUrl: ticket.photoUrl,    // Firebase Storage URL for the photo
           photoFileName: ticket.photoFileName
         };
 
