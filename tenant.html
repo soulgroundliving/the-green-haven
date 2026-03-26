@@ -1283,6 +1283,12 @@
             <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อธิบายปัญหา *</label>
             <textarea id="maintenanceDescription" required placeholder="เขียนรายละเอียดปัญหา..." style="width: 100%; margin-bottom: 1rem; padding: 0.8rem; border: 1px solid var(--border); border-radius: 6px; min-height: 80px; font-family: inherit;"></textarea>
 
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
+            <input type="file" id="maintenancePhoto" accept="image/*" style="margin-bottom: 1rem;">
+            <div id="maintenancePhotoPreview" style="margin-bottom: 1rem; text-align: center; display: none;">
+              <img id="maintenancePhotoImg" style="max-width: 100%; height: auto; border-radius: 6px;">
+            </div>
+
             <button type="submit" class="btn btn-success" style="width: 100%; padding: 0.9rem;">📤 ส่งแจ้งปัญหา</button>
           </form>
         </div>
