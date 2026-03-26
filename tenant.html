@@ -3980,6 +3980,7 @@
           reportedAt: ticket.reportedAt, // Date in YYYY-MM-DD format
           updatedAt: new Date().toISOString().split('T')[0],
           photoUrl: ticket.photoUrl,    // Firebase Storage URL for the photo
+          photo: ticket.photo,          // Base64 encoded photo data (compressed)
           photoFileName: ticket.photoFileName
         };
 
