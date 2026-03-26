@@ -8703,10 +8703,10 @@ function renderMaintenancePage(){
           <div style="font-size:.85rem;color:#555;line-height:1.5;margin-bottom:6px;">${x.desc}</div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
             <span class="mx-status-pill ${MX_STATUS_CLASS[x.status]||'mx-pending'}">${MX_STATUS_LABEL[x.status]||x.status}</span>
-            ${x.photoUrl||x.beforePhoto||x.afterPhoto?'<span style="font-size:.75rem;color:var(--blue);background:#e3f2fd;padding:4px 10px;border-radius:20px;">📸 มีรูปภาพ</span>':''}
+            ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?'<span style="font-size:.75rem;color:var(--blue);background:#e3f2fd;padding:4px 10px;border-radius:20px;">📸 มีรูปภาพ</span>':''}
             ${x.assignedTo?'<span style="font-size:.75rem;color:#5e35b1;background:#e8e4f3;padding:4px 10px;border-radius:20px;">👤 '+x.assignedTo+'</span>':''}
           </div>
-          ${x.photoUrl?'<div style="margin-top:8px;"><img src="'+x.photoUrl+'" alt="Evidence photo" style="max-width:100%;max-height:200px;border-radius:6px;border:1px solid var(--border);"></div>':''}
+          ${x.photoUrl||x.photo?'<div style="margin-top:8px;"><img src="'+(x.photoUrl||x.photo)+'" alt="Evidence photo" style="max-width:100%;max-height:200px;border-radius:6px;border:1px solid var(--border);"></div>':''}
 
           <div class="mx-row-meta">
             <div><strong>หมวด:</strong> ${MX_CAT_LABEL[x.category]||x.category}</div>
