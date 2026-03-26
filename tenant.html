@@ -3605,165 +3605,53 @@
     }
 
     // BILL TEMPLATE DOWNLOAD
-    function downloadBillTemplate() {
+    async function downloadBillTemplate() {
       // Get owner info for download (used throughout function)
       const billOwnerName = getOwnerName();
       const billBuildingName = getBuildingDisplayName();
 
       try {
+        // Create temporary container
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'fixed';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.background = '#fff';
+        tempContainer.style.padding = '2rem';
+        tempContainer.style.width = '800px';
+
         const templateContent = document.getElementById('billTemplatePreview').innerHTML;
+        tempContainer.innerHTML = `
+          <div style="background: white; padding: 2rem; border-radius: 8px;">
+            ${templateContent}
+            <div style="text-align: center; color: #999; font-size: 0.9rem; padding: 1rem; background: #f5f5f5; border-radius: 8px; margin-top: 2rem;">
+              <p style="margin: 0;">📝 ใบวางบิลนี้แสดงรูปแบบมาตรฐานของบิลค่าเช่า</p>
+              <p style="margin: 0.5rem 0 0 0;">คุณสามารถพิมพ์หรือบันทึกเอกสารนี้เพื่อใช้เป็นอ้างอิง</p>
+            </div>
+          </div>
+        `;
 
-        const htmlContent = `<!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ใบวางบิล - ${billOwnerName}</title>
-  <style>
-    body {
-      font-family: 'Sarabun', Arial, sans-serif;
-      padding: 2rem;
-      background: #f5f5f5;
-      max-width: 1000px;
-      margin: 0 auto;
-      color: #333;
-    }
-    .container {
-      background: white;
-      padding: 2rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    hr {
-      border: none;
-      border-top: 1px solid #e0e0e0;
-      margin: 1.5rem 0;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    .header h2 {
-      color: #2d8653;
-      margin: 0 0 0.5rem 0;
-      font-size: 1.5rem;
-    }
-    .header p {
-      color: #999;
-      margin: 0;
-      font-size: 0.9rem;
-    }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
-      margin-bottom: 2rem;
-    }
-    .info-item {
-      display: flex;
-      flex-direction: column;
-    }
-    .info-label {
-      font-size: 0.9rem;
-      color: #999;
-      margin-bottom: 0.3rem;
-    }
-    .info-value {
-      font-weight: 700;
-      font-size: 1rem;
-      color: #333;
-    }
-    .section {
-      margin-bottom: 2rem;
-    }
-    .section-title {
-      font-size: 1rem;
-      color: #2d8653;
-      margin: 0 0 1rem 0;
-      padding: 0.8rem;
-      background: #e8f5e9;
-      border-radius: 6px;
-    }
-    .charge-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 0.8rem;
-      padding-bottom: 0.8rem;
-      border-bottom: 1px solid #eee;
-    }
-    .charge-label {
-      color: #333;
-    }
-    .charge-value {
-      font-weight: 600;
-      color: #333;
-    }
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 0.8rem 0;
-      border-top: 2px solid #2d8653;
-      margin-top: 0.8rem;
-      font-weight: 700;
-    }
-    .total-label {
-      font-size: 1.1rem;
-      color: #333;
-    }
-    .total-value {
-      font-weight: 800;
-      font-size: 1.3rem;
-      color: #2d8653;
-    }
-    .footer {
-      text-align: center;
-      color: #999;
-      font-size: 0.85rem;
-      margin-top: 2rem;
-      padding-top: 1rem;
-      border-top: 1px solid #e0e0e0;
-    }
-    .note {
-      text-align: center;
-      color: #999;
-      font-size: 0.9rem;
-      padding: 1rem;
-      background: #f5f5f5;
-      border-radius: 8px;
-      margin-top: 2rem;
-    }
-    @media print {
-      body {
-        background: white;
-        padding: 0;
-        margin: 0;
-      }
-      .note {
-        display: none;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    ${templateContent}
-  </div>
+        document.body.appendChild(tempContainer);
 
-  <div class="note">
-    <p>📝 ใบวางบิลนี้แสดงรูปแบบมาตรฐานของบิลค่าเช่า</p>
-    <p style="margin: 0;">คุณสามารถพิมพ์หรือบันทึกเอกสารนี้เพื่อใช้เป็นอ้างอิง</p>
-  </div>
-</body>
-</html>`;
+        // Convert to image using html2canvas
+        const canvas = await html2canvas(tempContainer, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          logging: false
+        });
 
-        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        // Download as PNG
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        const fileName = getOwnerName().replace(/\s+/g, '-').toLowerCase();
-        link.download = `bill-template-${fileName}.html`;
+        const fileName = billOwnerName.replace(/\s+/g, '-').toLowerCase();
+        link.href = canvas.toDataURL('image/png');
+        link.download = `bill-template-${fileName}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
+        // Clean up
+        document.body.removeChild(tempContainer);
+
+        console.log('✅ Bill template downloaded as PNG');
       } catch (error) {
         console.error('Error downloading template:', error);
         alert('⚠️ เกิดข้อผิดพลาดในการดาวน์โหลดเทมเพลท: ' + error.message);
