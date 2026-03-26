@@ -3736,10 +3736,10 @@
             <div class="ticket-details" style="margin-top: 1rem;">
               <div style="margin-bottom: 0.5rem;"><strong>ประเภท:</strong> ${ticket.category || 'ไม่ระบุ'}</div>
               <div style="margin-bottom: 0.5rem;"><strong>รายละเอียด:</strong> ${ticket.description || ticket.title || ''}</div>
-              ${ticket.photoUrl || ticket.photo ? `
+              ${ticket.beforePhoto || ticket.photoUrl || ticket.photo ? `
                 <div style="margin-top: 0.8rem;">
                   <strong>📸 หลักฐาน:</strong>
-                  <img src="${ticket.photoUrl || ticket.photo}" alt="Maintenance photo" style="max-width: 200px; max-height: 200px; margin-top: 0.5rem; border-radius: 6px; border: 1px solid #ddd;">
+                  <img src="${ticket.beforePhoto || ticket.photoUrl || ticket.photo}" alt="Maintenance photo" style="max-width: 200px; max-height: 200px; margin-top: 0.5rem; border-radius: 6px; border: 1px solid #ddd;">
                 </div>
               ` : ''}
             </div>
