@@ -1153,22 +1153,6 @@
       <div class="page" id="page-bills">
         <div class="section-title">ชำระเงิน บิลรายเดือน</div>
 
-        <!-- Bill Control Buttons -->
-        <div style="display: flex; gap: 0.8rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-          <button onclick="generateAllBackdatedBills()" style="padding: 0.7rem 1.2rem; background: #ff9800; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
-            📅 Generate ย้อนหลัง
-          </button>
-          <button onclick="clearAndRegenerateBills()" style="padding: 0.7rem 1.2rem; background: #e74c3c; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
-            🔄 ล้างและ Regenerate
-          </button>
-          <button onclick="markAllBillsAsPaid()" style="padding: 0.7rem 1.2rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
-            ✅ จ่ายครบทุกเดือน
-          </button>
-          <button onclick="goToPage('template')" style="padding: 0.7rem 1.2rem; background: #2196F3; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
-            📄 ดูเทมเพลท
-          </button>
-        </div>
-
         <div id="billsList"></div>
       </div>
 
