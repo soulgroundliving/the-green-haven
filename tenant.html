@@ -4208,11 +4208,14 @@
 
           const totalWithPenalty = (latestBill.totalCharge || 0) + penalty;
           html += `
-            <div class="bill-status-badge-container ${statusClass}">
-              <div class="badge-status ${statusClass}">${statusMsg}</div>
-              <div class="badge-amount ${penalty > 0 ? 'with-penalty' : ''}">
-                ${(latestBill.totalCharge || 0).toLocaleString('th-TH')} บาท
-                ${penalty > 0 ? `<div class="badge-penalty-info">+ ${penalty.toLocaleString('th-TH')} ปรับ</div>` : ''}
+            <div style="margin-bottom: 2rem; padding: 1.5rem; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <div style="text-align: center; margin-bottom: 1rem; font-size: 0.9rem; color: var(--text-muted);">📋 บิลล่าสุด</div>
+              <div class="bill-status-badge-container ${statusClass}">
+                <div class="badge-status ${statusClass}">${statusMsg}</div>
+                <div class="badge-amount ${penalty > 0 ? 'with-penalty' : ''}">
+                  ${(latestBill.totalCharge || 0).toLocaleString('th-TH')} บาท
+                  ${penalty > 0 ? `<div class="badge-penalty-info">+ ${penalty.toLocaleString('th-TH')} ปรับ</div>` : ''}
+                </div>
               </div>
             </div>
           `;
