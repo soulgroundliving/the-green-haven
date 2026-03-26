@@ -1462,7 +1462,7 @@
         </div>
 
         <!-- Bill Template Preview -->
-        <div id="billTemplatePreview" style="background: #f9f9f9; border: 2px dashed var(--green); border-radius: 8px; padding: 2rem; margin-bottom: 2rem;">
+        <div id="billTemplatePreview" style="background: white; border: 2px dashed var(--blue); border-radius: 8px; padding: 2rem; margin-bottom: 2rem;">
           <div style="text-align: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--green);">
             <div style="font-size: 1.6rem; font-weight: 800; color: var(--text); margin-bottom: 0.2rem;">🌿 <span id="billTemplateCompanyName">The Green Haven Co., Ltd.</span></div>
             <div style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.5rem;">โครงการ Nature Haven</div>
@@ -1501,7 +1501,7 @@
 
           <!-- Charges Breakdown -->
           <div style="margin-bottom: 2rem;">
-            <h3 style="font-size: 1rem; color: var(--green); margin: 0 0 1rem 0; padding: 0.8rem; background: var(--green-pale); border-radius: 6px;">รายละเอียดการคำนวณค่าใช้งาน</h3>
+            <h3 style="font-size: 1rem; color: var(--blue); margin: 0 0 1rem 0; padding: 0.8rem; background: var(--blue-pale); border-radius: 6px;">รายละเอียดการคำนวณค่าใช้งาน</h3>
 
             <div style="padding: 1rem 0;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; padding-bottom: 0.8rem; border-bottom: 1px solid #eee;">
@@ -3351,13 +3351,13 @@
                     </div>
                     ${billData.charges.electric?.cost ? `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
-                      <span style="color: var(--text);">⚡ ค่าไฟฟ้า (${billData.charges.electric.usage || 0} หน่วย × ฿${billData.charges.electric.rate})</span>
+                      <span style="color: var(--text);">⚡ ค่าไฟ${billData.meterReadings && billData.meterReadings.electric ? `: ${billData.meterReadings.electric.current} - ${billData.meterReadings.electric.previous} = ` : ': '}${(billData.charges.electric.usage || 0).toFixed(0)} หน่วย × ฿${billData.charges.electric.rate} = </span>
                       <span style="font-weight: 600; color: var(--text);">฿${billData.charges.electric.cost.toLocaleString('th-TH')}</span>
                     </div>
                     ` : ''}
                     ${billData.charges.water?.cost ? `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
-                      <span style="color: var(--text);">💧 ค่าน้ำ (${billData.charges.water.usage || 0} หน่วย × ฿${billData.charges.water.rate})</span>
+                      <span style="color: var(--text);">💧 ค่าน้ำ${billData.meterReadings && billData.meterReadings.water ? `: ${billData.meterReadings.water.current} - ${billData.meterReadings.water.previous} = ` : ': '}${(billData.charges.water.usage || 0).toFixed(0)} หน่วย × ฿${billData.charges.water.rate} = </span>
                       <span style="font-weight: 600; color: var(--text);">฿${billData.charges.water.cost.toLocaleString('th-TH')}</span>
                     </div>
                     ` : ''}
