@@ -4139,6 +4139,85 @@
         // Render bills organized by year
         let html = '';
 
+        // 📊 BILL STATUS SECTION - Show latest bill status with deadline and penalty
+        const latestBill = filteredBills[0]; // First bill is latest (sorted newest first)
+        if (latestBill) {
+          let billPayment = null;
+          let statusMsg = '';
+          let statusClass = '';
+          let penalty = 0;
+
+          // Check if bill is marked as paid
+          if (latestBill.status === 'paid') {
+            statusMsg = `✅ ชำระแล้ว`;
+            statusClass = 'status-ok';
+            billPayment = { status: 'paid' };
+          } else {
+            // Check payment records
+            const paymentKey = `payment_${currentBuilding}_${currentRoom}`;
+            const paymentData = localStorage.getItem(paymentKey);
+            const payments = paymentData ? JSON.parse(paymentData) : [];
+
+            if (payments.length > 0) {
+              billPayment = payments.find(p => {
+                if (p.billId && latestBill.billId && p.billId === latestBill.billId) return true;
+                if (p.month === latestBill.month && p.year === latestBill.year) return true;
+                return false;
+              });
+
+              if (!billPayment && payments.length > 0) {
+                const sortedPayments = payments.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+                billPayment = sortedPayments[0];
+              }
+            }
+          }
+
+          // Display status
+          if (billPayment && billPayment.status === 'paid') {
+            const paidDate = billPayment.paymentDate ? new Date(billPayment.paymentDate) : new Date();
+            const paidDateStr = `${paidDate.getDate()}/${paidDate.getMonth() + 1}/${paidDate.getFullYear()}`;
+            statusMsg = `✅ ชำระแล้ว ${paidDateStr}`;
+            statusClass = 'status-ok';
+          } else {
+            // Calculate days until deadline
+            const billDate = new Date(latestBill.billDate || new Date());
+            const billDateMonth = billDate.getMonth();
+            const billDateYear = billDate.getFullYear();
+            const deadlineDate = new Date(billDateYear, billDateMonth + 1, 5);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            deadlineDate.setHours(0, 0, 0, 0);
+
+            const daysUntilDeadline = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
+            const isOverdue = daysUntilDeadline < 0;
+            const daysOverdue = Math.abs(daysUntilDeadline);
+
+            penalty = isOverdue ? daysOverdue * 100 : 0;
+
+            if (isOverdue) {
+              statusMsg = `⚠️ สายแล้ว ${daysOverdue} วัน`;
+              statusClass = 'status-overdue';
+            } else if (daysUntilDeadline <= 3) {
+              statusMsg = `⏰ ใกล้หมดเขต ${daysUntilDeadline} วัน`;
+              statusClass = 'status-warning';
+            } else {
+              statusMsg = `⏳ รอชำระ`;
+              statusClass = 'status-ok';
+            }
+          }
+
+          const totalWithPenalty = (latestBill.totalCharge || 0) + penalty;
+          html += `
+            <div class="bill-status-badge-container ${statusClass}">
+              <div class="badge-status ${statusClass}">${statusMsg}</div>
+              <div class="badge-amount ${penalty > 0 ? 'with-penalty' : ''}">
+                ${(latestBill.totalCharge || 0).toLocaleString('th-TH')} บาท
+                ${penalty > 0 ? `<div class="badge-penalty-info">+ ${penalty.toLocaleString('th-TH')} ปรับ</div>` : ''}
+              </div>
+            </div>
+          `;
+        }
+
         Object.keys(billsByYear)
           .sort((a, b) => b - a) // Years descending
           .forEach(year => {
