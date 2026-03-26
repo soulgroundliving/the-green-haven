@@ -1927,6 +1927,8 @@
             currentBills.sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
 
             console.log(`✅ Loaded ${currentBills.length} bills from TenantManager`);
+            // Update bill statuses from payment records
+            updateBillStatusesFromPayments();
             return;
           }
         }
@@ -1953,6 +1955,8 @@
           }
           currentBills.sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
           console.log(`✅ Loaded ${currentBills.length} bills from localStorage meter_data`);
+          // Update bill statuses from payment records
+          updateBillStatusesFromPayments();
         } else {
           console.warn('⚠️ No meter data found in localStorage');
         }
@@ -1960,6 +1964,44 @@
         console.warn('⚠️ Error loading bills from meters:', error.message);
         currentBills = [];
       }
+    }
+
+    function updateBillStatusesFromPayments() {
+      // Update each bill's status based on payment records
+      const paymentKey = `payment_${currentBuilding}_${currentRoom}`;
+      const paymentData = localStorage.getItem(paymentKey);
+      const payments = paymentData ? JSON.parse(paymentData) : [];
+
+      currentBills.forEach(bill => {
+        // Check if bill status is marked as paid
+        if (bill.status === 'paid') {
+          return; // Already marked as paid
+        }
+
+        // Find matching payment record
+        const billPayment = payments.find(p => {
+          // Match by billId
+          if (p.billId && bill.billId && p.billId === bill.billId) {
+            return true;
+          }
+          // Match by month/year
+          if (p.month && bill.month) {
+            const THAI_MONTHS = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+            const billMonthIndex = THAI_MONTHS.indexOf(bill.month);
+            if (billMonthIndex > 0 && p.month === billMonthIndex && p.year === bill.year % 100) {
+              return true;
+            }
+          }
+          return false;
+        });
+
+        if (billPayment && billPayment.status === 'paid') {
+          bill.status = 'paid';
+        }
+      });
+
+      console.log(`✅ Updated bill statuses from payment records`);
     }
 
     // Helper function - Thai month names
