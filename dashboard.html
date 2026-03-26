@@ -8401,6 +8401,14 @@ function updateMaintenanceStatus(id,newStatus){
     console.log('✅ Found ticket, updating status from',tenantTicket.status,'to',item.status);
     tenantTicket.status=item.status;
     tenantTicket.updatedAt=item.updatedAt;
+    // Push admin data when marked as done
+    if(item.status==='done'){
+      tenantTicket.assignedTo=item.assignedTo;
+      tenantTicket.afterPhoto=item.afterPhoto;
+      tenantTicket.workNotes=item.workNotes;
+      tenantTicket.completedAt=item.completedAt;
+      console.log('📤 Sending admin completion data to tenant:', {assignedTo: item.assignedTo, afterPhoto: !!item.afterPhoto, workNotes: item.workNotes});
+    }
   } else {
     // If not found, add it with current data (for tickets that existed before tenant_maintenance_tickets)
     console.log('⚠️ Ticket not found in tenant_maintenance_tickets, adding it now');
@@ -8414,7 +8422,10 @@ function updateMaintenanceStatus(id,newStatus){
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       startedAt: item.startedAt,
-      completedAt: item.completedAt
+      completedAt: item.completedAt,
+      assignedTo: item.assignedTo,
+      afterPhoto: item.afterPhoto,
+      workNotes: item.workNotes
     };
     tenantTickets.unshift(tenantTicket);
   }
@@ -8428,13 +8439,20 @@ function updateMaintenanceStatus(id,newStatus){
       // Update in Firebase at maintenance/{building}/{room}/{id}
       const room = item.room;
       const maintenanceRef = window.firebaseRef(window.firebaseDatabase, `maintenance/rooms/${room}/${id}`);
-      window.firebaseUpdate(maintenanceRef, {
+      const firebaseData = {
         status: item.status,
         updatedAt: item.updatedAt,
         startedAt: item.startedAt,
         completedAt: item.completedAt
-      });
-      console.log('🔥 Updated Firebase maintenance ticket:', id);
+      };
+      // Include admin data when completed
+      if(item.status==='done'){
+        firebaseData.assignedTo = item.assignedTo;
+        firebaseData.afterPhoto = item.afterPhoto;
+        firebaseData.workNotes = item.workNotes;
+      }
+      window.firebaseUpdate(maintenanceRef, firebaseData);
+      console.log('🔥 Updated Firebase maintenance ticket:', id, firebaseData);
     } catch(e) {
       console.log('⚠️ Firebase update failed (fallback to localStorage only):', e.message);
     }
