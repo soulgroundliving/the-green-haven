@@ -2194,7 +2194,7 @@
       const outstandingBills = currentBills.filter(b => b.status === 'pending' || b.status === 'overdue');
       const totalOutstanding = outstandingBills.reduce((sum, bill) => sum + (bill.total || 0), 0);
       if (totalOutstanding > 0) {
-        document.getElementById('outstandingCard').style.display = 'block';
+        document.getElementById('outstandingCard').style.display = 'none'; // HIDDEN - Show only payment section
         document.getElementById('outstandingAmount').textContent = `${totalOutstanding.toLocaleString('th-TH')} บาท`;
         document.getElementById('pendingBillCount').textContent = `${outstandingBills.length} บิล`;
       }
@@ -2235,7 +2235,7 @@
 
       // Display bill summary stats
       if (currentBills && currentBills.length > 0) {
-        document.getElementById('billSummaryCard').style.display = 'block';
+        document.getElementById('billSummaryCard').style.display = 'none'; // HIDDEN - Show only payment section
         const paidBills = currentBills.filter(b => b.status === 'paid').length;
         const pendingBills = currentBills.filter(b => b.status === 'pending').length;
         const overdueBills = currentBills.filter(b => b.status === 'overdue').length;
