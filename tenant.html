@@ -1262,7 +1262,31 @@
       <!-- SERVICES PAGE -->
       <div class="page" id="page-services">
         <div class="section-title">🔧 แจ้งซ่อม</div>
-        <button class="btn btn-primary" onclick="goToPage('create-maintenance')" style="margin-bottom: 1.5rem;">➕ แจ้งปัญหา</button>
+
+        <!-- ADD MAINTENANCE FORM AT TOP -->
+        <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #f0f4f8 0%, #fff 100%); border: 2px solid var(--blue-pale);">
+          <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.5rem;">
+            <span style="font-size: 1.5rem;">➕</span>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--blue);">แจ้งปัญหาใหม่</div>
+          </div>
+          <form onsubmit="submitMaintenance(event)">
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">ประเภทปัญหา *</label>
+            <select id="maintenanceCategory" required style="width: 100%; margin-bottom: 1rem; padding: 0.8rem; border: 1px solid var(--border); border-radius: 6px;">
+              <option value="">เลือกประเภท</option>
+              <option value="electric">⚡ ไฟฟ้า</option>
+              <option value="water">💧 น้ำ</option>
+              <option value="aircon">❄️ แอร์</option>
+              <option value="furniture">🪑 เฟอร์นิเจอร์</option>
+              <option value="other">📝 อื่นๆ</option>
+            </select>
+
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อธิบายปัญหา *</label>
+            <textarea id="maintenanceDescription" required placeholder="เขียนรายละเอียดปัญหา..." style="width: 100%; margin-bottom: 1rem; padding: 0.8rem; border: 1px solid var(--border); border-radius: 6px; min-height: 80px; font-family: inherit;"></textarea>
+
+            <button type="submit" class="btn btn-success" style="width: 100%; padding: 0.9rem;">📤 ส่งแจ้งปัญหา</button>
+          </form>
+        </div>
+
         <div id="ticketsList"></div>
       </div>
 
