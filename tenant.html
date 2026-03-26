@@ -3952,15 +3952,18 @@
         // Show success notification
         showSuccessNotification('✅ แจ้งปัญหาสำเร็จ!\nข้อมูลถูกส่งไปยัง Admin แล้ว');
 
-        // Clear form
+        // Clear form immediately
         document.getElementById('maintenanceCategory').value = '';
         document.getElementById('maintenanceDescription').value = '';
         document.getElementById('maintenancePhoto').value = '';
         document.getElementById('maintenancePhotoPreview').style.display = 'none';
 
-        // Reload tickets and navigate after 2 seconds
+        // Reload and render tickets IMMEDIATELY before navigating
+        console.log('🔄 Reloading ticket list immediately...');
+        renderTicketsList();  // Render first to show the new ticket at the top
+
+        // Wait a bit for user to see the notification, then navigate
         await new Promise(resolve => setTimeout(resolve, 2000));
-        loadServicesPage();
         goToPage('services');
       } else {
         showErrorNotification('⚠️ บันทึกไม่สำเร็จ\nกรุณาลองใหม่อีกครั้ง');
