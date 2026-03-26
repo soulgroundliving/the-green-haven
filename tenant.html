@@ -3708,7 +3708,7 @@
           <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #eee;">
             <div style="font-weight: 700; color: var(--green); margin-bottom: 1rem;">✅ ข้อมูลการซ่อมเสร็จ</div>
             ${ticket.assignedTo ? `<div style="margin-bottom: 0.8rem;"><strong>👤 ผู้รับผิดชอบ:</strong> ${ticket.assignedTo}</div>` : ''}
-            ${ticket.notes ? `<div style="margin-bottom: 0.8rem;"><strong>📝 หมายเหตุ:</strong> ${ticket.notes}</div>` : ''}
+            ${ticket.workNotes || ticket.notes ? `<div style="margin-bottom: 0.8rem;"><strong>📝 หมายเหตุ:</strong> ${ticket.workNotes || ticket.notes}</div>` : ''}
             ${ticket.completedAt ? `<div style="margin-bottom: 0.8rem;"><strong>📅 วันที่เสร็จ:</strong> ${new Date(ticket.completedAt).toLocaleDateString('th-TH')}</div>` : ''}
             ${ticket.beforePhoto || ticket.afterPhoto ? `
               <div style="margin-bottom: 0.8rem;">
