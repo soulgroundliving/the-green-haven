@@ -275,6 +275,7 @@
     import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
     import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
     import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM",
@@ -292,6 +293,7 @@
       const database = getDatabase(app);
       const auth = getAuth(app);
       const firestore = getFirestore(app);
+      const storage = getStorage(app);
 
       // Expose globals for TenantFirebaseSync
       window.firebaseApp = app;
@@ -302,6 +304,10 @@
       window.firebaseSet = set;
       window.firebaseOnValue = onValue;
       window.firebaseDB = database;
+      window.firebaseStorage = storage;
+      window.firebaseStorageRef = storageRef;
+      window.firebaseUploadBytes = uploadBytes;
+      window.firebaseGetDownloadURL = getDownloadURL;
 
       window.firebase = {
         firestore: () => firestore,
@@ -3835,7 +3841,8 @@
 
     async function uploadPhotoToStorage(base64Data, ticketId) {
       try {
-        if (!base64Data || !window.firebase?.storage) {
+        if (!base64Data || !window.firebaseStorage || !window.firebaseStorageRef || !window.firebaseUploadBytes || !window.firebaseGetDownloadURL) {
+          console.warn('⚠️ Firebase Storage not initialized');
           return null; // No photo or Firebase Storage not available
         }
 
@@ -3851,12 +3858,11 @@
         const blob = new Blob([u8arr], { type: mime });
 
         // Upload to Firebase Storage
-        const storage = window.firebase.storage();
         const fileName = `maintenance_${currentBuilding}_${currentRoom}_${ticketId}_${Date.now()}.jpg`;
-        const storageRef = window.firebase.ref(storage, `maintenance/${currentBuilding}/${currentRoom}/${fileName}`);
+        const photoRef = window.firebaseStorageRef(window.firebaseStorage, `maintenance/${currentBuilding}/${currentRoom}/${fileName}`);
 
-        await window.firebase.uploadBytes(storageRef, blob);
-        const downloadUrl = await window.firebase.getDownloadURL(storageRef);
+        await window.firebaseUploadBytes(photoRef, blob);
+        const downloadUrl = await window.firebaseGetDownloadURL(photoRef);
 
         console.log('✅ Photo uploaded to Firebase Storage:', downloadUrl);
         return downloadUrl;
