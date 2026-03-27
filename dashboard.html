@@ -7651,7 +7651,6 @@ function showTenantModal(roomId){
   const footer=document.getElementById('payModalFooter');
   body.innerHTML=`
     <div class="pm-row"><span class="pm-label">ชื่อ-นามสกุล</span><input class="pm-input" id="tm-name" style="width:185px" type="text" value="${t.name||''}" placeholder="สมชาย ใจดี"></div>
-    <div class="pm-row"><span class="pm-label">เบอร์โทรศัพท์</span><div style="display:flex;flex-direction:column;"><input class="pm-input" id="tm-phone" style="width:145px" type="text" value="${t.phone||''}" placeholder="081-234-5678" maxlength="10"><small id="tmPhoneError" style="display:none;color:#d32f2f;font-size:0.8rem;margin-top:2px;"></small></div></div>
     <div class="pm-row"><span class="pm-label">Line ID</span><input class="pm-input" id="tm-line" style="width:145px" type="text" value="${t.lineId||''}" placeholder="@username"></div>
     <div class="pm-row"><span class="pm-label">วันที่เข้าอยู่</span><input class="pm-input" id="tm-moveIn" style="width:145px" type="date" value="${t.moveInDate||''}"></div>
     <div class="pm-row"><span class="pm-label">วันหมดสัญญา</span><input class="pm-input" id="tm-contractEnd" style="width:145px" type="date" value="${t.contractEnd||''}"></div>
@@ -7675,7 +7674,7 @@ function saveTenant(){
   const name=document.getElementById('tm-name').value.trim();
   if(name){
     tenants[editingTenantRoom]={
-      name,phone:document.getElementById('tm-phone').value.trim(),
+      name,
       lineId:document.getElementById('tm-line').value.trim(),
       moveInDate:document.getElementById('tm-moveIn').value,
       contractEnd:document.getElementById('tm-contractEnd').value,
@@ -7933,14 +7932,6 @@ function loadTenantProfile(){
         <div style="margin-bottom:1.5rem;">
           <div style="font-size:.9rem;color:var(--text-muted);margin-bottom:.5rem;">👤 ชื่อ-สกุล</div>
           <div style="font-size:1.1rem;font-weight:700;color:var(--text);">${tenant.name || '—'}</div>
-        </div>
-        <div style="margin-bottom:1.5rem;">
-          <div style="font-size:.9rem;color:var(--text-muted);margin-bottom:.5rem;">📱 เบอร์โทรศัพท์</div>
-          <div style="font-size:1rem;color:var(--text);">${tenant.phone || '—'}</div>
-        </div>
-        <div style="margin-bottom:1.5rem;">
-          <div style="font-size:.9rem;color:var(--text-muted);margin-bottom:.5rem;">📧 อีเมล</div>
-          <div style="font-size:.95rem;color:var(--text);">${tenant.email || '—'}</div>
         </div>
       </div>
 
