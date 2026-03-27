@@ -1044,9 +1044,128 @@
         grid-template-columns: 1fr 1fr 1fr 1fr;
       }
     }
+
+    /* Photo Viewer Modal */
+    .photo-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .photo-modal.active {
+      display: flex;
+    }
+
+    .photo-modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 90vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .photo-modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: var(--red);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .photo-modal-close:hover {
+      background: #a01a1a;
+    }
+
+    .photo-modal-photos {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    .photo-modal-item {
+      text-align: center;
+    }
+
+    .photo-modal-item-label {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.8rem;
+      display: block;
+    }
+
+    .photo-modal-item img {
+      max-width: 400px;
+      max-height: 500px;
+      border-radius: 8px;
+      border: 3px solid var(--border);
+    }
+
+    .photo-viewer-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--green);
+      color: white;
+      border: none;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-family: 'Sarabun', sans-serif;
+    }
+
+    .photo-viewer-btn:hover {
+      background: var(--green-dark);
+    }
   </style>
 </head>
 <body>
+  <!-- Photo Viewer Modal -->
+  <div id="photoModal" class="photo-modal">
+    <div class="photo-modal-content">
+      <button class="photo-modal-close" onclick="closePhotoModal()">✕</button>
+      <h2 style="text-align: center; margin-bottom: 1rem; color: var(--text);">รูปภาพซ่อม</h2>
+      <div class="photo-modal-photos" id="photoModalPhotos"></div>
+    </div>
+  </div>
+
   <div class="app-container">
     <!-- Header -->
     <header class="app-header">
@@ -3712,11 +3831,9 @@
             ${ticket.completedAt ? `<div style="margin-bottom: 0.8rem;"><strong>📅 วันที่เสร็จ:</strong> ${new Date(ticket.completedAt).toLocaleDateString('th-TH')}</div>` : ''}
             ${ticket.beforePhoto || ticket.afterPhoto ? `
               <div style="margin-bottom: 0.8rem;">
-                <strong>📸 รูปภาพ:</strong>
-                <div style="display: flex; gap: 1rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                  ${ticket.beforePhoto ? `<img src="${ticket.beforePhoto}" alt="Before" style="max-width: 150px; max-height: 150px; border-radius: 6px; border: 1px solid #ddd;">` : ''}
-                  ${ticket.afterPhoto ? `<img src="${ticket.afterPhoto}" alt="After" style="max-width: 150px; max-height: 150px; border-radius: 6px; border: 1px solid #ddd;">` : ''}
-                </div>
+                <button class="photo-viewer-btn" onclick="openPhotoModal('${ticket.beforePhoto || ''}', '${ticket.afterPhoto || ''}')">
+                  📸 รูปภาพ
+                </button>
               </div>
             ` : ''}
           </div>
@@ -3738,8 +3855,9 @@
               <div style="margin-bottom: 0.5rem;"><strong>รายละเอียด:</strong> ${ticket.description || ticket.title || ''}</div>
               ${ticket.beforePhoto || ticket.photoUrl || ticket.photo ? `
                 <div style="margin-top: 0.8rem;">
-                  <strong>📸 หลักฐาน:</strong>
-                  <img src="${ticket.beforePhoto || ticket.photoUrl || ticket.photo}" alt="Maintenance photo" style="max-width: 200px; max-height: 200px; margin-top: 0.5rem; border-radius: 6px; border: 1px solid #ddd;">
+                  <button class="photo-viewer-btn" onclick="openPhotoModal('${ticket.beforePhoto || ticket.photoUrl || ticket.photo}', '')">
+                    📸 ก่อนซ่อม (Before)
+                  </button>
                 </div>
               ` : ''}
             </div>
@@ -3758,6 +3876,53 @@
       const stored = localStorage.getItem('tenant_maintenance_tickets');
       return stored ? JSON.parse(stored) : [];
     }
+
+    // Open photo modal to view before/after images
+    function openPhotoModal(beforePhoto, afterPhoto) {
+      const modal = document.getElementById('photoModal');
+      const photosContainer = document.getElementById('photoModalPhotos');
+
+      let html = '';
+
+      if (beforePhoto) {
+        html += `
+          <div class="photo-modal-item">
+            <span class="photo-modal-item-label">ก่อนซ่อม (Before)</span>
+            <img src="${beforePhoto}" alt="Before repair">
+          </div>
+        `;
+      }
+
+      if (afterPhoto) {
+        html += `
+          <div class="photo-modal-item">
+            <span class="photo-modal-item-label">หลังซ่อม (After)</span>
+            <img src="${afterPhoto}" alt="After repair">
+          </div>
+        `;
+      }
+
+      photosContainer.innerHTML = html;
+      modal.classList.add('active');
+    }
+
+    // Close photo modal
+    function closePhotoModal() {
+      const modal = document.getElementById('photoModal');
+      modal.classList.remove('active');
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('DOMContentLoaded', function() {
+      const modal = document.getElementById('photoModal');
+      if (modal) {
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) {
+            closePhotoModal();
+          }
+        });
+      }
+    });
 
     // Handle maintenance photo preview
     function handleMaintenancePhotoChange(inputId, previewId, imgId) {
