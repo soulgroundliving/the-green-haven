@@ -1251,6 +1251,48 @@
           </div>
         </div>
 
+        <!-- Building Internet Status Card -->
+        <div class="card" id="internetStatusCard" style="display: none;">
+          <div class="card-title" style="margin-bottom: 1rem;">📱 อินเทอร์เน็ต ส่วนกลาง</div>
+          <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+            <!-- Status Section -->
+            <div style="padding: 1rem; background: var(--blue-pale); border-radius: 8px;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">🔌 สถานะการเชื่อมต่อ</div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span id="internetStatusIcon" style="font-size: 1.5rem;">●</span>
+                <span id="internetStatusText" style="font-size: 1.1rem; font-weight: 700; color: var(--blue);">-</span>
+              </div>
+            </div>
+
+            <!-- Speed Section -->
+            <div id="internetSpeedSection" style="padding: 1rem; background: #f0f8ff; border-radius: 8px; display: none;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">⚡ ความเร็วล่าสุด</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Download</div>
+                  <div style="font-size: 1rem; font-weight: 700; color: var(--blue);" id="internetDownloadSpeed">-</div>
+                </div>
+                <div>
+                  <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Upload</div>
+                  <div style="font-size: 1rem; font-weight: 700; color: var(--blue);" id="internetUploadSpeed">-</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Provider Info Section -->
+            <div style="padding: 1rem; background: var(--border-light); border-radius: 8px;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">🏢 ผู้ให้บริการ</div>
+              <div style="font-size: 0.95rem; color: var(--text); margin-bottom: 0.3rem;" id="internetProvider">-</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);" id="internetContact">-</div>
+            </div>
+
+            <!-- Last Check Time -->
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">
+              ตรวจสอบล่าสุด: <span id="internetLastCheck">-</span>
+            </div>
+          </div>
+        </div>
+
         <div class="quick-actions">
           <button class="quick-action-btn" onclick="goToPage('bills')">
             <span class="quick-action-icon">💳</span>
@@ -2355,9 +2397,94 @@
         document.getElementById('homeMoveInDate').textContent = currentLease.moveInDate ? new Date(currentLease.moveInDate).toLocaleDateString('th-TH') : '-';
       }
 
+      // Display building internet status
+      try {
+        displayBuildingInternetStatus();
+      } catch (e) {
+        console.warn('⚠️ Error displaying building internet status:', e);
+      }
+
       // Update header with tenant name
       const tenantName = currentTenant?.name || (currentLease?.tenantName) || 'ผู้เช่า';
       document.querySelector('.app-header-title p').textContent = tenantName;
+    }
+
+    // BUILDING INTERNET STATUS - View only
+    function displayBuildingInternetStatus() {
+      const card = document.getElementById('internetStatusCard');
+
+      // Load internet status from localStorage
+      let internetStatus = {
+        status: 'online',
+        provider: 'True Internet',
+        contact: '📞 1-2700-1700 | www.true.co.th',
+        downloadSpeed: '50 Mbps',
+        uploadSpeed: '10 Mbps',
+        lastCheck: new Date().toLocaleString('th-TH')
+      };
+
+      // Try to load from localStorage if stored
+      try {
+        const stored = JSON.parse(localStorage.getItem('building_internet_status') || '{}');
+        if (stored && Object.keys(stored).length > 0) {
+          internetStatus = { ...internetStatus, ...stored };
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not load stored internet status:', e);
+      }
+
+      // Show the card
+      if (card) {
+        card.style.display = 'block';
+      }
+
+      // Update status icon and text
+      const statusIcon = document.getElementById('internetStatusIcon');
+      const statusText = document.getElementById('internetStatusText');
+
+      if (internetStatus.status === 'online') {
+        statusIcon.textContent = '🟢';
+        statusIcon.style.color = '#28a745';
+        statusText.textContent = 'เชื่อมต่อแล้ว (Online)';
+        statusText.style.color = '#28a745';
+      } else if (internetStatus.status === 'offline') {
+        statusIcon.textContent = '🔴';
+        statusIcon.style.color = '#dc3545';
+        statusText.textContent = 'ไม่เชื่อมต่อ (Offline)';
+        statusText.style.color = '#dc3545';
+      } else if (internetStatus.status === 'maintenance') {
+        statusIcon.textContent = '🟡';
+        statusIcon.style.color = '#ffc107';
+        statusText.textContent = 'กำลังบำรุงรักษา (Maintenance)';
+        statusText.style.color = '#ffc107';
+      }
+
+      // Update speed info if available
+      if (internetStatus.downloadSpeed || internetStatus.uploadSpeed) {
+        const speedSection = document.getElementById('internetSpeedSection');
+        if (speedSection) {
+          speedSection.style.display = 'block';
+          const downloadEl = document.getElementById('internetDownloadSpeed');
+          const uploadEl = document.getElementById('internetUploadSpeed');
+
+          if (downloadEl) downloadEl.textContent = internetStatus.downloadSpeed || '-';
+          if (uploadEl) uploadEl.textContent = internetStatus.uploadSpeed || '-';
+        }
+      }
+
+      // Update provider info
+      const providerEl = document.getElementById('internetProvider');
+      const contactEl = document.getElementById('internetContact');
+
+      if (providerEl) providerEl.textContent = internetStatus.provider || '-';
+      if (contactEl) contactEl.textContent = internetStatus.contact || '-';
+
+      // Update last check time
+      const lastCheckEl = document.getElementById('internetLastCheck');
+      if (lastCheckEl) {
+        const checkTime = internetStatus.lastCheck || new Date().toLocaleString('th-TH');
+        lastCheckEl.textContent = checkTime;
+      }
     }
 
     // BILLS PAGE
