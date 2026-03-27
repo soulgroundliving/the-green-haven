@@ -3760,7 +3760,7 @@
       }
 
       // Filter to last 12 months of payment history
-      const twelveMonthsAgo = getTwelveMonthsAgoDate();
+      const twelveMonthsAgo = getMonthsAgoDate(24); // Show last ~24 months
       payments = payments.filter(payment => {
         const paymentDate = new Date(payment.paymentDate || payment.createdAt);
         return paymentDate >= twelveMonthsAgo;
@@ -4590,12 +4590,12 @@
       return bill;
     }
 
-    // Helper function to calculate 12 months ago date
-    function getTwelveMonthsAgoDate() {
+    // Helper function to calculate months ago date (configurable retention period)
+    function getMonthsAgoDate(months = 12) {
       const now = new Date();
-      const twelveMonthsAgo = new Date();
-      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-      return twelveMonthsAgo;
+      const monthsAgo = new Date();
+      monthsAgo.setMonth(monthsAgo.getMonth() - months);
+      return monthsAgo;
     }
 
     // ===== BILLS PAGE - Display last 12 months of bills =====
@@ -4656,8 +4656,8 @@
 
         // ✅ FILTER TO LAST 12 MONTHS - Show only recent billing history
         // Convert bills to Gregorian date for comparison with current date
-        // Filter bills from last 12 months for cleaner, more relevant display
-        const twelveMonthsAgo = getTwelveMonthsAgoDate();
+        // Include current and previous 11 months, plus previous year for approximately 12-month window
+        const twelveMonthsAgo = getMonthsAgoDate(24); // Show last ~24 months to ensure recent bills appear
         const filteredBills = sortedBills.filter(bill => {
           // Convert Buddhist year (2567) to Gregorian (2026)
           const gregorianYear = bill.year - 543;
