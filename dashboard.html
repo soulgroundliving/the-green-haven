@@ -1768,6 +1768,26 @@
       </button>
     </div>
 
+    <!-- Community & Tenant Services -->
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">🏘️ Community Services</div>
+      <button class="sidebar-item" onclick="window.showPage('service-providers', this)">
+        <span class="sidebar-item-icon">📞</span>Service Providers
+      </button>
+      <button class="sidebar-item" onclick="window.showPage('community-events', this)">
+        <span class="sidebar-item-icon">📅</span>Community Events
+      </button>
+      <button class="sidebar-item" onclick="window.showPage('community-docs', this)">
+        <span class="sidebar-item-icon">📋</span>Documents
+      </button>
+      <button class="sidebar-item" onclick="window.showPage('pet-approvals', this)">
+        <span class="sidebar-item-icon">🐾</span>Pet Approvals
+      </button>
+      <button class="sidebar-item" onclick="window.showPage('lease-settings', this)">
+        <span class="sidebar-item-icon">🔔</span>Lease Alerts Config
+      </button>
+    </div>
+
     <!-- Account Settings -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Account</div>
@@ -3354,6 +3374,156 @@
   <div id="leaseAgreementsContainer"></div>
 </div>
 
+<!-- ===== SERVICE PROVIDERS MANAGEMENT ===== -->
+<div class="page" id="page-service-providers">
+  <div class="section-title">📞 Service Providers Management</div>
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+      <input type="text" id="providerSearch" placeholder="Search providers..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+      <button onclick="toggleAddProviderForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Provider</button>
+    </div>
+
+    <!-- Add Provider Form (Hidden) -->
+    <div id="addProviderForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+      <div style="font-weight: 700; margin-bottom: 1rem;">Add New Service Provider</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <input type="text" id="providerType" placeholder="Type (internet, electricity, water, etc.)" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <input type="text" id="providerName" placeholder="Provider Name" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <input type="tel" id="providerPhone" placeholder="Phone" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <input type="email" id="providerEmail" placeholder="Email" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+      </div>
+      <input type="text" id="providerWebsite" placeholder="Website" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+      <div style="display: flex; gap: 1rem;">
+        <button onclick="saveServiceProvider()" class="btn-receipt">💾 Save</button>
+        <button onclick="toggleAddProviderForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+      </div>
+    </div>
+
+    <!-- Providers List -->
+    <div id="providersList"></div>
+  </div>
+</div>
+
+<!-- ===== COMMUNITY EVENTS MANAGEMENT ===== -->
+<div class="page" id="page-community-events">
+  <div class="section-title">📅 Community Events Management</div>
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+      <input type="text" id="eventSearch" placeholder="Search events..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+      <button onclick="toggleAddEventForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Event</button>
+    </div>
+
+    <!-- Add Event Form (Hidden) -->
+    <div id="addEventForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+      <div style="font-weight: 700; margin-bottom: 1rem;">Add New Community Event</div>
+      <input type="text" id="eventTitle" placeholder="Event Title" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <input type="date" id="eventDate" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <input type="time" id="eventTime" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+      </div>
+      <input type="text" id="eventLocation" placeholder="Location" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+      <textarea id="eventDescription" placeholder="Description" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
+      <div style="display: flex; gap: 1rem;">
+        <button onclick="saveCommunityEvent()" class="btn-receipt">💾 Save</button>
+        <button onclick="toggleAddEventForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+      </div>
+    </div>
+
+    <!-- Events List -->
+    <div id="eventsList"></div>
+  </div>
+</div>
+
+<!-- ===== COMMUNITY DOCUMENTS MANAGEMENT ===== -->
+<div class="page" id="page-community-docs">
+  <div class="section-title">📋 Community Documents Management</div>
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+      <input type="text" id="docSearch" placeholder="Search documents..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+      <button onclick="toggleAddDocForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Document</button>
+    </div>
+
+    <!-- Add Document Form (Hidden) -->
+    <div id="addDocForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+      <div style="font-weight: 700; margin-bottom: 1rem;">Add New Document</div>
+      <input type="text" id="docTitle" placeholder="Document Title" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <select id="docCategory" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+          <option value="">Select Category</option>
+          <option value="Rules">Building Rules</option>
+          <option value="Emergency">Emergency Procedures</option>
+          <option value="Forms">Forms</option>
+          <option value="Policies">Policies</option>
+          <option value="Other">Other</option>
+        </select>
+        <input type="text" id="docType" placeholder="File Type (pdf, doc, etc.)" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+      </div>
+      <input type="text" id="docUrl" placeholder="Document URL / Link" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+      <textarea id="docDescription" placeholder="Description (optional)" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
+      <div style="display: flex; gap: 1rem;">
+        <button onclick="saveCommunityDocument()" class="btn-receipt">💾 Save</button>
+        <button onclick="toggleAddDocForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+      </div>
+    </div>
+
+    <!-- Documents List -->
+    <div id="docsList"></div>
+  </div>
+</div>
+
+<!-- ===== PET REGISTRATIONS APPROVAL ===== -->
+<div class="page" id="page-pet-approvals">
+  <div class="section-title">🐾 Pet Registration Approvals</div>
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+      <select id="petFilterStatus" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;" onchange="filterPetsByStatus(this.value)">
+        <option value="">All Status</option>
+        <option value="pending">⏳ Pending</option>
+        <option value="approved">✅ Approved</option>
+        <option value="rejected">❌ Rejected</option>
+      </select>
+      <input type="text" id="petSearch" placeholder="Search by room or tenant..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+    </div>
+
+    <!-- Pets List -->
+    <div id="petsList"></div>
+  </div>
+</div>
+
+<!-- ===== LEASE RENEWAL ALERTS SETTINGS ===== -->
+<div class="page" id="page-lease-settings">
+  <div class="section-title">🔔 Lease Renewal Alert Settings</div>
+  <div class="card">
+    <div style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+      <div style="font-weight: 700; margin-bottom: 1rem;">Alert Configuration</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <div>
+          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Alert Threshold (days)</label>
+          <input type="number" id="alertThreshold" min="1" max="365" value="60" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+          <small style="color: var(--text-muted);">Show alert when lease expires within X days</small>
+        </div>
+        <div>
+          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Alert Severity Level</label>
+          <select id="alertSeverity" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+            <option value="notice">ℹ️ Notice</option>
+            <option value="warning">⚠️ Warning</option>
+            <option value="urgent">🚨 Urgent</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="saveLeaseAlertSettings()" class="btn-receipt" style="margin-top: 1rem; padding: 10px 20px;">💾 Save Settings</button>
+    </div>
+
+    <!-- Upcoming Lease Expirations -->
+    <div style="margin-top: 2rem;">
+      <div style="font-weight: 700; margin-bottom: 1rem; font-size: 1.05rem;">📋 Upcoming Lease Expirations</div>
+      <div id="leaseExpiryList"></div>
+    </div>
+  </div>
+</div>
+
 </div><!-- end main -->
 
 <!-- Firebase Monitoring Panel -->
@@ -3438,6 +3608,11 @@ window._showPageImpl = function(page,btn){
   if(page==='owner-info')initOwnerInfoPage();
   if(page==='tenant-master')initTenantMasterPage();
   if(page==='lease-agreements')initLeaseAgreementsPage();
+  if(page==='service-providers')initServiceProvidersPage();
+  if(page==='community-events')initCommunityEventsPage();
+  if(page==='community-docs')initCommunityDocsPage();
+  if(page==='pet-approvals')initPetApprovalsPage();
+  if(page==='lease-settings')initLeaseSettingsPage();
 };
 // Assign to global scope after definition
 window.showPage = window._showPageImpl;
@@ -12285,6 +12460,530 @@ function showDebugPage() {
   debugShowAnnouncements();
   debugShowAllKeys();
 }
+
+// ===== SERVICE PROVIDERS MANAGEMENT =====
+function initServiceProvidersPage() {
+  loadAndRenderServiceProviders();
+}
+
+function loadAndRenderServiceProviders() {
+  const list = document.getElementById('providersList');
+  if (!list) return;
+
+  let providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
+  const searchVal = document.getElementById('providerSearch')?.value.toLowerCase() || '';
+
+  if (searchVal) {
+    providers = providers.filter(p =>
+      p.name.toLowerCase().includes(searchVal) ||
+      p.type.toLowerCase().includes(searchVal) ||
+      p.phone.includes(searchVal)
+    );
+  }
+
+  if (providers.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">📭 No service providers yet</div>';
+    return;
+  }
+
+  list.innerHTML = providers.map(p => `
+    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid var(--green);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+        <div>
+          <div style="font-weight: 700; font-size: 1rem;">📞 ${p.name}</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Type: <strong>${p.type}</strong></div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button onclick="editServiceProvider('${p.id}')" class="compact-btn compact-btn-edit">✏️ Edit</button>
+          <button onclick="deleteServiceProvider('${p.id}')" class="compact-btn compact-btn-delete">🗑️ Delete</button>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+        <div>📱 Phone: <strong>${p.phone}</strong></div>
+        <div>📧 Email: <strong>${p.email || '-'}</strong></div>
+        <div style="grid-column: 1/-1;">🌐 Website: <strong><a href="${p.website}" target="_blank" style="color: var(--blue);">${p.website || '-'}</a></strong></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleAddProviderForm() {
+  const form = document.getElementById('addProviderForm');
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  if (form.style.display === 'block') {
+    document.getElementById('providerType').focus();
+  }
+}
+
+function saveServiceProvider() {
+  const type = document.getElementById('providerType')?.value.trim();
+  const name = document.getElementById('providerName')?.value.trim();
+  const phone = document.getElementById('providerPhone')?.value.trim();
+  const email = document.getElementById('providerEmail')?.value.trim();
+  const website = document.getElementById('providerWebsite')?.value.trim();
+
+  if (!type || !name || !phone) {
+    alert('⚠️ Please fill in Type, Name, and Phone');
+    return;
+  }
+
+  let providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
+  const newProvider = {
+    id: 'sp_' + Date.now(),
+    type: type,
+    name: name,
+    phone: phone,
+    email: email,
+    website: website,
+    createdDate: new Date().toISOString()
+  };
+
+  providers.push(newProvider);
+  localStorage.setItem('service_providers_data', JSON.stringify(providers));
+
+  // Clear form
+  document.getElementById('providerType').value = '';
+  document.getElementById('providerName').value = '';
+  document.getElementById('providerPhone').value = '';
+  document.getElementById('providerEmail').value = '';
+  document.getElementById('providerWebsite').value = '';
+
+  toggleAddProviderForm();
+  loadAndRenderServiceProviders();
+  showToast('✅ Service provider added successfully', 'success');
+}
+
+function deleteServiceProvider(id) {
+  if (!confirm('Are you sure you want to delete this provider?')) return;
+
+  let providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
+  providers = providers.filter(p => p.id !== id);
+  localStorage.setItem('service_providers_data', JSON.stringify(providers));
+  loadAndRenderServiceProviders();
+  showToast('✅ Service provider deleted', 'success');
+}
+
+// ===== COMMUNITY EVENTS MANAGEMENT =====
+function initCommunityEventsPage() {
+  loadAndRenderCommunityEvents();
+}
+
+function loadAndRenderCommunityEvents() {
+  const list = document.getElementById('eventsList');
+  if (!list) return;
+
+  let events = JSON.parse(localStorage.getItem('community_events_data') || '[]');
+  const searchVal = document.getElementById('eventSearch')?.value.toLowerCase() || '';
+
+  if (searchVal) {
+    events = events.filter(e =>
+      e.title.toLowerCase().includes(searchVal) ||
+      e.location.toLowerCase().includes(searchVal)
+    );
+  }
+
+  // Sort by date
+  events.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (events.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">📭 No events scheduled</div>';
+    return;
+  }
+
+  list.innerHTML = events.map(e => `
+    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid #ff8f00;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+        <div style="flex: 1;">
+          <div style="font-weight: 700; font-size: 1rem;">📅 ${e.title}</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
+            📍 ${e.location} | 🕐 ${e.time}
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button onclick="deleteEvent('${e.id}')" class="compact-btn compact-btn-delete">🗑️</button>
+        </div>
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text);">📝 ${e.description || '-'}</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">📅 ${new Date(e.date).toLocaleDateString('th-TH')}</div>
+    </div>
+  `).join('');
+}
+
+function toggleAddEventForm() {
+  const form = document.getElementById('addEventForm');
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  if (form.style.display === 'block') {
+    document.getElementById('eventTitle').focus();
+  }
+}
+
+function saveCommunityEvent() {
+  const title = document.getElementById('eventTitle')?.value.trim();
+  const date = document.getElementById('eventDate')?.value;
+  const time = document.getElementById('eventTime')?.value;
+  const location = document.getElementById('eventLocation')?.value.trim();
+  const description = document.getElementById('eventDescription')?.value.trim();
+
+  if (!title || !date || !time || !location) {
+    alert('⚠️ Please fill in Title, Date, Time, and Location');
+    return;
+  }
+
+  let events = JSON.parse(localStorage.getItem('community_events_data') || '[]');
+  const newEvent = {
+    id: 'evt_' + Date.now(),
+    title: title,
+    date: date,
+    time: time,
+    location: location,
+    description: description,
+    building: 'rooms',
+    createdDate: new Date().toISOString()
+  };
+
+  events.push(newEvent);
+  localStorage.setItem('community_events_data', JSON.stringify(events));
+
+  // Clear form
+  document.getElementById('eventTitle').value = '';
+  document.getElementById('eventDate').value = '';
+  document.getElementById('eventTime').value = '';
+  document.getElementById('eventLocation').value = '';
+  document.getElementById('eventDescription').value = '';
+
+  toggleAddEventForm();
+  loadAndRenderCommunityEvents();
+  showToast('✅ Event created successfully', 'success');
+}
+
+function deleteEvent(id) {
+  if (!confirm('Are you sure you want to delete this event?')) return;
+
+  let events = JSON.parse(localStorage.getItem('community_events_data') || '[]');
+  events = events.filter(e => e.id !== id);
+  localStorage.setItem('community_events_data', JSON.stringify(events));
+  loadAndRenderCommunityEvents();
+  showToast('✅ Event deleted', 'success');
+}
+
+// ===== COMMUNITY DOCUMENTS MANAGEMENT =====
+function initCommunityDocsPage() {
+  loadAndRenderCommunityDocs();
+}
+
+function loadAndRenderCommunityDocs() {
+  const list = document.getElementById('docsList');
+  if (!list) return;
+
+  let docs = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
+  const searchVal = document.getElementById('docSearch')?.value.toLowerCase() || '';
+
+  if (searchVal) {
+    docs = docs.filter(d =>
+      d.title.toLowerCase().includes(searchVal) ||
+      d.category.toLowerCase().includes(searchVal)
+    );
+  }
+
+  // Group by category
+  const grouped = {};
+  docs.forEach(d => {
+    if (!grouped[d.category]) grouped[d.category] = [];
+    grouped[d.category].push(d);
+  });
+
+  if (docs.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">📭 No documents added</div>';
+    return;
+  }
+
+  list.innerHTML = Object.entries(grouped).map(([category, items]) => `
+    <div style="margin-bottom: 2rem;">
+      <div style="font-weight: 700; font-size: 0.95rem; color: var(--green-dark); margin-bottom: 1rem; border-bottom: 2px solid var(--green-pale); padding-bottom: 0.5rem;">📑 ${category}</div>
+      ${items.map(d => `
+        <div class="card" style="margin-bottom: 1rem; border-left: 4px solid #1976d2;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="flex: 1;">
+              <div style="font-weight: 700;">📄 ${d.title}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Type: <strong>${d.fileType || '-'}</strong></div>
+              ${d.description ? `<div style="font-size: 0.9rem; margin-top: 0.5rem;">${d.description}</div>` : ''}
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <a href="${d.fileUrl}" target="_blank" class="compact-btn compact-btn-view">📥 View</a>
+              <button onclick="deleteDocument('${d.id}')" class="compact-btn compact-btn-delete">🗑️</button>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function toggleAddDocForm() {
+  const form = document.getElementById('addDocForm');
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  if (form.style.display === 'block') {
+    document.getElementById('docTitle').focus();
+  }
+}
+
+function saveCommunityDocument() {
+  const title = document.getElementById('docTitle')?.value.trim();
+  const category = document.getElementById('docCategory')?.value;
+  const fileType = document.getElementById('docType')?.value.trim();
+  const fileUrl = document.getElementById('docUrl')?.value.trim();
+  const description = document.getElementById('docDescription')?.value.trim();
+
+  if (!title || !category || !fileUrl) {
+    alert('⚠️ Please fill in Title, Category, and URL');
+    return;
+  }
+
+  let docs = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
+  const newDoc = {
+    id: 'doc_' + Date.now(),
+    title: title,
+    category: category,
+    description: description,
+    fileUrl: fileUrl,
+    fileType: fileType,
+    building: 'rooms',
+    uploadedDate: new Date().toISOString()
+  };
+
+  docs.push(newDoc);
+  localStorage.setItem('community_documents_data', JSON.stringify(docs));
+
+  // Clear form
+  document.getElementById('docTitle').value = '';
+  document.getElementById('docCategory').value = '';
+  document.getElementById('docType').value = '';
+  document.getElementById('docUrl').value = '';
+  document.getElementById('docDescription').value = '';
+
+  toggleAddDocForm();
+  loadAndRenderCommunityDocs();
+  showToast('✅ Document added successfully', 'success');
+}
+
+function deleteDocument(id) {
+  if (!confirm('Are you sure you want to delete this document?')) return;
+
+  let docs = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
+  docs = docs.filter(d => d.id !== id);
+  localStorage.setItem('community_documents_data', JSON.stringify(docs));
+  loadAndRenderCommunityDocs();
+  showToast('✅ Document deleted', 'success');
+}
+
+// ===== PET REGISTRATION APPROVALS =====
+function initPetApprovalsPage() {
+  loadAndRenderPetApprovals();
+}
+
+function loadAndRenderPetApprovals() {
+  const list = document.getElementById('petsList');
+  if (!list) return;
+
+  // Load all pets from all rooms
+  let allPets = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('tenant_pets_')) {
+      const pets = JSON.parse(localStorage.getItem(key) || '[]');
+      const [, building, room] = key.split('_');
+      allPets = allPets.concat(pets.map(p => ({ ...p, room, building, storageKey: key })));
+    }
+  }
+
+  const searchVal = document.getElementById('petSearch')?.value.toLowerCase() || '';
+  const statusFilter = document.getElementById('petFilterStatus')?.value || '';
+
+  allPets = allPets.filter(p => {
+    const matchesSearch = !searchVal || p.room.toLowerCase().includes(searchVal) || p.name.toLowerCase().includes(searchVal);
+    const matchesStatus = !statusFilter || p.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  if (allPets.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">🐾 No pet registrations</div>';
+    return;
+  }
+
+  list.innerHTML = allPets.map(p => {
+    const statusBadge = p.status === 'approved' ? '✅ Approved' : p.status === 'rejected' ? '❌ Rejected' : '⏳ Pending';
+    const statusColor = p.status === 'approved' ? '#4caf50' : p.status === 'rejected' ? '#f44336' : '#ff9800';
+
+    return `
+      <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${statusColor};">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+          <div>
+            <div style="font-weight: 700; font-size: 1rem;">🐾 ${p.name} (${p.type})</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Room: <strong>${p.room}</strong></div>
+          </div>
+          <span style="padding: 0.4rem 0.8rem; border-radius: 20px; background: ${statusColor}; color: white; font-size: 0.85rem; font-weight: 600;">${statusBadge}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; font-size: 0.9rem; margin-bottom: 1rem;">
+          <div>🐕 Breed: <strong>${p.breed || '-'}</strong></div>
+          <div>⚖️ Weight: <strong>${p.weight || '-'}</strong></div>
+          <div>🎨 Color: <strong>${p.color || '-'}</strong></div>
+        </div>
+        ${p.notes ? `<div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">📝 ${p.notes}</div>` : ''}
+        ${p.status === 'pending' ? `
+          <div style="display: flex; gap: 0.5rem;">
+            <button onclick="approvePet('${p.id}', '${p.room}', '${p.storageKey}')" class="compact-btn compact-btn-view">✅ Approve</button>
+            <button onclick="rejectPet('${p.id}', '${p.room}', '${p.storageKey}')" class="compact-btn compact-btn-delete">❌ Reject</button>
+          </div>
+        ` : `
+          <button onclick="removePetApproval('${p.id}', '${p.room}', '${p.storageKey}')" class="compact-btn compact-btn-delete">🗑️ Remove</button>
+        `}
+      </div>
+    `;
+  }).join('');
+}
+
+function filterPetsByStatus(status) {
+  loadAndRenderPetApprovals();
+}
+
+function approvePet(id, room, storageKey) {
+  let pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  const pet = pets.find(p => p.id === id);
+  if (pet) {
+    pet.status = 'approved';
+    pet.approvalDate = new Date().toISOString();
+    localStorage.setItem(storageKey, JSON.stringify(pets));
+    loadAndRenderPetApprovals();
+    showToast('✅ Pet approved', 'success');
+  }
+}
+
+function rejectPet(id, room, storageKey) {
+  if (!confirm('Are you sure you want to reject this pet registration?')) return;
+
+  let pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  const pet = pets.find(p => p.id === id);
+  if (pet) {
+    pet.status = 'rejected';
+    pet.rejectionDate = new Date().toISOString();
+    localStorage.setItem(storageKey, JSON.stringify(pets));
+    loadAndRenderPetApprovals();
+    showToast('✅ Pet rejected', 'success');
+  }
+}
+
+function removePetApproval(id, room, storageKey) {
+  if (!confirm('Are you sure you want to remove this pet registration?')) return;
+
+  let pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  pets = pets.filter(p => p.id !== id);
+  localStorage.setItem(storageKey, JSON.stringify(pets));
+  loadAndRenderPetApprovals();
+  showToast('✅ Pet registration removed', 'success');
+}
+
+// ===== LEASE RENEWAL ALERTS SETTINGS =====
+function initLeaseSettingsPage() {
+  loadAndRenderLeaseSettings();
+}
+
+function loadAndRenderLeaseSettings() {
+  // Load current settings
+  const settings = JSON.parse(localStorage.getItem('lease_alert_settings') || '{"threshold": 60, "severity": "warning"}');
+  document.getElementById('alertThreshold').value = settings.threshold || 60;
+  document.getElementById('alertSeverity').value = settings.severity || 'warning';
+
+  // Load lease expirations
+  loadAndRenderLeaseExpirations();
+}
+
+function loadAndRenderLeaseExpirations() {
+  const container = document.getElementById('leaseExpiryList');
+  if (!container) return;
+
+  // Get all leases
+  const leases = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('lease_')) {
+      try {
+        const lease = JSON.parse(localStorage.getItem(key));
+        if (lease && lease.status === 'active') leases.push(lease);
+      } catch (e) {}
+    }
+  }
+
+  const threshold = parseInt(document.getElementById('alertThreshold')?.value || 60);
+  const today = new Date();
+  const expiringLeases = [];
+
+  leases.forEach(lease => {
+    const endDate = new Date(lease.moveOutDate || lease.moveInDate);
+    if (lease.duration) {
+      endDate.setMonth(endDate.getMonth() + lease.duration);
+    } else {
+      endDate.setFullYear(endDate.getFullYear() + 1);
+    }
+
+    const daysUntilExpiry = Math.floor((endDate - today) / (1000 * 60 * 60 * 24));
+    if (daysUntilExpiry >= 0 && daysUntilExpiry <= threshold) {
+      expiringLeases.push({ ...lease, daysUntilExpiry, expiryDate: endDate });
+    }
+  });
+
+  expiringLeases.sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
+
+  if (expiringLeases.length === 0) {
+    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">✅ No leases expiring soon</div>';
+    return;
+  }
+
+  container.innerHTML = expiringLeases.map(lease => {
+    let urgency = 'notice';
+    if (lease.daysUntilExpiry <= 7) urgency = 'urgent';
+    else if (lease.daysUntilExpiry <= 30) urgency = 'warning';
+
+    const urgencyColor = urgency === 'urgent' ? '#f44336' : urgency === 'warning' ? '#ff9800' : '#2196f3';
+    const urgencyIcon = urgency === 'urgent' ? '🚨' : urgency === 'warning' ? '⚠️' : 'ℹ️';
+
+    return `
+      <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${urgencyColor};">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="flex: 1;">
+            <div style="font-weight: 700; font-size: 1rem;">🏠 Room ${lease.roomId}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
+              Building: <strong>${lease.building === 'rooms' ? 'Rooms Building' : 'Nest Building'}</strong>
+            </div>
+          </div>
+          <span style="padding: 0.6rem 1rem; border-radius: 20px; background: ${urgencyColor}; color: white; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">${urgencyIcon} ${lease.daysUntilExpiry} days</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem; margin-top: 1rem;">
+          <div>👤 Tenant: <strong>${lease.tenantName || lease.tenantId}</strong></div>
+          <div>📅 Expires: <strong>${lease.expiryDate.toLocaleDateString('th-TH')}</strong></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function saveLeaseAlertSettings() {
+  const threshold = parseInt(document.getElementById('alertThreshold')?.value || 60);
+  const severity = document.getElementById('alertSeverity')?.value || 'warning';
+
+  if (threshold < 1 || threshold > 365) {
+    alert('⚠️ Threshold must be between 1 and 365 days');
+    return;
+  }
+
+  const settings = { threshold, severity };
+  localStorage.setItem('lease_alert_settings', JSON.stringify(settings));
+  showToast('✅ Lease alert settings saved', 'success');
+  loadAndRenderLeaseSettings();
+}
+
 </script>
 </body>
 </html>
