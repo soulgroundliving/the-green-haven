@@ -3332,7 +3332,7 @@
           <label style="display:block;margin-bottom:.5rem;font-weight:700;color:var(--text);">📸 อัปโหลดรูปสลิป:</label>
           <div style="border:2px dashed var(--border);border-radius:8px;padding:2rem;text-align:center;cursor:pointer;background:#fafafa;transition:.2s;"
             id="slipUploadDrop"
-            ondrop="handleSlipDrop(event)"
+            ondrop="handleAdminSlipDrop(event)"
             ondragover="event.preventDefault();this.style.background='#f0f7ff';this.style.borderColor='var(--blue)'"
             ondragleave="this.style.background='#fafafa';this.style.borderColor='var(--border)'"
             onclick="document.getElementById('slipUploadInput').click()">
@@ -7508,6 +7508,66 @@ function updateNavBadge(){
 function loadTenants(){return JSON.parse(localStorage.getItem('tenant_data')||'{}');}
 
 function saveTenants(t){localStorage.setItem('tenant_data',JSON.stringify(t));}
+
+// Initialize all rooms with default tenant users
+function initializeAllRoomUsers() {
+  const tenants = loadTenants();
+  const tNames = ['สมชาย ใจดี', 'นางสาวจิรา สมิตร', 'นายวิชัย จันทร์สว่าง', 'นางสมหญิง พรประเสริฐ', 'นายกมล วงศ์พันธ์',
+    'นางปวณีย์ ศรีสวัสดิ์', 'นายศักดา บุญเพิ่ม', 'นับพบ ยิ่มเสถียร', 'นางนิยม ดวงแว่', 'นายปณิต นิยมาน',
+    'นางกรรณิการ์ มัตตานี', 'นายเสวิชญ์ ศรีสอง', 'นางอรทัย ชิดโพธิ์', 'นายอภิวัฒน์ คงประเสริฐ'];
+
+  // Get all rooms from RoomConfigManager
+  const roomsConfig = RoomConfigManager.getRoomsConfig('rooms');
+  const nestConfig = RoomConfigManager.getRoomsConfig('nest');
+
+  let nameIndex = 0;
+  let updated = 0;
+
+  // Create users for Rooms building
+  if (roomsConfig && roomsConfig.rooms) {
+    roomsConfig.rooms.forEach(room => {
+      if (!tenants[room.id]) {
+        tenants[room.id] = {
+          name: tNames[nameIndex % tNames.length],
+          lineId: `@tenant_${room.id}`,
+          moveInDate: new Date(2024, 0, 15).toISOString().split('T')[0],
+          contractEnd: new Date(2025, 11, 15).toISOString().split('T')[0],
+          deposit: 3000,
+          note: `Tenant for ${room.name}`,
+          updatedAt: new Date().toISOString()
+        };
+        updated++;
+        nameIndex++;
+      }
+    });
+  }
+
+  // Create users for Nest building
+  if (nestConfig && nestConfig.rooms) {
+    nestConfig.rooms.forEach(room => {
+      if (!tenants[room.id]) {
+        tenants[room.id] = {
+          name: tNames[nameIndex % tNames.length],
+          lineId: `@tenant_${room.id}`,
+          moveInDate: new Date(2024, 0, 15).toISOString().split('T')[0],
+          contractEnd: new Date(2025, 11, 15).toISOString().split('T')[0],
+          deposit: room.deposit || 2500,
+          note: `Tenant for ${room.name}`,
+          updatedAt: new Date().toISOString()
+        };
+        updated++;
+        nameIndex++;
+      }
+    });
+  }
+
+  if (updated > 0) {
+    saveTenants(tenants);
+    console.log(`✅ Initialized ${updated} room users`);
+    return updated;
+  }
+  return 0;
+}
 let tenantBuilding='old';
 
 function setTenantBuilding(bld,btn){
@@ -8305,7 +8365,7 @@ function loadSelectedPayment(){
   selectedSlipFile = null;
 }
 
-function handleSlipDrop(e){
+function handleAdminSlipDrop(e){
   e.preventDefault();
   const file = e.dataTransfer.files[0];
   handleSlipSelect(file);
@@ -8421,6 +8481,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     return;
   }
   AccessControl.logAccessAttempt('/dashboard.html', true);
+
+  // Initialize all room users if not already done
+  initializeAllRoomUsers();
 
   populateRoomDropdown();
   const now=new Date();
@@ -11588,18 +11651,6 @@ function addNewTenant() {
   }
 }
 
-function deleteTenant(tenantId) {
-  const building = window.currentTenantMasterBuilding || 'rooms';
-  if (confirm(`คุณแน่ใจหรือว่าต้องการลบผู้เช่า ${tenantId}?`)) {
-    const deleteSuccess = typeof TenantConfigManager.deleteTenantWithFirebase === 'function'
-      ? (TenantConfigManager.deleteTenantWithFirebase(building, tenantId), true)
-      : TenantConfigManager.deleteTenant(building, tenantId);
-    if (deleteSuccess) {
-      alert('✅ ลบผู้เช่าเรียบร้อย');
-      renderTenantMasterPage();
-    }
-  }
-}
 
 function editTenant(tenantId) {
   alert('🔨 ฟีเจอร์แก้ไขผู้เช่ากำลังพัฒนา');
