@@ -1541,9 +1541,128 @@
     animation: slideOut 0.3s ease-out forwards;
   }
 
+  /* Photo Viewer Modal */
+  .photo-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .photo-modal.active {
+    display: flex;
+  }
+
+  .photo-modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .photo-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+
+  .photo-modal-close:hover {
+    background: #a01a1a;
+  }
+
+  .photo-modal-photos {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+
+  .photo-modal-item {
+    text-align: center;
+  }
+
+  .photo-modal-item-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.8rem;
+    display: block;
+  }
+
+  .photo-modal-item img {
+    max-width: 400px;
+    max-height: 500px;
+    border-radius: 8px;
+    border: 3px solid var(--border);
+  }
+
+  .photo-viewer-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--green);
+    color: white;
+    border: none;
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: 'Sarabun', sans-serif;
+  }
+
+  .photo-viewer-btn:hover {
+    background: var(--green-dark);
+  }
+
 </style>
 </head>
 <body>
+
+<!-- Photo Viewer Modal -->
+<div id="photoModal" class="photo-modal">
+  <div class="photo-modal-content">
+    <button class="photo-modal-close" onclick="closePhotoModal()">✕</button>
+    <h2 style="text-align: center; margin-bottom: 1rem; color: var(--text);">รูปภาพซ่อม</h2>
+    <div class="photo-modal-photos" id="photoModalPhotos"></div>
+  </div>
+</div>
 
 <!-- Toast Notification Container -->
 <div id="toastContainer" class="toast-container"></div>
@@ -8693,6 +8812,53 @@ function calculateDuration(startedAt, completedAt){
   return`${hours} ชั่วโมง ${remMins} นาที`;
 }
 
+// Open photo modal to view before/after images
+function openPhotoModal(beforePhoto, afterPhoto) {
+  const modal = document.getElementById('photoModal');
+  const photosContainer = document.getElementById('photoModalPhotos');
+
+  let html = '';
+
+  if (beforePhoto) {
+    html += `
+      <div class="photo-modal-item">
+        <span class="photo-modal-item-label">ก่อนซ่อม (Before)</span>
+        <img src="${beforePhoto}" alt="Before repair">
+      </div>
+    `;
+  }
+
+  if (afterPhoto) {
+    html += `
+      <div class="photo-modal-item">
+        <span class="photo-modal-item-label">หลังซ่อม (After)</span>
+        <img src="${afterPhoto}" alt="After repair">
+      </div>
+    `;
+  }
+
+  photosContainer.innerHTML = html;
+  modal.classList.add('active');
+}
+
+// Close photo modal
+function closePhotoModal() {
+  const modal = document.getElementById('photoModal');
+  modal.classList.remove('active');
+}
+
+// Close modal when clicking outside
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('photoModal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        closePhotoModal();
+      }
+    });
+  }
+});
+
 function renderMaintenancePage(){
   const mx=loadMaintenance();
   // Update KPIs
@@ -8726,7 +8892,7 @@ function renderMaintenancePage(){
             ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?'<span style="font-size:.75rem;color:var(--blue);background:#e3f2fd;padding:4px 10px;border-radius:20px;">📸 มีรูปภาพ</span>':''}
             ${x.assignedTo?'<span style="font-size:.75rem;color:#5e35b1;background:#e8e4f3;padding:4px 10px;border-radius:20px;">👤 '+x.assignedTo+'</span>':''}
           </div>
-          ${x.photoUrl||x.photo?'<div style="margin-top:8px;"><img src="'+(x.photoUrl||x.photo)+'" alt="Evidence photo" style="max-width:100%;max-height:200px;border-radius:6px;border:1px solid var(--border);"></div>':''}
+          ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?`<div style="margin-top:8px;"><button class="photo-viewer-btn" onclick="openPhotoModal('${x.beforePhoto||x.photoUrl||x.photo||''}', '${x.afterPhoto||''}')">📸 รูปภาพ</button></div>`:''}
 
           <div class="mx-row-meta">
             <div><strong>หมวด:</strong> ${MX_CAT_LABEL[x.category]||x.category}</div>
