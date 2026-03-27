@@ -8,11 +8,16 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-// Firebase config
+// Firebase config - Load API key from environment variable
 const firebaseConfig = {
-  apiKey: "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM",
+  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM", // Use env var if available
   databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
+
+if (!process.env.FIREBASE_API_KEY) {
+  console.warn('⚠️ WARNING: FIREBASE_API_KEY not set in environment. Using fallback key.');
+  console.warn('⚠️ For production, set: export FIREBASE_API_KEY="your-key"');
+}
 
 // Load bills
 const billsData = JSON.parse(fs.readFileSync('real-bills-generated.json', 'utf8'));

@@ -12,6 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="./shared/security.js"></script>
+  <script src="./shared/config-secure.js"></script>
   <script src="./shared/access-control.js"></script>
   <script src="./shared/invoice-receipt-manager.js"></script>
   <script src="./shared/room-config.js"></script>
@@ -278,7 +279,7 @@
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM",
+      apiKey: (typeof SecureConfig !== 'undefined' && SecureConfig.firebase.apiKey) ? SecureConfig.firebase.apiKey : "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM",
       authDomain: "the-green-haven.firebaseapp.com",
       databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "the-green-haven",
@@ -3525,7 +3526,7 @@
     function generateInvoiceWithDetails(bill, monthYear) {
       const billNo = bill.billId || ('INV-' + Date.now());
       const today = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
-      const ppNumber = localStorage.getItem('promptpay') || '0977826153';
+      const ppNumber = localStorage.getItem('promptpay') || '';
 
       const roomInfo = typeof RoomConfigManager !== 'undefined' ? RoomConfigManager.getRoom(currentBuilding, currentRoom) : null;
       const roomName = roomInfo?.name || `ห้อง ${currentRoom}`;
@@ -3633,7 +3634,7 @@
     function generateInvoice(month, amount) {
       const billNo = 'INV-' + Date.now();
       const today = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
-      const ppNumber = localStorage.getItem('promptpay') || '0977826153';
+      const ppNumber = localStorage.getItem('promptpay') || '';
 
       const roomInfo = typeof RoomConfigManager !== 'undefined' ? RoomConfigManager.getRoom(currentBuilding, currentRoom) : null;
       const roomName = roomInfo?.name || `ห้อง ${currentRoom}`;
@@ -3729,7 +3730,7 @@
       document.getElementById('qrCode').innerHTML = '';
 
       // Get PromptPay number from localStorage (default: 0977826153)
-      const ppNumber = localStorage.getItem('promptpay') || '0977826153';
+      const ppNumber = localStorage.getItem('promptpay') || '';
 
       // Build PromptPay QR payload using proper EMV format with CRC
       const qrPayload = buildPromptPayPayload(ppNumber, currentPaymentAmount);
