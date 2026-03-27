@@ -4654,15 +4654,10 @@
           return b.month - a.month;
         });
 
-        // ✅ FILTER TO LAST 12 MONTHS - Show only recent billing history
-        // Filter bills to display only the last 12 months for cleaner view
-        const twelveMonthsAgo = getMonthsAgoDate(12);
-        const filteredBills = sortedBills.filter(bill => {
-          // Convert Buddhist year (2569) to Gregorian (2026)
-          const gregorianYear = bill.year - 543;
-          const billDate = new Date(gregorianYear, bill.month - 1, 1);
-          return billDate >= twelveMonthsAgo;
-        });
+        // ✅ FILTER TO LAST 12 MONTHS - Show only most recent billing history
+        // Limit to last 12 bills (approximately 1 year = 12 months)
+        // Sorted newest first, so slice first 12 items
+        const filteredBills = sortedBills.slice(0, 12);
 
         // Display info
         const paidCount = filteredBills.filter(b => b.status === 'paid').length;
