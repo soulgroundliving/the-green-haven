@@ -3829,13 +3829,6 @@
             ${ticket.assignedTo ? `<div style="margin-bottom: 0.8rem;"><strong>👤 ผู้รับผิดชอบ:</strong> ${ticket.assignedTo}</div>` : ''}
             ${ticket.workNotes || ticket.notes ? `<div style="margin-bottom: 0.8rem;"><strong>📝 หมายเหตุ:</strong> ${ticket.workNotes || ticket.notes}</div>` : ''}
             ${ticket.completedAt ? `<div style="margin-bottom: 0.8rem;"><strong>📅 วันที่เสร็จ:</strong> ${new Date(ticket.completedAt).toLocaleDateString('th-TH')}</div>` : ''}
-            ${ticket.beforePhoto || ticket.afterPhoto ? `
-              <div style="margin-bottom: 0.8rem;">
-                <button class="photo-viewer-btn" onclick="openPhotoModal('${ticket.beforePhoto || ''}', '${ticket.afterPhoto || ''}')">
-                  📸 รูปภาพ
-                </button>
-              </div>
-            ` : ''}
           </div>
         ` : '';
 
@@ -3853,10 +3846,10 @@
             <div class="ticket-details" style="margin-top: 1rem;">
               <div style="margin-bottom: 0.5rem;"><strong>ประเภท:</strong> ${ticket.category || 'ไม่ระบุ'}</div>
               <div style="margin-bottom: 0.5rem;"><strong>รายละเอียด:</strong> ${ticket.description || ticket.title || ''}</div>
-              ${ticket.beforePhoto || ticket.photoUrl || ticket.photo ? `
+              ${ticket.beforePhoto || ticket.photoUrl || ticket.photo || ticket.afterPhoto ? `
                 <div style="margin-top: 0.8rem;">
-                  <button class="photo-viewer-btn" onclick="openPhotoModal('${ticket.beforePhoto || ticket.photoUrl || ticket.photo}', '')">
-                    📸 ก่อนซ่อม (Before)
+                  <button class="photo-viewer-btn" onclick="openPhotoModal('${ticket.beforePhoto || ticket.photoUrl || ticket.photo || ''}', '${ticket.afterPhoto || ''}')">
+                    📸 รูปภาพ
                   </button>
                 </div>
               ` : ''}
