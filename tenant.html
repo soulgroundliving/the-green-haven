@@ -5876,10 +5876,16 @@
     function loadProfilePage() {
       // ✅ Load Personal Information from Tenant Data
       if (currentTenant) {
-        document.getElementById('profileName').value = currentTenant.name || '—';
-        document.getElementById('profilePhone').value = currentTenant.phone || '—';
-        document.getElementById('profileEmail').value = currentTenant.email || '—';
-        document.getElementById('profileAddress').value = currentTenant.address || '—';
+        // Handle both 'name' and 'tenantName' fields (from lease object or tenant master)
+        const tenantName = currentTenant.name || currentTenant.tenantName || '—';
+        const tenantPhone = currentTenant.phone || currentTenant.tenantPhone || '—';
+        const tenantEmail = currentTenant.email || currentTenant.tenantEmail || '—';
+        const tenantAddress = currentTenant.address || currentTenant.tenantAddress || '—';
+
+        document.getElementById('profileName').value = tenantName;
+        document.getElementById('profilePhone').value = tenantPhone;
+        document.getElementById('profileEmail').value = tenantEmail;
+        document.getElementById('profileAddress').value = tenantAddress;
       }
 
       // ✅ Load Room & Lease Information from currentLease
