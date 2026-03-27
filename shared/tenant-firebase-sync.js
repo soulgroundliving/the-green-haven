@@ -465,6 +465,29 @@ class TenantFirebaseSync {
   }
 
   /**
+   * Delete maintenance ticket from Firebase
+   */
+  static async deleteMaintenanceTicket(building, room, ticketId) {
+    try {
+      if (!this.database || !window.firebaseRef || !window.firebaseRemove) {
+        console.warn('⚠️ Firebase not available, cannot delete');
+        return false;
+      }
+
+      const ticketRef = window.firebaseRef(this.database,
+        `maintenance/${building}/${room}/${ticketId}`);
+
+      await window.firebaseRemove(ticketRef);
+
+      console.log('✅ Maintenance ticket deleted from Firebase:', ticketId);
+      return true;
+    } catch (error) {
+      console.error('❌ Error deleting maintenance ticket:', error);
+      return false;
+    }
+  }
+
+  /**
    * Update payment record in Firebase
    */
   static async updatePayment(billId, paymentData) {

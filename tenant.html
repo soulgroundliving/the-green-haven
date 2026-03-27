@@ -3805,6 +3805,9 @@
       // Always read fresh from localStorage (don't cache tenantFirebaseData)
       let tickets = getMaintenanceTickets();
 
+      // Auto-cleanup old completed tickets (30+ days old)
+      tickets = filterAndCleanupOldTickets(tickets);
+
       console.log('📋 renderTicketsList - loaded',tickets.length,'tickets from storage');
 
       if (tickets.length === 0) {
@@ -3868,6 +3871,55 @@
     function getMaintenanceTickets() {
       const stored = localStorage.getItem('tenant_maintenance_tickets');
       return stored ? JSON.parse(stored) : [];
+    }
+
+    // Auto-cleanup old completed tickets (delete after 30 days of completion)
+    function filterAndCleanupOldTickets(tickets) {
+      const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+
+      const filtered = tickets.filter(ticket => {
+        // Keep tickets that are not done
+        if (ticket.status !== 'done') return true;
+
+        // Keep tickets without completedAt field
+        if (!ticket.completedAt) return true;
+
+        try {
+          const completedTime = new Date(ticket.completedAt).getTime();
+          const ageMs = now - completedTime;
+
+          // Keep if less than 30 days old
+          if (ageMs <= THIRTY_DAYS_MS) return true;
+
+          // Delete old completed ticket from storage
+          console.log(`🗑️ Deleting old maintenance ticket: ${ticket.id} (${Math.floor(ageMs / (24 * 60 * 60 * 1000))} days old)`);
+
+          // Remove from Firebase if available
+          if (typeof TenantFirebaseSync !== 'undefined' && TenantFirebaseSync.deleteMaintenanceTicket) {
+            const building = ticket.building || 'rooms';
+            const room = ticket.room || sessionStorage.getItem('tenant_room');
+            if (room) {
+              TenantFirebaseSync.deleteMaintenanceTicket(building, room, ticket.id).catch(err =>
+                console.warn('⚠️ Could not delete from Firebase:', err)
+              );
+            }
+          }
+
+          return false; // Remove from filtered array
+        } catch (error) {
+          console.warn(`⚠️ Error processing ticket ${ticket.id}:`, error);
+          return true; // Keep on error
+        }
+      });
+
+      // Update localStorage with filtered tickets
+      if (filtered.length !== tickets.length) {
+        localStorage.setItem('tenant_maintenance_tickets', JSON.stringify(filtered));
+        console.log(`✅ Cleaned up ${tickets.length - filtered.length} old maintenance tickets`);
+      }
+
+      return filtered;
     }
 
     // Open photo modal to view before/after images
