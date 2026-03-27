@@ -1561,25 +1561,10 @@
         <div class="card">
           <div class="card-title" style="margin-bottom: 1.5rem;">📋 ข้อมูลส่วนตัว</div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+          <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 2rem;">
             <div>
               <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">ชื่อ-นามสกุล</label>
-              <input type="text" id="profileName" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px; font-weight: 600;">
-            </div>
-
-            <div>
-              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">เบอร์โทรศัพท์</label>
-              <input type="tel" id="profilePhone" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
-            </div>
-
-            <div>
-              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">อีเมล</label>
-              <input type="email" id="profileEmail" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
-            </div>
-
-            <div>
-              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">ที่อยู่</label>
-              <input type="text" id="profileAddress" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
+              <input type="text" id="profileName" readonly style="background: var(--green-pale); border: 1px solid var(--green); padding: 0.75rem; border-radius: 6px; font-weight: 600;">
             </div>
           </div>
         </div>
@@ -5878,14 +5863,7 @@
       if (currentTenant) {
         // Handle both 'name' and 'tenantName' fields (from lease object or tenant master)
         const tenantName = currentTenant.name || currentTenant.tenantName || '—';
-        const tenantPhone = currentTenant.phone || currentTenant.tenantPhone || '—';
-        const tenantEmail = currentTenant.email || currentTenant.tenantEmail || '—';
-        const tenantAddress = currentTenant.address || currentTenant.tenantAddress || '—';
-
         document.getElementById('profileName').value = tenantName;
-        document.getElementById('profilePhone').value = tenantPhone;
-        document.getElementById('profileEmail').value = tenantEmail;
-        document.getElementById('profileAddress').value = tenantAddress;
       }
 
       // ✅ Load Room & Lease Information from currentLease
