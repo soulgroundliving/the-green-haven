@@ -12545,6 +12545,53 @@ function saveServiceProvider() {
   showToast('✅ Service provider added successfully', 'success');
 }
 
+function editServiceProvider(id) {
+  const providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
+  const provider = providers.find(p => p.id === id);
+  if (!provider) return;
+
+  document.getElementById('providerType').value = provider.type;
+  document.getElementById('providerName').value = provider.name;
+  document.getElementById('providerPhone').value = provider.phone;
+  document.getElementById('providerEmail').value = provider.email || '';
+  document.getElementById('providerWebsite').value = provider.website || '';
+
+  const form = document.getElementById('addProviderForm');
+  form.style.display = 'block';
+
+  const button = form.querySelector('button.btn-receipt');
+  const originalText = button.textContent;
+  button.textContent = '✏️ Update Provider';
+  button.onclick = function() {
+    const updatedProvider = {
+      id: provider.id,
+      type: document.getElementById('providerType').value.trim(),
+      name: document.getElementById('providerName').value.trim(),
+      phone: document.getElementById('providerPhone').value.trim(),
+      email: document.getElementById('providerEmail').value.trim(),
+      website: document.getElementById('providerWebsite').value.trim(),
+      createdDate: provider.createdDate,
+      updatedDate: new Date().toISOString()
+    };
+
+    const idx = providers.findIndex(p => p.id === id);
+    if (idx >= 0) {
+      providers[idx] = updatedProvider;
+      localStorage.setItem('service_providers_data', JSON.stringify(providers));
+      document.getElementById('providerType').value = '';
+      document.getElementById('providerName').value = '';
+      document.getElementById('providerPhone').value = '';
+      document.getElementById('providerEmail').value = '';
+      document.getElementById('providerWebsite').value = '';
+      form.style.display = 'none';
+      button.textContent = originalText;
+      button.onclick = null;
+      loadAndRenderServiceProviders();
+      showToast('✅ Service provider updated', 'success');
+    }
+  };
+}
+
 function deleteServiceProvider(id) {
   if (!confirm('Are you sure you want to delete this provider?')) return;
 
