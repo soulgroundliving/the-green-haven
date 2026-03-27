@@ -3759,6 +3759,13 @@
         payments = currentBills.filter(b => b.status === 'paid');
       }
 
+      // Filter to last 12 months of payment history
+      const twelveMonthsAgo = getTwelveMonthsAgoDate();
+      payments = payments.filter(payment => {
+        const paymentDate = new Date(payment.paymentDate || payment.createdAt);
+        return paymentDate >= twelveMonthsAgo;
+      });
+
       if (payments.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">ยังไม่มีประวัติการชำระเงิน</p>';
         console.log('✅ No payment history found');
@@ -4583,7 +4590,15 @@
       return bill;
     }
 
-    // ===== BILLS PAGE - Display all historical bills =====
+    // Helper function to calculate 12 months ago date
+    function getTwelveMonthsAgoDate() {
+      const now = new Date();
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+      return twelveMonthsAgo;
+    }
+
+    // ===== BILLS PAGE - Display last 12 months of bills =====
     function loadBills() {
       const container = document.getElementById('billsList');
 
@@ -4639,15 +4654,21 @@
           return b.month - a.month;
         });
 
-        // ✅ SHOW ALL BILLS - No time limit filter
-        // Display all bills from all available years for complete history
-        // Include both pending and paid bills - nothing is hidden
-        const filteredBills = sortedBills;
+        // ✅ FILTER TO LAST 12 MONTHS - Show only recent billing history
+        // Convert bills to Gregorian date for comparison with current date
+        // Filter bills from last 12 months for cleaner, more relevant display
+        const twelveMonthsAgo = getTwelveMonthsAgoDate();
+        const filteredBills = sortedBills.filter(bill => {
+          // Convert Buddhist year (2567) to Gregorian (2026)
+          const gregorianYear = bill.year - 543;
+          const billDate = new Date(gregorianYear, bill.month - 1, 1);
+          return billDate >= twelveMonthsAgo;
+        });
 
         // Display info
         const paidCount = filteredBills.filter(b => b.status === 'paid').length;
         const pendingCount = filteredBills.filter(b => b.status !== 'paid').length;
-        console.log(`📋 Showing all ${filteredBills.length} bills for room ${currentRoom} (✅ ${paidCount} paid, ⏳ ${pendingCount} pending)`);
+        console.log(`📋 Showing ${filteredBills.length} bills (last 12 months) for room ${currentRoom} (✅ ${paidCount} paid, ⏳ ${pendingCount} pending)`);
         if (filteredBills.length === 0 && sortedBills.length === 0) {
           container.innerHTML = `
             <div class="info-box" style="text-align: center;">
