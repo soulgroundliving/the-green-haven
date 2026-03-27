@@ -26,6 +26,7 @@
 <script src="./shared/invoice-pdf-generator.js"></script>
 <script src="./shared/shared-config.js"></script>
 <script src="./shared/meter_import_helper.js"></script>
+<script src="./shared/config-secure.js"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="./mock-tenant-data.js"></script>
 <script src="./mock-meter-history.js"></script>
@@ -50,7 +51,7 @@
   // Firebase configuration
   // Firebase config from environment - API Key must be set via build process
   const firebaseConfig = {
-    apiKey: typeof FIREBASE_API_KEY !== 'undefined' ? FIREBASE_API_KEY : "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM",
+    apiKey: typeof SecureConfig !== 'undefined' && SecureConfig.firebase.apiKey ? SecureConfig.firebase.apiKey : (typeof FIREBASE_API_KEY !== 'undefined' ? FIREBASE_API_KEY : ''),
     authDomain: "the-green-haven.firebaseapp.com",
     databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "the-green-haven",
@@ -6949,7 +6950,7 @@ function enableReceiptBtn(){
 }
 
 // ===== PROMPTPAY QR =====
-let PROMPTPAY_NUMBER = localStorage.getItem('promptpay') || '0977826153';
+let PROMPTPAY_NUMBER = (typeof SecureConfig !== 'undefined' ? localStorage.getItem(SecureConfig.promptpay.storageKey) : localStorage.getItem('promptpay')) || '';
 
 function crc16(str){
   let c=0xFFFF;
@@ -8492,10 +8493,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Pre-select current month in vacant room checker
   document.getElementById('vc-month').value=now.getMonth()+1;
   renderPaymentStatus();
-  // Ensure default PromptPay number is set
+  // PromptPay number must be set by admin in settings
+  // No hardcoded default for security reasons
   if(!localStorage.getItem('promptpay')){
-    localStorage.setItem('promptpay','0977826153');
-    PROMPTPAY_NUMBER='0977826153';
+    console.warn('⚠️ PromptPay number not configured. Admin must set this in dashboard settings.');
   }
   // Restore saved PromptPay number
   if(PROMPTPAY_NUMBER){
