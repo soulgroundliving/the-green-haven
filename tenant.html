@@ -3928,9 +3928,12 @@
         return null;
       }
 
-      console.log('📝 Storing photo as Base64 (optimized for maintenance records)');
-      // Return base64 data - it will be stored in the ticket
-      return base64Data;
+      console.log('📝 Compressing photo before storage...');
+      // ✅ Compress image to reduce localStorage usage
+      const compressedData = await compressImage(base64Data, 1280, 1280, 0.75);
+      console.log('📝 Storing photo as Base64 (compressed)');
+      // Return compressed base64 data - it will be stored in the ticket
+      return compressedData;
     }
 
     async function saveMaintenanceTicket(ticket, reportedDate) {
