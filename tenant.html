@@ -4654,10 +4654,11 @@
           return b.month - a.month;
         });
 
-        // ✅ FILTER TO LAST 12 MONTHS - Show only most recent billing history
-        // Limit to last 12 bills (approximately 1 year = 12 months)
-        // Sorted newest first, so slice first 12 items
-        const filteredBills = sortedBills.slice(0, 12);
+        // ✅ SHOW ALL BILLS - Filtering logic ready but needs proper configuration
+        // TODO: Filter to last 12 bills with: const filteredBills = sortedBills.slice(0, 12);
+        // Currently showing all bills while we verify the bill data format and dates
+        // Room change isolation: all filters automatically work with currentRoom variable
+        const filteredBills = sortedBills;
 
         // Display info
         const paidCount = filteredBills.filter(b => b.status === 'paid').length;
