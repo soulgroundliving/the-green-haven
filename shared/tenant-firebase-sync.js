@@ -87,9 +87,9 @@ class TenantFirebaseSync {
    */
   static async loadTenant(tenantId) {
     try {
-      // Try localStorage first
-      if (typeof TenantConfigManager !== 'undefined') {
-        const tenant = TenantConfigManager.getTenant(tenantId);
+      // Try localStorage first - TenantConfigManager requires building parameter
+      if (typeof TenantConfigManager !== 'undefined' && this.currentBuilding) {
+        const tenant = TenantConfigManager.getTenant(this.currentBuilding, tenantId);
         if (tenant) {
           console.log('✅ Loaded tenant from localStorage:', tenant);
           return tenant;
@@ -100,7 +100,8 @@ class TenantFirebaseSync {
       // So we load it when we load the lease
       const lease = await this.loadLease();
       if (lease) {
-        // The lease object contains tenant info (name, phone, email, etc.)
+        // The lease object contains basic tenant info (tenantName, rent, etc.)
+        // But for phone, email, address, we need the full tenant record
         console.log('✅ Loaded tenant from lease data:', lease);
         return lease;
       }
