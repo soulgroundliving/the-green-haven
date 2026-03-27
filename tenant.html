@@ -2177,7 +2177,7 @@
           if (typeof LeaseAgreementManager !== 'undefined') {
             currentLease = LeaseAgreementManager.getActiveLease(currentBuilding, currentRoom);
             if (currentLease?.tenantId) {
-              currentTenant = TenantConfigManager?.getTenant(currentLease.tenantId);
+              currentTenant = TenantConfigManager?.getTenant(currentBuilding, currentLease.tenantId);
             }
           }
           loadBillsData();
@@ -2188,7 +2188,7 @@
         if (typeof LeaseAgreementManager !== 'undefined') {
           currentLease = LeaseAgreementManager.getActiveLease(currentBuilding, currentRoom);
           if (currentLease?.tenantId) {
-            currentTenant = TenantConfigManager?.getTenant(currentLease.tenantId);
+            currentTenant = TenantConfigManager?.getTenant(currentBuilding, currentLease.tenantId);
           }
         }
         loadBillsData();
