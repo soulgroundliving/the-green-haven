@@ -1395,7 +1395,7 @@
             <div style="font-size: 1.1rem; font-weight: 700; color: var(--blue);">แจ้งซ่อมใหม่</div>
           </div>
           <form onsubmit="submitMaintenance(event)">
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">ประเภทปัญหา *</label>
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">หมวดซ่อม *</label>
             <select id="maintenanceCategory" required style="width: 100%; margin-bottom: 1rem; padding: 0.8rem; border: 1px solid var(--border); border-radius: 6px;">
               <option value="">เลือกประเภท</option>
               <option value="electric">⚡ ไฟฟ้า</option>
@@ -1405,7 +1405,7 @@
               <option value="other">📝 อื่นๆ</option>
             </select>
 
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อธิบายปัญหา *</label>
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อธิบายรายละเอียด *</label>
             <textarea id="maintenanceDescription" required placeholder="เขียนรายละเอียดปัญหา..." style="width: 100%; margin-bottom: 1rem; padding: 0.8rem; border: 1px solid var(--border); border-radius: 6px; min-height: 80px; font-family: inherit;"></textarea>
 
             <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
@@ -1426,7 +1426,7 @@
         <div class="section-title">➕ แจ้งซ่อมใหม่</div>
         <div class="card">
           <form onsubmit="submitMaintenance(event)">
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">ประเภทปัญหา *</label>
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">หมวดซ่อม *</label>
             <select id="maintenanceCategory" required>
               <option value="">เลือกประเภท</option>
               <option value="electric">⚡ ไฟฟ้า</option>
@@ -1436,8 +1436,8 @@
               <option value="other">📝 อื่นๆ</option>
             </select>
 
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อธิบายปัญหา *</label>
-            <textarea id="maintenanceDescription" placeholder="เขียนอธิบายปัญหาโดยละเอียด..." required></textarea>
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อธิบายรายละเอียด *</label>
+            <textarea id="maintenanceDescription" placeholder="เขียนอธิบายรายละเอียดโดยละเอียด..." required></textarea>
 
             <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
             <input type="file" id="maintenancePhoto" accept="image/*" style="margin-bottom: 1rem;" onchange="handleMaintenancePhotoChange('maintenancePhoto', 'maintenancePhotoPreview', 'maintenancePhotoImg')">
