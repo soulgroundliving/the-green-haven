@@ -3759,13 +3759,12 @@
         payments = currentBills.filter(b => b.status === 'paid');
       }
 
-      // TODO: Filter to last 12 months of payment history
-      // For now, showing all payments - filter will be enabled once date range is confirmed
-      // const twelveMonthsAgo = getMonthsAgoDate(12);
-      // payments = payments.filter(payment => {
-      //   const paymentDate = new Date(payment.paymentDate || payment.createdAt);
-      //   return paymentDate >= twelveMonthsAgo;
-      // });
+      // Filter to last 12 months of payment history
+      const twelveMonthsAgo = getMonthsAgoDate(12);
+      payments = payments.filter(payment => {
+        const paymentDate = new Date(payment.paymentDate || payment.createdAt);
+        return paymentDate >= twelveMonthsAgo;
+      });
 
       if (payments.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">ยังไม่มีประวัติการชำระเงิน</p>';
@@ -4655,10 +4654,15 @@
           return b.month - a.month;
         });
 
-        // ✅ SHOW ALL BILLS - Temporarily showing all bills
-        // TODO: Filter to show only bills from the last 12 months when date range is confirmed
-        // This ensures all available bills are visible for now
-        const filteredBills = sortedBills; // Show all bills temporarily
+        // ✅ FILTER TO LAST 12 MONTHS - Show only recent billing history
+        // Filter bills to display only the last 12 months for cleaner view
+        const twelveMonthsAgo = getMonthsAgoDate(12);
+        const filteredBills = sortedBills.filter(bill => {
+          // Convert Buddhist year (2569) to Gregorian (2026)
+          const gregorianYear = bill.year - 543;
+          const billDate = new Date(gregorianYear, bill.month - 1, 1);
+          return billDate >= twelveMonthsAgo;
+        });
 
         // Display info
         const paidCount = filteredBills.filter(b => b.status === 'paid').length;
