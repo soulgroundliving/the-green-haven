@@ -5499,7 +5499,7 @@
 
       container.innerHTML = payments.map(payment => {
         const displayDate = payment.createdAt
-          ? new Date(payment.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+          ? new Date(payment.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
           : payment.dueDate;
 
         const monthYear = payment.month && payment.year
@@ -5507,18 +5507,29 @@
           : payment.billId || 'ไม่ระบุ';
 
         return `
-          <div class="bill-card">
-            <div class="bill-card-left">
-              <h3>${monthYear}</h3>
-              <div class="bill-card-details">
-                <div>จำนวน: ${(payment.total || payment.amount || 0).toLocaleString('th-TH')} บาท</div>
-                <div>วิธีชำระ: ${payment.paymentMethod === 'slip' ? '📸 สลิป' : payment.paymentMethod === 'cash' ? '💵 เงินสด' : 'อื่นๆ'}</div>
-                <div>ชำระเมื่อ: ${displayDate}</div>
-                ${payment.slipOkVerified ? '<div style="color: var(--primary); font-weight: 700;">✅ ตรวจสอบโดย SlipOK</div>' : ''}
+          <div class="bill-card" style="display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.6rem 0.8rem; flex-wrap: nowrap;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem;">
+                <h3 style="margin: 0; font-size: var(--font-body); font-weight: 700;">${monthYear}</h3>
+              </div>
+              <div style="display: flex; gap: 0.8rem; font-size: var(--font-xs); color: var(--neutral); flex-wrap: wrap;">
+                <span>วิธีชำระ: ${payment.paymentMethod === 'slip' ? '📸 สลิป' : payment.paymentMethod === 'cash' ? '💵 เงินสด' : 'อื่นๆ'}</span>
+                <span>${displayDate}</span>
+                ${payment.slipOkVerified ? '<span style="color: var(--primary); font-weight: 700;">✅ SlipOK</span>' : ''}
               </div>
             </div>
-            <div class="bill-card-action">
-              <span class="bill-status-badge paid">✅ จ่ายแล้ว</span>
+
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; white-space: nowrap;">
+              <div style="text-align: right;">
+                <div style="font-size: var(--font-xs); color: var(--neutral); font-weight: 700;">จำนวน</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary); direction: ltr;">
+                  ฿${(payment.total || payment.amount || 0).toLocaleString('th-TH')}
+                </div>
+              </div>
+
+              <span style="padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; background: var(--primary)20; color: var(--primary); white-space: nowrap;">
+                ✅ จ่ายแล้ว
+              </span>
             </div>
           </div>
         `;
