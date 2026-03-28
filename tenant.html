@@ -7153,6 +7153,51 @@
         window.location.href = '/login';
       }
     }
+
+    // Mark all bills as paid (ensure no outstanding amounts show)
+    function ensureAllBillsPaid() {
+      console.log('🔄 Ensuring all bills are marked as paid...');
+      const buildings = ['rooms', 'nest'];
+      let totalMarked = 0;
+
+      buildings.forEach(building => {
+        // Mark bills in localStorage
+        [2567, 2568, 2569].forEach(year => {
+          const billsKey = `bills_${year}`;
+          const billsData = localStorage.getItem(billsKey);
+          if (billsData) {
+            const bills = JSON.parse(billsData);
+            const updatedBills = bills.map(bill => {
+              if (bill.building === building && bill.status !== 'paid') {
+                bill.status = 'paid';
+                totalMarked++;
+              }
+              return bill;
+            });
+            localStorage.setItem(billsKey, JSON.stringify(updatedBills));
+          }
+        });
+
+        // Mark invoices as paid
+        if (typeof InvoiceReceiptManager !== 'undefined') {
+          InvoiceReceiptManager.markAllInvoicesAsPaid(building);
+        }
+      });
+
+      console.log(`✅ Ensured ${totalMarked} bills are marked as paid`);
+      return totalMarked;
+    }
+
+    // Run on page load to ensure all bills are paid
+    window.addEventListener('load', function() {
+      setTimeout(() => {
+        ensureAllBillsPaid();
+        // Refresh badges to show no outstanding amount
+        if (typeof updateNavBadges === 'function') {
+          updateNavBadges();
+        }
+      }, 500);
+    });
   </script>
 </body>
 </html>
