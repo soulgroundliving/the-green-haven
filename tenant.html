@@ -3050,7 +3050,7 @@
       ctx.stroke();
     }
 
-    // METER TRENDS - Display historical meter readings
+    // METER TRENDS - Display historical meter readings (synced with bills)
     function displayMeterTrends() {
       const container = document.getElementById('meterTrendsContainer');
       const canvas = document.getElementById('meterTrendsChart');
@@ -3068,35 +3068,40 @@
       try {
         container.style.display = 'block';
 
-        // Collect meter data from all 12 months with readings
+        // Load all bills from localStorage to match bills data exactly
+        let allBills = [];
+        for (const year of [2567, 2568, 2569, 2570]) {
+          const billsKey = `bills_${year}`;
+          const billsData = localStorage.getItem(billsKey);
+          if (billsData) {
+            const yearBills = JSON.parse(billsData).filter(b => b.building === currentBuilding && b.roomId === currentRoom);
+            allBills.push(...yearBills);
+          }
+        }
+
+        // Build trends from bills (uses same calculation as bill display)
         const trends = [];
         const today = new Date();
 
         for (let i = 11; i >= 0; i--) {
           const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
           const year = date.getFullYear();
-          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          const month = date.getMonth() + 1;
           const buddhYear = year + 543;
 
-          const meterKey = `meter_data_${buddhYear}`;
-          const monthKey = `${buddhYear}-${month}`;
+          // Find bill for this month/year
+          const bill = allBills.find(b => b.year === buddhYear && b.month === month);
 
-          try {
-            const meterData = JSON.parse(localStorage.getItem(meterKey) || '{}');
-            if (meterData[monthKey] && meterData[monthKey][currentRoom]) {
-              const reading = meterData[monthKey][currentRoom];
-              trends.push({
-                month: date.toLocaleDateString('th-TH', { year: '2-digit', month: 'short' }),
-                monthNum: parseInt(month),
-                year: year,
-                electricReading: reading.eNew || reading.currentElectric || 0,
-                waterReading: reading.wNew || reading.currentWater || 0,
-                electricOld: reading.eOld || reading.previousElectric || 0,
-                waterOld: reading.wOld || reading.previousWater || 0
-              });
-            }
-          } catch (e) {
-            console.warn(`Could not load meter data for ${monthKey}`);
+          if (bill && bill.charges) {
+            const thaiMonth = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            trends.push({
+              month: thaiMonth[month],
+              monthNum: month,
+              year: year,
+              electricUsage: bill.charges?.electric?.usage || 0,
+              waterUsage: bill.charges?.water?.usage || 0,
+              monthStr: `${thaiMonth[month]} ${buddhYear}`
+            });
           }
         }
 
@@ -3104,38 +3109,92 @@
         canvas.width = Math.min(canvas.parentElement.offsetWidth, 900);
         canvas.height = 300;
 
-        // Calculate monthly usage and daily averages
-        const daysInMonth = (month, year) => new Date(year, month, 0).getDate();
+        // Update chart data structure to use usage values
+        if (trends.length > 0) {
+          // Convert usage to chart format
+          const chartData = trends.map(t => ({
+            month: t.month,
+            electric: t.electricUsage,
+            water: t.waterUsage,
+            avgElectric: '-',
+            avgWater: '-'
+          }));
 
-        // Draw the chart
-        drawMeterTrendsChart(trends);
+          // Draw the chart with usage data
+          const ctx = canvas.getContext('2d');
+          const padding = 40;
+          const chartWidth = canvas.width - (padding * 2);
+          const chartHeight = canvas.height - (padding * 2);
+          const barWidth = chartWidth / (chartData.length * 2.5);
+          const barGap = barWidth * 0.5;
 
-        // Generate table rows
+          const maxElectric = Math.max(...chartData.map(d => d.electric));
+          const maxWater = Math.max(...chartData.map(d => d.water));
+          const maxValue = Math.max(maxElectric, maxWater) * 1.1;
+
+          // Draw background
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Draw grid lines
+          ctx.strokeStyle = '#e0e0e0';
+          ctx.lineWidth = 1;
+          for (let i = 0; i <= 5; i++) {
+            const y = padding + (chartHeight / 5) * i;
+            ctx.beginPath();
+            ctx.moveTo(padding, y);
+            ctx.lineTo(canvas.width - padding, y);
+            ctx.stroke();
+
+            ctx.fillStyle = '#666';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'right';
+            const value = Math.round((maxValue / 5) * (5 - i));
+            ctx.fillText(value, padding - 10, y + 4);
+          }
+
+          // Draw bars
+          chartData.forEach((data, idx) => {
+            const x = padding + (idx * (barWidth * 2 + barGap));
+            const electricHeight = (data.electric / maxValue) * chartHeight;
+            const waterHeight = (data.water / maxValue) * chartHeight;
+
+            ctx.fillStyle = '#FFB84D'; // Electric (orange)
+            ctx.fillRect(x, padding + chartHeight - electricHeight, barWidth, electricHeight);
+
+            ctx.fillStyle = '#64B5F6'; // Water (blue)
+            ctx.fillRect(x + barWidth + 4, padding + chartHeight - waterHeight, barWidth, waterHeight);
+
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(data.month, x + barWidth, canvas.height - 15);
+          });
+
+          // Draw axes
+          ctx.strokeStyle = '#333';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(padding, padding);
+          ctx.lineTo(padding, padding + chartHeight);
+          ctx.lineTo(canvas.width - padding, padding + chartHeight);
+          ctx.stroke();
+        }
+
+        // Generate table rows (matching bills data exactly)
         tbody.innerHTML = trends.map((trend, idx) => {
-          // Calculate monthly usage from readings
-          let monthlyElectric = trend.electricReading - trend.electricOld;
-          let monthlyWater = trend.waterReading - trend.waterOld;
-
-          // If readings go backwards (meter reset), use the difference as-is
-          if (monthlyElectric < 0) monthlyElectric = Math.abs(monthlyElectric);
-          if (monthlyWater < 0) monthlyWater = Math.abs(monthlyWater);
-
-          const daysThisMonth = daysInMonth(trend.monthNum, trend.year);
-          const avgElectricDaily = (monthlyElectric / daysThisMonth).toFixed(2);
-          const avgWaterDaily = (monthlyWater / daysThisMonth).toFixed(2);
-
           return `
             <tr style="border-bottom: 1px solid var(--border); ${idx % 2 === 0 ? 'background: white;' : 'background: #fafafa;'}">
               <td style="padding: 0.6rem;">${trend.month}</td>
-              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">${monthlyElectric.toLocaleString('th-TH')}</td>
-              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">${avgElectricDaily}</td>
-              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">${monthlyWater.toLocaleString('th-TH')}</td>
-              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">${avgWaterDaily}</td>
+              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">${Math.round(trend.electricUsage).toLocaleString('th-TH')}</td>
+              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">-</td>
+              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">${Math.round(trend.waterUsage).toLocaleString('th-TH')}</td>
+              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">-</td>
             </tr>
           `;
         }).join('');
 
-        console.log('✅ Meter trends chart and table displayed:', trends.length, 'months');
+        console.log('✅ Meter trends synced with bills data:', trends.length, 'months');
       } catch (e) {
         console.error('❌ Error displaying meter trends:', e);
         tbody.innerHTML = '<tr><td colspan="5" style="padding: 1rem; text-align: center; color: var(--red);">⚠️ ไม่สามารถโหลดข้อมูลมิเตอร์</td></tr>';
