@@ -668,12 +668,13 @@
     // Firebase configuration
     // Environment variables are injected at build time by Vercel
     // Using the correct Firebase project from .env.local
+    // Fallback to hardcoded key if environment variable not available (static site limitation)
     const firebaseConfig = {
-      apiKey: "__FIREBASE_API_KEY__",
-      authDomain: "the-green-haven-d9b20.firebaseapp.com",
-      databaseURL: "https://the-green-haven-d9b20-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "the-green-haven-d9b20",
-      storageBucket: "the-green-haven-d9b20.appspot.com",
+      apiKey: (typeof SecureConfig !== 'undefined' && SecureConfig.firebase.apiKey) ? SecureConfig.firebase.apiKey : "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM",
+      authDomain: "the-green-haven.firebaseapp.com",
+      databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "the-green-haven",
+      storageBucket: "the-green-haven.appspot.com",
       messagingSenderId: "123456789",
       appId: "1:123456789:web:abcdef123456"
     };
