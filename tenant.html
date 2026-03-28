@@ -3233,37 +3233,59 @@
             });
           });
 
-          // Handle mouse events
-          canvas.addEventListener('mousemove', (e) => {
+          // Handle mouse and touch events
+          function showTooltip(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+            const posX = clientX - rect.left;
+            const posY = clientY - rect.top;
 
-            // Check if mouse is in chart area
-            if (mouseX < padding || mouseX > canvas.width - padding ||
-                mouseY < padding || mouseY > padding + chartHeight) {
+            // Check if position is in chart area
+            if (posX < padding || posX > canvas.width - padding ||
+                posY < padding || posY > padding + chartHeight) {
               tooltip.style.display = 'none';
               return;
             }
 
-            // Find which bar is hovered
+            // Find which bar is hovered/tapped
             for (let bar of barPositions) {
-              if (mouseX >= bar.x && mouseX <= bar.x + bar.width) {
+              if (posX >= bar.x && posX <= bar.x + bar.width) {
                 tooltip.innerHTML = `<strong>${bar.month}</strong><br>⚡ ${Math.round(bar.electric)} หน่วย<br>💧 ${Math.round(bar.water)} หน่วย`;
                 tooltip.style.display = 'block';
-                tooltip.style.left = (e.clientX - rect.left - 50) + 'px';
-                tooltip.style.top = (e.clientY - rect.top - 60) + 'px';
+                tooltip.style.left = (posX - 50) + 'px';
+                tooltip.style.top = (posY - 60) + 'px';
                 canvas.style.cursor = 'pointer';
                 return;
               }
             }
             tooltip.style.display = 'none';
             canvas.style.cursor = 'default';
+          }
+
+          // Mouse events (desktop)
+          canvas.addEventListener('mousemove', (e) => {
+            showTooltip(e.clientX, e.clientY);
           });
 
           canvas.addEventListener('mouseleave', () => {
             tooltip.style.display = 'none';
             canvas.style.cursor = 'default';
+          });
+
+          // Touch events (mobile/tablet)
+          canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+              showTooltip(e.touches[0].clientX, e.touches[0].clientY);
+            }
+          });
+
+          canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+              showTooltip(e.touches[0].clientX, e.touches[0].clientY);
+            }
+          });
+
+          canvas.addEventListener('touchend', () => {
+            tooltip.style.display = 'none';
           });
         }
 
