@@ -2051,10 +2051,10 @@
       // Protect tenant app - tenant only
       if (!AccessControl.protectPage('tenant')) {
         console.error('❌ Access denied: This page is for tenants only');
-        AccessControl.logAccessAttempt('/tenant.html', false);
+        AccessControl.logAccessAttempt('/tenant', false);
         return;
       }
-      AccessControl.logAccessAttempt('/tenant.html', true);
+      AccessControl.logAccessAttempt('/tenant', true);
 
       // Check authentication - prioritize sessionStorage (more reliable)
       try {
@@ -2077,7 +2077,7 @@
         }
       } catch (e) {
         console.error('❌ Authentication check failed:', e.message);
-        window.location.href = '/login.html';
+        window.location.href = '/login';
         return;
       }
 
@@ -2087,7 +2087,7 @@
 
       if (!roomNumber || roomNumber === 'null') {
         console.error('❌ ข้อมูลห้องพักไม่ถูกต้อง');
-        window.location.href = '/login.html';
+        window.location.href = '/login';
         return;
       }
 
@@ -2122,7 +2122,7 @@
         if (remaining <= 0) {
           // Session expired - logout
           sessionStorage.removeItem('user');
-          window.location.href = '/login.html?expired=true';
+          window.location.href = '/login?expired=true';
           return;
         }
 
@@ -2153,7 +2153,7 @@
               <div style="color: #856404; font-weight: 700;">⏰ หมดเวลาเซสชัน</div>
               <div style="color: #856404; font-size: 0.9rem;">เซสชั่นของคุณจะหมดในอีก ${minutes} นาที โปรดเพื่อเพิ่มเวลา</div>
             </div>
-            <button onclick="location.href='/tenant.html'" style="background: #ffc107; border: none; color: #000; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; margin-left: 1rem;">📄 รีเฟรส</button>
+            <button onclick="location.href='/tenant'" style="background: #ffc107; border: none; color: #000; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; margin-left: 1rem;">📄 รีเฟรส</button>
           `;
 
           document.body.insertBefore(banner, document.body.firstChild);
@@ -6130,7 +6130,7 @@
     function logout() {
       if (confirm('คุณแน่ใจว่าต้องการออกจากระบบ?')) {
         sessionStorage.removeItem('user');
-        window.location.href = '/login.html';
+        window.location.href = '/login';
       }
     }
   </script>

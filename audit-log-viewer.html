@@ -469,11 +469,11 @@
       // Protect audit log viewer - admin only
       if (!AccessControl.protectPage('admin')) {
         console.error('❌ Access denied: Only admin can view audit logs');
-        AccessControl.logAccessAttempt('/audit-log-viewer.html', false);
-        window.location.href = '/dashboard.html';
+        AccessControl.logAccessAttempt('/audit-log-viewer', false);
+        window.location.href = '/dashboard';
         return;
       }
-      AccessControl.logAccessAttempt('/audit-log-viewer.html', true);
+      AccessControl.logAccessAttempt('/audit-log-viewer', true);
 
       // Load logs
       loadLogs();
@@ -708,7 +708,7 @@
      * Go back to dashboard
      */
     function goBackToDashboard() {
-      window.location.href = '/dashboard.html';
+      window.location.href = '/dashboard';
     }
   </script>
 </body>
