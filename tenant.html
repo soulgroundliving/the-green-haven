@@ -2914,12 +2914,42 @@
       }
     }
 
+    // Check if tenant is new (has no meter data yet)
+    function hasAnyMeterData() {
+      const today = new Date();
+      for (let i = 0; i < 12; i++) {
+        const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const buddhYear = year + 543;
+        const meterKey = `meter_data_${buddhYear}`;
+        const monthKey = `${buddhYear}-${month}`;
+
+        try {
+          const meterData = JSON.parse(localStorage.getItem(meterKey) || '{}');
+          if (meterData[monthKey] && meterData[monthKey][currentRoom]) {
+            return true; // Has at least one month of data
+          }
+        } catch (e) {
+          // Continue checking other months
+        }
+      }
+      return false; // No meter data found
+    }
+
     // METER TRENDS - Display historical meter readings
     function displayMeterTrends() {
       const container = document.getElementById('meterTrendsContainer');
       const tbody = document.getElementById('meterTrendsTableBody');
 
       if (!container || !tbody) return;
+
+      // Check if tenant has any meter data
+      if (!hasAnyMeterData()) {
+        container.innerHTML = '<div style="background: var(--blue-pale); padding: 1.5rem; border-radius: 8px; text-align: center; color: var(--text-muted);">📊 ยังไม่มีข้อมูลการใช้พลังงาน (ผู้เช่าใหม่)</div>';
+        container.style.display = 'block';
+        return;
+      }
 
       try {
         container.style.display = 'block';
@@ -3000,6 +3030,15 @@
 
     // BILLS PAGE
     function loadBillsPage() {
+      // Hide meter trends button for new tenants
+      const meterTrendsBtn = document.querySelector('button[onclick="displayMeterTrends()"]');
+      if (meterTrendsBtn) {
+        if (hasAnyMeterData()) {
+          meterTrendsBtn.style.display = 'block';
+        } else {
+          meterTrendsBtn.style.display = 'none';
+        }
+      }
       loadBills();
     }
 
@@ -5344,9 +5383,18 @@
         }
 
         if (!bills || bills.length === 0) {
+          const isNewTenant = !hasAnyMeterData();
+          const message = isNewTenant ?
+            '📋 ยังไม่มีบิล (ผู้เช่าใหม่)' :
+            '📋 ยังไม่มีบิล';
+          const description = isNewTenant ?
+            '<div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem;">ข้อมูลบิลจะปรากฏหลังจากทำการบันทึกข้อมูลมิเตอร์เป็นครั้งแรก</div>' :
+            '';
+
           container.innerHTML = `
             <div class="info-box" style="text-align: center;">
-              <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">📋 ยังไม่มีบิล</div>
+              <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">${message}</div>
+              ${description}
               <p style="margin: 0;">ระบบยังไม่มีข้อมูลบิลสำหรับห้องนี้</p>
             </div>
           `;
