@@ -2767,6 +2767,26 @@
 
           console.log('✅ Tenant data initialized from Firebase (currentRoom=' + currentRoom + ')');
 
+          // ⚠️ If Firebase didn't provide lease, fall back to localStorage
+          if (!currentLease && typeof LeaseAgreementManager !== 'undefined') {
+            console.log('⚠️ No lease from Firebase, loading from localStorage (LeaseAgreementManager)...');
+            currentLease = LeaseAgreementManager.getActiveLease(currentBuilding, currentRoom);
+            if (currentLease?.tenantId && typeof TenantConfigManager !== 'undefined') {
+              currentTenant = TenantConfigManager.getTenant(currentBuilding, currentLease.tenantId);
+            }
+          }
+
+          // ⚠️ If tenant still not loaded, try to get from lease data
+          if (!currentTenant && currentLease?.tenantName) {
+            console.log('⚠️ No tenant from managers, using tenant name from lease...');
+            currentTenant = {
+              name: currentLease.tenantName,
+              tenantName: currentLease.tenantName,
+              building: currentBuilding,
+              id: currentLease.tenantId
+            };
+          }
+
           // ⚠️ If Firebase didn't provide bills, load them from TenantManager
           if (currentBills.length === 0) {
             console.log('⚠️ No bills from Firebase, loading from TenantManager...');
