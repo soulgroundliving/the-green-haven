@@ -6369,11 +6369,10 @@
           return b.month - a.month;
         });
 
-        // ✅ SHOW ALL BILLS - Filtering logic ready but needs proper configuration
-        // TODO: Filter to last 12 bills with: const filteredBills = sortedBills.slice(0, 12);
-        // Currently showing all bills while we verify the bill data format and dates
+        // ✅ Show last 12 months of bills only
+        // Filter to last 12 months (most recent first due to sorting)
         // Room change isolation: all filters automatically work with currentRoom variable
-        const filteredBills = sortedBills;
+        const filteredBills = sortedBills.slice(0, 12);
 
         // Display info
         const paidCount = filteredBills.filter(b => b.status === 'paid').length;
