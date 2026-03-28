@@ -3079,6 +3079,13 @@
           }
         }
 
+        console.log('📊 Meter Trends Debug:', {
+          currentBuilding,
+          currentRoom,
+          totalBillsLoaded: allBills.length,
+          bills: allBills.map(b => ({ month: b.month, year: b.year, electric: b.charges?.electric?.usage, water: b.charges?.water?.usage }))
+        });
+
         // Build trends from bills (uses same calculation as bill display)
         const trends = [];
         const today = new Date();
