@@ -648,12 +648,12 @@
       background: #fff;
       border: 1px solid #f0f0f0;
       border-radius: var(--radius-sm);
-      padding: 0.8rem 1rem;
-      margin-bottom: 0.5rem;
+      padding: 0.6rem 0.8rem;
+      margin-bottom: 0.4rem;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 0.5rem;
+      gap: 0.4rem;
       box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
       transition: all 0.2s ease;
     }
@@ -668,22 +668,23 @@
     }
 
     .bill-card h3 {
-      font-size: var(--font-body);
+      font-size: var(--font-small);
       font-weight: 700;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.3rem;
     }
 
     .bill-card-details {
-      font-size: var(--font-small);
+      font-size: var(--font-xs);
       color: var(--neutral);
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.3rem;
+      line-height: 1.3;
     }
 
     .bill-card-amount {
-      font-size: 1.3rem;
+      font-size: 1.1rem;
       font-weight: 800;
       color: var(--primary);
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.3rem;
     }
 
     .bill-status-badge {
@@ -1084,7 +1085,7 @@
     }
 
     .nav-item {
-      padding: 0.8rem 0.5rem;
+      padding: 0.5rem 0.4rem;
       border: none;
       background: transparent;
       cursor: pointer;
@@ -1095,7 +1096,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.3rem;
+      gap: 0.2rem;
       color: var(--neutral);
       position: relative;
     }
@@ -1105,7 +1106,7 @@
     }
 
     .nav-item-icon {
-      font-size: 1.5rem;
+      font-size: 1.2rem;
     }
 
     .nav-item-label {
@@ -3010,7 +3011,7 @@
       document.getElementById('homeRoomDetails').innerHTML = `
         <div class="room-details-item">
           <span>🌿 สมาชิกชุมชน</span>
-          <span>${tenantNameDisplay}</span>
+          <span style="font-weight: 700; color: #fff;">${tenantNameDisplay || currentUser?.email?.split('@')[0] || 'ผู้เช่า'}</span>
         </div>
         <div class="room-details-item">
           <span>🏡 ที่อยู่ของคุณ</span>
@@ -4163,8 +4164,8 @@
               </span>
 
               ${bill.status === 'pending' || bill.status === 'paid' ? `
-                <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.6rem 1rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: var(--font-body); white-space: nowrap;">
-                  📋 ดูใบเสร็จ
+                <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.4rem 0.8rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: var(--font-xs); white-space: nowrap;">
+                  📋 ดู
                 </button>
               ` : ''}
             </div>
