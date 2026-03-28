@@ -30,6 +30,18 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "RateLimit-Limit",
+          "value": "1000"
+        },
+        {
+          "key": "RateLimit-Remaining",
+          "value": "999"
+        },
+        {
+          "key": "RateLimit-Reset",
+          "value": "60"
         }
       ]
     }
