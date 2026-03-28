@@ -1344,9 +1344,10 @@
                 <thead>
                   <tr style="background: var(--blue); color: white;">
                     <th style="padding: 0.8rem; text-align: left;">เดือน/ปี</th>
-                    <th style="padding: 0.8rem; text-align: center;">⚡ ไฟฟ้า (หน่วย)</th>
-                    <th style="padding: 0.8rem; text-align: center;">💧 น้ำ (หน่วย)</th>
-                    <th style="padding: 0.8rem; text-align: center;">เปลี่ยนแปลง</th>
+                    <th style="padding: 0.8rem; text-align: center;">⚡ ไฟฟ้า<br/>(หน่วย/เดือน)</th>
+                    <th style="padding: 0.8rem; text-align: center;">⚡ เฉลี่ย<br/>(หน่วย/วัน)</th>
+                    <th style="padding: 0.8rem; text-align: center;">💧 น้ำ<br/>(หน่วย/เดือน)</th>
+                    <th style="padding: 0.8rem; text-align: center;">💧 เฉลี่ย<br/>(หน่วย/วัน)</th>
                   </tr>
                 </thead>
                 <tbody id="meterTrendsTableBody">
@@ -2923,7 +2924,7 @@
       try {
         container.style.display = 'block';
 
-        // Collect meter data from all 12 months
+        // Collect meter data from all 12 months with readings
         const trends = [];
         const today = new Date();
 
@@ -2942,8 +2943,12 @@
               const reading = meterData[monthKey][currentRoom];
               trends.push({
                 month: date.toLocaleDateString('th-TH', { year: '2-digit', month: 'short' }),
-                electric: reading.eNew || reading.currentElectric || 0,
-                water: reading.wNew || reading.currentWater || 0
+                monthNum: parseInt(month),
+                year: year,
+                electricReading: reading.eNew || reading.currentElectric || 0,
+                waterReading: reading.wNew || reading.currentWater || 0,
+                electricOld: reading.eOld || reading.previousElectric || 0,
+                waterOld: reading.wOld || reading.previousWater || 0
               });
             }
           } catch (e) {
@@ -2951,29 +2956,38 @@
           }
         }
 
+        // Calculate monthly usage and daily averages
+        const daysInMonth = (month, year) => new Date(year, month, 0).getDate();
+
         // Generate table rows
         tbody.innerHTML = trends.map((trend, idx) => {
-          let change = '';
-          if (idx > 0) {
-            const eDiff = trend.electric - trends[idx - 1].electric;
-            const wDiff = trend.water - trends[idx - 1].water;
-            change = `⚡${eDiff > 0 ? '+' : ''}${eDiff} | 💧${wDiff > 0 ? '+' : ''}${wDiff}`;
-          }
+          // Calculate monthly usage from readings
+          let monthlyElectric = trend.electricReading - trend.electricOld;
+          let monthlyWater = trend.waterReading - trend.waterOld;
+
+          // If readings go backwards (meter reset), use the difference as-is
+          if (monthlyElectric < 0) monthlyElectric = Math.abs(monthlyElectric);
+          if (monthlyWater < 0) monthlyWater = Math.abs(monthlyWater);
+
+          const daysThisMonth = daysInMonth(trend.monthNum, trend.year);
+          const avgElectricDaily = (monthlyElectric / daysThisMonth).toFixed(2);
+          const avgWaterDaily = (monthlyWater / daysThisMonth).toFixed(2);
 
           return `
             <tr style="border-bottom: 1px solid var(--border); ${idx % 2 === 0 ? 'background: white;' : 'background: #fafafa;'}">
               <td style="padding: 0.8rem;">${trend.month}</td>
-              <td style="padding: 0.8rem; text-align: center; font-weight: 600;">${trend.electric.toLocaleString('th-TH')}</td>
-              <td style="padding: 0.8rem; text-align: center; font-weight: 600;">${trend.water.toLocaleString('th-TH')}</td>
-              <td style="padding: 0.8rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">${change}</td>
+              <td style="padding: 0.8rem; text-align: center; font-weight: 600;">${monthlyElectric.toLocaleString('th-TH')}</td>
+              <td style="padding: 0.8rem; text-align: center; font-weight: 600;">${avgElectricDaily}</td>
+              <td style="padding: 0.8rem; text-align: center; font-weight: 600;">${monthlyWater.toLocaleString('th-TH')}</td>
+              <td style="padding: 0.8rem; text-align: center; font-weight: 600;">${avgWaterDaily}</td>
             </tr>
           `;
         }).join('');
 
-        console.log('✅ Meter trends displayed:', trends.length, 'months');
+        console.log('✅ Meter trends displayed with averages:', trends.length, 'months');
       } catch (e) {
         console.error('❌ Error displaying meter trends:', e);
-        tbody.innerHTML = '<tr><td colspan="4" style="padding: 1rem; text-align: center; color: var(--red);">⚠️ ไม่สามารถโหลดข้อมูลมิเตอร์</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="padding: 1rem; text-align: center; color: var(--red);">⚠️ ไม่สามารถโหลดข้อมูลมิเตอร์</td></tr>';
       }
     }
 
