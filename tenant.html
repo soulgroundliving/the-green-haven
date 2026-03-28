@@ -3004,8 +3004,8 @@
       const floor = Math.floor(parseInt(currentRoom.replace(/[^0-9]/g, '')) / 100) || 1;
 
       document.getElementById('homeRoomId').textContent = currentRoom;
-      // Get tenant name
-      const tenantNameDisplay = currentTenant?.name || currentLease?.tenantName || 'ไม่ระบุ';
+      // Get tenant name - try multiple sources
+      const tenantNameDisplay = currentTenant?.name || currentTenant?.tenantName || currentLease?.tenantName || currentUser?.name || 'ผู้เช่า';
 
       document.getElementById('homeRoomDetails').innerHTML = `
         <div class="room-details-item">
@@ -3166,9 +3166,12 @@
         if (internetSection) internetSection.style.display = 'none';
       }
 
-      // Update header with tenant name
-      const tenantName = currentTenant?.name || (currentLease?.tenantName) || 'ผู้เช่า';
-      document.querySelector('.app-header-title p').textContent = tenantName;
+      // Update header with tenant name - use improved fallback
+      const tenantName = currentTenant?.name || currentTenant?.tenantName || currentLease?.tenantName || currentUser?.name || 'ผู้เช่า';
+      const headerSubtitle = document.querySelector('.app-header-title p');
+      if (headerSubtitle) {
+        headerSubtitle.textContent = tenantName;
+      }
     }
 
     // ACCORDION TOGGLE - Expand/Collapse accordion sections
