@@ -4130,42 +4130,58 @@
 
         return `
           <div class="bill-card">
-            <div class="bill-card-left">
-              <h3 style="margin-bottom: 0.2rem;">${monthName} ${bill.year}</h3>
-              <span style="font-size: var(--font-xs); color: var(--neutral); font-weight: 400;">${bill.billId || ''}</span>
-
-              <div style="font-size: var(--font-small); color: var(--neutral); margin-bottom: 0.3rem; line-height: 1.4;">
-                <div>💰 ค่าเช่า: ฿${(bill.charges?.rent || bill.rent || 0).toLocaleString('th-TH')}</div>
-                <div>⚡ ค่าไฟ: ${
-                  bill.meterReadings && bill.meterReadings.electric
-                    ? `(${bill.meterReadings.electric.current} - ${bill.meterReadings.electric.previous}) = ${(bill.charges?.electric?.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges?.electric?.rate || 8} = ฿${(bill.charges?.electric?.cost || 0).toLocaleString('th-TH')}`
-                    : `฿${(bill.charges?.electric?.cost || bill.electric || 0).toLocaleString('th-TH')} (${(bill.charges?.electric?.usage || 0).toFixed(1)} หน่วย)`
-                }</div>
-                <div>💧 ค่าน้ำ: ${
-                  bill.meterReadings && bill.meterReadings.water
-                    ? `(${bill.meterReadings.water.current} - ${bill.meterReadings.water.previous}) = ${(bill.charges?.water?.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges?.water?.rate || 20} = ฿${(bill.charges?.water?.cost || 0).toLocaleString('th-TH')}`
-                    : `฿${(bill.charges?.water?.cost || bill.water || 0).toLocaleString('th-TH')} (${(bill.charges?.water?.usage || 0).toFixed(1)} หน่วย)`
-                }</div>
-                <div>🗑️ ค่าขยะ: ฿${(bill.charges?.trash || bill.trash || 0).toLocaleString('th-TH')}</div>
-                ${bill.charges?.common > 0 ? `<div>🏢 ค่าใช้ส่วนกลาง: ฿${(bill.charges.common || 0).toLocaleString('th-TH')}</div>` : ''}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.6rem;">
+              <div>
+                <h3 style="margin-bottom: 0.2rem; font-size: var(--font-body);">${monthName} ${bill.year}</h3>
+                <span style="font-size: var(--font-xs); color: var(--neutral);">${bill.billId || ''}</span>
               </div>
-            </div>
-
-            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem;">
               <div style="text-align: right;">
-                <div style="font-size: var(--font-xs); color: var(--neutral); font-weight: 700; margin-bottom: 0.2rem;">รวม</div>
-                <div style="font-size: 1.2rem; font-weight: 800; color: ${statusColor}; white-space: nowrap; direction: ltr;">
+                <div style="font-size: var(--font-xs); color: var(--neutral); margin-bottom: 0.2rem; font-weight: 700;">รวมทั้งสิ้น</div>
+                <div style="font-size: 1.4rem; font-weight: 800; color: ${statusColor}; direction: ltr;">
                   ฿${Math.round(bill.totalCharge || bill.total || 0).toLocaleString('th-TH')}
                 </div>
               </div>
+            </div>
 
-              <span style="display: inline-block; padding: 4px 10px; border-radius: 16px; font-size: var(--font-xs); font-weight: 700; background: ${statusColor}20; color: ${statusColor};">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem; padding: 0.6rem; background: #f9f9f9; border-radius: 8px;">
+              <div>
+                <div style="font-size: var(--font-xs); color: var(--neutral); margin-bottom: 0.2rem;">💰 ค่าเช่า</div>
+                <div style="font-size: var(--font-body); font-weight: 700; color: var(--text);">฿${(bill.charges?.rent || bill.rent || 0).toLocaleString('th-TH')}</div>
+              </div>
+              <div>
+                <div style="font-size: var(--font-xs); color: var(--neutral); margin-bottom: 0.2rem;">⚡ ค่าไฟ</div>
+                <div style="font-size: var(--font-body); font-weight: 700; color: var(--text);">฿${(bill.charges?.electric?.cost || bill.electric || 0).toLocaleString('th-TH')}</div>
+              </div>
+              <div>
+                <div style="font-size: var(--font-xs); color: var(--neutral); margin-bottom: 0.2rem;">💧 ค่าน้ำ</div>
+                <div style="font-size: var(--font-body); font-weight: 700; color: var(--text);">฿${(bill.charges?.water?.cost || bill.water || 0).toLocaleString('th-TH')}</div>
+              </div>
+              <div>
+                <div style="font-size: var(--font-xs); color: var(--neutral); margin-bottom: 0.2rem;">🗑️ ค่าขยะ</div>
+                <div style="font-size: var(--font-body); font-weight: 700; color: var(--text);">฿${(bill.charges?.trash || bill.trash || 0).toLocaleString('th-TH')}</div>
+              </div>
+            </div>
+
+            ${bill.meterReadings && (bill.meterReadings.electric || bill.meterReadings.water) ? `
+              <details style="margin-bottom: 0.6rem;">
+                <summary style="cursor: pointer; padding: 0.5rem; background: #f0f0f0; border-radius: 6px; font-size: var(--font-xs); font-weight: 700; color: var(--neutral); user-select: none;">
+                  📊 ดูรายละเอียดการใช้พลังงาน
+                </summary>
+                <div style="padding: 0.6rem 0.8rem; margin-top: 0.4rem; background: #fafafa; border-radius: 6px; font-size: var(--font-xs); color: var(--neutral); line-height: 1.6;">
+                  ${bill.meterReadings.electric ? `<div>⚡ ไฟฟ้า: (${bill.meterReadings.electric.current} - ${bill.meterReadings.electric.previous}) = ${(bill.charges?.electric?.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges?.electric?.rate || 8}</div>` : ''}
+                  ${bill.meterReadings.water ? `<div>💧 น้ำ: (${bill.meterReadings.water.current} - ${bill.meterReadings.water.previous}) = ${(bill.charges?.water?.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges?.water?.rate || 20}</div>` : ''}
+                </div>
+              </details>
+            ` : ''}
+
+            <div style="display: flex; gap: 0.6rem; align-items: center; justify-content: space-between;">
+              <span style="display: inline-block; padding: 0.4rem 0.8rem; border-radius: 16px; font-size: var(--font-xs); font-weight: 700; background: ${statusColor}20; color: ${statusColor};">
                 ${statusText}
               </span>
 
               ${bill.status === 'pending' || bill.status === 'paid' ? `
-                <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.4rem 0.8rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: var(--font-xs); white-space: nowrap;">
-                  📋 ดู
+                <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.5rem 1rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: var(--font-xs);">
+                  📋 ดูใบเสร็จ
                 </button>
               ` : ''}
             </div>
