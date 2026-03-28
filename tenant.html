@@ -3085,10 +3085,15 @@
             const yearBills = parsed.filter(b => {
               const matches = b.building === currentBuilding && b.roomId === currentRoom;
               if (matches) {
-                console.log(`    ✓ Found bill: month=${b.month}, year=${b.year}`);
+                console.log(`    ✓ Bill: month=${b.month}, year=${b.year}, building=${b.building}, roomId=${b.roomId}`);
               }
               return matches;
             });
+
+            // Also show first bill for debugging
+            if (parsed.length > 0 && yearBills.length === 0) {
+              console.log(`    (Sample bill structure: building=${parsed[0].building}, roomId=${parsed[0].roomId})`);
+            }
 
             allBills.push(...yearBills);
           }
