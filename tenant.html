@@ -524,7 +524,7 @@
       flex: 1;
       padding: 0.8rem 0.9rem;
       overflow-y: auto;
-      padding-bottom: 6rem;
+      padding-bottom: 7.5rem;
     }
 
     /* Page visibility - with smooth transitions */
@@ -4129,62 +4129,47 @@
         const statusText = bill.status === 'paid' ? '✅ จ่ายแล้ว' : bill.status === 'overdue' ? '⚠️逾期' : '⏳ รอชำระ';
 
         return `
-          <div class="bill-card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.6rem;">
-              <div>
-                <h3 style="margin-bottom: 0.2rem; font-size: var(--font-body);">${monthName} ${bill.year}</h3>
+          <div class="bill-card" style="display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.6rem 0.8rem; flex-wrap: nowrap;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem;">
+                <h3 style="margin: 0; font-size: var(--font-body); font-weight: 700;">${monthName} ${bill.year}</h3>
                 <span style="font-size: var(--font-xs); color: var(--neutral);">${bill.billId || ''}</span>
               </div>
+              <div style="display: flex; gap: 0.8rem; font-size: var(--font-xs); color: var(--neutral); flex-wrap: wrap;">
+                <span>💰 ฿${(bill.charges?.rent || bill.rent || 0).toLocaleString('th-TH')}</span>
+                <span>⚡ ฿${(bill.charges?.electric?.cost || bill.electric || 0).toLocaleString('th-TH')}</span>
+                <span>💧 ฿${(bill.charges?.water?.cost || bill.water || 0).toLocaleString('th-TH')}</span>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; white-space: nowrap;">
               <div style="text-align: right;">
-                <div style="font-size: var(--font-xs); color: var(--neutral); margin-bottom: 0.2rem; font-weight: 700;">รวมทั้งสิ้น</div>
-                <div style="font-size: 1.4rem; font-weight: 800; color: ${statusColor}; direction: ltr;">
+                <div style="font-size: var(--font-xs); color: var(--neutral); font-weight: 700;">รวม</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: ${statusColor}; direction: ltr;">
                   ฿${Math.round(bill.totalCharge || bill.total || 0).toLocaleString('th-TH')}
                 </div>
               </div>
-            </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem; padding: 0.6rem; background: #f9f9f9; border-radius: 8px;">
-              <div>
-                <div style="font-size: var(--font-xs); color: var(--neutral); margin-bottom: 0.2rem;">💰 ค่าเช่า</div>
-                <div style="font-size: var(--font-body); font-weight: 700; color: var(--text);">฿${(bill.charges?.rent || bill.rent || 0).toLocaleString('th-TH')}</div>
-              </div>
-              <div>
-                <div style="font-size: var(--font-xs); color: var(--neutral); margin-bottom: 0.2rem;">⚡ ค่าไฟ</div>
-                <div style="font-size: var(--font-body); font-weight: 700; color: var(--text);">฿${(bill.charges?.electric?.cost || bill.electric || 0).toLocaleString('th-TH')}</div>
-              </div>
-              <div>
-                <div style="font-size: var(--font-xs); color: var(--neutral); margin-bottom: 0.2rem;">💧 ค่าน้ำ</div>
-                <div style="font-size: var(--font-body); font-weight: 700; color: var(--text);">฿${(bill.charges?.water?.cost || bill.water || 0).toLocaleString('th-TH')}</div>
-              </div>
-              <div>
-                <div style="font-size: var(--font-xs); color: var(--neutral); margin-bottom: 0.2rem;">🗑️ ค่าขยะ</div>
-                <div style="font-size: var(--font-body); font-weight: 700; color: var(--text);">฿${(bill.charges?.trash || bill.trash || 0).toLocaleString('th-TH')}</div>
-              </div>
-            </div>
-
-            ${bill.meterReadings && (bill.meterReadings.electric || bill.meterReadings.water) ? `
-              <details style="margin-bottom: 0.6rem;">
-                <summary style="cursor: pointer; padding: 0.5rem; background: #f0f0f0; border-radius: 6px; font-size: var(--font-xs); font-weight: 700; color: var(--neutral); user-select: none;">
-                  📊 ดูรายละเอียดการใช้พลังงาน
-                </summary>
-                <div style="padding: 0.6rem 0.8rem; margin-top: 0.4rem; background: #fafafa; border-radius: 6px; font-size: var(--font-xs); color: var(--neutral); line-height: 1.6;">
-                  ${bill.meterReadings.electric ? `<div>⚡ ไฟฟ้า: (${bill.meterReadings.electric.current} - ${bill.meterReadings.electric.previous}) = ${(bill.charges?.electric?.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges?.electric?.rate || 8}</div>` : ''}
-                  ${bill.meterReadings.water ? `<div>💧 น้ำ: (${bill.meterReadings.water.current} - ${bill.meterReadings.water.previous}) = ${(bill.charges?.water?.usage || 0).toFixed(0)} หน่วย × ฿${bill.charges?.water?.rate || 20}</div>` : ''}
-                </div>
-              </details>
-            ` : ''}
-
-            <div style="display: flex; gap: 0.6rem; align-items: center; justify-content: space-between;">
-              <span style="display: inline-block; padding: 0.4rem 0.8rem; border-radius: 16px; font-size: var(--font-xs); font-weight: 700; background: ${statusColor}20; color: ${statusColor};">
+              <span style="padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; background: ${statusColor}20; color: ${statusColor}; white-space: nowrap;">
                 ${statusText}
               </span>
 
               ${bill.status === 'pending' || bill.status === 'paid' ? `
-                <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.5rem 1rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: var(--font-xs);">
-                  📋 ดูใบเสร็จ
+                <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.4rem 0.8rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: var(--font-xs); white-space: nowrap; flex-shrink: 0;">
+                  📋 ดู
                 </button>
               ` : ''}
             </div>
+
+            ${bill.meterReadings && (bill.meterReadings.electric || bill.meterReadings.water) ? `
+              <details style="position: absolute; right: 0.8rem; bottom: -2.5rem; background: white; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border); z-index: 10; font-size: var(--font-xs);">
+                <summary style="cursor: pointer; font-weight: 700; color: var(--info);">📊</summary>
+                <div style="padding: 0.4rem; color: var(--neutral); line-height: 1.4; white-space: nowrap;">
+                  ${bill.meterReadings.electric ? `<div>⚡ ${(bill.charges?.electric?.usage || 0).toFixed(0)} × ฿${bill.charges?.electric?.rate || 8}</div>` : ''}
+                  ${bill.meterReadings.water ? `<div>💧 ${(bill.charges?.water?.usage || 0).toFixed(0)} × ฿${bill.charges?.water?.rate || 20}</div>` : ''}
+                </div>
+              </details>
+            ` : ''}
           </div>
         `;
       }).join('');
