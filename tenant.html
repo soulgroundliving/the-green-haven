@@ -1782,57 +1782,25 @@
           </div>
         </div>
 
-        <!-- Section 3: Home Journey -->
-        <div class="accordion-section">
-          <button class="accordion-header" onclick="toggleAccordion(this)">
-            <span>🏡 บ้านของฉัน</span>
-            <span class="accordion-toggle">▼</span>
-          </button>
-          <div class="accordion-content">
-            <div style="display: grid; gap: 0.6rem;">
-              <div class="list-item">
-                <span class="list-item-label">เงินมัดจำ</span>
-                <span class="list-item-value" id="homeDeposit">-</span>
-              </div>
-              <div class="list-item">
-                <span class="list-item-label">วันเข้าเช่า</span>
-                <span class="list-item-value" id="homeMoveInDate">-</span>
-              </div>
-              <div class="list-item">
-                <span class="list-item-label">วันสิ้นสุดสัญญา</span>
-                <span class="list-item-value" id="homeLeaseEnd">-</span>
-              </div>
+        <!-- Section 3: Digital Wellness -->
+        <div id="internetStatusSection" style="display: none; padding: 0.8rem; background: var(--info-pale); border-radius: 8px; margin-bottom: 0.8rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem;">
+            <span style="font-size: 1.2rem;">📱</span>
+            <div class="stat-card-label" style="margin: 0;">เชื่อมต่อ</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: white; border-radius: 6px;">
+            <span id="internetStatusIcon" style="font-size: 1.5rem;">●</span>
+            <span id="internetStatusText" style="font-weight: 700; color: var(--info);">-</span>
+          </div>
+          <div id="internetSpeedSection" style="display: none; margin-top: 0.4rem;">
+            <span style="font-size: var(--font-xs); color: var(--neutral); font-weight: 700;">⚡ ความเร็ว:</span>
+            <div style="display: flex; gap: 1rem; margin-top: 0.2rem; font-size: var(--font-xs);">
+              <div>⬇️ <span id="internetDownloadSpeed">-</span></div>
+              <div>⬆️ <span id="internetUploadSpeed">-</span></div>
             </div>
           </div>
-        </div>
-
-        <!-- Section 4: Digital Wellness -->
-        <div class="accordion-section" id="internetStatusSection" style="display: none;">
-          <button class="accordion-header" onclick="toggleAccordion(this)">
-            <span>📱 เชื่อมต่อ</span>
-            <span class="accordion-toggle">▼</span>
-          </button>
-          <div class="accordion-content">
-            <div style="display: grid; gap: 0.6rem;">
-              <div style="padding: 0.8rem; background: var(--info-pale); border-radius: 8px;">
-                <div class="stat-card-label">🔌 สถานะการเชื่อมต่อ</div>
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.3rem;">
-                  <span id="internetStatusIcon" style="font-size: 1rem;">●</span>
-                  <span id="internetStatusText" style="font-weight: 700; color: var(--info);">-</span>
-                </div>
-              </div>
-              <div id="internetSpeedSection" style="display: none;">
-                <div class="stat-card-label">⚡ ความเร็ว</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.3rem;">
-                  <div><span style="font-size: var(--font-xs); color: var(--neutral);">Download</span><div style="font-weight: 700;" id="internetDownloadSpeed">-</div></div>
-                  <div><span style="font-size: var(--font-xs); color: var(--neutral);">Upload</span><div style="font-weight: 700;" id="internetUploadSpeed">-</div></div>
-                </div>
-              </div>
-              <div class="list-item">
-                <span class="list-item-label">ผู้ให้บริการ</span>
-                <span class="list-item-value" id="internetProvider">-</span>
-              </div>
-            </div>
+          <div id="internetProviderSection" style="display: none; margin-top: 0.3rem; font-size: var(--font-xs); color: var(--neutral);">
+            บริการ: <span id="internetProvider" style="font-weight: 700;">-</span>
           </div>
         </div>
 
@@ -3254,9 +3222,13 @@
       // Update provider info
       const providerEl = document.getElementById('internetProvider');
       const contactEl = document.getElementById('internetContact');
+      const providerSection = document.getElementById('internetProviderSection');
 
       if (providerEl) providerEl.textContent = internetStatus.provider || '-';
       if (contactEl) contactEl.textContent = internetStatus.contact || '-';
+      if (providerSection && internetStatus.provider) {
+        providerSection.style.display = 'block';
+      }
 
       // Update last check time
       const lastCheckEl = document.getElementById('internetLastCheck');
