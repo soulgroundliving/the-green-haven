@@ -2963,6 +2963,13 @@
       } else {
         servicesBadge.style.display = 'none';
       }
+
+      // Clear community badge - no pending items to notify about
+      const communityBadge = document.getElementById('community-badge');
+      if (communityBadge) {
+        communityBadge.style.display = 'none';
+        communityBadge.textContent = '';
+      }
     }
 
     // HOME PAGE
@@ -2976,10 +2983,19 @@
       // Get tenant name - try multiple sources
       const tenantNameDisplay = currentTenant?.name || currentTenant?.tenantName || currentLease?.tenantName || currentUser?.name || 'ผู้เช่า';
 
+      // Format today's date in Thai
+      const today = new Date();
+      const todayThai = today.toLocaleDateString('th-TH', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
       document.getElementById('homeRoomDetails').innerHTML = `
         <div class="room-details-item">
-          <span>🌿 สมาชิกชุมชน</span>
-          <span style="font-weight: 700; color: #fff;">${tenantNameDisplay || currentUser?.email?.split('@')[0] || 'ผู้เช่า'}</span>
+          <span style="font-size: 1.1rem; font-weight: 700;">👋 Welcome back!</span>
+          <span style="font-weight: 600; color: #fff; font-size: 0.95rem;">${todayThai}</span>
         </div>
         <div class="room-details-item">
           <span>🏡 ที่อยู่ของคุณ</span>
@@ -3673,40 +3689,21 @@
       try {
         container.style.display = 'block';
 
-        // Load all bills from localStorage to match bills data exactly
+        // Load all bills from localStorage
         let allBills = [];
-        console.log('🔍 Searching for bills...');
-        console.log('  currentBuilding:', currentBuilding, 'currentRoom:', currentRoom);
-
         for (const year of [2567, 2568, 2569, 2570]) {
           const billsKey = `bills_${year}`;
           const billsData = localStorage.getItem(billsKey);
-          console.log(`  ${billsKey}:`, billsData ? 'EXISTS' : 'missing');
-
           if (billsData) {
             const parsed = JSON.parse(billsData);
-            console.log(`    Total bills in ${billsKey}: ${parsed.length}`);
-
             const yearBills = parsed.filter(b => {
-              const matches = b.building === currentBuilding && b.roomId === currentRoom;
-              if (matches) {
-                console.log(`    ✓ Bill: month=${b.month}, year=${b.year}, building=${b.building}, roomId=${b.roomId}`);
-              }
-              return matches;
+              return b.building === currentBuilding && b.roomId === currentRoom;
             });
-
-            // Also show first bill for debugging
-            if (parsed.length > 0 && yearBills.length === 0) {
-              console.log(`    (Sample bill structure: building=${parsed[0].building}, roomId=${parsed[0].roomId})`);
-            }
-
             allBills.push(...yearBills);
           }
         }
 
-        console.log('📊 Total bills loaded for this room:', allBills.length);
-
-        // Build trends from bills (uses same calculation as bill display)
+        // Build trends from bills
         const trends = [];
         const today = new Date();
 
@@ -3715,50 +3712,80 @@
           const year = date.getFullYear();
           const month = date.getMonth() + 1;
           const buddhistYear = year + 543;
-          const buddhistYearShort = buddhistYear - 2500; // Convert 2567 → 67
+          const buddhistYearShort = buddhistYear - 2500;
 
-          // Find bill for this month/year (bills stored with short Buddhist year: 67, 68, 69, etc.)
           const bill = allBills.find(b => b.year === buddhistYearShort && b.month === month);
-          console.log(`🔍 ${date.toLocaleDateString('th-TH')}: Looking for month=${month}, year=${buddhistYearShort}, Found:`, bill ? `✓ (electric=${bill.charges?.electric?.usage})` : '✗');
 
           if (bill && bill.charges) {
             const thaiMonth = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            const daysInMonth = new Date(year, month, 0).getDate();
+
             trends.push({
               month: thaiMonth[month],
               monthNum: month,
               year: year,
               electricUsage: bill.charges?.electric?.usage || 0,
               waterUsage: bill.charges?.water?.usage || 0,
-              monthStr: `${thaiMonth[month]} ${buddhistYear}`
+              monthStr: `${thaiMonth[month]} ${buddhistYear}`,
+              daysInMonth: daysInMonth,
+              electricDaily: ((bill.charges?.electric?.usage || 0) / daysInMonth).toFixed(2),
+              waterDaily: ((bill.charges?.water?.usage || 0) / daysInMonth).toFixed(2)
             });
           }
         }
 
-        // Set canvas size for responsive chart
-        canvas.width = Math.min(canvas.parentElement.offsetWidth, 900);
-        canvas.height = 300;
+        // Detect screen size for responsive design
+        const isMobile = window.innerWidth < 768;
+        const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
 
-        // Update chart data structure to use usage values
+        // Set canvas size based on screen size
+        const containerWidth = canvas.parentElement.offsetWidth;
+        let canvasWidth = containerWidth;
+        let canvasHeight = isMobile ? 250 : (isTablet ? 280 : 300);
+
+        if (isMobile) {
+          canvasWidth = Math.min(containerWidth - 20, 400); // Leave padding on mobile
+        } else if (isTablet) {
+          canvasWidth = Math.min(containerWidth, 700);
+        } else {
+          canvasWidth = Math.min(containerWidth, 900);
+        }
+
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        canvas.style.maxWidth = '100%';
+        canvas.style.height = 'auto';
+
+        // Update chart data structure
         if (trends.length > 0) {
-          // Convert usage to chart format
           const chartData = trends.map(t => ({
             month: t.month,
             electric: t.electricUsage,
             water: t.waterUsage,
-            avgElectric: '-',
-            avgWater: '-'
+            electricDaily: t.electricDaily,
+            waterDaily: t.waterDaily
           }));
 
-          // Draw the chart with usage data
+          // Draw the chart with responsive sizing
           const ctx = canvas.getContext('2d');
-          const padding = 40;
+          const padding = isMobile ? 35 : 40;
           const chartWidth = canvas.width - (padding * 2);
           const chartHeight = canvas.height - (padding * 2);
-          const barWidth = chartWidth / (chartData.length * 2.5);
-          const barGap = barWidth * 0.5;
 
-          const maxElectric = Math.max(...chartData.map(d => d.electric));
-          const maxWater = Math.max(...chartData.map(d => d.water));
+          // Calculate bar width based on screen size
+          let barWidth;
+          let barGap;
+
+          if (isMobile) {
+            barWidth = chartWidth / (chartData.length * 3);
+            barGap = barWidth * 0.3;
+          } else {
+            barWidth = chartWidth / (chartData.length * 2.5);
+            barGap = barWidth * 0.5;
+          }
+
+          const maxElectric = Math.max(...chartData.map(d => d.electric), 1);
+          const maxWater = Math.max(...chartData.map(d => d.water), 1);
           const maxValue = Math.max(maxElectric, maxWater) * 1.1;
 
           // Draw background
@@ -3776,7 +3803,7 @@
             ctx.stroke();
 
             ctx.fillStyle = '#666';
-            ctx.font = '12px Arial';
+            ctx.font = isMobile ? '10px Arial' : '12px Arial';
             ctx.textAlign = 'right';
             const value = Math.round((maxValue / 5) * (5 - i));
             ctx.fillText(value, padding - 10, y + 4);
@@ -3788,14 +3815,14 @@
             const electricHeight = (data.electric / maxValue) * chartHeight;
             const waterHeight = (data.water / maxValue) * chartHeight;
 
-            ctx.fillStyle = '#FFB84D'; // Electric (orange)
+            ctx.fillStyle = '#FFB84D';
             ctx.fillRect(x, padding + chartHeight - electricHeight, barWidth, electricHeight);
 
-            ctx.fillStyle = '#64B5F6'; // Water (blue)
+            ctx.fillStyle = '#64B5F6';
             ctx.fillRect(x + barWidth + 4, padding + chartHeight - waterHeight, barWidth, waterHeight);
 
             ctx.fillStyle = '#333';
-            ctx.font = 'bold 11px Arial';
+            ctx.font = isMobile ? 'bold 9px Arial' : 'bold 11px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(data.month, x + barWidth, canvas.height - 15);
           });
@@ -3809,25 +3836,29 @@
           ctx.lineTo(canvas.width - padding, padding + chartHeight);
           ctx.stroke();
 
-          // Add interactive tooltip for bars
+          // Add interactive tooltip
+          const existingTooltip = document.getElementById('chartTooltip');
+          if (existingTooltip) existingTooltip.remove();
+
           const tooltip = document.createElement('div');
           tooltip.id = 'chartTooltip';
           tooltip.style.cssText = `
             position: absolute;
             background: rgba(0,0,0,0.9);
             color: white;
-            padding: 10px;
+            padding: 8px 10px;
             border-radius: 6px;
-            font-size: 13px;
+            font-size: ${isMobile ? '12px' : '13px'};
             pointer-events: none;
             z-index: 1000;
             display: none;
             white-space: nowrap;
           `;
+
           canvas.parentElement.style.position = 'relative';
           canvas.parentElement.appendChild(tooltip);
 
-          // Track bar positions for hover detection
+          // Track bar positions for hover/touch detection
           const barPositions = [];
           chartData.forEach((data, idx) => {
             const x = padding + (idx * (barWidth * 2 + barGap));
@@ -3846,14 +3877,12 @@
             const posX = clientX - rect.left;
             const posY = clientY - rect.top;
 
-            // Check if position is in chart area
             if (posX < padding || posX > canvas.width - padding ||
                 posY < padding || posY > padding + chartHeight) {
               tooltip.style.display = 'none';
               return;
             }
 
-            // Find which bar is hovered/tapped
             for (let bar of barPositions) {
               if (posX >= bar.x && posX <= bar.x + bar.width) {
                 tooltip.innerHTML = `<strong>${bar.month}</strong><br>⚡ ${Math.round(bar.electric)} หน่วย<br>💧 ${Math.round(bar.water)} หน่วย`;
@@ -3868,7 +3897,6 @@
             canvas.style.cursor = 'default';
           }
 
-          // Mouse events (desktop)
           canvas.addEventListener('mousemove', (e) => {
             showTooltip(e.clientX, e.clientY);
           });
@@ -3878,15 +3906,16 @@
             canvas.style.cursor = 'default';
           });
 
-          // Touch events (mobile/tablet)
           canvas.addEventListener('touchstart', (e) => {
             if (e.touches.length > 0) {
+              e.preventDefault();
               showTooltip(e.touches[0].clientX, e.touches[0].clientY);
             }
           });
 
           canvas.addEventListener('touchmove', (e) => {
             if (e.touches.length > 0) {
+              e.preventDefault();
               showTooltip(e.touches[0].clientX, e.touches[0].clientY);
             }
           });
@@ -3896,70 +3925,96 @@
           });
         }
 
-        // Calculate 12-month averages
+        // Calculate averages
         const avgElectric = trends.reduce((sum, t) => sum + t.electricUsage, 0) / trends.length;
         const avgWater = trends.reduce((sum, t) => sum + t.waterUsage, 0) / trends.length;
+        const avgElectricDaily = trends.reduce((sum, t) => sum + parseFloat(t.electricDaily), 0) / trends.length;
+        const avgWaterDaily = trends.reduce((sum, t) => sum + parseFloat(t.waterDaily), 0) / trends.length;
 
-        // Update table headers with average values
+        // Update table headers
         const electricUsageHeader = document.getElementById('electricUsageHeader');
         const waterUsageHeader = document.getElementById('waterUsageHeader');
         const electricDailyHeader = document.getElementById('electricDailyHeader');
         const waterDailyHeader = document.getElementById('waterDailyHeader');
 
-        if (electricUsageHeader) {
-          electricUsageHeader.textContent = `⚡ ไฟฟ้า (${Math.round(avgElectric).toLocaleString('th-TH')})`;
-        }
-        if (waterUsageHeader) {
-          waterUsageHeader.textContent = `💧 น้ำ (${Math.round(avgWater).toLocaleString('th-TH')})`;
-        }
+        if (electricUsageHeader) electricUsageHeader.textContent = `⚡ ไฟฟ้า (${avgElectric.toFixed(0)} เฉลี่ย)`;
+        if (waterUsageHeader) waterUsageHeader.textContent = `💧 น้ำ (${avgWater.toFixed(0)} เฉลี่ย)`;
+        if (electricDailyHeader) electricDailyHeader.textContent = `⚡ เฉลี่ยวัน (${avgElectricDaily.toFixed(2)})`;
+        if (waterDailyHeader) waterDailyHeader.textContent = `💧 เฉลี่ยวัน (${avgWaterDaily.toFixed(2)})`;
 
-        // Generate table rows (matching bills data exactly)
-        const dailyAverages = trends.map((trend, idx) => {
-          // Calculate daily average (usage / days in month)
-          const daysThisMonth = new Date(trend.year, trend.monthNum, 0).getDate();
-          const dailyElectric = (trend.electricUsage / daysThisMonth).toFixed(1);
-          const dailyWater = (trend.waterUsage / daysThisMonth).toFixed(1);
+        // Render responsive table
+        tbody.innerHTML = trends.map((trend) => {
+          const electricDaily = parseFloat(trend.electricDaily);
+          const waterDaily = parseFloat(trend.waterDaily);
 
-          return { dailyElectric: parseFloat(dailyElectric), dailyWater: parseFloat(dailyWater), daysThisMonth };
-        });
-
-        // Calculate 12-month average daily consumption
-        const avgDailyElectric = dailyAverages.reduce((sum, d) => sum + d.dailyElectric, 0) / dailyAverages.length;
-        const avgDailyWater = dailyAverages.reduce((sum, d) => sum + d.dailyWater, 0) / dailyAverages.length;
-
-        if (electricDailyHeader) {
-          electricDailyHeader.textContent = `⚡ เฉลี่ยวัน (${avgDailyElectric.toFixed(1)})`;
-        }
-        if (waterDailyHeader) {
-          waterDailyHeader.textContent = `💧 เฉลี่ยวัน (${avgDailyWater.toFixed(1)})`;
-        }
-
-        tbody.innerHTML = trends.map((trend, idx) => {
-          // Calculate daily average (usage / days in month)
-          const daysThisMonth = new Date(trend.year, trend.monthNum, 0).getDate();
-          const dailyElectric = (trend.electricUsage / daysThisMonth).toFixed(1);
-          const dailyWater = (trend.waterUsage / daysThisMonth).toFixed(1);
-
-          // Determine trend indicators (compared to 12-month average)
-          const electricTrend = trend.electricUsage > avgElectric ? '📈' : trend.electricUsage < avgElectric ? '📉' : '→';
-          const waterTrend = trend.waterUsage > avgWater ? '📈' : trend.waterUsage < avgWater ? '📉' : '→';
-
-          return `
-            <tr style="border-bottom: 1px solid var(--border); ${idx % 2 === 0 ? 'background: white;' : 'background: #fafafa;'}">
-              <td style="padding: 0.6rem;">${trend.month}</td>
-              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">${Math.round(trend.electricUsage).toLocaleString('th-TH')}</td>
-              <td style="padding: 0.6rem; text-align: center; font-weight: 600; color: #666;">${dailyElectric} ${electricTrend}</td>
-              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">${Math.round(trend.waterUsage).toLocaleString('th-TH')}</td>
-              <td style="padding: 0.6rem; text-align: center; font-weight: 600; color: #666;">${dailyWater} ${waterTrend}</td>
-            </tr>
-          `;
+          if (isMobile) {
+            // Mobile view: Stacked card layout
+            return `
+              <tr style="display: block; background: white; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 0.8rem; padding: 0.8rem;">
+                <td style="display: block; padding: 0; margin-bottom: 0.4rem;">
+                  <strong style="font-size: 1rem;">${trend.monthStr}</strong>
+                </td>
+                <td style="display: block; padding: 0; margin-bottom: 0.3rem; font-size: 0.95rem;">
+                  <div style="display: flex; justify-content: space-between;">
+                    <span>⚡ ไฟฟ้า:</span>
+                    <span style="font-weight: 600;">${trend.electricUsage.toFixed(0)} หน่วย</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; color: var(--neutral); font-size: 0.85rem;">
+                    <span>└─ เฉลี่ยวัน:</span>
+                    <span>${electricDaily.toFixed(2)} หน่วย</span>
+                  </div>
+                </td>
+                <td style="display: block; padding: 0;">
+                  <div style="display: flex; justify-content: space-between;">
+                    <span>💧 น้ำ:</span>
+                    <span style="font-weight: 600;">${trend.waterUsage.toFixed(0)} หน่วย</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; color: var(--neutral); font-size: 0.85rem;">
+                    <span>└─ เฉลี่ยวัน:</span>
+                    <span>${waterDaily.toFixed(2)} หน่วย</span>
+                  </div>
+                </td>
+              </tr>
+            `;
+          } else {
+            // Desktop/Tablet view: Table format
+            return `
+              <tr style="border-bottom: 1px solid var(--border); font-size: ${isTablet ? '0.9rem' : '0.95rem'};">
+                <td style="padding: 0.6rem; text-align: left; font-weight: 600;">${trend.monthStr}</td>
+                <td style="padding: 0.6rem; text-align: center;">${trend.electricUsage.toFixed(0)}</td>
+                <td style="padding: 0.6rem; text-align: center;">${electricDaily.toFixed(2)}</td>
+                <td style="padding: 0.6rem; text-align: center;">${trend.waterUsage.toFixed(0)}</td>
+                <td style="padding: 0.6rem; text-align: center;">${waterDaily.toFixed(2)}</td>
+              </tr>
+            `;
+          }
         }).join('');
 
-        console.log('✅ Meter trends synced with bills data:', trends.length, 'months');
       } catch (e) {
         console.error('❌ Error displaying meter trends:', e);
         tbody.innerHTML = '<tr><td colspan="5" style="padding: 0.6rem 0.8rem; text-align: center; color: var(--danger);">⚠️ ไม่สามารถโหลดข้อมูลมิเตอร์</td></tr>';
       }
+    }
+
+    // Handle window resize for responsive chart
+    window.addEventListener('resize', debounce(() => {
+      const container = document.getElementById('meterTrendsContainer');
+      if (container && container.style.display !== 'none') {
+        displayMeterTrends();
+      }
+    }, 300));
+
+    // Debounce function to prevent excessive recalculations
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
     }
 
     function hideMeterTrends() {
@@ -6087,6 +6142,13 @@
       renderAnnouncements();
       displayEvents();
       displayDocuments();
+
+      // Clear community badge since all data is displayed
+      const communityBadge = document.getElementById('community-badge');
+      if (communityBadge) {
+        communityBadge.style.display = 'none';
+        communityBadge.textContent = '';
+      }
     }
 
     async function renderAnnouncements() {
