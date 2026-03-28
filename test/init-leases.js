@@ -10,10 +10,24 @@ function initializeLeaseAgreements() {
   // Get existing lease data or create new
   let leaseAgreementsData = {};
   const stored = localStorage.getItem('lease_agreements_data');
+
+  // Validate existing data - check if room 15 lease exists and is valid
   if (stored) {
-    leaseAgreementsData = JSON.parse(stored);
-    console.log('✅ Found existing lease agreements, skipping initialization');
-    return;
+    try {
+      leaseAgreementsData = JSON.parse(stored);
+      const hasRoom15 = Object.values(leaseAgreementsData).some(lease =>
+        lease.roomId === '15' && lease.status === 'active'
+      );
+      if (hasRoom15) {
+        console.log('✅ Found existing valid lease agreements for room 15, skipping initialization');
+        return;
+      } else {
+        console.log('⚠️ Found lease data but missing room 15, reinitializing...');
+      }
+    } catch (e) {
+      console.warn('⚠️ Lease data corrupted, reinitializing...');
+      leaseAgreementsData = {};
+    }
   }
 
   // Create lease agreements for all tenants
