@@ -573,6 +573,13 @@
     .card:nth-child(4) { animation-delay: 0.4s; }
     .card:nth-child(5) { animation-delay: 0.5s; }
 
+    /* Hide monthly bill status grid from home page */
+    #billPaidCount,
+    #billPendingCount,
+    #billOverdueCount {
+      display: none !important;
+    }
+
     .card:hover {
       box-shadow: 0 8px 32px rgba(45, 134, 83, .15);
       border-color: var(--primary-light);
