@@ -3205,15 +3205,28 @@
           ctx.stroke();
         }
 
+        // Calculate 12-month averages
+        const avgElectric = trends.reduce((sum, t) => sum + t.electricUsage, 0) / trends.length;
+        const avgWater = trends.reduce((sum, t) => sum + t.waterUsage, 0) / trends.length;
+
         // Generate table rows (matching bills data exactly)
         tbody.innerHTML = trends.map((trend, idx) => {
+          // Calculate daily average (usage / days in month)
+          const daysThisMonth = new Date(trend.year, trend.monthNum, 0).getDate();
+          const dailyElectric = (trend.electricUsage / daysThisMonth).toFixed(1);
+          const dailyWater = (trend.waterUsage / daysThisMonth).toFixed(1);
+
+          // Determine trend indicators (compared to 12-month average)
+          const electricTrend = trend.electricUsage > avgElectric ? '📈' : trend.electricUsage < avgElectric ? '📉' : '→';
+          const waterTrend = trend.waterUsage > avgWater ? '📈' : trend.waterUsage < avgWater ? '📉' : '→';
+
           return `
             <tr style="border-bottom: 1px solid var(--border); ${idx % 2 === 0 ? 'background: white;' : 'background: #fafafa;'}">
               <td style="padding: 0.6rem;">${trend.month}</td>
               <td style="padding: 0.6rem; text-align: center; font-weight: 600;">${Math.round(trend.electricUsage).toLocaleString('th-TH')}</td>
-              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">-</td>
+              <td style="padding: 0.6rem; text-align: center; font-weight: 600; color: #666;">${dailyElectric} ${electricTrend}</td>
               <td style="padding: 0.6rem; text-align: center; font-weight: 600;">${Math.round(trend.waterUsage).toLocaleString('th-TH')}</td>
-              <td style="padding: 0.6rem; text-align: center; font-weight: 600;">-</td>
+              <td style="padding: 0.6rem; text-align: center; font-weight: 600; color: #666;">${dailyWater} ${waterTrend}</td>
             </tr>
           `;
         }).join('');
