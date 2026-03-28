@@ -1031,19 +1031,189 @@
 
     .nav-badge {
       position: absolute;
-      top: 0;
-      right: 0;
+      top: -6px;
+      right: -4px;
       background: var(--red);
       color: white;
       border-radius: 50%;
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.65rem;
+      font-size: 0.7rem;
       font-weight: 700;
-      margin-top: -2px;
+      box-shadow: 0 2px 4px rgba(198, 40, 40, 0.3);
+    }
+
+    /* ===== DESIGN SYSTEM: COMPACT CARD COMPONENTS ===== */
+
+    /* Status Badge */
+    .status-badge {
+      display: inline-block;
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .status-badge.paid {
+      background: var(--green-pale);
+      color: var(--green-dark);
+    }
+
+    .status-badge.pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status-badge.overdue {
+      background: var(--red-pale);
+      color: var(--red);
+    }
+
+    /* Summary Stat Card */
+    .stat-card {
+      background: var(--card);
+      padding: 0.9rem;
+      border-radius: 10px;
+      text-align: center;
+      border: 1px solid var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      box-shadow: 0 4px 12px rgba(45, 134, 83, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .stat-card-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--green);
+      margin: 0.3rem 0;
+    }
+
+    .stat-card-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Expandable Section (Accordion) */
+    .accordion-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 0.75rem;
+      overflow: hidden;
+    }
+
+    .accordion-header {
+      padding: 0.9rem 1rem;
+      background: var(--card);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      font-family: 'Sarabun', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      transition: all 0.3s ease;
+    }
+
+    .accordion-header:hover {
+      background: var(--bg);
+    }
+
+    .accordion-header.active {
+      background: var(--green-pale);
+      color: var(--green-dark);
+    }
+
+    .accordion-toggle {
+      font-size: 0.8rem;
+      transition: transform 0.3s ease;
+    }
+
+    .accordion-header.active .accordion-toggle {
+      transform: rotate(180deg);
+    }
+
+    .accordion-content {
+      display: none;
+      padding: 1rem;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .accordion-content.active {
+      display: block;
+      max-height: 500px;
+    }
+
+    /* Compact List Item */
+    .list-item {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+
+    .list-item:last-child {
+      border-bottom: none;
+    }
+
+    .list-item-label {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .list-item-value {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Alert Banner */
+    .alert-banner {
+      padding: 0.9rem 1rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      font-size: 0.9rem;
+    }
+
+    .alert-banner.info {
+      background: var(--blue-pale);
+      border-left: 4px solid var(--blue);
+      color: var(--blue);
+    }
+
+    .alert-banner.warning {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      color: #856404;
+    }
+
+    .alert-banner.danger {
+      background: var(--red-pale);
+      border-left: 4px solid var(--red);
+      color: var(--red);
+    }
+
+    .alert-icon {
+      font-size: 1.3rem;
+      flex-shrink: 0;
     }
 
     /* Success/Error Boxes */
@@ -1502,70 +1672,24 @@
           </div>
         </div>
 
-        <!-- Latest Announcement Card -->
-        <div class="card" id="latestAnnouncementCard" style="display: none;">
-          <div class="card-title">📢 ประกาศล่าสุด</div>
-          <div id="latestAnnouncementContent"></div>
-        </div>
-
-        <!-- Lease Information Card -->
-        <div class="card" id="leaseInfoCard" style="display: none;">
-          <div class="card-title" style="margin-bottom: 1rem;">📋 ข้อมูลสัญญา</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">เงินมัดจำ</div>
-              <div style="font-size: 1.2rem; font-weight: 700; color: var(--text);" id="homeDeposit">-</div>
-            </div>
-            <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">วันเข้าเช่า</div>
-              <div style="font-size: 1rem; font-weight: 600; color: var(--text);" id="homeMoveInDate">-</div>
-            </div>
+        <!-- STATUS GRID (3 columns - paid/pending/overdue) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; margin-bottom: 1rem;">
+          <div class="stat-card">
+            <div class="stat-card-label">✅ ชำระแล้ว</div>
+            <div class="stat-card-value" id="billPaidCount">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">⏳ รอชำระ</div>
+            <div class="stat-card-value" id="billPendingCount" style="color: #ff9800;">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">⚠️ เกินกำหนด</div>
+            <div class="stat-card-value" id="billOverdueCount" style="color: var(--red);">0</div>
           </div>
         </div>
 
-        <!-- Building Internet Status Card -->
-        <div class="card" id="internetStatusCard" style="display: none;">
-          <div class="card-title" style="margin-bottom: 1rem;">📱 อินเทอร์เน็ต ส่วนกลาง</div>
-          <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
-            <!-- Status Section -->
-            <div style="padding: 1rem; background: var(--blue-pale); border-radius: 8px;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">🔌 สถานะการเชื่อมต่อ</div>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span id="internetStatusIcon" style="font-size: 1.5rem;">●</span>
-                <span id="internetStatusText" style="font-size: 1.1rem; font-weight: 700; color: var(--blue);">-</span>
-              </div>
-            </div>
-
-            <!-- Speed Section -->
-            <div id="internetSpeedSection" style="padding: 1rem; background: #f0f8ff; border-radius: 8px; display: none;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">⚡ ความเร็วล่าสุด</div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div>
-                  <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Download</div>
-                  <div style="font-size: 1rem; font-weight: 700; color: var(--blue);" id="internetDownloadSpeed">-</div>
-                </div>
-                <div>
-                  <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem;">Upload</div>
-                  <div style="font-size: 1rem; font-weight: 700; color: var(--blue);" id="internetUploadSpeed">-</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Provider Info Section -->
-            <div style="padding: 1rem; background: var(--border-light); border-radius: 8px;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">🏢 ผู้ให้บริการ</div>
-              <div style="font-size: 0.95rem; color: var(--text); margin-bottom: 0.3rem;" id="internetProvider">-</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);" id="internetContact">-</div>
-            </div>
-
-            <!-- Last Check Time -->
-            <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right;">
-              ตรวจสอบล่าสุด: <span id="internetLastCheck">-</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="quick-actions">
+        <!-- QUICK ACTION BUTTONS -->
+        <div class="quick-actions" style="margin-bottom: 1rem;">
           <button class="quick-action-btn" onclick="goToPage('bills')">
             <span class="quick-action-icon">💳</span>
             <span>ดูบิล</span>
@@ -1586,6 +1710,110 @@
             <span class="quick-action-icon">📞</span>
             <span>ติดต่อด่วน</span>
           </button>
+        </div>
+
+        <!-- EXPANDABLE SECTIONS (Accordion) -->
+
+        <!-- Section 1: Meter Readings -->
+        <div class="accordion-section">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span>⚡💧 มิเตอร์ปัจจุบัน</span>
+            <span class="accordion-toggle">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+              <div style="text-align: center; padding: 0.8rem; background: var(--blue-pale); border-radius: 8px;">
+                <div class="stat-card-label">⚡ ไฟฟ้า</div>
+                <div style="font-size: 1.6rem; font-weight: 800; color: var(--blue); margin: 0.3rem 0;" id="meterElectric">-</div>
+                <div class="stat-card-label">หน่วย</div>
+              </div>
+              <div style="text-align: center; padding: 0.8rem; background: var(--blue-pale); border-radius: 8px;">
+                <div class="stat-card-label">💧 น้ำ</div>
+                <div style="font-size: 1.6rem; font-weight: 800; color: var(--blue); margin: 0.3rem 0;" id="meterWater">-</div>
+                <div class="stat-card-label">หน่วย</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Outstanding Balance -->
+        <div class="accordion-section" id="outstandingSection" style="display: none;">
+          <button class="accordion-header" style="background: var(--red-pale); color: var(--red); font-weight: 800;" onclick="toggleAccordion(this)">
+            <span>💰 ยอดค้างชำระ</span>
+            <span class="accordion-toggle">▼</span>
+          </button>
+          <div class="accordion-content active">
+            <div style="text-align: center; padding: 1rem;">
+              <div class="stat-card-label">รวมค้างชำระ</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--red); margin: 0.5rem 0;" id="outstandingAmount">-</div>
+              <div class="stat-card-label" id="pendingBillCount">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Lease Information -->
+        <div class="accordion-section">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span>📋 ข้อมูลสัญญา</span>
+            <span class="accordion-toggle">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div style="display: grid; gap: 0.6rem;">
+              <div class="list-item">
+                <span class="list-item-label">เงินมัดจำ</span>
+                <span class="list-item-value" id="homeDeposit">-</span>
+              </div>
+              <div class="list-item">
+                <span class="list-item-label">วันเข้าเช่า</span>
+                <span class="list-item-value" id="homeMoveInDate">-</span>
+              </div>
+              <div class="list-item">
+                <span class="list-item-label">วันสิ้นสุดสัญญา</span>
+                <span class="list-item-value" id="homeLeaseEnd">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Internet Status -->
+        <div class="accordion-section" id="internetStatusSection" style="display: none;">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span>📱 อินเทอร์เน็ต</span>
+            <span class="accordion-toggle">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div style="display: grid; gap: 0.6rem;">
+              <div style="padding: 0.8rem; background: var(--blue-pale); border-radius: 8px;">
+                <div class="stat-card-label">🔌 สถานะการเชื่อมต่อ</div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.3rem;">
+                  <span id="internetStatusIcon" style="font-size: 1.2rem;">●</span>
+                  <span id="internetStatusText" style="font-weight: 700; color: var(--blue);">-</span>
+                </div>
+              </div>
+              <div id="internetSpeedSection" style="display: none;">
+                <div class="stat-card-label">⚡ ความเร็ว</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.3rem;">
+                  <div><span style="font-size: 0.75rem; color: var(--text-muted);">Download</span><div style="font-weight: 700;" id="internetDownloadSpeed">-</div></div>
+                  <div><span style="font-size: 0.75rem; color: var(--text-muted);">Upload</span><div style="font-weight: 700;" id="internetUploadSpeed">-</div></div>
+                </div>
+              </div>
+              <div class="list-item">
+                <span class="list-item-label">ผู้ให้บริการ</span>
+                <span class="list-item-value" id="internetProvider">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Latest Announcement (if exists) -->
+        <div class="accordion-section" id="latestAnnouncementSection" style="display: none;">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span>📢 ประกาศล่าสุด</span>
+            <span class="accordion-toggle">▼</span>
+          </button>
+          <div class="accordion-content">
+            <div id="latestAnnouncementContent"></div>
+          </div>
         </div>
       </div>
 
@@ -2891,6 +3119,19 @@
       // Update header with tenant name
       const tenantName = currentTenant?.name || (currentLease?.tenantName) || 'ผู้เช่า';
       document.querySelector('.app-header-title p').textContent = tenantName;
+    }
+
+    // ACCORDION TOGGLE - Expand/Collapse accordion sections
+    function toggleAccordion(headerElement) {
+      const content = headerElement.nextElementSibling;
+      if (!content || !content.classList.contains('accordion-content')) {
+        console.warn('⚠️ toggleAccordion: Could not find accordion content element');
+        return;
+      }
+
+      // Toggle active state
+      content.classList.toggle('active');
+      headerElement.classList.toggle('active');
     }
 
     // BUILDING INTERNET STATUS - View only
