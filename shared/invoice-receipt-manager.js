@@ -388,6 +388,33 @@ class InvoiceReceiptManager {
       return false;
     }
   }
+
+  /**
+   * Mark all invoices as paid for a building
+   */
+  static markAllInvoicesAsPaid(building) {
+    try {
+      const key = `invoices_${building}`;
+      const invoices = JSON.parse(localStorage.getItem(key) || '{}');
+      let totalMarked = 0;
+
+      Object.keys(invoices).forEach(invoiceId => {
+        if (invoices[invoiceId].status !== 'paid') {
+          invoices[invoiceId].status = 'paid';
+          invoices[invoiceId].updatedAt = new Date().toISOString();
+          totalMarked++;
+        }
+      });
+
+      localStorage.setItem(key, JSON.stringify(invoices));
+      console.log(`✅ Marked ${totalMarked} invoices as paid for ${building}`);
+
+      return { success: true, marked: totalMarked };
+    } catch (error) {
+      console.error('❌ Error marking invoices as paid:', error);
+      return { success: false, marked: 0 };
+    }
+  }
 }
 
 console.log('✅ InvoiceReceiptManager loaded');
