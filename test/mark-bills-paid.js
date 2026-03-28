@@ -1,19 +1,20 @@
 /**
- * Mark All Old Bills as Paid (Years 67-69)
+ * Mark All Old Bills & Invoices as Paid (Years 67-69)
  * Closes historical bills since no payment records exist
  * Starting fresh from today onwards
  */
 
 function markAllBillsPaid() {
-  console.log('📝 Starting to mark all bills as paid...\n');
+  console.log('📝 Starting to mark all bills and invoices as paid...\n');
 
   const buildings = ['rooms', 'nest'];
-  let totalMarked = 0;
+  let totalBillsMarked = 0;
+  let totalInvoicesMarked = 0;
 
   buildings.forEach(building => {
     console.log(`🏢 Processing ${building}...`);
 
-    // Process each year (67, 68, 69)
+    // Mark bills in localStorage
     [2567, 2568, 2569].forEach(year => {
       const billsKey = `bills_${year}`;
       const billsData = localStorage.getItem(billsKey);
@@ -32,7 +33,7 @@ function markAllBillsPaid() {
       const updatedBills = bills.map(bill => {
         if (bill.building === building) {
           bill.status = 'paid';
-          totalMarked++;
+          totalBillsMarked++;
           return bill;
         }
         return bill;
@@ -42,29 +43,42 @@ function markAllBillsPaid() {
       localStorage.setItem(billsKey, JSON.stringify(updatedBills));
       console.log(`  ✅ Marked ${buildingBills.length} bills as paid for year ${year}`);
     });
+
+    // Mark invoices as paid (if InvoiceReceiptManager is available)
+    if (typeof InvoiceReceiptManager !== 'undefined') {
+      const result = InvoiceReceiptManager.markAllInvoicesAsPaid(building);
+      totalInvoicesMarked += result.marked;
+    }
   });
 
   console.log(`\n✅ Completed!`);
-  console.log(`📊 Total bills marked as paid: ${totalMarked}`);
+  console.log(`📊 Total bills marked as paid: ${totalBillsMarked}`);
+  console.log(`📊 Total invoices marked as paid: ${totalInvoicesMarked}`);
 
   // Save completion status
   localStorage.setItem('bills_marked_paid', JSON.stringify({
     timestamp: new Date().toISOString(),
-    totalMarked: totalMarked,
+    totalBillsMarked: totalBillsMarked,
+    totalInvoicesMarked: totalInvoicesMarked,
     status: 'complete'
   }));
 
   return {
     success: true,
-    totalMarked: totalMarked,
-    message: 'All old bills marked as paid successfully'
+    totalBillsMarked: totalBillsMarked,
+    totalInvoicesMarked: totalInvoicesMarked,
+    message: 'All old bills and invoices marked as paid successfully'
   };
 }
 
 // Auto-run if not already done
 if (!localStorage.getItem('bills_marked_paid')) {
-  console.log('🔄 Running bill status update...');
+  console.log('🔄 Running bill and invoice status update...');
   markAllBillsPaid();
 } else {
-  console.log('✅ Bills already marked as paid');
+  console.log('✅ Bills and invoices already marked as paid');
+  // Force re-run to ensure all invoices are marked as paid
+  console.log('🔄 Re-running to ensure invoices are marked as paid...');
+  localStorage.removeItem('bills_marked_paid');
+  markAllBillsPaid();
 }
