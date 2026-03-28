@@ -6,7 +6,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https: wss:; frame-src 'self';">
   <meta name="theme-color" content="#2d8653">
   <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%232d8653' width='192' height='192'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='100' font-family='Arial' fill='white' font-weight='bold'>🏡</text></svg>">
-  <title>Nature Haven - Tenant App</title>
+  <title>Nature Haven - Wellness Resident Platform</title>
   <!-- v2.0.1 - Fixed ownerInfo duplicate declarations -->
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -1667,7 +1667,7 @@
     <header class="app-header">
       <div class="app-header-title">
         <h1>🏡 Nature Haven</h1>
-        <p id="headerSubtitle">Tenant App</p>
+        <p id="headerSubtitle">Wellness Resident Hub</p>
       </div>
       <div class="app-header-user">👤</div>
     </header>
@@ -1676,6 +1676,12 @@
     <div class="app-content">
       <!-- HOME PAGE -->
       <div class="page active" id="page-home">
+        <!-- Wellness Welcome Banner -->
+        <div style="background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%); color: white; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; text-align: center; box-shadow: var(--shadow-md);">
+          <div style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.3rem;">🌿 ยินดีต้อนรับ สมาชิกชุมชน</div>
+          <div style="font-size: 0.85rem; color: rgba(255,255,255,0.95);">เพื่อการอยู่ที่ดี · Quiet Living</div>
+        </div>
+
         <div class="room-card">
           <div class="room-number" id="homeRoomId">-</div>
           <div class="room-details" id="homeRoomDetails">-</div>
@@ -3008,24 +3014,24 @@
 
       document.getElementById('homeRoomDetails').innerHTML = `
         <div class="room-details-item">
-          <span>ผู้เช่า</span>
+          <span>🌿 สมาชิกชุมชน</span>
           <span>${tenantNameDisplay}</span>
         </div>
         <div class="room-details-item">
-          <span>ห้อง</span>
+          <span>🏡 ที่อยู่ของคุณ</span>
           <span>${roomName}</span>
         </div>
         <div class="room-details-item">
-          <span>ชั้น</span>
+          <span>📍 ชั้น</span>
           <span>${floor}</span>
         </div>
         <div class="room-details-item">
-          <span>ค่าเช่า</span>
+          <span>💚 การดูแลรายเดือน</span>
           <span>${rentPrice.toLocaleString('th-TH')} บาท</span>
         </div>
         <div class="room-details-item">
-          <span>สถานะ</span>
-          <span>✅ เช่าอยู่</span>
+          <span>✨ สถานะ</span>
+          <span>🌟 สมาชิกหลัก (Active)</span>
         </div>
       `;
 
