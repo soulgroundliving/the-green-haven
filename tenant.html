@@ -3098,6 +3098,7 @@
 
           // Find bill for this month/year
           const bill = allBills.find(b => b.year === buddhYear && b.month === month);
+          console.log(`🔍 Looking for: ${month}/${buddhYear}, Found:`, bill ? 'YES' : 'NO');
 
           if (bill && bill.charges) {
             const thaiMonth = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
