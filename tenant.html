@@ -39,6 +39,89 @@
   <!-- Populate room 15 data to Firebase -->
   <script src="./test/populate-room-15-firebase.js"></script>
   <script>
+    // ⚡ CRITICAL: Initialize lease data IMMEDIATELY (before everything else)
+    (function initLeaseDataDirectly() {
+      try {
+        const leaseData = localStorage.getItem('lease_agreements_data');
+        const leases = leaseData ? JSON.parse(leaseData) : {};
+
+        // Check if room 15 lease exists and is valid
+        const room15Lease = Object.values(leases).find(l => l.roomId === '15' && l.status === 'active');
+
+        if (room15Lease) {
+          console.log('✅ Lease data valid for room 15, using existing data');
+          return;
+        }
+
+        // Create/recreate lease data for all rooms
+        console.log('📝 Initializing lease agreements...');
+        const leaseAgreements = {
+          '15_lease_001': {
+            id: '15_lease_001',
+            building: 'rooms',
+            roomId: '15',
+            tenantId: '15',
+            tenantName: 'Somchai Room 15',
+            moveInDate: '2026-01-01',
+            moveOutDate: null,
+            rentAmount: 1200,
+            deposit: 3000,
+            status: 'active',
+            contractNumber: 'LEASE-rooms-15-001',
+            createdDate: new Date().toISOString()
+          },
+          '16_lease_001': {
+            id: '16_lease_001',
+            building: 'rooms',
+            roomId: '16',
+            tenantId: '16',
+            tenantName: 'Niran Room 16',
+            moveInDate: '2026-01-01',
+            moveOutDate: null,
+            rentAmount: 1200,
+            deposit: 3000,
+            status: 'active',
+            contractNumber: 'LEASE-rooms-16-001',
+            createdDate: new Date().toISOString()
+          },
+          '17_lease_001': {
+            id: '17_lease_001',
+            building: 'rooms',
+            roomId: '17',
+            tenantId: '17',
+            tenantName: 'Pimpa Room 17',
+            moveInDate: '2026-01-01',
+            moveOutDate: null,
+            rentAmount: 1200,
+            deposit: 3000,
+            status: 'active',
+            contractNumber: 'LEASE-rooms-17-001',
+            createdDate: new Date().toISOString()
+          },
+          '18_lease_001': {
+            id: '18_lease_001',
+            building: 'rooms',
+            roomId: '18',
+            tenantId: '18',
+            tenantName: 'Somphet Room 18',
+            moveInDate: '2026-01-01',
+            moveOutDate: null,
+            rentAmount: 1200,
+            deposit: 3000,
+            status: 'active',
+            contractNumber: 'LEASE-rooms-18-001',
+            createdDate: new Date().toISOString()
+          }
+        };
+
+        localStorage.setItem('lease_agreements_data', JSON.stringify(leaseAgreements));
+        console.log(`✅ Initialized ${Object.keys(leaseAgreements).length} lease agreements`);
+      } catch (e) {
+        console.error('❌ Error initializing leases:', e);
+      }
+    })();
+  </script>
+  <script>
     // Initialize test data when tenant app loads (only if real bills not loaded)
     if (typeof mockTenantData !== 'undefined' && typeof initializeTestData === 'function') {
       try {
