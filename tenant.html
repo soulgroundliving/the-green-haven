@@ -3079,12 +3079,11 @@
           }
         }
 
-        console.log('📊 Meter Trends Debug:', {
-          currentBuilding,
-          currentRoom,
-          totalBillsLoaded: allBills.length,
-          bills: allBills.map(b => ({ month: b.month, year: b.year, electric: b.charges?.electric?.usage, water: b.charges?.water?.usage }))
+        console.log('📊 Meter Trends Debug - All bills loaded:', allBills.length, 'bills');
+        allBills.forEach(b => {
+          console.log(`  Bill: month=${b.month}, year=${b.year}, electric=${b.charges?.electric?.usage}, water=${b.charges?.water?.usage}`);
         });
+        console.log('Current building:', currentBuilding, 'Current room:', currentRoom);
 
         // Build trends from bills (uses same calculation as bill display)
         const trends = [];
@@ -3098,7 +3097,7 @@
 
           // Find bill for this month/year
           const bill = allBills.find(b => b.year === buddhYear && b.month === month);
-          console.log(`🔍 Looking for: ${month}/${buddhYear}, Found:`, bill ? 'YES' : 'NO');
+          console.log(`🔍 ${date.toLocaleDateString('th-TH')}: Looking for month=${month}, year=${buddhYear}, Found:`, bill ? `✓ (electric=${bill.charges?.electric?.usage})` : '✗');
 
           if (bill && bill.charges) {
             const thaiMonth = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
