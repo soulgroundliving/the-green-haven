@@ -337,24 +337,85 @@
     }
   </script>
   <style>
+    /* ===== THE GREEN HAVEN: QUIET LIVING DESIGN SYSTEM ===== */
     :root {
-      --green-dark: #1a5c38;
-      --green: #2d8653;
-      --green-light: #4caf50;
-      --green-pale: #e8f5e9;
-      --accent: #ff8f00;
-      --accent-light: #fff8e1;
-      --blue: #1976d2;
-      --blue-pale: #e3f2fd;
-      --red: #c62828;
-      --red-pale: #ffebee;
-      --bg: #f4f6f8;
-      --card: #fff;
-      --text: #1a2332;
-      --text-muted: #6b7a8d;
-      --border: #e0e6ed;
-      --radius: 14px;
-      --radius-sm: 8px;
+      /* PRIMARY COLOR PALETTE - Calm, Nature-Inspired */
+      --primary-dark: #2d5a4d;      /* Deep forest green - calm, grounding */
+      --primary: #3d7063;           /* Primary green - peaceful, balanced */
+      --primary-light: #5a8f7f;     /* Light green - soft, accessible */
+      --primary-pale: #ecf3f1;      /* Very pale green - backgrounds */
+
+      /* SECONDARY/NEUTRAL - Warm, Professional */
+      --neutral-dark: #3f4a52;      /* Deep charcoal - primary text */
+      --neutral: #6b7a8d;           /* Soft gray - secondary text */
+      --neutral-light: #c0c9d4;     /* Light gray - borders, dividers */
+      --neutral-pale: #f5f7f9;      /* Off-white - subtle backgrounds */
+
+      /* ACCENT - Nature Tones */
+      --accent-warm: #8b7f6a;       /* Warm taupe - accents, icons */
+      --accent-light: #d4cfc4;      /* Light taupe - backgrounds */
+
+      /* STATUS COLORS - Muted & Calm */
+      --success: #5a8f7f;           /* Muted green - paid, complete */
+      --success-pale: #ecf3f1;      /* Pale green background */
+      --warning: #c9a876;           /* Warm amber - pending, caution */
+      --warning-pale: #f5f0e8;      /* Pale amber background */
+      --danger: #a85a5a;            /* Muted red - overdue, alert */
+      --danger-pale: #f5ecec;       /* Pale red background */
+
+      /* SUPPORTING COLORS */
+      --info: #5a8f7f;              /* Info blue-green */
+      --info-pale: #ecf3f1;         /* Pale info background */
+
+      /* UI ELEMENTS */
+      --bg: #fafbfc;                /* Main background - off-white */
+      --card: #ffffff;              /* Card background - white */
+      --text: #3f4a52;              /* Primary text - dark charcoal */
+      --text-muted: #6b7a8d;        /* Muted text - secondary */
+      --text-light: #a0abb6;        /* Light text - disabled, hints */
+      --border: #d9dfe8;            /* Borders - subtle */
+      --divider: #eef2f5;           /* Dividers - very subtle */
+
+      /* TYPOGRAPHY SCALE */
+      --font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-h1: 2rem;              /* 32px - Page titles */
+      --font-h2: 1.5rem;            /* 24px - Section titles */
+      --font-h3: 1.25rem;           /* 20px - Card titles */
+      --font-body: 0.95rem;         /* 15px - Default text */
+      --font-small: 0.85rem;        /* 13.6px - Labels */
+      --font-xs: 0.75rem;           /* 12px - Helper text */
+      --font-weight-light: 300;
+      --font-weight-normal: 400;
+      --font-weight-medium: 500;
+      --font-weight-semibold: 600;
+      --font-weight-bold: 700;
+      --font-weight-extrabold: 800;
+
+      /* SPACING SYSTEM (4px base) */
+      --space-xs: 0.25rem;          /* 4px */
+      --space-sm: 0.5rem;           /* 8px */
+      --space-md: 1rem;             /* 16px */
+      --space-lg: 1.5rem;           /* 24px */
+      --space-xl: 2rem;             /* 32px */
+      --space-2xl: 2.5rem;          /* 40px */
+
+      /* BORDER RADIUS */
+      --radius-sm: 6px;
+      --radius: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 18px;
+
+      /* SHADOWS - Subtle & Calm */
+      --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+
+      /* TRANSITIONS - Smooth & Natural */
+      --transition-fast: 0.15s ease;
+      --transition: 0.3s ease;
+      --transition-slow: 0.5s ease;
     }
 
     /* ✨ Magical Animations */
@@ -421,15 +482,16 @@
 
     /* App Header */
     .app-header {
-      background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
       color: #fff;
       padding: 1rem 1.5rem;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, .15);
+      box-shadow: var(--shadow-md);
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
       padding-top: max(1rem, env(safe-area-inset-top));
+      transition: background var(--transition-slow);
     }
 
     .app-header-title {
@@ -437,15 +499,17 @@
     }
 
     .app-header-title h1 {
-      font-size: 1.3rem;
-      font-weight: 800;
+      font-size: var(--font-h2);
+      font-weight: var(--font-weight-bold);
       margin: 0;
+      letter-spacing: -0.5px;
     }
 
     .app-header-title p {
-      font-size: .75rem;
-      opacity: .85;
-      margin: .2rem 0 0 0;
+      font-size: var(--font-xs);
+      opacity: 0.9;
+      margin: 0.3rem 0 0 0;
+      font-weight: var(--font-weight-normal);
     }
 
     .app-header-user {
@@ -472,14 +536,21 @@
       opacity: 1;
     }
 
+    /* Typography Hierarchy */
+    h1 { font-size: var(--font-h1); font-weight: var(--font-weight-bold); color: var(--text); margin: 0 0 var(--space-md) 0; }
+    h2 { font-size: var(--font-h2); font-weight: var(--font-weight-bold); color: var(--text); margin: 0 0 var(--space-md) 0; }
+    h3 { font-size: var(--font-h3); font-weight: var(--font-weight-semibold); color: var(--text); margin: 0 0 var(--space-sm) 0; }
+    p { font-size: var(--font-body); color: var(--text); line-height: 1.6; margin: 0 0 var(--space-md) 0; }
+    small { font-size: var(--font-small); color: var(--neutral); }
+
     .section-title {
-      font-size: 1.3rem;
-      font-weight: 800;
-      margin-bottom: 1.5rem;
+      font-size: var(--font-h2);
+      font-weight: var(--font-weight-bold);
+      margin-bottom: var(--space-lg);
       color: var(--text);
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: var(--space-sm);
     }
 
     .card {
@@ -501,7 +572,7 @@
 
     .card:hover {
       box-shadow: 0 8px 32px rgba(45, 134, 83, .15);
-      border-color: var(--green-light);
+      border-color: var(--primary-light);
       transform: translateY(-4px);
     }
 
@@ -535,7 +606,7 @@
 
     /* Room Info Card */
     .room-card {
-      background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
       color: #fff;
       border-radius: var(--radius);
       padding: 1rem;
@@ -593,14 +664,14 @@
 
     .bill-card-details {
       font-size: 0.9rem;
-      color: var(--text-muted);
+      color: var(--neutral);
       margin-bottom: 0.5rem;
     }
 
     .bill-card-amount {
       font-size: 1.3rem;
       font-weight: 800;
-      color: var(--green);
+      color: var(--primary);
       margin-bottom: 0.5rem;
     }
 
@@ -618,8 +689,8 @@
     }
 
     .bill-status-badge.paid {
-      background: var(--green-pale);
-      color: var(--green-dark);
+      background: var(--primary-pale);
+      color: var(--primary-dark);
     }
 
     /* Bill Status Card */
@@ -634,7 +705,7 @@
     }
 
     .bill-status-card.status-ok {
-      border-left-color: var(--green);
+      border-left-color: var(--primary);
       background: linear-gradient(to right, rgba(76, 175, 80, 0.02), transparent);
     }
 
@@ -663,7 +734,7 @@
     }
 
     .bill-status-badge-container.status-ok {
-      border-color: var(--green);
+      border-color: var(--primary);
       background: linear-gradient(to right, rgba(76, 175, 80, 0.05), transparent);
     }
 
@@ -684,7 +755,7 @@
     }
 
     .badge-status.status-ok {
-      color: var(--green);
+      color: var(--primary);
     }
 
     .badge-status.status-warning {
@@ -713,7 +784,7 @@
     }
 
     .text-success {
-      color: var(--green) !important;
+      color: var(--primary) !important;
     }
 
     .text-danger {
@@ -721,8 +792,8 @@
     }
 
     .bill-status-badge.overdue {
-      background: var(--red-pale);
-      color: var(--red);
+      background: var(--danger-pale);
+      color: var(--danger);
     }
 
     .bill-card-action {
@@ -731,7 +802,7 @@
 
     .bill-card-action button {
       padding: 0.6rem 1.2rem;
-      background: var(--green);
+      background: var(--primary);
       color: #fff;
       border: none;
       border-radius: var(--radius-sm);
@@ -742,7 +813,7 @@
     }
 
     .bill-card-action button:hover {
-      background: var(--green-dark);
+      background: var(--primary-dark);
     }
 
     /* Quick Actions */
@@ -768,8 +839,8 @@
     }
 
     .quick-action-btn:hover {
-      border-color: var(--green);
-      background: var(--green-pale);
+      border-color: var(--primary);
+      background: var(--primary-pale);
       box-shadow: 0 4px 16px rgba(45, 134, 83, 0.15);
       transform: translateY(-2px);
     }
@@ -806,8 +877,8 @@
     select:focus,
     textarea:focus {
       outline: none;
-      border-color: var(--green);
-      box-shadow: 0 0 0 3px var(--green-pale);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-pale);
     }
 
     textarea {
@@ -831,12 +902,12 @@
     }
 
     .btn-primary {
-      background: var(--green);
+      background: var(--primary);
       color: #fff;
     }
 
     .btn-primary:hover {
-      background: var(--green-dark);
+      background: var(--primary-dark);
     }
 
     .btn-primary:active {
@@ -844,7 +915,7 @@
     }
 
     .btn-secondary {
-      background: var(--blue);
+      background: var(--info);
       color: #fff;
     }
 
@@ -853,7 +924,7 @@
     }
 
     .btn-danger {
-      background: var(--red);
+      background: var(--danger);
       color: #fff;
     }
 
@@ -889,14 +960,14 @@
     /* Maintenance Ticket */
     .ticket-card {
       background: #fff;
-      border-left: 4px solid var(--blue);
+      border-left: 4px solid var(--info);
       border-radius: var(--radius-sm);
       padding: 1.5rem;
       margin-bottom: 1rem;
       box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
       transition: all 0.2s ease;
       border: 1px solid #f0f0f0;
-      border-left: 4px solid var(--blue);
+      border-left: 4px solid var(--info);
     }
 
     .ticket-card:hover {
@@ -938,14 +1009,14 @@
     }
 
     .ticket-status.completed {
-      background: var(--green-pale);
-      color: var(--green-dark);
+      background: var(--primary-pale);
+      color: var(--primary-dark);
     }
 
     .ticket-details {
       font-size: 0.95rem;
       line-height: 1.6;
-      color: var(--text-muted);
+      color: var(--neutral);
     }
 
     /* Announcement */
@@ -959,7 +1030,7 @@
 
     .announcement-date {
       font-size: 0.85rem;
-      color: var(--text-muted);
+      color: var(--neutral);
       margin-bottom: 0.5rem;
     }
 
@@ -1013,12 +1084,12 @@
       flex-direction: column;
       align-items: center;
       gap: 0.3rem;
-      color: var(--text-muted);
+      color: var(--neutral);
       position: relative;
     }
 
     .nav-item.active {
-      color: var(--green);
+      color: var(--primary);
     }
 
     .nav-item-icon {
@@ -1033,7 +1104,7 @@
       position: absolute;
       top: -6px;
       right: -4px;
-      background: var(--red);
+      background: var(--danger);
       color: white;
       border-radius: 50%;
       width: 24px;
@@ -1058,8 +1129,8 @@
     }
 
     .status-badge.paid {
-      background: var(--green-pale);
-      color: var(--green-dark);
+      background: var(--primary-pale);
+      color: var(--primary-dark);
     }
 
     .status-badge.pending {
@@ -1068,8 +1139,8 @@
     }
 
     .status-badge.overdue {
-      background: var(--red-pale);
-      color: var(--red);
+      background: var(--danger-pale);
+      color: var(--danger);
     }
 
     /* Summary Stat Card */
@@ -1090,13 +1161,13 @@
     .stat-card-value {
       font-size: 1.4rem;
       font-weight: 800;
-      color: var(--green);
+      color: var(--primary);
       margin: 0.2rem 0;
     }
 
     .stat-card-label {
       font-size: 0.7rem;
-      color: var(--text-muted);
+      color: var(--neutral);
       font-weight: 600;
       line-height: 1;
     }
@@ -1131,8 +1202,8 @@
     }
 
     .accordion-header.active {
-      background: var(--green-pale);
-      color: var(--green-dark);
+      background: var(--primary-pale);
+      color: var(--primary-dark);
     }
 
     .accordion-toggle {
@@ -1174,7 +1245,7 @@
     }
 
     .list-item-label {
-      color: var(--text-muted);
+      color: var(--neutral);
       font-size: 0.85rem;
     }
 
@@ -1195,9 +1266,9 @@
     }
 
     .alert-banner.info {
-      background: var(--blue-pale);
-      border-left: 4px solid var(--blue);
-      color: var(--blue);
+      background: var(--info-pale);
+      border-left: 4px solid var(--info);
+      color: var(--info);
     }
 
     .alert-banner.warning {
@@ -1207,9 +1278,9 @@
     }
 
     .alert-banner.danger {
-      background: var(--red-pale);
-      border-left: 4px solid var(--red);
-      color: var(--red);
+      background: var(--danger-pale);
+      border-left: 4px solid var(--danger);
+      color: var(--danger);
     }
 
     .alert-icon {
@@ -1219,31 +1290,31 @@
 
     /* Success/Error Boxes */
     .success-box {
-      background: var(--green-pale);
-      border-left: 4px solid var(--green);
+      background: var(--primary-pale);
+      border-left: 4px solid var(--primary);
       padding: 1rem;
       border-radius: var(--radius-sm);
-      color: var(--green-dark);
+      color: var(--primary-dark);
       line-height: 1.6;
       margin: 1rem 0;
     }
 
     .error-box {
-      background: var(--red-pale);
-      border-left: 4px solid var(--red);
+      background: var(--danger-pale);
+      border-left: 4px solid var(--danger);
       padding: 1rem;
       border-radius: var(--radius-sm);
-      color: var(--red);
+      color: var(--danger);
       line-height: 1.6;
       margin: 1rem 0;
     }
 
     .info-box {
-      background: var(--blue-pale);
-      border-left: 4px solid var(--blue);
+      background: var(--info-pale);
+      border-left: 4px solid var(--info);
       padding: 1rem;
       border-radius: var(--radius-sm);
-      color: var(--blue);
+      color: var(--info);
       line-height: 1.6;
       margin: 1rem 0;
     }
@@ -1512,7 +1583,7 @@
       position: absolute;
       top: 1rem;
       right: 1rem;
-      background: var(--red);
+      background: var(--danger);
       color: white;
       border: none;
       border-radius: 50%;
@@ -1561,7 +1632,7 @@
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      background: var(--green);
+      background: var(--primary);
       color: white;
       border: none;
       padding: 0.6rem 1rem;
@@ -1574,7 +1645,7 @@
     }
 
     .photo-viewer-btn:hover {
-      background: var(--green-dark);
+      background: var(--primary-dark);
     }
   </style>
 </head>
@@ -1640,7 +1711,7 @@
           </div>
           <div class="stat-card">
             <div class="stat-card-label">⚠️ เกินกำหนด</div>
-            <div class="stat-card-value" id="billOverdueCount" style="color: var(--red);">0</div>
+            <div class="stat-card-value" id="billOverdueCount" style="color: var(--danger);">0</div>
           </div>
         </div>
 
@@ -1678,14 +1749,14 @@
           </button>
           <div class="accordion-content">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
-              <div style="text-align: center; padding: 0.8rem; background: var(--blue-pale); border-radius: 8px;">
+              <div style="text-align: center; padding: 0.8rem; background: var(--info-pale); border-radius: 8px;">
                 <div class="stat-card-label">⚡ ไฟฟ้า</div>
-                <div style="font-size: 1.6rem; font-weight: 800; color: var(--blue); margin: 0.3rem 0;" id="meterElectric">-</div>
+                <div style="font-size: 1.6rem; font-weight: 800; color: var(--info); margin: 0.3rem 0;" id="meterElectric">-</div>
                 <div class="stat-card-label">หน่วย</div>
               </div>
-              <div style="text-align: center; padding: 0.8rem; background: var(--blue-pale); border-radius: 8px;">
+              <div style="text-align: center; padding: 0.8rem; background: var(--info-pale); border-radius: 8px;">
                 <div class="stat-card-label">💧 น้ำ</div>
-                <div style="font-size: 1.6rem; font-weight: 800; color: var(--blue); margin: 0.3rem 0;" id="meterWater">-</div>
+                <div style="font-size: 1.6rem; font-weight: 800; color: var(--info); margin: 0.3rem 0;" id="meterWater">-</div>
                 <div class="stat-card-label">หน่วย</div>
               </div>
             </div>
@@ -1694,14 +1765,14 @@
 
         <!-- Section 2: Outstanding Balance -->
         <div class="accordion-section" id="outstandingSection" style="display: none;">
-          <button class="accordion-header" style="background: var(--red-pale); color: var(--red); font-weight: 800;" onclick="toggleAccordion(this)">
+          <button class="accordion-header" style="background: var(--danger-pale); color: var(--danger); font-weight: 800;" onclick="toggleAccordion(this)">
             <span>💰 ยอดค้างชำระ</span>
             <span class="accordion-toggle">▼</span>
           </button>
           <div class="accordion-content active">
             <div style="text-align: center; padding: 1rem;">
               <div class="stat-card-label">รวมค้างชำระ</div>
-              <div style="font-size: 2rem; font-weight: 800; color: var(--red); margin: 0.5rem 0;" id="outstandingAmount">-</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--danger); margin: 0.5rem 0;" id="outstandingAmount">-</div>
               <div class="stat-card-label" id="pendingBillCount">-</div>
             </div>
           </div>
@@ -1739,18 +1810,18 @@
           </button>
           <div class="accordion-content">
             <div style="display: grid; gap: 0.6rem;">
-              <div style="padding: 0.8rem; background: var(--blue-pale); border-radius: 8px;">
+              <div style="padding: 0.8rem; background: var(--info-pale); border-radius: 8px;">
                 <div class="stat-card-label">🔌 สถานะการเชื่อมต่อ</div>
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.3rem;">
                   <span id="internetStatusIcon" style="font-size: 1.2rem;">●</span>
-                  <span id="internetStatusText" style="font-weight: 700; color: var(--blue);">-</span>
+                  <span id="internetStatusText" style="font-weight: 700; color: var(--info);">-</span>
                 </div>
               </div>
               <div id="internetSpeedSection" style="display: none;">
                 <div class="stat-card-label">⚡ ความเร็ว</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.3rem;">
-                  <div><span style="font-size: 0.75rem; color: var(--text-muted);">Download</span><div style="font-weight: 700;" id="internetDownloadSpeed">-</div></div>
-                  <div><span style="font-size: 0.75rem; color: var(--text-muted);">Upload</span><div style="font-weight: 700;" id="internetUploadSpeed">-</div></div>
+                  <div><span style="font-size: 0.75rem; color: var(--neutral);">Download</span><div style="font-weight: 700;" id="internetDownloadSpeed">-</div></div>
+                  <div><span style="font-size: 0.75rem; color: var(--neutral);">Upload</span><div style="font-weight: 700;" id="internetUploadSpeed">-</div></div>
                 </div>
               </div>
               <div class="list-item">
@@ -1784,7 +1855,7 @@
 
         <!-- Meter Trends Chart -->
         <div id="meterTrendsContainer" style="display: none; margin-bottom: 2rem;">
-          <div style="background: var(--blue-pale); padding: 1.5rem; border-radius: 8px;">
+          <div style="background: var(--info-pale); padding: 1.5rem; border-radius: 8px;">
             <div style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--text);">⚡💧 แนวโน้มการใช้พลังงาน (12 เดือนล่าสุด)</div>
 
             <!-- Chart Container -->
@@ -1810,7 +1881,7 @@
               <div style="overflow-x: auto; margin-top: 1rem;">
                 <table id="meterTrendsTable" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
                   <thead>
-                    <tr style="background: var(--blue); color: white;">
+                    <tr style="background: var(--info); color: white;">
                       <th style="padding: 0.6rem; text-align: left;">เดือน/ปี</th>
                       <th style="padding: 0.6rem; text-align: center;" id="electricUsageHeader">⚡ ไฟฟ้า</th>
                       <th style="padding: 0.6rem; text-align: center;" id="electricDailyHeader">⚡ เฉลี่ยวัน</th>
@@ -1835,13 +1906,13 @@
       <!-- PAYMENT PAGE -->
       <div class="page" id="page-payment">
         <!-- Payment Page Header -->
-        <div style="margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--green); display: flex; align-items: flex-start; justify-content: space-between;">
+        <div style="margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--primary); display: flex; align-items: flex-start; justify-content: space-between;">
           <button onclick="goToPage('bills')" style="padding: 0.6rem 1.2rem; background: #f0f0f0; color: #333; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; white-space: nowrap; height: fit-content;">
             ← ย้อนกลับ
           </button>
           <div style="flex: 1; text-align: center;">
-            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--green);">💳 ชำระเงิน</h1>
-            <p style="margin: 0.5rem 0 0 0; color: var(--text-muted); font-size: 0.95rem;">ทำตามขั้นตอนด้านล่างเพื่อชำระเงินค่าบิล</p>
+            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--primary);">💳 ชำระเงิน</h1>
+            <p style="margin: 0.5rem 0 0 0; color: var(--neutral); font-size: 0.95rem;">ทำตามขั้นตอนด้านล่างเพื่อชำระเงินค่าบิล</p>
           </div>
           <div style="width: 120px;"></div>
         </div>
@@ -1850,16 +1921,16 @@
         <div style="display: flex; justify-content: space-between; margin-bottom: 2rem; position: relative;">
           <div style="position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: var(--border); z-index: 0;"></div>
           <div id="step1" style="flex: 1; text-align: center; position: relative; z-index: 1;">
-            <div style="display: inline-block; width: 36px; height: 36px; border-radius: 50%; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 0.5rem;">1</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">📄 ใบวางบิล</div>
+            <div style="display: inline-block; width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 0.5rem;">1</div>
+            <div style="font-size: 0.85rem; color: var(--neutral);">📄 ใบวางบิล</div>
           </div>
           <div id="step2" style="flex: 1; text-align: center; position: relative; z-index: 1;">
             <div style="display: inline-block; width: 36px; height: 36px; border-radius: 50%; background: #ddd; color: #666; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 0.5rem;">2</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">📸 ยืนยันการชำระ</div>
+            <div style="font-size: 0.85rem; color: var(--neutral);">📸 ยืนยันการชำระ</div>
           </div>
           <div id="step3" style="flex: 1; text-align: center; position: relative; z-index: 1;">
             <div style="display: inline-block; width: 36px; height: 36px; border-radius: 50%; background: #ddd; color: #666; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 0.5rem;">3</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">✅ ใบเสร็จ</div>
+            <div style="font-size: 0.85rem; color: var(--neutral);">✅ ใบเสร็จ</div>
           </div>
         </div>
 
@@ -1868,7 +1939,7 @@
           <div class="section-title">📄 ใบวางบิล / Invoice</div>
 
           <!-- Invoice Document -->
-          <div class="card" style="border: 2px dashed var(--blue); background: #f9f9f9;">
+          <div class="card" style="border: 2px dashed var(--info); background: #f9f9f9;">
             <div id="invoiceContent"></div>
           </div>
 
@@ -1881,18 +1952,18 @@
 
           <div class="card">
             <div class="card-title">อัปโหลดสลิปการโอนเงิน</div>
-            <div style="background: var(--blue-pale); border: 2px dashed var(--blue); border-radius: var(--radius-sm); padding: 2rem; text-align: center; cursor: pointer; margin-bottom: 1rem;"
+            <div style="background: var(--info-pale); border: 2px dashed var(--info); border-radius: var(--radius-sm); padding: 2rem; text-align: center; cursor: pointer; margin-bottom: 1rem;"
                  id="dropZone" onclick="document.getElementById('slipFile').click()">
               <div style="font-size: 2rem; margin-bottom: 0.5rem;">📸</div>
               <p style="margin: 0; color: var(--text); font-weight: 700;">แตะเพื่ออัปโหลดสลิป</p>
-              <p style="margin: 0.5rem 0 0 0; color: var(--text-muted); font-size: 0.9rem;">หรือลากมาวางที่นี่</p>
-              <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">✅ SlipOK ตรวจสอบ ชื่อ ยอด วันเวลา ภายใน 3 วินาที</p>
+              <p style="margin: 0.5rem 0 0 0; color: var(--neutral); font-size: 0.9rem;">หรือลากมาวางที่นี่</p>
+              <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: var(--neutral);">✅ SlipOK ตรวจสอบ ชื่อ ยอด วันเวลา ภายใน 3 วินาที</p>
             </div>
             <input type="file" id="slipFile" accept="image/*" style="display: none;" onchange="handleSlipFile()">
 
             <div id="slipPreview" style="margin-bottom: 1rem; text-align: center; display: none;">
-              <img id="slipImage" style="max-width: 100%; height: auto; border-radius: var(--radius-sm); border: 3px solid var(--green);">
-              <p style="margin: 0.5rem 0 0 0; font-weight: 700; color: var(--green);">✅ สลิปพร้อม</p>
+              <img id="slipImage" style="max-width: 100%; height: auto; border-radius: var(--radius-sm); border: 3px solid var(--primary);">
+              <p style="margin: 0.5rem 0 0 0; font-weight: 700; color: var(--primary);">✅ สลิปพร้อม</p>
             </div>
 
             <div id="slipVerifyResult" style="display: none;">
@@ -1920,7 +1991,7 @@
           <div class="section-title">✅ ใบเสร็จรับเงิน / Receipt</div>
 
           <!-- Receipt Document -->
-          <div class="card" style="border: 2px dashed var(--green); background: #f9f9f9;">
+          <div class="card" style="border: 2px dashed var(--primary); background: #f9f9f9;">
             <div id="receiptContent"></div>
           </div>
 
@@ -1943,10 +2014,10 @@
         <div class="section-title">🔧 แจ้งซ่อม</div>
 
         <!-- ADD MAINTENANCE FORM AT TOP -->
-        <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #f0f4f8 0%, #fff 100%); border: 2px solid var(--blue-pale);">
+        <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #f0f4f8 0%, #fff 100%); border: 2px solid var(--info-pale);">
           <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.5rem;">
             <span style="font-size: 1.5rem;">➕</span>
-            <div style="font-size: 1.1rem; font-weight: 700; color: var(--blue);">แจ้งซ่อมใหม่</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--info);">แจ้งซ่อมใหม่</div>
           </div>
           <form onsubmit="submitMaintenance(event)">
             <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">หมวดซ่อม *</label>
@@ -2077,8 +2148,8 @@
 
           <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 2rem;">
             <div>
-              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">ชื่อ-นามสกุล</label>
-              <input type="text" id="profileName" readonly style="background: var(--green-pale); border: 1px solid var(--green); padding: 0.75rem; border-radius: 6px; font-weight: 600;">
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--neutral); font-size: 0.85rem;">ชื่อ-นามสกุล</label>
+              <input type="text" id="profileName" readonly style="background: var(--primary-pale); border: 1px solid var(--primary); padding: 0.75rem; border-radius: 6px; font-weight: 600;">
             </div>
           </div>
         </div>
@@ -2089,32 +2160,32 @@
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
             <div>
-              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">ห้องเลขที่</label>
-              <input type="text" id="profileRoom" readonly style="background: var(--green-pale); border: 1px solid var(--green); padding: 0.75rem; border-radius: 6px; font-weight: 700; color: var(--green-dark);">
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--neutral); font-size: 0.85rem;">ห้องเลขที่</label>
+              <input type="text" id="profileRoom" readonly style="background: var(--primary-pale); border: 1px solid var(--primary); padding: 0.75rem; border-radius: 6px; font-weight: 700; color: var(--primary-dark);">
             </div>
 
             <div>
-              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">ชั้น</label>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--neutral); font-size: 0.85rem;">ชั้น</label>
               <input type="text" id="profileFloor" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
             </div>
 
             <div>
-              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">วันเข้าเช่า</label>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--neutral); font-size: 0.85rem;">วันเข้าเช่า</label>
               <input type="text" id="profileMoveIn" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
             </div>
 
             <div>
-              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">วันสิ้นสุดสัญญา</label>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--neutral); font-size: 0.85rem;">วันสิ้นสุดสัญญา</label>
               <input type="text" id="profileMoveOut" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
             </div>
 
             <div>
-              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">ค่าเช่ารายเดือน</label>
-              <input type="text" id="profileRent" readonly style="background: var(--blue-pale); border: 1px solid var(--blue); padding: 0.75rem; border-radius: 6px; font-weight: 700; color: var(--blue);">
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--neutral); font-size: 0.85rem;">ค่าเช่ารายเดือน</label>
+              <input type="text" id="profileRent" readonly style="background: var(--info-pale); border: 1px solid var(--info); padding: 0.75rem; border-radius: 6px; font-weight: 700; color: var(--info);">
             </div>
 
             <div>
-              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">เงินมัดจำ</label>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--neutral); font-size: 0.85rem;">เงินมัดจำ</label>
               <input type="text" id="profileDeposit" readonly style="background: var(--bg); border: 1px solid var(--border); padding: 0.75rem; border-radius: 6px;">
             </div>
           </div>
@@ -2124,29 +2195,29 @@
         <div class="card" id="leaseAgreementCard" style="display: none;">
           <div class="card-title" style="margin-bottom: 1.5rem;">📄 สัญญาเช่า</div>
 
-          <div style="padding: 1.5rem; background: var(--green-pale); border-radius: 8px; border-left: 4px solid var(--green);">
+          <div style="padding: 1.5rem; background: var(--primary-pale); border-radius: 8px; border-left: 4px solid var(--primary);">
             <div style="margin-bottom: 1rem;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.5rem;">เลขที่สัญญา</div>
+              <div style="font-size: 0.85rem; color: var(--neutral); font-weight: 700; margin-bottom: 0.5rem;">เลขที่สัญญา</div>
               <div style="font-size: 1rem; color: var(--text); font-weight: 600;" id="leaseAgreementNumber">—</div>
             </div>
 
             <div style="margin-bottom: 1rem;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.5rem;">ลงนามเมื่อ</div>
+              <div style="font-size: 0.85rem; color: var(--neutral); font-weight: 700; margin-bottom: 0.5rem;">ลงนามเมื่อ</div>
               <div style="font-size: 1rem; color: var(--text);" id="leaseAgreementDate">—</div>
             </div>
 
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-              <button onclick="viewLeaseAgreement()" id="viewLeaseBtn" style="display: none; padding: 0.7rem 1.2rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
+              <button onclick="viewLeaseAgreement()" id="viewLeaseBtn" style="display: none; padding: 0.7rem 1.2rem; background: var(--primary); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
                 👁️ ดูเอกสาร
               </button>
-              <button onclick="downloadLeaseAgreement()" id="downloadLeaseBtn" style="display: none; padding: 0.7rem 1.2rem; background: var(--blue); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
+              <button onclick="downloadLeaseAgreement()" id="downloadLeaseBtn" style="display: none; padding: 0.7rem 1.2rem; background: var(--info); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem;">
                 ⬇️ ดาวน์โหลด
               </button>
             </div>
           </div>
         </div>
 
-        <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">
+        <div style="text-align: center; color: var(--neutral); font-size: 0.85rem; padding: 1rem;">
           ℹ️ ข้อมูลส่วนตัวอัพเดตโดย Admin เท่านั้น
         </div>
 
@@ -2167,7 +2238,7 @@
           <button class="btn btn-primary" onclick="togglePetForm()">➕ ลงทะเบียนสัตว์เลี้ยงใหม่</button>
 
           <!-- Pet Registration Form -->
-          <div id="petFormContainer" style="display: none; margin-top: 1.5rem; padding: 1.5rem; background: var(--blue-pale); border-radius: 8px;">
+          <div id="petFormContainer" style="display: none; margin-top: 1.5rem; padding: 1.5rem; background: var(--info-pale); border-radius: 8px;">
             <div style="margin-bottom: 1rem;">
               <label style="font-weight: 600; color: var(--text);">ชื่อสัตว์ *</label>
               <input type="text" id="petName" placeholder="เช่น Max" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem;">
@@ -2246,13 +2317,13 @@
         </div>
 
         <!-- Bill Template Preview -->
-        <div id="billTemplatePreview" style="background: white; border: 2px dashed var(--blue); border-radius: 8px; padding: 2rem; margin-bottom: 2rem;">
-          <div style="text-align: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--green);">
+        <div id="billTemplatePreview" style="background: white; border: 2px dashed var(--info); border-radius: 8px; padding: 2rem; margin-bottom: 2rem;">
+          <div style="text-align: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--primary);">
             <div style="font-size: 1.6rem; font-weight: 800; color: var(--text); margin-bottom: 0.2rem;">🌿 <span id="billTemplateCompanyName">The Green Haven Co., Ltd.</span></div>
-            <div style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.5rem;">โครงการ Nature Haven</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">อพาร์ทเมนต์ <span id="billTemplateBuildingName">Nest</span></div>
-            <div style="font-size: 1.2rem; font-weight: 700; color: var(--green); margin-bottom: 0.2rem;">📄 ใบวางบิล</div>
-            <p style="color: var(--text-muted); margin: 0.3rem 0 0 0; font-size: 0.9rem;">Bill / Invoice</p>
+            <div style="font-size: 0.95rem; color: var(--neutral); margin-bottom: 0.5rem;">โครงการ Nature Haven</div>
+            <div style="font-size: 0.85rem; color: var(--neutral); margin-bottom: 1rem;">อพาร์ทเมนต์ <span id="billTemplateBuildingName">Nest</span></div>
+            <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.2rem;">📄 ใบวางบิล</div>
+            <p style="color: var(--neutral); margin: 0.3rem 0 0 0; font-size: 0.9rem;">Bill / Invoice</p>
           </div>
 
           <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 1.5rem 0;">
@@ -2260,11 +2331,11 @@
           <!-- Bill Info -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
             <div>
-              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.3rem;">เลขที่บิล</div>
+              <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 0.3rem;">เลขที่บิล</div>
               <div style="font-weight: 700; font-size: 1rem; color: var(--text);">BILL-69-03-rooms-15</div>
             </div>
             <div>
-              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.3rem;">วันที่</div>
+              <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 0.3rem;">วันที่</div>
               <div style="font-weight: 700; font-size: 1rem; color: var(--text);">มีนาคม 2569</div>
             </div>
           </div>
@@ -2272,11 +2343,11 @@
           <!-- Room Info -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; padding: 1rem; background: #f9f9f9; border-radius: 6px;">
             <div>
-              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.3rem;">ห้องพัก</div>
+              <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 0.3rem;">ห้องพัก</div>
               <div style="font-weight: 700; font-size: 1rem; color: var(--text);">15</div>
             </div>
             <div>
-              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.3rem;">ช่วงเวลา</div>
+              <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 0.3rem;">ช่วงเวลา</div>
               <div style="font-weight: 700; font-size: 1rem; color: var(--text);">1 - 31 มีนาคม 2569</div>
             </div>
           </div>
@@ -2285,7 +2356,7 @@
 
           <!-- Charges Breakdown -->
           <div style="margin-bottom: 2rem;">
-            <h3 style="font-size: 1rem; color: var(--blue); margin: 0 0 1rem 0; padding: 0.8rem; background: var(--blue-pale); border-radius: 6px;">รายละเอียดการคำนวณค่าใช้งาน</h3>
+            <h3 style="font-size: 1rem; color: var(--info); margin: 0 0 1rem 0; padding: 0.8rem; background: var(--info-pale); border-radius: 6px;">รายละเอียดการคำนวณค่าใช้งาน</h3>
 
             <div style="padding: 1rem 0;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; padding-bottom: 0.8rem; border-bottom: 1px solid #eee;">
@@ -2308,9 +2379,9 @@
                 <span style="font-weight: 600; color: var(--text);">฿40</span>
               </div>
 
-              <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-top: 2px solid var(--green); margin-top: 0.8rem;">
+              <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-top: 2px solid var(--primary); margin-top: 0.8rem;">
                 <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
-                <span style="font-weight: 800; font-size: 1.3rem; color: var(--green);">฿2,640</span>
+                <span style="font-weight: 800; font-size: 1.3rem; color: var(--primary);">฿2,640</span>
               </div>
             </div>
           </div>
@@ -2318,20 +2389,20 @@
           <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 1.5rem 0;">
 
           <!-- Footer -->
-          <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+          <div style="text-align: center; color: var(--neutral); font-size: 0.85rem;">
             <p>ใบวางบิลนี้เป็นเพียงตัวอย่าง</p>
             <p style="margin-bottom: 0;"><span id="billTemplateFooterCompany">The Green Haven Co., Ltd.</span></p>
           </div>
         </div>
 
-        <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 1rem; background: #f5f5f5; border-radius: 8px; margin-top: 2rem;">
+        <div style="text-align: center; color: var(--neutral); font-size: 0.9rem; padding: 1rem; background: #f5f5f5; border-radius: 8px; margin-top: 2rem;">
           <p>📝 ใบวางบิลนี้แสดงรูปแบบมาตรฐานของบิลค่าเช่า</p>
           <p style="margin: 0;">คุณสามารถดาวน์โหลดเป็นไฟล์ PNG เพื่อใช้เป็นอ้างอิง</p>
         </div>
 
         <!-- Meter Readings Format Preview -->
-        <div style="margin-top: 2rem; padding: 1.5rem; background: #e3f2fd; border: 2px solid var(--blue); border-radius: 8px;">
-          <div style="font-weight: 700; color: var(--blue); margin-bottom: 1rem; font-size: 0.95rem;">📊 ตัวอย่าง: ใบเสร็จรับเงิน (ที่จะขึ้นในบิลถัดไป)</div>
+        <div style="margin-top: 2rem; padding: 1.5rem; background: #e3f2fd; border: 2px solid var(--info); border-radius: 8px;">
+          <div style="font-weight: 700; color: var(--info); margin-bottom: 1rem; font-size: 0.95rem;">📊 ตัวอย่าง: ใบเสร็จรับเงิน (ที่จะขึ้นในบิลถัดไป)</div>
           <div style="background: white; padding: 1rem; border-radius: 6px; font-size: 0.9rem; color: var(--text); line-height: 1.8; text-align: left;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; padding-bottom: 0.8rem; border-bottom: 1px solid #eee;">
               <span>💰 ค่าเช่า</span>
@@ -2349,9 +2420,9 @@
               <span>🗑️ ค่าขยะ</span>
               <span style="font-weight: 600;">฿20</span>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--green);">
+            <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--primary);">
               <span style="font-weight: 700; font-size: 1.05rem;">รวมทั้งสิ้น</span>
-              <span style="font-weight: 800; font-size: 1.2rem; color: var(--green);">฿82,736</span>
+              <span style="font-weight: 800; font-size: 1.2rem; color: var(--primary);">฿82,736</span>
             </div>
           </div>
           <div style="margin-top: 0.8rem; font-size: 0.85rem; color: #0066cc; font-style: italic;">
@@ -3048,10 +3119,10 @@
           announcementSection.style.display = 'block'; // Show announcement section
           const latest = announcements[0];
           announcementContent.innerHTML = `
-            <div style="padding: 0.8rem; background: var(--green-pale); border-radius: 8px;">
+            <div style="padding: 0.8rem; background: var(--primary-pale); border-radius: 8px;">
               <div style="font-weight: 700; color: var(--text); margin-bottom: 0.3rem;">${latest.title || '-'}</div>
-              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">${latest.content || '-'}</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">
+              <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 0.5rem;">${latest.content || '-'}</div>
+              <div style="font-size: 0.8rem; color: var(--neutral);">
                 ${latest.date ? (typeof latest.date === 'string' ? latest.date : new Date(latest.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })) : '-'}
               </div>
             </div>
@@ -3309,27 +3380,27 @@
 
         // Render providers as cards with Call Now button
         container.innerHTML = providers.map(provider => `
-          <div style="padding: 1.2rem; background: var(--blue-pale); border-radius: 10px; border-left: 4px solid var(--blue);">
+          <div style="padding: 1.2rem; background: var(--info-pale); border-radius: 10px; border-left: 4px solid var(--info);">
             <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem;">
               <span style="font-size: 1.8rem;">${provider.icon}</span>
               <div style="flex: 1;">
                 <div style="font-weight: 700; color: var(--text); font-size: 1rem;">${provider.name}</div>
-                <div style="font-size: 0.85rem; color: var(--text-muted);">ประเภท: ${provider.type}</div>
+                <div style="font-size: 0.85rem; color: var(--neutral);">ประเภท: ${provider.type}</div>
               </div>
             </div>
             <div style="display: grid; gap: 0.5rem; font-size: 0.9rem; color: var(--text); margin-bottom: 1rem;">
               ${provider.phone ? `<div>📞 ${provider.phone}</div>` : ''}
-              ${provider.email ? `<div>📧 <a href="mailto:${provider.email}" style="color: var(--blue); text-decoration: none;">${provider.email}</a></div>` : ''}
-              ${provider.website ? `<div>🌐 <a href="https://${provider.website}" target="_blank" style="color: var(--blue); text-decoration: none;">${provider.website}</a></div>` : ''}
+              ${provider.email ? `<div>📧 <a href="mailto:${provider.email}" style="color: var(--info); text-decoration: none;">${provider.email}</a></div>` : ''}
+              ${provider.website ? `<div>🌐 <a href="https://${provider.website}" target="_blank" style="color: var(--info); text-decoration: none;">${provider.website}</a></div>` : ''}
             </div>
-            ${provider.phone ? `<button onclick="makeCall('${provider.phone}')" style="width: 100%; padding: 0.8rem; background: var(--blue); color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.95rem; transition: all 0.3s ease;" onmouseover="this.style.background='var(--green)'" onmouseout="this.style.background='var(--blue)'">📞 เรียกตอนนี้</button>` : ''}
+            ${provider.phone ? `<button onclick="makeCall('${provider.phone}')" style="width: 100%; padding: 0.8rem; background: var(--info); color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.95rem; transition: all 0.3s ease;" onmouseover="this.style.background='var(--primary)'" onmouseout="this.style.background='var(--info)'">📞 เรียกตอนนี้</button>` : ''}
           </div>
         `).join('');
 
         console.log('✅ Service providers displayed:', providers.length);
       } catch (e) {
         console.error('❌ Error displaying service providers:', e);
-        container.innerHTML = '<div style="color: var(--red); padding: 1rem;">⚠️ ไม่สามารถโหลดรายชื่อผู้ให้บริการ</div>';
+        container.innerHTML = '<div style="color: var(--danger); padding: 1rem;">⚠️ ไม่สามารถโหลดรายชื่อผู้ให้บริการ</div>';
       }
     }
 
@@ -3343,22 +3414,22 @@
         let pets = JSON.parse(localStorage.getItem(petsKey) || '[]');
 
         if (pets.length === 0) {
-          container.innerHTML = '<div style="padding: 1rem; background: #f9f9f9; border-radius: 8px; color: var(--text-muted);">ยังไม่มีสัตว์เลี้ยงลงทะเบียน</div>';
+          container.innerHTML = '<div style="padding: 1rem; background: #f9f9f9; border-radius: 8px; color: var(--neutral);">ยังไม่มีสัตว์เลี้ยงลงทะเบียน</div>';
         } else {
           container.innerHTML = pets.map(pet => `
             <div style="padding: 1rem; background: #fff3e0; border-radius: 8px; border-left: 4px solid #ff9800;">
               <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.8rem;">
                 <div>
                   <div style="font-weight: 700; font-size: 1.1rem; color: var(--text);">${pet.name}</div>
-                  <div style="font-size: 0.9rem; color: var(--text-muted);">${pet.type}${pet.breed ? ' - ' + pet.breed : ''}</div>
+                  <div style="font-size: 0.9rem; color: var(--neutral);">${pet.type}${pet.breed ? ' - ' + pet.breed : ''}</div>
                 </div>
                 <span style="padding: 0.3rem 0.8rem; background: ${pet.status === 'approved' ? '#d4edda' : '#fff3cd'}; border-radius: 4px; font-size: 0.8rem; font-weight: 600; color: ${pet.status === 'approved' ? '#155724' : '#856404'};">
                   ${pet.status === 'approved' ? '✅ อนุมัติแล้ว' : '⏳ รอการอนุมัติ'}
                 </span>
               </div>
-              ${pet.weight ? `<div style="font-size: 0.9rem; color: var(--text-muted);">น้ำหนัก: ${pet.weight}</div>` : ''}
-              ${pet.color ? `<div style="font-size: 0.9rem; color: var(--text-muted);">สี: ${pet.color}</div>` : ''}
-              ${pet.notes ? `<div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem;">หมายเหตุ: ${pet.notes}</div>` : ''}
+              ${pet.weight ? `<div style="font-size: 0.9rem; color: var(--neutral);">น้ำหนัก: ${pet.weight}</div>` : ''}
+              ${pet.color ? `<div style="font-size: 0.9rem; color: var(--neutral);">สี: ${pet.color}</div>` : ''}
+              ${pet.notes ? `<div style="font-size: 0.9rem; color: var(--neutral); margin-top: 0.5rem;">หมายเหตุ: ${pet.notes}</div>` : ''}
             </div>
           `).join('');
         }
@@ -3436,11 +3507,11 @@
         }
 
         container.innerHTML = events.map(event => `
-          <div class="card" style="border-left: 4px solid var(--green);">
+          <div class="card" style="border-left: 4px solid var(--primary);">
             <div style="display: flex; justify-content: space-between; align-items: start;">
               <div style="flex: 1;">
                 <div style="font-weight: 700; font-size: 1.1rem; color: var(--text); margin-bottom: 0.5rem;">${event.title}</div>
-                <div style="display: grid; gap: 0.3rem; font-size: 0.9rem; color: var(--text-muted);">
+                <div style="display: grid; gap: 0.3rem; font-size: 0.9rem; color: var(--neutral);">
                   <div>📅 ${new Date(event.date).toLocaleDateString('th-TH')} ${event.time ? '⏰ ' + event.time : ''}</div>
                   <div>📍 ${event.location}</div>
                   ${event.description ? `<div>${event.description}</div>` : ''}
@@ -3470,15 +3541,15 @@
         }
 
         if (documents.length === 0) {
-          container.innerHTML = '<div class="card"><p style="color: var(--text-muted);">ยังไม่มีเอกสาร</p></div>';
+          container.innerHTML = '<div class="card"><p style="color: var(--neutral);">ยังไม่มีเอกสาร</p></div>';
         } else {
           container.innerHTML = documents.map(doc => `
-            <div class="card" style="border-left: 4px solid var(--blue);">
+            <div class="card" style="border-left: 4px solid var(--info);">
               <div style="display: flex; justify-content: space-between; align-items: start;">
                 <div style="flex: 1;">
                   <div style="font-weight: 700; font-size: 1rem; color: var(--text); margin-bottom: 0.3rem;">📄 ${doc.title}</div>
-                  <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">${doc.description || ''}</div>
-                  <span style="display: inline-block; padding: 0.3rem 0.8rem; background: var(--blue-pale); border-radius: 4px; font-size: 0.8rem; font-weight: 600; color: var(--blue);">${doc.category}</span>
+                  <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 0.5rem;">${doc.description || ''}</div>
+                  <span style="display: inline-block; padding: 0.3rem 0.8rem; background: var(--info-pale); border-radius: 4px; font-size: 0.8rem; font-weight: 600; color: var(--info);">${doc.category}</span>
                 </div>
                 ${doc.fileUrl && doc.fileUrl !== '#' ? `<button class="btn btn-primary" onclick="window.open('${doc.fileUrl}', '_blank')" style="margin-left: 1rem;">⬇️ ดาวน์โหลด</button>` : ''}
               </div>
@@ -3613,7 +3684,7 @@
 
       // Check if tenant has any meter data
       if (!hasAnyMeterData()) {
-        container.innerHTML = '<div style="background: var(--blue-pale); padding: 1.5rem; border-radius: 8px; text-align: center; color: var(--text-muted);">📊 ยังไม่มีข้อมูลการใช้พลังงาน (ผู้เช่าใหม่)</div>';
+        container.innerHTML = '<div style="background: var(--info-pale); padding: 1.5rem; border-radius: 8px; text-align: center; color: var(--neutral);">📊 ยังไม่มีข้อมูลการใช้พลังงาน (ผู้เช่าใหม่)</div>';
         container.style.display = 'block';
         return;
       }
@@ -3906,7 +3977,7 @@
         console.log('✅ Meter trends synced with bills data:', trends.length, 'months');
       } catch (e) {
         console.error('❌ Error displaying meter trends:', e);
-        tbody.innerHTML = '<tr><td colspan="5" style="padding: 1rem; text-align: center; color: var(--red);">⚠️ ไม่สามารถโหลดข้อมูลมิเตอร์</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="padding: 1rem; text-align: center; color: var(--danger);">⚠️ ไม่สามารถโหลดข้อมูลมิเตอร์</td></tr>';
       }
     }
 
@@ -3945,20 +4016,20 @@
             container.innerHTML = history.map(item => {
               if (item.type === 'invoice') {
                 return `
-                  <div class="bill-card" style="border-left: 4px solid var(--blue);">
+                  <div class="bill-card" style="border-left: 4px solid var(--info);">
                     <div class="bill-card-left">
                       <h3>${item.icon} ${item.displayStatus}</h3>
                       <div class="bill-card-details">
                         <div>เลขที่: ${item.id}</div>
                         <div>เดือน: ${item.month}</div>
                         <div>จำนวน: ${item.amount.toLocaleString('th-TH')} บาท</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">
+                        <div style="font-size: 0.85rem; color: var(--neutral);">
                           ${new Date(item.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
                         </div>
                       </div>
                       <div class="bill-card-amount">รวม: ${item.amount.toLocaleString('th-TH')} บาท</div>
                       ${item.breakdown ? `
-                        <div class="bill-card-details" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                        <div class="bill-card-details" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--neutral);">
                           <div>• ค่าเช่า: ${(item.breakdown.rent || 0).toLocaleString('th-TH')} บาท</div>
                           <div>• ค่าไฟ: ${(item.breakdown.electric || 0).toLocaleString('th-TH')} บาท</div>
                           <div>• ค่าน้ำ: ${(item.breakdown.water || 0).toLocaleString('th-TH')} บาท</div>
@@ -3976,7 +4047,7 @@
                 `;
               } else if (item.type === 'receipt') {
                 return `
-                  <div class="bill-card" style="border-left: 4px solid var(--green);">
+                  <div class="bill-card" style="border-left: 4px solid var(--primary);">
                     <div class="bill-card-left">
                       <h3>${item.icon} ${item.displayStatus}</h3>
                       <div class="bill-card-details">
@@ -3984,10 +4055,10 @@
                         <div>อ้างอิง Invoice: ${item.invoiceId}</div>
                         <div>วิธีชำระ: ${item.paymentMethod === 'slip' ? '📸 สลิป' : item.paymentMethod === 'cash' ? '💵 เงินสด' : item.paymentMethod}</div>
                         <div>จำนวน: ${item.amount.toLocaleString('th-TH')} บาท</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">
+                        <div style="font-size: 0.85rem; color: var(--neutral);">
                           ${new Date(item.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
                         </div>
-                        ${item.slipOkVerified ? `<div style="color: var(--green); font-weight: 700; margin-top: 0.3rem;">✅ ตรวจสอบโดย SlipOK</div>` : ''}
+                        ${item.slipOkVerified ? `<div style="color: var(--primary); font-weight: 700; margin-top: 0.3rem;">✅ ตรวจสอบโดย SlipOK</div>` : ''}
                       </div>
                       <div class="bill-card-amount">รวม: ${item.amount.toLocaleString('th-TH')} บาท</div>
                       <span class="bill-status-badge paid">✅ จ่ายแล้ว</span>
@@ -4046,16 +4117,16 @@
         };
         const monthName = getThaiMonthName(bill.month);
         const year = bill.year + 2500;
-        const statusColor = bill.status === 'paid' ? 'var(--green)' : bill.status === 'overdue' ? '#ff9800' : '#2196f3';
+        const statusColor = bill.status === 'paid' ? 'var(--primary)' : bill.status === 'overdue' ? '#ff9800' : '#2196f3';
         const statusText = bill.status === 'paid' ? '✅ จ่ายแล้ว' : bill.status === 'overdue' ? '⚠️逾期' : '⏳ รอชำระ';
 
         return `
           <div class="bill-card">
             <div class="bill-card-left">
               <h3>${monthName} ${bill.year}</h3>
-              <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 400;">${bill.billId || ''}</span>
+              <span style="font-size: 0.85rem; color: var(--neutral); font-weight: 400;">${bill.billId || ''}</span>
 
-              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; line-height: 1.6;">
+              <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 0.5rem; line-height: 1.6;">
                 <div>💰 ค่าเช่า: ฿${(bill.charges?.rent || bill.rent || 0).toLocaleString('th-TH')}</div>
                 <div>⚡ ค่าไฟ: ${
                   bill.meterReadings && bill.meterReadings.electric
@@ -4074,7 +4145,7 @@
 
             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 1rem;">
               <div style="text-align: right;">
-                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem;">รวม</div>
+                <div style="font-size: 0.85rem; color: var(--neutral); font-weight: 700; margin-bottom: 0.3rem;">รวม</div>
                 <div style="font-size: 1.5rem; font-weight: 800; color: ${statusColor}; white-space: nowrap; direction: ltr;">
                   ฿${Math.round(bill.totalCharge || bill.total || 0).toLocaleString('th-TH')}
                 </div>
@@ -4085,7 +4156,7 @@
               </span>
 
               ${bill.status === 'pending' || bill.status === 'paid' ? `
-                <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.6rem 1.2rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem; white-space: nowrap;">
+                <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.6rem 1.2rem; background: var(--primary); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem; white-space: nowrap;">
                   📋 ดูใบเสร็จ
                 </button>
               ` : ''}
@@ -4508,7 +4579,7 @@
       slipData = null;
 
       // Reset to step 1: Invoice
-      document.getElementById('step1').style.background = 'var(--green)';
+      document.getElementById('step1').style.background = 'var(--primary)';
       document.getElementById('step2').style.background = '#ddd';
       document.getElementById('step3').style.background = '#ddd';
       document.getElementById('invoiceSection').style.display = 'block';
@@ -4537,32 +4608,32 @@
       const total = bill.totalCharge || bill.total || 0;
 
       const invoiceHTML = `
-        <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--blue); padding-bottom: 1rem;">
+        <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--info); padding-bottom: 1rem;">
           <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 0.3rem;">🌿 The Green Haven Co., Ltd.</div>
-          <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">อพาร์ทเมนต์ ${currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า'}</div>
-          <div style="font-size: 1.3rem; font-weight: 700; color: var(--blue); margin-bottom: 0.2rem;">ใบวางบิล / Invoice</div>
-          <div style="font-size: 0.85rem; color: var(--text-muted);">เลขที่: ${billNo}</div>
+          <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 1rem;">อพาร์ทเมนต์ ${currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า'}</div>
+          <div style="font-size: 1.3rem; font-weight: 700; color: var(--info); margin-bottom: 0.2rem;">ใบวางบิล / Invoice</div>
+          <div style="font-size: 0.85rem; color: var(--neutral);">เลขที่: ${billNo}</div>
         </div>
 
         <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f0f7ff; border-radius: 8px;">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
             <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ห้องเลขที่</div>
+              <div style="font-size: 0.8rem; color: var(--neutral); font-weight: 700;">ห้องเลขที่</div>
               <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);">${roomName}</div>
             </div>
             <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ประจำเดือน</div>
+              <div style="font-size: 0.8rem; color: var(--neutral); font-weight: 700;">ประจำเดือน</div>
               <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">${monthYear}</div>
             </div>
           </div>
           <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">วันที่ออกบิล</div>
+            <div style="font-size: 0.8rem; color: var(--neutral); font-weight: 700;">วันที่ออกบิล</div>
             <div style="font-size: 0.95rem; color: var(--text);">${today}</div>
           </div>
         </div>
 
         <div style="margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
-          <div style="background: var(--blue); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดค่าใช้จ่าย</div>
+          <div style="background: var(--info); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดค่าใช้จ่าย</div>
           <div style="padding: 1rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; padding-bottom: 0.6rem; border-bottom: 1px solid #eee;">
               <span style="color: var(--text);">💰 ค่าเช่า</span>
@@ -4596,25 +4667,25 @@
               <span style="font-weight: 700; color: var(--text);">฿${common.toLocaleString('th-TH')}</span>
             </div>
             ` : ''}
-            <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-top: 2px solid var(--blue);">
+            <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-top: 2px solid var(--info);">
               <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
-              <span style="font-weight: 800; font-size: 1.3rem; color: var(--blue);">฿${total.toLocaleString('th-TH')}</span>
+              <span style="font-weight: 800; font-size: 1.3rem; color: var(--info);">฿${total.toLocaleString('th-TH')}</span>
             </div>
           </div>
         </div>
 
-        <div style="background: var(--blue-pale); border: 2px dashed var(--blue); border-radius: 8px; padding: 1rem; text-align: center; margin-bottom: 1rem;">
+        <div style="background: var(--info-pale); border: 2px dashed var(--info); border-radius: 8px; padding: 1rem; text-align: center; margin-bottom: 1rem;">
           <div style="font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.8rem;">📲 สแกน QR Code เพื่อชำระเงิน</div>
           <div id="qrCode" style="display: flex; justify-content: center; margin-bottom: 0.5rem;"></div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">พร้อมเพย์: ${ppNumber}<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
+          <div style="font-size: 0.75rem; color: var(--neutral);">พร้อมเพย์: ${ppNumber}<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
         </div>
 
         <div style="background: #fffacd; border-left: 4px solid var(--accent); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
           <div style="font-weight: 700; color: var(--accent); margin-bottom: 0.5rem;">⏰ กรุณาชำระภายใน 5 วันถัดไป</div>
-          <div style="font-size: 0.85rem; color: var(--text-muted);">หากผ่านกำหนด อาจมีค่าปรับ</div>
+          <div style="font-size: 0.85rem; color: var(--neutral);">หากผ่านกำหนด อาจมีค่าปรับ</div>
         </div>
 
-        <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+        <div style="text-align: center; color: var(--neutral); font-size: 0.8rem; padding-top: 1rem; border-top: 1px solid var(--border);">
           ⏳ <strong>รอชำระ</strong> — กรุณาอัปโหลดสลิปเพื่อยืนยันการชำระเงิน
         </div>
       `;
@@ -4637,56 +4708,56 @@
       const roomName = roomInfo?.name || `ห้อง ${currentRoom}`;
 
       const invoiceHTML = `
-        <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--blue); padding-bottom: 1rem;">
+        <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--info); padding-bottom: 1rem;">
           <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 0.3rem;">🌿 The Green Haven Co., Ltd.</div>
-          <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">อพาร์ทเมนต์ ${currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า'}</div>
-          <div style="font-size: 1.3rem; font-weight: 700; color: var(--blue); margin-bottom: 0.2rem;">ใบวางบิล / Invoice</div>
-          <div style="font-size: 0.85rem; color: var(--text-muted);">เลขที่: ${billNo}</div>
+          <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 1rem;">อพาร์ทเมนต์ ${currentBuilding === 'nest' ? 'Nest' : 'ห้องเช่า'}</div>
+          <div style="font-size: 1.3rem; font-weight: 700; color: var(--info); margin-bottom: 0.2rem;">ใบวางบิล / Invoice</div>
+          <div style="font-size: 0.85rem; color: var(--neutral);">เลขที่: ${billNo}</div>
         </div>
 
         <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f0f7ff; border-radius: 8px;">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
             <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ห้องเลขที่</div>
+              <div style="font-size: 0.8rem; color: var(--neutral); font-weight: 700;">ห้องเลขที่</div>
               <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);">${roomName}</div>
             </div>
             <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ประจำเดือน</div>
+              <div style="font-size: 0.8rem; color: var(--neutral); font-weight: 700;">ประจำเดือน</div>
               <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">${month} 2026</div>
             </div>
           </div>
           <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">วันที่ออกบิล</div>
+            <div style="font-size: 0.8rem; color: var(--neutral); font-weight: 700;">วันที่ออกบิล</div>
             <div style="font-size: 0.95rem; color: var(--text);">${today}</div>
           </div>
         </div>
 
         <div style="margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
-          <div style="background: var(--blue); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดค่าใช้จ่าย</div>
+          <div style="background: var(--info); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดค่าใช้จ่าย</div>
           <div style="padding: 1rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
               <span style="color: var(--text);">ค่าเช่า (ประจำเดือน)</span>
               <span style="font-weight: 700; color: var(--text);">฿${amount.toLocaleString('th-TH')}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--blue);">
+            <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--info);">
               <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
-              <span style="font-weight: 800; font-size: 1.3rem; color: var(--blue);">฿${amount.toLocaleString('th-TH')}</span>
+              <span style="font-weight: 800; font-size: 1.3rem; color: var(--info);">฿${amount.toLocaleString('th-TH')}</span>
             </div>
           </div>
         </div>
 
-        <div style="background: var(--blue-pale); border: 2px dashed var(--blue); border-radius: 8px; padding: 1rem; text-align: center; margin-bottom: 1rem;">
+        <div style="background: var(--info-pale); border: 2px dashed var(--info); border-radius: 8px; padding: 1rem; text-align: center; margin-bottom: 1rem;">
           <div style="font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 0.8rem;">📲 สแกน QR Code เพื่อชำระเงิน</div>
           <div id="qrCode" style="display: flex; justify-content: center; margin-bottom: 0.5rem;"></div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">พร้อมเพย์: ${ppNumber}<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
+          <div style="font-size: 0.75rem; color: var(--neutral);">พร้อมเพย์: ${ppNumber}<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
         </div>
 
         <div style="background: #fffacd; border-left: 4px solid var(--accent); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
           <div style="font-weight: 700; color: var(--accent); margin-bottom: 0.5rem;">⏰ กรุณาชำระภายใน 5 วันถัดไป</div>
-          <div style="font-size: 0.85rem; color: var(--text-muted);">หากผ่านกำหนด อาจมีค่าปรับ</div>
+          <div style="font-size: 0.85rem; color: var(--neutral);">หากผ่านกำหนด อาจมีค่าปรับ</div>
         </div>
 
-        <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+        <div style="text-align: center; color: var(--neutral); font-size: 0.8rem; padding-top: 1rem; border-top: 1px solid var(--border);">
           ⏳ <strong>รอชำระ</strong> — กรุณาอัปโหลดสลิปเพื่อยืนยันการชำระเงิน
         </div>
       `;
@@ -4748,7 +4819,7 @@
       document.getElementById('slipSection').style.display = 'block';
       document.getElementById('step1').style.background = '#ddd';
       document.getElementById('step1').style.color = '#666';
-      document.getElementById('step2').style.background = 'var(--green)';
+      document.getElementById('step2').style.background = 'var(--primary)';
       document.getElementById('step2').style.color = '#fff';
       slipVerified = false;
       document.getElementById('slipPreview').style.display = 'none';
@@ -4834,7 +4905,7 @@
         console.log('🔄 Verifying with SlipOK API...');
 
         // Show loading state
-        document.getElementById('slipVerifyResult').innerHTML = '<div style="text-align: center; color: var(--text-muted);">⏳ กำลังตรวจสอบ...</div>';
+        document.getElementById('slipVerifyResult').innerHTML = '<div style="text-align: center; color: var(--neutral);">⏳ กำลังตรวจสอบ...</div>';
         document.getElementById('slipVerifyResult').style.display = 'block';
 
         // Prepare FormData for SlipOK API
@@ -4985,32 +5056,32 @@
         const receiptBuildingDisplayName = getBuildingDisplayName();
 
         const receiptHTML = `
-          <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--green); padding-bottom: 1rem;">
+          <div style="text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--primary); padding-bottom: 1rem;">
             <div style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 0.3rem;">🌿 ${receiptOwnerName}</div>
-            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">โครงการ Nature Haven</div>
-            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green); margin-bottom: 0.2rem;">✅ ใบเสร็จรับเงิน / RECEIPT</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">เลขที่: ${receiptNo}</div>
+            <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 1rem;">โครงการ Nature Haven</div>
+            <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-bottom: 0.2rem;">✅ ใบเสร็จรับเงิน / RECEIPT</div>
+            <div style="font-size: 0.85rem; color: var(--neutral);">เลขที่: ${receiptNo}</div>
           </div>
 
           <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f0fff4; border-radius: 8px;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
               <div>
-                <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ห้องเลขที่</div>
+                <div style="font-size: 0.8rem; color: var(--neutral); font-weight: 700;">ห้องเลขที่</div>
                 <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);">${roomName}</div>
               </div>
               <div>
-                <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">ประจำเดือน</div>
+                <div style="font-size: 0.8rem; color: var(--neutral); font-weight: 700;">ประจำเดือน</div>
                 <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">${currentPaymentMonth} ${currentBillYear}</div>
               </div>
             </div>
             <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;">วันที่ชำระเงิน</div>
+              <div style="font-size: 0.8rem; color: var(--neutral); font-weight: 700;">วันที่ชำระเงิน</div>
               <div style="font-size: 0.95rem; color: var(--text);">${payDate}</div>
             </div>
           </div>
 
           <div style="margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
-            <div style="background: var(--green); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดการชำระ</div>
+            <div style="background: var(--primary); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดการชำระ</div>
             <div style="padding: 1rem;">
               ${(() => {
                 // Try to find bill data to show breakdown
@@ -5054,9 +5125,9 @@
                       <span style="font-weight: 600; color: var(--text);">฿${billData.charges.trash.toLocaleString('th-TH')}</span>
                     </div>
                     ` : ''}
-                    <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--green);">
+                    <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--primary);">
                       <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
-                      <span style="font-weight: 800; font-size: 1.3rem; color: var(--green);">฿${(billData.totalCharge || currentPaymentAmount).toLocaleString('th-TH')}</span>
+                      <span style="font-weight: 800; font-size: 1.3rem; color: var(--primary);">฿${(billData.totalCharge || currentPaymentAmount).toLocaleString('th-TH')}</span>
                     </div>
                   `;
                 } else {
@@ -5066,9 +5137,9 @@
                       <span style="color: var(--text);">ค่าเช่า</span>
                       <span style="font-weight: 700; color: var(--text);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--green);">
+                    <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 2px solid var(--primary);">
                       <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
-                      <span style="font-weight: 800; font-size: 1.3rem; color: var(--green);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
+                      <span style="font-weight: 800; font-size: 1.3rem; color: var(--primary);">฿${currentPaymentAmount.toLocaleString('th-TH')}</span>
                     </div>
                   `;
                 }
@@ -5076,9 +5147,9 @@
             </div>
           </div>
 
-          <div style="background: var(--green-pale); border: 2px solid var(--green); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-            <div style="font-weight: 700; color: var(--green-dark); margin-bottom: 0.5rem;">✅ ตรวจสอบและยืนยันโดย SlipOK</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+          <div style="background: var(--primary-pale); border: 2px solid var(--primary); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+            <div style="font-weight: 700; color: var(--primary-dark); margin-bottom: 0.5rem;">✅ ตรวจสอบและยืนยันโดย SlipOK</div>
+            <div style="font-size: 0.85rem; color: var(--neutral); margin-bottom: 0.5rem;">
               <div>ผู้โอน: ${slipData.sender}</div>
               <div>จำนวน: ฿${slipData.amount.toLocaleString('th-TH')}</div>
               <div>เวลา: ${slipData.tDate}</div>
@@ -5088,7 +5159,7 @@
             </div>
           </div>
 
-          <div style="text-align: center; color: var(--green-dark); font-size: 0.8rem; padding: 1rem; border-top: 1px solid var(--border); background: var(--green-pale); border-radius: 8px;">
+          <div style="text-align: center; color: var(--primary-dark); font-size: 0.8rem; padding: 1rem; border-top: 1px solid var(--border); background: var(--primary-pale); border-radius: 8px;">
             <div style="font-weight: 700; margin-bottom: 0.3rem;">✅ ยืนยันการชำระแล้ว</div>
             <div style="font-size: 0.75rem;">ขอบคุณที่ชำระค่าเช่าตรงเวลา</div>
           </div>
@@ -5100,7 +5171,7 @@
         document.getElementById('receiptSection').style.display = 'block';
         document.getElementById('step2').style.background = '#ddd';
         document.getElementById('step2').style.color = '#666';
-        document.getElementById('step3').style.background = 'var(--green)';
+        document.getElementById('step3').style.background = 'var(--primary)';
         document.getElementById('step3').style.color = '#fff';
 
         // 5. Notify admin with receipt confirmation
@@ -5391,7 +5462,7 @@
       });
 
       if (payments.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">ยังไม่มีประวัติการชำระเงิน</p>';
+        container.innerHTML = '<p style="text-align: center; color: var(--neutral);">ยังไม่มีประวัติการชำระเงิน</p>';
         console.log('✅ No payment history found');
         return;
       }
@@ -5413,7 +5484,7 @@
                 <div>จำนวน: ${(payment.total || payment.amount || 0).toLocaleString('th-TH')} บาท</div>
                 <div>วิธีชำระ: ${payment.paymentMethod === 'slip' ? '📸 สลิป' : payment.paymentMethod === 'cash' ? '💵 เงินสด' : 'อื่นๆ'}</div>
                 <div>ชำระเมื่อ: ${displayDate}</div>
-                ${payment.slipOkVerified ? '<div style="color: var(--green); font-weight: 700;">✅ ตรวจสอบโดย SlipOK</div>' : ''}
+                ${payment.slipOkVerified ? '<div style="color: var(--primary); font-weight: 700;">✅ ตรวจสอบโดย SlipOK</div>' : ''}
               </div>
             </div>
             <div class="bill-card-action">
@@ -5442,7 +5513,7 @@
       console.log('📋 renderTicketsList - loaded',tickets.length,'tickets from storage');
 
       if (tickets.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">ยังไม่มีรายการแจ้งซ่อม</p>';
+        container.innerHTML = '<p style="text-align: center; color: var(--neutral);">ยังไม่มีรายการแจ้งซ่อม</p>';
         console.log('✅ No maintenance tickets found');
         return;
       }
@@ -5459,7 +5530,7 @@
         // Completion details (when done)
         const completionHTML = ticket.status === 'done' ? `
           <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #eee;">
-            <div style="font-weight: 700; color: var(--green); margin-bottom: 1rem;">✅ ข้อมูลการซ่อมเสร็จ</div>
+            <div style="font-weight: 700; color: var(--primary); margin-bottom: 1rem;">✅ ข้อมูลการซ่อมเสร็จ</div>
             ${ticket.assignedTo ? `<div style="margin-bottom: 0.8rem;"><strong>👤 ผู้รับผิดชอบ:</strong> ${ticket.assignedTo}</div>` : ''}
             ${ticket.workNotes || ticket.notes ? `<div style="margin-bottom: 0.8rem;"><strong>📝 หมายเหตุ:</strong> ${ticket.workNotes || ticket.notes}</div>` : ''}
             ${ticket.completedAt ? `<div style="margin-bottom: 0.8rem;"><strong>📅 วันที่เสร็จ:</strong> ${new Date(ticket.completedAt).toLocaleDateString('th-TH')}</div>` : ''}
@@ -5470,7 +5541,7 @@
           <div class="ticket-card">
             <div class="ticket-header">
               <div>
-                <div class="ticket-id" style="font-weight: 700; font-size: 1.1rem; color: var(--green); margin-bottom: 0.5rem; padding: 0.5rem 0.8rem; background: #f0f9f0; border-radius: 4px; border-left: 4px solid var(--green);">🎟️ ${ticket.id}</div>
+                <div class="ticket-id" style="font-weight: 700; font-size: 1.1rem; color: var(--primary); margin-bottom: 0.5rem; padding: 0.5rem 0.8rem; background: #f0f9f0; border-radius: 4px; border-left: 4px solid var(--primary);">🎟️ ${ticket.id}</div>
                 <div class="ticket-details">${displayDate}</div>
               </div>
               <span class="ticket-status ${ticket.status}">
@@ -6079,7 +6150,7 @@
       if (!container) return;
 
       if (announcements.length === 0) {
-        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">📢 ยังไม่มีประกาศใหม่</div>';
+        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--neutral);">📢 ยังไม่มีประกาศใหม่</div>';
         return;
       }
 
@@ -6117,7 +6188,7 @@
       if (!container) return;
 
       if (!currentLease) {
-        container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">ไม่มีข้อมูลสัญญา</p>';
+        container.innerHTML = '<p style="text-align: center; color: var(--neutral);">ไม่มีข้อมูลสัญญา</p>';
         return;
       }
 
@@ -6141,48 +6212,48 @@
         : 'ไม่มีกำหนด (เช่าต่อเนื่อง)';
 
       container.innerHTML = `
-        <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--green-pale); border-radius: 8px; border-left: 4px solid var(--green);">
-          <h3 style="margin: 0 0 1rem 0; color: var(--green-dark);">📋 รายละเอียดสัญญาเช่า</h3>
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--primary-pale); border-radius: 8px; border-left: 4px solid var(--primary);">
+          <h3 style="margin: 0 0 1rem 0; color: var(--primary-dark);">📋 รายละเอียดสัญญาเช่า</h3>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
             <div>
-              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem;">ห้องเลขที่</div>
+              <div style="font-size: 0.85rem; color: var(--neutral); font-weight: 700; margin-bottom: 0.3rem;">ห้องเลขที่</div>
               <div style="font-size: 1.1rem; color: var(--text); font-weight: 700;">${roomName}</div>
             </div>
             <div>
-              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem;">ผู้เช่า</div>
+              <div style="font-size: 0.85rem; color: var(--neutral); font-weight: 700; margin-bottom: 0.3rem;">ผู้เช่า</div>
               <div style="font-size: 1.1rem; color: var(--text); font-weight: 700;">${currentTenant?.name || currentLease.tenantName || '-'}</div>
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(45, 134, 83, 0.2);">
             <div>
-              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem;">วันเริ่มเช่า</div>
+              <div style="font-size: 0.85rem; color: var(--neutral); font-weight: 700; margin-bottom: 0.3rem;">วันเริ่มเช่า</div>
               <div style="font-size: 0.95rem; color: var(--text);">${moveInDate}</div>
             </div>
             <div>
-              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem;">วันสิ้นสุด</div>
+              <div style="font-size: 0.85rem; color: var(--neutral); font-weight: 700; margin-bottom: 0.3rem;">วันสิ้นสุด</div>
               <div style="font-size: 0.95rem; color: var(--text);">${moveOutDate}</div>
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div style="padding: 1rem; background: #fff; border-radius: 8px; text-align: center;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.5rem;">ค่าเช่ารายเดือน</div>
-              <div style="font-size: 1.5rem; font-weight: 800; color: var(--green);">฿${(currentLease.rentAmount || 5900).toLocaleString('th-TH')}</div>
+              <div style="font-size: 0.85rem; color: var(--neutral); font-weight: 700; margin-bottom: 0.5rem;">ค่าเช่ารายเดือน</div>
+              <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary);">฿${(currentLease.rentAmount || 5900).toLocaleString('th-TH')}</div>
             </div>
             <div style="padding: 1rem; background: #fff; border-radius: 8px; text-align: center;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.5rem;">เงินมัดจำ</div>
-              <div style="font-size: 1.5rem; font-weight: 800; color: var(--green);">฿${(currentLease.deposit || 0).toLocaleString('th-TH')}</div>
+              <div style="font-size: 0.85rem; color: var(--neutral); font-weight: 700; margin-bottom: 0.5rem;">เงินมัดจำ</div>
+              <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary);">฿${(currentLease.deposit || 0).toLocaleString('th-TH')}</div>
             </div>
           </div>
         </div>
 
-        <div style="text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+        <div style="text-align: center; padding: 1rem; color: var(--neutral); font-size: 0.9rem;">
           <div style="margin-bottom: 0.5rem;">📄 ไฟล์สัญญา</div>
           ${currentLease.contractDocument
-            ? `<a href="${currentLease.contractDocument}" target="_blank" style="color: var(--green); text-decoration: none; font-weight: 700;">⬇️ ดาวน์โหลดสัญญา</a>`
-            : '<div style="color: var(--text-muted);">ไม่มีไฟล์สัญญาอัพโหลด</div>'
+            ? `<a href="${currentLease.contractDocument}" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: 700;">⬇️ ดาวน์โหลดสัญญา</a>`
+            : '<div style="color: var(--neutral);">ไม่มีไฟล์สัญญาอัพโหลด</div>'
           }
         </div>
       `;
@@ -6277,7 +6348,7 @@
             '📋 ยังไม่มีบิล (ผู้เช่าใหม่)' :
             '📋 ยังไม่มีบิล';
           const description = isNewTenant ?
-            '<div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem;">ข้อมูลบิลจะปรากฏหลังจากทำการบันทึกข้อมูลมิเตอร์เป็นครั้งแรก</div>' :
+            '<div style="font-size: 0.9rem; color: var(--neutral); margin-top: 0.5rem;">ข้อมูลบิลจะปรากฏหลังจากทำการบันทึกข้อมูลมิเตอร์เป็นครั้งแรก</div>' :
             '';
 
           container.innerHTML = `
@@ -6399,7 +6470,7 @@
           const totalWithPenalty = (latestBill.totalCharge || 0) + penalty;
           html += `
             <div style="margin-bottom: 2rem; padding: 1.5rem; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-              <div style="text-align: center; margin-bottom: 1rem; font-size: 0.9rem; color: var(--text-muted);">📋 บิลล่าสุด</div>
+              <div style="text-align: center; margin-bottom: 1rem; font-size: 0.9rem; color: var(--neutral);">📋 บิลล่าสุด</div>
               <div class="bill-status-badge-container ${statusClass}">
                 <div class="badge-status ${statusClass}">${statusMsg}</div>
                 <div class="badge-amount ${penalty > 0 ? 'with-penalty' : ''}">
@@ -6415,7 +6486,7 @@
           .sort((a, b) => b - a) // Years descending
           .forEach(year => {
             html += `<div style="margin-bottom: 2rem;">`;
-            html += `<h3 style="font-size: 1.1rem; font-weight: 700; color: var(--green); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--green-pale);">ปี ${year}</h3>`;
+            html += `<h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-pale);">ปี ${year}</h3>`;
 
             billsByYear[year].forEach((bill, billIndex) => {
               const monthNames = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -6424,7 +6495,7 @@
               if (bill.status === 'paid') {
                 console.log(`✅ Rendering paid bill: ${bill.billId}`);
               }
-              const statusColor = bill.status === 'paid' ? 'var(--green)' :
+              const statusColor = bill.status === 'paid' ? 'var(--primary)' :
                                   bill.status === 'pending' ? '#ff9800' :
                                   '#c62828';
               const statusText = bill.status === 'paid' ? '✅ จ่ายแล้ว' :
@@ -6535,10 +6606,10 @@
                   <div style="flex: 1;">
                     <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: 0.5rem; color: var(--text);">
                       ${monthName} ${year}
-                      <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 400;">${bill.billId}</span>
+                      <span style="font-size: 0.85rem; color: var(--neutral); font-weight: 400;">${bill.billId}</span>
                     </div>
 
-                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; line-height: 1.6;">
+                    <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 0.5rem; line-height: 1.6;">
                       <div>💰 ค่าเช่า: ฿${(bill.charges.rent || 0).toLocaleString('th-TH')}</div>
                       <div>⚡ ค่าไฟ: ${electricDisplay}</div>
                       <div>💧 ค่าน้ำ: ${waterDisplay}</div>
@@ -6549,7 +6620,7 @@
 
                   <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 1rem;">
                     <div style="text-align: right;">
-                      <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem;">รวม</div>
+                      <div style="font-size: 0.85rem; color: var(--neutral); font-weight: 700; margin-bottom: 0.3rem;">รวม</div>
                       <div style="font-size: 1.5rem; font-weight: 800; color: ${statusColor}; white-space: nowrap; direction: ltr;">
                         ฿${Math.round(bill.totalCharge || 0).toLocaleString('th-TH')}
                       </div>
@@ -6560,11 +6631,11 @@
                     </span>
 
                     ${bill.status === 'paid' ? `
-                      <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.8rem 1.6rem; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem; white-space: nowrap; box-shadow: 0 2px 8px rgba(45, 134, 83, 0.2);">
+                      <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.8rem 1.6rem; background: var(--primary); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem; white-space: nowrap; box-shadow: 0 2px 8px rgba(45, 134, 83, 0.2);">
                         📋 ดูใบเสร็จ
                       </button>
                     ` : bill.status === 'pending' ? `
-                      <button onclick="goToBillPaymentWithFullData('${encodeURIComponent(JSON.stringify({...bill, monthName, year}))}', '${monthName} ${year}')" style="padding: 1.2rem 2.4rem; background: var(--green); color: #fff; border: none; border-radius: 12px; cursor: pointer; font-weight: 800; font-size: 1.3rem; white-space: nowrap; box-shadow: 0 4px 12px rgba(45, 134, 83, 0.3);">
+                      <button onclick="goToBillPaymentWithFullData('${encodeURIComponent(JSON.stringify({...bill, monthName, year}))}', '${monthName} ${year}')" style="padding: 1.2rem 2.4rem; background: var(--primary); color: #fff; border: none; border-radius: 12px; cursor: pointer; font-weight: 800; font-size: 1.3rem; white-space: nowrap; box-shadow: 0 4px 12px rgba(45, 134, 83, 0.3);">
                         ชำระเงิน
                       </button>
                     ` : ''}
@@ -6611,7 +6682,7 @@
         slipData = null;
 
         // Reset to step 1: Invoice
-        document.getElementById('step1').style.background = 'var(--green)';
+        document.getElementById('step1').style.background = 'var(--primary)';
         document.getElementById('step2').style.background = '#ddd';
         document.getElementById('step3').style.background = '#ddd';
         document.getElementById('invoiceSection').style.display = 'block';
@@ -6658,28 +6729,28 @@
         const invoiceHTML = `
           <div style="padding: 2rem; background: #fff; border-radius: 8px; border: 1px solid #e0e0e0;">
             <!-- Header -->
-            <div style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid var(--green); padding-bottom: 1rem;">
-              <h2 style="margin: 0 0 0.5rem 0; color: var(--green); font-size: 1.3rem;">ใบวางบิล</h2>
-              <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted);">Invoice</p>
+            <div style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid var(--primary); padding-bottom: 1rem;">
+              <h2 style="margin: 0 0 0.5rem 0; color: var(--primary); font-size: 1.3rem;">ใบวางบิล</h2>
+              <p style="margin: 0; font-size: 0.9rem; color: var(--neutral);">Invoice</p>
             </div>
 
             <!-- Bill Info -->
             <div style="margin-bottom: 1.5rem;">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.95rem;">
                 <div>
-                  <div style="color: var(--text-muted); font-weight: 600;">เลขที่บิล</div>
+                  <div style="color: var(--neutral); font-weight: 600;">เลขที่บิล</div>
                   <div style="font-weight: 700; color: var(--text);">${bill.billId}</div>
                 </div>
                 <div>
-                  <div style="color: var(--text-muted); font-weight: 600;">วันที่</div>
+                  <div style="color: var(--neutral); font-weight: 600;">วันที่</div>
                   <div style="font-weight: 700; color: var(--text);">${monthName} ${bill.year}</div>
                 </div>
                 <div>
-                  <div style="color: var(--text-muted); font-weight: 600;">ห้องเลขที่</div>
+                  <div style="color: var(--neutral); font-weight: 600;">ห้องเลขที่</div>
                   <div style="font-weight: 700; color: var(--text);">${bill.roomId}</div>
                 </div>
                 <div>
-                  <div style="color: var(--text-muted); font-weight: 600;">สถานะ</div>
+                  <div style="color: var(--neutral); font-weight: 600;">สถานะ</div>
                   <div style="font-weight: 700; color: #ff9800;">⏳ รอชำระ</div>
                 </div>
               </div>
@@ -6722,8 +6793,8 @@
 
             <!-- Total -->
             <div style="text-align: right; margin-bottom: 2rem;">
-              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">รวมทั้งสิ้น</div>
-              <div style="font-size: 2rem; font-weight: 800; color: var(--green);">
+              <div style="font-size: 0.9rem; color: var(--neutral); margin-bottom: 0.5rem;">รวมทั้งสิ้น</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--primary);">
                 ฿${(bill.totalCharge || 0).toLocaleString('th-TH')}
               </div>
             </div>
@@ -6734,34 +6805,34 @@
               <h4 style="margin: 0 0 0.8rem 0; font-size: 0.95rem;">สถานะมิเตอร์</h4>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div>
-                  <div style="color: var(--text-muted); margin-bottom: 0.3rem;">⚡ ไฟฟ้า</div>
-                  <div style="color: var(--text-muted); font-size: 0.85rem;">เดิม: ${(bill.meterReadings.electric?.previous || 0).toLocaleString('th-TH')}</div>
-                  <div style="color: var(--text-muted); font-size: 0.85rem;">ปัจจุบัน: ${(bill.meterReadings.electric?.current || 0).toLocaleString('th-TH')}</div>
-                  <div style="font-weight: 600; color: var(--green);">ใช้: ${(bill.meterReadings.electric?.usage || 0).toFixed(1)} หน่วย</div>
+                  <div style="color: var(--neutral); margin-bottom: 0.3rem;">⚡ ไฟฟ้า</div>
+                  <div style="color: var(--neutral); font-size: 0.85rem;">เดิม: ${(bill.meterReadings.electric?.previous || 0).toLocaleString('th-TH')}</div>
+                  <div style="color: var(--neutral); font-size: 0.85rem;">ปัจจุบัน: ${(bill.meterReadings.electric?.current || 0).toLocaleString('th-TH')}</div>
+                  <div style="font-weight: 600; color: var(--primary);">ใช้: ${(bill.meterReadings.electric?.usage || 0).toFixed(1)} หน่วย</div>
                 </div>
                 <div>
-                  <div style="color: var(--text-muted); margin-bottom: 0.3rem;">💧 น้ำ</div>
-                  <div style="color: var(--text-muted); font-size: 0.85rem;">เดิม: ${(bill.meterReadings.water?.previous || 0).toLocaleString('th-TH')}</div>
-                  <div style="color: var(--text-muted); font-size: 0.85rem;">ปัจจุบัน: ${(bill.meterReadings.water?.current || 0).toLocaleString('th-TH')}</div>
-                  <div style="font-weight: 600; color: var(--green);">ใช้: ${(bill.meterReadings.water?.usage || 0).toFixed(1)} หน่วย</div>
+                  <div style="color: var(--neutral); margin-bottom: 0.3rem;">💧 น้ำ</div>
+                  <div style="color: var(--neutral); font-size: 0.85rem;">เดิม: ${(bill.meterReadings.water?.previous || 0).toLocaleString('th-TH')}</div>
+                  <div style="color: var(--neutral); font-size: 0.85rem;">ปัจจุบัน: ${(bill.meterReadings.water?.current || 0).toLocaleString('th-TH')}</div>
+                  <div style="font-weight: 600; color: var(--primary);">ใช้: ${(bill.meterReadings.water?.usage || 0).toFixed(1)} หน่วย</div>
                 </div>
               </div>
             </div>
             ` : ''}
 
             <!-- QR Code Section -->
-            <div style="background: #e3f2fd; border: 2px dashed var(--green); padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 2rem;">
+            <div style="background: #e3f2fd; border: 2px dashed var(--primary); padding: 1.5rem; border-radius: 8px; text-align: center; margin-top: 2rem;">
               <div style="font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 1rem;">💳 สแกน QR Code เพื่อชำระเงิน</div>
               <div id="qrCode" style="display: flex; justify-content: center; margin-bottom: 1rem;"></div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">พร้อมเพย์: ${ppNumber}<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
+              <div style="font-size: 0.75rem; color: var(--neutral);">พร้อมเพย์: ${ppNumber}<br/>สแกนแล้วยอดขึ้นอัตโนมัติ</div>
             </div>
 
             <div style="background: #fffacd; border-left: 4px solid var(--accent); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
               <div style="font-weight: 700; color: var(--accent); margin-bottom: 0.5rem;">⏰ กรุณาชำระภายใน 5 วันถัดไป</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">หากผ่านกำหนด อาจมีค่าปรับ</div>
+              <div style="font-size: 0.85rem; color: var(--neutral);">หากผ่านกำหนด อาจมีค่าปรับ</div>
             </div>
 
-            <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <div style="text-align: center; color: var(--neutral); font-size: 0.8rem; padding-top: 1rem; border-top: 1px solid var(--border);">
               ⏳ <strong>รอชำระ</strong> — กรุณาอัปโหลดสลิปเพื่อยืนยันการชำระเงิน
             </div>
           </div>
@@ -6829,29 +6900,29 @@
         const receiptHTML = `
           <div style="padding: 2rem; background: #fff; border-radius: 8px; border: 2px dashed #2d8653;">
             <!-- Header -->
-            <div style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid var(--green); padding-bottom: 1rem;">
-              <h2 style="margin: 0 0 0.5rem 0; color: var(--green); font-size: 1.3rem;">ใบเสร็จรับเงิน</h2>
-              <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted);">Receipt</p>
-              <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--green); font-weight: 700;">✅ ชำระเงินแล้ว</div>
+            <div style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid var(--primary); padding-bottom: 1rem;">
+              <h2 style="margin: 0 0 0.5rem 0; color: var(--primary); font-size: 1.3rem;">ใบเสร็จรับเงิน</h2>
+              <p style="margin: 0; font-size: 0.9rem; color: var(--neutral);">Receipt</p>
+              <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--primary); font-weight: 700;">✅ ชำระเงินแล้ว</div>
             </div>
 
             <!-- Receipt Info -->
             <div style="margin-bottom: 1.5rem;">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.95rem;">
                 <div>
-                  <div style="color: var(--text-muted); font-weight: 600;">อ้างอิงบิลที่</div>
+                  <div style="color: var(--neutral); font-weight: 600;">อ้างอิงบิลที่</div>
                   <div style="font-weight: 700; color: var(--text);">${bill.billId}</div>
                 </div>
                 <div>
-                  <div style="color: var(--text-muted); font-weight: 600;">วันที่</div>
+                  <div style="color: var(--neutral); font-weight: 600;">วันที่</div>
                   <div style="font-weight: 700; color: var(--text);">${monthName} ${year}</div>
                 </div>
                 <div>
-                  <div style="color: var(--text-muted); font-weight: 600;">ห้องเลขที่</div>
+                  <div style="color: var(--neutral); font-weight: 600;">ห้องเลขที่</div>
                   <div style="font-weight: 700; color: var(--text);">${bill.roomId}</div>
                 </div>
                 <div>
-                  <div style="color: var(--text-muted); font-weight: 600;">วิธีชำระเงิน</div>
+                  <div style="color: var(--neutral); font-weight: 600;">วิธีชำระเงิน</div>
                   <div style="font-weight: 700; color: var(--text);">ธนาคาร / PromptPay</div>
                 </div>
               </div>
@@ -6859,7 +6930,7 @@
 
             <!-- Payment Details with Breakdown -->
             <div style="margin-bottom: 1.5rem; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-              <div style="background: var(--green); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดการชำระ</div>
+              <div style="background: var(--primary); color: #fff; padding: 0.8rem; font-weight: 700;">รายละเอียดการชำระ</div>
               <div style="padding: 1rem;">
                 ${bill.charges?.rent ? `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.8rem;">
@@ -6885,27 +6956,27 @@
                   <span style="font-weight: 600; color: var(--text);">฿${bill.charges.trash.toLocaleString('th-TH')}</span>
                 </div>
                 ` : ''}
-                <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-top: 2px solid var(--green); margin-top: 0.8rem;">
+                <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; border-top: 2px solid var(--primary); margin-top: 0.8rem;">
                   <span style="font-weight: 700; font-size: 1.1rem; color: var(--text);">รวมทั้งสิ้น</span>
-                  <span style="font-weight: 800; font-size: 1.3rem; color: var(--green);">฿${(bill.totalCharge || 0).toLocaleString('th-TH')}</span>
+                  <span style="font-weight: 800; font-size: 1.3rem; color: var(--primary);">฿${(bill.totalCharge || 0).toLocaleString('th-TH')}</span>
                 </div>
               </div>
             </div>
 
             <!-- Date -->
             <div style="margin-bottom: 1.5rem; font-size: 0.9rem;">
-              <div style="color: var(--text-muted); margin-bottom: 0.3rem;">วันที่ชำระ</div>
+              <div style="color: var(--neutral); margin-bottom: 0.3rem;">วันที่ชำระ</div>
               <div style="font-weight: 700; color: var(--text);">${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
             </div>
 
             <!-- Confirmation -->
-            <div style="background: #e8f5e9; padding: 1rem; border-radius: 6px; text-align: center; color: var(--green); font-weight: 600;">
+            <div style="background: #e8f5e9; padding: 1rem; border-radius: 6px; text-align: center; color: var(--primary); font-weight: 600;">
               ✅ ได้รับชำระเงินแล้ว<br>
-              <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: 400;">ขอบคุณที่ชำระเงินตรงเวลา</span>
+              <span style="font-size: 0.9rem; color: var(--neutral); font-weight: 400;">ขอบคุณที่ชำระเงินตรงเวลา</span>
             </div>
 
             <!-- Footer -->
-            <div style="text-align: center; margin-top: 2rem; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid #e0e0e0; padding-top: 1rem;">
+            <div style="text-align: center; margin-top: 2rem; font-size: 0.85rem; color: var(--neutral); border-top: 1px solid #e0e0e0; padding-top: 1rem;">
               <p style="margin: 0;">ใบเสร็จฉบับนี้ใช้เป็นหลักฐานการชำระเงิน</p>
               <p style="margin: 0.5rem 0 0 0;">The Green Haven Co., Ltd.</p>
             </div>
