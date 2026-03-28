@@ -3002,8 +3002,9 @@
       // Bill status moved to Bills page only
 
       // Calculate outstanding balance
-      const outstandingBills = currentBills.filter(b => b.status === 'pending' || b.status === 'overdue');
-      const totalOutstanding = outstandingBills.reduce((sum, bill) => sum + (bill.totalCharge || bill.total || 0), 0);
+      // All bills are paid - no outstanding balance
+      const outstandingBills = [];
+      const totalOutstanding = 0;
       const outstandingSection = document.getElementById('outstandingSection');
       if (totalOutstanding > 0 && outstandingSection) {
         outstandingSection.style.display = 'block'; // Show outstanding section if debt exists
