@@ -3070,20 +3070,31 @@
 
         // Load all bills from localStorage to match bills data exactly
         let allBills = [];
+        console.log('🔍 Searching for bills...');
+        console.log('  currentBuilding:', currentBuilding, 'currentRoom:', currentRoom);
+
         for (const year of [2567, 2568, 2569, 2570]) {
           const billsKey = `bills_${year}`;
           const billsData = localStorage.getItem(billsKey);
+          console.log(`  ${billsKey}:`, billsData ? 'EXISTS' : 'missing');
+
           if (billsData) {
-            const yearBills = JSON.parse(billsData).filter(b => b.building === currentBuilding && b.roomId === currentRoom);
+            const parsed = JSON.parse(billsData);
+            console.log(`    Total bills in ${billsKey}: ${parsed.length}`);
+
+            const yearBills = parsed.filter(b => {
+              const matches = b.building === currentBuilding && b.roomId === currentRoom;
+              if (matches) {
+                console.log(`    ✓ Found bill: month=${b.month}, year=${b.year}`);
+              }
+              return matches;
+            });
+
             allBills.push(...yearBills);
           }
         }
 
-        console.log('📊 Meter Trends Debug - All bills loaded:', allBills.length, 'bills');
-        allBills.forEach(b => {
-          console.log(`  Bill: month=${b.month}, year=${b.year}, electric=${b.charges?.electric?.usage}, water=${b.charges?.water?.usage}`);
-        });
-        console.log('Current building:', currentBuilding, 'Current room:', currentRoom);
+        console.log('📊 Total bills loaded for this room:', allBills.length);
 
         // Build trends from bills (uses same calculation as bill display)
         const trends = [];
