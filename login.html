@@ -998,18 +998,18 @@
           });
 
           if (userData.userType === 'accountant') {
-            console.log('➡️ Redirecting to: /accounting.html');
-            window.location.href = '/accounting.html';
+            console.log('➡️ Redirecting to: /accounting');
+            window.location.href = '/accounting';
           } else if (userData.userType === 'admin') {
-            console.log('➡️ Redirecting to: /dashboard.html');
-            window.location.href = '/dashboard.html';
+            console.log('➡️ Redirecting to: /dashboard');
+            window.location.href = '/dashboard';
           } else if (userData.userType === 'tenant') {
-            const tenantUrl = `/tenant.html?room=${userData.roomNumber}`;
+            const tenantUrl = `/tenant?room=${userData.roomNumber}`;
             console.log('➡️ Redirecting to:', tenantUrl);
             window.location.href = tenantUrl;
           } else {
             console.warn('⚠️ Unknown userType, defaulting to dashboard:', userData.userType);
-            window.location.href = '/dashboard.html';
+            window.location.href = '/dashboard';
           }
         }, 1500);
 
@@ -1148,13 +1148,13 @@
         // Redirect based on user type (use userData.userType instead of currentUserType)
         setTimeout(() => {
           if (userData.userType === 'accountant') {
-            window.location.href = '/accounting.html';
+            window.location.href = '/accounting';
           } else if (userData.userType === 'admin') {
-            window.location.href = '/dashboard.html';
+            window.location.href = '/dashboard';
           } else if (userData.userType === 'tenant') {
-            window.location.href = `/tenant.html?room=${userData.roomNumber}`;
+            window.location.href = `/tenant?room=${userData.roomNumber}`;
           } else {
-            window.location.href = '/dashboard.html'; // Default to dashboard
+            window.location.href = '/dashboard'; // Default to dashboard
           }
         }, 1500);
 

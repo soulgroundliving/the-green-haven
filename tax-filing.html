@@ -516,10 +516,10 @@
 
     <div class="sidebar-group">
       <div class="sidebar-group-title">Navigation</div>
-      <button class="sidebar-item" onclick="window.location.href='/dashboard.html'">
+      <button class="sidebar-item" onclick="window.location.href='/dashboard'">
         <span class="sidebar-item-icon">🏠</span>Dashboard หลัก
       </button>
-      <button class="sidebar-item" onclick="window.location.href='/accounting.html'">
+      <button class="sidebar-item" onclick="window.location.href='/accounting'">
         <span class="sidebar-item-icon">💸</span>ระบบบัญชี
       </button>
     </div>
@@ -824,7 +824,7 @@
   function handleLogout() {
     if (confirm('ยืนยันการออกจากระบบ?')) {
       localStorage.removeItem('currentUser');
-      window.location.href = '/login.html';
+      window.location.href = '/login';
     }
   }
 </script>

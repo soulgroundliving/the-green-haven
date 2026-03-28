@@ -380,14 +380,14 @@ function checkTenantAuth() {
   const user = window.SecurityUtils.getSecureSession();
   if (!user) {
     // Not logged in or session expired - redirect to login
-    window.location.href = '/login.html';
+    window.location.href = '/login';
     return;
   }
 
   // Check if user is tenant
   if (user.userType !== 'tenant') {
     alert('เฉพาะผู้เช่าเท่านั้นที่สามารถเข้าถึง Payment Portal');
-    window.location.href = '/login.html';
+    window.location.href = '/login';
     return;
   }
 

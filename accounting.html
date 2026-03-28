@@ -822,7 +822,7 @@
       <button class="sidebar-item" onclick="showAccountingPage('reports', this)">
         <span class="sidebar-item-icon">📋</span>รายงาน
       </button>
-      <button class="sidebar-item" onclick="window.location.href='/tax-filing.html'">
+      <button class="sidebar-item" onclick="window.location.href='/tax-filing'">
         <span class="sidebar-item-icon">🏛️</span>ยื่นแบบประเมิน
       </button>
       <button class="sidebar-item" onclick="showAccountingPage('reports', this)">
@@ -833,7 +833,7 @@
     <!-- Navigation Section -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Navigation</div>
-      <button class="sidebar-item" onclick="window.location.href='/dashboard.html'">
+      <button class="sidebar-item" onclick="window.location.href='/dashboard'">
         <span class="sidebar-item-icon">🏠</span>Dashboard หลัก
       </button>
     </div>
@@ -1183,13 +1183,13 @@
   function checkAccountingAuth() {
     const user = window.SecurityUtils.getSecureSession();
     if (!user) {
-      window.location.href = '/login.html';
+      window.location.href = '/login';
       return;
     }
 
     if (user.userType !== 'admin' && user.userType !== 'accountant') {
       alert('เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบบัญชี');
-      window.location.href = '/login.html';
+      window.location.href = '/login';
       return;
     }
 
