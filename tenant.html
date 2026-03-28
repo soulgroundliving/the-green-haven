@@ -4019,15 +4019,13 @@
                         </div>
                       </div>
 
-                      <span style="padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; background: ${item.status === 'paid' ? 'var(--primary)' : '#2196f3'}20; color: ${item.status === 'paid' ? 'var(--primary)' : '#2196f3'}; white-space: nowrap;">
-                        ${item.status === 'paid' ? '✅ จ่ายแล้ว' : item.status === 'overdue' ? '⚠️逾期' : '⏳ รอชำระ'}
+                      <span style="padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; background: var(--primary)20; color: var(--primary); white-space: nowrap;">
+                        ✅ จ่ายแล้ว
                       </span>
 
-                      ${item.status === 'pending' ? `
-                        <button onclick="goToPayment('${item.month}', ${item.amount})" style="padding: 0.4rem 0.8rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: var(--font-xs); white-space: nowrap; flex-shrink: 0;">
-                          💳 จ่าย
-                        </button>
-                      ` : ''}
+                      <button onclick="viewBillReceipt('${item.id}', '${item.month}', '2569')" style="padding: 0.4rem 0.8rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: var(--font-xs); white-space: nowrap; flex-shrink: 0;">
+                        📋 ดูใบเสร็จ
+                      </button>
                     </div>
                   </div>
                 `;
