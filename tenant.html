@@ -4114,8 +4114,8 @@
         return b.month - a.month;
       });
 
-      // Show ALL historical bills (no 12-month filter)
-      const filteredBills = sortedBills;
+      // Show only last 12 months of bills
+      const filteredBills = sortedBills.slice(0, 12);
 
       // Render bills with real data structure
       container.innerHTML = filteredBills.map((bill, index) => {
