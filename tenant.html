@@ -4160,8 +4160,8 @@
               </span>
 
               ${bill.status === 'pending' || bill.status === 'paid' ? `
-                <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.3rem 0.6rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: var(--font-xs); white-space: nowrap;">
-                  📋 ดู
+                <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.6rem 1rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: var(--font-body); white-space: nowrap;">
+                  📋 ดูใบเสร็จ
                 </button>
               ` : ''}
             </div>
