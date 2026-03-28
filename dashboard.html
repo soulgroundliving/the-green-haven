@@ -279,14 +279,14 @@
     const user = window.SecurityUtils.getSecureSession();
     if (!user) {
       // Not logged in or session expired - redirect to login
-      window.location.href = '/login.html';
+      window.location.href = '/login';
       return;
     }
 
     // Check if user is admin
     if (user.userType !== 'admin') {
       alert('เฉพาะ Admin เท่านั้นที่สามารถเข้าถึง Dashboard');
-      window.location.href = '/login.html';
+      window.location.href = '/login';
       return;
     }
 
@@ -326,7 +326,7 @@
       if (remaining <= 0) {
         // Session expired - logout
         sessionStorage.removeItem('user');
-        window.location.href = '/login.html?expired=true';
+        window.location.href = '/login?expired=true';
         return;
       }
 
@@ -382,7 +382,7 @@
   window.goToAccounting = function() {
     const user = window.SecurityUtils.getSecureSession();
     if (user && (user.userType === 'admin' || user.userType === 'accountant')) {
-      window.location.href = '/accounting.html';
+      window.location.href = '/accounting';
     } else {
       alert('⛔ เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบบัญชี');
     }
@@ -395,8 +395,8 @@
   window.goToTaxFiling = function(pageId) {
     const user = window.SecurityUtils.getSecureSession();
     if (user && (user.userType === 'admin' || user.userType === 'accountant')) {
-      sessionStorage.setItem('returnPath', '/dashboard.html');
-      window.location.href = '/tax-filing.html#' + pageId;
+      sessionStorage.setItem('returnPath', '/dashboard');
+      window.location.href = '/tax-filing#' + pageId;
     } else {
       alert('⛔ เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบยื่นแบบประเมิน');
     }
@@ -1805,7 +1805,7 @@
     <!-- Operations -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">⚙️ Operations</div>
-      <button class="sidebar-item" onclick="window.location.href='/audit-log-viewer.html'">
+      <button class="sidebar-item" onclick="window.location.href='/audit-log-viewer'">
         <span class="sidebar-item-icon">📋</span>Audit Logs
       </button>
     </div>
@@ -8162,7 +8162,7 @@ function updateLinkPreview(){
     return;
   }
 
-  const paymentLink = `${window.location.origin}/payment.html?room=${room}`;
+  const paymentLink = `${window.location.origin}/payment?room=${room}`;
   const qrId = 'qr-' + room;
 
   document.getElementById('linkPreview').innerHTML = `
@@ -8598,10 +8598,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Protect dashboard - admin only
   if (!AccessControl.protectPage('admin')) {
     console.error('❌ Access denied: This page is for admin only');
-    AccessControl.logAccessAttempt('/dashboard.html', false);
+    AccessControl.logAccessAttempt('/dashboard', false);
     return;
   }
-  AccessControl.logAccessAttempt('/dashboard.html', true);
+  AccessControl.logAccessAttempt('/dashboard', true);
 
   // Initialize all room users if not already done
   initializeAllRoomUsers();
