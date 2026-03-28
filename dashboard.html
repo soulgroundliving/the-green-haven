@@ -51,7 +51,7 @@
   // Firebase configuration
   // Firebase config from environment - API Key must be set via build process
   const firebaseConfig = {
-    apiKey: typeof SecureConfig !== 'undefined' && SecureConfig.firebase.apiKey ? SecureConfig.firebase.apiKey : (typeof FIREBASE_API_KEY !== 'undefined' ? FIREBASE_API_KEY : ''),
+    apiKey: typeof SecureConfig !== 'undefined' && SecureConfig.firebase.apiKey ? SecureConfig.firebase.apiKey : (typeof FIREBASE_API_KEY !== 'undefined' ? FIREBASE_API_KEY : "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM"),
     authDomain: "the-green-haven.firebaseapp.com",
     databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "the-green-haven",
