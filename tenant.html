@@ -3203,6 +3203,70 @@
           ctx.lineTo(padding, padding + chartHeight);
           ctx.lineTo(canvas.width - padding, padding + chartHeight);
           ctx.stroke();
+
+          // Add interactive tooltip for bars
+          const tooltip = document.createElement('div');
+          tooltip.id = 'chartTooltip';
+          tooltip.style.cssText = `
+            position: absolute;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            white-space: nowrap;
+          `;
+          canvas.parentElement.style.position = 'relative';
+          canvas.parentElement.appendChild(tooltip);
+
+          // Track bar positions for hover detection
+          const barPositions = [];
+          chartData.forEach((data, idx) => {
+            const x = padding + (idx * (barWidth * 2 + barGap));
+            barPositions.push({
+              month: data.month,
+              electric: data.electric,
+              water: data.water,
+              x: x,
+              width: barWidth * 2 + 4
+            });
+          });
+
+          // Handle mouse events
+          canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // Check if mouse is in chart area
+            if (mouseX < padding || mouseX > canvas.width - padding ||
+                mouseY < padding || mouseY > padding + chartHeight) {
+              tooltip.style.display = 'none';
+              return;
+            }
+
+            // Find which bar is hovered
+            for (let bar of barPositions) {
+              if (mouseX >= bar.x && mouseX <= bar.x + bar.width) {
+                tooltip.innerHTML = `<strong>${bar.month}</strong><br>⚡ ${Math.round(bar.electric)} หน่วย<br>💧 ${Math.round(bar.water)} หน่วย`;
+                tooltip.style.display = 'block';
+                tooltip.style.left = (e.clientX - rect.left - 50) + 'px';
+                tooltip.style.top = (e.clientY - rect.top - 60) + 'px';
+                canvas.style.cursor = 'pointer';
+                return;
+              }
+            }
+            tooltip.style.display = 'none';
+            canvas.style.cursor = 'default';
+          });
+
+          canvas.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+            canvas.style.cursor = 'default';
+          });
         }
 
         // Calculate 12-month averages
