@@ -1366,9 +1366,9 @@
                     <tr style="background: var(--blue); color: white;">
                       <th style="padding: 0.6rem; text-align: left;">เดือน/ปี</th>
                       <th style="padding: 0.6rem; text-align: center;" id="electricUsageHeader">⚡ ไฟฟ้า</th>
-                      <th style="padding: 0.6rem; text-align: center;">⚡ เฉลี่ย</th>
+                      <th style="padding: 0.6rem; text-align: center;" id="electricDailyHeader">⚡ เฉลี่ยวัน</th>
                       <th style="padding: 0.6rem; text-align: center;" id="waterUsageHeader">💧 น้ำ</th>
-                      <th style="padding: 0.6rem; text-align: center;">💧 เฉลี่ย</th>
+                      <th style="padding: 0.6rem; text-align: center;" id="waterDailyHeader">💧 เฉลี่ยวัน</th>
                     </tr>
                   </thead>
                   <tbody id="meterTrendsTableBody">
@@ -3212,6 +3212,9 @@
         // Update table headers with average values
         const electricUsageHeader = document.getElementById('electricUsageHeader');
         const waterUsageHeader = document.getElementById('waterUsageHeader');
+        const electricDailyHeader = document.getElementById('electricDailyHeader');
+        const waterDailyHeader = document.getElementById('waterDailyHeader');
+
         if (electricUsageHeader) {
           electricUsageHeader.textContent = `⚡ ไฟฟ้า (${Math.round(avgElectric).toLocaleString('th-TH')})`;
         }
@@ -3220,6 +3223,26 @@
         }
 
         // Generate table rows (matching bills data exactly)
+        const dailyAverages = trends.map((trend, idx) => {
+          // Calculate daily average (usage / days in month)
+          const daysThisMonth = new Date(trend.year, trend.monthNum, 0).getDate();
+          const dailyElectric = (trend.electricUsage / daysThisMonth).toFixed(1);
+          const dailyWater = (trend.waterUsage / daysThisMonth).toFixed(1);
+
+          return { dailyElectric: parseFloat(dailyElectric), dailyWater: parseFloat(dailyWater), daysThisMonth };
+        });
+
+        // Calculate 12-month average daily consumption
+        const avgDailyElectric = dailyAverages.reduce((sum, d) => sum + d.dailyElectric, 0) / dailyAverages.length;
+        const avgDailyWater = dailyAverages.reduce((sum, d) => sum + d.dailyWater, 0) / dailyAverages.length;
+
+        if (electricDailyHeader) {
+          electricDailyHeader.textContent = `⚡ เฉลี่ยวัน (${avgDailyElectric.toFixed(1)})`;
+        }
+        if (waterDailyHeader) {
+          waterDailyHeader.textContent = `💧 เฉลี่ยวัน (${avgDailyWater.toFixed(1)})`;
+        }
+
         tbody.innerHTML = trends.map((trend, idx) => {
           // Calculate daily average (usage / days in month)
           const daysThisMonth = new Date(trend.year, trend.monthNum, 0).getDate();
