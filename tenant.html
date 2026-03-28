@@ -6658,7 +6658,7 @@
 
                     ${bill.status === 'paid' ? `
                       <button onclick="viewBillReceipt('${bill.billId}', '${monthName}', '${year}')" style="padding: 0.4rem 0.8rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: var(--font-xs); white-space: nowrap; flex-shrink: 0;">
-                        📋 ดู
+                        📋 ดูใบเสร็จรับเงิน
                       </button>
                     ` : bill.status === 'pending' ? `
                       <button onclick="goToBillPaymentWithFullData('${encodeURIComponent(JSON.stringify({...bill, monthName, year}))}', '${monthName} ${year}')" style="padding: 0.4rem 0.8rem; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: var(--font-xs); white-space: nowrap; flex-shrink: 0;">
