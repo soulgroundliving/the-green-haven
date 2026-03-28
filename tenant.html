@@ -1365,10 +1365,10 @@
                   <thead>
                     <tr style="background: var(--blue); color: white;">
                       <th style="padding: 0.6rem; text-align: left;">เดือน/ปี</th>
-                      <th style="padding: 0.6rem; text-align: center;">⚡ ไฟฟ้า</th>
-                      <th style="padding: 0.6rem; text-align: center;" id="electricAvgHeader">⚡ เฉลี่ย</th>
-                      <th style="padding: 0.6rem; text-align: center;">💧 น้ำ</th>
-                      <th style="padding: 0.6rem; text-align: center;" id="waterAvgHeader">💧 เฉลี่ย</th>
+                      <th style="padding: 0.6rem; text-align: center;" id="electricUsageHeader">⚡ ไฟฟ้า</th>
+                      <th style="padding: 0.6rem; text-align: center;">⚡ เฉลี่ย</th>
+                      <th style="padding: 0.6rem; text-align: center;" id="waterUsageHeader">💧 น้ำ</th>
+                      <th style="padding: 0.6rem; text-align: center;">💧 เฉลี่ย</th>
                     </tr>
                   </thead>
                   <tbody id="meterTrendsTableBody">
@@ -3210,13 +3210,13 @@
         const avgWater = trends.reduce((sum, t) => sum + t.waterUsage, 0) / trends.length;
 
         // Update table headers with average values
-        const electricAvgHeader = document.getElementById('electricAvgHeader');
-        const waterAvgHeader = document.getElementById('waterAvgHeader');
-        if (electricAvgHeader) {
-          electricAvgHeader.textContent = `⚡ เฉลี่ย (${Math.round(avgElectric).toLocaleString('th-TH')})`;
+        const electricUsageHeader = document.getElementById('electricUsageHeader');
+        const waterUsageHeader = document.getElementById('waterUsageHeader');
+        if (electricUsageHeader) {
+          electricUsageHeader.textContent = `⚡ ไฟฟ้า (${Math.round(avgElectric).toLocaleString('th-TH')})`;
         }
-        if (waterAvgHeader) {
-          waterAvgHeader.textContent = `💧 เฉลี่ย (${Math.round(avgWater).toLocaleString('th-TH')})`;
+        if (waterUsageHeader) {
+          waterUsageHeader.textContent = `💧 น้ำ (${Math.round(avgWater).toLocaleString('th-TH')})`;
         }
 
         // Generate table rows (matching bills data exactly)
