@@ -1627,51 +1627,6 @@
           </button>
         </div>
 
-        <!-- Outstanding Balance Card -->
-        <div class="card" id="outstandingCard" style="display: none;">
-          <div style="text-align: center;">
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">ยอดค้างชำระทั้งหมด</p>
-            <div style="font-size: 2rem; font-weight: 800; color: var(--red); margin-bottom: 1rem;" id="outstandingAmount">-</div>
-            <p style="color: var(--text-muted); font-size: 0.85rem;" id="pendingBillCount">-</p>
-          </div>
-        </div>
-
-        <!-- Meter Readings Card -->
-        <div class="card" id="meterReadingsCard" style="display: none;">
-          <div class="card-title" style="margin-bottom: 1rem;">⚡💧 มิเตอร์ปัจจุบัน</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div style="text-align: center; padding: 1rem; background: var(--blue-pale); border-radius: 8px;">
-              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">⚡ ไฟฟ้า</div>
-              <div style="font-size: 1.8rem; font-weight: 800; color: var(--blue);" id="meterElectric">-</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">หน่วย</div>
-            </div>
-            <div style="text-align: center; padding: 1rem; background: var(--blue-pale); border-radius: 8px; opacity: 0.8;">
-              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">💧 น้ำ</div>
-              <div style="font-size: 1.8rem; font-weight: 800; color: var(--blue);" id="meterWater">-</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">หน่วย</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bill Summary Card -->
-        <div class="card" id="billSummaryCard" style="display: none;">
-          <div class="card-title" style="margin-bottom: 1rem;">📊 สถานะบิล</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
-            <div style="text-align: center; padding: 1rem; background: var(--green-pale); border-radius: 8px;">
-              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">✅ ชำระแล้ว</div>
-              <div style="font-size: 1.8rem; font-weight: 800; color: var(--green);" id="billPaidCount">0</div>
-            </div>
-            <div style="text-align: center; padding: 1rem; background: #fff3cd; border-radius: 8px;">
-              <div style="font-size: 0.9rem; color: #856404; margin-bottom: 0.5rem;">⏳ รอชำระ</div>
-              <div style="font-size: 1.8rem; font-weight: 800; color: #856404;" id="billPendingCount">0</div>
-            </div>
-            <div style="text-align: center; padding: 1rem; background: var(--red-pale); border-radius: 8px;">
-              <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">⚠️ เกินกำหนด</div>
-              <div style="font-size: 1.8rem; font-weight: 800; color: var(--red);" id="billOverdueCount">0</div>
-            </div>
-          </div>
-        </div>
-
         <!-- STATUS GRID (3 columns - paid/pending/overdue) -->
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; margin-bottom: 1rem;">
           <div class="stat-card">
@@ -3004,10 +2959,13 @@
       // Calculate outstanding balance
       const outstandingBills = currentBills.filter(b => b.status === 'pending' || b.status === 'overdue');
       const totalOutstanding = outstandingBills.reduce((sum, bill) => sum + (bill.total || 0), 0);
-      if (totalOutstanding > 0) {
-        document.getElementById('outstandingCard').style.display = 'none'; // HIDDEN - Show only payment section
+      const outstandingSection = document.getElementById('outstandingSection');
+      if (totalOutstanding > 0 && outstandingSection) {
+        outstandingSection.style.display = 'block'; // Show outstanding section if debt exists
         document.getElementById('outstandingAmount').textContent = `${totalOutstanding.toLocaleString('th-TH')} บาท`;
         document.getElementById('pendingBillCount').textContent = `${outstandingBills.length} บิล`;
+      } else if (outstandingSection) {
+        outstandingSection.style.display = 'none'; // Hide if no outstanding balance
       }
 
       // Display meter readings (latest from Firebase)
@@ -3035,25 +2993,30 @@
           }
         }
 
-        if (meterData && (meterData.eNew || meterData.currentElectric)) {
-          document.getElementById('meterReadingsCard').style.display = 'block';
-          document.getElementById('meterElectric').textContent = (meterData.eNew || meterData.currentElectric || 0).toLocaleString('th-TH');
-          document.getElementById('meterWater').textContent = (meterData.wNew || meterData.currentWater || 0).toLocaleString('th-TH');
+        // Update meter readings in accordion (always visible)
+        const meterElectric = document.getElementById('meterElectric');
+        const meterWater = document.getElementById('meterWater');
+        if (meterData && meterElectric && meterWater) {
+          meterElectric.textContent = (meterData.eNew || meterData.currentElectric || 0).toLocaleString('th-TH');
+          meterWater.textContent = (meterData.wNew || meterData.currentWater || 0).toLocaleString('th-TH');
         }
       } catch (e) {
         console.warn('⚠️ Error loading meter data for home page:', e);
       }
 
-      // Display bill summary stats
+      // Display bill summary stats in status grid
       if (currentBills && currentBills.length > 0) {
-        document.getElementById('billSummaryCard').style.display = 'none'; // HIDDEN - Show only payment section
         const paidBills = currentBills.filter(b => b.status === 'paid').length;
         const pendingBills = currentBills.filter(b => b.status === 'pending').length;
         const overdueBills = currentBills.filter(b => b.status === 'overdue').length;
 
-        document.getElementById('billPaidCount').textContent = paidBills;
-        document.getElementById('billPendingCount').textContent = pendingBills;
-        document.getElementById('billOverdueCount').textContent = overdueBills;
+        const paidCountElements = document.querySelectorAll('#billPaidCount');
+        const pendingCountElements = document.querySelectorAll('#billPendingCount');
+        const overdueCountElements = document.querySelectorAll('#billOverdueCount');
+
+        paidCountElements.forEach(el => el.textContent = paidBills);
+        pendingCountElements.forEach(el => el.textContent = pendingBills);
+        overdueCountElements.forEach(el => el.textContent = overdueBills);
       }
 
       // Display latest announcement
@@ -3078,28 +3041,36 @@
           announcements = tenantFirebaseData.announcements;
         }
 
-        if (announcements && announcements.length > 0) {
+        const announcementSection = document.getElementById('latestAnnouncementSection');
+        const announcementContent = document.getElementById('latestAnnouncementContent');
+        if (announcements && announcements.length > 0 && announcementSection && announcementContent) {
+          announcementSection.style.display = 'block'; // Show announcement section
           const latest = announcements[0];
-          document.getElementById('latestAnnouncementCard').style.display = 'block';
-          document.getElementById('latestAnnouncementContent').innerHTML = `
-            <div style="padding: 1rem; background: var(--green-pale); border-radius: 8px; border-left: 4px solid var(--green);">
-              <div style="font-weight: 700; color: var(--text); margin-bottom: 0.5rem;">${latest.title || '-'}</div>
+          announcementContent.innerHTML = `
+            <div style="padding: 0.8rem; background: var(--green-pale); border-radius: 8px;">
+              <div style="font-weight: 700; color: var(--text); margin-bottom: 0.3rem;">${latest.title || '-'}</div>
               <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">${latest.content || '-'}</div>
               <div style="font-size: 0.8rem; color: var(--text-muted);">
                 ${latest.date ? (typeof latest.date === 'string' ? latest.date : new Date(latest.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })) : '-'}
               </div>
             </div>
           `;
+        } else if (announcementSection) {
+          announcementSection.style.display = 'none'; // Hide if no announcements
         }
       } catch (e) {
         console.warn('⚠️ Error displaying latest announcement:', e);
       }
 
-      // Display lease information
+      // Display lease information in accordion
       if (currentLease) {
-        document.getElementById('leaseInfoCard').style.display = 'block';
-        document.getElementById('homeDeposit').textContent = `${(currentLease.deposit || 0).toLocaleString('th-TH')} บาท`;
-        document.getElementById('homeMoveInDate').textContent = currentLease.moveInDate ? new Date(currentLease.moveInDate).toLocaleDateString('th-TH') : '-';
+        const depositEl = document.getElementById('homeDeposit');
+        const moveInEl = document.getElementById('homeMoveInDate');
+        const leaseEndEl = document.getElementById('homeLeaseEnd');
+
+        if (depositEl) depositEl.textContent = `${(currentLease.deposit || 0).toLocaleString('th-TH')} บาท`;
+        if (moveInEl) moveInEl.textContent = currentLease.moveInDate ? new Date(currentLease.moveInDate).toLocaleDateString('th-TH') : '-';
+        if (leaseEndEl) leaseEndEl.textContent = currentLease.endDate ? new Date(currentLease.endDate).toLocaleDateString('th-TH') : '-';
       }
 
       // Display lease renewal alert (check if lease expiring soon)
@@ -3114,6 +3085,9 @@
         displayBuildingInternetStatus();
       } catch (e) {
         console.warn('⚠️ Error displaying building internet status:', e);
+        // Hide internet section if error occurs
+        const internetSection = document.getElementById('internetStatusSection');
+        if (internetSection) internetSection.style.display = 'none';
       }
 
       // Update header with tenant name
@@ -3136,7 +3110,7 @@
 
     // BUILDING INTERNET STATUS - View only
     function displayBuildingInternetStatus() {
-      const card = document.getElementById('internetStatusCard');
+      const section = document.getElementById('internetStatusSection');
 
       // Load internet status from localStorage
       let internetStatus = {
@@ -3158,9 +3132,9 @@
         console.warn('⚠️ Could not load stored internet status:', e);
       }
 
-      // Show the card
-      if (card) {
-        card.style.display = 'block';
+      // Show the accordion section
+      if (section) {
+        section.style.display = 'block';
       }
 
       // Update status icon and text
