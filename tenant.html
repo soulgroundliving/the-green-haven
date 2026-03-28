@@ -4025,17 +4025,17 @@
               if (item.type === 'invoice') {
                 return `
                   <div class="bill-card" style="display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.6rem 0.8rem; flex-wrap: nowrap;">
-                    <div style="flex: 1; min-width: 0;">
+                    <div style="flex: 1; min-width: 0; overflow: hidden;">
                       <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem;">
                         <h3 style="margin: 0; font-size: var(--font-body); font-weight: 700;">${item.month}</h3>
                         <span style="font-size: var(--font-xs); color: var(--neutral);">${item.id}</span>
                       </div>
-                      <div style="display: flex; gap: 0.8rem; font-size: var(--font-xs); color: var(--neutral); flex-wrap: wrap;">
+                      <div style="font-size: var(--font-xs); color: var(--neutral); line-height: 1.3;">
                         ${item.breakdown ? `
-                          <span>💰 ฿${(item.breakdown.rent || 0).toLocaleString('th-TH')}</span>
-                          <span>⚡ ฿${(item.breakdown.electric || 0).toLocaleString('th-TH')}</span>
-                          <span>💧 ฿${(item.breakdown.water || 0).toLocaleString('th-TH')}</span>
-                        ` : `<span>฿${item.amount.toLocaleString('th-TH')}</span>`}
+                          <div>🏠 ค่าเช่า: ฿${(item.breakdown.rent || 0).toLocaleString('th-TH')}</div>
+                          <div>⚡ ค่าไฟ: ฿${(item.breakdown.electric || 0).toLocaleString('th-TH')}</div>
+                          <div>💧 ค่าน้ำ: ฿${(item.breakdown.water || 0).toLocaleString('th-TH')}</div>
+                        ` : `<div>฿${item.amount.toLocaleString('th-TH')}</div>`}
                       </div>
                     </div>
 
@@ -4062,15 +4062,15 @@
               } else if (item.type === 'receipt') {
                 return `
                   <div class="bill-card" style="display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.6rem 0.8rem; flex-wrap: nowrap;">
-                    <div style="flex: 1; min-width: 0;">
+                    <div style="flex: 1; min-width: 0; overflow: hidden;">
                       <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem;">
                         <h3 style="margin: 0; font-size: var(--font-body); font-weight: 700;">${item.icon} ${item.displayStatus}</h3>
                         <span style="font-size: var(--font-xs); color: var(--neutral);">${item.id}</span>
                       </div>
-                      <div style="display: flex; gap: 0.8rem; font-size: var(--font-xs); color: var(--neutral); flex-wrap: wrap;">
-                        <span>🧾 อ้างอิง: ${item.invoiceId}</span>
-                        <span>${item.paymentMethod === 'slip' ? '📸 สลิป' : item.paymentMethod === 'cash' ? '💵 เงินสด' : item.paymentMethod}</span>
-                        <span>${new Date(item.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                      <div style="font-size: var(--font-xs); color: var(--neutral); line-height: 1.3;">
+                        <div>เลขที่: ${item.invoiceId}</div>
+                        <div>วิธีชำระ: ${item.paymentMethod === 'slip' ? '📸 สลิป' : item.paymentMethod === 'cash' ? '💵 เงินสด' : item.paymentMethod}</div>
+                        <div>${new Date(item.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })} ${item.slipOkVerified ? '✅ SlipOK' : ''}</div>
                       </div>
                     </div>
 
@@ -4085,12 +4085,6 @@
                       <span style="padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; background: var(--primary)20; color: var(--primary); white-space: nowrap;">
                         ✅ จ่ายแล้ว
                       </span>
-
-                      ${item.slipOkVerified ? `
-                        <span style="padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; background: #4caf5020; color: #4caf50; white-space: nowrap;">
-                          ✓ SlipOK
-                        </span>
-                      ` : ''}
                     </div>
                   </div>
                 `;
@@ -4151,15 +4145,16 @@
 
         return `
           <div class="bill-card" style="display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.6rem 0.8rem; flex-wrap: nowrap;">
-            <div style="flex: 1; min-width: 0;">
+            <div style="flex: 1; min-width: 0; overflow: hidden;">
               <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem;">
                 <h3 style="margin: 0; font-size: var(--font-body); font-weight: 700;">${monthName} ${bill.year}</h3>
                 <span style="font-size: var(--font-xs); color: var(--neutral);">${bill.billId || ''}</span>
               </div>
-              <div style="display: flex; gap: 0.8rem; font-size: var(--font-xs); color: var(--neutral); flex-wrap: wrap;">
-                <span>💰 ฿${(bill.charges?.rent || bill.rent || 0).toLocaleString('th-TH')}</span>
-                <span>⚡ ฿${(bill.charges?.electric?.cost || bill.electric || 0).toLocaleString('th-TH')}</span>
-                <span>💧 ฿${(bill.charges?.water?.cost || bill.water || 0).toLocaleString('th-TH')}</span>
+              <div style="font-size: var(--font-xs); color: var(--neutral); line-height: 1.3;">
+                <div>🏠 ค่าเช่า: ฿${(bill.charges?.rent || bill.rent || 0).toLocaleString('th-TH')}</div>
+                <div>⚡ ค่าไฟ: ${(bill.charges?.electric?.usage || 0).toFixed(0)} × ฿${bill.charges?.electric?.rate || 8} = ฿${(bill.charges?.electric?.cost || bill.electric || 0).toLocaleString('th-TH')}</div>
+                <div>💧 ค่าน้ำ: ${(bill.charges?.water?.usage || 0).toFixed(0)} × ฿${bill.charges?.water?.rate || 20} = ฿${(bill.charges?.water?.cost || bill.water || 0).toLocaleString('th-TH')}</div>
+                ${bill.charges?.trash ? `<div>🗑️ ค่าขยะ: ฿${(bill.charges.trash || 0).toLocaleString('th-TH')}</div>` : ''}
               </div>
             </div>
 
@@ -4181,16 +4176,6 @@
                 </button>
               ` : ''}
             </div>
-
-            ${bill.meterReadings && (bill.meterReadings.electric || bill.meterReadings.water) ? `
-              <details style="position: absolute; right: 0.8rem; bottom: -2.5rem; background: white; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border); z-index: 10; font-size: var(--font-xs);">
-                <summary style="cursor: pointer; font-weight: 700; color: var(--info);">📊</summary>
-                <div style="padding: 0.4rem; color: var(--neutral); line-height: 1.4; white-space: nowrap;">
-                  ${bill.meterReadings.electric ? `<div>⚡ ${(bill.charges?.electric?.usage || 0).toFixed(0)} × ฿${bill.charges?.electric?.rate || 8}</div>` : ''}
-                  ${bill.meterReadings.water ? `<div>💧 ${(bill.charges?.water?.usage || 0).toFixed(0)} × ฿${bill.charges?.water?.rate || 20}</div>` : ''}
-                </div>
-              </details>
-            ` : ''}
           </div>
         `;
       }).join('');
@@ -5508,14 +5493,14 @@
 
         return `
           <div class="bill-card" style="display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.6rem 0.8rem; flex-wrap: nowrap;">
-            <div style="flex: 1; min-width: 0;">
+            <div style="flex: 1; min-width: 0; overflow: hidden;">
               <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem;">
                 <h3 style="margin: 0; font-size: var(--font-body); font-weight: 700;">${monthYear}</h3>
+                <span style="font-size: var(--font-xs); color: var(--neutral);">${payment.billId || ''}</span>
               </div>
-              <div style="display: flex; gap: 0.8rem; font-size: var(--font-xs); color: var(--neutral); flex-wrap: wrap;">
-                <span>วิธีชำระ: ${payment.paymentMethod === 'slip' ? '📸 สลิป' : payment.paymentMethod === 'cash' ? '💵 เงินสด' : 'อื่นๆ'}</span>
-                <span>${displayDate}</span>
-                ${payment.slipOkVerified ? '<span style="color: var(--primary); font-weight: 700;">✅ SlipOK</span>' : ''}
+              <div style="font-size: var(--font-xs); color: var(--neutral); line-height: 1.3;">
+                <div>วิธีชำระ: ${payment.paymentMethod === 'slip' ? '📸 สลิป' : payment.paymentMethod === 'cash' ? '💵 เงินสด' : 'อื่นๆ'}</div>
+                <div>วันชำระ: ${displayDate} ${payment.slipOkVerified ? '✅ SlipOK' : ''}</div>
               </div>
             </div>
 
@@ -6646,15 +6631,16 @@
 
               html += `
                 <div class="bill-card" style="display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.6rem 0.8rem; flex-wrap: nowrap; margin-bottom: 0.5rem;">
-                  <div style="flex: 1; min-width: 0;">
+                  <div style="flex: 1; min-width: 0; overflow: hidden;">
                     <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem;">
                       <h3 style="margin: 0; font-size: var(--font-body); font-weight: 700;">${monthName} ${year}</h3>
                       <span style="font-size: var(--font-xs); color: var(--neutral);">${bill.billId}</span>
                     </div>
-                    <div style="display: flex; gap: 0.8rem; font-size: var(--font-xs); color: var(--neutral); flex-wrap: wrap;">
-                      <span>💰 ฿${(bill.charges.rent || 0).toLocaleString('th-TH')}</span>
-                      <span>⚡ ฿${(bill.charges.electric?.cost || 0).toLocaleString('th-TH')}</span>
-                      <span>💧 ฿${(bill.charges.water?.cost || 0).toLocaleString('th-TH')}</span>
+                    <div style="font-size: var(--font-xs); color: var(--neutral); line-height: 1.3;">
+                      <div>🏠 ค่าเช่า: ฿${(bill.charges.rent || 0).toLocaleString('th-TH')}</div>
+                      <div>⚡ ค่าไฟ: ${electricDisplay}</div>
+                      <div>💧 ค่าน้ำ: ${waterDisplay}</div>
+                      ${bill.charges.trash ? `<div>🗑️ ค่าขยะ: ฿${(bill.charges.trash || 0).toLocaleString('th-TH')}</div>` : ''}
                     </div>
                   </div>
 
