@@ -314,6 +314,61 @@
     // Set session timeout for auto-logout on inactivity
     window.SecurityUtils.setSessionTimeout(30);
 
+    // === DASHBOARD SESSION TIMEOUT WARNING ===
+    const DASHBOARD_SESSION_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 hours
+    const DASHBOARD_WARNING_TIME_MS = 5 * 60 * 1000; // Show warning 5 minutes before timeout
+    const DASHBOARD_LOGIN_TIME = Date.now();
+
+    function checkDashboardSessionTimeout() {
+      const elapsed = Date.now() - DASHBOARD_LOGIN_TIME;
+      const remaining = DASHBOARD_SESSION_TIMEOUT_MS - elapsed;
+
+      if (remaining <= 0) {
+        // Session expired - logout
+        sessionStorage.removeItem('user');
+        window.location.href = '/login.html?expired=true';
+        return;
+      }
+
+      if (remaining <= DASHBOARD_WARNING_TIME_MS && !document.getElementById('dashboardSessionWarningBanner')) {
+        // Show warning banner
+        const banner = document.createElement('div');
+        banner.id = 'dashboardSessionWarningBanner';
+        banner.style.cssText = `
+          background: #fff3cd;
+          border-left: 4px solid #ffc107;
+          padding: 1rem;
+          margin: 1rem;
+          border-radius: 6px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 10000;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        `;
+
+        const minutes = Math.ceil(remaining / 60000);
+        banner.innerHTML = `
+          <div style="flex: 1;">
+            <div style="color: #856404; font-weight: 700;">⏰ หมดเวลาเซสชัน</div>
+            <div style="color: #856404; font-size: 0.9rem;">เซสชั่นของคุณจะหมดในอีก ${minutes} นาที โปรดรีเฟรชเพื่อเพิ่มเวลา</div>
+          </div>
+          <button onclick="location.reload()" style="background: #ffc107; border: none; color: #000; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; margin-left: 1rem;">🔄 รีเฟรช</button>
+        `;
+
+        document.body.insertBefore(banner, document.body.firstChild);
+      }
+    }
+
+    // Check session every 30 seconds
+    setInterval(checkDashboardSessionTimeout, 30000);
+    // Initial check
+    checkDashboardSessionTimeout();
+
     console.log('✅ Authentication verified:', user.name);
   }
 
@@ -6867,6 +6922,51 @@ const SLIPOK_KEY = 'SLIPOK8P4B99Z';
 let slipVerified = false;
 let slipData = null;
 
+// === RATE LIMITING (Dashboard) ===
+const DASHBOARD_RATE_LIMIT_CONFIG = {
+  slipVerification: { maxRequests: 3, windowMs: 60000 }, // 3 requests per minute
+  billUpload: { maxRequests: 5, windowMs: 3600000 }       // 5 uploads per hour
+};
+const dashboardRateLimitTracker = {};
+
+function checkDashboardRateLimit(key) {
+  const now = Date.now();
+  const config = DASHBOARD_RATE_LIMIT_CONFIG[key];
+  if (!config) return true;
+
+  if (!dashboardRateLimitTracker[key]) {
+    dashboardRateLimitTracker[key] = [];
+  }
+
+  // Remove old requests outside the window
+  dashboardRateLimitTracker[key] = dashboardRateLimitTracker[key].filter(time => now - time < config.windowMs);
+
+  if (dashboardRateLimitTracker[key].length >= config.maxRequests) {
+    return false;
+  }
+
+  dashboardRateLimitTracker[key].push(now);
+  return true;
+}
+
+function validateSlipFileAdmin(file) {
+  const errors = [];
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    errors.push(`❌ ไฟล์ใหญ่เกินไป (สูงสุด ${MAX_FILE_SIZE / 1024 / 1024}MB)`);
+  }
+
+  // Check file type
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    errors.push('❌ รูปแบบไฟล์ต้องเป็น JPG, PNG หรือ WebP เท่านั้น');
+  }
+
+  return errors;
+}
+
 function handleSlipDrop(e){
   e.preventDefault();
   document.getElementById('slipDropArea').classList.remove('dragging');
@@ -6876,6 +6976,15 @@ function handleSlipDrop(e){
 
 async function verifySlip(file){
   if(!file) return;
+
+  // Validate file
+  const validationErrors = validateSlipFileAdmin(file);
+  if (validationErrors.length > 0) {
+    const resultEl = document.getElementById('slipResult');
+    resultEl.innerHTML = `<div style="color: #d32f2f; padding: 1rem; background: #ffebee; border-radius: 6px;">${validationErrors.join('<br>')}</div>`;
+    return;
+  }
+
   const resultEl = document.getElementById('slipResult');
   const dropText = document.getElementById('slipDropText');
 
@@ -6888,6 +6997,10 @@ async function verifySlip(file){
   resultEl.innerHTML = '';
 
   try {
+    // Check rate limit
+    if (!checkDashboardRateLimit('slipVerification')) {
+      throw new Error('⏱️ คำขอมากเกินไป โปรดลองใหม่ในเวลาไม่กี่วินาที');
+    }
     const fd = new FormData();
     fd.append('files', file);
     const res = await fetch(SLIPOK_URL, {
@@ -8373,8 +8486,15 @@ function handleAdminSlipDrop(e){
 }
 
 function handleSlipSelect(file){
-  if(!file || !file.type.startsWith('image/')){
-    alert('❌ กรุณาเลือกรูปภาพ');
+  if(!file){
+    alert('❌ กรุณาเลือกไฟล์');
+    return;
+  }
+
+  // Validate file
+  const validationErrors = validateSlipFileAdmin(file);
+  if (validationErrors.length > 0) {
+    alert('❌ ข้อผิดพลาดในการอัปโหลดสลิป:\n' + validationErrors.join('\n'));
     return;
   }
 
