@@ -7322,6 +7322,9 @@ ${styles}
   printWindow=window.open('','_blank','width=420,height=700,toolbar=0,menubar=0,scrollbars=1');
   if(!printWindow){alert('Pop-up ถูกบล็อก — กรุณาอนุญาต pop-up สำหรับ localhost');return;}
 
+  // ตั้งให้ปิดเมื่อ unload
+  printWindow.onunload = () => { printWindow = null; };
+
   printWindow.document.write(html);
   printWindow.document.close();
 
@@ -7329,8 +7332,13 @@ ${styles}
   const imgs=printWindow.document.querySelectorAll('img');
   const doPrint=()=>{
     try{printWindow.focus();printWindow.print();}catch(e){}
-    // Auto-close window หลัง print dialog เปิด
-    setTimeout(()=>{if(printWindow){try{printWindow.close();}catch(e){}}},500);
+    // Force close window หลัง print dialog (รอเพื่อให้ user กด Save/Cancel)
+    setTimeout(()=>{
+      if(printWindow && !printWindow.closed){
+        try{printWindow.close();}catch(e){}
+      }
+      printWindow = null; // Clear reference completely
+    }, 1000);
   };
 
   if(imgs.length===0){
