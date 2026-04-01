@@ -7427,8 +7427,9 @@ async function saveBillToFirebase(d){
     // Tenant app expects: bills/{building}/{room} as an object with billIds as keys
     const { ref: firebaseRef } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
 
-    // Determine Firebase building ID
-    const fbBuildingId = currentBuilding === 'main' ? 'rooms' : (currentBuilding === 'nest' ? 'nest' : 'rooms');
+    // Determine Firebase building ID using proper conversion
+    // currentBuilding is 'old' or 'new', need to convert to 'rooms' or 'nest'
+    const fbBuildingId = CONFIG.getBuildingConfig(currentBuilding);
 
     // Save bill at bills/{building}/{room}/{billId}
     const billsRef = firebaseRef(window.firebaseDatabase, `bills/${fbBuildingId}/${d.room}/${d.no}`);
