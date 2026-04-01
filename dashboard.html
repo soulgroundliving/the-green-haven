@@ -703,20 +703,20 @@
     .doc-body{max-width:100%!important;margin:0;padding:20px;width:100%;box-sizing:border-box;}
   }
   .doc-header{text-align:center;padding:14px 0 10px;border-bottom:2px dashed #ccc;}
-  .doc-logo{font-size:clamp(1rem, 5vw, 1.35rem);font-weight:800;color:var(--green-dark);}
-  .doc-sub{font-size:clamp(0.65rem, 2.5vw, 0.78rem);color:var(--text-muted);margin-top:1px;}
-  .doc-title{font-size:clamp(0.9rem, 4vw, 1.05rem);font-weight:700;margin:10px 0 3px;}
+  .doc-logo{font-size:clamp(0.95rem, 3.5vw, 1.2rem);font-weight:800;color:var(--green-dark);}
+  .doc-sub{font-size:clamp(0.6rem, 1.8vw, 0.7rem);color:var(--text-muted);margin-top:1px;}
+  .doc-title{font-size:clamp(0.8rem, 2.8vw, 0.95rem);font-weight:700;margin:8px 0 2px;}
   .doc-title.invoice{color:var(--blue);}
   .doc-title.receipt{color:var(--green-dark);}
-  .doc-no{font-size:clamp(0.65rem, 2.5vw, 0.75rem);color:var(--text-muted);}
-  .doc-content{padding:10px 0;}
-  .d-row{display:flex;justify-content:space-between;padding:4px 0;font-size:clamp(0.75rem, 3vw, 0.87rem);word-break:break-word;}
-  .d-divider{border:none;border-top:1px dashed #ccc;margin:7px 0;}
-  .d-total{display:flex;justify-content:space-between;padding:7px 0 3px;font-size:clamp(0.9rem, 4vw, 1.05rem);font-weight:800;border-top:2px dashed #333;margin-top:7px;}
+  .doc-no{font-size:clamp(0.6rem, 1.8vw, 0.7rem);color:var(--text-muted);}
+  .doc-content{padding:8px 0;}
+  .d-row{display:flex;justify-content:space-between;padding:3px 0;font-size:clamp(0.7rem, 2.2vw, 0.8rem);word-break:break-word;}
+  .d-divider{border:none;border-top:1px dashed #ccc;margin:5px 0;}
+  .d-total{display:flex;justify-content:space-between;padding:5px 0 2px;font-size:clamp(0.8rem, 2.8vw, 0.95rem);font-weight:800;border-top:2px dashed #333;margin-top:5px;}
   .d-total.invoice{color:var(--blue);}
   .d-total.receipt{color:var(--green-dark);}
-  .doc-footer{text-align:center;padding:10px 0 6px;border-top:2px dashed #ccc;font-size:clamp(0.65rem, 2.5vw, 0.75rem);color:var(--text-muted);}
-  .doc-stamp{display:inline-block;padding:6px 14px;border-radius:50%;font-weight:700;font-size:clamp(0.7rem, 3vw, 0.82rem);margin:7px 0;transform:rotate(-5deg);}
+  .doc-footer{text-align:center;padding:8px 0 5px;border-top:2px dashed #ccc;font-size:clamp(0.6rem, 1.8vw, 0.7rem);color:var(--text-muted);}
+  .doc-stamp{display:inline-block;padding:5px 10px;border-radius:50%;font-weight:700;font-size:clamp(0.65rem, 2.2vw, 0.75rem);margin:5px 0;transform:rotate(-5deg);}
   .stamp-pending{border:2px solid var(--blue);color:var(--blue);}
   .stamp-paid{border:2px solid var(--green);color:var(--green);}
   .due-box{background:var(--accent-light);border:1px solid var(--accent);border-radius:6px;padding:6px 10px;font-size:.78rem;margin:8px 0;text-align:center;color:#bf360c;font-weight:600;}
@@ -7161,6 +7161,10 @@ function generateInvoice(){
   const due=new Date(d.now); due.setDate(5); if(due<=d.now)due.setMonth(due.getMonth()+1);
   const dueStr=due.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
 
+  // Hide receipt panel to show only invoice
+  document.getElementById('receiptPanel').style.display='none';
+  document.getElementById('invoicePanel').style.display='block';
+
   document.getElementById('invoicePanel').innerHTML=buildDocHTML(d,'invoice',dueStr);
   renderQR('qr-payment', d.total); // generate PromptPay QR with bill amount
 
@@ -7190,6 +7194,10 @@ function generateReceipt(){
   if(!invoiceData){alert('กรุณาส่งใบวางบิลก่อน');isGeneratingReceipt = false;return;}
   const d=invoiceData;
   const payDate=new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+
+  // Hide invoice panel to show only receipt
+  document.getElementById('invoicePanel').style.display='none';
+  document.getElementById('receiptPanel').style.display='block';
 
   // ===== AUDIT LOGGING =====
   if (window.AuditLogger) {
