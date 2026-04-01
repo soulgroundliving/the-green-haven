@@ -7252,9 +7252,15 @@ function resetBillFlow(){
   document.getElementById('slipResult').innerHTML='';
 }
 
-// ===== SHARE TO LINE =====
 // ===== PRINT DOC — popup หน้าเดียว ไม่มี header/footer ของ browser =====
+let printWindow = null; // Track print window to prevent accumulation
+
 function printDoc(docId){
+  // Close previous print window if still open
+  if(printWindow && !printWindow.closed){
+    try{printWindow.close();}catch(e){}
+  }
+
   const el=document.getElementById(docId);
   if(!el){alert('ไม่พบเอกสาร');return;}
   // รวม styles ทั้งหมดจากหน้าหลัก
@@ -7274,19 +7280,28 @@ ${styles}
 }
 </style></head>
 <body>${content}</body></html>`;
-  const w=window.open('','_blank','width=420,height=700,toolbar=0,menubar=0,scrollbars=1');
-  if(!w){alert('Pop-up ถูกบล็อก — กรุณาอนุญาต pop-up สำหรับ localhost');return;}
-  w.document.write(html);
-  w.document.close();
+
+  printWindow=window.open('','_blank','width=420,height=700,toolbar=0,menubar=0,scrollbars=1');
+  if(!printWindow){alert('Pop-up ถูกบล็อก — กรุณาอนุญาต pop-up สำหรับ localhost');return;}
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+
   // รอ QR image โหลดก่อน print
-  const imgs=w.document.querySelectorAll('img');
+  const imgs=printWindow.document.querySelectorAll('img');
+  const doPrint=()=>{
+    try{printWindow.focus();printWindow.print();}catch(e){}
+    // Auto-close window หลัง print dialog เปิด
+    setTimeout(()=>{if(printWindow){try{printWindow.close();}catch(e){}}},500);
+  };
+
   if(imgs.length===0){
-    setTimeout(()=>{w.focus();w.print();},400);
+    setTimeout(doPrint,400);
   } else {
     let done=0;
-    const tryPrint=()=>{if(++done>=imgs.length)setTimeout(()=>{w.focus();w.print();},200);};
+    const tryPrint=()=>{if(++done>=imgs.length)setTimeout(doPrint,200);};
     imgs.forEach(img=>{img.complete?tryPrint():(img.onload=tryPrint,img.onerror=tryPrint);});
-    setTimeout(()=>{w.focus();w.print();},3000); // fallback 3 วิ
+    setTimeout(doPrint,3000); // fallback 3 วิ
   }
 }
 
