@@ -689,25 +689,25 @@
 
   /* ===== DOCUMENT STYLES ===== */
   /* Print is handled by printDoc() popup — no @media print needed here */
-  .doc-body{font-family:'Sarabun',sans-serif;background:#fff;max-width:360px;margin:0 auto;}
+  .doc-body{font-family:'Sarabun',sans-serif;background:#fff;max-width:360px;margin:0 auto;padding:0 10px;}
   @media print{
-    .doc-body{max-width:100%!important;margin:0;padding:0;}
+    .doc-body{max-width:100%!important;margin:0;padding:20px;width:100%;box-sizing:border-box;}
   }
   .doc-header{text-align:center;padding:14px 0 10px;border-bottom:2px dashed #ccc;}
-  .doc-logo{font-size:1.35rem;font-weight:800;color:var(--green-dark);}
-  .doc-sub{font-size:.78rem;color:var(--text-muted);margin-top:1px;}
-  .doc-title{font-size:1.05rem;font-weight:700;margin:10px 0 3px;}
+  .doc-logo{font-size:clamp(1rem, 5vw, 1.35rem);font-weight:800;color:var(--green-dark);}
+  .doc-sub{font-size:clamp(0.65rem, 2.5vw, 0.78rem);color:var(--text-muted);margin-top:1px;}
+  .doc-title{font-size:clamp(0.9rem, 4vw, 1.05rem);font-weight:700;margin:10px 0 3px;}
   .doc-title.invoice{color:var(--blue);}
   .doc-title.receipt{color:var(--green-dark);}
-  .doc-no{font-size:.75rem;color:var(--text-muted);}
+  .doc-no{font-size:clamp(0.65rem, 2.5vw, 0.75rem);color:var(--text-muted);}
   .doc-content{padding:10px 0;}
-  .d-row{display:flex;justify-content:space-between;padding:4px 0;font-size:.87rem;}
+  .d-row{display:flex;justify-content:space-between;padding:4px 0;font-size:clamp(0.75rem, 3vw, 0.87rem);word-break:break-word;}
   .d-divider{border:none;border-top:1px dashed #ccc;margin:7px 0;}
-  .d-total{display:flex;justify-content:space-between;padding:7px 0 3px;font-size:1.05rem;font-weight:800;border-top:2px dashed #333;margin-top:7px;}
+  .d-total{display:flex;justify-content:space-between;padding:7px 0 3px;font-size:clamp(0.9rem, 4vw, 1.05rem);font-weight:800;border-top:2px dashed #333;margin-top:7px;}
   .d-total.invoice{color:var(--blue);}
   .d-total.receipt{color:var(--green-dark);}
-  .doc-footer{text-align:center;padding:10px 0 6px;border-top:2px dashed #ccc;font-size:.75rem;color:var(--text-muted);}
-  .doc-stamp{display:inline-block;padding:6px 14px;border-radius:50%;font-weight:700;font-size:.82rem;margin:7px 0;transform:rotate(-5deg);}
+  .doc-footer{text-align:center;padding:10px 0 6px;border-top:2px dashed #ccc;font-size:clamp(0.65rem, 2.5vw, 0.75rem);color:var(--text-muted);}
+  .doc-stamp{display:inline-block;padding:6px 14px;border-radius:50%;font-weight:700;font-size:clamp(0.7rem, 3vw, 0.82rem);margin:7px 0;transform:rotate(-5deg);}
   .stamp-pending{border:2px solid var(--blue);color:var(--blue);}
   .stamp-paid{border:2px solid var(--green);color:var(--green);}
   .due-box{background:var(--accent-light);border:1px solid var(--accent);border-radius:6px;padding:6px 10px;font-size:.78rem;margin:8px 0;text-align:center;color:#bf360c;font-weight:600;}
