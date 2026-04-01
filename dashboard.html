@@ -7129,11 +7129,18 @@ function renderQR(imgId,amount){
   el.onerror=()=>{el.alt='⚠️ QR ไม่โหลด (ต้องใช้อินเทอร์เน็ต)';el.style.cssText='width:160px;height:50px;border:1px dashed #ccc;';};
 }
 
+let isGeneratingInvoice = false; // Prevent rapid clicks
 function generateInvoice(){
+  // Prevent rapid button clicks
+  if(isGeneratingInvoice) return;
+  isGeneratingInvoice = true;
+  setTimeout(() => { isGeneratingInvoice = false; }, 1500);
+
   // Validate bill form before processing
   const validation = validateBillForm();
   if (!validation.isValid) {
     showValidationErrors(validation.errors);
+    isGeneratingInvoice = false;
     return;
   }
 
@@ -7165,8 +7172,13 @@ function generateInvoice(){
   document.getElementById('invoicePanel').scrollIntoView({behavior:'smooth'});
 }
 
+let isGeneratingReceipt = false; // Prevent rapid clicks
 function generateReceipt(){
-  if(!invoiceData){alert('กรุณาส่งใบวางบิลก่อน');return;}
+  if(isGeneratingReceipt) return;
+  isGeneratingReceipt = true;
+  setTimeout(() => { isGeneratingReceipt = false; }, 1500);
+
+  if(!invoiceData){alert('กรุณาส่งใบวางบิลก่อน');isGeneratingReceipt = false;return;}
   const d=invoiceData;
   const payDate=new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
 
@@ -7258,7 +7270,13 @@ function resetBillFlow(){
 // ===== PRINT DOC — popup หน้าเดียว ไม่มี header/footer ของ browser =====
 let printWindow = null; // Track print window to prevent accumulation
 
+let isPrinting = false; // Prevent rapid print requests
 function printDoc(docId){
+  // Prevent rapid print requests
+  if(isPrinting) return;
+  isPrinting = true;
+  setTimeout(() => { isPrinting = false; }, 2000);
+
   // Close previous print window if still open
   if(printWindow && !printWindow.closed){
     try{printWindow.close();}catch(e){}
