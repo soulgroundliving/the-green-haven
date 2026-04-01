@@ -7220,10 +7220,10 @@ function buildDocHTML(d,type,dueDate,payDate){
       <div class="d-row"><span>${isInvoice?'วันที่ออกบิล':'วันที่ชำระ'}:</span><span>${isInvoice?d.dateStr:payDate}</span></div>
       <hr class="d-divider">
       <div class="d-row"><span>${d.rentLabel}</span><span>฿${d.rent.toLocaleString()}</span></div>
-      ${d.eCost>0?`<div class="d-row" style="font-size:.8rem;color:var(--text-muted);padding-left:10px;"><span>มิเตอร์ไฟ: ${d.eOld} → ${d.eNew} (${d.eUnits} หน่วย × ฿${d.eRate})</span></div>
-      <div class="d-row"><span>ค่าไฟฟ้า</span><span>฿${d.eCost.toLocaleString()}</span></div>`:''}
-      ${d.wCost>0?`<div class="d-row" style="font-size:.8rem;color:var(--text-muted);padding-left:10px;"><span>มิเตอร์น้ำ: ${d.wOld} → ${d.wNew} (${d.wUnits} หน่วย × ฿${d.wRate})</span></div>
-      <div class="d-row"><span>ค่าน้ำประปา</span><span>฿${d.wCost.toLocaleString()}</span></div>`:''}
+      ${d.eOld!=null||d.eNew!=null?`<div class="d-row" style="font-size:.8rem;color:var(--text-muted);padding-left:10px;"><span>มิเตอร์ไฟ: ${d.eOld||0} → ${d.eNew||0} (${d.eUnits||0} หน่วย × ฿${d.eRate||0})</span></div>
+      <div class="d-row"><span>ค่าไฟฟ้า</span><span>฿${(d.eCost||0).toLocaleString()}</span></div>`:''}
+      ${d.wOld!=null||d.wNew!=null?`<div class="d-row" style="font-size:.8rem;color:var(--text-muted);padding-left:10px;"><span>มิเตอร์น้ำ: ${d.wOld||0} → ${d.wNew||0} (${d.wUnits||0} หน่วย × ฿${d.wRate||0})</span></div>
+      <div class="d-row"><span>ค่าน้ำประปา</span><span>฿${(d.wCost||0).toLocaleString()}</span></div>`:''}
       ${d.trash>0?`<div class="d-row"><span>ค่าขยะ</span><span>฿${d.trash.toLocaleString()}</span></div>`:''}
       ${d.other>0?`<div class="d-row"><span>ค่าบริการอื่นๆ</span><span>฿${d.other.toLocaleString()}</span></div>`:''}
       ${d.note?`<div class="d-row" style="font-size:.78rem;color:var(--accent);"><span>หมายเหตุ:</span><span>${d.note}</span></div>`:''}
