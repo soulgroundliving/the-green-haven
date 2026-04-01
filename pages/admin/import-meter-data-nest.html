@@ -375,6 +375,16 @@
     <!-- Status Message Section -->
     <div id="statusMessage"></div>
 
+    <!-- Data Maintenance Section -->
+    <div class="section" style="background: #f9f9f9; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+      <div class="section-title">🔧 การแก้ไขข้อมูล</div>
+      <p style="margin-bottom: 10px; color: #666;">หากมีข้อมูลเก่าผิด (เช่น เลข 10161 ควรเป็น 161)</p>
+      <button onclick="clearCorruptedMeterData()" style="background: #e74c3c; color: white; padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+        🗑️ ล้างข้อมูลเก่าทั้งหมด
+      </button>
+      <p style="margin-top: 10px; font-size: 0.9rem; color: #999;">⚠️ คำเตือน: จะลบข้อมูลเก่าออกจากระบบ อัพโหลดไฟล์ใหม่ตรวจสอบให้ดีก่อนทำ</p>
+    </div>
+
     <!-- Step 1: File Upload Section -->
     <div class="section" id="uploadSection">
       <div class="section-title">
@@ -980,6 +990,30 @@ function cancelImport() {
   sessionStorage.removeItem('pendingImportData');
 
   location.href = '/dashboard';
+}
+
+function clearCorruptedMeterData() {
+  if (!confirm('⚠️ แน่ใจหรือ? จะลบข้อมูลเก่า Nest Building ทั้งหมด')) {
+    return;
+  }
+
+  // Clear METER_DATA.nest from memory
+  if (window.METER_DATA && window.METER_DATA['nest']) {
+    window.METER_DATA['nest'] = {};
+    console.log('✅ Cleared METER_DATA.nest from memory');
+  }
+
+  // Clear from localStorage
+  if (localStorage.getItem('METER_DATA_NEST')) {
+    localStorage.removeItem('METER_DATA_NEST');
+    console.log('✅ Cleared METER_DATA_NEST from localStorage');
+  }
+
+  // Clear sessionStorage import data
+  sessionStorage.removeItem('pendingImportData');
+  console.log('✅ Cleared pending import data');
+
+  showStatus('✅ ลบข้อมูลเก่า Nest Building เรียบร้อย - ตอนนี้สามารถอัพโหลดไฟล์ใหม่ได้', 'success');
 }
 
 function generateCode(data) {
