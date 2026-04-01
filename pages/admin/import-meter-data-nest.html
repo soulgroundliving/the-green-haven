@@ -950,6 +950,35 @@ function approveAndStore() {
 }
 
 function cancelImport() {
+  // Clear all state variables
+  parsedData = null;
+  currentWorkbook = null;
+  availableSheets = [];
+  selectedSheetName = null;
+
+  // Clear file input
+  const fileInput = document.getElementById('fileInput');
+  if (fileInput) {
+    fileInput.value = '';
+  }
+
+  // Clear status message
+  const statusDiv = document.getElementById('statusMessage');
+  if (statusDiv) {
+    statusDiv.innerHTML = '';
+    statusDiv.style.display = 'none';
+  }
+
+  // Clear all visible sections
+  document.getElementById('matchingPreviewSection').classList.add('hidden');
+  document.getElementById('fullResultsSection').classList.add('hidden');
+  document.getElementById('approvalSection').classList.add('hidden');
+  document.getElementById('sheetSelectionSection').classList.add('hidden');
+  document.getElementById('codeSection').classList.add('hidden');
+
+  // Clear sessionStorage
+  sessionStorage.removeItem('pendingImportData');
+
   location.href = '/dashboard';
 }
 
