@@ -233,35 +233,54 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Load bills from localStorage or calculated from meter data
+   * Load bills from both TenantManager (meter data) and Firebase (generated bills)
+   * Combines both sources to show all available bills
    */
   static async loadBills() {
     try {
-      // Try TenantManager first (calculates from meter data)
+      const allBills = [];
+      const billIds = new Set(); // Track bill IDs to avoid duplicates
+
+      // Load bills from TenantManager (calculates from meter data)
       if (typeof TenantManager !== 'undefined') {
-        const bills = TenantManager.getBillsForRoom(this.currentBuilding, this.currentRoom);
-        if (bills && bills.length > 0) {
-          console.log(`✅ Loaded ${bills.length} bills from TenantManager`);
-          return bills;
+        const meterBills = TenantManager.getBillsForRoom(this.currentBuilding, this.currentRoom);
+        if (meterBills && meterBills.length > 0) {
+          console.log(`✅ Loaded ${meterBills.length} bills from TenantManager (meter data)`);
+          allBills.push(...meterBills);
+          meterBills.forEach(b => billIds.add(b.billId || b.id));
         }
       }
 
-      // Fallback: load from Firebase bills collection
-      if (!this.database || !window.firebaseRef || !window.firebaseGet) {
-        return [];
+      // Also load from Firebase bills collection (admin-generated bills)
+      if (this.database && window.firebaseRef && window.firebaseGet) {
+        try {
+          const billsRef = window.firebaseRef(this.database,
+            `bills/${this.currentBuilding}/${this.currentRoom}`);
+          const snapshot = await window.firebaseGet(billsRef);
+
+          if (snapshot.exists()) {
+            const firebaseBills = Object.values(snapshot.val() || {});
+            console.log(`✅ Loaded ${firebaseBills.length} bills from Firebase`);
+
+            // Add Firebase bills that aren't already in the list
+            firebaseBills.forEach(fbBill => {
+              if (!billIds.has(fbBill.billId)) {
+                allBills.push(fbBill);
+                billIds.add(fbBill.billId);
+              }
+            });
+          }
+        } catch (e) {
+          console.warn(`⚠️ Firebase bill loading failed: ${e.message}`);
+        }
       }
 
-      const billsRef = window.firebaseRef(this.database,
-        `bills/${this.currentBuilding}/${this.currentRoom}`);
-      const snapshot = await window.firebaseGet(billsRef);
-
-      if (snapshot.exists()) {
-        const billsData = Object.values(snapshot.val() || {});
-        console.log(`✅ Loaded ${billsData.length} bills from Firebase`);
-        return billsData;
-      }
-
-      return [];
+      // Sort by date (newest first)
+      return allBills.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.billDate || 0);
+        const dateB = new Date(b.createdAt || b.billDate || 0);
+        return dateB - dateA;
+      });
     } catch (error) {
       console.error('❌ Error loading bills:', error);
       return [];
