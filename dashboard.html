@@ -4304,6 +4304,20 @@ function cancelImportProcess() {
   currentImportData = null;
   currentImportMatchResults = null;
   currentImportWorkbook = null;
+
+  // Clear corrupted meter data
+  if (window.METER_DATA) {
+    window.METER_DATA = { rooms: {}, nest: {} };
+  }
+  if (localStorage.getItem('METER_DATA_NEST')) {
+    localStorage.removeItem('METER_DATA_NEST');
+  }
+  if (localStorage.getItem('METER_DATA')) {
+    localStorage.removeItem('METER_DATA');
+  }
+  if (sessionStorage.getItem('pendingImportData')) {
+    sessionStorage.removeItem('pendingImportData');
+  }
 }
 
 function showImportStatus(message, type) {
