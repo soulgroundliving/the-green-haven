@@ -7366,6 +7366,78 @@ function markRoomPaid(d){
   };
   savePS(ps);
   renderPaymentStatus();
+
+  // ===== SAVE BILL TO FIREBASE FOR TENANT APP =====
+  saveBillToFirebase(d);
+}
+
+async function saveBillToFirebase(d){
+  try {
+    if (!window.firebaseDatabase || !window.firebaseSet) {
+      console.warn('⚠️ Firebase not initialized, skipping bill save');
+      return;
+    }
+
+    // Create bill object with all necessary data for tenant app
+    const billObject = {
+      billId: d.no,
+      room: d.room,
+      building: d.building,
+      month: d.month,
+      year: d.year,
+      status: 'paid',
+      billDate: d.dateStr,
+      totalCharge: d.total,
+      charges: {
+        rent: d.rent,
+        rentLabel: d.rentLabel,
+        electric: {
+          cost: d.eCost || 0,
+          old: d.eOld || 0,
+          new: d.eNew || 0,
+          units: d.eUnits || 0,
+          rate: d.eRate || 8
+        },
+        water: {
+          cost: d.wCost || 0,
+          old: d.wOld || 0,
+          new: d.wNew || 0,
+          units: d.wUnits || 0,
+          rate: d.wRate || 20
+        },
+        trash: d.trash || 0,
+        common: d.other || 0
+      },
+      meterReadings: {
+        electric: { old: d.eOld || 0, new: d.eNew || 0, units: d.eUnits || 0 },
+        water: { old: d.wOld || 0, new: d.wNew || 0, units: d.wUnits || 0 }
+      },
+      note: d.note || '',
+      createdAt: new Date().toISOString(),
+      slipVerified: slipVerified,
+      slipData: slipVerified && slipData ? {
+        amount: slipData.amount,
+        sender: slipData.sender,
+        ref: slipData.ref,
+        tDate: slipData.tDate
+      } : null
+    };
+
+    // Save to Firebase: bills/{building}/{roomId}/{billId}
+    // Tenant app expects: bills/{building}/{room} as an object with billIds as keys
+    const { ref: firebaseRef } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
+
+    // Determine Firebase building ID
+    const fbBuildingId = currentBuilding === 'main' ? 'rooms' : (currentBuilding === 'nest' ? 'nest' : 'rooms');
+
+    // Save bill at bills/{building}/{room}/{billId}
+    const billsRef = firebaseRef(window.firebaseDatabase, `bills/${fbBuildingId}/${d.room}/${d.no}`);
+    await window.firebaseSet(billsRef, billObject);
+
+    console.log(`✅ Bill saved to Firebase: bills/${fbBuildingId}/${d.room}/${d.no}`);
+  } catch (error) {
+    console.error('❌ Error saving bill to Firebase:', error);
+  }
 }
 
 function renderPaymentStatus(){
