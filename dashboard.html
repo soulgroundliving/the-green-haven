@@ -690,6 +690,9 @@
   /* ===== DOCUMENT STYLES ===== */
   /* Print is handled by printDoc() popup — no @media print needed here */
   .doc-body{font-family:'Sarabun',sans-serif;background:#fff;max-width:360px;margin:0 auto;}
+  @media print{
+    .doc-body{max-width:100%!important;margin:0;padding:0;}
+  }
   .doc-header{text-align:center;padding:14px 0 10px;border-bottom:2px dashed #ccc;}
   .doc-logo{font-size:1.35rem;font-weight:800;color:var(--green-dark);}
   .doc-sub{font-size:.78rem;color:var(--text-muted);margin-top:1px;}
