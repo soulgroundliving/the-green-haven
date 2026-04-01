@@ -7264,12 +7264,14 @@ function printDoc(docId){
   const html=`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">${fonts}
 <style>
 ${styles}
-/* Print overrides */
-@page{size:80mm auto;margin:4mm 4mm 6mm 4mm;}
-*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-body{background:#fff!important;padding:8px;margin:0;}
-.doc-body{max-width:100%!important;box-shadow:none!important;}
-.btn-doc-action{display:none!important;}
+/* Print overrides - let browser print dialog handle page size */
+@page{margin:10mm;}
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  body{background:#fff!important;padding:0;margin:0;}
+  .doc-body{max-width:100%!important;box-shadow:none!important;padding:15mm;}
+  .btn-doc-action{display:none!important;}
+}
 </style></head>
 <body>${content}</body></html>`;
   const w=window.open('','_blank','width=420,height=700,toolbar=0,menubar=0,scrollbars=1');
