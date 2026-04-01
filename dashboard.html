@@ -3265,11 +3265,14 @@
         </div>
 
         <!-- Action buttons -->
-        <div class="bill-actions">
-          <button class="btn-invoice" onclick="generateInvoice()">📄 ส่งใบวางบิล</button>
-          <button class="btn-receipt" onclick="generateReceipt()" id="btnReceipt" disabled style="opacity:.4;cursor:not-allowed;">✅ ออกใบเสร็จรับเงิน</button>
+        <div class="bill-actions" style="display:flex;flex-direction:column;gap:.5rem;">
+          <div style="display:flex;gap:.5rem;">
+            <button class="btn-invoice" onclick="generateInvoice()" style="flex:1;">📄 ส่งใบวางบิล</button>
+            <button class="btn-receipt" onclick="generateReceipt()" id="btnReceipt" disabled style="opacity:.4;cursor:not-allowed;flex:1;">✅ ออกใบเสร็จรับเงิน</button>
+          </div>
+          <button style="background:linear-gradient(135deg,#9c27b0,#673ab7);color:white;border:none;border-radius:6px;padding:.7rem 1rem;cursor:pointer;font-weight:600;font-size:.9rem;transition:all .2s;" onclick="autoGenerateAllBills()" title="อ่านข้อมูลมิเตอร์จาก Firebase สร้างบิลอัตโนมัติสำหรับห้องทั้งหมด">🤖 สร้างบิลทั้งหมดเดือนนี้ (AUTO)</button>
         </div>
-        <div id="billHint" style="font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:8px;">ส่งใบวางบิลก่อน → อัปโหลดสลิป → ออกใบเสร็จรับเงิน</div>
+        <div id="billHint" style="font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:8px;">📱 AUTO: อ่านมิเตอร์จาก Firebase สร้างบิลอัตโนมัติ | 📄 ส่งใบวางบิลก่อน → อัปโหลดสลิป → ออกใบเสร็จรับเงิน</div>
       </div>
     </div>
 
@@ -7438,6 +7441,113 @@ async function saveBillToFirebase(d){
     console.log(`✅ Bill saved to Firebase: bills/${fbBuildingId}/${d.room}/${d.no}`);
   } catch (error) {
     console.error('❌ Error saving bill to Firebase:', error);
+  }
+}
+
+// ===== AUTO-GENERATE BILLS FROM FIREBASE METER DATA =====
+async function autoGenerateAllBills() {
+  const month = parseInt(document.getElementById('f-month').value);
+  const year = document.getElementById('f-year').value;
+  const bldgInfo = getBuildingInfo(currentBuilding);
+  const fbBuildingId = CONFIG.getBuildingConfig(currentBuilding);
+  const rooms = getActiveRoomsWithMetadata(bldgInfo.firebaseBuilding, bldgInfo.metadataArray);
+
+  console.log(`🚀 Auto-generating bills for ${fbBuildingId}/${month}/${year}...`);
+
+  try {
+    // Get meter data from Firebase for this month
+    const yearMonth = `${year % 100}_${String(month).padStart(2, '0')}`;
+    const meterData = await FirebaseMeterHelper.getMeterDataForMonth(fbBuildingId, yearMonth);
+
+    if (!meterData) {
+      alert(`❌ ไม่พบข้อมูลมิเตอร์สำหรับ ${MONTHS_FULL[month]} ${year + 543}`);
+      return;
+    }
+
+    let generatedCount = 0;
+    const generatedBills = [];
+
+    // Generate bill for each room with meter data
+    for (const [roomId, meterReadings] of Object.entries(meterData)) {
+      // Get room config
+      const roomConfig = rooms.find(r => r.id === roomId);
+      if (!roomConfig) continue;
+
+      const rent = roomConfig.rent || 0;
+      const eRate = roomConfig.elecRate || 8;
+      const wRate = 20; // Standard water rate
+      const trash = roomConfig.trashFee || 20;
+
+      // Calculate costs from meter data
+      const eUnits = Math.max(0, (meterReadings.eNew || 0) - (meterReadings.eOld || 0));
+      const wUnits = Math.max(0, (meterReadings.wNew || 0) - (meterReadings.wOld || 0));
+      const eCost = eUnits * eRate;
+      const wCost = wUnits * wRate;
+      const total = rent + eCost + wCost + trash;
+
+      // Create bill object
+      const now = new Date();
+      const billObject = {
+        billId: `TGH-${year}${String(month).padStart(2,'0')}-${roomId.replace(/[^0-9ก-๙A-Za-z]/g,'')}-${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`,
+        room: roomId,
+        building: bldgInfo.displayName,
+        month: month,
+        year: year,
+        status: 'pending',
+        billDate: now.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}),
+        totalCharge: total,
+        charges: {
+          rent: rent,
+          rentLabel: 'ค่าเช่าห้อง',
+          electric: {
+            cost: eCost || 0,
+            old: meterReadings.eOld || 0,
+            new: meterReadings.eNew || 0,
+            units: eUnits || 0,
+            rate: eRate || 8
+          },
+          water: {
+            cost: wCost || 0,
+            old: meterReadings.wOld || 0,
+            new: meterReadings.wNew || 0,
+            units: wUnits || 0,
+            rate: wRate || 20
+          },
+          trash: trash || 0,
+          common: 0
+        },
+        meterReadings: {
+          electric: { old: meterReadings.eOld || 0, new: meterReadings.eNew || 0, units: eUnits || 0 },
+          water: { old: meterReadings.wOld || 0, new: meterReadings.wNew || 0, units: wUnits || 0 }
+        },
+        note: '',
+        createdAt: new Date().toISOString()
+      };
+
+      // Save to Firebase
+      try {
+        const { ref: firebaseRef } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
+        const billsRef = firebaseRef(window.firebaseDatabase, `bills/${fbBuildingId}/${roomId}/${billObject.billId}`);
+        await window.firebaseSet(billsRef, billObject);
+
+        generatedCount++;
+        generatedBills.push(`${roomId}: ฿${total.toLocaleString()}`);
+        console.log(`✅ Bill generated: ${fbBuildingId}/${roomId}/${billObject.billId}`);
+      } catch (e) {
+        console.error(`❌ Error saving bill for ${roomId}:`, e);
+      }
+    }
+
+    if (generatedCount === 0) {
+      alert(`⚠️ ไม่มีบิลที่สร้างได้ (ตรวจสอบข้อมูลมิเตอร์)`);
+      return;
+    }
+
+    alert(`✅ สร้างบิลสำเร็จ ${generatedCount} ห้อง\n\n${generatedBills.join('\n')}`);
+    console.log(`📊 Auto-generated ${generatedCount} bills for ${MONTHS_FULL[month]} ${year + 543}`);
+  } catch (error) {
+    console.error('❌ Error in auto-generate bills:', error);
+    alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
   }
 }
 
