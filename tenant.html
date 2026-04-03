@@ -24,37 +24,9 @@
   <script src="./shared/expense-manager.js"></script>
   <script src="./shared/tenant-manager.js"></script>
   <script src="./shared/tenant-firebase-sync.js"></script>
-  <!-- Initialize Real Bills from JSON file (BEFORE test data) -->
-  <script src="./test/init-real-bills.js"></script>
-  <!-- Mark old bills as paid (start fresh from today) -->
-  <script src="./test/mark-bills-paid.js"></script>
-  <!-- Initialize Payment Records for all bills -->
-  <script src="./test/init-payment-records.js"></script>
-  <!-- Mock data for fallback -->
-  <script src="./mock-tenant-data.js"></script>
-  <script src="./mock-meter-history.js"></script>
-  <script src="./test/init-test-data.js"></script>
-  <!-- Check room 15 status in Firebase -->
-  <script src="./test/check-room-15.js"></script>
-  <!-- Populate room 15 data to Firebase -->
-  <script src="./test/populate-room-15-firebase.js"></script>
-
-  <script>
-    // Initialize test data when tenant app loads (only if real bills not loaded)
-    if (typeof mockTenantData !== 'undefined' && typeof initializeTestData === 'function') {
-      try {
-        const realBillsInitialized = localStorage.getItem('real_bills_initialized');
-        const meterData = localStorage.getItem('meter_data');
-        // Only initialize test data if real bills haven't been loaded yet
-        if (!realBillsInitialized && (!meterData || meterData === '{}')) {
-          console.log('🔄 Initializing test data for tenant app...');
-          initializeTestData();
-        }
-      } catch (e) {
-        console.warn('⚠️ Could not initialize test data:', e);
-      }
-    }
-  </script>
+  <!-- TEST/MOCK DATA REMOVED FOR PRODUCTION DEPLOYMENT -->
+  <!-- (Was: init-real-bills.js, mark-bills-paid.js, init-payment-records.js, mock data, etc.) -->
+  <!-- TEST DATA INITIALIZATION REMOVED FOR PRODUCTION DEPLOYMENT -->
   <!-- Billing System -->
   <script src="./shared/billing-calculator.js"></script>
   <script src="./shared/meter-data-manager.js"></script>
