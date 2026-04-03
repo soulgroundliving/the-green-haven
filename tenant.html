@@ -2984,6 +2984,16 @@
       }
     }
 
+    function navigateToPayment(billId, month, year) {
+      // Store bill info in sessionStorage for the payment page to access
+      sessionStorage.setItem('selectedBillId', billId);
+      sessionStorage.setItem('selectedBillMonth', month);
+      sessionStorage.setItem('selectedBillYear', year);
+
+      // Navigate to payment page
+      goToPage('payment');
+    }
+
     function capitalize(str) {
       return str.replace(/-/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
     }
@@ -6672,6 +6682,12 @@
                   ${penalty > 0 ? `<div style="font-size: 0.85rem; color: #c62828; margin-top: 0.3rem;">+ ฿${penalty.toLocaleString('th-TH')} ค่าปรับ</div>` : ''}
                 </div>
               </div>
+
+              ${!billPayment || billPayment.status !== 'paid' ? `
+              <button class="btn btn-primary" onclick="navigateToPayment('${latestBill.billId}', '${latestBill.month}', '${latestBill.year}')" style="width: 100%; margin-top: 1rem; padding: 0.8rem; font-size: 1rem; font-weight: 700; border-radius: 8px;">
+                💰 ชำระ
+              </button>
+              ` : ''}
             </div>
           `;
         }
