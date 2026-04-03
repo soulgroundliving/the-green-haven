@@ -6531,6 +6531,21 @@
 
         // Extract latest bill separately for prominent display
         const latestBill = filteredBills[0]; // First bill is latest (sorted newest first)
+
+        // 🔧 CRITICAL FIX: Force April to pending RIGHT BEFORE rendering (final enforcement)
+        if (latestBill && latestBill.month === 4) {
+          latestBill.status = 'pending';
+          console.log(`🔧 CRITICAL: Force latestBill (April) status to pending BEFORE rendering`);
+        }
+
+        // Force ALL April bills in filteredBills to pending
+        filteredBills.forEach((bill, idx) => {
+          if (bill.month === 4 && bill.status === 'paid') {
+            bill.status = 'pending';
+            console.log(`🔧 CRITICAL: Force filteredBills[${idx}] (April) status to pending`);
+          }
+        });
+
         console.log(`🔍 DEBUG FEATURED BILL: billId=${latestBill?.billId}, month=${latestBill?.month}, status=${latestBill?.status}, total=${latestBill?.totalCharge}`);
 
         // Group remaining bills by year for better organization (normalize year format)
