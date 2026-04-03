@@ -64,10 +64,11 @@
         document.addEventListener('DOMContentLoaded', resetAprilBills);
         window.addEventListener('load', resetAprilBills);
 
-        // Run after a delay to override auto-bill-calculator regeneration
+        // Run after delays to override auto-bill-calculator and ensureAllBillsPaid()
         setTimeout(resetAprilBills, 500);
         setTimeout(resetAprilBills, 1500);
         setTimeout(resetAprilBills, 3000);
+        setTimeout(resetAprilBills, 5000); // Final override after page load events
 
         // Also run right before bills are displayed
         document.addEventListener('loadBills', resetAprilBills);
