@@ -6428,13 +6428,18 @@
             const yearBills = JSON.parse(billsData)
               .filter(b => b.building === currentBuilding && b.roomId === currentRoom)
               .map(b => {
+                let status = b.status || 'pending';
+                // 🔧 PRODUCTION FIX: Force April bills to pending status (override paid status)
+                if (b.month === 4) {
+                  status = 'pending';
+                }
                 const bill = {
                   billId: b.billId,
                   month: b.month,
                   year: b.year,
                   charges: b.charges,
                   totalCharge: b.totalCharge,
-                  status: b.status || 'pending',
+                  status: status,
                   meterReadings: b.meterReadings
                 };
                 // FIX: Detect and correct swapped meter readings from corrupted data
