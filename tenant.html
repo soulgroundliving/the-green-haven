@@ -6474,11 +6474,13 @@
           return;
         }
 
-        // Group bills by year for better organization
+        // Group bills by year for better organization (normalize year format)
         const billsByYear = {};
         filteredBills.forEach(bill => {
-          if (!billsByYear[bill.year]) billsByYear[bill.year] = [];
-          billsByYear[bill.year].push(bill);
+          // Normalize year: convert 69 to 2569, etc.
+          const normalizedYear = bill.year < 100 ? bill.year + 2500 : bill.year;
+          if (!billsByYear[normalizedYear]) billsByYear[normalizedYear] = [];
+          billsByYear[normalizedYear].push(bill);
         });
 
         // Render bills organized by year
