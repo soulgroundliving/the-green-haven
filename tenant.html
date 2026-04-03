@@ -6452,6 +6452,7 @@
                 // 🔧 PRODUCTION FIX: Force April bills to pending status (override paid status)
                 if (b.month === 4) {
                   status = 'pending';
+                  console.log(`🔍 DEBUG: April bill loaded - billId: ${b.billId}, status forced to: ${status}`);
                 }
                 const bill = {
                   billId: b.billId,
@@ -6530,6 +6531,7 @@
 
         // Extract latest bill separately for prominent display
         const latestBill = filteredBills[0]; // First bill is latest (sorted newest first)
+        console.log(`🔍 DEBUG FEATURED BILL: billId=${latestBill?.billId}, month=${latestBill?.month}, status=${latestBill?.status}, total=${latestBill?.totalCharge}`);
 
         // Group remaining bills by year for better organization (normalize year format)
         // Exclude the latest bill from year groups - it will display separately above
@@ -6617,6 +6619,8 @@
                               latestBill.status === 'pending' ? '#ff9800' :
                               '#c62828';
 
+          console.log(`🔍 DEBUG STATUS MSG: status=${latestBill.status}, statusMsg="${statusMsg}", statusColor=${statusColor}`);
+
           html += `
             <div style="margin-bottom: 1.2rem; padding: 1rem; background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid var(--primary);">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
@@ -6673,8 +6677,11 @@
               const monthNames = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
               const monthName = monthNames[bill.month] || 'เดือน ' + bill.month;
               // IMPORTANT: All bills are being rendered, including paid bills - nothing is filtered out
+              console.log(`🔍 DEBUG YEAR BILL: billId=${bill.billId}, month=${bill.month}, status=${bill.status}, total=${bill.totalCharge}`);
               if (bill.status === 'paid') {
                 console.log(`✅ Rendering paid bill: ${bill.billId}`);
+              } else if (bill.status === 'pending') {
+                console.log(`⏳ Rendering PENDING bill: ${bill.billId}`);
               }
               const statusColor = bill.status === 'paid' ? 'var(--primary)' :
                                   bill.status === 'pending' ? '#ff9800' :
