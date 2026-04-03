@@ -7315,9 +7315,9 @@
       }
     }
 
-    // Mark all bills as paid (ensure no outstanding amounts show)
+    // Mark all bills as paid EXCEPT April (PRODUCTION FIX)
     function ensureAllBillsPaid() {
-      console.log('🔄 Ensuring all bills are marked as paid...');
+      console.log('🔄 Ensuring all bills are marked as paid (excluding April)...');
       const buildings = ['rooms', 'nest'];
       let totalMarked = 0;
 
@@ -7329,7 +7329,8 @@
           if (billsData) {
             const bills = JSON.parse(billsData);
             const updatedBills = bills.map(bill => {
-              if (bill.building === building && bill.status !== 'paid') {
+              // 🔧 PRODUCTION FIX: Never mark April bills as paid - they must stay pending
+              if (bill.building === building && bill.status !== 'paid' && bill.month !== 4) {
                 bill.status = 'paid';
                 totalMarked++;
               }
@@ -7345,11 +7346,11 @@
         }
       });
 
-      console.log(`✅ Ensured ${totalMarked} bills are marked as paid`);
+      console.log(`✅ Ensured ${totalMarked} bills are marked as paid (April excluded)`);
       return totalMarked;
     }
 
-    // Run on page load to ensure all bills are paid
+    // Run on page load to ensure all bills are paid (but NOT April)
     window.addEventListener('load', function() {
       setTimeout(() => {
         ensureAllBillsPaid();
