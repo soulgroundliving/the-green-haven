@@ -27,6 +27,38 @@
   <!-- TEST/MOCK DATA REMOVED FOR PRODUCTION DEPLOYMENT -->
   <!-- (Was: init-real-bills.js, mark-bills-paid.js, init-payment-records.js, mock data, etc.) -->
   <!-- TEST DATA INITIALIZATION REMOVED FOR PRODUCTION DEPLOYMENT -->
+  <!-- Cleanup: Reset April bills to pending status (production data cleanup) -->
+  <script>
+    (function cleanupTestDataBills() {
+      try {
+        // Reset April 2569 bills to "pending" status (they were marked as "paid" by test scripts)
+        for(let year = 2567; year <= 2570; year++) {
+          const billsKey = `bills_${year}`;
+          const billsData = localStorage.getItem(billsKey);
+
+          if(billsData) {
+            const bills = JSON.parse(billsData);
+            let aprilCount = 0;
+
+            bills.forEach(bill => {
+              // Reset April (month 4) bills to "pending" if they're marked as "paid"
+              if(bill.month === 4 && bill.status === 'paid') {
+                bill.status = 'pending'; // Change from test-marked "paid" to actual "pending"
+                aprilCount++;
+              }
+            });
+
+            if(aprilCount > 0) {
+              localStorage.setItem(billsKey, JSON.stringify(bills));
+              console.log(`✅ Reset ${aprilCount} April bills to pending for year ${year}`);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ Cleanup script error:', e.message);
+      }
+    })();
+  </script>
   <!-- Billing System -->
   <script src="./shared/billing-calculator.js"></script>
   <script src="./shared/meter-data-manager.js"></script>
