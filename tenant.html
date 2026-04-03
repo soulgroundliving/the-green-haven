@@ -2985,13 +2985,38 @@
     }
 
     function navigateToPayment(billId, month, year) {
-      // Store bill info in sessionStorage for the payment page to access
-      sessionStorage.setItem('selectedBillId', billId);
-      sessionStorage.setItem('selectedBillMonth', month);
-      sessionStorage.setItem('selectedBillYear', year);
+      try {
+        // Get bill from localStorage (same as viewBillReceipt does)
+        let bill = null;
+        for (const y of [2567, 2568, 2569, 2570]) {
+          const billsKey = `bills_${y}`;
+          const billsData = localStorage.getItem(billsKey);
+          if (billsData) {
+            const yearBills = JSON.parse(billsData);
+            const found = yearBills.find(b => b.billId === billId);
+            if (found) {
+              bill = found;
+              break;
+            }
+          }
+        }
 
-      // Navigate to payment page
-      goToPage('payment');
+        if (!bill) {
+          alert('❌ ไม่พบข้อมูลบิล: ' + billId);
+          return;
+        }
+
+        // Get month name for display
+        const monthNames = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const monthName = monthNames[bill.month] || 'เดือน ' + bill.month;
+        const displayYear = bill.year < 100 ? bill.year + 2500 : bill.year;
+
+        // Use the same function as the bill list (goToBillPaymentWithFullData)
+        goToBillPaymentWithFullData(encodeURIComponent(JSON.stringify({...bill, monthName, displayYear})), `${monthName} ${displayYear}`);
+      } catch (error) {
+        console.error('❌ Error navigating to payment:', error);
+        alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+      }
     }
 
     function capitalize(str) {
