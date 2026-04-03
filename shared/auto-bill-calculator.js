@@ -277,25 +277,24 @@ AutoBillCalculator.watchForNewMeterData = function(building) {
 
   try {
     const db = window.firebase.firestore();
-    const fs = window.firebase.firestoreFunctions;
 
-    // Watch for changes in meter_data collection
-    const q = fs.query(fs.collection(db, 'meter_data'), fs.where('building', '==', building));
-
+    // Watch for changes in meter_data collection using compat SDK
     console.log(`👁️ Watching meter_data collection for ${building}...`);
 
-    const unsubscribe = fs.onSnapshot(q, async (snapshot) => {
-      const changes = snapshot.docChanges();
+    const unsubscribe = db.collection('meter_data')
+      .where('building', '==', building)
+      .onSnapshot(async (snapshot) => {
+        const changes = snapshot.docChanges();
 
-      // Check if there are new or modified documents
-      const hasChanges = changes.some(change => change.type === 'added' || change.type === 'modified');
+        // Check if there are new or modified documents
+        const hasChanges = changes.some(change => change.type === 'added' || change.type === 'modified');
 
-      if (hasChanges) {
-        console.log(`📡 New meter data detected! Re-generating bills...`);
-        await AutoBillCalculator.autogenerateBillsForAllYears(building);
-        console.log(`✅ Bills auto-updated from new meter data`);
-      }
-    });
+        if (hasChanges) {
+          console.log(`📡 New meter data detected! Re-generating bills...`);
+          await AutoBillCalculator.autogenerateBillsForAllYears(building);
+          console.log(`✅ Bills auto-updated from new meter data`);
+        }
+      });
 
     // Return unsubscribe function for cleanup
     return unsubscribe;
