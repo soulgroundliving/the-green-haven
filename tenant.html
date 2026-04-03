@@ -29,7 +29,7 @@
   <!-- TEST DATA INITIALIZATION REMOVED FOR PRODUCTION DEPLOYMENT -->
   <!-- Cleanup: Ensure April bills are ALWAYS pending (production data cleanup) -->
   <script>
-    // Run immediately and after page loads to ensure April bills stay pending
+    // Aggressive cleanup that runs multiple times to override any regeneration
     (function setupAprilBillsCleanup() {
       try {
         function resetAprilBills() {
@@ -42,29 +42,35 @@
               let aprilCount = 0;
 
               bills.forEach(bill => {
-                // FORCE April bills to "pending" status - override any "paid" status
-                if(bill.month === 4) {
-                  if(bill.status !== 'pending') {
-                    bill.status = 'pending';
-                    aprilCount++;
-                  }
+                // FORCE April bills to "pending" status - OVERRIDE any status
+                if(bill.month === 4 && bill.status !== 'pending') {
+                  bill.status = 'pending';
+                  aprilCount++;
                 }
               });
 
               if(aprilCount > 0) {
                 localStorage.setItem(billsKey, JSON.stringify(bills));
-                console.log(`✅ Corrected ${aprilCount} April bills to pending for year ${year}`);
+                console.log(`✅ Forced ${aprilCount} April bills to PENDING for year ${year}`);
               }
             }
           }
         }
 
-        // Run cleanup immediately
+        // Run cleanup immediately (before any scripts load)
         resetAprilBills();
 
-        // Also run after page fully loads (after auto-bill-calculator finishes)
+        // Run after page fully loads
         document.addEventListener('DOMContentLoaded', resetAprilBills);
         window.addEventListener('load', resetAprilBills);
+
+        // Run after a delay to override auto-bill-calculator regeneration
+        setTimeout(resetAprilBills, 500);
+        setTimeout(resetAprilBills, 1500);
+        setTimeout(resetAprilBills, 3000);
+
+        // Also run right before bills are displayed
+        document.addEventListener('loadBills', resetAprilBills);
 
       } catch (e) {
         console.warn('⚠️ April cleanup error:', e.message);
@@ -6469,6 +6475,13 @@
         const sortedBills = [...bills].sort((a, b) => {
           if (b.year !== a.year) return b.year - a.year;
           return b.month - a.month;
+        });
+
+        // 🔧 PRODUCTION FIX: Ensure April bills are always pending (override any paid status)
+        bills.forEach(bill => {
+          if (bill.month === 4 && bill.status === 'paid') {
+            bill.status = 'pending'; // Force April to pending
+          }
         });
 
         // ✅ Show last 12 months of bills only
