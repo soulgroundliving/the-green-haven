@@ -268,6 +268,42 @@ class AutoBillCalculator {
   }
 }
 
+// Real-time listener for new meter data
+AutoBillCalculator.watchForNewMeterData = function(building) {
+  if (!window.firebase?.firestore) {
+    console.warn('⚠️ Firestore not available for real-time watching');
+    return;
+  }
+
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+
+    // Watch for changes in meter_data collection
+    const q = fs.query(fs.collection(db, 'meter_data'), fs.where('building', '==', building));
+
+    console.log(`👁️ Watching meter_data collection for ${building}...`);
+
+    const unsubscribe = fs.onSnapshot(q, async (snapshot) => {
+      const changes = snapshot.docChanges();
+
+      // Check if there are new or modified documents
+      const hasChanges = changes.some(change => change.type === 'added' || change.type === 'modified');
+
+      if (hasChanges) {
+        console.log(`📡 New meter data detected! Re-generating bills...`);
+        await AutoBillCalculator.autogenerateBillsForAllYears(building);
+        console.log(`✅ Bills auto-updated from new meter data`);
+      }
+    });
+
+    // Return unsubscribe function for cleanup
+    return unsubscribe;
+  } catch (error) {
+    console.warn('⚠️ Could not set up real-time meter watching:', error.message);
+  }
+};
+
 // Auto-run when tenant app loads (if Firebase is ready)
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', async () => {
@@ -285,6 +321,9 @@ if (document.readyState === 'loading') {
 
       console.log('🔔 Auto-bill generator activated');
       await AutoBillCalculator.autogenerateBillsForAllYears(building);
+
+      // Set up real-time watching for future meter data uploads
+      AutoBillCalculator.watchForNewMeterData(building);
     }
   });
 } else {
@@ -293,6 +332,9 @@ if (document.readyState === 'loading') {
     const params = new URLSearchParams(window.location.search);
     const building = params.get('building') || localStorage.getItem('currentBuilding') || 'rooms';
     AutoBillCalculator.autogenerateBillsForAllYears(building);
+
+    // Set up real-time watching for future meter data uploads
+    AutoBillCalculator.watchForNewMeterData(building);
   }
 }
 
