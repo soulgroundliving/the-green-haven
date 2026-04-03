@@ -7350,16 +7350,17 @@
       return totalMarked;
     }
 
-    // Run on page load to ensure all bills are paid (but NOT April)
-    window.addEventListener('load', function() {
-      setTimeout(() => {
-        ensureAllBillsPaid();
-        // Refresh badges to show no outstanding amount
-        if (typeof updateNavBadges === 'function') {
-          updateNavBadges();
-        }
-      }, 500);
-    });
+    // DISABLED FOR PRODUCTION: ensureAllBillsPaid() function disabled
+    // This was test/demo code that marked all bills as paid, hiding real payment status
+    // For production, we show REAL payment status (April = pending, others as stored)
+    // window.addEventListener('load', function() {
+    //   setTimeout(() => {
+    //     ensureAllBillsPaid();
+    //     if (typeof updateNavBadges === 'function') {
+    //       updateNavBadges();
+    //     }
+    //   }, 500);
+    // });
   </script>
 </body>
 </html>
