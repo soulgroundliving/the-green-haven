@@ -6418,6 +6418,25 @@
       const container = document.getElementById('billsList');
 
       try {
+        // 🔧 FINAL FAILSAFE: Reset April to pending in localStorage before displaying
+        for (let year = 2567; year <= 2570; year++) {
+          const billsKey = `bills_${year}`;
+          const billsData = localStorage.getItem(billsKey);
+          if (billsData) {
+            const bills = JSON.parse(billsData);
+            let aprilCount = 0;
+            bills.forEach(bill => {
+              if (bill.month === 4 && bill.status === 'paid') {
+                bill.status = 'pending';
+                aprilCount++;
+              }
+            });
+            if (aprilCount > 0) {
+              localStorage.setItem(billsKey, JSON.stringify(bills));
+              console.log(`🔧 FAILSAFE: Reset ${aprilCount} April bills to pending`);
+            }
+          }
+        }
         // Get all bills for this room - try real bills from localStorage first
         let bills = [];
 
