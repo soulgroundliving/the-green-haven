@@ -2005,11 +2005,20 @@
     <button class="year-tab" onclick="setYear('69',this)">2569 (2026)</button>
   </div>
   <div class="kpi-grid">
-    <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-label">รายได้รวมทั้งปี</div><div class="kpi-value green" id="kpi-total">฿0</div><div class="kpi-sub" id="kpi-total-sub"></div></div>
+    <!-- Combined Total (Both Buildings) -->
+    <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-label">รายได้รวมทั้งปี (รวมทั้ง 2 อาคาร)</div><div class="kpi-value green" id="kpi-total">฿0</div><div class="kpi-sub" id="kpi-total-sub"></div></div>
+    <!-- Building Breakdown -->
+    <div class="kpi-card" style="background:linear-gradient(135deg, #e3f2fd, #f3e5f5); border-left: 4px solid #2d8653;"><div class="kpi-icon">🏠</div><div class="kpi-label">รายได้ rooms (ห้องแถว)</div><div class="kpi-value" id="kpi-rooms-total" style="color:#2d8653;">฿0</div><div class="kpi-sub" id="kpi-rooms-sub">แบ่งตามระบบตัวใจ</div></div>
+    <div class="kpi-card" style="background:linear-gradient(135deg, #fce4ec, #e8f5e9); border-left: 4px solid #7b1fa2;"><div class="kpi-icon">🏢</div><div class="kpi-label">รายได้ Nest Building</div><div class="kpi-value" id="kpi-nest-total" style="color:#7b1fa2;">฿0</div><div class="kpi-sub" id="kpi-nest-sub">ยูนิตที่เปิดให้เช่า</div></div>
+    <!-- Average Monthly -->
     <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
-    <div class="kpi-card blue" style="cursor:pointer;" onclick="window.showPage('property',document.querySelector('[onclick*=\'property\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (ห้องแถว)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
+    <!-- Occupancy Combined -->
+    <div class="kpi-card blue" style="cursor:pointer;" onclick="window.showPage('property',document.querySelector('[onclick*=\'property\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (รวม 2 อาคาร)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
+    <!-- Payment Status -->
     <div class="kpi-card purple" style="cursor:pointer;" onclick="window.showPage('bill',document.querySelector('[onclick*=\'bill\']'))"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
+    <!-- Expected Revenue -->
     <div class="kpi-card" style="background:linear-gradient(135deg, #e8f5e9, #f1f8e9); border-left: 4px solid #4caf50;"><div class="kpi-icon">📊</div><div class="kpi-label">รายได้คาดหวัง (เดือนนี้)</div><div class="kpi-value" id="kpi-expected" style="color:#2d8653;">฿0</div><div class="kpi-sub" id="kpi-expected-sub">จากห้องที่มีผู้เช่า</div></div>
+    <!-- Overdue -->
     <div class="kpi-card" style="background:linear-gradient(135deg, #ffebee, #fce4ec); border-left: 4px solid #d32f2f;"><div class="kpi-icon">⚠️</div><div class="kpi-label">ค้างชำระทั้งสิ้น</div><div class="kpi-value" id="kpi-overdue" style="color:#d32f2f;">฿0</div><div class="kpi-sub" id="kpi-overdue-sub">รอชำระเงินค้าง</div></div>
   </div>
   <div class="charts-grid">
@@ -2052,7 +2061,14 @@
 
 <!-- ===== ROOMS (OLD BUILDING) ===== -->
 <div class="page" id="page-property">
-  <div class="section-title">📊 ข้อมูลห้องพัก</div>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div class="section-title">📊 ข้อมูลห้องพัก</div>
+    <!-- Real-time Status Indicator -->
+    <div id="realtime-status" style="font-size: 12px; display: flex; align-items: center; gap: 6px;">
+      <span id="status-dot" style="width: 10px; height: 10px; background: #cc0000; border-radius: 50%; display: inline-block;"></span>
+      <span id="status-text" style="color: #666;">🔴 Connecting...</span>
+    </div>
+  </div>
 
   <!-- Building Tabs -->
   <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:2px solid #eee;flex-wrap:wrap;">
@@ -5679,6 +5695,24 @@ async function initDashboardCharts(){
   document.getElementById('kpi-total-sub').textContent=(yr==='all'?'ปี 2566-2569':DATA[yr]?.label)+' · '+valid.length+' เดือน';
   document.getElementById('kpi-monthly').textContent='฿'+avg.toLocaleString();
   document.getElementById('kpi-monthly-sub').textContent='สูงสุด: ฿'+maxV.toLocaleString()+' ('+MONTHS_TH[maxIdx+1]+')';
+
+  // Calculate and display building-specific estimates
+  // Estimate based on occupied rooms × room price
+  const activeRooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
+  const activeNest = getActiveRoomsWithMetadata('nest', NEST_ROOMS);
+  const tenants = loadTenants();
+  const occupiedRooms = activeRooms.filter(r => tenants[r.id]?.name).length;
+  const occupiedNest = activeNest.filter(r => tenants[r.id]?.name).length;
+  const monthlyRoomsRent = occupiedRooms > 0 ? activeRooms.filter(r => tenants[r.id]?.name).reduce((sum, r) => sum + (r.rent || 0), 0) : 0;
+  const monthlyNestRent = occupiedNest > 0 ? activeNest.filter(r => tenants[r.id]?.name).reduce((sum, r) => sum + (r.rent || 0), 0) : 0;
+  const yearlyRoomsEst = monthlyRoomsRent * (yr === 'all' ? 12 : valid.length);
+  const yearlyNestEst = monthlyNestRent * (yr === 'all' ? 12 : valid.length);
+
+  document.getElementById('kpi-rooms-total').textContent = '฿' + yearlyRoomsEst.toLocaleString();
+  document.getElementById('kpi-rooms-sub').textContent = `${occupiedRooms}/${activeRooms.length} ห้อง · ฿${monthlyRoomsRent.toLocaleString()}/เดือน`;
+  document.getElementById('kpi-nest-total').textContent = '฿' + yearlyNestEst.toLocaleString();
+  document.getElementById('kpi-nest-sub').textContent = `${occupiedNest}/${activeNest.length} ยูนิต · ฿${monthlyNestRent.toLocaleString()}/เดือน`;
+
   document.getElementById('ins-rent').textContent='฿'+rentT.toLocaleString();
   document.getElementById('ins-elec').textContent='฿'+elecT.toLocaleString();
   document.getElementById('ins-water').textContent='฿'+waterT.toLocaleString();
@@ -5744,6 +5778,13 @@ function getActiveRoomsWithMetadata(building, metadataArray) {
 function initRoomsPage(){
   updateOccupancyDashboard();
   updateLeaseExpiryAlerts();
+
+  // Set up real-time Firebase listeners
+  setupRoomDataListener();
+  setupLeaseDataListener();
+  setupMeterDataListener();
+  console.log('✅ Real-time listeners activated for Rooms page');
+
   const allTenants = loadTenants();
   const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
   const grid=document.getElementById('roomGrid');
@@ -6392,6 +6433,12 @@ function toggleNestRoomView(view, btn){
 function initNestPage(){
   updateOccupancyDashboard();
   updateLeaseExpiryAlerts();
+
+  // Set up real-time Firebase listeners
+  setupRoomDataListener();
+  setupLeaseDataListener();
+  setupMeterDataListener();
+  console.log('✅ Real-time listeners activated for Nest page');
 
   // Populate room grid (visual layout)
   const allTenants = loadTenants();
@@ -7451,7 +7498,23 @@ async function autoGenerateAllBills() {
   const fbBuildingId = CONFIG.getBuildingConfig(currentBuilding);
   const rooms = getActiveRoomsWithMetadata(bldgInfo.firebaseBuilding, bldgInfo.metadataArray);
 
-  console.log(`🚀 Auto-generating bills for ${fbBuildingId}/${month}/${year}...`);
+  // VERIFICATION #1: Check room count before generation
+  const expectedRoomCount = fbBuildingId === 'rooms' ? 23 : 10; // 23 for Rooms, 10 for Nest
+  const actualRoomCount = rooms.length;
+
+  if (actualRoomCount !== expectedRoomCount) {
+    const proceed = confirm(
+      `⚠️ Warning: Expected ${expectedRoomCount} rooms but found ${actualRoomCount}.\n\n` +
+      `This may result in incomplete bill generation.\n\n` +
+      `Continue anyway?`
+    );
+    if (!proceed) {
+      console.log('❌ Bill generation cancelled by user');
+      return;
+    }
+  }
+
+  console.log(`🚀 Auto-generating bills for ${fbBuildingId}/${month}/${year}... (${actualRoomCount} rooms)`);
 
   try {
     // Get meter data from Firebase for this month
@@ -7465,9 +7528,13 @@ async function autoGenerateAllBills() {
 
     let generatedCount = 0;
     const generatedBills = [];
+    const totalMeterEntries = Object.entries(meterData).length;
 
     // Generate bill for each room with meter data
     for (const [roomId, meterReadings] of Object.entries(meterData)) {
+      // Show progress
+      const progressPercent = Math.round((generatedCount / totalMeterEntries) * 100);
+      console.log(`📊 Generating bills... ${generatedCount}/${totalMeterEntries} (${progressPercent}%)`);
       // Get room config
       const roomConfig = rooms.find(r => r.id === roomId);
       if (!roomConfig) continue;
@@ -7537,13 +7604,27 @@ async function autoGenerateAllBills() {
       }
     }
 
+    // VERIFICATION #2: Check if all expected bills were generated
+    const missingRooms = rooms.filter(r => !generatedBills.some(b => b.includes(r.id)));
+
     if (generatedCount === 0) {
       alert(`⚠️ ไม่มีบิลที่สร้างได้ (ตรวจสอบข้อมูลมิเตอร์)`);
       return;
     }
 
-    alert(`✅ สร้างบิลสำเร็จ ${generatedCount} ห้อง\n\n${generatedBills.join('\n')}`);
-    console.log(`📊 Auto-generated ${generatedCount} bills for ${MONTHS_FULL[month]} ${year + 543}`);
+    let message = `✅ สร้างบิลสำเร็จ ${generatedCount}/${actualRoomCount} ห้อง\n\n${generatedBills.join('\n')}`;
+
+    if (generatedCount < actualRoomCount) {
+      const missingRoomIds = missingRooms.map(r => r.id).join(', ');
+      message += `\n\n⚠️ ไม่พบข้อมูลมิเตอร์สำหรับ: ${missingRoomIds}`;
+    }
+
+    if (generatedCount === actualRoomCount) {
+      message = `✅ สร้างบิลครบทั้ง ${generatedCount} ห้องแล้ว!\n\n${generatedBills.join('\n')}`;
+    }
+
+    alert(message);
+    console.log(`📊 Auto-generated ${generatedCount}/${actualRoomCount} bills for ${MONTHS_FULL[month]} ${year + 543}`);
   } catch (error) {
     console.error('❌ Error in auto-generate bills:', error);
     alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
@@ -7764,9 +7845,14 @@ function goBillFromTable(roomId, year, month){
 
 // ===== DASHBOARD LIVE UPDATES =====
 function updateDashboardLive(){
-  // Ensure data is available
+  // Ensure data is available (both buildings)
   if(!ROOMS_OLD || ROOMS_OLD.length === 0) {
     console.warn('⚠️ ROOMS_OLD data not available yet, retrying...');
+    setTimeout(updateDashboardLive, 200);
+    return;
+  }
+  if(!NEST_ROOMS || NEST_ROOMS.length === 0) {
+    console.warn('⚠️ NEST_ROOMS data not available yet, retrying...');
     setTimeout(updateDashboardLive, 200);
     return;
   }
@@ -7778,28 +7864,41 @@ function updateDashboardLive(){
   const key=`${year}_${month}`;
   const paid=ps[key]||{};
   const paidCount=Object.keys(paid).length;
-  // Use active rooms from RoomConfigManager
+
+  // Use active rooms from BOTH buildings
   const activeRooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
-  const totalRooms=activeRooms.length;
-  const pendingCount=totalRooms-paidCount;
+  const activeNest = getActiveRoomsWithMetadata('nest', NEST_ROOMS);
+  const allActiveRooms = [...activeRooms, ...activeNest];
+  const totalRooms = allActiveRooms.length;
+
+  // Calculate paid for both buildings
+  const paidCountAll = Object.keys(paid).length;
+  // For now, use combined total
+  const paidCountRooms = Object.keys(paid).filter(k => activeRooms.map(r => r.id).includes(k)).length;
+  const paidCountNest = Object.keys(paid).filter(k => activeNest.map(r => r.id).includes(k)).length;
+  const pendingCount=totalRooms-paidCountAll;
   const totalCollected=Object.values(paid).reduce((a,p)=>a+(p.amount||0),0);
 
-  // KPI: paid this month
+  // KPI: paid this month (COMBINED - both buildings)
   const kpiPN=document.getElementById('kpi-paid-now');
   const kpiPNS=document.getElementById('kpi-paid-now-sub');
-  if(kpiPN)kpiPN.textContent=`${paidCount}/${totalRooms}`;
+  if(kpiPN)kpiPN.textContent=`${paidCountAll}/${totalRooms}`;
   if(kpiPNS)kpiPNS.textContent=`฿${totalCollected.toLocaleString()} · รอ ${pendingCount} ห้อง`;
 
-  // KPI: occupancy from tenant data
+  // KPI: occupancy from tenant data (COMBINED - both buildings)
   const tenants=loadTenants();
-  const occCount=activeRooms.filter(r=>tenants[r.id]?.name).length;
+  const occCountRooms=activeRooms.filter(r=>tenants[r.id]?.name).length;
+  const occCountNest=activeNest.filter(r=>tenants[r.id]?.name).length;
+  const occCount = occCountRooms + occCountNest;
   const kpiOcc=document.getElementById('kpi-occupancy');
   const kpiOccS=document.getElementById('kpi-occupancy-sub');
   if(kpiOcc)kpiOcc.textContent=`${Math.round(occCount/totalRooms*100)}%`;
   if(kpiOccS)kpiOccS.textContent=`มีผู้เช่า ${occCount} · ว่าง ${totalRooms-occCount} ห้อง`;
 
-  // KPI: Expected Revenue (this month from occupied rooms)
-  const expectedRevenue=activeRooms.filter(r=>tenants[r.id]?.name).reduce((sum,r)=>sum+(r.rent||0),0);
+  // KPI: Expected Revenue (this month from occupied rooms - COMBINED)
+  const expectedRevenueRooms=activeRooms.filter(r=>tenants[r.id]?.name).reduce((sum,r)=>sum+(r.rent||0),0);
+  const expectedRevenueNest=activeNest.filter(r=>tenants[r.id]?.name).reduce((sum,r)=>sum+(r.rent||0),0);
+  const expectedRevenue=expectedRevenueRooms + expectedRevenueNest;
   const kpiExp=document.getElementById('kpi-expected');
   const kpiExpS=document.getElementById('kpi-expected-sub');
   if(kpiExp)kpiExp.textContent=`฿${expectedRevenue.toLocaleString()}`;
@@ -7819,41 +7918,54 @@ function updateDashboardLive(){
   if(kpiOD)kpiOD.textContent=`฿${totalOverdue.toLocaleString()}`;
   if(kpiODS)kpiODS.textContent=`${overdueInvoices.length} ใบแจ้งค้าง · รอชำระ`;
 
-  // Quick payment panel
+  // Quick payment panel (COMBINED)
   const dashPay=document.getElementById('dashPaymentStatus');
   if(dashPay){
-    const pendingRooms=activeRooms.filter(r=>!paid[r.id]).map(r=>r.id);
+    const pendingRoomsArr=activeRooms.filter(r=>!paid[r.id]).map(r=>r.id);
+    const pendingNestArr=activeNest.filter(r=>!paid[r.id]).map(r=>r.id);
+    const allPending=[...pendingRoomsArr, ...pendingNestArr];
     dashPay.innerHTML=`
       <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
-        <div><div style="font-size:1.5rem;font-weight:800;color:var(--green)">${paidCount}</div><div style="font-size:.72rem;color:var(--text-muted)">จ่ายแล้ว</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:var(--green)">${paidCountAll}</div><div style="font-size:.72rem;color:var(--text-muted)">จ่ายแล้ว</div></div>
         <div><div style="font-size:1.5rem;font-weight:800;color:var(--accent)">${pendingCount}</div><div style="font-size:.72rem;color:var(--text-muted)">รอชำระ</div></div>
         <div><div style="font-size:1.15rem;font-weight:800;color:var(--green-dark)">฿${totalCollected.toLocaleString()}</div><div style="font-size:.72rem;color:var(--text-muted)">เก็บได้แล้ว</div></div>
       </div>
-      ${pendingRooms.length?`<div style="font-size:.75rem;color:var(--text-muted);margin-bottom:5px;">ยังไม่จ่าย:</div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;">${pendingRooms.map(r=>`<span onclick="goBillFromTable('${r}',${year},${month})" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;cursor:pointer;">⏳${r}</span>`).join('')}</div>`
+      <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${paidCountRooms}/${activeRooms.length} | 🏢 Nest: ${paidCountNest}/${activeNest.length}</div>
+      ${allPending.length?`<div style="font-size:.75rem;color:var(--text-muted);margin-bottom:5px;">ยังไม่จ่าย:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">${allPending.map(r=>`<span onclick="goBillFromTable('${r}',${year},${month})" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;cursor:pointer;">⏳${r}</span>`).join('')}</div>`
       :'<div style="color:var(--green);font-weight:700;font-size:.86rem;">🎉 เก็บค่าเช่าครบทุกห้องแล้ว!</div>'}`;
   }
 
-  // Quick tenant panel
+  // Quick tenant panel (COMBINED from both buildings)
   const dashTen=document.getElementById('dashTenantStatus');
   if(dashTen){
     const today=new Date();
-    const vacantRooms=activeRooms.filter(r=>!tenants[r.id]?.name).map(r=>r.id);
-    const soon=activeRooms.filter(r=>{
+    const vacantRoomsRooms=activeRooms.filter(r=>!tenants[r.id]?.name).map(r=>r.id);
+    const vacantRoomsNest=activeNest.filter(r=>!tenants[r.id]?.name).map(r=>r.id);
+    const allVacant=[...vacantRoomsRooms, ...vacantRoomsNest];
+    const soonRooms=activeRooms.filter(r=>{
       const t=tenants[r.id];
       if(!t?.contractEnd)return false;
       const diff=(new Date(t.contractEnd)-today)/(1000*60*60*24);
       return diff>=0&&diff<=30;
     });
+    const soonNest=activeNest.filter(r=>{
+      const t=tenants[r.id];
+      if(!t?.contractEnd)return false;
+      const diff=(new Date(t.contractEnd)-today)/(1000*60*60*24);
+      return diff>=0&&diff<=30;
+    });
+    const allSoon=[...soonRooms, ...soonNest];
     dashTen.innerHTML=`
       <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
         <div><div style="font-size:1.5rem;font-weight:800;color:var(--blue)">${occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">มีผู้เช่า</div></div>
         <div><div style="font-size:1.5rem;font-weight:800;color:var(--accent)">${totalRooms-occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">ห้องว่าง</div></div>
-        ${soon.length?`<div><div style="font-size:1.5rem;font-weight:800;color:var(--red)">${soon.length}</div><div style="font-size:.72rem;color:var(--text-muted)">สัญญาใกล้หมด</div></div>`:''}
+        ${allSoon.length?`<div><div style="font-size:1.5rem;font-weight:800;color:var(--red)">${allSoon.length}</div><div style="font-size:.72rem;color:var(--text-muted)">สัญญาใกล้หมด</div></div>`:''}
       </div>
-      ${vacantRooms.length?`<div style="font-size:.74rem;color:var(--text-muted);">ว่าง: ${vacantRooms.slice(0,8).join(', ')}${vacantRooms.length>8?'...':''}</div>`
+      <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${occCountRooms}/${activeRooms.length} | 🏢 Nest: ${occCountNest}/${activeNest.length}</div>
+      ${allVacant.length?`<div style="font-size:.74rem;color:var(--text-muted);">ว่าง: ${allVacant.slice(0,8).join(', ')}${allVacant.length>8?'...':''}</div>`
       :'<div style="color:var(--green);font-weight:700;font-size:.85rem;">✅ ไม่มีห้องว่าง</div>'}
-      ${soon.length?`<div style="font-size:.74rem;color:var(--red);margin-top:4px;">⚠️ สัญญาใกล้หมด: ${soon.map(r=>r.id).join(', ')}</div>`:''}`;
+      ${allSoon.length?`<div style="font-size:.74rem;color:var(--red);margin-top:4px;">⚠️ สัญญาใกล้หมด: ${allSoon.map(r=>r.id).join(', ')}</div>`:''}`;
   }
 
   updateNavBadge();
@@ -7866,8 +7978,11 @@ function updateNavBadge(){
   const ps=loadPS();
   const key=`${now.getFullYear()+543}_${now.getMonth()+1}`;
   const paid=ps[key]||{};
+  // Count both buildings
   const activeRooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
-  const pending=activeRooms.length-Object.keys(paid).length;
+  const activeNest = getActiveRoomsWithMetadata('nest', NEST_ROOMS);
+  const allActive = [...activeRooms, ...activeNest];
+  const pending=allActive.length-Object.keys(paid).length;
   if(pending>0){badge.textContent=pending;badge.style.display='inline-block';}
   else{badge.style.display='none';}
 }
@@ -9859,6 +9974,11 @@ function initAnnouncementsPage() {
   if (dateInput && !dateInput.value) {
     dateInput.value = today;
   }
+
+  // Set up real-time Firebase listeners for announcements
+  setupAnnouncementListener();
+  console.log('✅ Real-time announcement listeners activated');
+
   renderAnnouncementsList();
 }
 
@@ -9895,12 +10015,28 @@ function saveAnnouncement() {
     createdBy: '📌 Admin' // TODO: Get actual admin name
   };
 
-  // Save to localStorage (for now)
+  // Save to localStorage
   let announcements = loadAnnouncements();
   announcements.unshift(announcement);
   saveAnnouncementsData(announcements);
 
-  // TODO: Save to Firebase: announcements/{building}/{id}
+  // Save to Firebase
+  if (window.firebase && window.firebase.firestore) {
+    try {
+      const db = window.firebase.firestore();
+      const docRef = db.collection('announcements').doc(announcement.building).collection('items').doc(announcement.id);
+      docRef.set(announcement)
+        .then(() => {
+          console.log('✅ Announcement saved to Firebase:', announcement.id);
+        })
+        .catch(err => {
+          console.error('❌ Error saving to Firebase:', err);
+        });
+    } catch (err) {
+      console.warn('⚠️ Firebase not available, announcement saved to localStorage only');
+    }
+  }
+
   console.log('📢 Announcement saved:', announcement);
 
   // Clear form
@@ -9924,8 +10060,26 @@ function deleteAnnouncement(id) {
   if (!confirm('ลบประกาศนี้?')) return;
 
   let announcements = loadAnnouncements();
+  const announcement = announcements.find(a => a.id === id);
   announcements = announcements.filter(a => a.id !== id);
   saveAnnouncementsData(announcements);
+
+  // Delete from Firebase
+  if (window.firebase && window.firebase.firestore && announcement) {
+    try {
+      const db = window.firebase.firestore();
+      db.collection('announcements').doc(announcement.building).collection('items').doc(id)
+        .delete()
+        .then(() => {
+          console.log('✅ Announcement deleted from Firebase:', id);
+        })
+        .catch(err => {
+          console.error('❌ Error deleting from Firebase:', err);
+        });
+    } catch (err) {
+      console.warn('⚠️ Firebase not available, announcement deleted from localStorage only');
+    }
+  }
 
   renderAnnouncementsList();
 }
@@ -11548,6 +11702,182 @@ function updateLeaseExpiryAlerts() {
   }
 }
 
+// ===== REAL-TIME FIREBASE LISTENERS =====
+let realtimeListeners = {};
+
+function setupRoomDataListener() {
+  if (!window.firebase || !window.firebase.firestore) {
+    console.warn('Firebase not initialized, skipping real-time listeners');
+    return;
+  }
+
+  const db = window.firebase.firestore();
+
+  try {
+    // Listen to rooms building data
+    const roomsUnsubscribe = db.collection('buildings').doc('rooms').collection('rooms')
+      .onSnapshot(
+        (snapshot) => {
+          console.log('✅ Rooms data updated in real-time');
+          updateOccupancyDashboard();
+          updateRealtimeStatus(true);
+        },
+        (error) => {
+          console.error('❌ Error listening to rooms:', error);
+          updateRealtimeStatus(false);
+        }
+      );
+
+    // Listen to nest building data
+    const nestUnsubscribe = db.collection('buildings').doc('nest').collection('units')
+      .onSnapshot(
+        (snapshot) => {
+          console.log('✅ Nest units updated in real-time');
+          updateOccupancyDashboard();
+          updateRealtimeStatus(true);
+        },
+        (error) => {
+          console.error('❌ Error listening to nest units:', error);
+          updateRealtimeStatus(false);
+        }
+      );
+
+    // Store unsubscribe functions for cleanup
+    realtimeListeners.rooms = roomsUnsubscribe;
+    realtimeListeners.nest = nestUnsubscribe;
+  } catch (err) {
+    console.error('Error setting up room data listeners:', err);
+  }
+}
+
+function setupLeaseDataListener() {
+  if (!window.firebase || !window.firebase.firestore) {
+    console.warn('Firebase not initialized, skipping lease listeners');
+    return;
+  }
+
+  const db = window.firebase.firestore();
+
+  try {
+    // Listen to lease data changes
+    const leaseUnsubscribe = db.collection('leases')
+      .onSnapshot(
+        (snapshot) => {
+          console.log('✅ Lease data updated in real-time');
+          updateLeaseExpiryAlerts();
+          updateOccupancyDashboard();
+        },
+        (error) => {
+          console.error('❌ Error listening to leases:', error);
+        }
+      );
+
+    realtimeListeners.leases = leaseUnsubscribe;
+  } catch (err) {
+    console.error('Error setting up lease listeners:', err);
+  }
+}
+
+function setupMeterDataListener() {
+  if (!window.firebase || !window.firebase.firestore) {
+    console.warn('Firebase not initialized, skipping meter listeners');
+    return;
+  }
+
+  const db = window.firebase.firestore();
+
+  try {
+    // Listen to meter readings
+    const meterUnsubscribe = db.collection('meterReadings')
+      .onSnapshot(
+        (snapshot) => {
+          console.log('✅ Meter data updated in real-time');
+          // Trigger dashboard update
+          updateDashboardLive();
+        },
+        (error) => {
+          console.error('❌ Error listening to meter data:', error);
+        }
+      );
+
+    realtimeListeners.meter = meterUnsubscribe;
+  } catch (err) {
+    console.error('Error setting up meter listeners:', err);
+  }
+}
+
+function updateRealtimeStatus(connected) {
+  const dot = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+
+  if (!dot || !text) return; // Element may not exist on all pages
+
+  if (connected) {
+    dot.style.background = '#00cc00';
+    text.textContent = '🟢 Real-time (Live)';
+  } else {
+    dot.style.background = '#cc0000';
+    text.textContent = '🔴 Disconnected';
+  }
+}
+
+function stopRealtimeListeners() {
+  // Unsubscribe from all listeners
+  Object.values(realtimeListeners).forEach(unsubscribe => {
+    if (typeof unsubscribe === 'function') {
+      unsubscribe();
+    }
+  });
+  realtimeListeners = {};
+  console.log('✅ Real-time listeners stopped');
+}
+
+function setupAnnouncementListener() {
+  if (!window.firebase || !window.firebase.firestore) {
+    console.warn('Firebase not initialized, skipping announcement listeners');
+    return;
+  }
+
+  const db = window.firebase.firestore();
+
+  try {
+    // Listen to announcements for rooms building
+    const roomsAnnounceUnsubscribe = db.collection('announcements').doc('rooms').collection('items')
+      .onSnapshot(
+        (snapshot) => {
+          console.log('✅ Rooms announcements updated in real-time');
+          // Reload announcements and render if on announcements page
+          if (document.getElementById('announcementsList')) {
+            renderAnnouncementsList();
+          }
+        },
+        (error) => {
+          console.error('❌ Error listening to rooms announcements:', error);
+        }
+      );
+
+    // Listen to announcements for nest building
+    const nestAnnounceUnsubscribe = db.collection('announcements').doc('nest').collection('items')
+      .onSnapshot(
+        (snapshot) => {
+          console.log('✅ Nest announcements updated in real-time');
+          // Reload announcements and render if on announcements page
+          if (document.getElementById('announcementsList')) {
+            renderAnnouncementsList();
+          }
+        },
+        (error) => {
+          console.error('❌ Error listening to nest announcements:', error);
+        }
+      );
+
+    realtimeListeners.roomsAnnounce = roomsAnnounceUnsubscribe;
+    realtimeListeners.nestAnnounce = nestAnnounceUnsubscribe;
+  } catch (err) {
+    console.error('Error setting up announcement listeners:', err);
+  }
+}
+
 // ===== FIREBASE CLOUD DATA INITIALIZATION =====
 async function initializeCloudData() {
   try {
@@ -12097,6 +12427,39 @@ function renderLeaseAgreementsPage() {
           </div>
         </div>
 
+        <!-- FILE UPLOADS SECTION -->
+        <div style="background: #f0f9ff; padding: 1rem; border-radius: 6px; border: 1px solid #b3e5fc; margin-bottom: 1rem;">
+          <div style="font-weight: 600; margin-bottom: 0.8rem; color: #01579b;">📄 เอกสารประกอบสัญญา (optional)</div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div>
+              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">💉 ใบรับรองวัคซีนสัตว์เลี้ยง</label>
+              <input type="file" id="leaseFilePetCert" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">📞 ข้อมูลติดต่อผู้เช่า</label>
+              <input type="file" id="leaseFileTenantContact" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div>
+              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">📋 สัญญาเช่า</label>
+              <input type="file" id="leaseFileAgreement" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">🆔 สำเนาบัตรประชาชน</label>
+              <input type="file" id="leaseFileId" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">💰 หลักฐานรายได้</label>
+            <input type="file" id="leaseFileIncome" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+          </div>
+          <small style="color: #666; margin-top: 0.5rem; display: block;">📁 สนับสนุน: PDF, JPG, PNG · ขนาดสูงสุด: 5MB</small>
+        </div>
+
         <button onclick="createNewLease()" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
           ➕ สร้างสัญญา
         </button>
@@ -12157,6 +12520,20 @@ function createNewLease() {
     return;
   }
 
+  // Collect uploaded files
+  const documentsToUpload = {};
+  const petCertFile = document.getElementById('leaseFilePetCert')?.files[0];
+  const tenantContactFile = document.getElementById('leaseFileTenantContact')?.files[0];
+  const agreementFile = document.getElementById('leaseFileAgreement')?.files[0];
+  const idFile = document.getElementById('leaseFileId')?.files[0];
+  const incomeFile = document.getElementById('leaseFileIncome')?.files[0];
+
+  if (petCertFile) documentsToUpload.petCert = petCertFile;
+  if (tenantContactFile) documentsToUpload.tenantContact = tenantContactFile;
+  if (agreementFile) documentsToUpload.agreement = agreementFile;
+  if (idFile) documentsToUpload.id = idFile;
+  if (incomeFile) documentsToUpload.income = incomeFile;
+
   const tenant = TenantConfigManager.getTenant(tenantId);
   const leaseData = {
     building: building,
@@ -12167,7 +12544,8 @@ function createNewLease() {
     moveOutDate: null,
     rentAmount: rentAmount,
     deposit: deposit,
-    status: 'active'
+    status: 'active',
+    documents: Object.keys(documentsToUpload).length > 0 ? Object.keys(documentsToUpload) : []
   };
 
   // Use Firebase-enabled create if available
@@ -12176,7 +12554,14 @@ function createNewLease() {
     : LeaseAgreementManager.createLease(leaseData);
 
   if (leaseId) {
-    alert(`✅ สร้างสัญญาเช่าสำเร็จ`);
+    // Upload documents to Firebase Storage if available
+    if (Object.keys(documentsToUpload).length > 0 && window.firebase && window.firebase.storage) {
+      uploadLeaseDocuments(leaseId, building, roomId, documentsToUpload);
+      alert(`✅ สร้างสัญญาเช่าสำเร็จ\n📁 กำลังอัพโหลดเอกสาร...`);
+    } else {
+      alert(`✅ สร้างสัญญาเช่าสำเร็จ`);
+    }
+
     // Clear inputs
     document.getElementById('leaseBuilding').value = 'rooms';
     document.getElementById('leaseRoom').value = '';
@@ -12184,7 +12569,56 @@ function createNewLease() {
     document.getElementById('leaseMoveIn').value = '';
     document.getElementById('leaseRent').value = '';
     document.getElementById('leaseDeposit').value = '';
+
+    // Clear file inputs
+    document.getElementById('leaseFilePetCert').value = '';
+    document.getElementById('leaseFileTenantContact').value = '';
+    document.getElementById('leaseFileAgreement').value = '';
+    document.getElementById('leaseFileId').value = '';
+    document.getElementById('leaseFileIncome').value = '';
+
     renderLeaseAgreementsPage();
+  }
+}
+
+function uploadLeaseDocuments(leaseId, building, roomId, documents) {
+  try {
+    const storage = window.firebase.storage();
+    const fileTypeMap = {
+      petCert: 'pet-vaccine-certificate',
+      tenantContact: 'tenant-contact',
+      agreement: 'lease-agreement',
+      id: 'tenant-id',
+      income: 'proof-of-income'
+    };
+
+    let uploadCount = 0;
+    const totalFiles = Object.keys(documents).length;
+
+    // Upload each document
+    Object.entries(documents).forEach(([docType, file]) => {
+      if (!file) return;
+
+      const fileName = `${fileTypeMap[docType]}-${Date.now()}.${file.name.split('.').pop()}`;
+      const storageRef = storage.ref(`leases/${building}/${roomId}/${leaseId}/${fileName}`);
+
+      storageRef.put(file)
+        .then((snapshot) => {
+          uploadCount++;
+          console.log(`✅ Document uploaded: ${docType} (${uploadCount}/${totalFiles})`);
+          return snapshot.ref.getDownloadURL();
+        })
+        .then((downloadURL) => {
+          console.log(`📄 Download URL: ${downloadURL}`);
+        })
+        .catch((error) => {
+          console.error(`❌ Error uploading ${docType}:`, error);
+        });
+    });
+
+    console.log(`📁 Uploading ${totalFiles} documents for lease ${leaseId}...`);
+  } catch (err) {
+    console.warn('⚠️ Firebase Storage not available, documents will be uploaded later');
   }
 }
 
