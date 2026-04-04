@@ -8,6 +8,7 @@
   <title>Login - The Green Haven</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="shared/security.js"></script>
+  <script src="shared/firebase-config-loader.js"></script>
   <style>
     * {
       margin: 0;
@@ -665,27 +666,37 @@
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
     import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
 
-    // Firebase configuration
-    // Environment variables are injected at build time by Vercel
-    // Using the correct Firebase project from .env.local
-    // Fallback to hardcoded key if environment variable not available (static site limitation)
-    const firebaseConfig = {
-      apiKey: (typeof SecureConfig !== 'undefined' && SecureConfig.firebase.apiKey) ? SecureConfig.firebase.apiKey : "",
-      authDomain: "the-green-haven.firebaseapp.com",
-      databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "the-green-haven",
-      storageBucket: "the-green-haven.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abcdef123456"
-    };
+    // Firebase configuration - loaded from /api/config endpoint
+    // This keeps the API key secure while serving it to the client
+    let firebaseConfig;
+    let app;
+    let auth;
+    let database;
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const database = getDatabase(app);
+    // Initialize Firebase once config is loaded
+    async function initializeFirebase() {
+      try {
+        firebaseConfig = await window.loadFirebaseConfig();
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        database = getDatabase(app);
 
-    window.auth = auth;
-    window.database = database;
-    window.firebaseDB = { ref, set, get };
+        window.auth = auth;
+        window.database = database;
+        window.firebaseDB = { ref, set, get };
+
+        // Mark Firebase as ready
+        window.firebaseReady = true;
+        console.log('✅ Firebase initialized successfully');
+      } catch (error) {
+        console.error('❌ Failed to initialize Firebase:', error);
+        document.getElementById('errorMessage').textContent = 'Error initializing Firebase. Please check console.';
+        throw error;
+      }
+    }
+
+    // Initialize Firebase immediately
+    initializeFirebase();
 
     // Import signOut function
     import { signOut } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
@@ -888,6 +899,13 @@
     async function handleLogin(event) {
       event.preventDefault();
       clearMessages();
+
+      // Wait for Firebase to be initialized
+      if (!window.firebaseReady) {
+        showMessage('กำลังโหลด... โปรดรอสักครู่');
+        setLoading(false);
+        return;
+      }
 
       const email = document.getElementById('loginEmail').value.trim();
 

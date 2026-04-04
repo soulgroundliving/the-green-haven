@@ -175,24 +175,37 @@
     </div>
 
     <script src="./shared/config-secure.js"></script>
+    <script src="./shared/firebase-config-loader.js"></script>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
         import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js';
 
-        const firebaseConfig = {
-            apiKey: (typeof SecureConfig !== 'undefined' && SecureConfig.firebase.apiKey) ? SecureConfig.firebase.apiKey : "",
-            authDomain: "the-green-haven.firebaseapp.com",
-            databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "the-green-haven",
-            storageBucket: "the-green-haven.firebasestorage.app",
-            messagingSenderId: "523697750767",
-            appId: "1:523697750767:web:89b253f92d8d5cfe8a111a"
-        };
+        let firebaseConfig;
+        let database;
 
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
+        async function initializeFirebase() {
+            firebaseConfig = await window.loadFirebaseConfig();
+
+            firebaseConfig.authDomain = "the-green-haven.firebaseapp.com";
+            firebaseConfig.storageBucket = "the-green-haven.firebasestorage.app";
+            firebaseConfig.messagingSenderId = "523697750767";
+            firebaseConfig.appId = "1:523697750767:web:89b253f92d8d5cfe8a111a";
+
+            const app = initializeApp(firebaseConfig);
+            database = getDatabase(app);
+            window.firebaseReady = true;
+        }
+
+        // Initialize Firebase immediately
+        initializeFirebase();
 
         window.uploadBills = async function() {
+            // Wait for Firebase to be initialized
+            if (!window.firebaseReady) {
+                alert('Firebase is still initializing... Please wait');
+                return;
+            }
+
             const statusEl = document.getElementById('status');
             statusEl.innerHTML = '';
 

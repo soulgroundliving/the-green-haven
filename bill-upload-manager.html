@@ -493,19 +493,27 @@
     </div>
   </div>
 
+  <script src="./shared/firebase-config-loader.js"></script>
   <script type="module">
     // Firebase imports
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
     import { getDatabase, ref, get, set } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js';
 
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "",
-      databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app"
-    };
+    // Firebase config - loaded from /api/config endpoint
+    let firebaseConfig;
+    let db;
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    async function initializeFirebase() {
+      firebaseConfig = await window.loadFirebaseConfig();
+      firebaseConfig.databaseURL = "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app";
+
+      const app = initializeApp(firebaseConfig);
+      db = getDatabase(app);
+      window.firebaseReady = true;
+    }
+
+    // Initialize Firebase immediately
+    initializeFirebase();
 
     let uploadHistory = JSON.parse(localStorage.getItem('uploadHistory') || '[]');
     let selectedFile = null;
@@ -552,6 +560,12 @@
     }
 
     uploadBtn.addEventListener('click', async () => {
+      // Wait for Firebase to be initialized
+      if (!window.firebaseReady) {
+        showAlert('❌ Firebase is initializing... Please wait', 'error');
+        return;
+      }
+
       if (!selectedFile) return;
 
       const building = document.getElementById('building').value;
