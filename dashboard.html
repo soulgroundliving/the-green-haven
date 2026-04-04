@@ -8,6 +8,7 @@
 <title>The Green Haven — ระบบจัดการอพาร์ทเมนต์</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="./shared/security.js"></script>
+<script src="./shared/firebase-config-loader.js"></script>
 <script src="./shared/access-control.js"></script>
 <script src="./shared/audit.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -47,54 +48,72 @@
   import { getAuth, signInAnonymously, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
   import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-  // Firebase configuration
-  // Firebase config from environment - API Key must be set via build process
-  const firebaseConfig = {
-    apiKey: typeof SecureConfig !== 'undefined' && SecureConfig.firebase.apiKey ? SecureConfig.firebase.apiKey : (typeof FIREBASE_API_KEY !== 'undefined' ? FIREBASE_API_KEY : ""),
-    authDomain: "the-green-haven.firebaseapp.com",
-    databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "the-green-haven",
-    storageBucket: "the-green-haven.firebasestorage.app",
-    messagingSenderId: "523697750767",
-    appId: "1:523697750767:web:89b253f92d8d5cfe8a111a",
-    measurementId: "G-93J1CBN1BZ"
-  };
+  // Firebase configuration - loaded from /api/config endpoint
+  // This keeps the API key secure while serving it to the client
+  let firebaseConfig;
+  let app;
+  let database;
+  let auth;
+  let firestore;
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const database = getDatabase(app);
-  const auth = getAuth(app);
-  const firestore = getFirestore(app);
+  // Initialize Firebase once config is loaded
+  async function initializeFirebase() {
+    try {
+      firebaseConfig = await window.loadFirebaseConfig();
 
-  // Make them globally available for other scripts
-  window.firebaseApp = app;
-  window.firebaseDatabase = database;
-  window.firebaseAuth = auth;
-  window.firebaseRef = ref;
-  window.firebaseSet = set;
-  window.firebaseGet = get;
-  window.firebaseAuthFunctions = {
-    EmailAuthProvider: EmailAuthProvider
-  };
+      // Add additional config fields for dashboard
+      firebaseConfig.authDomain = "the-green-haven.firebaseapp.com";
+      firebaseConfig.storageBucket = "the-green-haven.firebasestorage.app";
+      firebaseConfig.messagingSenderId = "523697750767";
+      firebaseConfig.appId = "1:523697750767:web:89b253f92d8d5cfe8a111a";
+      firebaseConfig.measurementId = "G-93J1CBN1BZ";
 
-  window.firebase = {
-    firestore: () => firestore,
-    firestoreFunctions: {
-      collection: collection,
-      doc: doc,
-      setDoc: setDoc,
-      getDoc: getDoc,
-      getDocs: getDocs,
-      query: query,
-      where: where,
-      deleteDoc: deleteDoc
+      app = initializeApp(firebaseConfig);
+      database = getDatabase(app);
+      auth = getAuth(app);
+      firestore = getFirestore(app);
+
+      // Make them globally available for other scripts
+      window.firebaseApp = app;
+      window.firebaseDatabase = database;
+      window.firebaseAuth = auth;
+      window.firebaseRef = ref;
+      window.firebaseSet = set;
+      window.firebaseGet = get;
+      window.firebaseAuthFunctions = {
+        EmailAuthProvider: EmailAuthProvider
+      };
+
+      window.firebase = {
+        firestore: () => firestore,
+        firestoreFunctions: {
+          collection: collection,
+          doc: doc,
+          setDoc: setDoc,
+          getDoc: getDoc,
+          getDocs: getDocs,
+          query: query,
+          where: where,
+          deleteDoc: deleteDoc
+        }
+      };
+
+      // Mark Firebase as ready
+      window.firebaseReady = true;
+
+      // Log Firebase connection status
+      console.log('✅ Firebase initialized successfully');
+      console.log('📊 Database URL:', firebaseConfig.databaseURL);
+      console.log('🔐 Auth:', auth);
+    } catch (error) {
+      console.error('❌ Failed to initialize Firebase:', error);
+      alert('Error initializing Firebase. Please check console.');
+      throw error;
     }
-  };
+  }
 
-  // Log Firebase connection status
-  console.log('✅ Firebase initialized successfully');
-  console.log('📊 Database URL:', firebaseConfig.databaseURL);
-  console.log('🔐 Auth:', auth);
+  // Initialize Firebase immediately
+  initializeFirebase();
 
   // Load METER_DATA from Firebase on initialization
   async function initializeMeterDataFromFirebase() {
@@ -8959,7 +8978,23 @@ function approvePayment(){
 }
 
 // ===== INIT =====
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // Wait for Firebase to be initialized
+  if (!window.firebaseReady) {
+    console.log('⏳ Waiting for Firebase to initialize...');
+    // Wait up to 10 seconds for Firebase
+    let waitCount = 0;
+    while (!window.firebaseReady && waitCount < 100) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      waitCount++;
+    }
+    if (!window.firebaseReady) {
+      console.error('❌ Firebase failed to initialize');
+      alert('Error: Firebase initialization failed. Please reload the page.');
+      return;
+    }
+  }
+
   // ===== ACCESS CONTROL =====
   // Protect dashboard - admin only
   if (!AccessControl.protectPage('admin')) {

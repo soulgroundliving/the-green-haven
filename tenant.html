@@ -12,6 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="./shared/security.js"></script>
+  <script src="./shared/firebase-config-loader.js"></script>
   <script src="./shared/config-secure.js"></script>
   <script src="./shared/access-control.js"></script>
   <script src="./shared/invoice-receipt-manager.js"></script>
@@ -306,18 +307,20 @@
     import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
-    const firebaseConfig = {
-      apiKey: (typeof SecureConfig !== 'undefined' && SecureConfig.firebase.apiKey) ? SecureConfig.firebase.apiKey : "",
-      authDomain: "the-green-haven.firebaseapp.com",
-      databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "the-green-haven",
-      storageBucket: "the-green-haven.firebasestorage.app",
-      messagingSenderId: "523697750767",
-      appId: "1:523697750767:web:89b253f92d8d5cfe8a111a",
-      measurementId: "G-93J1CBN1BZ"
-    };
+    // Firebase configuration - loaded from /api/config endpoint
+    let firebaseConfig;
 
-    try {
+    async function initializeFirebase() {
+      try {
+        firebaseConfig = await window.loadFirebaseConfig();
+
+        // Add additional config fields for tenant app
+        firebaseConfig.authDomain = "the-green-haven.firebaseapp.com";
+        firebaseConfig.storageBucket = "the-green-haven.firebasestorage.app";
+        firebaseConfig.messagingSenderId = "523697750767";
+        firebaseConfig.appId = "1:523697750767:web:89b253f92d8d5cfe8a111a";
+        firebaseConfig.measurementId = "G-93J1CBN1BZ";
+
       const app = initializeApp(firebaseConfig);
       const database = getDatabase(app);
       const auth = getAuth(app);
@@ -352,17 +355,21 @@
         }
       };
 
-      // Signal that Firebase is ready
-      window.firebaseReady = true;
-      window.dispatchEvent(new Event('firebaseInitialized'));
+        // Signal that Firebase is ready
+        window.firebaseReady = true;
+        window.dispatchEvent(new Event('firebaseInitialized'));
 
-      console.log('✅ Firebase initialized successfully');
-      console.log('📊 Database URL:', firebaseConfig.databaseURL);
-      console.log('📁 Firestore functions exposed:', Object.keys(window.firebase.firestoreFunctions));
-    } catch (error) {
-      console.error('❌ Firebase initialization failed:', error);
-      window.firebaseReady = false;
+        console.log('✅ Firebase initialized successfully');
+        console.log('📊 Database URL:', firebaseConfig.databaseURL);
+        console.log('📁 Firestore functions exposed:', Object.keys(window.firebase.firestoreFunctions));
+      } catch (error) {
+        console.error('❌ Firebase initialization failed:', error);
+        window.firebaseReady = false;
+      }
     }
+
+    // Initialize Firebase immediately
+    initializeFirebase();
   </script>
   <style>
     /* ===== THE GREEN HAVEN: QUIET LIVING DESIGN SYSTEM ===== */
