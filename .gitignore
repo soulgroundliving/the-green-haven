@@ -59,3 +59,18 @@ yarn-error.log
 # Testing
 coverage/
 .nyc_output/
+
+# Credentials & Sensitive Data (Enhanced Security)
+credentials*.txt
+secrets*.txt
+api-keys*.txt
+*.key
+*.pem
+*.pfx
+*.p12
+config.local.js
+config.local.json
+firebase.local.json
+.env.*.local
+.env.production.local
+.env.test.local
