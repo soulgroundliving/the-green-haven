@@ -5025,44 +5025,44 @@
           throw new Error('⏱️ คำขอมากเกินไป โปรดลองใหม่ในเวลาไม่กี่วินาที');
         }
 
-        console.log('🔄 Verifying with SlipOK API...');
+        console.log('🔄 Verifying with Secure Cloud Function...');
 
         // Show loading state
         document.getElementById('slipVerifyResult').innerHTML = '<div style="text-align: center; color: var(--neutral);">⏳ กำลังตรวจสอบ...</div>';
         document.getElementById('slipVerifyResult').style.display = 'block';
 
-        // Prepare FormData for SlipOK API
-        const formData = new FormData();
-        formData.append('file', file);
+        // Get current tenant info
+        const tenantId = localStorage.getItem('currentTenant') || 'unknown';
+        const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+        const room = tenantData[tenantId]?.room || 'unknown';
 
-        // Real SlipOK API call
-        const response = await fetch('https://api.slipok.com/api/line/apikey/62328', {
-          method: 'POST',
-          headers: {
-            'x-authorization': 'SLIPOK8P4B99Z'
-          },
-          body: formData
-        });
+        // Call secure Cloud Function (API keys are server-side, never exposed)
+        const result = await verifySlipSecure(
+          file,
+          null, // expectedAmount (optional)
+          'rooms', // building
+          room,
+          tenantId
+        );
 
-        const data = await response.json();
-        console.log('✅ SlipOK Response:', data);
+        console.log('✅ Cloud Function Response:', result);
 
         // Validate response
-        if (data.success && data.data) {
+        if (result.success && result.data) {
           verifySlip({
             success: true,
             data: {
-              amount: data.data.amount,
-              sendingBankCode: data.data.sendingBankCode || 'UNKNOWN',
-              transactionDate: data.data.transactionDate,
-              transactionId: data.data.transactionId
+              amount: result.data.amount,
+              sendingBankCode: result.data.sendingBankCode || 'UNKNOWN',
+              transactionDate: result.data.transactionDate,
+              transactionId: result.data.transactionId
             }
           });
         } else {
-          throw new Error(data.message || 'SlipOK verification failed');
+          throw new Error(result.error || 'Verification failed');
         }
       } catch (error) {
-        console.error('❌ SlipOK verification failed:', error);
+        console.error('❌ Verification failed:', error);
         verifySlip({
           success: false,
           error: error.message

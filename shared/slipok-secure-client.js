@@ -10,7 +10,7 @@
 
 // ==================== CONFIGURATION ====================
 // Use your Firebase Cloud Function URL
-const SLIPOK_CLOUD_FUNCTION_URL = 'https://us-central1-your-project-id.cloudfunctions.net/verifySlip';
+const SLIPOK_CLOUD_FUNCTION_URL = 'https://us-central1-the-green-haven.cloudfunctions.net/verifySlip';
 
 // Or use a local proxy during development:
 // const SLIPOK_CLOUD_FUNCTION_URL = '/api/verifySlip';
