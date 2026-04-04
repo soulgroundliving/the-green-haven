@@ -5607,10 +5607,10 @@ async function loadDashboardDataFromFirebase() {
         }
       });
 
-      // Update month data
-      monthData[0] = Math.round(rentTotal); // rent
-      monthData[1] = Math.round(elecTotal); // electricity
-      monthData[2] = Math.round(waterTotal); // water
+      // ✅ FIXED: ADD to existing month data (combines multiple buildings) instead of overwriting
+      monthData[0] += Math.round(rentTotal); // rent
+      monthData[1] += Math.round(elecTotal); // electricity
+      monthData[2] += Math.round(waterTotal); // water
       monthData[3] = monthData[0] + monthData[1] + monthData[2]; // total
 
       aggregated[year].months[month - 1] = monthData;
