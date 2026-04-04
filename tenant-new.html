@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nature Haven - Living OS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-functions-compat.js"></script>
+    <style>
+        :root {
+            --primary-green: #7BA67E; --soft-green: #E8F0E9; --text-dark: #334435;
+            --bg-color: #F9FBF9; --white: #FFFFFF; --accent-gold: #D4AF37;
+            --danger: #DC2626; --shadow: 0 10px 30px rgba(0,0,0,0.05);
+            --suggest-bg: #F0F4FF; --suggest-border: #D1E1FF; --suggest-accent: #2563EB;
+            --receipt-green: #377E5E;
+        }
+
+        * { box-sizing: border-box; font-family: 'Prompt', sans-serif; transition: background 0.3s, color 0.3s; }
+        body { background-color: var(--bg-color); margin: 0; padding-bottom: 100px; color: var(--text-dark); overflow-x: hidden; }
+
+        /* Animation & Pages */
+        .page { display: none; animation: slideUp 0.4s ease; }
+        .page.active { display: block; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Dashboard Layout */
+        .dashboard-layout { display: flex; }
+        .sidebar-left {
+            background: linear-gradient(135deg, #8beac4 0%, #7BA67E 100%);
+            width: 120px;
+            padding: 25px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            color: #fff;
+        }
+        .sidebar-left .label { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; }
+        .sidebar-left .status { font-weight: bold; font-size: 1rem; margin-bottom: 30px; }
+        .sidebar-left .icon { width: 70px; margin-bottom: 30px; font-size: 2.5rem; }
+        .sidebar-left .value { font-size: 2.8rem; font-weight: 700; line-height: 1; }
+        .sidebar-left .unit { font-size: 0.9rem; font-weight: bold; }
+
+        .details-right { flex: 1; padding: 20px; position: relative; }
+        .location-name { color: var(--primary-green); font-weight: bold; font-size: 1.1rem; margin-top: 0; margin-bottom: 20px; }
+        .info-group { margin-bottom: 15px; }
+        .info-label { color: #888; font-size: 0.85rem; margin-bottom: 3px; }
+        .info-value { color: var(--text-dark); font-weight: bold; font-size: 0.95rem; }
+
+        .data-list { border-top: 1px dashed #ddd; padding-top: 10px; margin-top: 15px; }
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        /* General UI Elements */
+        .app-bar { padding: 45px 25px 25px; background: var(--white); border-radius: 0 0 35px 35px; box-shadow: var(--shadow); position: relative;}
+        .date-display { font-size: 0.85rem; color: var(--primary-green); font-weight: 600; margin-bottom: 5px; }
+        .card { background: var(--white); margin: 15px; padding: 20px; border-radius: 25px; box-shadow: var(--shadow); border: 1px solid rgba(0,0,0,0.02); }
+        .section-title { padding: 20px 25px 5px; font-size: 1.1rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .btn-main { width: 100%; padding: 16px; border-radius: 18px; border: none; background: var(--primary-green); color: white; font-weight: 600; cursor: pointer; }
+
+        /* SOS call Button */
+        .sos-btn { position: fixed; right: 20px; bottom: 120px; width: 60px; height: 60px; background: var(--danger); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4); z-index: 999; border: 3px solid white; cursor: pointer; font-size: 1.5rem; }
+
+        /* Bottom Nav */
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: var(--white); display: flex; justify-content: space-around; padding: 18px 0; border-radius: 30px 30px 0 0; box-shadow: 0 -5px 25px rgba(0,0,0,0.05); z-index: 1000; }
+        .nav-item { text-align: center; color: #BDC3C7; font-size: 0.75rem; flex: 1; cursor: pointer; transition: 0.3s; }
+        .nav-item.active { color: var(--primary-green); font-weight: 600; }
+        .nav-item i { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+
+        /* Menu List */
+        .menu-list { background: var(--white); margin: 15px; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow); }
+        .menu-item { display: flex; align-items: center; padding: 18px 20px; border-bottom: 1px solid #f5f5f5; cursor: pointer; transition: 0.2s; }
+        .icon-box { width: 38px; height: 38px; border-radius: 10px; display: flex; justify-content: center; align-items: center; margin-right: 15px; color: white; font-size: 1.1rem;}
+
+        /* Payment Styles */
+        .payment-header { background: white; padding: 20px 15px; text-align: center; border-bottom: 2px solid var(--receipt-green); }
+        .stepper { display: flex; justify-content: space-between; padding: 20px 30px; position: relative; margin-bottom: 10px;}
+        .stepper::before { content: ''; position: absolute; top: 32px; left: 40px; right: 40px; height: 2px; background: #ddd; z-index: 1; }
+        .step { display: flex; flex-direction: column; align-items: center; z-index: 2; gap: 5px; opacity: 0.4; transition: 0.3s;}
+        .step.active { opacity: 1; }
+        .step-circle { width: 25px; height: 25px; border-radius: 50%; background: #ccc; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; }
+        .step.active .step-circle { background: var(--receipt-green); }
+
+        .bill-table { width: 100%; font-size: 0.85rem; border-collapse: collapse; }
+        .bill-table th { background: var(--receipt-green); color: white; padding: 10px; text-align: left; }
+        .bill-table td { padding: 12px 10px; border-bottom: 1px solid #eee; color: #444; }
+        .bill-table td:last-child { text-align: right; font-weight: bold; }
+
+        /* Tabs */
+        .tabs { display: flex; background: var(--soft-green); border-radius: 20px; margin: 15px; padding: 5px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 15px; font-weight: 600; color: var(--text-dark); cursor: pointer; transition: 0.3s; }
+        .tab-btn.active { background: var(--white); color: var(--primary-green); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
+    </style>
+    <script src="./shared/tenant-firebase-sync.js"></script>
+</head>
+<body>
+
+    <div class="sos-btn" onclick="alert('ติดต่อ: 191')"><i class="fas fa-phone-alt"></i></div>
+
+    <!-- HOME PAGE -->
+    <div id="page-home" class="page active">
+        <div class="app-bar">
+            <div class="date-display" id="current-date">--/--/--</div>
+            <h1 id="user-greeting">สวัสดีครับ</h1>
+            <p id="time-greet" style="margin:5px 0 0; opacity:0.6;">ยินดีต้อนรับกลับบ้าน 🌿</p>
+        </div>
+
+        <!-- Dashboard with Sidebar -->
+        <div class="dashboard-layout" style="background: white; margin: 15px; border-radius: 25px; overflow: hidden; box-shadow: var(--shadow);">
+            <div class="sidebar-left">
+                <div class="label">ยอดค้าง</div>
+                <div class="icon">💳</div>
+                <div class="value" id="home-due-amount">0</div>
+                <div class="unit">บาท</div>
+                <button class="btn-main" style="width: 90%; margin-top: 20px; padding: 8px; font-size: 0.8rem;" onclick="goToPage('payment')">ชำระ</button>
+            </div>
+
+            <div class="details-right">
+                <div class="location-name">ห้อง <span id="room-number">402</span></div>
+
+                <div class="info-group">
+                    <div class="info-label">ค่าเช่า</div>
+                    <div class="info-value" id="rent-info">-</div>
+                </div>
+
+                <div class="data-list">
+                    <div class="data-item">
+                        <span>⚡ ไฟฟ้า</span>
+                        <strong id="electric-usage">-</strong>
+                    </div>
+                    <div class="data-item">
+                        <span>💧 น้ำ</span>
+                        <strong id="water-usage">-</strong>
+                    </div>
+                    <div class="data-item">
+                        <span>🏆 พอยต์</span>
+                        <strong id="gamif-points" style="color: var(--primary-green);">-</strong>
+                    </div>
+                    <div class="data-item">
+                        <span>📊 อันดับ</span>
+                        <strong id="gamif-rank" style="color: var(--primary-green);">-</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="border-top: 5px solid var(--primary-green); margin-top: 0;">
+            <strong>📦 ข้อมูลอื่น</strong>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 0.9rem;">
+                <div style="padding: 10px; background: var(--soft-green); border-radius: 10px;">
+                    <small>ค่าเบี้ยประกัน</small><br>
+                    <strong id="insurance-info">-</strong>
+                </div>
+                <div style="padding: 10px; background: var(--soft-green); border-radius: 10px;">
+                    <small>สถานะสัญญา</small><br>
+                    <strong id="lease-status">-</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SERVICES PAGE -->
+    <div id="page-services" class="page">
+        <div class="app-bar">
+            <h1>🔧 บริการ</h1>
+            <p>ซ่อมแซม แจ้งปัญหา และการบริการอื่นๆ</p>
+        </div>
+
+        <div class="section-title"><span>แจ้งซ่อมใหม่</span></div>
+        <div class="card">
+            <form onsubmit="submitMaintenance(event)">
+                <label style="font-weight: 700; margin-bottom: 0.3rem; color: var(--text-dark); font-size: 0.9rem; display: block;">ประเภท *</label>
+                <select id="maintenanceCategory" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 10px;">
+                    <option value="">เลือกประเภท</option>
+                    <option value="electric">⚡ ไฟฟ้า</option>
+                    <option value="water">💧 น้ำ</option>
+                    <option value="aircon">❄️ แอร์</option>
+                    <option value="furniture">🪑 เฟอร์นิเจอร์</option>
+                    <option value="other">📝 อื่นๆ</option>
+                </select>
+
+                <label style="font-weight: 700; margin-bottom: 0.3rem; color: var(--text-dark); font-size: 0.9rem; display: block;">รายละเอียด *</label>
+                <textarea id="maintenanceDescription" required placeholder="อธิบายปัญหา..." style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 10px; min-height: 60px;"></textarea>
+
+                <button type="submit" class="btn-main" style="margin-top: 10px;">📤 ส่งคำขอ</button>
+            </form>
+        </div>
+
+        <div class="section-title"><span>ประวัติการซ่อม</span></div>
+        <div id="ticketsList"></div>
+
+        <div class="section-title"><span>⚠️ แจ้งปัญหาอื่น</span></div>
+        <div class="card">
+            <form onsubmit="submitComplaint(event)">
+                <label style="font-weight: 700; margin-bottom: 0.3rem; color: var(--text-dark); font-size: 0.9rem; display: block;">ประเภท *</label>
+                <select id="complaintCategory" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 10px;">
+                    <option value="">เลือกประเภท</option>
+                    <option value="noise">🔊 เสียงดัง</option>
+                    <option value="security">🔒 ความปลอดภัย</option>
+                    <option value="parking">🅿️ ที่จอด</option>
+                    <option value="other">📌 อื่นๆ</option>
+                </select>
+
+                <label style="font-weight: 700; margin-bottom: 0.3rem; color: var(--text-dark); font-size: 0.9rem; display: block;">รายละเอียด *</label>
+                <textarea id="complaintDescription" required placeholder="อธิบายปัญหา..." style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 10px; min-height: 60px;"></textarea>
+
+                <button type="submit" class="btn-main" style="margin-top: 10px;">✈️ ส่งแจ้ง</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- COMMUNITY PAGE -->
+    <div id="page-community" class="page">
+        <div class="app-bar">
+            <h1>👥 ชุมชน</h1>
+            <p>ข่าวสารและประชาสัมพันธ์</p>
+        </div>
+
+        <div class="section-title"><span>📢 ประกาศจากอาคาร</span></div>
+        <div id="announcementsList"></div>
+
+        <div class="section-title" style="margin-top: 20px;"><span>🏆 อันดับชุมชน</span></div>
+        <div class="card">
+            <div id="leaderboardTable" style="display: grid; gap: 0.4rem;">
+                <div style="text-align: center; padding: 1rem; color: #888;">กำลังโหลด...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAYMENT PAGE -->
+    <div id="page-payment" class="page">
+        <div class="app-bar">
+            <h1>💳 ชำระเงิน</h1>
+            <p>บิล ประวัติ และการใช้</p>
+        </div>
+
+        <div class="section-title"><span>📋 บิลรายเดือน</span></div>
+        <div id="billsList"></div>
+
+        <div class="section-title" style="margin-top: 20px;"><span>📊 ใช้พลังงาน (12 เดือน)</span></div>
+        <div class="card">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchBillTab('usage', this)">ใช้พลังงาน</button>
+                <button class="tab-btn" onclick="switchBillTab('history', this)">ประวัติ</button>
+            </div>
+            <div id="usage-section">
+                <table class="bill-table" style="margin-top: 10px;">
+                    <thead>
+                        <tr><th>เดือน</th><th>⚡ ไฟ</th><th>💧 น้ำ</th></tr>
+                    </thead>
+                    <tbody id="usageTableBody"></tbody>
+                </table>
+            </div>
+            <div id="history-section" style="display: none;">
+                <div id="billHistory"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROFILE PAGE -->
+    <div id="page-profile" class="page">
+        <div class="app-bar">
+            <h1>🌟 โปรไฟล์</h1>
+            <p>ข้อมูลส่วนตัวและสัญญา</p>
+        </div>
+
+        <div class="section-title"><span>👤 ข้อมูลส่วนตัว</span></div>
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.9rem;">
+                <span>ชื่อ-นามสกุล:</span>
+                <strong id="profile-name">-</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.9rem;">
+                <span>เบอร์โทร:</span>
+                <strong id="profile-phone">-</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.9rem;">
+                <span>อีเมล:</span>
+                <strong id="profile-email">-</strong>
+            </div>
+        </div>
+
+        <div class="section-title"><span>📜 สัญญาเช่า</span></div>
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.85rem;">
+                <span>เริ่มต้น:</span>
+                <strong id="lease-start">-</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.85rem;">
+                <span>สิ้นสุด:</span>
+                <strong id="lease-end">-</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 0.85rem;">
+                <span>ระยะเวลาคงเหลือ:</span>
+                <strong id="lease-remaining" style="color: var(--primary-green);">-</strong>
+            </div>
+        </div>
+
+        <div class="section-title"><span>🐾 สัตว์เลี้ยง</span></div>
+        <div id="petsList"></div>
+
+        <div class="section-title"><span>📞 ติดต่อฉุกเฉิน</span></div>
+        <div id="emergencyContactsList" style="display: grid; gap: 10px; margin: 15px;">
+            <div class="card" style="background: var(--soft-green); border-left: 4px solid var(--primary-green); padding: 15px;">
+                <strong>👥 ผู้ติดต่อ</strong>
+                <p id="emergency-contact" style="margin: 5px 0 0; color: #666;">-</p>
+            </div>
+        </div>
+
+        <div class="card" style="background: var(--danger); color: white; text-align: center; cursor: pointer; margin-bottom: 50px;" onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="nav-bar">
+        <div class="nav-item active" onclick="goToPage('home')">
+            <i class="fas fa-home"></i>
+            <span>หน้าแรก</span>
+        </div>
+        <div class="nav-item" onclick="goToPage('services')">
+            <i class="fas fa-tools"></i>
+            <span>บริการ</span>
+        </div>
+        <div class="nav-item" onclick="goToPage('community')">
+            <i class="fas fa-users"></i>
+            <span>ชุมชน</span>
+        </div>
+        <div class="nav-item" onclick="goToPage('payment')">
+            <i class="fas fa-credit-card"></i>
+            <span>ชำระเงิน</span>
+        </div>
+        <div class="nav-item" onclick="goToPage('profile')">
+            <i class="fas fa-user"></i>
+            <span>โปรไฟล์</span>
+        </div>
+    </nav>
+
+    <script>
+        // Global variables
+        let currentRoom = '402';
+        let currentTenantId = 'tenant-001';
+        let currentBuilding = 'rooms';
+        let currentBills = [];
+        let currentComplaints = [];
+
+        // Navigation
+        function goToPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(`page-${pageName}`)?.classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            event.target.closest('.nav-item')?.classList.add('active');
+
+            if (typeof window[`load${pageName.charAt(0).toUpperCase() + pageName.slice(1)}`] === 'function') {
+                window[`load${pageName.charAt(0).toUpperCase() + pageName.slice(1)}`]();
+            }
+        }
+
+        function switchBillTab(tab, element) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            element.classList.add('active');
+            document.getElementById('usage-section').style.display = tab === 'usage' ? 'block' : 'none';
+            document.getElementById('history-section').style.display = tab === 'history' ? 'block' : 'none';
+        }
+
+        // Initialize on load
+        async function initApp() {
+            updateDateTime();
+            setInterval(updateDateTime, 60000);
+
+            await loadHome();
+            await loadPayment();
+            await loadProfile();
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('current-date').textContent = now.toLocaleDateString('th-TH');
+        }
+
+        async function loadHome() {
+            // Load meter data
+            let meterData = localStorage.getItem('meter_data_latest');
+            if (meterData) {
+                const data = JSON.parse(meterData);
+                document.getElementById('electric-usage').textContent = (data.eNew - data.eOld) + ' หน่วย';
+                document.getElementById('water-usage').textContent = (data.wNew - data.wOld) + ' m³';
+            }
+
+            // Load bill data
+            let bills = [];
+            for (let y = 2567; y <= 2570; y++) {
+                const billsKey = `bills_${y}`;
+                const billsData = localStorage.getItem(billsKey);
+                if (billsData) {
+                    bills = bills.concat(JSON.parse(billsData));
+                }
+            }
+
+            if (bills.length > 0) {
+                const latestBill = bills.sort((a,b) => new Date(b.dueDate) - new Date(a.dueDate))[0];
+                const dueBill = bills.find(b => b.status === 'pending' || b.status === 'overdue');
+                if (dueBill) {
+                    document.getElementById('home-due-amount').textContent = dueBill.total.toFixed(2);
+                }
+            }
+
+            // Load gamification
+            let gamifData = localStorage.getItem('gamification_data');
+            if (gamifData) {
+                const gdata = JSON.parse(gamifData);
+                document.getElementById('gamif-points').textContent = gdata.points || '0';
+                document.getElementById('gamif-rank').textContent = gdata.rank || 'Bronze';
+            }
+        }
+
+        async function loadServices() {
+            // Load maintenance and complaints
+            const ticketsKey = `maintenance_tickets_${currentBuilding}_${currentRoom}`;
+            const tickets = JSON.parse(localStorage.getItem(ticketsKey) || '[]');
+
+            let html = tickets.map(t => `
+                <div class="card" style="border-left: 4px solid var(--primary-green);">
+                    <strong>${t.category}</strong>
+                    <p style="margin: 5px 0 0; font-size: 0.9rem;">${t.description}</p>
+                    <small style="color: ${t.status === 'completed' ? 'green' : 'orange'};">สถานะ: ${t.status}</small>
+                </div>
+            `).join('');
+
+            document.getElementById('ticketsList').innerHTML = html || '<div class="card"><p style="color: #888;">ยังไม่มีการแจ้ง</p></div>';
+        }
+
+        async function loadCommunity() {
+            // Load leaderboard from localStorage
+            let leaderboard = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+
+            let html = leaderboard.slice(0, 5).map((t, i) => `
+                <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="font-size: 1.1rem;">${i+1}. ${t.tenantName || 'ผู้อยู่อาศัย'}</strong>
+                        <small style="color: #888; display: block;">ห้อง ${t.room || '-'}</small>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary-green);">${t.points || 0}</div>
+                        <small style="color: #888;">พอยต์</small>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('leaderboardTable').innerHTML = html || '<div class="card"><p>ยังไม่มีข้อมูล</p></div>';
+        }
+
+        async function loadPayment() {
+            // Load bills
+            let bills = [];
+            for (let y = 2567; y <= 2570; y++) {
+                const billsKey = `bills_${y}`;
+                const billsData = localStorage.getItem(billsKey);
+                if (billsData) {
+                    bills = bills.concat(JSON.parse(billsData));
+                }
+            }
+
+            let billHtml = bills.sort((a,b) => new Date(b.dueDate) - new Date(a.dueDate)).slice(0, 6).map(b => {
+                const months = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                const year = b.year < 100 ? b.year + 2500 : b.year;
+                return `
+                <div class="card" style="border-left: 4px solid ${b.status === 'paid' ? 'green' : 'orange'};">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <strong>${months[b.month]} ${year}</strong>
+                        <span style="background: ${b.status === 'paid' ? '#d4edda' : '#fff3cd'}; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;">${b.status === 'paid' ? '✓ ชำระแล้ว' : '⏳ รอชำระ'}</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem;">
+                        <div>🏠 ค่าเช่า: ฿${b.rent}</div>
+                        <div>⚡ ไฟ: ฿${b.electric}</div>
+                        <div>💧 น้ำ: ฿${b.water}</div>
+                        <div>🗑️ ขยะ: ฿${b.trash}</div>
+                    </div>
+                    <strong style="display: block; margin-top: 10px; color: var(--primary-green);">รวม: ฿${b.total}</strong>
+                </div>
+                `;
+            }).join('');
+
+            document.getElementById('billsList').innerHTML = billHtml || '<div class="card"><p>ยังไม่มีบิล</p></div>';
+        }
+
+        async function loadProfile() {
+            // Load tenant info from localStorage
+            let tenantData = localStorage.getItem('tenant_profile');
+            if (tenantData) {
+                const tdata = JSON.parse(tenantData);
+                document.getElementById('profile-name').textContent = tdata.firstName + ' ' + tdata.lastName;
+                document.getElementById('profile-phone').textContent = tdata.phone || '-';
+                document.getElementById('profile-email').textContent = tdata.email || '-';
+
+                // Lease info
+                if (tdata.lease) {
+                    const startDate = new Date(tdata.lease.moveInDate);
+                    const endDate = new Date(tdata.lease.moveOutDatePlanned);
+                    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+                    document.getElementById('lease-start').textContent = startDate.getDate() + ' ' + months[startDate.getMonth()] + ' ' + startDate.getFullYear();
+                    document.getElementById('lease-end').textContent = endDate.getDate() + ' ' + months[endDate.getMonth()] + ' ' + endDate.getFullYear();
+
+                    const diff = endDate - new Date();
+                    const daysLeft = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const monthsLeft = Math.floor(daysLeft / 30);
+                    document.getElementById('lease-remaining').textContent = monthsLeft + ' เดือน ' + (daysLeft % 30) + ' วัน';
+                }
+            }
+
+            // Emergency contacts
+            document.getElementById('emergency-contact').textContent = '081-777-7777';
+        }
+
+        async function submitMaintenance(e) {
+            e.preventDefault();
+            const category = document.getElementById('maintenanceCategory').value;
+            const description = document.getElementById('maintenanceDescription').value;
+
+            const ticket = {
+                id: 'TICKET-' + Date.now(),
+                category,
+                description,
+                status: 'pending',
+                createdAt: new Date().toISOString()
+            };
+
+            const ticketsKey = `maintenance_tickets_${currentBuilding}_${currentRoom}`;
+            let tickets = JSON.parse(localStorage.getItem(ticketsKey) || '[]');
+            tickets.push(ticket);
+            localStorage.setItem(ticketsKey, JSON.stringify(tickets));
+
+            alert('✅ ส่งคำขอสำเร็จ!');
+            document.getElementById('maintenanceCategory').value = '';
+            document.getElementById('maintenanceDescription').value = '';
+            await loadServices();
+        }
+
+        async function submitComplaint(e) {
+            e.preventDefault();
+            const category = document.getElementById('complaintCategory').value;
+            const description = document.getElementById('complaintDescription').value;
+
+            const complaint = {
+                id: 'COMPLAINT-' + Date.now(),
+                category,
+                description,
+                status: 'open',
+                createdAt: new Date().toISOString()
+            };
+
+            const complaintsKey = `complaints_${currentBuilding}_${currentRoom}`;
+            let complaints = JSON.parse(localStorage.getItem(complaintsKey) || '[]');
+            complaints.push(complaint);
+            localStorage.setItem(complaintsKey, JSON.stringify(complaints));
+
+            alert('✅ แจ้งปัญหาสำเร็จ!');
+            document.getElementById('complaintCategory').value = '';
+            document.getElementById('complaintDescription').value = '';
+        }
+
+        function logout() {
+            if (confirm('ต้องการออกจากระบบหรือไม่?')) {
+                localStorage.clear();
+                alert('ออกจากระบบสำเร็จ');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Init
+        initApp();
+    </script>
+</body>
+</html>
