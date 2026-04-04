@@ -23,7 +23,8 @@ jobs:
             echo "ERROR: $file missing closing </html>"
             exit 1
           fi
-          if ! grep -q "</style>" "$file"; then
+          # Only check closing </style> if file has opening <style>
+          if grep -q "<style" "$file" && ! grep -q "</style>" "$file"; then
             echo "ERROR: $file missing closing </style>"
             exit 1
           fi
