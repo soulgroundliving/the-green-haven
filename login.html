@@ -670,7 +670,7 @@
     // Using the correct Firebase project from .env.local
     // Fallback to hardcoded key if environment variable not available (static site limitation)
     const firebaseConfig = {
-      apiKey: (typeof SecureConfig !== 'undefined' && SecureConfig.firebase.apiKey) ? SecureConfig.firebase.apiKey : "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM",
+      apiKey: (typeof SecureConfig !== 'undefined' && SecureConfig.firebase.apiKey) ? SecureConfig.firebase.apiKey : "",
       authDomain: "the-green-haven.firebaseapp.com",
       databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "the-green-haven",
