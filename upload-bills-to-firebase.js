@@ -10,7 +10,7 @@ const https = require('https');
 
 // Firebase config - Load API key from environment variable
 const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyAHbEbYZtiHLmxNzBXkNv3P_latd5HnfXM", // Use env var if available
+  apiKey: process.env.FIREBASE_API_KEY || "", // Must set FIREBASE_API_KEY environment variable
   databaseURL: "https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
