@@ -4302,6 +4302,122 @@ function parseImportExcelData(workbook, building) {
     console.log(`✅ Final year: ${year}`);
   }
 
+  // ===== V3 FORMAT DETECTION & PARSING (June 69+) =====
+  // V3 Format: All three buildings in one sheet
+  // - Columns B-C: Rooms meter (previous, current)
+  // - Columns F-G: Nest meter (previous, current) - NEW in V3
+  // - Columns L-M: Amazon meter (previous, current) - MOVED in V3
+  // - Column A: Room number
+
+  // Detect V3 format by checking if columns F and L have numeric data
+  let isV3Format = false;
+  let hasNestData = false;
+  let hasAmazonData = false;
+
+  // Check first 20 data rows for V3 indicators
+  for (let i = 1; i < Math.min(21, data.length); i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+
+    // Check if columns F (5) and L (11) have numeric values (meter readings)
+    const colF = parseFloat(row[5]);
+    const colL = parseFloat(row[11]);
+
+    if (!isNaN(colF) && colF > 0 && colF < 100000) {
+      hasNestData = true;
+    }
+    if (!isNaN(colL) && colL > 0 && colL < 100000) {
+      hasAmazonData = true;
+    }
+  }
+
+  isV3Format = hasNestData && hasAmazonData;
+  console.log(`📊 [V3 Detection] hasNestData: ${hasNestData}, hasAmazonData: ${hasAmazonData}, isV3Format: ${isV3Format}`);
+
+  if (isV3Format) {
+    // ===== V3 METER FORMAT PARSING =====
+    console.log('🔧 Parsing V3 meter format (all buildings in one sheet)');
+
+    const allRooms = {
+      rooms: {},     // Rooms building meters
+      nest: {},      // Nest building meters
+      amazon: {}     // Amazon building meters
+    };
+
+    // Define room lists for validation
+    const roomsRoomList = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25',
+                           '26', '27', '28', '29', '30', '31', '32', '33', '35', 'AMAZON', 'ร้านใหญ่'];
+    const nestRoomList = ['N101', 'N102', 'N103', 'N104', 'N105',
+                          'N201', 'N202', 'N203', 'N204', 'N205',
+                          'N301', 'N302', 'N303', 'N304', 'N305',
+                          'N401', 'N402', 'N403', 'N404', 'N405'];
+
+    // Parse all rows
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row[0]) continue;
+
+      const roomNum = String(row[0]).trim();
+
+      // Parse meter readings
+      // V3 Column mapping:
+      // A(0)=room, B(1)=rooms_prev, C(2)=rooms_curr, D(3)=rent,
+      // F(5)=nest_prev, G(6)=nest_curr,
+      // L(11)=amazon_prev, M(12)=amazon_curr
+
+      const roomsPrev = parseFloat(row[1]) || 0;
+      const roomsCurr = parseFloat(row[2]) || 0;
+      const nestPrev = parseFloat(row[5]) || 0;
+      const nestCurr = parseFloat(row[6]) || 0;
+      const amazonPrev = parseFloat(row[11]) || 0;
+      const amazonCurr = parseFloat(row[12]) || 0;
+
+      // Store for all buildings
+      if (roomsRoomList.includes(roomNum)) {
+        allRooms.rooms[roomNum] = {
+          eNew: roomsCurr,  // Current (new) reading
+          eOld: roomsPrev,  // Previous (old) reading
+          wNew: nestCurr,   // Current Nest reading (stored as wNew for compat)
+          wOld: nestPrev    // Previous Nest reading (stored as wOld for compat)
+        };
+      }
+
+      if (nestRoomList.includes(roomNum)) {
+        allRooms.nest[roomNum] = {
+          eNew: roomsCurr,
+          eOld: roomsPrev,
+          wNew: nestCurr,
+          wOld: nestPrev
+        };
+      }
+
+      // Amazon meters (if room matches any pattern or has Amazon data)
+      allRooms.amazon[roomNum] = {
+        eNew: amazonCurr,
+        eOld: amazonPrev,
+        wNew: roomsCurr,   // Alternative: could map differently
+        wOld: roomsPrev
+      };
+    }
+
+    console.log(`📦 V3 Parse Results - Rooms: ${Object.keys(allRooms.rooms).length}, Nest: ${Object.keys(allRooms.nest).length}, Amazon: ${Object.keys(allRooms.amazon).length}`);
+
+    // Return multi-building structure for V3 format
+    return {
+      year,
+      month: selectedMonth || 1,
+      sheetName: selectedSheet,
+      rooms: allRooms.rooms,  // Primary return for compatibility
+      nest: allRooms.nest,
+      amazon: allRooms.amazon,
+      building: 'all',        // Indicates V3 multi-building format
+      isV3: true
+    };
+  }
+
+  // ===== FALLBACK: V1/V2 FORMAT PARSING =====
+  console.log('🔧 Parsing V1/V2 meter format (single building per file)');
+
   // Get room list based on building
   let roomList = [];
   if (building === 'rooms') {
@@ -4341,7 +4457,8 @@ function parseImportExcelData(workbook, building) {
     month: selectedMonth || 1,
     sheetName: selectedSheet,
     rooms,
-    building: building
+    building: building,
+    isV3: false
   };
 }
 
