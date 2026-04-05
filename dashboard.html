@@ -406,14 +406,6 @@
     }
   };
 
-  window.goToAccounting = function() {
-    const user = window.SecurityUtils.getSecureSession();
-    if (user && (user.userType === 'admin' || user.userType === 'accountant')) {
-      window.location.href = '/accounting';
-    } else {
-      alert('⛔ เฉพาะ Admin และบัญชีเท่านั้นที่สามารถเข้าถึงระบบบัญชี');
-    }
-  };
 
   /**
    * Navigate to Tax Filing Module
@@ -1818,10 +1810,6 @@
         </button>
       </div>
 
-      <!-- Accounting Module -->
-      <button class="sidebar-item" onclick="goToAccounting()">
-        <span class="sidebar-item-icon">💾</span>Accounting Module
-      </button>
     </div>
 
     <!-- TAX FILING & REPORTING -->
@@ -12418,32 +12406,6 @@ function renderOwnerInfoPage() {
       </div>
     </div>
 
-    <!-- Accounting Information Section -->
-    <div style="margin-top: 2rem; padding: 1rem; background: #f5f5f5; border-left: 4px solid #ff9800; border-radius: 4px;">
-      <h3 style="margin: 0 0 1rem 0; color: #ff9800;">📊 ข้อมูลการบัญชี</h3>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-        <div>
-          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">วันเริ่มดำเนินการ</label>
-          <input type="date" id="ownerOperationStartDate" value="${owner.operationStartDate || ''}" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-          <small style="color: #666;">วันที่เริ่มดำเนินการธุรกิจให้เช่า</small>
-        </div>
-        <div>
-          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ประเภทธุรกิจ</label>
-          <select id="ownerBusinessType" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-            <option value="residential_rental" ${owner.businessType === 'residential_rental' ? 'selected' : ''}>ให้เช่าที่อยู่อาศัย</option>
-            <option value="commercial_rental" ${owner.businessType === 'commercial_rental' ? 'selected' : ''}>ให้เช่าพื้นที่พาณิชย์</option>
-            <option value="mixed_rental" ${owner.businessType === 'mixed_rental' ? 'selected' : ''}>ให้เช่าผสมผสาน</option>
-            <option value="hotel_rental" ${owner.businessType === 'hotel_rental' ? 'selected' : ''}>ให้เช่าแบบโรงแรม</option>
-          </select>
-        </div>
-        <div>
-          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">หมวดหมู่ธุรกิจ (ตามสรรพากร)</label>
-          <input type="text" id="ownerBusinessCategory" value="${owner.businessCategory || ''}" placeholder="เช่น: 7010 (ให้เช่าอสังหาริมทรัพย์)" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-          <small style="color: #666;">รหัสหมวดหมู่ตามรหัส อบค. / นสค.</small>
-        </div>
-      </div>
-    </div>
 
     <div style="margin-top: 2rem; display: flex; gap: 1rem;">
       <button onclick="saveOwnerInfo()" style="padding: 0.8rem 2rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem;">
