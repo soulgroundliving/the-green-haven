@@ -4411,7 +4411,8 @@ function parseImportExcelData(workbook, building) {
       nest: allRooms.nest,
       amazon: allRooms.amazon,
       building: 'all',        // Indicates V3 multi-building format
-      isV3: true
+      isV3: true,
+      importType: 'meter'     // Store as meter_data in Firebase
     };
   }
 
@@ -4458,7 +4459,8 @@ function parseImportExcelData(workbook, building) {
     sheetName: selectedSheet,
     rooms,
     building: building,
-    isV3: false
+    isV3: false,
+    importType: 'billing'   // Store as billing_data in localStorage
   };
 }
 
@@ -4623,6 +4625,18 @@ async function approveImportData() {
     showImportStatus('❌ ไม่มีข้อมูลให้บันทึก', 'error');
     return;
   }
+
+  // ===== ROUTE TO CORRECT STORAGE BASED ON IMPORT TYPE =====
+  const importType = currentImportData.importType || (currentImportData.isV3 ? 'meter' : 'billing');
+
+  if (importType === 'billing') {
+    // Billing data goes to localStorage
+    console.log('📥 Routing to billing import (localStorage)');
+    return approveBillingImportDataFromMeter(currentImportData, currentImportMatchResults);
+  }
+
+  // Meter data goes to Firebase (default)
+  console.log('📊 Routing to meter import (Firebase)');
 
   // Check for duplicate month upload
   const key = `${currentImportData.year}_${currentImportData.month}`;
@@ -14732,6 +14746,100 @@ function displayBillingImportPreview(monthlyData, year) {
 
   previewDiv.innerHTML = html;
   document.getElementById('billingResultsSection').style.display = 'block';
+}
+
+// Handle billing import data that comes from meter import flow (V1/V2 billing format)
+function approveBillingImportDataFromMeter(importData, matchResults) {
+  console.log('💾 Processing billing data import to localStorage', { importData, matchResults });
+
+  try {
+    const year = importData.year;
+    const month = importData.month;
+    const roomsData = importData.rooms || {};
+
+    // Convert meter readings to billing amounts
+    // For V1/V2 billing format: eNew/eOld are electricity, wNew/wOld are water
+    // Create monthly breakdown
+    const monthlyData = [{
+      rent: 0,
+      electricity: 0,
+      water: 0,
+      trash: 0,
+      total: 0,
+      breakdown: {
+        rooms: { rent: 0, elec: 0, water: 0, trash: 0, total: 0 },
+        nest: { rent: 0, elec: 0, water: 0, trash: 0, total: 0 },
+        amazon: { rent: 0, elec: 0, water: 0, trash: 0, total: 0 }
+      }
+    }];
+
+    // Process room data based on building
+    const building = importData.building || 'rooms';
+    if (building === 'rooms' || building === 'all') {
+      // For Rooms building, eNew/eOld are electricity, wNew/wOld are water
+      for (let roomNum in roomsData) {
+        const room = roomsData[roomNum];
+        const elecUsage = Math.abs(room.eNew - room.eOld) || 0;
+        const waterUsage = Math.abs(room.wNew - room.wOld) || 0;
+
+        // Simple calculation: multiply usage by assumed rates (can be refined)
+        const elecCharge = elecUsage * 5; // ฿5 per unit
+        const waterCharge = waterUsage * 10; // ฿10 per unit
+        const trash = 50; // Fixed trash fee per room
+        const rent = 1500; // Default rent (can be retrieved from data if available)
+
+        const roomTotal = elecCharge + waterCharge + trash + rent;
+
+        // Add to Rooms building breakdown
+        monthlyData[0].breakdown.rooms.elec += elecCharge;
+        monthlyData[0].breakdown.rooms.water += waterCharge;
+        monthlyData[0].breakdown.rooms.trash += trash;
+        monthlyData[0].breakdown.rooms.rent += rent;
+        monthlyData[0].breakdown.rooms.total += roomTotal;
+      }
+    }
+
+    // Update totals
+    monthlyData[0].rent = monthlyData[0].breakdown.rooms.rent + monthlyData[0].breakdown.nest.rent + monthlyData[0].breakdown.amazon.rent;
+    monthlyData[0].electricity = monthlyData[0].breakdown.rooms.elec + monthlyData[0].breakdown.nest.elec + monthlyData[0].breakdown.amazon.elec;
+    monthlyData[0].water = monthlyData[0].breakdown.rooms.water + monthlyData[0].breakdown.nest.water + monthlyData[0].breakdown.amazon.water;
+    monthlyData[0].trash = monthlyData[0].breakdown.rooms.trash + monthlyData[0].breakdown.nest.trash + monthlyData[0].breakdown.amazon.trash;
+    monthlyData[0].total = monthlyData[0].rent + monthlyData[0].electricity + monthlyData[0].water + monthlyData[0].trash;
+
+    // Get or create HISTORICAL_DATA
+    let historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+
+    // Create months array for this year
+    const months = monthlyData.map(m => ({
+      total: [m.rent, m.electricity, m.water, m.trash, m.total],
+      rooms: [m.breakdown.rooms.rent, m.breakdown.rooms.elec, m.breakdown.rooms.water, m.breakdown.rooms.trash, m.breakdown.rooms.total],
+      nest: [m.breakdown.nest.rent, m.breakdown.nest.elec, m.breakdown.nest.water, m.breakdown.nest.trash, m.breakdown.nest.total],
+      amazon: [m.breakdown.amazon.rent, m.breakdown.amazon.elec, m.breakdown.amazon.water, m.breakdown.amazon.trash, m.breakdown.amazon.total]
+    }));
+
+    // Add/update year data
+    historicalData[year] = {
+      label: `ปี ${2500 + parseInt(year)} (${year})`,
+      months: months
+    };
+
+    // Save to localStorage
+    localStorage.setItem('HISTORICAL_DATA', JSON.stringify(historicalData));
+
+    showImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) สำเร็จ!`, 'success');
+
+    // Clean up and refresh
+    setTimeout(() => {
+      cancelImportProcess();
+      if (typeof initDashboardCharts === 'function') {
+        initDashboardCharts();
+      }
+    }, 1000);
+
+  } catch (error) {
+    showImportStatus(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
+    console.error('Error processing billing data:', error);
+  }
 }
 
 function approveBillingImportData() {
