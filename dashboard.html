@@ -14300,7 +14300,7 @@ function parseBillingExcelData(workbook) {
   const monthlyData = [];
 
   // Try to extract detailed data from each sheet (skip first sheet if it's template)
-  const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex.' ? 1 : 0;
+  const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex' ? 1 : 0;
 
   for (let idx = startIdx; idx < workbook.SheetNames.length; idx++) {
     const sheetName = workbook.SheetNames[idx];
