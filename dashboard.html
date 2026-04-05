@@ -14270,8 +14270,25 @@ function handleBillingImportFileProcess(file) {
       const year = yearInput;
       console.log(`📊 Parsing billing data for year: ${year}`);
 
-      // Parse billing data from all sheets
-      const monthlyData = parseBillingExcelData(workbook);
+      // Auto-select parser based on year
+      // V1: Year 68 (all), Year 69 (Jan-May)
+      // V2: Year 69 (Jun+), Year 70+
+      let monthlyData;
+      const isYear69 = parseInt(year) === 69;
+      const isNewerYear = parseInt(year) >= 70;
+
+      // Check first sheet to detect structure
+      const firstDataSheetIdx = workbook.SheetNames[0].toLowerCase() === 'ex' ? 1 : 0;
+      const firstDataSheet = workbook.SheetNames[firstDataSheetIdx];
+      const hasD43Data = workbook.Sheets[firstDataSheet]?.['D43']?.v !== undefined;
+
+      if (hasD43Data || isNewerYear) {
+        console.log('📌 Using V2 parser (with Nest building)');
+        monthlyData = parseBillingExcelDataV2(workbook);
+      } else {
+        console.log('📌 Using V1 parser (Rooms + Amazon only)');
+        monthlyData = parseBillingExcelData(workbook);
+      }
 
       if (!monthlyData || monthlyData.length === 0) {
         showBillingImportStatus('❌ ไม่พบข้อมูลบิล H32 ในไฟล์', 'error');
@@ -14333,6 +14350,67 @@ function parseBillingExcelData(workbook) {
         water: totalWater,
         trash: totalTrash,
         total: total
+      });
+    }
+  }
+
+  return monthlyData;
+}
+
+// V2: For June 69 onwards (with Nest building + rooms rows)
+function parseBillingExcelDataV2(workbook) {
+  const monthlyData = [];
+
+  // Skip first sheet if template (EX)
+  const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex' ? 1 : 0;
+
+  for (let idx = startIdx; idx < workbook.SheetNames.length; idx++) {
+    const sheetName = workbook.SheetNames[idx];
+    const worksheet = workbook.Sheets[sheetName];
+
+    // V2 Cell mapping for June onwards:
+    // D43 = Nest rent, J43 = Nest elec, P43 = Nest water
+    // D45 = Amazon rent, J45 = Amazon elec, P45 = Amazon water
+    // S48 = Trash total
+
+    const nestRent = parseFloat(worksheet['D43']?.v || 0) || 0;    // Nest rent
+    const nestElec = parseFloat(worksheet['J43']?.v || 0) || 0;    // Nest electricity
+    const nestWater = parseFloat(worksheet['P43']?.v || 0) || 0;   // Nest water
+
+    const amazonRent = parseFloat(worksheet['D45']?.v || 0) || 0;  // Amazon rent
+    const amazonElec = parseFloat(worksheet['J45']?.v || 0) || 0;  // Amazon electricity
+    const amazonWater = parseFloat(worksheet['P45']?.v || 0) || 0; // Amazon water
+
+    // Rooms: Sum D24:D26 (or detect from A24:A42 rows with N10x pattern)
+    let roomsRent = 0, roomsElec = 0, roomsWater = 0;
+    for (let row = 24; row <= 42; row++) {
+      const d = worksheet[`D${row}`]?.v;
+      const j = worksheet[`J${row}`]?.v;
+      const p = worksheet[`P${row}`]?.v;
+      if (d !== undefined) roomsRent += parseFloat(d) || 0;
+      if (j !== undefined) roomsElec += parseFloat(j) || 0;
+      if (p !== undefined) roomsWater += parseFloat(p) || 0;
+    }
+
+    // Trash total from S48
+    const totalTrash = parseFloat(worksheet['S48']?.v || 0) || 0;
+
+    // Calculate totals
+    const totalRent = roomsRent + nestRent + amazonRent;
+    const totalElec = roomsElec + nestElec + amazonElec;
+    const totalWater = roomsWater + nestWater + amazonWater;
+    const total = totalRent + totalElec + totalWater + totalTrash;
+
+    if (total > 0) {
+      monthlyData.push({
+        month: idx - startIdx + 1,
+        sheetName: sheetName,
+        rent: totalRent,
+        electricity: totalElec,
+        water: totalWater,
+        trash: totalTrash,
+        total: total,
+        breakdown: { rooms: roomsRent, nest: nestRent, amazon: amazonRent } // For debug
       });
     }
   }
