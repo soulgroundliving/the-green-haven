@@ -4473,7 +4473,7 @@ function displayMatchSummary(matchResults) {
     html += '<div style="font-size:0.85rem;">';
     mismatches.forEach(m => {
       const icon = m.status === 'error' ? '❌' : '⚠️';
-      html += `<div style="padding:0.5rem;color:#666;">
+      html += `<div style="padding:0.25rem;color:#666;">
         ${icon} ห้อง <strong>${escapeHtml(m.room)}</strong> (${escapeHtml(m.fieldLabel)}):
         นำเข้า ${escapeHtml(m.imported)} / ระบบ ${escapeHtml(m.expected)} (ต่างกัน ${escapeHtml(m.delta)})
       </div>`;
@@ -4484,18 +4484,18 @@ function displayMatchSummary(matchResults) {
   // Status message
   if (canProceed) {
     if (errorCount === 0) {
-      html += '<div style="color:#4caf50;font-weight:600;padding:0.5rem;">✅ ข้อมูลสามารถบันทึกได้</div>';
+      html += '<div style="color:#4caf50;font-weight:600;padding:0.25rem;">✅ ข้อมูลสามารถบันทึกได้</div>';
       approveBtn.disabled = false;
       approveBtn.style.opacity = '1';
       approveBtn.style.cursor = 'pointer';
     } else {
-      html += '<div style="color:#ff9800;font-weight:600;padding:0.5rem;">⚠️ มีข้อมูลที่ต่างกัน ตรวจสอบอีกครั้ง</div>';
+      html += '<div style="color:#ff9800;font-weight:600;padding:0.25rem;">⚠️ มีข้อมูลที่ต่างกัน ตรวจสอบอีกครั้ง</div>';
       approveBtn.disabled = true;
       approveBtn.style.opacity = '0.5';
       approveBtn.style.cursor = 'not-allowed';
     }
   } else {
-    html += '<div style="color:#f44336;font-weight:600;padding:0.5rem;">❌ มีข้อผิดพลาดในข้อมูล ไม่สามารถบันทึกได้</div>';
+    html += '<div style="color:#f44336;font-weight:600;padding:0.25rem;">❌ มีข้อผิดพลาดในข้อมูล ไม่สามารถบันทึกได้</div>';
     approveBtn.disabled = true;
     approveBtn.style.opacity = '0.5';
     approveBtn.style.cursor = 'not-allowed';
@@ -4987,11 +4987,11 @@ function renderNestMeterGrid() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
           <div>
             <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ล่าสุด</small>
-            <input type="number" id="meter-nest-${room}-electric-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <input type="number" id="meter-nest-${room}-electric-new" placeholder="0" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
           <div>
             <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เดิม</small>
-            <input type="number" id="meter-nest-${room}-electric-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <input type="number" id="meter-nest-${room}-electric-old" placeholder="0" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-nest-${room}-electric">0</span> หน่วย = <span id="calc-nest-${room}-electric" style="color:var(--green);font-weight:600;">฿0</span></div>
@@ -5003,11 +5003,11 @@ function renderNestMeterGrid() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
           <div>
             <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ล่าสุด</small>
-            <input type="number" id="meter-nest-${room}-water-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <input type="number" id="meter-nest-${room}-water-new" placeholder="0" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
           <div>
             <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เดิม</small>
-            <input type="number" id="meter-nest-${room}-water-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <input type="number" id="meter-nest-${room}-water-old" placeholder="0" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-nest-${room}-water">0</span> หน่วย = <span id="calc-nest-${room}-water" style="color:var(--green);font-weight:600;">฿0</span></div>
@@ -5318,11 +5318,11 @@ function renderRoomsMeterGrid() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
           <div>
             <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ล่าสุด</small>
-            <input type="number" id="meter-rooms-${room}-electric-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <input type="number" id="meter-rooms-${room}-electric-new" placeholder="0" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
           <div>
             <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เดิม</small>
-            <input type="number" id="meter-rooms-${room}-electric-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <input type="number" id="meter-rooms-${room}-electric-old" placeholder="0" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-rooms-${room}-electric">0</span> หน่วย = <span id="calc-rooms-${room}-electric" style="color:var(--green);font-weight:600;">฿0</span></div>
@@ -5334,11 +5334,11 @@ function renderRoomsMeterGrid() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.3rem;">
           <div> 
             <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">ล่าสุด</small>
-            <input type="number" id="meter-rooms-${room}-water-new" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <input type="number" id="meter-rooms-${room}-water-new" placeholder="0" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
           <div>
             <small style="color:var(--text-muted);display:block;margin-bottom:0.2rem;">เดิม</small>
-            <input type="number" id="meter-rooms-${room}-water-old" placeholder="0" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+            <input type="number" id="meter-rooms-${room}-water-old" placeholder="0" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
           </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;">ผลต่าง: <span id="diff-rooms-${room}-water">0</span> หน่วย = <span id="calc-rooms-${room}-water" style="color:var(--green);font-weight:600;">฿0</span></div>
@@ -5599,22 +5599,22 @@ function loadRoomConfigUI() {
       <tr style="border-bottom:1px solid var(--border);">
         <td style="border:1px solid var(--border);padding:0.8rem;color:var(--text);">${room.id}</td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
-          <input type="text" value="${room.name}" onchange="updateRoomField('${building}', '${room.id}', 'name', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="text" value="${room.name}" onchange="updateRoomField('${building}', '${room.id}', 'name', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
-          <input type="number" value="${rent}" onchange="updateRentAndDeposit('${building}', '${room.id}', parseInt(this.value), '${depositId}')" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="number" value="${rent}" onchange="updateRentAndDeposit('${building}', '${room.id}', parseInt(this.value), '${depositId}')" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
-          <input type="number" id="${depositId}" value="${rent * 2}" readonly style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;background:#f5f5f5;color:#666;">
+          <input type="number" id="${depositId}" value="${rent * 2}" readonly style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;background:#f5f5f5;color:#666;">
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
-          <input type="number" value="${room.waterRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'water', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="number" value="${room.waterRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'water', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
-          <input type="number" value="${room.electricRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'electric', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="number" value="${room.electricRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'electric', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
-          <input type="number" value="${room.trashRate || 20}" step="1" onchange="updateTrashRate('${building}', '${room.id}', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="number" value="${room.trashRate || 20}" step="1" onchange="updateTrashRate('${building}', '${room.id}', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;text-align:center;">
           <button onclick="deleteRoom('${building}', '${room.id}')" style="padding:0.4rem 0.8rem;background:#f44336;color:white;border:none;border-radius:4px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:0.85rem;">ลบ</button>
@@ -14587,35 +14587,35 @@ function displayBillingImportPreview(monthlyData, year) {
   const monthNames = ['มค', 'กพ', 'มีค', 'เมษา', 'พค', 'มิย', 'กค', 'สค', 'กย', 'ตค', 'พย', 'ธค'];
 
   let html = `<strong>ข้อมูลบิลปี ${year} (Rooms + Nest + Amazon + Utilities + Trash):</strong><br>`;
-  html += `<div style="overflow-x:auto;margin-top:0.5rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);min-width:1500px;">`;
-  html += `<table style="width:100%;border-collapse:collapse;font-size:1.1rem;table-layout:fixed;">`;
+  html += `<div style="overflow-x:auto;margin-top:0.5rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">`;
+  html += `<table style="width:100%;border-collapse:collapse;font-size:0.85rem;table-layout:fixed;">`;
   html += `<colgroup><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"></colgroup>`;
   html += `<tr style="border-bottom:2px solid #ccc;background:#f0f0f0;">
-    <th style="padding:0.5rem;"></th>
-    <th colspan="5" style="padding:0.5rem;text-align:center;background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms</th>
-    <th colspan="5" style="padding:0.5rem;text-align:center;background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest</th>
-    <th colspan="5" style="padding:0.5rem;text-align:center;background:#fff9c4;color:#f57f17;font-weight:700;">📦 Amazon</th>
-    <th colspan="2" style="padding:0.5rem;text-align:center;background:#f0f0f0;">รวม</th>
+    <th style="padding:0.25rem;"></th>
+    <th colspan="5" style="padding:0.25rem;text-align:center;background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms</th>
+    <th colspan="5" style="padding:0.25rem;text-align:center;background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest</th>
+    <th colspan="5" style="padding:0.25rem;text-align:center;background:#fff9c4;color:#f57f17;font-weight:700;">📦 Amazon</th>
+    <th colspan="2" style="padding:0.25rem;text-align:center;background:#f0f0f0;">รวม</th>
   </tr>
-  <tr style="border-bottom:1px solid #ccc;background:#f0f0f0;font-size:1rem;">
-    <th style="padding:0.4rem;text-align:left;background:#f0f0f0;">เดือน</th>
-    <th style="padding:0.4rem;text-align:right;background:#e8f5e9;">เช่า</th>
-    <th style="padding:0.4rem;text-align:right;background:#e8f5e9;">ไฟ</th>
-    <th style="padding:0.4rem;text-align:right;background:#e8f5e9;">น้ำ</th>
-    <th style="padding:0.4rem;text-align:right;background:#e8f5e9;">ขยะ</th>
-    <th style="padding:0.4rem;text-align:right;background:#e8f5e9;font-weight:600;">รวม</th>
-    <th style="padding:0.4rem;text-align:right;background:#f3e5f5;">เช่า</th>
-    <th style="padding:0.4rem;text-align:right;background:#f3e5f5;">ไฟ</th>
-    <th style="padding:0.4rem;text-align:right;background:#f3e5f5;">น้ำ</th>
-    <th style="padding:0.4rem;text-align:right;background:#f3e5f5;">ขยะ</th>
-    <th style="padding:0.4rem;text-align:right;background:#f3e5f5;font-weight:600;">รวม</th>
-    <th style="padding:0.4rem;text-align:right;background:#fff9c4;">เช่า</th>
-    <th style="padding:0.4rem;text-align:right;background:#fff9c4;">ไฟ</th>
-    <th style="padding:0.4rem;text-align:right;background:#fff9c4;">น้ำ</th>
-    <th style="padding:0.4rem;text-align:right;background:#fff9c4;">ขยะ</th>
-    <th style="padding:0.4rem;text-align:right;background:#fff9c4;font-weight:600;">รวม</th>
-    <th style="padding:0.4rem;text-align:right;background:#f0f0f0;">เช่า</th>
-    <th style="padding:0.4rem;text-align:right;background:#f0f0f0;">รวม</th>
+  <tr style="border-bottom:1px solid #ccc;background:#f0f0f0;font-size:0.8rem;">
+    <th style="padding:0.2rem;text-align:left;background:#f0f0f0;">เดือน</th>
+    <th style="padding:0.2rem;text-align:right;background:#e8f5e9;">เช่า</th>
+    <th style="padding:0.2rem;text-align:right;background:#e8f5e9;">ไฟ</th>
+    <th style="padding:0.2rem;text-align:right;background:#e8f5e9;">น้ำ</th>
+    <th style="padding:0.2rem;text-align:right;background:#e8f5e9;">ขยะ</th>
+    <th style="padding:0.2rem;text-align:right;background:#e8f5e9;font-weight:600;">รวม</th>
+    <th style="padding:0.2rem;text-align:right;background:#f3e5f5;">เช่า</th>
+    <th style="padding:0.2rem;text-align:right;background:#f3e5f5;">ไฟ</th>
+    <th style="padding:0.2rem;text-align:right;background:#f3e5f5;">น้ำ</th>
+    <th style="padding:0.2rem;text-align:right;background:#f3e5f5;">ขยะ</th>
+    <th style="padding:0.2rem;text-align:right;background:#f3e5f5;font-weight:600;">รวม</th>
+    <th style="padding:0.2rem;text-align:right;background:#fff9c4;">เช่า</th>
+    <th style="padding:0.2rem;text-align:right;background:#fff9c4;">ไฟ</th>
+    <th style="padding:0.2rem;text-align:right;background:#fff9c4;">น้ำ</th>
+    <th style="padding:0.2rem;text-align:right;background:#fff9c4;">ขยะ</th>
+    <th style="padding:0.2rem;text-align:right;background:#fff9c4;font-weight:600;">รวม</th>
+    <th style="padding:0.2rem;text-align:right;background:#f0f0f0;">เช่า</th>
+    <th style="padding:0.2rem;text-align:right;background:#f0f0f0;">รวม</th>
   </tr>`;
 
   let roomsRentSum = 0, roomsElecSum = 0, roomsWaterSum = 0, roomsTrashSum = 0, roomsTotal = 0;
@@ -14631,24 +14631,24 @@ function displayBillingImportPreview(monthlyData, year) {
 
     const monthName = monthNames[m.month - 1] || `เดือน${m.month}`;
     html += `<tr style="border-bottom:1px solid #eee;">`;
-    html += `<td style="padding:0.4rem;background:#f9f9f9;">${monthName}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#e8f5e9;">฿${(rooms.rent||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#e8f5e9;">฿${(rooms.elec||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#e8f5e9;">฿${(rooms.water||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#e8f5e9;">฿${(rooms.trash||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#e8f5e9;font-weight:600;">฿${(rooms.total||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#f3e5f5;">฿${(nest.rent||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#f3e5f5;">฿${(nest.elec||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#f3e5f5;">฿${(nest.water||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#f3e5f5;">฿${(nest.trash||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#f3e5f5;font-weight:600;">฿${(nest.total||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#fff9c4;">฿${(amazon.rent||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#fff9c4;">฿${(amazon.elec||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#fff9c4;">฿${(amazon.water||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#fff9c4;">฿${(amazon.trash||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#fff9c4;font-weight:600;">฿${(amazon.total||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#f9f9f9;">฿${m.rent.toLocaleString()}</td>`;
-    html += `<td style="padding:0.4rem;text-align:right;background:#f9f9f9;font-weight:bold;">฿${m.total.toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;background:#f9f9f9;">${monthName}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#e8f5e9;">฿${(rooms.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#e8f5e9;">฿${(rooms.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#e8f5e9;">฿${(rooms.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#e8f5e9;">฿${(rooms.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#e8f5e9;font-weight:600;">฿${(rooms.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#f3e5f5;">฿${(nest.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#f3e5f5;">฿${(nest.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#f3e5f5;">฿${(nest.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#f3e5f5;">฿${(nest.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#f3e5f5;font-weight:600;">฿${(nest.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#fff9c4;">฿${(amazon.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#fff9c4;">฿${(amazon.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#fff9c4;">฿${(amazon.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#fff9c4;">฿${(amazon.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#fff9c4;font-weight:600;">฿${(amazon.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#f9f9f9;">฿${m.rent.toLocaleString()}</td>`;
+    html += `<td style="padding:0.2rem;text-align:right;background:#f9f9f9;font-weight:bold;">฿${m.total.toLocaleString()}</td>`;
     html += `</tr>`;
 
     roomsRentSum += rooms.rent||0;
@@ -14670,24 +14670,24 @@ function displayBillingImportPreview(monthlyData, year) {
   });
 
   html += `<tr style="border-top:2px solid #333;font-weight:bold;background:#f0f0f0;font-size:0.7rem;">`;
-  html += `<td style="padding:0.5rem;background:#f0f0f0;">รวมทั้งปี</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#e8f5e9;">฿${roomsRentSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#e8f5e9;">฿${roomsElecSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#e8f5e9;">฿${roomsWaterSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#e8f5e9;">฿${roomsTrashSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#e8f5e9;font-weight:600;">฿${roomsTotal.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#f3e5f5;">฿${nestRentSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#f3e5f5;">฿${nestElecSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#f3e5f5;">฿${nestWaterSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#f3e5f5;">฿${nestTrashSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#f3e5f5;font-weight:600;">฿${nestTotal.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#fff9c4;">฿${amazonRentSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#fff9c4;">฿${amazonElecSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#fff9c4;">฿${amazonWaterSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#fff9c4;">฿${amazonTrashSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#fff9c4;font-weight:600;">฿${amazonTotal.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#f0f0f0;color:#f57f17;font-weight:600;">฿${amazonRentSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.5rem;text-align:right;background:#f0f0f0;color:#1b5e20;font-weight:bold;">฿${yearlyTotal.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;background:#f0f0f0;">รวมทั้งปี</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#e8f5e9;">฿${roomsRentSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#e8f5e9;">฿${roomsElecSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#e8f5e9;">฿${roomsWaterSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#e8f5e9;">฿${roomsTrashSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#e8f5e9;font-weight:600;">฿${roomsTotal.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#f3e5f5;">฿${nestRentSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#f3e5f5;">฿${nestElecSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#f3e5f5;">฿${nestWaterSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#f3e5f5;">฿${nestTrashSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#f3e5f5;font-weight:600;">฿${nestTotal.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#fff9c4;">฿${amazonRentSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#fff9c4;">฿${amazonElecSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#fff9c4;">฿${amazonWaterSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#fff9c4;">฿${amazonTrashSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#fff9c4;font-weight:600;">฿${amazonTotal.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#f0f0f0;color:#f57f17;font-weight:600;">฿${amazonRentSum.toLocaleString()}</td>`;
+  html += `<td style="padding:0.25rem;text-align:right;background:#f0f0f0;color:#1b5e20;font-weight:bold;">฿${yearlyTotal.toLocaleString()}</td>`;
   html += `</tr>`;
   html += `</table>`;
   html += `</div>`;
@@ -14848,17 +14848,17 @@ function displayHistoricalDataForYear(year) {
       <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวมทั้งหมด</th>
     </tr>
     <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
-      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">เช่า</th>
-      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ไฟ</th>
-      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">น้ำ</th>
-      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ขยะ</th>
-      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">รวม</th>
-      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">เช่า</th>
-      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ไฟ</th>
-      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">น้ำ</th>
-      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ขยะ</th>
-      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">รวม</th>
-      <th style="padding:0.4rem;text-align:right;font-size:0.8rem;color:var(--green);font-weight:700;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;font-size:0.8rem;color:var(--green);font-weight:700;">รวม</th>
     </tr>
   </thead>`;
   html += `<tbody>`;
