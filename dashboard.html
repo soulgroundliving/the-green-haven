@@ -3000,8 +3000,16 @@
       <div style="margin-top:2rem;">
         <div class="section-title">📊 ข้อมูลที่บันทึก (HISTORICAL_DATA)</div>
         <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;">
+          <!-- Year Selector -->
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">📅 เลือกปี:</label>
+            <select id="historicalDataYearSelect" style="width:100%;padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.95rem;background:white;cursor:pointer;">
+              <option value="">-- เลือกปี --</option>
+            </select>
+          </div>
+          <!-- Data Display -->
           <div id="historicalDataDisplay" style="overflow-x:auto;">
-            <p style="color:var(--text-muted);text-align:center;padding:2rem;">กำลังโหลดข้อมูล...</p>
+            <p style="color:var(--text-muted);text-align:center;padding:2rem;">โปรดเลือกปีที่ต้องการดู</p>
           </div>
         </div>
       </div>
@@ -14599,8 +14607,8 @@ function approveBillingImportData() {
       showBillingImportStatus(`✅ Dashboard อัพเดทข้อมูลสำเร็จ`, 'success');
     }
     // Refresh the HISTORICAL_DATA display
-    if (typeof displayHistoricalData === 'function') {
-      displayHistoricalData();
+    if (typeof initHistoricalDataDisplay === 'function') {
+      initHistoricalDataDisplay();
     }
   }, 1000);
 }
@@ -14630,98 +14638,142 @@ function showBillingImportStatus(message, type) {
   statusDiv.innerHTML = `<div style="padding:0.8rem;background:${bgColor};border:1px solid ${borderColor};border-radius:var(--radius-sm);color:var(--text);">${message}</div>`;
 }
 
-// Display HISTORICAL_DATA in a readable format
-function displayHistoricalData() {
+// Initialize HISTORICAL_DATA dropdown and display
+function initHistoricalDataDisplay() {
   const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+  const yearSelect = document.getElementById('historicalDataYearSelect');
   const displayDiv = document.getElementById('historicalDataDisplay');
+
+  if (!yearSelect) return;
 
   if (Object.keys(historicalData).length === 0) {
     displayDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">ยังไม่มีข้อมูลบิล - โปรดอัพโหลดไฟล์บิล Excel</p>';
+    yearSelect.disabled = true;
     return;
   }
 
-  let html = '<div style="font-family:\'Sarabun\',sans-serif;font-size:0.9rem;">';
+  yearSelect.disabled = false;
 
-  // Sort years in descending order
+  // Populate dropdown with available years (sorted descending)
   const years = Object.keys(historicalData).sort((a, b) => parseInt(b) - parseInt(a));
 
+  // Clear existing options (except the placeholder)
+  while (yearSelect.options.length > 1) {
+    yearSelect.remove(1);
+  }
+
+  // Add year options
   years.forEach(year => {
     const yearData = historicalData[year];
     const yearLabel = yearData.label || `ปี ${parseInt(year) + 543} (${year})`;
-    const months = yearData.months || [];
-
-    html += `<div style="margin-bottom:2rem;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;">`;
-    html += `<div style="background:var(--green);color:white;padding:1rem;font-weight:600;">${yearLabel}</div>`;
-    html += `<table style="width:100%;border-collapse:collapse;">`;
-    html += `<thead><tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
-              <th style="padding:0.8rem;text-align:left;border-right:1px solid var(--border);">เดือน</th>
-              <th style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">ค่าเช่า (บาท)</th>
-              <th style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">ค่าไฟ (บาท)</th>
-              <th style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">ค่าน้ำ (บาท)</th>
-              <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวม (บาท)</th>
-            </tr></thead>`;
-    html += `<tbody>`;
-
-    let totalRent = 0, totalElec = 0, totalWater = 0, totalAll = 0;
-
-    months.forEach((month, idx) => {
-      if (!month) {
-        html += `<tr style="border-bottom:1px solid var(--border);">
-                  <td style="padding:0.8rem;color:var(--text-muted);border-right:1px solid var(--border);">เดือน ${idx + 1}</td>
-                  <td colspan="4" style="padding:0.8rem;text-align:center;color:var(--text-muted);font-style:italic;">ไม่มีข้อมูล</td>
-                </tr>`;
-        return;
-      }
-
-      const [rent, elec, water, total] = month;
-      totalRent += rent || 0;
-      totalElec += elec || 0;
-      totalWater += water || 0;
-      totalAll += total || 0;
-
-      const monthNames = ['มค.', 'กพ.', 'มีค.', 'เมย.', 'พค.', 'มิย.', 'กค.', 'สค.', 'กย.', 'ตค.', 'พย.', 'ธค.'];
-      const monthName = monthNames[idx] || `เดือน ${idx + 1}`;
-
-      html += `<tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.8rem;border-right:1px solid var(--border);">${monthName}</td>
-                <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${(rent || 0).toLocaleString()}</td>
-                <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${(elec || 0).toLocaleString()}</td>
-                <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${(water || 0).toLocaleString()}</td>
-                <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:600;">฿${(total || 0).toLocaleString()}</td>
-              </tr>`;
-    });
-
-    html += `<tr style="background:var(--green-pale);font-weight:700;border-bottom:2px solid var(--green);">
-              <td style="padding:0.8rem;border-right:1px solid var(--border);">รวมทั้งสิ้น</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalRent.toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalElec.toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalWater.toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;color:var(--green);">฿${totalAll.toLocaleString()}</td>
-            </tr>`;
-
-    html += `</tbody></table></div>`;
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = yearLabel;
+    yearSelect.appendChild(option);
   });
 
+  // Select first year by default
+  if (years.length > 0) {
+    yearSelect.value = years[0];
+    displayHistoricalDataForYear(years[0]);
+  }
+
+  // Add change event listener
+  yearSelect.addEventListener('change', function() {
+    if (this.value) {
+      displayHistoricalDataForYear(this.value);
+    } else {
+      displayDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">โปรดเลือกปีที่ต้องการดู</p>';
+    }
+  });
+}
+
+// Display data for a specific year
+function displayHistoricalDataForYear(year) {
+  const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+  const displayDiv = document.getElementById('historicalDataDisplay');
+
+  if (!historicalData[year]) {
+    displayDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">ไม่พบข้อมูลสำหรับปีนี้</p>';
+    return;
+  }
+
+  const yearData = historicalData[year];
+  const yearLabel = yearData.label || `ปี ${parseInt(year) + 543} (${year})`;
+  const months = yearData.months || [];
+
+  let html = '<div style="font-family:\'Sarabun\',sans-serif;font-size:0.9rem;">';
+  html += `<table style="width:100%;border-collapse:collapse;">`;
+  html += `<thead><tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
+            <th style="padding:0.8rem;text-align:left;border-right:1px solid var(--border);">เดือน</th>
+            <th style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">ค่าเช่า (บาท)</th>
+            <th style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">ค่าไฟ (บาท)</th>
+            <th style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">ค่าน้ำ (บาท)</th>
+            <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวม (บาท)</th>
+          </tr></thead>`;
+  html += `<tbody>`;
+
+  let totalRent = 0, totalElec = 0, totalWater = 0, totalAll = 0;
+
+  months.forEach((month, idx) => {
+    if (!month) {
+      html += `<tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:0.8rem;color:var(--text-muted);border-right:1px solid var(--border);">เดือน ${idx + 1}</td>
+                <td colspan="4" style="padding:0.8rem;text-align:center;color:var(--text-muted);font-style:italic;">ไม่มีข้อมูล</td>
+              </tr>`;
+      return;
+    }
+
+    const [rent, elec, water, total] = month;
+    totalRent += rent || 0;
+    totalElec += elec || 0;
+    totalWater += water || 0;
+    totalAll += total || 0;
+
+    const monthNames = ['มค.', 'กพ.', 'มีค.', 'เมย.', 'พค.', 'มิย.', 'กค.', 'สค.', 'กย.', 'ตค.', 'พย.', 'ธค.'];
+    const monthName = monthNames[idx] || `เดือน ${idx + 1}`;
+
+    html += `<tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:0.8rem;border-right:1px solid var(--border);">${monthName}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${(rent || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${(elec || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${(water || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:600;">฿${(total || 0).toLocaleString()}</td>
+            </tr>`;
+  });
+
+  html += `<tr style="background:var(--green-pale);font-weight:700;border-bottom:2px solid var(--green);">
+            <td style="padding:0.8rem;border-right:1px solid var(--border);">รวมทั้งสิ้น</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalRent.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalElec.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalWater.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;color:var(--green);">฿${totalAll.toLocaleString()}</td>
+          </tr>`;
+
+  html += `</tbody></table>`;
   html += '</div>';
   displayDiv.innerHTML = html;
 }
 
-// Initialize display on page load
+// Initialize display on page load and when switching tabs
 document.addEventListener('DOMContentLoaded', function() {
-  // Display HISTORICAL_DATA when switching to billing import tab
-  const switchTab = window.switchMeterTab;
-  window.switchMeterTab = function(tab, btn) {
-    switchTab.call(window, tab, btn);
-    if (tab === 'import-billing') {
-      setTimeout(displayHistoricalData, 100);
-    }
-  };
-
-  // Also display on initial load if on the import-billing tab
-  if (document.getElementById('meter-import-billing-content').style.display !== 'none') {
-    displayHistoricalData();
+  // Initialize when page loads if on billing import tab
+  const billingContent = document.getElementById('meter-import-billing-content');
+  if (billingContent && billingContent.style.display !== 'none') {
+    setTimeout(initHistoricalDataDisplay, 100);
   }
 });
+
+// Hook into tab switching to refresh display
+if (window.switchMeterTab) {
+  const originalSwitchTab = window.switchMeterTab;
+  window.switchMeterTab = function(tab, btn) {
+    originalSwitchTab.call(window, tab, btn);
+    if (tab === 'import-billing') {
+      setTimeout(initHistoricalDataDisplay, 100);
+    }
+  };
+}
 
 </script>
 </body>
