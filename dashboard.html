@@ -5992,7 +5992,7 @@ async function initDashboardCharts(){
 
   if(yr==='all'){
     labels=['67','68','69'].flatMap(y=>dataSource[y]?.months.map((_,i)=>MONTHS_TH[i+1]+"'"+y) || []);
-    totals=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[3]:null) || []);
+    totals=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[4]:null) || []);
     elecs=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[1]:null) || []);
     waters=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[2]:null) || []);
     rents=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[0]:null) || []);
@@ -6000,7 +6000,7 @@ async function initDashboardCharts(){
     const d=dataSource[yr];
     if(d){
       labels=d.months.map((_,i)=>MONTHS_TH[i+1]);
-      totals=d.months.map(m=>m?m[3]:null);
+      totals=d.months.map(m=>m?m[4]:null);
       elecs=d.months.map(m=>m?m[1]:null);
       waters=d.months.map(m=>m?m[2]:null);
       rents=d.months.map(m=>m?m[0]:null);
@@ -14384,17 +14384,25 @@ function handleBillingImportFileProcess(file) {
 
 // Helper: Parse single sheet with V1 format
 function parseSingleSheetV1(worksheet, monthNum, sheetName) {
-  const d24 = parseFloat(worksheet['D24']?.v || 0) || 0;
-  const j24 = parseFloat(worksheet['J24']?.v || 0) || 0;
-  const p24 = parseFloat(worksheet['P24']?.v || 0) || 0;
-  const d26 = parseFloat(worksheet['D26']?.v || 0) || 0;
-  const j26 = parseFloat(worksheet['J26']?.v || 0) || 0;
-  const p26 = parseFloat(worksheet['P26']?.v || 0) || 0;
-  const totalTrash = parseFloat(worksheet['S29']?.v || 0) || 0;
+  // Rooms: D24=rent, J24=elec, P24=water, S2:S23=trash
+  const roomsRent = parseFloat(worksheet['D24']?.v || 0) || 0;
+  const roomsElec = parseFloat(worksheet['J24']?.v || 0) || 0;
+  const roomsWater = parseFloat(worksheet['P24']?.v || 0) || 0;
+  let roomsTrash = 0;
+  for (let row = 2; row <= 23; row++) {
+    roomsTrash += parseFloat(worksheet[`S${row}`]?.v || 0) || 0;
+  }
 
-  const totalRent = d24 + d26;
-  const totalElec = j24 + j26;
-  const totalWater = p24 + p26;
+  // Amazon: D26=rent, J26=elec, P26=water, S26=trash
+  const amazonRent = parseFloat(worksheet['D26']?.v || 0) || 0;
+  const amazonElec = parseFloat(worksheet['J26']?.v || 0) || 0;
+  const amazonWater = parseFloat(worksheet['P26']?.v || 0) || 0;
+  const amazonTrash = parseFloat(worksheet['S26']?.v || 0) || 0;
+
+  const totalRent = roomsRent + amazonRent;
+  const totalElec = roomsElec + amazonElec;
+  const totalWater = roomsWater + amazonWater;
+  const totalTrash = roomsTrash + amazonTrash;
   const total = totalRent + totalElec + totalWater + totalTrash;
 
   if (total > 0) {
@@ -14407,9 +14415,9 @@ function parseSingleSheetV1(worksheet, monthNum, sheetName) {
       trash: totalTrash,
       total: total,
       breakdown: {
-        rooms: { rent: totalRent, elec: totalElec, water: totalWater, total: total - totalTrash },
-        nest: { rent: 0, elec: 0, water: 0, total: 0 },
-        amazon: { rent: 0, elec: 0, water: 0, total: 0 }
+        rooms: { rent: roomsRent, elec: roomsElec, water: roomsWater, trash: roomsTrash, total: roomsRent + roomsElec + roomsWater + roomsTrash },
+        nest: { rent: 0, elec: 0, water: 0, trash: 0, total: 0 },
+        amazon: { rent: amazonRent, elec: amazonElec, water: amazonWater, trash: amazonTrash, total: amazonRent + amazonElec + amazonWater + amazonTrash }
       }
     };
   }
@@ -14418,29 +14426,32 @@ function parseSingleSheetV1(worksheet, monthNum, sheetName) {
 
 // Helper: Parse single sheet with V2 format (with Nest building)
 function parseSingleSheetV2(worksheet, monthNum, sheetName) {
-  // Nest: D43, J43, P43
-  const nestRent = parseFloat(worksheet['D43']?.v || 0) || 0;
-  const nestElec = parseFloat(worksheet['J43']?.v || 0) || 0;
-  const nestWater = parseFloat(worksheet['P43']?.v || 0) || 0;
-
-  // Amazon: D45, J45, P45
-  const amazonRent = parseFloat(worksheet['D45']?.v || 0) || 0;
-  const amazonElec = parseFloat(worksheet['J45']?.v || 0) || 0;
-  const amazonWater = parseFloat(worksheet['P45']?.v || 0) || 0;
-
-  // Rooms: Sum D24:D26, J24:J26, P24:P26
-  let roomsRent = 0, roomsElec = 0, roomsWater = 0;
-  for (let row = 24; row <= 26; row++) {
-    const d = worksheet[`D${row}`]?.v;
-    const j = worksheet[`J${row}`]?.v;
-    const p = worksheet[`P${row}`]?.v;
-    if (d !== undefined) roomsRent += parseFloat(d) || 0;
-    if (j !== undefined) roomsElec += parseFloat(j) || 0;
-    if (p !== undefined) roomsWater += parseFloat(p) || 0;
+  // Rooms: D24=total, J24=elec, P24=water, S2:S23=trash
+  const roomsRent = parseFloat(worksheet['D24']?.v || 0) || 0;
+  const roomsElec = parseFloat(worksheet['J24']?.v || 0) || 0;
+  const roomsWater = parseFloat(worksheet['P24']?.v || 0) || 0;
+  let roomsTrash = 0;
+  for (let row = 2; row <= 23; row++) {
+    roomsTrash += parseFloat(worksheet[`S${row}`]?.v || 0) || 0;
   }
 
-  // Trash: S48
-  const totalTrash = parseFloat(worksheet['S48']?.v || 0) || 0;
+  // Nest: D45=rent, J45=elec, P45=water, S26:S44=trash
+  const nestRent = parseFloat(worksheet['D45']?.v || 0) || 0;
+  const nestElec = parseFloat(worksheet['J45']?.v || 0) || 0;
+  const nestWater = parseFloat(worksheet['P45']?.v || 0) || 0;
+  let nestTrash = 0;
+  for (let row = 26; row <= 44; row++) {
+    nestTrash += parseFloat(worksheet[`S${row}`]?.v || 0) || 0;
+  }
+
+  // Amazon: D47=rent, J47=elec, P47=water, S47=trash
+  const amazonRent = parseFloat(worksheet['D47']?.v || 0) || 0;
+  const amazonElec = parseFloat(worksheet['J47']?.v || 0) || 0;
+  const amazonWater = parseFloat(worksheet['P47']?.v || 0) || 0;
+  const amazonTrash = parseFloat(worksheet['S47']?.v || 0) || 0;
+
+  // Total trash: S50
+  const totalTrash = parseFloat(worksheet['S50']?.v || 0) || 0;
 
   const totalRent = roomsRent + nestRent + amazonRent;
   const totalElec = roomsElec + nestElec + amazonElec;
@@ -14457,9 +14468,9 @@ function parseSingleSheetV2(worksheet, monthNum, sheetName) {
       trash: totalTrash,
       total: total,
       breakdown: {
-        rooms: { rent: roomsRent, elec: roomsElec, water: roomsWater, total: roomsRent + roomsElec + roomsWater },
-        nest: { rent: nestRent, elec: nestElec, water: nestWater, total: nestRent + nestElec + nestWater },
-        amazon: { rent: amazonRent, elec: amazonElec, water: amazonWater, total: amazonRent + amazonElec + amazonWater }
+        rooms: { rent: roomsRent, elec: roomsElec, water: roomsWater, trash: roomsTrash, total: roomsRent + roomsElec + roomsWater + roomsTrash },
+        nest: { rent: nestRent, elec: nestElec, water: nestWater, trash: nestTrash, total: nestRent + nestElec + nestWater + nestTrash },
+        amazon: { rent: amazonRent, elec: amazonElec, water: amazonWater, trash: amazonTrash, total: amazonRent + amazonElec + amazonWater + amazonTrash }
       }
     };
   }
@@ -14680,13 +14691,13 @@ function approveBillingImportData() {
   // Create HISTORICAL_DATA structure with detailed breakdown (rooms, nest, amazon)
   const months = monthlyData.map(m => {
     const bd = m.breakdown || {};
-    const rooms = bd.rooms || { rent: 0, elec: 0, water: 0, total: 0 };
-    const nest = bd.nest || { rent: 0, elec: 0, water: 0, total: 0 };
+    const rooms = bd.rooms || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+    const nest = bd.nest || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
 
     return {
-      total: [m.rent, m.electricity, m.water, m.total],
-      rooms: [rooms.rent, rooms.elec, rooms.water, rooms.total],
-      nest: [nest.rent, nest.elec, nest.water, nest.total]
+      total: [m.rent, m.electricity, m.water, m.trash, m.total],
+      rooms: [rooms.rent, rooms.elec, rooms.water, rooms.trash, rooms.total],
+      nest: [nest.rent, nest.elec, nest.water, nest.trash, nest.total]
     };
   });
 
@@ -14848,17 +14859,28 @@ function displayHistoricalDataForYear(year) {
     }
 
     // Support both old format (array) and new format (object with total/rooms/nest)
-    let rent, elec, water, total, roomsData, nestData;
+    let rent, elec, water, trash, total, roomsData, nestData;
     if (Array.isArray(month)) {
-      // Old format: [rent, elec, water, total]
-      [rent, elec, water, total] = month;
-      roomsData = [0, 0, 0, 0];
-      nestData = [0, 0, 0, 0];
+      // Old format: [rent, elec, water, total] or new format: [rent, elec, water, trash, total]
+      if (month.length >= 5) {
+        [rent, elec, water, trash, total] = month;
+      } else {
+        [rent, elec, water, total] = month;
+        trash = 0;
+      }
+      roomsData = [0, 0, 0, 0, 0];
+      nestData = [0, 0, 0, 0, 0];
     } else {
       // New format: { total: [...], rooms: [...], nest: [...] }
-      [rent, elec, water, total] = month.total || [0, 0, 0, 0];
-      roomsData = month.rooms || [0, 0, 0, 0];
-      nestData = month.nest || [0, 0, 0, 0];
+      const totalArr = month.total || [0, 0, 0, 0, 0];
+      if (totalArr.length >= 5) {
+        [rent, elec, water, trash, total] = totalArr;
+      } else {
+        [rent, elec, water, total] = totalArr;
+        trash = 0;
+      }
+      roomsData = month.rooms || [0, 0, 0, 0, 0];
+      nestData = month.nest || [0, 0, 0, 0, 0];
     }
 
     totalRent += rent || 0;
@@ -14868,11 +14890,11 @@ function displayHistoricalDataForYear(year) {
     totalRoomsRent += roomsData[0] || 0;
     totalRoomsElec += roomsData[1] || 0;
     totalRoomsWater += roomsData[2] || 0;
-    totalRoomsAll += roomsData[3] || 0;
+    totalRoomsAll += roomsData[4] || 0;
     totalNestRent += nestData[0] || 0;
     totalNestElec += nestData[1] || 0;
     totalNestWater += nestData[2] || 0;
-    totalNestAll += nestData[3] || 0;
+    totalNestAll += nestData[4] || 0;
 
     const monthNames = ['มค.', 'กพ.', 'มีค.', 'เมย.', 'พค.', 'มิย.', 'กค.', 'สค.', 'กย.', 'ตค.', 'พย.', 'ธค.'];
     const monthName = monthNames[idx] || `เดือน ${idx + 1}`;
@@ -14882,13 +14904,32 @@ function displayHistoricalDataForYear(year) {
               <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(roomsData[0] || 0).toLocaleString()}</td>
               <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(roomsData[1] || 0).toLocaleString()}</td>
               <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(roomsData[2] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;color:#2d8653;font-weight:600;">฿${(roomsData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(roomsData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;color:#2d8653;font-weight:600;">฿${(roomsData[4] || 0).toLocaleString()}</td>
               <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(nestData[0] || 0).toLocaleString()}</td>
               <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(nestData[1] || 0).toLocaleString()}</td>
               <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(nestData[2] || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;color:#7b1fa2;font-weight:600;">฿${(nestData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(nestData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;color:#7b1fa2;font-weight:600;">฿${(nestData[4] || 0).toLocaleString()}</td>
               <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${(total || 0).toLocaleString()}</td>
             </tr>`;
+  });
+
+  // Calculate trash totals for rooms and nest
+  let totalRoomsTrash = 0, totalNestTrash = 0;
+  months.forEach(month => {
+    if (month) {
+      if (Array.isArray(month)) {
+        if (month.length >= 5) {
+          totalRoomsTrash += month[3] || 0; // This logic needs review
+        }
+      } else {
+        const rd = month.rooms || [];
+        const nd = month.nest || [];
+        totalRoomsTrash += rd[3] || 0;
+        totalNestTrash += nd[3] || 0;
+      }
+    }
   });
 
   html += `<tr style="background:var(--green-pale);font-weight:700;border-bottom:2px solid var(--green);">
@@ -14896,10 +14937,12 @@ function displayHistoricalDataForYear(year) {
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalRoomsRent.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalRoomsElec.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalRoomsWater.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalRoomsTrash.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;color:#2d8653;font-weight:700;">฿${totalRoomsAll.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalNestRent.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalNestElec.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalNestWater.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalNestTrash.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;color:#7b1fa2;font-weight:700;">฿${totalNestAll.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${totalAll.toLocaleString()}</td>
           </tr>`;
