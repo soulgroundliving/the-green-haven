@@ -14587,7 +14587,8 @@ function displayBillingImportPreview(monthlyData, year) {
   const monthNames = ['มค', 'กพ', 'มีค', 'เมษา', 'พค', 'มิย', 'กค', 'สค', 'กย', 'ตค', 'พย', 'ธค'];
 
   let html = `<strong>ข้อมูลบิลปี ${year} (Rooms + Nest + Amazon + Utilities + Trash):</strong><br>`;
-  html += `<table style="width:100%;border-collapse:collapse;margin-top:0.5rem;font-size:0.75rem;">`;
+  html += `<div style="overflow-x:auto;margin-top:0.5rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">`;
+  html += `<table style="width:100%;border-collapse:collapse;font-size:0.75rem;min-width:1200px;">`;
   html += `<tr style="border-bottom:2px solid #ccc;background:#f0f0f0;">
     <th colspan="7" style="padding:0.3rem;text-align:center;background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms</th>
     <th colspan="7" style="padding:0.3rem;text-align:center;background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest</th>
@@ -14687,6 +14688,7 @@ function displayBillingImportPreview(monthlyData, year) {
   html += `<td style="padding:0.3rem;text-align:right;background:#f0f0f0;color:#1b5e20;font-weight:bold;">฿${yearlyTotal.toLocaleString()}</td>`;
   html += `</tr>`;
   html += `</table>`;
+  html += `</div>`;
 
   previewDiv.innerHTML = html;
   document.getElementById('billingResultsSection').style.display = 'block';
