@@ -5855,7 +5855,10 @@ window.addEventListener('resize',function(){
 
 
 // ===== DASHBOARD =====
-let currentYear='67';
+// Auto-detect latest year from HISTORICAL_DATA, fallback to 67
+const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+const availableYears = Object.keys(historicalData).map(y => parseInt(y)).sort((a,b) => b-a);
+let currentYear = availableYears.length > 0 ? String(availableYears[0]) : '67';
 let chartRevenue,chartPie,chartYears,chartElec,chartWater,chartMS,chartCum;
 
 function setYear(yr,btn){
