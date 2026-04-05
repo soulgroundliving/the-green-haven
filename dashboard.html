@@ -2968,11 +2968,6 @@
         <input type="file" id="billingFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleBillingImportFile(event);">
       </div>
 
-      <!-- Year Selector -->
-      <div style="margin-bottom:1.5rem;">
-        <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📅 เลือกปี (optional - อ่านจากชื่อไฟล์ได้):</label>
-        <input type="number" id="billingYearInput" min="50" max="99" placeholder="เช่น 68 หรือปล่อยว่างให้ auto-detect" style="width:100%;padding:0.8rem;border:2px solid var(--green);border-radius:var(--radius-sm);background:var(--bg-secondary);color:var(--text);font-size:0.9rem;font-weight:600;">
-      </div>
 
       <!-- Status Messages -->
       <div id="billingStatusMessage" style="margin-bottom:1.5rem;"></div>
@@ -14253,20 +14248,16 @@ function handleBillingImportFile(event) {
 
 function handleBillingImportFileProcess(file) {
   // Auto-detect year from filename (e.g., "บิลปี69.xlsx" → 69)
-  let yearInput = document.getElementById('billingYearInput').value.trim();
+  // Filename MUST contain "ปี" followed by year number
+  const yearMatch = file.name.match(/ปี(\d+)/);
 
-  if (!yearInput || yearInput === '') {
-    // Try to extract year from filename: "บิลปี69" or "บิลปี69 (6)"
-    const yearMatch = file.name.match(/ปี(\d+)/);
-    if (yearMatch) {
-      yearInput = yearMatch[1];
-      document.getElementById('billingYearInput').value = yearInput;
-      showBillingImportStatus(`✅ ตรวจพบปี ${yearInput} จากชื่อไฟล์`, 'success');
-    } else {
-      showBillingImportStatus('❌ กรุณาใส่ปี (เช่น 68) หรือใช้ชื่อไฟล์เช่น "บิลปี69.xlsx"', 'error');
-      return;
-    }
+  if (!yearMatch) {
+    showBillingImportStatus('❌ ชื่อไฟล์ต้องมี "ปี" และตัวเลขปี เช่น "บิลปี69.xlsx" หรือ "บิลปี70 (2).xlsx"', 'error');
+    return;
   }
+
+  const yearInput = yearMatch[1];
+  showBillingImportStatus(`✅ ตรวจพบปี ${yearInput} จากชื่อไฟล์`, 'success');
 
   showBillingImportStatus('⏳ กำลังโหลดไฟล์...', 'info');
 
