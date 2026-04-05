@@ -31,6 +31,10 @@
     "audit_logs": {
       ".read": true,
       ".write": true
+    },
+    "system": {
+      ".read": true,
+      ".write": true
     }
   }
 }
