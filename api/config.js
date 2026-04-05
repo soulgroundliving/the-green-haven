@@ -13,9 +13,10 @@ export default function handler(req, res) {
     authDomain: 'the-green-haven.firebaseapp.com',
     databaseURL: 'https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app',
     projectId: 'the-green-haven',
-    storageBucket: 'the-green-haven.appspot.com',
-    messagingSenderId: '123456789',
-    appId: '1:123456789:web:abcdef123456'
+    storageBucket: 'the-green-haven.firebasestorage.app',
+    messagingSenderId: '523697750767',
+    appId: '1:523697750767:web:89b253f92d8d5cfe8a111a',
+    measurementId: 'G-93J1CBN1BZ'
   };
 
   // Cache for 1 hour
