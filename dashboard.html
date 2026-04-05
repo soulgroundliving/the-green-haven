@@ -14569,14 +14569,15 @@ function approveBillingImportData() {
 
   showBillingImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) สำเร็จ! Dashboard จะใช้ข้อมูลนี้แล้ว`, 'success');
 
-  // Cleanup
-  setTimeout(() => {
+  // Reload dashboard charts with new data
+  setTimeout(async () => {
     cancelBillingImportProcess();
-    // Reload dashboard charts if they exist
+    // Reload dashboard charts if they exist (wait for async operation)
     if (typeof initDashboardCharts === 'function') {
-      initDashboardCharts();
+      await initDashboardCharts();
+      showBillingImportStatus(`✅ Dashboard อัพเดทข้อมูลสำเร็จ`, 'success');
     }
-  }, 2000);
+  }, 1000);
 }
 
 function cancelBillingImportProcess() {
