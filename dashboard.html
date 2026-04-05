@@ -1874,6 +1874,20 @@
       </button>
     </div>
 
+    <!-- Tenant & Admin Management -->
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">👨‍💼 Tenant & Admin</div>
+      <button class="sidebar-item" onclick="window.showPage('complaints', this)">
+        <span class="sidebar-item-icon">⚠️</span>Complaint Management<span class="sidebar-badge" id="complaintBadge" style="display:none"></span>
+      </button>
+      <button class="sidebar-item" onclick="window.showPage('gamification', this)">
+        <span class="sidebar-item-icon">🏆</span>Gamification Management
+      </button>
+      <button class="sidebar-item" onclick="window.showPage('admin-reports', this)">
+        <span class="sidebar-item-icon">📈</span>Admin Reports & Analytics
+      </button>
+    </div>
+
     <!-- Account Settings -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Account</div>
@@ -2785,6 +2799,7 @@
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ห้อง ID</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ชื่อห้อง</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ราคา (บาท/เดือน)</th>
+            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">มัดจำ (บาท)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">น้ำ (บาท/หน่วย)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ไฟ (บาท/หน่วย)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ขยะ (บาท)</th>
@@ -2823,7 +2838,8 @@
       <div id="manualEntryMode" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:1rem;margin-bottom:1rem;">
         <input type="text" id="newRoomId" placeholder="ห้อง ID (เช่น 34)" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
         <input type="text" id="newRoomName" placeholder="ชื่อห้อง" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
-        <input type="number" id="newRoomRent" placeholder="ราคาห้องพัก" value="1500" step="1" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <input type="number" id="newRoomRent" placeholder="ราคาห้องพัก" value="1500" step="1" oninput="updateDepositDisplay()" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <input type="number" id="newRoomDeposit" placeholder="มัดจำ (อัตโนมัติ)" value="3000" readonly style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;background:#f5f5f5;color:#666;">
         <input type="number" id="newRoomWater" placeholder="อัตราน้ำ" value="20" step="0.01" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
         <input type="number" id="newRoomElectric" placeholder="อัตราไฟ" value="8" step="0.01" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
       </div>
@@ -3629,6 +3645,219 @@
   </div>
 </div>
 
+<!-- ===== COMPLAINT MANAGEMENT ===== -->
+<div class="page" id="page-complaints">
+  <div class="section-title">⚠️ Complaint Management System</div>
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <!-- Filters -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+      <input type="text" id="complaintSearch" placeholder="Search complaints..." style="flex: 1; min-width: 200px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+      <select id="complaintStatusFilter" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); min-width: 150px;">
+        <option value="">All Status</option>
+        <option value="open">🔴 Open</option>
+        <option value="in-progress">🟡 In Progress</option>
+        <option value="resolved">🟢 Resolved</option>
+      </select>
+    </div>
+
+    <!-- Stats -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+      <div style="background: var(--green-pale); padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+        <div style="font-size: 1.5rem; font-weight: 700; color: var(--green-dark);" id="totalComplaintsCount">0</div>
+        <div style="font-size: 0.9rem; color: var(--text-muted);">Total Complaints</div>
+      </div>
+      <div style="background: #fff3e0; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+        <div style="font-size: 1.5rem; font-weight: 700; color: #f57c00;" id="openComplaintsCount">0</div>
+        <div style="font-size: 0.9rem; color: var(--text-muted);">Open</div>
+      </div>
+      <div style="background: #e3f2fd; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+        <div style="font-size: 1.5rem; font-weight: 700; color: #1976d2;" id="inProgressComplaintsCount">0</div>
+        <div style="font-size: 0.9rem; color: var(--text-muted);">In Progress</div>
+      </div>
+      <div style="background: #e8f5e9; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+        <div style="font-size: 1.5rem; font-weight: 700; color: #388e3c;" id="resolvedComplaintsCount">0</div>
+        <div style="font-size: 0.9rem; color: var(--text-muted);">Resolved</div>
+      </div>
+    </div>
+
+    <!-- Complaints List -->
+    <div id="complaintsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;"></div>
+  </div>
+</div>
+
+<!-- ===== GAMIFICATION MANAGEMENT ===== -->
+<div class="page" id="page-gamification">
+  <div class="section-title">🏆 Gamification & Rewards Management</div>
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <!-- Tabs -->
+    <div style="border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
+      <button onclick="switchGamificationTab('leaderboard', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🏅 Leaderboard</button>
+      <button onclick="switchGamificationTab('badges', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🎖️ Badges</button>
+      <button onclick="switchGamificationTab('rewards', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🎁 Rewards</button>
+    </div>
+
+    <!-- Leaderboard Tab -->
+    <div id="gamificationLeaderboard" style="display: block;">
+      <div style="overflow-x: auto;">
+        <table class="data-table" style="width: 100%; margin-bottom: 1rem;">
+          <thead>
+            <tr>
+              <th style="width: 50px;">Rank</th>
+              <th>Tenant Name</th>
+              <th style="width: 100px;">Points</th>
+              <th style="width: 100px;">Badges</th>
+              <th style="width: 100px;">Rank</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardTable">
+            <tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">Loading leaderboard...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Badges Tab -->
+    <div id="gamificationBadges" style="display: none;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1.5rem;">
+        <div style="text-align: center; padding: 1rem; background: var(--green-pale); border-radius: var(--radius-sm);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🌟</div>
+          <div style="font-weight: 600;">First Month</div>
+          <small style="color: var(--text-muted);">Complete first month</small>
+        </div>
+        <div style="text-align: center; padding: 1rem; background: var(--green-pale); border-radius: var(--radius-sm);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">💎</div>
+          <div style="font-weight: 600;">On Time</div>
+          <small style="color: var(--text-muted);">Pay rent on time</small>
+        </div>
+        <div style="text-align: center; padding: 1rem; background: #f5f5f5; border-radius: var(--radius-sm); opacity: 0.6;">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">👑</div>
+          <div style="font-weight: 600;">Master</div>
+          <small style="color: var(--text-muted);">1000+ points</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rewards Tab -->
+    <div id="gamificationRewards" style="display: none;">
+      <div style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm);">
+        <div style="font-weight: 700; margin-bottom: 1rem;">Point Distribution System</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">On-Time Payment</small>
+            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);">+50 pts</div>
+          </div>
+          <div>
+            <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">No Complaints</small>
+            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);">+40 pts</div>
+          </div>
+          <div>
+            <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Community Event</small>
+            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);">+30 pts</div>
+          </div>
+          <div>
+            <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Cleanliness</small>
+            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);">+25 pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN REPORTS & ANALYTICS ===== -->
+<div class="page" id="page-admin-reports">
+  <div class="section-title">📈 Reports & Advanced Analytics</div>
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <!-- Report Tabs -->
+    <div style="border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
+      <button onclick="switchReportTab('occupancy', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: #2d8653; border-bottom: 3px solid #2d8653; margin-bottom: -2px;">📊 Occupancy</button>
+      <button onclick="switchReportTab('revenue', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">💰 Revenue</button>
+      <button onclick="switchReportTab('complaints', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">⚠️ Complaints</button>
+      <button onclick="switchReportTab('maintenance', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🔧 Maintenance</button>
+    </div>
+
+    <!-- Occupancy Report -->
+    <div id="occupancyReport" style="display: block;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
+          <div style="font-size: 2rem; font-weight: 700;" id="occupancyRate">85%</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">Occupancy Rate</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
+          <div style="font-size: 2rem; font-weight: 700;" id="occupiedRooms">36</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">Occupied Rooms</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #f57c00 0%, #e65100 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
+          <div style="font-size: 2rem; font-weight: 700;" id="vacantRooms">7</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">Vacant Rooms</div>
+        </div>
+      </div>
+      <div id="occupancyChart" style="height: 300px; background: var(--green-pale); border-radius: var(--radius-sm); padding: 1rem;">Chart will render here</div>
+    </div>
+
+    <!-- Revenue Report -->
+    <div id="revenueReport" style="display: none;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
+          <div style="font-size: 1.3rem; font-weight: 700;" id="totalRevenue">฿123,450</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">Total Revenue (This Month)</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
+          <div style="font-size: 1.3rem; font-weight: 700;" id="collectionRate">92%</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">Collection Rate</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
+          <div style="font-size: 1.3rem; font-weight: 700;" id="pendingPayments">฿10,650</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">Pending Payments</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Complaints Report -->
+    <div id="complaintsReport" style="display: none;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+        <div style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); border-left: 4px solid var(--green);">
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--green-dark);" id="totalComplaints">12</div>
+          <small style="color: var(--text-muted);">Total Complaints</small>
+        </div>
+        <div style="background: #fff3e0; padding: 1.5rem; border-radius: var(--radius-sm); border-left: 4px solid #ff9800;">
+          <div style="font-size: 1.5rem; font-weight: 700; color: #f57c00;" id="openComplaints">3</div>
+          <small style="color: var(--text-muted);">Open</small>
+        </div>
+        <div style="background: #e3f2fd; padding: 1.5rem; border-radius: var(--radius-sm); border-left: 4px solid #2196f3;">
+          <div style="font-size: 1.5rem; font-weight: 700; color: #1976d2;" id="resolvedComplaints">9</div>
+          <small style="color: var(--text-muted);">Resolved</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Maintenance Report -->
+    <div id="maintenanceReport" style="display: none;">
+      <div style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm);">
+        <div style="font-weight: 700; margin-bottom: 1rem;">Maintenance Statistics</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <small style="color: var(--text-muted); display: block;">Total Requests</small>
+            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);" id="totalMaintenance">28</div>
+          </div>
+          <div>
+            <small style="color: var(--text-muted); display: block;">Pending</small>
+            <div style="font-size: 1.3rem; font-weight: 700; color: #f57c00;" id="pendingMaintenance">5</div>
+          </div>
+          <div>
+            <small style="color: var(--text-muted); display: block;">Avg Response Time</small>
+            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);">2.5 hrs</div>
+          </div>
+          <div>
+            <small style="color: var(--text-muted); display: block;">Completed</small>
+            <div style="font-size: 1.3rem; font-weight: 700; color: #388e3c;" id="completedMaintenance">23</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- end main -->
 
 <!-- Firebase Monitoring Panel -->
@@ -3718,6 +3947,9 @@ window._showPageImpl = function(page,btn){
   if(page==='community-docs')initCommunityDocsPage();
   if(page==='pet-approvals')initPetApprovalsPage();
   if(page==='lease-settings')initLeaseSettingsPage();
+  if(page==='complaints')initComplaintsPage();
+  if(page==='gamification')initGamificationPage();
+  if(page==='admin-reports')initAdminReportsPage();
 };
 // Assign to global scope after definition
 window.showPage = window._showPageImpl;
@@ -5323,6 +5555,9 @@ function loadRoomConfigUI() {
           <input type="number" value="${rent}" onchange="updateRoomField('${building}', '${room.id}', 'rentPrice', parseInt(this.value))" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
+          <input type="number" value="${rent * 2}" readonly style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;background:#f5f5f5;color:#666;">
+        </td>
+        <td style="border:1px solid var(--border);padding:0.8rem;">
           <input type="number" value="${room.waterRate}" step="0.01" onchange="updateRoomRate('${building}', '${room.id}', 'water', this.value)" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
@@ -5369,6 +5604,15 @@ function showToast(message, type = 'success', duration = 3000) {
     toast.classList.add('remove');
     setTimeout(() => toast.remove(), 300);
   }, duration);
+}
+
+function updateDepositDisplay() {
+  const rentInput = document.getElementById('newRoomRent');
+  const depositInput = document.getElementById('newRoomDeposit');
+  if (rentInput && depositInput) {
+    const rent = parseInt(rentInput.value) || 1500;
+    depositInput.value = rent * 2;
+  }
 }
 
 function updateRoomField(building, roomId, fieldName, value) {
@@ -13912,6 +14156,51 @@ function saveLeaseAlertSettings() {
   localStorage.setItem('lease_alert_settings', JSON.stringify(settings));
   showToast('✅ Lease alert settings saved', 'success');
   loadAndRenderLeaseSettings();
+}
+
+// ===== COMPLAINTS PAGE =====
+function initComplaintsPage() {
+  console.log('✅ Complaints page initialized');
+  // Load complaints from Firebase or localStorage
+  // Update stats
+  document.getElementById('totalComplaintsCount').textContent = '0';
+  document.getElementById('openComplaintsCount').textContent = '0';
+  document.getElementById('inProgressComplaintsCount').textContent = '0';
+  document.getElementById('resolvedComplaintsCount').textContent = '0';
+  // Render complaints list
+  document.getElementById('complaintsList').innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No complaints found. Data will load from Firebase when connected.</div>';
+}
+
+// ===== GAMIFICATION PAGE =====
+function initGamificationPage() {
+  console.log('✅ Gamification page initialized');
+}
+
+function switchGamificationTab(tabName, btn) {
+  document.querySelectorAll('[id^="gamification"]').forEach(el => el.style.display = 'none');
+  document.getElementById('gamification' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).style.display = 'block';
+  document.querySelectorAll('#page-gamification button').forEach(b => b.style.color = 'var(--text-muted)');
+  document.querySelectorAll('#page-gamification button').forEach(b => b.style.borderBottom = '3px solid transparent');
+  btn.style.color = '#2d8653';
+  btn.style.borderBottom = '3px solid #2d8653';
+}
+
+// ===== REPORTS PAGE =====
+function initAdminReportsPage() {
+  console.log('✅ Admin Reports page initialized');
+  // Load report data
+  document.getElementById('occupancyRate').textContent = '85%';
+  document.getElementById('occupiedRooms').textContent = '36';
+  document.getElementById('vacantRooms').textContent = '7';
+}
+
+function switchReportTab(tabName, btn) {
+  document.querySelectorAll('[id$="Report"]').forEach(el => el.style.display = 'none');
+  document.getElementById(tabName + 'Report').style.display = 'block';
+  document.querySelectorAll('#page-admin-reports > .card > div:first-child button').forEach(b => b.style.color = 'var(--text-muted)');
+  document.querySelectorAll('#page-admin-reports > .card > div:first-child button').forEach(b => b.style.borderBottom = '3px solid transparent');
+  btn.style.color = '#2d8653';
+  btn.style.borderBottom = '3px solid #2d8653';
 }
 
 </script>
