@@ -5915,7 +5915,7 @@ async function loadDashboardDataFromFirebase() {
       const month = parseInt(monthStr);
 
       if (!aggregated[year]) {
-        aggregated[year] = { label: `ปี ${parseInt(year)} (${parseInt(year) - 543})`, months: Array(12).fill(null) };
+        aggregated[year] = { label: `ปี ${2500 + parseInt(year)} (${year})`, months: Array(12).fill(null) };
       }
 
       // Get existing month data or create new
@@ -5994,9 +5994,9 @@ async function initDashboardCharts(){
     console.log('⚠️ Firebase dashboard load failed:', err.message);
   }
 
-  // Use Firebase data first, then HISTORICAL_DATA (no hardcoded data fallback)
+  // Use HISTORICAL_DATA first (imported bills take priority), then Firebase (no hardcoded data fallback)
   const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
-  const dataSource = firebaseData || historicalData;
+  const dataSource = historicalData && Object.keys(historicalData).length > 0 ? historicalData : (firebaseData || {});
 
   if(yr==='all'){
     labels=['67','68','69'].flatMap(y=>dataSource[y]?.months.map((_,i)=>MONTHS_TH[i+1]+"'"+y) || []);
@@ -6027,7 +6027,7 @@ async function initDashboardCharts(){
   const waterT=waters.filter(Boolean).reduce((a,b)=>a+b,0);
 
   document.getElementById('kpi-total').textContent='฿'+total.toLocaleString();
-  const yearLabel=yr==='all'?'ปี 2566-2569':dataSource[yr]?.label||`ปี ${parseInt(yr)+543} (${yr})`;
+  const yearLabel=yr==='all'?'ปี 2566-2569':dataSource[yr]?.label||`ปี ${2500+parseInt(yr)} (${yr})`;
   document.getElementById('kpi-total-sub').textContent=yearLabel+' · '+valid.length+' เดือน';
   document.getElementById('kpi-monthly').textContent='฿'+avg.toLocaleString();
   document.getElementById('kpi-monthly-sub').textContent='สูงสุด: ฿'+maxV.toLocaleString()+' ('+MONTHS_TH[maxIdx+1]+')';
@@ -14589,7 +14589,7 @@ function approveBillingImportData() {
 
   // Add/update year data
   historicalData[year] = {
-    label: `ปี ${parseInt(year) + 543} (${year})`,
+    label: `ปี ${2500 + parseInt(year)} (${year})`,
     months: months
   };
 
@@ -14698,7 +14698,7 @@ function displayHistoricalDataForYear(year) {
   }
 
   const yearData = historicalData[year];
-  const yearLabel = yearData.label || `ปี ${parseInt(year) + 543} (${year})`;
+  const yearLabel = yearData.label || `ปี ${2500 + parseInt(year)} (${year})`;
   const months = yearData.months || [];
 
   let html = '<div style="font-family:\'Sarabun\',sans-serif;font-size:0.9rem;">';
