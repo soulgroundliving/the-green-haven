@@ -14315,11 +14315,14 @@ function parseBillingExcelData(workbook) {
     const j26 = parseFloat(worksheet['J26']?.v || 0) || 0;  // Amazon electricity
     const p26 = parseFloat(worksheet['P26']?.v || 0) || 0;  // Amazon water
 
+    // Read trash total from S29 (รวมค่าขยะ summary cell)
+    const totalTrash = parseFloat(worksheet['S29']?.v || 0) || 0;
+
     // Calculate totals
     const totalRent = d24 + d26;
     const totalElec = j24 + j26;
     const totalWater = p24 + p26;
-    const total = totalRent + totalElec + totalWater;
+    const total = totalRent + totalElec + totalWater + totalTrash;
 
     if (total > 0) {
       monthlyData.push({
@@ -14328,6 +14331,7 @@ function parseBillingExcelData(workbook) {
         rent: totalRent,
         electricity: totalElec,
         water: totalWater,
+        trash: totalTrash,
         total: total
       });
     }
@@ -14340,11 +14344,11 @@ function displayBillingImportPreview(monthlyData, year) {
   const previewDiv = document.getElementById('billingPreviewData');
   const monthNames = ['มค', 'กพ', 'มีค', 'เมษา', 'พค', 'มิย', 'กค', 'สค', 'กย', 'ตค', 'พย', 'ธค'];
 
-  let html = `<strong>ข้อมูลบิลปี ${year} (Rooms + Amazon + Utilities):</strong><br>`;
+  let html = `<strong>ข้อมูลบิลปี ${year} (Rooms + Amazon + Utilities + Trash):</strong><br>`;
   html += `<table style="width:100%;border-collapse:collapse;margin-top:0.5rem;font-size:0.85rem;">`;
-  html += `<tr style="border-bottom:2px solid #ccc;background:#f0f0f0;"><th style="padding:0.4rem;text-align:left;">เดือน</th><th style="padding:0.4rem;text-align:right;"><div>ค่าเช่า</div><small style="font-weight:normal;color:#666;">(D24+D26)</small></th><th style="padding:0.4rem;text-align:right;"><div>ค่าไฟ</div><small style="font-weight:normal;color:#666;">(J24+J26)</small></th><th style="padding:0.4rem;text-align:right;"><div>ค่าน้ำ</div><small style="font-weight:normal;color:#666;">(P24+P26)</small></th><th style="padding:0.4rem;text-align:right;"><div>รวม</div><small style="font-weight:normal;color:#666;">(คำนวณ D+J+P)</small></th></tr>`;
+  html += `<tr style="border-bottom:2px solid #ccc;background:#f0f0f0;"><th style="padding:0.4rem;text-align:left;">เดือน</th><th style="padding:0.4rem;text-align:right;"><div>ค่าเช่า</div><small style="font-weight:normal;color:#666;">(D+D)</small></th><th style="padding:0.4rem;text-align:right;"><div>ค่าไฟ</div><small style="font-weight:normal;color:#666;">(J+J)</small></th><th style="padding:0.4rem;text-align:right;"><div>ค่าน้ำ</div><small style="font-weight:normal;color:#666;">(P+P)</small></th><th style="padding:0.4rem;text-align:right;"><div>ค่าขยะ</div><small style="font-weight:normal;color:#666;">(S29)</small></th><th style="padding:0.4rem;text-align:right;"><div>รวม</div><small style="font-weight:normal;color:#666;">(D+J+P+S29)</small></th></tr>`;
 
-  let yearlyRent = 0, yearlyElec = 0, yearlyWater = 0, yearlyTotal = 0;
+  let yearlyRent = 0, yearlyElec = 0, yearlyWater = 0, yearlyTrash = 0, yearlyTotal = 0;
   monthlyData.forEach(m => {
     const monthName = monthNames[m.month - 1] || `เดือน${m.month}`;
     html += `<tr style="border-bottom:1px solid #eee;">`;
@@ -14352,11 +14356,13 @@ function displayBillingImportPreview(monthlyData, year) {
     html += `<td style="padding:0.3rem;text-align:right;">฿${m.rent.toLocaleString()}</td>`;
     html += `<td style="padding:0.3rem;text-align:right;">฿${m.electricity.toLocaleString()}</td>`;
     html += `<td style="padding:0.3rem;text-align:right;">฿${m.water.toLocaleString()}</td>`;
+    html += `<td style="padding:0.3rem;text-align:right;">฿${m.trash.toLocaleString()}</td>`;
     html += `<td style="padding:0.3rem;text-align:right;font-weight:bold;">฿${m.total.toLocaleString()}</td>`;
     html += `</tr>`;
     yearlyRent += m.rent;
     yearlyElec += m.electricity;
     yearlyWater += m.water;
+    yearlyTrash += m.trash;
     yearlyTotal += m.total;
   });
 
@@ -14365,6 +14371,7 @@ function displayBillingImportPreview(monthlyData, year) {
   html += `<td style="padding:0.4rem;text-align:right;">฿${yearlyRent.toLocaleString()}</td>`;
   html += `<td style="padding:0.4rem;text-align:right;">฿${yearlyElec.toLocaleString()}</td>`;
   html += `<td style="padding:0.4rem;text-align:right;">฿${yearlyWater.toLocaleString()}</td>`;
+  html += `<td style="padding:0.4rem;text-align:right;">฿${yearlyTrash.toLocaleString()}</td>`;
   html += `<td style="padding:0.4rem;text-align:right;">฿${yearlyTotal.toLocaleString()}</td>`;
   html += `</tr>`;
   html += `</table>`;
