@@ -1,4 +1,7 @@
 {
+  "database": {
+    "rules": "config/database.rules.json"
+  },
   "functions": [
     {
       "source": "functions",

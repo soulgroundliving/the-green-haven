@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - The Green Haven</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Bottom Navigation */
+    .sidebar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #2c3e50;
+      color: white;
+      padding: 10px 0;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      z-index: 100;
+    }
+
+    .sidebar h1 {
+      display: none;
+    }
+
+    .sidebar ul {
+      list-style: none;
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      margin: 0;
+      padding: 0;
+    }
+
+    .sidebar li {
+      margin: 0;
+      flex: 1;
+      text-align: center;
+      min-width: 60px;
+    }
+
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 10px;
+      transition: background 0.3s;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      background: #3498db;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px;
+      padding-bottom: 140px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .header h2 {
+      font-size: 24px;
+      color: #2c3e50;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .user-info img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #3498db;
+    }
+
+    /* Sections */
+    .section {
+      display: none;
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    /* Tables */
+    .table-container {
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      background: #f8f9fa;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid #dee2e6;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    tr:hover {
+      background: #f8f9fa;
+    }
+
+    /* Forms */
+    .form-group {
+      margin: 15px 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    /* Buttons */
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: #3498db;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2980b9;
+    }
+
+    .btn-success {
+      background: #27ae60;
+      color: white;
+    }
+
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #95a5a6;
+      color: white;
+    }
+
+    /* Cards */
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin: 15px 0;
+    }
+
+    .card-header {
+      font-size: 16px;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+    }
+
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .stat-box {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 32px;
+      font-weight: 700;
+      color: #3498db;
+    }
+
+    .stat-label {
+      color: #7f8c8d;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .badge-danger {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .badge-warning {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .badge-info {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background-color: white;
+      padding: 30px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #f0f0f0;
+      padding-bottom: 10px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+    }
+
+    .close {
+      font-size: 28px;
+      font-weight: bold;
+      color: #aaa;
+      cursor: pointer;
+    }
+
+    .close:hover {
+      color: #000;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar li {
+        min-width: 50px;
+      }
+
+      .sidebar a {
+        font-size: 11px;
+        padding: 6px 5px;
+      }
+
+      .main-content {
+        padding: 20px;
+        padding-bottom: 120px;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .header {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .header h2 {
+        font-size: 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .sidebar a {
+        font-size: 10px;
+        padding: 4px 4px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .main-content {
+        padding: 15px;
+        padding-bottom: 110px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h1>🏢 Admin Panel</h1>
+      <ul>
+        <li><a class="nav-link active" data-section="dashboard">📊 Dashboard</a></li>
+        <li><a class="nav-link" data-section="rooms">🏠 Rooms</a></li>
+        <li><a class="nav-link" data-section="tenants">👥 Tenants</a></li>
+        <li><a class="nav-link" data-section="complaints">⚠️ Complaints</a></li>
+        <li><a class="nav-link" data-section="maintenance">🔧 Maintenance</a></li>
+        <li><a class="nav-link" data-section="gamification">🎮 Gamification</a></li>
+        <li><a class="nav-link" data-section="reports">📈 Reports</a></li>
+        <li style="margin-top: 30px; border-top: 1px solid #444; padding-top: 20px;">
+          <a class="nav-link" onclick="logout()">🚪 Logout</a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Header -->
+      <div class="header">
+        <h2 id="page-title">Dashboard</h2>
+        <div class="user-info">
+          <div>
+            <p style="margin: 0; font-weight: 600;" id="user-name">Admin</p>
+            <p style="margin: 0; font-size: 12px; color: #7f8c8d;">luktan@thegreenhaven.com</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Section -->
+      <div id="dashboard" class="section active">
+        <h3>Welcome to Admin Dashboard</h3>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-number" id="total-rooms">43</div>
+            <div class="stat-label">Total Rooms</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-number" id="occupied-rooms">0</div>
+            <div class="stat-label">Occupied</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-number" id="pending-complaints">0</div>
+            <div class="stat-label">Pending Complaints</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-number" id="maintenance-due">0</div>
+            <div class="stat-label">Maintenance Due</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Recent Activities</div>
+          <div id="recent-activities">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Rooms Section -->
+      <div id="rooms" class="section">
+        <h3>Room Management</h3>
+        <button class="btn-primary" onclick="openRoomModal()">➕ Add New Room</button>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Room ID</th>
+                <th>Building</th>
+                <th>Status</th>
+                <th>Tenant</th>
+                <th>Rent</th>
+                <th>Last Maintenance</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rooms-table">
+              <tr><td colspan="7">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tenants Section -->
+      <div id="tenants" class="section">
+        <h3>Tenant Management</h3>
+        <button class="btn-primary" onclick="openTenantModal()">➕ Add New Tenant</button>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Tenant ID</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Room</th>
+                <th>Move In Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tenants-table">
+              <tr><td colspan="7">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Complaints Section -->
+      <div id="complaints" class="section">
+        <h3>Complaint Management</h3>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Room</th>
+                <th>Category</th>
+                <th>Severity</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="complaints-table">
+              <tr><td colspan="7">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Maintenance Section -->
+      <div id="maintenance" class="section">
+        <h3>Maintenance Management</h3>
+        <button class="btn-primary" onclick="openMaintenanceModal()">➕ Add Maintenance Record</button>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Room</th>
+                <th>Type</th>
+                <th>Date</th>
+                <th>Technician</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="maintenance-table">
+              <tr><td colspan="5">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Gamification Section -->
+      <div id="gamification" class="section">
+        <h3>Gamification Management</h3>
+
+        <div class="card">
+          <div class="card-header">Tenant Rankings</div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Tenant Name</th>
+                  <th>Points</th>
+                  <th>Badges</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="gamification-table">
+                <tr><td colspan="5">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Available Badges</div>
+          <div id="badges-list">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Reports Section -->
+      <div id="reports" class="section">
+        <h3>Reports & Analytics</h3>
+
+        <div class="card">
+          <div class="card-header">Marketing ROI</div>
+          <div id="marketing-roi">Loading...</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Maintenance History</div>
+          <div id="maintenance-report">Loading...</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Complaint Statistics</div>
+          <div id="complaint-stats">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room Modal -->
+  <div id="roomModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Manage Room</h3>
+        <span class="close" onclick="closeRoomModal()">&times;</span>
+      </div>
+      <form onsubmit="saveRoom(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Room ID</label>
+            <input type="text" id="roomId" required>
+          </div>
+          <div class="form-group">
+            <label>Building</label>
+            <select id="roomBuilding" required>
+              <option value="">Select Building</option>
+              <option value="Nest">Nest</option>
+              <option value="GroupA">GroupA</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Rent Amount</label>
+            <input type="number" id="rentAmount" required>
+          </div>
+          <div class="form-group">
+            <label>Deposit</label>
+            <input type="number" id="deposit" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Billing Cycle Day</label>
+          <input type="number" id="billingCycle" min="1" max="28" value="1">
+        </div>
+
+        <div class="form-group">
+          <label>Plate Number (if any)</label>
+          <input type="text" id="plateNumber">
+        </div>
+
+        <div class="form-group">
+          <label>Referral Source</label>
+          <select id="referralSource">
+            <option value="">Select Source</option>
+            <option value="Facebook">Facebook</option>
+            <option value="Billboard">Billboard</option>
+            <option value="Friend">Friend</option>
+            <option value="Website">Website</option>
+            <option value="Walk-in">Walk-in</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-success">Save Room</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tenant Modal -->
+  <div id="tenantModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Manage Tenant</h3>
+        <span class="close" onclick="closeTenantModal()">&times;</span>
+      </div>
+      <form onsubmit="saveTenant(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tenant ID</label>
+            <input type="text" id="tenantId" required>
+          </div>
+          <div class="form-group">
+            <label>Room ID</label>
+            <input type="text" id="tenantRoomId" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>First Name</label>
+            <input type="text" id="firstName" required>
+          </div>
+          <div class="form-group">
+            <label>Last Name</label>
+            <input type="text" id="lastName" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Nickname</label>
+          <input type="text" id="tenantName" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" id="tenantPhone" required>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="tenantEmail" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Move In Date</label>
+            <input type="date" id="moveInDate" required>
+          </div>
+          <div class="form-group">
+            <label>Move Out Date</label>
+            <input type="date" id="moveOutDate">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Emergency Contact Name</label>
+          <input type="text" id="emergencyName">
+        </div>
+
+        <div class="form-group">
+          <label>Emergency Contact Phone</label>
+          <input type="tel" id="emergencyPhone">
+        </div>
+
+        <button type="submit" class="btn-success">Save Tenant</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Maintenance Modal -->
+  <div id="maintenanceModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Maintenance Record</h3>
+        <span class="close" onclick="closeMaintenanceModal()">&times;</span>
+      </div>
+      <form onsubmit="saveMaintenance(event)">
+        <div class="form-group">
+          <label>Room ID</label>
+          <input type="text" id="maintenanceRoomId" required>
+        </div>
+
+        <div class="form-group">
+          <label>Maintenance Type</label>
+          <select id="maintenanceType" required>
+            <option value="">Select Type</option>
+            <option value="AC Cleaning">AC Cleaning</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Plumbing">Plumbing</option>
+            <option value="General Inspection">General Inspection</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="maintenanceDate" required>
+        </div>
+
+        <div class="form-group">
+          <label>Technician Name</label>
+          <input type="text" id="technicianName" required>
+        </div>
+
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="maintenanceNotes" rows="4"></textarea>
+        </div>
+
+        <button type="submit" class="btn-success">Save Record</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyC6_q_example",
+      authDomain: "the-green-haven.firebaseapp.com",
+      projectId: "the-green-haven",
+      storageBucket: "the-green-haven.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:example"
+    };
+
+    // Initialize Firebase (with error handling)
+    let db = null;
+    let auth = null;
+
+    try {
+      if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+        console.log('✅ Firebase initialized successfully');
+      }
+    } catch (error) {
+      console.warn('⚠️ Firebase initialization error (navigation will still work):', error);
+    }
+
+    // Navigation - Initialize when DOM is ready
+    function initializeNavigation() {
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          const sectionId = this.getAttribute('data-section');
+          showSection(sectionId);
+
+          // Update active link
+          document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+          this.classList.add('active');
+        });
+      });
+      console.log('✅ Navigation initialized');
+    }
+
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeNavigation);
+    } else {
+      initializeNavigation();
+    }
+
+    function showSection(sectionId) {
+      // Hide all sections
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      // Show selected section
+      document.getElementById(sectionId).classList.add('active');
+      // Update title
+      const titles = {
+        'dashboard': 'Dashboard',
+        'rooms': 'Room Management',
+        'tenants': 'Tenant Management',
+        'complaints': 'Complaint Management',
+        'maintenance': 'Maintenance Management',
+        'gamification': 'Gamification Management',
+        'reports': 'Reports & Analytics'
+      };
+      document.getElementById('page-title').textContent = titles[sectionId];
+
+      // Load section data
+      loadSectionData(sectionId);
+    }
+
+    async function loadSectionData(sectionId) {
+      console.log(`Loading data for section: ${sectionId}`);
+      // Specific loading logic for each section will go here
+    }
+
+    // Modal Functions
+    function openRoomModal() {
+      document.getElementById('roomModal').classList.add('active');
+    }
+
+    function closeRoomModal() {
+      document.getElementById('roomModal').classList.remove('active');
+    }
+
+    function openTenantModal() {
+      document.getElementById('tenantModal').classList.add('active');
+    }
+
+    function closeTenantModal() {
+      document.getElementById('tenantModal').classList.remove('active');
+    }
+
+    function openMaintenanceModal() {
+      document.getElementById('maintenanceModal').classList.add('active');
+    }
+
+    function closeMaintenanceModal() {
+      document.getElementById('maintenanceModal').classList.remove('active');
+    }
+
+    // Form Handlers
+    async function saveRoom(e) {
+      e.preventDefault();
+      console.log('Saving room...');
+      // Implementation will go here
+      alert('Room saved successfully!');
+      closeRoomModal();
+    }
+
+    async function saveTenant(e) {
+      e.preventDefault();
+      console.log('Saving tenant...');
+      // Implementation will go here
+      alert('Tenant saved successfully!');
+      closeTenantModal();
+    }
+
+    async function saveMaintenance(e) {
+      e.preventDefault();
+      console.log('Saving maintenance...');
+      // Implementation will go here
+      alert('Maintenance record saved successfully!');
+      closeMaintenanceModal();
+    }
+
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        if (auth) {
+          auth.signOut();
+        }
+        window.location.href = 'login.html';
+      }
+    }
+
+    // Initialize
+    window.addEventListener('load', () => {
+      console.log('Admin Dashboard loaded');
+      loadSectionData('dashboard');
+    });
+  </script>
+</body>
+</html>

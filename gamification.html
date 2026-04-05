@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Rewards - The Green Haven</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      min-height: 100vh;
+      padding: 20px;
+      padding-bottom: 140px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      flex: 1;
+      overflow-y: auto;
+      width: 100%;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    /* Profile Card */
+    .profile-card {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+
+    .profile-avatar {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+    }
+
+    .profile-name {
+      font-size: 24px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+
+    .profile-room {
+      color: #7f8c8d;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .rank-badge {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-weight: 600;
+      margin-bottom: 30px;
+      display: inline-block;
+    }
+
+    .points-display {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .points-number {
+      font-size: 40px;
+      font-weight: 700;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+
+    .points-label {
+      color: #7f8c8d;
+      font-size: 14px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #ecf0f1;
+      border-radius: 4px;
+      margin-top: 15px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      width: 65%;
+      transition: width 0.3s ease;
+    }
+
+    .next-milestone {
+      color: #7f8c8d;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    /* Badges Section */
+    .badges-section {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badges-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .badge-item {
+      text-align: center;
+      padding: 15px;
+      border-radius: 10px;
+      background: #f8f9fa;
+      transition: all 0.3s;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+
+    .badge-item:hover {
+      transform: translateY(-5px);
+      border-color: #667eea;
+    }
+
+    .badge-item.earned {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    }
+
+    .badge-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+      opacity: 0.5;
+      transition: opacity 0.3s;
+    }
+
+    .badge-item.earned .badge-icon {
+      opacity: 1;
+      animation: bounce 0.5s;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .badge-name {
+      font-weight: 600;
+      font-size: 13px;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+
+    .badge-description {
+      font-size: 11px;
+      color: #7f8c8d;
+    }
+
+    .badge-locked {
+      opacity: 0.5;
+    }
+
+    /* Rankings Section */
+    .rankings-section {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .ranking-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .ranking-table thead {
+      background: #f8f9fa;
+    }
+
+    .ranking-table th {
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+      color: #2c3e50;
+      border-bottom: 2px solid #ecf0f1;
+    }
+
+    .ranking-table td {
+      padding: 15px;
+      border-bottom: 1px solid #ecf0f1;
+    }
+
+    .ranking-table tr:hover {
+      background: #f8f9fa;
+    }
+
+    .rank-position {
+      font-weight: 700;
+      color: #667eea;
+      font-size: 16px;
+    }
+
+    .rank-position.top3 {
+      color: #f39c12;
+    }
+
+    .medal {
+      font-size: 20px;
+      margin-right: 5px;
+    }
+
+    .tenant-name {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .you-badge {
+      background: #667eea;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 5px;
+    }
+
+    .points-display-table {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      border-bottom: 2px solid rgba(255,255,255,0.3);
+    }
+
+    .tab-button {
+      padding: 12px 24px;
+      border: none;
+      background: none;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .tab-button.active {
+      border-bottom-color: white;
+    }
+
+    .tab-button:hover {
+      opacity: 0.8;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Achievements */
+    .achievement-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .achievement-card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      border-left: 4px solid #667eea;
+    }
+
+    .achievement-title {
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .achievement-description {
+      color: #7f8c8d;
+      font-size: 14px;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .achievement-reward {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 13px;
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .progress-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .stat-number {
+      font-size: 32px;
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    .stat-label {
+      color: #7f8c8d;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 2px solid rgba(255, 255, 255, 0.3);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 10px 0;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 10px 20px;
+      color: #7f8c8d;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.3s;
+      flex: 1;
+      text-align: center;
+    }
+
+    .nav-item:hover {
+      color: #667eea;
+    }
+
+    .nav-item.active {
+      color: #667eea;
+      border-top: 3px solid #667eea;
+      margin-top: -10px;
+      padding-top: 7px;
+    }
+
+    .nav-icon {
+      font-size: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .badges-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .progress-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .ranking-table {
+        font-size: 13px;
+      }
+
+      .ranking-table th,
+      .ranking-table td {
+        padding: 10px;
+      }
+
+      .nav-item {
+        padding: 8px 10px;
+        font-size: 11px;
+      }
+
+      .nav-icon {
+        font-size: 18px;
+      }
+
+      body {
+        padding-bottom: 120px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .nav-item {
+        padding: 5px 8px;
+        font-size: 10px;
+      }
+
+      .nav-icon {
+        font-size: 16px;
+      }
+
+      body {
+        padding-bottom: 110px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🏆 Community Rewards</h1>
+      <p>Earn points and badges for being a great community member</p>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-grid">
+      <!-- Profile Card -->
+      <div class="profile-card">
+        <div class="profile-avatar">👤</div>
+        <div class="profile-name" id="userName">Sammy</div>
+        <div class="profile-room" id="userRoom">Room 402 • Nest</div>
+        <div class="rank-badge" id="userRank">🥉 Bronze Member</div>
+
+        <div class="points-display">
+          <div class="points-number" id="userPoints">450</div>
+          <div class="points-label">Total Points</div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="next-milestone" id="nextMilestone">500 points to reach Silver</div>
+        </div>
+
+        <div style="text-align: left; margin-top: 20px;">
+          <h4 style="color: #2c3e50; margin-bottom: 10px;">Recent Activity</h4>
+          <div id="recentActivity" style="font-size: 13px; color: #7f8c8d; line-height: 1.8;">
+            <p>✅ On-time rent payment: +50 points</p>
+            <p>✅ Community event participation: +25 points</p>
+            <p>✅ No complaints: +10 points</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Badges Section -->
+      <div class="badges-section">
+        <div class="section-title">🎖️ Your Badges</div>
+        <div class="badges-grid">
+          <div class="badge-item earned" title="Earned on March 15, 2026">
+            <div class="badge-icon">🌟</div>
+            <div class="badge-name">First Month</div>
+            <div class="badge-description">Complete first month</div>
+          </div>
+          <div class="badge-item earned" title="Earned on April 1, 2026">
+            <div class="badge-icon">💎</div>
+            <div class="badge-name">On Time</div>
+            <div class="badge-description">Pay rent on time</div>
+          </div>
+          <div class="badge-item earned" title="Earned on March 25, 2026">
+            <div class="badge-icon">🤝</div>
+            <div class="badge-name">Community Star</div>
+            <div class="badge-description">Participate in events</div>
+          </div>
+          <div class="badge-item earned" title="Earned on April 3, 2026">
+            <div class="badge-icon">🌿</div>
+            <div class="badge-name">Green Guardian</div>
+            <div class="badge-description">Keep area clean</div>
+          </div>
+          <div class="badge-item badge-locked">
+            <div class="badge-icon">👑</div>
+            <div class="badge-name">Master Resident</div>
+            <div class="badge-description">1000+ points</div>
+          </div>
+          <div class="badge-item badge-locked">
+            <div class="badge-icon">🎯</div>
+            <div class="badge-name">Perfect Record</div>
+            <div class="badge-description">Zero complaints</div>
+          </div>
+          <div class="badge-item badge-locked">
+            <div class="badge-icon">📚</div>
+            <div class="badge-name">Learning Path</div>
+            <div class="badge-description">Complete all tutorials</div>
+          </div>
+          <div class="badge-item badge-locked">
+            <div class="badge-icon">🚀</div>
+            <div class="badge-name">Rising Star</div>
+            <div class="badge-description">3 months resident</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 30px;">
+      <div class="tabs">
+        <button class="tab-button active" onclick="showTab('rankings')">🏅 Rankings</button>
+        <button class="tab-button" onclick="showTab('achievements')">📋 Achievements</button>
+        <button class="tab-button" onclick="showTab('leaderboard')">📊 Stats</button>
+      </div>
+
+      <!-- Rankings Tab -->
+      <div id="rankings" class="tab-content active">
+        <div class="rankings-section">
+          <div class="section-title">🏆 Community Rankings</div>
+          <table class="ranking-table">
+            <thead>
+              <tr>
+                <th style="width: 60px;">Rank</th>
+                <th>Tenant</th>
+                <th>Points</th>
+                <th>Badges</th>
+              </tr>
+            </thead>
+            <tbody id="rankingsList">
+              <tr>
+                <td><span class="rank-position top3"><span class="medal">🥇</span>1</span></td>
+                <td><span class="tenant-name">Alex Johnson</span></td>
+                <td class="points-display-table">1,250</td>
+                <td>8</td>
+              </tr>
+              <tr>
+                <td><span class="rank-position top3"><span class="medal">🥈</span>2</span></td>
+                <td><span class="tenant-name">Maria Santos</span></td>
+                <td class="points-display-table">950</td>
+                <td>7</td>
+              </tr>
+              <tr>
+                <td><span class="rank-position top3"><span class="medal">🥉</span>3</span></td>
+                <td><span class="tenant-name">James Park</span></td>
+                <td class="points-display-table">820</td>
+                <td>6</td>
+              </tr>
+              <tr>
+                <td><span class="rank-position">4</span></td>
+                <td><span class="tenant-name">Sammy<span class="you-badge">YOU</span></span></td>
+                <td class="points-display-table">450</td>
+                <td>4</td>
+              </tr>
+              <tr>
+                <td><span class="rank-position">5</span></td>
+                <td><span class="tenant-name">Emma Wilson</span></td>
+                <td class="points-display-table">380</td>
+                <td>3</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Achievements Tab -->
+      <div id="achievements" class="tab-content">
+        <h2 style="color: white; margin-bottom: 20px;">🎯 How to Earn Points</h2>
+        <div class="achievement-list">
+          <div class="achievement-card">
+            <div class="achievement-title">
+              <span>💰</span> On-Time Payments
+            </div>
+            <div class="achievement-description">Pay your rent on time every month</div>
+            <div class="achievement-reward">+50 points/month</div>
+          </div>
+
+          <div class="achievement-card">
+            <div class="achievement-title">
+              <span>🧹</span> Room Cleanliness
+            </div>
+            <div class="achievement-description">Maintain your room in excellent condition</div>
+            <div class="achievement-reward">+25 points/month</div>
+          </div>
+
+          <div class="achievement-card">
+            <div class="achievement-title">
+              <span>🤝</span> Community Events
+            </div>
+            <div class="achievement-description">Participate in community activities</div>
+            <div class="achievement-reward">+30 points/event</div>
+          </div>
+
+          <div class="achievement-card">
+            <div class="achievement-title">
+              <span>⭐</span> No Complaints
+            </div>
+            <div class="achievement-description">Stay complaint-free for a full month</div>
+            <div class="achievement-reward">+40 points/month</div>
+          </div>
+
+          <div class="achievement-card">
+            <div class="achievement-title">
+              <span>🌍</span> Eco-Friendly
+            </div>
+            <div class="achievement-description">Participate in sustainability initiatives</div>
+            <div class="achievement-reward">+20 points/action</div>
+          </div>
+
+          <div class="achievement-card">
+            <div class="achievement-title">
+              <span>👋</span> Refer a Friend
+            </div>
+            <div class="achievement-description">Refer someone who becomes a tenant</div>
+            <div class="achievement-reward">+100 points</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Tab -->
+      <div id="leaderboard" class="tab-content">
+        <h2 style="color: white; margin-bottom: 20px;">📊 Your Statistics</h2>
+        <div class="progress-stats">
+          <div class="stat-card">
+            <div class="stat-number">4/12</div>
+            <div class="stat-label">Months Resident</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Total Complaints</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">4</div>
+            <div class="stat-label">Badges Earned</div>
+          </div>
+        </div>
+
+        <div class="rankings-section" style="margin-top: 20px;">
+          <div class="section-title">📈 Rank Progress</div>
+          <div style="padding: 20px;">
+            <div style="margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: white;">
+                <span>🥉 Bronze → 🌟 Silver</span>
+                <span>450/500 points</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 90%;"></div>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: white;">
+                <span>🌟 Silver → 💎 Gold</span>
+                <span>450/1000 points</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 45%;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: white;">
+                <span>💎 Gold → 👑 Platinum</span>
+                <span>450/2000 points</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 22.5%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="admin-dashboard.html" class="nav-item">
+      <span class="nav-icon">📊</span>
+      <span>Dashboard</span>
+    </a>
+    <a href="complaint-system.html" class="nav-item">
+      <span class="nav-icon">⚠️</span>
+      <span>Complaints</span>
+    </a>
+    <a href="gamification.html" class="nav-item active">
+      <span class="nav-icon">🏆</span>
+      <span>Rewards</span>
+    </a>
+  </nav>
+
+  <script>
+    // Tab switching
+    function showTab(tabName) {
+      const tabs = document.querySelectorAll('.tab-content');
+      const buttons = document.querySelectorAll('.tab-button');
+
+      tabs.forEach(tab => tab.classList.remove('active'));
+      buttons.forEach(btn => btn.classList.remove('active'));
+
+      document.getElementById(tabName).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    // Load data from Firebase
+    async function loadGamificationData() {
+      console.log('Loading gamification data...');
+      // This will be connected to Firebase in actual implementation
+    }
+
+    window.addEventListener('load', loadGamificationData);
+  </script>
+</body>
+</html>

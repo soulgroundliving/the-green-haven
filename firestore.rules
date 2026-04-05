@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== DEFAULT: DENY ALL =====
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===== BUILDINGS COLLECTION =====
+    match /buildings/{buildingId} {
+      // Allow authenticated users to read their building
+      allow read: if request.auth != null;
+
+      // Allow admins to write
+      allow write: if isAdmin();
+
+      // ===== ROOMS SUBCOLLECTION =====
+      match /rooms/{roomId} {
+        // Tenant can read their own room
+        allow read: if request.auth != null &&
+          (isTenantInRoom(roomId) || isAdmin());
+
+        // Admin can write
+        allow write: if isAdmin();
+
+        // ===== MAINTENANCE HISTORY SUBCOLLECTION =====
+        match /maintenanceHistory/{docId} {
+          allow read: if request.auth != null &&
+            (isTenantInRoom(roomId) || isAdmin());
+          allow write: if isAdmin();
+        }
+
+        // ===== COMPLAINT HISTORY SUBCOLLECTION =====
+        match /complaintHistory/{docId} {
+          allow read: if request.auth != null &&
+            (isTenantInRoom(roomId) || isAdmin());
+          allow write: if request.auth != null &&
+            (isTenantInRoom(roomId) || isAdmin());
+          allow update: if isAdmin(); // Only admin can change status
+        }
+
+        // ===== ROOM CONDITION REPORTS SUBCOLLECTION =====
+        match /roomConditionReports/{docId} {
+          allow read: if request.auth != null &&
+            (isTenantInRoom(roomId) || isAdmin());
+          allow write: if isAdmin();
+        }
+      }
+    }
+
+    // ===== TENANTS COLLECTION =====
+    match /tenants/{tenantId} {
+      // Tenant can read their own profile
+      allow read: if request.auth != null &&
+        (request.auth.uid == tenantId || isAdmin());
+
+      // Tenant can update own profile (except gamification)
+      allow update: if request.auth != null &&
+        request.auth.uid == tenantId &&
+        !request.resource.data.gamification.diff(resource.data.gamification).affectedKeys().size() > 0;
+
+      // Admin can read and write all
+      allow read, write: if isAdmin();
+    }
+
+    // ===== METER DATA COLLECTION =====
+    match /meter_data/{roomId} {
+      // Allow authenticated users to read meter data
+      allow read: if request.auth != null;
+
+      // Only admin can write
+      allow write: if isAdmin();
+
+      match /{yearMonth}/{docId} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
+      }
+    }
+
+    // ===== LEASES COLLECTION (ARCHIVE) =====
+    match /leases/{roomId} {
+      // Allow authenticated users to read lease data
+      allow read: if request.auth != null;
+
+      // Only admin can write
+      allow write: if isAdmin();
+
+      match /{leaseId}/{docId} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
+      }
+    }
+
+    // ===== CUSTOM CLAIMS HELPER =====
+    function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.admin == true;
+    }
+
+    function isTenantInRoom(roomId) {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/buildings/Nest/rooms/$(roomId)).data.tenantId == request.auth.uid ||
+        get(/databases/$(database)/documents/buildings/GroupA/rooms/$(roomId)).data.tenantId == request.auth.uid;
+    }
+  }
+}
