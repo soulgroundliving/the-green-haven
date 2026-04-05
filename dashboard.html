@@ -3951,11 +3951,9 @@ const MONTHS_FULL = CONFIG.months.full;
 // ROOMS_OLD and ROOMS_NEW are now defined in shared-config.js
 // Use CONFIG.rooms_old and CONFIG.rooms_new instead
 
-const DATA = {
-  '67':{label:'ปี 2567 (2024)',months:[[33600,12224,3120,100568],[33600,null,null,99904],[33600,null,null,102820],[33600,13344,2800,102416],[33600,14288,3200,105436],[33600,14088,3100,103072],[33600,14424,3460,103368],[33800,12768,3460,99828],[33800,12512,3040,94812],[33800,13344,3280,98576],[33800,12664,3200,96768],[33800,12648,2940,98524]]},
-  '68':{label:'ปี 2568 (2025)',months:[[33800,11272,3160,96372],[33800,8480,2860,91652],[33800,9104,2560,95944],[33800,12488,3200,95268],[33800,12896,2960,90856],[33800,12120,3140,90200],[33800,12432,3080,70980],[33800,13064,3660,72752],[33800,15144,3380,74748],[33800,12216,3460,71304],[33800,13752,3500,66520],[33800,10320,3420,88196]]},
-  '69':{label:'ปี 2569 (2026)',months:[[33800,11848,3380,67824],[33800,10568,3380,63630],[33800,13344,4020,67208],null,null,null,null,null,null,null,null,null]},
-};
+// Hardcoded data removed - use only Firebase and HISTORICAL_DATA
+// All billing data must be imported through the billing import tool
+const DATA = {};
 
 // ===== NAV =====
 window._showPageImpl = function(page,btn){
@@ -5978,9 +5976,9 @@ async function initDashboardCharts(){
     console.log('⚠️ Firebase dashboard load failed:', err.message);
   }
 
-  // Use Firebase data first, then HISTORICAL_DATA, then fall back to hardcoded DATA
+  // Use Firebase data first, then HISTORICAL_DATA (no hardcoded data fallback)
   const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
-  const dataSource = firebaseData || (Object.keys(historicalData).length > 0 ? historicalData : DATA);
+  const dataSource = firebaseData || historicalData;
 
   if(yr==='all'){
     labels=['67','68','69'].flatMap(y=>dataSource[y]?.months.map((_,i)=>MONTHS_TH[i+1]+"'"+y) || []);
@@ -6011,7 +6009,8 @@ async function initDashboardCharts(){
   const waterT=waters.filter(Boolean).reduce((a,b)=>a+b,0);
 
   document.getElementById('kpi-total').textContent='฿'+total.toLocaleString();
-  document.getElementById('kpi-total-sub').textContent=(yr==='all'?'ปี 2566-2569':DATA[yr]?.label)+' · '+valid.length+' เดือน';
+  const yearLabel=yr==='all'?'ปี 2566-2569':dataSource[yr]?.label||`ปี ${parseInt(yr)+543} (${yr})`;
+  document.getElementById('kpi-total-sub').textContent=yearLabel+' · '+valid.length+' เดือน';
   document.getElementById('kpi-monthly').textContent='฿'+avg.toLocaleString();
   document.getElementById('kpi-monthly-sub').textContent='สูงสุด: ฿'+maxV.toLocaleString()+' ('+MONTHS_TH[maxIdx+1]+')';
 
@@ -6052,7 +6051,7 @@ async function initDashboardCharts(){
   const avgOth=avg-avgR-avgE-avgW;
   chartPie=mkChart('chartPie','doughnut',{labels:['ค่าเช่าห้อง','ค่าไฟ','ค่าน้ำ','ค่าพาณิชย์/อื่นๆ'],datasets:[{data:[avgR,avgE,avgW,Math.max(0,avgOth)],backgroundColor:['#2d8653','#ff8f00','#2196f3','#9c27b0'],borderWidth:0,hoverOffset:8}]},{plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}},tooltip:{callbacks:{label:c=>c.label+': ฿'+Math.round(c.raw).toLocaleString()}}}});
 
-  const yrAvgs=['67','68','69'].map(y=>{const v=DATA[y].months.filter(m=>m&&m[3]>0);return v.length?Math.round(v.reduce((a,m)=>a+m[3],0)/v.length):0;});
+  const yrAvgs=['67','68','69'].map(y=>{const v=(dataSource[y]?.months||[]).filter(m=>m&&m[3]>0);return v.length?Math.round(v.reduce((a,m)=>a+m[3],0)/v.length):0;});
   chartYears=mkChart('chartYears','bar',{labels:['2567','2568','2569*'],datasets:[{label:'เฉลี่ย/เดือน',data:yrAvgs,backgroundColor:['#2d8653','#1976d2','#ff8f00'],borderRadius:8}]},{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false}}}});
 
   const lineOpts=(color)=>({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(1)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{maxRotation:45}}}});
@@ -6833,7 +6832,16 @@ function setMonthlyYear(yr,btn){
 }
 function initMonthlyPage(){
   renderMeterTable();
-  const d=DATA[monthlyYear];
+  // Load from Firebase or HISTORICAL_DATA (no hardcoded data)
+  let firebaseData = null;
+  let historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+  const d = firebaseData || historicalData[monthlyYear];
+
+  if(!d || !d.months){
+    document.getElementById('monthlyTable').innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">ยังไม่มีข้อมูลสำหรับปี ${monthlyYear}</td></tr>`;
+    return;
+  }
+
   const tbl=document.getElementById('monthlyTable');
   const rows=d.months.map((m,i)=>{
     if(!m||m[3]===0)return`<tr style="color:var(--text-muted);"><td>${MONTHS_FULL[i+1]}</td><td colspan="5" style="text-align:center;font-style:italic;">ยังไม่มีข้อมูล</td></tr>`;
