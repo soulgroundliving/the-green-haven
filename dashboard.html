@@ -14839,18 +14839,20 @@ function displayHistoricalDataForYear(year) {
   html += `<thead>
     <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
       <th style="padding:0.8rem;text-align:left;border-right:1px solid var(--border);rowspan:2;">เดือน</th>
-      <th colspan="4" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms (ห้องแถว)</th>
-      <th colspan="4" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest Building</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms (ห้องแถว)</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest Building</th>
       <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวมทั้งหมด</th>
     </tr>
     <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
       <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">เช่า</th>
       <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ไฟ</th>
       <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">น้ำ</th>
+      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ขยะ</th>
       <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">รวม</th>
       <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">เช่า</th>
       <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ไฟ</th>
       <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">น้ำ</th>
+      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ขยะ</th>
       <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">รวม</th>
       <th style="padding:0.4rem;text-align:right;font-size:0.8rem;color:var(--green);font-weight:700;">รวม</th>
     </tr>
