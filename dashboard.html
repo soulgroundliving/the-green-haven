@@ -14299,22 +14299,36 @@ function handleBillingImportFileProcess(file) {
 function parseBillingExcelData(workbook) {
   const monthlyData = [];
 
-  // Try to extract H32 from each sheet (skip first sheet if it's template)
+  // Try to extract detailed data from each sheet (skip first sheet if it's template)
   const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex.' ? 1 : 0;
 
   for (let idx = startIdx; idx < workbook.SheetNames.length; idx++) {
     const sheetName = workbook.SheetNames[idx];
     const worksheet = workbook.Sheets[sheetName];
 
-    // Get H32 value (total revenue)
-    const h32Cell = worksheet['H32'];
-    const h32Value = h32Cell?.v || h32Cell?.w || 0;
+    // Read individual cells for Rooms (row 24) and Amazon (row 26)
+    const d24 = parseFloat(worksheet['D24']?.v || 0) || 0;  // Room rent
+    const j24 = parseFloat(worksheet['J24']?.v || 0) || 0;  // Room electricity
+    const p24 = parseFloat(worksheet['P24']?.v || 0) || 0;  // Room water
 
-    if (h32Value && typeof h32Value === 'number') {
+    const d26 = parseFloat(worksheet['D26']?.v || 0) || 0;  // Amazon rent
+    const j26 = parseFloat(worksheet['J26']?.v || 0) || 0;  // Amazon electricity
+    const p26 = parseFloat(worksheet['P26']?.v || 0) || 0;  // Amazon water
+
+    // Calculate totals
+    const totalRent = d24 + d26;
+    const totalElec = j24 + j26;
+    const totalWater = p24 + p26;
+    const total = totalRent + totalElec + totalWater;
+
+    if (total > 0) {
       monthlyData.push({
         month: idx - startIdx + 1,
         sheetName: sheetName,
-        total: h32Value
+        rent: totalRent,
+        electricity: totalElec,
+        water: totalWater,
+        total: total
       });
     }
   }
@@ -14326,18 +14340,33 @@ function displayBillingImportPreview(monthlyData, year) {
   const previewDiv = document.getElementById('billingPreviewData');
   const monthNames = ['มค', 'กพ', 'มีค', 'เมษา', 'พค', 'มิย', 'กค', 'สค', 'กย', 'ตค', 'พย', 'ธค'];
 
-  let html = `<strong>ข้อมูลบิลปี ${year}:</strong><br>`;
-  html += `<table style="width:100%;border-collapse:collapse;margin-top:0.5rem;">`;
-  html += `<tr style="border-bottom:1px solid #ccc;"><th style="padding:0.3rem;text-align:left;">เดือน</th><th style="padding:0.3rem;text-align:right;">รายได้ (H32)</th></tr>`;
+  let html = `<strong>ข้อมูลบิลปี ${year} (Rooms + Amazon + Utilities):</strong><br>`;
+  html += `<table style="width:100%;border-collapse:collapse;margin-top:0.5rem;font-size:0.85rem;">`;
+  html += `<tr style="border-bottom:2px solid #ccc;background:#f0f0f0;"><th style="padding:0.4rem;text-align:left;">เดือน</th><th style="padding:0.4rem;text-align:right;">ค่าเช่า</th><th style="padding:0.4rem;text-align:right;">ค่าไฟ</th><th style="padding:0.4rem;text-align:right;">ค่าน้ำ</th><th style="padding:0.4rem;text-align:right;">รวม</th></tr>`;
 
-  let yearlyTotal = 0;
+  let yearlyRent = 0, yearlyElec = 0, yearlyWater = 0, yearlyTotal = 0;
   monthlyData.forEach(m => {
     const monthName = monthNames[m.month - 1] || `เดือน${m.month}`;
-    html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:0.3rem;">${monthName}${year}</td><td style="padding:0.3rem;text-align:right;">฿${m.total.toLocaleString()}</td></tr>`;
+    html += `<tr style="border-bottom:1px solid #eee;">`;
+    html += `<td style="padding:0.3rem;">${monthName}${year}</td>`;
+    html += `<td style="padding:0.3rem;text-align:right;">฿${m.rent.toLocaleString()}</td>`;
+    html += `<td style="padding:0.3rem;text-align:right;">฿${m.electricity.toLocaleString()}</td>`;
+    html += `<td style="padding:0.3rem;text-align:right;">฿${m.water.toLocaleString()}</td>`;
+    html += `<td style="padding:0.3rem;text-align:right;font-weight:bold;">฿${m.total.toLocaleString()}</td>`;
+    html += `</tr>`;
+    yearlyRent += m.rent;
+    yearlyElec += m.electricity;
+    yearlyWater += m.water;
     yearlyTotal += m.total;
   });
 
-  html += `<tr style="border-top:2px solid #333;font-weight:bold;"><td style="padding:0.3rem;">รวมทั้งปี</td><td style="padding:0.3rem;text-align:right;">฿${yearlyTotal.toLocaleString()}</td></tr>`;
+  html += `<tr style="border-top:2px solid #333;font-weight:bold;background:#f9f9f9;">`;
+  html += `<td style="padding:0.4rem;">รวมทั้งปี</td>`;
+  html += `<td style="padding:0.4rem;text-align:right;">฿${yearlyRent.toLocaleString()}</td>`;
+  html += `<td style="padding:0.4rem;text-align:right;">฿${yearlyElec.toLocaleString()}</td>`;
+  html += `<td style="padding:0.4rem;text-align:right;">฿${yearlyWater.toLocaleString()}</td>`;
+  html += `<td style="padding:0.4rem;text-align:right;">฿${yearlyTotal.toLocaleString()}</td>`;
+  html += `</tr>`;
   html += `</table>`;
 
   previewDiv.innerHTML = html;
@@ -14352,8 +14381,8 @@ function approveBillingImportData() {
 
   const { year, monthlyData } = window.pendingBillingData;
 
-  // Create HISTORICAL_DATA structure
-  const months = monthlyData.map(m => [m.total, 0, 0, m.total]); // [rent, elec, water, total]
+  // Create HISTORICAL_DATA structure with detailed breakdown
+  const months = monthlyData.map(m => [m.rent, m.electricity, m.water, m.total]); // [rent, elec, water, total]
 
   // Get or create HISTORICAL_DATA
   let historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
@@ -14367,7 +14396,7 @@ function approveBillingImportData() {
   // Save to localStorage
   localStorage.setItem('HISTORICAL_DATA', JSON.stringify(historicalData));
 
-  showBillingImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} สำเร็จ! Dashboard จะใช้ข้อมูลนี้แล้ว`, 'success');
+  showBillingImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) สำเร็จ! Dashboard จะใช้ข้อมูลนี้แล้ว`, 'success');
 
   // Cleanup
   setTimeout(() => {
