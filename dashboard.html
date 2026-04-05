@@ -14709,11 +14709,13 @@ function approveBillingImportData() {
     const bd = m.breakdown || {};
     const rooms = bd.rooms || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
     const nest = bd.nest || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+    const amazon = bd.amazon || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
 
     return {
       total: [m.rent, m.electricity, m.water, m.trash, m.total],
       rooms: [rooms.rent, rooms.elec, rooms.water, rooms.trash, rooms.total],
-      nest: [nest.rent, nest.elec, nest.water, nest.trash, nest.total]
+      nest: [nest.rent, nest.elec, nest.water, nest.trash, nest.total],
+      amazon: [amazon.rent, amazon.elec, amazon.water, amazon.trash, amazon.total]
     };
   });
 
@@ -14838,14 +14840,15 @@ function displayHistoricalDataForYear(year) {
   const yearLabel = yearData.label || `ปี ${2500 + parseInt(year)} (${year})`;
   const months = yearData.months || [];
 
-  let html = '<div style="font-family:\'Sarabun\',sans-serif;font-size:0.9rem;">';
+  let html = '<div style="font-family:\'Sarabun\',sans-serif;font-size:0.9rem;overflow-x:auto;">';
   html += `<table style="width:100%;border-collapse:collapse;">`;
   html += `<thead>
     <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
       <th style="padding:0.8rem;text-align:left;border-right:1px solid var(--border);rowspan:2;">เดือน</th>
-      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms (ห้องแถว)</th>
-      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest Building</th>
-      <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวมทั้งหมด</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#fff9c4;color:#f57f17;font-weight:700;">📦 Amazon</th>
+      <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวม</th>
     </tr>
     <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
       <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">เช่า</th>
@@ -14858,6 +14861,11 @@ function displayHistoricalDataForYear(year) {
       <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">น้ำ</th>
       <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ขยะ</th>
       <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">รวม</th>
       <th style="padding:0.2rem;text-align:right;font-size:0.8rem;color:var(--green);font-weight:700;">รวม</th>
     </tr>
   </thead>`;
@@ -14866,6 +14874,7 @@ function displayHistoricalDataForYear(year) {
   let totalRent = 0, totalElec = 0, totalWater = 0, totalAll = 0;
   let totalRoomsRent = 0, totalRoomsElec = 0, totalRoomsWater = 0, totalRoomsAll = 0;
   let totalNestRent = 0, totalNestElec = 0, totalNestWater = 0, totalNestAll = 0;
+  let totalAmazonRent = 0, totalAmazonElec = 0, totalAmazonWater = 0, totalAmazonAll = 0;
 
   months.forEach((month, idx) => {
     if (!month) {
@@ -14889,7 +14898,7 @@ function displayHistoricalDataForYear(year) {
       roomsData = [0, 0, 0, 0, 0];
       nestData = [0, 0, 0, 0, 0];
     } else {
-      // New format: { total: [...], rooms: [...], nest: [...] }
+      // New format: { total: [...], rooms: [...], nest: [...], amazon: [...] }
       const totalArr = month.total || [0, 0, 0, 0, 0];
       if (totalArr.length >= 5) {
         [rent, elec, water, trash, total] = totalArr;
@@ -14899,6 +14908,7 @@ function displayHistoricalDataForYear(year) {
       }
       roomsData = month.rooms || [0, 0, 0, 0, 0];
       nestData = month.nest || [0, 0, 0, 0, 0];
+      var amazonData = month.amazon || [0, 0, 0, 0, 0];
     }
 
     totalRent += rent || 0;
@@ -14913,6 +14923,10 @@ function displayHistoricalDataForYear(year) {
     totalNestElec += nestData[1] || 0;
     totalNestWater += nestData[2] || 0;
     totalNestAll += nestData[4] || 0;
+    totalAmazonRent += amazonData[0] || 0;
+    totalAmazonElec += amazonData[1] || 0;
+    totalAmazonWater += amazonData[2] || 0;
+    totalAmazonAll += amazonData[4] || 0;
 
     const monthNames = ['มค.', 'กพ.', 'มีค.', 'เมย.', 'พค.', 'มิย.', 'กค.', 'สค.', 'กย.', 'ตค.', 'พย.', 'ธค.'];
     const monthName = monthNames[idx] || `เดือน ${idx + 1}`;
@@ -14929,12 +14943,17 @@ function displayHistoricalDataForYear(year) {
               <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(nestData[2] || 0).toLocaleString()}</td>
               <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(nestData[3] || 0).toLocaleString()}</td>
               <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;color:#7b1fa2;font-weight:600;">฿${(nestData[4] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(amazonData[0] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(amazonData[1] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(amazonData[2] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(amazonData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#fff9c4;color:#f57f17;font-weight:600;">฿${(amazonData[4] || 0).toLocaleString()}</td>
               <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${(total || 0).toLocaleString()}</td>
             </tr>`;
   });
 
-  // Calculate trash totals for rooms and nest
-  let totalRoomsTrash = 0, totalNestTrash = 0;
+  // Calculate trash totals for rooms, nest, and amazon
+  let totalRoomsTrash = 0, totalNestTrash = 0, totalAmazonTrash = 0;
   months.forEach(month => {
     if (month) {
       if (Array.isArray(month)) {
@@ -14944,8 +14963,10 @@ function displayHistoricalDataForYear(year) {
       } else {
         const rd = month.rooms || [];
         const nd = month.nest || [];
+        const ad = month.amazon || [];
         totalRoomsTrash += rd[3] || 0;
         totalNestTrash += nd[3] || 0;
+        totalAmazonTrash += ad[3] || 0;
       }
     }
   });
@@ -14962,6 +14983,11 @@ function displayHistoricalDataForYear(year) {
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalNestWater.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalNestTrash.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;color:#7b1fa2;font-weight:700;">฿${totalNestAll.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalAmazonRent.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalAmazonElec.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalAmazonWater.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalAmazonTrash.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;color:#f57f17;font-weight:700;">฿${totalAmazonAll.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${totalAll.toLocaleString()}</td>
           </tr>`;
 
