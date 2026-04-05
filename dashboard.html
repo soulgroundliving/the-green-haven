@@ -2705,7 +2705,10 @@
       ⚙️ จัดการห้อง
     </button>
     <button class="meter-tab" onclick="window.switchMeterTab('import-meter', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
-      📥 นำเข้าข้อมูล
+      📥 นำเข้าข้อมูลมิเตอร์
+    </button>
+    <button class="meter-tab" onclick="window.switchMeterTab('import-billing', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
+      📥 นำเข้าข้อมูลบิล
     </button>
   </div>
 
@@ -2944,6 +2947,61 @@
     </div>
   </div>
 
+  <!-- Tab Content: Import Billing Data -->
+  <div id="meter-import-billing-content" class="meter-tab-content" style="display:none;">
+    <div class="section-title">📥 นำเข้าข้อมูลบิล</div>
+
+    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;">
+      <!-- File Upload -->
+      <div style="margin-bottom:1.5rem;">
+        <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📤 อัพโหลดไฟล์บิล Excel:</label>
+        <div class="import-drop-zone" id="billingDropZone"
+             style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
+             ondragover="event.preventDefault();this.style.background='var(--border)';"
+             ondragleave="this.style.background='var(--accent-light)';"
+             ondrop="handleBillingImportDrop(event);"
+             onclick="document.getElementById('billingFileInput').click();">
+          <div style="font-size:2rem;margin-bottom:0.5rem;">💳</div>
+          <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์บิล Excel มาวางที่นี่ หรือคลิก</div>
+          <div style="color:var(--text-muted);font-size:0.85rem;">ไฟล์ Excel (.xlsx, .xls) เช่น บิลปี68.xlsx</div>
+        </div>
+        <input type="file" id="billingFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleBillingImportFile(event);">
+      </div>
+
+      <!-- Year Selector -->
+      <div style="margin-bottom:1.5rem;">
+        <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📅 เลือกปี:</label>
+        <input type="number" id="billingYearInput" min="50" max="99" placeholder="เช่น 68" style="width:100%;padding:0.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-secondary);color:var(--text);font-size:0.9rem;">
+      </div>
+
+      <!-- Status Messages -->
+      <div id="billingStatusMessage" style="margin-bottom:1.5rem;"></div>
+
+      <!-- Import Results -->
+      <div id="billingResultsSection" style="display:none;margin-bottom:1.5rem;">
+        <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;">
+          <h3 style="color:var(--text);margin-bottom:1rem;font-size:0.95rem;">✅ ตรวจสอบข้อมูล</h3>
+          <div id="billingPreviewData" style="background:white;padding:1.2rem;border-radius:var(--radius-sm);font-family:monospace;font-size:0.85rem;"></div>
+        </div>
+
+        <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
+          <button id="approveBillingBtn" onclick="approveBillingImportData()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
+          <button onclick="cancelBillingImportProcess()" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">❌ ยกเลิก</button>
+        </div>
+      </div>
+
+      <!-- Instructions -->
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:1rem;color:var(--text-muted);font-size:0.85rem;">
+        <strong>ขั้นตอน:</strong>
+        <ol style="margin:0.5rem 0 0 1.5rem;padding:0;">
+          <li>อัพโหลดไฟล์ Excel บิล (เช่น บิลปี68.xlsx)</li>
+          <li>ระบบจะอ่าน H32 (รายได้รวม) จากแต่ละเดือน</li>
+          <li>ตรวจสอบข้อมูลและอนุมัติ</li>
+          <li>บันทึกเป็น HISTORICAL_DATA - Dashboard จะใช้ข้อมูลนี้</li>
+        </ol>
+      </div>
+    </div>
+  </div>
 
 </div>
 
@@ -5922,8 +5980,9 @@ async function initDashboardCharts(){
     console.log('⚠️ Firebase dashboard load failed:', err.message);
   }
 
-  // Use Firebase data if available, otherwise fall back to hardcoded DATA
-  const dataSource = firebaseData || DATA;
+  // Use Firebase data first, then HISTORICAL_DATA, then fall back to hardcoded DATA
+  const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+  const dataSource = firebaseData || (Object.keys(historicalData).length > 0 ? historicalData : DATA);
 
   if(yr==='all'){
     labels=['67','68','69'].flatMap(y=>dataSource[y]?.months.map((_,i)=>MONTHS_TH[i+1]+"'"+y) || []);
@@ -14174,6 +14233,175 @@ function switchReportTab(tabName, btn) {
   document.querySelectorAll('#page-admin-reports > .card > div:first-child button').forEach(b => b.style.borderBottom = '3px solid transparent');
   btn.style.color = '#2d8653';
   btn.style.borderBottom = '3px solid #2d8653';
+}
+
+// ===== BILLING IMPORT FUNCTIONS =====
+function handleBillingImportDrop(event) {
+  event.preventDefault();
+  const files = event.dataTransfer.files;
+  if (files.length > 0) {
+    handleBillingImportFileProcess(files[0]);
+  }
+}
+
+function handleBillingImportFile(event) {
+  const files = event.target.files;
+  if (files.length > 0) {
+    handleBillingImportFileProcess(files[0]);
+  }
+}
+
+function handleBillingImportFileProcess(file) {
+  showBillingImportStatus('⏳ กำลังโหลดไฟล์...', 'info');
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+
+      // Get year from user input
+      const yearInput = document.getElementById('billingYearInput').value.trim();
+      if (!yearInput) {
+        showBillingImportStatus('❌ กรุณาเลือกปี', 'error');
+        return;
+      }
+
+      const year = yearInput;
+      console.log(`📊 Parsing billing data for year: ${year}`);
+
+      // Parse billing data from all sheets
+      const monthlyData = parseBillingExcelData(workbook);
+
+      if (!monthlyData || monthlyData.length === 0) {
+        showBillingImportStatus('❌ ไม่พบข้อมูลบิล H32 ในไฟล์', 'error');
+        return;
+      }
+
+      // Display preview
+      displayBillingImportPreview(monthlyData, year);
+      showBillingImportStatus(`✅ โหลดข้อมูลบิล ${monthlyData.length} เดือน สำหรับปี ${year} สำเร็จ`, 'success');
+
+      // Store for approval
+      window.pendingBillingData = {
+        year: year,
+        monthlyData: monthlyData
+      };
+
+    } catch (err) {
+      showBillingImportStatus('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseBillingExcelData(workbook) {
+  const monthlyData = [];
+
+  // Try to extract H32 from each sheet (skip first sheet if it's template)
+  const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex.' ? 1 : 0;
+
+  for (let idx = startIdx; idx < workbook.SheetNames.length; idx++) {
+    const sheetName = workbook.SheetNames[idx];
+    const worksheet = workbook.Sheets[sheetName];
+
+    // Get H32 value (total revenue)
+    const h32Cell = worksheet['H32'];
+    const h32Value = h32Cell?.v || h32Cell?.w || 0;
+
+    if (h32Value && typeof h32Value === 'number') {
+      monthlyData.push({
+        month: idx - startIdx + 1,
+        sheetName: sheetName,
+        total: h32Value
+      });
+    }
+  }
+
+  return monthlyData;
+}
+
+function displayBillingImportPreview(monthlyData, year) {
+  const previewDiv = document.getElementById('billingPreviewData');
+  const monthNames = ['มค', 'กพ', 'มีค', 'เมษา', 'พค', 'มิย', 'กค', 'สค', 'กย', 'ตค', 'พย', 'ธค'];
+
+  let html = `<strong>ข้อมูลบิลปี ${year}:</strong><br>`;
+  html += `<table style="width:100%;border-collapse:collapse;margin-top:0.5rem;">`;
+  html += `<tr style="border-bottom:1px solid #ccc;"><th style="padding:0.3rem;text-align:left;">เดือน</th><th style="padding:0.3rem;text-align:right;">รายได้ (H32)</th></tr>`;
+
+  let yearlyTotal = 0;
+  monthlyData.forEach(m => {
+    const monthName = monthNames[m.month - 1] || `เดือน${m.month}`;
+    html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:0.3rem;">${monthName}${year}</td><td style="padding:0.3rem;text-align:right;">฿${m.total.toLocaleString()}</td></tr>`;
+    yearlyTotal += m.total;
+  });
+
+  html += `<tr style="border-top:2px solid #333;font-weight:bold;"><td style="padding:0.3rem;">รวมทั้งปี</td><td style="padding:0.3rem;text-align:right;">฿${yearlyTotal.toLocaleString()}</td></tr>`;
+  html += `</table>`;
+
+  previewDiv.innerHTML = html;
+  document.getElementById('billingResultsSection').style.display = 'block';
+}
+
+function approveBillingImportData() {
+  if (!window.pendingBillingData) {
+    showBillingImportStatus('❌ ไม่มีข้อมูลที่รออนุมัติ', 'error');
+    return;
+  }
+
+  const { year, monthlyData } = window.pendingBillingData;
+
+  // Create HISTORICAL_DATA structure
+  const months = monthlyData.map(m => [m.total, 0, 0, m.total]); // [rent, elec, water, total]
+
+  // Get or create HISTORICAL_DATA
+  let historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+
+  // Add/update year data
+  historicalData[year] = {
+    label: `ปี ${parseInt(year) + 543} (${year})`,
+    months: months
+  };
+
+  // Save to localStorage
+  localStorage.setItem('HISTORICAL_DATA', JSON.stringify(historicalData));
+
+  showBillingImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} สำเร็จ! Dashboard จะใช้ข้อมูลนี้แล้ว`, 'success');
+
+  // Cleanup
+  setTimeout(() => {
+    cancelBillingImportProcess();
+    // Reload dashboard charts if they exist
+    if (typeof initDashboardCharts === 'function') {
+      initDashboardCharts();
+    }
+  }, 2000);
+}
+
+function cancelBillingImportProcess() {
+  document.getElementById('billingFileInput').value = '';
+  document.getElementById('billingYearInput').value = '';
+  document.getElementById('billingResultsSection').style.display = 'none';
+  document.getElementById('billingPreviewData').innerHTML = '';
+  document.getElementById('billingStatusMessage').innerHTML = '';
+  window.pendingBillingData = null;
+}
+
+function showBillingImportStatus(message, type) {
+  const statusDiv = document.getElementById('billingStatusMessage');
+  let bgColor = 'var(--accent-light)';
+  let borderColor = 'var(--accent)';
+
+  if (type === 'success') {
+    bgColor = '#e8f5e9';
+    borderColor = '#2e7d32';
+  } else if (type === 'error') {
+    bgColor = '#ffebee';
+    borderColor = '#c62828';
+  }
+
+  statusDiv.innerHTML = `<div style="padding:0.8rem;background:${bgColor};border:1px solid ${borderColor};border-radius:var(--radius-sm);color:var(--text);">${message}</div>`;
 }
 
 </script>
