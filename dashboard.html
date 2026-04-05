@@ -2970,8 +2970,8 @@
 
       <!-- Year Selector -->
       <div style="margin-bottom:1.5rem;">
-        <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📅 เลือกปี:</label>
-        <input type="number" id="billingYearInput" min="50" max="99" placeholder="เช่น 68" style="width:100%;padding:0.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-secondary);color:var(--text);font-size:0.9rem;">
+        <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📅 เลือกปี (ต้องใส่ก่อนอัพโหลด):</label>
+        <input type="number" id="billingYearInput" min="50" max="99" placeholder="เช่น 68" style="width:100%;padding:0.8rem;border:2px solid var(--green);border-radius:var(--radius-sm);background:var(--bg-secondary);color:var(--text);font-size:0.9rem;font-weight:600;">
       </div>
 
       <!-- Status Messages -->
@@ -14252,6 +14252,13 @@ function handleBillingImportFile(event) {
 }
 
 function handleBillingImportFileProcess(file) {
+  // Check year FIRST before reading file
+  const yearInput = document.getElementById('billingYearInput').value.trim();
+  if (!yearInput || yearInput === '') {
+    showBillingImportStatus('❌ กรุณาใส่ปีก่อน (เช่น 68) แล้วค่อยอัพโหลดไฟล์', 'error');
+    return;
+  }
+
   showBillingImportStatus('⏳ กำลังโหลดไฟล์...', 'info');
 
   const reader = new FileReader();
@@ -14259,13 +14266,6 @@ function handleBillingImportFileProcess(file) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
-
-      // Get year from user input
-      const yearInput = document.getElementById('billingYearInput').value.trim();
-      if (!yearInput) {
-        showBillingImportStatus('❌ กรุณาเลือกปี', 'error');
-        return;
-      }
 
       const year = yearInput;
       console.log(`📊 Parsing billing data for year: ${year}`);
