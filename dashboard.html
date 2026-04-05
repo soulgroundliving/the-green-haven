@@ -14662,11 +14662,15 @@ function approveBillingImportData() {
 }
 
 function cancelBillingImportProcess() {
-  document.getElementById('billingFileInput').value = '';
-  document.getElementById('billingYearInput').value = '';
-  document.getElementById('billingResultsSection').style.display = 'none';
-  document.getElementById('billingPreviewData').innerHTML = '';
-  document.getElementById('billingStatusMessage').innerHTML = '';
+  const fileInput = document.getElementById('billingFileInput');
+  const resultsSection = document.getElementById('billingResultsSection');
+  const previewData = document.getElementById('billingPreviewData');
+  const statusMsg = document.getElementById('billingStatusMessage');
+
+  if (fileInput) fileInput.value = '';
+  if (resultsSection) resultsSection.style.display = 'none';
+  if (previewData) previewData.innerHTML = '';
+  if (statusMsg) statusMsg.innerHTML = '';
   window.pendingBillingData = null;
 }
 
