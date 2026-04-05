@@ -14664,7 +14664,7 @@ function initHistoricalDataDisplay() {
 
   // Add year options (Buddhist year format only)
   years.forEach(year => {
-    const buddhistYear = parseInt(year) + 543;
+    const buddhistYear = 2500 + parseInt(year);
     const option = document.createElement('option');
     option.value = year;
     option.textContent = buddhistYear.toString(); // Just show Buddhist year number
