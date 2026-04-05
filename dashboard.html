@@ -2021,9 +2021,9 @@
   <div class="year-tabs" style="margin-bottom:1rem;">
     <span class="year-tab-label">ปีงบประมาณ:</span>
     <button class="year-tab" onclick="setYear('all',this)">ทั้งหมด</button>
-    <button class="year-tab active" onclick="setYear('67',this)">2567 (2024)</button>
+    <button class="year-tab" onclick="setYear('67',this)">2567 (2024)</button>
     <button class="year-tab" onclick="setYear('68',this)">2568 (2025)</button>
-    <button class="year-tab" onclick="setYear('69',this)">2569 (2026)</button>
+    <button class="year-tab active" onclick="setYear('69',this)">2569 (2026)</button>
   </div>
   <div class="kpi-grid">
     <!-- Combined Total (Both Buildings) -->
@@ -5863,10 +5863,10 @@ window.addEventListener('resize',function(){
 
 
 // ===== DASHBOARD =====
-// Auto-detect latest year from HISTORICAL_DATA, fallback to 67
+// Auto-detect latest year from HISTORICAL_DATA, fallback to 69 (2026)
 const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
 const availableYears = Object.keys(historicalData).map(y => parseInt(y)).sort((a,b) => b-a);
-let currentYear = availableYears.length > 0 ? String(availableYears[0]) : '67';
+let currentYear = '69';
 let chartRevenue,chartPie,chartYears,chartElec,chartWater,chartMS,chartCum;
 
 function setYear(yr,btn){
@@ -6024,20 +6024,50 @@ async function initDashboardCharts(){
   document.getElementById('kpi-monthly').textContent='฿'+avg.toLocaleString();
   document.getElementById('kpi-monthly-sub').textContent='สูงสุด: ฿'+maxV.toLocaleString()+' ('+MONTHS_TH[maxIdx+1]+')';
 
-  // Calculate and display building-specific estimates
-  // Estimate based on occupied rooms × room price
+  // Calculate and display building-specific data from HISTORICAL_DATA or live estimates
   const activeRooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
   const activeNest = getActiveRoomsWithMetadata('nest', NEST_ROOMS);
   const tenants = loadTenants();
   const occupiedRooms = activeRooms.filter(r => tenants[r.id]?.name).length;
   const occupiedNest = activeNest.filter(r => tenants[r.id]?.name).length;
-  const monthlyRoomsRent = occupiedRooms > 0 ? activeRooms.filter(r => tenants[r.id]?.name).reduce((sum, r) => sum + (r.rent || 0), 0) : 0;
-  const monthlyNestRent = occupiedNest > 0 ? activeNest.filter(r => tenants[r.id]?.name).reduce((sum, r) => sum + (r.rent || 0), 0) : 0;
-  const yearlyRoomsEst = monthlyRoomsRent * (yr === 'all' ? 12 : valid.length);
-  const yearlyNestEst = monthlyNestRent * (yr === 'all' ? 12 : valid.length);
 
-  document.getElementById('kpi-rooms-total').textContent = '฿' + yearlyRoomsEst.toLocaleString();
-  document.getElementById('kpi-rooms-sub').textContent = `${occupiedRooms}/${activeRooms.length} ห้อง · ฿${monthlyRoomsRent.toLocaleString()}/เดือน`;
+  // Try to get actual breakdown data from HISTORICAL_DATA
+  let yearlyRoomsRent = 0, yearlyNestRent = 0;
+  let monthlyRoomsRent = 0, monthlyNestRent = 0;
+
+  if (yr !== 'all' && dataSource[yr] && dataSource[yr].months) {
+    // Sum from actual historical data (with breakdown)
+    const yearData = dataSource[yr];
+    yearData.months.forEach(month => {
+      if (month) {
+        if (Array.isArray(month)) {
+          // Old format: no breakdown, use fallback
+          monthlyRoomsRent = 0;
+          monthlyNestRent = 0;
+        } else if (month.rooms && month.nest) {
+          // New format: has breakdown [rent, elec, water, total]
+          yearlyRoomsRent += (month.rooms[0] || 0); // rooms rent
+          yearlyNestRent += (month.nest[0] || 0);   // nest rent
+          monthlyRoomsRent = (month.rooms[0] || 0);
+          monthlyNestRent = (month.nest[0] || 0);
+        }
+      }
+    });
+  }
+
+  // Fallback to estimate if no data found
+  if (yearlyRoomsRent === 0 && yearlyNestRent === 0) {
+    monthlyRoomsRent = occupiedRooms > 0 ? activeRooms.filter(r => tenants[r.id]?.name).reduce((sum, r) => sum + (r.rent || 0), 0) : 0;
+    monthlyNestRent = occupiedNest > 0 ? activeNest.filter(r => tenants[r.id]?.name).reduce((sum, r) => sum + (r.rent || 0), 0) : 0;
+    yearlyRoomsRent = monthlyRoomsRent * (yr === 'all' ? 12 : valid.length);
+    yearlyNestRent = monthlyNestRent * (yr === 'all' ? 12 : valid.length);
+  }
+
+  document.getElementById('kpi-rooms-total').textContent = '฿' + yearlyRoomsRent.toLocaleString();
+  document.getElementById('kpi-rooms-sub').textContent = yearlyRoomsRent > 0 ? `ข้อมูลจากปีนั้นๆ` : `${occupiedRooms}/${activeRooms.length} ห้อง · ฿${monthlyRoomsRent.toLocaleString()}/เดือน`;
+
+  document.getElementById('kpi-nest-total').textContent = '฿' + yearlyNestRent.toLocaleString();
+  document.getElementById('kpi-nest-sub').textContent = yearlyNestRent > 0 ? `ข้อมูลจากปีนั้นๆ` : `${occupiedNest}/${activeNest.length} ยูนิต · ฿${monthlyNestRent.toLocaleString()}/เดือน`;
 
   document.getElementById('ins-rent').textContent='฿'+rentT.toLocaleString();
   document.getElementById('ins-elec').textContent='฿'+elecT.toLocaleString();
@@ -8193,8 +8223,17 @@ function updateDashboardLive(){
   }
 
   const now=new Date();
-  const month=now.getMonth()+1;
-  const year=now.getFullYear()+543;
+  const currentDate=now.getFullYear()+543;
+  const currentMonth=now.getMonth()+1;
+
+  // Only update live KPIs if viewing current year
+  // For other years, skip live updates (those are based on current month data only)
+  if(currentYear !== String(currentDate)) {
+    return; // Don't update live metrics for past/future years
+  }
+
+  const month=currentMonth;
+  const year=currentDate;
   const ps=loadPS();
   const key=`${year}_${month}`;
   const paid=ps[key]||{};
@@ -14366,7 +14405,12 @@ function parseSingleSheetV1(worksheet, monthNum, sheetName) {
       electricity: totalElec,
       water: totalWater,
       trash: totalTrash,
-      total: total
+      total: total,
+      breakdown: {
+        rooms: { rent: totalRent, elec: totalElec, water: totalWater, total: total - totalTrash },
+        nest: { rent: 0, elec: 0, water: 0, total: 0 },
+        amazon: { rent: 0, elec: 0, water: 0, total: 0 }
+      }
     };
   }
   return null;
@@ -14412,7 +14456,11 @@ function parseSingleSheetV2(worksheet, monthNum, sheetName) {
       water: totalWater,
       trash: totalTrash,
       total: total,
-      breakdown: { rooms: roomsRent, nest: nestRent, amazon: amazonRent }
+      breakdown: {
+        rooms: { rent: roomsRent, elec: roomsElec, water: roomsWater, total: roomsRent + roomsElec + roomsWater },
+        nest: { rent: nestRent, elec: nestElec, water: nestWater, total: nestRent + nestElec + nestWater },
+        amazon: { rent: amazonRent, elec: amazonElec, water: amazonWater, total: amazonRent + amazonElec + amazonWater }
+      }
     };
   }
   return null;
@@ -14571,8 +14619,18 @@ function approveBillingImportData() {
 
   const { year, monthlyData } = window.pendingBillingData;
 
-  // Create HISTORICAL_DATA structure with detailed breakdown
-  const months = monthlyData.map(m => [m.rent, m.electricity, m.water, m.total]); // [rent, elec, water, total]
+  // Create HISTORICAL_DATA structure with detailed breakdown (rooms, nest, amazon)
+  const months = monthlyData.map(m => {
+    const bd = m.breakdown || {};
+    const rooms = bd.rooms || { rent: 0, elec: 0, water: 0, total: 0 };
+    const nest = bd.nest || { rent: 0, elec: 0, water: 0, total: 0 };
+
+    return {
+      total: [m.rent, m.electricity, m.water, m.total],
+      rooms: [rooms.rent, rooms.elec, rooms.water, rooms.total],
+      nest: [nest.rent, nest.elec, nest.water, nest.total]
+    };
+  });
 
   // Get or create HISTORICAL_DATA
   let historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
@@ -14586,7 +14644,7 @@ function approveBillingImportData() {
   // Save to localStorage
   localStorage.setItem('HISTORICAL_DATA', JSON.stringify(historicalData));
 
-  showBillingImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) สำเร็จ! Dashboard จะใช้ข้อมูลนี้แล้ว`, 'success');
+  showBillingImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) รวมข้อมูล Rooms/Nest สำเร็จ!`, 'success');
 
   // Reload dashboard charts with new data
   setTimeout(async () => {
@@ -14693,50 +14751,95 @@ function displayHistoricalDataForYear(year) {
 
   let html = '<div style="font-family:\'Sarabun\',sans-serif;font-size:0.9rem;">';
   html += `<table style="width:100%;border-collapse:collapse;">`;
-  html += `<thead><tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
-            <th style="padding:0.8rem;text-align:left;border-right:1px solid var(--border);">เดือน</th>
-            <th style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">ค่าเช่า (บาท)</th>
-            <th style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">ค่าไฟ (บาท)</th>
-            <th style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">ค่าน้ำ (บาท)</th>
-            <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวม (บาท)</th>
-          </tr></thead>`;
+  html += `<thead>
+    <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
+      <th style="padding:0.8rem;text-align:left;border-right:1px solid var(--border);rowspan:2;">เดือน</th>
+      <th colspan="4" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms (ห้องแถว)</th>
+      <th colspan="4" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest Building</th>
+      <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวมทั้งหมด</th>
+    </tr>
+    <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
+      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">เช่า</th>
+      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ไฟ</th>
+      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">น้ำ</th>
+      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">รวม</th>
+      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">เช่า</th>
+      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">ไฟ</th>
+      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;">น้ำ</th>
+      <th style="padding:0.4rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">รวม</th>
+      <th style="padding:0.4rem;text-align:right;font-size:0.8rem;color:var(--green);font-weight:700;">รวม</th>
+    </tr>
+  </thead>`;
   html += `<tbody>`;
 
   let totalRent = 0, totalElec = 0, totalWater = 0, totalAll = 0;
+  let totalRoomsRent = 0, totalRoomsElec = 0, totalRoomsWater = 0, totalRoomsAll = 0;
+  let totalNestRent = 0, totalNestElec = 0, totalNestWater = 0, totalNestAll = 0;
 
   months.forEach((month, idx) => {
     if (!month) {
       html += `<tr style="border-bottom:1px solid var(--border);">
                 <td style="padding:0.8rem;color:var(--text-muted);border-right:1px solid var(--border);">เดือน ${idx + 1}</td>
-                <td colspan="4" style="padding:0.8rem;text-align:center;color:var(--text-muted);font-style:italic;">ไม่มีข้อมูล</td>
+                <td colspan="8" style="padding:0.8rem;text-align:center;color:var(--text-muted);font-style:italic;">ไม่มีข้อมูล</td>
               </tr>`;
       return;
     }
 
-    const [rent, elec, water, total] = month;
+    // Support both old format (array) and new format (object with total/rooms/nest)
+    let rent, elec, water, total, roomsData, nestData;
+    if (Array.isArray(month)) {
+      // Old format: [rent, elec, water, total]
+      [rent, elec, water, total] = month;
+      roomsData = [0, 0, 0, 0];
+      nestData = [0, 0, 0, 0];
+    } else {
+      // New format: { total: [...], rooms: [...], nest: [...] }
+      [rent, elec, water, total] = month.total || [0, 0, 0, 0];
+      roomsData = month.rooms || [0, 0, 0, 0];
+      nestData = month.nest || [0, 0, 0, 0];
+    }
+
     totalRent += rent || 0;
     totalElec += elec || 0;
     totalWater += water || 0;
     totalAll += total || 0;
+    totalRoomsRent += roomsData[0] || 0;
+    totalRoomsElec += roomsData[1] || 0;
+    totalRoomsWater += roomsData[2] || 0;
+    totalRoomsAll += roomsData[3] || 0;
+    totalNestRent += nestData[0] || 0;
+    totalNestElec += nestData[1] || 0;
+    totalNestWater += nestData[2] || 0;
+    totalNestAll += nestData[3] || 0;
 
     const monthNames = ['มค.', 'กพ.', 'มีค.', 'เมย.', 'พค.', 'มิย.', 'กค.', 'สค.', 'กย.', 'ตค.', 'พย.', 'ธค.'];
     const monthName = monthNames[idx] || `เดือน ${idx + 1}`;
 
     html += `<tr style="border-bottom:1px solid var(--border);">
-              <td style="padding:0.8rem;border-right:1px solid var(--border);">${monthName}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${(rent || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${(elec || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${(water || 0).toLocaleString()}</td>
-              <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:600;">฿${(total || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;border-right:1px solid var(--border);font-weight:600;">${monthName}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(roomsData[0] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(roomsData[1] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(roomsData[2] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;color:#2d8653;font-weight:600;">฿${(roomsData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(nestData[0] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(nestData[1] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;">฿${(nestData[2] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;color:#7b1fa2;font-weight:600;">฿${(nestData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${(total || 0).toLocaleString()}</td>
             </tr>`;
   });
 
   html += `<tr style="background:var(--green-pale);font-weight:700;border-bottom:2px solid var(--green);">
             <td style="padding:0.8rem;border-right:1px solid var(--border);">รวมทั้งสิ้น</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalRent.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalElec.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalWater.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;color:var(--green);">฿${totalAll.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalRoomsRent.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalRoomsElec.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalRoomsWater.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;color:#2d8653;font-weight:700;">฿${totalRoomsAll.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalNestRent.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalNestElec.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);">฿${totalNestWater.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;color:#7b1fa2;font-weight:700;">฿${totalNestAll.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${totalAll.toLocaleString()}</td>
           </tr>`;
 
   html += `</tbody></table>`;
