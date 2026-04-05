@@ -14342,7 +14342,7 @@ function displayBillingImportPreview(monthlyData, year) {
 
   let html = `<strong>ข้อมูลบิลปี ${year} (Rooms + Amazon + Utilities):</strong><br>`;
   html += `<table style="width:100%;border-collapse:collapse;margin-top:0.5rem;font-size:0.85rem;">`;
-  html += `<tr style="border-bottom:2px solid #ccc;background:#f0f0f0;"><th style="padding:0.4rem;text-align:left;">เดือน</th><th style="padding:0.4rem;text-align:right;">ค่าเช่า</th><th style="padding:0.4rem;text-align:right;">ค่าไฟ</th><th style="padding:0.4rem;text-align:right;">ค่าน้ำ</th><th style="padding:0.4rem;text-align:right;">รวม</th></tr>`;
+  html += `<tr style="border-bottom:2px solid #ccc;background:#f0f0f0;"><th style="padding:0.4rem;text-align:left;">เดือน</th><th style="padding:0.4rem;text-align:right;"><div>ค่าเช่า</div><small style="font-weight:normal;color:#666;">(D24+D26)</small></th><th style="padding:0.4rem;text-align:right;"><div>ค่าไฟ</div><small style="font-weight:normal;color:#666;">(J24+J26)</small></th><th style="padding:0.4rem;text-align:right;"><div>ค่าน้ำ</div><small style="font-weight:normal;color:#666;">(P24+P26)</small></th><th style="padding:0.4rem;text-align:right;">รวม</th></tr>`;
 
   let yearlyRent = 0, yearlyElec = 0, yearlyWater = 0, yearlyTotal = 0;
   monthlyData.forEach(m => {
