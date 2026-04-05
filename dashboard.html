@@ -14252,11 +14252,20 @@ function handleBillingImportFile(event) {
 }
 
 function handleBillingImportFileProcess(file) {
-  // Check year FIRST before reading file
-  const yearInput = document.getElementById('billingYearInput').value.trim();
+  // Auto-detect year from filename (e.g., "บิลปี69.xlsx" → 69)
+  let yearInput = document.getElementById('billingYearInput').value.trim();
+
   if (!yearInput || yearInput === '') {
-    showBillingImportStatus('❌ กรุณาใส่ปีก่อน (เช่น 68) แล้วค่อยอัพโหลดไฟล์', 'error');
-    return;
+    // Try to extract year from filename: "บิลปี69" or "บิลปี69 (6)"
+    const yearMatch = file.name.match(/ปี(\d+)/);
+    if (yearMatch) {
+      yearInput = yearMatch[1];
+      document.getElementById('billingYearInput').value = yearInput;
+      showBillingImportStatus(`✅ ตรวจพบปี ${yearInput} จากชื่อไฟล์`, 'success');
+    } else {
+      showBillingImportStatus('❌ กรุณาใส่ปี (เช่น 68) หรือใช้ชื่อไฟล์เช่น "บิลปี69.xlsx"', 'error');
+      return;
+    }
   }
 
   showBillingImportStatus('⏳ กำลังโหลดไฟล์...', 'info');
@@ -14270,30 +14279,35 @@ function handleBillingImportFileProcess(file) {
       const year = yearInput;
       console.log(`📊 Parsing billing data for year: ${year}`);
 
-      // Auto-select parser: Use V2 if ANY sheet has D43 data (Nest building)
-      // This allows mixed parsing per sheet (V1 for Jan-May, V2 for Jun+)
-      // For now, we'll detect and use a hybrid approach:
-      // - Parse all sheets individually
-      // - Check each sheet for D43 → V2, no D43 → V1
+      // Auto-select parser strategy based on year
+      // Year 69: Mixed V1 (Jan-May) + V2 (Jun-Dec) based on D43 presence per sheet
+      // Year 70+: V2 only (all sheets use V2 format with Nest building)
       let monthlyData = [];
       const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex' ? 1 : 0;
+      const yearNum = parseInt(year);
+      const forceV2 = yearNum >= 70; // Year 70+ always use V2
 
       for (let idx = startIdx; idx < workbook.SheetNames.length; idx++) {
         const sheet = workbook.Sheets[workbook.SheetNames[idx]];
         const hasD43 = sheet['D43']?.v !== undefined;
 
-        if (hasD43) {
-          // V2: Parse this sheet with Nest building
+        if (forceV2) {
+          // Year 70+: Always use V2 (Nest building format)
+          const result = parseSingleSheetV2(sheet, idx - startIdx + 1, workbook.SheetNames[idx]);
+          if (result) monthlyData.push(result);
+        } else if (hasD43) {
+          // Year 69: Check for D43 → use V2 (Jun+)
           const result = parseSingleSheetV2(sheet, idx - startIdx + 1, workbook.SheetNames[idx]);
           if (result) monthlyData.push(result);
         } else {
-          // V1: Parse this sheet normally
+          // Year 69: No D43 → use V1 (Jan-May)
           const result = parseSingleSheetV1(sheet, idx - startIdx + 1, workbook.SheetNames[idx]);
           if (result) monthlyData.push(result);
         }
       }
 
-      console.log(`📌 Parsed ${monthlyData.length} months (mixed V1/V2)`);
+      const parserMode = forceV2 ? '(V2 only)' : '(mixed V1/V2)';
+      console.log(`📌 Year ${year}: Parsed ${monthlyData.length} months ${parserMode}`);
 
 
       if (!monthlyData || monthlyData.length === 0) {
