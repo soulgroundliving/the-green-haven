@@ -14662,13 +14662,12 @@ function initHistoricalDataDisplay() {
     yearSelect.remove(1);
   }
 
-  // Add year options
+  // Add year options (Buddhist year format only)
   years.forEach(year => {
-    const yearData = historicalData[year];
-    const yearLabel = yearData.label || `ปี ${parseInt(year) + 543} (${year})`;
+    const buddhistYear = parseInt(year) + 543;
     const option = document.createElement('option');
     option.value = year;
-    option.textContent = yearLabel;
+    option.textContent = buddhistYear.toString(); // Just show Buddhist year number
     yearSelect.appendChild(option);
   });
 
