@@ -2985,6 +2985,21 @@
       <!-- Status Messages -->
       <div id="billingStatusMessage" style="margin-bottom:1.5rem;"></div>
 
+      <!-- HTML FILE INPUT EXPLANATION:
+           Line 2981: <input id="billingFileInput" onchange="window.handleBillingImportFile && window.handleBillingImportFile(event);">
+
+           🔑 KEY POINTS:
+           1. hidden input element (display:none) - clicked from drop zone
+           2. onchange attribute - CRITICAL: must check window.handleBillingImportFile exists
+           3. window.handleBillingImportFile && ... - prevents ReferenceError if function not loaded
+           4. Function is defined in JavaScript section below and exposed to window scope
+
+           ⚠️ COMMON ISSUE: If this doesn't work, check:
+           - Is handleBillingImportFile function defined? (Line ~14700)
+           - Is it exposed to window? (Line ~14711: window.handleBillingImportFile = ...)
+           - Browser cache cleared? (Ctrl+F5)
+      -->
+
       <!-- Import Results -->
       <div id="billingResultsSection" style="display:none;margin-bottom:1.5rem;">
         <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;">
@@ -4157,6 +4172,8 @@ function initImportMeterTab() {
         if (importData) {
           currentImportData = importData;
           let matchResults;
+          // ⚠️ SAME SAFETY CHECK as line ~4254
+          // See explanation there for why we check before calling
           if (typeof window.matchMeterDataWithPrevious === 'function') {
             matchResults = window.matchMeterDataWithPrevious(importData);
           } else {
@@ -4233,12 +4250,24 @@ function handleImportFileProcess(file) {
         console.log(`📊 Final: Rooms=${Object.keys(importData.rooms || {}).length}, Nest=${Object.keys(importData.nest || {}).length}, Amazon=${Object.keys(importData.amazon || {}).length}`);
         currentImportData = importData;
 
-        // Get match results
+        // STEP 6: Get match results - CRITICAL SAFETY CHECK
+        // This function comes from meter-unified.js (shared/meter-unified.js)
+        // It compares imported data with previous month's readings
+        //
+        // ⚠️ WHY THE SAFETY CHECK IS CRITICAL:
+        // - Function must be loaded from meter-unified.js
+        // - If meter-unified.js didn't load → function won't exist
+        // - If we call undefined function → ReferenceError crash
+        // - Solution: Check if exists before calling + provide fallback
+        //
+        // Error would be: "Uncaught ReferenceError: matchMeterDataWithPrevious is not defined"
         console.log('🔍 Calling matchMeterDataWithPrevious...');
         let matchResults;
         if (typeof window.matchMeterDataWithPrevious === 'function') {
+          // Function exists - safe to call
           matchResults = window.matchMeterDataWithPrevious(importData);
         } else {
+          // Function not loaded yet - use default/fallback object
           console.warn('⚠️ matchMeterDataWithPrevious not available yet, using fallback');
           matchResults = { summary: { totalRooms: 0 }, details: [], canProceed: true, isFirstImport: true };
         }
@@ -14694,6 +14723,18 @@ function switchReportTab(tabName, btn) {
 }
 
 // ===== BILLING IMPORT FUNCTIONS =====
+/**
+ * CRITICAL SECTION: Handles file uploads for billing data
+ *
+ * 🔑 KEY CONCEPT: Two entry points → One processor
+ * 1. Drop Zone (ondrop) → handleBillingImportDrop()
+ * 2. File Input (onchange) → handleBillingImportFile()
+ * 3. Both call → handleBillingImportFileProcess(file)
+ *
+ * ⚠️ IMPORTANT: Functions MUST be exposed to window scope (bottom of this section)
+ *    Otherwise HTML onclick/ondrop attributes will not find them!
+ */
+
 function handleBillingImportDrop(event) {
   event.preventDefault();
   const files = event.dataTransfer.files;
@@ -14702,6 +14743,14 @@ function handleBillingImportDrop(event) {
   }
 }
 
+/**
+ * ENTRY POINT #1: File input onchange handler
+ * HTML attribute: onchange="window.handleBillingImportFile && window.handleBillingImportFile(event);"
+ *
+ * Flow: User clicks drop zone → clicks hidden input → selects file → onchange fires → this function called
+ *
+ * ⚠️ Safety check in HTML: "window.handleBillingImportFile &&" prevents error if not loaded yet
+ */
 function handleBillingImportFile(event) {
   const files = event.target.files;
   if (files.length > 0) {
@@ -14709,23 +14758,56 @@ function handleBillingImportFile(event) {
   }
 }
 
-// Expose to global scope for HTML event handlers
+/**
+ * 🚨 CRITICAL SECTION: EXPOSE TO GLOBAL SCOPE
+ *
+ * WHY: HTML attributes (onchange, ondrop) need these functions in window scope
+ * WHEN: After function definitions above
+ *
+ * If this is missing or wrong:
+ * ❌ Error: "handleBillingImportFile is not defined"
+ * ❌ Error: "handleBillingImportDrop is not defined"
+ *
+ * Solution: Always assign to window object:
+ */
 window.handleBillingImportFile = handleBillingImportFile;
 window.handleBillingImportDrop = handleBillingImportDrop;
 
+/**
+ * MAIN PROCESSOR: Handles Excel file reading and parsing
+ *
+ * 🔄 FLOW:
+ * 1. Extract year from filename (must have "ปี" + number)
+ * 2. Read Excel file using XLSX library
+ * 3. Parse sheets based on year format
+ * 4. Save to HISTORICAL_DATA in localStorage
+ * 5. Display preview with matchResults
+ *
+ * ⚠️ CRITICAL DEPENDENCIES:
+ * - XLSX library (loaded in HTML header)
+ * - meter-unified.js (for matchMeterDataWithPrevious)
+ * - Functions: showBillingImportStatus, parseImportExcelData, displayImportPreview
+ *
+ * 🐛 COMMON ISSUES:
+ * - "matchMeterDataWithPrevious is not defined" → Check if meter-unified.js loaded
+ * - File not processing → Check browser console for errors
+ * - Filename not recognized → Must contain "ปี" + year number
+ */
 function handleBillingImportFileProcess(file) {
-  // Auto-detect year from filename (e.g., "บิลปี69.xlsx" → 69)
-  // Filename MUST contain "ปี" followed by year number
+  // STEP 1: Filename validation - Auto-detect year from filename
+  // Example: "บิลปี69.xlsx" → year = 69
+  // Pattern: Look for Thai character "ปี" followed by digits
   const yearMatch = file.name.match(/ปี(\d+)/);
 
   if (!yearMatch) {
     showBillingImportStatus('❌ ชื่อไฟล์ต้องมี "ปี" และตัวเลขปี เช่น "บิลปี69.xlsx" หรือ "บิลปี70 (2).xlsx"', 'error');
-    return;
+    return; // STOP: Cannot proceed without year
   }
 
   const yearInput = yearMatch[1];
   showBillingImportStatus(`✅ ตรวจพบปี ${yearInput} จากชื่อไฟล์`, 'success');
 
+  // STEP 2: Start file loading
   showBillingImportStatus('⏳ กำลังโหลดไฟล์...', 'info');
 
   const reader = new FileReader();
@@ -14733,19 +14815,24 @@ function handleBillingImportFileProcess(file) {
     try {
       showBillingImportStatus('⏳ กำลังประมวลผลข้อมูล...', 'info');
 
-      // Process file reading async to avoid blocking UI
+      // STEP 3: Async processing to prevent UI freeze
+      // setTimeout allows browser to update UI between processing
       setTimeout(() => {
         try {
+          // STEP 4: Read and parse Excel file
           const data = new Uint8Array(e.target.result);
           console.log('📥 Reading Excel file...', data.length, 'bytes');
 
+          // XLSX library reads binary data and returns workbook object
           const workbook = XLSX.read(data, { type: 'array' });
           console.log('✅ Excel loaded:', workbook.SheetNames.length, 'sheets');
 
           const year = yearInput;
           console.log(`📊 Parsing billing data for year: ${year}`);
 
-          // Auto-select parser strategy based on year
+          // STEP 5: Detect file format version based on year
+          // Year >= 70 (Thai year 2570+) = V2 format
+          // Year < 70 = V3 format
           let monthlyData = [];
           const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex' ? 1 : 0;
           const yearNum = parseInt(year);
