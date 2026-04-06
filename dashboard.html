@@ -3534,7 +3534,7 @@
           <label style="display:block;margin-bottom:.5rem;font-weight:700;color:var(--text);">📸 อัปโหลดรูปสลิป:</label>
           <div style="border:2px dashed var(--border);border-radius:8px;padding:2rem;text-align:center;cursor:pointer;background:#fafafa;transition:.2s;"
             id="slipUploadDrop"
-            ondrop="handleAdminSlipDrop(event)"
+            ondrop="handlePaymentSlipDrop(event)"
             ondragover="event.preventDefault();this.style.background='#f0f7ff';this.style.borderColor='var(--blue)'"
             ondragleave="this.style.background='#fafafa';this.style.borderColor='var(--border)'"
             onclick="document.getElementById('slipUploadInput').click()">
@@ -9541,7 +9541,7 @@ function loadSelectedPayment(){
   selectedSlipFile = null;
 }
 
-function handleAdminSlipDrop(e){
+function handlePaymentSlipDrop(e){
   e.preventDefault();
   const file = e.dataTransfer.files[0];
   handleSlipSelect(file);
