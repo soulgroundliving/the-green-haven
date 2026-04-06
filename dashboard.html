@@ -4465,8 +4465,9 @@ function parseImportExcelData(workbook, building) {
     const amazonCurr = parseFloat(row[12]) || 0;
 
     // Store based on room number (auto-detect building)
-    if (roomsRoomList.includes(roomNum)) {
-      // Rows 2-23: ROOMS building
+    // IMPORTANT: Skip Amazon here - it's handled separately below
+    if (roomsRoomList.includes(roomNum) && roomNum !== 'AMAZON' && roomNum !== 'ร้านใหญ่') {
+      // Rows 2-23: ROOMS building (excluding Amazon)
       allRooms.rooms[roomNum] = {
         eNew: roomsCurr,
         eOld: roomsPrev,
@@ -4483,9 +4484,9 @@ function parseImportExcelData(workbook, building) {
       };
     }
 
-    // Row 47: AMAZON (ร้านใหญ่)
+    // Row 47: AMAZON (ร้านใหญ่) - Handle separately to avoid duplication
     if (roomNum === 'ร้านใหญ่' || roomNum === 'AMAZON') {
-      allRooms.amazon[roomNum] = {
+      allRooms.amazon['ร้านใหญ่'] = {
         eNew: amazonCurr,
         eOld: amazonPrev,
         wNew: 0,
