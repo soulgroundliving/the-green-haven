@@ -4561,9 +4561,9 @@ function parseImportExcelData(workbook, building) {
 }
 
 function displayImportPreview(importData, matchResults) {
-  // Guard against undefined matchResults
-  if (!matchResults || !matchResults.details) {
-    showImportStatus('❌ เกิดข้อผิดพลาด: ไม่สามารถประมวลผลข้อมูลได้', 'error');
+  // Guard against undefined importData
+  if (!importData) {
+    showImportStatus('❌ เกิดข้อผิดพลาด: ไม่มีข้อมูลที่นำเข้า', 'error');
     return;
   }
 
