@@ -3257,11 +3257,7 @@
         <!-- Server URL Settings for QR Code -->
         <!-- PromptPay Settings -->
         <div class="pp-settings">
-          <span style="font-size:1.2rem;">💳</span>
-          <label>เลขพร้อมเพย์:</label>
-          <input type="text" id="pp-input" placeholder="0XX-XXX-XXXX" maxlength="12" oninput="document.getElementById('pp-status').textContent=''">
-          <button onclick="savePromptPay()">💾 บันทึก</button>
-          <span class="pp-status" id="pp-status">—</span>
+          <!-- PromptPay removed - use SlipOK instead -->
         </div>
 
         <!-- Building selector -->
@@ -7945,15 +7941,7 @@ function crc16(str){
 
 // Removed: buildPromptPayPayload() and savePromptPay() - PromptPay not used in payment verification page
 
-function renderQR(imgId,amount){
-  if(!PROMPTPAY_NUMBER)return;
-  const payload=buildPromptPayPayload(PROMPTPAY_NUMBER,amount);
-  const el=document.getElementById(imgId);
-  if(!el)return;
-  // Use QR image API — works immediately, no JS library required
-  el.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=M&data='+encodeURIComponent(payload);
-  el.onerror=()=>{el.alt='⚠️ QR ไม่โหลด (ต้องใช้อินเทอร์เน็ต)';el.style.cssText='width:160px;height:50px;border:1px dashed #ccc;';};
-}
+// Removed: renderQR() - PromptPay QR not used, using SlipOK instead
 
 let isGeneratingInvoice = false; // Prevent rapid clicks
 function generateInvoice(){
