@@ -2747,7 +2747,7 @@
     <div style="margin-bottom:1.5rem;">
       <label style="font-weight:600;display:block;margin-bottom:0.5rem;color:var(--text);">เลือกอาคาร</label>
       <select id="roomConfigBuilding" onchange="loadRoomConfigUI()" style="padding:0.7rem;margin-top:0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;width:100%;max-width:300px;">
-        <option value="rooms">ห้องแถว (Rooms Building)</option>
+        <option value="rooms" selected>ห้องแถว (Rooms Building)</option>
         <option value="nest">Nest Building</option>
       </select>
     </div>
@@ -4077,7 +4077,13 @@ window._switchMeterTabImpl = function(tabName, btnElement) {
   } else if (tabName === 'rooms') {
     initMeterRoomsTab();
   } else if (tabName === 'room-config') {
-    loadRoomConfigUI();
+    // Initialize room config tab
+    const dropdown = document.getElementById('roomConfigBuilding');
+    if (dropdown && !dropdown.value) {
+      dropdown.value = 'rooms'; // Set default
+    }
+    // Small delay to ensure DOM is ready
+    setTimeout(() => loadRoomConfigUI(), 50);
   } else if (tabName === 'import-meter') {
     initImportMeterTab();
   }
@@ -5957,11 +5963,31 @@ function exportRoomsMeterCSV() {
 
 // ===== ROOM CONFIGURATION FUNCTIONS =====
 function loadRoomConfigUI() {
-  const building = document.getElementById('roomConfigBuilding').value;
-  const config = RoomConfigManager.getRoomsConfig(building);
-  const tbody = document.getElementById('roomConfigBody');
+  try {
+    const dropdown = document.getElementById('roomConfigBuilding');
+    if (!dropdown) {
+      console.error('❌ roomConfigBuilding dropdown not found');
+      return;
+    }
 
-  tbody.innerHTML = config.rooms
+    const building = dropdown.value || 'rooms';
+    console.log('📋 Loading room config for building:', building);
+
+    if (typeof RoomConfigManager === 'undefined') {
+      console.error('❌ RoomConfigManager not loaded');
+      return;
+    }
+
+    const config = RoomConfigManager.getRoomsConfig(building);
+    console.log('📦 Config loaded:', config);
+
+    const tbody = document.getElementById('roomConfigBody');
+    if (!tbody) {
+      console.error('❌ roomConfigBody tbody not found');
+      return;
+    }
+
+    tbody.innerHTML = config.rooms
     .filter(room => !room.deleted)
     .map(room => {
       // Get rent: use RoomConfigManager if explicitly set, fallback to metadata, then default
@@ -5999,17 +6025,29 @@ function loadRoomConfigUI() {
       </tr>
     `}).join('');
 
-  populateTemplateSelect(building);
+    populateTemplateSelect(building);
+    console.log('✅ Room config UI loaded successfully');
+  } catch (error) {
+    console.error('❌ Error loading room config UI:', error);
+  }
 }
 
 function populateTemplateSelect(building) {
-  const config = RoomConfigManager.getRoomsConfig(building);
-  const select = document.getElementById('templateRoomSelect');
-  select.innerHTML = '<option value="">-- เลือกห้อง --</option>' +
-    config.rooms
-      .filter(room => !room.deleted)
-      .map(room => `<option value="${room.id}">${room.id} - ${room.name}</option>`)
-      .join('');
+  try {
+    const config = RoomConfigManager.getRoomsConfig(building);
+    const select = document.getElementById('templateRoomSelect');
+    if (!select) {
+      console.warn('⚠️ templateRoomSelect not found');
+      return;
+    }
+    select.innerHTML = '<option value="">-- เลือกห้อง --</option>' +
+      config.rooms
+        .filter(room => !room.deleted)
+        .map(room => `<option value="${room.id}">${room.id} - ${room.name}</option>`)
+        .join('');
+  } catch (error) {
+    console.error('❌ Error populating template select:', error);
+  }
 }
 
 function toggleAddMode(mode) {
@@ -15258,11 +15296,24 @@ function approveBillingImportData() {
         console.log('✅ Historical data display updated');
       }
 
-      // Force refresh the entire page to ensure all data is synced
-      showBillingImportStatus(`✅ บันทึกข้อมูลและอัพเดทสำเร็จ! กำลัง refresh หน้า...`, 'success');
+      // Navigate to HISTORICAL_DATA page to show the imported data
+      showBillingImportStatus(`✅ บันทึกข้อมูลและอัพเดทสำเร็จ!`, 'success');
+
+      // Navigate to meter page to show the imported data in HISTORICAL_DATA
       setTimeout(() => {
-        location.reload();
-      }, 1500);
+        console.log('🔄 Navigating to HISTORICAL_DATA page...');
+        // Find the meter page button and click it to navigate
+        const meterPageBtn = document.querySelector('[onclick*="\'meter\'"]');
+        if (meterPageBtn) {
+          meterPageBtn.click();
+          console.log('✅ Navigated to meter page');
+        } else {
+          console.warn('⚠️ Could not find meter page button, using window.showPage');
+          if (typeof window.showPage === 'function') {
+            window.showPage('meter');
+          }
+        }
+      }, 1000);
 
     } catch (error) {
       console.error('❌ Error during billing import refresh:', error);
