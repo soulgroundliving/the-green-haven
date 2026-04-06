@@ -4453,16 +4453,22 @@ function parseImportExcelData(workbook, building) {
     const roomNum = String(row[0]).trim();
 
     // Column mapping (all buildings use same columns):
-    // A(0)=room, B(1)=prev, C(2)=curr, D(3)=rent,
-    // G(6)=nest_prev, H(7)=nest_curr,
-    // L(11)=amazon_prev, M(12)=amazon_curr
+    // A(0)=room, B(1)=rooms_prev, C(2)=rooms_curr, D(3)=rooms_wprev, E(4)=rooms_wcurr,
+    // G(6)=nest_prev, H(7)=nest_curr, I(8)=nest_wprev, J(9)=nest_wcurr,
+    // L(11)=amazon_prev, M(12)=amazon_curr, N(13)=amazon_wprev, O(14)=amazon_wcurr
 
     const roomsPrev = parseFloat(row[1]) || 0;
     const roomsCurr = parseFloat(row[2]) || 0;
+    const roomsWPrev = parseFloat(row[3]) || 0;
+    const roomsWCurr = parseFloat(row[4]) || 0;
     const nestPrev = parseFloat(row[6]) || 0;
     const nestCurr = parseFloat(row[7]) || 0;
+    const nestWPrev = parseFloat(row[8]) || 0;
+    const nestWCurr = parseFloat(row[9]) || 0;
     const amazonPrev = parseFloat(row[11]) || 0;
     const amazonCurr = parseFloat(row[12]) || 0;
+    const amazonWPrev = parseFloat(row[13]) || 0;
+    const amazonWCurr = parseFloat(row[14]) || 0;
 
     // Store based on room number (auto-detect building)
     if (roomsRoomList.includes(roomNum)) {
@@ -4470,16 +4476,16 @@ function parseImportExcelData(workbook, building) {
       allRooms.rooms[roomNum] = {
         eNew: roomsCurr,
         eOld: roomsPrev,
-        wNew: 0,
-        wOld: 0
+        wNew: roomsWCurr,
+        wOld: roomsWPrev
       };
     } else if (nestRoomList.includes(roomNum)) {
       // Rows 26-44: NEST building
       allRooms.nest[roomNum] = {
         eNew: nestCurr,
         eOld: nestPrev,
-        wNew: 0,
-        wOld: 0
+        wNew: nestWCurr,
+        wOld: nestWPrev
       };
     }
 
@@ -4488,8 +4494,8 @@ function parseImportExcelData(workbook, building) {
       allRooms.amazon['ร้านใหญ่'] = {
         eNew: amazonCurr,
         eOld: amazonPrev,
-        wNew: 0,
-        wOld: 0
+        wNew: amazonWCurr,
+        wOld: amazonWPrev
       };
     }
   }
