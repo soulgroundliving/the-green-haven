@@ -4833,12 +4833,12 @@ function displayRecordedMeterData(importData, matchResults) {
     document.getElementById('recordedNestCount').textContent = nestCount;
     document.getElementById('recordedAmazonCount').textContent = amazonCount;
 
-    // ===== GENERATE SAMPLE DATA TABLE =====
+    // ===== GENERATE COMPLETE DATA TABLE (ALL 43 ROOMS) =====
     const tableDiv = document.getElementById('recordedMeterTable');
-    let tableHtml = '<div style="font-weight:600;margin-bottom:0.8rem;">📋 ตัวอย่างข้อมูลมิเตอร์ที่บันทึก:</div>';
+    let tableHtml = '<div style="font-weight:600;margin-bottom:0.8rem;">📋 ข้อมูลมิเตอร์ทั้งหมด (43 ห้อง):</div>';
 
-    tableHtml += '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
-    tableHtml += '<thead><tr style="background:#e8f5e9;border-bottom:2px solid #4caf50;">';
+    tableHtml += '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;max-height:600px;overflow-y:auto;">';
+    tableHtml += '<thead style="position:sticky;top:0;"><tr style="background:#e8f5e9;border-bottom:2px solid #4caf50;">';
     tableHtml += '<th style="padding:0.6rem;text-align:left;border-right:1px solid #c8e6c9;">🏢 Building</th>';
     tableHtml += '<th style="padding:0.6rem;text-align:left;border-right:1px solid #c8e6c9;">🔢 ห้อง</th>';
     tableHtml += '<th style="padding:0.6rem;text-align:right;border-right:1px solid #c8e6c9;">📊 เก่า</th>';
@@ -4846,9 +4846,9 @@ function displayRecordedMeterData(importData, matchResults) {
     tableHtml += '<th style="padding:0.6rem;text-align:right;">📈 ใช้</th>';
     tableHtml += '</tr></thead><tbody>';
 
-    // Sample Rooms data
-    const roomsSample = Object.entries(importData.rooms || {}).slice(0, 5);
-    roomsSample.forEach(([roomNum, data]) => {
+    // ALL Rooms data (not just sample)
+    const allRoomsData = Object.entries(importData.rooms || {});
+    allRoomsData.forEach(([roomNum, data]) => {
       const usage = Math.abs((data.eNew || 0) - (data.eOld || 0));
       tableHtml += `<tr style="border-bottom:1px solid #e8f5e9;background:#fafafa;">
         <td style="padding:0.5rem;border-right:1px solid #c8e6c9;"><strong>🏠 Rooms</strong></td>
@@ -4859,9 +4859,9 @@ function displayRecordedMeterData(importData, matchResults) {
       </tr>`;
     });
 
-    // Sample Nest data
-    const nestSample = Object.entries(importData.nest || {}).slice(0, 5);
-    nestSample.forEach(([roomNum, data]) => {
+    // ALL Nest data (not just sample)
+    const allNestData = Object.entries(importData.nest || {});
+    allNestData.forEach(([roomNum, data]) => {
       const usage = Math.abs((data.eNew || 0) - (data.eOld || 0));
       tableHtml += `<tr style="border-bottom:1px solid #e8f5e9;background:#fafafa;">
         <td style="padding:0.5rem;border-right:1px solid #c8e6c9;"><strong>🏢 Nest</strong></td>
@@ -4869,6 +4869,19 @@ function displayRecordedMeterData(importData, matchResults) {
         <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;">${(data.eOld || 0).toLocaleString()}</td>
         <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;"><strong>${(data.eNew || 0).toLocaleString()}</strong></td>
         <td style="padding:0.5rem;text-align:right;color:#6a1b9a;font-weight:600;">${usage.toLocaleString()}</td>
+      </tr>`;
+    });
+
+    // Amazon data
+    const allAmazonData = Object.entries(importData.amazon || {});
+    allAmazonData.forEach(([roomNum, data]) => {
+      const usage = Math.abs((data.eNew || 0) - (data.eOld || 0));
+      tableHtml += `<tr style="border-bottom:1px solid #e8f5e9;background:#fafafa;">
+        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;"><strong>📦 Amazon</strong></td>
+        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;">${roomNum}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;">${(data.eOld || 0).toLocaleString()}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;"><strong>${(data.eNew || 0).toLocaleString()}</strong></td>
+        <td style="padding:0.5rem;text-align:right;color:#f57f17;font-weight:600;">${usage.toLocaleString()}</td>
       </tr>`;
     });
 
