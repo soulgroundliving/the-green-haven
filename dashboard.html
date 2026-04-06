@@ -3984,8 +3984,7 @@
   </div>
 </div>
 
-<!-- Toggle Button for Firebase Panel -->
-<button id="firebaseToggleBtn" onclick="toggleFirebasePanel()" style="position:fixed;bottom:20px;right:20px;width:50px;height:50px;background:#2d8653;color:white;border:none;border-radius:50%;cursor:pointer;font-size:24px;box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:9998;display:flex;align-items:center;justify-content:center;">🔥</button>
+<!-- Toggle Button for Firebase Panel - REMOVED FOR PRODUCTION (was blocking content on scroll) -->
 
 <script>
 // Use CONFIG from shared-config.js instead
@@ -4182,15 +4181,31 @@ function handleImportFileProcess(file) {
       console.log('📊 Parsed import data:', importData);
 
       if (importData) {
-        // Auto-detect building from room names
-        const detectedBuilding = detectBuildingFromRooms(Object.keys(importData.rooms));
-        console.log(`🏢 Auto-detected building: ${detectedBuilding}`);
+        // Check if V3 format - look for explicit isV3 flag OR building='all'
+        const isV3Format = importData.isV3 === true || importData.building === 'all';
+        console.log(`🔍 V3 Format detected: ${isV3Format}`);
+        console.log(`   isV3=${importData.isV3}, building=${importData.building}`);
+        console.log(`   Rooms: ${Object.keys(importData.rooms || {}).length}, Nest: ${Object.keys(importData.nest || {}).length}, Amazon: ${Object.keys(importData.amazon || {}).length}`);
 
-        // Re-parse with correct building if needed
-        if (detectedBuilding === 'nest') {
-          importData = parseImportExcelData(workbook, 'nest');
+        if (isV3Format) {
+          // V3 format - already has all 3 buildings (rooms/nest/amazon), don't re-parse
+          console.log(`✅ V3 format confirmed - SKIP re-parsing!`);
+          console.log(`   Rooms: ${Object.keys(importData.rooms || {}).length}, Nest: ${Object.keys(importData.nest || {}).length}, Amazon: ${Object.keys(importData.amazon || {}).length}`);
+        } else {
+          // V1/V2 format - auto-detect single building
+          console.log(`⚠️ Not V3 format - attempting V1/V2 building detection...`);
+          const detectedBuilding = detectBuildingFromRooms(Object.keys(importData.rooms));
+          console.log(`🏢 Auto-detected building: ${detectedBuilding}`);
+
+          // Re-parse with correct building if needed
+          if (detectedBuilding === 'nest') {
+            console.log(`⚠️ Re-parsing as NEST building...`);
+            importData = parseImportExcelData(workbook, 'nest');
+            console.log(`   After re-parse - Rooms: ${Object.keys(importData.rooms || {}).length}, Nest: ${Object.keys(importData.nest || {}).length}, Amazon: ${Object.keys(importData.amazon || {}).length}`);
+          }
         }
 
+        console.log(`📊 Final importData before display: Rooms=${Object.keys(importData.rooms || {}).length}, Nest=${Object.keys(importData.nest || {}).length}, Amazon=${Object.keys(importData.amazon || {}).length}`);
         currentImportData = importData;
 
         // Get match results
@@ -4469,8 +4484,15 @@ function parseImportExcelData(workbook, building) {
 
   console.log(`📦 V3 Parse Results - Rooms: ${Object.keys(allRooms.rooms).length}, Nest: ${Object.keys(allRooms.nest).length}, Amazon: ${Object.keys(allRooms.amazon).length} (all pre-populated with 0, actual data overlaid)`);
 
+  // DEBUG: Log Nest room keys
+  if (Object.keys(allRooms.nest).length > 0) {
+    console.log(`✅ Nest rooms populated:`, Object.keys(allRooms.nest).slice(0, 5), '...', Object.keys(allRooms.nest).slice(-2));
+  } else {
+    console.warn(`⚠️ WARNING: allRooms.nest is EMPTY!`);
+  }
+
   // Return multi-building structure
-  return {
+  const result = {
     year,
     month: selectedMonth || 1,
     sheetName: selectedSheet,
@@ -4482,15 +4504,18 @@ function parseImportExcelData(workbook, building) {
     importType: 'meter'     // Store as meter_data in Firebase
   };
 
+  console.log(`📤 Returning V3 data: Rooms=${Object.keys(result.rooms).length}, Nest=${Object.keys(result.nest).length}, Amazon=${Object.keys(result.amazon).length}`);
+  return result;
+
   // ===== FALLBACK: V1/V2 FORMAT PARSING =====
   console.log('🔧 Parsing V1/V2 meter format (single building per file)');
 
   // Get room list based on building
   let roomList = [];
   if (building === 'rooms') {
-    // Rooms Building: 13-33, 15ก, ร้านใหญ่
+    // Rooms Building: 13-33, 15ก, ร้านใหญ่ (NO room 35)
     roomList = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25',
-                '26', '27', '28', '29', '30', '31', '32', '33', '35', 'AMAZON', 'ร้านใหญ่'];
+                '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON', 'ร้านใหญ่'];
   } else if (building === 'nest') {
     // Nest Building: N101-N405
     roomList = ['N101', 'N102', 'N103', 'N104', 'N105',
@@ -4887,9 +4912,9 @@ function displayRecordedMeterData(importData, matchResults) {
 
     tableHtml += '</tbody></table>';
 
-    if (roomsSample.length > 0 || nestSample.length > 0) {
-      tableHtml += `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">... แสดง ${roomsSample.length + nestSample.length} แถว จาก ${roomsCount + nestCount} ห้อง</div>`;
-    }
+    // Display all rooms count summary
+    const totalRooms = roomsCount + nestCount + amazonCount;
+    tableHtml += `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">📌 รวม ${totalRooms} ห้อง: Rooms ${roomsCount} + Nest ${nestCount} + Amazon ${amazonCount}</div>`;
 
     tableDiv.innerHTML = tableHtml;
 
