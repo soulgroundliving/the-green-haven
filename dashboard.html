@@ -15184,18 +15184,37 @@ function approveBillingImportData() {
   showBillingImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) รวมข้อมูล Rooms/Nest สำเร็จ!`, 'success');
 
   // Reload dashboard charts with new data
+  showBillingImportStatus(`✅ กำลังอัพเดทข้อมูล...`, 'info');
+
   setTimeout(async () => {
-    cancelBillingImportProcess();
-    // Reload dashboard charts if they exist (wait for async operation)
-    if (typeof initDashboardCharts === 'function') {
-      await initDashboardCharts();
-      showBillingImportStatus(`✅ Dashboard อัพเดทข้อมูลสำเร็จ`, 'success');
+    try {
+      cancelBillingImportProcess();
+
+      // Reload dashboard charts (await for completion)
+      if (typeof initDashboardCharts === 'function') {
+        console.log('🔄 Updating dashboard charts...');
+        await initDashboardCharts();
+        console.log('✅ Dashboard charts updated');
+      }
+
+      // Refresh historical data display
+      if (typeof initHistoricalDataDisplay === 'function') {
+        console.log('🔄 Updating historical data display...');
+        initHistoricalDataDisplay();
+        console.log('✅ Historical data display updated');
+      }
+
+      // Force refresh the entire page to ensure all data is synced
+      showBillingImportStatus(`✅ บันทึกข้อมูลและอัพเดทสำเร็จ! กำลัง refresh หน้า...`, 'success');
+      setTimeout(() => {
+        location.reload();
+      }, 1500);
+
+    } catch (error) {
+      console.error('❌ Error during billing import refresh:', error);
+      showBillingImportStatus(`❌ เกิดข้อผิดพลาดขณะอัพเดท: ${error.message}`, 'error');
     }
-    // Refresh the HISTORICAL_DATA display
-    if (typeof initHistoricalDataDisplay === 'function') {
-      initHistoricalDataDisplay();
-    }
-  }, 1000);
+  }, 500);
 }
 
 function cancelBillingImportProcess() {
