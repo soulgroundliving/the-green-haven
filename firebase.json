@@ -1,4 +1,25 @@
 {
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "functions/",
+      "config/",
+      "shared/",
+      ".git",
+      "README.md",
+      "test-*.js",
+      "*.md"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/dashboard.html"
+      }
+    ]
+  },
   "database": {
     "rules": "config/database.rules.json"
   },
