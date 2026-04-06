@@ -14678,57 +14678,67 @@ function handleBillingImportFileProcess(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
+      showBillingImportStatus('⏳ กำลังประมวลผลข้อมูล...', 'info');
 
-      const year = yearInput;
-      console.log(`📊 Parsing billing data for year: ${year}`);
+      // Process file reading async to avoid blocking UI
+      setTimeout(() => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          console.log('📥 Reading Excel file...', data.length, 'bytes');
 
-      // Auto-select parser strategy based on year
-      // Year 69: Mixed V1 (Jan-May) + V2 (Jun-Dec) based on D43 presence per sheet
-      // Year 70+: V2 only (all sheets use V2 format with Nest building)
-      let monthlyData = [];
-      const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex' ? 1 : 0;
-      const yearNum = parseInt(year);
-      const forceV2 = yearNum >= 70; // Year 70+ always use V2
+          const workbook = XLSX.read(data, { type: 'array' });
+          console.log('✅ Excel loaded:', workbook.SheetNames.length, 'sheets');
 
-      for (let idx = startIdx; idx < workbook.SheetNames.length; idx++) {
-        const sheet = workbook.Sheets[workbook.SheetNames[idx]];
-        const hasD43 = sheet['D43']?.v !== undefined;
+          const year = yearInput;
+          console.log(`📊 Parsing billing data for year: ${year}`);
 
-        if (forceV2) {
-          // Year 70+: Always use V2 (Nest building format)
-          const result = parseSingleSheetV2(sheet, idx - startIdx + 1, workbook.SheetNames[idx]);
-          if (result) monthlyData.push(result);
-        } else if (hasD43) {
-          // Year 69: Check for D43 → use V2 (Jun+)
-          const result = parseSingleSheetV2(sheet, idx - startIdx + 1, workbook.SheetNames[idx]);
-          if (result) monthlyData.push(result);
-        } else {
-          // Year 69: No D43 → use V1 (Jan-May)
-          const result = parseSingleSheetV1(sheet, idx - startIdx + 1, workbook.SheetNames[idx]);
-          if (result) monthlyData.push(result);
+          // Auto-select parser strategy based on year
+          let monthlyData = [];
+          const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex' ? 1 : 0;
+          const yearNum = parseInt(year);
+          const forceV2 = yearNum >= 70;
+
+          // Process sheets with async breaks to avoid UI freeze
+          let sheetIdx = startIdx;
+
+          const processSheet = () => {
+            if (sheetIdx >= workbook.SheetNames.length) {
+              // Done processing all sheets
+              finalizeBillingImport(monthlyData, year, forceV2);
+              return;
+            }
+
+            const sheet = workbook.Sheets[workbook.SheetNames[sheetIdx]];
+            const hasD43 = sheet['D43']?.v !== undefined;
+
+            try {
+              if (forceV2) {
+                const result = parseSingleSheetV2(sheet, sheetIdx - startIdx + 1, workbook.SheetNames[sheetIdx]);
+                if (result) monthlyData.push(result);
+              } else if (hasD43) {
+                const result = parseSingleSheetV2(sheet, sheetIdx - startIdx + 1, workbook.SheetNames[sheetIdx]);
+                if (result) monthlyData.push(result);
+              } else {
+                const result = parseSingleSheetV1(sheet, sheetIdx - startIdx + 1, workbook.SheetNames[sheetIdx]);
+                if (result) monthlyData.push(result);
+              }
+            } catch (sheetErr) {
+              console.warn(`⚠️ Error processing sheet ${sheetIdx}:`, sheetErr.message);
+            }
+
+            sheetIdx++;
+
+            // Process next sheet with tiny delay to allow UI refresh
+            setTimeout(processSheet, 10);
+          };
+
+          processSheet();
+
+        } catch (err) {
+          showBillingImportStatus('❌ เกิดข้อผิดพลาดในการอ่านไฟล์: ' + err.message, 'error');
+          console.error('File reading error:', err);
         }
-      }
-
-      const parserMode = forceV2 ? '(V2 only)' : '(mixed V1/V2)';
-      console.log(`📌 Year ${year}: Parsed ${monthlyData.length} months ${parserMode}`);
-
-
-      if (!monthlyData || monthlyData.length === 0) {
-        showBillingImportStatus('❌ ไม่พบข้อมูลบิล H32 ในไฟล์', 'error');
-        return;
-      }
-
-      // Display preview
-      displayBillingImportPreview(monthlyData, year);
-      showBillingImportStatus(`✅ โหลดข้อมูลบิล ${monthlyData.length} เดือน สำหรับปี ${year} สำเร็จ`, 'success');
-
-      // Store for approval
-      window.pendingBillingData = {
-        year: year,
-        monthlyData: monthlyData
-      };
+      }, 50);
 
     } catch (err) {
       showBillingImportStatus('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
@@ -14736,6 +14746,32 @@ function handleBillingImportFileProcess(file) {
     }
   };
   reader.readAsArrayBuffer(file);
+}
+
+// Helper: Finalize billing import after all sheets processed
+function finalizeBillingImport(monthlyData, year, forceV2) {
+  try {
+    const parserMode = forceV2 ? '(V2 only)' : '(mixed V1/V2)';
+    console.log(`📌 Year ${year}: Parsed ${monthlyData.length} months ${parserMode}`);
+
+    if (!monthlyData || monthlyData.length === 0) {
+      showBillingImportStatus('❌ ไม่พบข้อมูลบิล H32 ในไฟล์', 'error');
+      return;
+    }
+
+    // Display preview
+    displayBillingImportPreview(monthlyData, year);
+    showBillingImportStatus(`✅ โหลดข้อมูลบิล ${monthlyData.length} เดือน สำหรับปี ${year} สำเร็จ`, 'success');
+
+    // Store for approval
+    window.pendingBillingData = {
+      year: year,
+      monthlyData: monthlyData
+    };
+  } catch (err) {
+    showBillingImportStatus('❌ เกิดข้อผิดพลาดในการประมวลผล: ' + err.message, 'error');
+    console.error('Finalization error:', err);
+  }
 }
 
 // Helper: Parse single sheet with V1 format
