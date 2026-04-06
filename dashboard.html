@@ -2902,6 +2902,64 @@
         </div>
       </div>
 
+      <!-- 📊 Recorded Meter Data Display -->
+      <div id="meterDataRecordedSection" style="display:none;margin-top:2rem;">
+        <div style="background:#e8f5e9;border:2px solid #2e7d32;border-radius:var(--radius);padding:2rem;">
+          <h3 style="color:#2e7d32;margin-bottom:1.5rem;font-size:1.1rem;font-weight:600;">📊 ข้อมูลที่บันทึก</h3>
+
+          <!-- Period Info -->
+          <div style="background:white;border:1px solid #c8e6c9;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+            <div style="text-align:center;">
+              <div style="color:var(--text-muted);font-size:0.85rem;">📅 ปี</div>
+              <div id="recordedYear" style="font-size:1.2rem;font-weight:600;color:#2e7d32;">-</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:var(--text-muted);font-size:0.85rem;">📆 เดือน</div>
+              <div id="recordedMonth" style="font-size:1.2rem;font-weight:600;color:#2e7d32;">-</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:var(--text-muted);font-size:0.85rem;">⏰ เวลา</div>
+              <div id="recordedTime" style="font-size:1.2rem;font-weight:600;color:#2e7d32;">-</div>
+            </div>
+          </div>
+
+          <!-- Building Breakdown -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+            <!-- Rooms -->
+            <div style="background:white;border:1px solid #c8e6c9;border-radius:var(--radius-sm);padding:1rem;">
+              <div style="color:#2e7d32;font-weight:600;margin-bottom:0.8rem;">🏠 Rooms Building</div>
+              <div id="recordedRoomsCount" style="font-size:1.5rem;font-weight:600;color:#2e7d32;">0</div>
+              <div style="color:var(--text-muted);font-size:0.85rem;">ห้องที่บันทึก</div>
+            </div>
+            <!-- Nest -->
+            <div style="background:white;border:1px solid #e1bee7;border-radius:var(--radius-sm);padding:1rem;">
+              <div style="color:#6a1b9a;font-weight:600;margin-bottom:0.8rem;">🏢 Nest Building</div>
+              <div id="recordedNestCount" style="font-size:1.5rem;font-weight:600;color:#6a1b9a;">0</div>
+              <div style="color:var(--text-muted);font-size:0.85rem;">ห้องที่บันทึก</div>
+            </div>
+            <!-- Amazon -->
+            <div style="background:white;border:1px solid #fff9c4;border-radius:var(--radius-sm);padding:1rem;">
+              <div style="color:#f57f17;font-weight:600;margin-bottom:0.8rem;">📦 Amazon Meters</div>
+              <div id="recordedAmazonCount" style="font-size:1.5rem;font-weight:600;color:#f57f17;">0</div>
+              <div style="color:var(--text-muted);font-size:0.85rem;">หน่วยที่บันทึก</div>
+            </div>
+          </div>
+
+          <!-- Sample Data Table -->
+          <div id="recordedMeterTable" style="background:white;border:1px solid #c8e6c9;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;overflow-x:auto;"></div>
+
+          <!-- Historical Comparison -->
+          <div id="meterHistoricalComparison" style="background:white;border:1px solid #c8e6c9;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;"></div>
+
+          <!-- Status Badge -->
+          <div style="text-align:center;padding:1rem;background:white;border-radius:var(--radius-sm);border:2px solid #2e7d32;">
+            <div style="font-size:1.5rem;margin-bottom:0.5rem;">✅</div>
+            <div style="color:#2e7d32;font-weight:600;">บันทึกข้อมูลมิเตอร์สำเร็จ</div>
+            <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.3rem;">ข้อมูลถูกบันทึกใน Firebase database</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Instructions -->
       <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:1rem;color:var(--text-muted);font-size:0.85rem;">
         <strong>ขั้นตอน:</strong>
@@ -4691,6 +4749,9 @@ async function performDataReplacementWithData(importData, matchResults) {
 
       showImportStatus(`✅ บันทึกข้อมูล ${monthName} ปี ${displayYear} สำเร็จ! 🎉 Dashboard อัพเดทแล้ว 📊`, 'success');
 
+      // Display recorded meter data
+      displayRecordedMeterData(importData, matchResults);
+
       // Refresh dashboard in background
       console.log('🔄 Refreshing dashboard after import...');
       setTimeout(async () => {
@@ -4730,6 +4791,134 @@ async function performDataReplacementWithData(importData, matchResults) {
 
 async function performDataReplacement() {
   await performDataReplacementWithData(currentImportData, currentImportMatchResults);
+}
+
+function displayRecordedMeterData(importData, matchResults) {
+  const recordedSection = document.getElementById('meterDataRecordedSection');
+
+  if (!recordedSection) return;
+
+  try {
+    // ===== POPULATE PERIOD INFO =====
+    const monthNames = {
+      1: 'มกราคม', 2: 'กุมภาพันธ์', 3: 'มีนาคม', 4: 'เมษายน',
+      5: 'พฤษภาคม', 6: 'มิถุนายน', 7: 'กรกฎาคม', 8: 'สิงหาคม',
+      9: 'กันยายน', 10: 'ตุลาคม', 11: 'พฤศจิกายน', 12: 'ธันวาคม'
+    };
+
+    const year = importData.year;
+    const month = importData.month;
+    const monthName = monthNames[month] || `เดือน ${month}`;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    document.getElementById('recordedYear').textContent = `ปี ${year}`;
+    document.getElementById('recordedMonth').textContent = `${monthName} (เดือน ${month})`;
+    document.getElementById('recordedTime').textContent = timeStr;
+
+    // ===== COUNT BUILDINGS =====
+    const roomsCount = Object.keys(importData.rooms || {}).length;
+    const nestCount = Object.keys(importData.nest || {}).length;
+    const amazonCount = Object.keys(importData.amazon || {}).length;
+
+    document.getElementById('recordedRoomsCount').textContent = roomsCount;
+    document.getElementById('recordedNestCount').textContent = nestCount;
+    document.getElementById('recordedAmazonCount').textContent = amazonCount;
+
+    // ===== GENERATE SAMPLE DATA TABLE =====
+    const tableDiv = document.getElementById('recordedMeterTable');
+    let tableHtml = '<div style="font-weight:600;margin-bottom:0.8rem;">📋 ตัวอย่างข้อมูลมิเตอร์ที่บันทึก:</div>';
+
+    tableHtml += '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+    tableHtml += '<thead><tr style="background:#e8f5e9;border-bottom:2px solid #4caf50;">';
+    tableHtml += '<th style="padding:0.6rem;text-align:left;border-right:1px solid #c8e6c9;">🏢 Building</th>';
+    tableHtml += '<th style="padding:0.6rem;text-align:left;border-right:1px solid #c8e6c9;">🔢 ห้อง</th>';
+    tableHtml += '<th style="padding:0.6rem;text-align:right;border-right:1px solid #c8e6c9;">📊 เก่า</th>';
+    tableHtml += '<th style="padding:0.6rem;text-align:right;border-right:1px solid #c8e6c9;">📊 ใหม่</th>';
+    tableHtml += '<th style="padding:0.6rem;text-align:right;">📈 ใช้</th>';
+    tableHtml += '</tr></thead><tbody>';
+
+    // Sample Rooms data
+    const roomsSample = Object.entries(importData.rooms || {}).slice(0, 5);
+    roomsSample.forEach(([roomNum, data]) => {
+      const usage = Math.abs((data.eNew || 0) - (data.eOld || 0));
+      tableHtml += `<tr style="border-bottom:1px solid #e8f5e9;background:#fafafa;">
+        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;"><strong>🏠 Rooms</strong></td>
+        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;">${roomNum}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;">${(data.eOld || 0).toLocaleString()}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;"><strong>${(data.eNew || 0).toLocaleString()}</strong></td>
+        <td style="padding:0.5rem;text-align:right;color:#2e7d32;font-weight:600;">${usage.toLocaleString()}</td>
+      </tr>`;
+    });
+
+    // Sample Nest data
+    const nestSample = Object.entries(importData.nest || {}).slice(0, 5);
+    nestSample.forEach(([roomNum, data]) => {
+      const usage = Math.abs((data.eNew || 0) - (data.eOld || 0));
+      tableHtml += `<tr style="border-bottom:1px solid #e8f5e9;background:#fafafa;">
+        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;"><strong>🏢 Nest</strong></td>
+        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;">${roomNum}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;">${(data.eOld || 0).toLocaleString()}</td>
+        <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;"><strong>${(data.eNew || 0).toLocaleString()}</strong></td>
+        <td style="padding:0.5rem;text-align:right;color:#6a1b9a;font-weight:600;">${usage.toLocaleString()}</td>
+      </tr>`;
+    });
+
+    tableHtml += '</tbody></table>';
+
+    if (roomsSample.length > 0 || nestSample.length > 0) {
+      tableHtml += `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">... แสดง ${roomsSample.length + nestSample.length} แถว จาก ${roomsCount + nestCount} ห้อง</div>`;
+    }
+
+    tableDiv.innerHTML = tableHtml;
+
+    // ===== HISTORICAL COMPARISON =====
+    const comparisonDiv = document.getElementById('meterHistoricalComparison');
+    let comparisonHtml = '<div style="font-weight:600;margin-bottom:0.8rem;">📈 สรุปข้อมูล:</div>';
+    comparisonHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-size:0.9rem;">';
+
+    // Validation summary
+    if (matchResults && matchResults.summary) {
+      const { okCount, warningCount, errorCount } = matchResults.summary;
+      comparisonHtml += `<div style="background:#e8f5e9;padding:0.8rem;border-radius:4px;border-left:4px solid #4caf50;">
+        <div style="color:#2e7d32;font-weight:600;margin-bottom:0.3rem;">✅ ข้อมูลตรงกัน</div>
+        <div style="font-size:1.2rem;font-weight:600;color:#2e7d32;">${okCount}</div>
+        <div style="color:var(--text-muted);font-size:0.8rem;">ห้อง</div>
+      </div>`;
+
+      if (warningCount > 0) {
+        comparisonHtml += `<div style="background:#fff3e0;padding:0.8rem;border-radius:4px;border-left:4px solid #ff9800;">
+          <div style="color:#e65100;font-weight:600;margin-bottom:0.3rem;">⚠️ ต่างเล็กน้อย</div>
+          <div style="font-size:1.2rem;font-weight:600;color:#e65100;">${warningCount}</div>
+          <div style="color:var(--text-muted);font-size:0.8rem;">ห้อง</div>
+        </div>`;
+      }
+
+      if (errorCount > 0) {
+        comparisonHtml += `<div style="background:#ffebee;padding:0.8rem;border-radius:4px;border-left:4px solid #f44336;">
+          <div style="color:#c62828;font-weight:600;margin-bottom:0.3rem;">❌ ต่างมาก</div>
+          <div style="font-size:1.2rem;font-weight:600;color:#c62828;">${errorCount}</div>
+          <div style="color:var(--text-muted);font-size:0.8rem;">ห้อง</div>
+        </div>`;
+      }
+    }
+
+    comparisonHtml += '</div>';
+    comparisonDiv.innerHTML = comparisonHtml;
+
+    // ===== SHOW SECTION =====
+    recordedSection.style.display = 'block';
+
+    // Scroll into view
+    setTimeout(() => {
+      recordedSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+
+    console.log('✅ Meter data recorded section displayed', { year, month, roomsCount, nestCount, amazonCount });
+
+  } catch (error) {
+    console.error('Error displaying recorded meter data:', error);
+  }
 }
 
 function cancelImportProcess() {
