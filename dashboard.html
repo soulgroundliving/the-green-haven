@@ -2847,7 +2847,7 @@
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์มาวางที่นี่ หรือคลิก</div>
           <div style="color:var(--text-muted);font-size:0.85rem;">ไฟล์ Excel (.xlsx, .xls)</div>
         </div>
-        <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event);">
+        <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="window.handleImportFile && window.handleImportFile(event);">
       </div>
 
       <!-- Month Selector (Optional manual selection) -->
@@ -4197,6 +4197,12 @@ function handleImportDrop(event) {
   }
 }
 
+/**
+ * METER IMPORT: File input handler (same as billing import)
+ * HTML: onchange="window.handleImportFile && window.handleImportFile(event);"
+ *
+ * ⚠️ MUST expose to window scope below!
+ */
 function handleImportFile(event) {
   const files = event.target.files;
   if (files.length > 0) {
@@ -4204,19 +4210,41 @@ function handleImportFile(event) {
   }
 }
 
+// 🚨 CRITICAL: Expose to global scope for HTML event handler
+window.handleImportFile = handleImportFile;
+
+/**
+ * METER IMPORT: Main file processor
+ *
+ * 🔄 FLOW (Different from Billing!):
+ * 1. Read Excel file using XLSX
+ * 2. Parse data with parseImportExcelData()
+ * 3. Detect format (V3 has 3 buildings: rooms/nest/amazon)
+ * 4. Call matchMeterDataWithPrevious() with SAFETY CHECK
+ * 5. Display preview
+ * 6. (No auto-save - user must click "บันทึก")
+ *
+ * ⚠️ KEY DIFFERENCE FROM BILLING:
+ * - Meter import has month selector (can change after upload)
+ * - Meter import stores in memory (currentImportData)
+ * - Billing import auto-saves to localStorage
+ */
 function handleImportFileProcess(file) {
   showImportStatus('⏳ กำลังโหลด...', 'info');
 
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
+      // STEP 1: Read Excel file binary data
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
 
-      // Store workbook for month selector changes
+      // Store workbook globally for month selector changes
+      // (User can change month without re-uploading file)
       currentImportWorkbook = workbook;
 
-      // Parse the data (building will be detected from room names)
+      // STEP 2: Parse the data
+      // Building auto-detected from room names in parseImportExcelData()
       let importData = parseImportExcelData(workbook, 'rooms'); // Parse as rooms first
       console.log('📊 Parsed import data:', importData);
 
