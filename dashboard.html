@@ -4181,31 +4181,33 @@ function handleImportFileProcess(file) {
       console.log('📊 Parsed import data:', importData);
 
       if (importData) {
-        // Check if V3 format - look for explicit isV3 flag OR building='all'
-        const isV3Format = importData.isV3 === true || importData.building === 'all';
-        console.log(`🔍 V3 Format detected: ${isV3Format}`);
-        console.log(`   isV3=${importData.isV3}, building=${importData.building}`);
-        console.log(`   Rooms: ${Object.keys(importData.rooms || {}).length}, Nest: ${Object.keys(importData.nest || {}).length}, Amazon: ${Object.keys(importData.amazon || {}).length}`);
+        // Check if V3 format - more reliable: check if Nest data exists (not just flag)
+        const hasNestData = importData.nest && Object.keys(importData.nest || {}).length >= 5; // At least 5 rooms to be Nest
+        const isV3Format = (importData.isV3 === true) || (importData.building === 'all') || hasNestData;
 
+        console.log(`🔍 V3 Format Check:`);
+        console.log(`   isV3=${importData.isV3}, building=${importData.building}, hasNestData=${hasNestData}`);
+        console.log(`   Data counts - Rooms: ${Object.keys(importData.rooms || {}).length}, Nest: ${Object.keys(importData.nest || {}).length}, Amazon: ${Object.keys(importData.amazon || {}).length}`);
+
+        let detectedBuilding = 'rooms'; // Default value
         if (isV3Format) {
           // V3 format - already has all 3 buildings (rooms/nest/amazon), don't re-parse
-          console.log(`✅ V3 format confirmed - SKIP re-parsing!`);
-          console.log(`   Rooms: ${Object.keys(importData.rooms || {}).length}, Nest: ${Object.keys(importData.nest || {}).length}, Amazon: ${Object.keys(importData.amazon || {}).length}`);
+          console.log(`✅ V3 format confirmed - SKIP re-parsing to preserve Nest data!`);
+          detectedBuilding = 'all';
         } else {
           // V1/V2 format - auto-detect single building
           console.log(`⚠️ Not V3 format - attempting V1/V2 building detection...`);
-          const detectedBuilding = detectBuildingFromRooms(Object.keys(importData.rooms));
+          detectedBuilding = detectBuildingFromRooms(Object.keys(importData.rooms));
           console.log(`🏢 Auto-detected building: ${detectedBuilding}`);
 
           // Re-parse with correct building if needed
           if (detectedBuilding === 'nest') {
             console.log(`⚠️ Re-parsing as NEST building...`);
             importData = parseImportExcelData(workbook, 'nest');
-            console.log(`   After re-parse - Rooms: ${Object.keys(importData.rooms || {}).length}, Nest: ${Object.keys(importData.nest || {}).length}, Amazon: ${Object.keys(importData.amazon || {}).length}`);
           }
         }
 
-        console.log(`📊 Final importData before display: Rooms=${Object.keys(importData.rooms || {}).length}, Nest=${Object.keys(importData.nest || {}).length}, Amazon=${Object.keys(importData.amazon || {}).length}`);
+        console.log(`📊 Final: Rooms=${Object.keys(importData.rooms || {}).length}, Nest=${Object.keys(importData.nest || {}).length}, Amazon=${Object.keys(importData.amazon || {}).length}`);
         currentImportData = importData;
 
         // Get match results
@@ -4216,7 +4218,8 @@ function handleImportFileProcess(file) {
 
         // Display preview
         displayImportPreview(importData, matchResults);
-        showImportStatus('✅ โหลดข้อมูลสำเร็จ! (อาคาร: ' + (detectedBuilding === 'nest' ? 'Nest Building' : 'Rooms Building') + ')', 'success');
+        const buildingLabel = (detectedBuilding === 'nest' ? 'Nest Building' : (detectedBuilding === 'all' ? 'All Buildings' : 'Rooms Building'));
+        showImportStatus('✅ โหลดข้อมูลสำเร็จ! (อาคาร: ' + buildingLabel + ')', 'success');
       } else {
         console.error('❌ importData is null or undefined');
       }
@@ -4413,7 +4416,8 @@ function parseImportExcelData(workbook, building) {
     };
   });
 
-  // Nest: populate all 20 rooms with 0 values
+  // Nest: populate all 20 rooms with 0 values (ALWAYS - even if no data in file)
+  console.log(`📋 Pre-populating Nest rooms (${nestRoomList.length} rooms)...`);
   nestRoomList.forEach(roomNum => {
     allRooms.nest[roomNum] = {
       eNew: 0,
@@ -4422,6 +4426,7 @@ function parseImportExcelData(workbook, building) {
       wOld: 0
     };
   });
+  console.log(`✅ Nest pre-population complete - ${Object.keys(allRooms.nest).length} rooms`);
 
   // Amazon: pre-populate with 0 (will be overwritten if found in file)
   allRooms.amazon['ร้านใหญ่'] = {
@@ -4567,6 +4572,67 @@ function displayImportPreview(importData, matchResults) {
     return String(text).replace(/[&<>"']/g, m => map[m]);
   }
 
+  // ===== BUILD COMPLETE TABLE WITH ALL BUILDINGS =====
+  // Count all 3 buildings
+  const roomsCount = Object.keys(importData.rooms || {}).length;
+  const nestCount = Object.keys(importData.nest || {}).length;
+  const amazonCount = Object.keys(importData.amazon || {}).length;
+  const totalCount = roomsCount + nestCount + amazonCount;
+
+  // Build table rows for all buildings
+  let tableRows = '';
+
+  // Add Rooms Building rows
+  if (importData.rooms) {
+    Object.entries(importData.rooms).forEach((entry, idx) => {
+      const [room, data] = entry;
+      tableRows += `
+        <tr style="border-bottom:1px solid var(--border);background:${idx % 2 === 0 ? 'white' : 'rgba(0,0,0,0.01)'};">
+          <td style="padding:0.7rem;font-weight:600;">🏠 ${escapeHtml(room)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.eNew || 0)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.eOld || 0)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wNew || 0)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wOld || 0)}</td>
+          <td style="padding:0.7rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
+        </tr>
+      `;
+    });
+  }
+
+  // Add Nest Building rows
+  if (importData.nest) {
+    Object.entries(importData.nest).forEach((entry, idx) => {
+      const [room, data] = entry;
+      tableRows += `
+        <tr style="border-bottom:1px solid var(--border);background:${idx % 2 === 0 ? 'white' : 'rgba(0,0,0,0.01)'};">
+          <td style="padding:0.7rem;font-weight:600;">🏢 ${escapeHtml(room)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.eNew || 0)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.eOld || 0)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wNew || 0)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wOld || 0)}</td>
+          <td style="padding:0.7rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
+        </tr>
+      `;
+    });
+  }
+
+  // Add Amazon rows
+  if (importData.amazon) {
+    Object.entries(importData.amazon).forEach((entry, idx) => {
+      const [room, data] = entry;
+      tableRows += `
+        <tr style="border-bottom:1px solid var(--border);background:${idx % 2 === 0 ? 'white' : 'rgba(0,0,0,0.01)'};">
+          <td style="padding:0.7rem;font-weight:600;">📦 ${escapeHtml(room)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.eNew || 0)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.eOld || 0)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wNew || 0)}</td>
+          <td style="padding:0.7rem;text-align:right;">${escapeHtml(data.wOld || 0)}</td>
+          <td style="padding:0.7rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
+        </tr>
+      `;
+    });
+  }
+
   const previewHtml = `
     <div style="border:1px solid var(--border);border-radius:var(--radius-sm);">
       <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
@@ -4581,21 +4647,12 @@ function displayImportPreview(importData, matchResults) {
           </tr>
         </thead>
         <tbody>
-          ${matchResults.details.map((result, idx) => `
-            <tr style="border-bottom:1px solid var(--border);background:${idx % 2 === 0 ? 'white' : 'rgba(0,0,0,0.01)'};">
-              <td style="padding:0.7rem;font-weight:600;">${escapeHtml(result.room)}</td>
-              <td style="padding:0.7rem;text-align:right;">${escapeHtml(result.eNew)}</td>
-              <td style="padding:0.7rem;text-align:right;">${escapeHtml(result.eOld)}</td>
-              <td style="padding:0.7rem;text-align:right;">${escapeHtml(result.wNew)}</td>
-              <td style="padding:0.7rem;text-align:right;">${escapeHtml(result.wOld)}</td>
-              <td style="padding:0.7rem;text-align:center;"><span style="background:#c8e6c9;color:#2e7d32;padding:0.3rem 0.6rem;border-radius:3px;font-size:0.75rem;font-weight:600;">✓</span></td>
-            </tr>
-          `).join('')}
+          ${tableRows}
         </tbody>
       </table>
     </div>
     <div style="margin-top:1rem;padding:0.8rem;background:var(--bg-secondary);border-radius:var(--radius-sm);font-size:0.85rem;color:var(--text-muted);text-align:center;">
-      <strong style="color:var(--text);">ปี ${escapeHtml(importData.year)}</strong> | เดือน <strong style="color:var(--text);">${escapeHtml(importData.month)}</strong> | ห้องทั้งหมด: <strong style="color:var(--text);">${escapeHtml(Object.keys(importData.rooms).length)}</strong>
+      <strong style="color:var(--text);">ปี ${escapeHtml(importData.year)}</strong> | เดือน <strong style="color:var(--text);">${escapeHtml(importData.month)}</strong> | ห้องทั้งหมด: <strong style="color:var(--text);">${escapeHtml(totalCount)}</strong> (Rooms: ${roomsCount}, Nest: ${nestCount}, Amazon: ${amazonCount})
     </div>
   `;
 
@@ -4832,6 +4889,21 @@ function displayRecordedMeterData(importData, matchResults) {
   if (!recordedSection) return;
 
   try {
+    // DEBUG: Check what importData contains
+    console.log(`🔍 displayRecordedMeterData called with:`);
+    console.log(`   importData keys:`, Object.keys(importData || {}));
+    console.log(`   importData.isV3:`, importData?.isV3);
+    console.log(`   importData.building:`, importData?.building);
+    console.log(`   importData.rooms keys count:`, Object.keys(importData?.rooms || {}).length);
+    console.log(`   importData.nest keys count:`, Object.keys(importData?.nest || {}).length);
+    console.log(`   importData.amazon keys count:`, Object.keys(importData?.amazon || {}).length);
+
+    if (importData?.nest && Object.keys(importData.nest).length > 0) {
+      console.log(`✅ Nest data FOUND:`, Object.keys(importData.nest).slice(0, 3), '...');
+    } else {
+      console.warn(`❌ Nest data MISSING or EMPTY!`);
+    }
+
     // ===== POPULATE PERIOD INFO =====
     const monthNames = {
       1: 'มกราคม', 2: 'กุมภาพันธ์', 3: 'มีนาคม', 4: 'เมษายน',
@@ -4849,10 +4921,27 @@ function displayRecordedMeterData(importData, matchResults) {
     document.getElementById('recordedMonth').textContent = `${monthName} (เดือน ${month})`;
     document.getElementById('recordedTime').textContent = timeStr;
 
+    // ===== ENSURE NEST DATA EXISTS =====
+    // If Nest data is missing, re-populate it with pre-defined list
+    if (!importData.nest || Object.keys(importData.nest).length === 0) {
+      console.warn(`⚠️ Nest data missing in display! Re-populating...`);
+      const nestRoomList = ['N101', 'N102', 'N103', 'N104', 'N105',
+                            'N201', 'N202', 'N203', 'N204', 'N205',
+                            'N301', 'N302', 'N303', 'N304', 'N305',
+                            'N401', 'N402', 'N403', 'N404', 'N405'];
+      importData.nest = {};
+      nestRoomList.forEach(roomNum => {
+        importData.nest[roomNum] = { eNew: 0, eOld: 0, wNew: 0, wOld: 0 };
+      });
+      console.log(`✅ Nest data re-populated with ${Object.keys(importData.nest).length} rooms`);
+    }
+
     // ===== COUNT BUILDINGS =====
     const roomsCount = Object.keys(importData.rooms || {}).length;
     const nestCount = Object.keys(importData.nest || {}).length;
     const amazonCount = Object.keys(importData.amazon || {}).length;
+
+    console.log(`📊 Final display counts: Rooms=${roomsCount}, Nest=${nestCount}, Amazon=${amazonCount}`);
 
     document.getElementById('recordedRoomsCount').textContent = roomsCount;
     document.getElementById('recordedNestCount').textContent = nestCount;
