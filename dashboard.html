@@ -4009,7 +4009,7 @@
 const MONTHS_TH = (window.CONFIG?.months?.short) || ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTHS_FULL = (window.CONFIG?.months?.full) || ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-// ROOMS_OLD and ROOMS_NEW are now defined in shared-config.js
+// window.ROOMS_OLD and window.ROOMS_NEW are now defined in shared-config.js
 // Use window.CONFIG.rooms_old and window.CONFIG.rooms_new instead
 
 // Hardcoded data removed - use only Firebase and HISTORICAL_DATA
@@ -5965,8 +5965,8 @@ function loadRoomConfigUI() {
     .filter(room => !room.deleted)
     .map(room => {
       // Get rent: use RoomConfigManager if explicitly set, fallback to metadata, then default
-      const metadataArray = building === 'rooms' ? ROOMS_OLD : NEST_ROOMS;
-      // Search using room ID as-is (both ROOMS_OLD and NEST_ROOMS use the actual IDs)
+      const metadataArray = building === 'rooms' ? window.ROOMS_OLD : window.NEST_ROOMS;
+      // Search using room ID as-is (both window.ROOMS_OLD and window.NEST_ROOMS use the actual IDs)
       const searchId = room.id;
       const metadata = metadataArray.find(m => m.id === searchId);
       // Prefer explicit room.rentPrice from DEFAULT_ROOMS_CONFIG, but only if it was actually saved (not 0 or undefined)
@@ -6506,8 +6506,8 @@ async function initDashboardCharts(){
   document.getElementById('kpi-monthly-sub').textContent='สูงสุด: ฿'+maxV.toLocaleString()+' ('+MONTHS_TH[maxIdx+1]+')';
 
   // Calculate and display building-specific data from HISTORICAL_DATA or live estimates
-  const activeRooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
-  const activeNest = getActiveRoomsWithMetadata('nest', NEST_ROOMS);
+  const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
+  const activeNest = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
   const tenants = loadTenants();
   const occupiedRooms = activeRooms.filter(r => tenants[r.id]?.name).length;
   const occupiedNest = activeNest.filter(r => tenants[r.id]?.name).length;
@@ -6623,7 +6623,7 @@ function initRoomsPage(){
   console.log('✅ Real-time listeners activated for Rooms page');
 
   const allTenants = loadTenants();
-  const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
+  const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
   const grid=document.getElementById('roomGrid');
   grid.innerHTML=rooms.map(r=>{
     const tenant = allTenants[r.id];
@@ -6694,7 +6694,7 @@ function renderCompactRoomGrid(){
   const allTenants = loadTenants();
   const searchInput=document.getElementById('roomCompactSearch');
   const searchTerm=(searchInput?.value||'').toLowerCase();
-  const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
+  const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
 
   // Apply search filter
   let filtered=rooms.filter(r=>r.id.toString().toLowerCase().includes(searchTerm) || (allTenants[r.id]?.name||'').toLowerCase().includes(searchTerm));
@@ -6893,7 +6893,7 @@ function renderRoomSelectionCheckboxes() {
   const container = document.getElementById('roomSelectionContainer');
   if (!container) return;
 
-  const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
+  const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
   container.innerHTML = rooms.map(room => {
     const currentRent = room.rentPrice || 0;
     return `
@@ -6991,7 +6991,7 @@ function updatePreview() {
     return;
   }
 
-  const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
+  const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
   const selectedRooms = rooms.filter(r => batchSelectedRooms.has(r.id));
   const preview = selectedRooms.map(room => {
     let newRent = room.rentPrice;
@@ -7028,8 +7028,8 @@ function applyBatchRentAdjustment() {
     return;
   }
 
-  // Apply adjustments to ROOMS_OLD
-  ROOMS_OLD.forEach(room => {
+  // Apply adjustments to window.ROOMS_OLD
+  window.ROOMS_OLD.forEach(room => {
     if (batchSelectedRooms.has(room.id)) {
       if (adjustType === 'fixed-increase') room.rentPrice = room.rentPrice + adjustValue;
       else if (adjustType === 'percentage-increase') room.rentPrice = Math.round(room.rentPrice * (1 + adjustValue / 100));
@@ -7061,7 +7061,7 @@ function applyBatchRentAdjustment() {
   closeBatchRentAdjustmentModal();
 }
 
-// NEST_ROOMS is now defined in shared-config.js
+// window.NEST_ROOMS is now defined in shared-config.js
 // Use window.CONFIG.nest_rooms instead
 
 // ===== SET NEST FILTER =====
@@ -7090,7 +7090,7 @@ function renderNestCompactGrid(){
   const allTenants = loadTenants();
   const searchInput = document.getElementById('nestCompactSearch');
   const searchTerm = (searchInput?.value || '').toLowerCase();
-  const rooms = getActiveRoomsWithMetadata('nest', NEST_ROOMS);
+  const rooms = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
 
   // Apply search filter
   let filtered = rooms.filter(r =>
@@ -7279,7 +7279,7 @@ function initNestPage(){
 
   // Populate room grid (visual layout)
   const allTenants = loadTenants();
-  const rooms = getActiveRoomsWithMetadata('nest', NEST_ROOMS);
+  const rooms = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
   const grid = document.getElementById('nestRoomGrid');
   grid.innerHTML = rooms.map(r => {
     const tenant = allTenants[r.id];
@@ -7405,7 +7405,7 @@ let invoiceData=null;
 // Helper: Convert legacy building names to Firebase config + metadata
 function getBuildingInfo(legacyBuilding) {
   const firebaseBuilding = window.CONFIG?.getBuildingConfig?.(legacyBuilding) || (legacyBuilding === 'old' ? 'rooms' : 'nest');
-  const metadataArray = legacyBuilding === 'old' ? ROOMS_OLD : ROOMS_NEW;
+  const metadataArray = legacyBuilding === 'old' ? window.ROOMS_OLD : window.ROOMS_NEW;
   const displayName = legacyBuilding === 'old' ? 'เดอะ กรีน เฮฟเว่น' : 'Nest · เดอะ กรีน เฮฟเว่น';
   return { firebaseBuilding, metadataArray, displayName };
 }
@@ -8579,7 +8579,7 @@ function renderMeterTable(){
   const paid=ps[psKey]||{};
   let totalPaid=0, totalPending=0, totalAmt=0;
 
-  const rooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
+  const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
   const rows=rooms.map(r=>{
     const lookupId=r.id==='Amazon ☕'?'ร้านใหญ่':r.id;
     // Read from building-namespaced METER_DATA (Rooms Building)
@@ -8650,13 +8650,13 @@ function goBillFromTable(roomId, year, month){
 // ===== DASHBOARD LIVE UPDATES =====
 function updateDashboardLive(){
   // Ensure data is available (both buildings)
-  if(!ROOMS_OLD || ROOMS_OLD.length === 0) {
-    console.warn('⚠️ ROOMS_OLD data not available yet, retrying...');
+  if(!window.ROOMS_OLD || window.ROOMS_OLD.length === 0) {
+    console.warn('⚠️ window.ROOMS_OLD data not available yet, retrying...');
     setTimeout(updateDashboardLive, 200);
     return;
   }
-  if(!NEST_ROOMS || NEST_ROOMS.length === 0) {
-    console.warn('⚠️ NEST_ROOMS data not available yet, retrying...');
+  if(!window.NEST_ROOMS || window.NEST_ROOMS.length === 0) {
+    console.warn('⚠️ window.NEST_ROOMS data not available yet, retrying...');
     setTimeout(updateDashboardLive, 200);
     return;
   }
@@ -8679,8 +8679,8 @@ function updateDashboardLive(){
   const paidCount=Object.keys(paid).length;
 
   // Use active rooms from BOTH buildings
-  const activeRooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
-  const activeNest = getActiveRoomsWithMetadata('nest', NEST_ROOMS);
+  const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
+  const activeNest = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
   const allActiveRooms = [...activeRooms, ...activeNest];
   const totalRooms = allActiveRooms.length;
 
@@ -8792,8 +8792,8 @@ function updateNavBadge(){
   const key=`${now.getFullYear()+543}_${now.getMonth()+1}`;
   const paid=ps[key]||{};
   // Count both buildings
-  const activeRooms = getActiveRoomsWithMetadata('rooms', ROOMS_OLD);
-  const activeNest = getActiveRoomsWithMetadata('nest', NEST_ROOMS);
+  const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
+  const activeNest = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
   const allActive = [...activeRooms, ...activeNest];
   const pending=allActive.length-Object.keys(paid).length;
   if(pending>0){badge.textContent=pending;badge.style.display='inline-block';}
@@ -8887,7 +8887,7 @@ function initTenantPage(){
 }
 
 function renderTenantPage(){
-  const rooms=tenantBuilding==='old'?ROOMS_OLD:ROOMS_NEW;
+  const rooms=tenantBuilding==='old'?window.ROOMS_OLD:window.ROOMS_NEW;
   const tenants=loadTenants();
   const today=new Date();
   let occ=0,vac=0,soon=0;
@@ -8939,7 +8939,7 @@ function renderTenantPage(){
 function renderTenantTable(){
   const searchInput=document.getElementById('tenantSearch');
   const searchTerm=(searchInput?.value||'').toLowerCase();
-  const rooms=tenantBuilding==='old'?ROOMS_OLD:ROOMS_NEW;
+  const rooms=tenantBuilding==='old'?window.ROOMS_OLD:window.ROOMS_NEW;
   const tenants=loadTenants();
   const tbody=document.getElementById('tenantTableBody');
   const today=new Date();
@@ -9329,7 +9329,7 @@ function initPaymentVerify(){
 }
 
 function populateRoomLinkSelect(){
-  const rooms = ROOMS_OLD.concat(ROOMS_NEW);
+  const rooms = window.ROOMS_OLD.concat(window.ROOMS_NEW);
   const select = document.getElementById('linkRoomSelect');
   select.innerHTML = '<option value="">-- เลือกห้อง --</option>';
   rooms.forEach(r => {
@@ -11118,7 +11118,7 @@ function initAnalyticsPage(){
 }
 
 function renderAnalyticsPage(){
-  const rooms=analyticsBuilding==='old'?ROOMS_OLD:ROOMS_NEW;
+  const rooms=analyticsBuilding==='old'?window.ROOMS_OLD:window.ROOMS_NEW;
   const tenants=loadTenants();
   const ps=loadPS();
   const now=new Date();
