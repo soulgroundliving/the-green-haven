@@ -4384,7 +4384,41 @@ function parseImportExcelData(workbook, building) {
                         'N301', 'N302', 'N303', 'N304', 'N305',
                         'N401', 'N402', 'N403', 'N404', 'N405'];
 
-  // Parse all data rows
+  // PRE-POPULATE all expected rooms with 0 values
+  console.log('📋 Pre-populating all expected rooms with 0 values...');
+
+  // Rooms: populate from roomsRoomList (excluding AMAZON/ร้านใหญ่)
+  const roomsOnlyList = roomsRoomList.filter(r => r !== 'AMAZON' && r !== 'ร้านใหญ่');
+  roomsOnlyList.forEach(roomNum => {
+    allRooms.rooms[roomNum] = {
+      eNew: 0,
+      eOld: 0,
+      wNew: 0,
+      wOld: 0
+    };
+  });
+
+  // Nest: populate all 20 rooms with 0 values
+  nestRoomList.forEach(roomNum => {
+    allRooms.nest[roomNum] = {
+      eNew: 0,
+      eOld: 0,
+      wNew: 0,
+      wOld: 0
+    };
+  });
+
+  // Amazon: pre-populate with 0 (will be overwritten if found in file)
+  allRooms.amazon['ร้านใหญ่'] = {
+    eNew: 0,
+    eOld: 0,
+    wNew: 0,
+    wOld: 0
+  };
+
+  console.log(`📋 Pre-population complete - Rooms: ${roomsOnlyList.length}, Nest: ${nestRoomList.length}, Amazon: 1`);
+
+  // Parse all data rows (will overwrite pre-populated values with actual data)
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     if (!row[0]) continue;
@@ -4433,7 +4467,7 @@ function parseImportExcelData(workbook, building) {
     }
   }
 
-  console.log(`📦 V3 Parse Results - Rooms: ${Object.keys(allRooms.rooms).length}, Nest: ${Object.keys(allRooms.nest).length}, Amazon: ${Object.keys(allRooms.amazon).length}`);
+  console.log(`📦 V3 Parse Results - Rooms: ${Object.keys(allRooms.rooms).length}, Nest: ${Object.keys(allRooms.nest).length}, Amazon: ${Object.keys(allRooms.amazon).length} (all pre-populated with 0, actual data overlaid)`);
 
   // Return multi-building structure
   return {
