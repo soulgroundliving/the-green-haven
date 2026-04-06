@@ -4541,15 +4541,13 @@ function parseImportExcelData(workbook, building) {
 
     const roomNum = String(row[0]).trim();
     if (roomList.includes(roomNum)) {
-      // Column mapping (XLSX includes empty columns):
-      // A(0)=room, B(1)=e_total, C(2)=w_total, D(3)=rent,
-      // E(4)=empty, F(5)=eNew, G(6)=eOld, H(7)=e_diff, I(8)=e_rate, J(9)=e_charge,
-      // K(10)=empty, L(11)=wNew, M(12)=wOld, N(13)=w_diff, O(14)=w_rate, P(15)=w_charge
+      // Column mapping (same as V3 format):
+      // A(0)=room, B(1)=eNew, C(2)=wNew, D(3)=rent, G(6)=eOld, M(12)=wOld
       rooms[roomNum] = {
-        eNew: parseInt(row[5]) || 0,  // Column F
-        eOld: parseInt(row[6]) || 0,  // Column G
-        wNew: parseInt(row[11]) || 0, // Column L
-        wOld: parseInt(row[12]) || 0  // Column M
+        eNew: parseFloat(row[1]) || 0,  // Column B: Electricity New
+        eOld: parseFloat(row[6]) || 0,  // Column G: Electricity Old
+        wNew: parseFloat(row[2]) || 0,  // Column C: Water New
+        wOld: parseFloat(row[12]) || 0  // Column M: Water Old
       };
     }
   }
