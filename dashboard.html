@@ -4005,12 +4005,12 @@
 <!-- Toggle Button for Firebase Panel - REMOVED FOR PRODUCTION (was blocking content on scroll) -->
 
 <script>
-// Use CONFIG from shared-config.js instead
-const MONTHS_TH = CONFIG.months.short;
-const MONTHS_FULL = CONFIG.months.full;
+// Use CONFIG from config-unified.js instead
+const MONTHS_TH = window.window.CONFIG.months.short;
+const MONTHS_FULL = window.window.CONFIG.months.full;
 
 // ROOMS_OLD and ROOMS_NEW are now defined in shared-config.js
-// Use CONFIG.rooms_old and CONFIG.rooms_new instead
+// Use window.CONFIG.rooms_old and window.CONFIG.rooms_new instead
 
 // Hardcoded data removed - use only Firebase and HISTORICAL_DATA
 // All billing data must be imported through the billing import tool
@@ -7062,7 +7062,7 @@ function applyBatchRentAdjustment() {
 }
 
 // NEST_ROOMS is now defined in shared-config.js
-// Use CONFIG.nest_rooms instead
+// Use window.CONFIG.nest_rooms instead
 
 // ===== SET NEST FILTER =====
 function setNestFilter(filter) {
@@ -7404,7 +7404,7 @@ let invoiceData=null;
 
 // Helper: Convert legacy building names to Firebase config + metadata
 function getBuildingInfo(legacyBuilding) {
-  const firebaseBuilding = CONFIG.getBuildingConfig(legacyBuilding);
+  const firebaseBuilding = window.CONFIG.getBuildingConfig(legacyBuilding);
   const metadataArray = legacyBuilding === 'old' ? ROOMS_OLD : ROOMS_NEW;
   const displayName = legacyBuilding === 'old' ? 'เดอะ กรีน เฮฟเว่น' : 'Nest · เดอะ กรีน เฮฟเว่น';
   return { firebaseBuilding, metadataArray, displayName };
@@ -7471,7 +7471,7 @@ function checkVacant(){
     document.getElementById('vc-result').innerHTML=`<span style="color:var(--text-muted);">ไม่มีข้อมูลเดือนนี้ในปี ${yy+2500}</span>`;
     return;
   }
-  const monthNames=CONFIG.months.short;
+  const monthNames=window.CONFIG.months.short;
   // ALL rooms in old building
   const allRooms=['15ก','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','ร้านใหญ่'];
   const vacant=[], occupied=[], noData=[];
@@ -8282,7 +8282,7 @@ async function saveBillToFirebase(d){
 
     // Determine Firebase building ID using proper conversion
     // currentBuilding is 'old' or 'new', need to convert to 'rooms' or 'nest'
-    const fbBuildingId = CONFIG.getBuildingConfig(currentBuilding);
+    const fbBuildingId = window.CONFIG.getBuildingConfig(currentBuilding);
 
     // Save bill at bills/{building}/{room}/{billId}
     const billsRef = firebaseRef(window.firebaseDatabase, `bills/${fbBuildingId}/${d.room}/${d.no}`);
@@ -8299,7 +8299,7 @@ async function autoGenerateAllBills() {
   const month = parseInt(document.getElementById('f-month').value);
   const year = document.getElementById('f-year').value;
   const bldgInfo = getBuildingInfo(currentBuilding);
-  const fbBuildingId = CONFIG.getBuildingConfig(currentBuilding);
+  const fbBuildingId = window.CONFIG.getBuildingConfig(currentBuilding);
   const rooms = getActiveRoomsWithMetadata(bldgInfo.firebaseBuilding, bldgInfo.metadataArray);
 
   // VERIFICATION #1: Check room count before generation
@@ -10978,7 +10978,7 @@ function renderContractPage(){
   const rooms=getBuildingInfo(contractBuilding).metadataArray;
   const tenants=loadTenants();
   const now=new Date();
-  const monthNames=CONFIG.months.short.slice(1);
+  const monthNames=window.CONFIG.months.short.slice(1);
   const fmtDate=d=>{if(!d)return'—';const p=new Date(d);return`${p.getDate()} ${monthNames[p.getMonth()]} ${p.getFullYear()+543}`;};
 
   // KPIs
@@ -11056,7 +11056,7 @@ function printContract(roomId){
   const bldgInfo=getBuildingInfo(contractBuilding);
   const room=bldgInfo.metadataArray.find(r=>r.id===roomId)||{id:roomId};
   const building=bldgInfo.displayName;
-  const monthNames=CONFIG.months.short.slice(1);
+  const monthNames=window.CONFIG.months.short.slice(1);
   const fmtDate=d=>{if(!d)return'—';const p=new Date(d);return`${p.getDate()} ${monthNames[p.getMonth()]} ${p.getFullYear()+543}`;};
   const w=window.open('','_blank','width=720,height=900,scrollbars=yes');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>สัญญาเช่า ห้อง ${roomId}</title>
@@ -11153,7 +11153,7 @@ function renderAnalyticsPage(){
   document.getElementById('ana-expiring').textContent=expiringRooms.length;
 
   // ---- Monthly occupancy chart ----
-  const monthLabels = CONFIG.months.short.slice(1);
+  const monthLabels = window.CONFIG.months.short.slice(1);
   const roomIds=rooms.map(r=>r.id);
   const paidCountByMonth=Array.from({length:12},(_,i)=>{
     const key=`${thYear}_${i+1}`;
