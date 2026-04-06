@@ -4390,9 +4390,9 @@ function parseImportExcelData(workbook, building) {
     amazon: {}     // Amazon building meters (Row 47)
   };
 
-  // Define room lists
+  // Define room lists (AMAZON/ร้านใหญ่ excluded - handled separately)
   const roomsRoomList = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25',
-                         '26', '27', '28', '29', '30', '31', '32', '33', 'AMAZON', 'ร้านใหญ่'];
+                         '26', '27', '28', '29', '30', '31', '32', '33'];
   const nestRoomList = ['N101', 'N102', 'N103', 'N104', 'N105',
                         'N201', 'N202', 'N203', 'N204', 'N205',
                         'N301', 'N302', 'N303', 'N304', 'N305',
@@ -4401,8 +4401,8 @@ function parseImportExcelData(workbook, building) {
   // PRE-POPULATE all expected rooms with 0 values
   console.log('📋 Pre-populating all expected rooms with 0 values...');
 
-  // Rooms: populate from roomsRoomList (excluding AMAZON/ร้านใหญ่)
-  const roomsOnlyList = roomsRoomList.filter(r => r !== 'AMAZON' && r !== 'ร้านใหญ่');
+  // Rooms: populate only rooms (13-33, 15ก) - NO Amazon
+  const roomsOnlyList = roomsRoomList;
   roomsOnlyList.forEach(roomNum => {
     allRooms.rooms[roomNum] = {
       eNew: 0,
@@ -4465,9 +4465,8 @@ function parseImportExcelData(workbook, building) {
     const amazonCurr = parseFloat(row[12]) || 0;
 
     // Store based on room number (auto-detect building)
-    // IMPORTANT: Skip Amazon here - it's handled separately below
-    if (roomsRoomList.includes(roomNum) && roomNum !== 'AMAZON' && roomNum !== 'ร้านใหญ่') {
-      // Rows 2-23: ROOMS building (excluding Amazon)
+    if (roomsRoomList.includes(roomNum)) {
+      // Rows 2-23: ROOMS building (13-33, 15ก only)
       allRooms.rooms[roomNum] = {
         eNew: roomsCurr,
         eOld: roomsPrev,
