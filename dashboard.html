@@ -14942,37 +14942,38 @@ function displayBillingImportPreview(monthlyData, year) {
   const previewDiv = document.getElementById('billingPreviewData');
   const monthNames = ['มค', 'กพ', 'มีค', 'เมษา', 'พค', 'มิย', 'กค', 'สค', 'กย', 'ตค', 'พย', 'ธค'];
 
-  let html = `<strong>ข้อมูลบิลปี ${year} (Rooms + Nest + Amazon + Utilities + Trash):</strong><br>`;
-  html += `<div style="overflow-x:auto;margin-top:0.5rem;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);min-width:1200px;">`;
-  html += `<table style="width:100%;border-collapse:collapse;font-size:0.85rem;table-layout:fixed;">`;
-  html += `<colgroup><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"><col style="width:5.556%;"></colgroup>`;
-  html += `<tr style="border-bottom:2px solid #ccc;background:#f0f0f0;">
-    <th style="padding:0.25rem;"></th>
-    <th colspan="5" style="padding:0.25rem;text-align:center;background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms</th>
-    <th colspan="5" style="padding:0.25rem;text-align:center;background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest</th>
-    <th colspan="5" style="padding:0.25rem;text-align:center;background:#fff9c4;color:#f57f17;font-weight:700;">📦 Amazon</th>
-    <th colspan="2" style="padding:0.25rem;text-align:center;background:#f0f0f0;">รวม</th>
-  </tr>
-  <tr style="border-bottom:1px solid #ccc;background:#f0f0f0;font-size:0.8rem;">
-    <th style="padding:0.2rem;text-align:left;background:#f0f0f0;">เดือน</th>
-    <th style="padding:0.2rem;text-align:right;background:#e8f5e9;">เช่า</th>
-    <th style="padding:0.2rem;text-align:right;background:#e8f5e9;">ไฟ</th>
-    <th style="padding:0.2rem;text-align:right;background:#e8f5e9;">น้ำ</th>
-    <th style="padding:0.2rem;text-align:right;background:#e8f5e9;">ขยะ</th>
-    <th style="padding:0.2rem;text-align:right;background:#e8f5e9;font-weight:600;">รวม</th>
-    <th style="padding:0.2rem;text-align:right;background:#f3e5f5;">เช่า</th>
-    <th style="padding:0.2rem;text-align:right;background:#f3e5f5;">ไฟ</th>
-    <th style="padding:0.2rem;text-align:right;background:#f3e5f5;">น้ำ</th>
-    <th style="padding:0.2rem;text-align:right;background:#f3e5f5;">ขยะ</th>
-    <th style="padding:0.2rem;text-align:right;background:#f3e5f5;font-weight:600;">รวม</th>
-    <th style="padding:0.2rem;text-align:right;background:#fff9c4;">เช่า</th>
-    <th style="padding:0.2rem;text-align:right;background:#fff9c4;">ไฟ</th>
-    <th style="padding:0.2rem;text-align:right;background:#fff9c4;">น้ำ</th>
-    <th style="padding:0.2rem;text-align:right;background:#fff9c4;">ขยะ</th>
-    <th style="padding:0.2rem;text-align:right;background:#fff9c4;font-weight:600;">รวม</th>
-    <th style="padding:0.2rem;text-align:right;background:#f0f0f0;">เช่า</th>
-    <th style="padding:0.2rem;text-align:right;background:#f0f0f0;">รวม</th>
-  </tr>`;
+  let html = `<strong>ข้อมูลบิลปี ${year} (Rooms + Nest + Amazon):</strong><br>`;
+  html += `<div style="font-family:'Sarabun',sans-serif;font-size:0.9rem;overflow-x:auto;margin-top:0.5rem;">`;
+  html += `<table style="width:100%;border-collapse:collapse;">`;
+  html += `<thead>
+    <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
+      <th style="padding:0.8rem;text-align:left;border-right:1px solid var(--border);">เดือน</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#fff9c4;color:#f57f17;font-weight:700;">📦 Amazon</th>
+      <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวม</th>
+    </tr>
+    <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
+      <th style="padding:0.2rem;border-right:1px solid var(--border);"></th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;font-size:0.8rem;color:var(--green);font-weight:700;">รวม</th>
+    </tr>
+  </thead>
+  <tbody>`;
 
   let roomsRentSum = 0, roomsElecSum = 0, roomsWaterSum = 0, roomsTrashSum = 0, roomsTotal = 0;
   let nestRentSum = 0, nestElecSum = 0, nestWaterSum = 0, nestTrashSum = 0, nestTotal = 0;
@@ -14986,25 +14987,24 @@ function displayBillingImportPreview(monthlyData, year) {
     const amazon = bd.amazon || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
 
     const monthName = monthNames[m.month - 1] || `เดือน${m.month}`;
-    html += `<tr style="border-bottom:1px solid #eee;">`;
-    html += `<td style="padding:0.2rem;background:#f9f9f9;">${monthName}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#e8f5e9;">฿${(rooms.rent||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#e8f5e9;">฿${(rooms.elec||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#e8f5e9;">฿${(rooms.water||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#e8f5e9;">฿${(rooms.trash||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#e8f5e9;font-weight:600;">฿${(rooms.total||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#f3e5f5;">฿${(nest.rent||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#f3e5f5;">฿${(nest.elec||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#f3e5f5;">฿${(nest.water||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#f3e5f5;">฿${(nest.trash||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#f3e5f5;font-weight:600;">฿${(nest.total||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#fff9c4;">฿${(amazon.rent||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#fff9c4;">฿${(amazon.elec||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#fff9c4;">฿${(amazon.water||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#fff9c4;">฿${(amazon.trash||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#fff9c4;font-weight:600;">฿${(amazon.total||0).toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#f9f9f9;">฿${m.rent.toLocaleString()}</td>`;
-    html += `<td style="padding:0.2rem;text-align:right;background:#f9f9f9;font-weight:bold;">฿${m.total.toLocaleString()}</td>`;
+    html += `<tr style="border-bottom:1px solid var(--border);">`;
+    html += `<td style="padding:0.5rem;text-align:left;border-right:1px solid var(--border);">${monthName}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;font-weight:600;">฿${(rooms.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;font-weight:600;">฿${(nest.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;font-weight:600;">฿${(amazon.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;font-weight:600;color:var(--green);">฿${m.total.toLocaleString()}</td>`;
     html += `</tr>`;
 
     roomsRentSum += rooms.rent||0;
@@ -15025,28 +15025,30 @@ function displayBillingImportPreview(monthlyData, year) {
     yearlyTotal += m.total;
   });
 
-  html += `<tr style="border-top:2px solid #333;font-weight:bold;background:#f0f0f0;font-size:0.7rem;">`;
-  html += `<td style="padding:0.25rem;background:#f0f0f0;">รวมทั้งปี</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#e8f5e9;">฿${roomsRentSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#e8f5e9;">฿${roomsElecSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#e8f5e9;">฿${roomsWaterSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#e8f5e9;">฿${roomsTrashSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#e8f5e9;font-weight:600;">฿${roomsTotal.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#f3e5f5;">฿${nestRentSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#f3e5f5;">฿${nestElecSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#f3e5f5;">฿${nestWaterSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#f3e5f5;">฿${nestTrashSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#f3e5f5;font-weight:600;">฿${nestTotal.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#fff9c4;">฿${amazonRentSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#fff9c4;">฿${amazonElecSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#fff9c4;">฿${amazonWaterSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#fff9c4;">฿${amazonTrashSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#fff9c4;font-weight:600;">฿${amazonTotal.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#f0f0f0;color:#f57f17;font-weight:600;">฿${amazonRentSum.toLocaleString()}</td>`;
-  html += `<td style="padding:0.25rem;text-align:right;background:#f0f0f0;color:#1b5e20;font-weight:bold;">฿${yearlyTotal.toLocaleString()}</td>`;
-  html += `</tr>`;
-  html += `</table>`;
-  html += `</div>`;
+  html += `  </tbody>
+  <tfoot>
+    <tr style="background:var(--bg-secondary);border-top:2px solid var(--border);font-weight:700;">
+      <td style="padding:0.8rem;border-right:1px solid var(--border);">รวมทั้งปี</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsRentSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsElecSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsWaterSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsTrashSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsTotal.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestRentSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestElecSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestWaterSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestTrashSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestTotal.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonRentSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonElecSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonWaterSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonTrashSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonTotal.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${yearlyTotal.toLocaleString()}</td>
+    </tr>
+  </tfoot>
+  </table>
+  </div>`;
 
   previewDiv.innerHTML = html;
   document.getElementById('billingResultsSection').style.display = 'block';
