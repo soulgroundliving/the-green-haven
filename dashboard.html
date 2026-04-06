@@ -4418,8 +4418,9 @@ function parseImportExcelData(workbook, building) {
 
   // Nest: populate all 20 rooms with 0 values ONLY for V3 format (June 69+)
   // For V1/V2 formats (before June), don't pre-populate Nest - it doesn't exist in those files
-  if (building === 'nest' || selectedSheet === 'มิย69' || selectedSheet === 'มีค69' || selectedSheet === 'กค69' || selectedSheet === 'สค69' || selectedSheet === 'กย69' || selectedSheet === 'ตค69' || selectedSheet === 'พย69' || selectedSheet === 'ธค69') {
-    console.log(`📋 Pre-populating Nest rooms (${nestRoomList.length} rooms) for V3 format...`);
+  // Use selectedMonth >= 6 to support all month name variations (มิย/มิถุน for June, กค/กรก for July, etc.)
+  if (building === 'nest' || selectedMonth >= 6) {
+    console.log(`📋 Pre-populating Nest rooms (${nestRoomList.length} rooms) for V3 format (month ${selectedMonth})...`);
     nestRoomList.forEach(roomNum => {
       allRooms.nest[roomNum] = {
         eNew: 0,
@@ -4430,7 +4431,7 @@ function parseImportExcelData(workbook, building) {
     });
     console.log(`✅ Nest pre-population complete - ${Object.keys(allRooms.nest).length} rooms`);
   } else {
-    console.log(`⊘ Skipping Nest pre-population - V1/V2 format (no Nest data in this month)`);
+    console.log(`⊘ Skipping Nest pre-population - V1/V2 format (month ${selectedMonth}, no Nest data before June)`);
   }
 
   // Amazon: pre-populate with 0 (will be overwritten if found in file)
