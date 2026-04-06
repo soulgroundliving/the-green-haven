@@ -4416,17 +4416,22 @@ function parseImportExcelData(workbook, building) {
     };
   });
 
-  // Nest: populate all 20 rooms with 0 values (ALWAYS - even if no data in file)
-  console.log(`📋 Pre-populating Nest rooms (${nestRoomList.length} rooms)...`);
-  nestRoomList.forEach(roomNum => {
-    allRooms.nest[roomNum] = {
-      eNew: 0,
-      eOld: 0,
-      wNew: 0,
-      wOld: 0
-    };
-  });
-  console.log(`✅ Nest pre-population complete - ${Object.keys(allRooms.nest).length} rooms`);
+  // Nest: populate all 20 rooms with 0 values ONLY for V3 format (June 69+)
+  // For V1/V2 formats (before June), don't pre-populate Nest - it doesn't exist in those files
+  if (building === 'nest' || selectedSheet === 'มิย69' || selectedSheet === 'มีค69' || selectedSheet === 'กค69' || selectedSheet === 'สค69' || selectedSheet === 'กย69' || selectedSheet === 'ตค69' || selectedSheet === 'พย69' || selectedSheet === 'ธค69') {
+    console.log(`📋 Pre-populating Nest rooms (${nestRoomList.length} rooms) for V3 format...`);
+    nestRoomList.forEach(roomNum => {
+      allRooms.nest[roomNum] = {
+        eNew: 0,
+        eOld: 0,
+        wNew: 0,
+        wOld: 0
+      };
+    });
+    console.log(`✅ Nest pre-population complete - ${Object.keys(allRooms.nest).length} rooms`);
+  } else {
+    console.log(`⊘ Skipping Nest pre-population - V1/V2 format (no Nest data in this month)`);
+  }
 
   // Amazon: pre-populate with 0 (will be overwritten if found in file)
   allRooms.amazon['ร้านใหญ่'] = {
@@ -7937,41 +7942,7 @@ function crc16(str){
   return(c&0xFFFF).toString(16).toUpperCase().padStart(4,'0');
 }
 
-function buildPromptPayPayload(phone,amount){
-  phone=phone.replace(/[-\s]/g,'');
-  // Phone: 0XXXXXXXXX → 0066XXXXXXXXX (13 digits)
-  // NationalID: 13 digits not starting with 0 → use as-is with tag 02
-  let tag,num;
-  if(phone.startsWith('0')&&phone.length<=10){
-    num='0066'+phone.slice(1); tag='01';           // phone number
-  } else if(/^\d{13}$/.test(phone)){
-    num=phone; tag='02';                            // national ID
-  } else {
-    num=phone; tag='01';                            // fallback
-  }
-  const pTag=tag+String(num.length).padStart(2,'0')+num;
-  const acct='0016A000000677010111'+pTag;
-  const mTag='29'+String(acct.length).padStart(2,'0')+acct;
-  // 5204 0000 = MCC  |  5303 764 = THB  (NO extra characters)
-  let p='000201010212'+mTag+'520400005303764';
-  if(amount>0){const a=amount.toFixed(2);p+='54'+String(a.length).padStart(2,'0')+a;}
-  p+='5802TH6304';
-  return p+crc16(p);
-}
-
-function savePromptPay(){
-  try{
-    const v=document.getElementById('pp-input').value.trim();
-    if(!v){alert('กรุณาใส่เลขพร้อมเพย์ เช่น 0XX-XXX-XXXX');return;}
-    PROMPTPAY_NUMBER=v;
-    localStorage.setItem('promptpay',v);
-    document.getElementById('pp-status').textContent='✅ บันทึกแล้ว: '+v;
-    console.log('✅ PromptPay saved:',v);
-  }catch(e){
-    console.error('❌ Error saving PromptPay:',e);
-    alert('เกิดข้อผิดพลาด: '+e.message);
-  }
-}
+// Removed: buildPromptPayPayload() and savePromptPay() - PromptPay not used in payment verification page
 
 function renderQR(imgId,amount){
   if(!PROMPTPAY_NUMBER)return;
