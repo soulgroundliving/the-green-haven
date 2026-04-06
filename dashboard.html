@@ -5970,7 +5970,7 @@ function loadRoomConfigUI() {
       const searchId = room.id;
       const metadata = metadataArray.find(m => m.id === searchId);
       // Prefer explicit room.rentPrice from DEFAULT_ROOMS_CONFIG, but only if it was actually saved (not 0 or undefined)
-      const rent = (room.rentPrice && room.rentPrice > 0) ? room.rentPrice : (metadata?.rent || 1500);
+      const rent = (room.rentPrice && room.rentPrice > 0) ? room.rentPrice : (metadata?.rentPrice || 1500);
       const depositId = `deposit_${building}_${room.id}`;
       return `
       <tr style="border-bottom:1px solid var(--border);">
@@ -15152,22 +15152,38 @@ function approveBillingImportData() {
     return;
   }
 
-  const { year, monthlyData } = window.pendingBillingData;
+  try {
+    const { year, monthlyData } = window.pendingBillingData;
 
-  // Create HISTORICAL_DATA structure with detailed breakdown (rooms, nest, amazon)
-  const months = monthlyData.map(m => {
-    const bd = m.breakdown || {};
-    const rooms = bd.rooms || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
-    const nest = bd.nest || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
-    const amazon = bd.amazon || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+    if (!monthlyData || !Array.isArray(monthlyData) || monthlyData.length === 0) {
+      showBillingImportStatus('❌ ข้อมูลเดือนไม่ถูกต้องหรือเป็นช่วง', 'error');
+      return;
+    }
 
-    return {
-      total: [m.rent, m.electricity, m.water, m.trash, m.total],
-      rooms: [rooms.rent, rooms.elec, rooms.water, rooms.trash, rooms.total],
-      nest: [nest.rent, nest.elec, nest.water, nest.trash, nest.total],
-      amazon: [amazon.rent, amazon.elec, amazon.water, amazon.trash, amazon.total]
-    };
-  });
+    // Create HISTORICAL_DATA structure with detailed breakdown (rooms, nest, amazon)
+    const months = monthlyData.map(m => {
+      // Ensure m is an object with default values
+      if (!m || typeof m !== 'object') {
+        return {
+          total: [0, 0, 0, 0, 0],
+          rooms: [0, 0, 0, 0, 0],
+          nest: [0, 0, 0, 0, 0],
+          amazon: [0, 0, 0, 0, 0]
+        };
+      }
+
+      const bd = m.breakdown || {};
+      const rooms = bd.rooms || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+      const nest = bd.nest || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+      const amazon = bd.amazon || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+
+      return {
+        total: [m.rent || 0, m.electricity || 0, m.water || 0, m.trash || 0, m.total || 0],
+        rooms: [rooms.rent || 0, rooms.elec || 0, rooms.water || 0, rooms.trash || 0, rooms.total || 0],
+        nest: [nest.rent || 0, nest.elec || 0, nest.water || 0, nest.trash || 0, nest.total || 0],
+        amazon: [amazon.rent || 0, amazon.elec || 0, amazon.water || 0, amazon.trash || 0, amazon.total || 0]
+      };
+    });
 
   // Get or create HISTORICAL_DATA
   let historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
