@@ -9774,6 +9774,11 @@ function handlePaymentSlipDrop(e){
   handleSlipSelect(file);
 }
 
+// 🚨 Expose slip handlers to global scope for HTML event handlers
+window.handleSlipDrop = handleSlipDrop;
+window.handlePaymentSlipDrop = handlePaymentSlipDrop;
+window.handleSlipSelect = handleSlipSelect;
+
 function handleSlipSelect(file){
   if(!file){
     alert('❌ กรุณาเลือกไฟล์');
