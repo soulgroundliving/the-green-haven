@@ -4518,37 +4518,38 @@ function parseImportExcelData(workbook, building) {
   return result;
 
   // ===== FALLBACK: V1/V2 FORMAT PARSING =====
-  console.log('🔧 Parsing V1/V2 meter format (single building per file)');
+  console.log('🔧 Parsing V1/V2 meter format (auto-detect all buildings)');
 
-  // Get room list based on building
-  let roomList = [];
-  if (building === 'rooms') {
-    // Rooms Building: 13-33, 15ก only (NO room 35, NO Amazon - handled separately)
-    roomList = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25',
-                '26', '27', '28', '29', '30', '31', '32', '33'];
-  } else if (building === 'nest') {
-    // Nest Building: N101-N405
-    roomList = ['N101', 'N102', 'N103', 'N104', 'N105',
-                'N201', 'N202', 'N203', 'N204', 'N205',
-                'N301', 'N302', 'N303', 'N304', 'N305',
-                'N401', 'N402', 'N403', 'N404', 'N405'];
-  }
+  const roomsRoomList = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25',
+                         '26', '27', '28', '29', '30', '31', '32', '33'];
+  const nestRoomList = ['N101', 'N102', 'N103', 'N104', 'N105',
+                        'N201', 'N202', 'N203', 'N204', 'N205',
+                        'N301', 'N302', 'N303', 'N304', 'N305',
+                        'N401', 'N402', 'N403', 'N404', 'N405'];
 
-  const rooms = {};
+  const roomsData = {};
+  const nestData = {};
+  const amazonData = {};
+
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     if (!row[0]) continue;
 
     const roomNum = String(row[0]).trim();
-    if (roomList.includes(roomNum)) {
-      // Column mapping (same as V3 format):
-      // A(0)=room, B(1)=eNew, C(2)=wNew, D(3)=rent, G(6)=eOld, M(12)=wOld
-      rooms[roomNum] = {
-        eNew: parseFloat(row[1]) || 0,  // Column B: Electricity New
-        eOld: parseFloat(row[6]) || 0,  // Column G: Electricity Old
-        wNew: parseFloat(row[2]) || 0,  // Column C: Water New
-        wOld: parseFloat(row[12]) || 0  // Column M: Water Old
-      };
+    const meterData = {
+      eNew: parseFloat(row[1]) || 0,  // Column B: Electricity New
+      eOld: parseFloat(row[6]) || 0,  // Column G: Electricity Old
+      wNew: parseFloat(row[2]) || 0,  // Column C: Water New
+      wOld: parseFloat(row[12]) || 0  // Column M: Water Old
+    };
+
+    // Auto-detect building from room number
+    if (roomsRoomList.includes(roomNum)) {
+      roomsData[roomNum] = meterData;
+    } else if (nestRoomList.includes(roomNum)) {
+      nestData[roomNum] = meterData;
+    } else if (roomNum === 'ร้านใหญ่' || roomNum === 'AMAZON') {
+      amazonData['ร้านใหญ่'] = meterData;
     }
   }
 
@@ -4556,8 +4557,10 @@ function parseImportExcelData(workbook, building) {
     year,
     month: selectedMonth || 1,
     sheetName: selectedSheet,
-    rooms,
-    building: building,
+    rooms: roomsData,
+    nest: nestData,
+    amazon: amazonData,
+    building: 'all',  // V1/V2 can have mixed buildings
     isV3: false,
     importType: 'billing'   // Store as billing_data in localStorage
   };
