@@ -2842,12 +2842,12 @@
              style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
              ondragover="event.preventDefault();this.style.background='var(--border)';"
              ondragleave="this.style.background='var(--accent-light)';"
-             ondrop="window.handleImportDrop && window.handleImportDrop(event);">
+             ondrop="handleImportDrop(event);">
           <div style="font-size:2rem;margin-bottom:0.5rem;">📊</div>
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์มาวางที่นี่ หรือคลิก</div>
           <div style="color:var(--text-muted);font-size:0.85rem;">ไฟล์ Excel (.xlsx, .xls)</div>
         </div>
-        <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="window.handleImportFile && window.handleImportFile(event);">
+        <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event);">
       </div>
 
       <!-- Month Selector (Optional manual selection) -->
@@ -2972,13 +2972,13 @@
              style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
              ondragover="event.preventDefault();this.style.background='var(--border)';"
              ondragleave="this.style.background='var(--accent-light)';"
-             ondrop="window.handleBillingImportDrop && window.handleBillingImportDrop(event);"
+             ondrop="handleBillingImportDrop(event);"
              onclick="document.getElementById('billingFileInput').click();">
           <div style="font-size:2rem;margin-bottom:0.5rem;">💳</div>
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์บิล Excel มาวางที่นี่ หรือคลิก</div>
           <div style="color:var(--text-muted);font-size:0.85rem;">ไฟล์ Excel (.xlsx, .xls) เช่น บิลปี68.xlsx</div>
         </div>
-        <input type="file" id="billingFileInput" accept=".xlsx,.xls" style="display:none;" onchange="window.handleBillingImportFile && window.handleBillingImportFile(event);">
+        <input type="file" id="billingFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleBillingImportFile(event);">
       </div>
 
 
