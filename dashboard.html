@@ -4005,9 +4005,9 @@
 <!-- Toggle Button for Firebase Panel - REMOVED FOR PRODUCTION (was blocking content on scroll) -->
 
 <script>
-// Use CONFIG from config-unified.js instead
-const MONTHS_TH = window.window.CONFIG.months.short;
-const MONTHS_FULL = window.window.CONFIG.months.full;
+// Use CONFIG from config-unified.js instead (with fallback if not loaded yet)
+const MONTHS_TH = (window.CONFIG?.months?.short) || ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_FULL = (window.CONFIG?.months?.full) || ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 // ROOMS_OLD and ROOMS_NEW are now defined in shared-config.js
 // Use window.CONFIG.rooms_old and window.CONFIG.rooms_new instead
