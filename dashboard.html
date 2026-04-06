@@ -7404,7 +7404,7 @@ let invoiceData=null;
 
 // Helper: Convert legacy building names to Firebase config + metadata
 function getBuildingInfo(legacyBuilding) {
-  const firebaseBuilding = window.CONFIG.getBuildingConfig(legacyBuilding);
+  const firebaseBuilding = window.CONFIG?.getBuildingConfig?.(legacyBuilding) || (legacyBuilding === 'old' ? 'rooms' : 'nest');
   const metadataArray = legacyBuilding === 'old' ? ROOMS_OLD : ROOMS_NEW;
   const displayName = legacyBuilding === 'old' ? 'เดอะ กรีน เฮฟเว่น' : 'Nest · เดอะ กรีน เฮฟเว่น';
   return { firebaseBuilding, metadataArray, displayName };
