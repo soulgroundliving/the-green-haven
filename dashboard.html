@@ -1844,7 +1844,7 @@
       <button class="sidebar-item" onclick="window.showPage('content-management', this)">
         <span class="sidebar-item-icon">📅</span>Community Events
       </button>
-      <button class="sidebar-item" onclick="window.showPage('community-docs', this)">
+      <button class="sidebar-item" onclick="window.showPage('content-management', this)">
         <span class="sidebar-item-icon">📋</span>Documents
       </button>
       <button class="sidebar-item" onclick="window.showPage('requests-approvals', this)">
@@ -4042,12 +4042,6 @@ window._showPageImpl = function(page,btn){
   if(page==='owner-info')initOwnerInfoPage();
   if(page==='tenant-master')initTenantMasterPage();
   if(page==='lease-agreements')initLeaseAgreementsPage();
-  if(page==='service-providers')initServiceProvidersPage();
-  if(page==='community-events')initCommunityEventsPage();
-  if(page==='community-docs')initCommunityDocsPage();
-  if(page==='pet-approvals')initPetApprovalsPage();
-  if(page==='lease-settings')initLeaseSettingsPage();
-  if(page==='complaints')initComplaintsPage();
   if(page==='gamification')initGamificationPage();
   if(page==='admin-reports')initAdminReportsPage();
 };
