@@ -2978,7 +2978,7 @@
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์บิล Excel มาวางที่นี่ หรือคลิก</div>
           <div style="color:var(--text-muted);font-size:0.85rem;">ไฟล์ Excel (.xlsx, .xls) เช่น บิลปี68.xlsx</div>
         </div>
-        <input type="file" id="billingFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleBillingImportFile(event);">
+        <input type="file" id="billingFileInput" accept=".xlsx,.xls" style="display:none;">
       </div>
 
 
@@ -4156,7 +4156,12 @@ function initImportMeterTab() {
         const importData = parseImportExcelData(currentImportWorkbook, building);
         if (importData) {
           currentImportData = importData;
-          const matchResults = window.matchMeterDataWithPrevious(importData);
+          let matchResults;
+          if (typeof window.matchMeterDataWithPrevious === 'function') {
+            matchResults = window.matchMeterDataWithPrevious(importData);
+          } else {
+            matchResults = { summary: { totalRooms: 0 }, details: [], canProceed: true, isFirstImport: true };
+          }
           currentImportMatchResults = matchResults;
           displayImportPreview(importData, matchResults);
           showImportStatus('✅ อัพเดตข้อมูลเดือนแล้ว!', 'success');
@@ -4230,7 +4235,13 @@ function handleImportFileProcess(file) {
 
         // Get match results
         console.log('🔍 Calling matchMeterDataWithPrevious...');
-        const matchResults = matchMeterDataWithPrevious(importData);
+        let matchResults;
+        if (typeof window.matchMeterDataWithPrevious === 'function') {
+          matchResults = window.matchMeterDataWithPrevious(importData);
+        } else {
+          console.warn('⚠️ matchMeterDataWithPrevious not available yet, using fallback');
+          matchResults = { summary: { totalRooms: 0 }, details: [], canProceed: true, isFirstImport: true };
+        }
         console.log('📋 Match results:', matchResults);
         currentImportMatchResults = matchResults;
 
@@ -14697,6 +14708,21 @@ function handleBillingImportFile(event) {
     handleBillingImportFileProcess(files[0]);
   }
 }
+
+// Expose to global scope for HTML onclick handlers
+window.handleBillingImportFile = handleBillingImportFile;
+window.handleBillingImportDrop = handleBillingImportDrop;
+
+// Bind event handlers once DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  const billingInput = document.getElementById('billingFileInput');
+  if (billingInput) {
+    billingInput.addEventListener('change', handleBillingImportFile);
+    console.log('✅ Billing file input event listener bound');
+  } else {
+    console.warn('⚠️ billingFileInput element not found');
+  }
+});
 
 function handleBillingImportFileProcess(file) {
   // Auto-detect year from filename (e.g., "บิลปี69.xlsx" → 69)
