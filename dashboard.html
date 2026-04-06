@@ -13850,34 +13850,6 @@ function updatePaymentNotificationBadge(count) {
 /**
  * Get payment notification summary
  */
-function getPaymentNotificationSummary() {
-  try {
-    const notifications = JSON.parse(localStorage.getItem('payment_notifications') || '[]');
-    const verified = notifications.filter(n => n.type === 'payment_verified');
-    const receipts = notifications.filter(n => n.type === 'receipt_generated');
-
-    const totalVerified = verified.reduce((sum, n) => sum + (n.amount || 0), 0);
-    const totalReceipts = receipts.length;
-
-    return {
-      totalPaymentsVerified: verified.length,
-      totalReceiptsGenerated: receipts.length,
-      totalAmountVerified: totalVerified,
-      lastPaymentTime: verified.length > 0 ? verified[verified.length - 1].timestamp : null,
-      lastReceiptTime: receipts.length > 0 ? receipts[receipts.length - 1].timestamp : null
-    };
-  } catch (error) {
-    console.warn('⚠️ Error getting payment summary:', error);
-    return {
-      totalPaymentsVerified: 0,
-      totalReceiptsGenerated: 0,
-      totalAmountVerified: 0,
-      lastPaymentTime: null,
-      lastReceiptTime: null
-    };
-  }
-}
-
 /**
  * Clear payment notifications (admin function)
  */
