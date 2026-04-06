@@ -13,21 +13,20 @@
 <script src="./shared/audit.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="./shared/meter-firebase.js"></script>
 <script src="./shared/room-config.js"></script>
 <script src="./shared/owner-config.js"></script>
 <script src="./shared/expense-manager.js"></script>
-<script src="./shared/tenant-config.js"></script>
+<script src="./shared/tenant-system.js"></script>
 <script src="./shared/tenant-lookup.js"></script>
 <script src="./shared/lease-config.js"></script>
 <script src="./shared/invoice-receipt-manager.js"></script>
+<script src="./shared/meter-unified.js"></script>
+<script src="./shared/billing-system.js"></script>
 <script src="./shared/bill-generator.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="./shared/invoice-pdf-generator.js"></script>
-<script src="./shared/shared-config.js"></script>
-<script src="./shared/meter_import_helper.js"></script>
-<script src="./shared/config-secure.js"></script>
+<script src="./shared/config-unified.js"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <!-- TEST/MOCK DATA REMOVED FOR PRODUCTION DEPLOYMENT -->
 <!-- (Was: mock-tenant-data.js, mock-meter-history.js, init-test-data.js) -->
@@ -1779,8 +1778,8 @@
       <button class="sidebar-item" onclick="window.showPage('maintenance', this)">
         <span class="sidebar-item-icon">🔧</span>แจ้งซ่อม<span class="sidebar-badge" id="mxBadge" style="display:none"></span>
       </button>
-      <button class="sidebar-item" onclick="window.showPage('announcements', this)">
-        <span class="sidebar-item-icon">📢</span>ประกาศ
+      <button class="sidebar-item" onclick="window.showPage('content-management', this)">
+        <span class="sidebar-item-icon">📚</span>เอกสารและประกาศ
       </button>
     </div>
 
@@ -1831,43 +1830,31 @@
     <!-- Management -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">👤 Management</div>
-      <button class="sidebar-item" onclick="window.showPage('owner-info', this)">
-        <span class="sidebar-item-icon">🏢</span>Owner Info
+      <button class="sidebar-item" onclick="window.showPage('people-management', this)">
+        <span class="sidebar-item-icon">👨‍💼</span>People Management
       </button>
-      <button class="sidebar-item" onclick="window.showPage('tenant-master', this)">
-        <span class="sidebar-item-icon">👥</span>Tenant Master
-      </button>
-      <button class="sidebar-item" onclick="window.showPage('lease-agreements', this)">
-        <span class="sidebar-item-icon">📋</span>Lease Agreements
+      <button class="sidebar-item" onclick="window.showPage('lease-management', this)">
+        <span class="sidebar-item-icon">📋</span>Lease Management
       </button>
     </div>
 
     <!-- Community & Tenant Services -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">🏘️ Community Services</div>
-      <button class="sidebar-item" onclick="window.showPage('service-providers', this)">
-        <span class="sidebar-item-icon">📞</span>Service Providers
-      </button>
-      <button class="sidebar-item" onclick="window.showPage('community-events', this)">
+      <button class="sidebar-item" onclick="window.showPage('content-management', this)">
         <span class="sidebar-item-icon">📅</span>Community Events
       </button>
       <button class="sidebar-item" onclick="window.showPage('community-docs', this)">
         <span class="sidebar-item-icon">📋</span>Documents
       </button>
-      <button class="sidebar-item" onclick="window.showPage('pet-approvals', this)">
-        <span class="sidebar-item-icon">🐾</span>Pet Approvals
-      </button>
-      <button class="sidebar-item" onclick="window.showPage('lease-settings', this)">
-        <span class="sidebar-item-icon">🔔</span>Lease Alerts Config
+      <button class="sidebar-item" onclick="window.showPage('requests-approvals', this)">
+        <span class="sidebar-item-icon">✅</span>Requests & Approvals
       </button>
     </div>
 
     <!-- Tenant & Admin Management -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">👨‍💼 Tenant & Admin</div>
-      <button class="sidebar-item" onclick="window.showPage('complaints', this)">
-        <span class="sidebar-item-icon">⚠️</span>Complaint Management<span class="sidebar-badge" id="complaintBadge" style="display:none"></span>
-      </button>
       <button class="sidebar-item" onclick="window.showPage('gamification', this)">
         <span class="sidebar-item-icon">🏆</span>Gamification Management
       </button>
@@ -3162,56 +3149,131 @@
 </div>
 
 <!-- ===== ANNOUNCEMENTS ===== -->
-<div class="page" id="page-announcements">
-  <div class="section-title">📢 ประกาศและข้อมูลข่าวสาร</div>
+<div class="page" id="page-content-management">
+  <div class="section-title">📚 เอกสารและประกาศ</div>
 
-  <!-- Building Selection -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;">
-    <span class="year-tab-label">ตึก:</span>
-    <button class="year-tab active" onclick="setAnnouncementBuilding('rooms', this)">🏠 ห้องแถว</button>
-    <button class="year-tab" onclick="setAnnouncementBuilding('nest', this)">🏢 Nest</button>
+  <!-- Tab Navigation -->
+  <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
+    <button id="tab-announcements-btn" class="content-mgmt-tab active" onclick="switchContentTab('announcements', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📢 ประกาศ</button>
+    <button id="tab-events-btn" class="content-mgmt-tab" onclick="switchContentTab('events', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📅 กิจกรรม</button>
+    <button id="tab-docs-btn" class="content-mgmt-tab" onclick="switchContentTab('docs', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📋 เอกสาร</button>
   </div>
 
-  <!-- Create Form -->
-  <div class="card" style="margin-bottom: 2rem;">
-    <div class="card-title">➕ สร้างประกาศใหม่</div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-      <div>
-        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">หัวข้อ *</label>
-        <input type="text" id="ann-title" placeholder="เช่น แจ้งปิดน้ำ" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
-      </div>
-
-      <div>
-        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">ไอคอน Emoji</label>
-        <input type="text" id="ann-icon" placeholder="💧 🧹 🔧" maxlength="2" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun'; font-size: 1.2rem;">
-      </div>
+  <!-- TAB 1: Announcements -->
+  <div id="content-tab-announcements" class="content-mgmt-content active">
+    <!-- Building Selection -->
+    <div class="year-tabs" style="margin-bottom:1.2rem;">
+      <span class="year-tab-label">ตึก:</span>
+      <button class="year-tab active" onclick="setAnnouncementBuilding('rooms', this)">🏠 ห้องแถว</button>
+      <button class="year-tab" onclick="setAnnouncementBuilding('nest', this)">🏢 Nest</button>
     </div>
 
-    <div style="margin-bottom: 1rem;">
-      <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เนื้อหา *</label>
-      <textarea id="ann-content" rows="4" placeholder="รายละเอียดประกาศ..." style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun'; resize: vertical;"></textarea>
-    </div>
+    <!-- Create Form -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="card-title">➕ สร้างประกาศใหม่</div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-      <div>
-        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">วันที่ (optional)</label>
-        <input type="date" id="ann-date" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">หัวข้อ *</label>
+          <input type="text" id="ann-title" placeholder="เช่น แจ้งปิดน้ำ" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+        </div>
+
+        <div>
+          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">ไอคอน Emoji</label>
+          <input type="text" id="ann-icon" placeholder="💧 🧹 🔧" maxlength="2" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun'; font-size: 1.2rem;">
+        </div>
       </div>
 
-      <div>
-        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เวลา (optional)</label>
-        <input type="text" id="ann-time" placeholder="เช่น 10:00 - 14:00" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+      <div style="margin-bottom: 1rem;">
+        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เนื้อหา *</label>
+        <textarea id="ann-content" rows="4" placeholder="รายละเอียดประกาศ..." style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun'; resize: vertical;"></textarea>
       </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">วันที่ (optional)</label>
+          <input type="date" id="ann-date" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px;">
+        </div>
+
+        <div>
+          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เวลา (optional)</label>
+          <input type="text" id="ann-time" placeholder="เช่น 10:00 - 14:00" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+        </div>
+      </div>
+
+      <button onclick="saveAnnouncement()" style="width: 100%; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun'; font-size: 0.95rem;">📢 สร้างประกาศ</button>
     </div>
 
-    <button onclick="saveAnnouncement()" style="width: 100%; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun'; font-size: 0.95rem;">📢 สร้างประกาศ</button>
+    <!-- List of Announcements -->
+    <div class="card">
+      <div class="card-title">📋 รายการประกาศทั้งหมด</div>
+      <div id="announcementsList" style="min-height: 200px;"></div>
+    </div>
   </div>
 
-  <!-- List of Announcements -->
-  <div class="card">
-    <div class="card-title">📋 รายการประกาศทั้งหมด</div>
-    <div id="announcementsList" style="min-height: 200px;"></div>
+  <!-- TAB 2: Community Events -->
+  <div id="content-tab-events" class="content-mgmt-content" style="display: none;">
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <input type="text" id="eventSearch" placeholder="Search events..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <button onclick="toggleAddEventForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Event</button>
+      </div>
+
+      <!-- Add Event Form (Hidden) -->
+      <div id="addEventForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+        <div style="font-weight: 700; margin-bottom: 1rem;">Add New Community Event</div>
+        <input type="text" id="eventTitle" placeholder="Event Title" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <input type="date" id="eventDate" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+          <input type="time" id="eventTime" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        </div>
+        <input type="text" id="eventLocation" placeholder="Location" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+        <textarea id="eventDescription" placeholder="Description" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
+        <div style="display: flex; gap: 1rem;">
+          <button onclick="saveCommunityEvent()" class="btn-receipt">💾 Save</button>
+          <button onclick="toggleAddEventForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+        </div>
+      </div>
+
+      <!-- Events List -->
+      <div id="eventsList"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Community Documents -->
+  <div id="content-tab-docs" class="content-mgmt-content" style="display: none;">
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <input type="text" id="docSearch" placeholder="Search documents..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <button onclick="toggleAddDocForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Document</button>
+      </div>
+
+      <!-- Add Document Form (Hidden) -->
+      <div id="addDocForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+        <div style="font-weight: 700; margin-bottom: 1rem;">Add New Document</div>
+        <input type="text" id="docTitle" placeholder="Document Title" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <select id="docCategory" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+            <option value="">Select Category</option>
+            <option value="Rules">Building Rules</option>
+            <option value="Emergency">Emergency Procedures</option>
+            <option value="Forms">Forms</option>
+            <option value="Policies">Policies</option>
+            <option value="Other">Other</option>
+          </select>
+          <input type="text" id="docType" placeholder="File Type (pdf, doc, etc.)" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        </div>
+        <input type="text" id="docUrl" placeholder="Document URL / Link" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+        <textarea id="docDescription" placeholder="Description (optional)" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
+        <div style="display: flex; gap: 1rem;">
+          <button onclick="saveCommunityDocument()" class="btn-receipt">💾 Save</button>
+          <button onclick="toggleAddDocForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+        </div>
+      </div>
+
+      <!-- Documents List -->
+      <div id="docsList"></div>
+    </div>
   </div>
 </div>
 
@@ -3559,210 +3621,170 @@
 </div>
 
 <!-- Owner Info Page -->
-<div class="page" id="page-owner-info">
-  <div class="section-title">🏢 ข้อมูลเจ้าของ</div>
-  <div id="ownerInfoContainer"></div>
-</div>
+<div class="page" id="page-people-management">
+  <div class="section-title">👨‍💼 People Management</div>
 
-<!-- Tenant Master Page -->
-<div class="page" id="page-tenant-master">
-  <div class="section-title">👥 จัดการผู้เช่า</div>
-  <div id="tenantMasterContainer"></div>
+  <!-- Tab Navigation -->
+  <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
+    <button id="tab-owner-btn" class="people-mgmt-tab active" onclick="switchPeopleTab('owner', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">🏢 Owner</button>
+    <button id="tab-tenant-btn" class="people-mgmt-tab" onclick="switchPeopleTab('tenant', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">👥 Tenants</button>
+    <button id="tab-providers-btn" class="people-mgmt-tab" onclick="switchPeopleTab('providers', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📞 Service Providers</button>
+  </div>
+
+  <!-- TAB 1: Owner Info -->
+  <div id="people-tab-owner" class="people-mgmt-content active">
+    <div id="ownerInfoContainer"></div>
+  </div>
+
+  <!-- TAB 2: Tenant Master -->
+  <div id="people-tab-tenant" class="people-mgmt-content" style="display: none;">
+    <div id="tenantMasterContainer"></div>
+  </div>
+
+  <!-- TAB 3: Service Providers -->
+  <div id="people-tab-providers" class="people-mgmt-content" style="display: none;">
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <input type="text" id="providerSearch" placeholder="Search providers..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <button onclick="toggleAddProviderForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Provider</button>
+      </div>
+
+      <!-- Add Provider Form (Hidden) -->
+      <div id="addProviderForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+        <div style="font-weight: 700; margin-bottom: 1rem;">Add New Service Provider</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <input type="text" id="providerType" placeholder="Type (internet, electricity, water, etc.)" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+          <input type="text" id="providerName" placeholder="Provider Name" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <input type="tel" id="providerPhone" placeholder="Phone" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+          <input type="email" id="providerEmail" placeholder="Email" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        </div>
+        <input type="text" id="providerWebsite" placeholder="Website" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+        <div style="display: flex; gap: 1rem;">
+          <button onclick="saveServiceProvider()" class="btn-receipt">💾 Save</button>
+          <button onclick="toggleAddProviderForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+        </div>
+      </div>
+
+      <!-- Providers List -->
+      <div id="providersList"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Lease Agreements Page -->
-<div class="page" id="page-lease-agreements">
-  <div class="section-title">📋 สัญญาเช่า</div>
-  <div id="leaseAgreementsContainer"></div>
-</div>
+<div class="page" id="page-lease-management">
+  <div class="section-title">📋 Lease Management</div>
 
-<!-- ===== SERVICE PROVIDERS MANAGEMENT ===== -->
-<div class="page" id="page-service-providers">
-  <div class="section-title">📞 Service Providers Management</div>
-  <div class="card" style="margin-bottom: 1.5rem;">
-    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-      <input type="text" id="providerSearch" placeholder="Search providers..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-      <button onclick="toggleAddProviderForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Provider</button>
-    </div>
-
-    <!-- Add Provider Form (Hidden) -->
-    <div id="addProviderForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
-      <div style="font-weight: 700; margin-bottom: 1rem;">Add New Service Provider</div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-        <input type="text" id="providerType" placeholder="Type (internet, electricity, water, etc.)" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-        <input type="text" id="providerName" placeholder="Provider Name" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-      </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-        <input type="tel" id="providerPhone" placeholder="Phone" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-        <input type="email" id="providerEmail" placeholder="Email" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-      </div>
-      <input type="text" id="providerWebsite" placeholder="Website" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
-      <div style="display: flex; gap: 1rem;">
-        <button onclick="saveServiceProvider()" class="btn-receipt">💾 Save</button>
-        <button onclick="toggleAddProviderForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
-      </div>
-    </div>
-
-    <!-- Providers List -->
-    <div id="providersList"></div>
+  <!-- Tab Navigation -->
+  <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
+    <button id="tab-agreements-btn" class="lease-mgmt-tab active" onclick="switchLeaseTab('agreements', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📋 Agreements</button>
+    <button id="tab-alerts-btn" class="lease-mgmt-tab" onclick="switchLeaseTab('alerts', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">🔔 Alert Settings</button>
   </div>
-</div>
 
-<!-- ===== COMMUNITY EVENTS MANAGEMENT ===== -->
-<div class="page" id="page-community-events">
-  <div class="section-title">📅 Community Events Management</div>
-  <div class="card" style="margin-bottom: 1.5rem;">
-    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-      <input type="text" id="eventSearch" placeholder="Search events..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-      <button onclick="toggleAddEventForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Event</button>
-    </div>
-
-    <!-- Add Event Form (Hidden) -->
-    <div id="addEventForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
-      <div style="font-weight: 700; margin-bottom: 1rem;">Add New Community Event</div>
-      <input type="text" id="eventTitle" placeholder="Event Title" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-        <input type="date" id="eventDate" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-        <input type="time" id="eventTime" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-      </div>
-      <input type="text" id="eventLocation" placeholder="Location" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
-      <textarea id="eventDescription" placeholder="Description" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
-      <div style="display: flex; gap: 1rem;">
-        <button onclick="saveCommunityEvent()" class="btn-receipt">💾 Save</button>
-        <button onclick="toggleAddEventForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
-      </div>
-    </div>
-
-    <!-- Events List -->
-    <div id="eventsList"></div>
+  <!-- TAB 1: Lease Agreements -->
+  <div id="lease-tab-agreements" class="lease-mgmt-content active">
+    <div id="leaseAgreementsContainer"></div>
   </div>
-</div>
 
-<!-- ===== COMMUNITY DOCUMENTS MANAGEMENT ===== -->
-<div class="page" id="page-community-docs">
-  <div class="section-title">📋 Community Documents Management</div>
-  <div class="card" style="margin-bottom: 1.5rem;">
-    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-      <input type="text" id="docSearch" placeholder="Search documents..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-      <button onclick="toggleAddDocForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Document</button>
-    </div>
-
-    <!-- Add Document Form (Hidden) -->
-    <div id="addDocForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
-      <div style="font-weight: 700; margin-bottom: 1rem;">Add New Document</div>
-      <input type="text" id="docTitle" placeholder="Document Title" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-        <select id="docCategory" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-          <option value="">Select Category</option>
-          <option value="Rules">Building Rules</option>
-          <option value="Emergency">Emergency Procedures</option>
-          <option value="Forms">Forms</option>
-          <option value="Policies">Policies</option>
-          <option value="Other">Other</option>
-        </select>
-        <input type="text" id="docType" placeholder="File Type (pdf, doc, etc.)" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+  <!-- TAB 2: Alert Settings -->
+  <div id="lease-tab-alerts" class="lease-mgmt-content" style="display: none;">
+    <div class="card">
+      <div style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+        <div style="font-weight: 700; margin-bottom: 1rem;">Alert Configuration</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Alert Threshold (days)</label>
+            <input type="number" id="alertThreshold" min="1" max="365" value="60" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+            <small style="color: var(--text-muted);">Show alert when lease expires within X days</small>
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Alert Severity Level</label>
+            <select id="alertSeverity" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+              <option value="notice">ℹ️ Notice</option>
+              <option value="warning">⚠️ Warning</option>
+              <option value="urgent">🚨 Urgent</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="saveLeaseAlertSettings()" class="btn-receipt" style="margin-top: 1rem; padding: 10px 20px;">💾 Save Settings</button>
       </div>
-      <input type="text" id="docUrl" placeholder="Document URL / Link" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
-      <textarea id="docDescription" placeholder="Description (optional)" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
-      <div style="display: flex; gap: 1rem;">
-        <button onclick="saveCommunityDocument()" class="btn-receipt">💾 Save</button>
-        <button onclick="toggleAddDocForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+
+      <!-- Upcoming Lease Expirations -->
+      <div style="margin-top: 2rem;">
+        <div style="font-weight: 700; margin-bottom: 1rem; font-size: 1.05rem;">📋 Upcoming Lease Expirations</div>
+        <div id="leaseExpiryList"></div>
       </div>
     </div>
-
-    <!-- Documents List -->
-    <div id="docsList"></div>
   </div>
 </div>
 
 <!-- ===== PET REGISTRATIONS APPROVAL ===== -->
-<div class="page" id="page-pet-approvals">
-  <div class="section-title">🐾 Pet Registration Approvals</div>
-  <div class="card" style="margin-bottom: 1.5rem;">
-    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-      <select id="petFilterStatus" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;" onchange="filterPetsByStatus(this.value)">
-        <option value="">All Status</option>
-        <option value="pending">⏳ Pending</option>
-        <option value="approved">✅ Approved</option>
-        <option value="rejected">❌ Rejected</option>
-      </select>
-      <input type="text" id="petSearch" placeholder="Search by room or tenant..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-    </div>
+<div class="page" id="page-requests-approvals">
+  <div class="section-title">✅ Requests & Approvals</div>
 
-    <!-- Pets List -->
-    <div id="petsList"></div>
+  <!-- Tab Navigation -->
+  <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
+    <button id="tab-complaints-btn" class="requests-mgmt-tab active" onclick="switchRequestsTab('complaints', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">⚠️ Complaints</button>
+    <button id="tab-pets-btn" class="requests-mgmt-tab" onclick="switchRequestsTab('pets', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">🐾 Pet Approvals</button>
   </div>
-</div>
 
-<!-- ===== LEASE RENEWAL ALERTS SETTINGS ===== -->
-<div class="page" id="page-lease-settings">
-  <div class="section-title">🔔 Lease Renewal Alert Settings</div>
-  <div class="card">
-    <div style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
-      <div style="font-weight: 700; margin-bottom: 1rem;">Alert Configuration</div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-        <div>
-          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Alert Threshold (days)</label>
-          <input type="number" id="alertThreshold" min="1" max="365" value="60" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-          <small style="color: var(--text-muted);">Show alert when lease expires within X days</small>
+  <!-- TAB 1: Complaints -->
+  <div id="requests-tab-complaints" class="requests-mgmt-content active">
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <!-- Filters -->
+      <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+        <input type="text" id="complaintSearch" placeholder="Search complaints..." style="flex: 1; min-width: 200px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <select id="complaintStatusFilter" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); min-width: 150px;">
+          <option value="">All Status</option>
+          <option value="open">🔴 Open</option>
+          <option value="in-progress">🟡 In Progress</option>
+          <option value="resolved">🟢 Resolved</option>
+        </select>
+      </div>
+
+      <!-- Stats -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="background: var(--green-pale); padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--green-dark);" id="totalComplaintsCount">0</div>
+          <div style="font-size: 0.9rem; color: var(--text-muted);">Total Complaints</div>
         </div>
-        <div>
-          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Alert Severity Level</label>
-          <select id="alertSeverity" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-            <option value="notice">ℹ️ Notice</option>
-            <option value="warning">⚠️ Warning</option>
-            <option value="urgent">🚨 Urgent</option>
-          </select>
+        <div style="background: #fff3e0; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700; color: #f57c00;" id="openComplaintsCount">0</div>
+          <div style="font-size: 0.9rem; color: var(--text-muted);">Open</div>
+        </div>
+        <div style="background: #e3f2fd; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700; color: #1976d2;" id="inProgressComplaintsCount">0</div>
+          <div style="font-size: 0.9rem; color: var(--text-muted);">In Progress</div>
+        </div>
+        <div style="background: #e8f5e9; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700; color: #388e3c;" id="resolvedComplaintsCount">0</div>
+          <div style="font-size: 0.9rem; color: var(--text-muted);">Resolved</div>
         </div>
       </div>
-      <button onclick="saveLeaseAlertSettings()" class="btn-receipt" style="margin-top: 1rem; padding: 10px 20px;">💾 Save Settings</button>
-    </div>
 
-    <!-- Upcoming Lease Expirations -->
-    <div style="margin-top: 2rem;">
-      <div style="font-weight: 700; margin-bottom: 1rem; font-size: 1.05rem;">📋 Upcoming Lease Expirations</div>
-      <div id="leaseExpiryList"></div>
+      <!-- Complaints List -->
+      <div id="complaintsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;"></div>
     </div>
   </div>
-</div>
 
-<!-- ===== COMPLAINT MANAGEMENT ===== -->
-<div class="page" id="page-complaints">
-  <div class="section-title">⚠️ Complaint Management System</div>
-  <div class="card" style="margin-bottom: 1.5rem;">
-    <!-- Filters -->
-    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-      <input type="text" id="complaintSearch" placeholder="Search complaints..." style="flex: 1; min-width: 200px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-      <select id="complaintStatusFilter" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); min-width: 150px;">
-        <option value="">All Status</option>
-        <option value="open">🔴 Open</option>
-        <option value="in-progress">🟡 In Progress</option>
-        <option value="resolved">🟢 Resolved</option>
-      </select>
+  <!-- TAB 2: Pet Approvals -->
+  <div id="requests-tab-pets" class="requests-mgmt-content" style="display: none;">
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <select id="petFilterStatus" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;" onchange="filterPetsByStatus(this.value)">
+          <option value="">All Status</option>
+          <option value="pending">⏳ Pending</option>
+          <option value="approved">✅ Approved</option>
+          <option value="rejected">❌ Rejected</option>
+        </select>
+        <input type="text" id="petSearch" placeholder="Search by room or tenant..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+      </div>
+
+      <!-- Pets List -->
+      <div id="petsList"></div>
     </div>
-
-    <!-- Stats -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-      <div style="background: var(--green-pale); padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
-        <div style="font-size: 1.5rem; font-weight: 700; color: var(--green-dark);" id="totalComplaintsCount">0</div>
-        <div style="font-size: 0.9rem; color: var(--text-muted);">Total Complaints</div>
-      </div>
-      <div style="background: #fff3e0; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
-        <div style="font-size: 1.5rem; font-weight: 700; color: #f57c00;" id="openComplaintsCount">0</div>
-        <div style="font-size: 0.9rem; color: var(--text-muted);">Open</div>
-      </div>
-      <div style="background: #e3f2fd; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
-        <div style="font-size: 1.5rem; font-weight: 700; color: #1976d2;" id="inProgressComplaintsCount">0</div>
-        <div style="font-size: 0.9rem; color: var(--text-muted);">In Progress</div>
-      </div>
-      <div style="background: #e8f5e9; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
-        <div style="font-size: 1.5rem; font-weight: 700; color: #388e3c;" id="resolvedComplaintsCount">0</div>
-        <div style="font-size: 0.9rem; color: var(--text-muted);">Resolved</div>
-      </div>
-    </div>
-
-    <!-- Complaints List -->
-    <div id="complaintsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;"></div>
   </div>
 </div>
 
@@ -6177,6 +6199,110 @@ function switchDashboardTab(tabName, btn) {
         initDashboardAnalyticsCharts();
       }
     }, 100);
+  }
+}
+
+// ===== CONTENT MANAGEMENT TAB SWITCHING =====
+function switchContentTab(tabName, btn) {
+  // Hide all content tabs
+  document.querySelectorAll('.content-mgmt-content').forEach(tab => {
+    tab.style.display = 'none';
+  });
+
+  // Remove active style from all tab buttons
+  document.querySelectorAll('.content-mgmt-tab').forEach(button => {
+    button.style.color = '#999';
+    button.style.borderBottomColor = 'transparent';
+  });
+
+  // Show selected tab
+  const tabElement = document.getElementById('content-tab-' + tabName);
+  if(tabElement) {
+    tabElement.style.display = 'block';
+  }
+
+  // Highlight active button
+  if(btn) {
+    btn.style.color = 'var(--green)';
+    btn.style.borderBottomColor = 'var(--green)';
+  }
+}
+
+// ===== REQUESTS & APPROVALS TAB SWITCHING =====
+function switchRequestsTab(tabName, btn) {
+  // Hide all requests tabs
+  document.querySelectorAll('.requests-mgmt-content').forEach(tab => {
+    tab.style.display = 'none';
+  });
+
+  // Remove active style from all tab buttons
+  document.querySelectorAll('.requests-mgmt-tab').forEach(button => {
+    button.style.color = '#999';
+    button.style.borderBottomColor = 'transparent';
+  });
+
+  // Show selected tab
+  const tabElement = document.getElementById('requests-tab-' + tabName);
+  if(tabElement) {
+    tabElement.style.display = 'block';
+  }
+
+  // Highlight active button
+  if(btn) {
+    btn.style.color = 'var(--green)';
+    btn.style.borderBottomColor = 'var(--green)';
+  }
+}
+
+// ===== PEOPLE MANAGEMENT TAB SWITCHING =====
+function switchPeopleTab(tabName, btn) {
+  // Hide all people tabs
+  document.querySelectorAll('.people-mgmt-content').forEach(tab => {
+    tab.style.display = 'none';
+  });
+
+  // Remove active style from all tab buttons
+  document.querySelectorAll('.people-mgmt-tab').forEach(button => {
+    button.style.color = '#999';
+    button.style.borderBottomColor = 'transparent';
+  });
+
+  // Show selected tab
+  const tabElement = document.getElementById('people-tab-' + tabName);
+  if(tabElement) {
+    tabElement.style.display = 'block';
+  }
+
+  // Highlight active button
+  if(btn) {
+    btn.style.color = 'var(--green)';
+    btn.style.borderBottomColor = 'var(--green)';
+  }
+}
+
+// ===== LEASE MANAGEMENT TAB SWITCHING =====
+function switchLeaseTab(tabName, btn) {
+  // Hide all lease tabs
+  document.querySelectorAll('.lease-mgmt-content').forEach(tab => {
+    tab.style.display = 'none';
+  });
+
+  // Remove active style from all tab buttons
+  document.querySelectorAll('.lease-mgmt-tab').forEach(button => {
+    button.style.color = '#999';
+    button.style.borderBottomColor = 'transparent';
+  });
+
+  // Show selected tab
+  const tabElement = document.getElementById('lease-tab-' + tabName);
+  if(tabElement) {
+    tabElement.style.display = 'block';
+  }
+
+  // Highlight active button
+  if(btn) {
+    btn.style.color = 'var(--green)';
+    btn.style.borderBottomColor = 'var(--green)';
   }
 }
 
