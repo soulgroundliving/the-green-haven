@@ -4361,15 +4361,16 @@ function parseImportExcelData(workbook, building) {
   }
 
   // ===== V3 FORMAT DETECTION & PARSING (June 69+) =====
-  // V3 Format: All three buildings in one sheet
+  // V3 Format: All buildings in one sheet
   // - Columns B-C: Rooms meter (previous, current)
-  // - Columns F-G: Nest meter (previous, current) - NEW in V3
-  // - Columns L-M: Amazon meter (previous, current) - MOVED in V3
+  // - Columns F-G: Nest meter (previous, current) - NOT in June 69+
+  // - Columns L-M: Amazon meter (previous, current)
   // - Column A: Room number
 
-  // Detect V3 format by checking if columns F and L have numeric data
+  // Detect V3 format by checking if columns B-C and L-M have numeric data
+  // (Nest F-G is NOT present in June 69+ format)
   let isV3Format = false;
-  let hasNestData = false;
+  let hasRoomsData = false;
   let hasAmazonData = false;
 
   // Check first 20 data rows for V3 indicators
@@ -4377,20 +4378,24 @@ function parseImportExcelData(workbook, building) {
     const row = data[i];
     if (!row[0]) continue;
 
-    // Check if columns F (5) and L (11) have numeric values (meter readings)
-    const colF = parseFloat(row[5]);
-    const colL = parseFloat(row[11]);
+    // Check if columns B-C (Rooms) have numeric values
+    const colB = parseFloat(row[1]);
+    const colC = parseFloat(row[2]);
 
-    if (!isNaN(colF) && colF > 0 && colF < 100000) {
-      hasNestData = true;
+    // Check if columns L-M (Amazon) have numeric values
+    const colL = parseFloat(row[11]);
+    const colM = parseFloat(row[12]);
+
+    if (!isNaN(colB) && colB > 0 && colB < 100000) {
+      hasRoomsData = true;
     }
     if (!isNaN(colL) && colL > 0 && colL < 100000) {
       hasAmazonData = true;
     }
   }
 
-  isV3Format = hasNestData && hasAmazonData;
-  console.log(`📊 [V3 Detection] hasNestData: ${hasNestData}, hasAmazonData: ${hasAmazonData}, isV3Format: ${isV3Format}`);
+  isV3Format = hasRoomsData && hasAmazonData;
+  console.log(`📊 [V3 Detection] hasRoomsData: ${hasRoomsData}, hasAmazonData: ${hasAmazonData}, isV3Format: ${isV3Format}`);
 
   if (isV3Format) {
     // ===== V3 METER FORMAT PARSING =====
@@ -4418,44 +4423,38 @@ function parseImportExcelData(workbook, building) {
       const roomNum = String(row[0]).trim();
 
       // Parse meter readings
-      // V3 Column mapping:
+      // V3 Column mapping (June 69+):
       // A(0)=room, B(1)=rooms_prev, C(2)=rooms_curr, D(3)=rent,
-      // F(5)=nest_prev, G(6)=nest_curr,
+      // F-G: EMPTY (no Nest meters in June+)
       // L(11)=amazon_prev, M(12)=amazon_curr
 
       const roomsPrev = parseFloat(row[1]) || 0;
       const roomsCurr = parseFloat(row[2]) || 0;
-      const nestPrev = parseFloat(row[5]) || 0;
-      const nestCurr = parseFloat(row[6]) || 0;
       const amazonPrev = parseFloat(row[11]) || 0;
       const amazonCurr = parseFloat(row[12]) || 0;
 
-      // Store for all buildings
+      // Store for buildings
       if (roomsRoomList.includes(roomNum)) {
         allRooms.rooms[roomNum] = {
           eNew: roomsCurr,  // Current (new) reading
           eOld: roomsPrev,  // Previous (old) reading
-          wNew: nestCurr,   // Current Nest reading (stored as wNew for compat)
-          wOld: nestPrev    // Previous Nest reading (stored as wOld for compat)
+          wNew: 0,          // No Nest data in June 69+
+          wOld: 0
         };
       }
 
-      if (nestRoomList.includes(roomNum)) {
-        allRooms.nest[roomNum] = {
-          eNew: roomsCurr,
-          eOld: roomsPrev,
-          wNew: nestCurr,
-          wOld: nestPrev
+      // Note: No Nest meters (N101-N405) in June 69+ format
+      // allRooms.nest remains empty
+
+      // Amazon meters (all rooms get Amazon data)
+      if (amazonPrev > 0 || amazonCurr > 0) {
+        allRooms.amazon[roomNum] = {
+          eNew: amazonCurr,
+          eOld: amazonPrev,
+          wNew: 0,  // No secondary meter
+          wOld: 0
         };
       }
-
-      // Amazon meters (if room matches any pattern or has Amazon data)
-      allRooms.amazon[roomNum] = {
-        eNew: amazonCurr,
-        eOld: amazonPrev,
-        wNew: roomsCurr,   // Alternative: could map differently
-        wOld: roomsPrev
-      };
     }
 
     console.log(`📦 V3 Parse Results - Rooms: ${Object.keys(allRooms.rooms).length}, Nest: ${Object.keys(allRooms.nest).length}, Amazon: ${Object.keys(allRooms.amazon).length}`);
