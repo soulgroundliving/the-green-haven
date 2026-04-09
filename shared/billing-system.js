@@ -665,6 +665,11 @@ if (document.readyState === 'loading') {
       console.log('🔔 Billing system activated');
       await BillingSystem.autogenerateBillsForAllYears(building);
 
+      // Refresh HISTORICAL_DATA display after generation completes
+      if (typeof window.initHistoricalDataDisplay === 'function') {
+        window.initHistoricalDataDisplay();
+      }
+
       BillingSystem.watchForNewMeterData(building);
     }
   });
@@ -672,7 +677,12 @@ if (document.readyState === 'loading') {
   if (window.firebase?.firestore) {
     const params = new URLSearchParams(window.location.search);
     const building = params.get('building') || localStorage.getItem('currentBuilding') || 'rooms';
-    BillingSystem.autogenerateBillsForAllYears(building);
+    BillingSystem.autogenerateBillsForAllYears(building).then(() => {
+      // Refresh HISTORICAL_DATA display after generation completes
+      if (typeof window.initHistoricalDataDisplay === 'function') {
+        window.initHistoricalDataDisplay();
+      }
+    });
 
     BillingSystem.watchForNewMeterData(building);
   }
