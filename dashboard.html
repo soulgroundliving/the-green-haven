@@ -8118,7 +8118,7 @@ async function verifySlip(file){
   // Show image preview + loading state
   const reader = new FileReader();
   reader.onload = ev => {
-    dropText.innerHTML = `<img src="${ev.target.result}" style="max-height:90px;border-radius:6px;object-fit:contain;margin-bottom:4px;"><br><small style="color:var(--text-muted);">⏳ กำลังตรวจสอบกับ SlipOK...</small>`;
+    dropText.innerHTML = `\x3cimg src="${ev.target.result}" style="max-height:90px;border-radius:6px;object-fit:contain;margin-bottom:4px;">\x3cbr>\x3csmall style="color:var(--text-muted);">⏳ กำลังตรวจสอบกับ SlipOK...\x3c/small>`;
   };
   reader.readAsDataURL(file);
   resultEl.innerHTML = '';
@@ -10486,12 +10486,12 @@ function showPhotosModal(id){
     <div style="margin-bottom:16px;">
       <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">📸 ถ่ายรูปก่อน (Before)</label>
       <input type="file" id="before-photo-input" accept="image/*" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;">
-      ${(item.beforePhoto && (item.beforePhoto.startsWith('data:') || item.beforePhoto.startsWith('https://')))?'<div style="margin-top:8px;"><img src="'+item.beforePhoto+'" style="max-width:100%;height:120px;object-fit:cover;border-radius:6px;"></div>':''}
+      ${(item.beforePhoto && (item.beforePhoto.startsWith('data:') || item.beforePhoto.startsWith('https://')))?'<div style="margin-top:8px;">\x3cimg src="'+item.beforePhoto+'" style="max-width:100%;height:120px;object-fit:cover;border-radius:6px;"></div>':''}
     </div>
     <div style="margin-bottom:20px;">
       <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">📸 ถ่ายรูปหลัง (After)</label>
       <input type="file" id="after-photo-input" accept="image/*" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;">
-      ${(item.afterPhoto && (item.afterPhoto.startsWith('data:') || item.afterPhoto.startsWith('https://')))?'<div style="margin-top:8px;"><img src="'+item.afterPhoto+'" style="max-width:100%;height:120px;object-fit:cover;border-radius:6px;"></div>':''}
+      ${(item.afterPhoto && (item.afterPhoto.startsWith('data:') || item.afterPhoto.startsWith('https://')))?'<div style="margin-top:8px;">\x3cimg src="'+item.afterPhoto+'" style="max-width:100%;height:120px;object-fit:cover;border-radius:6px;"></div>':''}
     </div>
     <div style="display:flex;gap:10px;">
       <button onclick="closePhotosModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ เสร็จ</button>
@@ -10637,7 +10637,7 @@ function openPhotoModal(beforePhoto, afterPhoto) {
     html += `
       <div class="photo-modal-item">
         <span class="photo-modal-item-label">ก่อนซ่อม (Before)</span>
-        <img src="${beforePhoto}" alt="Before repair">
+        \x3cimg src="${beforePhoto}" alt="Before repair">
       </div>
     `;
   }
@@ -10646,7 +10646,7 @@ function openPhotoModal(beforePhoto, afterPhoto) {
     html += `
       <div class="photo-modal-item">
         <span class="photo-modal-item-label">หลังซ่อม (After)</span>
-        <img src="${afterPhoto}" alt="After repair">
+        \x3cimg src="${afterPhoto}" alt="After repair">
       </div>
     `;
   }
