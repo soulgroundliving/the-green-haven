@@ -2047,9 +2047,32 @@
   </div>
   <div class="insights-grid">
     <div class="insight-card green"><div class="insight-title">💵 รายได้ค่าเช่าห้อง</div><div class="insight-value" id="ins-rent">—</div><div class="insight-detail" id="ins-rent-d">รวมห้องพักทั้งหมด</div></div>
-    <div class="insight-card amber"><div class="insight-title">⚡ รายได้ค่าไฟ</div><div class="insight-value" id="ins-elec">—</div><div class="insight-detail">อัตรา 8 บาท/หน่วย (ห้องพัก), 6 บาท/หน่วย (Amazon)</div></div>
-    <div class="insight-card blue"><div class="insight-title">💧 รายได้ค่าน้ำ</div><div class="insight-value" id="ins-water">—</div><div class="insight-detail">อัตรา 20 บาท/หน่วย</div></div>
+    <div class="insight-card amber"><div class="insight-title">⚡ รายได้ค่าไฟ</div><div class="insight-value" id="ins-elec">—</div><div class="insight-detail">อัตราตาม config ห้องพัก</div></div>
+    <div class="insight-card blue"><div class="insight-title">💧 รายได้ค่าน้ำ</div><div class="insight-value" id="ins-water">—</div><div class="insight-detail">อัตราตาม config ห้องพัก</div></div>
   </div>
+
+  <!-- ย้อนหลัง 6 เดือน -->
+  <div class="card" style="margin-bottom:1.4rem;">
+    <div class="card-title">📅 รายได้ย้อนหลัง 6 เดือน (ล่าสุด)</div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+        <thead>
+          <tr style="background:var(--green-pale);color:var(--green-dark);">
+            <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">เดือน</th>
+            <th style="padding:.55rem .7rem;text-align:right;">💵 ค่าเช่า</th>
+            <th style="padding:.55rem .7rem;text-align:right;">⚡ ค่าไฟ</th>
+            <th style="padding:.55rem .7rem;text-align:right;">💧 ค่าน้ำ</th>
+            <th style="padding:.55rem .7rem;text-align:right;">แยกอาคาร</th>
+            <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">💰 รวม</th>
+          </tr>
+        </thead>
+        <tbody id="dash-last6-body">
+          <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">กำลังโหลด...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="charts-grid-3">
     <div class="card"><div class="card-title">📊 เปรียบเทียบ 3 ปี</div><div class="chart-wrap-sm"><canvas id="chartYears"></canvas></div></div>
     <div class="card"><div class="card-title">⚡ ค่าไฟรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartElec"></canvas></div></div>
@@ -6679,93 +6702,105 @@ async function initDashboardCharts(){
     console.log('⚠️ Firebase dashboard load failed:', err.message);
   }
 
-  // Use HISTORICAL_DATA first (imported bills take priority), then Firebase (no hardcoded data fallback)
+  // Use HISTORICAL_DATA first (imported bills take priority), then Firebase
   const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
   const dataSource = historicalData && Object.keys(historicalData).length > 0 ? historicalData : (firebaseData || {});
 
+  // ─── HELPER: รองรับ 2 รูปแบบ month entry ───
+  // รูปแบบเก่า (Firebase): Array [rent, elec, water, grandTotal]  → idx 3 = total
+  // รูปแบบใหม่ (HISTORICAL_DATA): Object { total:[rent,elec,water,trash,grandTotal], rooms:[...], nest:[...], amazon:[...] }
+  const mv  = (m, idx) => !m ? null : (Array.isArray(m) ? (m[idx] ?? null) : (m.total?.[idx] ?? null));
+  const mgt = m          => !m ? null : (Array.isArray(m) ? (m[3]    ?? null) : (m.total?.[4] ?? null)); // grand total
+  const mbuild = (m, bld, idx) => !m || Array.isArray(m) ? null : (m[bld]?.[idx] ?? null); // building breakdown
+
   if(yr==='all'){
     labels=['67','68','69'].flatMap(y=>dataSource[y]?.months.map((_,i)=>MONTHS_TH[i+1]+"'"+y) || []);
-    totals=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[4]:null) || []);
-    elecs=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[1]:null) || []);
-    waters=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[2]:null) || []);
-    rents=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>m?m[0]:null) || []);
+    totals=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>mgt(m)) || []);
+    elecs =['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>mv(m,1)) || []);
+    waters=['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>mv(m,2)) || []);
+    rents =['67','68','69'].flatMap(y=>dataSource[y]?.months.map(m=>mv(m,0)) || []);
   } else {
     const d=dataSource[yr];
     if(d){
       labels=d.months.map((_,i)=>MONTHS_TH[i+1]);
-      totals=d.months.map(m=>m?m[4]:null);
-      elecs=d.months.map(m=>m?m[1]:null);
-      waters=d.months.map(m=>m?m[2]:null);
-      rents=d.months.map(m=>m?m[0]:null);
+      totals=d.months.map(m=>mgt(m));
+      elecs =d.months.map(m=>mv(m,1));
+      waters=d.months.map(m=>mv(m,2));
+      rents =d.months.map(m=>mv(m,0));
     } else {
       labels=[]; totals=[]; elecs=[]; waters=[]; rents=[];
     }
   }
 
-  const valid=totals.filter(Boolean);
+  const valid=totals.filter(v=>v!=null&&v>0);
   const total=valid.reduce((a,b)=>a+b,0);
   const avg=valid.length?Math.round(total/valid.length):0;
-  const maxV=Math.max(...valid);
-  const maxIdx=totals.findIndex(t=>t===maxV);
+  const maxV=valid.length?Math.max(...valid):0;
+  const maxIdx=maxV>0?totals.findIndex(t=>t===maxV):-1;
   const rentT=rents.filter(Boolean).reduce((a,b)=>a+b,0);
   const elecT=elecs.filter(Boolean).reduce((a,b)=>a+b,0);
   const waterT=waters.filter(Boolean).reduce((a,b)=>a+b,0);
 
   document.getElementById('kpi-total').textContent='฿'+total.toLocaleString();
-  const yearLabel=yr==='all'?'ปี 2566-2569':dataSource[yr]?.label||`ปี ${2500+parseInt(yr)} (${yr})`;
+  const yearLabel=yr==='all'?'ปี 2567-2569':dataSource[yr]?.label||`ปี ${2500+parseInt(yr)} (${yr})`;
   document.getElementById('kpi-total-sub').textContent=yearLabel+' · '+valid.length+' เดือน';
   document.getElementById('kpi-monthly').textContent='฿'+avg.toLocaleString();
-  document.getElementById('kpi-monthly-sub').textContent='สูงสุด: ฿'+maxV.toLocaleString()+' ('+MONTHS_TH[maxIdx+1]+')';
+  document.getElementById('kpi-monthly-sub').textContent=maxV>0?('สูงสุด: ฿'+maxV.toLocaleString()+(maxIdx>=0&&MONTHS_TH[maxIdx+1]?' ('+MONTHS_TH[maxIdx+1]+')':'')):'—';
 
-  // Calculate and display building-specific data from HISTORICAL_DATA or live estimates
+  // ─── Building breakdown from HISTORICAL_DATA ───
   const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
-  const activeNest = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
+  const activeNest  = getActiveRoomsWithMetadata('nest',  window.NEST_ROOMS);
   const tenants = loadTenants();
-  const occupiedRooms = activeRooms.filter(r => tenants[r.id]?.name).length;
-  const occupiedNest = activeNest.filter(r => tenants[r.id]?.name).length;
+  const occupiedRooms = activeRooms.filter(r=>tenants[r.id]?.name).length;
+  const occupiedNest  = activeNest.filter(r=>tenants[r.id]?.name).length;
 
-  // Try to get actual breakdown data from HISTORICAL_DATA
-  let yearlyRoomsRent = 0, yearlyNestRent = 0;
-  let monthlyRoomsRent = 0, monthlyNestRent = 0;
+  let yearlyRoomsTotal=0, yearlyNestTotal=0, yearlyAmazonTotal=0;
+  let yearlyRoomsRent=0, yearlyNestRent=0;
 
-  if (yr !== 'all' && dataSource[yr] && dataSource[yr].months) {
-    // Sum from actual historical data (with breakdown)
-    const yearData = dataSource[yr];
-    yearData.months.forEach(month => {
-      if (month) {
-        if (Array.isArray(month)) {
-          // Old format: no breakdown, use fallback
-          monthlyRoomsRent = 0;
-          monthlyNestRent = 0;
-        } else if (month.rooms && month.nest) {
-          // New format: has breakdown [rent, elec, water, total]
-          yearlyRoomsRent += (month.rooms[0] || 0); // rooms rent
-          yearlyNestRent += (month.nest[0] || 0);   // nest rent
-          monthlyRoomsRent = (month.rooms[0] || 0);
-          monthlyNestRent = (month.nest[0] || 0);
-        }
+  const yearsToSum = yr==='all'?['67','68','69']:[yr];
+  yearsToSum.forEach(y=>{
+    (dataSource[y]?.months||[]).forEach(month=>{
+      if(!month)return;
+      if(!Array.isArray(month)){
+        // New object format — sum per building
+        yearlyRoomsTotal  += (month.rooms?.[4]  || 0);
+        yearlyNestTotal   += (month.nest?.[4]   || 0);
+        yearlyAmazonTotal += (month.amazon?.[4] || 0);
+        yearlyRoomsRent   += (month.rooms?.[0]  || 0);
+        yearlyNestRent    += (month.nest?.[0]   || 0);
       }
     });
-  }
+  });
 
-  // Fallback to estimate if no data found
-  if (yearlyRoomsRent === 0 && yearlyNestRent === 0) {
-    monthlyRoomsRent = occupiedRooms > 0 ? activeRooms.filter(r => tenants[r.id]?.name).reduce((sum, r) => sum + (r.rent || 0), 0) : 0;
-    monthlyNestRent = occupiedNest > 0 ? activeNest.filter(r => tenants[r.id]?.name).reduce((sum, r) => sum + (r.rent || 0), 0) : 0;
-    yearlyRoomsRent = monthlyRoomsRent * (yr === 'all' ? 12 : valid.length);
-    yearlyNestRent = monthlyNestRent * (yr === 'all' ? 12 : valid.length);
-  }
+  // Fallback: estimate from active tenants if no historical data
+  const estRoomsMonthly = activeRooms.filter(r=>tenants[r.id]?.name).reduce((s,r)=>s+(r.rent||0),0);
+  const estNestMonthly  = activeNest.filter(r=>tenants[r.id]?.name).reduce((s,r)=>s+(r.rent||0),0);
+  const mCount = valid.length || 1;
 
-  document.getElementById('kpi-rooms-total').textContent = '฿' + yearlyRoomsRent.toLocaleString();
-  document.getElementById('kpi-rooms-sub').textContent = yearlyRoomsRent > 0 ? `ข้อมูลจากปีนั้นๆ` : `${occupiedRooms}/${activeRooms.length} ห้อง · ฿${monthlyRoomsRent.toLocaleString()}/เดือน`;
+  const kpiRooms = yearlyRoomsTotal>0 ? yearlyRoomsTotal : estRoomsMonthly*mCount;
+  const kpiNest  = yearlyNestTotal>0  ? yearlyNestTotal  : estNestMonthly*mCount;
 
-  document.getElementById('kpi-nest-total').textContent = '฿' + yearlyNestRent.toLocaleString();
-  document.getElementById('kpi-nest-sub').textContent = yearlyNestRent > 0 ? `ข้อมูลจากปีนั้นๆ` : `${occupiedNest}/${activeNest.length} ยูนิต · ฿${monthlyNestRent.toLocaleString()}/เดือน`;
+  document.getElementById('kpi-rooms-total').textContent='฿'+kpiRooms.toLocaleString();
+  document.getElementById('kpi-rooms-sub').textContent=yearlyRoomsTotal>0
+    ? `เช่า ฿${Math.round(yearlyRoomsRent/mCount).toLocaleString()}/เดือน · ${valid.length} เดือน`
+    : `ประมาณการ ${occupiedRooms}/${activeRooms.length} ห้อง`;
 
-  document.getElementById('ins-rent').textContent='฿'+rentT.toLocaleString();
-  document.getElementById('ins-elec').textContent='฿'+elecT.toLocaleString();
-  document.getElementById('ins-water').textContent='฿'+waterT.toLocaleString();
-  document.getElementById('ins-rent-d').textContent=(rents.filter(Boolean)[0]||33800).toLocaleString()+' บาท/เดือน · '+rents.filter(Boolean).length+' เดือน';
+  document.getElementById('kpi-nest-total').textContent='฿'+kpiNest.toLocaleString();
+  document.getElementById('kpi-nest-sub').textContent=yearlyNestTotal>0
+    ? `เช่า ฿${Math.round(yearlyNestRent/mCount).toLocaleString()}/เดือน · ${valid.length} เดือน`
+    : `ประมาณการ ${occupiedNest}/${activeNest.length} ยูนิต`;
+
+  // ─── Insight cards ───
+  document.getElementById('ins-rent').textContent  = rentT >0?'฿'+rentT.toLocaleString() :'—';
+  document.getElementById('ins-elec').textContent  = elecT >0?'฿'+elecT.toLocaleString() :'—';
+  document.getElementById('ins-water').textContent = waterT>0?'฿'+waterT.toLocaleString():'—';
+  const avgRentPerMonth = rents.filter(Boolean).length>0 ? Math.round(rentT/rents.filter(Boolean).length) : 0;
+  document.getElementById('ins-rent-d').textContent = avgRentPerMonth>0
+    ? `เฉลี่ย ฿${avgRentPerMonth.toLocaleString()}/เดือน · ${rents.filter(Boolean).length} เดือน`
+    : 'รวมห้องพักทั้งหมด';
+
+  // ─── Last 6 months table ───
+  renderLast6MonthsTable(dataSource, mv, mgt);
 
   const mkChart=(id,type,data,opts)=>{
     const el=document.getElementById(id);
@@ -6774,20 +6809,87 @@ async function initDashboardCharts(){
     return new Chart(el.getContext('2d'),{type,data,options:{responsive:true,maintainAspectRatio:false,...opts}});
   };
 
-  chartRevenue=mkChart('chartRevenue','bar',{labels,datasets:[{label:'รายได้รวม',data:totals,backgroundColor:totals.map((v,i)=>!v?'rgba(200,200,200,.3)':v===maxV?'rgba(255,143,0,.85)':'rgba(45,134,83,.8)'),borderRadius:5,borderSkipped:false}]},{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false}}}});
+  // Remove null values for cleaner charts (skip months with no data)
+  const chartLabels=[], chartTotals=[], chartElecs=[], chartWaters=[], chartRents=[];
+  labels.forEach((lbl,i)=>{
+    if(totals[i]!=null){
+      chartLabels.push(lbl);
+      chartTotals.push(totals[i]);
+      chartElecs.push(elecs[i]  || 0);
+      chartWaters.push(waters[i] || 0);
+      chartRents.push(rents[i]  || 0);
+    }
+  });
 
-  const avgE=elecs.filter(Boolean).length?Math.round(elecT/elecs.filter(Boolean).length):0;
-  const avgW=waters.filter(Boolean).length?Math.round(waterT/waters.filter(Boolean).length):0;
+  chartRevenue=mkChart('chartRevenue','bar',{labels:chartLabels,datasets:[
+    {label:'ค่าเช่า',data:chartRents, backgroundColor:'rgba(45,134,83,.75)', stack:'s',borderRadius:3},
+    {label:'ค่าไฟ', data:chartElecs, backgroundColor:'rgba(255,143,0,.75)',  stack:'s'},
+    {label:'ค่าน้ำ', data:chartWaters,backgroundColor:'rgba(33,150,243,.75)', stack:'s'}
+  ]},{plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:45}},y:{stacked:true,ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(0,0,0,.04)'}}}});
+
+  const avgE=chartElecs.filter(Boolean).length?Math.round(elecT/chartElecs.filter(Boolean).length):0;
+  const avgW=chartWaters.filter(Boolean).length?Math.round(waterT/chartWaters.filter(Boolean).length):0;
   const avgR=rents.filter(Boolean).length?Math.round(rentT/rents.filter(Boolean).length):0;
-  const avgOth=avg-avgR-avgE-avgW;
-  chartPie=mkChart('chartPie','doughnut',{labels:['ค่าเช่าห้อง','ค่าไฟ','ค่าน้ำ','ค่าพาณิชย์/อื่นๆ'],datasets:[{data:[avgR,avgE,avgW,Math.max(0,avgOth)],backgroundColor:['#2d8653','#ff8f00','#2196f3','#9c27b0'],borderWidth:0,hoverOffset:8}]},{plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}},tooltip:{callbacks:{label:c=>c.label+': ฿'+Math.round(c.raw).toLocaleString()}}}});
+  const avgOth=Math.max(0,avg-avgR-avgE-avgW);
+  chartPie=mkChart('chartPie','doughnut',{labels:['ค่าเช่าห้อง','ค่าไฟ','ค่าน้ำ','ค่าพาณิชย์/อื่นๆ'],datasets:[{data:[avgR,avgE,avgW,avgOth],backgroundColor:['#2d8653','#ff8f00','#2196f3','#9c27b0'],borderWidth:0,hoverOffset:8}]},{plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}},tooltip:{callbacks:{label:c=>c.label+': ฿'+Math.round(c.raw).toLocaleString()}}}});
 
-  const yrAvgs=['67','68','69'].map(y=>{const v=(dataSource[y]?.months||[]).filter(m=>m&&m[3]>0);return v.length?Math.round(v.reduce((a,m)=>a+m[3],0)/v.length):0;});
+  const yrAvgs=['67','68','69'].map(y=>{const v=(dataSource[y]?.months||[]).filter(m=>mgt(m)>0);return v.length?Math.round(v.reduce((a,m)=>a+mgt(m),0)/v.length):0;});
   chartYears=mkChart('chartYears','bar',{labels:['2567','2568','2569*'],datasets:[{label:'เฉลี่ย/เดือน',data:yrAvgs,backgroundColor:['#2d8653','#1976d2','#ff8f00'],borderRadius:8}]},{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false}}}});
 
-  const lineOpts=(color)=>({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(1)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{maxRotation:45}}}});
-  chartElec=mkChart('chartElec','line',{labels,datasets:[{label:'ค่าไฟ',data:elecs,borderColor:'#ff8f00',backgroundColor:'rgba(255,143,0,.1)',fill:true,tension:.4,pointRadius:3}]},lineOpts('#ff8f00'));
-  chartWater=mkChart('chartWater','line',{labels,datasets:[{label:'ค่าน้ำ',data:waters,borderColor:'#2196f3',backgroundColor:'rgba(33,150,243,.1)',fill:true,tension:.4,pointRadius:3}]},lineOpts('#2196f3'));
+  const lineOpts=()=>({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(1)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{maxRotation:45}}}});
+  chartElec =mkChart('chartElec','line', {labels:chartLabels,datasets:[{label:'ค่าไฟ', data:chartElecs, borderColor:'#ff8f00',backgroundColor:'rgba(255,143,0,.1)',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},lineOpts());
+  chartWater=mkChart('chartWater','line',{labels:chartLabels,datasets:[{label:'ค่าน้ำ',data:chartWaters,borderColor:'#2196f3',backgroundColor:'rgba(33,150,243,.1)',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},lineOpts());
+}
+
+// ─── Render last-6-months summary table ───
+function renderLast6MonthsTable(dataSource, mv, mgt) {
+  const el = document.getElementById('dash-last6-body');
+  if (!el) return;
+
+  // Flatten all months across all years into chronological entries
+  const allEntries = [];
+  ['67','68','69'].forEach(y => {
+    (dataSource[y]?.months || []).forEach((m, idx) => {
+      if (mgt(m) > 0) {
+        allEntries.push({
+          label: MONTHS_TH[idx+1] + ' ' + (2500+parseInt(y)),
+          rent:  mv(m,0) || 0,
+          elec:  mv(m,1) || 0,
+          water: mv(m,2) || 0,
+          trash: mv(m,3) || 0,
+          total: mgt(m)  || 0,
+          rooms: Array.isArray(m) ? null : m.rooms,
+          nest:  Array.isArray(m) ? null : m.nest,
+          amazon:Array.isArray(m) ? null : m.amazon
+        });
+      }
+    });
+  });
+
+  // Take last 6 entries
+  const last6 = allEntries.slice(-6).reverse();
+
+  if (last6.length === 0) {
+    el.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">ยังไม่มีข้อมูล — นำเข้าบิลก่อน</td></tr>`;
+    return;
+  }
+
+  el.innerHTML = last6.map(row => {
+    const roomsTotal  = row.rooms?.[4]  || 0;
+    const nestTotal   = row.nest?.[4]   || 0;
+    const amazonTotal = row.amazon?.[4] || 0;
+    const hasBreakdown = row.rooms !== null;
+    return `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:.55rem .7rem;font-weight:700;">${row.label}</td>
+      <td style="padding:.55rem .7rem;text-align:right;color:#2d8653;">฿${row.rent.toLocaleString()}</td>
+      <td style="padding:.55rem .7rem;text-align:right;color:#ff8f00;">฿${row.elec.toLocaleString()}</td>
+      <td style="padding:.55rem .7rem;text-align:right;color:#2196f3;">฿${row.water.toLocaleString()}</td>
+      <td style="padding:.55rem .7rem;text-align:right;font-size:.78rem;color:#666;">${hasBreakdown
+        ? `🏠${roomsTotal.toLocaleString()} 🏢${nestTotal.toLocaleString()}${amazonTotal?' 🏪'+amazonTotal.toLocaleString():''}`
+        : '—'}</td>
+      <td style="padding:.55rem .7rem;text-align:right;font-weight:800;color:var(--green-dark);">฿${row.total.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ===== ROOM FILTER STATE =====
