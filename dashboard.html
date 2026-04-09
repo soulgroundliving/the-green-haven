@@ -45,7 +45,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
   import { getAuth, signInAnonymously, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
   // Firebase configuration - loaded from /api/config endpoint
   // This keeps the API key secure while serving it to the client
@@ -93,7 +93,8 @@
           getDocs: getDocs,
           query: query,
           where: where,
-          deleteDoc: deleteDoc
+          deleteDoc: deleteDoc,
+          onSnapshot: onSnapshot
         }
       };
 
@@ -12721,43 +12722,44 @@ function updateLeaseExpiryAlerts() {
 let realtimeListeners = {};
 
 function setupRoomDataListener() {
-  if (!window.firebase || !window.firebase.firestore) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
     console.warn('Firebase not initialized, skipping real-time listeners');
     return;
   }
+  if (!window.firebaseAuth?.currentUser) return;
 
   const db = window.firebase.firestore();
+  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
 
   try {
     // Listen to rooms building data
-    const roomsUnsubscribe = db.collection('buildings').doc('rooms').collection('rooms')
-      .onSnapshot(
-        (snapshot) => {
-          console.log('✅ Rooms data updated in real-time');
-          updateOccupancyDashboard();
-          updateRealtimeStatus(true);
-        },
-        (error) => {
-          console.error('❌ Error listening to rooms:', error);
-          updateRealtimeStatus(false);
-        }
-      );
+    const roomsUnsubscribe = onSnapshot(
+      collection(db, 'buildings', 'rooms', 'rooms'),
+      (snapshot) => {
+        console.log('✅ Rooms data updated in real-time');
+        updateOccupancyDashboard();
+        updateRealtimeStatus(true);
+      },
+      (error) => {
+        console.error('❌ Error listening to rooms:', error);
+        updateRealtimeStatus(false);
+      }
+    );
 
     // Listen to nest building data
-    const nestUnsubscribe = db.collection('buildings').doc('nest').collection('units')
-      .onSnapshot(
-        (snapshot) => {
-          console.log('✅ Nest units updated in real-time');
-          updateOccupancyDashboard();
-          updateRealtimeStatus(true);
-        },
-        (error) => {
-          console.error('❌ Error listening to nest units:', error);
-          updateRealtimeStatus(false);
-        }
-      );
+    const nestUnsubscribe = onSnapshot(
+      collection(db, 'buildings', 'nest', 'units'),
+      (snapshot) => {
+        console.log('✅ Nest units updated in real-time');
+        updateOccupancyDashboard();
+        updateRealtimeStatus(true);
+      },
+      (error) => {
+        console.error('❌ Error listening to nest units:', error);
+        updateRealtimeStatus(false);
+      }
+    );
 
-    // Store unsubscribe functions for cleanup
     realtimeListeners.rooms = roomsUnsubscribe;
     realtimeListeners.nest = nestUnsubscribe;
   } catch (err) {
@@ -12766,26 +12768,27 @@ function setupRoomDataListener() {
 }
 
 function setupLeaseDataListener() {
-  if (!window.firebase || !window.firebase.firestore) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
     console.warn('Firebase not initialized, skipping lease listeners');
     return;
   }
+  if (!window.firebaseAuth?.currentUser) return;
 
   const db = window.firebase.firestore();
+  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
 
   try {
-    // Listen to lease data changes
-    const leaseUnsubscribe = db.collection('leases')
-      .onSnapshot(
-        (snapshot) => {
-          console.log('✅ Lease data updated in real-time');
-          updateLeaseExpiryAlerts();
-          updateOccupancyDashboard();
-        },
-        (error) => {
-          console.error('❌ Error listening to leases:', error);
-        }
-      );
+    const leaseUnsubscribe = onSnapshot(
+      collection(db, 'leases'),
+      (snapshot) => {
+        console.log('✅ Lease data updated in real-time');
+        updateLeaseExpiryAlerts();
+        updateOccupancyDashboard();
+      },
+      (error) => {
+        console.error('❌ Error listening to leases:', error);
+      }
+    );
 
     realtimeListeners.leases = leaseUnsubscribe;
   } catch (err) {
@@ -12794,26 +12797,26 @@ function setupLeaseDataListener() {
 }
 
 function setupMeterDataListener() {
-  if (!window.firebase || !window.firebase.firestore) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
     console.warn('Firebase not initialized, skipping meter listeners');
     return;
   }
+  if (!window.firebaseAuth?.currentUser) return;
 
   const db = window.firebase.firestore();
+  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
 
   try {
-    // Listen to meter readings
-    const meterUnsubscribe = db.collection('meterReadings')
-      .onSnapshot(
-        (snapshot) => {
-          console.log('✅ Meter data updated in real-time');
-          // Trigger dashboard update
-          updateDashboardLive();
-        },
-        (error) => {
-          console.error('❌ Error listening to meter data:', error);
-        }
-      );
+    const meterUnsubscribe = onSnapshot(
+      collection(db, 'meterReadings'),
+      (snapshot) => {
+        console.log('✅ Meter data updated in real-time');
+        updateDashboardLive();
+      },
+      (error) => {
+        console.error('❌ Error listening to meter data:', error);
+      }
+    );
 
     realtimeListeners.meter = meterUnsubscribe;
   } catch (err) {
@@ -12848,43 +12851,41 @@ function stopRealtimeListeners() {
 }
 
 function setupAnnouncementListener() {
-  if (!window.firebase || !window.firebase.firestore) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
     console.warn('Firebase not initialized, skipping announcement listeners');
     return;
   }
+  if (!window.firebaseAuth?.currentUser) return;
 
   const db = window.firebase.firestore();
+  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
 
   try {
-    // Listen to announcements for rooms building
-    const roomsAnnounceUnsubscribe = db.collection('announcements').doc('rooms').collection('items')
-      .onSnapshot(
-        (snapshot) => {
-          console.log('✅ Rooms announcements updated in real-time');
-          // Reload announcements and render if on announcements page
-          if (document.getElementById('announcementsList')) {
-            renderAnnouncementsList();
-          }
-        },
-        (error) => {
-          console.error('❌ Error listening to rooms announcements:', error);
+    const roomsAnnounceUnsubscribe = onSnapshot(
+      collection(db, 'announcements', 'rooms', 'items'),
+      (snapshot) => {
+        console.log('✅ Rooms announcements updated in real-time');
+        if (document.getElementById('announcementsList')) {
+          renderAnnouncementsList();
         }
-      );
+      },
+      (error) => {
+        console.error('❌ Error listening to rooms announcements:', error);
+      }
+    );
 
-    // Listen to announcements for nest building
-    const nestAnnounceUnsubscribe = db.collection('announcements').doc('nest').collection('items')
-      .onSnapshot(
-        (snapshot) => {
-          console.log('✅ Nest announcements updated in real-time');
-          // Reload announcements and render if on announcements page
-          if (document.getElementById('announcementsList')) {
-            renderAnnouncementsList();
-          }
-        },
-        (error) => {
-          console.error('❌ Error listening to nest announcements:', error);
+    const nestAnnounceUnsubscribe = onSnapshot(
+      collection(db, 'announcements', 'nest', 'items'),
+      (snapshot) => {
+        console.log('✅ Nest announcements updated in real-time');
+        if (document.getElementById('announcementsList')) {
+          renderAnnouncementsList();
         }
-      );
+      },
+      (error) => {
+        console.error('❌ Error listening to nest announcements:', error);
+      }
+    );
 
     realtimeListeners.roomsAnnounce = roomsAnnounceUnsubscribe;
     realtimeListeners.nestAnnounce = nestAnnounceUnsubscribe;

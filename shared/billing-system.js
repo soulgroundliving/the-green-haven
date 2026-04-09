@@ -423,29 +423,34 @@ class BillingSystem {
    * Watch for new meter data in real-time
    */
   static watchForNewMeterData(building) {
-    if (!window.firebase?.firestore) {
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
       console.warn('⚠️ Firestore not available for real-time watching');
+      return;
+    }
+    // Skip if not authenticated — Firestore rules require auth
+    if (!window.firebaseAuth?.currentUser) return;
+
+    const { collection, query, where, onSnapshot } = window.firebase.firestoreFunctions;
+    if (!onSnapshot) {
+      console.warn('⚠️ onSnapshot not available — skipping meter watching');
       return;
     }
 
     try {
       const db = window.firebase.firestore();
+      const q = query(collection(db, 'meter_data'), where('building', '==', building));
 
       console.log(`👁️ Watching meter_data collection for ${building}...`);
 
-      const unsubscribe = db.collection('meter_data')
-        .where('building', '==', building)
-        .onSnapshot(async (snapshot) => {
-          const changes = snapshot.docChanges();
-
-          const hasChanges = changes.some(change => change.type === 'added' || change.type === 'modified');
-
-          if (hasChanges) {
-            console.log(`📡 New meter data detected! Re-generating bills...`);
-            await BillingSystem.autogenerateBillsForAllYears(building);
-            console.log(`✅ Bills auto-updated from new meter data`);
-          }
-        });
+      const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const changes = snapshot.docChanges();
+        const hasChanges = changes.some(change => change.type === 'added' || change.type === 'modified');
+        if (hasChanges) {
+          console.log(`📡 New meter data detected! Re-generating bills...`);
+          await BillingSystem.autogenerateBillsForAllYears(building);
+          console.log(`✅ Bills auto-updated from new meter data`);
+        }
+      });
 
       return unsubscribe;
     } catch (error) {
