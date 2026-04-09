@@ -292,15 +292,19 @@
       }
     }
 
-    // Test Firebase connection with 5 second timeout to prevent page hang
-    try {
-      await Promise.race([
-        window.testFirebaseConnection(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase test timeout')), 5000))
-      ]);
-    } catch (error) {
-      console.warn('⚠️ Firebase connection test failed or timed out:', error.message);
-      // Continue anyway - app should work with cached data
+    // Test Firebase connection — only if Firebase is already ready
+    // (database is set inside initializeFirebase() which is async)
+    if (window.firebaseReady && database) {
+      try {
+        await Promise.race([
+          window.testFirebaseConnection(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase test timeout')), 5000))
+        ]);
+      } catch (error) {
+        console.warn('⚠️ Firebase connection test failed or timed out:', error.message);
+      }
+    } else {
+      console.log('⏳ Firebase not ready at load event, connection test will run after init');
     }
   });
 
