@@ -5163,6 +5163,10 @@ function initMeterPage() {
   setTimeout(() => initMeterNestTab(), 100);
 }
 
+// F4+F5: Module-level interval IDs to prevent leak when tabs are switched repeatedly
+let _nestMeterIntervalId = null;
+let _roomsMeterIntervalId = null;
+
 function initMeterNestTab() {
   console.log('📊 Loading Nest Building meter...');
   // Set current month if not set
@@ -5190,8 +5194,13 @@ function initMeterNestTab() {
   monthInput.addEventListener('blur', handleMonthChange);
 
   // Also watch for value changes via setInterval (catches programmatic changes)
+  // Clear previous interval before creating a new one to prevent leak on tab switch
+  if (_nestMeterIntervalId) {
+    clearInterval(_nestMeterIntervalId);
+    _nestMeterIntervalId = null;
+  }
   let lastMonthValue = monthInput.value;
-  setInterval(() => {
+  _nestMeterIntervalId = setInterval(() => {
     if (monthInput.value !== lastMonthValue) {
       console.log('📅 Month value changed (detected via polling):', monthInput.value);
       lastMonthValue = monthInput.value;
@@ -5228,8 +5237,13 @@ function initMeterRoomsTab() {
   monthInput.addEventListener('blur', handleMonthChange);
 
   // Also watch for value changes via setInterval (catches programmatic changes)
+  // Clear previous interval before creating a new one to prevent leak on tab switch
+  if (_roomsMeterIntervalId) {
+    clearInterval(_roomsMeterIntervalId);
+    _roomsMeterIntervalId = null;
+  }
   let lastMonthValue = monthInput.value;
-  setInterval(() => {
+  _roomsMeterIntervalId = setInterval(() => {
     if (monthInput.value !== lastMonthValue) {
       console.log('📅 Month value changed (detected via polling):', monthInput.value);
       lastMonthValue = monthInput.value;
