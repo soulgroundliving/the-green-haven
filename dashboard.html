@@ -15248,6 +15248,11 @@ function parseSingleSheetV1(worksheet, monthNum, sheetName) {
 }
 
 // Helper: Parse single sheet with V2 format (with Nest building)
+// Layout (June 69+):
+//   Rows 2-23:  Rooms (22 ห้อง), summary at row 24
+//   Rows 26-45: Nest (20 ห้อง N101-N405), summary at row 46
+//   Row 47:     empty separator
+//   Row 48:     ร้านใหญ่ (Amazon)
 function parseSingleSheetV2(worksheet, monthNum, sheetName) {
   // Rooms: D24=total, J24=elec, P24=water, S2:S23=trash
   const roomsRent = parseFloat(worksheet['D24']?.v || 0) || 0;
@@ -15258,23 +15263,23 @@ function parseSingleSheetV2(worksheet, monthNum, sheetName) {
     roomsTrash += parseFloat(worksheet[`S${row}`]?.v || 0) || 0;
   }
 
-  // Nest: D45=rent, J45=elec, P45=water, S26:S44=trash
-  const nestRent = parseFloat(worksheet['D45']?.v || 0) || 0;
-  const nestElec = parseFloat(worksheet['J45']?.v || 0) || 0;
-  const nestWater = parseFloat(worksheet['P45']?.v || 0) || 0;
+  // Nest: D46=total, J46=elec, P46=water, S26:S45=trash (20 rooms, summary row 46)
+  const nestRent = parseFloat(worksheet['D46']?.v || 0) || 0;
+  const nestElec = parseFloat(worksheet['J46']?.v || 0) || 0;
+  const nestWater = parseFloat(worksheet['P46']?.v || 0) || 0;
   let nestTrash = 0;
-  for (let row = 26; row <= 44; row++) {
+  for (let row = 26; row <= 45; row++) {
     nestTrash += parseFloat(worksheet[`S${row}`]?.v || 0) || 0;
   }
 
-  // Amazon: D47=rent, J47=elec, P47=water, S47=trash
-  const amazonRent = parseFloat(worksheet['D47']?.v || 0) || 0;
-  const amazonElec = parseFloat(worksheet['J47']?.v || 0) || 0;
-  const amazonWater = parseFloat(worksheet['P47']?.v || 0) || 0;
-  const amazonTrash = parseFloat(worksheet['S47']?.v || 0) || 0;
+  // Amazon/ร้านใหญ่: D48=rent, J48=elec, P48=water, S48=trash (row moved from 47→48 in June 69+)
+  const amazonRent = parseFloat(worksheet['D48']?.v || 0) || 0;
+  const amazonElec = parseFloat(worksheet['J48']?.v || 0) || 0;
+  const amazonWater = parseFloat(worksheet['P48']?.v || 0) || 0;
+  const amazonTrash = parseFloat(worksheet['S48']?.v || 0) || 0;
 
-  // Total trash: S50
-  const totalTrash = parseFloat(worksheet['S50']?.v || 0) || 0;
+  // Total trash: S51 (shifted down 1 row from S50 due to Amazon moving to row 48)
+  const totalTrash = parseFloat(worksheet['S51']?.v || 0) || parseFloat(worksheet['S50']?.v || 0) || 0;
 
   const totalRent = roomsRent + nestRent + amazonRent;
   const totalElec = roomsElec + nestElec + amazonElec;
