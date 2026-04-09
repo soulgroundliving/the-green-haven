@@ -130,6 +130,12 @@
       return;
     }
 
+    // Skip if not authenticated — Firestore rules require auth, and Firebase
+    // restores sessions async so currentUser may be null even for logged-in admins
+    if (!window.firebaseAuth?.currentUser) {
+      return;
+    }
+
     try {
       // Query all documents from meter_data collection
       const meterCollection = collection(firestore, 'meter_data');
@@ -6564,8 +6570,12 @@ async function loadDashboardDataFromFirebase() {
   try {
     // Get Firestore references
     if (!window.firebase || !window.firebase.firestore) {
-      console.warn('Firebase not initialized, returning empty data');
-      return {};
+      return null;
+    }
+
+    // Skip if not authenticated — Firestore rules require auth
+    if (!window.firebaseAuth?.currentUser) {
+      return null;
     }
 
     const db = window.firebase.firestore();
