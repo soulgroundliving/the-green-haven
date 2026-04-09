@@ -6959,7 +6959,7 @@ function initRoomsPage(){
     const statusInfo = getRoomColorStatus(r.id, r);
     const bgColor = r.type==='commercial'?'rgba(66,133,244,0.15)':statusInfo.color+'40';
     const borderColor = r.type==='commercial'?'#4285f4':statusInfo.color;
-    const displayId = r.id === 'ร้านใหญ่' ? getShopRoomName() : r.id;
+    const displayId = r.id === 'Amazon ☕' ? getShopRoomName() : r.id;
     return `
     <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" onclick="openTenantModal('rooms', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${displayId}</div>
@@ -7096,7 +7096,7 @@ function renderCompactRoomGrid(){
     const nextPaymentDate = paymentInfo.nextDueDate ? new Date(paymentInfo.nextDueDate).toLocaleDateString('th-TH', {month: 'short', day: 'numeric'}) : '—';
     const overdueDisplay = paymentInfo.overdueAmount > 0 ? `฿${paymentInfo.overdueAmount.toLocaleString()}` : '—';
 
-    const displayRoomId = r.id === 'ร้านใหญ่' ? getShopRoomName() : r.id;
+    const displayRoomId = r.id === 'Amazon ☕' ? getShopRoomName() : r.id;
     return `
     <div class="compact-card ${r.type==='commercial'?'':''}" style="border-left-color:${r.type==='commercial'?'var(--blue)':'var(--green)'}">
       <div class="compact-card-header">
