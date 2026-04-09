@@ -607,17 +607,46 @@ function determineStatus(results) {
 }
 
 function matchMeterDataWithPrevious(importedData) {
-  const { year, month, rooms, building = null } = importedData;
-  const previousData = getPreviousMonthReadings(year, month, building);
+  const { year, month, building = null } = importedData;
+
+  // Combine all buildings into a flat roomId→data map
+  // V3 format returns { rooms:{...}, nest:{...}, amazon:{...} }
+  // V1/V2 format returns { rooms:{...} } or flat rooms object
+  const allRooms = {};
+  if (importedData.rooms && typeof importedData.rooms === 'object') {
+    Object.assign(allRooms, importedData.rooms);
+  }
+  if (importedData.nest && typeof importedData.nest === 'object') {
+    Object.assign(allRooms, importedData.nest);
+  }
+  if (importedData.amazon && typeof importedData.amazon === 'object') {
+    Object.assign(allRooms, importedData.amazon);
+  }
+  // Fallback: if importedData has numeric/string keys directly (old format)
+  if (Object.keys(allRooms).length === 0 && importedData.rooms) {
+    Object.assign(allRooms, importedData.rooms);
+  }
+
+  // Get previous month readings for all buildings
+  let previousData = {};
+  if (building === 'all') {
+    // Merge previous readings from all three buildings
+    const prevRooms = getPreviousMonthReadings(year, month, 'rooms');
+    const prevNest = getPreviousMonthReadings(year, month, 'nest');
+    const prevAmazon = getPreviousMonthReadings(year, month, 'amazon');
+    Object.assign(previousData, prevRooms, prevNest, prevAmazon);
+  } else {
+    previousData = getPreviousMonthReadings(year, month, building);
+  }
 
   const buildingKey = building || 'rooms';
   const isFirstImport = Object.keys(previousData).length === 0;
 
-  console.log(`🔍 matchMeterDataWithPrevious: building=${buildingKey}, month=${month}, isFirstImport=${isFirstImport}`);
+  console.log(`🔍 matchMeterDataWithPrevious: building=${buildingKey}, month=${month}, totalRooms=${Object.keys(allRooms).length}, isFirstImport=${isFirstImport}`);
 
   const results = {
     summary: {
-      totalRooms: Object.keys(rooms).length,
+      totalRooms: Object.keys(allRooms).length,
       okCount: 0,
       warningCount: 0,
       errorCount: 0,
@@ -629,8 +658,8 @@ function matchMeterDataWithPrevious(importedData) {
     isFirstImport: isFirstImport
   };
 
-  for (const roomId in rooms) {
-    const imported = rooms[roomId];
+  for (const roomId in allRooms) {
+    const imported = allRooms[roomId];
     const previous = previousData[roomId] || {};
 
     const electricMatch = compareValues(imported.eOld, previous.eNew, 'electric', isFirstImport);
