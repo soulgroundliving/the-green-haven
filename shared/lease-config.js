@@ -207,7 +207,11 @@ class LeaseAgreementManager {
   static async loadLeasesFromFirebase(building) {
     try {
       if (!window.firebase) {
-        console.warn('⚠️ Firebase not loaded');
+        return this.getAllLeases();
+      }
+
+      // Skip if not authenticated — Firestore rules require auth
+      if (!window.firebaseAuth?.currentUser) {
         return this.getAllLeases();
       }
 
