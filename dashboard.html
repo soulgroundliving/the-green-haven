@@ -14912,10 +14912,21 @@ function switchGamificationTab(tabName, btn) {
 // ===== REPORTS PAGE =====
 function initAdminReportsPage() {
   console.log('✅ Admin Reports page initialized');
-  // Load report data
-  document.getElementById('occupancyRate').textContent = '85%';
-  document.getElementById('occupiedRooms').textContent = '36';
-  document.getElementById('vacantRooms').textContent = '7';
+
+  // Calculate real occupancy from both buildings via calculateOccupancy()
+  const roomsOcc = calculateOccupancy('rooms');
+  const nestOcc = calculateOccupancy('nest');
+  const totalOccupied = roomsOcc.occupied + nestOcc.occupied;
+  const totalVacant = roomsOcc.vacant + nestOcc.vacant;
+  const totalRooms = roomsOcc.total + nestOcc.total;
+  const rate = totalRooms > 0 ? Math.round((totalOccupied / totalRooms) * 100) : 0;
+
+  const rateEl = document.getElementById('occupancyRate');
+  const occEl  = document.getElementById('occupiedRooms');
+  const vacEl  = document.getElementById('vacantRooms');
+  if (rateEl) rateEl.textContent = rate + '%';
+  if (occEl)  occEl.textContent  = totalOccupied;
+  if (vacEl)  vacEl.textContent  = totalVacant;
 }
 
 function switchReportTab(tabName, btn) {
