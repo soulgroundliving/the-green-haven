@@ -107,6 +107,13 @@ class OwnerConfigManager {
         return this.getOwnerInfo();
       }
 
+      // Skip if no authenticated user — Firestore rules require auth.
+      // Firebase restores sessions asynchronously, so currentUser may be null
+      // on initial page load even for authenticated admins. Use localStorage instead.
+      if (!window.firebaseAuth?.currentUser) {
+        return this.getOwnerInfo();
+      }
+
       const db = window.firebase.firestore();
       const docRef = window.firebase.firestoreFunctions.doc(
         window.firebase.firestoreFunctions.collection(db, 'owner_info'),
