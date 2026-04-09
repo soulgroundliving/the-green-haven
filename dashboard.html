@@ -2181,13 +2181,13 @@
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
-    <div class="card" style="background:#fff3e0;border-left:4px solid var(--accent);">
-      <div class="card-title" style="color:#bf360c;">☕ Amazon (ร้านค้าใหญ่) — อัปเดตล่าสุด</div>
-      <div style="font-size:.88rem;line-height:2;">
-        <div>💰 ค่าเช่า: <strong>฿15,000/เดือน</strong></div>
-        <div>⚡ อัตราค่าไฟ: <strong>6 บาท/หน่วย</strong></div>
-        <div>💧 อัตราค่าน้ำ: <strong>20 บาท/หน่วย</strong></div>
-        <div>🗑️ ค่าขยะ: <strong>20 บาท/เดือน</strong></div>
+    <div class="card" id="shop-info-card" style="background:#fff3e0;border-left:4px solid var(--accent);">
+      <div class="card-title" id="shop-info-title" style="color:#bf360c;">🏪 ร้านค้า</div>
+      <div id="shop-info-body" style="font-size:.88rem;line-height:2;">
+        <div>💰 ค่าเช่า: <strong id="shop-info-rent">—</strong></div>
+        <div>⚡ อัตราค่าไฟ: <strong id="shop-info-elec">—</strong></div>
+        <div>💧 อัตราค่าน้ำ: <strong id="shop-info-water">—</strong></div>
+        <div>🗑️ ค่าขยะ: <strong id="shop-info-trash">—</strong></div>
       </div>
     </div>
     <div class="card" style="background:#fce4ec;border-left:4px solid #e91e63;">
@@ -6182,7 +6182,7 @@ function loadRoomConfigUI() {
       const depositId = `deposit_${building}_${room.id}`;
       return `
       <tr style="border-bottom:1px solid var(--border);">
-        <td style="border:1px solid var(--border);padding:0.8rem;color:var(--text);">${room.id}</td>
+        <td style="border:1px solid var(--border);padding:0.8rem;color:var(--text);">${room.id === 'ร้านใหญ่' ? getShopRoomName() : room.id}</td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
           <input type="text" value="${room.name}" onchange="updateRoomField('${building}', '${room.id}', 'name', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
@@ -6262,6 +6262,18 @@ function saveShopRoomName(name) {
   if (!trimmed) { showToast('กรุณากรอกชื่อร้านค้า', 'warning'); return; }
   localStorage.setItem('SHOP_ROOM_NAME', trimmed);
   showToast(`บันทึกชื่อร้านค้า "${trimmed}" เรียบร้อย`, 'success');
+  // Refresh all pages that show shop name
+  loadRoomConfigUI();                    // refresh config table ทันที
+  refreshPropertyPageIfActive();         // refresh property page ถ้าเปิดอยู่
+}
+
+function refreshPropertyPageIfActive() {
+  const propPage = document.getElementById('page-property');
+  if (propPage && propPage.classList.contains('active')) {
+    initPropertyPage();
+  }
+  // Also update the static shop info card
+  updateShopInfoCard();
 }
 
 function updateDepositDisplay() {
@@ -6290,34 +6302,35 @@ function updateRoomField(building, roomId, fieldName, value) {
     room[fieldName] = value;
     RoomConfigManager.saveRoomsConfig(building, config);
 
-    // Show save confirmation
     const fieldLabel = {
       'name': 'ชื่อห้อง',
       'rent': 'ราคาเช่า',
+      'rentPrice': 'ราคาเช่า',
       'waterRate': 'อัตราน้ำ',
       'electricRate': 'อัตราไฟ'
     }[fieldName] || fieldName;
 
     showToast(`✅ บันทึก${fieldLabel}สำหรับห้อง ${roomId} เรียบร้อย`, 'success', 2500);
     console.log(`✅ อัปเดต ${fieldName} สำหรับ ${roomId}`);
+    refreshPropertyPageIfActive();
   }
 }
 
 function updateRoomRate(building, roomId, rateType, rate) {
   RoomConfigManager.updateRoomRate(building, roomId, rateType, parseFloat(rate));
 
-  // Show save confirmation
   const rateLabel = rateType === 'water' ? 'อัตราน้ำ' : 'อัตราไฟฟ้า';
   showToast(`✅ บันทึก${rateLabel}สำหรับห้อง ${roomId} = ${rate} บาท/หน่วย`, 'success', 2500);
   console.log(`✅ อัปเดตอัตรา ${rateType === 'water' ? 'น้ำ' : 'ไฟ'} สำหรับ ${roomId} = ${rate} บาท/หน่วย`);
+  refreshPropertyPageIfActive();
 }
 
 function updateTrashRate(building, roomId, rate) {
   RoomConfigManager.updateTrashRate(building, roomId, parseInt(rate));
 
-  // Show save confirmation
   showToast(`✅ บันทึกค่าขยะสำหรับห้อง ${roomId} = ${rate} บาท`, 'success', 2500);
   console.log(`✅ อัปเดตค่าขยะสำหรับ ${roomId} = ${rate} บาท`);
+  refreshPropertyPageIfActive();
 }
 
 function addNewRoom() {
@@ -6945,9 +6958,10 @@ function initRoomsPage(){
     const statusInfo = getRoomColorStatus(r.id, r);
     const bgColor = r.type==='commercial'?'rgba(66,133,244,0.15)':statusInfo.color+'40';
     const borderColor = r.type==='commercial'?'#4285f4':statusInfo.color;
+    const displayId = r.id === 'ร้านใหญ่' ? getShopRoomName() : r.id;
     return `
     <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" onclick="openTenantModal('rooms', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
-      <div class="room-num">${r.id}</div>
+      <div class="room-num">${displayId}</div>
       <div class="room-rent">฿${r.rentPrice.toLocaleString()}/เดือน</div>
       <div class="room-status">${r.type==='commercial'?'🏪 พาณิชย์':occupancyIcon + (tenant && tenant.name ? ' ' + tenant.name : ' ว่าง')}</div>
       <div style="font-size:0.8rem;margin-top:4px;text-align:center;color:${borderColor};font-weight:600;">${statusInfo.icon} ${statusInfo.label}</div>
@@ -7081,10 +7095,11 @@ function renderCompactRoomGrid(){
     const nextPaymentDate = paymentInfo.nextDueDate ? new Date(paymentInfo.nextDueDate).toLocaleDateString('th-TH', {month: 'short', day: 'numeric'}) : '—';
     const overdueDisplay = paymentInfo.overdueAmount > 0 ? `฿${paymentInfo.overdueAmount.toLocaleString()}` : '—';
 
+    const displayRoomId = r.id === 'ร้านใหญ่' ? getShopRoomName() : r.id;
     return `
     <div class="compact-card ${r.type==='commercial'?'':''}" style="border-left-color:${r.type==='commercial'?'var(--blue)':'var(--green)'}">
       <div class="compact-card-header">
-        <div class="compact-card-id">${r.id}</div>
+        <div class="compact-card-id">${displayRoomId}</div>
         <span class="compact-card-type">${r.type==='commercial'?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
         <span style="margin-left:auto;display:flex;gap:6px;align-items:center;">
           <span style="font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOccupied?'var(--green-pale)':'#f3e5f5'};color:${isOccupied?'var(--green-dark)':'#6a1b9a'};font-weight:600;">${isOccupied?'มีผู้เช่า':'ว่าง'}</span>
@@ -7654,6 +7669,32 @@ function initPropertyPage(){
 
   if(roomsSection) initRoomsPage();
   if(nestSection) initNestPage();
+  updateShopInfoCard();
+}
+
+// ─── Dynamic shop info card — reads from RoomConfigManager ───
+function updateShopInfoCard() {
+  const shopName = getShopRoomName();
+  // Read live config from RoomConfigManager
+  const config = (typeof RoomConfigManager !== 'undefined') ? RoomConfigManager.getRoomsConfig('rooms') : null;
+  const shopRoom = config?.rooms?.find(r => r.id === 'ร้านใหญ่');
+
+  const rent  = shopRoom?.rentPrice  || 0;
+  const elec  = shopRoom?.electricRate || 0;
+  const water = shopRoom?.waterRate  || 0;
+  const trash = shopRoom?.trashRate  || 0;
+
+  const titleEl = document.getElementById('shop-info-title');
+  const rentEl  = document.getElementById('shop-info-rent');
+  const elecEl  = document.getElementById('shop-info-elec');
+  const waterEl = document.getElementById('shop-info-water');
+  const trashEl = document.getElementById('shop-info-trash');
+
+  if (titleEl) titleEl.textContent = `🏪 ${shopName}`;
+  if (rentEl)  rentEl.textContent  = rent  > 0 ? `฿${rent.toLocaleString()}/เดือน`  : '—';
+  if (elecEl)  elecEl.textContent  = elec  > 0 ? `${elec} บาท/หน่วย`  : '—';
+  if (waterEl) waterEl.textContent = water > 0 ? `${water} บาท/หน่วย` : '—';
+  if (trashEl) trashEl.textContent = trash > 0 ? `฿${trash}/เดือน`    : '—';
 }
 
 // ===== MONTHLY PAGE =====
