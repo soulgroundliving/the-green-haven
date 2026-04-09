@@ -6057,11 +6057,61 @@ function saveRoomsMeterReadings() {
 }
 
 function exportNestMeterCSV() {
-  alert('⏳ ฟีเจอร์นี้มาเร็ว ๆ');
+  const month = document.getElementById('nestMeterMonth')?.value;
+  if (!month) { alert('⚠️ กรุณาเลือกเดือนก่อน'); return; }
+
+  const allData = JSON.parse(localStorage.getItem('METER_READINGS_NEST') || '[]');
+  const entry = [...allData].reverse().find(d => d.month === month);
+  const readings = entry?.readings || {};
+
+  if (Object.keys(readings).length === 0) {
+    alert('⚠️ ไม่มีข้อมูลมิเตอร์สำหรับเดือนนี้');
+    return;
+  }
+
+  let csv = 'ห้อง,ไฟเก่า,ไฟใหม่,หน่วยไฟ,น้ำเก่า,น้ำใหม่,หน่วยน้ำ\n';
+  Object.entries(readings).forEach(([roomId, r]) => {
+    const eUsed = Math.max(0, (r.eNew || 0) - (r.eOld || 0));
+    const wUsed = Math.max(0, (r.wNew || 0) - (r.wOld || 0));
+    csv += `${roomId},${r.eOld || 0},${r.eNew || 0},${eUsed},${r.wOld || 0},${r.wNew || 0},${wUsed}\n`;
+  });
+
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `meter-nest-${month}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function exportRoomsMeterCSV() {
-  alert('⏳ ฟีเจอร์นี้มาเร็ว ๆ');
+  const month = document.getElementById('roomsMeterMonth')?.value;
+  if (!month) { alert('⚠️ กรุณาเลือกเดือนก่อน'); return; }
+
+  const allData = JSON.parse(localStorage.getItem('METER_READINGS_ROOMS') || '[]');
+  const entry = [...allData].reverse().find(d => d.month === month);
+  const readings = entry?.readings || {};
+
+  if (Object.keys(readings).length === 0) {
+    alert('⚠️ ไม่มีข้อมูลมิเตอร์สำหรับเดือนนี้');
+    return;
+  }
+
+  let csv = 'ห้อง,ไฟเก่า,ไฟใหม่,หน่วยไฟ,น้ำเก่า,น้ำใหม่,หน่วยน้ำ\n';
+  Object.entries(readings).forEach(([roomId, r]) => {
+    const eUsed = Math.max(0, (r.eNew || 0) - (r.eOld || 0));
+    const wUsed = Math.max(0, (r.wNew || 0) - (r.wOld || 0));
+    csv += `${roomId},${r.eOld || 0},${r.eNew || 0},${eUsed},${r.wOld || 0},${r.wNew || 0},${wUsed}\n`;
+  });
+
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `meter-rooms-${month}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ===== ROOM CONFIGURATION FUNCTIONS =====
