@@ -119,6 +119,17 @@
     console.log('📥 Loading meter data from Firebase...');
     window.METER_DATA = { rooms: {}, nest: {} };
 
+    // Wait for Firebase to finish initializing (firestore assigned after initializeFirebase() resolves)
+    let waited = 0;
+    while (!window.firebaseReady && waited < 5000) {
+      await new Promise(r => setTimeout(r, 100));
+      waited += 100;
+    }
+    if (!window.firebaseReady || !firestore) {
+      console.warn('⚠️ Firebase not ready after 5s, skipping meter data load from Firestore');
+      return;
+    }
+
     try {
       // Query all documents from meter_data collection
       const meterCollection = collection(firestore, 'meter_data');
@@ -269,9 +280,12 @@
     } else {
       // Try anonymous sign-in if no user is logged in
       try {
-        if (!auth) { console.warn('⚠️ auth not ready yet, skipping anonymous sign-in'); return; }
-        const userCred = await signInAnonymously(auth);
-        console.log('✅ Firebase Anonymous Auth: SUCCESS (UID:', userCred.user.uid.substring(0, 8) + '...)');
+        if (!auth) {
+          console.warn('⚠️ auth not ready yet, skipping anonymous sign-in');
+        } else {
+          const userCred = await signInAnonymously(auth);
+          console.log('✅ Firebase Anonymous Auth: SUCCESS (UID:', userCred.user.uid.substring(0, 8) + '...)');
+        }
       } catch (error) {
         console.error('⚠️ Anonymous Auth Error:', error.message);
         console.log('💡 Firebase auth initialization failed - Firestore reads may fail');
