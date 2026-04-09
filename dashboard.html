@@ -5877,7 +5877,7 @@ function renderRoomsMeterGrid() {
 function loadPreviousMonthNest() {
   const currentMonthInput = document.getElementById('nestMeterMonth').value;
   if (!currentMonthInput) {
-    alert('⚠️ กรุณาเลือกเดือนก่อน');
+    showToast('กรุณาเลือกเดือนก่อน', 'warning');
     return;
   }
 
@@ -5896,7 +5896,7 @@ function loadPreviousMonthNest() {
   const prevMonthData = allData.find(d => d.month === prevMonthStr);
 
   if (!prevMonthData) {
-    alert(`⚠️ ไม่มีข้อมูลมิเตอร์สำหรับเดือน ${prevMonthStr}`);
+    showToast(`ไม่มีข้อมูลมิเตอร์สำหรับเดือน ${prevMonthStr}`, 'warning');
     return;
   }
 
@@ -5929,13 +5929,13 @@ function loadPreviousMonthNest() {
     }
   });
 
-  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เป็นค่าเดิม (${loadCount} ห้อง)`);
+  showToast(`โหลดข้อมูลเดือน ${prevMonthStr} เป็นค่าเดิม (${loadCount} ห้อง)`, 'success');
 }
 
 function loadPreviousMonthRooms() {
   const currentMonthInput = document.getElementById('roomsMeterMonth').value;
   if (!currentMonthInput) {
-    alert('⚠️ กรุณาเลือกเดือนก่อน');
+    showToast('กรุณาเลือกเดือนก่อน', 'warning');
     return;
   }
 
@@ -5954,7 +5954,7 @@ function loadPreviousMonthRooms() {
   const prevMonthData = allData.find(d => d.month === prevMonthStr);
 
   if (!prevMonthData) {
-    alert(`⚠️ ไม่มีข้อมูลมิเตอร์สำหรับเดือน ${prevMonthStr}`);
+    showToast(`ไม่มีข้อมูลมิเตอร์สำหรับเดือน ${prevMonthStr}`, 'warning');
     return;
   }
 
@@ -5987,13 +5987,13 @@ function loadPreviousMonthRooms() {
     }
   });
 
-  alert(`✅ โหลดข้อมูลเดือน ${prevMonthStr} เป็นค่าเดิม (${loadCount} ห้อง)`);
+  showToast(`โหลดข้อมูลเดือน ${prevMonthStr} เป็นค่าเดิม (${loadCount} ห้อง)`, 'success');
 }
 
 function saveNestMeterReadings() {
   const month = document.getElementById('nestMeterMonth').value;
   if (!month) {
-    alert('⚠️ กรุณาเลือกเดือน');
+    showToast('กรุณาเลือกเดือน', 'warning');
     return;
   }
 
@@ -6020,13 +6020,13 @@ function saveNestMeterReadings() {
   allData.push(data);
   localStorage.setItem('METER_READINGS_NEST', JSON.stringify(allData));
 
-  alert(`✅ บันทึกค่ามิเตอร์ ${Object.keys(readings).length} ห้อง เรียบร้อย`);
+  showToast(`บันทึกค่ามิเตอร์ ${Object.keys(readings).length} ห้อง เรียบร้อย`, 'success');
 }
 
 function saveRoomsMeterReadings() {
   const month = document.getElementById('roomsMeterMonth').value;
   if (!month) {
-    alert('⚠️ กรุณาเลือกเดือน');
+    showToast('กรุณาเลือกเดือน', 'warning');
     return;
   }
 
@@ -6053,19 +6053,19 @@ function saveRoomsMeterReadings() {
   allData.push(data);
   localStorage.setItem('METER_READINGS_ROOMS', JSON.stringify(allData));
 
-  alert(`✅ บันทึกค่ามิเตอร์ ${Object.keys(readings).length} ห้อง เรียบร้อย`);
+  showToast(`บันทึกค่ามิเตอร์ ${Object.keys(readings).length} ห้อง เรียบร้อย`, 'success');
 }
 
 function exportNestMeterCSV() {
   const month = document.getElementById('nestMeterMonth')?.value;
-  if (!month) { alert('⚠️ กรุณาเลือกเดือนก่อน'); return; }
+  if (!month) { showToast('กรุณาเลือกเดือนก่อน', 'warning'); return; }
 
   const allData = JSON.parse(localStorage.getItem('METER_READINGS_NEST') || '[]');
   const entry = [...allData].reverse().find(d => d.month === month);
   const readings = entry?.readings || {};
 
   if (Object.keys(readings).length === 0) {
-    alert('⚠️ ไม่มีข้อมูลมิเตอร์สำหรับเดือนนี้');
+    showToast('ไม่มีข้อมูลมิเตอร์สำหรับเดือนนี้', 'warning');
     return;
   }
 
@@ -6087,14 +6087,14 @@ function exportNestMeterCSV() {
 
 function exportRoomsMeterCSV() {
   const month = document.getElementById('roomsMeterMonth')?.value;
-  if (!month) { alert('⚠️ กรุณาเลือกเดือนก่อน'); return; }
+  if (!month) { showToast('กรุณาเลือกเดือนก่อน', 'warning'); return; }
 
   const allData = JSON.parse(localStorage.getItem('METER_READINGS_ROOMS') || '[]');
   const entry = [...allData].reverse().find(d => d.month === month);
   const readings = entry?.readings || {};
 
   if (Object.keys(readings).length === 0) {
-    alert('⚠️ ไม่มีข้อมูลมิเตอร์สำหรับเดือนนี้');
+    showToast('ไม่มีข้อมูลมิเตอร์สำหรับเดือนนี้', 'warning');
     return;
   }
 
@@ -6294,7 +6294,7 @@ function addNewRoom() {
     electricRate = parseFloat(document.getElementById('newRoomElectric').value);
 
     if (!roomId || !roomName) {
-      alert('⚠️ กรุณากรอก ID และชื่อห้อง');
+      showToast('กรุณากรอก ID และชื่อห้อง', 'warning');
       return;
     }
   } else {
@@ -6304,7 +6304,7 @@ function addNewRoom() {
     rent = parseInt(document.getElementById('newRoomRentCopy').value) || 1500;
 
     if (!templateId || !roomId || !roomName) {
-      alert('⚠️ กรุณาเลือก template และป้อน ID กับชื่อห้อง');
+      showToast('กรุณาเลือก template และป้อน ID กับชื่อห้อง', 'warning');
       return;
     }
 
@@ -6323,7 +6323,7 @@ function addNewRoom() {
   });
 
   if (success) {
-    alert(`✅ เพิ่มห้อง ${roomId} สำเร็จ`);
+    showToast(`เพิ่มห้อง ${roomId} สำเร็จ`, 'success');
     document.getElementById('newRoomId').value = '';
     document.getElementById('newRoomName').value = '';
     document.getElementById('newRoomRent').value = '1500';
@@ -6334,7 +6334,7 @@ function addNewRoom() {
     loadRoomConfigUI();
     initMeterRoomsTab();
   } else {
-    alert(`⚠️ ห้อง ${roomId} มีอยู่แล้ว`);
+    showToast(`ห้อง ${roomId} มีอยู่แล้ว`, 'warning');
   }
 }
 
@@ -6345,7 +6345,7 @@ function deleteRoom(building, roomId) {
     if (room) {
       room.deleted = true;
       RoomConfigManager.saveRoomsConfig(building, config);
-      alert(`✅ ลบห้อง ${roomId} เรียบร้อย (ข้อมูลมิเตอร์ยังเก็บไว้)`);
+      showToast(`ลบห้อง ${roomId} เรียบร้อย (ข้อมูลมิเตอร์ยังเก็บไว้)`, 'success');
       loadRoomConfigUI();
       initMeterRoomsTab();
     }
@@ -7207,7 +7207,7 @@ function updatePreview() {
 
 function applyBatchRentAdjustment() {
   if (batchSelectedRooms.size === 0) {
-    alert('กรุณาเลือกห้องพักอย่างน้อย 1 ห้อง');
+    showToast('กรุณาเลือกห้องพักอย่างน้อย 1 ห้อง', 'warning');
     return;
   }
 
@@ -7215,7 +7215,7 @@ function applyBatchRentAdjustment() {
   const adjustValue = parseFloat(document.getElementById('adjustmentValue')?.value || 0);
 
   if (isNaN(adjustValue) || adjustValue === 0) {
-    alert('กรุณากรอกจำนวนที่ต้องการปรับ');
+    showToast('กรุณากรอกจำนวนที่ต้องการปรับ', 'warning');
     return;
   }
 
@@ -7247,7 +7247,7 @@ function applyBatchRentAdjustment() {
   updateDashboardLive();
 
   // Show success message
-  alert(`✓ ปรับค่าเช่า ${batchSelectedRooms.size} ห้อง สำเร็จ!`);
+  showToast(`ปรับค่าเช่า ${batchSelectedRooms.size} ห้อง สำเร็จ!`, 'success');
 
   closeBatchRentAdjustmentModal();
 }
@@ -7986,7 +7986,7 @@ function validateTenantForm() {
  */
 function showValidationErrors(errors) {
   if (errors.length === 0) return false;
-  alert('⚠️ ข้อมูลไม่ครบถ้วน:\n\n' + errors.join('\n'));
+  showToast('ข้อมูลไม่ครบถ้วน:\n\n' + errors.join('\n'), 'warning');
   return true;
 }
 
@@ -8192,7 +8192,7 @@ function generateInvoice(){
   }
 
   const d=getBillData();
-  if(!d.room||d.total===0){alert('กรุณากรอกข้อมูลให้ครบถ้วน');return;}
+  if(!d.room||d.total===0){showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');return;}
   invoiceData=d;
 
   // Due date = 5th of next month
@@ -8229,7 +8229,7 @@ function generateReceipt(){
   isGeneratingReceipt = true;
   setTimeout(() => { isGeneratingReceipt = false; }, 1500);
 
-  if(!invoiceData){alert('กรุณาส่งใบวางบิลก่อน');isGeneratingReceipt = false;return;}
+  if(!invoiceData){showToast('กรุณาส่งใบวางบิลก่อน', 'warning');isGeneratingReceipt = false;return;}
   const d=invoiceData;
   const payDate=new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
 
@@ -8338,7 +8338,7 @@ function printDoc(docId){
   }
 
   const el=document.getElementById(docId);
-  if(!el){alert('ไม่พบเอกสาร');return;}
+  if(!el){showToast('ไม่พบเอกสาร', 'error');return;}
   // รวม styles ทั้งหมดจากหน้าหลัก
   const styles=[...document.querySelectorAll('style')].map(s=>s.innerHTML).join('\n');
   const fonts='<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">';
@@ -8358,7 +8358,7 @@ ${styles}
 <body>${content}</body></html>`;
 
   printWindow=window.open('','_blank','width=420,height=700,toolbar=0,menubar=0,scrollbars=1');
-  if(!printWindow){alert('Pop-up ถูกบล็อก — กรุณาอนุญาต pop-up สำหรับ localhost');return;}
+  if(!printWindow){showToast('Pop-up ถูกบล็อก — กรุณาอนุญาต pop-up สำหรับ localhost', 'warning');return;}
 
   // ตั้งให้ปิดเมื่อ unload
   printWindow.onunload = () => { printWindow = null; };
@@ -8511,7 +8511,7 @@ async function autoGenerateAllBills() {
     const meterData = await FirebaseMeterHelper.getMeterDataForMonth(fbBuildingId, yearMonth);
 
     if (!meterData) {
-      alert(`❌ ไม่พบข้อมูลมิเตอร์สำหรับ ${MONTHS_FULL[month]} ${year + 543}`);
+      showToast(`ไม่พบข้อมูลมิเตอร์สำหรับ ${MONTHS_FULL[month]} ${year + 543}`, 'error');
       return;
     }
 
@@ -8597,7 +8597,7 @@ async function autoGenerateAllBills() {
     const missingRooms = rooms.filter(r => !generatedBills.some(b => b.includes(r.id)));
 
     if (generatedCount === 0) {
-      alert(`⚠️ ไม่มีบิลที่สร้างได้ (ตรวจสอบข้อมูลมิเตอร์)`);
+      showToast(`ไม่มีบิลที่สร้างได้ (ตรวจสอบข้อมูลมิเตอร์)`, 'warning');
       return;
     }
 
@@ -8612,11 +8612,11 @@ async function autoGenerateAllBills() {
       message = `✅ สร้างบิลครบทั้ง ${generatedCount} ห้องแล้ว!\n\n${generatedBills.join('\n')}`;
     }
 
-    alert(message);
+    showToast(message, 'success');
     console.log(`📊 Auto-generated ${generatedCount}/${actualRoomCount} bills for ${MONTHS_FULL[month]} ${year + 543}`);
   } catch (error) {
     console.error('❌ Error in auto-generate bills:', error);
-    alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
+    showToast(`เกิดข้อผิดพลาด: ${error.message}`, 'error');
   }
 }
 
@@ -9328,7 +9328,7 @@ function addExpense(){
   const desc=document.getElementById('exp-desc').value.trim();
   const room=document.getElementById('exp-room').value.trim();
   const amount=parseFloat(document.getElementById('exp-amount').value)||0;
-  if(!date||!desc||!amount){alert('กรุณากรอกวันที่ รายการ และจำนวนเงิน');return;}
+  if(!date||!desc||!amount){showToast('กรุณากรอกวันที่ รายการ และจำนวนเงิน', 'warning');return;}
   const expenses=loadExpenses();
   expenses.push({id:Date.now(),date,category,desc,room,amount});
   saveExpenses(expenses);
@@ -9375,7 +9375,7 @@ function submitMaintenance(){
   const sanitizedDescription = window.SecurityUtils.sanitizeInput(description);
 
   if(!sanitizedRoom||!type||!sanitizedDescription){
-    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+    showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
     return;
   }
 
@@ -9399,7 +9399,7 @@ function submitMaintenance(){
   document.getElementById('tp-priority').value='medium';
   document.getElementById('tp-description').value='';
 
-  alert('✅ แจ้งซ่อมเรียบร้อยแล้ว เจ้าของจะติดต่อในไม่ช้า');
+  showToast('แจ้งซ่อมเรียบร้อยแล้ว เจ้าของจะติดต่อในไม่ช้า', 'success');
   renderTenantMaintenanceList();
 }
 
@@ -9563,14 +9563,14 @@ function updateLinkPreview(){
 
 function copyToClipboard(text){
   navigator.clipboard.writeText(text).then(() => {
-    alert('✅ คัดลอกลิ้งค์เรียบร้อย');
+    showToast('คัดลอกลิ้งค์เรียบร้อย', 'success');
   });
 }
 
 function downloadQRCode(elementId, filename){
   const canvas = document.querySelector(`#${elementId} canvas`);
   if(!canvas){
-    alert('QR Code ยังสร้างไม่เสร็จ');
+    showToast('QR Code ยังสร้างไม่เสร็จ', 'warning');
     return;
   }
   const link = document.createElement('a');
@@ -9684,7 +9684,7 @@ function verifyPayment(paymentId, status){
 
   renderPaymentStats();
   renderPaymentList('all');
-  alert(status === 'verified' ? '✅ ยืนยันการชำระแล้ว (คลิก ⬇️ ดาวน์โหลดใบเสร็จ)' : '✅ ปฏิเสธการชำระแล้ว');
+  showToast(status === 'verified' ? 'ยืนยันการชำระแล้ว (คลิก ⬇️ ดาวน์โหลดใบเสร็จ)' : 'ปฏิเสธการชำระแล้ว', 'success');
 }
 
 function generateAdminReceipt(roomId, amount, verifiedAt) {
@@ -9764,14 +9764,14 @@ function generateAdminReceipt(roomId, amount, verifiedAt) {
     console.log(`✅ Generated receipt for room ${roomId}: ฿${amount.toLocaleString()}`);
   } catch (error) {
     console.error('❌ Error generating receipt:', error);
-    alert('⚠️ เกิดข้อผิดพลาดในการสร้างใบเสร็จ');
+    showToast('เกิดข้อผิดพลาดในการสร้างใบเสร็จ', 'warning');
   }
 }
 
 // ===== INVOICE/RECEIPT HISTORY =====
 function showInvoiceHistory(roomId, building = 'rooms'){
   if(typeof InvoiceReceiptManager === 'undefined') {
-    alert('❌ InvoiceReceiptManager ยังไม่โหลด');
+    showToast('InvoiceReceiptManager ยังไม่โหลด', 'error');
     return;
   }
 
@@ -9832,7 +9832,7 @@ function loadSelectedPayment(){
   const payment = payments.find(p => p.id == selectedPaymentId);
 
   if(!payment){
-    alert('ไม่พบการแจ้ง');
+    showToast('ไม่พบการแจ้ง', 'warning');
     return;
   }
 
@@ -9859,14 +9859,14 @@ window.handleSlipSelect = handleSlipSelect;
 
 function handleSlipSelect(file){
   if(!file){
-    alert('❌ กรุณาเลือกไฟล์');
+    showToast('กรุณาเลือกไฟล์', 'error');
     return;
   }
 
   // Validate file
   const validationErrors = validateSlipFileAdmin(file);
   if (validationErrors.length > 0) {
-    alert('❌ ข้อผิดพลาดในการอัปโหลดสลิป:\n' + validationErrors.join('\n'));
+    showToast('ข้อผิดพลาดในการอัปโหลดสลิป:\n' + validationErrors.join('\n'), 'error');
     return;
   }
 
@@ -9882,7 +9882,7 @@ function handleSlipSelect(file){
 
 async function verifyWithSlipOK(){
   if(!selectedSlipFile || !selectedPaymentId){
-    alert('❌ กรุณาเลือกการแจ้งและรูปสลิป');
+    showToast('กรุณาเลือกการแจ้งและรูปสลิป', 'error');
     return;
   }
 
@@ -9958,7 +9958,7 @@ function approvePayment(){
   document.getElementById('pendingPaymentSelect').value = '';
   document.getElementById('selectedPaymentInfo').style.display = 'none';
 
-  alert('✅ ยืนยันการชำระแล้ว');
+  showToast('ยืนยันการชำระแล้ว', 'success');
 }
 
 // ===== INIT =====
@@ -10266,7 +10266,7 @@ function addMaintenanceRequestFromModal(){
   const pri=document.getElementById('mx-priority-modal').value;
 
   if(!room||!desc||!date){
-    alert('กรุณากรอกข้อมูลให้ครบ');
+    showToast('กรุณากรอกข้อมูลให้ครบ', 'warning');
     return;
   }
 
@@ -10519,7 +10519,7 @@ function handlePhotoUpload(file, fieldName, id){
 function assignMaintenanceWorker(id){
   const assignedName=document.getElementById('assigned-name').value.trim();
   if(!assignedName){
-    alert('กรุณากรอกชื่อผู้รับผิดชอบ');
+    showToast('กรุณากรอกชื่อผู้รับผิดชอบ', 'warning');
     return;
   }
   const mx=loadMaintenance();
@@ -10778,7 +10778,7 @@ function addHousekeepingRequestFromModal(){
   const priority=document.getElementById('hk-priority-modal').value;
 
   if(!room||!date){
-    alert('กรุณากรอกข้อมูลให้ครบ');
+    showToast('กรุณากรอกข้อมูลให้ครบ', 'warning');
     return;
   }
 
@@ -10801,10 +10801,10 @@ function addHousekeepingRequest(){
   const date=document.getElementById('hk-date')?.value||'';
 
   // Validation
-  if(!room||room.length>10){alert('กรุณาป้อนหมายเลขห้องให้ถูกต้อง (สูงสุด 10 ตัว)');return;}
-  if(!date){alert('กรุณาเลือกวันที่');return;}
-  if(new Date(date)>new Date()){alert('ไม่สามารถเลือกวันในอนาคต');return;}
-  if(desc.length>200){alert('หมายเหตุต้องไม่เกิน 200 ตัวอักษร');return;}
+  if(!room||room.length>10){showToast('กรุณาป้อนหมายเลขห้องให้ถูกต้อง (สูงสุด 10 ตัว)', 'warning');return;}
+  if(!date){showToast('กรุณาเลือกวันที่', 'warning');return;}
+  if(new Date(date)>new Date()){showToast('ไม่สามารถเลือกวันในอนาคต', 'warning');return;}
+  if(desc.length>200){showToast('หมายเหตุต้องไม่เกิน 200 ตัวอักษร', 'warning');return;}
 
   // Sanitize inputs
   const sanitizedRoom=window.SecurityUtils.sanitizeInput(room);
@@ -10992,7 +10992,7 @@ function saveAnnouncement() {
   const time = document.getElementById('ann-time')?.value?.trim() || '';
 
   if (!title || !content) {
-    alert('⚠️ กรุณากรอกหัวข้อและเนื้อหา');
+    showToast('กรุณากรอกหัวข้อและเนื้อหา', 'warning');
     return;
   }
 
@@ -11219,7 +11219,7 @@ function renewContract(roomId){
 
 function printContract(roomId){
   const t=loadTenants()[roomId];
-  if(!t?.name){alert('ไม่พบข้อมูลผู้เช่า');return;}
+  if(!t?.name){showToast('ไม่พบข้อมูลผู้เช่า', 'warning');return;}
   const bldgInfo=getBuildingInfo(contractBuilding);
   const room=bldgInfo.metadataArray.find(r=>r.id===roomId)||{id:roomId};
   const building=bldgInfo.displayName;
@@ -11634,7 +11634,7 @@ function saveTenantInfo() {
 
   // Validate data
   if (!fullName) {
-    alert('❌ กรุณากรอกชื่อผู้เช่า');
+    showToast('กรุณากรอกชื่อผู้เช่า', 'error');
     return;
   }
 
@@ -11666,7 +11666,7 @@ function saveTenantInfo() {
     : TenantConfigManager.addTenant(building, tenantId, tenantData);
 
   if (!saved && !currentEditTenantId) {
-    alert('❌ ไม่สามารถบันทึกข้อมูลได้');
+    showToast('ไม่สามารถบันทึกข้อมูลได้', 'error');
     return;
   }
 
@@ -11774,7 +11774,7 @@ function saveTenantInfo() {
   }
 
   // Show success message
-  alert('✅ บันทึกข้อมูลสำเร็จ');
+  showToast('บันทึกข้อมูลสำเร็จ', 'success');
 }
 
 /**
@@ -11968,31 +11968,31 @@ async function changePassword() {
   const confirmPassword = document.getElementById('confirmPassword').value;
 
   if (!oldPassword || !newPassword || !confirmPassword) {
-    alert('กรุณากรอกรหัสผ่านทั้งหมด');
+    showToast('กรุณากรอกรหัสผ่านทั้งหมด', 'warning');
     return;
   }
 
   if (newPassword !== confirmPassword) {
-    alert('รหัสผ่านใหม่ไม่ตรงกัน');
+    showToast('รหัสผ่านใหม่ไม่ตรงกัน', 'warning');
     return;
   }
 
   if (newPassword.length < 6) {
-    alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
+    showToast('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร', 'warning');
     return;
   }
 
   try {
     const user = window.auth.currentUser;
     if (!user) {
-      alert('ไม่พบบัญชีผู้ใช้');
+      showToast('ไม่พบบัญชีผู้ใช้', 'warning');
       return;
     }
 
     // Reauthenticate
     const credential = window.firebaseAuthFunctions.EmailAuthProvider?.credential(user.email, oldPassword);
     if (!credential) {
-      alert('อีเมลหรือรหัสผ่านเก่าไม่ถูกต้อง');
+      showToast('อีเมลหรือรหัสผ่านเก่าไม่ถูกต้อง', 'warning');
       return;
     }
 
@@ -12013,12 +12013,12 @@ async function changePassword() {
     auditLog.push(audit);
     localStorage.setItem('auditLog', JSON.stringify(auditLog));
 
-    alert('✅ เปลี่ยนรหัสผ่านสำเร็จ');
+    showToast('เปลี่ยนรหัสผ่านสำเร็จ', 'success');
     closeChangePasswordModal();
     setTimeout(() => handleLogout(), 1500);
   } catch (error) {
     console.error('Password change error:', error);
-    alert('เกิดข้อผิดพลาด: ' + error.message);
+    showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
   }
 }
 
@@ -12199,7 +12199,7 @@ function viewContract(roomId) {
   const tenant = tenantData[roomId];
 
   if (!tenant || !tenant.name) {
-    alert('❌ ไม่มีข้อมูลผู้เช่า');
+    showToast('ไม่มีข้อมูลผู้เช่า', 'error');
     return;
   }
 
@@ -12231,7 +12231,7 @@ function viewContract(roomId) {
       showContractDocument(roomId, tenant);
     }
   } else {
-    alert(contractInfo + '\n\n❌ ยังไม่มีไฟล์สัญญา');
+    showToast('ยังไม่มีไฟล์สัญญา', 'warning');
   }
 }
 
@@ -12261,7 +12261,7 @@ function previewContractDocument(building, roomId) {
   }
 
   if (!tenant || !tenant.contractDocument) {
-    alert('❌ ไม่มีไฟล์สัญญา');
+    showToast('ไม่มีไฟล์สัญญา', 'error');
     return;
   }
 
@@ -12315,12 +12315,12 @@ function deleteContractDocument(building, roomId) {
   document.getElementById('modalContractFileName').value = '';
   document.getElementById('contractDocStatus').textContent = '';
 
-  alert('✅ ลบไฟล์สัญญาแล้ว');
+  showToast('ลบไฟล์สัญญาแล้ว', 'success');
 }
 
 function showContractDocument(roomId, tenant) {
   if (!tenant.contractDocument) {
-    alert('❌ ไม่มีไฟล์สัญญา');
+    showToast('ไม่มีไฟล์สัญญา', 'error');
     return;
   }
 
@@ -12428,7 +12428,7 @@ function downloadContractAsFile(roomId, tenantName) {
   const tenant = tenantData[roomId];
 
   if (!tenant || !tenant.contractDocument) {
-    alert('❌ ไม่มีไฟล์สัญญา');
+    showToast('ไม่มีไฟล์สัญญา', 'error');
     return;
   }
 
@@ -12444,7 +12444,7 @@ function recordPayment(roomId) {
   const tenant = tenantData.tenants?.[roomId];
 
   if (!tenant || !tenant.name) {
-    alert('❌ ไม่มีข้อมูลผู้เช่า');
+    showToast('ไม่มีข้อมูลผู้เช่า', 'error');
     return;
   }
 
@@ -12454,7 +12454,7 @@ function recordPayment(roomId) {
 
   const paymentAmount = parseFloat(amount);
   if (isNaN(paymentAmount) || paymentAmount <= 0) {
-    alert('❌ กรุณาใส่จำนวนเงินที่ถูกต้อง');
+    showToast('กรุณาใส่จำนวนเงินที่ถูกต้อง', 'error');
     return;
   }
 
@@ -12465,7 +12465,7 @@ function recordPayment(roomId) {
     .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 
   if (roomInvoices.length === 0) {
-    alert('✅ ไม่มีใบแจ้งหนี้ที่รอชำระ');
+    showToast('ไม่มีใบแจ้งหนี้ที่รอชำระ', 'success');
     return;
   }
 
@@ -12489,7 +12489,7 @@ function recordPayment(roomId) {
   tenantData.invoices = invoices;
   localStorage.setItem('tenant_data', JSON.stringify(tenantData));
 
-  alert(`✅ บันทึกการชำระเงินสำเร็จ\n\nจำนวนเงินที่ชำระ: ฿${paymentAmount.toLocaleString()}`);
+  showToast(`บันทึกการชำระเงินสำเร็จ จำนวนเงินที่ชำระ: ฿${paymentAmount.toLocaleString()}`, 'success');
 
   // Refresh the display
   renderCompactRoomGrid();
@@ -12500,7 +12500,7 @@ function viewBills(roomId) {
   const invoices = (tenantData.invoices || []).filter(inv => inv.roomId === roomId);
 
   if (invoices.length === 0) {
-    alert(`📋 ไม่มีบิลสำหรับห้อง ${roomId}`);
+    showToast(`ไม่มีบิลสำหรับห้อง ${roomId}`, 'warning');
     return;
   }
 
@@ -12512,7 +12512,7 @@ function viewBills(roomId) {
     billInfo += `${dueDate} | ฿${inv.amount.toLocaleString()} | ${status} | ${paidDate}\n`;
   });
 
-  alert(billInfo);
+  showToast(billInfo, 'warning');
 }
 
 function reportMaintenance(roomId) {
@@ -12520,7 +12520,7 @@ function reportMaintenance(roomId) {
   const tenant = tenantData.tenants?.[roomId];
 
   if (!tenant || !tenant.name) {
-    alert('❌ ไม่มีข้อมูลผู้เช่า');
+    showToast('ไม่มีข้อมูลผู้เช่า', 'error');
     return;
   }
 
@@ -12543,7 +12543,7 @@ function reportMaintenance(roomId) {
   tenantData.maintenanceReports = maintenanceReports;
   localStorage.setItem('tenant_data', JSON.stringify(tenantData));
 
-  alert(`✅ บันทึกการแจ้งซ่อมสำเร็จ\n\nเรื่อง: ${issue}\nวันที่แจ้ง: ${new Date().toLocaleDateString('th-TH')}`);
+  showToast(`บันทึกการแจ้งซ่อมสำเร็จ เรื่อง: ${issue} วันที่แจ้ง: ${new Date().toLocaleDateString('th-TH')}`, 'success');
 }
 
 function updateRoomStatuses() {
@@ -13139,7 +13139,7 @@ function renderOwnerInfoPage() {
 function saveOwnerInfo() {
   const name = document.getElementById('ownerName').value.trim();
   if (!name) {
-    alert('⚠️ กรุณากรอกชื่อเจ้าของ');
+    showToast('กรุณากรอกชื่อเจ้าของ', 'warning');
     return;
   }
 
@@ -13172,14 +13172,14 @@ function saveOwnerInfo() {
   } else {
     OwnerConfigManager.saveOwnerInfo(ownerData);
   }
-  alert('✅ บันทึกข้อมูลเจ้าของสำเร็จ');
+  showToast('บันทึกข้อมูลเจ้าของสำเร็จ', 'success');
   renderOwnerInfoPage();
 }
 
 function clearOwnerInfo() {
   if (confirm('คุณแน่ใจหรือว่าต้องการลบข้อมูลเจ้าของทั้งหมด?')) {
     OwnerConfigManager.clearOwnerInfo();
-    alert('✅ ลบข้อมูลเรียบร้อย');
+    showToast('ลบข้อมูลเรียบร้อย', 'success');
     renderOwnerInfoPage();
   }
 }
@@ -13290,7 +13290,7 @@ function addNewTenant() {
   const name = document.getElementById('newTenantName').value.trim();
 
   if (!id || !name) {
-    alert('⚠️ กรุณากรอกรหัสและชื่อผู้เช่า');
+    showToast('กรุณากรอกรหัสและชื่อผู้เช่า', 'warning');
     return;
   }
 
@@ -13309,7 +13309,7 @@ function addNewTenant() {
     : TenantConfigManager.addTenant(building, id, tenantData);
 
   if (saveSuccess) {
-    alert(`✅ เพิ่มผู้เช่า ${name} สำเร็จ`);
+    showToast(`เพิ่มผู้เช่า ${name} สำเร็จ`, 'success');
     // Clear inputs
     document.getElementById('newTenantId').value = '';
     document.getElementById('newTenantName').value = '';
@@ -13319,7 +13319,7 @@ function addNewTenant() {
     document.getElementById('newTenantAddress').value = '';
     renderTenantMasterPage();
   } else {
-    alert(`⚠️ ผู้เช่า ${id} มีอยู่แล้ว`);
+    showToast(`ผู้เช่า ${id} มีอยู่แล้ว`, 'warning');
   }
 }
 
@@ -13327,7 +13327,7 @@ function addNewTenant() {
 function editTenant(tenantId) {
   const building = window.currentTenantMasterBuilding || 'rooms';
   const tenant = TenantConfigManager.getTenant(building, tenantId);
-  if (!tenant) { alert('⚠️ ไม่พบข้อมูลผู้เช่า'); return; }
+  if (!tenant) { showToast('ไม่พบข้อมูลผู้เช่า', 'warning'); return; }
 
   // Remove any existing edit modal
   const existing = document.getElementById('editTenantModal');
@@ -13391,7 +13391,7 @@ function editTenant(tenantId) {
 
 function saveEditTenant(building, tenantId) {
   const name = document.getElementById('etName')?.value.trim();
-  if (!name) { alert('⚠️ กรุณากรอกชื่อ-นามสกุล'); return; }
+  if (!name) { showToast('กรุณากรอกชื่อ-นามสกุล', 'warning'); return; }
 
   const updates = {
     name,
@@ -13411,7 +13411,7 @@ function saveEditTenant(building, tenantId) {
     renderTenantMasterPage();
     showToast('อัพเดทข้อมูลผู้เช่าเรียบร้อย', 'success');
   } else {
-    alert('❌ ไม่สามารถบันทึกข้อมูลได้');
+    showToast('ไม่สามารถบันทึกข้อมูลได้', 'error');
   }
 }
 
@@ -13570,7 +13570,7 @@ function createNewLease() {
   const deposit = parseFloat(document.getElementById('leaseDeposit').value) || 0;
 
   if (!building || !roomId || !tenantId || !moveInDate || !rentAmount) {
-    alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน');
+    showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
     return;
   }
 
@@ -13611,9 +13611,9 @@ function createNewLease() {
     // Upload documents to Firebase Storage if available
     if (Object.keys(documentsToUpload).length > 0 && window.firebase && window.firebase.storage) {
       uploadLeaseDocuments(leaseId, building, roomId, documentsToUpload);
-      alert(`✅ สร้างสัญญาเช่าสำเร็จ\n📁 กำลังอัพโหลดเอกสาร...`);
+      showToast(`สร้างสัญญาเช่าสำเร็จ กำลังอัพโหลดเอกสาร...`, 'success');
     } else {
-      alert(`✅ สร้างสัญญาเช่าสำเร็จ`);
+      showToast(`สร้างสัญญาเช่าสำเร็จ`, 'success');
     }
 
     // Clear inputs
@@ -13690,7 +13690,7 @@ function endLease(leaseId) {
       : LeaseAgreementManager.endLease(leaseId);
 
     if (success) {
-      alert('✅ สิ้นสุดสัญญาเช่าเรียบร้อย');
+      showToast('สิ้นสุดสัญญาเช่าเรียบร้อย', 'success');
       renderLeaseAgreementsPage();
     }
   }
@@ -13699,7 +13699,7 @@ function endLease(leaseId) {
 function deleteLease(leaseId) {
   if (confirm('คุณแน่ใจหรือว่าต้องการลบสัญญาเช่า?')) {
     if (LeaseAgreementManager.deleteLease(leaseId)) {
-      alert('✅ ลบสัญญาเช่าเรียบร้อย');
+      showToast('ลบสัญญาเช่าเรียบร้อย', 'success');
       renderLeaseAgreementsPage();
     }
   }
@@ -13830,7 +13830,7 @@ function generateMonthlyBillsUI() {
     const monthNum = parseInt(month);
 
     if (monthNum < 1 || monthNum > 12) {
-      alert('❌ เดือนไม่ถูกต้อง');
+      showToast('เดือนไม่ถูกต้อง', 'error');
       return;
     }
 
@@ -13838,7 +13838,7 @@ function generateMonthlyBillsUI() {
     const result = BillGenerator.generateMonthlyBills(buildingName, buddhistYear, monthNum);
 
     if (result.success) {
-      alert(`✅ สร้างใบวางบิลสำเร็จ!\n\nจำนวน: ${result.count} ใบ\nอาคาร: ${buildingName}\nเดือน: ${monthNum}/${buddhistYear}`);
+      showToast(`สร้างใบวางบิลสำเร็จ! จำนวน: ${result.count} ใบ อาคาร: ${buildingName} เดือน: ${monthNum}/${buddhistYear}`, 'success');
 
       // Show generated invoice list
       showGeneratedInvoices(buildingName, result.invoiceIds);
@@ -13846,11 +13846,11 @@ function generateMonthlyBillsUI() {
       // Update dashboard
       updateOccupancyDashboard();
     } else {
-      alert(`❌ เกิดข้อผิดพลาด: ไม่สามารถสร้างใบวางบิล`);
+      showToast(`เกิดข้อผิดพลาด: ไม่สามารถสร้างใบวางบิล`, 'error');
     }
   } catch (error) {
     console.error('Error:', error);
-    alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+    showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
   }
 }
 
@@ -13882,11 +13882,11 @@ function downloadInvoicesPDF() {
   const allInvoices = InvoiceReceiptManager.getAllInvoices(buildingName);
 
   if (allInvoices.length === 0) {
-    alert('❌ ไม่มีใบวางบิล');
+    showToast('ไม่มีใบวางบิล', 'error');
     return;
   }
 
-  alert(`📥 ดาวน์โหลด ${allInvoices.length} ใบวางบิล\n\n(ระบบจะดาวน์โหลดแต่ละไฟล์)`)
+  showToast(`ดาวน์โหลด ${allInvoices.length} ใบวางบิล (ระบบจะดาวน์โหลดแต่ละไฟล์)`, 'warning')
 
  allInvoices.forEach((invoice, idx) => {
     setTimeout(() => {
@@ -14346,7 +14346,7 @@ function saveServiceProvider() {
   const website = document.getElementById('providerWebsite')?.value.trim();
 
   if (!type || !name || !phone) {
-    alert('⚠️ Please fill in Type, Name, and Phone');
+    showToast('Please fill in Type, Name, and Phone', 'warning');
     return;
   }
 
@@ -14496,7 +14496,7 @@ function saveCommunityEvent() {
   const description = document.getElementById('eventDescription')?.value.trim();
 
   if (!title || !date || !time || !location) {
-    alert('⚠️ Please fill in Title, Date, Time, and Location');
+    showToast('Please fill in Title, Date, Time, and Location', 'warning');
     return;
   }
 
@@ -14607,7 +14607,7 @@ function saveCommunityDocument() {
   const description = document.getElementById('docDescription')?.value.trim();
 
   if (!title || !category || !fileUrl) {
-    alert('⚠️ Please fill in Title, Category, and URL');
+    showToast('Please fill in Title, Category, and URL', 'warning');
     return;
   }
 
@@ -14843,7 +14843,7 @@ function saveLeaseAlertSettings() {
   const severity = document.getElementById('alertSeverity')?.value || 'warning';
 
   if (threshold < 1 || threshold > 365) {
-    alert('⚠️ Threshold must be between 1 and 365 days');
+    showToast('Threshold must be between 1 and 365 days', 'warning');
     return;
   }
 
