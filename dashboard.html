@@ -13354,7 +13354,94 @@ function addNewTenant() {
 
 
 function editTenant(tenantId) {
-  alert('🔨 ฟีเจอร์แก้ไขผู้เช่ากำลังพัฒนา');
+  const building = window.currentTenantMasterBuilding || 'rooms';
+  const tenant = TenantConfigManager.getTenant(building, tenantId);
+  if (!tenant) { alert('⚠️ ไม่พบข้อมูลผู้เช่า'); return; }
+
+  // Remove any existing edit modal
+  const existing = document.getElementById('editTenantModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'editTenantModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+  // Use DOM manipulation (not innerHTML) for fields that take user-controlled data
+  // to avoid XSS from tenant name/phone/etc.
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:8px;padding:2rem;width:min(500px,95vw);max-height:90vh;overflow-y:auto;';
+
+  const title = document.createElement('div');
+  title.style.cssText = 'font-weight:700;font-size:1.1rem;margin-bottom:1.5rem;';
+  title.textContent = `✏️ แก้ไขข้อมูลผู้เช่า — ${tenant.id}`;
+  box.appendChild(title);
+
+  const fields = [
+    { id: 'etName',    label: 'ชื่อ-นามสกุล *', val: tenant.name || '',   type: 'text' },
+    { id: 'etIdCard',  label: 'เลขประจำตัว',      val: tenant.idCard || '', type: 'text' },
+    { id: 'etPhone',   label: 'เบอร์โทรศัพท์',    val: tenant.phone || '',  type: 'tel'  },
+    { id: 'etEmail',   label: 'อีเมล',             val: tenant.email || '',  type: 'email'},
+    { id: 'etAddress', label: 'ที่อยู่',            val: tenant.address || '',type: 'text' }
+  ];
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;gap:1rem;';
+  fields.forEach(f => {
+    const wrap = document.createElement('div');
+    const lbl = document.createElement('label');
+    lbl.style.cssText = 'display:block;margin-bottom:0.4rem;font-weight:600;';
+    lbl.textContent = f.label;
+    const inp = document.createElement('input');
+    inp.id = f.id; inp.type = f.type; inp.value = f.val;
+    if (f.id === 'etPhone') inp.maxLength = 10;
+    inp.style.cssText = 'width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;';
+    wrap.appendChild(lbl); wrap.appendChild(inp);
+    grid.appendChild(wrap);
+  });
+  box.appendChild(grid);
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:0.8rem;margin-top:1.5rem;justify-content:flex-end;';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'ยกเลิก';
+  cancelBtn.style.cssText = 'padding:0.7rem 1.2rem;border:1px solid #ddd;border-radius:4px;cursor:pointer;background:#fff;';
+  cancelBtn.onclick = () => modal.remove();
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = '💾 บันทึก';
+  saveBtn.style.cssText = 'padding:0.7rem 1.5rem;background:#2196F3;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;';
+  saveBtn.onclick = () => saveEditTenant(building, tenantId);
+  btnRow.appendChild(cancelBtn); btnRow.appendChild(saveBtn);
+  box.appendChild(btnRow);
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+  document.getElementById('etName')?.focus();
+}
+
+function saveEditTenant(building, tenantId) {
+  const name = document.getElementById('etName')?.value.trim();
+  if (!name) { alert('⚠️ กรุณากรอกชื่อ-นามสกุล'); return; }
+
+  const updates = {
+    name,
+    idCard: document.getElementById('etIdCard')?.value.trim() || '',
+    phone: document.getElementById('etPhone')?.value.trim() || '',
+    email: document.getElementById('etEmail')?.value.trim() || '',
+    address: document.getElementById('etAddress')?.value.trim() || '',
+    updatedDate: new Date().toISOString()
+  };
+
+  const ok = TenantConfigManager.updateTenant(building, tenantId, updates);
+  if (ok) {
+    if (typeof TenantConfigManager.saveTenantToFirebase === 'function') {
+      TenantConfigManager.saveTenantToFirebase(building, tenantId, updates);
+    }
+    document.getElementById('editTenantModal')?.remove();
+    renderTenantMasterPage();
+    showToast('อัพเดทข้อมูลผู้เช่าเรียบร้อย', 'success');
+  } else {
+    alert('❌ ไม่สามารถบันทึกข้อมูลได้');
+  }
 }
 
 // ===== LEASE AGREEMENTS PAGE =====
