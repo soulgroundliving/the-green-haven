@@ -2772,6 +2772,16 @@
       </select>
     </div>
 
+    <!-- Shop Room Name Setting -->
+    <div style="margin-bottom:1.5rem;padding:1rem;background:#fff8e1;border:1px solid #ffe082;border-radius:var(--radius-sm);">
+      <div style="font-weight:600;margin-bottom:0.6rem;color:#795548;">🏪 ชื่อร้านค้า (ร้านใหญ่)</div>
+      <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+        <input type="text" id="shopRoomNameInput" placeholder="ชื่อร้านค้า เช่น ร้านใหญ่, Amazon ☕" style="flex:1;min-width:200px;padding:0.6rem 0.8rem;border:1px solid #ffe082;border-radius:4px;font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <button onclick="saveShopRoomName(document.getElementById('shopRoomNameInput').value)" style="padding:0.6rem 1.2rem;background:#ff8f00;color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;white-space:nowrap;">💾 บันทึก</button>
+      </div>
+      <div style="font-size:0.8rem;color:#795548;margin-top:0.5rem;">ชื่อที่แสดงบนใบวางบิล, รายงาน และ UI (ID ภายในคงเป็น "ร้านใหญ่" เสมอ)</div>
+    </div>
+
     <!-- Instructions -->
     <div style="margin-bottom:1.5rem;padding:0.8rem;background:#e3f2fd;border-left:4px solid #1976d2;border-radius:4px;">
       <div style="font-weight:600;color:#0d47a1;font-size:0.95rem;">📝 วิธีการใช้:</div>
@@ -6123,6 +6133,10 @@ function loadRoomConfigUI() {
       return;
     }
 
+    // Populate shop name input with current saved value
+    const shopInput = document.getElementById('shopRoomNameInput');
+    if (shopInput) shopInput.value = getShopRoomName();
+
     const building = dropdown.value || 'rooms';
     console.log('📋 Loading room config for building:', building);
 
@@ -6222,6 +6236,17 @@ function showToast(message, type = 'success', duration = 3000) {
     toast.classList.add('remove');
     setTimeout(() => toast.remove(), 300);
   }, duration);
+}
+
+// F16: Configurable shop room display name (internal ID stays 'ร้านใหญ่')
+function getShopRoomName() {
+  return localStorage.getItem('SHOP_ROOM_NAME') || 'ร้านใหญ่';
+}
+function saveShopRoomName(name) {
+  const trimmed = name?.trim();
+  if (!trimmed) { showToast('กรุณากรอกชื่อร้านค้า', 'warning'); return; }
+  localStorage.setItem('SHOP_ROOM_NAME', trimmed);
+  showToast(`บันทึกชื่อร้านค้า "${trimmed}" เรียบร้อย`, 'success');
 }
 
 function updateDepositDisplay() {
