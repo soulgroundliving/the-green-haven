@@ -8172,12 +8172,6 @@ function enableReceiptBtn(){
 // ===== PROMPTPAY QR =====
 let PROMPTPAY_NUMBER = (typeof SecureConfig !== 'undefined' ? localStorage.getItem(SecureConfig.promptpay.storageKey) : localStorage.getItem('promptpay')) || '';
 
-function crc16(str){
-  let c=0xFFFF;
-  for(let i=0;i<str.length;i++){c^=str.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=(c&0x8000)?((c<<1)^0x1021):(c<<1);}
-  return(c&0xFFFF).toString(16).toUpperCase().padStart(4,'0');
-}
-
 // Removed: buildPromptPayPayload() and savePromptPay() - PromptPay not used in payment verification page
 
 // Removed: renderQR() - PromptPay QR not used, using SlipOK instead
@@ -10954,29 +10948,6 @@ function switchMaintenanceTab(tabName, btn) {
       initMaintenancePage();
     }
   }
-}
-
-// ===== TEST FUNCTION FOR MAINTENANCE NOTIFICATION =====
-function testMaintenanceNotification(){
-  const newTicket={
-    id:'T'+Date.now(),
-    room:'N101',
-    category:'electrical',
-    desc:'ไฟฟ้าช่วงไม่สว่าง',
-    status:'pending',
-    reportedAt:new Date().toISOString().split('T')[0],
-    priority:'normal'
-  };
-  const mx=loadMaintenance();
-  mx.unshift(newTicket);
-  saveMaintenance(mx);
-  renderMaintenancePage();
-  updateMxBadge();
-  updateMaintenanceBadge();
-  window.dispatchEvent(new CustomEvent('maintenance_ticket_submitted',{detail:{room:newTicket.room,category:newTicket.category}}));
-  const t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--blue);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
-  t.textContent='✅ Test ticket added: '+newTicket.room;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
 }
 
 // ===== ANNOUNCEMENTS MANAGEMENT =====
