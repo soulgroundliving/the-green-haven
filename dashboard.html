@@ -194,7 +194,6 @@
         timestamp: new Date().toISOString(),
         status: 'connected'
       });
-      console.log('✅ Firebase Database Connection Test: SUCCESS');
       return true;
     } catch (error) {
       console.error('❌ Firebase Connection Error:', error);
@@ -476,22 +475,19 @@
     ];
     functionsEl.innerHTML = functions.map(f => `✅ ${f}`).join('<br>');
 
-    // Test connection
-    try {
-      const result = await window.testFirebaseConnection();
-      testEl.innerHTML = result ? '✅ Connected' : '❌ Failed';
-      testEl.style.color = result ? '#2d8653' : '#c62828';
-    } catch (err) {
-      testEl.innerHTML = '⚠️ Error';
-      testEl.style.color = '#ff8f00';
+    // Show last known status without re-running a write test every 5s
+    // (write test only runs once after init via the explicit call below)
+    if (testEl && !testEl.dataset.tested) {
+      testEl.innerHTML = '🟢 Ready';
+      testEl.style.color = '#2d8653';
     }
 
     // Update timestamp
     updateEl.innerHTML = new Date().toLocaleTimeString('th-TH');
   }
 
-  // Auto-update every 5 seconds
-  setInterval(updateFirebaseMonitorPanel, 5000);
+  // Auto-update every 30 seconds (was 5s — reduced to avoid console spam)
+  setInterval(updateFirebaseMonitorPanel, 30000);
 
   // Initial update on load
   window.addEventListener('load', () => {
@@ -12899,9 +12895,14 @@ function setupAnnouncementListener() {
 // ===== FIREBASE CLOUD DATA INITIALIZATION =====
 async function initializeCloudData() {
   try {
-    // Check if Firebase is ready
-    if (!window.firebaseApp || !window.firebase) {
-      console.warn('⚠️ Firebase not ready for cloud data initialization');
+    // Wait for Firebase to finish initializing (max 5s) — same pattern as initializeMeterDataFromFirebase
+    let waited = 0;
+    while (!window.firebaseReady && waited < 5000) {
+      await new Promise(r => setTimeout(r, 100));
+      waited += 100;
+    }
+    if (!window.firebaseReady || !window.firebaseApp || !window.firebase) {
+      console.warn('⚠️ Firebase not ready for cloud data initialization after 5s');
       return;
     }
 
