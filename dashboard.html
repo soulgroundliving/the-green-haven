@@ -6182,7 +6182,7 @@ function loadRoomConfigUI() {
       const depositId = `deposit_${building}_${room.id}`;
       return `
       <tr style="border-bottom:1px solid var(--border);">
-        <td style="border:1px solid var(--border);padding:0.8rem;color:var(--text);">${room.id === 'ร้านใหญ่' ? getShopRoomName() : room.id}</td>
+        <td style="border:1px solid var(--border);padding:0.8rem;color:var(--text);">${room.id === 'Amazon ☕' ? getShopRoomName() : room.id}</td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
           <input type="text" value="${room.name}" onchange="updateRoomField('${building}', '${room.id}', 'name', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
@@ -6253,7 +6253,8 @@ function showToast(message, type = 'success', duration = 3000) {
   }, duration);
 }
 
-// F16: Configurable shop room display name (internal ID stays 'ร้านใหญ่')
+// F16: Configurable shop room display name
+// RoomConfigManager ID = 'Amazon ☕', ROOMS_OLD/METER_DATA ID = 'ร้านใหญ่'
 function getShopRoomName() {
   return localStorage.getItem('SHOP_ROOM_NAME') || 'ร้านใหญ่';
 }
@@ -7677,7 +7678,7 @@ function updateShopInfoCard() {
   const shopName = getShopRoomName();
   // Read live config from RoomConfigManager
   const config = (typeof RoomConfigManager !== 'undefined') ? RoomConfigManager.getRoomsConfig('rooms') : null;
-  const shopRoom = config?.rooms?.find(r => r.id === 'ร้านใหญ่');
+  const shopRoom = config?.rooms?.find(r => r.id === 'Amazon ☕');
 
   const rent  = shopRoom?.rentPrice  || 0;
   const elec  = shopRoom?.electricRate || 0;
