@@ -3839,9 +3839,8 @@ function onRoomChange(){
     const t2 = tenants2[roomId2];
     tn.textContent = t2?.name ? `👤 ${t2.name}${t2.phone?' · '+t2.phone:''}` : '';
   }
-  autoFillMeters();
+  autoFillMeters().then(()=>{ renderPaymentStatus(); resetBillFlow(); });
   renderPaymentStatus();
-  calcBill(); resetBillFlow();
 }
 
 function checkVacant(){
@@ -3888,15 +3887,13 @@ function checkVacant(){
   document.getElementById('vc-result').innerHTML=html;
 }
 
-function autoFillMeters(){
+async function autoFillMeters(){
   renderPaymentStatus();
   const roomId=document.getElementById('f-room').value;
-  // Allow month/year selection without room first
-  // if(!roomId)return;
   const month=parseInt(document.getElementById('f-month').value);
   const year=parseInt(document.getElementById('f-year').value);
 
-  // If no room selected, just return (don't fill data yet)
+  // If no room selected, just return
   if(!roomId){
     console.log('⏳ Waiting for room selection...');
     return;
@@ -3904,33 +3901,50 @@ function autoFillMeters(){
   const yy=year%100;
   const key=`${yy}_${month}`;
   const psKey=`${year}_${month}`;
-
-  // Try METER_DATA first (window global, then localStorage fallback)
-  let d=null;
   const meterDataBuilding = getBuildingInfo(currentBuilding).firebaseBuilding;
-  const _md = (typeof METER_DATA!=='undefined' && METER_DATA)
-    || (() => { try { return JSON.parse(localStorage.getItem('METER_DATA')||'null'); } catch(e){ return null; } })();
-  if(_md&&_md[meterDataBuilding]&&_md[meterDataBuilding][key]){
-    const monthData=_md[meterDataBuilding][key];
-    d=monthData[roomId];
-  }
 
-  // If not in METER_DATA, check localStorage payment_status (recorded meter data)
-  if(!d){
-    const ps=JSON.parse(localStorage.getItem('payment_status')||'{}');
-    if(ps[psKey]&&ps[psKey][roomId]){
-      d=ps[psKey][roomId];
+  // Helper: fetch one meter doc from Firestore
+  async function fetchFirestoreDoc(building, yyVal, monthVal, room){
+    try {
+      if(!window.firebaseAuth?.currentUser) return null;
+      const db=window.firebase?.firestore?.();
+      const fs=window.firebase?.firestoreFunctions;
+      if(!db||!fs?.doc||!fs?.getDoc) return null;
+      const docId=`${building}_${yyVal}_${monthVal}_${room}`;
+      const snap=await fs.getDoc(fs.doc(db,'meter_data',docId));
+      return snap.exists()?snap.data():null;
+    } catch(e){
+      console.warn('Firestore meter fetch failed:',e.message);
+      return null;
     }
   }
 
-  // Normalize data structure - เพื่อให้ใช้ logic เดียวกัน
+  // Try METER_DATA (window global → localStorage)
+  const _md = (typeof METER_DATA!=='undefined' && METER_DATA)
+    || (() => { try { return JSON.parse(localStorage.getItem('METER_DATA')||'null'); } catch(e){ return null; } })();
+
+  let d=null;
+  if(_md&&_md[meterDataBuilding]&&_md[meterDataBuilding][key]){
+    d=_md[meterDataBuilding][key][roomId];
+  }
+
+  // Try localStorage payment_status
+  if(!d){
+    const ps=JSON.parse(localStorage.getItem('payment_status')||'{}');
+    if(ps[psKey]&&ps[psKey][roomId]) d=ps[psKey][roomId];
+  }
+
+  // Try Firestore for current month
+  if(!d){
+    d=await fetchFirestoreDoc(meterDataBuilding,yy,month,roomId);
+  }
+
   let meterData=null;
 
   if(d){
-    // Case 1: Current month has data
     meterData=d;
   } else {
-    // Case 2: Current month has no data, try previous month
+    // Try previous month as eOld baseline
     const prevMonth=month===1?12:month-1;
     const prevYear=month===1?year-1:year;
     const prevYy=prevYear%100;
@@ -3938,38 +3952,28 @@ function autoFillMeters(){
     const prevPsKey=`${prevYear}_${prevMonth}`;
     let prevD=null;
 
-    // Try previous month in METER_DATA (window global then localStorage fallback)
     if(_md&&_md[meterDataBuilding]&&_md[meterDataBuilding][prevKey]){
       prevD=_md[meterDataBuilding][prevKey][roomId];
     }
-
-    // If not found, try localStorage
     if(!prevD){
       const ps=JSON.parse(localStorage.getItem('payment_status')||'{}');
-      if(ps[prevPsKey]&&ps[prevPsKey][roomId]){
-        prevD=ps[prevPsKey][roomId];
-      }
+      if(ps[prevPsKey]&&ps[prevPsKey][roomId]) prevD=ps[prevPsKey][roomId];
+    }
+    if(!prevD){
+      prevD=await fetchFirestoreDoc(meterDataBuilding,prevYy,prevMonth,roomId);
     }
 
     if(prevD){
-      // Normalize: เลขเก่า = prev month ending, เลขใหม่ = empty
-      meterData={
-        eNew:'',           // Not recorded yet
-        eOld:prevD.eNew,   // Use previous month's ending
-        wNew:'',
-        wOld:prevD.wNew
-      };
+      meterData={eNew:'',eOld:prevD.eNew,wNew:'',wOld:prevD.wNew};
     }
   }
 
-  // Apply SAME logic for both cases
   if(meterData){
     document.getElementById('f-elec-new').value=(meterData.eNew!=null?meterData.eNew:'');
     document.getElementById('f-elec-old').value=(meterData.eOld!=null?meterData.eOld:'');
     document.getElementById('f-water-new').value=(meterData.wNew!=null?meterData.wNew:'');
     document.getElementById('f-water-old').value=(meterData.wOld!=null?meterData.wOld:'');
   } else {
-    // ไม่เจอ data เลย
     document.getElementById('f-elec-new').value='';
     document.getElementById('f-elec-old').value='';
     document.getElementById('f-water-new').value='';
