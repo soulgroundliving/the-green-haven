@@ -20,7 +20,7 @@ window._showPageImpl = function(page,btn){
   if(window.innerWidth <= 600){
     window._closeSidebarImpl();
   }
-  if(page==='dashboard'){setTimeout(initDashboardCharts,100);updateDashboardLive();}
+  if(page==='dashboard'){setTimeout(initDashboardCharts,100);updateDashboardLive();syncDashboardYearUI();}
   if(page==='property')initPropertyPage();
   if(page==='monthly')initMonthlyPage();
   if(page==='tenant')initTenantPage();
@@ -2512,18 +2512,26 @@ const availableYears = Object.keys(historicalData).map(y => parseInt(y)).sort((a
 let currentYear = '69';
 let chartRevenue,chartPie,chartYears,chartElec,chartWater,chartMS,chartCum;
 
+function syncDashboardYearUI(){
+  const yr = currentYear;
+  const isAll = yr==='all';
+  const isOldYear = yr==='67'||yr==='68';
+  // 3-year compare — all only
+  const cardYears = document.getElementById('card-years-compare');
+  if(cardYears) cardYears.style.display = isAll ? '' : 'none';
+  // Live-only cards + panels — all only
+  document.querySelectorAll('.kpi-live').forEach(el=>el.style.display=isAll?'':'none');
+  const livePanels = document.getElementById('dash-live-panels');
+  if(livePanels) livePanels.style.display = isAll ? 'grid' : 'none';
+  // Nest Building card — hide for 67/68 (not open yet)
+  document.querySelectorAll('.kpi-nest').forEach(el=>el.style.display=isOldYear?'none':'');
+}
+
 function setYear(yr,btn){
   document.querySelectorAll('#page-dashboard .year-tabs .year-tab').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   currentYear=yr;
-  const isAll = yr==='all';
-  // 3-year compare chart — all tab only
-  const cardYears = document.getElementById('card-years-compare');
-  if(cardYears) cardYears.style.display = isAll ? '' : 'none';
-  // Live-only cards (occupancy, paid now, expected, overdue) + panels
-  document.querySelectorAll('.kpi-live').forEach(el=>el.style.display=isAll?'':'none');
-  const livePanels = document.getElementById('dash-live-panels');
-  if(livePanels) livePanels.style.display = isAll ? 'grid' : 'none';
+  syncDashboardYearUI();
   updateDashboardLive();
   initDashboardCharts();
 }
