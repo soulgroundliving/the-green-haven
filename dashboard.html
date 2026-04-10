@@ -2372,37 +2372,37 @@
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
     <div class="card" style="background:#e3f2fd;border-left:4px solid var(--blue);">
-      <div class="card-title" style="color:#1565c0;">🏠 Studio (ชั้น 1-2)</div>
+      <div class="card-title" id="nest-daily-title" style="color:#1565c0;">📅 รายวัน</div>
       <div style="font-size:.88rem;line-height:2;">
-        <div>💰 ค่าเช่า: <strong>฿5,600/เดือน</strong></div>
-        <div>⚡ อัตราค่าไฟ: <strong>8 บาท/หน่วย</strong></div>
-        <div>💧 อัตราค่าน้ำ: <strong>20 บาท/หน่วย</strong></div>
-        <div>🗑️ ค่าขยะ: <strong>40 บาท/เดือน</strong></div>
+        <div>💰 ค่าเช่า: <strong id="nest-daily-rent">—</strong></div>
+        <div>⚡ อัตราค่าไฟ: <strong id="nest-daily-elec">—</strong></div>
+        <div>💧 อัตราค่าน้ำ: <strong id="nest-daily-water">—</strong></div>
+        <div>🗑️ ค่าขยะ: <strong id="nest-daily-trash">—</strong></div>
       </div>
     </div>
     <div class="card" style="background:#f3e5f5;border-left:4px solid var(--purple);">
-      <div class="card-title" style="color:#6a1b9a;">🐾 Pet Friendly (ชั้น 3-4)</div>
+      <div class="card-title" id="nest-studio-title" style="color:#6a1b9a;">🏠 Studio</div>
       <div style="font-size:.88rem;line-height:2;">
-        <div>💰 ค่าเช่า: <strong>฿5,900/เดือน</strong></div>
-        <div>⚡ อัตราค่าไฟ: <strong>8 บาท/หน่วย</strong></div>
-        <div>💧 อัตราค่าน้ำ: <strong>20 บาท/หน่วย</strong></div>
-        <div>🗑️ ค่าขยะ: <strong>40 บาท/เดือน</strong></div>
+        <div>💰 ค่าเช่า: <strong id="nest-studio-rent">—</strong></div>
+        <div>⚡ อัตราค่าไฟ: <strong id="nest-studio-elec">—</strong></div>
+        <div>💧 อัตราค่าน้ำ: <strong id="nest-studio-water">—</strong></div>
+        <div>🗑️ ค่าขยะ: <strong id="nest-studio-trash">—</strong></div>
       </div>
     </div>
     <div class="card" style="background:#fff3e0;border-left:4px solid var(--accent);">
-      <div class="card-title" style="color:#bf360c;">📅 รายวัน (ชั้น 1 บางส่วน)</div>
+      <div class="card-title" id="nest-pet-title" style="color:#bf360c;">🐾 Pet Friendly</div>
       <div style="font-size:.88rem;line-height:2;">
-        <div>💰 ค่าเช่ารายเดือน: <strong>฿5,600</strong></div>
-        <div>📍 ค่ารายวัน: <strong>~฿400/คืน</strong></div>
-        <div>🗑️ ค่าขยะ: <strong>40 บาท/เดือน</strong></div>
-        <div>📞 ห้อง: <strong>101, 102, 103</strong></div>
+        <div>💰 ค่าเช่า: <strong id="nest-pet-rent">—</strong></div>
+        <div>⚡ อัตราค่าไฟ: <strong id="nest-pet-elec">—</strong></div>
+        <div>💧 อัตราค่าน้ำ: <strong id="nest-pet-water">—</strong></div>
+        <div>🗑️ ค่าขยะ: <strong id="nest-pet-trash">—</strong></div>
       </div>
     </div>
     <div class="card" style="background:#f3e5f5;border-left:4px solid #9c27b0;">
-      <div class="card-title" style="color:#4a148c;">📊 รวมทั้งหมด (20 ห้อง)</div>
+      <div class="card-title" id="nest-total-title" style="color:#4a148c;">📊 รวมทั้งหมด</div>
       <div style="font-size:.88rem;line-height:2;">
-        <div>💰 รายได้เช่า: <strong>~฿115,000/เดือน</strong></div>
-        <div>👥 สัดส่วน: <strong>10 Studio + 10 Pet Friendly + 3 Daily</strong></div>
+        <div>💰 รายได้เช่า: <strong id="nest-total-income">—</strong></div>
+        <div>👥 สัดส่วน: <strong id="nest-total-breakdown">—</strong></div>
         <div>📍 ที่อยู่: <strong>Nest · เดอะ กรีน เฮฟเว่น (4 ชั้น)</strong></div>
         <div>✨ หมายเหตุ: <strong>ห้องพักแบบยุคใหม่ (Modern Co-Living)</strong></div>
       </div>
@@ -7660,6 +7660,9 @@ function initNestPage(){
   if(searchInput){
     searchInput.addEventListener('input', renderNestCompactGrid);
   }
+
+  // Update info cards from live RoomConfigManager data
+  updateNestInfoCards();
 }
 
 // ===== PROPERTY PAGE (COMBINED ROOMS & NEST) =====
@@ -7673,6 +7676,52 @@ function initPropertyPage(){
   updateShopInfoCard();
 }
 
+// ─── Dynamic Nest info cards — reads from RoomConfigManager ───
+function updateNestInfoCards() {
+  const nestConfig = (typeof RoomConfigManager !== 'undefined') ? RoomConfigManager.getRoomsConfig('nest') : null;
+  const rooms = nestConfig?.rooms?.filter(r => !r.deleted) || [];
+  if (!rooms.length) return;
+
+  const byType = { daily: [], studio: [], pet: [] };
+  rooms.forEach(r => { if (byType[r.type]) byType[r.type].push(r); });
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  const fmtRent  = v => v > 0 ? `฿${v.toLocaleString()}/เดือน` : '—';
+  const fmtElec  = v => v > 0 ? `${v} บาท/หน่วย` : '—';
+  const fmtWater = v => v > 0 ? `${v} บาท/หน่วย` : '—';
+  const fmtTrash = v => v > 0 ? `฿${v}/เดือน` : '—';
+  const floorStr = arr => [...new Set(arr.map(r => r.floor).filter(Boolean))].sort((a,b)=>a-b).join(', ');
+  const rep = arr => arr[0] || {};
+
+  const d = byType.daily, s = byType.studio, p = byType.pet;
+
+  const rd = rep(d);
+  set('nest-daily-title', `📅 รายวัน${d.length ? ' (' + d.length + ' ห้อง ชั้น ' + floorStr(d) + ')' : ''}`);
+  set('nest-daily-rent',  fmtRent(rd.rentPrice));
+  set('nest-daily-elec',  fmtElec(rd.electricRate));
+  set('nest-daily-water', fmtWater(rd.waterRate));
+  set('nest-daily-trash', fmtTrash(rd.trashRate));
+
+  const rs = rep(s);
+  set('nest-studio-title', `🏠 Studio${s.length ? ' (' + s.length + ' ห้อง ชั้น ' + floorStr(s) + ')' : ''}`);
+  set('nest-studio-rent',  fmtRent(rs.rentPrice));
+  set('nest-studio-elec',  fmtElec(rs.electricRate));
+  set('nest-studio-water', fmtWater(rs.waterRate));
+  set('nest-studio-trash', fmtTrash(rs.trashRate));
+
+  const rp = rep(p);
+  set('nest-pet-title', `🐾 Pet Friendly${p.length ? ' (' + p.length + ' ห้อง ชั้น ' + floorStr(p) + ')' : ''}`);
+  set('nest-pet-rent',  fmtRent(rp.rentPrice));
+  set('nest-pet-elec',  fmtElec(rp.electricRate));
+  set('nest-pet-water', fmtWater(rp.waterRate));
+  set('nest-pet-trash', fmtTrash(rp.trashRate));
+
+  const totalRent = rooms.reduce((a, r) => a + (r.rentPrice || 0), 0);
+  set('nest-total-title', `📊 รวมทั้งหมด (${rooms.length} ห้อง)`);
+  set('nest-total-income', `฿${totalRent.toLocaleString()}/เดือน`);
+  set('nest-total-breakdown', `${d.length} รายวัน + ${s.length} Studio + ${p.length} Pet Friendly`);
+}
+
 // ─── Dynamic shop info card — reads from RoomConfigManager ───
 function updateShopInfoCard() {
   const shopName = getShopRoomName();
@@ -7680,10 +7729,12 @@ function updateShopInfoCard() {
   const config = (typeof RoomConfigManager !== 'undefined') ? RoomConfigManager.getRoomsConfig('rooms') : null;
   const shopRoom = config?.rooms?.find(r => r.id === 'Amazon ☕');
 
-  const rent  = shopRoom?.rentPrice  || 0;
+  const rent  = shopRoom?.rentPrice   || 0;
   const elec  = shopRoom?.electricRate || 0;
-  const water = shopRoom?.waterRate  || 0;
-  const trash = shopRoom?.trashRate  || 0;
+  const water = shopRoom?.waterRate    || 0;
+  // trashRate may not be set in RoomConfigManager — fall back to ROOMS_OLD metadata
+  const shopMeta = (window.ROOMS_OLD || []).find(r => r.id === 'ร้านใหญ่');
+  const trash = shopRoom?.trashRate || shopMeta?.trashFee || 0;
 
   const titleEl = document.getElementById('shop-info-title');
   const rentEl  = document.getElementById('shop-info-rent');
