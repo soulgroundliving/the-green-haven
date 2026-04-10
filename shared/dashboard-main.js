@@ -2786,16 +2786,16 @@ async function initDashboardCharts(){
     }
   });
 
-  // Elec/Water charts: build from ALL years, filter by own value (not by total)
-  // so meter months show even if no billing import yet
-  const allYears = ['67','68','69'];
+  // Elec/Water charts: same year selection + same filter as table (mgt > 0)
+  // ensures charts always show identical months to what table shows
   const elecChartLabels=[], elecChartData=[], waterChartLabels=[], waterChartData=[];
-  allYears.forEach(y=>{
+  const utilYears = yr === 'all' ? ['67','68','69'] : [yr];
+  utilYears.forEach(y=>{
     (dataSource[y]?.months||[]).forEach((m,i)=>{
-      const lbl = MONTHS_TH[i+1]+"'"+(2500+parseInt(y)).toString().slice(-2);
-      const e = mv(m,1), w = mv(m,2);
-      if(e!=null && e>0){ elecChartLabels.push(lbl); elecChartData.push(e); }
-      if(w!=null && w>0){ waterChartLabels.push(lbl); waterChartData.push(w); }
+      if(!m || !(mgt(m)>0)) return;
+      const lbl = MONTHS_TH[i+1] + (utilYears.length>1 ? `'${y}` : '');
+      elecChartLabels.push(lbl); elecChartData.push(mv(m,1)||0);
+      waterChartLabels.push(lbl); waterChartData.push(mv(m,2)||0);
     });
   });
 
