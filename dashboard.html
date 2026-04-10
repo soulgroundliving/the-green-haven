@@ -6239,8 +6239,8 @@ function showToast(message, type = 'success', duration = 3000) {
   }, duration);
 }
 
-// Shop display name comes from RoomConfigManager room.name (id='Amazon ☕')
-// Edit via ⚙️ room config table → "ชื่อห้อง" column → auto-propagates everywhere
+// Shop room: id='ร้านใหญ่' (stable internal ID, same in RoomConfigManager & METER_DATA)
+// Display name (room.name) is editable via ⚙️ config table → "ชื่อห้อง" column
 
 function refreshPropertyPageIfActive() {
   const propPage = document.getElementById('page-property');
@@ -7700,8 +7700,8 @@ function updateNestInfoCards() {
 function updateShopInfoCard() {
   // Read live config from RoomConfigManager
   const config = (typeof RoomConfigManager !== 'undefined') ? RoomConfigManager.getRoomsConfig('rooms') : null;
-  const shopRoom = config?.rooms?.find(r => r.id === 'Amazon ☕');
-  const shopName = shopRoom?.name || 'ร้านค้า';  // use editable name field directly
+  const shopRoom = config?.rooms?.find(r => r.id === 'ร้านใหญ่');
+  const shopName = shopRoom?.name || 'ร้านใหญ่';  // use editable name field directly
 
   const rent  = shopRoom?.rentPrice   || 0;
   const elec  = shopRoom?.electricRate || 0;
@@ -7904,7 +7904,7 @@ function autoFillMeters(){
   const meterDataBuilding = getBuildingInfo(currentBuilding).firebaseBuilding;
   if(typeof METER_DATA!=='undefined'&&METER_DATA[meterDataBuilding]&&METER_DATA[meterDataBuilding][key]){
     const monthData=METER_DATA[meterDataBuilding][key];
-    const lookupId=roomId==='Amazon ☕'?'ร้านใหญ่':roomId;
+    const lookupId=roomId; // id is now 'ร้านใหญ่' in both RoomConfigManager & METER_DATA
     d=monthData[lookupId];
   }
 
@@ -7934,7 +7934,7 @@ function autoFillMeters(){
     // Try previous month in METER_DATA - use building-namespaced structure
     if(typeof METER_DATA!=='undefined'&&METER_DATA[meterDataBuilding]&&METER_DATA[meterDataBuilding][prevKey]){
       const monthData=METER_DATA[meterDataBuilding][prevKey];
-      const lookupId=roomId==='Amazon ☕'?'ร้านใหญ่':roomId;
+      const lookupId=roomId; // id is now 'ร้านใหญ่' in both RoomConfigManager & METER_DATA
       prevD=monthData[lookupId];
     }
 
@@ -8956,7 +8956,7 @@ function renderMeterTable(){
 
   const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
   const rows=rooms.map(r=>{
-    const lookupId=r.id==='Amazon ☕'?'ร้านใหญ่':r.id;
+    const lookupId=r.id; // id unified as 'ร้านใหญ่' in both systems
     // Read from building-namespaced METER_DATA (Rooms Building)
     const md=(typeof METER_DATA!=='undefined'&&METER_DATA['rooms']&&METER_DATA['rooms'][mdKey])?METER_DATA['rooms'][mdKey][lookupId]:null;
     const p=paid[r.id];
