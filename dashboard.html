@@ -2032,14 +2032,14 @@
     <div class="kpi-card" style="background:linear-gradient(135deg, #fce4ec, #e8f5e9); border-left: 4px solid #7b1fa2;"><div class="kpi-icon">🏢</div><div class="kpi-label">รายได้ Nest Building</div><div class="kpi-value" id="kpi-nest-total" style="color:#7b1fa2;">฿0</div><div class="kpi-sub" id="kpi-nest-sub">ยูนิตที่เปิดให้เช่า</div></div>
     <!-- Average Monthly -->
     <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
-    <!-- Occupancy Combined -->
-    <div class="kpi-card blue" style="cursor:pointer;" onclick="window.showPage('property',document.querySelector('[onclick*=\'property\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (รวม 2 อาคาร)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
-    <!-- Payment Status -->
-    <div class="kpi-card purple" style="cursor:pointer;" onclick="window.showPage('bill',document.querySelector('[onclick*=\'bill\']'))"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
-    <!-- Expected Revenue -->
-    <div class="kpi-card" style="background:linear-gradient(135deg, #e8f5e9, #f1f8e9); border-left: 4px solid #4caf50;"><div class="kpi-icon">📊</div><div class="kpi-label">รายได้คาดหวัง (เดือนนี้)</div><div class="kpi-value" id="kpi-expected" style="color:#2d8653;">฿0</div><div class="kpi-sub" id="kpi-expected-sub">จากห้องที่มีผู้เช่า</div></div>
-    <!-- Overdue -->
-    <div class="kpi-card" style="background:linear-gradient(135deg, #ffebee, #fce4ec); border-left: 4px solid #d32f2f;"><div class="kpi-icon">⚠️</div><div class="kpi-label">ค้างชำระทั้งสิ้น</div><div class="kpi-value" id="kpi-overdue" style="color:#d32f2f;">฿0</div><div class="kpi-sub" id="kpi-overdue-sub">รอชำระเงินค้าง</div></div>
+    <!-- Occupancy Combined — live only -->
+    <div class="kpi-card kpi-live blue" style="cursor:pointer;" onclick="window.showPage('property',document.querySelector('[onclick*=\'property\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (รวม 2 อาคาร)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
+    <!-- Payment Status — live only -->
+    <div class="kpi-card kpi-live purple" style="cursor:pointer;" onclick="window.showPage('bill',document.querySelector('[onclick*=\'bill\']'))"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
+    <!-- Expected Revenue — live only -->
+    <div class="kpi-card kpi-live" style="background:linear-gradient(135deg, #e8f5e9, #f1f8e9); border-left: 4px solid #4caf50;"><div class="kpi-icon">📊</div><div class="kpi-label">รายได้คาดหวัง (เดือนนี้)</div><div class="kpi-value" id="kpi-expected" style="color:#2d8653;">฿0</div><div class="kpi-sub" id="kpi-expected-sub">จากห้องที่มีผู้เช่า</div></div>
+    <!-- Overdue — live only -->
+    <div class="kpi-card kpi-live" style="background:linear-gradient(135deg, #ffebee, #fce4ec); border-left: 4px solid #d32f2f;"><div class="kpi-icon">⚠️</div><div class="kpi-label">ค้างชำระทั้งสิ้น</div><div class="kpi-value" id="kpi-overdue" style="color:#d32f2f;">฿0</div><div class="kpi-sub" id="kpi-overdue-sub">รอชำระเงินค้าง</div></div>
   </div>
   <div class="charts-grid">
     <div class="card"><div class="card-title">📈 รายได้รายเดือน (บาท)</div><div class="chart-wrap"><canvas id="chartRevenue"></canvas></div></div>
@@ -2078,8 +2078,8 @@
     <div class="card"><div class="card-title">⚡ ค่าไฟรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartElec"></canvas></div></div>
     <div class="card"><div class="card-title">💧 ค่าน้ำรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartWater"></canvas></div></div>
   </div>
-  <!-- Quick status panels -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
+  <!-- Quick status panels — live only -->
+  <div id="dash-live-panels" style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
     <div class="card">
       <div class="card-title">💳 สถานะการชำระเงินเดือนนี้</div>
       <div id="dashPaymentStatus" style="min-height:70px;"></div>
@@ -4058,7 +4058,7 @@
 
 <!-- Toggle Button for Firebase Panel - REMOVED FOR PRODUCTION (was blocking content on scroll) -->
 
-<script src="./shared/dashboard-main.js?v=20260411h"></script>
+<script src="./shared/dashboard-main.js?v=20260411i"></script>
 
 <!-- ===== PAYMENT DETAIL MODAL ===== -->
 <div class="pay-modal-overlay" id="payModalOverlay" onclick="if(event.target===this)closePayModal()">
