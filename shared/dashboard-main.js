@@ -2516,7 +2516,9 @@ function setYear(yr,btn){
   document.querySelectorAll('#page-dashboard .year-tabs .year-tab').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   currentYear=yr;
-  updateDashboardLive();  // Update KPI values when year changes
+  const cardYears = document.getElementById('card-years-compare');
+  if(cardYears) cardYears.style.display = yr==='all' ? '' : 'none';
+  updateDashboardLive();
   initDashboardCharts();
 }
 
