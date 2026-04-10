@@ -3905,13 +3905,14 @@ function autoFillMeters(){
   const key=`${yy}_${month}`;
   const psKey=`${year}_${month}`;
 
-  // Try METER_DATA first (static file) - use building-namespaced structure
+  // Try METER_DATA first (window global, then localStorage fallback)
   let d=null;
   const meterDataBuilding = getBuildingInfo(currentBuilding).firebaseBuilding;
-  if(typeof METER_DATA!=='undefined'&&METER_DATA[meterDataBuilding]&&METER_DATA[meterDataBuilding][key]){
-    const monthData=METER_DATA[meterDataBuilding][key];
-    const lookupId=roomId; // id is now 'ร้านใหญ่' in both RoomConfigManager & METER_DATA
-    d=monthData[lookupId];
+  const _md = (typeof METER_DATA!=='undefined' && METER_DATA)
+    || (() => { try { return JSON.parse(localStorage.getItem('METER_DATA')||'null'); } catch(e){ return null; } })();
+  if(_md&&_md[meterDataBuilding]&&_md[meterDataBuilding][key]){
+    const monthData=_md[meterDataBuilding][key];
+    d=monthData[roomId];
   }
 
   // If not in METER_DATA, check localStorage payment_status (recorded meter data)
@@ -3937,11 +3938,9 @@ function autoFillMeters(){
     const prevPsKey=`${prevYear}_${prevMonth}`;
     let prevD=null;
 
-    // Try previous month in METER_DATA - use building-namespaced structure
-    if(typeof METER_DATA!=='undefined'&&METER_DATA[meterDataBuilding]&&METER_DATA[meterDataBuilding][prevKey]){
-      const monthData=METER_DATA[meterDataBuilding][prevKey];
-      const lookupId=roomId; // id is now 'ร้านใหญ่' in both RoomConfigManager & METER_DATA
-      prevD=monthData[lookupId];
+    // Try previous month in METER_DATA (window global then localStorage fallback)
+    if(_md&&_md[meterDataBuilding]&&_md[meterDataBuilding][prevKey]){
+      prevD=_md[meterDataBuilding][prevKey][roomId];
     }
 
     // If not found, try localStorage
@@ -4368,9 +4367,39 @@ function enableReceiptBtn(){
 // ===== PROMPTPAY QR =====
 let PROMPTPAY_NUMBER = (typeof SecureConfig !== 'undefined' ? localStorage.getItem(SecureConfig.promptpay.storageKey) : localStorage.getItem('promptpay')) || '';
 
-// Removed: buildPromptPayPayload() and savePromptPay() - PromptPay not used in payment verification page
+function savePromptPay(){
+  const v=(document.getElementById('pp-input')?.value||'').trim();
+  PROMPTPAY_NUMBER=v;
+  localStorage.setItem('promptpay',v);
+  const st=document.getElementById('pp-status');
+  if(st)st.textContent=v?'✅ บันทึกแล้ว':'';
+}
 
-// Removed: renderQR() - PromptPay QR not used, using SlipOK instead
+function buildPromptPayPayload(phone,amount){
+  const s=phone.replace(/[^0-9]/g,'');
+  const t=s.startsWith('0')?'0066'+s.slice(1):s;
+  const aid='0016A000000677010111'+'01'+String(t.length).padStart(2,'0')+t;
+  const a=amount.toFixed(2);
+  let p='000201'+'010212'+'29'+String(aid.length).padStart(2,'0')+aid+'5303764'+'54'+String(a.length).padStart(2,'0')+a+'5802TH'+'6304';
+  let c=0xFFFF;
+  for(let i=0;i<p.length;i++){c^=p.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=(c&0x8000)?((c<<1)^0x1021):(c<<1);}
+  return p+(c&0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+}
+
+function renderQR(elementId,amount){
+  const el=document.getElementById(elementId);
+  if(!el)return;
+  if(!PROMPTPAY_NUMBER){el.style.display='none';return;}
+  try{
+    const payload=buildPromptPayPayload(PROMPTPAY_NUMBER,amount);
+    const wrap=document.createElement('div');
+    new QRCode(wrap,{text:payload,width:160,height:160,correctLevel:QRCode.CorrectLevel.M});
+    setTimeout(()=>{
+      const src=wrap.querySelector('canvas')?.toDataURL()||wrap.querySelector('img')?.src||'';
+      el.src=src; el.style.display=src?'block':'none';
+    },120);
+  }catch(e){console.warn('QR generation failed:',e);el.style.display='none';}
+}
 
 let isGeneratingInvoice = false; // Prevent rapid clicks
 function generateInvoice(){
