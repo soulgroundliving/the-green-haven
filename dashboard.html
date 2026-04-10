@@ -545,27 +545,27 @@
   .card:hover{box-shadow:var(--shadow-hover);}
   .card-title{font-size:.82rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.75rem;}
 
-  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.1rem;margin-bottom:1.4rem;}
-  .kpi-card{background:var(--card);border-radius:var(--radius);padding:1.2rem 1.4rem;box-shadow:var(--shadow);
-    display:flex;flex-direction:column;gap:5px;border-left:4px solid transparent;transition:all .2s;}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1rem;}
+  .kpi-card{background:var(--card);border-radius:var(--radius);padding:.8rem 1rem;box-shadow:var(--shadow);
+    display:flex;flex-direction:column;gap:3px;border-left:4px solid transparent;transition:all .2s;}
   .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);}
   .kpi-card.green{border-color:var(--green);}
   .kpi-card.amber{border-color:var(--accent);}
   .kpi-card.blue{border-color:var(--blue);}
   .kpi-card.purple{border-color:var(--purple);}
-  .kpi-label{font-size:.78rem;color:var(--text-muted);font-weight:500;}
-  .kpi-value{font-size:1.75rem;font-weight:800;line-height:1;}
+  .kpi-label{font-size:.72rem;color:var(--text-muted);font-weight:500;}
+  .kpi-value{font-size:1.45rem;font-weight:800;line-height:1;}
   .kpi-value.green{color:var(--green);}
   .kpi-value.amber{color:var(--accent);}
   .kpi-value.blue{color:var(--blue);}
   .kpi-value.purple{color:var(--purple);}
-  .kpi-sub{font-size:.75rem;color:var(--text-muted);}
+  .kpi-sub{font-size:.7rem;color:var(--text-muted);}
   .kpi-icon{font-size:1.4rem;margin-bottom:1px;}
 
-  .charts-grid{display:grid;grid-template-columns:2fr 1fr;gap:1.1rem;margin-bottom:1.4rem;}
-  .charts-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;margin-bottom:1.4rem;}
-  .chart-wrap{position:relative;height:260px;}
-  .chart-wrap-sm{position:relative;height:200px;}
+  .charts-grid{display:grid;grid-template-columns:2fr 1fr;gap:.7rem;margin-bottom:1rem;}
+  .charts-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.7rem;margin-bottom:1rem;}
+  .chart-wrap{position:relative;height:200px;}
+  .chart-wrap-sm{position:relative;height:160px;}
 
   .section-title{font-size:1.05rem;font-weight:700;color:var(--green-dark);margin-bottom:1.1rem;
     padding-bottom:.55rem;border-bottom:2px solid var(--green-pale);display:flex;align-items:center;gap:8px;}
@@ -884,14 +884,14 @@
   .proj-label{font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:5px;}
   .proj-value{font-size:1.45rem;font-weight:800;}
 
-  .insights-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;margin-bottom:1.3rem;}
-  .insight-card{border-radius:var(--radius);padding:1.15rem;border-left:4px solid;}
+  .insights-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;margin-bottom:1rem;}
+  .insight-card{border-radius:var(--radius);padding:.75rem 1rem;border-left:4px solid;}
   .insight-card.green{background:var(--green-pale);border-color:var(--green);}
   .insight-card.amber{background:var(--accent-light);border-color:var(--accent);}
   .insight-card.blue{background:var(--blue-pale);border-color:var(--blue);}
-  .insight-title{font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:5px;}
-  .insight-value{font-size:1.4rem;font-weight:800;color:var(--text);}
-  .insight-detail{font-size:.78rem;color:var(--text-muted);margin-top:3px;}
+  .insight-title{font-size:.72rem;font-weight:700;color:var(--text-muted);margin-bottom:3px;}
+  .insight-value{font-size:1.2rem;font-weight:800;color:var(--text);}
+  .insight-detail{font-size:.72rem;color:var(--text-muted);margin-top:2px;}
 
   .scroll-x{overflow-x:auto;}
 
@@ -2017,7 +2017,7 @@
 
   <!-- OVERVIEW TAB -->
   <div id="dashboard-overview-tab" class="dashboard-tab-content active">
-  <div class="year-tabs" style="margin-bottom:1rem;">
+  <div class="year-tabs" style="margin-bottom:.6rem;">
     <span class="year-tab-label">ปีงบประมาณ:</span>
     <button class="year-tab" onclick="setYear('all',this)">ทั้งหมด</button>
     <button class="year-tab" onclick="setYear('67',this)">2567 (2024)</button>
@@ -2052,10 +2052,10 @@
   </div>
 
   <!-- ย้อนหลัง 6 เดือน -->
-  <div class="card" style="margin-bottom:1.4rem;">
+  <div class="card" style="margin-bottom:1rem;">
     <div class="card-title" id="dash-last6-title">📅 รายได้ย้อนหลัง 12 เดือน (ล่าสุด)</div>
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+    <div style="overflow-x:auto;max-height:220px;overflow-y:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
         <thead>
           <tr style="background:var(--green-pale);color:var(--green-dark);">
             <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">เดือน</th>
@@ -2079,7 +2079,7 @@
     <div class="card"><div class="card-title">💧 ค่าน้ำรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartWater"></canvas></div></div>
   </div>
   <!-- Quick status panels -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.4rem;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
     <div class="card">
       <div class="card-title">💳 สถานะการชำระเงินเดือนนี้</div>
       <div id="dashPaymentStatus" style="min-height:70px;"></div>
