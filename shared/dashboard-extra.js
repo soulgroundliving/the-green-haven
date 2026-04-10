@@ -1,0 +1,4021 @@
+// ===== Password Change Modal Functions =====
+function openChangePasswordModal() {
+  document.getElementById('changePasswordModal').style.display = 'flex';
+  document.getElementById('oldPassword').focus();
+}
+
+function closeChangePasswordModal() {
+  document.getElementById('changePasswordModal').style.display = 'none';
+  document.getElementById('oldPassword').value = '';
+  document.getElementById('newPassword').value = '';
+  document.getElementById('confirmPassword').value = '';
+}
+
+async function changePassword() {
+  const oldPassword = document.getElementById('oldPassword').value;
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    showToast('กรุณากรอกรหัสผ่านทั้งหมด', 'warning');
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    showToast('รหัสผ่านใหม่ไม่ตรงกัน', 'warning');
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    showToast('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร', 'warning');
+    return;
+  }
+
+  try {
+    const user = window.auth.currentUser;
+    if (!user) {
+      showToast('ไม่พบบัญชีผู้ใช้', 'warning');
+      return;
+    }
+
+    // Reauthenticate
+    const credential = window.firebaseAuthFunctions.EmailAuthProvider?.credential(user.email, oldPassword);
+    if (!credential) {
+      showToast('อีเมลหรือรหัสผ่านเก่าไม่ถูกต้อง', 'warning');
+      return;
+    }
+
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPassword);
+
+    // Log audit
+    const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+    const audit = {
+      timestamp: new Date().toISOString(),
+      action: 'PASSWORD_CHANGED',
+      userId: user.uid,
+      userEmail: user.email,
+      userType: tenantData.userType
+    };
+
+    const auditLog = JSON.parse(localStorage.getItem('auditLog') || '[]');
+    auditLog.push(audit);
+    localStorage.setItem('auditLog', JSON.stringify(auditLog));
+
+    showToast('เปลี่ยนรหัสผ่านสำเร็จ', 'success');
+    closeChangePasswordModal();
+    setTimeout(() => handleLogout(), 1500);
+  } catch (error) {
+    console.error('Password change error:', error);
+    showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+  }
+}
+
+// ===== Password Visibility Toggle (Inline) =====
+function togglePasswordVisibility(fieldId) {
+  const input = document.getElementById(fieldId);
+  const icon = document.getElementById(`icon-${fieldId}`);
+
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.textContent = '🙈';  // Now visible, show closed eye to close
+  } else {
+    input.type = 'password';
+    icon.textContent = '👁️';  // Now hidden, show open eye to open
+  }
+}
+
+// Close modal when clicking outside
+document.addEventListener('DOMContentLoaded', function() {
+  const changePasswordModal = document.getElementById('changePasswordModal');
+  if (changePasswordModal) {
+    changePasswordModal.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeChangePasswordModal();
+      }
+    });
+  }
+
+  // Initialize room status colors
+  updateRoomStatuses();
+});
+
+// ===== Room Status Color System =====
+function getRoomStatus(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenants = tenantData.tenants || {};
+  const tenant = tenants[roomId];
+
+  // No tenant = vacant
+  if (!tenant || !tenant.name) {
+    return 'vacant';
+  }
+
+  // Check for overdue payments
+  const invoices = tenantData.invoices || [];
+  const roomInvoices = invoices.filter(inv => inv.roomId === roomId);
+  const overdueInvoices = roomInvoices.filter(inv => {
+    if (inv.status === 'paid') return false;
+    const dueDate = new Date(inv.dueDate);
+    return new Date() > dueDate;
+  });
+
+  if (overdueInvoices.length > 0) {
+    return 'overdue';
+  }
+
+  // Check for expiring lease (< 30 days remaining)
+  if (tenant.contractEnd) {
+    const endDate = new Date(tenant.contractEnd);
+    const today = new Date();
+    const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+    if (daysLeft > 0 && daysLeft <= 30) {
+      return 'expiring';
+    }
+  }
+
+  // Has tenant and paying = occupied
+  return 'occupied';
+}
+
+// ===== Payment Status System =====
+function getPaymentStatus(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const invoices = tenantData.invoices || [];
+  const tenant = tenantData.tenants?.[roomId];
+
+  // No tenant = no payment status
+  if (!tenant || !tenant.name) {
+    return null;
+  }
+
+  // Get room's invoices
+  const roomInvoices = invoices.filter(inv => inv.roomId === roomId);
+  if (roomInvoices.length === 0) {
+    return null;
+  }
+
+  const today = new Date();
+
+  // Check for any overdue invoices (unpaid and past due date)
+  const overdueInvoices = roomInvoices.filter(inv => {
+    if (inv.status === 'paid') return false;
+    const dueDate = new Date(inv.dueDate);
+    return today > dueDate;
+  });
+
+  if (overdueInvoices.length > 0) {
+    return 'overdue';
+  }
+
+  // Check for unpaid invoices (pending payment)
+  const unpaidInvoices = roomInvoices.filter(inv => inv.status !== 'paid');
+  if (unpaidInvoices.length > 0) {
+    return 'pending';
+  }
+
+  // All invoices are paid
+  return 'paid';
+}
+
+// ===== Room Color Status Function =====
+function getRoomColorStatus(roomId, room) {
+  const allTenants = loadTenants();
+  const tenant = allTenants[roomId];
+
+  // Vacant = gray
+  if (!tenant || !tenant.name) {
+    return { color: '#e0e0e0', icon: '⚪', label: 'ว่าง' };
+  }
+
+  // Check payment status
+  const paymentStatus = getPaymentStatus(roomId);
+  if (paymentStatus === 'overdue') {
+    return { color: '#d32f2f', icon: '🔴', label: 'ค้าง' };
+  }
+
+  // Check contract expiry (within 30 days)
+  const today = new Date();
+  const in30 = new Date(today.getTime() + 30*86400000);
+  if (tenant.contractEnd) {
+    const exp = new Date(tenant.contractEnd);
+    if (exp > today && exp <= in30) {
+      return { color: '#fbc02d', icon: '🟡', label: 'ใกล้หมด' };
+    }
+  }
+
+  // Occupied with good payment = green
+  return { color: '#4caf50', icon: '🟢', label: 'มี' };
+}
+
+// ===== Get Payment Info Function =====
+function getPaymentInfo(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const invoices = tenantData.invoices || [];
+  const roomInvoices = invoices.filter(inv => inv.roomId === roomId);
+
+  let nextDueDate = null;
+  let overdueAmount = 0;
+
+  if (roomInvoices.length > 0) {
+    const today = new Date();
+
+    // Find the next unpaid invoice
+    const unpaidInvoices = roomInvoices.filter(inv => inv.status !== 'paid');
+    if (unpaidInvoices.length > 0) {
+      // Sort by due date and get the earliest
+      unpaidInvoices.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+      nextDueDate = unpaidInvoices[0].dueDate;
+    }
+
+    // Calculate overdue amount
+    const overdueInvoices = roomInvoices.filter(inv => {
+      if (inv.status === 'paid') return false;
+      const dueDate = new Date(inv.dueDate);
+      return today > dueDate;
+    });
+
+    overdueAmount = overdueInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+  }
+
+  return { nextDueDate, overdueAmount };
+}
+
+// ===== Quick Action Functions =====
+function viewContract(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenant = tenantData[roomId];
+
+  if (!tenant || !tenant.name) {
+    showToast('ไม่มีข้อมูลผู้เช่า', 'error');
+    return;
+  }
+
+  const contractStart = tenant.contractStart || '—';
+  const contractEnd = tenant.contractEnd || '—';
+  const moveInDate = tenant.moveInDate || '—';
+
+  const contractInfo = `
+📄 สัญญาเช่า — ห้อง ${roomId}
+
+👤 ชื่อผู้เช่า: ${tenant.name}
+📱 โทรศัพท์: ${tenant.phone || '—'}
+🆔 เลขประชาชน: ${tenant.idNumber || '—'}
+
+📅 วันเข้าพัก: ${new Date(moveInDate).toLocaleDateString('th-TH') || '—'}
+📅 วันเริ่มสัญญา: ${new Date(contractStart).toLocaleDateString('th-TH') || '—'}
+📅 วันสิ้นสุดสัญญา: ${new Date(contractEnd).toLocaleDateString('th-TH') || '—'}
+
+💰 ค่าเช่า: ฿${tenant.rent?.toLocaleString() || '—'}
+💵 มัดจำ: ฿${tenant.deposit?.toLocaleString() || '0'}
+
+📝 หมายเหตุ: ${tenant.notes || 'ไม่มี'}
+  `;
+
+  // Show dialog with option to view document
+  if (tenant.contractDocument) {
+    const viewDoc = confirm(contractInfo + '\n\n✅ มีไฟล์สัญญาอยู่\n\nคลิก "ตกลง" เพื่อแสดงเอกสาร');
+    if (viewDoc) {
+      showContractDocument(roomId, tenant);
+    }
+  } else {
+    showToast('ยังไม่มีไฟล์สัญญา', 'warning');
+  }
+}
+
+/**
+ * Display contract document in a modal/window
+ */
+/**
+ * Preview contract document from modal button click
+ */
+function previewContractDocument(building, roomId) {
+  // Support both old signature (single param) and new signature (building, roomId)
+  if (typeof building === 'string' && !roomId) {
+    roomId = building;
+    building = currentEditBuilding || detectBuildingFromRoomId(roomId);
+  }
+
+  // Try to get tenant from TenantConfigManager first
+  let tenant = null;
+  if (currentEditTenantId && typeof TenantConfigManager !== 'undefined') {
+    tenant = TenantConfigManager.getTenant(building, currentEditTenantId);
+  }
+
+  // Fallback to legacy tenant_data
+  if (!tenant) {
+    const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+    tenant = tenantData[roomId];
+  }
+
+  if (!tenant || !tenant.contractDocument) {
+    showToast('ไม่มีไฟล์สัญญา', 'error');
+    return;
+  }
+
+  showContractDocument(roomId, tenant);
+}
+
+/**
+ * Delete contract document
+ */
+function deleteContractDocument(building, roomId) {
+  // Support both old signature (single param) and new signature (building, roomId)
+  if (typeof building === 'string' && !roomId) {
+    roomId = building;
+    building = currentEditBuilding || detectBuildingFromRoomId(roomId);
+  }
+
+  if (!confirm('❓ คุณแน่ใจหรือว่าต้องการลบไฟล์สัญญา?\n\nการดำเนินการนี้ไม่สามารถยกเลิกได้')) {
+    return;
+  }
+
+  // Delete from TenantConfigManager
+  if (currentEditTenantId && typeof TenantConfigManager !== 'undefined') {
+    const tenant = TenantConfigManager.getTenant(building, currentEditTenantId);
+    if (tenant) {
+      TenantConfigManager.updateTenant(building, currentEditTenantId, {
+        contractDocument: '',
+        contractFileName: ''
+      });
+    }
+  }
+
+  // Also delete from legacy tenant_data for compatibility
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  if (tenantData[roomId]) {
+    tenantData[roomId].contractDocument = '';
+    tenantData[roomId].contractFileName = '';
+    localStorage.setItem('tenant_data', JSON.stringify(tenantData));
+  }
+
+  // Delete from lease if exists
+  const lease = LeaseAgreementManager.getActiveLease(building, roomId);
+  if (lease) {
+    LeaseAgreementManager.updateLease(lease.id, {
+      contractDocument: '',
+      contractFileName: ''
+    });
+  }
+
+  // Update UI
+  document.getElementById('modalContractDocument').value = '';
+  document.getElementById('modalContractFileName').value = '';
+  document.getElementById('contractDocStatus').textContent = '';
+
+  showToast('ลบไฟล์สัญญาแล้ว', 'success');
+}
+
+function showContractDocument(roomId, tenant) {
+  if (!tenant.contractDocument) {
+    showToast('ไม่มีไฟล์สัญญา', 'error');
+    return;
+  }
+
+  // Create a modal to display the document
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  `;
+
+  const container = document.createElement('div');
+  container.style.cssText = `
+    background: white;
+    border-radius: 12px;
+    max-width: 95%;
+    max-height: 90%;
+    width: 800px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  `;
+
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = `
+    padding: 20px;
+    border-bottom: 2px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  `;
+  header.innerHTML = `
+    <h2 style="margin:0;color:#333;">📄 สัญญาเช่า - ห้อง ${roomId} (${tenant.name})</h2>
+    <button onclick="this.closest('[data-modal]').remove()" style="background:#f0f0f0;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:600;">✕ ปิด</button>
+  `;
+
+  // Content
+  const content = document.createElement('div');
+  content.style.cssText = `
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+    background: #f9f9f9;
+  `;
+
+  // Check if it's a PDF or image
+  if (tenant.contractDocument.startsWith('data:application/pdf')) {
+    // Display PDF
+    const iframe = document.createElement('iframe');
+    iframe.src = tenant.contractDocument;
+    iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+    content.appendChild(iframe);
+  } else if (tenant.contractDocument.startsWith('data:image')) {
+    // Display image
+    const img = document.createElement('img');
+    img.src = tenant.contractDocument;
+    img.style.cssText = 'max-width: 100%; max-height: 100%; object-fit: contain;';
+    content.appendChild(img);
+  } else {
+    content.innerHTML = '<p style="color:#666;">ไม่สามารถแสดงไฟล์นี้</p>';
+  }
+
+  // Footer
+  const footer = document.createElement('div');
+  footer.style.cssText = `
+    padding: 15px 20px;
+    background: white;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    gap: 10px;
+  `;
+  footer.innerHTML = `
+    <button onclick="downloadContractAsFile('${roomId}', '${tenant.name}')" style="flex:1;padding:12px;background:#1976d2;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">⬇️ ดาวน์โหลด</button>
+    <button onclick="this.closest('[data-modal]').remove()" style="flex:1;padding:12px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;font-weight:600;">ปิด</button>
+  `;
+
+  container.appendChild(header);
+  container.appendChild(content);
+  container.appendChild(footer);
+  modal.appendChild(container);
+  modal.setAttribute('data-modal', 'true');
+  document.body.appendChild(modal);
+
+  // Close on background click
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) modal.remove();
+  });
+}
+
+/**
+ * Download contract document
+ */
+function downloadContractAsFile(roomId, tenantName) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenant = tenantData[roomId];
+
+  if (!tenant || !tenant.contractDocument) {
+    showToast('ไม่มีไฟล์สัญญา', 'error');
+    return;
+  }
+
+  // Create download link
+  const link = document.createElement('a');
+  link.href = tenant.contractDocument;
+  link.download = `contract_room${roomId}_${tenantName.replace(/\s+/g, '_')}.pdf`;
+  link.click();
+}
+
+function recordPayment(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenant = tenantData.tenants?.[roomId];
+
+  if (!tenant || !tenant.name) {
+    showToast('ไม่มีข้อมูลผู้เช่า', 'error');
+    return;
+  }
+
+  const amount = prompt(`💰 บันทึกค่าเช่า — ห้อง ${roomId}\n\nชื่อผู้เช่า: ${tenant.name}\nค่าเช่า: ฿${tenant.rent?.toLocaleString() || '0'}\n\nกรุณาระบุจำนวนเงินที่ชำระ:`);
+
+  if (amount === null) return;
+
+  const paymentAmount = parseFloat(amount);
+  if (isNaN(paymentAmount) || paymentAmount <= 0) {
+    showToast('กรุณาใส่จำนวนเงินที่ถูกต้อง', 'error');
+    return;
+  }
+
+  // Record payment in invoices
+  const invoices = tenantData.invoices || [];
+  const roomInvoices = invoices
+    .filter(inv => inv.roomId === roomId && inv.status !== 'paid')
+    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+  if (roomInvoices.length === 0) {
+    showToast('ไม่มีใบแจ้งหนี้ที่รอชำระ', 'success');
+    return;
+  }
+
+  let remainingAmount = paymentAmount;
+  roomInvoices.forEach(inv => {
+    if (remainingAmount <= 0) return;
+
+    const invoiceAmount = inv.amount;
+    if (remainingAmount >= invoiceAmount) {
+      inv.status = 'paid';
+      inv.paidDate = new Date().toISOString().split('T')[0];
+      remainingAmount -= invoiceAmount;
+    } else {
+      inv.amount -= remainingAmount;
+      inv.paidAmount = (inv.paidAmount || 0) + remainingAmount;
+      remainingAmount = 0;
+    }
+  });
+
+  // Save to localStorage
+  tenantData.invoices = invoices;
+  localStorage.setItem('tenant_data', JSON.stringify(tenantData));
+
+  showToast(`บันทึกการชำระเงินสำเร็จ จำนวนเงินที่ชำระ: ฿${paymentAmount.toLocaleString()}`, 'success');
+
+  // Refresh the display
+  renderCompactRoomGrid();
+}
+
+function viewBills(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const invoices = (tenantData.invoices || []).filter(inv => inv.roomId === roomId);
+
+  if (invoices.length === 0) {
+    showToast(`ไม่มีบิลสำหรับห้อง ${roomId}`, 'warning');
+    return;
+  }
+
+  let billInfo = `📋 บิล — ห้อง ${roomId}\n\n`;
+  invoices.forEach(inv => {
+    const dueDate = new Date(inv.dueDate).toLocaleDateString('th-TH');
+    const paidDate = inv.paidDate ? new Date(inv.paidDate).toLocaleDateString('th-TH') : '—';
+    const status = inv.status === 'paid' ? '✅ จ่ายแล้ว' : '⏳ รอจ่าย';
+    billInfo += `${dueDate} | ฿${inv.amount.toLocaleString()} | ${status} | ${paidDate}\n`;
+  });
+
+  showToast(billInfo, 'warning');
+}
+
+function reportMaintenance(roomId) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenant = tenantData.tenants?.[roomId];
+
+  if (!tenant || !tenant.name) {
+    showToast('ไม่มีข้อมูลผู้เช่า', 'error');
+    return;
+  }
+
+  const issue = prompt(`🔧 แจ้งซ่อม — ห้อง ${roomId}\n\nชื่อผู้เช่า: ${tenant.name}\n\nกรุณาอธิบายปัญหา:`);
+
+  if (issue === null || !issue.trim()) return;
+
+  // Record maintenance request
+  const maintenanceReports = tenantData.maintenanceReports || [];
+  maintenanceReports.push({
+    id: Date.now().toString(),
+    roomId: roomId,
+    tenantName: tenant.name,
+    issue: issue,
+    date: new Date().toISOString().split('T')[0],
+    status: 'pending',
+    phone: tenant.phone || '—'
+  });
+
+  tenantData.maintenanceReports = maintenanceReports;
+  localStorage.setItem('tenant_data', JSON.stringify(tenantData));
+
+  showToast(`บันทึกการแจ้งซ่อมสำเร็จ เรื่อง: ${issue} วันที่แจ้ง: ${new Date().toLocaleDateString('th-TH')}`, 'success');
+}
+
+function updateRoomStatuses() {
+  const roomPills = document.querySelectorAll('.new-room-pill');
+
+  roomPills.forEach(pill => {
+    const roomNum = pill.querySelector('.nr-num')?.textContent || '';
+    const roomId = 'N' + roomNum;
+    const status = getRoomStatus(roomId);
+
+    // Remove all status classes
+    pill.classList.remove('occupied', 'vacant', 'overdue', 'expiring');
+
+    // Add current status class
+    pill.classList.add(status);
+  });
+}
+
+// Update room statuses when tenant data changes
+window.updateRoomStatuses = updateRoomStatuses;
+
+// ===== Occupancy Dashboard =====
+function calculateOccupancy(buildingType = null) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenants = tenantData.tenants || {};
+
+  // Use RoomConfigManager to get dynamic room list
+  const building = buildingType === 'nest' ? 'nest' : 'rooms';
+  const config = RoomConfigManager.getRoomsConfig(building);
+  const rooms = config.rooms
+    .filter(r => !r.deleted)
+    .map(r => r.id);
+
+  const occupied = rooms.filter(r => tenants[r] && tenants[r].name).length;
+  const vacant = rooms.length - occupied;
+  const rate = rooms.length > 0 ? Math.round((occupied / rooms.length) * 100) : 0;
+
+  const result = {
+    total: rooms.length,
+    occupied: occupied,
+    vacant: vacant,
+    rate: rate
+  };
+
+  console.log(`Occupancy for ${buildingType || 'old'}: ${result.total} total, ${result.occupied} occupied, ${result.vacant} vacant`);
+  return result;
+}
+
+// Export to window for global access
+window.calculateOccupancy = calculateOccupancy;
+
+function updateOccupancyDashboard() {
+  // Update Old Building (page-property - rooms section)
+  const oldMetrics = calculateOccupancy('old');
+  document.getElementById('occupancy-total').textContent = oldMetrics.total;
+  document.getElementById('occupancy-occupied').textContent = oldMetrics.occupied;
+  document.getElementById('occupancy-vacant').textContent = oldMetrics.vacant;
+  document.getElementById('occupancy-rate').textContent = oldMetrics.rate + '%';
+
+  // Update Nest Building (page-property - nest section)
+  const nestMetrics = calculateOccupancy('nest');
+  document.getElementById('nest-occupancy-total').textContent = nestMetrics.total;
+  document.getElementById('nest-occupancy-occupied').textContent = nestMetrics.occupied;
+  document.getElementById('nest-occupancy-vacant').textContent = nestMetrics.vacant;
+  document.getElementById('nest-occupancy-rate').textContent = nestMetrics.rate + '%';
+}
+
+// ===== Lease Expiry Alerts =====
+function getExpiringLeases(buildingType = null) {
+  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+  const tenants = tenantData.tenants || {};
+
+  // Use RoomConfigManager to get dynamic room list
+  const building = buildingType === 'nest' ? 'nest' : 'rooms';
+  const config = RoomConfigManager.getRoomsConfig(building);
+  const rooms = config.rooms
+    .filter(r => !r.deleted)
+    .map(r => r.id);
+
+  const today = new Date();
+  const expiringLeases = [];
+
+  rooms.forEach(roomId => {
+    const tenant = tenants[roomId];
+    if (!tenant || !tenant.name || !tenant.contractEnd) return;
+
+    const endDate = new Date(tenant.contractEnd);
+    const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+    if (daysLeft > 0 && daysLeft <= 30) {
+      expiringLeases.push({
+        roomId: roomId,
+        tenantName: tenant.name,
+        endDate: tenant.contractEnd,
+        daysLeft: daysLeft
+      });
+    }
+  });
+
+  // Sort by days left (closest first)
+  return expiringLeases.sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
+function updateLeaseExpiryAlerts() {
+  // Update Old Building alerts
+  const oldExpiringLeases = getExpiringLeases('old');
+  const oldAlertsDiv = document.getElementById('lease-expiry-alerts');
+  const oldListDiv = document.getElementById('lease-expiry-list');
+
+  if (oldExpiringLeases.length > 0) {
+    oldAlertsDiv.style.display = 'block';
+    oldListDiv.innerHTML = oldExpiringLeases.map(lease => `
+      <div style="background:white;padding:10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid #fbc02d;">
+        <div>
+          <div style="font-weight:600;color:#333;">🟡 ห้อง ${lease.roomId} — ${lease.tenantName}</div>
+          <div style="font-size:.85rem;color:#666;margin-top:4px;">หมดสัญญา ${new Date(lease.endDate).toLocaleDateString('th-TH')}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:700;color:#f57f17;font-size:1.1rem;">${lease.daysLeft} วัน</div>
+          <div style="font-size:.75rem;color:#999;">เหลือเวลา</div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    oldAlertsDiv.style.display = 'none';
+  }
+
+  // Update Nest Building alerts
+  const nestExpiringLeases = getExpiringLeases('nest');
+  const nestAlertsDiv = document.getElementById('nest-lease-expiry-alerts');
+  const nestListDiv = document.getElementById('nest-lease-expiry-list');
+
+  if (nestExpiringLeases.length > 0) {
+    nestAlertsDiv.style.display = 'block';
+    nestListDiv.innerHTML = nestExpiringLeases.map(lease => `
+      <div style="background:white;padding:10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid #fbc02d;">
+        <div>
+          <div style="font-weight:600;color:#333;">🟡 ห้อง ${lease.roomId} — ${lease.tenantName}</div>
+          <div style="font-size:.85rem;color:#666;margin-top:4px;">หมดสัญญา ${new Date(lease.endDate).toLocaleDateString('th-TH')}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:700;color:#f57f17;font-size:1.1rem;">${lease.daysLeft} วัน</div>
+          <div style="font-size:.75rem;color:#999;">เหลือเวลา</div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    nestAlertsDiv.style.display = 'none';
+  }
+}
+
+// ===== REAL-TIME FIREBASE LISTENERS =====
+let realtimeListeners = {};
+
+function setupRoomDataListener() {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    console.warn('Firebase not initialized, skipping real-time listeners');
+    return;
+  }
+  if (!window.firebaseAuth?.currentUser) return;
+
+  const db = window.firebase.firestore();
+  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
+
+  try {
+    // Listen to rooms building data
+    const roomsUnsubscribe = onSnapshot(
+      collection(db, 'buildings', 'rooms', 'rooms'),
+      (snapshot) => {
+        console.log('✅ Rooms data updated in real-time');
+        updateOccupancyDashboard();
+        updateRealtimeStatus(true);
+      },
+      (error) => {
+        console.error('❌ Error listening to rooms:', error);
+        updateRealtimeStatus(false);
+      }
+    );
+
+    // Listen to nest building data
+    const nestUnsubscribe = onSnapshot(
+      collection(db, 'buildings', 'nest', 'units'),
+      (snapshot) => {
+        console.log('✅ Nest units updated in real-time');
+        updateOccupancyDashboard();
+        updateRealtimeStatus(true);
+      },
+      (error) => {
+        console.error('❌ Error listening to nest units:', error);
+        updateRealtimeStatus(false);
+      }
+    );
+
+    realtimeListeners.rooms = roomsUnsubscribe;
+    realtimeListeners.nest = nestUnsubscribe;
+  } catch (err) {
+    console.error('Error setting up room data listeners:', err);
+  }
+}
+
+function setupLeaseDataListener() {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    console.warn('Firebase not initialized, skipping lease listeners');
+    return;
+  }
+  if (!window.firebaseAuth?.currentUser) return;
+
+  const db = window.firebase.firestore();
+  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
+
+  try {
+    const leaseUnsubscribe = onSnapshot(
+      collection(db, 'leases'),
+      (snapshot) => {
+        console.log('✅ Lease data updated in real-time');
+        updateLeaseExpiryAlerts();
+        updateOccupancyDashboard();
+      },
+      (error) => {
+        console.error('❌ Error listening to leases:', error);
+      }
+    );
+
+    realtimeListeners.leases = leaseUnsubscribe;
+  } catch (err) {
+    console.error('Error setting up lease listeners:', err);
+  }
+}
+
+function setupMeterDataListener() {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    console.warn('Firebase not initialized, skipping meter listeners');
+    return;
+  }
+  if (!window.firebaseAuth?.currentUser) return;
+
+  const db = window.firebase.firestore();
+  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
+
+  try {
+    const meterUnsubscribe = onSnapshot(
+      collection(db, 'meterReadings'),
+      (snapshot) => {
+        console.log('✅ Meter data updated in real-time');
+        updateDashboardLive();
+      },
+      (error) => {
+        console.error('❌ Error listening to meter data:', error);
+      }
+    );
+
+    realtimeListeners.meter = meterUnsubscribe;
+  } catch (err) {
+    console.error('Error setting up meter listeners:', err);
+  }
+}
+
+function updateRealtimeStatus(connected) {
+  const dot = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+
+  if (!dot || !text) return; // Element may not exist on all pages
+
+  if (connected) {
+    dot.style.background = '#00cc00';
+    text.textContent = '🟢 Real-time (Live)';
+  } else {
+    dot.style.background = '#cc0000';
+    text.textContent = '🔴 Disconnected';
+  }
+}
+
+function stopRealtimeListeners() {
+  // Unsubscribe from all listeners
+  Object.values(realtimeListeners).forEach(unsubscribe => {
+    if (typeof unsubscribe === 'function') {
+      unsubscribe();
+    }
+  });
+  realtimeListeners = {};
+  console.log('✅ Real-time listeners stopped');
+}
+
+function setupAnnouncementListener() {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    console.warn('Firebase not initialized, skipping announcement listeners');
+    return;
+  }
+  if (!window.firebaseAuth?.currentUser) return;
+
+  const db = window.firebase.firestore();
+  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
+
+  try {
+    const roomsAnnounceUnsubscribe = onSnapshot(
+      collection(db, 'announcements', 'rooms', 'items'),
+      (snapshot) => {
+        console.log('✅ Rooms announcements updated in real-time');
+        if (document.getElementById('announcementsList')) {
+          renderAnnouncementsList();
+        }
+      },
+      (error) => {
+        console.error('❌ Error listening to rooms announcements:', error);
+      }
+    );
+
+    const nestAnnounceUnsubscribe = onSnapshot(
+      collection(db, 'announcements', 'nest', 'items'),
+      (snapshot) => {
+        console.log('✅ Nest announcements updated in real-time');
+        if (document.getElementById('announcementsList')) {
+          renderAnnouncementsList();
+        }
+      },
+      (error) => {
+        console.error('❌ Error listening to nest announcements:', error);
+      }
+    );
+
+    realtimeListeners.roomsAnnounce = roomsAnnounceUnsubscribe;
+    realtimeListeners.nestAnnounce = nestAnnounceUnsubscribe;
+  } catch (err) {
+    console.error('Error setting up announcement listeners:', err);
+  }
+}
+
+// ===== FIREBASE CLOUD DATA INITIALIZATION =====
+async function initializeCloudData() {
+  try {
+    // Wait for Firebase to finish initializing (max 5s) — same pattern as initializeMeterDataFromFirebase
+    let waited = 0;
+    while (!window.firebaseReady && waited < 5000) {
+      await new Promise(r => setTimeout(r, 100));
+      waited += 100;
+    }
+    if (!window.firebaseReady || !window.firebaseApp || !window.firebase) {
+      console.warn('⚠️ Firebase not ready for cloud data initialization after 5s');
+      return;
+    }
+
+    console.log('🔄 Initializing cloud data from Firebase...');
+
+    // Load owner info
+    if (typeof OwnerConfigManager !== 'undefined' && typeof OwnerConfigManager.loadOwnerInfoFromFirebase === 'function') {
+      await OwnerConfigManager.loadOwnerInfoFromFirebase();
+    }
+
+    // Load tenants for both buildings
+    if (typeof TenantConfigManager !== 'undefined' && typeof TenantConfigManager.loadTenantsFromFirebase === 'function') {
+      await TenantConfigManager.loadTenantsFromFirebase('rooms');
+      await TenantConfigManager.loadTenantsFromFirebase('nest');
+    }
+
+    // Load leases for both buildings
+    if (typeof LeaseAgreementManager !== 'undefined' && typeof LeaseAgreementManager.loadLeasesFromFirebase === 'function') {
+      await LeaseAgreementManager.loadLeasesFromFirebase('rooms');
+      await LeaseAgreementManager.loadLeasesFromFirebase('nest');
+    }
+
+    console.log('✅ Cloud data initialization complete');
+  } catch (error) {
+    console.warn('⚠️ Cloud data initialization failed:', error.message);
+  }
+}
+
+// Initialize occupancy dashboard & lease alerts on page load
+document.addEventListener('DOMContentLoaded', function() {
+  updateOccupancyDashboard();
+  updateLeaseExpiryAlerts();
+  // Initialize cloud data from Firebase
+  initializeCloudData();
+});
+
+// Update occupancy and lease alerts when room statuses are updated
+const originalUpdateRoomStatuses = window.updateRoomStatuses;
+window.updateRoomStatuses = function() {
+  originalUpdateRoomStatuses();
+  updateOccupancyDashboard();
+  updateLeaseExpiryAlerts();
+};
+
+
+/**
+ * Custom confirmation modal for duplicate month detection
+ */
+function showDuplicateConfirmDialog(title, message) {
+  return new Promise((resolve) => {
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'confirm-modal-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    `;
+
+    // Create modal container
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 420px;
+      overflow: hidden;
+      animation: modalIn 0.18s ease;
+    `;
+
+    // Modal header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      padding: 1rem 1.3rem 0.85rem;
+      background: #fff3e0;
+      border-bottom: 1px solid #ffe0b2;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    `;
+    header.innerHTML = `
+      <span style="font-size: 1.5rem;">⚠️</span>
+      <div style="font-size: 0.95rem; font-weight: 700; color: #e65100;">${title}</div>
+    `;
+
+    // Modal body
+    const body = document.createElement('div');
+    body.style.cssText = `
+      padding: 1.1rem 1.3rem;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 0.95rem;
+      color: #333;
+      line-height: 1.5;
+    `;
+    body.textContent = message;
+
+    // Modal footer
+    const footer = document.createElement('div');
+    footer.style.cssText = `
+      padding: 0.85rem 1.3rem;
+      background: #fafafa;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 0.8rem;
+      justify-content: flex-end;
+    `;
+
+    // Cancel button
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '❌ ยกเลิก';
+    cancelBtn.style.cssText = `
+      padding: 0.6rem 1.2rem;
+      background: #e0e0e0;
+      color: #333;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    `;
+    cancelBtn.onmouseover = () => cancelBtn.style.background = '#d0d0d0';
+    cancelBtn.onmouseout = () => cancelBtn.style.background = '#e0e0e0';
+    cancelBtn.onclick = () => {
+      overlay.remove();
+      resolve(false);
+    };
+
+    // Confirm button
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '✅ ตกลง แทนที่ข้อมูล';
+    confirmBtn.style.cssText = `
+      padding: 0.6rem 1.2rem;
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    `;
+    confirmBtn.onmouseover = () => confirmBtn.style.background = '#45a049';
+    confirmBtn.onmouseout = () => confirmBtn.style.background = '#4caf50';
+    confirmBtn.onclick = () => {
+      overlay.remove();
+      resolve(true);
+    };
+
+    // Assemble modal
+    footer.appendChild(cancelBtn);
+    footer.appendChild(confirmBtn);
+    modal.appendChild(header);
+    modal.appendChild(body);
+    modal.appendChild(footer);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Focus confirm button for keyboard navigation
+    confirmBtn.focus();
+  });
+}
+
+// ===== OWNER INFO PAGE =====
+function initOwnerInfoPage() {
+  renderOwnerInfoPage();
+}
+
+function renderOwnerInfoPage() {
+  const container = document.getElementById('ownerInfoContainer');
+  if (!container) return;
+
+  const owner = OwnerConfigManager.getOwnerInfo();
+
+  container.innerHTML = `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+      <!-- Left column -->
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ชื่อ-นามสกุล *</label>
+        <input type="text" id="ownerName" value="${owner.name || ''}" placeholder="ชื่อเจ้าของ" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขประจำตัวประชาชน *</label>
+        <input type="text" id="ownerIdCard" value="${owner.idCardNumber || ''}" placeholder="เลขประจำตัวประชาชน" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เบอร์โทรศัพท์</label>
+        <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" maxlength="10" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <small id="ownerPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">อีเมล</label>
+        <input type="email" id="ownerEmail" value="${owner.email || ''}" placeholder="อีเมล" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ที่อยู่</label>
+        <input type="text" id="ownerAddress" value="${owner.address || ''}" placeholder="ที่อยู่" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">แขวง/ตำบล</label>
+        <input type="text" id="ownerSubDistrict" value="${owner.subDistrict || ''}" placeholder="แขวง/ตำบล" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เขต/อำเภอ</label>
+        <input type="text" id="ownerDistrict" value="${owner.district || ''}" placeholder="เขต/อำเภอ" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">จังหวัด</label>
+        <input type="text" id="ownerProvince" value="${owner.province || ''}" placeholder="จังหวัด" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">รหัสไปรษณีย์</label>
+        <input type="text" id="ownerPostalCode" value="${owner.postalCode || ''}" placeholder="รหัสไปรษณีย์" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขประจำตัวผู้เสียภาษี</label>
+        <input type="text" id="ownerTaxId" value="${owner.taxId || ''}" placeholder="เลขประจำตัวผู้เสียภาษี" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ชื่อธนาคาร</label>
+        <input type="text" id="ownerBankName" value="${owner.bankName || ''}" placeholder="ชื่อธนาคาร" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขบัญชี</label>
+        <input type="text" id="ownerBankAccount" value="${owner.bankAccount || ''}" placeholder="เลขบัญชี" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+    </div>
+
+
+    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+      <button onclick="saveOwnerInfo()" style="padding: 0.8rem 2rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+        💾 บันทึกข้อมูล
+      </button>
+      <button onclick="clearOwnerInfo()" style="padding: 0.8rem 2rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+        🗑️ ลบข้อมูล
+      </button>
+    </div>
+  `;
+}
+
+function saveOwnerInfo() {
+  const name = document.getElementById('ownerName').value.trim();
+  if (!name) {
+    showToast('กรุณากรอกชื่อเจ้าของ', 'warning');
+    return;
+  }
+
+  const ownerData = {
+    // ===== BASIC INFO =====
+    name: name,
+    idCardNumber: document.getElementById('ownerIdCard').value.trim(),
+    phone: document.getElementById('ownerPhone').value.trim(),
+    email: document.getElementById('ownerEmail').value.trim(),
+    address: document.getElementById('ownerAddress').value.trim(),
+    subDistrict: document.getElementById('ownerSubDistrict').value.trim(),
+    district: document.getElementById('ownerDistrict').value.trim(),
+    province: document.getElementById('ownerProvince').value.trim(),
+    postalCode: document.getElementById('ownerPostalCode').value.trim(),
+
+    // ===== TAX & BANKING =====
+    taxId: document.getElementById('ownerTaxId').value.trim(),
+    bankName: document.getElementById('ownerBankName').value.trim(),
+    bankAccount: document.getElementById('ownerBankAccount').value.trim(),
+
+    // ===== ACCOUNTING INFO =====
+    operationStartDate: document.getElementById('ownerOperationStartDate').value.trim(),
+    businessType: document.getElementById('ownerBusinessType').value,
+    businessCategory: document.getElementById('ownerBusinessCategory').value.trim()
+  };
+
+  // Use Firebase-enabled save if available
+  if (typeof OwnerConfigManager.saveOwnerInfoWithFirebase === 'function') {
+    OwnerConfigManager.saveOwnerInfoWithFirebase(ownerData);
+  } else {
+    OwnerConfigManager.saveOwnerInfo(ownerData);
+  }
+  showToast('บันทึกข้อมูลเจ้าของสำเร็จ', 'success');
+  renderOwnerInfoPage();
+}
+
+function clearOwnerInfo() {
+  if (confirm('คุณแน่ใจหรือว่าต้องการลบข้อมูลเจ้าของทั้งหมด?')) {
+    OwnerConfigManager.clearOwnerInfo();
+    showToast('ลบข้อมูลเรียบร้อย', 'success');
+    renderOwnerInfoPage();
+  }
+}
+
+// ===== TENANT MASTER PAGE =====
+function initTenantMasterPage() {
+  renderTenantMasterPage();
+}
+
+function renderTenantMasterPage() {
+  const container = document.getElementById('tenantMasterContainer');
+  if (!container) return;
+
+  const building = window.currentTenantMasterBuilding || 'rooms';
+  const tenants = TenantConfigManager.getTenantList(building);
+
+  container.innerHTML = `
+    <div style="margin-top: 1.5rem;">
+      <!-- Building Selector -->
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลือกอาคาร</label>
+        <select id="tenantMasterBuilding" onchange="window.currentTenantMasterBuilding = this.value; renderTenantMasterPage();" style="padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px;">
+          <option value="rooms" ${(window.currentTenantMasterBuilding || 'rooms') === 'rooms' ? 'selected' : ''}>ห้องแถว (Rooms)</option>
+          <option value="nest" ${(window.currentTenantMasterBuilding || 'rooms') === 'nest' ? 'selected' : ''}>Nest</option>
+        </select>
+      </div>
+
+      <!-- Add Tenant Form -->
+      <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+        <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">➕ เพิ่มผู้เช่าใหม่</div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">รหัสผู้เช่า *</label>
+            <input type="text" id="newTenantId" placeholder="เช่น T001, T002" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ชื่อ-นามสกุล *</label>
+            <input type="text" id="newTenantName" placeholder="ชื่อผู้เช่า" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขประจำตัวประชาชน/Passport</label>
+            <input type="text" id="newTenantIdCard" placeholder="เลขประจำตัว" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เบอร์โทรศัพท์</label>
+            <input type="tel" id="newTenantPhone" placeholder="เบอร์โทรศัพท์" maxlength="10" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <small id="newTenantPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">อีเมล</label>
+            <input type="email" id="newTenantEmail" placeholder="อีเมล" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ที่อยู่</label>
+            <input type="text" id="newTenantAddress" placeholder="ที่อยู่" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <button onclick="addNewTenant()" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+          ➕ เพิ่มผู้เช่า
+        </button>
+      </div>
+
+      <!-- Tenant List -->
+      <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">📋 รายชื่อผู้เช่า (${tenants.length} คน)</div>
+      ${tenants.length === 0 ? '<div style="padding: 1.5rem; text-align: center; color: #999;">ยังไม่มีผู้เช่า</div>' : ''}
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background: #f0f0f0;">
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">รหัส</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ชื่อ</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">เบอร์โทร</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">อีเมล</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">การกระทำ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tenants.map(tenant => `
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.id}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.name}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.phone || '-'}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.email || '-'}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">
+                  <button onclick="editTenant('${tenant.id}')" style="padding: 0.4rem 0.8rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">📝</button>
+                  <button onclick="deleteTenant('${tenant.id}')" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function addNewTenant() {
+  const building = window.currentTenantMasterBuilding || 'rooms';
+  const id = document.getElementById('newTenantId').value.trim();
+  const name = document.getElementById('newTenantName').value.trim();
+
+  if (!id || !name) {
+    showToast('กรุณากรอกรหัสและชื่อผู้เช่า', 'warning');
+    return;
+  }
+
+  const tenantData = {
+    id: id,
+    name: name,
+    idCardNumber: document.getElementById('newTenantIdCard').value.trim(),
+    phone: document.getElementById('newTenantPhone').value.trim(),
+    email: document.getElementById('newTenantEmail').value.trim(),
+    address: document.getElementById('newTenantAddress').value.trim()
+  };
+
+  // Use Firebase-enabled save if available
+  const saveSuccess = typeof TenantConfigManager.saveTenantToFirebase === 'function'
+    ? (TenantConfigManager.saveTenantToFirebase(building, id, tenantData), TenantConfigManager.getTenant(building, id) !== null)
+    : TenantConfigManager.addTenant(building, id, tenantData);
+
+  if (saveSuccess) {
+    showToast(`เพิ่มผู้เช่า ${name} สำเร็จ`, 'success');
+    // Clear inputs
+    document.getElementById('newTenantId').value = '';
+    document.getElementById('newTenantName').value = '';
+    document.getElementById('newTenantIdCard').value = '';
+    document.getElementById('newTenantPhone').value = '';
+    document.getElementById('newTenantEmail').value = '';
+    document.getElementById('newTenantAddress').value = '';
+    renderTenantMasterPage();
+  } else {
+    showToast(`ผู้เช่า ${id} มีอยู่แล้ว`, 'warning');
+  }
+}
+
+
+function editTenant(tenantId) {
+  const building = window.currentTenantMasterBuilding || 'rooms';
+  const tenant = TenantConfigManager.getTenant(building, tenantId);
+  if (!tenant) { showToast('ไม่พบข้อมูลผู้เช่า', 'warning'); return; }
+
+  // Remove any existing edit modal
+  const existing = document.getElementById('editTenantModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'editTenantModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+  // Use DOM manipulation (not innerHTML) for fields that take user-controlled data
+  // to avoid XSS from tenant name/phone/etc.
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:8px;padding:2rem;width:min(500px,95vw);max-height:90vh;overflow-y:auto;';
+
+  const title = document.createElement('div');
+  title.style.cssText = 'font-weight:700;font-size:1.1rem;margin-bottom:1.5rem;';
+  title.textContent = `✏️ แก้ไขข้อมูลผู้เช่า — ${tenant.id}`;
+  box.appendChild(title);
+
+  const fields = [
+    { id: 'etName',    label: 'ชื่อ-นามสกุล *', val: tenant.name || '',   type: 'text' },
+    { id: 'etIdCard',  label: 'เลขประจำตัว',      val: tenant.idCard || '', type: 'text' },
+    { id: 'etPhone',   label: 'เบอร์โทรศัพท์',    val: tenant.phone || '',  type: 'tel'  },
+    { id: 'etEmail',   label: 'อีเมล',             val: tenant.email || '',  type: 'email'},
+    { id: 'etAddress', label: 'ที่อยู่',            val: tenant.address || '',type: 'text' }
+  ];
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;gap:1rem;';
+  fields.forEach(f => {
+    const wrap = document.createElement('div');
+    const lbl = document.createElement('label');
+    lbl.style.cssText = 'display:block;margin-bottom:0.4rem;font-weight:600;';
+    lbl.textContent = f.label;
+    const inp = document.createElement('input');
+    inp.id = f.id; inp.type = f.type; inp.value = f.val;
+    if (f.id === 'etPhone') inp.maxLength = 10;
+    inp.style.cssText = 'width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;';
+    wrap.appendChild(lbl); wrap.appendChild(inp);
+    grid.appendChild(wrap);
+  });
+  box.appendChild(grid);
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:0.8rem;margin-top:1.5rem;justify-content:flex-end;';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'ยกเลิก';
+  cancelBtn.style.cssText = 'padding:0.7rem 1.2rem;border:1px solid #ddd;border-radius:4px;cursor:pointer;background:#fff;';
+  cancelBtn.onclick = () => modal.remove();
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = '💾 บันทึก';
+  saveBtn.style.cssText = 'padding:0.7rem 1.5rem;background:#2196F3;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;';
+  saveBtn.onclick = () => saveEditTenant(building, tenantId);
+  btnRow.appendChild(cancelBtn); btnRow.appendChild(saveBtn);
+  box.appendChild(btnRow);
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+  document.getElementById('etName')?.focus();
+}
+
+function saveEditTenant(building, tenantId) {
+  const name = document.getElementById('etName')?.value.trim();
+  if (!name) { showToast('กรุณากรอกชื่อ-นามสกุล', 'warning'); return; }
+
+  const updates = {
+    name,
+    idCard: document.getElementById('etIdCard')?.value.trim() || '',
+    phone: document.getElementById('etPhone')?.value.trim() || '',
+    email: document.getElementById('etEmail')?.value.trim() || '',
+    address: document.getElementById('etAddress')?.value.trim() || '',
+    updatedDate: new Date().toISOString()
+  };
+
+  const ok = TenantConfigManager.updateTenant(building, tenantId, updates);
+  if (ok) {
+    if (typeof TenantConfigManager.saveTenantToFirebase === 'function') {
+      TenantConfigManager.saveTenantToFirebase(building, tenantId, updates);
+    }
+    document.getElementById('editTenantModal')?.remove();
+    renderTenantMasterPage();
+    showToast('อัพเดทข้อมูลผู้เช่าเรียบร้อย', 'success');
+  } else {
+    showToast('ไม่สามารถบันทึกข้อมูลได้', 'error');
+  }
+}
+
+// ===== LEASE AGREEMENTS PAGE =====
+function initLeaseAgreementsPage() {
+  renderLeaseAgreementsPage();
+}
+
+function renderLeaseAgreementsPage() {
+  const container = document.getElementById('leaseAgreementsContainer');
+  if (!container) return;
+
+  const leases = LeaseAgreementManager.getAllLeasesList();
+  const rooms = RoomConfigManager.getRoomsConfig('rooms').rooms;
+  const nestRooms = RoomConfigManager.getRoomsConfig('nest').rooms;
+  const allRooms = [...rooms, ...nestRooms];
+  const tenants = TenantConfigManager.getTenantList();
+
+  const buildingOptions = '<option value="rooms">ห้องแถว</option><option value="nest">Nest Building</option>';
+  const roomOptions = allRooms.map(r => `<option value="${r.id}">${r.id} - ${r.name}</option>`).join('');
+  const tenantOptions = tenants.map(t => `<option value="${t.id}">${t.id} - ${t.name}</option>`).join('');
+
+  container.innerHTML = `
+    <div style="margin-top: 1.5rem;">
+      <!-- Add Lease Form -->
+      <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
+        <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">➕ สร้างสัญญาเช่าใหม่</div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">อาคาร *</label>
+            <select id="leaseBuilding" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+              ${buildingOptions}
+            </select>
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ห้อง *</label>
+            <select id="leaseRoom" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+              <option value="">-- เลือกห้อง --</option>
+              ${roomOptions}
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ผู้เช่า *</label>
+            <select id="leaseTenant" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+              <option value="">-- เลือกผู้เช่า --</option>
+              ${tenantOptions}
+            </select>
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">วันเข้าเช่า *</label>
+            <input type="date" id="leaseMoveIn" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ค่าเช่า/เดือน (บาท) *</label>
+            <input type="number" id="leaseRent" placeholder="0" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">มัดจำ (บาท)</label>
+            <input type="number" id="leaseDeposit" placeholder="0" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <!-- FILE UPLOADS SECTION -->
+        <div style="background: #f0f9ff; padding: 1rem; border-radius: 6px; border: 1px solid #b3e5fc; margin-bottom: 1rem;">
+          <div style="font-weight: 600; margin-bottom: 0.8rem; color: #01579b;">📄 เอกสารประกอบสัญญา (optional)</div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div>
+              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">💉 ใบรับรองวัคซีนสัตว์เลี้ยง</label>
+              <input type="file" id="leaseFilePetCert" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">📞 ข้อมูลติดต่อผู้เช่า</label>
+              <input type="file" id="leaseFileTenantContact" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div>
+              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">📋 สัญญาเช่า</label>
+              <input type="file" id="leaseFileAgreement" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">🆔 สำเนาบัตรประชาชน</label>
+              <input type="file" id="leaseFileId" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">💰 หลักฐานรายได้</label>
+            <input type="file" id="leaseFileIncome" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+          </div>
+          <small style="color: #666; margin-top: 0.5rem; display: block;">📁 สนับสนุน: PDF, JPG, PNG · ขนาดสูงสุด: 5MB</small>
+        </div>
+
+        <button onclick="createNewLease()" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+          ➕ สร้างสัญญา
+        </button>
+      </div>
+
+      <!-- Lease List -->
+      <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">📋 สัญญาเช่าทั้งหมด (${leases.length})</div>
+      ${leases.length === 0 ? '<div style="padding: 1.5rem; text-align: center; color: #999;">ยังไม่มีสัญญาเช่า</div>' : ''}
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background: #f0f0f0;">
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">อาคาร</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ห้อง</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ผู้เช่า</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">วันเข้า</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ค่าเช่า</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">สถานะ</th>
+              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">การกระทำ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${leases.map(lease => `
+              <tr style="border-bottom: 1px solid #ddd;">
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${lease.building === 'rooms' ? 'ห้องแถว' : 'Nest'}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${lease.roomId}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${lease.tenantName || lease.tenantId}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">${new Date(lease.moveInDate).toLocaleDateString('th-TH')}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: right;">฿${lease.rentAmount?.toLocaleString() || '-'}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem;">
+                  <span style="padding: 0.3rem 0.8rem; border-radius: 4px; background: ${lease.status === 'active' ? '#c8e6c9' : '#f5f5f5'}; color: ${lease.status === 'active' ? '#2e7d32' : '#999'}; font-weight: 600;">
+                    ${lease.status === 'active' ? '✅ กำลังเช่า' : '❌ เลิกเช่า'}
+                  </span>
+                </td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">
+                  ${lease.status === 'active' ? `<button onclick="endLease('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;">🚪</button>` : ''}
+                  <button onclick="deleteLease('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function createNewLease() {
+  const building = document.getElementById('leaseBuilding').value;
+  const roomId = document.getElementById('leaseRoom').value;
+  const tenantId = document.getElementById('leaseTenant').value;
+  const moveInDate = document.getElementById('leaseMoveIn').value;
+  const rentAmount = parseFloat(document.getElementById('leaseRent').value);
+  const deposit = parseFloat(document.getElementById('leaseDeposit').value) || 0;
+
+  if (!building || !roomId || !tenantId || !moveInDate || !rentAmount) {
+    showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+    return;
+  }
+
+  // Collect uploaded files
+  const documentsToUpload = {};
+  const petCertFile = document.getElementById('leaseFilePetCert')?.files[0];
+  const tenantContactFile = document.getElementById('leaseFileTenantContact')?.files[0];
+  const agreementFile = document.getElementById('leaseFileAgreement')?.files[0];
+  const idFile = document.getElementById('leaseFileId')?.files[0];
+  const incomeFile = document.getElementById('leaseFileIncome')?.files[0];
+
+  if (petCertFile) documentsToUpload.petCert = petCertFile;
+  if (tenantContactFile) documentsToUpload.tenantContact = tenantContactFile;
+  if (agreementFile) documentsToUpload.agreement = agreementFile;
+  if (idFile) documentsToUpload.id = idFile;
+  if (incomeFile) documentsToUpload.income = incomeFile;
+
+  const tenant = TenantConfigManager.getTenant(tenantId);
+  const leaseData = {
+    building: building,
+    roomId: roomId,
+    tenantId: tenantId,
+    tenantName: tenant ? tenant.name : tenantId,
+    moveInDate: new Date(moveInDate).toISOString(),
+    moveOutDate: null,
+    rentAmount: rentAmount,
+    deposit: deposit,
+    status: 'active',
+    documents: Object.keys(documentsToUpload).length > 0 ? Object.keys(documentsToUpload) : []
+  };
+
+  // Use Firebase-enabled create if available
+  const leaseId = typeof LeaseAgreementManager.createLeaseWithFirebase === 'function'
+    ? LeaseAgreementManager.createLeaseWithFirebase(leaseData)
+    : LeaseAgreementManager.createLease(leaseData);
+
+  if (leaseId) {
+    // Upload documents to Firebase Storage if available
+    if (Object.keys(documentsToUpload).length > 0 && window.firebase && window.firebase.storage) {
+      uploadLeaseDocuments(leaseId, building, roomId, documentsToUpload);
+      showToast(`สร้างสัญญาเช่าสำเร็จ กำลังอัพโหลดเอกสาร...`, 'success');
+    } else {
+      showToast(`สร้างสัญญาเช่าสำเร็จ`, 'success');
+    }
+
+    // Clear inputs
+    document.getElementById('leaseBuilding').value = 'rooms';
+    document.getElementById('leaseRoom').value = '';
+    document.getElementById('leaseTenant').value = '';
+    document.getElementById('leaseMoveIn').value = '';
+    document.getElementById('leaseRent').value = '';
+    document.getElementById('leaseDeposit').value = '';
+
+    // Clear file inputs
+    document.getElementById('leaseFilePetCert').value = '';
+    document.getElementById('leaseFileTenantContact').value = '';
+    document.getElementById('leaseFileAgreement').value = '';
+    document.getElementById('leaseFileId').value = '';
+    document.getElementById('leaseFileIncome').value = '';
+
+    renderLeaseAgreementsPage();
+  }
+}
+
+function uploadLeaseDocuments(leaseId, building, roomId, documents) {
+  try {
+    const storage = window.firebase.storage();
+    const fileTypeMap = {
+      petCert: 'pet-vaccine-certificate',
+      tenantContact: 'tenant-contact',
+      agreement: 'lease-agreement',
+      id: 'tenant-id',
+      income: 'proof-of-income'
+    };
+
+    let uploadCount = 0;
+    const totalFiles = Object.keys(documents).length;
+
+    // Upload each document
+    Object.entries(documents).forEach(([docType, file]) => {
+      if (!file) return;
+
+      const fileName = `${fileTypeMap[docType]}-${Date.now()}.${file.name.split('.').pop()}`;
+      const storageRef = storage.ref(`leases/${building}/${roomId}/${leaseId}/${fileName}`);
+
+      storageRef.put(file)
+        .then((snapshot) => {
+          uploadCount++;
+          console.log(`✅ Document uploaded: ${docType} (${uploadCount}/${totalFiles})`);
+          return snapshot.ref.getDownloadURL();
+        })
+        .then((downloadURL) => {
+          console.log(`📄 Download URL: ${downloadURL}`);
+        })
+        .catch((error) => {
+          console.error(`❌ Error uploading ${docType}:`, error);
+        });
+    });
+
+    console.log(`📁 Uploading ${totalFiles} documents for lease ${leaseId}...`);
+  } catch (err) {
+    console.warn('⚠️ Firebase Storage not available, documents will be uploaded later');
+  }
+}
+
+function endLease(leaseId) {
+  if (confirm('คุณแน่ใจหรือว่าต้องการสิ้นสุดสัญญาเช่า?')) {
+    const lease = LeaseAgreementManager.getLease(leaseId);
+    const moveOutDate = new Date().toISOString();
+
+    // Use Firebase-enabled update if available
+    const success = typeof LeaseAgreementManager.updateLeaseWithFirebase === 'function'
+      ? LeaseAgreementManager.updateLeaseWithFirebase(leaseId, lease.building, {
+          moveOutDate: moveOutDate,
+          status: 'inactive'
+        })
+      : LeaseAgreementManager.endLease(leaseId);
+
+    if (success) {
+      showToast('สิ้นสุดสัญญาเช่าเรียบร้อย', 'success');
+      renderLeaseAgreementsPage();
+    }
+  }
+}
+
+function deleteLease(leaseId) {
+  if (confirm('คุณแน่ใจหรือว่าต้องการลบสัญญาเช่า?')) {
+    if (LeaseAgreementManager.deleteLease(leaseId)) {
+      showToast('ลบสัญญาเช่าเรียบร้อย', 'success');
+      renderLeaseAgreementsPage();
+    }
+  }
+}
+
+// ===== UPLOAD REAL BILLS PAGE (ADMIN ONLY) =====
+// Phone Number Validation Function
+// Handles: format, validation, error messages, auto-formatting
+function validatePhoneNumber(inputElement, errorElementId) {
+  const input = inputElement.value;
+  const errorEl = errorElementId ? document.getElementById(errorElementId) : null;
+
+  // Remove all non-digit characters for processing
+  const cleanedInput = input.replace(/\D/g, '');
+
+  // Initialize error message as empty
+  let errorMsg = '';
+  let isValid = true;
+
+  // Validation rules:
+  // 1. Must contain only numbers
+  if (input !== cleanedInput && input.length > 0) {
+    // Allow dashes and spaces but clean them
+    if (!/^[0-9\s\-]*$/.test(input)) {
+      errorMsg = '❌ เบอร์โทรต้องเป็นตัวเลขเท่านั้น (0-9, dash, space)';
+      isValid = false;
+    }
+  }
+
+  // 2. Must be exactly 10 digits
+  if (cleanedInput.length > 0 && cleanedInput.length !== 10) {
+    errorMsg = '❌ กรุณากรอกเบอร์โทร 10 หลัก';
+    isValid = false;
+  }
+
+  // 3. Must start with 0
+  if (cleanedInput.length > 0 && !cleanedInput.startsWith('0')) {
+    errorMsg = '❌ เบอร์โทรต้องขึ้นต้นด้วย 0';
+    isValid = false;
+  }
+
+  // Update input value with cleaned version (store without dashes)
+  inputElement.value = cleanedInput;
+
+  // Display formatted version for user (with dashes) - optional
+  // Format: 081-234-5678
+  if (cleanedInput.length === 10) {
+    const formatted = cleanedInput.slice(0, 3) + '-' + cleanedInput.slice(3, 6) + '-' + cleanedInput.slice(6);
+    inputElement.placeholder = formatted;
+  }
+
+  // Show/hide error message
+  if (errorEl) {
+    if (errorMsg) {
+      errorEl.style.display = 'block';
+      errorEl.textContent = errorMsg;
+      errorEl.style.color = '#d32f2f';
+      errorEl.style.fontSize = '0.85rem';
+      errorEl.style.marginTop = '4px';
+    } else {
+      errorEl.style.display = 'none';
+      errorEl.textContent = '';
+    }
+  }
+
+  // Update input styling based on validation
+  if (cleanedInput.length === 10 && isValid) {
+    inputElement.style.borderColor = '#4caf50'; // Green for valid
+    inputElement.style.boxShadow = '0 0 10px rgba(76,175,80,0.2)';
+  } else if (cleanedInput.length > 0 && !isValid) {
+    inputElement.style.borderColor = '#d32f2f'; // Red for invalid
+    inputElement.style.boxShadow = '0 0 10px rgba(211,47,47,0.2)';
+  } else {
+    inputElement.style.borderColor = 'var(--border)';
+    inputElement.style.boxShadow = 'none';
+  }
+
+  return isValid && cleanedInput.length === 10;
+}
+
+// Attach validation to phone input fields
+function initPhoneValidation() {
+  const phoneFields = [
+    { id: 'modalTenantPhone', errorId: 'modalTenantPhoneError' },
+    { id: 'tm-phone', errorId: 'tmPhoneError' },
+    { id: 'ownerPhone', errorId: 'ownerPhoneError' },
+    { id: 'newTenantPhone', errorId: 'newTenantPhoneError' }
+  ];
+
+  phoneFields.forEach(field => {
+    const input = document.getElementById(field.id);
+    if (input) {
+      // Real-time validation on input
+      input.addEventListener('input', function() {
+        validatePhoneNumber(this, field.errorId);
+      });
+
+      // Validate on blur
+      input.addEventListener('blur', function() {
+        validatePhoneNumber(this, field.errorId);
+      });
+    }
+  });
+}
+
+// Call this when page loads or modals open
+document.addEventListener('DOMContentLoaded', function() {
+  initPhoneValidation();
+});
+
+// ============== BILL GENERATION SYSTEM ==============
+
+/**
+ * Generate monthly invoices for all rooms
+ */
+function generateMonthlyBillsUI() {
+  const building = prompt('เลือกอาคาร:\n1. rooms (ห้องแถว)\n2. nest (Nest Building)', '1');
+  if (!building) return;
+
+  const buildingName = building === '2' ? 'nest' : 'rooms';
+  const month = prompt('เดือน (1-12):', new Date().getMonth() + 1);
+  const year = prompt('ปี (ค.ศ.)', new Date().getFullYear() + 543);
+
+  if (!month || !year) return;
+
+  try {
+    const buddhistYear = parseInt(year) - 543;
+    const monthNum = parseInt(month);
+
+    if (monthNum < 1 || monthNum > 12) {
+      showToast('เดือนไม่ถูกต้อง', 'error');
+      return;
+    }
+
+    // Generate bills
+    const result = BillGenerator.generateMonthlyBills(buildingName, buddhistYear, monthNum);
+
+    if (result.success) {
+      showToast(`สร้างใบวางบิลสำเร็จ! จำนวน: ${result.count} ใบ อาคาร: ${buildingName} เดือน: ${monthNum}/${buddhistYear}`, 'success');
+
+      // Show generated invoice list
+      showGeneratedInvoices(buildingName, result.invoiceIds);
+
+      // Update dashboard
+      updateOccupancyDashboard();
+    } else {
+      showToast(`เกิดข้อผิดพลาด: ไม่สามารถสร้างใบวางบิล`, 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Display list of generated invoices
+ */
+function showGeneratedInvoices(building, invoiceIds) {
+  let invoiceList = `📋 สร้างใบวางบิล ${invoiceIds.length} ใบ\n\n`;
+
+  invoiceIds.slice(0, 10).forEach((id, idx) => {
+    invoiceList += `${idx + 1}. ${id}\n`;
+  });
+
+  if (invoiceIds.length > 10) {
+    invoiceList += `\n... และอีก ${invoiceIds.length - 10} ใบ`;
+  }
+
+  console.log(invoiceList);
+}
+
+/**
+ * Download all invoices as PDF
+ */
+function downloadInvoicesPDF() {
+  const building = prompt('เลือกอาคาร:\n1. rooms\n2. nest', '1');
+  if (!building) return;
+
+  const buildingName = building === '2' ? 'nest' : 'rooms';
+  const allInvoices = InvoiceReceiptManager.getAllInvoices(buildingName);
+
+  if (allInvoices.length === 0) {
+    showToast('ไม่มีใบวางบิล', 'error');
+    return;
+  }
+
+  showToast(`ดาวน์โหลด ${allInvoices.length} ใบวางบิล (ระบบจะดาวน์โหลดแต่ละไฟล์)`, 'warning')
+
+ allInvoices.forEach((invoice, idx) => {
+    setTimeout(() => {
+      const pdf = InvoicePDFGenerator.generateInvoicePDF(invoice);
+      if (pdf) {
+        InvoicePDFGenerator.downloadPDF(pdf, `INV-${invoice.id}.pdf`);
+      }
+    }, idx * 500);  // Delay to avoid browser blocking
+  });
+}
+
+/**
+ * Listen for new invoice notifications
+ */
+function listenForInvoiceNotifications() {
+  window.addEventListener('new_invoices_generated', function() {
+    console.log('🔔 New invoices generated!');
+    showNotification('📄 สร้างใบวางบิลใหม่เข้ามา', 'success');
+  });
+
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'invoice_notifications') {
+      const notifications = JSON.parse(e.newValue || '[]');
+      if (notifications.length > 0) {
+        const latest = notifications[notifications.length - 1];
+        showNotification(`📄 มีใบวางบิลใหม่ ${latest.count} ใบ`, 'info');
+      }
+    }
+  });
+}
+
+/**
+ * Show notification on dashboard
+ */
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'success' ? '#4caf50' : '#2196f3'};
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 10000;
+    animation: slideIn 0.3s ease-out;
+  `;
+
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease-in';
+    setTimeout(() => notification.remove(), 300);
+  }, 4000);
+}
+
+// Add notification styles
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from { transform: translateX(400px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(400px); opacity: 0; }
+  }
+`;
+document.head.appendChild(style);
+
+// Initialize listeners on page load
+listenForInvoiceNotifications();
+listenForPaymentNotifications();
+
+/**
+ * Listen for payment notifications from tenant app
+ */
+function listenForPaymentNotifications() {
+  // Listen for payment verified event
+  window.addEventListener('payment_verified', function() {
+    console.log('🔔 Payment verified from tenant app!');
+    showNotification('✅ ได้รับเงินจากผู้เช่า', 'success');
+    loadPaymentNotifications();
+  });
+
+  // Listen for receipt generated event
+  window.addEventListener('receipt_generated', function() {
+    console.log('🔔 Receipt generated!');
+    showNotification('📄 ใบเสร็จรับเงินถูกสร้าง', 'success');
+    loadPaymentNotifications();
+  });
+
+  // Listen for storage changes (for cross-tab sync)
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'payment_notifications') {
+      const notifications = JSON.parse(e.newValue || '[]');
+      if (notifications.length > 0) {
+        const latest = notifications[notifications.length - 1];
+        if (latest.type === 'payment_verified') {
+          showNotification(`✅ ห้อง ${latest.room} - โอนเงิน ฿${latest.amount.toLocaleString('th-TH')}`, 'success');
+        } else if (latest.type === 'receipt_generated') {
+          showNotification(`📄 ห้อง ${latest.room} - ใบเสร็จ ${latest.receiptId}`, 'success');
+        }
+      }
+    }
+  });
+
+  // Load initial notifications
+  loadPaymentNotifications();
+}
+
+/**
+ * Load and display payment notifications
+ */
+function loadPaymentNotifications() {
+  try {
+    const notifications = JSON.parse(localStorage.getItem('payment_notifications') || '[]');
+
+    if (notifications.length === 0) {
+      console.log('📭 No payment notifications');
+      const notifPanel = document.getElementById('paymentNotificationsList');
+      if (notifPanel) {
+        notifPanel.innerHTML = '<div style="text-align: center; color: #999; padding: 2rem;">📭 ยังไม่มีการชำระเงิน</div>';
+      }
+      return;
+    }
+
+    // Update notifications panel on payment verification page
+    updatePaymentNotificationsPanel(notifications);
+
+    // Display latest 5 notifications in console
+    const recent = notifications.slice(-5).reverse();
+    console.log('💳 Recent Payment Notifications:');
+    recent.forEach((notif, idx) => {
+      console.log(`${idx + 1}. [${notif.type}] ห้อง ${notif.room} - ฿${notif.amount?.toLocaleString('th-TH')} (${new Date(notif.timestamp).toLocaleString('th-TH')})`);
+
+      // Update dashboard UI if payment verification section exists
+      if (notif.type === 'payment_verified') {
+        updatePaymentVerificationUI(notif);
+      } else if (notif.type === 'receipt_generated') {
+        updateReceiptGenerationUI(notif);
+      }
+    });
+
+    // Update payment notification badge if it exists
+    updatePaymentNotificationBadge(notifications.length);
+  } catch (error) {
+    console.warn('⚠️ Error loading payment notifications:', error);
+  }
+}
+
+/**
+ * Update payment notifications panel display
+ */
+function updatePaymentNotificationsPanel(notifications) {
+  try {
+    const notifPanel = document.getElementById('paymentNotificationsList');
+    if (!notifPanel) return;
+
+    // Show latest 10 notifications, newest first
+    const recent = notifications.slice(-10).reverse();
+
+    notifPanel.innerHTML = recent.map((notif, idx) => {
+      const timeStr = new Date(notif.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+      const dateStr = new Date(notif.timestamp).toLocaleDateString('th-TH');
+
+      if (notif.type === 'payment_verified') {
+        return `
+          <div style="background: white; border-left: 4px solid #4caf50; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.9rem;">
+            <div style="font-weight: 600; color: #2e7d32;">✅ ห้อง ${notif.room} - โอนเงิน ฿${notif.amount?.toLocaleString('th-TH')}</div>
+            <div style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+              ${dateStr} ${timeStr} | SlipID: ${notif.slipId?.substring(0, 10) || 'N/A'}...
+            </div>
+          </div>
+        `;
+      } else if (notif.type === 'receipt_generated') {
+        return `
+          <div style="background: white; border-left: 4px solid #1976d2; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.9rem;">
+            <div style="font-weight: 600; color: #1565c0;">📄 ห้อง ${notif.room} - ใบเสร็จ ฿${notif.amount?.toLocaleString('th-TH')}</div>
+            <div style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+              ${dateStr} ${timeStr} | ReceiptID: ${notif.receiptId?.substring(0, 10) || 'N/A'}... | Verified: ${notif.verified ? '✅' : '❌'}
+            </div>
+          </div>
+        `;
+      }
+      return '';
+    }).join('');
+  } catch (error) {
+    console.warn('⚠️ Error updating notifications panel:', error);
+  }
+}
+
+/**
+ * Update payment verification UI in admin dashboard
+ */
+function updatePaymentVerificationUI(notification) {
+  try {
+    // Find payment section in dashboard
+    const paymentSection = document.querySelector('[data-section="payment-verification"]');
+    if (!paymentSection) return;
+
+    // Add notification item to payment list
+    const notifItem = document.createElement('div');
+    notifItem.className = 'payment-notification-item';
+    notifItem.style.cssText = `
+      background: #e8f5e9;
+      border-left: 4px solid #4caf50;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    `;
+
+    const timeStr = new Date(notification.timestamp).toLocaleTimeString('th-TH');
+    notifItem.innerHTML = `
+      <div style="font-weight: 600; color: #2e7d32;">
+        ✅ ห้อง ${notification.room} - โอนเงิน ฿${notification.amount?.toLocaleString('th-TH')}
+      </div>
+      <div style="font-size: 12px; color: #666; margin-top: 4px;">
+        เวลา: ${timeStr} | SlipID: ${notification.slipId || 'N/A'}
+      </div>
+    `;
+
+    // Insert at top of payment list
+    const paymentList = paymentSection.querySelector('.payment-list') || paymentSection;
+    if (paymentList.firstChild) {
+      paymentList.insertBefore(notifItem, paymentList.firstChild);
+    } else {
+      paymentList.appendChild(notifItem);
+    }
+
+    // Keep only last 10 items
+    const items = paymentList.querySelectorAll('.payment-notification-item');
+    if (items.length > 10) {
+      items[items.length - 1].remove();
+    }
+  } catch (error) {
+    console.warn('⚠️ Error updating payment verification UI:', error);
+  }
+}
+
+/**
+ * Update receipt generation UI in admin dashboard
+ */
+function updateReceiptGenerationUI(notification) {
+  try {
+    // Find receipt section in dashboard
+    const receiptSection = document.querySelector('[data-section="receipt-list"]');
+    if (!receiptSection) return;
+
+    // Add receipt item
+    const receiptItem = document.createElement('div');
+    receiptItem.className = 'receipt-notification-item';
+    receiptItem.style.cssText = `
+      background: #e3f2fd;
+      border-left: 4px solid #1976d2;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    `;
+
+    const timeStr = new Date(notification.timestamp).toLocaleTimeString('th-TH');
+    receiptItem.innerHTML = `
+      <div style="font-weight: 600; color: #1565c0;">
+        📄 ใบเสร็จ ห้อง ${notification.room} - ฿${notification.amount?.toLocaleString('th-TH')}
+      </div>
+      <div style="font-size: 12px; color: #666; margin-top: 4px;">
+        เวลา: ${timeStr} | ReceiptID: ${notification.receiptId || 'N/A'} | Verified: ${notification.verified ? '✅' : '❌'}
+      </div>
+    `;
+
+    // Insert at top of receipt list
+    const receiptList = receiptSection.querySelector('.receipt-list') || receiptSection;
+    if (receiptList.firstChild) {
+      receiptList.insertBefore(receiptItem, receiptList.firstChild);
+    } else {
+      receiptList.appendChild(receiptItem);
+    }
+
+    // Keep only last 10 items
+    const items = receiptList.querySelectorAll('.receipt-notification-item');
+    if (items.length > 10) {
+      items[items.length - 1].remove();
+    }
+  } catch (error) {
+    console.warn('⚠️ Error updating receipt generation UI:', error);
+  }
+}
+
+/**
+ * Update payment notification badge
+ */
+function updatePaymentNotificationBadge(count) {
+  try {
+    let badge = document.querySelector('[data-badge="payment-count"]');
+    if (!badge) {
+      // Create badge if doesn't exist
+      badge = document.createElement('span');
+      badge.setAttribute('data-badge', 'payment-count');
+      badge.style.cssText = `
+        display: inline-block;
+        background: #f44336;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        text-align: center;
+        line-height: 24px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-left: 4px;
+      `;
+      const paymentTab = document.querySelector('[data-nav="💳"]') || document.querySelector('button:contains("💳")');
+      if (paymentTab) {
+        paymentTab.appendChild(badge);
+      }
+    }
+
+    if (badge && count > 0) {
+      badge.textContent = count > 99 ? '99+' : count;
+      badge.style.display = 'inline-block';
+    } else if (badge) {
+      badge.style.display = 'none';
+    }
+  } catch (error) {
+    console.warn('⚠️ Error updating payment notification badge:', error);
+  }
+}
+
+/**
+ * Get payment notification summary
+ */
+/**
+ * Clear payment notifications (admin function)
+ */
+function clearPaymentNotifications() {
+  if (confirm('คุณแน่ใจที่จะล้างประวัติการชำระเงินทั้งหมด?')) {
+    localStorage.setItem('payment_notifications', '[]');
+    showNotification('✅ ล้างประวัติเรียบร้อย', 'success');
+    loadPaymentNotifications();
+  }
+}
+
+// ===== DEBUG FUNCTIONS =====
+function debugShowMaintenance() {
+  try {
+    const data = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
+    const output = document.getElementById('debugMaintenanceOutput');
+    output.textContent = '📊 maintenance_data (' + data.length + ' items)\n\n' + JSON.stringify(data, null, 2);
+    console.log('🔍 DEBUG: maintenance_data =', data);
+  } catch (e) {
+    document.getElementById('debugMaintenanceOutput').textContent = '❌ Error: ' + e.message;
+  }
+}
+
+function debugShowAnnouncements() {
+  try {
+    const data = JSON.parse(localStorage.getItem('announcements_data') || '[]');
+    const output = document.getElementById('debugAnnouncementsOutput');
+    output.textContent = '📊 announcements_data (' + data.length + ' items)\n\n' + JSON.stringify(data, null, 2);
+    console.log('🔍 DEBUG: announcements_data =', data);
+  } catch (e) {
+    document.getElementById('debugAnnouncementsOutput').textContent = '❌ Error: ' + e.message;
+  }
+}
+
+function debugShowAllKeys() {
+  try {
+    const keys = [];
+    const output = document.getElementById('debugAllKeysOutput');
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      const value = localStorage.getItem(key);
+      const size = new Blob([value]).size;
+      keys.push({ key: key, size: size + ' bytes' });
+    }
+    output.textContent = '📊 All localStorage keys (' + keys.length + ' items)\n\n' + JSON.stringify(keys, null, 2);
+    console.log('🔍 DEBUG: All localStorage keys =', keys);
+  } catch (e) {
+    document.getElementById('debugAllKeysOutput').textContent = '❌ Error: ' + e.message;
+  }
+}
+
+// Show debug page on demand
+function showDebugPage() {
+  window.showPage('debug');
+  debugShowMaintenance();
+  debugShowAnnouncements();
+  debugShowAllKeys();
+}
+
+// ===== SERVICE PROVIDERS MANAGEMENT =====
+function initServiceProvidersPage() {
+  loadAndRenderServiceProviders();
+}
+
+function loadAndRenderServiceProviders() {
+  const list = document.getElementById('providersList');
+  if (!list) return;
+
+  let providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
+  const searchVal = document.getElementById('providerSearch')?.value.toLowerCase() || '';
+
+  if (searchVal) {
+    providers = providers.filter(p =>
+      p.name.toLowerCase().includes(searchVal) ||
+      p.type.toLowerCase().includes(searchVal) ||
+      p.phone.includes(searchVal)
+    );
+  }
+
+  if (providers.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">📭 No service providers yet</div>';
+    return;
+  }
+
+  list.innerHTML = providers.map(p => `
+    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid var(--green);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+        <div>
+          <div style="font-weight: 700; font-size: 1rem;">📞 ${p.name}</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Type: <strong>${p.type}</strong></div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button onclick="editServiceProvider('${p.id}')" class="compact-btn compact-btn-edit">✏️ Edit</button>
+          <button onclick="deleteServiceProvider('${p.id}')" class="compact-btn compact-btn-delete">🗑️ Delete</button>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+        <div>📱 Phone: <strong>${p.phone}</strong></div>
+        <div>📧 Email: <strong>${p.email || '-'}</strong></div>
+        <div style="grid-column: 1/-1;">🌐 Website: <strong><a href="${p.website}" target="_blank" style="color: var(--blue);">${p.website || '-'}</a></strong></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleAddProviderForm() {
+  const form = document.getElementById('addProviderForm');
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  if (form.style.display === 'block') {
+    document.getElementById('providerType').focus();
+  }
+}
+
+function saveServiceProvider() {
+  const type = document.getElementById('providerType')?.value.trim();
+  const name = document.getElementById('providerName')?.value.trim();
+  const phone = document.getElementById('providerPhone')?.value.trim();
+  const email = document.getElementById('providerEmail')?.value.trim();
+  const website = document.getElementById('providerWebsite')?.value.trim();
+
+  if (!type || !name || !phone) {
+    showToast('Please fill in Type, Name, and Phone', 'warning');
+    return;
+  }
+
+  let providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
+  const newProvider = {
+    id: 'sp_' + Date.now(),
+    type: type,
+    name: name,
+    phone: phone,
+    email: email,
+    website: website,
+    createdDate: new Date().toISOString()
+  };
+
+  providers.push(newProvider);
+  localStorage.setItem('service_providers_data', JSON.stringify(providers));
+
+  // Clear form
+  document.getElementById('providerType').value = '';
+  document.getElementById('providerName').value = '';
+  document.getElementById('providerPhone').value = '';
+  document.getElementById('providerEmail').value = '';
+  document.getElementById('providerWebsite').value = '';
+
+  toggleAddProviderForm();
+  loadAndRenderServiceProviders();
+  showToast('✅ Service provider added successfully', 'success');
+}
+
+function editServiceProvider(id) {
+  const providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
+  const provider = providers.find(p => p.id === id);
+  if (!provider) return;
+
+  document.getElementById('providerType').value = provider.type;
+  document.getElementById('providerName').value = provider.name;
+  document.getElementById('providerPhone').value = provider.phone;
+  document.getElementById('providerEmail').value = provider.email || '';
+  document.getElementById('providerWebsite').value = provider.website || '';
+
+  const form = document.getElementById('addProviderForm');
+  form.style.display = 'block';
+
+  const button = form.querySelector('button.btn-receipt');
+  const originalText = button.textContent;
+  button.textContent = '✏️ Update Provider';
+  button.onclick = function() {
+    const updatedProvider = {
+      id: provider.id,
+      type: document.getElementById('providerType').value.trim(),
+      name: document.getElementById('providerName').value.trim(),
+      phone: document.getElementById('providerPhone').value.trim(),
+      email: document.getElementById('providerEmail').value.trim(),
+      website: document.getElementById('providerWebsite').value.trim(),
+      createdDate: provider.createdDate,
+      updatedDate: new Date().toISOString()
+    };
+
+    const idx = providers.findIndex(p => p.id === id);
+    if (idx >= 0) {
+      providers[idx] = updatedProvider;
+      localStorage.setItem('service_providers_data', JSON.stringify(providers));
+      document.getElementById('providerType').value = '';
+      document.getElementById('providerName').value = '';
+      document.getElementById('providerPhone').value = '';
+      document.getElementById('providerEmail').value = '';
+      document.getElementById('providerWebsite').value = '';
+      form.style.display = 'none';
+      button.textContent = originalText;
+      button.onclick = null;
+      loadAndRenderServiceProviders();
+      showToast('✅ Service provider updated', 'success');
+    }
+  };
+}
+
+function deleteServiceProvider(id) {
+  if (!confirm('Are you sure you want to delete this provider?')) return;
+
+  let providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
+  providers = providers.filter(p => p.id !== id);
+  localStorage.setItem('service_providers_data', JSON.stringify(providers));
+  loadAndRenderServiceProviders();
+  showToast('✅ Service provider deleted', 'success');
+}
+
+// ===== COMMUNITY EVENTS MANAGEMENT =====
+function initCommunityEventsPage() {
+  loadAndRenderCommunityEvents();
+}
+
+function loadAndRenderCommunityEvents() {
+  const list = document.getElementById('eventsList');
+  if (!list) return;
+
+  let events = JSON.parse(localStorage.getItem('community_events_data') || '[]');
+  const searchVal = document.getElementById('eventSearch')?.value.toLowerCase() || '';
+
+  if (searchVal) {
+    events = events.filter(e =>
+      e.title.toLowerCase().includes(searchVal) ||
+      e.location.toLowerCase().includes(searchVal)
+    );
+  }
+
+  // Sort by date
+  events.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (events.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">📭 No events scheduled</div>';
+    return;
+  }
+
+  list.innerHTML = events.map(e => `
+    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid #ff8f00;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+        <div style="flex: 1;">
+          <div style="font-weight: 700; font-size: 1rem;">📅 ${e.title}</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
+            📍 ${e.location} | 🕐 ${e.time}
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button onclick="deleteEvent('${e.id}')" class="compact-btn compact-btn-delete">🗑️</button>
+        </div>
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text);">📝 ${e.description || '-'}</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">📅 ${new Date(e.date).toLocaleDateString('th-TH')}</div>
+    </div>
+  `).join('');
+}
+
+function toggleAddEventForm() {
+  const form = document.getElementById('addEventForm');
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  if (form.style.display === 'block') {
+    document.getElementById('eventTitle').focus();
+  }
+}
+
+function saveCommunityEvent() {
+  const title = document.getElementById('eventTitle')?.value.trim();
+  const date = document.getElementById('eventDate')?.value;
+  const time = document.getElementById('eventTime')?.value;
+  const location = document.getElementById('eventLocation')?.value.trim();
+  const description = document.getElementById('eventDescription')?.value.trim();
+
+  if (!title || !date || !time || !location) {
+    showToast('Please fill in Title, Date, Time, and Location', 'warning');
+    return;
+  }
+
+  let events = JSON.parse(localStorage.getItem('community_events_data') || '[]');
+  const newEvent = {
+    id: 'evt_' + Date.now(),
+    title: title,
+    date: date,
+    time: time,
+    location: location,
+    description: description,
+    building: 'rooms',
+    createdDate: new Date().toISOString()
+  };
+
+  events.push(newEvent);
+  localStorage.setItem('community_events_data', JSON.stringify(events));
+
+  // Clear form
+  document.getElementById('eventTitle').value = '';
+  document.getElementById('eventDate').value = '';
+  document.getElementById('eventTime').value = '';
+  document.getElementById('eventLocation').value = '';
+  document.getElementById('eventDescription').value = '';
+
+  toggleAddEventForm();
+  loadAndRenderCommunityEvents();
+  showToast('✅ Event created successfully', 'success');
+}
+
+function deleteEvent(id) {
+  if (!confirm('Are you sure you want to delete this event?')) return;
+
+  let events = JSON.parse(localStorage.getItem('community_events_data') || '[]');
+  events = events.filter(e => e.id !== id);
+  localStorage.setItem('community_events_data', JSON.stringify(events));
+  loadAndRenderCommunityEvents();
+  showToast('✅ Event deleted', 'success');
+}
+
+// ===== COMMUNITY DOCUMENTS MANAGEMENT =====
+function initCommunityDocsPage() {
+  loadAndRenderCommunityDocs();
+}
+
+function loadAndRenderCommunityDocs() {
+  const list = document.getElementById('docsList');
+  if (!list) return;
+
+  let docs = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
+  const searchVal = document.getElementById('docSearch')?.value.toLowerCase() || '';
+
+  if (searchVal) {
+    docs = docs.filter(d =>
+      d.title.toLowerCase().includes(searchVal) ||
+      d.category.toLowerCase().includes(searchVal)
+    );
+  }
+
+  // Group by category
+  const grouped = {};
+  docs.forEach(d => {
+    if (!grouped[d.category]) grouped[d.category] = [];
+    grouped[d.category].push(d);
+  });
+
+  if (docs.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">📭 No documents added</div>';
+    return;
+  }
+
+  list.innerHTML = Object.entries(grouped).map(([category, items]) => `
+    <div style="margin-bottom: 2rem;">
+      <div style="font-weight: 700; font-size: 0.95rem; color: var(--green-dark); margin-bottom: 1rem; border-bottom: 2px solid var(--green-pale); padding-bottom: 0.5rem;">📑 ${category}</div>
+      ${items.map(d => `
+        <div class="card" style="margin-bottom: 1rem; border-left: 4px solid #1976d2;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="flex: 1;">
+              <div style="font-weight: 700;">📄 ${d.title}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Type: <strong>${d.fileType || '-'}</strong></div>
+              ${d.description ? `<div style="font-size: 0.9rem; margin-top: 0.5rem;">${d.description}</div>` : ''}
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <a href="${d.fileUrl}" target="_blank" class="compact-btn compact-btn-view">📥 View</a>
+              <button onclick="deleteDocument('${d.id}')" class="compact-btn compact-btn-delete">🗑️</button>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function toggleAddDocForm() {
+  const form = document.getElementById('addDocForm');
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  if (form.style.display === 'block') {
+    document.getElementById('docTitle').focus();
+  }
+}
+
+function saveCommunityDocument() {
+  const title = document.getElementById('docTitle')?.value.trim();
+  const category = document.getElementById('docCategory')?.value;
+  const fileType = document.getElementById('docType')?.value.trim();
+  const fileUrl = document.getElementById('docUrl')?.value.trim();
+  const description = document.getElementById('docDescription')?.value.trim();
+
+  if (!title || !category || !fileUrl) {
+    showToast('Please fill in Title, Category, and URL', 'warning');
+    return;
+  }
+
+  let docs = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
+  const newDoc = {
+    id: 'doc_' + Date.now(),
+    title: title,
+    category: category,
+    description: description,
+    fileUrl: fileUrl,
+    fileType: fileType,
+    building: 'rooms',
+    uploadedDate: new Date().toISOString()
+  };
+
+  docs.push(newDoc);
+  localStorage.setItem('community_documents_data', JSON.stringify(docs));
+
+  // Clear form
+  document.getElementById('docTitle').value = '';
+  document.getElementById('docCategory').value = '';
+  document.getElementById('docType').value = '';
+  document.getElementById('docUrl').value = '';
+  document.getElementById('docDescription').value = '';
+
+  toggleAddDocForm();
+  loadAndRenderCommunityDocs();
+  showToast('✅ Document added successfully', 'success');
+}
+
+function deleteDocument(id) {
+  if (!confirm('Are you sure you want to delete this document?')) return;
+
+  let docs = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
+  docs = docs.filter(d => d.id !== id);
+  localStorage.setItem('community_documents_data', JSON.stringify(docs));
+  loadAndRenderCommunityDocs();
+  showToast('✅ Document deleted', 'success');
+}
+
+// ===== PET REGISTRATION APPROVALS =====
+function initPetApprovalsPage() {
+  loadAndRenderPetApprovals();
+}
+
+function loadAndRenderPetApprovals() {
+  const list = document.getElementById('petsList');
+  if (!list) return;
+
+  // Load all pets from all rooms
+  let allPets = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('tenant_pets_')) {
+      const pets = JSON.parse(localStorage.getItem(key) || '[]');
+      const [, building, room] = key.split('_');
+      allPets = allPets.concat(pets.map(p => ({ ...p, room, building, storageKey: key })));
+    }
+  }
+
+  const searchVal = document.getElementById('petSearch')?.value.toLowerCase() || '';
+  const statusFilter = document.getElementById('petFilterStatus')?.value || '';
+
+  allPets = allPets.filter(p => {
+    const matchesSearch = !searchVal || p.room.toLowerCase().includes(searchVal) || p.name.toLowerCase().includes(searchVal);
+    const matchesStatus = !statusFilter || p.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  if (allPets.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">🐾 No pet registrations</div>';
+    return;
+  }
+
+  list.innerHTML = allPets.map(p => {
+    const statusBadge = p.status === 'approved' ? '✅ Approved' : p.status === 'rejected' ? '❌ Rejected' : '⏳ Pending';
+    const statusColor = p.status === 'approved' ? '#4caf50' : p.status === 'rejected' ? '#f44336' : '#ff9800';
+
+    return `
+      <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${statusColor};">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+          <div>
+            <div style="font-weight: 700; font-size: 1rem;">🐾 ${p.name} (${p.type})</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Room: <strong>${p.room}</strong></div>
+          </div>
+          <span style="padding: 0.4rem 0.8rem; border-radius: 20px; background: ${statusColor}; color: white; font-size: 0.85rem; font-weight: 600;">${statusBadge}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; font-size: 0.9rem; margin-bottom: 1rem;">
+          <div>🐕 Breed: <strong>${p.breed || '-'}</strong></div>
+          <div>⚖️ Weight: <strong>${p.weight || '-'}</strong></div>
+          <div>🎨 Color: <strong>${p.color || '-'}</strong></div>
+        </div>
+        ${p.notes ? `<div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">📝 ${p.notes}</div>` : ''}
+        ${p.status === 'pending' ? `
+          <div style="display: flex; gap: 0.5rem;">
+            <button onclick="approvePet('${p.id}', '${p.room}', '${p.storageKey}')" class="compact-btn compact-btn-view">✅ Approve</button>
+            <button onclick="rejectPet('${p.id}', '${p.room}', '${p.storageKey}')" class="compact-btn compact-btn-delete">❌ Reject</button>
+          </div>
+        ` : `
+          <button onclick="removePetApproval('${p.id}', '${p.room}', '${p.storageKey}')" class="compact-btn compact-btn-delete">🗑️ Remove</button>
+        `}
+      </div>
+    `;
+  }).join('');
+}
+
+function filterPetsByStatus(status) {
+  loadAndRenderPetApprovals();
+}
+
+function approvePet(id, room, storageKey) {
+  let pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  const pet = pets.find(p => p.id === id);
+  if (pet) {
+    pet.status = 'approved';
+    pet.approvalDate = new Date().toISOString();
+    localStorage.setItem(storageKey, JSON.stringify(pets));
+    loadAndRenderPetApprovals();
+    showToast('✅ Pet approved', 'success');
+  }
+}
+
+function rejectPet(id, room, storageKey) {
+  if (!confirm('Are you sure you want to reject this pet registration?')) return;
+
+  let pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  const pet = pets.find(p => p.id === id);
+  if (pet) {
+    pet.status = 'rejected';
+    pet.rejectionDate = new Date().toISOString();
+    localStorage.setItem(storageKey, JSON.stringify(pets));
+    loadAndRenderPetApprovals();
+    showToast('✅ Pet rejected', 'success');
+  }
+}
+
+function removePetApproval(id, room, storageKey) {
+  if (!confirm('Are you sure you want to remove this pet registration?')) return;
+
+  let pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  pets = pets.filter(p => p.id !== id);
+  localStorage.setItem(storageKey, JSON.stringify(pets));
+  loadAndRenderPetApprovals();
+  showToast('✅ Pet registration removed', 'success');
+}
+
+// ===== LEASE RENEWAL ALERTS SETTINGS =====
+function initLeaseSettingsPage() {
+  loadAndRenderLeaseSettings();
+}
+
+function loadAndRenderLeaseSettings() {
+  // Load current settings
+  const settings = JSON.parse(localStorage.getItem('lease_alert_settings') || '{"threshold": 60, "severity": "warning"}');
+  document.getElementById('alertThreshold').value = settings.threshold || 60;
+  document.getElementById('alertSeverity').value = settings.severity || 'warning';
+
+  // Load lease expirations
+  loadAndRenderLeaseExpirations();
+}
+
+function loadAndRenderLeaseExpirations() {
+  const container = document.getElementById('leaseExpiryList');
+  if (!container) return;
+
+  // Get all leases
+  const leases = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('lease_')) {
+      try {
+        const lease = JSON.parse(localStorage.getItem(key));
+        if (lease && lease.status === 'active') leases.push(lease);
+      } catch (e) {}
+    }
+  }
+
+  const threshold = parseInt(document.getElementById('alertThreshold')?.value || 60);
+  const today = new Date();
+  const expiringLeases = [];
+
+  leases.forEach(lease => {
+    const endDate = new Date(lease.moveOutDate || lease.moveInDate);
+    if (lease.duration) {
+      endDate.setMonth(endDate.getMonth() + lease.duration);
+    } else {
+      endDate.setFullYear(endDate.getFullYear() + 1);
+    }
+
+    const daysUntilExpiry = Math.floor((endDate - today) / (1000 * 60 * 60 * 24));
+    if (daysUntilExpiry >= 0 && daysUntilExpiry <= threshold) {
+      expiringLeases.push({ ...lease, daysUntilExpiry, expiryDate: endDate });
+    }
+  });
+
+  expiringLeases.sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
+
+  if (expiringLeases.length === 0) {
+    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">✅ No leases expiring soon</div>';
+    return;
+  }
+
+  container.innerHTML = expiringLeases.map(lease => {
+    let urgency = 'notice';
+    if (lease.daysUntilExpiry <= 7) urgency = 'urgent';
+    else if (lease.daysUntilExpiry <= 30) urgency = 'warning';
+
+    const urgencyColor = urgency === 'urgent' ? '#f44336' : urgency === 'warning' ? '#ff9800' : '#2196f3';
+    const urgencyIcon = urgency === 'urgent' ? '🚨' : urgency === 'warning' ? '⚠️' : 'ℹ️';
+
+    return `
+      <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${urgencyColor};">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="flex: 1;">
+            <div style="font-weight: 700; font-size: 1rem;">🏠 Room ${lease.roomId}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
+              Building: <strong>${lease.building === 'rooms' ? 'Rooms Building' : 'Nest Building'}</strong>
+            </div>
+          </div>
+          <span style="padding: 0.6rem 1rem; border-radius: 20px; background: ${urgencyColor}; color: white; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">${urgencyIcon} ${lease.daysUntilExpiry} days</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem; margin-top: 1rem;">
+          <div>👤 Tenant: <strong>${lease.tenantName || lease.tenantId}</strong></div>
+          <div>📅 Expires: <strong>${lease.expiryDate.toLocaleDateString('th-TH')}</strong></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function saveLeaseAlertSettings() {
+  const threshold = parseInt(document.getElementById('alertThreshold')?.value || 60);
+  const severity = document.getElementById('alertSeverity')?.value || 'warning';
+
+  if (threshold < 1 || threshold > 365) {
+    showToast('Threshold must be between 1 and 365 days', 'warning');
+    return;
+  }
+
+  const settings = { threshold, severity };
+  localStorage.setItem('lease_alert_settings', JSON.stringify(settings));
+  showToast('✅ Lease alert settings saved', 'success');
+  loadAndRenderLeaseSettings();
+}
+
+// ===== COMPLAINTS PAGE =====
+function initComplaintsPage() {
+  console.log('✅ Complaints page initialized');
+
+  const complaints = JSON.parse(localStorage.getItem('complaints_data') || '[]');
+  const open       = complaints.filter(c => c.status === 'open').length;
+  const inProg     = complaints.filter(c => c.status === 'in-progress').length;
+  const resolved   = complaints.filter(c => c.status === 'resolved').length;
+
+  document.getElementById('totalComplaintsCount').textContent    = complaints.length;
+  document.getElementById('openComplaintsCount').textContent      = open;
+  document.getElementById('inProgressComplaintsCount').textContent = inProg;
+  document.getElementById('resolvedComplaintsCount').textContent  = resolved;
+
+  const list = document.getElementById('complaintsList');
+  if (!list) return;
+
+  if (complaints.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">ยังไม่มีการร้องเรียน</div>';
+    return;
+  }
+
+  const statusColor = { 'open': '#f57c00', 'in-progress': '#1976d2', 'resolved': '#388e3c' };
+  const statusLabel = { 'open': '🔴 Open', 'in-progress': '🟡 In Progress', 'resolved': '🟢 Resolved' };
+
+  list.innerHTML = complaints.slice().reverse().map(c => {
+    const color = statusColor[c.status] || '#999';
+    const label = statusLabel[c.status] || c.status;
+    const date  = c.createdAt ? new Date(c.createdAt).toLocaleDateString('th-TH') : '-';
+    return `
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.2rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+          <span style="font-weight:700;">${c.title || '(ไม่มีหัวข้อ)'}</span>
+          <span style="font-size:0.8rem;color:${color};font-weight:600;">${label}</span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">ห้อง ${c.room || '-'} · ${date}</div>
+        <div style="font-size:0.9rem;">${c.desc || ''}</div>
+        <div style="margin-top:0.8rem;display:flex;gap:0.5rem;">
+          ${c.status !== 'resolved' ? `<button onclick="updateComplaintStatus('${c.id}','resolved')" style="padding:0.3rem 0.7rem;font-size:0.8rem;background:#e8f5e9;color:#388e3c;border:1px solid #c8e6c9;border-radius:4px;cursor:pointer;">✅ Resolve</button>` : ''}
+          ${c.status === 'open' ? `<button onclick="updateComplaintStatus('${c.id}','in-progress')" style="padding:0.3rem 0.7rem;font-size:0.8rem;background:#e3f2fd;color:#1976d2;border:1px solid #bbdefb;border-radius:4px;cursor:pointer;">🔄 In Progress</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function updateComplaintStatus(id, newStatus) {
+  const complaints = JSON.parse(localStorage.getItem('complaints_data') || '[]');
+  const idx = complaints.findIndex(c => c.id === id);
+  if (idx >= 0) {
+    complaints[idx].status = newStatus;
+    complaints[idx].updatedAt = new Date().toISOString();
+    localStorage.setItem('complaints_data', JSON.stringify(complaints));
+    initComplaintsPage();
+  }
+}
+
+// ===== GAMIFICATION PAGE =====
+function initGamificationPage() {
+  console.log('✅ Gamification page initialized');
+
+  // Build leaderboard from TenantConfigManager data across both buildings
+  const roomsTenants = TenantConfigManager.getTenantList('rooms');
+  const nestTenants  = TenantConfigManager.getTenantList('nest');
+  const allTenants   = [...roomsTenants, ...nestTenants];
+
+  // Score: 10 pts per month of tenancy (createdDate → now), capped at 120 pts
+  const scored = allTenants.map(t => {
+    const months = t.createdDate
+      ? Math.min(120, Math.floor((Date.now() - new Date(t.createdDate).getTime()) / (1000 * 60 * 60 * 24 * 30)))
+      : 0;
+    const points = months * 10;
+    const badges = months >= 12 ? '🌟🏅' : months >= 6 ? '🌟' : '';
+    const rank   = points >= 1000 ? '🥇 Gold' : points >= 500 ? '🥈 Silver' : '🥉 Bronze';
+    return { name: t.name || t.id, points, badges, rank };
+  }).sort((a, b) => b.points - a.points);
+
+  const tbody = document.getElementById('leaderboardTable');
+  if (!tbody) return;
+
+  if (scored.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">ยังไม่มีข้อมูลผู้เช่า</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = scored.map((t, i) => `
+    <tr>
+      <td style="text-align:center;font-weight:700;">${i + 1}</td>
+      <td>${t.name}</td>
+      <td style="text-align:center;font-weight:600;">${t.points}</td>
+      <td style="text-align:center;">${t.badges}</td>
+      <td style="text-align:center;font-size:0.85rem;">${t.rank}</td>
+    </tr>`).join('');
+}
+
+function switchGamificationTab(tabName, btn) {
+  document.querySelectorAll('[id^="gamification"]').forEach(el => el.style.display = 'none');
+  document.getElementById('gamification' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).style.display = 'block';
+  document.querySelectorAll('#page-gamification button').forEach(b => b.style.color = 'var(--text-muted)');
+  document.querySelectorAll('#page-gamification button').forEach(b => b.style.borderBottom = '3px solid transparent');
+  btn.style.color = '#2d8653';
+  btn.style.borderBottom = '3px solid #2d8653';
+}
+
+// ===== REPORTS PAGE =====
+function initAdminReportsPage() {
+  console.log('✅ Admin Reports page initialized');
+
+  // Calculate real occupancy from both buildings via calculateOccupancy()
+  const roomsOcc = calculateOccupancy('rooms');
+  const nestOcc = calculateOccupancy('nest');
+  const totalOccupied = roomsOcc.occupied + nestOcc.occupied;
+  const totalVacant = roomsOcc.vacant + nestOcc.vacant;
+  const totalRooms = roomsOcc.total + nestOcc.total;
+  const rate = totalRooms > 0 ? Math.round((totalOccupied / totalRooms) * 100) : 0;
+
+  const rateEl = document.getElementById('occupancyRate');
+  const occEl  = document.getElementById('occupiedRooms');
+  const vacEl  = document.getElementById('vacantRooms');
+  if (rateEl) rateEl.textContent = rate + '%';
+  if (occEl)  occEl.textContent  = totalOccupied;
+  if (vacEl)  vacEl.textContent  = totalVacant;
+}
+
+function switchReportTab(tabName, btn) {
+  document.querySelectorAll('[id$="Report"]').forEach(el => el.style.display = 'none');
+  document.getElementById(tabName + 'Report').style.display = 'block';
+  document.querySelectorAll('#page-admin-reports > .card > div:first-child button').forEach(b => b.style.color = 'var(--text-muted)');
+  document.querySelectorAll('#page-admin-reports > .card > div:first-child button').forEach(b => b.style.borderBottom = '3px solid transparent');
+  btn.style.color = '#2d8653';
+  btn.style.borderBottom = '3px solid #2d8653';
+}
+
+// ===== BILLING IMPORT FUNCTIONS =====
+/**
+ * CRITICAL SECTION: Handles file uploads for billing data
+ *
+ * 🔑 KEY CONCEPT: Two entry points → One processor
+ * 1. Drop Zone (ondrop) → handleBillingImportDrop()
+ * 2. File Input (onchange) → handleBillingImportFile()
+ * 3. Both call → handleBillingImportFileProcess(file)
+ *
+ * ⚠️ IMPORTANT: Functions MUST be exposed to window scope (bottom of this section)
+ *    Otherwise HTML onclick/ondrop attributes will not find them!
+ */
+
+function handleBillingImportDrop(event) {
+  event.preventDefault();
+  const files = event.dataTransfer.files;
+  if (files.length > 0) {
+    handleBillingImportFileProcess(files[0]);
+  }
+}
+
+/**
+ * ENTRY POINT #1: File input onchange handler
+ * HTML attribute: onchange="window.handleBillingImportFile && window.handleBillingImportFile(event);"
+ *
+ * Flow: User clicks drop zone → clicks hidden input → selects file → onchange fires → this function called
+ *
+ * ⚠️ Safety check in HTML: "window.handleBillingImportFile &&" prevents error if not loaded yet
+ */
+function handleBillingImportFile(event) {
+  const files = event.target.files;
+  if (files.length > 0) {
+    handleBillingImportFileProcess(files[0]);
+  }
+}
+
+/**
+ * 🚨 CRITICAL SECTION: EXPOSE TO GLOBAL SCOPE
+ *
+ * WHY: HTML attributes (onchange, ondrop) need these functions in window scope
+ * WHEN: After function definitions above
+ *
+ * If this is missing or wrong:
+ * ❌ Error: "handleBillingImportFile is not defined"
+ * ❌ Error: "handleBillingImportDrop is not defined"
+ *
+ * Solution: Always assign to window object:
+ */
+window.handleBillingImportFile = handleBillingImportFile;
+window.handleBillingImportDrop = handleBillingImportDrop;
+
+/**
+ * MAIN PROCESSOR: Handles Excel file reading and parsing
+ *
+ * 🔄 FLOW:
+ * 1. Extract year from filename (must have "ปี" + number)
+ * 2. Read Excel file using XLSX library
+ * 3. Parse sheets based on year format
+ * 4. Save to HISTORICAL_DATA in localStorage
+ * 5. Display preview with matchResults
+ *
+ * ⚠️ CRITICAL DEPENDENCIES:
+ * - XLSX library (loaded in HTML header)
+ * - meter-unified.js (for matchMeterDataWithPrevious)
+ * - Functions: showBillingImportStatus, parseImportExcelData, displayImportPreview
+ *
+ * 🐛 COMMON ISSUES:
+ * - "matchMeterDataWithPrevious is not defined" → Check if meter-unified.js loaded
+ * - File not processing → Check browser console for errors
+ * - Filename not recognized → Must contain "ปี" + year number
+ */
+function handleBillingImportFileProcess(file) {
+  // STEP 1: Filename validation - Auto-detect year from filename
+  // Example: "บิลปี69.xlsx" → year = 69
+  // Pattern: Look for Thai character "ปี" followed by digits
+  const yearMatch = file.name.match(/ปี(\d+)/);
+
+  if (!yearMatch) {
+    showBillingImportStatus('❌ ชื่อไฟล์ต้องมี "ปี" และตัวเลขปี เช่น "บิลปี69.xlsx" หรือ "บิลปี70 (2).xlsx"', 'error');
+    return; // STOP: Cannot proceed without year
+  }
+
+  const yearInput = yearMatch[1];
+  showBillingImportStatus(`✅ ตรวจพบปี ${yearInput} จากชื่อไฟล์`, 'success');
+
+  // STEP 2: Start file loading
+  showBillingImportStatus('⏳ กำลังโหลดไฟล์...', 'info');
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      showBillingImportStatus('⏳ กำลังประมวลผลข้อมูล...', 'info');
+
+      // STEP 3: Async processing to prevent UI freeze
+      // setTimeout allows browser to update UI between processing
+      setTimeout(() => {
+        try {
+          // STEP 4: Read and parse Excel file
+          const data = new Uint8Array(e.target.result);
+          console.log('📥 Reading Excel file...', data.length, 'bytes');
+
+          // XLSX library reads binary data and returns workbook object
+          const workbook = XLSX.read(data, { type: 'array' });
+          console.log('✅ Excel loaded:', workbook.SheetNames.length, 'sheets');
+
+          const year = yearInput;
+          console.log(`📊 Parsing billing data for year: ${year}`);
+
+          // STEP 5: Detect file format version based on year
+          // Year >= 70 (Thai year 2570+) = V2 format
+          // Year < 70 = V3 format
+          let monthlyData = [];
+          const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex' ? 1 : 0;
+          const yearNum = parseInt(year);
+          const forceV2 = yearNum >= 70;
+
+          // Process sheets with async breaks to avoid UI freeze
+          let sheetIdx = startIdx;
+
+          const processSheet = () => {
+            if (sheetIdx >= workbook.SheetNames.length) {
+              // Done processing all sheets
+              finalizeBillingImport(monthlyData, year, forceV2);
+              return;
+            }
+
+            const sheet = workbook.Sheets[workbook.SheetNames[sheetIdx]];
+            const hasD43 = sheet['D43']?.v !== undefined;
+
+            try {
+              if (forceV2) {
+                const result = parseSingleSheetV2(sheet, sheetIdx - startIdx + 1, workbook.SheetNames[sheetIdx]);
+                if (result) monthlyData.push(result);
+              } else if (hasD43) {
+                const result = parseSingleSheetV2(sheet, sheetIdx - startIdx + 1, workbook.SheetNames[sheetIdx]);
+                if (result) monthlyData.push(result);
+              } else {
+                const result = parseSingleSheetV1(sheet, sheetIdx - startIdx + 1, workbook.SheetNames[sheetIdx]);
+                if (result) monthlyData.push(result);
+              }
+            } catch (sheetErr) {
+              console.warn(`⚠️ Error processing sheet ${sheetIdx}:`, sheetErr.message);
+            }
+
+            sheetIdx++;
+
+            // Process next sheet with tiny delay to allow UI refresh
+            setTimeout(processSheet, 10);
+          };
+
+          processSheet();
+
+        } catch (err) {
+          showBillingImportStatus('❌ เกิดข้อผิดพลาดในการอ่านไฟล์: ' + err.message, 'error');
+          console.error('File reading error:', err);
+        }
+      }, 50);
+
+    } catch (err) {
+      showBillingImportStatus('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Helper: Finalize billing import after all sheets processed
+function finalizeBillingImport(monthlyData, year, forceV2) {
+  try {
+    const parserMode = forceV2 ? '(V2 only)' : '(mixed V1/V2)';
+    console.log(`📌 Year ${year}: Parsed ${monthlyData.length} months ${parserMode}`);
+
+    if (!monthlyData || monthlyData.length === 0) {
+      showBillingImportStatus('❌ ไม่พบข้อมูลบิล H32 ในไฟล์', 'error');
+      return;
+    }
+
+    // Display preview
+    displayBillingImportPreview(monthlyData, year);
+    showBillingImportStatus(`✅ โหลดข้อมูลบิล ${monthlyData.length} เดือน สำหรับปี ${year} สำเร็จ`, 'success');
+
+    // Store for approval
+    window.pendingBillingData = {
+      year: year,
+      monthlyData: monthlyData
+    };
+  } catch (err) {
+    showBillingImportStatus('❌ เกิดข้อผิดพลาดในการประมวลผล: ' + err.message, 'error');
+    console.error('Finalization error:', err);
+  }
+}
+
+// Helper: Parse single sheet with V1 format
+function parseSingleSheetV1(worksheet, monthNum, sheetName) {
+  // Rooms: D24=rent, J24=elec, P24=water, S2:S23=trash
+  const roomsRent = parseFloat(worksheet['D24']?.v || 0) || 0;
+  const roomsElec = parseFloat(worksheet['J24']?.v || 0) || 0;
+  const roomsWater = parseFloat(worksheet['P24']?.v || 0) || 0;
+  let roomsTrash = 0;
+  for (let row = 2; row <= 23; row++) {
+    roomsTrash += parseFloat(worksheet[`S${row}`]?.v || 0) || 0;
+  }
+
+  // Amazon: D26=rent, J26=elec, P26=water, S26=trash
+  const amazonRent = parseFloat(worksheet['D26']?.v || 0) || 0;
+  const amazonElec = parseFloat(worksheet['J26']?.v || 0) || 0;
+  const amazonWater = parseFloat(worksheet['P26']?.v || 0) || 0;
+  const amazonTrash = parseFloat(worksheet['S26']?.v || 0) || 0;
+
+  const totalRent = roomsRent + amazonRent;
+  const totalElec = roomsElec + amazonElec;
+  const totalWater = roomsWater + amazonWater;
+  const totalTrash = roomsTrash + amazonTrash;
+  const total = totalRent + totalElec + totalWater + totalTrash;
+
+  if (total > 0) {
+    return {
+      month: monthNum,
+      sheetName: sheetName,
+      rent: totalRent,
+      electricity: totalElec,
+      water: totalWater,
+      trash: totalTrash,
+      total: total,
+      breakdown: {
+        rooms: { rent: roomsRent, elec: roomsElec, water: roomsWater, trash: roomsTrash, total: roomsRent + roomsElec + roomsWater + roomsTrash },
+        nest: { rent: 0, elec: 0, water: 0, trash: 0, total: 0 },
+        amazon: { rent: amazonRent, elec: amazonElec, water: amazonWater, trash: amazonTrash, total: amazonRent + amazonElec + amazonWater + amazonTrash }
+      }
+    };
+  }
+  return null;
+}
+
+// Helper: Parse single sheet with V2 format (with Nest building)
+// Layout (June 69+):
+//   Rows 2-23:  Rooms (22 ห้อง), summary at row 24
+//   Rows 26-45: Nest (20 ห้อง N101-N405), summary at row 46
+//   Row 47:     empty separator
+//   Row 48:     ร้านใหญ่ (Amazon)
+function parseSingleSheetV2(worksheet, monthNum, sheetName) {
+  // Rooms: D24=total, J24=elec, P24=water, S2:S23=trash
+  const roomsRent = parseFloat(worksheet['D24']?.v || 0) || 0;
+  const roomsElec = parseFloat(worksheet['J24']?.v || 0) || 0;
+  const roomsWater = parseFloat(worksheet['P24']?.v || 0) || 0;
+  let roomsTrash = 0;
+  for (let row = 2; row <= 23; row++) {
+    roomsTrash += parseFloat(worksheet[`S${row}`]?.v || 0) || 0;
+  }
+
+  // Nest: D46=total, J46=elec, P46=water, S26:S45=trash (20 rooms, summary row 46)
+  const nestRent = parseFloat(worksheet['D46']?.v || 0) || 0;
+  const nestElec = parseFloat(worksheet['J46']?.v || 0) || 0;
+  const nestWater = parseFloat(worksheet['P46']?.v || 0) || 0;
+  let nestTrash = 0;
+  for (let row = 26; row <= 45; row++) {
+    nestTrash += parseFloat(worksheet[`S${row}`]?.v || 0) || 0;
+  }
+
+  // Amazon/ร้านใหญ่: D48=rent, J48=elec, P48=water, S48=trash (row moved from 47→48 in June 69+)
+  const amazonRent = parseFloat(worksheet['D48']?.v || 0) || 0;
+  const amazonElec = parseFloat(worksheet['J48']?.v || 0) || 0;
+  const amazonWater = parseFloat(worksheet['P48']?.v || 0) || 0;
+  const amazonTrash = parseFloat(worksheet['S48']?.v || 0) || 0;
+
+  // Total trash: S51 (shifted down 1 row from S50 due to Amazon moving to row 48)
+  const totalTrash = parseFloat(worksheet['S51']?.v || 0) || parseFloat(worksheet['S50']?.v || 0) || 0;
+
+  const totalRent = roomsRent + nestRent + amazonRent;
+  const totalElec = roomsElec + nestElec + amazonElec;
+  const totalWater = roomsWater + nestWater + amazonWater;
+  const total = totalRent + totalElec + totalWater + totalTrash;
+
+  if (total > 0) {
+    return {
+      month: monthNum,
+      sheetName: sheetName,
+      rent: totalRent,
+      electricity: totalElec,
+      water: totalWater,
+      trash: totalTrash,
+      total: total,
+      breakdown: {
+        rooms: { rent: roomsRent, elec: roomsElec, water: roomsWater, trash: roomsTrash, total: roomsRent + roomsElec + roomsWater + roomsTrash },
+        nest: { rent: nestRent, elec: nestElec, water: nestWater, trash: nestTrash, total: nestRent + nestElec + nestWater + nestTrash },
+        amazon: { rent: amazonRent, elec: amazonElec, water: amazonWater, trash: amazonTrash, total: amazonRent + amazonElec + amazonWater + amazonTrash }
+      }
+    };
+  }
+  return null;
+}
+
+function parseBillingExcelData(workbook) {
+  const monthlyData = [];
+
+  // Try to extract detailed data from each sheet (skip first sheet if it's template)
+  const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex' ? 1 : 0;
+
+  for (let idx = startIdx; idx < workbook.SheetNames.length; idx++) {
+    const sheetName = workbook.SheetNames[idx];
+    const worksheet = workbook.Sheets[sheetName];
+
+    // Read individual cells for Rooms (row 24) and Amazon (row 26)
+    const d24 = parseFloat(worksheet['D24']?.v || 0) || 0;  // Room rent
+    const j24 = parseFloat(worksheet['J24']?.v || 0) || 0;  // Room electricity
+    const p24 = parseFloat(worksheet['P24']?.v || 0) || 0;  // Room water
+
+    const d26 = parseFloat(worksheet['D26']?.v || 0) || 0;  // Amazon rent
+    const j26 = parseFloat(worksheet['J26']?.v || 0) || 0;  // Amazon electricity
+    const p26 = parseFloat(worksheet['P26']?.v || 0) || 0;  // Amazon water
+
+    // Read trash total from S29 (รวมค่าขยะ summary cell)
+    const totalTrash = parseFloat(worksheet['S29']?.v || 0) || 0;
+
+    // Calculate totals
+    const totalRent = d24 + d26;
+    const totalElec = j24 + j26;
+    const totalWater = p24 + p26;
+    const total = totalRent + totalElec + totalWater + totalTrash;
+
+    if (total > 0) {
+      monthlyData.push({
+        month: idx - startIdx + 1,
+        sheetName: sheetName,
+        rent: totalRent,
+        electricity: totalElec,
+        water: totalWater,
+        trash: totalTrash,
+        total: total
+      });
+    }
+  }
+
+  return monthlyData;
+}
+
+// V2: For June 69 onwards (with Nest building + rooms rows)
+function parseBillingExcelDataV2(workbook) {
+  const monthlyData = [];
+
+  // Skip first sheet if template (EX)
+  const startIdx = workbook.SheetNames[0].toLowerCase() === 'ex' ? 1 : 0;
+
+  for (let idx = startIdx; idx < workbook.SheetNames.length; idx++) {
+    const sheetName = workbook.SheetNames[idx];
+    const worksheet = workbook.Sheets[sheetName];
+
+    // V2 Cell mapping for June onwards:
+    // D43 = Nest rent, J43 = Nest elec, P43 = Nest water
+    // D45 = Amazon rent, J45 = Amazon elec, P45 = Amazon water
+    // S48 = Trash total
+
+    const nestRent = parseFloat(worksheet['D43']?.v || 0) || 0;    // Nest rent
+    const nestElec = parseFloat(worksheet['J43']?.v || 0) || 0;    // Nest electricity
+    const nestWater = parseFloat(worksheet['P43']?.v || 0) || 0;   // Nest water
+
+    const amazonRent = parseFloat(worksheet['D45']?.v || 0) || 0;  // Amazon rent
+    const amazonElec = parseFloat(worksheet['J45']?.v || 0) || 0;  // Amazon electricity
+    const amazonWater = parseFloat(worksheet['P45']?.v || 0) || 0; // Amazon water
+
+    // Rooms: Sum D24:D26 (or detect from A24:A42 rows with N10x pattern)
+    let roomsRent = 0, roomsElec = 0, roomsWater = 0;
+    for (let row = 24; row <= 42; row++) {
+      const d = worksheet[`D${row}`]?.v;
+      const j = worksheet[`J${row}`]?.v;
+      const p = worksheet[`P${row}`]?.v;
+      if (d !== undefined) roomsRent += parseFloat(d) || 0;
+      if (j !== undefined) roomsElec += parseFloat(j) || 0;
+      if (p !== undefined) roomsWater += parseFloat(p) || 0;
+    }
+
+    // Trash total from S48
+    const totalTrash = parseFloat(worksheet['S48']?.v || 0) || 0;
+
+    // Calculate totals
+    const totalRent = roomsRent + nestRent + amazonRent;
+    const totalElec = roomsElec + nestElec + amazonElec;
+    const totalWater = roomsWater + nestWater + amazonWater;
+    const total = totalRent + totalElec + totalWater + totalTrash;
+
+    if (total > 0) {
+      monthlyData.push({
+        month: idx - startIdx + 1,
+        sheetName: sheetName,
+        rent: totalRent,
+        electricity: totalElec,
+        water: totalWater,
+        trash: totalTrash,
+        total: total,
+        breakdown: { rooms: roomsRent, nest: nestRent, amazon: amazonRent } // For debug
+      });
+    }
+  }
+
+  return monthlyData;
+}
+
+function displayBillingImportPreview(monthlyData, year) {
+  const previewDiv = document.getElementById('billingPreviewData');
+  const monthNames = ['มค', 'กพ', 'มีค', 'เมษา', 'พค', 'มิย', 'กค', 'สค', 'กย', 'ตค', 'พย', 'ธค'];
+
+  let html = `<strong>ข้อมูลบิลปี ${year} (Rooms + Nest + Amazon):</strong><br>`;
+  html += `<div style="font-family:'Sarabun',sans-serif;font-size:0.9rem;overflow-x:auto;margin-top:0.5rem;">`;
+  html += `<table style="width:100%;border-collapse:collapse;">`;
+  html += `<thead>
+    <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
+      <th style="padding:0.8rem;text-align:left;border-right:1px solid var(--border);">เดือน</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#fff9c4;color:#f57f17;font-weight:700;">📦 Amazon</th>
+      <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวม</th>
+    </tr>
+    <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
+      <th style="padding:0.2rem;border-right:1px solid var(--border);"></th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;font-size:0.8rem;color:var(--green);font-weight:700;">รวม</th>
+    </tr>
+  </thead>
+  <tbody>`;
+
+  let roomsRentSum = 0, roomsElecSum = 0, roomsWaterSum = 0, roomsTrashSum = 0, roomsTotal = 0;
+  let nestRentSum = 0, nestElecSum = 0, nestWaterSum = 0, nestTrashSum = 0, nestTotal = 0;
+  let amazonRentSum = 0, amazonElecSum = 0, amazonWaterSum = 0, amazonTrashSum = 0, amazonTotal = 0;
+  let yearlyTotal = 0;
+
+  monthlyData.forEach(m => {
+    const bd = m.breakdown || {};
+    const rooms = bd.rooms || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+    const nest = bd.nest || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+    const amazon = bd.amazon || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+
+    const monthName = monthNames[m.month - 1] || `เดือน${m.month}`;
+    html += `<tr style="border-bottom:1px solid var(--border);">`;
+    html += `<td style="padding:0.5rem;text-align:left;border-right:1px solid var(--border);">${monthName}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${(rooms.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;font-weight:600;">฿${(rooms.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${(nest.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;font-weight:600;">฿${(nest.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.rent||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.elec||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.water||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${(amazon.trash||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;font-weight:600;">฿${(amazon.total||0).toLocaleString()}</td>`;
+    html += `<td style="padding:0.5rem;text-align:right;font-weight:600;color:var(--green);">฿${m.total.toLocaleString()}</td>`;
+    html += `</tr>`;
+
+    roomsRentSum += rooms.rent||0;
+    roomsElecSum += rooms.elec||0;
+    roomsWaterSum += rooms.water||0;
+    roomsTrashSum += rooms.trash||0;
+    roomsTotal += rooms.total||0;
+    nestRentSum += nest.rent||0;
+    nestElecSum += nest.elec||0;
+    nestWaterSum += nest.water||0;
+    nestTrashSum += nest.trash||0;
+    nestTotal += nest.total||0;
+    amazonRentSum += amazon.rent||0;
+    amazonElecSum += amazon.elec||0;
+    amazonWaterSum += amazon.water||0;
+    amazonTrashSum += amazon.trash||0;
+    amazonTotal += amazon.total||0;
+    yearlyTotal += m.total;
+  });
+
+  html += `  </tbody>
+  <tfoot>
+    <tr style="background:var(--bg-secondary);border-top:2px solid var(--border);font-weight:700;">
+      <td style="padding:0.8rem;border-right:1px solid var(--border);">รวมทั้งปี</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsRentSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsElecSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsWaterSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsTrashSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsTotal.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestRentSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestElecSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestWaterSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestTrashSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestTotal.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonRentSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonElecSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonWaterSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonTrashSum.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonTotal.toLocaleString()}</td>
+      <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${yearlyTotal.toLocaleString()}</td>
+    </tr>
+  </tfoot>
+  </table>
+  </div>`;
+
+  previewDiv.innerHTML = html;
+  document.getElementById('billingResultsSection').style.display = 'block';
+}
+
+// Handle billing import data that comes from meter import flow (V1/V2 billing format)
+function approveBillingImportDataFromMeter(importData, matchResults) {
+  console.log('💾 Processing billing data import to localStorage', { importData, matchResults });
+
+  try {
+    const year = importData.year;
+    const month = importData.month;
+    const roomsData = importData.rooms || {};
+
+    // Convert meter readings to billing amounts
+    // For V1/V2 billing format: eNew/eOld are electricity, wNew/wOld are water
+    // Create monthly breakdown
+    const monthlyData = [{
+      rent: 0,
+      electricity: 0,
+      water: 0,
+      trash: 0,
+      total: 0,
+      breakdown: {
+        rooms: { rent: 0, elec: 0, water: 0, trash: 0, total: 0 },
+        nest: { rent: 0, elec: 0, water: 0, trash: 0, total: 0 },
+        amazon: { rent: 0, elec: 0, water: 0, trash: 0, total: 0 }
+      }
+    }];
+
+    // Process room data based on building
+    const building = importData.building || 'rooms';
+    if (building === 'rooms' || building === 'all') {
+      // For Rooms building, eNew/eOld are electricity, wNew/wOld are water
+      for (let roomNum in roomsData) {
+        const room = roomsData[roomNum];
+        const elecUsage = Math.abs(room.eNew - room.eOld) || 0;
+        const waterUsage = Math.abs(room.wNew - room.wOld) || 0;
+
+        // Simple calculation: multiply usage by assumed rates (can be refined)
+        const elecCharge = elecUsage * 5; // ฿5 per unit
+        const waterCharge = waterUsage * 10; // ฿10 per unit
+        const trash = 50; // Fixed trash fee per room
+        const rent = 1500; // Default rent (can be retrieved from data if available)
+
+        const roomTotal = elecCharge + waterCharge + trash + rent;
+
+        // Add to Rooms building breakdown
+        monthlyData[0].breakdown.rooms.elec += elecCharge;
+        monthlyData[0].breakdown.rooms.water += waterCharge;
+        monthlyData[0].breakdown.rooms.trash += trash;
+        monthlyData[0].breakdown.rooms.rent += rent;
+        monthlyData[0].breakdown.rooms.total += roomTotal;
+      }
+    }
+
+    // Update totals
+    monthlyData[0].rent = monthlyData[0].breakdown.rooms.rent + monthlyData[0].breakdown.nest.rent + monthlyData[0].breakdown.amazon.rent;
+    monthlyData[0].electricity = monthlyData[0].breakdown.rooms.elec + monthlyData[0].breakdown.nest.elec + monthlyData[0].breakdown.amazon.elec;
+    monthlyData[0].water = monthlyData[0].breakdown.rooms.water + monthlyData[0].breakdown.nest.water + monthlyData[0].breakdown.amazon.water;
+    monthlyData[0].trash = monthlyData[0].breakdown.rooms.trash + monthlyData[0].breakdown.nest.trash + monthlyData[0].breakdown.amazon.trash;
+    monthlyData[0].total = monthlyData[0].rent + monthlyData[0].electricity + monthlyData[0].water + monthlyData[0].trash;
+
+    // Get or create HISTORICAL_DATA
+    let historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+
+    // Create months array for this year
+    const months = monthlyData.map(m => ({
+      total: [m.rent, m.electricity, m.water, m.trash, m.total],
+      rooms: [m.breakdown.rooms.rent, m.breakdown.rooms.elec, m.breakdown.rooms.water, m.breakdown.rooms.trash, m.breakdown.rooms.total],
+      nest: [m.breakdown.nest.rent, m.breakdown.nest.elec, m.breakdown.nest.water, m.breakdown.nest.trash, m.breakdown.nest.total],
+      amazon: [m.breakdown.amazon.rent, m.breakdown.amazon.elec, m.breakdown.amazon.water, m.breakdown.amazon.trash, m.breakdown.amazon.total]
+    }));
+
+    // Add/update year data
+    historicalData[year] = {
+      label: `ปี ${2500 + parseInt(year)} (${year})`,
+      months: months
+    };
+
+    // Save to localStorage
+    localStorage.setItem('HISTORICAL_DATA', JSON.stringify(historicalData));
+
+    showImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) สำเร็จ!`, 'success');
+
+    // Clean up and refresh
+    setTimeout(() => {
+      cancelImportProcess();
+      if (typeof initDashboardCharts === 'function') {
+        initDashboardCharts();
+      }
+    }, 1000);
+
+  } catch (error) {
+    showImportStatus(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
+    console.error('Error processing billing data:', error);
+  }
+}
+
+function approveBillingImportData() {
+  if (!window.pendingBillingData) {
+    showBillingImportStatus('❌ ไม่มีข้อมูลที่รออนุมัติ', 'error');
+    return;
+  }
+
+  try {
+    const { year, monthlyData } = window.pendingBillingData;
+
+    if (!monthlyData || !Array.isArray(monthlyData) || monthlyData.length === 0) {
+      showBillingImportStatus('❌ ข้อมูลเดือนไม่ถูกต้องหรือเป็นช่วง', 'error');
+      return;
+    }
+
+    // Create HISTORICAL_DATA structure with detailed breakdown (rooms, nest, amazon)
+    const months = monthlyData.map(m => {
+      // Ensure m is an object with default values
+      if (!m || typeof m !== 'object') {
+        return {
+          total: [0, 0, 0, 0, 0],
+          rooms: [0, 0, 0, 0, 0],
+          nest: [0, 0, 0, 0, 0],
+          amazon: [0, 0, 0, 0, 0]
+        };
+      }
+
+      const bd = m.breakdown || {};
+      const rooms = bd.rooms || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+      const nest = bd.nest || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+      const amazon = bd.amazon || { rent: 0, elec: 0, water: 0, trash: 0, total: 0 };
+
+      return {
+        total: [m.rent || 0, m.electricity || 0, m.water || 0, m.trash || 0, m.total || 0],
+        rooms: [rooms.rent || 0, rooms.elec || 0, rooms.water || 0, rooms.trash || 0, rooms.total || 0],
+        nest: [nest.rent || 0, nest.elec || 0, nest.water || 0, nest.trash || 0, nest.total || 0],
+        amazon: [amazon.rent || 0, amazon.elec || 0, amazon.water || 0, amazon.trash || 0, amazon.total || 0]
+      };
+    });
+
+  // Get or create HISTORICAL_DATA
+  let historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+
+  // Add/update year data
+  historicalData[year] = {
+    label: `ปี ${2500 + parseInt(year)} (${year})`,
+    months: months
+  };
+
+  // Save to localStorage
+  localStorage.setItem('HISTORICAL_DATA', JSON.stringify(historicalData));
+
+  showBillingImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) รวมข้อมูล Rooms/Nest สำเร็จ!`, 'success');
+
+  // Reload dashboard charts with new data
+  showBillingImportStatus(`✅ กำลังอัพเดทข้อมูล...`, 'info');
+
+  setTimeout(async () => {
+    try {
+      cancelBillingImportProcess();
+
+      // Reload dashboard charts (await for completion)
+      if (typeof initDashboardCharts === 'function') {
+        console.log('🔄 Updating dashboard charts...');
+        await initDashboardCharts();
+        console.log('✅ Dashboard charts updated');
+      }
+
+      // Refresh historical data display
+      if (typeof initHistoricalDataDisplay === 'function') {
+        console.log('🔄 Updating historical data display...');
+        initHistoricalDataDisplay();
+        console.log('✅ Historical data display updated');
+      }
+
+      // Navigate to HISTORICAL_DATA page to show the imported data
+      showBillingImportStatus(`✅ บันทึกข้อมูลและอัพเดทสำเร็จ!`, 'success');
+
+      // Navigate to meter page to show the imported data in HISTORICAL_DATA
+      setTimeout(() => {
+        console.log('🔄 Navigating to HISTORICAL_DATA page...');
+        // Find the meter page button and click it to navigate
+        const meterPageBtn = document.querySelector('[onclick*="\'meter\'"]');
+        if (meterPageBtn) {
+          meterPageBtn.click();
+          console.log('✅ Navigated to meter page');
+        } else {
+          console.warn('⚠️ Could not find meter page button, using window.showPage');
+          if (typeof window.showPage === 'function') {
+            window.showPage('meter');
+          }
+        }
+      }, 1000);
+
+    } catch (error) {
+      console.error('❌ Error during billing import refresh:', error);
+      showBillingImportStatus(`❌ เกิดข้อผิดพลาดขณะอัพเดท: ${error.message}`, 'error');
+    }
+  }, 500);
+  } catch (error) {
+    showBillingImportStatus(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
+    console.error('Error in approveBillingImportData:', error);
+  }
+}
+
+function cancelBillingImportProcess() {
+  const fileInput = document.getElementById('billingFileInput');
+  const resultsSection = document.getElementById('billingResultsSection');
+  const previewData = document.getElementById('billingPreviewData');
+  const statusMsg = document.getElementById('billingStatusMessage');
+
+  if (fileInput) fileInput.value = '';
+  if (resultsSection) resultsSection.style.display = 'none';
+  if (previewData) previewData.innerHTML = '';
+  if (statusMsg) statusMsg.innerHTML = '';
+  window.pendingBillingData = null;
+}
+
+function showBillingImportStatus(message, type) {
+  const statusDiv = document.getElementById('billingStatusMessage');
+  let bgColor = 'var(--accent-light)';
+  let borderColor = 'var(--accent)';
+
+  if (type === 'success') {
+    bgColor = '#e8f5e9';
+    borderColor = '#2e7d32';
+  } else if (type === 'error') {
+    bgColor = '#ffebee';
+    borderColor = '#c62828';
+  }
+
+  statusDiv.innerHTML = `<div style="padding:0.8rem;background:${bgColor};border:1px solid ${borderColor};border-radius:var(--radius-sm);color:var(--text);">${message}</div>`;
+}
+
+// Initialize HISTORICAL_DATA dropdown and display
+function initHistoricalDataDisplay() {
+  const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+  const yearSelect = document.getElementById('historicalDataYearSelect');
+  const displayDiv = document.getElementById('historicalDataDisplay');
+
+  if (!yearSelect) return;
+
+  if (Object.keys(historicalData).length === 0) {
+    displayDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">ยังไม่มีข้อมูลบิล - โปรดอัพโหลดไฟล์บิล Excel</p>';
+    yearSelect.disabled = true;
+    return;
+  }
+
+  yearSelect.disabled = false;
+
+  // Populate dropdown with available years (sorted descending)
+  const years = Object.keys(historicalData).sort((a, b) => parseInt(b) - parseInt(a));
+
+  // Clear existing options (except the placeholder)
+  while (yearSelect.options.length > 1) {
+    yearSelect.remove(1);
+  }
+
+  // Add year options (Buddhist year format only)
+  years.forEach(year => {
+    const buddhistYear = 2500 + parseInt(year);
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = buddhistYear.toString(); // Just show Buddhist year number
+    yearSelect.appendChild(option);
+  });
+
+  // Select first year by default
+  if (years.length > 0) {
+    yearSelect.value = years[0];
+    displayHistoricalDataForYear(years[0]);
+  }
+
+  // Add change event listener
+  yearSelect.addEventListener('change', function() {
+    if (this.value) {
+      displayHistoricalDataForYear(this.value);
+    } else {
+      displayDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">โปรดเลือกปีที่ต้องการดู</p>';
+    }
+  });
+}
+
+// Display data for a specific year
+function displayHistoricalDataForYear(year) {
+  const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+  const displayDiv = document.getElementById('historicalDataDisplay');
+
+  if (!historicalData[year]) {
+    displayDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">ไม่พบข้อมูลสำหรับปีนี้</p>';
+    return;
+  }
+
+  const yearData = historicalData[year];
+  const yearLabel = yearData.label || `ปี ${2500 + parseInt(year)} (${year})`;
+  const months = yearData.months || [];
+
+  let html = '<div style="font-family:\'Sarabun\',sans-serif;font-size:0.9rem;overflow-x:auto;">';
+  html += `<table style="width:100%;border-collapse:collapse;">`;
+  html += `<thead>
+    <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
+      <th style="padding:0.8rem;text-align:left;border-right:1px solid var(--border);rowspan:2;">เดือน</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#e8f5e9;color:#1b5e20;font-weight:700;">🏠 Rooms</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#f3e5f5;color:#4a148c;font-weight:700;">🏢 Nest</th>
+      <th colspan="5" style="padding:0.8rem;text-align:center;border-right:1px solid var(--border);background:#fff9c4;color:#f57f17;font-weight:700;">📦 Amazon</th>
+      <th style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">รวม</th>
+    </tr>
+    <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
+      <th style="padding:0.2rem;border-right:1px solid var(--border);"></th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">เช่า</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">ไฟ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">น้ำ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">ขยะ</th>
+      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">รวม</th>
+      <th style="padding:0.2rem;text-align:right;font-size:0.8rem;color:var(--green);font-weight:700;">รวม</th>
+    </tr>
+  </thead>`;
+  html += `<tbody>`;
+
+  let totalRent = 0, totalElec = 0, totalWater = 0, totalAll = 0;
+  let totalRoomsRent = 0, totalRoomsElec = 0, totalRoomsWater = 0, totalRoomsAll = 0;
+  let totalNestRent = 0, totalNestElec = 0, totalNestWater = 0, totalNestAll = 0;
+  let totalAmazonRent = 0, totalAmazonElec = 0, totalAmazonWater = 0, totalAmazonAll = 0;
+
+  months.forEach((month, idx) => {
+    if (!month) {
+      html += `<tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:0.8rem;color:var(--text-muted);border-right:1px solid var(--border);">เดือน ${idx + 1}</td>
+                <td colspan="8" style="padding:0.8rem;text-align:center;color:var(--text-muted);font-style:italic;">ไม่มีข้อมูล</td>
+              </tr>`;
+      return;
+    }
+
+    // Support both old format (array) and new format (object with total/rooms/nest)
+    let rent, elec, water, trash, total, roomsData, nestData;
+    if (Array.isArray(month)) {
+      // Old format: [rent, elec, water, total] or new format: [rent, elec, water, trash, total]
+      if (month.length >= 5) {
+        [rent, elec, water, trash, total] = month;
+      } else {
+        [rent, elec, water, total] = month;
+        trash = 0;
+      }
+      roomsData = [0, 0, 0, 0, 0];
+      nestData = [0, 0, 0, 0, 0];
+    } else {
+      // New format: { total: [...], rooms: [...], nest: [...], amazon: [...] }
+      const totalArr = month.total || [0, 0, 0, 0, 0];
+      if (totalArr.length >= 5) {
+        [rent, elec, water, trash, total] = totalArr;
+      } else {
+        [rent, elec, water, total] = totalArr;
+        trash = 0;
+      }
+      roomsData = month.rooms || [0, 0, 0, 0, 0];
+      nestData = month.nest || [0, 0, 0, 0, 0];
+      var amazonData = month.amazon || [0, 0, 0, 0, 0];
+    }
+
+    totalRent += rent || 0;
+    totalElec += elec || 0;
+    totalWater += water || 0;
+    totalAll += total || 0;
+    totalRoomsRent += roomsData[0] || 0;
+    totalRoomsElec += roomsData[1] || 0;
+    totalRoomsWater += roomsData[2] || 0;
+    totalRoomsAll += roomsData[4] || 0;
+    totalNestRent += nestData[0] || 0;
+    totalNestElec += nestData[1] || 0;
+    totalNestWater += nestData[2] || 0;
+    totalNestAll += nestData[4] || 0;
+    totalAmazonRent += amazonData[0] || 0;
+    totalAmazonElec += amazonData[1] || 0;
+    totalAmazonWater += amazonData[2] || 0;
+    totalAmazonAll += amazonData[4] || 0;
+
+    const monthNames = ['มค.', 'กพ.', 'มีค.', 'เมย.', 'พค.', 'มิย.', 'กค.', 'สค.', 'กย.', 'ตค.', 'พย.', 'ธค.'];
+    const monthName = monthNames[idx] || `เดือน ${idx + 1}`;
+
+    html += `<tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:0.8rem;border-right:1px solid var(--border);font-weight:600;">${monthName}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;">฿${(roomsData[0] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;">฿${(roomsData[1] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;">฿${(roomsData[2] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;">฿${(roomsData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#e8f5e9;color:#2d8653;font-weight:600;">฿${(roomsData[4] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;">฿${(nestData[0] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;">฿${(nestData[1] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;">฿${(nestData[2] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;">฿${(nestData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#f3e5f5;color:#7b1fa2;font-weight:600;">฿${(nestData[4] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#fff9c4;">฿${(amazonData[0] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#fff9c4;">฿${(amazonData[1] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#fff9c4;">฿${(amazonData[2] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#fff9c4;">฿${(amazonData[3] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);font-size:0.9rem;background:#fff9c4;color:#f57f17;font-weight:600;">฿${(amazonData[4] || 0).toLocaleString()}</td>
+              <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${(total || 0).toLocaleString()}</td>
+            </tr>`;
+  });
+
+  // Calculate trash totals for rooms, nest, and amazon
+  let totalRoomsTrash = 0, totalNestTrash = 0, totalAmazonTrash = 0;
+  months.forEach(month => {
+    if (month) {
+      if (Array.isArray(month)) {
+        if (month.length >= 5) {
+          totalRoomsTrash += month[3] || 0; // This logic needs review
+        }
+      } else {
+        const rd = month.rooms || [];
+        const nd = month.nest || [];
+        const ad = month.amazon || [];
+        totalRoomsTrash += rd[3] || 0;
+        totalNestTrash += nd[3] || 0;
+        totalAmazonTrash += ad[3] || 0;
+      }
+    }
+  });
+
+  html += `<tr style="font-weight:700;border-bottom:2px solid var(--green);">
+            <td style="padding:0.8rem;border-right:1px solid var(--border);">รวมทั้งสิ้น</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${totalRoomsRent.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${totalRoomsElec.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${totalRoomsWater.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${totalRoomsTrash.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;color:#2d8653;font-weight:700;">฿${totalRoomsAll.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${totalNestRent.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${totalNestElec.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${totalNestWater.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${totalNestTrash.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;color:#7b1fa2;font-weight:700;">฿${totalNestAll.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${totalAmazonRent.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${totalAmazonElec.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${totalAmazonWater.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${totalAmazonTrash.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;color:#f57f17;font-weight:700;">฿${totalAmazonAll.toLocaleString()}</td>
+            <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${totalAll.toLocaleString()}</td>
+          </tr>`;
+
+  html += `</tbody></table>`;
+  html += '</div>';
+  displayDiv.innerHTML = html;
+}
+
+// Initialize display on page load and when switching tabs
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize when page loads if on billing import tab
+  const billingContent = document.getElementById('meter-import-billing-content');
+  if (billingContent && billingContent.style.display !== 'none') {
+    setTimeout(initHistoricalDataDisplay, 100);
+  }
+});
+
+// Hook into tab switching to refresh display
+if (window.switchMeterTab) {
+  const originalSwitchTab = window.switchMeterTab;
+  window.switchMeterTab = function(tab, btn) {
+    originalSwitchTab.call(window, tab, btn);
+    if (tab === 'import-billing') {
+      setTimeout(initHistoricalDataDisplay, 100);
+    }
+  };
+}
+
