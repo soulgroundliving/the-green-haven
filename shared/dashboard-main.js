@@ -2716,23 +2716,26 @@ async function initDashboardCharts(){
   const estNestMonthly  = activeNest.filter(r=>tenants[r.id]?.name).reduce((s,r)=>s+(r.rentPrice||0),0);
   const mCount = valid.length || 1;
 
+  // Potential Revenue (100% occupancy)
+  const potentialRoomsMonthly = activeRooms.reduce((s,r)=>s+(r.rentPrice||0),0);
+  const potentialNestMonthly  = activeNest.reduce((s,r)=>s+(r.rentPrice||0),0);
+
   const kpiRooms = yearlyRoomsTotal>0 ? yearlyRoomsTotal : estRoomsMonthly*mCount;
   const kpiNest  = yearlyNestTotal>0  ? yearlyNestTotal  : estNestMonthly*mCount;
 
   document.getElementById('kpi-rooms-total').textContent='฿'+kpiRooms.toLocaleString();
   document.getElementById('kpi-rooms-sub').textContent=yearlyRoomsTotal>0
-    ? `เช่า ฿${Math.round(yearlyRoomsRent/mCount).toLocaleString()}/เดือน · ${valid.length} เดือน`
-    : `ประมาณการ ${occupiedRooms}/${activeRooms.length} ห้อง`;
+    ? `เช่า ฿${Math.round(yearlyRoomsRent/mCount).toLocaleString()}/เดือน · Potential ฿${potentialRoomsMonthly.toLocaleString()}/เดือน`
+    : `${occupiedRooms}/${activeRooms.length} ห้อง · Potential ฿${potentialRoomsMonthly.toLocaleString()}/เดือน`;
 
   if (yr !== '69' && yr !== 'all') {
-    // Nest building didn't exist before 2026
     document.getElementById('kpi-nest-total').textContent = '—';
     document.getElementById('kpi-nest-sub').textContent = 'ยังไม่มีตึกนี้ในปีนั้น';
   } else {
     document.getElementById('kpi-nest-total').textContent='฿'+kpiNest.toLocaleString();
     document.getElementById('kpi-nest-sub').textContent=yearlyNestTotal>0
-      ? `เช่า ฿${Math.round(yearlyNestRent/mCount).toLocaleString()}/เดือน · ${valid.length} เดือน`
-      : `ประมาณการ ${occupiedNest}/${activeNest.length} ยูนิต`;
+      ? `เช่า ฿${Math.round(yearlyNestRent/mCount).toLocaleString()}/เดือน · Potential ฿${potentialNestMonthly.toLocaleString()}/เดือน`
+      : `${occupiedNest}/${activeNest.length} ยูนิต · Potential ฿${potentialNestMonthly.toLocaleString()}/เดือน`;
   }
 
   // ─── Insight cards ───
@@ -2743,6 +2746,23 @@ async function initDashboardCharts(){
   document.getElementById('ins-rent-d').textContent = avgRentPerMonth>0
     ? `เฉลี่ย ฿${avgRentPerMonth.toLocaleString()}/เดือน · ${rents.filter(Boolean).length} เดือน`
     : 'รวมห้องพักทั้งหมด';
+
+  // ─── Trend arrows: compare last month vs previous month ───
+  const trendArrow = arr => {
+    const valid = arr.filter(v => v > 0);
+    if (valid.length < 2) return '';
+    const last = valid[valid.length-1], prev = valid[valid.length-2];
+    const pct = Math.round((last-prev)/prev*100);
+    return pct > 0 ? ` ⬆️ +${pct}%` : pct < 0 ? ` ⬇️ ${pct}%` : ' ➡️ 0%';
+  };
+  const rentTrend  = trendArrow(rents);
+  const elecTrend  = trendArrow(elecs);
+  const waterTrend = trendArrow(waters);
+  if (rentTrend)  document.getElementById('ins-rent-d').textContent  += rentTrend + ' จากเดือนก่อน';
+  const elecDEl  = document.getElementById('ins-elec-d');
+  const waterDEl = document.getElementById('ins-water-d');
+  if (elecDEl)  elecDEl.textContent  = `เฉลี่ย ฿${avgE.toLocaleString()}/เดือน${elecTrend ? elecTrend+' จากเดือนก่อน' : ''}`;
+  if (waterDEl) waterDEl.textContent = `เฉลี่ย ฿${avgW.toLocaleString()}/เดือน${waterTrend ? waterTrend+' จากเดือนก่อน' : ''}`;
 
   // ─── Last 12 months table (filtered by selected year) ───
   renderLast6MonthsTable(dataSource, mv, mgt, yr);
@@ -2769,17 +2789,22 @@ async function initDashboardCharts(){
   chartRevenue=mkChart('chartRevenue','bar',{labels:chartLabels,datasets:[
     {label:'ค่าเช่า',data:chartRents, backgroundColor:'rgba(45,134,83,.75)', stack:'s',borderRadius:3},
     {label:'ค่าไฟ', data:chartElecs, backgroundColor:'rgba(255,143,0,.75)',  stack:'s'},
-    {label:'ค่าน้ำ', data:chartWaters,backgroundColor:'rgba(33,150,243,.75)', stack:'s'}
+    {label:'ค่าน้ำ', data:chartWaters,backgroundColor:'rgba(33,150,243,.75)', stack:'s'},
+    {label:`เฉลี่ย ฿${avg.toLocaleString()}`,data:chartLabels.map(()=>avg),type:'line',borderColor:'rgba(0,0,0,.4)',borderDash:[6,4],pointRadius:0,borderWidth:2,fill:false,stack:'',order:0,yAxisID:'y'}
   ]},{plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:45}},y:{stacked:true,ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(0,0,0,.04)'}}}});
 
   const avgE=chartElecs.filter(Boolean).length?Math.round(elecT/chartElecs.filter(Boolean).length):0;
   const avgW=chartWaters.filter(Boolean).length?Math.round(waterT/chartWaters.filter(Boolean).length):0;
   const avgR=rents.filter(Boolean).length?Math.round(rentT/rents.filter(Boolean).length):0;
   const avgOth=Math.max(0,avg-avgR-avgE-avgW);
-  chartPie=mkChart('chartPie','doughnut',{labels:['ค่าเช่าห้อง','ค่าไฟ','ค่าน้ำ','ค่าพาณิชย์/อื่นๆ'],datasets:[{data:[avgR,avgE,avgW,avgOth],backgroundColor:['#2d8653','#ff8f00','#2196f3','#9c27b0'],borderWidth:0,hoverOffset:8}]},{plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}},tooltip:{callbacks:{label:c=>c.label+': ฿'+Math.round(c.raw).toLocaleString()}}}});
+  const pieTotal=avgR+avgE+avgW+avgOth||1;
+  const piePct=v=>Math.round(v/pieTotal*100);
+  chartPie=mkChart('chartPie','doughnut',{labels:[`ค่าเช่าห้อง ${piePct(avgR)}%`,`ค่าไฟ ${piePct(avgE)}%`,`ค่าน้ำ ${piePct(avgW)}%`,`อื่นๆ ${piePct(avgOth)}%`],datasets:[{data:[avgR,avgE,avgW,avgOth],backgroundColor:['#2d8653','#ff8f00','#2196f3','#9c27b0'],borderWidth:0,hoverOffset:8}]},{plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}},tooltip:{callbacks:{label:c=>c.label+': ฿'+Math.round(c.raw).toLocaleString()}}}});
 
   const yrAvgs=['67','68','69'].map(y=>{const v=(dataSource[y]?.months||[]).filter(m=>mgt(m)>0);return v.length?Math.round(v.reduce((a,m)=>a+mgt(m),0)/v.length):0;});
-  chartYears=mkChart('chartYears','bar',{labels:['2567','2568','2569*'],datasets:[{label:'เฉลี่ย/เดือน',data:yrAvgs,backgroundColor:['#2d8653','#1976d2','#ff8f00'],borderRadius:8}]},{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false}}}});
+  const yrHasData=y=>(dataSource[y]?.months||[]).some(m=>mgt(m)>0);
+  const yrLabels=['67','68','69'].map(y=>yrHasData(y)?`${2500+parseInt(y)}\n(Actual)`:`${2500+parseInt(y)}\n(Forecast)`);
+  chartYears=mkChart('chartYears','bar',{labels:yrLabels,datasets:[{label:'เฉลี่ย/เดือน',data:yrAvgs,backgroundColor:['#2d8653','#1976d2','#ff8f00'],borderRadius:8}]},{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:9}}}}});
 
   const lineOpts=()=>({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(1)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{maxRotation:45}}}});
   chartElec =mkChart('chartElec','line', {labels:chartLabels,datasets:[{label:'ค่าไฟ', data:chartElecs, borderColor:'#ff8f00',backgroundColor:'rgba(255,143,0,.1)',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},lineOpts());
@@ -5093,10 +5118,12 @@ function updateDashboardLive(){
     const pendingRoomsArr=activeRooms.filter(r=>!paid[r.id]).map(r=>r.id);
     const pendingNestArr=activeNest.filter(r=>!paid[r.id]).map(r=>r.id);
     const allPending=[...pendingRoomsArr, ...pendingNestArr];
+    const overdueCount = overdueInvoices.length;
     dashPay.innerHTML=`
       <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
-        <div><div style="font-size:1.5rem;font-weight:800;color:var(--green)">${paidCountAll}</div><div style="font-size:.72rem;color:var(--text-muted)">จ่ายแล้ว</div></div>
-        <div><div style="font-size:1.5rem;font-weight:800;color:var(--accent)">${pendingCount}</div><div style="font-size:.72rem;color:var(--text-muted)">รอชำระ</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${paidCountAll}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ จ่ายแล้ว</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${pendingCount}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">⏳ รอชำระ</div></div>
+        ${overdueCount?`<div><div style="font-size:1.5rem;font-weight:800;color:#dc2626">${overdueCount}</div><div style="font-size:.72rem;color:#dc2626;font-weight:600;">🔴 ค้างชำระ</div></div>`:''}
         <div><div style="font-size:1.15rem;font-weight:800;color:var(--green-dark)">฿${totalCollected.toLocaleString()}</div><div style="font-size:.72rem;color:var(--text-muted)">เก็บได้แล้ว</div></div>
       </div>
       <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${paidCountRooms}/${activeRooms.length} | 🏢 Nest: ${paidCountNest}/${activeNest.length}</div>
@@ -5125,10 +5152,12 @@ function updateDashboardLive(){
       return diff>=0&&diff<=30;
     });
     const allSoon=[...soonRooms, ...soonNest];
+    const occRate = totalRooms>0 ? Math.round(occCount/totalRooms*100) : 0;
     dashTen.innerHTML=`
       <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
         <div><div style="font-size:1.5rem;font-weight:800;color:var(--blue)">${occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">มีผู้เช่า</div></div>
         <div><div style="font-size:1.5rem;font-weight:800;color:var(--accent)">${totalRooms-occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">ห้องว่าง</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:${occRate>=80?'#2d8653':occRate>=60?'#f59e0b':'#dc2626'}">${occRate}%</div><div style="font-size:.72rem;color:var(--text-muted)">Occupancy Rate</div></div>
         ${allSoon.length?`<div><div style="font-size:1.5rem;font-weight:800;color:var(--red)">${allSoon.length}</div><div style="font-size:.72rem;color:var(--text-muted)">สัญญาใกล้หมด</div></div>`:''}
       </div>
       <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${occCountRooms}/${activeRooms.length} | 🏢 Nest: ${occCountNest}/${activeNest.length}</div>
