@@ -772,22 +772,9 @@ function setupRoomDataListener() {
       }
     );
 
-    // Listen to nest building data
-    const nestUnsubscribe = onSnapshot(
-      collection(db, 'buildings', 'nest', 'units'),
-      (snapshot) => {
-        console.log('✅ Nest units updated in real-time');
-        updateOccupancyDashboard();
-        updateRealtimeStatus(true);
-      },
-      (error) => {
-        console.error('❌ Error listening to nest units:', error);
-        updateRealtimeStatus(false);
-      }
-    );
-
+    // Nest Building not yet open (opens June 2569) — skip listener to avoid permission errors
     realtimeListeners.rooms = roomsUnsubscribe;
-    realtimeListeners.nest = nestUnsubscribe;
+    realtimeListeners.nest = null;
   } catch (err) {
     console.error('Error setting up room data listeners:', err);
   }
