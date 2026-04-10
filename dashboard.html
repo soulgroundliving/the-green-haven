@@ -2053,7 +2053,7 @@
 
   <!-- ย้อนหลัง 6 เดือน -->
   <div class="card" style="margin-bottom:1.4rem;">
-    <div class="card-title">📅 รายได้ย้อนหลัง 6 เดือน (ล่าสุด)</div>
+    <div class="card-title">📅 รายได้ย้อนหลัง 12 เดือน (ล่าสุด)</div>
     <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
         <thead>
@@ -6761,8 +6761,8 @@ async function initDashboardCharts(){
   });
 
   // Fallback: estimate from active tenants if no historical data
-  const estRoomsMonthly = activeRooms.filter(r=>tenants[r.id]?.name).reduce((s,r)=>s+(r.rent||0),0);
-  const estNestMonthly  = activeNest.filter(r=>tenants[r.id]?.name).reduce((s,r)=>s+(r.rent||0),0);
+  const estRoomsMonthly = activeRooms.filter(r=>tenants[r.id]?.name).reduce((s,r)=>s+(r.rentPrice||0),0);
+  const estNestMonthly  = activeNest.filter(r=>tenants[r.id]?.name).reduce((s,r)=>s+(r.rentPrice||0),0);
   const mCount = valid.length || 1;
 
   const kpiRooms = yearlyRoomsTotal>0 ? yearlyRoomsTotal : estRoomsMonthly*mCount;
@@ -6829,7 +6829,7 @@ async function initDashboardCharts(){
   chartWater=mkChart('chartWater','line',{labels:chartLabels,datasets:[{label:'ค่าน้ำ',data:chartWaters,borderColor:'#2196f3',backgroundColor:'rgba(33,150,243,.1)',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},lineOpts());
 }
 
-// ─── Render last-6-months summary table ───
+// ─── Render last-12-months summary table ───
 function renderLast6MonthsTable(dataSource, mv, mgt) {
   const el = document.getElementById('dash-last6-body');
   if (!el) return;
@@ -6854,8 +6854,8 @@ function renderLast6MonthsTable(dataSource, mv, mgt) {
     });
   });
 
-  // Take last 6 entries
-  const last6 = allEntries.slice(-6).reverse();
+  // Take last 12 entries
+  const last6 = allEntries.slice(-12).reverse();
 
   if (last6.length === 0) {
     el.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">ยังไม่มีข้อมูล — นำเข้าบิลก่อน</td></tr>`;
@@ -9040,10 +9040,11 @@ function updateDashboardLive(){
   const currentDate=now.getFullYear()+543;
   const currentMonth=now.getMonth()+1;
 
-  // Only update live KPIs if viewing current year
-  // For other years, skip live updates (those are based on current month data only)
-  if(currentYear !== String(currentDate)) {
-    return; // Don't update live metrics for past/future years
+  // Only update live KPIs if viewing current year or 'all'
+  // currentYear = '67'/'68'/'69'/'all', currentDate = 4-digit Thai year e.g. 2569
+  const currentYearSuffix = String(currentDate - 2500); // '69'
+  if(currentYear !== 'all' && currentYear !== currentYearSuffix) {
+    return; // Don't update live metrics for past years
   }
 
   const month=currentMonth;
