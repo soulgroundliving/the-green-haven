@@ -2759,10 +2759,6 @@ async function initDashboardCharts(){
   const elecTrend  = trendArrow(elecs);
   const waterTrend = trendArrow(waters);
   if (rentTrend)  document.getElementById('ins-rent-d').textContent  += rentTrend + ' จากเดือนก่อน';
-  const elecDEl  = document.getElementById('ins-elec-d');
-  const waterDEl = document.getElementById('ins-water-d');
-  if (elecDEl)  elecDEl.textContent  = `เฉลี่ย ฿${avgE.toLocaleString()}/เดือน${elecTrend ? elecTrend+' จากเดือนก่อน' : ''}`;
-  if (waterDEl) waterDEl.textContent = `เฉลี่ย ฿${avgW.toLocaleString()}/เดือน${waterTrend ? waterTrend+' จากเดือนก่อน' : ''}`;
 
   // ─── Last 12 months table (filtered by selected year) ───
   renderLast6MonthsTable(dataSource, mv, mgt, yr);
@@ -2808,6 +2804,10 @@ async function initDashboardCharts(){
 
   const avgE=chartElecs.filter(Boolean).length?Math.round(elecT/chartElecs.filter(Boolean).length):0;
   const avgW=chartWaters.filter(Boolean).length?Math.round(waterT/chartWaters.filter(Boolean).length):0;
+  const elecDEl  = document.getElementById('ins-elec-d');
+  const waterDEl = document.getElementById('ins-water-d');
+  if (elecDEl)  elecDEl.textContent  = `เฉลี่ย ฿${avgE.toLocaleString()}/เดือน${elecTrend ? elecTrend+' จากเดือนก่อน' : ''}`;
+  if (waterDEl) waterDEl.textContent = `เฉลี่ย ฿${avgW.toLocaleString()}/เดือน${waterTrend ? waterTrend+' จากเดือนก่อน' : ''}`;
   const avgR=rents.filter(Boolean).length?Math.round(rentT/rents.filter(Boolean).length):0;
   const avgOth=Math.max(0,avg-avgR-avgE-avgW);
   const pieTotal=avgR+avgE+avgW+avgOth||1;
