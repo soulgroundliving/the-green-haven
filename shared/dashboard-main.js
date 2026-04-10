@@ -2774,7 +2774,7 @@ async function initDashboardCharts(){
     return new Chart(el.getContext('2d'),{type,data,options:{responsive:true,maintainAspectRatio:false,...opts}});
   };
 
-  // Remove null values for cleaner charts (skip months with no data)
+  // Revenue chart: filter months with total data
   const chartLabels=[], chartTotals=[], chartElecs=[], chartWaters=[], chartRents=[];
   labels.forEach((lbl,i)=>{
     if(totals[i]!=null){
@@ -2784,6 +2784,19 @@ async function initDashboardCharts(){
       chartWaters.push(waters[i] || 0);
       chartRents.push(rents[i]  || 0);
     }
+  });
+
+  // Elec/Water charts: build from ALL years, filter by own value (not by total)
+  // so meter months show even if no billing import yet
+  const allYears = ['67','68','69'];
+  const elecChartLabels=[], elecChartData=[], waterChartLabels=[], waterChartData=[];
+  allYears.forEach(y=>{
+    (dataSource[y]?.months||[]).forEach((m,i)=>{
+      const lbl = MONTHS_TH[i+1]+"'"+(2500+parseInt(y)).toString().slice(-2);
+      const e = mv(m,1), w = mv(m,2);
+      if(e!=null && e>0){ elecChartLabels.push(lbl); elecChartData.push(e); }
+      if(w!=null && w>0){ waterChartLabels.push(lbl); waterChartData.push(w); }
+    });
   });
 
   chartRevenue=mkChart('chartRevenue','bar',{labels:chartLabels,datasets:[
@@ -2807,8 +2820,8 @@ async function initDashboardCharts(){
   chartYears=mkChart('chartYears','bar',{labels:yrLabels,datasets:[{label:'เฉลี่ย/เดือน',data:yrAvgs,backgroundColor:['#2d8653','#1976d2','#ff8f00'],borderRadius:8}]},{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:9}}}}});
 
   const lineOpts=()=>({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(1)+'K'},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{maxRotation:45}}}});
-  chartElec =mkChart('chartElec','line', {labels:chartLabels,datasets:[{label:'ค่าไฟ', data:chartElecs, borderColor:'#ff8f00',backgroundColor:'rgba(255,143,0,.1)',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},lineOpts());
-  chartWater=mkChart('chartWater','line',{labels:chartLabels,datasets:[{label:'ค่าน้ำ',data:chartWaters,borderColor:'#2196f3',backgroundColor:'rgba(33,150,243,.1)',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},lineOpts());
+  chartElec =mkChart('chartElec','line', {labels:elecChartLabels,datasets:[{label:'ค่าไฟ', data:elecChartData, borderColor:'#ff8f00',backgroundColor:'rgba(255,143,0,.1)',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},lineOpts());
+  chartWater=mkChart('chartWater','line',{labels:waterChartLabels,datasets:[{label:'ค่าน้ำ',data:waterChartData,borderColor:'#2196f3',backgroundColor:'rgba(33,150,243,.1)',fill:true,tension:.4,pointRadius:4,pointHoverRadius:6}]},lineOpts());
 }
 
 // ─── Render last-12-months summary table ───
