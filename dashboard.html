@@ -2787,15 +2787,6 @@
       </select>
     </div>
 
-    <!-- Shop Room Name Setting -->
-    <div style="margin-bottom:1.5rem;padding:1rem;background:#fff8e1;border:1px solid #ffe082;border-radius:var(--radius-sm);">
-      <div style="font-weight:600;margin-bottom:0.6rem;color:#795548;">🏪 ชื่อร้านค้า (ร้านใหญ่)</div>
-      <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
-        <input type="text" id="shopRoomNameInput" placeholder="ชื่อร้านค้า เช่น ร้านใหญ่, Amazon ☕" style="flex:1;min-width:200px;padding:0.6rem 0.8rem;border:1px solid #ffe082;border-radius:4px;font-family:'Sarabun',sans-serif;font-size:0.9rem;">
-        <button onclick="saveShopRoomName(document.getElementById('shopRoomNameInput').value)" style="padding:0.6rem 1.2rem;background:#ff8f00;color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;white-space:nowrap;">💾 บันทึก</button>
-      </div>
-      <div style="font-size:0.8rem;color:#795548;margin-top:0.5rem;">ชื่อที่แสดงบนใบวางบิล, รายงาน และ UI (ID ภายในคงเป็น "ร้านใหญ่" เสมอ)</div>
-    </div>
 
     <!-- Instructions -->
     <div style="margin-bottom:1.5rem;padding:0.8rem;background:#e3f2fd;border-left:4px solid #1976d2;border-radius:4px;">
@@ -2811,7 +2802,6 @@
       <table id="roomConfigTable" style="width:100%;border-collapse:collapse;background:white;">
         <thead>
           <tr style="background:#f5f5f5;border-bottom:2px solid var(--border);">
-            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ห้อง ID</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ชื่อห้อง</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ราคา (บาท/เดือน)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">มัดจำ (บาท)</th>
@@ -6148,10 +6138,6 @@ function loadRoomConfigUI() {
       return;
     }
 
-    // Populate shop name input with current saved value
-    const shopInput = document.getElementById('shopRoomNameInput');
-    if (shopInput) shopInput.value = getShopRoomName();
-
     const building = dropdown.value || 'rooms';
     console.log('📋 Loading room config for building:', building);
 
@@ -6182,9 +6168,9 @@ function loadRoomConfigUI() {
       const depositId = `deposit_${building}_${room.id}`;
       return `
       <tr style="border-bottom:1px solid var(--border);">
-        <td style="border:1px solid var(--border);padding:0.8rem;color:var(--text);">${room.id === 'Amazon ☕' ? getShopRoomName() : room.id}</td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
           <input type="text" value="${room.name}" onchange="updateRoomField('${building}', '${room.id}', 'name', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <div style="font-size:.7rem;color:#bbb;margin-top:3px;">ID: ${room.id}</div>
         </td>
         <td style="border:1px solid var(--border);padding:0.8rem;">
           <input type="number" value="${rent}" onchange="updateRentAndDeposit('${building}', '${room.id}', parseInt(this.value), '${depositId}')" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
@@ -6253,20 +6239,8 @@ function showToast(message, type = 'success', duration = 3000) {
   }, duration);
 }
 
-// F16: Configurable shop room display name
-// RoomConfigManager ID = 'Amazon ☕', ROOMS_OLD/METER_DATA ID = 'ร้านใหญ่'
-function getShopRoomName() {
-  return localStorage.getItem('SHOP_ROOM_NAME') || 'ร้านใหญ่';
-}
-function saveShopRoomName(name) {
-  const trimmed = name?.trim();
-  if (!trimmed) { showToast('กรุณากรอกชื่อร้านค้า', 'warning'); return; }
-  localStorage.setItem('SHOP_ROOM_NAME', trimmed);
-  showToast(`บันทึกชื่อร้านค้า "${trimmed}" เรียบร้อย`, 'success');
-  // Refresh all pages that show shop name
-  loadRoomConfigUI();                    // refresh config table ทันที
-  refreshPropertyPageIfActive();         // refresh property page ถ้าเปิดอยู่
-}
+// Shop display name comes from RoomConfigManager room.name (id='Amazon ☕')
+// Edit via ⚙️ room config table → "ชื่อห้อง" column → auto-propagates everywhere
 
 function refreshPropertyPageIfActive() {
   const propPage = document.getElementById('page-property');
@@ -6959,7 +6933,7 @@ function initRoomsPage(){
     const statusInfo = getRoomColorStatus(r.id, r);
     const bgColor = r.type==='commercial'?'rgba(66,133,244,0.15)':statusInfo.color+'40';
     const borderColor = r.type==='commercial'?'#4285f4':statusInfo.color;
-    const displayId = r.id === 'Amazon ☕' ? getShopRoomName() : r.id;
+    const displayId = (r.name || r.id).replace(/^ห้อง |^Nest /, '');
     return `
     <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" onclick="openTenantModal('rooms', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${displayId}</div>
@@ -7096,7 +7070,7 @@ function renderCompactRoomGrid(){
     const nextPaymentDate = paymentInfo.nextDueDate ? new Date(paymentInfo.nextDueDate).toLocaleDateString('th-TH', {month: 'short', day: 'numeric'}) : '—';
     const overdueDisplay = paymentInfo.overdueAmount > 0 ? `฿${paymentInfo.overdueAmount.toLocaleString()}` : '—';
 
-    const displayRoomId = r.id === 'Amazon ☕' ? getShopRoomName() : r.id;
+    const displayRoomId = (r.name || r.id).replace(/^ห้อง |^Nest /, '');
     return `
     <div class="compact-card ${r.type==='commercial'?'':''}" style="border-left-color:${r.type==='commercial'?'var(--blue)':'var(--green)'}">
       <div class="compact-card-header">
@@ -7620,7 +7594,7 @@ function initNestPage(){
     const borderColor = statusInfo.color;
     return `
     <div class="room-pill ${r.type === 'pet' ? 'pet' : (r.type === 'daily' ? 'daily' : 'studio')}" onclick="openTenantModal('nest', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
-      <div class="room-num">${r.id}</div>
+      <div class="room-num">${(r.name || r.id).replace(/^ห้อง |^Nest /, '')}</div>
       <div class="room-rent">฿${r.rentPrice.toLocaleString()}/เดือน</div>
       <div class="room-status">${typeIcon} ${tenant && tenant.name ? tenant.name : 'ว่าง'}</div>
       <div style="font-size:0.8rem;margin-top:4px;text-align:center;color:${borderColor};font-weight:600;">${statusInfo.icon} ${statusInfo.label}</div>
@@ -7724,10 +7698,10 @@ function updateNestInfoCards() {
 
 // ─── Dynamic shop info card — reads from RoomConfigManager ───
 function updateShopInfoCard() {
-  const shopName = getShopRoomName();
   // Read live config from RoomConfigManager
   const config = (typeof RoomConfigManager !== 'undefined') ? RoomConfigManager.getRoomsConfig('rooms') : null;
   const shopRoom = config?.rooms?.find(r => r.id === 'Amazon ☕');
+  const shopName = shopRoom?.name || 'ร้านค้า';  // use editable name field directly
 
   const rent  = shopRoom?.rentPrice   || 0;
   const elec  = shopRoom?.electricRate || 0;
