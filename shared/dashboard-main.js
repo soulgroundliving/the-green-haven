@@ -5079,23 +5079,77 @@ function updateDashboardLive(){
   const currentDate=now.getFullYear()+543;
   const currentMonth=now.getMonth()+1;
 
-  // Live KPIs (occupancy, paid now, expected, overdue) are current-state only.
-  // Show them only when 'ทั้งหมด' is selected — specific year tabs show historical data only.
+  // Historical year selected — show yearly summary instead of live data
   if(currentYear !== 'all') {
-    // Specific year selected — hide live cards so year view is consistent historical data only
-    const clearPairs = [
-      ['kpi-occupancy',     '—', 'ข้อมูลปัจจุบัน (เลือกปีนี้เพื่อดู)'],
-      ['kpi-paid-now',      '—', 'ข้อมูลปัจจุบัน (เลือกปีนี้เพื่อดู)'],
-      ['kpi-expected',      '—', 'ข้อมูลปัจจุบัน (เลือกปีนี้เพื่อดู)'],
-      ['kpi-overdue',       '—', 'ข้อมูลปัจจุบัน (เลือกปีนี้เพื่อดู)'],
-    ];
-    clearPairs.forEach(([id, val, sub]) => {
-      const el = document.getElementById(id);
-      const subEl = document.getElementById(id + '-sub');
-      if (el) el.textContent = val;
-      if (subEl) subEl.textContent = sub;
-    });
-    return;
+    const yrBE = 2500 + parseInt(currentYear);
+    const isCurrentYear = yrBE === (new Date().getFullYear() + 543);
+    const dataSource = window.HISTORICAL_DATA || {};
+    const yrData = dataSource[currentYear] || {};
+    const months = (yrData.months || []).filter(m => m && Array.isArray(m) && m.reduce((a,v)=>a+(v||0),0)>0);
+    const totalYr = months.reduce((a,m)=>a+(m[0]||0),0);
+    const totalRent = months.reduce((a,m)=>a+(m[3]||0),0);
+    const totalElec = months.reduce((a,m)=>a+(m[1]||0),0);
+    const totalWater = months.reduce((a,m)=>a+(m[2]||0),0);
+    const monthCount = months.length;
+
+    // Occupancy: average across months that have data, or current if this year
+    const activeRoomsH = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
+    const activeNestH = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
+    const totalRoomsH = activeRoomsH.length + activeNestH.length;
+    const avgPerMonth = monthCount > 0 ? Math.round(totalYr / monthCount) : 0;
+
+    const kpiOcc = document.getElementById('kpi-occupancy');
+    const kpiOccS = document.getElementById('kpi-occupancy-sub');
+    if (kpiOcc) kpiOcc.textContent = monthCount > 0 ? `${monthCount} เดือน` : '—';
+    if (kpiOccS) kpiOccS.textContent = monthCount > 0 ? `เฉลี่ย ฿${avgPerMonth.toLocaleString()}/เดือน` : 'ไม่มีข้อมูล';
+
+    const kpiPN = document.getElementById('kpi-paid-now');
+    const kpiPNS = document.getElementById('kpi-paid-now-sub');
+    if (kpiPN) kpiPN.textContent = `฿${totalYr.toLocaleString()}`;
+    if (kpiPNS) kpiPNS.textContent = monthCount > 0 ? `รายรับจริงทั้งปี ${yrBE} (${monthCount} เดือน)` : 'ไม่มีข้อมูล';
+
+    const kpiExp = document.getElementById('kpi-expected');
+    const kpiExpS = document.getElementById('kpi-expected-sub');
+    if (kpiExp) kpiExp.textContent = `฿${totalRent.toLocaleString()}`;
+    if (kpiExpS) kpiExpS.textContent = `ค่าเช่า · ไฟ ฿${totalElec.toLocaleString()} · น้ำ ฿${totalWater.toLocaleString()}`;
+
+    const kpiOD = document.getElementById('kpi-overdue');
+    const kpiODS = document.getElementById('kpi-overdue-sub');
+    if (!isCurrentYear) {
+      if (kpiOD) kpiOD.textContent = '✅ ปิดแล้ว';
+      if (kpiODS) kpiODS.textContent = `ปี ${yrBE} ปิดบัญชีแล้ว`;
+    } else {
+      // current year — will be filled by live section below, don't return early
+    }
+
+    // Payment panel — historical summary
+    const dashPay = document.getElementById('dashPaymentStatus');
+    if (dashPay) {
+      if (monthCount > 0) {
+        dashPay.innerHTML = `
+          <div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-bottom:.6rem;">
+            <div><div style="font-size:1.4rem;font-weight:800;color:#2d8653;">฿${totalYr.toLocaleString()}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">รายรับรวมทั้งปี</div></div>
+            <div><div style="font-size:1.4rem;font-weight:800;color:#1976d2;">${monthCount}</div><div style="font-size:.72rem;color:#1976d2;font-weight:600;">เดือนที่มีข้อมูล</div></div>
+            <div><div style="font-size:1.15rem;font-weight:800;color:var(--text-muted);">฿${avgPerMonth.toLocaleString()}</div><div style="font-size:.72rem;color:var(--text-muted);">เฉลี่ย/เดือน</div></div>
+          </div>
+          ${!isCurrentYear ? '<div style="font-size:.78rem;color:#2d8653;font-weight:600;">✅ ปีนี้ปิดบัญชีแล้ว</div>' : ''}`;
+      } else {
+        dashPay.innerHTML = `<div style="color:var(--text-muted);font-size:.85rem;">ไม่มีข้อมูลปี ${yrBE}</div>`;
+      }
+    }
+
+    // Tenant panel — historical: show room total, note that data reflects current state
+    const dashTen = document.getElementById('dashTenantStatus');
+    if (dashTen) {
+      dashTen.innerHTML = `
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-bottom:.6rem;">
+          <div><div style="font-size:1.4rem;font-weight:800;color:#2d8653;">${totalRoomsH}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">ห้องทั้งหมด</div></div>
+          <div><div style="font-size:1.4rem;font-weight:800;color:#1976d2;">${monthCount}</div><div style="font-size:.72rem;color:#1976d2;font-weight:600;">เดือนที่มีรายได้</div></div>
+        </div>
+        <div style="font-size:.72rem;color:var(--text-muted);">ข้อมูลผู้เช่าปัจจุบันดูได้ที่แท็บ "ทั้งหมด"</div>`;
+    }
+
+    if (!isCurrentYear) return;
   }
 
   const month=currentMonth;
