@@ -9214,24 +9214,8 @@ function initializeAllRoomUsers() {
     });
   }
 
-  // Create users for Nest building
-  if (nestConfig && nestConfig.rooms) {
-    nestConfig.rooms.forEach(room => {
-      if (!tenants[room.id]) {
-        tenants[room.id] = {
-          name: tNames[nameIndex % tNames.length],
-          lineId: `@tenant_${room.id}`,
-          moveInDate: new Date(2024, 0, 15).toISOString().split('T')[0],
-          contractEnd: new Date(2025, 11, 15).toISOString().split('T')[0],
-          deposit: room.deposit || 2500,
-          note: `Tenant for ${room.name}`,
-          updatedAt: new Date().toISOString()
-        };
-        updated++;
-        nameIndex++;
-      }
-    });
-  }
+  // NOTE: Nest building intentionally excluded — not yet open for service
+  // Nest tenants will be added manually when building opens
 
   if (updated > 0) {
     saveTenants(tenants);
