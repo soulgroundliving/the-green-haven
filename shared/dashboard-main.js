@@ -5136,27 +5136,21 @@ function updateDashboardLive(){
   if(kpiOccS)kpiOccS.textContent=`มีผู้เช่า ${occCount} · ว่าง ${totalRooms-occCount} ห้อง`;
 
   // KPI: Expected Revenue (this month from occupied rooms - COMBINED)
-  const expectedRevenueRooms=activeRooms.filter(r=>tenants[r.id]?.name).reduce((sum,r)=>sum+(r.rent||0),0);
-  const expectedRevenueNest=activeNest.filter(r=>tenants[r.id]?.name).reduce((sum,r)=>sum+(r.rent||0),0);
+  // getActiveRoomsWithMetadata returns rentPrice (not rent)
+  const expectedRevenueRooms=activeRooms.filter(r=>tenants[r.id]?.name).reduce((sum,r)=>sum+(r.rentPrice||0),0);
+  const expectedRevenueNest=activeNest.filter(r=>tenants[r.id]?.name).reduce((sum,r)=>sum+(r.rentPrice||0),0);
   const expectedRevenue=expectedRevenueRooms + expectedRevenueNest;
   const kpiExp=document.getElementById('kpi-expected');
   const kpiExpS=document.getElementById('kpi-expected-sub');
   if(kpiExp)kpiExp.textContent=`฿${expectedRevenue.toLocaleString()}`;
   if(kpiExpS)kpiExpS.textContent=`จากห้องที่มีผู้เช่า ${occCount} ห้อง`;
 
-  // KPI: Overdue Rent (ค้างชำระทั้งสิ้น)
-  const allInvoices=JSON.parse(localStorage.getItem('tenant_data')||'{}').invoices||[];
-  const todayDate=new Date();
-  const overdueInvoices=allInvoices.filter(inv=>{
-    if(inv.status==='paid')return false;
-    const dueDate=new Date(inv.dueDate);
-    return todayDate>dueDate;
-  });
-  const totalOverdue=overdueInvoices.reduce((sum,inv)=>sum+(inv.amount||0),0);
+  // KPI: Overdue Rent (ค้างชำระทั้งสิ้น) = expected this month minus already collected
+  const overdueAmount=Math.max(0, expectedRevenue - totalCollected);
   const kpiOD=document.getElementById('kpi-overdue');
   const kpiODS=document.getElementById('kpi-overdue-sub');
-  if(kpiOD)kpiOD.textContent=`฿${totalOverdue.toLocaleString()}`;
-  if(kpiODS)kpiODS.textContent=`${overdueInvoices.length} ใบแจ้งค้าง · รอชำระ`;
+  if(kpiOD)kpiOD.textContent=`฿${overdueAmount.toLocaleString()}`;
+  if(kpiODS)kpiODS.textContent=`${pendingCount} ห้อง ยังไม่จ่ายเดือนนี้`;
 
   // Quick payment panel (COMBINED)
   const dashPay=document.getElementById('dashPaymentStatus');
@@ -5232,7 +5226,16 @@ function updateNavBadge(){
 }
 
 // ===== TENANT MANAGEMENT =====
-function loadTenants(){return JSON.parse(localStorage.getItem('tenant_data')||'{}');}
+function loadTenants(){
+  // TenantConfigManager stores to tenant_master_data: {rooms: {id: {...}}, nest: {id: {...}}}
+  // Flatten to {id: {...}} for backward compatibility
+  const master = localStorage.getItem('tenant_master_data');
+  if (master) {
+    const raw = JSON.parse(master);
+    return Object.values(raw).reduce((acc, bld) => Object.assign(acc, bld), {});
+  }
+  return JSON.parse(localStorage.getItem('tenant_data')||'{}');
+}
 
 function saveTenants(t){localStorage.setItem('tenant_data',JSON.stringify(t));}
 
