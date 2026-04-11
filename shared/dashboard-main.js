@@ -4352,12 +4352,12 @@ async function verifySlip(file){
       const sender  = d.sender?.displayName || d.sender?.name || '—';
       const receiver= d.receiver?.displayName || d.receiver?.name || '—';
       const ref     = d.transRef || d.transactionId || '—';
-      const tDate   = d.date ? new Date(d.date).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}) : '—';
+      // SlipOK returns transTimestamp (ISO) + transDate (YYYYMMDD) + transTime (HH:MM:SS)
+      const transferDate = d.transTimestamp || null;
+      const tDate   = transferDate ? new Date(transferDate).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}) : '—';
       const amountOk  = json.amountValid !== undefined ? json.amountValid : (billTotal <= 0 || Math.abs(amount - billTotal) < 1);
 
       slipVerified = true;
-      // transferDate = raw ISO from SlipOK — used for gamification on-time payment ranking
-      const transferDate = d.date || null;
       slipData = {amount, sender, receiver, ref, tDate, transferDate, amountOk};
 
       resultEl.innerHTML = `
