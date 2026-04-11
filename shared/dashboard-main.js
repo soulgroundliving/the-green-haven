@@ -4332,12 +4332,13 @@ async function verifySlip(file){
     });
     const billTotal = invoiceData?.total || 0;
     const room = invoiceData?.room || 'unknown';
-    const building = invoiceData?.building || 'rooms';
+    // invoiceData.building is a display name — map to 'rooms' or 'nest' for Cloud Function
+    const buildingRaw = (currentBuilding === 'nest') ? 'nest' : 'rooms';
     // Call Firebase Cloud Function (API key secured server-side)
     const res = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ file: base64, expectedAmount: billTotal || 1, building, room })
+      body: JSON.stringify({ file: base64, expectedAmount: billTotal || 1, building: buildingRaw, room })
     });
     if (!res.ok && res.status !== 200) {
       const errText = await res.text();
