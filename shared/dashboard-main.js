@@ -4323,12 +4323,21 @@ async function verifySlip(file){
     if (!checkDashboardRateLimit('slipVerification')) {
       throw new Error('⏱️ คำขอมากเกินไป โปรดลองใหม่ในเวลาไม่กี่วินาที');
     }
-    const fd = new FormData();
-    fd.append('files', file);
-    const res = await fetch(SLIPOK_URL, {
+    // Convert file to base64 for Cloud Function
+    const base64 = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result.split(',')[1]);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+    const billTotal = invoiceData?.total || 0;
+    const room = invoiceData?.room || 'unknown';
+    const building = invoiceData?.building || 'rooms';
+    // Call Firebase Cloud Function (API key secured server-side)
+    const res = await fetch('https://us-central1-the-green-haven.cloudfunctions.net/verifySlip', {
       method: 'POST',
-      headers: { 'x-authorization': SLIPOK_KEY },
-      body: fd
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: base64, expectedAmount: billTotal, building, room })
     });
     const json = await res.json();
 
@@ -4337,10 +4346,9 @@ async function verifySlip(file){
       const amount  = d.amount ?? 0;
       const sender  = d.sender?.displayName || d.sender?.name || '—';
       const receiver= d.receiver?.displayName || d.receiver?.name || '—';
-      const ref     = d.transRef || '—';
+      const ref     = d.transRef || d.transactionId || '—';
       const tDate   = d.date ? new Date(d.date).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}) : '—';
-      const billTotal = invoiceData?.total || 0;
-      const amountOk  = billTotal <= 0 || Math.abs(amount - billTotal) < 1;
+      const amountOk  = json.amountValid !== undefined ? json.amountValid : (billTotal <= 0 || Math.abs(amount - billTotal) < 1);
 
       slipVerified = true;
       slipData = {amount, sender, receiver, ref, tDate, amountOk};
