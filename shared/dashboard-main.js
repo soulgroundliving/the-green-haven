@@ -5135,10 +5135,10 @@ function updateDashboardLive(){
   const paid=ps[key]||{};
   const paidCount=Object.keys(paid).length;
 
-  // Use active rooms from BOTH buildings
+  // Rooms building only — Nest ยังไม่เปิด (มิถุนายน 2569)
   const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
-  const activeNest = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
-  const allActiveRooms = [...activeRooms, ...activeNest];
+  const activeNest = []; // exclude Nest until it opens
+  const allActiveRooms = [...activeRooms];
   const totalRooms = allActiveRooms.length;
 
   // Calculate paid for both buildings
