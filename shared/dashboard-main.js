@@ -2520,7 +2520,7 @@ function syncDashboardYearUI(){
   const cardYears = document.getElementById('card-years-compare');
   if(cardYears) cardYears.style.display = isAll ? '' : 'none';
   // Live-only cards + panels — all only
-  document.querySelectorAll('.kpi-live').forEach(el=>el.style.display=isAll?'':'none');
+  document.querySelectorAll('.kpi-live').forEach(el=>el.style.display=isAll?'block':'none');
   const livePanels = document.getElementById('dash-live-panels');
   if(livePanels) livePanels.style.display = isAll ? 'grid' : 'none';
   // Nest Building card — hide for 67/68 (not open yet)
