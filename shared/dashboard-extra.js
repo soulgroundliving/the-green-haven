@@ -752,6 +752,7 @@ function setupRoomDataListener() {
   // No Firestore listener needed — avoids permission errors on non-existent collection.
   realtimeListeners.rooms = null;
   realtimeListeners.nest = null;
+  updateRealtimeStatus(true); // data is always ready from local config
 }
 
 function setupLeaseDataListener() {
