@@ -4337,8 +4337,12 @@ async function verifySlip(file){
     const res = await fetch('https://us-central1-the-green-haven.cloudfunctions.net/verifySlip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ file: base64, expectedAmount: billTotal, building, room })
+      body: JSON.stringify({ file: base64, expectedAmount: billTotal || 1, building, room })
     });
+    if (!res.ok && res.status !== 200) {
+      const errText = await res.text();
+      throw new Error(`Cloud Function error ${res.status}: ${errText.slice(0, 200)}`);
+    }
     const json = await res.json();
 
     if(json.success && json.data){
@@ -4369,9 +4373,9 @@ async function verifySlip(file){
       resultEl.innerHTML = `<div class="slip-result-err">❌ <strong>สลิปไม่ผ่าน:</strong> ${msg}<br><small>ลองถ่ายรูปใหม่ให้คมชัดขึ้น หรือตรวจว่าสลิปถูกต้อง</small></div>`;
     }
   } catch(err){
-    const isCors = err.message?.includes('fetch') || err.message?.includes('CORS') || err.message?.includes('Failed');
-    resultEl.innerHTML = `<div class="slip-result-err">⚠️ เชื่อมต่อ SlipOK ไม่ได้<br>
-      <small>${isCors ? 'อาจเกิด CORS บน localhost — เปิดใช้ Chrome แบบ --disable-web-security หรือใช้แผน proxy' : err.message}</small><br>
+    console.error('❌ verifySlip error:', err);
+    resultEl.innerHTML = `<div class="slip-result-err">⚠️ เชื่อมต่อ Cloud Function ไม่ได้<br>
+      <small>${err.message || 'Network error'}</small><br>
       <button onclick="skipSlipVerify()" style="margin-top:6px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:.8rem;background:#fff;">ออกใบเสร็จโดยไม่ตรวจสลิป</button>
     </div>`;
   }
