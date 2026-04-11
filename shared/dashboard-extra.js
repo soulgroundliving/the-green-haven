@@ -748,65 +748,16 @@ function updateLeaseExpiryAlerts() {
 let realtimeListeners = {};
 
 function setupRoomDataListener() {
-  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-    console.warn('Firebase not initialized, skipping real-time listeners');
-    return;
-  }
-  if (!window.firebaseAuth?.currentUser) return;
-
-  const db = window.firebase.firestore();
-  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
-
-  try {
-    // Listen to rooms building data
-    const roomsUnsubscribe = onSnapshot(
-      collection(db, 'buildings', 'rooms', 'rooms'),
-      (snapshot) => {
-        console.log('✅ Rooms data updated in real-time');
-        updateOccupancyDashboard();
-        updateRealtimeStatus(true);
-      },
-      (error) => {
-        console.error('❌ Error listening to rooms:', error);
-        updateRealtimeStatus(false);
-      }
-    );
-
-    // Nest Building not yet open (opens June 2569) — skip listener to avoid permission errors
-    realtimeListeners.rooms = roomsUnsubscribe;
-    realtimeListeners.nest = null;
-  } catch (err) {
-    console.error('Error setting up room data listeners:', err);
-  }
+  // Room data comes from RoomConfigManager (local config), not Firestore subcollection.
+  // No Firestore listener needed — avoids permission errors on non-existent collection.
+  realtimeListeners.rooms = null;
+  realtimeListeners.nest = null;
 }
 
 function setupLeaseDataListener() {
-  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-    console.warn('Firebase not initialized, skipping lease listeners');
-    return;
-  }
-  if (!window.firebaseAuth?.currentUser) return;
-
-  const db = window.firebase.firestore();
-  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
-
-  try {
-    const leaseUnsubscribe = onSnapshot(
-      collection(db, 'leases'),
-      (snapshot) => {
-        console.log('✅ Lease data updated in real-time');
-        updateLeaseExpiryAlerts();
-        updateOccupancyDashboard();
-      },
-      (error) => {
-        console.error('❌ Error listening to leases:', error);
-      }
-    );
-
-    realtimeListeners.leases = leaseUnsubscribe;
-  } catch (err) {
-    console.error('Error setting up lease listeners:', err);
-  }
+  // Lease data comes from lease-config.js (local config), not a Firestore collection.
+  // No Firestore listener needed — avoids permission errors.
+  realtimeListeners.leases = null;
 }
 
 function setupMeterDataListener() {
@@ -821,7 +772,7 @@ function setupMeterDataListener() {
 
   try {
     const meterUnsubscribe = onSnapshot(
-      collection(db, 'meterReadings'),
+      collection(db, 'meter_data'),
       (snapshot) => {
         console.log('✅ Meter data updated in real-time');
         updateDashboardLive();
