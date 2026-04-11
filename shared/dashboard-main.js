@@ -1117,8 +1117,12 @@ function initMeterPage() {
   }
 
   console.log('✅ Meter page initialized');
-  // Initialize Nest tab by default
-  setTimeout(() => initMeterNestTab(), 100);
+  // Auto-switch to Room Config tab (default)
+  setTimeout(() => {
+    const roomConfigBtn = document.querySelector('[onclick*="room-config"]');
+    if (roomConfigBtn) window.switchMeterTab('room-config', roomConfigBtn);
+    if (typeof loadRoomConfigUI === 'function') loadRoomConfigUI();
+  }, 100);
 }
 
 // F4+F5: Module-level interval IDs to prevent leak when tabs are switched repeatedly
