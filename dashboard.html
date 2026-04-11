@@ -901,6 +901,11 @@
   /* Daily rate section */
   .daily-section{border:2px solid #f57c00;border-radius:var(--radius-sm);padding:.9rem;background:#fff3e0;display:none;}
   .daily-section.show{display:block;}
+  /* View toggle segmented control */
+  .view-toggle-group{display:inline-flex;background:#e0e0e0;border-radius:8px;padding:3px;gap:2px;}
+  .view-toggle-btn{padding:6px 16px;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.85rem;font-weight:600;color:var(--text-muted);background:transparent;transition:all .15s;}
+  .view-toggle-btn.active{background:#fff;color:var(--green-dark);box-shadow:0 1px 4px rgba(0,0,0,.15);}
+  .view-toggle-btn:not(.active):hover{background:rgba(255,255,255,.5);color:var(--text);}
 
   /* ===== BILL FORM REFACTOR ===== */
   /* Change 1: PromptPay collapsible */
@@ -2684,9 +2689,10 @@
   <!-- Tenant & Contract View Toggle -->
   <div style="margin-bottom:1.2rem;">
     <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
-      <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
-      <button onclick="toggleTenantView('cards', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--green);background:var(--green-pale);color:var(--green-dark);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">🃏 ไพ่ (Cards)</button>
-      <button onclick="toggleTenantView('table', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตาราง</button>
+      <div class="view-toggle-group">
+        <button onclick="toggleTenantView('cards',this)" class="view-toggle-btn active">▦ การ์ด</button>
+        <button onclick="toggleTenantView('table',this)" class="view-toggle-btn">☰ ตาราง</button>
+      </div>
       <select id="ct-filter-status" onchange="initContractPage()" style="margin-left:auto;padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;background:#fff;cursor:pointer;">
         <option value="all">ทั้งหมด</option>
         <option value="active">✅ ใช้งานอยู่</option>
@@ -2778,6 +2784,7 @@
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">น้ำ (บาท/หน่วย)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ไฟ (บาท/หน่วย)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ขยะ (บาท)</th>
+            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ผู้เช่า</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:center;font-weight:600;color:var(--text);">การกระทำ</th>
           </tr>
         </thead>
