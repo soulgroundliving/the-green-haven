@@ -6241,6 +6241,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   // Pre-select current month in meter table
   document.getElementById('mt-month').value=now.getMonth()+1;
   document.getElementById('mt-year').value=now.getFullYear()+543;
+  // Sync year UI state immediately (hide/show live cards based on default currentYear)
+  syncDashboardYearUI();
   // Delay KPI updates to ensure data is loaded from localStorage
   setTimeout(updateDashboardLive,100);
   setTimeout(initDashboardCharts,300);
