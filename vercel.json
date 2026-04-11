@@ -5,7 +5,7 @@
   "cleanUrls": true,
   "headers": [
     {
-      "source": "/(.*).html",
+      "source": "/(dashboard|login|tenant|index)(.html)?",
       "headers": [
         {
           "key": "Cache-Control",
