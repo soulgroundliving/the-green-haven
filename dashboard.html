@@ -901,6 +901,30 @@
   .daily-section{border:2px solid #f57c00;border-radius:var(--radius-sm);padding:.9rem;background:#fff3e0;display:none;}
   .daily-section.show{display:block;}
 
+  /* ===== BILL FORM REFACTOR ===== */
+  /* Change 1: PromptPay collapsible */
+  .pp-details-wrap{margin-bottom:.75rem;border:1px solid #ffe082;border-radius:8px;background:#fff8e1;}
+  .pp-details-summary{font-size:.8rem;font-weight:700;color:#e65100;padding:.5rem .9rem;cursor:pointer;list-style:none;display:flex;align-items:center;border-radius:8px;user-select:none;}
+  .pp-details-summary::-webkit-details-marker{display:none;}
+  .pp-details-summary::before{content:'▶';font-size:.65rem;margin-right:6px;transition:transform .2s;display:inline-block;}
+  details[open].pp-details-wrap .pp-details-summary::before{transform:rotate(90deg);}
+  .pp-details-wrap .pp-settings{border-top:1px solid #ffe082;border-radius:0 0 8px 8px;}
+  /* Change 3: Step 2 label */
+  .step-group-label{font-size:.78rem;font-weight:700;color:var(--green-dark);background:var(--green-pale);border-left:3px solid var(--green);padding:6px 10px;border-radius:var(--radius-sm);margin-top:2px;}
+  /* Change 4: Extras collapsible */
+  .extras-details-wrap{border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--green-pale);}
+  .extras-details-summary{font-size:.82rem;font-weight:700;color:var(--green-dark);padding:.65rem 1.1rem;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;border-radius:var(--radius-sm);user-select:none;}
+  .extras-details-summary::-webkit-details-marker{display:none;}
+  .extras-details-summary::before{content:'▶';font-size:.6rem;margin-right:4px;transition:transform .2s;display:inline-block;}
+  details[open].extras-details-wrap .extras-details-summary::before{transform:rotate(90deg);}
+  .extras-details-wrap .form-section{border-radius:0 0 var(--radius-sm) var(--radius-sm);margin-top:0;}
+  /* Change 5: Action buttons */
+  .bill-actions-col{display:flex;flex-direction:column;gap:.5rem;}
+  .bill-actions-row{display:flex;gap:.5rem;}
+  .bill-actions-row .btn-invoice,.bill-actions-row .btn-receipt{flex:1;}
+  .btn-auto-bill{background:linear-gradient(135deg,#9c27b0,#673ab7);color:white;border:none;border-radius:6px;padding:.7rem 1rem;cursor:pointer;font-weight:600;font-size:.9rem;font-family:'Sarabun',sans-serif;transition:all .2s;width:100%;}
+  .btn-auto-bill:hover{background:linear-gradient(135deg,#7b1fa2,#512da8);transform:translateY(-1px);}
+
   @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.charts-grid{grid-template-columns:1fr}.bill-layout{grid-template-columns:1fr}.insights-grid{grid-template-columns:1fr 1fr}.proj-grid{grid-template-columns:1fr 1fr}}
   @media(max-width:700px){.kpi-grid{grid-template-columns:1fr 1fr}.charts-grid-3{grid-template-columns:1fr}.header-nav{display:none}.main{padding:1rem}.proj-grid{grid-template-columns:1fr}.floor-rooms{grid-template-columns:repeat(3,1fr)}}
 
@@ -3368,19 +3392,33 @@
     <div>
       <div class="card bill-form">
 
-        <!-- Server URL Settings for QR Code -->
-        <!-- PromptPay Settings -->
-        <div class="pp-settings" style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:.7rem .9rem;margin-bottom:.75rem;">
-          <div style="font-size:.8rem;font-weight:700;color:#e65100;margin-bottom:6px;">📱 เลขพร้อมเพย์ (สำหรับ QR Code ในใบวางบิล)</div>
-          <div style="display:flex;gap:6px;align-items:center;">
-            <input type="text" id="pp-input" placeholder="เบอร์โทร / เลขบัตรประชาชน" style="flex:1;padding:6px 10px;border:1px solid #ffe082;border-radius:6px;font-size:.83rem;font-family:'Sarabun';" oninput="savePromptPay()">
-            <span id="pp-status" style="font-size:.72rem;color:var(--green);white-space:nowrap;min-width:60px;"></span>
+        <!-- PromptPay Settings (collapsible) -->
+        <details id="ppDetails" class="pp-details-wrap">
+          <summary class="pp-details-summary">⚙️ พร้อมเพย์ / QR Code
+            <span id="pp-status" style="font-size:.72rem;color:var(--green);white-space:nowrap;margin-left:6px;"></span>
+          </summary>
+          <div class="pp-settings" style="border-radius:0 0 8px 8px;padding:.7rem .9rem;">
+            <div style="font-size:.8rem;font-weight:700;color:#e65100;margin-bottom:6px;">📱 เลขพร้อมเพย์ (สำหรับ QR Code ในใบวางบิล)</div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="text" id="pp-input" placeholder="เบอร์โทร / เลขบัตรประชาชน" style="flex:1;padding:6px 10px;border:1px solid #ffe082;border-radius:6px;font-size:.83rem;font-family:'Sarabun';" oninput="savePromptPay()">
+            </div>
           </div>
-        </div>
+        </details>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(function() {
+            var ppInput = document.getElementById('pp-input');
+            var ppDetails = document.getElementById('ppDetails');
+            if (ppInput && ppDetails && (!ppInput.value || ppInput.value.trim() === '')) {
+              ppDetails.open = true;
+            }
+          }, 80);
+        });
+        </script>
 
-        <!-- Building selector -->
+        <!-- Step 1: Building + Room (merged) -->
         <div class="form-section amber">
-          <div class="form-section-title">🏢 เลือกตึก</div>
+          <div class="form-section-title">🏠 ขั้นตอนที่ 1 — เลือกห้อง</div>
           <div class="form-grid">
             <div class="form-field full">
               <label>ตึก</label>
@@ -3389,13 +3427,6 @@
                 <option value="new">🏗️ Nest (Studio / Pet Friendly)</option>
               </select>
             </div>
-          </div>
-        </div>
-
-        <!-- Room info -->
-        <div class="form-section">
-          <div class="form-section-title">🏠 ข้อมูลห้อง</div>
-          <div class="form-grid">
             <div class="form-field">
               <label>ห้องเลขที่</label>
               <select id="f-room" onchange="onRoomChange()">
@@ -3447,6 +3478,9 @@
           </div>
         </div>
 
+        <!-- Step 2 label -->
+        <div class="step-group-label">📊 ขั้นตอนที่ 2 — บันทึกมิเตอร์</div>
+
         <!-- Electricity -->
         <div class="form-section">
           <div class="form-section-title">⚡ มิเตอร์ไฟฟ้า</div>
@@ -3469,15 +3503,19 @@
           </div>
         </div>
 
-        <!-- Extras -->
-        <div class="form-section">
-          <div class="form-section-title">🗑️ ค่าบริการเพิ่มเติม</div>
-          <div class="form-grid">
-            <div class="form-field"><label>ค่าขยะ (บาท)</label><input type="number" id="f-trash" value="20" oninput="calcBill()"></div>
-            <div class="form-field"><label>ค่าบริการอื่นๆ (บาท)</label><input type="number" id="f-other" value="0" oninput="calcBill()"></div>
-            <div class="form-field full"><label>หมายเหตุ (ถ้ามี)</label><input type="text" id="f-note" placeholder="เช่น ชำระล่วงหน้า, ค้างชำระงวดที่แล้ว..."></div>
+        <!-- Extras (collapsible) -->
+        <details open class="extras-details-wrap">
+          <summary class="extras-details-summary">🗑️ ค่าบริการเพิ่มเติม
+            <span style="font-size:.74rem;font-weight:400;color:var(--text-muted);">(ขยะ ฿20 — คลิกเพื่อพับ)</span>
+          </summary>
+          <div class="form-section" style="border-radius:0 0 var(--radius-sm) var(--radius-sm);margin-top:0;">
+            <div class="form-grid">
+              <div class="form-field"><label>ค่าขยะ (บาท)</label><input type="number" id="f-trash" value="20" oninput="calcBill()"></div>
+              <div class="form-field"><label>ค่าบริการอื่นๆ (บาท)</label><input type="number" id="f-other" value="0" oninput="calcBill()"></div>
+              <div class="form-field full"><label>หมายเหตุ (ถ้ามี)</label><input type="text" id="f-note" placeholder="เช่น ชำระล่วงหน้า, ค้างชำระงวดที่แล้ว..."></div>
+            </div>
           </div>
-        </div>
+        </details>
 
         <!-- Summary -->
         <div class="calc-display">
@@ -3514,12 +3552,12 @@
         </div>
 
         <!-- Action buttons -->
-        <div class="bill-actions" style="display:flex;flex-direction:column;gap:.5rem;">
-          <div style="display:flex;gap:.5rem;">
-            <button class="btn-invoice" onclick="generateInvoice()" style="flex:1;">📄 ส่งใบวางบิล</button>
-            <button class="btn-receipt" onclick="generateReceipt()" id="btnReceipt" disabled style="opacity:.4;cursor:not-allowed;flex:1;">✅ ออกใบเสร็จรับเงิน</button>
+        <div class="bill-actions bill-actions-col">
+          <div class="bill-actions-row">
+            <button class="btn-invoice" onclick="generateInvoice()">📄 ส่งใบวางบิล</button>
+            <button class="btn-receipt" onclick="generateReceipt()" id="btnReceipt" disabled style="opacity:.4;cursor:not-allowed;">✅ ออกใบเสร็จรับเงิน</button>
           </div>
-          <button style="background:linear-gradient(135deg,#9c27b0,#673ab7);color:white;border:none;border-radius:6px;padding:.7rem 1rem;cursor:pointer;font-weight:600;font-size:.9rem;transition:all .2s;" onclick="autoGenerateAllBills()" title="อ่านข้อมูลมิเตอร์จาก Firebase สร้างบิลอัตโนมัติสำหรับห้องทั้งหมด">🤖 สร้างบิลทั้งหมดเดือนนี้ (AUTO)</button>
+          <button class="btn-auto-bill" onclick="autoGenerateAllBills()" title="อ่านข้อมูลมิเตอร์จาก Firebase สร้างบิลอัตโนมัติสำหรับห้องทั้งหมด">🤖 สร้างบิลทั้งหมดเดือนนี้ (AUTO)</button>
         </div>
         <div id="billHint" style="font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:8px;">📱 AUTO: อ่านมิเตอร์จาก Firebase สร้างบิลอัตโนมัติ | 📄 ส่งใบวางบิลก่อน → อัปโหลดสลิป → ออกใบเสร็จรับเงิน</div>
       </div>
