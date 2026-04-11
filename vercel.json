@@ -5,24 +5,6 @@
   "cleanUrls": true,
   "headers": [
     {
-      "source": "/(dashboard|login|tenant|index)(.html)?",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
-    },
-    {
       "source": "/(.*)",
       "headers": [
         {
@@ -48,18 +30,24 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
-        },
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
         {
-          "key": "RateLimit-Limit",
-          "value": "1000"
-        },
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(dashboard|login|tenant|index)(.html)?",
+      "headers": [
         {
-          "key": "RateLimit-Remaining",
-          "value": "999"
-        },
-        {
-          "key": "RateLimit-Reset",
-          "value": "60"
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
         }
       ]
     }
