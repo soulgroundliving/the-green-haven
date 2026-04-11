@@ -2736,13 +2736,7 @@
 
   <!-- Meter Tabs -->
   <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:2px solid #eee;flex-wrap:wrap;">
-    <button class="meter-tab active" onclick="window.switchMeterTab('nest', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#2d8653;border-bottom:3px solid #2d8653;margin-bottom:-2px;">
-      🏢 Nest Building
-    </button>
-    <button class="meter-tab" onclick="window.switchMeterTab('rooms', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
-      🏠 Rooms Building
-    </button>
-    <button class="meter-tab" onclick="window.switchMeterTab('room-config', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
+    <button class="meter-tab active" onclick="window.switchMeterTab('room-config', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#2d8653;border-bottom:3px solid #2d8653;margin-bottom:-2px;">
       ⚙️ จัดการห้อง
     </button>
     <button class="meter-tab" onclick="window.switchMeterTab('import-meter', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
@@ -2751,54 +2745,6 @@
     <button class="meter-tab" onclick="window.switchMeterTab('import-billing', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
       📥 นำเข้าข้อมูลบิล
     </button>
-  </div>
-
-  <!-- Tab Content: Nest Building -->
-  <div id="meter-nest-content" class="meter-tab-content" style="display:block;">
-    <!-- Month Selection -->
-    <div style="display:flex;gap:1rem;align-items:flex-end;margin-bottom:1.5rem;flex-wrap:wrap;">
-      <div style="flex:1;min-width:200px;">
-        <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.9rem;color:var(--text);">📅 เดือนที่จะบันทึก</label>
-        <input type="month" id="nestMeterMonth" style="width:100%;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
-      </div>
-      <button style="background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);padding:0.8rem 1.5rem;font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;height:42px;white-space:nowrap;" onclick="loadPreviousMonthNest()">← โหลดจากเดือนที่แล้ว</button>
-    </div>
-
-    <!-- Meter Input Grid -->
-    <div class="card">
-      <div style="font-size:1rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);">📊 บันทึกค่ามิเตอร์ (Nest Building)</div>
-      <div id="nestMeterGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:1.2rem;margin-top:1.5rem;"></div>
-    </div>
-
-    <!-- Buttons -->
-    <div style="display:flex;gap:0.8rem;margin-top:1.5rem;flex-wrap:wrap;">
-      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--green);color:#fff;flex:1;" onclick="saveNestMeterReadings()">✅ บันทึกและสร้างใบวางบิล</button>
-      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--border);color:var(--text);flex:0.5;" onclick="exportNestMeterCSV()">📤 ส่งออก CSV</button>
-    </div>
-  </div>
-
-  <!-- Tab Content: Rooms Building -->
-  <div id="meter-rooms-content" class="meter-tab-content" style="display:none;">
-    <!-- Month Selection -->
-    <div style="display:flex;gap:1rem;align-items:flex-end;margin-bottom:1.5rem;flex-wrap:wrap;">
-      <div style="flex:1;min-width:200px;">
-        <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.9rem;color:var(--text);">📅 เดือนที่จะบันทึก</label>
-        <input type="month" id="roomsMeterMonth" style="width:100%;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
-      </div>
-      <button style="background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);padding:0.8rem 1.5rem;font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;height:42px;white-space:nowrap;" onclick="loadPreviousMonthRooms()">← โหลดจากเดือนที่แล้ว</button>
-    </div>
-
-    <!-- Meter Input Grid -->
-    <div class="card">
-      <div style="font-size:1rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);">📊 บันทึกค่ามิเตอร์ (Rooms Building)</div>
-      <div id="roomsMeterGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:1.2rem;margin-top:1.5rem;"></div>
-    </div>
-
-    <!-- Buttons -->
-    <div style="display:flex;gap:0.8rem;margin-top:1.5rem;flex-wrap:wrap;">
-      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--green);color:#fff;flex:1;" onclick="saveRoomsMeterReadings()">✅ บันทึกและสร้างใบวางบิล</button>
-      <button style="padding:0.8rem 1.5rem;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;font-weight:600;cursor:pointer;background:var(--border);color:var(--text);flex:0.5;" onclick="exportRoomsMeterCSV()">📤 ส่งออก CSV</button>
-    </div>
   </div>
 
   <!-- Tab Content: Room Configuration -->
