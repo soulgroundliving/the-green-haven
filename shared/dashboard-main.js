@@ -5158,7 +5158,7 @@ function updateDashboardLive(){
     const pendingRoomsArr=activeRooms.filter(r=>!paid[r.id]).map(r=>r.id);
     const pendingNestArr=activeNest.filter(r=>!paid[r.id]).map(r=>r.id);
     const allPending=[...pendingRoomsArr, ...pendingNestArr];
-    const overdueCount = overdueInvoices.length;
+    const overdueCount = pendingCount; // rooms not yet paid this month
     dashPay.innerHTML=`
       <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
         <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${paidCountAll}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ จ่ายแล้ว</div></div>
