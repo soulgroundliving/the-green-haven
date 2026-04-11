@@ -885,6 +885,8 @@
   .proj-value{font-size:1.45rem;font-weight:800;}
 
   .insights-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;margin-bottom:1rem;}
+  .kpi-live{display:none;}
+  #dash-live-panels{display:none;}
   .insight-card{border-radius:var(--radius);padding:.75rem 1rem;border-left:4px solid;}
   .insight-card.green{background:var(--green-pale);border-color:var(--green);}
   .insight-card.amber{background:var(--accent-light);border-color:var(--accent);}
@@ -4058,7 +4060,7 @@
 
 <!-- Toggle Button for Firebase Panel - REMOVED FOR PRODUCTION (was blocking content on scroll) -->
 
-<script src="./shared/dashboard-main.js?v=20260411k"></script>
+<script src="./shared/dashboard-main.js?v=20260411l"></script>
 
 <!-- ===== PAYMENT DETAIL MODAL ===== -->
 <div class="pay-modal-overlay" id="payModalOverlay" onclick="if(event.target===this)closePayModal()">
