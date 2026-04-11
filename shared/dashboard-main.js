@@ -16,6 +16,7 @@ window._showPageImpl = function(page,btn){
   document.querySelectorAll('.sidebar-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   if(btn)btn.classList.add('active');
+  window.scrollTo(0,0);
   // Close sidebar on mobile after navigation
   if(window.innerWidth <= 600){
     window._closeSidebarImpl();
