@@ -656,6 +656,7 @@
 
   /* ===== BILL FLOW ===== */
   .bill-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.8rem;}
+  .bill-layout > div:last-child{position:sticky;top:1.5rem;align-self:start;}
   .bill-form{display:flex;flex-direction:column;gap:.9rem;}
   .form-section{background:var(--green-pale);border-radius:var(--radius-sm);padding:1.1rem;}
   .form-section.amber{background:var(--accent-light);}
@@ -3409,10 +3410,10 @@
           setTimeout(function() {
             var ppInput = document.getElementById('pp-input');
             var ppDetails = document.getElementById('ppDetails');
-            if (ppInput && ppDetails && (!ppInput.value || ppInput.value.trim() === '')) {
-              ppDetails.open = true;
+            if (ppInput && ppDetails) {
+              ppDetails.open = (!ppInput.value || ppInput.value.trim() === '');
             }
-          }, 80);
+          }, 200);
         });
         </script>
 
