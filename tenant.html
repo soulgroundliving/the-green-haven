@@ -13,18 +13,16 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="./shared/security.js"></script>
   <script src="./shared/firebase-config-loader.js"></script>
-  <script src="./shared/config-secure.js"></script>
+  <script src="./shared/config-unified.js"></script>
   <script src="./shared/access-control.js"></script>
   <script src="./shared/invoice-receipt-manager.js"></script>
   <script src="./shared/room-config.js"></script>
-  <script src="./shared/tenant-config.js"></script>
   <script src="./shared/lease-config.js"></script>
   <!-- Initialize lease agreements for all rooms -->
   <script src="./test/init-leases.js"></script>
   <script src="./shared/owner-config.js"></script>
   <script src="./shared/expense-manager.js"></script>
-  <script src="./shared/tenant-manager.js"></script>
-  <script src="./shared/tenant-firebase-sync.js"></script>
+  <script src="./shared/tenant-system.js"></script>
   <!-- TEST/MOCK DATA REMOVED FOR PRODUCTION DEPLOYMENT -->
   <!-- (Was: init-real-bills.js, mark-bills-paid.js, init-payment-records.js, mock data, etc.) -->
   <!-- TEST DATA INITIALIZATION REMOVED FOR PRODUCTION DEPLOYMENT -->
@@ -79,11 +77,9 @@
       }
     })();
   </script>
-  <!-- Billing System -->
-  <script src="./shared/billing-calculator.js"></script>
-  <script src="./shared/meter-data-manager.js"></script>
-  <!-- Auto-generate bills from meter data (runs on page load) -->
-  <script src="./shared/auto-bill-calculator.js"></script>
+  <!-- Consolidated Billing & Meter System (v3.0) -->
+  <script src="./shared/billing-system.js"></script>
+  <script src="./shared/meter-unified.js"></script>
   <!-- Migrate old meter_data format to new MeterDataManager format -->
   <script>
     (function migrateMeterData() {
@@ -5032,8 +5028,6 @@
           throw new Error('⏱️ คำขอมากเกินไป โปรดลองใหม่ในเวลาไม่กี่วินาที');
         }
 
-        console.log('🔄 Verifying with Secure Cloud Function...');
-
         // Show loading state
         document.getElementById('slipVerifyResult').innerHTML = '<div style="text-align: center; color: var(--neutral);">⏳ กำลังตรวจสอบ...</div>';
         document.getElementById('slipVerifyResult').style.display = 'block';
@@ -5043,30 +5037,34 @@
         const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
         const room = tenantData[tenantId]?.room || 'unknown';
 
-        // Call secure Cloud Function (API keys are server-side, never exposed)
-        const result = await verifySlipSecure(
-          file,
-          null, // expectedAmount (optional)
-          'rooms', // building
-          room,
-          tenantId
-        );
+        // Convert file to base64 for Cloud Function
+        const base64 = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result.split(',')[1]);
+          r.onerror = reject;
+          r.readAsDataURL(file);
+        });
 
-        console.log('✅ Cloud Function Response:', result);
+        // Call Firebase Cloud Function (API key secured server-side)
+        const res = await fetch('https://us-central1-the-green-haven.cloudfunctions.net/verifySlip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ file: base64, expectedAmount: currentPaymentAmount || 0, building: 'rooms', room })
+        });
+        const json = await res.json();
 
-        // Validate response
-        if (result.success && result.data) {
+        if (json.success && json.data) {
           verifySlip({
             success: true,
             data: {
-              amount: result.data.amount,
-              sendingBankCode: result.data.sendingBankCode || 'UNKNOWN',
-              transactionDate: result.data.transactionDate,
-              transactionId: result.data.transactionId
+              amount: json.data.amount,
+              sendingBankCode: json.data.sendingBankCode || 'UNKNOWN',
+              transactionDate: json.data.date,
+              transactionId: json.data.transactionId || json.data.transRef
             }
           });
         } else {
-          throw new Error(result.error || 'Verification failed');
+          throw new Error(json.error || 'Verification failed');
         }
       } catch (error) {
         console.error('❌ Verification failed:', error);
