@@ -169,7 +169,7 @@ async function isDuplicateSlip(transactionId) {
 async function callSlipOKAPI(fileBuffer) {
   try {
     const form = new FormData();
-    form.append('file', fileBuffer, { filename: 'slip.jpg' });
+    form.append('files', fileBuffer, { filename: 'slip.jpg', contentType: 'image/jpeg' });
 
     const response = await fetch(SLIPOK_API_URL, {
       method: 'POST',
