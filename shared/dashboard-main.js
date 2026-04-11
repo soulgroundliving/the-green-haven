@@ -4335,7 +4335,7 @@ async function verifySlip(file){
     // invoiceData.building is a display name — map to 'rooms' or 'nest' for Cloud Function
     const buildingRaw = (currentBuilding === 'nest') ? 'nest' : 'rooms';
     // Call Firebase Cloud Function (API key secured server-side)
-    const res = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
+    const res = await fetch('https://us-central1-the-green-haven.cloudfunctions.net/verifySlip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ file: base64, expectedAmount: billTotal || 1, building: buildingRaw, room })
