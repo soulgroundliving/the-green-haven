@@ -4356,7 +4356,9 @@ async function verifySlip(file){
       const amountOk  = json.amountValid !== undefined ? json.amountValid : (billTotal <= 0 || Math.abs(amount - billTotal) < 1);
 
       slipVerified = true;
-      slipData = {amount, sender, receiver, ref, tDate, amountOk};
+      // transferDate = raw ISO from SlipOK — used for gamification on-time payment ranking
+      const transferDate = d.date || null;
+      slipData = {amount, sender, receiver, ref, tDate, transferDate, amountOk};
 
       resultEl.innerHTML = `
         <div class="slip-result-ok">
@@ -4658,7 +4660,16 @@ function markRoomPaid(d){
   ps[key][d.room]={
     status:'paid', amount:d.total, date:new Date().toISOString(),
     receiptNo:d.no, eNew:d.eNew, eOld:d.eOld, wNew:d.wNew, wOld:d.wOld,
-    slip:slipVerified?{amount:slipData.amount,sender:slipData.sender,ref:slipData.ref}:null
+    slip:slipVerified?{
+      amount:slipData.amount,
+      sender:slipData.sender,
+      receiver:slipData.receiver,
+      ref:slipData.ref,
+      tDate:slipData.tDate,
+      transferDate:slipData.transferDate,  // ISO datetime — for on-time gamification
+      dueDate:`${d.year}-${String(d.month).padStart(2,'0')}-05`,  // 5th of billing month
+      amountOk:slipData.amountOk
+    }:null
   };
   savePS(ps);
   renderPaymentStatus();
@@ -4714,8 +4725,14 @@ async function saveBillToFirebase(d){
       slipData: slipVerified && slipData ? {
         amount: slipData.amount,
         sender: slipData.sender,
+        receiver: slipData.receiver,
         ref: slipData.ref,
-        tDate: slipData.tDate
+        tDate: slipData.tDate,
+        transferDate: slipData.transferDate,  // ISO — actual transfer time
+        dueDate: `${d.year}-${String(d.month).padStart(2,'0')}-05`,
+        paidOnTime: slipData.transferDate
+          ? new Date(slipData.transferDate) <= new Date(`${d.year}-${String(d.month).padStart(2,'0')}-05T23:59:59`)
+          : null
       } : null
     };
 
