@@ -5328,7 +5328,16 @@ function setTenantBuilding(bld,btn){
 }
 
 function initTenantPage(){
-  loadRoomConfigUI();
+  renderTenantPage();
+  renderTenantTable();
+  const searchInput=document.getElementById('tenantSearch');
+  if(searchInput){
+    searchInput.addEventListener('input',()=>{
+      renderTenantPage();
+      renderTenantTable();
+    });
+  }
+  _setupTenantRealtimeListener();
 }
 
 let _tenantListenerUnsubscribers=[];
