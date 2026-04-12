@@ -5496,12 +5496,10 @@ function updateTenantAlertBlock(){
 
 // ===== ROOM TYPE INFO CARDS =====
 function updateRoomTypeCards(){
-  const building=tenantBuilding==='old'?'old':'new';
-  const roomConfig=JSON.parse(localStorage.getItem('room_config_data')||'{}');
-  const buildingConfig=roomConfig[building]||{};
+  const rooms=tenantBuilding==='old'?window.ROOMS_OLD:window.ROOMS_NEW;
   const container=document.getElementById('roomTypeCardsContainer');
   const types={};
-  Object.values(buildingConfig).forEach(room=>{
+  (rooms||[]).forEach(room=>{
     if(!types[room.type])types[room.type]={type:room.type,rooms:0,rent:room.rent};
     types[room.type].rooms++;
   });
