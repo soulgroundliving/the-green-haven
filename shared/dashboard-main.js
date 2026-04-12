@@ -5330,11 +5330,15 @@ function setTenantBuilding(bld,btn){
 function initTenantPage(){
   renderTenantPage();
   renderTenantTable();
+  updateTenantAlertBlock();
+  updateRoomTypeCards();
   const searchInput=document.getElementById('tenantSearch');
   if(searchInput){
     searchInput.addEventListener('input',()=>{
       renderTenantPage();
       renderTenantTable();
+      updateTenantAlertBlock();
+      updateRoomTypeCards();
     });
   }
   _setupTenantRealtimeListener();
@@ -5357,6 +5361,8 @@ function _setupTenantRealtimeListener(){
       if(document.getElementById('page-tenant')?.style.display!=='none'){
         renderTenantPage();
         renderTenantTable();
+        updateTenantAlertBlock();
+        updateRoomTypeCards();
       }
     },err=>console.warn('tenant listener error:',err));
     _tenantListenerUnsubscribers.push(unsub);
@@ -5410,6 +5416,8 @@ function renderTenantPage(){
       ${info}
     </div>`;
   }).join('');
+  updateTenantAlertBlock();
+  updateRoomTypeCards();
 }
 
 // ===== COMPACT TENANT TABLE RENDERING =====
@@ -5463,6 +5471,73 @@ function toggleTenantView(view, btn){
     cardsView.style.display='none';
     tableView.style.display='block';
   }
+}
+
+// ===== TENANT ALERT BLOCK =====
+function updateTenantAlertBlock(){
+  const rooms=tenantBuilding==='old'?window.ROOMS_OLD:window.ROOMS_NEW;
+  const tenants=loadTenants();
+  const today=new Date();
+  const expiring=rooms.filter(r=>{
+    const t=tenants[r.id];
+    if(!t?.contractEnd)return false;
+    const diff=(new Date(t.contractEnd)-today)/(1000*60*60*24);
+    return diff>=0&&diff<=30;
+  });
+  const alertBlock=document.getElementById('tenantAlertBlock');
+  const alertList=document.getElementById('tenantAlertList');
+  if(expiring.length===0){
+    alertBlock.style.display='none';
+  }else{
+    alertBlock.style.display='block';
+    alertList.innerHTML=expiring.map(r=>`<div style="background:#fff;padding:6px 12px;border-radius:6px;border-left:3px solid #f57c00;font-size:.85rem;">🚪 ห้อง ${r.id}</div>`).join('');
+  }
+}
+
+// ===== ROOM TYPE INFO CARDS =====
+function updateRoomTypeCards(){
+  const building=tenantBuilding==='old'?'old':'new';
+  const roomConfig=JSON.parse(localStorage.getItem('room_config_data')||'{}');
+  const buildingConfig=roomConfig[building]||{};
+  const container=document.getElementById('roomTypeCardsContainer');
+  const types={};
+  Object.values(buildingConfig).forEach(room=>{
+    if(!types[room.type])types[room.type]={type:room.type,rooms:0,rent:room.rent};
+    types[room.type].rooms++;
+  });
+  container.innerHTML=Object.values(types).map(typeInfo=>`
+    <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem;">
+      <div style="font-weight:700;color:var(--green);margin-bottom:0.5rem;">${typeInfo.type}</div>
+      <div style="font-size:.9rem;color:var(--text-muted);">
+        <div>🏠 ${typeInfo.rooms} ห้อง</div>
+        <div>💰 ฿${Number(typeInfo.rent).toLocaleString()} / เดือน</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ===== EXPORT TENANT CSV =====
+function exportTenantCSV(){
+  const building=tenantBuilding==='old'?'ห้องแถว':'Nest';
+  const rooms=tenantBuilding==='old'?window.ROOMS_OLD:window.ROOMS_NEW;
+  const tenants=loadTenants();
+  const today=new Date();
+  let csv='ห้อง,ชื่อ-นามสกุล,เบอร์โทร,วันเข้า,วันหมดสัญญา,มัดจำ,สถานะ\n';
+  rooms.forEach(r=>{
+    const t=tenants[r.id];
+    const name=t?.name||'ว่าง';
+    const phone=t?.phone||'-';
+    const moveIn=t?.moveInDate?new Date(t.moveInDate).toLocaleDateString('th-TH'):'-';
+    const contractEnd=t?.contractEnd?new Date(t.contractEnd).toLocaleDateString('th-TH'):'-';
+    const deposit=t?.deposit?Number(t.deposit).toLocaleString('th-TH'):'-';
+    const status=!t?.name?'ว่าง':t.contractEnd&&new Date(t.contractEnd)<today?'หมด':'ปกติ';
+    csv+=`"${r.id}","${name}","${phone}","${moveIn}","${contractEnd}","${deposit}","${status}"\n`;
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const link=document.createElement('a');
+  link.href=URL.createObjectURL(blob);
+  link.download=`tenant-${building}-${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
 }
 
 let editingTenantRoom=null;
