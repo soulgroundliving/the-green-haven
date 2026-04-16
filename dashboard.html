@@ -2197,7 +2197,28 @@
     <button class="year-tab" onclick="setTenantBuilding('new',this)">🏗️ Nest</button>
   </div>
 
-  <!-- Property Rooms Section (Building Info + Room Grid) -->
+  <!-- Filter + Search Bar (PRIMARY — shown immediately) -->
+  <div style="margin-bottom:1.2rem;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="filter-btn-tenant active" onclick="setTenantFilter('all')" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--green-dark);color:white;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ทั้งหมด</button>
+        <button class="filter-btn-tenant" onclick="setTenantFilter('occupied')" style="padding:6px 14px;border-radius:20px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟢 มีผู้เช่า</button>
+        <button class="filter-btn-tenant" onclick="setTenantFilter('vacant')" style="padding:6px 14px;border-radius:20px;border:1.5px solid #9e9e9e;background:white;color:#666;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚪ ว่าง</button>
+        <button class="filter-btn-tenant" onclick="setTenantFilter('expiring')" style="padding:6px 14px;border-radius:20px;border:1.5px solid #f57c00;background:white;color:#f57c00;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟠 ใกล้หมด</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="tenantSearch" placeholder="🔍 ค้นหาห้อง/ชื่อ..." style="padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:200px;">
+        <button onclick="exportTenantCSV()" style="padding:8px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.85rem;cursor:pointer;font-weight:600;">📥 CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tenant Cards (PRIMARY) -->
+  <div id="tenantViewCards" style="margin-bottom:2rem;">
+    <div class="compact-grid" id="tenantGrid"></div>
+  </div>
+
+  <!-- Property Rooms Section (SECONDARY — collapsible) -->
   <div id="tenant-rooms-section">
 
   <!-- Occupancy KPIs -->

@@ -169,7 +169,13 @@ async function isDuplicateSlip(transactionId) {
 async function callSlipOKAPI(fileBuffer) {
   try {
     const form = new FormData();
-    form.append('files', fileBuffer, { filename: 'slip.jpg', contentType: 'image/jpeg' });
+    // Detect image type from buffer magic bytes
+    let mimeType = 'image/jpeg';
+    let ext = 'jpg';
+    if (fileBuffer[0] === 0x89 && fileBuffer[1] === 0x50) { mimeType = 'image/png'; ext = 'png'; }
+    else if (fileBuffer[0] === 0x47 && fileBuffer[1] === 0x49) { mimeType = 'image/gif'; ext = 'gif'; }
+    else if (fileBuffer[0] === 0x52 && fileBuffer[1] === 0x49) { mimeType = 'image/webp'; ext = 'webp'; }
+    form.append('files', fileBuffer, { filename: `slip.${ext}`, contentType: mimeType });
 
     const response = await fetch(SLIPOK_API_URL, {
       method: 'POST',
@@ -180,11 +186,15 @@ async function callSlipOKAPI(fileBuffer) {
       timeout: 30000 // 30 second timeout
     });
 
+    const responseText = await response.text();
+    console.log(`📡 SlipOK response ${response.status}:`, responseText.slice(0, 500));
+
     if (!response.ok) {
-      throw new Error(`SlipOK API returned ${response.status}: ${response.statusText}`);
+      throw new Error(`SlipOK API returned ${response.status}: ${responseText.slice(0, 300)}`);
     }
 
-    const data = await response.json();
+    let data;
+    try { data = JSON.parse(responseText); } catch(e) { throw new Error(`SlipOK non-JSON response: ${responseText.slice(0, 200)}`); }
 
     if (!data.success) {
       throw new Error(data.message || 'SlipOK verification failed');
