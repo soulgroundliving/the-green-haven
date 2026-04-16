@@ -2520,19 +2520,13 @@
 
 <!-- ===== METER RECORDING ===== -->
 <div class="page" id="page-meter">
-  <div class="section-title">📊 บันทึกค่ามิเตอร์</div>
+  <div class="section-title">📊 Meter Upload</div>
 
   <!-- Meter Tabs -->
-  <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:2px solid #eee;flex-wrap:wrap;">
-    <button class="meter-tab active" onclick="window.switchMeterTab('room-config', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#2d8653;border-bottom:3px solid #2d8653;margin-bottom:-2px;">
-      ⚙️ จัดการห้อง
-    </button>
-    <button class="meter-tab" onclick="window.switchMeterTab('import-meter', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
-      📥 นำเข้าข้อมูลมิเตอร์
-    </button>
-    <button class="meter-tab" onclick="window.switchMeterTab('import-billing', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
-      📥 นำเข้าข้อมูลบิล
-    </button>
+  <div class="year-tabs" style="margin-bottom:1.2rem;">
+    <button class="meter-tab year-tab active" onclick="window.switchMeterTab('room-config', this)">⚙️ จัดการห้อง & อัตรา</button>
+    <button class="meter-tab year-tab" onclick="window.switchMeterTab('import-meter', this)">📥 นำเข้าข้อมูลมิเตอร์</button>
+    <button class="meter-tab year-tab" onclick="window.switchMeterTab('import-billing', this)">📥 นำเข้าข้อมูลบิล</button>
   </div>
 
   <!-- Tab Content: Room Configuration -->
@@ -2897,12 +2891,12 @@
 
 <!-- ===== MAINTENANCE ===== -->
 <div class="page" id="page-maintenance">
-  <div class="section-title">🔧 Maintenance & Housekeeping System</div>
+  <div class="section-title">🔧 Requests & Approvals</div>
 
   <!-- TAB NAVIGATION -->
-  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.5rem;">
-    <button class="dashboard-tab active" onclick="switchMaintenanceTab('maintenance', this)" style="padding:12px 24px;background:none;border:none;border-bottom:3px solid transparent;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.3s;font-size:0.95rem;font-family:'Sarabun',sans-serif;">🔧 Maintenance Requests</button>
-    <button class="dashboard-tab" onclick="switchMaintenanceTab('housekeeping', this)" style="padding:12px 24px;background:none;border:none;border-bottom:3px solid transparent;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.3s;font-size:0.95rem;font-family:'Sarabun',sans-serif;">🧹 Housekeeping Requests</button>
+  <div class="year-tabs" style="margin-bottom:1.2rem;">
+    <button class="dashboard-tab year-tab active" onclick="switchMaintenanceTab('maintenance', this)">🔧 Maintenance</button>
+    <button class="dashboard-tab year-tab" onclick="switchMaintenanceTab('housekeeping', this)">🧹 Housekeeping</button>
   </div>
 
   <!-- MAINTENANCE TAB -->
@@ -2962,13 +2956,13 @@
 
 <!-- ===== ANNOUNCEMENTS ===== -->
 <div class="page" id="page-content-management">
-  <div class="section-title">📚 เอกสารและประกาศ</div>
+  <div class="section-title">📚 Community Events</div>
 
   <!-- Tab Navigation -->
-  <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
-    <button id="tab-announcements-btn" class="content-mgmt-tab active" onclick="switchContentTab('announcements', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📢 ประกาศ</button>
-    <button id="tab-events-btn" class="content-mgmt-tab" onclick="switchContentTab('events', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📅 กิจกรรม</button>
-    <button id="tab-docs-btn" class="content-mgmt-tab" onclick="switchContentTab('docs', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📋 เอกสาร</button>
+  <div class="year-tabs" style="margin-bottom:1.2rem;">
+    <button id="tab-announcements-btn" class="content-mgmt-tab year-tab active" onclick="switchContentTab('announcements', this)">📢 Announcement</button>
+    <button id="tab-events-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('events', this)">📅 Events</button>
+    <button id="tab-docs-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('docs', this)">📋 Documents</button>
   </div>
 
   <!-- TAB 1: Announcements -->
@@ -3554,9 +3548,9 @@
   <div class="section-title">✅ Requests & Approvals</div>
 
   <!-- Tab Navigation -->
-  <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
-    <button id="tab-complaints-btn" class="requests-mgmt-tab active" onclick="switchRequestsTab('complaints', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">⚠️ Complaints</button>
-    <button id="tab-pets-btn" class="requests-mgmt-tab" onclick="switchRequestsTab('pets', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">🐾 Pet Approvals</button>
+  <div class="year-tabs" style="margin-bottom:1.2rem;">
+    <button id="tab-complaints-btn" class="requests-mgmt-tab year-tab active" onclick="switchRequestsTab('complaints', this)">⚠️ Complaints</button>
+    <button id="tab-pets-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('pets', this)">🐾 Pet Approvals</button>
   </div>
 
   <!-- TAB 1: Complaints -->

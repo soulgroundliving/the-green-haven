@@ -47,21 +47,13 @@ window._switchMeterTabImpl = function(tabName, btnElement) {
   document.querySelectorAll('.meter-tab-content').forEach(el => el.style.display = 'none');
 
   // Remove active state from all buttons
-  document.querySelectorAll('.meter-tab').forEach(btn => {
-    btn.style.color = '#999';
-    btn.style.borderBottom = '3px solid transparent';
-  });
+  document.querySelectorAll('.meter-tab').forEach(btn => btn.classList.remove('active'));
 
   // Show selected tab
   const contentEl = document.getElementById('meter-' + tabName + '-content');
   if (contentEl) {
     contentEl.style.display = 'block';
-  }
-
-  // Set active button style
-  if (btnElement) {
-    btnElement.style.color = '#2d8653';
-    btnElement.style.borderBottom = '3px solid #2d8653';
+    if (btnElement) btnElement.classList.add('active');
   }
 
   // Initialize meter page content if needed
@@ -2372,21 +2364,13 @@ function switchContentTab(tabName, btn) {
   });
 
   // Remove active style from all tab buttons
-  document.querySelectorAll('.content-mgmt-tab').forEach(button => {
-    button.style.color = '#999';
-    button.style.borderBottomColor = 'transparent';
-  });
+  document.querySelectorAll('.content-mgmt-tab').forEach(button => button.classList.remove('active'));
 
   // Show selected tab
   const tabElement = document.getElementById('content-tab-' + tabName);
   if(tabElement) {
     tabElement.style.display = 'block';
-  }
-
-  // Highlight active button
-  if(btn) {
-    btn.style.color = 'var(--green)';
-    btn.style.borderBottomColor = 'var(--green)';
+    if(btn) btn.classList.add('active');
   }
 }
 
@@ -2398,21 +2382,13 @@ function switchRequestsTab(tabName, btn) {
   });
 
   // Remove active style from all tab buttons
-  document.querySelectorAll('.requests-mgmt-tab').forEach(button => {
-    button.style.color = '#999';
-    button.style.borderBottomColor = 'transparent';
-  });
+  document.querySelectorAll('.requests-mgmt-tab').forEach(button => button.classList.remove('active'));
 
   // Show selected tab
   const tabElement = document.getElementById('requests-tab-' + tabName);
   if(tabElement) {
     tabElement.style.display = 'block';
-  }
-
-  // Highlight active button
-  if(btn) {
-    btn.style.color = 'var(--green)';
-    btn.style.borderBottomColor = 'var(--green)';
+    if(btn) btn.classList.add('active');
   }
 }
 
@@ -7410,7 +7386,6 @@ function switchMaintenanceTab(tabName, btn) {
   // Remove active class from all buttons
   document.querySelectorAll('#page-maintenance .dashboard-tab').forEach(button => {
     button.classList.remove('active');
-    button.style.color = '';
   });
 
   // Show selected tab
