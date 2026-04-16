@@ -25,7 +25,17 @@ window._showPageImpl = function(page,btn){
   if(page==='monthly')initMonthlyPage();
   if(page==='tenant')initTenantPage();
   if(page==='expense')initExpensePage();
-  if(page==='maintenance')initMaintenancePage();
+  if(page==='maintenance'){
+    // Redirect to unified Requests & Approvals page
+    document.getElementById('page-'+page)?.classList.remove('active');
+    document.getElementById('page-requests-approvals')?.classList.add('active');
+    setTimeout(()=>switchRequestsTab('maintenance',document.getElementById('tab-maintenance-btn')),50);
+    return;
+  }
+  if(page==='requests-approvals'){
+    // Default to Maintenance tab on first load
+    setTimeout(()=>switchRequestsTab('maintenance',document.getElementById('tab-maintenance-btn')),80);
+  }
   if(page==='announcements')initAnnouncementsPage();
   if(page==='tenant-portal')initTenantPortal();
   if(page==='payment-verify')initPaymentVerify();
@@ -2384,11 +2394,17 @@ function switchRequestsTab(tabName, btn) {
   // Remove active style from all tab buttons
   document.querySelectorAll('.requests-mgmt-tab').forEach(button => button.classList.remove('active'));
 
+  // Hide all tab content
+  document.querySelectorAll('.requests-mgmt-content').forEach(tab => tab.style.display = 'none');
+
   // Show selected tab
   const tabElement = document.getElementById('requests-tab-' + tabName);
   if(tabElement) {
     tabElement.style.display = 'block';
     if(btn) btn.classList.add('active');
+    // Initialize content for maintenance-related tabs
+    if(tabName === 'maintenance') initMaintenancePage();
+    else if(tabName === 'housekeeping') initHousekeepingPage();
   }
 }
 
@@ -6543,15 +6559,6 @@ function saveMaintenance(d){
 }
 
 function initMaintenancePage(){
-  // Initialize Maintenance tab as default
-  const maintTab = document.getElementById('mx-maintenance-tab');
-  const mxTabBtn = document.querySelector('#page-maintenance .dashboard-tab:nth-child(1)');
-  if(maintTab && mxTabBtn) {
-    maintTab.classList.add('active');
-    mxTabBtn.classList.add('active');
-    mxTabBtn.style.color = 'var(--green)';
-    mxTabBtn.style.borderBottomColor = 'var(--green)';
-  }
 
   const now=new Date();
   const md=document.getElementById('mx-date');
@@ -7378,33 +7385,9 @@ function renderHousekeepingList(){
 }
 
 function switchMaintenanceTab(tabName, btn) {
-  // Hide all tabs
-  document.querySelectorAll('#page-maintenance .dashboard-tab-content').forEach(tab => {
-    tab.classList.remove('active');
-  });
-
-  // Remove active class from all buttons
-  document.querySelectorAll('#page-maintenance .dashboard-tab').forEach(button => {
-    button.classList.remove('active');
-  });
-
-  // Show selected tab
-  const tabElement = document.getElementById('mx-' + tabName + '-tab');
-  if(tabElement) {
-    tabElement.classList.add('active');
-    if(btn) {
-      btn.classList.add('active');
-      btn.style.color = 'var(--green)';
-      btn.style.borderBottomColor = 'var(--green)';
-    }
-
-    // Initialize tab data
-    if(tabName === 'housekeeping') {
-      initHousekeepingPage();
-    } else if(tabName === 'maintenance') {
-      initMaintenancePage();
-    }
-  }
+  // Shim: redirect to unified switchRequestsTab
+  const tabBtn = btn || document.getElementById('tab-' + tabName + '-btn');
+  switchRequestsTab(tabName, tabBtn);
 }
 
 // ===== ANNOUNCEMENTS MANAGEMENT =====

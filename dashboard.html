@@ -1885,10 +1885,10 @@
         <span class="sidebar-item-icon">🔧</span>Requests & Approvals<span class="sidebar-badge" id="mxBadge" style="display:none"></span><span class="sidebar-arrow" id="arrow-nav-requests">▶</span>
       </button>
       <div class="sidebar-accordion-content" id="nav-requests" style="display:none;">
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('maintenance',()=>switchMaintenanceTab('maintenance',null))">
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('requests-approvals',()=>switchRequestsTab('maintenance',document.getElementById('tab-maintenance-btn')))">
           <span class="sidebar-item-icon">🔧</span>Maintenance
         </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('maintenance',()=>switchMaintenanceTab('housekeeping',null))">
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('requests-approvals',()=>switchRequestsTab('housekeeping',document.getElementById('tab-housekeeping-btn')))">
           <span class="sidebar-item-icon">🧹</span>Housekeeping
         </button>
         <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('requests-approvals',()=>switchRequestsTab('complaints',null))">
@@ -3549,66 +3549,122 @@
 
   <!-- Tab Navigation -->
   <div class="year-tabs" style="margin-bottom:1.2rem;">
-    <button id="tab-complaints-btn" class="requests-mgmt-tab year-tab active" onclick="switchRequestsTab('complaints', this)">⚠️ Complaints</button>
+    <button id="tab-maintenance-btn" class="requests-mgmt-tab year-tab active" onclick="switchRequestsTab('maintenance', this)">🔧 Maintenance</button>
+    <button id="tab-housekeeping-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('housekeeping', this)">🧹 Housekeeping</button>
+    <button id="tab-complaints-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('complaints', this)">⚠️ Complaints</button>
     <button id="tab-pets-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('pets', this)">🐾 Pet Approvals</button>
+    <button id="tab-rental-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('rental', this)">📋 Rental Approvals</button>
   </div>
 
-  <!-- TAB 1: Complaints -->
-  <div id="requests-tab-complaints" class="requests-mgmt-content active">
-    <div class="card" style="margin-bottom: 1.5rem;">
-      <!-- Filters -->
-      <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-        <input type="text" id="complaintSearch" placeholder="Search complaints..." style="flex: 1; min-width: 200px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-        <select id="complaintStatusFilter" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); min-width: 150px;">
+  <!-- TAB 1: Maintenance -->
+  <div id="requests-tab-maintenance" class="requests-mgmt-content">
+    <div id="mx-notification-banner" style="display:none;background:#fff9c4;border-left:6px solid #fbc02d;padding:1rem;margin-bottom:1rem;border-radius:6px;">
+      <div style="color:#f57f17;font-weight:700;font-size:0.95rem;font-family:'Sarabun',sans-serif;">⚠️ <span id="mx-pending-count">0</span> รายการแจ้งซ่อม รอการตรวจสอบ</div>
+    </div>
+    <div class="mx-kpi-grid">
+      <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-pending" style="color:#e65100;">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
+      <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
+      <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
+      <input type="text" id="mx-filter-room" oninput="renderMaintenancePage()" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
+      <select id="mx-filter-status" onchange="renderMaintenancePage()" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
+        <option value="all">📋 ทั้งหมด</option>
+        <option value="pending">⏳ รอดำเนินการ</option>
+        <option value="inprogress">🔨 กำลังดำเนินการ</option>
+        <option value="done">✅ เสร็จแล้ว</option>
+      </select>
+      <button onclick="showAddMaintenanceModal()" style="padding:10px 18px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">➕ แจ้งซ่อมใหม่</button>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 รายการงานซ่อมทั้งหมด</div>
+      <div id="mxList"></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Housekeeping -->
+  <div id="requests-tab-housekeeping" class="requests-mgmt-content" style="display:none;">
+    <div class="mx-kpi-grid">
+      <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-pending" style="color:#e65100;">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
+      <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
+      <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
+      <input type="text" id="hk-filter-room" oninput="renderHousekeepingList()" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
+      <select id="hk-filter-status" onchange="renderHousekeepingList()" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
+        <option value="all">📋 ทั้งหมด</option>
+        <option value="pending">⏳ รอดำเนินการ</option>
+        <option value="inprogress">🔨 กำลังดำเนินการ</option>
+        <option value="done">✅ เสร็จแล้ว</option>
+      </select>
+      <button onclick="showAddHousekeepingModal()" style="padding:10px 18px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">➕ ขอบริการใหม่</button>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 รายการบริการทำความสะอาดทั้งหมด</div>
+      <div id="hkList"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Complaints -->
+  <div id="requests-tab-complaints" class="requests-mgmt-content" style="display:none;">
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+        <input type="text" id="complaintSearch" placeholder="Search complaints..." style="flex:1;min-width:200px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);">
+        <select id="complaintStatusFilter" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);min-width:150px;">
           <option value="">All Status</option>
           <option value="open">🔴 Open</option>
           <option value="in-progress">🟡 In Progress</option>
           <option value="resolved">🟢 Resolved</option>
         </select>
       </div>
-
-      <!-- Stats -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-        <div style="background: var(--green-pale); padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
-          <div style="font-size: 1.5rem; font-weight: 700; color: var(--green-dark);" id="totalComplaintsCount">0</div>
-          <div style="font-size: 0.9rem; color: var(--text-muted);">Total Complaints</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem;">
+        <div style="background:var(--green-pale);padding:1rem;border-radius:var(--radius-sm);text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:var(--green-dark);" id="totalComplaintsCount">0</div>
+          <div style="font-size:.9rem;color:var(--text-muted);">Total Complaints</div>
         </div>
-        <div style="background: #fff3e0; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
-          <div style="font-size: 1.5rem; font-weight: 700; color: #f57c00;" id="openComplaintsCount">0</div>
-          <div style="font-size: 0.9rem; color: var(--text-muted);">Open</div>
+        <div style="background:#fff3e0;padding:1rem;border-radius:var(--radius-sm);text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:#f57c00;" id="openComplaintsCount">0</div>
+          <div style="font-size:.9rem;color:var(--text-muted);">Open</div>
         </div>
-        <div style="background: #e3f2fd; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
-          <div style="font-size: 1.5rem; font-weight: 700; color: #1976d2;" id="inProgressComplaintsCount">0</div>
-          <div style="font-size: 0.9rem; color: var(--text-muted);">In Progress</div>
+        <div style="background:#e3f2fd;padding:1rem;border-radius:var(--radius-sm);text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:#1976d2;" id="inProgressComplaintsCount">0</div>
+          <div style="font-size:.9rem;color:var(--text-muted);">In Progress</div>
         </div>
-        <div style="background: #e8f5e9; padding: 1rem; border-radius: var(--radius-sm); text-align: center;">
-          <div style="font-size: 1.5rem; font-weight: 700; color: #388e3c;" id="resolvedComplaintsCount">0</div>
-          <div style="font-size: 0.9rem; color: var(--text-muted);">Resolved</div>
+        <div style="background:#e8f5e9;padding:1rem;border-radius:var(--radius-sm);text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:#388e3c;" id="resolvedComplaintsCount">0</div>
+          <div style="font-size:.9rem;color:var(--text-muted);">Resolved</div>
         </div>
       </div>
-
-      <!-- Complaints List -->
-      <div id="complaintsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;"></div>
+      <div id="complaintsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem;"></div>
     </div>
   </div>
 
-  <!-- TAB 2: Pet Approvals -->
-  <div id="requests-tab-pets" class="requests-mgmt-content" style="display: none;">
-    <div class="card" style="margin-bottom: 1.5rem;">
-      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-        <select id="petFilterStatus" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;" onchange="filterPetsByStatus(this.value)">
+  <!-- TAB 4: Pet Approvals -->
+  <div id="requests-tab-pets" class="requests-mgmt-content" style="display:none;">
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div style="display:flex;gap:1rem;margin-bottom:1rem;">
+        <select id="petFilterStatus" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;" onchange="filterPetsByStatus(this.value)">
           <option value="">All Status</option>
           <option value="pending">⏳ Pending</option>
           <option value="approved">✅ Approved</option>
           <option value="rejected">❌ Rejected</option>
         </select>
-        <input type="text" id="petSearch" placeholder="Search by room or tenant..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <input type="text" id="petSearch" placeholder="Search by room or tenant..." style="flex:1;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);">
       </div>
-
-      <!-- Pets List -->
       <div id="petsList"></div>
     </div>
   </div>
+
+  <!-- TAB 5: Rental Approvals -->
+  <div id="requests-tab-rental" class="requests-mgmt-content" style="display:none;">
+    <div class="card" style="text-align:center;padding:2rem;color:var(--text-muted);">
+      <div style="font-size:2.5rem;margin-bottom:1rem;">📋</div>
+      <div style="font-size:1.1rem;font-weight:700;margin-bottom:.5rem;">Rental Approvals</div>
+      <div style="font-size:.9rem;">สัญญาเช่าที่รอการอนุมัติ — จัดการใน Lease Management</div>
+      <button onclick="window.showPage('lease-management',this)" style="margin-top:1.5rem;padding:10px 24px;background:var(--green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.95rem;">ไปที่ Lease Management →</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- ===== GAMIFICATION MANAGEMENT ===== -->
