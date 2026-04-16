@@ -5377,8 +5377,14 @@ function _setupTenantRealtimeListener(){
   });
 }
 
+function _getTenantRooms(){
+  return tenantBuilding==='old'
+    ?getActiveRoomsWithMetadata('rooms',window.ROOMS_OLD)
+    :getActiveRoomsWithMetadata('nest',window.NEST_ROOMS);
+}
+
 function renderTenantPage(){
-  const rooms=tenantBuilding==='old'?window.ROOMS_OLD:window.ROOMS_NEW;
+  const rooms=_getTenantRooms();
   const tenants=loadTenants();
   const today=new Date();
   let occ=0,vac=0,soon=0;
@@ -5439,7 +5445,7 @@ function renderTenantPage(){
       </div>
       <div class="compact-card-info">
         <span style="font-size:.8rem;color:var(--text-muted);">${isCom?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
-        <span class="compact-card-value">฿${Number(r.rent).toLocaleString()}</span>
+        <span class="compact-card-value">฿${Number(r.rentPrice||r.rent||0).toLocaleString()}</span>
       </div>
       ${isOcc?`
       <div class="compact-card-info"><span style="font-weight:600;color:var(--text);">ชื่อ</span><span class="compact-card-value">${t.name}</span></div>
@@ -5472,7 +5478,7 @@ function renderTenantPage(){
 function renderTenantTable(){
   const searchInput=document.getElementById('tenantSearch');
   const searchTerm=(searchInput?.value||'').toLowerCase();
-  const rooms=tenantBuilding==='old'?window.ROOMS_OLD:window.ROOMS_NEW;
+  const rooms=_getTenantRooms();
   const tenants=loadTenants();
   const tbody=document.getElementById('tenantTableBody');
   const today=new Date();
@@ -5540,7 +5546,7 @@ function setTenantFilter(filter){
 
 // ===== TENANT ALERT BLOCK =====
 function updateTenantAlertBlock(){
-  const rooms=tenantBuilding==='old'?window.ROOMS_OLD:window.ROOMS_NEW;
+  const rooms=_getTenantRooms();
   const tenants=loadTenants();
   const today=new Date();
   const expiring=rooms.filter(r=>{
@@ -5561,11 +5567,11 @@ function updateTenantAlertBlock(){
 
 // ===== ROOM TYPE INFO CARDS =====
 function updateRoomTypeCards(){
-  const rooms=tenantBuilding==='old'?window.ROOMS_OLD:window.ROOMS_NEW;
+  const rooms=_getTenantRooms();
   const container=document.getElementById('roomTypeCardsContainer');
   const types={};
   (rooms||[]).forEach(room=>{
-    if(!types[room.type])types[room.type]={type:room.type,rooms:0,rent:room.rent};
+    if(!types[room.type])types[room.type]={type:room.type,rooms:0,rent:room.rentPrice||room.rent||0};
     types[room.type].rooms++;
   });
   container.innerHTML=Object.values(types).map(typeInfo=>`
@@ -5582,7 +5588,7 @@ function updateRoomTypeCards(){
 // ===== EXPORT TENANT CSV =====
 function exportTenantCSV(){
   const building=tenantBuilding==='old'?'ห้องแถว':'Nest';
-  const rooms=tenantBuilding==='old'?window.ROOMS_OLD:window.ROOMS_NEW;
+  const rooms=_getTenantRooms();
   const tenants=loadTenants();
   const today=new Date();
   let csv='ห้อง,ชื่อ-นามสกุล,เบอร์โทร,วันเข้า,วันหมดสัญญา,มัดจำ,สถานะ\n';
