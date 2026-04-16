@@ -1844,107 +1844,34 @@
     <!-- MAIN -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Main</div>
-      <button class="sidebar-item active" onclick="toggleSidebarSection('nav-dashboard')">
-        <span class="sidebar-item-icon">📊</span>Dashboard<span class="sidebar-arrow" id="arrow-nav-dashboard">▶</span>
+      <button class="sidebar-item active" onclick="window.showPage('dashboard',this)">
+        <span class="sidebar-item-icon">📊</span>Dashboard
       </button>
-      <div class="sidebar-accordion-content" id="nav-dashboard" style="display:none;">
-        <button class="sidebar-item sidebar-item-indent" onclick="showDashboardYear('all')">
-          <span class="sidebar-item-icon">📊</span>ทั้งหมด
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showDashboardYear('67')">
-          <span class="sidebar-item-icon">📅</span>ปีงบ 2567 (2024)
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showDashboardYear('68')">
-          <span class="sidebar-item-icon">📅</span>ปีงบ 2568 (2025)
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showDashboardYear('69')">
-          <span class="sidebar-item-icon">📅</span>ปีงบ 2569 (2026)
-        </button>
-      </div>
     </div>
 
     <!-- PROPERTY -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Property</div>
-
-      <!-- Tenant Information -->
-      <button class="sidebar-item" onclick="toggleSidebarSection('nav-tenant')">
-        <span class="sidebar-item-icon">👥</span>Tenant Information<span class="sidebar-arrow" id="arrow-nav-tenant">▶</span>
+      <button class="sidebar-item" onclick="window.showPage('tenant',this)">
+        <span class="sidebar-item-icon">👥</span>Tenant Information
       </button>
-      <div class="sidebar-accordion-content" id="nav-tenant" style="display:none;">
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('tenant',()=>setTenantBuilding('old',null))">
-          <span class="sidebar-item-icon">🏠</span>ห้องแถว
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('tenant',()=>setTenantBuilding('new',null))">
-          <span class="sidebar-item-icon">🏗️</span>Nest
-        </button>
-      </div>
-
-      <!-- Requests & Approvals -->
-      <button class="sidebar-item" onclick="toggleSidebarSection('nav-requests')">
-        <span class="sidebar-item-icon">🔧</span>Requests & Approvals<span class="sidebar-badge" id="mxBadge" style="display:none"></span><span class="sidebar-arrow" id="arrow-nav-requests">▶</span>
+      <button class="sidebar-item" onclick="window.showPage('requests-approvals',this)">
+        <span class="sidebar-item-icon">🔧</span>Requests & Approvals<span class="sidebar-badge" id="mxBadge" style="display:none"></span>
       </button>
-      <div class="sidebar-accordion-content" id="nav-requests" style="display:none;">
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('requests-approvals',()=>switchRequestsTab('maintenance',document.getElementById('tab-maintenance-btn')))">
-          <span class="sidebar-item-icon">🔧</span>Maintenance
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('requests-approvals',()=>switchRequestsTab('housekeeping',document.getElementById('tab-housekeeping-btn')))">
-          <span class="sidebar-item-icon">🧹</span>Housekeeping
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('requests-approvals',()=>switchRequestsTab('complaints',null))">
-          <span class="sidebar-item-icon">⚠️</span>Complaints
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('requests-approvals',()=>switchRequestsTab('pets',null))">
-          <span class="sidebar-item-icon">🐾</span>Pet Approvals
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="window.showPage('lease-management',this)">
-          <span class="sidebar-item-icon">📋</span>Rental Contract
-        </button>
-      </div>
-
-      <!-- Community Events -->
-      <button class="sidebar-item" onclick="toggleSidebarSection('nav-community')">
-        <span class="sidebar-item-icon">📚</span>Community Events<span class="sidebar-arrow" id="arrow-nav-community">▶</span>
+      <button class="sidebar-item" onclick="window.showPage('content-management',this)">
+        <span class="sidebar-item-icon">📚</span>Community Events
       </button>
-      <div class="sidebar-accordion-content" id="nav-community" style="display:none;">
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('content-management',()=>switchContentTab('announcements',null))">
-          <span class="sidebar-item-icon">📢</span>Announcement
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('content-management',()=>switchContentTab('events',null))">
-          <span class="sidebar-item-icon">📅</span>Events
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('content-management',()=>switchContentTab('docs',null))">
-          <span class="sidebar-item-icon">📋</span>Documents
-        </button>
-      </div>
     </div>
 
     <!-- DATA ENTRY -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Data Entry</div>
-
-      <!-- Meter Upload -->
-      <button class="sidebar-item" onclick="toggleSidebarSection('nav-meter')">
-        <span class="sidebar-item-icon">📊</span>Meter Upload<span class="sidebar-arrow" id="arrow-nav-meter">▶</span>
+      <button class="sidebar-item" onclick="window.showPage('meter',this)">
+        <span class="sidebar-item-icon">📊</span>Meter Upload
       </button>
-      <div class="sidebar-accordion-content" id="nav-meter" style="display:none;">
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('meter',()=>window.switchMeterTab('room-config',null))">
-          <span class="sidebar-item-icon">🏠</span>จัดการห้องพัก & อัตรา
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('meter',()=>window.switchMeterTab('import-meter',null))">
-          <span class="sidebar-item-icon">📥</span>นำเข้าข้อมูลมิเตอร์
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('meter',()=>window.switchMeterTab('import-billing',null))">
-          <span class="sidebar-item-icon">📥</span>นำเข้าข้อมูลบิล
-        </button>
-      </div>
-
-      <!-- Billing -->
       <button class="sidebar-item" onclick="window.showPage('bill',this)">
         <span class="sidebar-item-icon">💳</span>Billing<span class="sidebar-badge" id="billBadge" style="display:none"></span>
       </button>
-
-      <!-- Expense -->
       <button class="sidebar-item" onclick="window.showPage('expense',this)">
         <span class="sidebar-item-icon">💸</span>ค่าใช้จ่าย
       </button>
