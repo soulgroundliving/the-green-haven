@@ -8049,6 +8049,8 @@ function openTenantModal(building, roomId) {
   }
   document.getElementById('modalTenantPhone').value = tenant.phone || '';
   document.getElementById('modalTenantLineID').value = tenant.lineID || '';
+  document.getElementById('modalTenantEmail').value = tenant.email || '';
+  document.getElementById('modalTenantVehiclePlate').value = tenant.vehiclePlate || '';
   document.getElementById('modalTenantMoveIn').value = tenant.moveInDate || '';
   document.getElementById('modalTenantContractEnd').value = tenant.contractEnd || '';
   document.getElementById('modalTenantDeposit').value = tenant.deposit || '';
@@ -8310,6 +8312,7 @@ function saveTenantInfo() {
     phone: document.getElementById('modalTenantPhone').value,
     idCardNumber: document.getElementById('modalTenantIdCard')?.value || '',
     email: document.getElementById('modalTenantEmail')?.value || '',
+    vehiclePlate: document.getElementById('modalTenantVehiclePlate')?.value || '',
     address: document.getElementById('modalTenantAddress')?.value || '',
     lineID: document.getElementById('modalTenantLineID').value,
     moveInDate: document.getElementById('modalTenantMoveIn').value,

@@ -389,6 +389,10 @@
                 <span>อีเมล:</span>
                 <strong id="profile-email">-</strong>
             </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.9rem;">
+                <span>ป้ายทะเบียน:</span>
+                <strong id="profile-vehicle-plate">-</strong>
+            </div>
         </div>
 
         <div class="section-title"><span>📜 สัญญาเช่า</span></div>
@@ -604,6 +608,7 @@
                 document.getElementById('profile-name').textContent = tdata.firstName + ' ' + tdata.lastName;
                 document.getElementById('profile-phone').textContent = tdata.phone || '-';
                 document.getElementById('profile-email').textContent = tdata.email || '-';
+                document.getElementById('profile-vehicle-plate').textContent = tdata.vehiclePlate || '-';
 
                 // Lease info
                 if (tdata.lease) {
