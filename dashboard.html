@@ -3291,122 +3291,42 @@
 
 <!-- ===== PAYMENT VERIFICATION ===== -->
 <div class="page" id="page-payment-verify">
-  <div class="section-title">💳 ยืนยันการชำระเงิน</div>
+  <div class="section-title">💳 Payment Verification</div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:2rem;">
-    <div class="card" style="text-align:center;">
-      <div style="font-size:2.5rem;font-weight:800;color:var(--blue);" id="pendingCount">0</div>
-      <div style="color:var(--text-muted);font-size:.9rem;">รอการยืนยัน</div>
+  <!-- Stats row -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
+    <div class="card" style="text-align:center;padding:1rem;">
+      <div style="font-size:2rem;font-weight:800;color:var(--green);" id="pv-today-count">—</div>
+      <div style="color:var(--text-muted);font-size:.82rem;">โอนวันนี้</div>
     </div>
-    <div class="card" style="text-align:center;">
-      <div style="font-size:2.5rem;font-weight:800;color:var(--green);" id="verifiedCount">0</div>
-      <div style="color:var(--text-muted);font-size:.9rem;">ยืนยันแล้ว</div>
+    <div class="card" style="text-align:center;padding:1rem;">
+      <div style="font-size:2rem;font-weight:800;color:var(--blue);" id="pv-month-count">—</div>
+      <div style="color:var(--text-muted);font-size:.82rem;">โอนเดือนนี้</div>
     </div>
-    <div class="card" style="text-align:center;">
-      <div style="font-size:2.5rem;font-weight:800;color:var(--accent);" id="totalAmount">฿0</div>
-      <div style="color:var(--text-muted);font-size:.9rem;">รวมทั้งหมด</div>
-    </div>
-  </div>
-
-  <!-- Bill Generation Section -->
-  <div class="card" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-left: 4px solid #ff9800; margin-bottom: 1.5rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-      <div>
-        <div style="font-weight: 700; color: #e65100; margin-bottom: 0.3rem;">📄 สร้างใบวางบิลประจำเดือน</div>
-        <div style="font-size: 0.85rem; color: #bf360c;">กด "สร้างบิล" เพื่อสร้างใบวางบิล (ใบแจ้งหนี้) ให้ลูกบ้านทั้งหมด</div>
-      </div>
-      <div style="display: flex; gap: 0.5rem;">
-        <button onclick="generateMonthlyBillsUI()" style="padding: 0.6rem 1.2rem; background: #ff9800; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: 'Sarabun', sans-serif;">📋 สร้างบิล</button>
-        <button onclick="downloadInvoicesPDF()" style="padding: 0.6rem 1.2rem; background: #2196f3; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: 'Sarabun', sans-serif;">📥 ดาวน์โหลด PDF</button>
-      </div>
+    <div class="card" style="text-align:center;padding:1rem;">
+      <div style="font-size:1.4rem;font-weight:800;color:var(--accent);" id="pv-month-total">฿—</div>
+      <div style="color:var(--text-muted);font-size:.82rem;">ยอดรวมเดือนนี้</div>
     </div>
   </div>
 
-  <!-- Tabs -->
-  <div style="margin-bottom:1.5rem;display:flex;gap:.5rem;flex-wrap:wrap;">
-    <button class="year-tab active" onclick="filterPaymentStatus('all')">📋 ทั้งหมด</button>
-    <button class="year-tab" onclick="filterPaymentStatus('pending')">⏳ รอการยืนยัน</button>
-    <button class="year-tab" onclick="filterPaymentStatus('verified')">✅ ยืนยันแล้ว</button>
-    <button class="year-tab" onclick="filterPaymentStatus('rejected')">❌ ไม่อนุมัติ</button>
+  <!-- Date filter -->
+  <div class="year-tabs" style="margin-bottom:1rem;">
+    <button id="pvf-today" class="year-tab active" onclick="setPVFilter('today',this)">วันนี้</button>
+    <button id="pvf-week" class="year-tab" onclick="setPVFilter('week',this)">7 วันล่าสุด</button>
+    <button id="pvf-month" class="year-tab" onclick="setPVFilter('month',this)">เดือนนี้</button>
+    <button id="pvf-all" class="year-tab" onclick="setPVFilter('all',this)">ทั้งหมด</button>
   </div>
 
-  <!-- Real-Time Payment Notifications -->
-  <div class="card" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-left: 4px solid #4caf50; margin-bottom: 1.5rem;">
-    <div style="font-weight: 700; color: #2e7d32; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-      <span>📬 การชำระเงินล่าสุด</span>
-      <button onclick="clearPaymentNotifications()" style="padding: 0.3rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">ล้าง</button>
-    </div>
-    <div id="paymentNotificationsList" style="max-height: 300px; overflow-y: auto;">
-      <div style="text-align: center; color: #999; padding: 2rem;">
-        📭 ยังไม่มีการชำระเงิน
+  <!-- Real-time feed -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div class="card-title" style="margin:0;">🔔 การโอนเงินที่ผ่านการยืนยัน</div>
+      <div id="pv-live-dot" style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--green);">
+        <span style="width:8px;height:8px;background:var(--green);border-radius:50%;display:inline-block;animation:pulse 1.5s infinite;"></span>
+        Live
       </div>
     </div>
-  </div>
-
-  <!-- Payment List -->
-  <div id="paymentList"></div>
-
-  <!-- Payment Links Manager -->
-  <div class="card" style="margin-top:2rem;">
-    <div class="card-title">🔗 สร้างลิ้งค์แจ้งบิลให้ลูกบ้าน</div>
-    <div style="background:#f0f7ff;border-radius:8px;padding:1.5rem;">
-      <div style="margin-bottom:1rem;">
-        <label style="display:block;margin-bottom:.5rem;font-weight:700;color:var(--text);">เลือกห้อง:</label>
-        <select id="linkRoomSelect" onchange="updateLinkPreview()" style="padding:10px;border-radius:6px;border:1.5px solid var(--border);width:100%;font-family:'Sarabun',sans-serif;font-size:.95rem;">
-          <option value="">-- เลือกห้อง --</option>
-        </select>
-      </div>
-
-      <div id="linkPreview"></div>
-    </div>
-  </div>
-
-  <!-- Admin Upload Slip -->
-  <div class="card" style="margin-top:2rem;">
-    <div class="card-title">📸 อัปโหลดสลิปจากลูกบ้าน</div>
-    <div style="background:#f9f9f9;border-radius:8px;padding:1.5rem;">
-      <div style="margin-bottom:1.5rem;">
-        <label style="display:block;margin-bottom:.5rem;font-weight:700;color:var(--text);">เลือกการแจ้งที่รอการยืนยัน:</label>
-        <select id="pendingPaymentSelect" onchange="loadSelectedPayment()" style="padding:10px;border-radius:6px;border:1.5px solid var(--border);width:100%;font-family:'Sarabun',sans-serif;font-size:.95rem;">
-          <option value="">-- เลือกการแจ้ง --</option>
-        </select>
-      </div>
-
-      <div id="selectedPaymentInfo" style="display:none;">
-        <div style="background:#e3f2fd;padding:1rem;border-radius:6px;margin-bottom:1.5rem;border-left:4px solid var(--blue);">
-          <div style="font-size:.9rem;color:var(--text-muted);margin-bottom:.5rem;">รายละเอียดการแจ้ง</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;font-size:.95rem;">
-            <div><strong>ห้อง:</strong> <span id="selectPayRoom"></span></div>
-            <div><strong>ยอด:</strong> <span id="selectPayAmount"></span></div>
-            <div><strong>แจ้งเมื่อ:</strong> <span id="selectPayDate"></span></div>
-          </div>
-        </div>
-
-        <div style="margin-bottom:1.5rem;">
-          <label style="display:block;margin-bottom:.5rem;font-weight:700;color:var(--text);">📸 อัปโหลดรูปสลิป:</label>
-          <div style="border:2px dashed var(--border);border-radius:8px;padding:2rem;text-align:center;cursor:pointer;background:#fafafa;transition:.2s;"
-            id="slipUploadDrop"
-            ondrop="handlePaymentSlipDrop(event)"
-            ondragover="event.preventDefault();this.style.background='#f0f7ff';this.style.borderColor='var(--blue)'"
-            ondragleave="this.style.background='#fafafa';this.style.borderColor='var(--border)'"
-            onclick="document.getElementById('slipUploadInput').click()">
-            <div style="font-size:2rem;margin-bottom:.5rem;">🖼️</div>
-            <div style="font-weight:700;color:var(--text);">แตะเพื่ออัปโหลด หรือ ลากรูปวางที่นี่</div>
-            <input type="file" id="slipUploadInput" accept="image/*" style="display:none;" onchange="handleSlipSelect(this.files[0])">
-          </div>
-        </div>
-
-        <div id="slipPreviewSection" style="display:none;margin-bottom:1.5rem;">
-          <img id="slipPreviewImg" style="max-width:100%;border-radius:8px;border:1px solid var(--border);">
-        </div>
-
-        <div id="verifySection" style="display:none;">
-          <label style="display:block;margin-bottom:.5rem;font-weight:700;color:var(--text);">ตรวจสอบด้วย SlipOK:</label>
-          <button onclick="verifyWithSlipOK()" style="width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;margin-bottom:1rem;">🔍 ตรวจสอบสลิป</button>
-          <div id="verifyResult"></div>
-        </div>
-      </div>
-    </div>
+    <div id="pvFeed" style="min-height:120px;"></div>
   </div>
 </div>
 

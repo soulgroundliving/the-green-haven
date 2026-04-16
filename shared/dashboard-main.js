@@ -6113,20 +6113,107 @@ function saveTenantPayments(data){
   localStorage.setItem('tenant_payments',JSON.stringify(data));
 }
 
-function initPaymentVerify(){
-  populateRoomLinkSelect();
-  populatePendingPayments();
-  renderPaymentStats();
-  renderPaymentList('all');
+// ===== PAYMENT VERIFICATION — Firestore real-time feed =====
+let _pvUnsubscribe = null;
+window._pvFilter = 'today';
+
+function initPaymentVerify() {
+  // Tear down previous listener
+  if (_pvUnsubscribe) { _pvUnsubscribe(); _pvUnsubscribe = null; }
+
+  const feed = document.getElementById('pvFeed');
+  if (!feed) return;
+  feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">🔄 กำลังโหลด...</div>';
+
+  if (!window.firebase?.firestore) {
+    feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ Firebase ยังไม่พร้อม</div>';
+    return;
+  }
+
+  const db = window.firebase.firestore();
+  _pvUnsubscribe = db.collection('verifiedSlips')
+    .orderBy('timestamp', 'desc')
+    .limit(200)
+    .onSnapshot(snapshot => {
+      const slips = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      updatePVStats(slips);
+      renderPVFeed(slips);
+    }, err => {
+      feed.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
+    });
 }
 
-function populateRoomLinkSelect(){
-  const rooms = window.ROOMS_OLD.concat(window.ROOMS_NEW);
-  const select = document.getElementById('linkRoomSelect');
-  select.innerHTML = '<option value="">-- เลือกห้อง --</option>';
-  rooms.forEach(r => {
-    select.innerHTML += `<option value="${r.id}">${r.id}</option>`;
-  });
+function setPVFilter(filter, btn) {
+  window._pvFilter = filter;
+  document.querySelectorAll('#page-payment-verify .year-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  // Re-trigger render by re-reading from snapshot cache
+  if (window.firebase?.firestore) {
+    window.firebase.firestore().collection('verifiedSlips')
+      .orderBy('timestamp', 'desc').limit(200).get()
+      .then(snap => {
+        const slips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        updatePVStats(slips);
+        renderPVFeed(slips);
+      });
+  }
+}
+
+function _pvInRange(slip) {
+  const ts = slip.timestamp?.toDate ? slip.timestamp.toDate() : new Date(slip.timestamp || slip.verifiedAt);
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(todayStart - 6 * 86400000);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const f = window._pvFilter || 'today';
+  if (f === 'today')  return ts >= todayStart;
+  if (f === 'week')   return ts >= weekStart;
+  if (f === 'month')  return ts >= monthStart;
+  return true; // 'all'
+}
+
+function updatePVStats(slips) {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const toDate = s => s.timestamp?.toDate ? s.timestamp.toDate() : new Date(s.timestamp || s.verifiedAt);
+  const todaySlips = slips.filter(s => toDate(s) >= todayStart);
+  const monthSlips = slips.filter(s => toDate(s) >= monthStart);
+  const monthTotal = monthSlips.reduce((sum, s) => sum + (s.amount || 0), 0);
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('pv-today-count', todaySlips.length);
+  set('pv-month-count', monthSlips.length);
+  set('pv-month-total', '฿' + monthTotal.toLocaleString());
+  // Update notification badge
+  const badge = document.getElementById('paymentBadge');
+  if (badge) { badge.style.display = 'none'; }
+}
+
+function renderPVFeed(slips) {
+  const feed = document.getElementById('pvFeed');
+  if (!feed) return;
+  const filtered = slips.filter(_pvInRange);
+  if (filtered.length === 0) {
+    feed.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--text-muted);">📭 ยังไม่มีการโอนในช่วงนี้</div>';
+    return;
+  }
+  const bankName = code => ({'004':'กสิกรไทย','014':'ไทยพาณิชย์','025':'กรุงไทย','002':'กรุงเทพ','006':'กรุงศรี','011':'TMB','065':'ทิสโก้','069':'เกียรตินาคิน','022':'CIMB','067':'ทีทีบี'})[code] || (code || '—');
+  feed.innerHTML = filtered.map(s => {
+    const ts = s.timestamp?.toDate ? s.timestamp.toDate() : new Date(s.timestamp || s.verifiedAt);
+    const timeStr = ts.toLocaleString('th-TH', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+    const amountOk = !s.expectedAmount || Math.abs(s.amount - s.expectedAmount) < 1;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+      <div style="background:${amountOk ? 'var(--green-pale)' : '#fff3e0'};color:${amountOk ? 'var(--green-dark)' : '#e65100'};border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">${amountOk ? '✅' : '⚠️'}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:.9rem;">ห้อง <span style="color:var(--green-dark);">${s.room || '—'}</span> <span style="color:var(--text-muted);font-size:.78rem;">${s.building || ''}</span></div>
+        <div style="font-size:.78rem;color:var(--text-muted);">โดย ${s.sender || '—'} · ${bankName(s.bankCode)}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-weight:800;color:var(--green-dark);font-size:.95rem;">฿${(s.amount||0).toLocaleString()}</div>
+        <div style="font-size:.72rem;color:var(--text-muted);">${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function updateLinkPreview(){
@@ -6186,387 +6273,6 @@ function downloadQRCode(elementId, filename){
   link.click();
 }
 
-function renderPaymentStats(){
-  const payments = loadTenantPayments();
-  const pending = payments.filter(p => p.status === 'pending').length;
-  const verified = payments.filter(p => p.status === 'verified').length;
-  const total = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-
-  document.getElementById('pendingCount').textContent = pending;
-  document.getElementById('verifiedCount').textContent = verified;
-  document.getElementById('totalAmount').textContent = '฿' + total.toLocaleString();
-
-  const badge = document.getElementById('paymentBadge');
-  if(pending > 0){
-    badge.textContent = pending;
-    badge.style.display = 'inline-block';
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
-function filterPaymentStatus(status){
-  document.querySelectorAll('#page-payment-verify .year-tab').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  renderPaymentList(status);
-}
-
-function renderPaymentList(filterStatus){
-  const payments = loadTenantPayments();
-  const filtered = filterStatus === 'all' ? payments : payments.filter(p => p.status === filterStatus);
-  const list = document.getElementById('paymentList');
-
-  if(filtered.length === 0){
-    list.innerHTML = '<div class="card"><div style="text-align:center;color:var(--text-muted);padding:2rem;">ไม่มีข้อมูลการชำระเงิน</div></div>';
-    return;
-  }
-
-  const statusColor = {
-    'pending': '#ff9800',
-    'verified': '#4caf50',
-    'rejected': '#f44336'
-  };
-
-  const statusText = {
-    'pending': '⏳ รอการยืนยัน',
-    'verified': '✅ ยืนยันแล้ว',
-    'rejected': '❌ ไม่อนุมัติ'
-  };
-
-  list.innerHTML = filtered.map(p => `
-    <div class="card">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem;align-items:start;">
-        <div>
-          <div style="font-size:.8rem;color:var(--text-muted);">ห้อง</div>
-          <div style="font-weight:700;font-size:1.1rem;color:var(--text);">${p.room}</div>
-        </div>
-        <div>
-          <div style="font-size:.8rem;color:var(--text-muted);">จำนวน</div>
-          <div style="font-weight:700;font-size:1.1rem;color:var(--green);">฿${p.amount.toLocaleString()}</div>
-        </div>
-        <div>
-          <div style="font-size:.8rem;color:var(--text-muted);">ผู้โอน</div>
-          <div style="font-weight:700;color:var(--text);">${p.sender}</div>
-        </div>
-        <div>
-          <div style="font-size:.8rem;color:var(--text-muted);">สถานะ</div>
-          <span style="display:inline-block;background:${statusColor[p.status]}20;color:${statusColor[p.status]};padding:4px 12px;border-radius:12px;font-size:.8rem;font-weight:700;">${statusText[p.status]}</span>
-        </div>
-      </div>
-
-      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-size:.9rem;color:var(--text-muted);">
-        <div>อัปโหลด: ${p.uploadedAt}</div>
-        <div>${p.verifiedAt ? 'ยืนยัน: ' + p.verifiedAt : ''}</div>
-      </div>
-
-      ${p.status === 'pending' ? `
-        <div style="margin-top:1rem;display:flex;gap:1rem;">
-          <button onclick="verifyPayment(${p.id}, 'verified')" style="flex:1;padding:10px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;">✅ ยืนยัน</button>
-          <button onclick="verifyPayment(${p.id}, 'rejected')" style="flex:1;padding:10px;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;">❌ ปฏิเสธ</button>
-        </div>
-      ` : p.status === 'verified' ? `
-        <div style="margin-top:1rem;display:flex;gap:1rem;">
-          <button onclick="generateAdminReceipt('${p.room}', ${p.amount}, '${p.verifiedAt}')" style="flex:1;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;">⬇️ ดาวน์โหลดใบเสร็จ</button>
-        </div>
-      ` : ''}
-    </div>
-  `).join('');
-}
-
-function verifyPayment(paymentId, status){
-  const payments = loadTenantPayments();
-  const payment = payments.find(p => p.id === paymentId);
-  if(!payment) return;
-
-  if(status === 'rejected'){
-    const reason = prompt('ระบุเหตุผลการปฏิเสธ:');
-    if(!reason) return;
-    payment.reason = reason;
-  }
-
-  payment.status = status;
-  payment.verifiedAt = new Date().toLocaleString('th-TH');
-
-  saveTenantPayments(payments);
-
-  renderPaymentStats();
-  renderPaymentList('all');
-  showToast(status === 'verified' ? 'ยืนยันการชำระแล้ว (คลิก ⬇️ ดาวน์โหลดใบเสร็จ)' : 'ปฏิเสธการชำระแล้ว', 'success');
-}
-
-function generateAdminReceipt(roomId, amount, verifiedAt) {
-  try {
-    // Create a professional receipt document
-    const receiptHTML = `
-      <!DOCTYPE html>
-      <html lang="th">
-      <head>
-        <meta charset="UTF-8">
-        <title>ใบเสร็จ - ห้อง ${roomId}</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
-          .header { text-align: center; margin-bottom: 2rem; border-bottom: 2px solid #333; padding-bottom: 1rem; }
-          .title { font-size: 24px; font-weight: bold; }
-          .subtitle { color: #666; margin-top: 0.5rem; }
-          .info-section { margin: 1.5rem 0; }
-          .info-row { display: flex; justify-content: space-between; margin: 0.5rem 0; }
-          .label { font-weight: bold; color: #333; }
-          .value { text-align: right; }
-          .amount-box { background: #f5f5f5; padding: 1rem; border-radius: 8px; text-align: center; margin: 1.5rem 0; }
-          .amount-label { font-size: 0.9rem; color: #666; }
-          .amount-value { font-size: 2rem; font-weight: bold; color: #4caf50; }
-          .footer { text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="title">✅ ใบเสร็จรับเงิน</div>
-          <div class="subtitle">Receipt - The Green Haven</div>
-        </div>
-
-        <div class="info-section">
-          <div class="info-row">
-            <span class="label">ห้องเลขที่:</span>
-            <span class="value">${roomId}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">วันที่รับเงิน:</span>
-            <span class="value">${verifiedAt}</span>
-          </div>
-        </div>
-
-        <div class="amount-box">
-          <div class="amount-label">จำนวนเงิน (บาท)</div>
-          <div class="amount-value">฿${amount.toLocaleString('th-TH')}</div>
-        </div>
-
-        <div class="info-section">
-          <div class="info-row">
-            <span class="label">สถานะ:</span>
-            <span class="value">✅ ชำระแล้ว</span>
-          </div>
-          <div class="info-row">
-            <span class="label">ยืนยันโดย:</span>
-            <span class="value">Admin</span>
-          </div>
-        </div>
-
-        <div class="footer">
-          <p>ขอบคุณที่ชำระค่าบิลตรงเวลา</p>
-          <p>Thank you for prompt payment</p>
-          <p>พิมพ์วันที่: ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-          <p>The Green Haven Apartment Management System</p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Open print dialog
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(receiptHTML);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-
-    console.log(`✅ Generated receipt for room ${roomId}: ฿${amount.toLocaleString()}`);
-  } catch (error) {
-    console.error('❌ Error generating receipt:', error);
-    showToast('เกิดข้อผิดพลาดในการสร้างใบเสร็จ', 'warning');
-  }
-}
-
-// ===== INVOICE/RECEIPT HISTORY =====
-function showInvoiceHistory(roomId, building = 'rooms'){
-  if(typeof InvoiceReceiptManager === 'undefined') {
-    showToast('InvoiceReceiptManager ยังไม่โหลด', 'error');
-    return;
-  }
-
-  const history = InvoiceReceiptManager.getInvoiceReceiptHistory(building, roomId);
-
-  let html = `<div style="padding:15px;background:#f9f9f9;border-radius:8px;max-height:300px;overflow-y:auto;">`;
-  html += `<h4>📋 ประวัติการชำระ - ห้อง ${roomId}</h4>`;
-
-  if(history.length === 0) {
-    html += `<p style="color:#999;">ยังไม่มีประวัติ</p>`;
-  } else {
-    history.forEach(item => {
-      const date = new Date(item.createdAt).toLocaleString('th-TH');
-      const icon = item.type === 'invoice' ? '📄' : '✅';
-      const label = item.type === 'invoice' ? `ใบวางบิล (฿${item.amount?.toLocaleString()})` : `ใบเสร็จรับเงิน (฿${item.amount?.toLocaleString()})`;
-      html += `<div style="padding:10px;background:#fff;margin:5px 0;border-radius:4px;border-left:3px solid ${item.type === 'invoice' ? '#ff9800' : '#4caf50'};">
-        ${icon} ${label}<br/>
-        <small style="color:#666;">${date}</small>
-      </div>`;
-    });
-  }
-
-  html += `</div>`;
-
-  const modal = document.createElement('div');
-  modal.innerHTML = html;
-  modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:10000;max-width:400px;';
-  document.body.appendChild(modal);
-
-  setTimeout(() => modal.remove(), 5000);
-}
-
-// ===== ADMIN UPLOAD SLIP =====
-let selectedPaymentId = null;
-let selectedSlipFile = null;
-
-function populatePendingPayments(){
-  const payments = loadTenantPayments();
-  const pending = payments.filter(p => p.status === 'pending');
-  const select = document.getElementById('pendingPaymentSelect');
-
-  select.innerHTML = '<option value="">-- เลือกการแจ้ง --</option>';
-  pending.forEach(p => {
-    select.innerHTML += `<option value="${p.id}">ห้อง ${p.room} | ฿${p.amount.toLocaleString()} | ${p.reportedAt}</option>`;
-  });
-}
-
-function loadSelectedPayment(){
-  const select = document.getElementById('pendingPaymentSelect');
-  selectedPaymentId = select.value;
-
-  if(!selectedPaymentId){
-    document.getElementById('selectedPaymentInfo').style.display = 'none';
-    return;
-  }
-
-  const payments = loadTenantPayments();
-  const payment = payments.find(p => p.id == selectedPaymentId);
-
-  if(!payment){
-    showToast('ไม่พบการแจ้ง', 'warning');
-    return;
-  }
-
-  document.getElementById('selectPayRoom').textContent = payment.room;
-  document.getElementById('selectPayAmount').textContent = '฿' + payment.amount.toLocaleString();
-  document.getElementById('selectPayDate').textContent = payment.reportedAt;
-  document.getElementById('selectedPaymentInfo').style.display = 'block';
-  document.getElementById('slipPreviewSection').style.display = 'none';
-  document.getElementById('verifySection').style.display = 'none';
-
-  selectedSlipFile = null;
-}
-
-function handlePaymentSlipDrop(e){
-  e.preventDefault();
-  const file = e.dataTransfer.files[0];
-  handleSlipSelect(file);
-}
-
-// 🚨 Expose slip handlers to global scope for HTML event handlers
-window.handleSlipDrop = handleSlipDrop;
-window.handlePaymentSlipDrop = handlePaymentSlipDrop;
-window.handleSlipSelect = handleSlipSelect;
-
-function handleSlipSelect(file){
-  if(!file){
-    showToast('กรุณาเลือกไฟล์', 'error');
-    return;
-  }
-
-  // Validate file
-  const validationErrors = validateSlipFileAdmin(file);
-  if (validationErrors.length > 0) {
-    showToast('ข้อผิดพลาดในการอัปโหลดสลิป:\n' + validationErrors.join('\n'), 'error');
-    return;
-  }
-
-  selectedSlipFile = file;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    document.getElementById('slipPreviewImg').src = e.target.result;
-    document.getElementById('slipPreviewSection').style.display = 'block';
-    document.getElementById('verifySection').style.display = 'block';
-  };
-  reader.readAsDataURL(file);
-}
-
-async function verifyWithSlipOK(){
-  if(!selectedSlipFile || !selectedPaymentId){
-    showToast('กรุณาเลือกการแจ้งและรูปสลิป', 'error');
-    return;
-  }
-
-  const verifyBtn = event.target;
-  verifyBtn.disabled = true;
-  verifyBtn.textContent = '🔄 กำลังตรวจสอบ...';
-
-  document.getElementById('verifyResult').innerHTML = '<div style="background:#e3f2fd;color:#1976d2;padding:1rem;border-radius:6px;">🔄 ตรวจสอบสลิป via Secure Cloud Function...</div>';
-
-  try {
-    // Use secure Cloud Function instead of direct API (API keys are server-side)
-    const result = await verifySlipSecure(
-      selectedSlipFile,
-      null,
-      'rooms',
-      'admin-dashboard',
-      'admin'
-    );
-
-    if(result.success && result.data){
-      const slipData = result.data;
-
-      // Update payment with slip info
-      const payments = loadTenantPayments();
-      const payment = payments.find(p => p.id == selectedPaymentId);
-
-      if(payment){
-        payment.status = 'verified';
-        payment.verifiedAt = new Date().toLocaleString('th-TH');
-        payment.slipSender = slipData.sendingBankCode || slipData.sender || 'Unknown';
-        payment.slipAmount = slipData.amount;
-        payment.slipRef = slipData.transactionId || slipData.transRef;
-
-        saveTenantPayments(payments);
-
-        document.getElementById('verifyResult').innerHTML = `
-          <div style="background:#e8f5e9;color:#1a5c38;padding:1rem;border-radius:6px;border-left:4px solid #4caf50;">
-            <strong>✅ ตรวจสอบสลิปสำเร็จ (Secure)</strong><br><br>
-            ธนาคาร: ${slipData.sendingBankCode || 'Unknown'}<br>
-            จำนวน: ฿${slipData.amount.toLocaleString()}<br>
-            เลขที่: ${slipData.transactionId}<br><br>
-            <button onclick="approvePayment()" style="padding:10px 20px;background:#4caf50;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;">✅ ยืนยันการชำระ</button>
-          </div>
-        `;
-      }
-    } else {
-      document.getElementById('verifyResult').innerHTML = `
-        <div style="background:#ffebee;color:#c62828;padding:1rem;border-radius:6px;border-left:4px solid #f44336;">
-          <strong>❌ ตรวจสอบสลิปไม่สำเร็จ</strong><br>
-          ${result.error || 'ไม่สามารถตรวจสอบสลิป'}
-        </div>
-      `;
-    }
-  } catch(e){
-    console.error('Verification error:', e);
-    document.getElementById('verifyResult').innerHTML = `
-      <div style="background:#ffebee;color:#c62828;padding:1rem;border-radius:6px;border-left:4px solid #f44336;">
-        <strong>❌ เกิดข้อผิดพลาด</strong><br>
-        ${e.message}
-      </div>
-    `;
-  }
-
-  verifyBtn.disabled = false;
-  verifyBtn.textContent = '🔍 ตรวจสอบสลิป';
-}
-
-function approvePayment(){
-  renderPaymentStats();
-  renderPaymentList('all');
-  populatePendingPayments();
-
-  document.getElementById('pendingPaymentSelect').value = '';
-  document.getElementById('selectedPaymentInfo').style.display = 'none';
-
-  showToast('ยืนยันการชำระแล้ว', 'success');
-}
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async ()=>{
