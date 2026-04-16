@@ -2402,9 +2402,11 @@ function switchRequestsTab(tabName, btn) {
   if(tabElement) {
     tabElement.style.display = 'block';
     if(btn) btn.classList.add('active');
-    // Initialize content for maintenance-related tabs
+    // Initialize content for each tab
     if(tabName === 'maintenance') initMaintenancePage();
     else if(tabName === 'housekeeping') initHousekeepingPage();
+    else if(tabName === 'complaints' && typeof initComplaintsPage === 'function') initComplaintsPage();
+    else if(tabName === 'pets' && typeof initPetApprovalsPage === 'function') initPetApprovalsPage();
   }
 }
 
