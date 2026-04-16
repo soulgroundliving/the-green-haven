@@ -7,7 +7,7 @@
     <title>Nature Haven - Living OS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
     <!-- QR Code library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Shared logic scripts -->
@@ -62,18 +62,24 @@
 
     <style>
         :root {
-            --primary-green: #7BA67E;
-            --primary-dark: #5F8A62;
-            --soft-green: #E8F0E9;
-            --text-dark: #334435;
-            --bg-color: #F9FBF9;
+            /* === Unified with dashboard brand === */
+            --primary-green: #2d8653;    /* Main brand green (dashboard --green) */
+            --primary-dark: #1a5c38;     /* Darker green for emphasis (dashboard --green-dark) */
+            --primary-light: #4caf50;    /* Lighter green for success (dashboard --green-light) */
+            --soft-green: #e8f5e9;       /* Pale green bg (dashboard --green-pale) */
+            --text-dark: #1a2332;        /* Main text (dashboard --text) */
+            --text-muted: #6b7a8d;       /* Muted text (dashboard --text-muted) */
+            --bg-color: #f4f6f8;         /* Page bg (dashboard --bg) */
             --white: #FFFFFF;
+            --border: #e0e6ed;           /* Borders (dashboard --border) */
+            --accent: #ff8f00;           /* Accent orange (dashboard --accent) */
             --accent-gold: #D4AF37;
-            --danger: #DC2626;
+            --danger: #c62828;           /* Danger red (dashboard --red) */
             --shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
-            --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.04);
-            --receipt-green: #5F8A62;
-            --radius-card: 22px;
+            --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.05);   /* Aligned with dashboard */
+            --receipt-green: #1a5c38;
+            --radius-card: 22px;         /* Tenant keeps softer radii for mobile UX */
+            --radius-sm: 8px;            /* Same as dashboard --radius-sm */
             --gap: 15px;
             /* Suggestion Colors */
             --suggest-bg: #F0F4FF;
@@ -83,7 +89,7 @@
 
         * {
             box-sizing: border-box;
-            font-family: 'Prompt', sans-serif;
+            font-family: 'Sarabun', 'Prompt', sans-serif;
         }
 
         body {
@@ -571,12 +577,12 @@
         body.night-mode {
             --bg-color: #1A1C1A;
             --white: #2A2D2A;
-            --text-dark: #E8F0E9;
+            --text-dark: #e8f5e9;
             --soft-green: #334435;
             --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             --suggest-bg: #1A1C1A;
             --suggest-border: #334435;
-            --suggest-accent: #7BA67E;
+            --suggest-accent: #4caf50;
         }
 
         body.eco-mode {
@@ -587,7 +593,7 @@
             --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             --suggest-bg: #F5F5F5;
             --suggest-border: #E0E0E0;
-            --suggest-accent: #5F8A62;
+            --suggest-accent: #1a5c38;
         }
 
         .avatar-selector {
@@ -924,7 +930,7 @@
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #E8F0E9;
+            background: #e8f5e9;
             border-radius: 10px;
         }
 
@@ -1041,13 +1047,13 @@
             style="position: absolute; top: 20px; left: 20px; z-index: 20; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.8); padding: 8px 15px; border-radius: 30px; backdrop-filter: blur(5px);">
 
             <div id="current-avatar"
-                style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #7BA67E; display: flex; align-items: center; justify-content: center; font-size: 20px; background: white;">
+                style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #2d8653; display: flex; align-items: center; justify-content: center; font-size: 20px; background: white;">
                 🌿
             </div>
 
             <div>
                 <p id="display-name" style="font-size: 12px; font-weight: 700; margin: 0; color: #334435;">คุณลุกตาล</p>
-                <p style="font-size: 10px; margin: 0; color: #7BA67E;">Lv.1 Seedling</p>
+                <p style="font-size: 10px; margin: 0; color: #2d8653;">Lv.1 Seedling</p>
             </div>
         </div>
 
@@ -1121,7 +1127,7 @@
             <p id="time-greet" class="text-xs mt-1 opacity-80">ยินดีต้อนรับกลับบ้านครับ 🌿</p>
         </div>
         <div onclick="showPage('world-map-page')"
-            style="background: #7BA67E; color: white; padding: 10px; border-radius: 15px; margin: 15px; text-align: center; cursor: pointer;">
+            style="background: #2d8653; color: white; padding: 10px; border-radius: 15px; margin: 15px; text-align: center; cursor: pointer;">
             <i class="fas fa-arrow-left"></i> กลับไปหน้าแผนที่ (The Maze)
         </div>
 
@@ -1159,7 +1165,7 @@
         </div>
 
         <div class="card power-card"
-            style="background: linear-gradient(135deg, #7BA67E, #5F8A62); color:white; border:none;">
+            style="background: linear-gradient(135deg, #2d8653, #1a5c38); color:white; border:none;">
             <small>🔮 คำทรงพลังวันนี้</small>
             <span style="display:block; font-size:1.5rem; font-weight:600; margin:10px 0;" id="power-word">เจิดจรัส
                 (Radiant)</span>
@@ -1684,13 +1690,13 @@
                 First Generation 🥇</span>
         </div>
         <div class="muji-card p-6 mb-4 text-center border-none shadow-md" style="background: var(--soft-green);">
-            <p class="text-[10px] text-[#7BA67E] font-bold uppercase mb-1">คะแนนสะสมของคุณ</p>
+            <p class="text-[10px] text-[#2d8653] font-bold uppercase mb-1">คะแนนสะสมของคุณ</p>
             <div class="text-3xl font-bold mb-4">
                 <span id="user-total-points">1,250</span>
                 <small class="text-sm font-normal">Points</small>
             </div>
             <button onclick="openRewardsShop()"
-                class="w-full bg-[#7BA67E] text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition">
+                class="w-full bg-[#2d8653] text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition">
                 🎁 เข้าสู่ Rewards Shop
             </button>
         </div>
@@ -1730,7 +1736,7 @@
                         </div>
                     </div>
                     <button onclick="redeemReward(this, 'บริการล้างแอร์พิเศษ', 2000)"
-                        class="bg-[#7BA67E] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
+                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
                 </div>
                 <div
                     class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
@@ -1742,7 +1748,7 @@
                         </div>
                     </div>
                     <button onclick="redeemReward(this, 'ส่วนลดค่าไฟ 100 บาท', 1000)"
-                        class="bg-[#7BA67E] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
+                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
                 </div>
                 <div
                     class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
@@ -1754,7 +1760,7 @@
                         </div>
                     </div>
                     <button onclick="redeemReward(this, 'บริการนวดในส่วนกลาง 60 นาที', 1000)"
-                        class="bg-[#7BA67E] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
+                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
                 </div>
                 <div
                     class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
@@ -1766,7 +1772,7 @@
                         </div>
                     </div>
                     <button onclick="redeemReward(this, 'ที่จอดรถส่วนตัว', 2000)"
-                        class="bg-[#7BA67E] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
+                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
                 </div>
                 <div
                     class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
@@ -1778,7 +1784,7 @@
                         </div>
                     </div>
                     <button onclick="redeemReward(this, 'แผ่นกรองอากาศ Pet Grade', 2000)"
-                        class="bg-[#7BA67E] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
+                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
                 </div>
                 <div
                     class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
@@ -1790,7 +1796,7 @@
                         </div>
                     </div>
                     <button onclick="redeemReward(this, 'Deep Clean ห้องพัก', 2000)"
-                        class="bg-[#7BA67E] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
+                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
                 </div>
                 <div
                     class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
@@ -1802,7 +1808,7 @@
                         </div>
                     </div>
                     <button onclick="redeemReward(this, 'น้ำยาฆ่าเชื่อ pet safe grade', 2000)"
-                        class="bg-[#7BA67E] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
+                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
                 </div>
                 <div class="space-y-4">
                     <div class="muji-card p-5 border-none shadow-sm relative overflow-hidden">
@@ -1811,10 +1817,10 @@
                                 <p class="text-sm font-bold text-[#334435]">จ่ายตรงเวลาครบ 10 รอบ</p>
                                 <p class="text-[10px] text-gray-400 mt-1">ขอบคุณที่ดูแลบ้านหลังนี้</p>
                             </div>
-                            <span class="text-[11px] font-bold text-[#7BA67E]">+100 Pts</span>
+                            <span class="text-[11px] font-bold text-[#2d8653]">+100 Pts</span>
                         </div>
                         <div class="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden mb-2">
-                            <div class="bg-[#7BA67E] h-full rounded-full" style="width: 83%"></div>
+                            <div class="bg-[#2d8653] h-full rounded-full" style="width: 83%"></div>
                         </div>
                         <div class="flex justify-between text-[10px] text-gray-400">
                             <span>สะสม 9 / 10 ครั้ง</span>
@@ -1827,10 +1833,10 @@
                                 <p class="text-sm font-bold text-[#334435]">📅 ครบรอบ 1 ปีที่ Nature Haven</p>
                                 <p class="text-[10px] text-gray-400 mt-1">ขอบคุณที่เป็นส่วนหนึ่งของครอบครัวเรา</p>
                             </div>
-                            <span class="text-[11px] font-bold text-[#7BA67E]">+200 Pts</span>
+                            <span class="text-[11px] font-bold text-[#2d8653]">+200 Pts</span>
                         </div>
                         <div class="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden mb-2">
-                            <div class="bg-[#7BA67E] h-full rounded-full" style="width: 83%"></div>
+                            <div class="bg-[#2d8653] h-full rounded-full" style="width: 83%"></div>
                         </div>
                         <div class="flex justify-between text-[10px] text-gray-400">
                             <span>สะสม 10 / 12 เดือน</span>
@@ -1845,7 +1851,7 @@
                                 <p class="text-[10px] text-gray-400">แนะนำเพื่อนมาเช่าสำเร็จ รับคะแนนก้อนใหญ่</p>
                             </div>
                             <button onclick="alert('แชร์รหัสแนะนำของคุณ: NEST-304')"
-                                class="bg-white text-[#7BA67E] text-[10px] px-4 py-2 rounded-xl font-bold shadow-sm">แชร์รหัส</button>
+                                class="bg-white text-[#2d8653] text-[10px] px-4 py-2 rounded-xl font-bold shadow-sm">แชร์รหัส</button>
                         </div>
                     </div>
                 </div>
@@ -2279,7 +2285,7 @@
         </div>
 
         <!-- Points Banner -->
-        <div class="muji-card p-6 mb-4 bg-gradient-to-br from-[#7BA67E] to-[#5F8A62] text-white border-none mx-4">
+        <div class="muji-card p-6 mb-4 bg-gradient-to-br from-[#2d8653] to-[#1a5c38] text-white border-none mx-4">
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-[10px] opacity-80 uppercase font-bold tracking-widest">ระดับปัจจุบัน</p>
@@ -2323,7 +2329,7 @@
                 <h3 class="font-bold text-sm mb-4">👑 ผู้พิทักษ์ป่าประจำสัปดาห์</h3>
                 <div class="space-y-3">
                     <div class="flex items-center gap-3 bg-[#F0F7F2] p-3 rounded-2xl">
-                        <span class="text-lg font-bold text-[#7BA67E] w-5 text-center">1</span>
+                        <span class="text-lg font-bold text-[#2d8653] w-5 text-center">1</span>
                         <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-sm">🏡</div>
                         <div class="flex-1">
                             <p class="text-xs font-bold">คุณมิน (ห้อง 402)</p>
@@ -2333,7 +2339,7 @@
                     </div>
                     <div class="flex items-center gap-3 p-3">
                         <span class="text-lg font-bold text-gray-300 w-5 text-center">2</span>
-                        <div class="w-10 h-10 bg-[#E8F0E9] rounded-full flex items-center justify-center text-sm">🐈</div>
+                        <div class="w-10 h-10 bg-[#e8f5e9] rounded-full flex items-center justify-center text-sm">🐈</div>
                         <div class="flex-1">
                             <p class="text-xs font-bold">คุณอาร์ม (ห้อง 215)</p>
                             <p class="text-[9px] text-gray-400">2,100 Pts</p>
@@ -2341,7 +2347,7 @@
                     </div>
                     <div class="flex items-center gap-3 p-3">
                         <span class="text-lg font-bold text-gray-300 w-5 text-center">3</span>
-                        <div class="w-10 h-10 bg-[#E8F0E9] rounded-full flex items-center justify-center text-sm">🌿</div>
+                        <div class="w-10 h-10 bg-[#e8f5e9] rounded-full flex items-center justify-center text-sm">🌿</div>
                         <div class="flex-1">
                             <p class="text-xs font-bold">คุณแพม (ห้อง 308)</p>
                             <p class="text-[9px] text-gray-400">1,890 Pts</p>
@@ -2349,7 +2355,7 @@
                     </div>
                     <div class="flex items-center gap-3 p-3 bg-[#FFF8E7] rounded-2xl border-2 border-[#D4AF37]">
                         <span class="text-lg font-bold text-[#D4AF37] w-5 text-center">4</span>
-                        <div class="w-10 h-10 bg-[#E8F0E9] rounded-full flex items-center justify-center text-sm">👤</div>
+                        <div class="w-10 h-10 bg-[#e8f5e9] rounded-full flex items-center justify-center text-sm">👤</div>
                         <div class="flex-1">
                             <p class="text-xs font-bold">คุณ (ห้องของฉัน)</p>
                             <p class="text-[9px] text-gray-400" id="eco-my-pts">1,250 Pts</p>
@@ -2368,7 +2374,7 @@
                             <p class="text-[9px] text-gray-400">สะสมพลังงานแสงอาทิตย์</p>
                         </div>
                     </div>
-                    <button class="bg-[#7BA67E] text-white text-[10px] px-4 py-1.5 rounded-full font-bold">รับ 10 Pts</button>
+                    <button class="bg-[#2d8653] text-white text-[10px] px-4 py-1.5 rounded-full font-bold">รับ 10 Pts</button>
                 </div>
             </div>
         </div>
@@ -2418,7 +2424,7 @@
                             <p class="text-[9px] text-gray-400">เทียบกับค่าเฉลี่ย</p>
                         </div>
                     </div>
-                    <span class="text-xs font-bold text-[#7BA67E]">+20 Pts</span>
+                    <span class="text-xs font-bold text-[#2d8653]">+20 Pts</span>
                 </div>
                 <div class="muji-card p-3 flex justify-between items-center">
                     <div class="flex items-center gap-3">
@@ -2428,7 +2434,7 @@
                             <p class="text-[9px] text-gray-400">เทียบกับค่าเฉลี่ย</p>
                         </div>
                     </div>
-                    <span class="text-xs font-bold text-[#7BA67E]">+30 Pts</span>
+                    <span class="text-xs font-bold text-[#2d8653]">+30 Pts</span>
                 </div>
                 <div class="muji-card p-3 flex justify-between items-center">
                     <div class="flex items-center gap-3">
@@ -2438,7 +2444,7 @@
                             <p class="text-[9px] text-gray-400">ก่อนวันที่ 5 ของเดือน</p>
                         </div>
                     </div>
-                    <span class="text-xs font-bold text-[#7BA67E]">+50 Pts</span>
+                    <span class="text-xs font-bold text-[#2d8653]">+50 Pts</span>
                 </div>
                 <div class="muji-card p-3 flex justify-between items-center">
                     <div class="flex items-center gap-3">
@@ -2448,7 +2454,7 @@
                             <p class="text-[9px] text-gray-400">ต่อครั้ง</p>
                         </div>
                     </div>
-                    <span class="text-xs font-bold text-[#7BA67E]">+100 Pts</span>
+                    <span class="text-xs font-bold text-[#2d8653]">+100 Pts</span>
                 </div>
             </div>
         </div>
@@ -2460,7 +2466,7 @@
                 <div class="space-y-3">
                     <div class="flex justify-between items-center text-sm">
                         <span class="text-gray-500">คะแนนสะสมเดือนนี้</span>
-                        <span class="font-bold text-[#7BA67E]">+180 Pts</span>
+                        <span class="font-bold text-[#2d8653]">+180 Pts</span>
                     </div>
                     <div class="flex justify-between items-center text-sm border-t pt-2">
                         <span class="text-gray-500">จ่ายตรงเวลา</span>
@@ -2482,7 +2488,7 @@
                     <div class="flex justify-between text-gray-400"><span>🌱 Seedling</span><span>0 – 299 Pts</span></div>
                     <div class="flex justify-between text-gray-400"><span>🌿 Sprout</span><span>300 – 699 Pts</span></div>
                     <div class="flex justify-between text-gray-400"><span>🌸 Blooming</span><span>700 – 1,499 Pts</span></div>
-                    <div class="flex justify-between font-bold text-[#7BA67E]"><span>⬆️ คุณอยู่ที่นี่ (Blooming)</span><span id="eco-stat-pts">1,250 Pts</span></div>
+                    <div class="flex justify-between font-bold text-[#2d8653]"><span>⬆️ คุณอยู่ที่นี่ (Blooming)</span><span id="eco-stat-pts">1,250 Pts</span></div>
                     <div class="flex justify-between text-gray-400"><span>🌳 Guardian</span><span>1,500 – 2,999 Pts</span></div>
                     <div class="flex justify-between text-gray-400"><span>🏆 Forest Master</span><span>3,000+ Pts</span></div>
                 </div>
@@ -2618,7 +2624,7 @@
             <h3 id="contract-room-title">สัญญาห้อง —</h3>
             <p style="font-size: 0.85rem; color: #666;">วันสิ้นสุดสัญญา: <strong id="contract-end-date">—</strong></p>
             <div
-                style="background: #E8F0E9; color: var(--primary-green); padding: 10px; border-radius: 12px; font-size: 0.8rem; margin-top: 15px;">
+                style="background: #e8f5e9; color: var(--primary-green); padding: 10px; border-radius: 12px; font-size: 0.8rem; margin-top: 15px;">
                 แจ้งความประสงค์ต่อสัญญา หรือแจ้งย้ายออกล่วงหน้าอย่างน้อย 30 วัน
             </div>
         </div>
@@ -3151,10 +3157,26 @@
             };
 
             try {
-                const key = 'tenant_cleaning_tickets';
-                const existing = JSON.parse(localStorage.getItem(key) || '[]');
+                const existing = JSON.parse(localStorage.getItem('tenant_cleaning_tickets') || '[]');
                 existing.unshift(record);
-                localStorage.setItem(key, JSON.stringify(existing));
+                localStorage.setItem('tenant_cleaning_tickets', JSON.stringify(existing));
+            } catch(e) {}
+
+            // Also write to housekeeping_data so admin Requests & Approvals page sees it
+            try {
+                const hk = JSON.parse(localStorage.getItem('housekeeping_data') || '[]');
+                hk.unshift({
+                    id: record.id,
+                    room: _taRoom,
+                    building: _taBuilding,
+                    service: _selectedService === 'deep' ? 'deep-clean' : 'standard-clean',
+                    description: note,
+                    date, time,
+                    status: 'pending',
+                    priority: 'normal',
+                    createdAt: record.createdAt
+                });
+                localStorage.setItem('housekeeping_data', JSON.stringify(hk));
             } catch(e) {}
 
             toast('จองบริการทำความสะอาดเรียบร้อยแล้วครับ 🧹', 'success');
@@ -3338,7 +3360,7 @@
                 ${vaxStatusHTML}
                 ${pet.alertStatusHTML || ''}
                 <div style="margin-top: 5px;">
-                    <button onclick="viewVaccineBook('${safeId}')" style="background: #E8F0E9; color: #7BA67E; border: none; padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 600; cursor: pointer;">
+                    <button onclick="viewVaccineBook('${safeId}')" style="background: #e8f5e9; color: #2d8653; border: none; padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-book-medical"></i> ดูสมุดวัคซีน
                     </button>
                 </div>
@@ -3502,7 +3524,7 @@
                 // --- ขั้นตอนปรับ UI ปุ่ม ---
                 btnElement.disabled = true; // ทำให้กดไม่ได้
                 btnElement.innerText = "แลกแล้ว";
-                btnElement.classList.remove('bg-[#7BA67E]', 'active:scale-90'); // เอาสีเขียวและ Animation ออก
+                btnElement.classList.remove('bg-[#2d8653]', 'active:scale-90'); // เอาสีเขียวและ Animation ออก
                 btnElement.classList.add('bg-gray-300', 'cursor-not-allowed'); // เพิ่มสีเทาและเปลี่ยน Cursor
 
                 // แจ้งเตือนความสำเร็จ
@@ -3781,16 +3803,26 @@
             const complaint = {
                 id: Date.now().toString(),
                 category, severity, description, location, startDate,
+                // Admin-side fields (complaints_data key uses title/desc/room)
+                title: category,
+                desc: description,
+                room: _taRoom,
+                building: _taBuilding,
                 status: 'open',
                 createdAt: new Date().toISOString()
             };
 
-            const key = 'tenant_app_complaints';
-            const list = JSON.parse(localStorage.getItem(key) || '[]');
+            // Write to tenant-facing key (history for this tenant)
+            const list = JSON.parse(localStorage.getItem('tenant_app_complaints') || '[]');
             list.unshift(complaint);
-            localStorage.setItem(key, JSON.stringify(list));
+            localStorage.setItem('tenant_app_complaints', JSON.stringify(list));
 
-            alert('✅ ส่งแจ้งเรียบร้อยแล้ว ทีมงานจะติดต่อกลับโดยเร็ว');
+            // Write to admin-facing key (so admin Complaints page can review)
+            const adminList = JSON.parse(localStorage.getItem('complaints_data') || '[]');
+            adminList.push(complaint);
+            localStorage.setItem('complaints_data', JSON.stringify(adminList));
+
+            toast('ส่งแจ้งเรียบร้อยแล้ว ทีมงานจะติดต่อกลับโดยเร็ว');
             event.target.reset();
             setSeverity('low');
         }

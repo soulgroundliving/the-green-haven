@@ -4746,6 +4746,26 @@ function markRoomPaid(d){
     }
   }
 
+  // ===== SYNC PAYMENT RECORD → payment_{building}_{room} (tenant history) =====
+  try {
+    const fbBuilding = (typeof getBuildingInfo === 'function')
+      ? getBuildingInfo(currentBuilding).firebaseBuilding
+      : (currentBuilding === 'old' ? 'rooms' : 'nest');
+    const phKey = `payment_${fbBuilding}_${d.room}`;
+    const history = JSON.parse(localStorage.getItem(phKey) || '[]');
+    history.unshift({
+      billId: d.no,
+      month: d.month,
+      year: parseInt(d.year),
+      amount: d.total,
+      paidAt: new Date().toISOString(),
+      method: slipVerified ? 'PromptPay' : 'Cash',
+      slipOkVerified: !!slipVerified
+    });
+    localStorage.setItem(phKey, JSON.stringify(history));
+    console.log(`💾 Synced payment history → ${phKey}`);
+  } catch(e) { console.warn('payment history sync failed', e); }
+
   // ===== SAVE BILL TO FIREBASE FOR TENANT APP =====
   saveBillToFirebase(d);
 }
