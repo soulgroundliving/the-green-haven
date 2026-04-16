@@ -2515,6 +2515,7 @@ window.addEventListener('resize',function(){
 const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
 const availableYears = Object.keys(historicalData).map(y => parseInt(y)).sort((a,b) => b-a);
 let currentYear = '69';
+window.dashBuildingFilter = 'all';
 let chartRevenue,chartPie,chartYears,chartElec,chartWater,chartMS,chartCum;
 
 function syncDashboardYearUI(){
@@ -2538,6 +2539,15 @@ function setYear(yr,btn){
   currentYear=yr;
   syncDashboardYearUI();
   updateDashboardLive();
+  initDashboardCharts();
+}
+
+function setBuilding(filter, btn) {
+  window.dashBuildingFilter = filter;
+  // Update active state on building filter row only (second year-tabs row)
+  const rows = document.querySelectorAll('#page-dashboard .year-tabs');
+  if (rows[1]) rows[1].querySelectorAll('.year-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
   initDashboardCharts();
 }
 
@@ -2889,20 +2899,30 @@ function renderLast6MonthsTable(dataSource, mv, mgt, yr) {
     return;
   }
 
+  const bldFilter = window.dashBuildingFilter || 'all';
   el.innerHTML = last6.map(row => {
     const roomsTotal  = row.rooms?.[4]  || 0;
     const nestTotal   = row.nest?.[4]   || 0;
     const amazonTotal = row.amazon?.[4] || 0;
     const hasBreakdown = row.rooms !== null;
+    let dRent, dElec, dWater, dTotal, dBreakdown;
+    if (bldFilter === 'rooms' && hasBreakdown) {
+      dRent = row.rooms[0]||0; dElec = row.rooms[1]||0; dWater = row.rooms[2]||0;
+      dTotal = row.rooms[4]||0; dBreakdown = '🏠 ห้องแถว';
+    } else if (bldFilter === 'nest' && hasBreakdown) {
+      dRent = row.nest[0]||0; dElec = row.nest[1]||0; dWater = row.nest[2]||0;
+      dTotal = row.nest[4]||0; dBreakdown = '🏢 Nest';
+    } else {
+      dRent = row.rent; dElec = row.elec; dWater = row.water; dTotal = row.total;
+      dBreakdown = hasBreakdown ? `🏠${roomsTotal.toLocaleString()} 🏢${nestTotal.toLocaleString()}${amazonTotal?' 🏪'+amazonTotal.toLocaleString():''}` : '—';
+    }
     return `<tr style="border-bottom:1px solid var(--border);">
       <td style="padding:.55rem .7rem;font-weight:700;">${row.label}</td>
-      <td style="padding:.55rem .7rem;text-align:right;color:#2d8653;">฿${row.rent.toLocaleString()}</td>
-      <td style="padding:.55rem .7rem;text-align:right;color:#ff8f00;">฿${row.elec.toLocaleString()}</td>
-      <td style="padding:.55rem .7rem;text-align:right;color:#2196f3;">฿${row.water.toLocaleString()}</td>
-      <td style="padding:.55rem .7rem;text-align:right;font-size:.78rem;color:#666;">${hasBreakdown
-        ? `🏠${roomsTotal.toLocaleString()} 🏢${nestTotal.toLocaleString()}${amazonTotal?' 🏪'+amazonTotal.toLocaleString():''}`
-        : '—'}</td>
-      <td style="padding:.55rem .7rem;text-align:right;font-weight:800;color:var(--green-dark);">฿${row.total.toLocaleString()}</td>
+      <td style="padding:.55rem .7rem;text-align:right;color:#2d8653;">฿${dRent.toLocaleString()}</td>
+      <td style="padding:.55rem .7rem;text-align:right;color:#ff8f00;">฿${dElec.toLocaleString()}</td>
+      <td style="padding:.55rem .7rem;text-align:right;color:#2196f3;">฿${dWater.toLocaleString()}</td>
+      <td style="padding:.55rem .7rem;text-align:right;font-size:.78rem;color:#666;">${dBreakdown}</td>
+      <td style="padding:.55rem .7rem;text-align:right;font-weight:800;color:var(--green-dark);">฿${dTotal.toLocaleString()}</td>
     </tr>`;
   }).join('');
 }
@@ -5320,8 +5340,74 @@ function updateDashboardLive(){
   }
 
   updateNotificationBell();
+  updateGamificationWidget();
+  updatePetAnalyticsWidget();
   updateNavBadge();
   updateMxBadge();
+}
+
+function updateGamificationWidget() {
+  const el = document.getElementById('dashTopTenants');
+  if (!el) return;
+  if (typeof TenantConfigManager === 'undefined') { el.innerHTML = '<div style="color:var(--text-muted);font-size:.82rem;">ยังไม่มีข้อมูล</div>'; return; }
+  const all = [
+    ...TenantConfigManager.getTenantList('rooms'),
+    ...TenantConfigManager.getTenantList('nest')
+  ].map(t => {
+    const months = t.createdDate
+      ? Math.min(120, Math.floor((Date.now() - new Date(t.createdDate).getTime()) / (1000*60*60*24*30)))
+      : 0;
+    const pts = months * 10;
+    const rank = pts >= 1000 ? '🥇' : pts >= 500 ? '🥈' : '🥉';
+    return { name: t.name || t.id, pts, rank, months };
+  }).filter(t => t.name && t.name !== t.id).sort((a,b) => b.pts - a.pts).slice(0,3);
+
+  if (all.length === 0) { el.innerHTML = '<div style="color:var(--text-muted);font-size:.82rem;">ยังไม่มีผู้เช่า</div>'; return; }
+  el.innerHTML = all.map((t, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:1.1rem;">${['🥇','🥈','🥉'][i]}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.name}</div>
+        <div style="font-size:.7rem;color:var(--text-muted);">${t.months} เดือน</div>
+      </div>
+      <span style="font-size:.78rem;font-weight:800;color:var(--green-dark);">${t.pts} pts</span>
+    </div>`).join('');
+}
+
+function updatePetAnalyticsWidget() {
+  const el = document.getElementById('dashPetAnalytics');
+  const card = document.getElementById('dashPetAnalyticsCard');
+  if (!el) return;
+  const counts = {};
+  let total = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('tenant_pets_')) {
+      const pets = JSON.parse(localStorage.getItem(key) || '[]');
+      pets.filter(p => p.status === 'approved').forEach(p => {
+        const t = (p.type || 'other').toLowerCase();
+        counts[t] = (counts[t] || 0) + 1;
+        total++;
+      });
+    }
+  }
+  if (total === 0) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:.82rem;">ยังไม่มีสัตว์เลี้ยงลงทะเบียน</div>';
+    return;
+  }
+  const emojis = { dog:'🐕', cat:'🐈', rabbit:'🐇', bird:'🐦', fish:'🐠', hamster:'🐹' };
+  el.innerHTML = Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([type, cnt]) => {
+    const pct = Math.round(cnt / total * 100);
+    const em = emojis[type] || '🐾';
+    return `<div style="margin-bottom:6px;">
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:2px;">
+        <span>${em} ${type}</span><span style="font-weight:700;">${cnt} ตัว</span>
+      </div>
+      <div style="background:var(--border);border-radius:4px;height:6px;">
+        <div style="background:var(--green);border-radius:4px;height:6px;width:${pct}%;transition:width .4s;"></div>
+      </div>
+    </div>`;
+  }).join('') + `<div style="font-size:.7rem;color:var(--text-muted);margin-top:4px;">รวม ${total} ตัว</div>`;
 }
 
 function updateNavBadge(){

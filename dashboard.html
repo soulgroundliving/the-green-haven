@@ -2094,12 +2094,18 @@
 
   <!-- OVERVIEW TAB -->
   <div id="dashboard-overview-tab" class="dashboard-tab-content active">
-  <div class="year-tabs" style="margin-bottom:.6rem;">
+  <div class="year-tabs" style="margin-bottom:.4rem;">
     <span class="year-tab-label">ปีงบประมาณ:</span>
     <button class="year-tab" onclick="setYear('all',this)">ทั้งหมด</button>
     <button class="year-tab" onclick="setYear('67',this)">2567 (2024)</button>
     <button class="year-tab" onclick="setYear('68',this)">2568 (2025)</button>
     <button class="year-tab active" onclick="setYear('69',this)">2569 (2026)</button>
+  </div>
+  <div class="year-tabs" style="margin-bottom:.8rem;">
+    <span class="year-tab-label">อาคาร:</span>
+    <button id="dash-bld-all" class="year-tab active" onclick="setBuilding('all',this)">ทั้งหมด</button>
+    <button id="dash-bld-rooms" class="year-tab" onclick="setBuilding('rooms',this)">🏠 ห้องแถว</button>
+    <button id="dash-bld-nest" class="year-tab" onclick="setBuilding('nest',this)">🏢 Nest</button>
   </div>
   <div class="kpi-grid">
     <!-- Combined Total (Both Buildings) -->
@@ -2167,7 +2173,7 @@
     </div>
   </div>
 
-  <!-- Complaints & Maintenance mini stats -->
+  <!-- Complaints & Maintenance + Gamification + Pet Analytics -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
     <div class="card">
       <div class="card-title">⚠️ Complaints</div>
@@ -2176,6 +2182,17 @@
     <div class="card">
       <div class="card-title">🔧 Maintenance</div>
       <div id="dashMaintenanceStatus" style="min-height:60px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>🏆 Top Tenants</span>
+        <button onclick="window.showPage('gamification',this)" style="font-size:.72rem;padding:2px 8px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">ดูทั้งหมด →</button>
+      </div>
+      <div id="dashTopTenants" style="min-height:60px;"></div>
+    </div>
+    <div class="card" id="dashPetAnalyticsCard">
+      <div class="card-title">🐾 Pet Analytics (Nest)</div>
+      <div id="dashPetAnalytics" style="min-height:60px;"></div>
     </div>
   </div>
 
