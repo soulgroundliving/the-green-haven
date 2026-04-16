@@ -4736,6 +4736,16 @@ function markRoomPaid(d){
   savePS(ps);
   renderPaymentStatus();
 
+  // ===== SYNC BILL STATUS → bills_YYYY (tenant app reads this) =====
+  if (typeof BillingSystem !== 'undefined') {
+    const yr = parseInt(d.year);
+    const bill = BillingSystem.getBillByMonthYear(d.room, d.month, yr);
+    if (bill) {
+      BillingSystem.updateBillStatus(bill.billId, 'paid', yr);
+      console.log(`🔄 Synced bill status to bills_${yr}: room ${d.room} month ${d.month} → paid`);
+    }
+  }
+
   // ===== SAVE BILL TO FIREBASE FOR TENANT APP =====
   saveBillToFirebase(d);
 }

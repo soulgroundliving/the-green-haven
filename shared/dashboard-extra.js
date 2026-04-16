@@ -2912,12 +2912,24 @@ function initGamificationPage() {
   const allTenants   = [...roomsTenants, ...nestTenants];
 
   // Score: 10 pts per month of tenancy (createdDate → now), capped at 120 pts
-  const scored = allTenants.map(t => {
+  const score = t => {
     const months = t.createdDate
       ? Math.min(120, Math.floor((Date.now() - new Date(t.createdDate).getTime()) / (1000 * 60 * 60 * 24 * 30)))
       : 0;
-    const points = months * 10;
-    const badges = months >= 12 ? '🌟🏅' : months >= 6 ? '🌟' : '';
+    return months * 10;
+  };
+
+  // Write eco points to localStorage so Tenant_app can read them
+  [['rooms', roomsTenants], ['nest', nestTenants]].forEach(([building, list]) => {
+    list.forEach(t => {
+      const room = t.id || t.room;
+      if (room) localStorage.setItem(`tenant_eco_points_${building}_${room}`, score(t));
+    });
+  });
+
+  const scored = allTenants.map(t => {
+    const points = score(t);
+    const badges = points >= 1200 ? '🌟🏅' : points >= 600 ? '🌟' : '';
     const rank   = points >= 1000 ? '🥇 Gold' : points >= 500 ? '🥈 Silver' : '🥉 Bronze';
     return { name: t.name || t.id, points, badges, rank };
   }).sort((a, b) => b.points - a.points);

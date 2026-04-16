@@ -1479,6 +1479,8 @@
                 <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
             </div>
         </div>
+        <div class="section-title"><span>กิจกรรมชุมชน 📅</span></div>
+        <div id="events-list"></div>
         <div class="section-title">
             <span>ตลาดนัดเพื่อนบ้าน 🛒</span>
             <small style="color:var(--primary-green); cursor: pointer; font-weight: bold;"
@@ -2216,30 +2218,22 @@
             </div>
             <h1 style="margin:0; font-size: 1.3rem;">ปริมาณไฟที่ใช้</h1>
         </div>
-        <div class="muji-card p-6 mb-4 bg-gradient-to-br from-yellow-50 to-white border-none">
-            <p class="text-xs text-orange-500 font-bold mb-1">สรุปการใช้ไฟเดือนนี้</p>
+        <div id="elec-summary-card" class="muji-card p-6 mb-4 bg-gradient-to-br from-yellow-50 to-white border-none">
+            <p class="text-xs text-orange-500 font-bold mb-1">สรุปการใช้ไฟเดือนล่าสุด</p>
             <div class="flex justify-between items-end">
-                <div><span class="text-3xl font-bold text-orange-600">145.5</span><span
-                        class="text-sm text-gray-500 ml-1">kWh</span></div>
-                <p class="text-[10px] text-gray-400 pb-1">ประมาณการ ฿ 720.00</p>
+                <div><span id="elec-latest-units" class="text-3xl font-bold text-orange-600">—</span><span class="text-sm text-gray-500 ml-1">kWh</span></div>
+                <p id="elec-latest-cost" class="text-[10px] text-gray-400 pb-1">ประมาณการ ฿ —</p>
             </div>
             <div class="w-full bg-orange-100 h-2 rounded-full mt-4">
-                <div class="bg-orange-400 h-2 rounded-full" style="width: 75%"></div>
+                <div id="elec-progress-bar" class="bg-orange-400 h-2 rounded-full" style="width:0%"></div>
             </div>
-            <p class="text-[9px] text-gray-400 mt-2">ประหยัดกว่าเดือนที่แล้ว 10% ✨</p>
+            <p id="elec-compare-note" class="text-[9px] text-gray-400 mt-2"> </p>
         </div>
 
         <div class="muji-card p-5">
-            <h4 class="text-sm font-bold mb-6">สถิติใช้ไฟรายเดือน</h4>
-            <div class="bar-chart">
-                <div class="bar-item" style="height: 40%"><span class="bar-value">ม.ค.</span></div>
-                <div class="bar-item" style="height: 55%"><span class="bar-value">ก.พ.</span></div>
-                <div class="bar-item" style="height: 85%"><span class="bar-value">มี.ค.</span></div>
-                <div class="bar-item" style="height: 65%; background: var(--primary-green);"><span
-                        class="bar-value">เม.ย.</span></div>
-            </div>
-            <div class="flex justify-between text-[10px] text-gray-400 mt-4">
-                <span>ม.ค.</span><span>ก.พ.</span><span>มี.ค.</span><span>เม.ย. (ปัจจุบัน)</span>
+            <h4 class="text-sm font-bold mb-4">สถิติใช้ไฟรายเดือน</h4>
+            <div id="elec-history-list" style="text-align:center;color:#aaa;padding:20px;font-size:0.85rem;">
+                <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
             </div>
         </div>
     </div>
@@ -2253,31 +2247,24 @@
             <h1 style="margin:0; font-size: 1.3rem;">ปริมาณน้ำที่ใช้</h1>
         </div>
         <div class="muji-card p-6 mb-4 bg-gradient-to-br from-blue-50 to-white border-none">
-            <p class="text-xs text-blue-500 font-bold mb-1">สรุปการใช้น้ำเดือนนี้</p>
+            <p class="text-xs text-blue-500 font-bold mb-1">สรุปการใช้น้ำเดือนล่าสุด</p>
             <div class="flex justify-between items-end">
                 <div>
-                    <span class="text-3xl font-bold text-blue-600">4.20</span>
+                    <span id="water-latest-units" class="text-3xl font-bold text-blue-600">—</span>
                     <span class="text-sm text-gray-500 ml-1">ลบ.ม. (Unit)</span>
                 </div>
-                <p class="text-[10px] text-gray-400 pb-1">ประมาณการ ฿ 120.00</p>
+                <p id="water-latest-cost" class="text-[10px] text-gray-400 pb-1">ประมาณการ ฿ —</p>
             </div>
             <div class="w-full bg-blue-100 h-2 rounded-full mt-4">
-                <div class="bg-blue-400 h-2 rounded-full" style="width: 65%"></div>
+                <div id="water-progress-bar" class="bg-blue-400 h-2 rounded-full" style="width:0%"></div>
             </div>
-            <p class="text-[9px] text-gray-400 mt-2">*คุณใช้มากกว่าค่าเฉลี่ยของตึก 5%</p>
+            <p id="water-compare-note" class="text-[9px] text-gray-400 mt-2"> </p>
         </div>
 
         <div class="muji-card p-5">
-            <h4 class="text-sm font-bold mb-4">ประวัติการใช้น้ำรายวัน</h4>
-            <div class="space-y-4">
-                <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
-                    <span class="text-gray-500">วันนี้ (12 เม.ย.)</span>
-                    <span class="font-medium">140 ลิตร</span>
-                </div>
-                <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
-                    <span class="text-gray-500">เมื่อวาน</span>
-                    <span class="font-medium text-blue-500">125 ลิตร</span>
-                </div>
+            <h4 class="text-sm font-bold mb-4">สถิติใช้น้ำรายเดือน</h4>
+            <div id="water-history-list" style="text-align:center;color:#aaa;padding:20px;font-size:0.85rem;">
+                <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
             </div>
         </div>
     </div>
@@ -2917,10 +2904,12 @@
             const navBar = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
             if (navBar) navBar.style.display = 'none';
 
+            if (id === 'elec_usage') renderElecUsage();
+            if (id === 'water_usage') renderWaterUsage();
             window.scrollTo(0, 0);
         }
 
-        // ฟังก์ชันปุ่มย้อนกลับ 
+        // ฟังก์ชันปุ่มย้อนกลับ
         function goBackToProfile() { showPage('profile'); updateNavActiveIndex(4); }
         function goBackToCommunity() { showPage('community'); updateNavActiveIndex(2); }
         function goBackToUsage() { showPage('usage'); updateNavActiveIndex(3); }
@@ -3863,7 +3852,14 @@
         }
 
         function loadGamificationData() {
-            const pts = parseInt(localStorage.getItem('tenant_eco_points') || '1250');
+            // Priority: room-specific key (written by admin gamification page) → generic key → calculate from lease → 0
+            let pts = parseInt(localStorage.getItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`))
+                   || parseInt(localStorage.getItem('tenant_eco_points'))
+                   || 0;
+            if (!pts && _taLease && _taLease.startDate) {
+                const months = Math.min(120, Math.floor((Date.now() - new Date(_taLease.startDate).getTime()) / (1000 * 60 * 60 * 24 * 30)));
+                pts = months * 10;
+            }
             userPoints = pts;
             const levels = [
                 { name:'Seedling 🌱', min:0,    max:299  },
@@ -3973,6 +3969,7 @@
             renderHomePage();
             renderBillsList();
             renderAnnouncements();
+            renderCommunityEvents();
             renderProfilePage();
             renderContractPage();
             updateNavBadges();
@@ -4067,6 +4064,146 @@
             }).join('');
         }
 
+        // ---- METER HISTORY ----
+        function _getMeterHistory(type) {
+            // type: 'elec' or 'water'
+            const key = `METER_READINGS_${_taBuilding.toUpperCase()}`;
+            let records = [];
+            try { records = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+
+            // Extract this room's readings from each month entry, newest first
+            const rows = records
+                .filter(entry => entry.readings && entry.readings[_taRoom])
+                .map(entry => {
+                    const r = entry.readings[_taRoom];
+                    return {
+                        month: entry.month,           // "YYYY-MM"
+                        old: type === 'elec' ? r.eOld : r.wOld,
+                        new: type === 'elec' ? r.eNew : r.wNew,
+                        units: Math.max(0, (type === 'elec' ? r.eNew - r.eOld : r.wNew - r.wOld)),
+                        cost: Math.max(0, (type === 'elec' ? r.eNew - r.eOld : r.wNew - r.wOld)) * (type === 'elec' ? 8 : 20)
+                    };
+                })
+                .sort((a, b) => b.month.localeCompare(a.month))
+                .slice(0, 6);
+
+            // Fallback to bills_YYYY if no meter readings
+            if (!rows.length) {
+                for (const yr of [2570, 2569, 2568, 2567]) {
+                    const bills = JSON.parse(localStorage.getItem(`bills_${yr}`) || '[]');
+                    bills.filter(b => (b.roomId || b.room) === _taRoom && b.building === _taBuilding)
+                        .forEach(b => {
+                            const m = String(b.month).padStart(2, '0');
+                            const yr_ce = yr - 543;
+                            rows.push({
+                                month: `${yr_ce}-${m}`,
+                                old: b.meterReadings?.[type === 'elec' ? 'electric' : 'water']?.old || 0,
+                                new: b.meterReadings?.[type === 'elec' ? 'electric' : 'water']?.new || 0,
+                                units: b.meterReadings?.[type === 'elec' ? 'electric' : 'water']?.units
+                                    || Math.round((b.charges?.[type === 'elec' ? 'electric' : 'water'] || 0) / (type === 'elec' ? 8 : 20)),
+                                cost: b.charges?.[type === 'elec' ? 'electric' : 'water'] || 0
+                            });
+                        });
+                }
+                rows.sort((a, b) => b.month.localeCompare(a.month));
+                rows.splice(6);
+            }
+            return rows;
+        }
+
+        function _renderMeterPage(type) {
+            const isMeter = type === 'elec';
+            const MONTHS_TH = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+            const prefix = isMeter ? 'elec' : 'water';
+            const unit = isMeter ? 'kWh' : 'Unit';
+            const rows = _getMeterHistory(type);
+
+            const latestEl = document.getElementById(`${prefix}-latest-units`);
+            const costEl = document.getElementById(`${prefix}-latest-cost`);
+            const noteEl = document.getElementById(`${prefix}-compare-note`);
+            const barEl = document.getElementById(`${prefix}-progress-bar`);
+            const listEl = document.getElementById(`${prefix}-history-list`);
+
+            if (!listEl) return;
+
+            if (!rows.length) {
+                if (latestEl) latestEl.textContent = '—';
+                if (costEl) costEl.textContent = 'ยังไม่มีข้อมูล';
+                listEl.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;font-size:0.85rem;">ยังไม่มีข้อมูลมิเตอร์</div>';
+                return;
+            }
+
+            const latest = rows[0];
+            if (latestEl) latestEl.textContent = Number(latest.units).toLocaleString();
+            if (costEl) costEl.textContent = `ประมาณการ ฿ ${Number(latest.cost).toLocaleString()}`;
+
+            // Compare with previous month
+            if (rows.length >= 2 && noteEl) {
+                const prev = rows[1];
+                if (prev.units > 0) {
+                    const diff = ((latest.units - prev.units) / prev.units * 100).toFixed(0);
+                    noteEl.textContent = diff > 0 ? `ใช้มากกว่าเดือนที่แล้ว ${Math.abs(diff)}%` : `ประหยัดกว่าเดือนที่แล้ว ${Math.abs(diff)}% ✨`;
+                }
+            }
+
+            // Progress bar relative to max in history
+            const maxUnits = Math.max(...rows.map(r => r.units), 1);
+            if (barEl) barEl.style.width = Math.min(100, Math.round(latest.units / maxUnits * 100)) + '%';
+
+            // History rows
+            listEl.innerHTML = rows.map((r, i) => {
+                const [yr, mo] = r.month.split('-');
+                const monthLabel = `${MONTHS_TH[parseInt(mo)]} ${parseInt(yr) + 543}`;
+                const barW = Math.round(r.units / maxUnits * 100);
+                const accent = i === 0 ? (isMeter ? '#f97316' : '#3b82f6') : '#aaa';
+                return `<div style="margin-bottom:14px;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:4px;">
+                        <span style="font-weight:${i===0?'700':'400'};color:${i===0?'var(--text-dark)':'#666'};">${monthLabel}</span>
+                        <span style="font-weight:600;">${Number(r.units).toLocaleString()} ${unit} · ฿${Number(r.cost).toLocaleString()}</span>
+                    </div>
+                    <div style="background:#f3f4f6;border-radius:4px;height:6px;">
+                        <div style="background:${accent};border-radius:4px;height:6px;width:${barW}%;transition:width .4s;"></div>
+                    </div>
+                    ${r.old != null && r.new != null ? `<div style="font-size:0.72rem;color:#aaa;margin-top:2px;">${r.old} → ${r.new}</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function renderElecUsage() { _renderMeterPage('elec'); }
+        function renderWaterUsage() { _renderMeterPage('water'); }
+
+        function renderCommunityEvents() {
+            const el = document.getElementById('events-list');
+            if (!el) return;
+            let events = [];
+            try { events = JSON.parse(localStorage.getItem('community_events_data') || '[]'); } catch(e) {}
+            if (!events.length) {
+                el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:0.85rem;">ไม่มีกิจกรรมในขณะนี้</div>';
+                return;
+            }
+            const MONTHS_TH = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+            el.innerHTML = events.slice(0, 5).map(ev => {
+                let dateStr = '';
+                if (ev.date) {
+                    const d = new Date(ev.date);
+                    if (!isNaN(d)) dateStr = `${d.getDate()} ${MONTHS_TH[d.getMonth()+1]} ${d.getFullYear()+543}`;
+                }
+                const timeStr = ev.time ? ` · ${ev.time}` : '';
+                const locStr = ev.location ? `<div style="font-size:0.75rem;color:#aaa;margin-top:3px;"><i class="fas fa-map-marker-alt" style="margin-right:4px;"></i>${_esc(ev.location)}</div>` : '';
+                return `<div class="card">
+                    <div style="display:flex;gap:12px;">
+                        <i class="fas fa-calendar-check" style="color:var(--primary-green);font-size:1.2rem;flex-shrink:0;margin-top:3px;"></i>
+                        <div style="font-size:0.85rem;flex:1;">
+                            <strong>${_esc(ev.title||'กิจกรรม')}</strong>
+                            ${dateStr ? `<span style="color:#aaa;font-size:0.75rem;margin-left:6px;">${dateStr}${timeStr}</span>` : ''}
+                            ${ev.description ? `<div style="opacity:0.7;margin-top:2px;">${_esc(ev.description)}</div>` : ''}
+                            ${locStr}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
         // ---- PROFILE ----
         function renderProfilePage() {
             const nameEl = document.getElementById('display-name');
@@ -4080,7 +4217,9 @@
             }
             const ptEl = document.getElementById('user-total-points');
             if (ptEl) {
-                const pts = parseInt(localStorage.getItem('tenant_eco_points') || '0') || userPoints || 0;
+                const pts = parseInt(localStorage.getItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`))
+                     || parseInt(localStorage.getItem('tenant_eco_points'))
+                     || userPoints || 0;
                 ptEl.textContent = Number(pts).toLocaleString();
             }
             renderPetList();
