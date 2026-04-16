@@ -1987,7 +1987,7 @@
         </div>
 
         <div class="menu-list" style="margin-bottom: 50px;">
-            <div class="menu-item" style="border:none;" onclick="alert('ออกจากระบบสำเร็จ');">
+            <div class="menu-item" style="border:none;" onclick="logoutTenantApp()">
                 <div class="icon-box icon-red"><i class="fas fa-sign-out-alt"></i></div>
                 <span style="color: var(--danger); font-weight:bold;">ออกจากระบบ (Logout)</span>
             </div>
@@ -2767,6 +2767,60 @@
 
         let records = []; // สำหรับเก็บประวัติการแจ้งซ่อม/บริการ
 
+        // ==========================================
+        // UTILITIES
+        // ==========================================
+
+        /** Escape HTML entities — prevents XSS when inserting user data into innerHTML */
+        function _esc(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        /** Show a non-blocking toast notification instead of alert() */
+        function toast(msg, type = 'success', duration = 3000) {
+            const existing = document.getElementById('app-toast');
+            if (existing) existing.remove();
+            const styles = {
+                success: { bg: '#D1FAE5', color: '#065F46', icon: 'fa-check-circle' },
+                error:   { bg: '#FEE2E2', color: '#991B1B', icon: 'fa-times-circle' },
+                info:    { bg: '#E0F2FE', color: '#0369A1', icon: 'fa-info-circle' },
+                warning: { bg: '#FFF4E5', color: '#92400E', icon: 'fa-exclamation-circle' }
+            };
+            const s = styles[type] || styles.info;
+            const el = document.createElement('div');
+            el.id = 'app-toast';
+            el.style.cssText = `position:fixed;top:24px;left:50%;transform:translateX(-50%);background:${s.bg};color:${s.color};padding:12px 20px;border-radius:22px;font-size:0.85rem;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.12);display:flex;align-items:center;gap:8px;max-width:calc(100% - 40px);animation:slideUp 0.3s ease;pointer-events:none;`;
+            el.innerHTML = `<i class="fas ${s.icon}"></i><span>${_esc(msg)}</span>`;
+            document.body.appendChild(el);
+            setTimeout(() => {
+                el.style.transition = 'opacity 0.3s';
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 300);
+            }, duration);
+        }
+
+        /** Set loading/success/error state on a status element (DRY helper) */
+        function _setStatus(el, type, msg) {
+            if (!el) return;
+            const styles = {
+                loading: 'background:#FFF4E5;color:#92400E;',
+                success: 'background:#D1FAE5;color:#065F46;',
+                error:   'background:#FEE2E2;color:#991B1B;'
+            };
+            const icons = {
+                loading: 'fa-spinner fa-spin',
+                success: 'fa-check-circle',
+                error:   'fa-times-circle'
+            };
+            el.style.cssText = `display:block;margin-top:10px;padding:10px;border-radius:12px;font-size:0.85rem;text-align:center;${styles[type] || styles.error}`;
+            el.innerHTML = `<i class="fas ${icons[type] || icons.error}"></i> ${_esc(msg)}`;
+        }
+
         // 🔮 Astro Database for profile
         const astroData = {
             Sunday: { word: "'เจิดจรัส' (Radiant)", desc: "วันนี้พลังงานแสงอาทิตย์ในตัวคุณสูงมาก ลองทำสิ่งที่กลัว แล้วความสำเร็จจะสว่างไสวครับ" },
@@ -3057,12 +3111,12 @@
                 <div class="card record-card" style="margin: 0 0 15px 0;">
                     <div class="record-header">
                         <div>
-                            <div class="record-id">รหัสอ้างอิง: ${record.id} • ${record.time}</div>
-                            <strong style="color: var(--text-dark);">${record.type}</strong>
+                            <div class="record-id">รหัสอ้างอิง: ${_esc(record.id)} • ${_esc(record.time)}</div>
+                            <strong style="color: var(--text-dark);">${_esc(record.type)}</strong>
                         </div>
-                        <div class="record-badge">${record.status}</div>
+                        <div class="record-badge">${_esc(record.status)}</div>
                     </div>
-                    <div class="record-detail">${record.detail}</div>
+                    <div class="record-detail">${_esc(record.detail)}</div>
                 </div>
             `).join('');
             }
@@ -3076,11 +3130,46 @@
         function switchUsageTab(el) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             el.classList.add('active');
-            const table = document.querySelector('.usage-table');
-            if (table) {
-                table.style.opacity = '0.5';
-                setTimeout(() => { table.style.opacity = '1'; }, 200);
+        }
+
+        let _selectedService = 'free';
+
+        function selectService(type) {
+            _selectedService = type;
+            const freeCard = document.getElementById('service-free');
+            const deepCard = document.getElementById('service-deep');
+            if (freeCard) freeCard.style.borderColor = type === 'free' ? 'var(--primary-green)' : 'transparent';
+            if (deepCard) deepCard.style.borderColor = type === 'deep' ? '#3b82f6' : 'transparent';
+        }
+
+        function submitCleaning() {
+            const date = document.getElementById('clean-date')?.value;
+            const time = document.getElementById('clean-time')?.value;
+            const note = document.getElementById('clean-note')?.value.trim() || '';
+
+            if (!date) {
+                toast('กรุณาเลือกวันที่ต้องการนะครับ', 'warning');
+                document.getElementById('clean-date')?.focus();
+                return;
             }
+
+            const record = {
+                id: 'CLN-' + Date.now().toString().slice(-5),
+                type: _selectedService === 'deep' ? 'Deep Cleaning' : 'Standard Clean',
+                date, time, note,
+                status: 'รอดำเนินการ',
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                const key = 'tenant_cleaning_tickets';
+                const existing = JSON.parse(localStorage.getItem(key) || '[]');
+                existing.unshift(record);
+                localStorage.setItem(key, JSON.stringify(existing));
+            } catch(e) {}
+
+            toast('จองบริการทำความสะอาดเรียบร้อยแล้วครับ 🧹', 'success');
+            setTimeout(() => goBackToService(), 1200);
         }
 
         function toggleCompanyForm() {
@@ -3089,136 +3178,6 @@
             if (compForm) compForm.style.display = (val === 'company') ? 'block' : 'none';
         }
 
-        function openPaymentFlow(isPaid) {
-            // 1. เรียกใช้ฟังก์ชันหน้าย่อยตัวใหม่ของเรา (แก้ปัญหาหน้าค้างเด็ดขาด!)
-            showSubPage('payment-page');
-
-            // 2. ดึง Element ต่างๆ มาจัดการ (ส่วนนี้ของเดิมคุณลุกตาล ปกติดีครับ)
-            const step1 = document.getElementById('step-1');
-            const step2 = document.getElementById('step-2');
-            const step3 = document.getElementById('step-3');
-
-            const flowTitle = document.getElementById('flow-title');
-            const mainTitle = document.getElementById('card-main-title');
-            const subTitle = document.getElementById('card-sub-title');
-            const statusBadge = document.getElementById('payment-status-badge');
-
-            const qrSection = document.getElementById('qr-section-container');
-            const paidFooter = document.getElementById('paid-footer-info');
-            const btnUnpaid = document.getElementById('action-buttons-unpaid');
-            const btnPaid = document.getElementById('action-buttons-paid');
-
-            const receiptType = document.getElementById('receipt-type-select')?.value || 'personal';
-            const compDisplay = document.getElementById('company-info-display');
-
-            if (receiptType === 'company' && compDisplay) {
-                document.getElementById('display-comp-name').innerText = document.getElementById('comp-name').value || 'บริษัท เดอะ กรีนเฮฟเว่น จำกัด';
-                document.getElementById('display-comp-tax').innerText = document.getElementById('comp-tax').value || '010556XXXXXXX';
-                document.getElementById('display-comp-addr').innerText = document.getElementById('comp-addr').value || 'สายไหม กรุงเทพมหานคร';
-                compDisplay.style.display = 'grid';
-            } else if (compDisplay) {
-                compDisplay.style.display = 'none';
-            }
-
-            if (isPaid) {
-                if (step1) step1.classList.add('active');
-                if (step2) step2.classList.add('active');
-                if (step3) step3.classList.add('active');
-
-                if (receiptType === 'company') {
-                    if (flowTitle) flowTitle.innerHTML = '<i class="fas fa-check-square"></i> ใบเสร็จรับเงิน/ใบกำกับภาษี';
-                    if (mainTitle) mainTitle.innerText = 'ใบเสร็จรับเงิน / ใบกำกับภาษี';
-                    if (subTitle) subTitle.innerText = 'Receipt / Tax Invoice';
-                } else {
-                    if (flowTitle) flowTitle.innerHTML = '<i class="fas fa-check-square"></i> ใบเสร็จรับเงิน / Receipt';
-                    if (mainTitle) mainTitle.innerText = 'ใบเสร็จรับเงิน';
-                    if (subTitle) subTitle.innerText = 'Receipt';
-                }
-
-                if (statusBadge) {
-                    statusBadge.className = 'status-badge status-paid';
-                    statusBadge.innerHTML = '<i class="fas fa-check"></i> ชำระเงินแล้ว';
-                }
-                if (qrSection) qrSection.style.display = 'none';
-                if (paidFooter) paidFooter.style.display = 'block';
-                if (btnUnpaid) btnUnpaid.style.display = 'none';
-                if (btnPaid) btnPaid.style.display = 'grid';
-            } else {
-                if (step1) step1.classList.add('active');
-                if (step2) step2.classList.remove('active');
-                if (step3) step3.classList.remove('active');
-
-                if (receiptType === 'company') {
-                    if (flowTitle) flowTitle.innerHTML = '<i class="fas fa-file-invoice"></i> ใบแจ้งหนี้/ใบกำกับภาษี';
-                    if (mainTitle) mainTitle.innerText = 'ใบแจ้งหนี้ / ใบกำกับภาษี';
-                    if (subTitle) subTitle.innerText = 'Invoice / Tax Invoice';
-                } else {
-                    if (flowTitle) flowTitle.innerHTML = '<i class="fas fa-file-invoice"></i> ใบวางบิล / Invoice';
-                    if (mainTitle) mainTitle.innerText = 'ใบวางบิล';
-                    if (subTitle) subTitle.innerText = 'Invoice';
-                }
-
-                if (statusBadge) {
-                    statusBadge.className = 'status-badge status-unpaid';
-                    statusBadge.innerHTML = '<i class="fas fa-exclamation-circle"></i> รอการชำระเงิน';
-                }
-                if (qrSection) qrSection.style.display = 'block';
-                if (paidFooter) paidFooter.style.display = 'none';
-                if (btnUnpaid) btnUnpaid.style.display = 'grid';
-                if (btnPaid) btnPaid.style.display = 'none';
-            }
-        }
-
-        function simulateUpload() {
-            const uploadBtn = document.querySelector('#action-buttons-unpaid button');
-            const loader = document.getElementById('upload-loader');
-
-            if (uploadBtn) uploadBtn.style.display = 'none';
-            if (loader) loader.style.display = 'block';
-            const step2 = document.getElementById('step-2');
-            if (step2) step2.classList.add('active');
-
-            setTimeout(() => {
-                if (loader) loader.style.display = 'none';
-                if (uploadBtn) uploadBtn.style.display = 'flex';
-                updatePaymentStatusGlobally();
-                alert('ตรวจสอบสลิปสำเร็จ! ระบบได้อัปเดตสถานะเป็นชำระเงินแล้ว');
-                openPaymentFlow(true);
-            }, 1500);
-        }
-
-        function updatePaymentStatusGlobally() {
-            const homeAmount = document.getElementById('home-due-amount');
-            if (homeAmount) homeAmount.innerText = '0.00 ฿';
-
-            const homeStatus = document.getElementById('home-due-status');
-            if (homeStatus) {
-                homeStatus.style.color = 'var(--primary-green)';
-                homeStatus.innerHTML = '<i class="fas fa-check-circle"></i> ขอบคุณที่ชำระเงินตรงเวลาครับ';
-            }
-
-            const homeBtn = document.getElementById('home-pay-btn');
-            if (homeBtn) homeBtn.style.display = 'none';
-
-            const serviceAmount = document.getElementById('service-due-amount');
-            if (serviceAmount) serviceAmount.innerText = '0.00 บาท';
-
-            const serviceBadge = document.getElementById('service-due-badge');
-            if (serviceBadge) {
-                serviceBadge.style.background = '#d4edda';
-                serviceBadge.style.color = '#155724';
-                serviceBadge.innerHTML = '<i class="fas fa-check"></i> ชำระแล้ว';
-            }
-
-            const serviceBtn = document.getElementById('service-pay-btn');
-            if (serviceBtn) {
-                serviceBtn.innerText = 'ดูใบเสร็จ';
-                serviceBtn.style.background = 'none';
-                serviceBtn.style.border = '1px solid var(--primary-green)';
-                serviceBtn.style.color = 'var(--primary-green)';
-                serviceBtn.onclick = () => openPaymentFlow(true);
-            }
-        }
 
         // ==========================================
         // 6. FEATURES (Profile, Astro, Market, Pets, Modal)
@@ -3308,19 +3267,25 @@
                 return;
             }
 
-            const newItemHTML = `
-            <div class="card" style="margin:0; padding:12px; animation: slideUp 0.5s ease;">
+            const newItem = document.createElement('div');
+            newItem.className = 'card';
+            newItem.style.cssText = 'margin:0; padding:12px; animation: slideUp 0.5s ease;';
+            newItem.innerHTML = `
                 <div style="height:100px; background:#f9f9f9; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:2rem; color:var(--primary-green);">
-                    <i class="${iconClass}"></i>
-                </div>
-                <small style="display:block; margin-top:8px;">${title}</small>
-                <strong>${price}.-</strong>
-            </div>`;
+                    <i class="${_esc(iconClass)}"></i>
+                </div>`;
+            const label = document.createElement('small');
+            label.style.cssText = 'display:block; margin-top:8px;';
+            label.textContent = title;
+            const priceEl = document.createElement('strong');
+            priceEl.textContent = price + '.-';
+            newItem.appendChild(label);
+            newItem.appendChild(priceEl);
 
             const container = document.getElementById('market-list-container');
-            if (container) container.insertAdjacentHTML('afterbegin', newItemHTML);
+            if (container) container.insertBefore(newItem, container.firstChild);
 
-            alert('ลงประกาศ "' + title + '" เรียบร้อยแล้วครับ! ขอให้ขายดีนะครับ 🎉');
+            toast('ลงประกาศ "' + title + '" เรียบร้อยแล้วครับ! ขอให้ขายดีนะครับ 🎉');
 
             document.getElementById('market-title').value = '';
             document.getElementById('market-price').value = '';
@@ -3375,21 +3340,22 @@
                     ? '<p style="margin:4px 0; font-size:0.8rem; color:#22c55e; font-weight: 600;">✓ ฉีดวัคซีนแล้ว</p>'
                     : '<p style="margin:4px 0; font-size:0.8rem; color:#f59e0b; font-weight: 600;">⚠️ รออัปเดตวัคซีน</p>';
 
+                const safeId = _esc(pet.id);
                 const html = `
         <div class="pet-item" style="animation: slideUp 0.5s ease; background: white; padding: 15px; border-radius: 20px; display: flex; align-items: center; gap: 15px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #f9f9f9;">
-            <div class="pet-avatar" style="font-size: 2rem; background: var(--soft-green); width:60px; height:60px; display:flex; align-items:center; justify-content:center; border-radius:15px;">${pet.typeEmoji}</div>
+            <div class="pet-avatar" style="font-size: 2rem; background: var(--soft-green); width:60px; height:60px; display:flex; align-items:center; justify-content:center; border-radius:15px;">${_esc(pet.typeEmoji)}</div>
             <div style="flex:1;">
-                <strong style="font-size: 0.9rem; color: #334435;">น้อง${pet.name} (${pet.breed})</strong>
+                <strong style="font-size: 0.9rem; color: #334435;">น้อง${_esc(pet.name)} (${_esc(pet.breed)})</strong>
                 ${vaxStatusHTML}
-                ${pet.alertStatusHTML || ""}
+                ${pet.alertStatusHTML || ''}
                 <div style="margin-top: 5px;">
-                    <button onclick="viewVaccineBook('${pet.id}')" style="background: #E8F0E9; color: #7BA67E; border: none; padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 600; cursor: pointer;">
+                    <button onclick="viewVaccineBook('${safeId}')" style="background: #E8F0E9; color: #7BA67E; border: none; padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-book-medical"></i> ดูสมุดวัคซีน
                     </button>
                 </div>
-                <small style="opacity: 0.5; font-size: 0.7rem; display: block; margin-top: 4px;">เพศ${pet.gender} | อายุ ${pet.age}</small>
+                <small style="opacity: 0.5; font-size: 0.7rem; display: block; margin-top: 4px;">เพศ${_esc(pet.gender)} | อายุ ${_esc(pet.age)}</small>
             </div>
-            <i class="fas fa-edit" style="color:var(--primary-green); opacity:0.5; cursor:pointer; font-size:1.1rem;" onclick="prepareEditPet('${pet.id}')"></i>
+            <i class="fas fa-edit" style="color:var(--primary-green); opacity:0.5; cursor:pointer; font-size:1.1rem;" onclick="prepareEditPet('${safeId}')"></i>
         </div>`;
 
                 container.insertAdjacentHTML('beforeend', html);
@@ -3402,7 +3368,7 @@
             const name = document.getElementById('pet-name')?.value.trim();
 
             if (!name) {
-                alert('กรุณาระบุชื่อน้องด้วยนะครับ 🐾');
+                toast('กรุณาระบุชื่อน้องด้วยนะครับ', 'error');
                 document.getElementById('pet-name').focus();
                 return;
             }
@@ -3441,7 +3407,7 @@
             }
 
             renderPetListToProfile();
-            alert(`บันทึกข้อมูลน้อง${name} เรียบร้อยแล้วครับ! 🎉`);
+            toast(`บันทึกข้อมูลน้อง${_esc(name)} เรียบร้อยแล้วครับ!`);
             resetPetForm();
             goBackToProfile(); // ใช้ฟังก์ชันเดิมที่คุณมีในภาพ d9b4e8
         }
@@ -4282,10 +4248,10 @@
 
         async function verifyTenantSlip() {
             if (!_slipBase64) return;
-            if (!_tenantRateLimit()) { alert('ส่งคำขอบ่อยเกินไป กรุณารอสักครู่'); return; }
+            if (!_tenantRateLimit()) { toast('ส่งคำขอบ่อยเกินไป กรุณารอสักครู่', 'error'); return; }
             const statusEl = document.getElementById('slip-verify-status');
             const btn = document.getElementById('slip-verify-btn');
-            if (statusEl) { statusEl.style.display=''; statusEl.style.cssText='display:block;margin-top:10px;padding:10px;border-radius:10px;font-size:0.85rem;text-align:center;background:#FFF4E5;color:#92400E;'; statusEl.innerHTML='<i class="fas fa-spinner fa-spin"></i> กำลังตรวจสอบสลิป...'; }
+            _setStatus(statusEl, 'loading', 'กำลังตรวจสอบสลิป...');
             if (btn) btn.disabled = true;
             try {
                 const total = _taCurrentBill ? (_taCurrentBill.totalAmount||_taCurrentBill.total||0) : 0;
@@ -4295,15 +4261,15 @@
                 });
                 const result = await resp.json();
                 if (result.success || result.verified) {
-                    if (statusEl) { statusEl.style.background='#D1FAE5'; statusEl.style.color='#065F46'; statusEl.innerHTML='<i class="fas fa-check-circle"></i> ตรวจสอบสำเร็จ!'; }
+                    _setStatus(statusEl, 'success', 'ตรวจสอบสำเร็จ!');
                     _saveTenantPayment({ slipOkVerified: true, ...result });
                     setTimeout(() => { goToPaymentStep(3); renderPaymentReceipt(_taCurrentBill); }, 1000);
                 } else {
-                    if (statusEl) { statusEl.style.background='#FEE2E2'; statusEl.style.color='#991B1B'; statusEl.innerHTML=`<i class="fas fa-times-circle"></i> ${result.message||'ตรวจสอบไม่ผ่าน กรุณาลองใหม่'}`; }
+                    _setStatus(statusEl, 'error', result.message || 'ตรวจสอบไม่ผ่าน กรุณาลองใหม่');
                     if (btn) btn.disabled = false;
                 }
             } catch(e) {
-                if (statusEl) { statusEl.style.background='#FEE2E2'; statusEl.style.color='#991B1B'; statusEl.innerHTML='<i class="fas fa-exclamation-triangle"></i> เกิดข้อผิดพลาด กรุณาลองใหม่'; }
+                _setStatus(statusEl, 'error', 'เกิดข้อผิดพลาด กรุณาลองใหม่');
                 if (btn) btn.disabled = false;
             }
         }
