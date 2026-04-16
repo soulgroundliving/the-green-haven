@@ -8,6 +8,57 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- QR Code library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Shared logic scripts -->
+    <script src="./shared/firebase-config-loader.js"></script>
+    <script src="./shared/room-config.js"></script>
+    <script src="./shared/tenant-system.js"></script>
+    <script src="./shared/lease-config.js"></script>
+    <script src="./shared/billing-system.js"></script>
+    <script src="./shared/invoice-receipt-manager.js"></script>
+    <!-- Firebase init -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+      import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+      import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+      import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+      async function initializeFirebase() {
+        try {
+          const firebaseConfig = await window.loadFirebaseConfig();
+          firebaseConfig.authDomain = "the-green-haven.firebaseapp.com";
+          firebaseConfig.storageBucket = "the-green-haven.firebasestorage.app";
+          firebaseConfig.messagingSenderId = "523697750767";
+          firebaseConfig.appId = "1:523697750767:web:89b253f92d8d5cfe8a111a";
+
+          const app = initializeApp(firebaseConfig);
+          const database = getDatabase(app);
+          const auth = getAuth(app);
+          const firestore = getFirestore(app);
+
+          window.firebaseApp = app;
+          window.firebaseDatabase = database;
+          window.firebaseAuth = auth;
+          window.firebaseRef = ref;
+          window.firebaseGet = get;
+          window.firebaseSet = set;
+          window.firebaseOnValue = onValue;
+          window.firebaseDB = database;
+          window.firebase = {
+            firestore: () => firestore,
+            firestoreFunctions: { collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc }
+          };
+          window.firebaseReady = true;
+          window.dispatchEvent(new Event('firebaseInitialized'));
+        } catch (e) {
+          console.warn('Firebase init failed:', e);
+          window.firebaseReady = false;
+          window.dispatchEvent(new Event('firebaseInitialized'));
+        }
+      }
+      initializeFirebase();
+    </script>
 
     <style>
         :root {
@@ -1461,11 +1512,9 @@
             <p>แบ่งปันและร่วมกันสร้างสังคมที่อบอุ่น 🤝</p>
         </div>
         <div class="section-title"><span>ประกาศจากเจ้าของ</span></div>
-        <div class="card" style="margin-top:0;">
-            <div style="display:flex; gap:12px;">
-                <i class="fas fa-bullhorn" style="color:var(--primary-green); font-size:1.2rem;"></i>
-                <div style="font-size:0.85rem;"><strong>แจ้งล้างถังน้ำส่วนกลาง</strong><br><span
-                        style="opacity:0.7;">วันอาทิตย์นี้ 09:00 - 12:00 น. น้ำอาจไหลอ่อนนะครับ</span></div>
+        <div id="announcements-list" style="padding:0 15px;">
+            <div class="card" style="margin-top:0; text-align:center; color:#aaa;">
+                <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
             </div>
         </div>
         <div class="section-title">
@@ -1497,9 +1546,9 @@
         <header class="backdrop-blur-sm px-6 py-5 flex justify-between items-center sticky top-0 z-50 border-b">
             <h1 class="text-xl font-bold">Nature Haven <span class="font-light text-gray-300">|</span>
                 Usage</h1>
-            <div
+            <div id="usage-room-badge"
                 class="w-10 h-10 rounded-full bg-[#D6CFC7] flex items-center justify-center text-[5px] text-white font-bold border-2 border-white shadow-sm">
-                ROOM 304
+                ROOM
             </div>
         </header>
         <div class="grid grid-cols-4">
@@ -1521,7 +1570,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <p class="text-sm font-light uppercase tracking-wider">ยอดที่ต้องชำระ</p>
-                    <h3 class="text-4xl font-bold mt-1 tracking-tight">฿ 1,950.00</h3>
+                    <h3 id="current-bill-amount" class="text-4xl font-bold mt-1 tracking-tight">฿ —</h3>
                 </div>
                 <span id="service-due-badge"
                     style="font-size: 0.75rem; background: #FFF4E5; color: #D97706; padding: 4px 10px; border-radius: 20px;">
@@ -1533,54 +1582,9 @@
         </div>
 
         <div class="section-title"><span>ประวัติย้อนหลัง</span></div>
-        <div class="card">
-            <div class="p-5 flex justify-between items-center">
-                <div class="flex items-center gap-5">
-                    <span class="text-sm font-semibold">เมษายน 2569</span>
-                </div>
-                <button
-                    style="background:none; border:1px solid var(--primary-green); color:var(--primary-green); padding:5px 12px; border-radius:10px; font-size:0.8rem; cursor: pointer;"
-                    onclick="openPaymentFlow(true)">ดูใบเสร็จ / ขอใบกำกับ</button>
-            </div>
-            <div class="p-5 flex justify-between items-center">
-                <div class="flex items-center gap-5">
-                    <span class="text-sm font-semibold">มีนาคม 2569</span>
-                </div>
-                <button
-                    style="background:none; border:1px solid var(--primary-green); color:var(--primary-green); padding:5px 12px; border-radius:10px; font-size:0.8rem; cursor: pointer;"
-                    onclick="openPaymentFlow(true)">ดูใบเสร็จ / ขอใบกำกับ</button>
-            </div>
-            <div class="p-5 flex justify-between items-center">
-                <div class="flex items-center gap-5">
-                    <span class="text-sm font-semibold">กุมภาพันธ์ 2569</span>
-                </div>
-                <button
-                    style="background:none; border:1px solid var(--primary-green); color:var(--primary-green); padding:5px 12px; border-radius:10px; font-size:0.8rem; cursor: pointer;"
-                    onclick="openPaymentFlow(true)">ดูใบเสร็จ / ขอใบกำกับ</button>
-            </div>
-            <div class="p-5 flex justify-between items-center">
-                <div class="flex items-center gap-5">
-                    <span class="text-sm font-semibold">มกราคม 2569</span>
-                </div>
-                <button
-                    style="background:none; border:1px solid var(--primary-green); color:var(--primary-green); padding:5px 12px; border-radius:10px; font-size:0.8rem; cursor: pointer;"
-                    onclick="openPaymentFlow(true)">ดูใบเสร็จ / ขอใบกำกับ</button>
-            </div>
-            <div class="p-5 flex justify-between items-center">
-                <div class="flex items-center gap-5">
-                    <span class="text-sm font-semibold">ธันวาคม 2568</span>
-                </div>
-                <button
-                    style="background:none; border:1px solid var(--primary-green); color:var(--primary-green); padding:5px 12px; border-radius:10px; font-size:0.8rem; cursor: pointer;"
-                    onclick="openPaymentFlow(true)">ดูใบเสร็จ / ขอใบกำกับ</button>
-            </div>
-            <div class="p-5 flex justify-between items-center">
-                <div class="flex items-center gap-5">
-                    <span class="text-sm font-semibold">พฤศจิกายน 2568</span>
-                </div>
-                <button
-                    style="background:none; border:1px solid var(--primary-green); color:var(--primary-green); padding:5px 12px; border-radius:10px; font-size:0.8rem; cursor: pointer;"
-                    onclick="openPaymentFlow(true)">ดูใบเสร็จ / ขอใบกำกับ</button>
+        <div class="card" id="bills-history-list">
+            <div style="text-align:center; padding:20px; color:#aaa;">
+                <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
             </div>
         </div>
     </div>
@@ -1609,116 +1613,94 @@
             </div>
         </div>
 
-        <h3 id="flow-title"
-            style="color: var(--receipt-green); margin: 0 15px 10px; display:flex; align-items:center; gap:8px;">
-            <i class="fas fa-check-square"></i> ใบเสร็จรับเงิน / Receipt
-        </h3>
-
-        <div class="receipt-card">
-            <div class="receipt-inner">
-                <h2 class="receipt-title" id="card-main-title">ใบเสร็จรับเงิน</h2>
-                <div class="receipt-subtitle" id="card-sub-title">Receipt</div>
-
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <span class="status-badge" id="payment-status-badge">
-                        <i class="fas fa-check"></i> ชำระเงินแล้ว
-                    </span>
-                </div>
-
-                <div class="info-grid">
-                    <div class="info-item"><span>อ้างอิงบิลที่</span><strong>BILL-69-03-rooms-15</strong></div>
-                    <div class="info-item"><span>วันที่</span><strong>มี.ค. 69</strong></div>
-                    <div class="info-item"><span>ห้องเลขที่</span><strong>15</strong></div>
-                    <div class="info-item"><span>วิธีชำระเงิน</span><strong>ธนาคาร / PromptPay</strong></div>
-                </div>
-
-                <div id="company-info-display" class="info-grid"
-                    style="display: none; border-top: none; padding-top: 0;">
-                    <div class="info-item" style="grid-column: span 2;">
-                        <span>ออกในนาม (Bill To)</span>
-                        <strong id="display-comp-name" style="color: var(--primary-green);">-</strong>
+        <!-- STEP 1: Invoice + QR -->
+        <div id="payment-step-1">
+            <div class="receipt-card">
+                <div class="receipt-inner">
+                    <h2 class="receipt-title">ใบวางบิล</h2>
+                    <div class="receipt-subtitle">Invoice</div>
+                    <div class="info-grid" id="pay-invoice-info">
+                        <div class="info-item"><span>ห้อง</span><strong id="pay-room-no">—</strong></div>
+                        <div class="info-item"><span>งวด</span><strong id="pay-period">—</strong></div>
                     </div>
-                    <div class="info-item" style="grid-column: span 2;">
-                        <span>เลขประจำตัวผู้เสียภาษี (Tax ID)</span>
-                        <strong id="display-comp-tax">-</strong>
-                    </div>
-                    <div class="info-item" style="grid-column: span 2;">
-                        <span>ที่อยู่ (Address)</span>
-                        <strong id="display-comp-addr">-</strong>
+                    <table class="bill-table">
+                        <thead><tr><th>รายการ</th><th></th></tr></thead>
+                        <tbody id="pay-items-tbody">
+                            <tr><td colspan="2" style="text-align:center;color:#aaa;">กำลังโหลด...</td></tr>
+                        </tbody>
+                    </table>
+                    <div id="pay-qr-box" style="text-align:center; padding:15px 0;">
+                        <p style="font-size:0.8rem; color:#888; margin-bottom:8px;">สแกน QR เพื่อชำระ PromptPay</p>
+                        <div id="pay-qr-canvas" style="display:inline-block;"></div>
                     </div>
                 </div>
-
-
-                <table class="bill-table">
-                    <thead>
-                        <tr>
-                            <th>รายละเอียดการชำระ</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>🏠 ค่าเช่า</td>
-                            <td>฿1,200</td>
-                        </tr>
-                        <tr>
-                            <td>⚡ ค่าไฟฟ้า (10161 - 9979 = 182 หน่วย × 8)</td>
-                            <td>฿1,456</td>
-                        </tr>
-                        <tr>
-                            <td>💧 ค่าน้ำ (1645 - 1642 = 3 หน่วย × 20)</td>
-                            <td>฿60</td>
-                        </tr>
-                        <tr>
-                            <td>🗑️ ค่าขยะ</td>
-                            <td>฿20</td>
-                        </tr>
-                        <tr class="total-row">
-                            <td>รวมทั้งสิ้น</td>
-                            <td>฿2,736</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div id="qr-section-container" class="qr-section">
-                    <div class="qr-box">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
-                            alt="PromptPay QR">
-                    </div>
-                    <button class="btn-receipt btn-outline"
-                        style="width: 150px; margin: 0 auto; padding: 8px; font-size:0.8rem;"
-                        onclick="alert('บันทึก QR Code ลงเครื่องแล้ว')"><i class="fas fa-download"></i> Save QR
-                        Code</button>
-                </div>
-
-                <div style="margin-top: 20px; text-align: center; font-size: 0.8rem;" id="paid-footer-info">
-                    <div style="text-align: left; margin-bottom: 10px;">
-                        <span>วันที่ชำระ</span><br>
-                        <strong>1 เมษายน 2569</strong>
-                    </div>
-                    <div
-                        style="background: #e8f5e9; color: #2e7d32; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-                        <i class="fas fa-check-circle"></i> ได้รับชำระเงินแล้ว<br>
-                        <small>ขอบคุณที่ชำระเงินตรงเวลา</small>
-                    </div>
-                    ใบเสร็จฉบับนี้ใช้เป็นหลักฐานการชำระเงิน<br>
-                    <strong>The Green Haven Co., Ltd.</strong>
-                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-receipt btn-green" style="grid-column:span 2;" onclick="goToPaymentStep(2)">
+                    <i class="fas fa-camera"></i> อัปโหลดสลิปยืนยัน
+                </button>
             </div>
         </div>
 
-        <div class="action-buttons" id="action-buttons-unpaid">
-            <button class="btn-receipt btn-green" style="grid-column: span 2;" onclick="simulateUpload()"><i
-                    class="fas fa-upload"></i> อัปโหลดสลิปยืนยันการชำระ</button>
-            <div id="upload-loader" class="loader" style="grid-column: span 2;"></div>
+        <!-- STEP 2: Slip Upload -->
+        <div id="payment-step-2" style="display:none;">
+            <div class="receipt-card">
+                <div class="receipt-inner">
+                    <h2 class="receipt-title">อัปโหลดสลิป</h2>
+                    <div class="receipt-subtitle">Upload Payment Slip</div>
+                    <div id="slip-preview-wrap" style="text-align:center; padding:10px 0; display:none;">
+                        <img id="slip-preview-img" src="" alt="slip preview" style="max-width:100%; border-radius:12px; max-height:300px;">
+                    </div>
+                    <div id="slip-drop-area" style="border:2px dashed #ccc; border-radius:16px; padding:30px; text-align:center; margin:10px 0; cursor:pointer;"
+                         onclick="document.getElementById('slip-file-input').click()">
+                        <i class="fas fa-cloud-upload-alt" style="font-size:2rem; color:var(--primary-green);"></i>
+                        <p style="margin:8px 0 0; font-size:0.85rem; color:#666;">แตะเพื่อเลือกรูปสลิป</p>
+                        <small style="color:#aaa;">JPG / PNG / WEBP ไม่เกิน 5MB</small>
+                    </div>
+                    <input type="file" id="slip-file-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleSlipFileUpload(this)">
+                    <div id="slip-verify-status" style="display:none; margin-top:10px; padding:10px; border-radius:10px; font-size:0.85rem; text-align:center;"></div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-receipt btn-outline" onclick="goToPaymentStep(1)">← ย้อนกลับ</button>
+                <button id="slip-verify-btn" class="btn-receipt btn-green" onclick="verifyTenantSlip()" disabled>
+                    <i class="fas fa-check-circle"></i> ตรวจสอบสลิป
+                </button>
+            </div>
         </div>
 
-        <div class="action-buttons" id="action-buttons-paid" style="display: none;">
-            <button class="btn-receipt btn-outline" onclick="window.print()"><i class="fas fa-print"></i>
-                พิมพ์</button>
-            <button class="btn-receipt btn-outline"><i class="fas fa-download"></i> ดาวน์โหลด</button>
-            <button class="btn-receipt btn-green" style="grid-column: span 2;" onclick="goBackFromPayment()">←
-                กลับไปบิล</button>
+        <!-- STEP 3: Receipt -->
+        <div id="payment-step-3" style="display:none;">
+            <div class="receipt-card">
+                <div class="receipt-inner">
+                    <h2 class="receipt-title" id="card-main-title">ใบเสร็จรับเงิน</h2>
+                    <div class="receipt-subtitle" id="card-sub-title">Receipt</div>
+                    <div style="text-align:center; margin-bottom:20px;">
+                        <span class="status-badge" id="payment-status-badge">
+                            <i class="fas fa-check"></i> ชำระเงินแล้ว
+                        </span>
+                    </div>
+                    <div class="info-grid" id="receipt-info-grid">
+                        <div class="info-item"><span>ห้องเลขที่</span><strong id="receipt-room">—</strong></div>
+                        <div class="info-item"><span>งวด</span><strong id="receipt-period">—</strong></div>
+                        <div class="info-item"><span>ยอดชำระ</span><strong id="receipt-total">—</strong></div>
+                        <div class="info-item"><span>วิธีชำระ</span><strong>PromptPay</strong></div>
+                    </div>
+                    <div id="company-info-display" class="info-grid" style="display:none; border-top:none; padding-top:0;">
+                        <div class="info-item" style="grid-column:span 2;"><span>ออกในนาม</span><strong id="display-comp-name" style="color:var(--primary-green);">-</strong></div>
+                        <div class="info-item" style="grid-column:span 2;"><span>เลขประจำตัวผู้เสียภาษี</span><strong id="display-comp-tax">-</strong></div>
+                        <div class="info-item" style="grid-column:span 2;"><span>ที่อยู่</span><strong id="display-comp-addr">-</strong></div>
+                    </div>
+                    <div style="background:#e8f5e9; color:#2e7d32; padding:12px; border-radius:10px; margin-top:10px; text-align:center; font-size:0.85rem;">
+                        <i class="fas fa-check-circle"></i> ส่งสลิปเรียบร้อยแล้ว รอการยืนยันจากเจ้าของ<br>
+                        <small>The Green Haven Co., Ltd.</small>
+                    </div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-receipt btn-outline" onclick="window.print()"><i class="fas fa-print"></i> พิมพ์</button>
+                <button class="btn-receipt btn-green" onclick="goBackFromPayment()">← กลับไปบิล</button>
+            </div>
         </div>
     </div>
 
@@ -1732,7 +1714,7 @@
                 style="width:80px; height:80px; background:var(--soft-green); border-radius:50%; margin:0 auto 10px; border:3px solid white; display:flex; align-items:center; justify-content:center; font-size:2.5rem;">
                 🌿</div>
             <h1 id="display-name" style="margin:0;">คุณลูกตาล</h1>
-            <p style="margin:5px 0; font-size:0.85rem; opacity:0.6;">ห้อง 402 | ตึก Nest</p>
+            <p id="profile-room-display" style="margin:5px 0; font-size:0.85rem; opacity:0.6;">ห้อง — | —</p>
             <span
                 style="background:var(--primary-green); color:white; padding:5px 20px; border-radius:20px; font-size:0.8rem; font-weight:600; display:inline-block; margin-top:5px;">The
                 First Generation 🥇</span>
@@ -2684,8 +2666,8 @@
         <div class="card" style="text-align: center; border-top: 5px solid var(--primary-green);">
             <i class="fas fa-file-contract"
                 style="font-size: 3rem; color: var(--primary-green); margin-bottom: 10px;"></i>
-            <h3>สัญญาห้อง 402</h3>
-            <p style="font-size: 0.85rem; color: #666;">วันสิ้นสุดสัญญา: <strong>31 ธ.ค. 2026</strong></p>
+            <h3 id="contract-room-title">สัญญาห้อง —</h3>
+            <p style="font-size: 0.85rem; color: #666;">วันสิ้นสุดสัญญา: <strong id="contract-end-date">—</strong></p>
             <div
                 style="background: #E8F0E9; color: var(--primary-green); padding: 10px; border-radius: 12px; font-size: 0.8rem; margin-top: 15px;">
                 แจ้งความประสงค์ต่อสัญญา หรือแจ้งย้ายออกล่วงหน้าอย่างน้อย 30 วัน
@@ -2801,9 +2783,15 @@
 
     <div class="nav-bar" id="main-nav-bar" style="display: none;">
         <div class="nav-item active" onclick="showPage('home', this)"><i class="fas fa-home"></i>หน้าหลัก</div>
-        <div class="nav-item" onclick="showPage('services', this)"><i class="fas fa-leaf"></i>บริการ</div>
+        <div class="nav-item" onclick="showPage('services', this)" style="position:relative;">
+            <i class="fas fa-leaf"></i>บริการ
+            <span id="nav-badge-services" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:9px; display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
+        </div>
         <div class="nav-item" onclick="showPage('community', this)"><i class="fas fa-comments"></i>ชุมชน</div>
-        <div class="nav-item" onclick="showPage('usage', this)"><i class="fas fa-wallet"></i>การใช้งาน</div>
+        <div class="nav-item" onclick="showPage('usage', this)" style="position:relative;">
+            <i class="fas fa-wallet"></i>การใช้งาน
+            <span id="nav-badge-bills" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:9px; display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
+        </div>
         <div class="nav-item" onclick="showPage('profile', this)"><i class="fas fa-user"></i>โปรไฟล์</div>
     </div>
 
@@ -3627,9 +3615,7 @@
                 pointsEl.innerText = userPoints.toLocaleString();
             }
 
-            // 2. อัปเดตจำนวนสิทธิ์คงเหลือของรางวัลต่างๆ
-            updateStockUI('stock-air', rewardsStock.air);
-            // updateStockUI('stock-elec', rewardsStock.electricity); // ถ้ามีตัวอื่นเพิ่ม
+            // 2. stock UI (reserved for future implementation)
         }
 
 
@@ -3977,6 +3963,444 @@
         // ==========================================
         // 7. INITIALIZATION (On Load)
         // ==========================================
+        // ==========================================
+        // TENANT APP — DATA INTEGRATION (Tasks 1-10)
+        // ==========================================
+        let _taRoom = '', _taBuilding = '', _taLease = null, _taTenant = null;
+        let _taBills = [], _taPayments = [], _taCurrentBill = null;
+        let _slipBase64 = null;
+
+        function detectRoomBuilding() {
+            try {
+                const userStr = sessionStorage.getItem('user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    const raw = String(user.roomNumber || user.room || user.email || '');
+                    const emailMatch = raw.match(/tenant(\w+)@/);
+                    _taRoom = emailMatch ? emailMatch[1] : raw.replace(/[^0-9A-Za-z]/g, '');
+                }
+            } catch(e) {}
+            if (!_taRoom) _taRoom = localStorage.getItem('tenant_app_room') || '';
+            if (!_taRoom) return false;
+            if (/^N/i.test(_taRoom) || (/^\d+$/.test(_taRoom) && parseInt(_taRoom) >= 101 && parseInt(_taRoom) <= 405)) {
+                _taBuilding = 'nest';
+            } else {
+                _taBuilding = 'rooms';
+            }
+            window._tenantAppRoom = _taRoom;
+            window._tenantAppBuilding = _taBuilding;
+            return true;
+        }
+
+        async function loadTenantAppData() {
+            if (!_taRoom) return;
+            if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady) {
+                try {
+                    const userStr = sessionStorage.getItem('user');
+                    const user = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
+                    const sync = new TenantFirebaseSync(user, _taBuilding, _taRoom);
+                    const data = await sync.loadAllData();
+                    if (data.lease) _taLease = data.lease;
+                    if (data.tenant) _taTenant = data.tenant;
+                    if (data.bills && data.bills.length) _taBills = data.bills;
+                    if (data.payments) _taPayments = data.payments;
+                } catch(e) { console.warn('TenantFirebaseSync failed, fallback to localStorage:', e); }
+            }
+            if (!_taLease && typeof LeaseAgreementManager !== 'undefined') {
+                try { _taLease = LeaseAgreementManager.getActiveLease(_taBuilding, _taRoom); } catch(e) {}
+            }
+            if (!_taTenant && typeof TenantConfigManager !== 'undefined') {
+                try { _taTenant = TenantConfigManager.getTenant(_taBuilding, _taRoom); } catch(e) {}
+            }
+            if (!_taTenant) {
+                try { _taTenant = JSON.parse(localStorage.getItem('tenant_data') || 'null'); } catch(e) {}
+            }
+            if (!_taBills.length) {
+                [2567,2568,2569,2570].forEach(y => {
+                    try {
+                        const raw = JSON.parse(localStorage.getItem(`bills_${y}`) || '[]');
+                        _taBills.push(...raw.filter(b => b.building === _taBuilding && String(b.room) === String(_taRoom)));
+                    } catch(e) {}
+                });
+            }
+            _taBills.sort((a,b) => ((b.year||0)-(a.year||0)) || ((b.month||0)-(a.month||0)));
+            if (!_taPayments.length) {
+                try { _taPayments = JSON.parse(localStorage.getItem(`payment_${_taBuilding}_${_taRoom}`) || '[]'); } catch(e) {}
+            }
+            window._tenantAppLease = _taLease;
+            window._tenantAppTenant = _taTenant;
+            window._tenantAppBills = _taBills;
+            window._tenantAppPayments = _taPayments;
+        }
+
+        async function initTenantApp() {
+            const hasRoom = detectRoomBuilding();
+            if (hasRoom && !window.firebaseReady) {
+                await new Promise(resolve => {
+                    const t = setTimeout(resolve, 3000);
+                    window.addEventListener('firebaseInitialized', () => { clearTimeout(t); resolve(); }, { once: true });
+                });
+            }
+            if (hasRoom) await loadTenantAppData();
+            renderHomePage();
+            renderBillsList();
+            renderAnnouncements();
+            renderProfilePage();
+            renderContractPage();
+            updateNavBadges();
+        }
+
+        // ---- HOME ----
+        function renderHomePage() {
+            const nameEl = document.getElementById('user-greeting');
+            if (nameEl && _taTenant) {
+                const name = _taTenant.name || _taTenant.tenantName || '';
+                if (name) nameEl.textContent = `สวัสดีครับ คุณ${name}`;
+            }
+        }
+
+        // ---- BILLS ----
+        const THAI_MONTHS_SHORT = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+        function renderBillsList() {
+            const el = document.getElementById('bills-history-list');
+            const badge = document.getElementById('usage-room-badge');
+            if (badge && _taRoom) badge.textContent = _taRoom;
+            if (!el) return;
+            if (!_taBills.length) {
+                el.innerHTML = '<div style="padding:20px; text-align:center; color:#aaa;">ไม่พบข้อมูลบิล</div>';
+                const amtEl = document.getElementById('current-bill-amount');
+                if (amtEl) amtEl.textContent = '฿ —';
+                return;
+            }
+            const unpaid = _taBills.find(b => b.status !== 'paid');
+            const latest = unpaid || _taBills[0];
+            _taCurrentBill = latest;
+            const amtEl = document.getElementById('current-bill-amount');
+            if (amtEl && latest) {
+                const total = latest.totalAmount || latest.total || latest.rentAmount || 0;
+                amtEl.textContent = `฿ ${Number(total).toLocaleString('th-TH',{minimumFractionDigits:2})}`;
+            }
+            const dueBadge = document.getElementById('service-due-badge');
+            if (dueBadge && latest) {
+                if (latest.status === 'paid') {
+                    dueBadge.style.cssText = 'font-size:0.75rem;background:#D1FAE5;color:#065F46;padding:4px 10px;border-radius:20px;';
+                    dueBadge.innerHTML = '<i class="fas fa-check"></i> ชำระแล้ว';
+                } else if (latest.status === 'overdue') {
+                    dueBadge.style.cssText = 'font-size:0.75rem;background:#FEE2E2;color:#991B1B;padding:4px 10px;border-radius:20px;';
+                    dueBadge.innerHTML = '<i class="fas fa-exclamation-circle"></i> เกินกำหนด';
+                } else {
+                    dueBadge.style.cssText = 'font-size:0.75rem;background:#FFF4E5;color:#D97706;padding:4px 10px;border-radius:20px;';
+                    dueBadge.innerHTML = '<i class="fas fa-clock"></i> รอชำระ';
+                }
+            }
+            el.innerHTML = _taBills.slice(0,12).map(b => {
+                const m = THAI_MONTHS_SHORT[b.month] || b.month || '?';
+                const yr = b.year ? (Number(b.year) + (b.year < 100 ? 2500 : 0)) : '?';
+                const total = b.totalAmount || b.total || b.rentAmount || 0;
+                const paid = b.status === 'paid';
+                const bId = b.id || b.billId || '';
+                return `<div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f3f3;">
+                    <div>
+                        <span style="font-size:0.9rem;font-weight:600;">${m} ${yr}</span>
+                        <span style="margin-left:8px;font-size:0.72rem;padding:2px 8px;border-radius:10px;${paid?'background:#D1FAE5;color:#065F46':'background:#FFF4E5;color:#D97706'}">${paid?'✓ จ่ายแล้ว':'รอชำระ'}</span>
+                        <p style="font-size:0.8rem;color:#888;margin:3px 0 0;">฿${Number(total).toLocaleString()}</p>
+                    </div>
+                    ${paid
+                        ? `<button onclick="openPaymentFlow(true,'${bId}')" style="background:none;border:1px solid var(--primary-green);color:var(--primary-green);padding:5px 12px;border-radius:10px;font-size:0.8rem;cursor:pointer;">ใบเสร็จ</button>`
+                        : `<button onclick="openPaymentFlow(false,'${bId}')" style="background:var(--primary-green);color:white;border:none;padding:5px 12px;border-radius:10px;font-size:0.8rem;cursor:pointer;">จ่ายเลย</button>`
+                    }
+                </div>`;
+            }).join('');
+        }
+
+        // ---- COMMUNITY ----
+        function renderAnnouncements() {
+            const el = document.getElementById('announcements-list');
+            if (!el) return;
+            let ann = [];
+            try { ann = JSON.parse(localStorage.getItem('announcements_data') || '[]'); } catch(e) {}
+            const filtered = ann.filter(a => !a.building || a.building === 'all' || a.building === _taBuilding);
+            if (!filtered.length) {
+                el.innerHTML = '<div class="card" style="margin-top:0;text-align:center;color:#aaa;font-size:0.85rem;">ไม่มีประกาศในขณะนี้</div>';
+                return;
+            }
+            el.innerHTML = filtered.slice(0,5).map(a => {
+                const d = a.createdAt ? new Date(a.createdAt).toLocaleDateString('th-TH') : '';
+                return `<div class="card" style="margin-top:0;margin-bottom:8px;">
+                    <div style="display:flex;gap:12px;">
+                        <i class="fas fa-bullhorn" style="color:var(--primary-green);font-size:1.2rem;flex-shrink:0;margin-top:3px;"></i>
+                        <div style="font-size:0.85rem;">
+                            <strong>${a.title||a.subject||'ประกาศ'}</strong>${d?`<span style="color:#aaa;font-size:0.75rem;margin-left:6px;">${d}</span>`:''}
+                            <br><span style="opacity:0.7;">${a.content||a.body||''}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ---- PROFILE ----
+        function renderProfilePage() {
+            const nameEl = document.getElementById('display-name');
+            if (nameEl && _taTenant) {
+                const name = _taTenant.name || _taTenant.tenantName || '';
+                if (name) nameEl.textContent = `คุณ${name}`;
+            }
+            const roomEl = document.getElementById('profile-room-display');
+            if (roomEl && _taRoom) {
+                roomEl.textContent = `ห้อง ${_taRoom} | ${_taBuilding === 'nest' ? 'ตึก Nest' : 'ตึก Rooms'}`;
+            }
+            const ptEl = document.getElementById('user-total-points');
+            if (ptEl) {
+                const pts = parseInt(localStorage.getItem('tenant_eco_points') || '0') || userPoints || 0;
+                ptEl.textContent = Number(pts).toLocaleString();
+            }
+            renderPetList();
+        }
+
+        function renderPetList() {
+            const el = document.getElementById('pet-list-container');
+            if (!el) return;
+            let pets = [];
+            try { pets = JSON.parse(localStorage.getItem(`tenant_pets_${_taBuilding}_${_taRoom}`) || '[]'); } catch(e) {}
+            if (!pets.length) {
+                try { pets = JSON.parse(localStorage.getItem(`tenant_pets_${_taRoom}`) || '[]'); } catch(e) {}
+            }
+            if (!pets.length) {
+                el.innerHTML = `<div onclick="showSubPage('add-pet-page')" style="border:2px dashed #e0e0e0;padding:30px 20px;border-radius:25px;text-align:center;cursor:pointer;background:#fff;">
+                    <div style="font-size:2rem;margin-bottom:10px;opacity:0.5;">🐾</div>
+                    <p style="font-size:0.85rem;color:#888;font-weight:500;">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
+                    <p style="font-size:0.75rem;color:var(--primary-green);font-weight:600;margin-top:5px;">+ เพิ่มสัตว์เลี้ยงของคุณ</p>
+                </div>`;
+                return;
+            }
+            const emojiMap = {dog:'🐕',cat:'🐈',rabbit:'🐇',bird:'🐦',fish:'🐠',hamster:'🐹',other:'🐾'};
+            el.innerHTML = pets.map(p => {
+                const emoji = emojiMap[p.type||p.petType] || '🐾';
+                return `<div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                    <div style="font-size:2rem;">${emoji}</div>
+                    <div><strong style="font-size:0.9rem;">${p.name||p.petName||'สัตว์เลี้ยง'}</strong>
+                    <p style="font-size:0.75rem;color:#888;margin:2px 0 0;">${p.breed||p.petBreed||''}</p></div>
+                </div>`;
+            }).join('');
+        }
+
+        // ---- CONTRACT ----
+        function renderContractPage() {
+            if (!_taRoom) return;
+            const titleEl = document.getElementById('contract-room-title');
+            if (titleEl) titleEl.textContent = `สัญญาห้อง ${_taRoom}`;
+            if (!_taLease) return;
+            const endEl = document.getElementById('contract-end-date');
+            if (endEl && _taLease.endDate) {
+                try {
+                    const d = new Date(_taLease.endDate);
+                    endEl.textContent = d.toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+                } catch(e) { endEl.textContent = _taLease.endDate; }
+            }
+        }
+
+        // ---- NAV BADGES ----
+        function updateNavBadges() {
+            const pendingBills = _taBills.filter(b => b.status !== 'paid').length;
+            const billBadge = document.getElementById('nav-badge-bills');
+            if (billBadge) {
+                billBadge.textContent = pendingBills > 9 ? '9+' : pendingBills;
+                billBadge.style.display = pendingBills > 0 ? 'flex' : 'none';
+            }
+            let tickets = [];
+            try { tickets = JSON.parse(localStorage.getItem('tenant_maintenance_tickets') || '[]'); } catch(e) {}
+            const pendingTix = tickets.filter(t => t.status === 'pending' || t.status === 'inprogress').length;
+            const svcBadge = document.getElementById('nav-badge-services');
+            if (svcBadge) {
+                svcBadge.textContent = pendingTix > 9 ? '9+' : pendingTix;
+                svcBadge.style.display = pendingTix > 0 ? 'flex' : 'none';
+            }
+        }
+
+        // ---- PAYMENT FLOW ----
+        let _payIsReceipt = false;
+
+        function openPaymentFlow(isReceipt, billId) {
+            _payIsReceipt = isReceipt;
+            if (billId) {
+                const found = _taBills.find(b => (b.id||b.billId) === billId);
+                if (found) _taCurrentBill = found;
+            } else if (!_taCurrentBill) {
+                _taCurrentBill = _taBills.find(b => b.status !== 'paid') || _taBills[0] || null;
+            }
+            showPage('payment-page');
+            _slipBase64 = null;
+            if (isReceipt) {
+                goToPaymentStep(3);
+                renderPaymentReceipt(_taCurrentBill);
+            } else {
+                goToPaymentStep(1);
+                renderPaymentInvoice(_taCurrentBill);
+            }
+        }
+
+        function goToPaymentStep(n) {
+            [1,2,3].forEach(i => {
+                const s = document.getElementById(`payment-step-${i}`);
+                if (s) s.style.display = i === n ? '' : 'none';
+                const stepEl = document.getElementById(`step-${i}`);
+                if (stepEl) {
+                    stepEl.classList.toggle('active', i === n);
+                    stepEl.classList.toggle('completed', i < n);
+                }
+            });
+        }
+
+        function renderPaymentInvoice(bill) {
+            if (!bill) { document.getElementById('pay-items-tbody').innerHTML = '<tr><td colspan="2" style="text-align:center;color:#aaa;">ไม่พบข้อมูลบิล</td></tr>'; return; }
+            const m = THAI_MONTHS_SHORT[bill.month] || bill.month || '?';
+            const yr = bill.year ? (Number(bill.year) + (bill.year < 100 ? 2500 : 0)) : '?';
+            const roomEl = document.getElementById('pay-room-no');
+            if (roomEl) roomEl.textContent = _taRoom;
+            const periodEl = document.getElementById('pay-period');
+            if (periodEl) periodEl.textContent = `${m} ${yr}`;
+            const tbody = document.getElementById('pay-items-tbody');
+            if (tbody) {
+                const rent = bill.rentAmount||bill.rent||0, elec = bill.electricityAmount||bill.electricity||0;
+                const water = bill.waterAmount||bill.water||0, trash = bill.trashAmount||bill.trash||0;
+                const total = bill.totalAmount||bill.total||(rent+elec+water+trash);
+                tbody.innerHTML = [
+                    rent  ? `<tr><td>🏠 ค่าเช่า</td><td>฿${Number(rent).toLocaleString()}</td></tr>` : '',
+                    elec  ? `<tr><td>⚡ ค่าไฟ${bill.electricityUnits?` (${bill.electricityUnits} หน่วย)`:''}</td><td>฿${Number(elec).toLocaleString()}</td></tr>` : '',
+                    water ? `<tr><td>💧 ค่าน้ำ${bill.waterUnits?` (${bill.waterUnits} หน่วย)`:''}</td><td>฿${Number(water).toLocaleString()}</td></tr>` : '',
+                    trash ? `<tr><td>🗑️ ค่าขยะ</td><td>฿${Number(trash).toLocaleString()}</td></tr>` : '',
+                    `<tr class="total-row"><td>รวมทั้งสิ้น</td><td>฿${Number(total).toLocaleString()}</td></tr>`
+                ].join('');
+            }
+            const qrBox = document.getElementById('pay-qr-canvas');
+            if (qrBox) {
+                qrBox.innerHTML = '';
+                const phone = localStorage.getItem('promptpay') || '';
+                const total2 = bill.totalAmount||bill.total||0;
+                if (phone && total2 && typeof QRCode !== 'undefined') {
+                    try { new QRCode(qrBox, { text: buildPromptPayPayload(phone, total2), width:200, height:200, correctLevel: QRCode.CorrectLevel.M }); }
+                    catch(e) { qrBox.innerHTML = '<p style="color:#aaa;font-size:0.8rem;">ไม่สามารถสร้าง QR ได้</p>'; }
+                } else {
+                    qrBox.innerHTML = '<p style="color:#aaa;font-size:0.8rem;">ไม่มีข้อมูล PromptPay</p>';
+                }
+            }
+        }
+
+        function renderPaymentReceipt(bill) {
+            if (!bill) return;
+            const m = THAI_MONTHS_SHORT[bill.month] || bill.month || '?';
+            const yr = bill.year ? (Number(bill.year) + (bill.year < 100 ? 2500 : 0)) : '?';
+            const roomEl = document.getElementById('receipt-room'); if (roomEl) roomEl.textContent = _taRoom;
+            const periodEl = document.getElementById('receipt-period'); if (periodEl) periodEl.textContent = `${m} ${yr}`;
+            const totalEl = document.getElementById('receipt-total');
+            if (totalEl) totalEl.textContent = `฿${Number(bill.totalAmount||bill.total||0).toLocaleString()}`;
+        }
+
+        // ---- SLIP UPLOAD ----
+        function handleSlipFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { alert('กรุณาเลือกไฟล์ JPG, PNG หรือ WEBP'); input.value=''; return; }
+            if (file.size > 5*1024*1024) { alert('ไฟล์ต้องไม่เกิน 5MB'); input.value=''; return; }
+            const reader = new FileReader();
+            reader.onload = e => {
+                _slipBase64 = e.target.result;
+                const preview = document.getElementById('slip-preview-img');
+                const wrap = document.getElementById('slip-preview-wrap');
+                const drop = document.getElementById('slip-drop-area');
+                const btn = document.getElementById('slip-verify-btn');
+                if (preview) preview.src = _slipBase64;
+                if (wrap) wrap.style.display = '';
+                if (drop) drop.style.display = 'none';
+                if (btn) btn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function verifyTenantSlip() {
+            if (!_slipBase64) return;
+            if (!_tenantRateLimit()) { alert('ส่งคำขอบ่อยเกินไป กรุณารอสักครู่'); return; }
+            const statusEl = document.getElementById('slip-verify-status');
+            const btn = document.getElementById('slip-verify-btn');
+            if (statusEl) { statusEl.style.display=''; statusEl.style.cssText='display:block;margin-top:10px;padding:10px;border-radius:10px;font-size:0.85rem;text-align:center;background:#FFF4E5;color:#92400E;'; statusEl.innerHTML='<i class="fas fa-spinner fa-spin"></i> กำลังตรวจสอบสลิป...'; }
+            if (btn) btn.disabled = true;
+            try {
+                const total = _taCurrentBill ? (_taCurrentBill.totalAmount||_taCurrentBill.total||0) : 0;
+                const resp = await fetch('https://us-central1-the-green-haven.cloudfunctions.net/verifySlip', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ file: _slipBase64, expectedAmount: total, building: _taBuilding, room: _taRoom })
+                });
+                const result = await resp.json();
+                if (result.success || result.verified) {
+                    if (statusEl) { statusEl.style.background='#D1FAE5'; statusEl.style.color='#065F46'; statusEl.innerHTML='<i class="fas fa-check-circle"></i> ตรวจสอบสำเร็จ!'; }
+                    _saveTenantPayment({ slipOkVerified: true, ...result });
+                    setTimeout(() => { goToPaymentStep(3); renderPaymentReceipt(_taCurrentBill); }, 1000);
+                } else {
+                    if (statusEl) { statusEl.style.background='#FEE2E2'; statusEl.style.color='#991B1B'; statusEl.innerHTML=`<i class="fas fa-times-circle"></i> ${result.message||'ตรวจสอบไม่ผ่าน กรุณาลองใหม่'}`; }
+                    if (btn) btn.disabled = false;
+                }
+            } catch(e) {
+                if (statusEl) { statusEl.style.background='#FEE2E2'; statusEl.style.color='#991B1B'; statusEl.innerHTML='<i class="fas fa-exclamation-triangle"></i> เกิดข้อผิดพลาด กรุณาลองใหม่'; }
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function _saveTenantPayment(verifyResult) {
+            if (!_taCurrentBill) return;
+            const record = {
+                billId: _taCurrentBill.id||_taCurrentBill.billId||'',
+                month: _taCurrentBill.month, year: _taCurrentBill.year,
+                amount: _taCurrentBill.totalAmount||_taCurrentBill.total||0,
+                paidAt: new Date().toISOString(), method: 'PromptPay',
+                slipOkVerified: verifyResult.slipOkVerified||false
+            };
+            try {
+                const key = `payment_${_taBuilding}_${_taRoom}`;
+                const existing = JSON.parse(localStorage.getItem(key)||'[]');
+                existing.unshift(record);
+                localStorage.setItem(key, JSON.stringify(existing));
+                _taPayments = existing;
+            } catch(e) {}
+            if (_taCurrentBill) _taCurrentBill.status = 'paid';
+            updateNavBadges();
+        }
+
+        function _tenantRateLimit() {
+            const key = 'ta_slip_rl', now = Date.now();
+            let hits = [];
+            try { hits = JSON.parse(localStorage.getItem(key)||'[]'); } catch(e) {}
+            hits = hits.filter(t => now - t < 60000);
+            if (hits.length >= 3) return false;
+            hits.push(now);
+            localStorage.setItem(key, JSON.stringify(hits));
+            return true;
+        }
+
+        // ---- PROMPTPAY QR ----
+        function crc16(str) {
+            let crc = 0xFFFF;
+            for (const c of str) { crc ^= c.charCodeAt(0) << 8; for (let i=0;i<8;i++) crc = (crc&0x8000) ? (crc<<1)^0x1021 : crc<<1; }
+            return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+        }
+
+        function buildPromptPayPayload(phone, amount) {
+            const clean = phone.replace(/\D/g,'');
+            const mobile = clean.startsWith('0') ? '0066'+clean.slice(1) : clean;
+            const f = (id,v) => id + v.length.toString().padStart(2,'0') + v;
+            const acc = f('00','0066') + f('01', mobile);
+            const merchant = f('00','A000000677010111') + f('01', acc);
+            const payload = f('00','01') + f('01','12') + f('29',merchant) + '5303764' + f('54',amount.toFixed(2)) + '5802TH' + '6304';
+            return payload + crc16(payload);
+        }
+
+        // ---- LOGOUT ----
+        function logoutTenantApp() {
+            if (!confirm('ต้องการออกจากระบบ?')) return;
+            sessionStorage.clear();
+            window.location.href = './index.html';
+        }
+
         window.addEventListener('load', () => {
             // 1. สั่งเปิดหน้าแผนที่เป็นหน้าแรก (แก้จาก 'home' เป็น 'world-map-page')
             showPage('world-map-page');
@@ -4000,6 +4424,8 @@
             setInterval(updateDashboard, 900000);
             loadGamificationData();
             renderTicketsList();
+            // Initialize tenant data integration
+            initTenantApp();
         });
 
 
