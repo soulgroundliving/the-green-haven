@@ -1628,7 +1628,46 @@ function createNewLease() {
   }
 }
 
-function uploadLeaseDocuments(leaseId, building, roomId, documents) {
+// Storage cost control — enforced client-side before upload
+const LEASE_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;     // 5MB hard cap per file
+const LEASE_COMPRESS_THRESHOLD = 2 * 1024 * 1024;   // Images above this get resized
+const LEASE_MAX_IMAGE_PX = 1600;                    // Max long-edge for images
+
+function _compressImageIfLarge(file) {
+  // Only compress images above threshold. PDFs/legal docs pass through unchanged.
+  return new Promise((resolve) => {
+    if (!file.type || !file.type.startsWith('image/') || file.size <= LEASE_COMPRESS_THRESHOLD) {
+      resolve(file);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const longest = Math.max(img.width, img.height);
+        const ratio = longest > LEASE_MAX_IMAGE_PX ? LEASE_MAX_IMAGE_PX / longest : 1;
+        const w = Math.round(img.width * ratio);
+        const h = Math.round(img.height * ratio);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => {
+          if (blob && blob.size < file.size) {
+            resolve(new File([blob], file.name.replace(/\.(png|bmp|webp)$/i, '.jpg'), { type: 'image/jpeg' }));
+          } else {
+            resolve(file);
+          }
+        }, 'image/jpeg', 0.85);
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadLeaseDocuments(leaseId, building, roomId, documents) {
   try {
     const storage = window.firebase.storage();
     const fileTypeMap = {
@@ -1639,14 +1678,30 @@ function uploadLeaseDocuments(leaseId, building, roomId, documents) {
       income: 'proof-of-income'
     };
 
+    const entries = Object.entries(documents).filter(([, f]) => !!f);
+    const totalFiles = entries.length;
     let uploadCount = 0;
-    const totalFiles = Object.keys(documents).length;
 
-    // Upload each document
-    Object.entries(documents).forEach(([docType, file]) => {
-      if (!file) return;
+    for (const [docType, originalFile] of entries) {
+      // Hard size cap — reject before upload to protect Storage quota
+      if (originalFile.size > LEASE_UPLOAD_MAX_BYTES) {
+        const mb = (originalFile.size / 1024 / 1024).toFixed(1);
+        console.warn(`⚠️ Skipped ${docType}: ${mb}MB exceeds ${LEASE_UPLOAD_MAX_BYTES / 1024 / 1024}MB limit`);
+        if (typeof showToast === 'function') {
+          showToast(`เอกสาร ${docType} ${mb}MB ใหญ่เกินไป (สูงสุด 5MB) กรุณาย่อไฟล์ก่อน`, 'warning');
+        }
+        continue;
+      }
 
-      const fileName = `${fileTypeMap[docType]}-${Date.now()}.${file.name.split('.').pop()}`;
+      // Compress images above 2MB, keep PDFs/small files as-is
+      const file = await _compressImageIfLarge(originalFile);
+      if (file !== originalFile) {
+        const savedMB = ((originalFile.size - file.size) / 1024 / 1024).toFixed(2);
+        console.log(`🗜️ Compressed ${docType}: saved ${savedMB}MB`);
+      }
+
+      const ext = file.name.split('.').pop();
+      const fileName = `${fileTypeMap[docType]}-${Date.now()}.${ext}`;
       const storageRef = storage.ref(`leases/${building}/${roomId}/${leaseId}/${fileName}`);
 
       storageRef.put(file)
@@ -1661,7 +1716,7 @@ function uploadLeaseDocuments(leaseId, building, roomId, documents) {
         .catch((error) => {
           console.error(`❌ Error uploading ${docType}:`, error);
         });
-    });
+    }
 
     console.log(`📁 Uploading ${totalFiles} documents for lease ${leaseId}...`);
   } catch (err) {
