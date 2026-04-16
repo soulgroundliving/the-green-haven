@@ -96,6 +96,17 @@ class RoomConfigManager {
       return DEFAULT_ROOMS_CONFIG[building] || DEFAULT_ROOMS_CONFIG['rooms'];
     }
 
+    // Sanity check: if stored rooms are fewer than default, add missing rooms
+    const def = DEFAULT_ROOMS_CONFIG[building];
+    if (def && config.rooms.length < def.rooms.length) {
+      const storedIds = new Set(config.rooms.map(r => r.id));
+      def.rooms.forEach(r => {
+        if (!storedIds.has(r.id)) config.rooms.push({ ...r });
+      });
+      localStorage.setItem(`rooms_config_${building}`, JSON.stringify(config));
+      console.log(`✅ RoomConfigManager: restored ${def.rooms.length - storedIds.size} missing rooms for building "${building}"`);
+    }
+
     return config;
   }
 
