@@ -3619,6 +3619,9 @@ function initNestPage(){
   setupMeterDataListener();
   console.log('✅ Real-time listeners activated for Nest page');
 
+  // Update info cards from live RoomConfigManager data (must be before early returns)
+  updateNestInfoCards();
+
   // Populate room grid (visual layout)
   const allTenants = loadTenants();
   const rooms = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
@@ -3674,8 +3677,6 @@ function initNestPage(){
     searchInput.addEventListener('input', renderNestCompactGrid);
   }
 
-  // Update info cards from live RoomConfigManager data
-  updateNestInfoCards();
 }
 
 // ===== PROPERTY PAGE (COMBINED ROOMS & NEST) =====
