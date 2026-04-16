@@ -2950,33 +2950,6 @@ function switchGamificationTab(tabName, btn) {
 }
 
 // ===== REPORTS PAGE =====
-function initAdminReportsPage() {
-  console.log('✅ Admin Reports page initialized');
-
-  // Calculate real occupancy from both buildings via calculateOccupancy()
-  const roomsOcc = calculateOccupancy('rooms');
-  const nestOcc = calculateOccupancy('nest');
-  const totalOccupied = roomsOcc.occupied + nestOcc.occupied;
-  const totalVacant = roomsOcc.vacant + nestOcc.vacant;
-  const totalRooms = roomsOcc.total + nestOcc.total;
-  const rate = totalRooms > 0 ? Math.round((totalOccupied / totalRooms) * 100) : 0;
-
-  const rateEl = document.getElementById('occupancyRate');
-  const occEl  = document.getElementById('occupiedRooms');
-  const vacEl  = document.getElementById('vacantRooms');
-  if (rateEl) rateEl.textContent = rate + '%';
-  if (occEl)  occEl.textContent  = totalOccupied;
-  if (vacEl)  vacEl.textContent  = totalVacant;
-}
-
-function switchReportTab(tabName, btn) {
-  document.querySelectorAll('[id$="Report"]').forEach(el => el.style.display = 'none');
-  document.getElementById(tabName + 'Report').style.display = 'block';
-  document.querySelectorAll('#page-admin-reports > .card > div:first-child button').forEach(b => b.style.color = 'var(--text-muted)');
-  document.querySelectorAll('#page-admin-reports > .card > div:first-child button').forEach(b => b.style.borderBottom = '3px solid transparent');
-  btn.style.color = '#2d8653';
-  btn.style.borderBottom = '3px solid #2d8653';
-}
 
 // ===== BILLING IMPORT FUNCTIONS =====
 /**

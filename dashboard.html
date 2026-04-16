@@ -1918,9 +1918,6 @@
       <button class="sidebar-item" onclick="window.showPage('gamification',this)">
         <span class="sidebar-item-icon">🏆</span>Gamification
       </button>
-      <button class="sidebar-item" onclick="window.showPage('admin-reports',this)">
-        <span class="sidebar-item-icon">📈</span>Admin Reports
-      </button>
     </div>
 
     <!-- ACCOUNT -->
@@ -2155,7 +2152,18 @@
     </div>
   </div>
 
-  <!-- New building projection card -->
+  <!-- Complaints & Maintenance mini stats -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
+    <div class="card">
+      <div class="card-title">⚠️ Complaints</div>
+      <div id="dashComplaintsStatus" style="min-height:60px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔧 Maintenance</div>
+      <div id="dashMaintenanceStatus" style="min-height:60px;"></div>
+    </div>
+  </div>
+
   </div><!-- END OVERVIEW TAB -->
 </div>
 
@@ -3666,100 +3674,6 @@
           <div>
             <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Cleanliness</small>
             <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);">+25 pts</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== ADMIN REPORTS & ANALYTICS ===== -->
-<div class="page" id="page-admin-reports">
-  <div class="section-title">📈 Reports & Advanced Analytics</div>
-  <div class="card" style="margin-bottom: 1.5rem;">
-    <!-- Report Tabs -->
-    <div style="border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
-      <button onclick="switchReportTab('occupancy', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: #2d8653; border-bottom: 3px solid #2d8653; margin-bottom: -2px;">📊 Occupancy</button>
-      <button onclick="switchReportTab('revenue', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">💰 Revenue</button>
-      <button onclick="switchReportTab('complaints', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">⚠️ Complaints</button>
-      <button onclick="switchReportTab('maintenance', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🔧 Maintenance</button>
-    </div>
-
-    <!-- Occupancy Report -->
-    <div id="occupancyReport" style="display: block;">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-        <div style="background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
-          <div style="font-size: 2rem; font-weight: 700;" id="occupancyRate">85%</div>
-          <div style="font-size: 0.9rem; opacity: 0.9;">Occupancy Rate</div>
-        </div>
-        <div style="background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
-          <div style="font-size: 2rem; font-weight: 700;" id="occupiedRooms">36</div>
-          <div style="font-size: 0.9rem; opacity: 0.9;">Occupied Rooms</div>
-        </div>
-        <div style="background: linear-gradient(135deg, #f57c00 0%, #e65100 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
-          <div style="font-size: 2rem; font-weight: 700;" id="vacantRooms">7</div>
-          <div style="font-size: 0.9rem; opacity: 0.9;">Vacant Rooms</div>
-        </div>
-      </div>
-      <div id="occupancyChart" style="height: 300px; background: var(--green-pale); border-radius: var(--radius-sm); padding: 1rem;">Chart will render here</div>
-    </div>
-
-    <!-- Revenue Report -->
-    <div id="revenueReport" style="display: none;">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-        <div style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
-          <div style="font-size: 1.3rem; font-weight: 700;" id="totalRevenue">฿123,450</div>
-          <div style="font-size: 0.9rem; opacity: 0.9;">Total Revenue (This Month)</div>
-        </div>
-        <div style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
-          <div style="font-size: 1.3rem; font-weight: 700;" id="collectionRate">92%</div>
-          <div style="font-size: 0.9rem; opacity: 0.9;">Collection Rate</div>
-        </div>
-        <div style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; padding: 1.5rem; border-radius: var(--radius-sm);">
-          <div style="font-size: 1.3rem; font-weight: 700;" id="pendingPayments">฿10,650</div>
-          <div style="font-size: 0.9rem; opacity: 0.9;">Pending Payments</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Complaints Report -->
-    <div id="complaintsReport" style="display: none;">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
-        <div style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); border-left: 4px solid var(--green);">
-          <div style="font-size: 1.5rem; font-weight: 700; color: var(--green-dark);" id="totalComplaints">12</div>
-          <small style="color: var(--text-muted);">Total Complaints</small>
-        </div>
-        <div style="background: #fff3e0; padding: 1.5rem; border-radius: var(--radius-sm); border-left: 4px solid #ff9800;">
-          <div style="font-size: 1.5rem; font-weight: 700; color: #f57c00;" id="openComplaints">3</div>
-          <small style="color: var(--text-muted);">Open</small>
-        </div>
-        <div style="background: #e3f2fd; padding: 1.5rem; border-radius: var(--radius-sm); border-left: 4px solid #2196f3;">
-          <div style="font-size: 1.5rem; font-weight: 700; color: #1976d2;" id="resolvedComplaints">9</div>
-          <small style="color: var(--text-muted);">Resolved</small>
-        </div>
-      </div>
-    </div>
-
-    <!-- Maintenance Report -->
-    <div id="maintenanceReport" style="display: none;">
-      <div style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm);">
-        <div style="font-weight: 700; margin-bottom: 1rem;">Maintenance Statistics</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <div>
-            <small style="color: var(--text-muted); display: block;">Total Requests</small>
-            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);" id="totalMaintenance">28</div>
-          </div>
-          <div>
-            <small style="color: var(--text-muted); display: block;">Pending</small>
-            <div style="font-size: 1.3rem; font-weight: 700; color: #f57c00;" id="pendingMaintenance">5</div>
-          </div>
-          <div>
-            <small style="color: var(--text-muted); display: block;">Avg Response Time</small>
-            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);">2.5 hrs</div>
-          </div>
-          <div>
-            <small style="color: var(--text-muted); display: block;">Completed</small>
-            <div style="font-size: 1.3rem; font-weight: 700; color: #388e3c;" id="completedMaintenance">23</div>
           </div>
         </div>
       </div>
