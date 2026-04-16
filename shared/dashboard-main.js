@@ -2954,6 +2954,10 @@ function initRoomsPage(){
 
   const allTenants = loadTenants();
   const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
+  // Update info cards regardless of floor plan visibility
+  updateRoomsInfoCards();
+  updateShopInfoCard();
+
   const grid=document.getElementById('roomGrid');
   if(!grid) return;
   grid.innerHTML=rooms.map(r=>{
@@ -3000,9 +3004,6 @@ function initRoomsPage(){
     searchInput.addEventListener('input',renderCompactRoomGrid);
   }
 
-  // Update dynamic info cards
-  updateRoomsInfoCards();
-  updateShopInfoCard();
 }
 
 // ===== ROOM FILTER FUNCTION =====
