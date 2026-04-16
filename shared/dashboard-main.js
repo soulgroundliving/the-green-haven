@@ -3495,6 +3495,16 @@ function renderNestCompactGrid(){
       }
     }
 
+    // Pet badges
+    const petKey = `tenant_pets_${r.id}`;
+    const roomPets = JSON.parse(localStorage.getItem(petKey) || '[]').filter(p => p.status === 'approved');
+    const petBadgesHtml = roomPets.length > 0
+      ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;">${roomPets.map(p => {
+          const em = {'dog':'🐕','cat':'🐈','rabbit':'🐇','bird':'🐦','fish':'🐠','hamster':'🐹'}[((p.type||'').toLowerCase())] || '🐾';
+          return `<span title="${p.type}: ${p.name}" style="font-size:.68rem;padding:1px 6px;border-radius:8px;background:#f3e5f5;color:#6a1b9a;border:1px solid #ce93d8;">${em} ${p.name}</span>`;
+        }).join('')}</div>`
+      : '';
+
     const typeLabel = r.type === 'daily' ? '📅 รายวัน' : (r.type === 'pet' ? '🐾 Pet Friendly' : '🏠 Studio');
     const floorLabel = `ชั้น ${r.floor}`;
 
@@ -3505,6 +3515,7 @@ function renderNestCompactGrid(){
         <span class="compact-card-type" style="background: ${r.type === 'pet' ? 'var(--purple-pale)' : 'var(--blue)'}60; color: ${r.type === 'pet' ? 'var(--purple)' : 'var(--blue)'};">${floorLabel}</span>
         <span style="margin-left:auto;font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOccupied?'var(--green-pale)':'#f3e5f5'};color:${isOccupied?'var(--green-dark)':'#6a1b9a'};font-weight:600;">${isOccupied?'มีผู้เช่า':'ว่าง'}</span>
       </div>
+      ${petBadgesHtml}
       <div class="compact-card-info">
         <span style="font-size:.8rem;color:var(--text-muted);">${typeLabel}</span>
         <span class="compact-card-value">฿${r.rentPrice.toLocaleString()}</span>
@@ -5308,6 +5319,7 @@ function updateDashboardLive(){
         </div>`;
   }
 
+  updateNotificationBell();
   updateNavBadge();
   updateMxBadge();
 }
@@ -6623,6 +6635,83 @@ function updateMxBadge(){
   if(total>0){badge.textContent=total;badge.style.display='inline-block';}
   else{badge.style.display='none';}
 }
+
+function updateNotificationBell() {
+  const badge = document.getElementById('notifBadge');
+  if (!badge) return;
+
+  const mx = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
+  const hk = JSON.parse(localStorage.getItem('housekeeping_data') || '[]');
+  const comp = JSON.parse(localStorage.getItem('complaints_data') || '[]');
+  const pays = JSON.parse(localStorage.getItem('tenant_payments') || '[]');
+
+  let pendingPets = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('tenant_pets_')) {
+      const pets = JSON.parse(localStorage.getItem(key) || '[]');
+      pendingPets = pendingPets.concat(pets.filter(p => p.status === 'pending'));
+    }
+  }
+
+  const counts = {
+    maintenance: mx.filter(x => x.status === 'pending' || x.status === 'inprogress').length,
+    housekeeping: hk.filter(x => x.status === 'pending' || x.status === 'inprogress').length,
+    complaints: comp.filter(x => x.status === 'open').length,
+    pets: pendingPets.length,
+    payments: pays.filter(x => x.status === 'pending').length
+  };
+
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  badge.textContent = total > 99 ? '99+' : total;
+  badge.style.display = total > 0 ? 'inline-block' : 'none';
+
+  // Build dropdown content
+  const content = document.getElementById('notifContent');
+  if (!content) return;
+
+  if (total === 0) {
+    content.innerHTML = '<div class="notif-empty">✅ ไม่มีการแจ้งเตือนใหม่</div>';
+    return;
+  }
+
+  const groups = [
+    { key: 'maintenance', icon: '🔧', label: 'Maintenance รอดำเนินการ', page: 'requests-approvals', tab: 'maintenance' },
+    { key: 'housekeeping', icon: '🧹', label: 'Housekeeping รอดำเนินการ', page: 'requests-approvals', tab: 'housekeeping' },
+    { key: 'complaints', icon: '⚠️', label: 'Complaints ที่ยังเปิดอยู่', page: 'requests-approvals', tab: 'complaints' },
+    { key: 'pets', icon: '🐾', label: 'Pet Approvals รอการอนุมัติ', page: 'requests-approvals', tab: 'pets' },
+    { key: 'payments', icon: '💳', label: 'Payment ยังไม่ตรวจสอบ', page: 'payment-verify', tab: null }
+  ];
+
+  content.innerHTML = groups
+    .filter(g => counts[g.key] > 0)
+    .map(g => {
+      const nav = g.tab
+        ? `window.showPage('${g.page}');setTimeout(()=>switchRequestsTab('${g.tab}',document.getElementById('tab-${g.tab}-btn')),80);toggleNotifPanel();`
+        : `window.showPage('${g.page}',document.querySelector('[onclick*="${g.page}"]'));toggleNotifPanel();`;
+      return `<div class="notif-group-title">${g.icon} ${g.label}</div>
+<div class="notif-item" onclick="${nav}">
+  <span>${g.icon} ${counts[g.key]} รายการรอดำเนินการ</span>
+  <span class="notif-item-count">${counts[g.key]}</span>
+</div>`;
+    }).join('');
+}
+
+function toggleNotifPanel() {
+  const dd = document.getElementById('notifDropdown');
+  if (!dd) return;
+  const isOpen = dd.classList.contains('open');
+  if (!isOpen) updateNotificationBell(); // refresh on open
+  dd.classList.toggle('open', !isOpen);
+}
+
+document.addEventListener('click', function(e) {
+  const wrapper = document.getElementById('notifBellWrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    const dd = document.getElementById('notifDropdown');
+    if (dd) dd.classList.remove('open');
+  }
+});
 
 function updateMaintenanceBadge(){
   const banner=document.getElementById('mx-notification-banner');

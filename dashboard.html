@@ -1807,6 +1807,21 @@
     background: var(--green-dark);
   }
 
+  /* ===== NOTIFICATION BELL ===== */
+  #notifBellWrapper { position:fixed; top:16px; right:20px; z-index:9992; }
+  #notifBellBtn { background:rgba(255,255,255,.92); border:1.5px solid var(--border); border-radius:50%; width:42px; height:42px; font-size:1.1rem; cursor:pointer; position:relative; box-shadow:0 2px 8px rgba(0,0,0,.12); transition:all .2s; display:flex; align-items:center; justify-content:center; }
+  #notifBellBtn:hover { background:var(--green-pale); border-color:var(--green); }
+  #notifBadge { position:absolute; top:-5px; right:-5px; background:#ef5350; color:#fff; font-size:.6rem; font-weight:800; padding:2px 5px; border-radius:10px; min-width:16px; text-align:center; line-height:1.2; display:none; }
+  #notifDropdown { display:none; position:absolute; right:0; top:50px; width:300px; background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,.15); max-height:70vh; overflow-y:auto; z-index:9993; }
+  #notifDropdown.open { display:block; }
+  .notif-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .notif-header h3 { font-size:.95rem; font-weight:700; color:var(--green-dark); margin:0; }
+  .notif-group-title { padding:8px 16px 4px; font-size:.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; background:var(--green-pale); border-top:1px solid var(--border); }
+  .notif-item { padding:10px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; font-size:.85rem; display:flex; align-items:center; gap:8px; }
+  .notif-item:hover { background:var(--green-pale); }
+  .notif-item-count { background:var(--green); color:#fff; font-size:.7rem; font-weight:800; padding:2px 7px; border-radius:10px; margin-left:auto; flex-shrink:0; }
+  .notif-empty { padding:24px; text-align:center; color:var(--text-muted); font-size:.85rem; }
+
 </style>
 </head>
 <body>
@@ -3817,5 +3832,19 @@
 </div>
 
 <script src="./shared/dashboard-extra.js"></script>
+
+<!-- ===== NOTIFICATION BELL ===== -->
+<div id="notifBellWrapper">
+  <button id="notifBellBtn" onclick="toggleNotifPanel()">
+    🔔<span id="notifBadge">0</span>
+  </button>
+  <div id="notifDropdown">
+    <div class="notif-header">
+      <h3>🔔 การแจ้งเตือน</h3>
+      <button onclick="toggleNotifPanel()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);">✕</button>
+    </div>
+    <div id="notifContent"></div>
+  </div>
+</div>
 </body>
 </html>
