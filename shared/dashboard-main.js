@@ -2955,6 +2955,7 @@ function initRoomsPage(){
   const allTenants = loadTenants();
   const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
   const grid=document.getElementById('roomGrid');
+  if(!grid) return;
   grid.innerHTML=rooms.map(r=>{
     const tenant = allTenants[r.id];
     const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
@@ -2972,6 +2973,7 @@ function initRoomsPage(){
   }).join('');
 
   const tbl=document.getElementById('roomTable');
+  if(!tbl) return;
   const rentT=rooms.filter(r=>r.type==='room').reduce((a,r)=>a+r.rentPrice,0);
   const avgE=Math.round(12500/22),avgW=Math.round(3200/22);
   tbl.innerHTML=`
@@ -3185,6 +3187,7 @@ function renderCompactRoomGrid(){
 function toggleRoomView(view, btn){
   const compactView=document.getElementById('roomViewCompact');
   const classicView=document.getElementById('roomViewClassic');
+  if(!compactView && !classicView) return;
   const buttons=document.querySelectorAll('.view-btn');
 
   buttons.forEach(b=>b.classList.remove('active'));
@@ -3579,6 +3582,7 @@ function renderNestCompactGrid(){
 // Toggle Nest room view between grid and classic table
 function toggleNestRoomView(view, btn){
   const compactView = document.getElementById('nestViewCompact');
+  if(!compactView) return;
   const classicView = document.getElementById('nestViewClassic');
   const buttons = btn.parentElement.querySelectorAll('.view-btn');
 
@@ -3618,6 +3622,7 @@ function initNestPage(){
   const allTenants = loadTenants();
   const rooms = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
   const grid = document.getElementById('nestRoomGrid');
+  if(!grid) return;
   grid.innerHTML = rooms.map(r => {
     const tenant = allTenants[r.id];
     const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
@@ -3636,6 +3641,7 @@ function initNestPage(){
 
   // Populate classic table view
   const tbl = document.getElementById('nestRoomTable');
+  if(!tbl) return;
   const rentStudio = rooms.filter(r => r.type === 'studio').reduce((a, r) => a + (r.rentPrice || 0), 0);
   const rentPet = rooms.filter(r => r.type === 'pet-allowed').reduce((a, r) => a + (r.rentPrice || 0), 0);
   const rentTotal = rooms.reduce((a, r) => a + (r.rentPrice || 0), 0);

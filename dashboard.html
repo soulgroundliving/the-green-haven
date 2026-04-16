@@ -2309,38 +2309,6 @@
     </div>
   </div>
 
-  <!-- Room display options -->
-  <div style="margin-bottom:1.2rem;">
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-        <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
-        <button onclick="toggleRoomView('grid', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--green);background:var(--green-pale);color:var(--green-dark);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">🗺️ แผนผัง</button>
-        <button onclick="toggleRoomView('classic', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตารางแบบดั้งเดิม</button>
-      </div>
-      <button onclick="openBatchRentAdjustmentModal()" style="padding:8px 14px;border-radius:6px;border:1.5px solid #9c27b0;background:#f3e5f5;color:#6a1b9a;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">⚙️ ปรับค่าเช่าหลายห้อง</button>
-    </div>
-  </div>
-
-  <!-- Floor Plan View (Default) -->
-  <div id="roomViewCompact">
-    <div class="card">
-      <div class="card-title">🏠 ตารางแผนผัง</div>
-      <div class="room-grid" id="roomGrid"></div>
-      <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:.76rem;">
-        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e8f5e9;border:2px solid #4caf50;border-radius:3px;display:inline-block"></span>ห้องพัก</span>
-        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e3f2fd;border:2px solid #2196f3;border-radius:3px;display:inline-block"></span>พาณิชย์</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Classic Table View (Hidden by default) -->
-  <div id="roomViewClassic" style="display:none;">
-    <div class="card">
-      <div class="card-title">ตารางห้องพัก & อัตราค่าเช่า</div>
-      <div class="scroll-x"><table class="data-table" id="roomTable"></table></div>
-    </div>
-  </div>
-
   </div><!-- end tenant-rooms-section -->
 
   <!-- Property Nest Section (Building Info + Room Grid) -->
@@ -2421,29 +2389,8 @@
     </div>
   </div>
 
-  <!-- Room display options -->
-  <div style="margin-bottom:1.2rem;">
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-      <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
-      <button onclick="toggleNestRoomView('grid', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--blue);background:#e3f2fd;color:#1565c0;border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">🗺️ แผนผัง</button>
-      <button onclick="toggleNestRoomView('classic', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตารางแบบดั้งเดิม</button>
-    </div>
-  </div>
-
-  <!-- Floor Plan View (Default) -->
-  <div id="nestViewCompact">
-    <div class="card">
-      <div class="card-title">🏗️ ตารางแผนผัง Nest</div>
-      <div class="room-grid" id="nestRoomGrid"></div>
-      <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:.76rem;">
-        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e3f2fd;border:2px solid #2196f3;border-radius:3px;display:inline-block"></span>Studio</span>
-        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#f3e5f5;border:2px solid #9c27b0;border-radius:3px;display:inline-block"></span>Pet-Allowed</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Classic Table View (Hidden by default) -->
-  <div id="nestViewClassic" style="display:none;">
+  <!-- Classic Table View -->
+  <div id="nestViewClassic">
     <div class="card">
       <div class="card-title">ตารางห้องพัก Nest & อัตราค่าเช่า</div>
       <div class="scroll-x"><table class="data-table" id="nestRoomTable"></table></div>
