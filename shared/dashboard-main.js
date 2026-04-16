@@ -25,13 +25,6 @@ window._showPageImpl = function(page,btn){
   if(page==='monthly')initMonthlyPage();
   if(page==='tenant')initTenantPage();
   if(page==='expense')initExpensePage();
-  if(page==='maintenance'){
-    // Redirect to unified Requests & Approvals page
-    document.getElementById('page-'+page)?.classList.remove('active');
-    document.getElementById('page-requests-approvals')?.classList.add('active');
-    setTimeout(()=>switchRequestsTab('maintenance',document.getElementById('tab-maintenance-btn')),50);
-    return;
-  }
   if(page==='requests-approvals'){
     // Default to Maintenance tab on first load
     setTimeout(()=>switchRequestsTab('maintenance',document.getElementById('tab-maintenance-btn')),80);

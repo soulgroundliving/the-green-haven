@@ -912,7 +912,6 @@
 
   .insights-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;margin-bottom:1rem;}
   .kpi-live{display:none;}
-  #dash-live-panels{display:none;}
   .insight-card{border-radius:var(--radius);padding:.75rem 1rem;border-left:4px solid;}
   .insight-card.green{background:var(--green-pale);border-color:var(--green);}
   .insight-card.amber{background:var(--accent-light);border-color:var(--accent);}
@@ -1284,46 +1283,6 @@
     display: inline-block;
     min-width: 20px;
   }
-
-  /* Subsection Styling for Finance & Accounting */
-  .sidebar-subsection {
-    margin: 8px 0;
-    padding: 4px 0;
-    padding-left: 8px;
-    border-left: 3px solid #4db8a8;
-  }
-
-  .sidebar-subsection-title {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: #4db8a8;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 4px 12px;
-    margin-bottom: 4px;
-    opacity: 0.8;
-  }
-
-  .sidebar-item-indent {
-    padding-left: 28px !important;
-    font-size: 0.9rem;
-  }
-
-  .sidebar-item-indent .sidebar-item-icon {
-    font-size: 0.9rem;
-    width: 16px;
-    margin-right: 8px;
-  }
-
-  .sidebar-arrow {
-    margin-left: auto;
-    font-size: 0.65rem;
-    transition: transform 0.2s;
-    opacity: 0.6;
-    flex-shrink: 0;
-  }
-  .sidebar-arrow.open { transform: rotate(90deg); opacity: 1; }
-  .sidebar-accordion-content { overflow: hidden; }
 
   .sidebar-badge {
     display: inline-block;
@@ -1883,6 +1842,9 @@
       <div class="sidebar-group-title">Data Entry</div>
       <button class="sidebar-item" onclick="window.showPage('meter',this)">
         <span class="sidebar-item-icon">📊</span>Meter Upload
+      </button>
+      <button class="sidebar-item" onclick="window.showPage('monthly',this)">
+        <span class="sidebar-item-icon">📅</span>Monthly Report
       </button>
       <button class="sidebar-item" onclick="window.showPage('bill',this)">
         <span class="sidebar-item-icon">💳</span>Billing<span class="sidebar-badge" id="billBadge" style="display:none"></span>
@@ -2854,71 +2816,6 @@
     <div class="card-title">📋 รายการทั้งหมด</div>
     <div id="expList"></div>
   </div>
-</div>
-
-<!-- ===== MAINTENANCE ===== -->
-<div class="page" id="page-maintenance">
-  <div class="section-title">🔧 Requests & Approvals</div>
-
-  <!-- TAB NAVIGATION -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;">
-    <button class="dashboard-tab year-tab active" onclick="switchMaintenanceTab('maintenance', this)">🔧 Maintenance</button>
-    <button class="dashboard-tab year-tab" onclick="switchMaintenanceTab('housekeeping', this)">🧹 Housekeeping</button>
-  </div>
-
-  <!-- MAINTENANCE TAB -->
-  <div id="mx-maintenance-tab" class="dashboard-tab-content active">
-  <!-- NOTIFICATION BANNER -->
-  <div id="mx-notification-banner" style="display:none;background:#fff9c4;border-left:6px solid #fbc02d;padding:1rem;margin-bottom:1rem;border-radius:6px;">
-    <div style="color:#f57f17;font-weight:700;font-size:0.95rem;font-family:'Sarabun',sans-serif;">⚠️ <span id="mx-pending-count">0</span> รายการแจ้งซ่อม รอการตรวจสอบ</div>
-  </div>
-  <div class="mx-kpi-grid">
-    <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-pending" style="color:#e65100;">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
-    <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
-    <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
-  </div>
-  <!-- Action Bar -->
-  <div style="display:flex;gap:12px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
-    <input type="text" id="mx-filter-room" oninput="renderMaintenancePage()" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
-    <select id="mx-filter-status" onchange="renderMaintenancePage()" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
-      <option value="all">📋 ทั้งหมด</option>
-      <option value="pending">⏳ รอดำเนินการ</option>
-      <option value="inprogress">🔨 กำลังดำเนินการ</option>
-      <option value="done">✅ เสร็จแล้ว</option>
-    </select>
-    <button onclick="showAddMaintenanceModal()" style="padding:10px 18px;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s ease;box-shadow:0 2px 8px rgba(76, 175, 80, 0.2);white-space:nowrap;">➕ แจ้งซ่อมใหม่</button>
-  </div>
-  <!-- List -->
-  <div class="card">
-    <div class="card-title">📋 รายการงานซ่อมทั้งหมด</div>
-    <div id="mxList"></div>
-  </div>
-  </div><!-- END MAINTENANCE TAB -->
-
-  <!-- HOUSEKEEPING TAB -->
-  <div id="mx-housekeeping-tab" class="dashboard-tab-content">
-  <div class="mx-kpi-grid">
-    <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-pending" style="color:#e65100;">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
-    <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
-    <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
-  </div>
-  <!-- Action Bar -->
-  <div style="display:flex;gap:12px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
-    <input type="text" id="hk-filter-room" oninput="renderHousekeepingList()" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
-    <select id="hk-filter-status" onchange="renderHousekeepingList()" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
-      <option value="all">📋 ทั้งหมด</option>
-      <option value="pending">⏳ รอดำเนินการ</option>
-      <option value="inprogress">🔨 กำลังดำเนินการ</option>
-      <option value="done">✅ เสร็จแล้ว</option>
-    </select>
-    <button onclick="showAddHousekeepingModal()" style="padding:10px 18px;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s ease;box-shadow:0 2px 8px rgba(76, 175, 80, 0.2);white-space:nowrap;">➕ ขอบริการใหม่</button>
-  </div>
-  <!-- List -->
-  <div class="card">
-    <div class="card-title">📋 รายการบริการทำความสะอาดทั้งหมด</div>
-    <div id="hkList"></div>
-  </div>
-  </div><!-- END HOUSEKEEPING TAB -->
 </div>
 
 <!-- ===== ANNOUNCEMENTS ===== -->
