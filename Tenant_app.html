@@ -1260,30 +1260,47 @@
         </div>
         <div class="card">
             <form onsubmit="submitMaintenance(event)">
-                <label
-                    style="font-weight: 700; margin-bottom: 0.3rem; color: var(--text-dark); font-size: 0.9rem; display: block;">ประเภท
-                    *</label>
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">หมวดซ่อม *</label>
                 <select id="maintenanceCategory" required
-                    style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 10px;">
+                    style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
                     <option value="">เลือกประเภท</option>
                     <option value="electric">⚡ ไฟฟ้า</option>
-                    <option value="water">💧 น้ำ</option>
+                    <option value="water">💧 น้ำ/ประปา</option>
                     <option value="aircon">❄️ แอร์</option>
                     <option value="furniture">🪑 เฟอร์นิเจอร์</option>
+                    <option value="door">🚪 ประตู/หน้าต่าง</option>
+                    <option value="internet">📶 อินเทอร์เน็ต</option>
                     <option value="other">📝 อื่นๆ</option>
                 </select>
 
-                <label
-                    style="font-weight: 700; margin-bottom: 0.3rem; color: var(--text-dark); font-size: 0.9rem; display: block;">รายละเอียด
-                    *</label>
-                <textarea id="maintenanceDescription" required placeholder="อธิบายปัญหา..."
-                    style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 10px; min-height: 60px;"></textarea>
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">ความเร่งด่วน</label>
+                <select id="maintenancePriority"
+                    style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
+                    <option value="normal">🟡 ปกติ</option>
+                    <option value="urgent">🔴 เร่งด่วน</option>
+                    <option value="low">🟢 ไม่เร่ง</option>
+                </select>
 
-                <button type="submit" class="btn-main" style="margin-top: 10px;">📤 ส่งคำขอ</button>
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">อธิบายรายละเอียด *</label>
+                <textarea id="maintenanceDescription" required placeholder="โปรดอธิบายรายละเอียด เช่น ตำแหน่ง อาการ ..."
+                    style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px; min-height:80px; font-family:inherit;"></textarea>
+
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
+                <input type="file" id="maintenancePhoto" accept="image/*"
+                    style="width:100%; margin-bottom:8px; font-size:0.85rem;"
+                    onchange="handleMaintenancePhotoChange('maintenancePhoto','maintenancePhotoPreview','maintenancePhotoImg')">
+                <div id="maintenancePhotoPreview" style="margin-bottom:10px; text-align:center; display:none;">
+                    <img id="maintenancePhotoImg" style="max-width:100%; border-radius:10px; max-height:200px; object-fit:cover;">
+                    <button type="button" onclick="clearMaintenancePhoto()"
+                        style="display:block; margin:6px auto 0; font-size:0.75rem; color:#ef4444; background:none; border:none; cursor:pointer;">✕ ลบรูป</button>
+                </div>
+
+                <button type="submit" class="btn-main" style="margin-top:10px;" id="maintenanceSubmitBtn">📤 ส่งแจ้งปัญหา</button>
             </form>
         </div>
+
         <div class="section-title"><span>ประวัติการซ่อม</span></div>
-        <div id="ticketsList"></div>
+        <div id="ticketsList" style="padding:0 16px 80px;"></div>
     </div>
 
 
@@ -3645,6 +3662,162 @@
         }
 
         // ==========================================
+        // MAINTENANCE SYSTEM
+        // ==========================================
+        function handleMaintenancePhotoChange(inputId, previewId, imgId) {
+            const fileInput = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            const img = document.getElementById(imgId);
+            if (fileInput && fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('❌ ไฟล์ใหญ่เกินไป (สูงสุด 10MB)');
+                    fileInput.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = e => { img.src = e.target.result; preview.style.display = 'block'; };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
+        function clearMaintenancePhoto() {
+            const input = document.getElementById('maintenancePhoto');
+            const preview = document.getElementById('maintenancePhotoPreview');
+            if (input) input.value = '';
+            if (preview) preview.style.display = 'none';
+        }
+
+        async function compressImage(base64Data, maxWidth = 1280, maxHeight = 1280, quality = 0.75) {
+            return new Promise(resolve => {
+                try {
+                    const img = new Image();
+                    img.onload = function () {
+                        let w = img.width, h = img.height;
+                        if (w > maxWidth || h > maxHeight) {
+                            const ratio = Math.min(maxWidth / w, maxHeight / h);
+                            w = Math.round(w * ratio); h = Math.round(h * ratio);
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = () => resolve(base64Data);
+                    img.src = base64Data;
+                } catch (e) { resolve(base64Data); }
+            });
+        }
+
+        function getCategoryName(cat) {
+            const m = { electric:'⚡ ไฟฟ้า', water:'💧 น้ำ/ประปา', aircon:'❄️ แอร์', furniture:'🪑 เฟอร์นิเจอร์', door:'🚪 ประตู/หน้าต่าง', internet:'📶 อินเทอร์เน็ต', other:'📝 อื่นๆ' };
+            return m[cat] || cat;
+        }
+
+        function getMaintenanceTickets() {
+            try { return JSON.parse(localStorage.getItem('tenant_maintenance_tickets') || '[]'); }
+            catch (e) { return []; }
+        }
+
+        function renderTicketsList() {
+            const container = document.getElementById('ticketsList');
+            if (!container) return;
+            const tickets = getMaintenanceTickets();
+            if (tickets.length === 0) {
+                container.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:0.85rem;padding:20px;">ยังไม่มีรายการแจ้งซ่อม</p>';
+                return;
+            }
+            const statusText = { pending:'⏳ รอดำเนินการ', inprogress:'🔧 กำลังซ่อม', done:'✅ เสร็จสิ้น' };
+            const statusColor = { pending:'#f59e0b', inprogress:'#3b82f6', done:'#22c55e' };
+            container.innerHTML = tickets.map(t => {
+                const date = t.submittedDate ? new Date(t.submittedDate).toLocaleDateString('th-TH') : (t.date || '');
+                const status = t.status || 'pending';
+                return `<div style="background:white;border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid #f0f0f0;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span style="font-size:0.8rem;font-weight:700;color:#6b7280;">${t.id}</span>
+                        <span style="font-size:0.72rem;font-weight:700;color:${statusColor[status]||'#6b7280'};">${statusText[status]||status}</span>
+                    </div>
+                    <p style="font-size:0.85rem;font-weight:700;margin-bottom:4px;">${getCategoryName(t.category)}</p>
+                    <p style="font-size:0.8rem;color:#6b7280;margin-bottom:4px;">${t.description||t.desc||''}</p>
+                    <p style="font-size:0.72rem;color:#9ca3af;">${date}</p>
+                    ${t.beforePhoto ? `<img src="${t.beforePhoto}" style="margin-top:8px;width:100%;max-height:140px;object-fit:cover;border-radius:8px;">` : ''}
+                    ${status==='done' && t.workNotes ? `<p style="font-size:0.8rem;margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;color:#374151;">📝 ${t.workNotes}</p>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        async function submitMaintenance(event) {
+            event.preventDefault();
+            const category = document.getElementById('maintenanceCategory').value;
+            const description = document.getElementById('maintenanceDescription').value.trim();
+            const priority = document.getElementById('maintenancePriority')?.value || 'normal';
+            const photoInput = document.getElementById('maintenancePhoto');
+            if (!category || !description) { alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
+
+            const btn = document.getElementById('maintenanceSubmitBtn');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังส่ง...'; }
+
+            const ticketId = `T${Date.now()}`;
+            const reportedDate = new Date().toISOString().split('T')[0];
+            const ticket = {
+                id: ticketId,
+                room: window._tenantAppRoom || '-',
+                building: window._tenantAppBuilding || '-',
+                date: new Date().toLocaleDateString('th-TH'),
+                category,
+                categoryLabel: getCategoryName(category),
+                description,
+                desc: description,
+                priority,
+                status: 'pending',
+                reportedAt: reportedDate,
+                submittedDate: new Date().toISOString()
+            };
+
+            // Handle photo upload
+            if (photoInput && photoInput.files && photoInput.files[0]) {
+                const file = photoInput.files[0];
+                const reader = new FileReader();
+                reader.onload = async e => {
+                    ticket.beforePhoto = await compressImage(e.target.result, 1280, 1280, 0.75);
+                    ticket.photoFileName = file.name;
+                    _saveMaintenanceTicket(ticket);
+                    _afterMaintenanceSave(event.target, btn);
+                };
+                reader.onerror = () => { _saveMaintenanceTicket(ticket); _afterMaintenanceSave(event.target, btn); };
+                reader.readAsDataURL(file);
+            } else {
+                _saveMaintenanceTicket(ticket);
+                _afterMaintenanceSave(event.target, btn);
+            }
+        }
+
+        function _saveMaintenanceTicket(ticket) {
+            // Save to maintenance_data (admin-compatible)
+            try {
+                let adminList = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
+                adminList.unshift({ id:ticket.id, room:ticket.room, building:ticket.building, desc:ticket.description, category:ticket.category, priority:ticket.priority, status:ticket.status, reportedAt:ticket.reportedAt, beforePhoto:ticket.beforePhoto, photoFileName:ticket.photoFileName });
+                localStorage.setItem('maintenance_data', JSON.stringify(adminList));
+            } catch(e) {}
+            // Save to tenant tickets
+            try {
+                let tenantList = getMaintenanceTickets();
+                tenantList.unshift(ticket);
+                localStorage.setItem('tenant_maintenance_tickets', JSON.stringify(tenantList));
+            } catch(e) {}
+        }
+
+        function _afterMaintenanceSave(form, btn) {
+            alert('✅ แจ้งปัญหาสำเร็จ!\nทีมงานจะติดต่อกลับโดยเร็ว');
+            form.reset();
+            clearMaintenancePhoto();
+            if (btn) { btn.disabled = false; btn.textContent = '📤 ส่งแจ้งปัญหา'; }
+            renderTicketsList();
+        }
+
+        // ==========================================
         // COMPLAINT SYSTEM
         // ==========================================
         let currentSeverity = 'low';
@@ -3826,6 +3999,7 @@
             updateDashboard();
             setInterval(updateDashboard, 900000);
             loadGamificationData();
+            renderTicketsList();
         });
 
 
