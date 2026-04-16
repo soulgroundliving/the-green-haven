@@ -3724,7 +3724,8 @@ function updateNestInfoCards() {
 
   const totalRent = rooms.reduce((a, r) => a + (r.rentPrice || 0), 0);
   set('nest-total-title', `📊 รวมทั้งหมด (${rooms.length} ห้อง)`);
-  set('nest-total-income', `฿${totalRent.toLocaleString()}/เดือน`);
+  set('nest-total-income',  `฿${totalRent.toLocaleString()}/เดือน`);
+  set('nest-total-income2', `฿${totalRent.toLocaleString()}/เดือน`);
   set('nest-total-breakdown', `${s.length} Studio + ${p.length} Pet-Allowed`);
 }
 
@@ -3777,7 +3778,8 @@ function updateRoomsInfoCards() {
   set('rooms-card-title', `🏠 ห้องพัก (${totalRooms} ห้อง)`);
   set('rooms-rent-tiers', tierStr || '฿1,200 / ฿1,500 / ฿2,000/เดือน');
   set('rooms-total-title', `📊 รวมทั้งหมด (${totalRooms + 1} ห้อง)`);
-  set('rooms-total-income', `฿${totalIncome.toLocaleString()}/เดือน (ไม่รวมร้านค้า)`);
+  set('rooms-total-income',  `฿${totalIncome.toLocaleString()}/เดือน (ไม่รวมร้านค้า)`);
+  set('rooms-total-income2', `฿${totalIncome.toLocaleString()}/เดือน (ไม่รวมร้านค้า)`);
   set('rooms-total-breakdown', `${totalRooms} ห้องพัก + 1 พาณิชย์`);
 }
 
