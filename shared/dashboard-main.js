@@ -3516,7 +3516,7 @@ function renderNestCompactGrid(){
     }
 
     // Pet badges
-    const petKey = `tenant_pets_${r.id}`;
+    const petKey = `tenant_pets_nest_${r.id}`;
     const roomPets = JSON.parse(localStorage.getItem(petKey) || '[]').filter(p => p.status === 'approved');
     const petBadgesHtml = roomPets.length > 0
       ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;">${roomPets.map(p => {
