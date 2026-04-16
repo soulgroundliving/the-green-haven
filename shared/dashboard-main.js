@@ -61,9 +61,10 @@ window._switchMeterTabImpl = function(tabName, btnElement) {
 
   // Show selected tab
   const contentEl = document.getElementById('meter-' + tabName + '-content');
+  const resolvedBtn = btnElement || document.getElementById('tab-' + tabName + '-btn');
   if (contentEl) {
     contentEl.style.display = 'block';
-    if (btnElement) btnElement.classList.add('active');
+    if (resolvedBtn) resolvedBtn.classList.add('active');
   }
 
   // Initialize meter page content if needed
@@ -2378,9 +2379,14 @@ function switchContentTab(tabName, btn) {
 
   // Show selected tab
   const tabElement = document.getElementById('content-tab-' + tabName);
+  const resolvedBtn = btn || document.getElementById('tab-' + tabName + '-btn');
   if(tabElement) {
     tabElement.style.display = 'block';
-    if(btn) btn.classList.add('active');
+    if(resolvedBtn) resolvedBtn.classList.add('active');
+    // Lazy-init tab content
+    if(tabName === 'announcements') initAnnouncementsPage();
+    else if(tabName === 'events' && typeof initCommunityEventsPage === 'function') initCommunityEventsPage();
+    else if(tabName === 'docs' && typeof initCommunityDocsPage === 'function') initCommunityDocsPage();
   }
 }
 
