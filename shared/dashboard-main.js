@@ -22,7 +22,6 @@ window._showPageImpl = function(page,btn){
     window._closeSidebarImpl();
   }
   if(page==='dashboard'){setTimeout(initDashboardCharts,100);updateDashboardLive();syncDashboardYearUI();}
-  if(page==='monthly')initMonthlyPage();
   if(page==='tenant')initTenantPage();
   if(page==='expense')initExpensePage();
   if(page==='requests-approvals'){
@@ -74,6 +73,20 @@ window._switchMeterTabImpl = function(tabName, btnElement) {
     setTimeout(() => loadRoomConfigUI(), 50);
   } else if (tabName === 'import-meter') {
     initImportMeterTab();
+  } else if (tabName === 'monthly-status') {
+    // Render meter status table + set sensible defaults
+    setTimeout(() => {
+      const now = new Date();
+      const mm = document.getElementById('mt-month');
+      const my = document.getElementById('mt-year');
+      const vm = document.getElementById('vc-month');
+      const vy = document.getElementById('vc-year');
+      if (mm && !mm.value) mm.value = now.getMonth() + 1;
+      if (my && !my.value) my.value = now.getFullYear() + 543;
+      if (vm && !vm.value) vm.value = now.getMonth() + 1;
+      if (vy && !vy.value) vy.value = now.getFullYear() + 543;
+      if (typeof renderMeterTable === 'function') renderMeterTable();
+    }, 50);
   }
 };
 // Assign to global scope
@@ -3807,62 +3820,6 @@ function updateRoomsInfoCards() {
   set('rooms-total-breakdown', `${totalRooms} ห้องพัก + 1 พาณิชย์`);
 }
 
-// ===== MONTHLY PAGE =====
-let monthlyYear='67';
-function setMonthlyYear(yr,btn){
-  document.querySelectorAll('#page-monthly .year-tab').forEach(b=>b.classList.remove('active'));
-  if(btn)btn.classList.add('active');
-  monthlyYear=yr; initMonthlyPage();
-}
-function initMonthlyPage(){
-  renderMeterTable();
-  // Load from Firebase or HISTORICAL_DATA (no hardcoded data)
-  let firebaseData = null;
-  let historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
-  const d = firebaseData || historicalData[monthlyYear];
-
-  if(!d || !d.months){
-    document.getElementById('monthlyTable').innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">ยังไม่มีข้อมูลสำหรับปี ${monthlyYear}</td></tr>`;
-    return;
-  }
-
-  const tbl=document.getElementById('monthlyTable');
-  const rows=d.months.map((m,i)=>{
-    if(!m||m[3]===0)return`<tr style="color:var(--text-muted);"><td>${MONTHS_FULL[i+1]}</td><td colspan="5" style="text-align:center;font-style:italic;">ยังไม่มีข้อมูล</td></tr>`;
-    const other=Math.max(0,m[3]-m[0]-(m[1]||0)-(m[2]||0)-22*20);
-    return`<tr><td><strong>${MONTHS_FULL[i+1]}</strong></td><td>฿${m[0].toLocaleString()}</td><td>${m[1]?'฿'+m[1].toLocaleString():'—'}</td><td>${m[2]?'฿'+m[2].toLocaleString():'—'}</td><td>฿${other.toLocaleString()}</td><td style="font-weight:700;color:var(--green-dark)">฿${m[3].toLocaleString()}</td></tr>`;
-  });
-  tbl.innerHTML=`
-    <thead><tr><th>เดือน</th><th>ค่าเช่าห้อง</th><th>ค่าไฟ</th><th>ค่าน้ำ</th><th>ค่าพาณิชย์/อื่นๆ</th><th>รวม</th></tr></thead>
-    <tbody>${rows.join('')}</tbody>
-    <tfoot><tr style="background:var(--green-pale);font-weight:700;">
-      <td>รวม</td>
-      <td>฿${d.months.filter(Boolean).reduce((a,m)=>a+m[0],0).toLocaleString()}</td>
-      <td>฿${d.months.filter(m=>m&&m[1]).reduce((a,m)=>a+m[1],0).toLocaleString()}</td>
-      <td>฿${d.months.filter(m=>m&&m[2]).reduce((a,m)=>a+m[2],0).toLocaleString()}</td>
-      <td>—</td>
-      <td>฿${d.months.filter(Boolean).reduce((a,m)=>a+m[3],0).toLocaleString()}</td>
-    </tr></tfoot>`;
-
-  const labels=d.months.map((_,i)=>MONTHS_TH[i+1]);
-  const mkLine=(id,dataArr,color,label)=>{
-    const el=document.getElementById(id);if(!el)return;
-    Chart.getChart(el)?.destroy();
-    return new Chart(el.getContext('2d'),{type:'line',data:{labels,datasets:[{label,data:dataArr,borderColor:color,backgroundColor:color.replace(')',',0.08)').replace('rgb','rgba'),fill:true,tension:.4,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},scales:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'}},x:{grid:{display:false}}}}});
-  };
-
-  const el=document.getElementById('chartMonthlyStack');if(el){Chart.getChart(el)?.destroy();
-  new Chart(el.getContext('2d'),{type:'bar',data:{labels,datasets:[
-    {label:'ค่าเช่า',data:d.months.map(m=>m?m[0]:0),backgroundColor:'#2d8653',stack:'s'},
-    {label:'ค่าไฟ',data:d.months.map(m=>m&&m[1]?m[1]:0),backgroundColor:'#ff8f00',stack:'s'},
-    {label:'ค่าน้ำ',data:d.months.map(m=>m&&m[2]?m[2]:0),backgroundColor:'#2196f3',stack:'s'},
-    {label:'ค่าพาณิชย์',data:d.months.map(m=>m?Math.max(0,m[3]-m[0]-(m[1]||0)-(m[2]||0)-22*20):0),backgroundColor:'#9c27b0',stack:'s'},
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}},tooltip:{mode:'index',intersect:false}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'}}}}});}
-
-  let cum=0;const cumEl=document.getElementById('chartCumulative');if(cumEl){Chart.getChart(cumEl)?.destroy();
-  new Chart(cumEl.getContext('2d'),{type:'line',data:{labels,datasets:[{label:'สะสม',data:d.months.map(m=>{if(m&&m[3])cum+=m[3];return cum>0?cum:null;}),borderColor:'#2d8653',backgroundColor:'rgba(45,134,83,.08)',fill:true,tension:.4,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'฿'+(c.raw||0).toLocaleString()}}},sections:{y:{ticks:{callback:v=>'฿'+(v/1000).toFixed(0)+'K'}},x:{grid:{display:false}}}}});}
-}
-
 // ===== BILL PAGE =====
 let currentBuilding='old';
 let invoiceData=null;
@@ -3927,7 +3884,8 @@ function checkVacant(){
     return;
   }
   const month=parseInt(document.getElementById('vc-month').value);
-  const yy=parseInt(monthlyYear||'69');
+  const yearFull=parseInt(document.getElementById('vc-year')?.value||(new Date().getFullYear()+543));
+  const yy=yearFull%100;
   const key=`${yy}_${month}`;
   // Read from building-namespaced METER_DATA (Rooms Building)
   const md=METER_DATA['rooms'] && METER_DATA['rooms'][key];

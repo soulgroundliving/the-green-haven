@@ -1843,9 +1843,6 @@
       <button class="sidebar-item" onclick="window.showPage('meter',this)">
         <span class="sidebar-item-icon">📊</span>Meter Upload
       </button>
-      <button class="sidebar-item" onclick="window.showPage('monthly',this)">
-        <span class="sidebar-item-icon">📅</span>Monthly Report
-      </button>
       <button class="sidebar-item" onclick="window.showPage('bill',this)">
         <span class="sidebar-item-icon">💳</span>Billing<span class="sidebar-badge" id="billBadge" style="display:none"></span>
       </button>
@@ -2161,60 +2158,6 @@
   </div><!-- END OVERVIEW TAB -->
 </div>
 
-<!-- ===== MONTHLY ===== -->
-<div class="page" id="page-monthly">
-  <div class="section-title">📅 รายงานรายเดือน — ห้องแถว</div>
-  <div class="year-tabs">
-    <span class="year-tab-label">เลือกปี:</span>
-    <button class="year-tab active" onclick="setMonthlyYear('67',this)">2567 (2024)</button>
-    <button class="year-tab" onclick="setMonthlyYear('68',this)">2568 (2025)</button>
-    <button class="year-tab" onclick="setMonthlyYear('69',this)">2569 (2026)</button>
-  </div>
-  <div class="card" style="margin-bottom:1.2rem;"><div class="scroll-x"><table class="data-table" id="monthlyTable"></table></div></div>
-
-  <!-- Monthly meter entry table -->
-  <div class="card" style="margin-bottom:1.2rem;">
-    <div class="card-title">📋 ตารางมิเตอร์ &amp; สถานะชำระ — ห้องแถว</div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.9rem;">
-      <select id="mt-month" onchange="renderMeterTable()" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.88rem;">
-        <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
-        <option value="3">มีนาคม</option><option value="4">เมษายน</option>
-        <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
-        <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
-        <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
-        <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
-      </select>
-      <input type="number" id="mt-year" value="2569" min="2560" max="2590" onchange="renderMeterTable()"
-        style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.88rem;">
-      <span style="font-size:.78rem;color:var(--text-muted);">✅ = คลิกดูรายละเอียด · ⏳ = คลิก"ออกบิล"</span>
-    </div>
-    <div id="meterTableBody"></div>
-  </div>
-
-  <!-- Vacant room checker -->
-  <div class="card" style="margin-bottom:1.2rem;" id="vacantCard">
-    <div class="card-title">🚪 ตรวจสอบห้องว่าง — เลือกเดือนที่ต้องการดู</div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
-      <select id="vc-month" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;">
-        <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
-        <option value="3">มีนาคม</option><option value="4">เมษายน</option>
-        <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
-        <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
-        <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
-        <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
-      </select>
-      <button onclick="checkVacant()" style="padding:6px 18px;background:var(--green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:600;">🔍 ตรวจสอบ</button>
-      <span style="font-size:.8rem;color:var(--text-muted);">ปีที่เลือกด้านบน · ดูจากการใช้ไฟฟ้า (ถ้ามิเตอร์ไม่เพิ่ม = อาจว่าง)</span>
-    </div>
-    <div id="vc-result"></div>
-  </div>
-
-  <div class="charts-grid">
-    <div class="card"><div class="card-title">📊 รายได้รายเดือน (แยกประเภท)</div><div class="chart-wrap"><canvas id="chartMonthlyStack"></canvas></div></div>
-    <div class="card"><div class="card-title">💰 สะสมรายได้</div><div class="chart-wrap"><canvas id="chartCumulative"></canvas></div></div>
-  </div>
-</div>
-
 <!-- ===== TENANT MANAGEMENT PAGE ===== -->
 <div class="page" id="page-tenant">
   <div class="section-title">👥 ผู้เช่า & สัญญา</div>
@@ -2456,6 +2399,7 @@
     <button id="tab-room-config-btn" class="meter-tab year-tab active" onclick="window.switchMeterTab('room-config', this)">⚙️ จัดการห้อง & อัตรา</button>
     <button id="tab-import-meter-btn" class="meter-tab year-tab" onclick="window.switchMeterTab('import-meter', this)">📥 นำเข้าข้อมูลมิเตอร์</button>
     <button id="tab-import-billing-btn" class="meter-tab year-tab" onclick="window.switchMeterTab('import-billing', this)">📥 นำเข้าข้อมูลบิล</button>
+    <button id="tab-monthly-status-btn" class="meter-tab year-tab" onclick="window.switchMeterTab('monthly-status', this)">📋 สถานะชำระ & ห้องว่าง</button>
   </div>
 
   <!-- Tab Content: Room Configuration -->
@@ -2761,6 +2705,50 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Tab Content: Monthly Payment Status & Vacancy (migrated from page-monthly) -->
+  <div id="meter-monthly-status-content" class="meter-tab-content" style="display:none;">
+    <div class="section-title">📋 สถานะชำระรายเดือน &amp; ห้องว่าง — ห้องแถว</div>
+
+    <!-- Monthly meter entry table -->
+    <div class="card" style="margin-bottom:1.2rem;">
+      <div class="card-title">📋 ตารางมิเตอร์ &amp; สถานะชำระ — ห้องแถว</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.9rem;">
+        <select id="mt-month" onchange="renderMeterTable()" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.88rem;">
+          <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+          <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+          <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+          <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+          <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+          <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+        </select>
+        <input type="number" id="mt-year" value="2569" min="2560" max="2590" onchange="renderMeterTable()"
+          style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.88rem;">
+        <span style="font-size:.78rem;color:var(--text-muted);">✅ = คลิกดูรายละเอียด · ⏳ = คลิก"ออกบิล"</span>
+      </div>
+      <div id="meterTableBody"></div>
+    </div>
+
+    <!-- Vacant room checker -->
+    <div class="card" style="margin-bottom:1.2rem;" id="vacantCard">
+      <div class="card-title">🚪 ตรวจสอบห้องว่าง — เลือกเดือน/ปี ที่ต้องการดู</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+        <select id="vc-month" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;">
+          <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+          <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+          <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+          <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+          <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+          <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+        </select>
+        <input type="number" id="vc-year" value="2569" min="2560" max="2590"
+          style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;">
+        <button onclick="checkVacant()" style="padding:6px 18px;background:var(--green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:600;">🔍 ตรวจสอบ</button>
+        <span style="font-size:.8rem;color:var(--text-muted);">ดูจากการใช้ไฟฟ้า (ถ้ามิเตอร์ไม่เพิ่ม = อาจว่าง)</span>
+      </div>
+      <div id="vc-result"></div>
     </div>
   </div>
 
