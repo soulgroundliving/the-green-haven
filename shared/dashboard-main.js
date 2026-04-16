@@ -5434,13 +5434,14 @@ function renderTenantPage(){
       }
     }else vac++;
   });
-  const kpi=document.getElementById('tenantKpiGrid');
-  if(kpi){
-    kpi.innerHTML=`
-      <div class="kpi-card green"><div class="kpi-icon">👤</div><div class="kpi-label">มีผู้เช่า</div><div class="kpi-value green">${occ}</div><div class="kpi-sub">จาก ${rooms.length} ห้อง</div></div>
-      <div class="kpi-card amber"><div class="kpi-icon">🚪</div><div class="kpi-label">ห้องว่าง</div><div class="kpi-value amber">${vac}</div><div class="kpi-sub">${Math.round(vac/rooms.length*100)}% ของทั้งหมด</div></div>
-      <div class="kpi-card blue"><div class="kpi-icon">📈</div><div class="kpi-label">Occupancy Rate</div><div class="kpi-value blue">${Math.round(occ/rooms.length*100)}%</div><div class="kpi-sub">อัตราการเช่า</div></div>
-      <div class="kpi-card ${soon>0?'red':'purple'}"><div class="kpi-icon">⏰</div><div class="kpi-label">สัญญาใกล้หมด</div><div class="kpi-value ${soon>0?'red':'purple'}">${soon}</div><div class="kpi-sub">ภายใน 30 วัน</div></div>`;
+  // Write สัญญาใกล้หมด to the unified building KPI (occupancy-soon / nest-occupancy-soon)
+  const soonId = tenantBuilding==='old' ? 'occupancy-soon' : 'nest-occupancy-soon';
+  const soonEl = document.getElementById(soonId);
+  if(soonEl){
+    soonEl.textContent = soon;
+    // Color: red if any expiring, purple otherwise
+    const card = soonEl.closest('.kpi-card');
+    if(card){ card.className = `kpi-card ${soon>0?'red':'purple'}`; }
   }
   const grid=document.getElementById('tenantGrid');if(!grid)return;
   const searchTerm=(document.getElementById('tenantSearch')?.value||'').toLowerCase();

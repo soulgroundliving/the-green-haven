@@ -2197,27 +2197,10 @@
     <button class="year-tab" onclick="setTenantBuilding('new',this)">🏗️ Nest</button>
   </div>
 
-  <!-- KPIs -->
-  <div class="kpi-grid" id="tenantKpiGrid" style="margin-bottom:1.2rem;"></div>
-
-  <!-- Lease Expiry Alert Block -->
-  <div id="tenantAlertBlock" style="display:none;background:#fff3e0;border:2px solid #f57c00;border-radius:8px;padding:1rem;margin-bottom:1.2rem;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.8rem;">
-      <span style="font-size:1.2rem;">⚠️</span>
-      <span style="font-weight:700;color:#e65100;">หมดสัญญาใน 30 วัน</span>
-    </div>
-    <div id="tenantAlertList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
-  </div>
-
-  <!-- Room Type Info Cards -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:1.2rem;">
-    <div id="roomTypeCardsContainer"></div>
-  </div>
-
   <!-- Property Rooms Section (Building Info + Room Grid) -->
   <div id="tenant-rooms-section">
 
-  <!-- Occupancy Dashboard -->
+  <!-- Occupancy KPIs -->
   <div class="kpi-grid" style="margin-bottom:1.2rem;">
     <div class="kpi-card green">
       <div class="kpi-icon">🏠</div>
@@ -2242,6 +2225,12 @@
       <div class="kpi-label">Occupancy Rate</div>
       <div class="kpi-value purple" id="occupancy-rate">0%</div>
       <div class="kpi-sub">อัตราการใช้</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">⏰</div>
+      <div class="kpi-label">สัญญาใกล้หมด</div>
+      <div class="kpi-value red" id="occupancy-soon">0</div>
+      <div class="kpi-sub">ภายใน 30 วัน</div>
     </div>
   </div>
 
@@ -2374,6 +2363,12 @@
       <div class="kpi-label">Occupancy Rate</div>
       <div class="kpi-value purple" id="nest-occupancy-rate">0%</div>
       <div class="kpi-sub">อัตราการใช้</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">⏰</div>
+      <div class="kpi-label">สัญญาใกล้หมด</div>
+      <div class="kpi-value red" id="nest-occupancy-soon">0</div>
+      <div class="kpi-sub">ภายใน 30 วัน</div>
     </div>
   </div>
 
@@ -2540,11 +2535,6 @@
         <button onclick="applyBatchRentAdjustment()" style="padding:10px 20px;border-radius:6px;border:none;background:#4caf50;color:white;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✓ ปรับค่าเช่า</button>
       </div>
     </div>
-  </div>
-
-  <!-- Tenant Section Header -->
-  <div style="display:flex;align-items:center;gap:10px;margin:1.5rem 0 1rem 0;padding-top:1rem;border-top:2px solid var(--border);">
-    <span style="font-size:1.1rem;font-weight:700;color:var(--text);">👥 ผู้เช่า & สัญญา</span>
   </div>
 
   <!-- Filter + Search Bar -->
