@@ -3048,6 +3048,7 @@ function renderCompactRoomGrid(){
     return true;
   });
   const grid=document.getElementById('roomCompactGrid');
+  if(!grid) return;
 
   // Calculate contract expiry summary
   const today = new Date();
@@ -5594,11 +5595,12 @@ function updateTenantAlertBlock(){
   });
   const alertBlock=document.getElementById('tenantAlertBlock');
   const alertList=document.getElementById('tenantAlertList');
+  if(!alertBlock) return;
   if(expiring.length===0){
     alertBlock.style.display='none';
   }else{
     alertBlock.style.display='block';
-    alertList.innerHTML=expiring.map(r=>`<div style="background:#fff;padding:6px 12px;border-radius:6px;border-left:3px solid #f57c00;font-size:.85rem;">🚪 ห้อง ${r.id}</div>`).join('');
+    if(alertList) alertList.innerHTML=expiring.map(r=>`<div style="background:#fff;padding:6px 12px;border-radius:6px;border-left:3px solid #f57c00;font-size:.85rem;">🚪 ห้อง ${r.id}</div>`).join('');
   }
 }
 
@@ -5606,6 +5608,7 @@ function updateTenantAlertBlock(){
 function updateRoomTypeCards(){
   const rooms=_getTenantRooms();
   const container=document.getElementById('roomTypeCardsContainer');
+  if(!container) return;
   const types={};
   (rooms||[]).forEach(room=>{
     if(!types[room.type])types[room.type]={type:room.type,rooms:0,rent:room.rentPrice||room.rent||0};
