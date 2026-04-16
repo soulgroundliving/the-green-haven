@@ -7417,9 +7417,11 @@ function switchMaintenanceTab(tabName, btn) {
   const tabElement = document.getElementById('mx-' + tabName + '-tab');
   if(tabElement) {
     tabElement.classList.add('active');
-    btn.classList.add('active');
-    btn.style.color = 'var(--green)';
-    btn.style.borderBottomColor = 'var(--green)';
+    if(btn) {
+      btn.classList.add('active');
+      btn.style.color = 'var(--green)';
+      btn.style.borderBottomColor = 'var(--green)';
+    }
 
     // Initialize tab data
     if(tabName === 'housekeeping') {

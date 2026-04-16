@@ -491,6 +491,31 @@
   });
 
   // Global function references (will be reassigned when actual functions are defined)
+  // Sidebar accordion toggle
+  window.toggleSidebarSection = function(id) {
+    const el = document.getElementById(id);
+    const arrow = document.getElementById('arrow-' + id);
+    if (!el) return;
+    const isOpen = el.style.display !== 'none';
+    el.style.display = isOpen ? 'none' : 'block';
+    if (arrow) arrow.classList.toggle('open', !isOpen);
+  };
+
+  // Navigate to page then switch to a specific tab (50ms delay for DOM)
+  window.showPageTab = function(page, tabFn) {
+    window.showPage(page);
+    setTimeout(() => { if (typeof tabFn === 'function') tabFn(); }, 80);
+  };
+
+  // Navigate to dashboard and apply year filter
+  window.showDashboardYear = function(yr) {
+    window.showPage('dashboard');
+    setTimeout(() => {
+      const btn = document.querySelector(`#page-dashboard [onclick*="setYear('${yr}'"]`);
+      if (btn) btn.click();
+    }, 80);
+  };
+
   window.showPage = function(page, btn) {
     // Queue the call if the real showPage isn't ready yet
     if (window._showPageImpl) {
@@ -1290,6 +1315,16 @@
     margin-right: 8px;
   }
 
+  .sidebar-arrow {
+    margin-left: auto;
+    font-size: 0.65rem;
+    transition: transform 0.2s;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .sidebar-arrow.open { transform: rotate(90deg); opacity: 1; }
+  .sidebar-accordion-content { overflow: hidden; }
+
   .sidebar-badge {
     display: inline-block;
     margin-left: 6px;
@@ -1805,115 +1840,170 @@
   </div>
 
   <nav class="sidebar-menu">
-    <!-- Main -->
+
+    <!-- MAIN -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Main</div>
-      <button class="sidebar-item active" onclick="window.showPage('dashboard', this)">
-        <span class="sidebar-item-icon">📊</span>Dashboard
+      <button class="sidebar-item active" onclick="toggleSidebarSection('nav-dashboard');window.showPage('dashboard',this)">
+        <span class="sidebar-item-icon">📊</span>Dashboard<span class="sidebar-arrow" id="arrow-nav-dashboard">▶</span>
       </button>
+      <div class="sidebar-accordion-content" id="nav-dashboard" style="display:none;">
+        <button class="sidebar-item sidebar-item-indent" onclick="showDashboardYear('all')">
+          <span class="sidebar-item-icon">📊</span>ทั้งหมด
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showDashboardYear('67')">
+          <span class="sidebar-item-icon">📅</span>ปีงบ 2567 (2024)
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showDashboardYear('68')">
+          <span class="sidebar-item-icon">📅</span>ปีงบ 2568 (2025)
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showDashboardYear('69')">
+          <span class="sidebar-item-icon">📅</span>ปีงบ 2569 (2026)
+        </button>
+      </div>
     </div>
 
-    <!-- Property -->
+    <!-- PROPERTY -->
     <div class="sidebar-group">
-      <div class="sidebar-group-title">🏠 Property</div>
-      <button class="sidebar-item" onclick="window.showPage('tenant', this)">
-        <span class="sidebar-item-icon">👥</span>ผู้เช่า & สัญญา
-      </button>
-      <button class="sidebar-item" onclick="window.showPage('maintenance', this)">
-        <span class="sidebar-item-icon">🔧</span>แจ้งซ่อม<span class="sidebar-badge" id="mxBadge" style="display:none"></span>
-      </button>
-      <button class="sidebar-item" onclick="window.showPage('content-management', this)">
-        <span class="sidebar-item-icon">📚</span>เอกสารและประกาศ
-      </button>
-    </div>
+      <div class="sidebar-group-title">Property</div>
 
-    <!-- Finance & Accounting -->
-    <div class="sidebar-group">
-      <div class="sidebar-group-title">💰 Finance & Accounting</div>
-
-      <!-- Data Entry Subsection -->
-      <div class="sidebar-subsection">
-        <div class="sidebar-subsection-title">📅 Data Entry</div>
-        <button class="sidebar-item sidebar-item-indent" onclick="window.showPage('meter', this)">
-          <span class="sidebar-item-icon">📊</span>บันทึกมิเตอร์
+      <!-- Tenant Information -->
+      <button class="sidebar-item" onclick="toggleSidebarSection('nav-tenant')">
+        <span class="sidebar-item-icon">👥</span>Tenant Information<span class="sidebar-arrow" id="arrow-nav-tenant">▶</span>
+      </button>
+      <div class="sidebar-accordion-content" id="nav-tenant" style="display:none;">
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('tenant',()=>setTenantBuilding('old',null))">
+          <span class="sidebar-item-icon">🏠</span>ห้องแถว
         </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="window.showPage('bill', this)">
-          <span class="sidebar-item-icon">💳</span>ออกบิล<span class="sidebar-badge" id="billBadge" style="display:none"></span>
-        </button>
-        <button class="sidebar-item sidebar-item-indent" onclick="window.showPage('expense', this)">
-          <span class="sidebar-item-icon">💸</span>ค่าใช้จ่าย
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('tenant',()=>setTenantBuilding('new',null))">
+          <span class="sidebar-item-icon">🏗️</span>Nest
         </button>
       </div>
 
-      <!-- Verification Subsection -->
-      <div class="sidebar-subsection">
-        <div class="sidebar-subsection-title">✓ Verification</div>
-        <button class="sidebar-item sidebar-item-indent" onclick="window.showPage('payment-verify', this)">
-          <span class="sidebar-item-icon">✓</span>ยืนยันการชำระ<span class="sidebar-badge" id="paymentBadge" style="display:none"></span>
+      <!-- Requests & Approvals -->
+      <button class="sidebar-item" onclick="toggleSidebarSection('nav-requests')">
+        <span class="sidebar-item-icon">🔧</span>Requests & Approvals<span class="sidebar-badge" id="mxBadge" style="display:none"></span><span class="sidebar-arrow" id="arrow-nav-requests">▶</span>
+      </button>
+      <div class="sidebar-accordion-content" id="nav-requests" style="display:none;">
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('maintenance',()=>switchMaintenanceTab('maintenance',null))">
+          <span class="sidebar-item-icon">🔧</span>Maintenance
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('maintenance',()=>switchMaintenanceTab('housekeeping',null))">
+          <span class="sidebar-item-icon">🧹</span>Housekeeping
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('requests-approvals',()=>switchRequestsTab('complaints',null))">
+          <span class="sidebar-item-icon">⚠️</span>Complaints
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('requests-approvals',()=>switchRequestsTab('pets',null))">
+          <span class="sidebar-item-icon">🐾</span>Pet Approvals
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="window.showPage('lease-management',this)">
+          <span class="sidebar-item-icon">📋</span>Rental Contract
         </button>
       </div>
 
+      <!-- Community Events -->
+      <button class="sidebar-item" onclick="toggleSidebarSection('nav-community')">
+        <span class="sidebar-item-icon">📚</span>Community Events<span class="sidebar-arrow" id="arrow-nav-community">▶</span>
+      </button>
+      <div class="sidebar-accordion-content" id="nav-community" style="display:none;">
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('content-management',()=>switchContentTab('announcements',null))">
+          <span class="sidebar-item-icon">📢</span>Announcement
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('content-management',()=>switchContentTab('events',null))">
+          <span class="sidebar-item-icon">📅</span>Events
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('content-management',()=>switchContentTab('docs',null))">
+          <span class="sidebar-item-icon">📋</span>Documents
+        </button>
+      </div>
     </div>
 
-    <!-- TAX FILING & REPORTING -->
+    <!-- DATA ENTRY -->
     <div class="sidebar-group">
-      <div class="sidebar-group-title">🏛️ TAX FILING</div>
+      <div class="sidebar-group-title">Data Entry</div>
+
+      <!-- Meter Upload -->
+      <button class="sidebar-item" onclick="toggleSidebarSection('nav-meter')">
+        <span class="sidebar-item-icon">📊</span>Meter Upload<span class="sidebar-arrow" id="arrow-nav-meter">▶</span>
+      </button>
+      <div class="sidebar-accordion-content" id="nav-meter" style="display:none;">
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('meter',()=>window.switchMeterTab('room-config',null))">
+          <span class="sidebar-item-icon">🏠</span>จัดการห้องพัก & อัตรา
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('meter',()=>window.switchMeterTab('import-meter',null))">
+          <span class="sidebar-item-icon">📥</span>นำเข้าข้อมูลมิเตอร์
+        </button>
+        <button class="sidebar-item sidebar-item-indent" onclick="showPageTab('meter',()=>window.switchMeterTab('import-billing',null))">
+          <span class="sidebar-item-icon">📥</span>นำเข้าข้อมูลบิล
+        </button>
+      </div>
+
+      <!-- Billing -->
+      <button class="sidebar-item" onclick="window.showPage('bill',this)">
+        <span class="sidebar-item-icon">💳</span>Billing<span class="sidebar-badge" id="billBadge" style="display:none"></span>
+      </button>
+
+      <!-- Expense -->
+      <button class="sidebar-item" onclick="window.showPage('expense',this)">
+        <span class="sidebar-item-icon">💸</span>ค่าใช้จ่าย
+      </button>
+    </div>
+
+    <!-- VERIFICATION -->
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Verification</div>
+      <button class="sidebar-item" onclick="window.showPage('payment-verify',this)">
+        <span class="sidebar-item-icon">✓</span>Payment Verification<span class="sidebar-badge" id="paymentBadge" style="display:none"></span>
+      </button>
+    </div>
+
+    <!-- TAX FILING -->
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Tax Filing</div>
       <button class="sidebar-item" onclick="goToTaxFiling('dashboard')">
-        <span class="sidebar-item-icon">📊</span>Tax Dashboard
+        <span class="sidebar-item-icon">🏛️</span>Tax Dashboard
       </button>
     </div>
 
-    <!-- Operations -->
+    <!-- OPERATIONS -->
     <div class="sidebar-group">
-      <div class="sidebar-group-title">⚙️ Operations</div>
+      <div class="sidebar-group-title">Operations</div>
       <button class="sidebar-item" onclick="window.location.href='/audit-log-viewer'">
         <span class="sidebar-item-icon">📋</span>Audit Logs
       </button>
     </div>
 
-    <!-- Management -->
+    <!-- MANAGEMENT -->
     <div class="sidebar-group">
-      <div class="sidebar-group-title">👤 Management</div>
-      <button class="sidebar-item" onclick="window.showPage('people-management', this)">
+      <div class="sidebar-group-title">Management</div>
+      <button class="sidebar-item" onclick="window.showPage('people-management',this)">
         <span class="sidebar-item-icon">👨‍💼</span>People Management
       </button>
-      <button class="sidebar-item" onclick="window.showPage('lease-management', this)">
+      <button class="sidebar-item" onclick="window.showPage('lease-management',this)">
         <span class="sidebar-item-icon">📋</span>Lease Management
       </button>
     </div>
 
-    <!-- Community & Tenant Services -->
+    <!-- TENANT & ADMIN -->
     <div class="sidebar-group">
-      <div class="sidebar-group-title">🏘️ Community Services</div>
-      <button class="sidebar-item" onclick="window.showPage('content-management', this)">
-        <span class="sidebar-item-icon">📅</span>Community Events
+      <div class="sidebar-group-title">Tenant & Admin</div>
+      <button class="sidebar-item" onclick="window.showPage('gamification',this)">
+        <span class="sidebar-item-icon">🏆</span>Gamification
       </button>
-      <button class="sidebar-item" onclick="window.showPage('content-management', this)">
-        <span class="sidebar-item-icon">📋</span>Documents
-      </button>
-      <button class="sidebar-item" onclick="window.showPage('requests-approvals', this)">
-        <span class="sidebar-item-icon">✅</span>Requests & Approvals
+      <button class="sidebar-item" onclick="window.showPage('admin-reports',this)">
+        <span class="sidebar-item-icon">📈</span>Admin Reports
       </button>
     </div>
 
-    <!-- Tenant & Admin Management -->
-    <div class="sidebar-group">
-      <div class="sidebar-group-title">👨‍💼 Tenant & Admin</div>
-      <button class="sidebar-item" onclick="window.showPage('gamification', this)">
-        <span class="sidebar-item-icon">🏆</span>Gamification Management
-      </button>
-      <button class="sidebar-item" onclick="window.showPage('admin-reports', this)">
-        <span class="sidebar-item-icon">📈</span>Admin Reports & Analytics
-      </button>
-    </div>
-
-    <!-- Account Settings -->
+    <!-- ACCOUNT -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Account</div>
       <button class="sidebar-item" onclick="openChangePasswordModal()">
         <span class="sidebar-item-icon">🔐</span>เปลี่ยนรหัสผ่าน
       </button>
     </div>
+
   </nav>
 
   <div class="sidebar-footer">
