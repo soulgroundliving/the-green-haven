@@ -5319,11 +5319,19 @@ function initializeAllRoomUsers() {
   return 0;
 }
 let tenantBuilding='old';
+let currentTenantFilter='all';
 
 function setTenantBuilding(bld,btn){
   document.querySelectorAll('#page-tenant .year-tab').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   tenantBuilding=bld;
+  currentTenantFilter='all';
+  // Reset filter buttons to "ทั้งหมด"
+  document.querySelectorAll('.filter-btn-tenant').forEach((b,i)=>{
+    b.classList.toggle('active',i===0);
+    b.style.background=i===0?'var(--green-dark)':'white';
+    b.style.color=i===0?'white':b.style.borderColor||'#666';
+  });
   renderTenantPage();
 }
 
@@ -5393,29 +5401,69 @@ function renderTenantPage(){
       <div class="kpi-card ${soon>0?'red':'purple'}"><div class="kpi-icon">⏰</div><div class="kpi-label">สัญญาใกล้หมด</div><div class="kpi-value ${soon>0?'red':'purple'}">${soon}</div><div class="kpi-sub">ภายใน 30 วัน</div></div>`;
   }
   const grid=document.getElementById('tenantGrid');if(!grid)return;
-  grid.innerHTML=rooms.map(r=>{
+  const searchTerm=(document.getElementById('tenantSearch')?.value||'').toLowerCase();
+
+  // Apply filters
+  let filtered=rooms.filter(r=>{
+    const t=tenants[r.id];
+    const matchSearch=!searchTerm||r.id.toString().toLowerCase().includes(searchTerm)||(t?.name||'').toLowerCase().includes(searchTerm);
+    if(!matchSearch)return false;
+    const isOcc=!!t?.name;
+    if(currentTenantFilter==='occupied')return isOcc;
+    if(currentTenantFilter==='vacant')return !isOcc;
+    if(currentTenantFilter==='expiring'){
+      if(!t?.contractEnd)return false;
+      const diff=(new Date(t.contractEnd)-today)/(1000*60*60*24);
+      return diff>=0&&diff<=30;
+    }
+    return true;
+  });
+
+  grid.innerHTML=filtered.map(r=>{
     const t=tenants[r.id];
     const isOcc=!!t?.name;
     const isCom=r.type==='commercial';
-    const cls=isCom?'com':isOcc?'occ':'vac';
-    let info='';
-    if(isOcc){
-      const mi=(t.moveInDate||t.moveIn)?new Date(t.moveInDate||t.moveIn).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}):'—';
-      const ce=t.contractEnd?new Date(t.contractEnd).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}):'—';
-      const diff=t.contractEnd?Math.round((new Date(t.contractEnd)-today)/(1000*60*60*24)):null;
-      const tag=diff===null?''
-        :diff<0?'<span class="t-warn">สัญญาหมดแล้ว</span>'
-        :diff<=30?`<span class="t-warn">เหลือ ${diff} วัน</span>`
-        :`<span class="t-deposit">เหลือ ${diff} วัน</span>`;
-      info=`<div class="t-info">เข้า: ${mi}<br>หมดสัญญา: ${ce}<br>${t.deposit?`<span class="t-deposit">มัดจำ ฿${Number(t.deposit).toLocaleString()}</span>`:''}${tag}</div>`;
+    const mi=(t?.moveInDate||t?.moveIn)?new Date(t.moveInDate||t.moveIn).toLocaleDateString('th-TH',{month:'short',day:'numeric'}):'—';
+    const ce=t?.contractEnd?new Date(t.contractEnd).toLocaleDateString('th-TH',{month:'short',day:'numeric',year:'2-digit'}):'—';
+    let daysLeft='—',expiryColor='var(--text-muted)';
+    if(t?.contractEnd){
+      const days=Math.ceil((new Date(t.contractEnd)-today)/86400000);
+      if(days>0){daysLeft=days;expiryColor=days<=30?'var(--red)':days<=60?'#f57c00':'var(--green-dark)';}
+      else{daysLeft='❌ หมดแล้ว';expiryColor='var(--red)';}
     }
-    return`<div class="tenant-card ${cls}" onclick="showTenantModal('${r.id}')">
-      <div class="t-room">${isCom?'☕':isOcc?'🏠':'🚪'} ห้อง ${r.id}</div>
-      ${isOcc?`<div class="t-name">${t.name}</div><div class="t-phone">📞 ${t.phone||'—'}</div>`
-             :`<div class="t-vacant">ว่าง / รอผู้เช่า</div>`}
-      ${info}
+    return`<div class="compact-card${!isOcc?' vacant':''}" style="border-left-color:${isCom?'var(--blue)':isOcc?'var(--green)':'#ff9800'}">
+      <div class="compact-card-header">
+        <div class="compact-card-id">${r.id}</div>
+        <span class="compact-card-type">${isCom?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
+        <span style="margin-left:auto;font-size:.75rem;padding:2px 8px;border-radius:4px;background:${isOcc?'var(--green-pale)':'#fff3e0'};color:${isOcc?'var(--green-dark)':'#e65100'};font-weight:600;">${isOcc?'มีผู้เช่า':'ว่าง'}</span>
+      </div>
+      <div class="compact-card-info">
+        <span style="font-size:.8rem;color:var(--text-muted);">${isCom?'🏪 พาณิชย์':'🏠 ที่พัก'}</span>
+        <span class="compact-card-value">฿${Number(r.rent).toLocaleString()}</span>
+      </div>
+      ${isOcc?`
+      <div class="compact-card-info"><span style="font-weight:600;color:var(--text);">ชื่อ</span><span class="compact-card-value">${t.name}</span></div>
+      <div class="compact-card-info"><span>โทร</span><span style="font-size:.8rem;">${t.phone||'—'}</span></div>
+      <div class="compact-card-info"><span>เข้าพัก</span><span style="font-size:.8rem;">${mi}</span></div>
+      <div class="compact-card-info"><span>สัญญาสิ้นสุด</span><span style="font-size:.8rem;color:${expiryColor};font-weight:600;">${ce}</span></div>
+      <div class="compact-card-info" style="border-top:1px solid var(--border);padding-top:8px;margin-top:6px;">
+        <span style="color:var(--text-muted);font-size:.75rem;">เหลือ</span>
+        <span style="font-weight:700;color:${expiryColor};">${typeof daysLeft==='number'?daysLeft+' วัน':daysLeft}</span>
+      </div>
+      ${t.deposit?`<div class="compact-card-info"><span style="font-size:.75rem;color:var(--text-muted);">มัดจำ</span><span style="font-weight:700;color:var(--green-dark);">฿${Number(t.deposit).toLocaleString()}</span></div>`:''}
+      `:`<div class="compact-card-info" style="text-align:center;padding:1rem 0;color:var(--text-muted);"><span>🚪 ไม่มีผู้เช่า</span></div>`}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
+        <button onclick="showTenantModal('${r.id}')" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">📄 สัญญา</button>
+        <button onclick="showTenantModal('${r.id}')" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">💰 ชำระ</button>
+        <button onclick="window.showPage('bill')" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🧾 บิล</button>
+        <button onclick="window.showPage('maintenance')" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #7b1fa2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🔧 ซ่อม</button>
+      </div>
     </div>`;
   }).join('');
+
+  if(filtered.length===0){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted);">ไม่พบข้อมูลที่ค้นหา</div>';
+  }
   updateTenantAlertBlock();
   updateRoomTypeCards();
 }
@@ -5471,6 +5519,23 @@ function toggleTenantView(view, btn){
     cardsView.style.display='none';
     tableView.style.display='block';
   }
+}
+
+// ===== TENANT FILTER =====
+function setTenantFilter(filter){
+  currentTenantFilter=filter;
+  document.querySelectorAll('.filter-btn-tenant').forEach(btn=>{
+    btn.classList.remove('active');
+    btn.style.background='white';
+    btn.style.color=btn.style.borderColor||'#666';
+  });
+  if(event?.target){
+    event.target.classList.add('active');
+    event.target.style.background='var(--green-dark)';
+    event.target.style.color='white';
+  }
+  renderTenantPage();
+  renderTenantTable();
 }
 
 // ===== TENANT ALERT BLOCK =====

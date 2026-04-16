@@ -2703,28 +2703,25 @@
     <div id="roomTypeCardsContainer"></div>
   </div>
 
-  <!-- Tenant & Contract View Toggle -->
+  <!-- Filter + Search Bar -->
   <div style="margin-bottom:1.2rem;">
-    <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
-      <div class="view-toggle-group">
-        <button onclick="toggleTenantView('cards',this)" class="view-toggle-btn active">▦ การ์ด</button>
-        <button onclick="toggleTenantView('table',this)" class="view-toggle-btn">☰ ตาราง</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="filter-btn-tenant active" onclick="setTenantFilter('all')" style="padding:6px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--green-dark);color:white;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ทั้งหมด</button>
+        <button class="filter-btn-tenant" onclick="setTenantFilter('occupied')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟢 มีผู้เช่า</button>
+        <button class="filter-btn-tenant" onclick="setTenantFilter('vacant')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #e0e0e0;background:white;color:#666;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚪ ว่าง</button>
+        <button class="filter-btn-tenant" onclick="setTenantFilter('expiring')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #f57c00;background:white;color:#f57c00;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟠 ใกล้หมด</button>
       </div>
-      <select id="ct-filter-status" onchange="initContractPage()" style="margin-left:auto;padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;background:#fff;cursor:pointer;">
-        <option value="all">ทั้งหมด</option>
-        <option value="active">✅ ใช้งานอยู่</option>
-        <option value="expiring">⚠️ ใกล้หมดอายุ</option>
-        <option value="expired">🗑️ หมดอายุ</option>
-        <option value="vacant">🚪 ห้องว่าง</option>
-      </select>
-      <button onclick="exportTenantCSV()" style="padding:8px 14px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.9rem;cursor:pointer;font-weight:600;">📥 ดาวน์โหลด CSV</button>
-      <input type="text" id="tenantSearch" placeholder="🔍 ค้นหาห้อง/ชื่อ..." style="padding:8px 14px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="tenantSearch" placeholder="🔍 ค้นหาห้อง/ชื่อ..." style="padding:8px 14px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:220px;">
+        <button onclick="exportTenantCSV()" style="padding:8px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.85rem;cursor:pointer;font-weight:600;">📥 CSV</button>
+      </div>
     </div>
   </div>
 
-  <!-- Cards View (Default) - Shows both tenant list and contract info -->
+  <!-- Cards View -->
   <div id="tenantViewCards">
-    <div class="tenant-grid" id="tenantGrid"></div>
+    <div class="compact-grid" id="tenantGrid"></div>
   </div>
 
   <!-- Table View (Hidden) -->
