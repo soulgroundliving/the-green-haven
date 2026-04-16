@@ -3,8 +3,11 @@ debug*.ps1
 server.ps1
 extract_meters.ps1
 
-# Excel files (backup)
+# Excel files (may contain tenant PII — never commit bill data)
 บิลปี*.xlsx
+bill*.xlsx
+*-bills.xlsx
+*-temp.xlsx
 
 # Node modules
 node_modules/
@@ -42,6 +45,7 @@ Thumbs.db
 dist/
 build/
 .next/
+.firebase/
 
 # Logs
 *.log
