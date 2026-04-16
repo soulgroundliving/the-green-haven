@@ -1816,9 +1816,6 @@
     <!-- Property -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">🏠 Property</div>
-      <button class="sidebar-item" onclick="window.showPage('property', this)">
-        <span class="sidebar-item-icon">📊</span>ข้อมูลห้องพัก
-      </button>
       <button class="sidebar-item" onclick="window.showPage('tenant', this)">
         <span class="sidebar-item-icon">👥</span>ผู้เช่า & สัญญา
       </button>
@@ -2024,6 +2021,15 @@
         <input type="hidden" id="modalContractDocument" value="">
         <input type="hidden" id="modalContractFileName" value="">
         <small id="contractDocStatus" style="color:#666;margin-top:4px;display:block;"></small>
+        <div style="margin-top:8px;">
+          <a href="#" onclick="showTenantLeaseHistory(currentEditBuilding, currentEditRoomId); return false;" style="font-size:.75rem;color:var(--green);text-decoration:underline;">📋 ดูประวัติผู้เช่าเก่า</a>
+        </div>
+      </div>
+
+      <!-- Lease History Section (collapsible) -->
+      <div id="tenantLeaseHistorySection" style="display:none;margin-top:1rem;padding:1rem;background:#f9fafb;border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <div style="font-weight:700;font-size:.9rem;color:var(--text-muted);margin-bottom:8px;">📋 ประวัติผู้เช่าเก่า</div>
+        <div id="tenantLeaseHistoryContent" style="font-size:.85rem;"></div>
       </div>
 
       <!-- Additional Notes Section -->
@@ -2065,7 +2071,7 @@
     <!-- Average Monthly -->
     <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
     <!-- Occupancy Combined — live only -->
-    <div class="kpi-card kpi-live blue" style="cursor:pointer;" onclick="window.showPage('property',document.querySelector('[onclick*=\'property\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (รวม 2 อาคาร)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
+    <div class="kpi-card kpi-live blue" style="cursor:pointer;" onclick="window.showPage('tenant',document.querySelector('[onclick*=\'tenant\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (รวม 2 อาคาร)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
     <!-- Payment Status — live only -->
     <div class="kpi-card kpi-live purple" style="cursor:pointer;" onclick="window.showPage('bill',document.querySelector('[onclick*=\'bill\']'))"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
     <!-- Expected Revenue — live only -->
@@ -2124,501 +2130,6 @@
 
   <!-- New building projection card -->
   </div><!-- END OVERVIEW TAB -->
-</div>
-
-<!-- ===== ROOMS (OLD BUILDING) ===== -->
-<div class="page" id="page-property">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <div class="section-title">📊 ข้อมูลห้องพัก</div>
-    <!-- Real-time Status Indicator -->
-    <div id="realtime-status" style="font-size: 12px; display: flex; align-items: center; gap: 6px;">
-      <span id="status-dot" style="width: 10px; height: 10px; background: #cc0000; border-radius: 50%; display: inline-block;"></span>
-      <span id="status-text" style="color: #666;">🔴 Connecting...</span>
-    </div>
-  </div>
-
-  <!-- Building Tabs -->
-  <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:2px solid #eee;flex-wrap:wrap;">
-    <button class="property-tab" id="tab-newbuild" onclick="window.switchPropertyTab('nest', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;">
-      🏢 Nest Building
-    </button>
-    <button class="property-tab active" id="tab-rooms" onclick="window.switchPropertyTab('rooms', this)" style="padding:12px 20px;border:none;background:none;cursor:pointer;font-weight:600;color:#2d8653;border-bottom:3px solid #2d8653;margin-bottom:-2px;">
-      🏠 Rooms Building
-    </button>
-  </div>
-
-  <!-- Rooms Building Content -->
-  <div id="property-rooms-section">
-  <div class="section-title" style="display:none;">🏠 ห้องแถว — ข้อมูลห้องพัก</div>
-  
-  <!-- Occupancy Dashboard -->
-  <div class="kpi-grid">
-    <div class="kpi-card green">
-      <div class="kpi-icon">🏠</div>
-      <div class="kpi-label">ห้องทั้งหมด</div>
-      <div class="kpi-value green" id="occupancy-total">0</div>
-      <div class="kpi-sub">ห้องพัก</div>
-    </div>
-    <div class="kpi-card blue">
-      <div class="kpi-icon">👤</div>
-      <div class="kpi-label">มีผู้เช่า</div>
-      <div class="kpi-value blue" id="occupancy-occupied">0</div>
-      <div class="kpi-sub">ห้อง</div>
-    </div>
-    <div class="kpi-card amber">
-      <div class="kpi-icon">🚪</div>
-      <div class="kpi-label">ว่าง</div>
-      <div class="kpi-value amber" id="occupancy-vacant">0</div>
-      <div class="kpi-sub">ห้อง</div>
-    </div>
-    <div class="kpi-card purple">
-      <div class="kpi-icon">📊</div>
-      <div class="kpi-label">Occupancy Rate</div>
-      <div class="kpi-value purple" id="occupancy-rate">0%</div>
-      <div class="kpi-sub">อัตราการใช้</div>
-    </div>
-  </div>
-
-  <!-- Lease Expiry Alerts -->
-  <div id="lease-expiry-alerts" style="display:none;margin-bottom:1.5rem;">
-    <div class="card" style="background:#fff9c4;border-left:6px solid #fbc02d;">
-      <div class="card-title" style="color:#f57f17;display:flex;align-items:center;gap:8px;">
-        <span style="font-size:1.3em;">⚠️</span>
-        <span>หมดสัญญาใน 30 วัน</span>
-      </div>
-      <div id="lease-expiry-list" style="display:grid;gap:8px;"></div>
-    </div>
-  </div>
-
-  <!-- Room Type Information Cards -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
-    <div class="card" style="background:#e8f5e9;border-left:4px solid #4caf50;">
-      <div class="card-title" style="color:#1b5e20;">🏠 ห้องพัก (22 ห้อง)</div>
-      <div style="font-size:.88rem;line-height:2;">
-        <div>💰 ค่าเช่า: <strong>฿1,200 / ฿1,500 / ฿2,000/เดือน</strong></div>
-        <div>⚡ อัตราค่าไฟ: <strong>8 บาท/หน่วย</strong></div>
-        <div>💧 อัตราค่าน้ำ: <strong>20 บาท/หน่วย</strong></div>
-        <div>🗑️ ค่าขยะ: <strong>20 บาท/เดือน</strong></div>
-      </div>
-    </div>
-    <div class="card" style="background:#f3e5f5;border-left:4px solid #9c27b0;">
-      <div class="card-title" style="color:#4a148c;">📊 รวมทั้งหมด (23 ห้อง)</div>
-      <div style="font-size:.88rem;line-height:2;">
-        <div>💰 รายได้เช่า: <strong>~฿40,400/เดือน</strong></div>
-        <div>👥 สัดส่วน: <strong>22 ห้องพัก + 1 พาณิชย์</strong></div>
-        <div>📍 ที่อยู่: <strong>ตึก 1 ส่วนเหนือ</strong></div>
-        <div>✏️ หมายเหตุ: <strong>โรงน้ำแข็งปิดแล้ว</strong></div>
-      </div>
-    </div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
-    <div class="card" id="shop-info-card" style="background:#fff3e0;border-left:4px solid var(--accent);">
-      <div class="card-title" id="shop-info-title" style="color:#bf360c;">🏪 ร้านค้า</div>
-      <div id="shop-info-body" style="font-size:.88rem;line-height:2;">
-        <div>💰 ค่าเช่า: <strong id="shop-info-rent">—</strong></div>
-        <div>⚡ อัตราค่าไฟ: <strong id="shop-info-elec">—</strong></div>
-        <div>💧 อัตราค่าน้ำ: <strong id="shop-info-water">—</strong></div>
-        <div>🗑️ ค่าขยะ: <strong id="shop-info-trash">—</strong></div>
-      </div>
-    </div>
-    <div class="card" style="background:#fce4ec;border-left:4px solid #e91e63;">
-      <div class="card-title" style="color:#880e4f;">❌ โรงน้ำแข็ง — สิ้นสุดสัญญา</div>
-      <div style="font-size:.88rem;line-height:2;">
-        <div>📋 สถานะ: <strong>ขายกิจการแล้ว ไม่เก็บค่าเช่า</strong></div>
-        <div>📅 สิ้นสุด: <strong>กรกฎาคม 2568</strong></div>
-        <div>💰 เดิมเก็บ: <strong>฿25,000/เดือน</strong></div>
-        <div style="color:#880e4f;">⚠️ ส่งผลให้รายได้ลดลง ~25,000 บาท/เดือน</div>
-      </div>
-    </div>
-  </div>
-  <!-- Room display options -->
-  <div style="margin-bottom:1.2rem;">
-    <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
-      <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
-      <button onclick="toggleRoomView('grid', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--green);background:var(--green-pale);color:var(--green-dark);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📦 ตารางกระทัดรัด</button>
-      <button onclick="toggleRoomView('classic', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตารางแบบดั้งเดิม</button>
-    </div>
-  </div>
-
-  <!-- Compact Grid View (Default) -->
-  <div id="roomViewCompact">
-    <div class="card" style="margin-bottom:1.2rem;">
-      <div class="card-title">🏠 ตารางแผนผัง</div>
-      <div class="room-grid" id="roomGrid"></div>
-      <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:.76rem;">
-        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e8f5e9;border:2px solid #4caf50;border-radius:3px;display:inline-block"></span>ห้องพัก</span>
-        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e3f2fd;border:2px solid #2196f3;border-radius:3px;display:inline-block"></span>พาณิชย์</span>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-        <span>📦 รายชื่อห้องพัก (ตารางกระทัดรัด)</span>
-        <input type="text" id="roomCompactSearch" placeholder="🔍 ค้นหาห้อง..." style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
-      </div>
-      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="filter-btn active" onclick="setRoomFilter('all')" style="padding:6px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--green-dark);color:white;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ทั้งหมด</button>
-          <button class="filter-btn" onclick="setRoomFilter('occupied')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟢 มีผู้เช่า</button>
-          <button class="filter-btn" onclick="setRoomFilter('vacant')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #e0e0e0;background:white;color:#666;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚪ ว่าง</button>
-          <button class="filter-btn" onclick="setRoomFilter('overdue')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #d32f2f;background:white;color:#d32f2f;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🔴 ค้าง</button>
-        </div>
-        <button onclick="openBatchRentAdjustmentModal()" style="padding:8px 14px;border-radius:6px;border:1.5px solid #9c27b0;background:#f3e5f5;color:#6a1b9a;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚙️ ปรับค่าเช่าแบบหลายห้อง</button>
-      </div>
-      <div class="compact-grid" id="roomCompactGrid"></div>
-    </div>
-  </div>
-
-  <!-- Classic Table View (Hidden by default) -->
-  <div id="roomViewClassic" style="display:none;">
-    <div class="card">
-      <div class="card-title">ตารางห้องพัก & อัตราค่าเช่า</div>
-      <div class="scroll-x"><table class="data-table" id="roomTable"></table></div>
-    </div>
-  </div>
-
-  <!-- Batch Rent Adjustment Modal -->
-  <div id="batchRentModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;flex-direction:column;">
-    <div style="background:white;border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h2 style="font-size:1.4rem;margin:0;color:#1b5e20;">⚙️ ปรับค่าเช่าแบบหลายห้อง</h2>
-        <button onclick="closeBatchRentAdjustmentModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;">✕</button>
-      </div>
-
-      <!-- Room Selection -->
-      <div style="margin-bottom:20px;">
-        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">📍 เลือกห้องพัก</h3>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:8px;margin-bottom:12px;max-height:150px;overflow-y:auto;">
-          <!-- Room selection checkboxes will be rendered here -->
-          <div id="roomSelectionContainer" style="grid-column:1/-1;">
-            <p style="color:#999;text-align:center;">กำลังโหลด...</p>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <button onclick="selectAllRooms()" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✓ เลือกทั้งหมด</button>
-          <button onclick="deselectAllRooms()" style="padding:6px 12px;border-radius:6px;border:1.5px solid #999;background:white;color:#999;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✗ ยกเลิกทั้งหมด</button>
-        </div>
-        <div style="font-size:0.85rem;color:#666;background:#f5f5f5;padding:10px;border-radius:6px;">
-          <strong id="roomSelectionCount">0</strong> ห้องได้รับการเลือก
-        </div>
-      </div>
-
-      <!-- Adjustment Type Selection -->
-      <div style="margin-bottom:20px;">
-        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">📊 วิธีการปรับค่าเช่า</h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;" onchange="updateAdjustmentDisplay()">
-            <input type="radio" name="adjustType" value="fixed-increase" checked style="cursor:pointer;">
-            <span style="font-size:0.9rem;">เพิ่มเป็นจำนวนเงิน</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;" onchange="updateAdjustmentDisplay()">
-            <input type="radio" name="adjustType" value="percentage-increase" style="cursor:pointer;">
-            <span style="font-size:0.9rem;">เพิ่มเป็นเปอร์เซ็นต์</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;" onchange="updateAdjustmentDisplay()">
-            <input type="radio" name="adjustType" value="fixed-decrease" style="cursor:pointer;">
-            <span style="font-size:0.9rem;">ลดเป็นจำนวนเงิน</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;" onchange="updateAdjustmentDisplay()">
-            <input type="radio" name="adjustType" value="percentage-decrease" style="cursor:pointer;">
-            <span style="font-size:0.9rem;">ลดเป็นเปอร์เซ็นต์</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all 0.2s;grid-column:1/-1;" onchange="updateAdjustmentDisplay()">
-            <input type="radio" name="adjustType" value="set-fixed" style="cursor:pointer;">
-            <span style="font-size:0.9rem;">กำหนดเป็นค่าเช่าคงที่</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Adjustment Value Input -->
-      <div style="margin-bottom:20px;">
-        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">
-          <span id="adjustLabel">จำนวนที่เพิ่ม</span>
-        </h3>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span id="adjustSymbol" style="font-size:1.1rem;font-weight:600;color:#4caf50;">฿</span>
-          <input type="number" id="adjustmentValue" placeholder="0" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:6px;font-size:1rem;font-family:'Sarabun',sans-serif;">
-          <span id="adjustUnit" style="font-size:0.95rem;color:#666;font-weight:500;">บาท</span>
-        </div>
-      </div>
-
-      <!-- Preview -->
-      <div style="margin-bottom:20px;padding:12px;background:#f5f5f5;border-radius:6px;max-height:120px;overflow-y:auto;">
-        <h3 style="font-size:0.9rem;font-weight:600;color:#333;margin:0 0 8px 0;">📋 ตัวอย่างผลลัพธ์</h3>
-        <div id="previewResult" style="font-size:0.85rem;color:#666;line-height:1.6;">
-          <p style="margin:0;color:#999;">เลือกห้องและค่าที่ต้องการปรับเพื่อดูตัวอย่าง</p>
-        </div>
-      </div>
-
-      <!-- Action Buttons -->
-      <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button onclick="closeBatchRentAdjustmentModal()" style="padding:10px 20px;border-radius:6px;border:1.5px solid #999;background:white;color:#333;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ยกเลิก</button>
-        <button onclick="applyBatchRentAdjustment()" style="padding:10px 20px;border-radius:6px;border:none;background:#4caf50;color:white;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;display:flex;align-items:center;gap:6px;">✓ ปรับค่าเช่า</button>
-      </div>
-    </div>
-  </div>
-  </div>
-
-  <!-- Nest Building Content -->
-  <div id="property-nest-section" style="display:none;">
-  <div id="rooms-content" class="section-title" style="display:none;">🏗️ Nest — ข้อมูลห้องพัก</div>
-
-  <!-- Occupancy Dashboard -->
-  <div class="kpi-grid">
-    <div class="kpi-card green">
-      <div class="kpi-icon">🏠</div>
-      <div class="kpi-label">ห้องทั้งหมด</div>
-      <div class="kpi-value green" id="nest-occupancy-total">0</div>
-      <div class="kpi-sub">ห้องพัก</div>
-    </div>
-    <div class="kpi-card blue">
-      <div class="kpi-icon">👤</div>
-      <div class="kpi-label">มีผู้เช่า</div>
-      <div class="kpi-value blue" id="nest-occupancy-occupied">0</div>
-      <div class="kpi-sub">ห้อง</div>
-    </div>
-    <div class="kpi-card amber">
-      <div class="kpi-icon">🚪</div>
-      <div class="kpi-label">ว่าง</div>
-      <div class="kpi-value amber" id="nest-occupancy-vacant">0</div>
-      <div class="kpi-sub">ห้อง</div>
-    </div>
-    <div class="kpi-card purple">
-      <div class="kpi-icon">📊</div>
-      <div class="kpi-label">Occupancy Rate</div>
-      <div class="kpi-value purple" id="nest-occupancy-rate">0%</div>
-      <div class="kpi-sub">อัตราการใช้</div>
-    </div>
-  </div>
-
-  <!-- Lease Expiry Alerts -->
-  <div id="nest-lease-expiry-alerts" style="display:none;margin-bottom:1.5rem;">
-    <div class="card" style="background:#fff9c4;border-left:6px solid #fbc02d;">
-      <div class="card-title" style="color:#f57f17;display:flex;align-items:center;gap:8px;">
-        <span style="font-size:1.3em;">⚠️</span>
-        <span>หมดสัญญาใน 30 วัน</span>
-      </div>
-      <div id="nest-lease-expiry-list" style="display:grid;gap:8px;"></div>
-    </div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
-    <div class="card" style="background:#e3f2fd;border-left:4px solid var(--blue);">
-      <div class="card-title" id="nest-daily-title" style="color:#1565c0;">📅 รายวัน</div>
-      <div style="font-size:.88rem;line-height:2;">
-        <div>💰 ค่าเช่า: <strong id="nest-daily-rent">—</strong></div>
-        <div>⚡ อัตราค่าไฟ: <strong id="nest-daily-elec">—</strong></div>
-        <div>💧 อัตราค่าน้ำ: <strong id="nest-daily-water">—</strong></div>
-        <div>🗑️ ค่าขยะ: <strong id="nest-daily-trash">—</strong></div>
-      </div>
-    </div>
-    <div class="card" style="background:#f3e5f5;border-left:4px solid var(--purple);">
-      <div class="card-title" id="nest-studio-title" style="color:#6a1b9a;">🏠 Studio</div>
-      <div style="font-size:.88rem;line-height:2;">
-        <div>💰 ค่าเช่า: <strong id="nest-studio-rent">—</strong></div>
-        <div>⚡ อัตราค่าไฟ: <strong id="nest-studio-elec">—</strong></div>
-        <div>💧 อัตราค่าน้ำ: <strong id="nest-studio-water">—</strong></div>
-        <div>🗑️ ค่าขยะ: <strong id="nest-studio-trash">—</strong></div>
-      </div>
-    </div>
-    <div class="card" style="background:#fff3e0;border-left:4px solid var(--accent);">
-      <div class="card-title" id="nest-pet-title" style="color:#bf360c;">🐾 Pet Friendly</div>
-      <div style="font-size:.88rem;line-height:2;">
-        <div>💰 ค่าเช่า: <strong id="nest-pet-rent">—</strong></div>
-        <div>⚡ อัตราค่าไฟ: <strong id="nest-pet-elec">—</strong></div>
-        <div>💧 อัตราค่าน้ำ: <strong id="nest-pet-water">—</strong></div>
-        <div>🗑️ ค่าขยะ: <strong id="nest-pet-trash">—</strong></div>
-      </div>
-    </div>
-    <div class="card" style="background:#f3e5f5;border-left:4px solid #9c27b0;">
-      <div class="card-title" id="nest-total-title" style="color:#4a148c;">📊 รวมทั้งหมด</div>
-      <div style="font-size:.88rem;line-height:2;">
-        <div>💰 รายได้เช่า: <strong id="nest-total-income">—</strong></div>
-        <div>👥 สัดส่วน: <strong id="nest-total-breakdown">—</strong></div>
-        <div>📍 ที่อยู่: <strong>Nest · เดอะ กรีน เฮฟเว่น (4 ชั้น)</strong></div>
-        <div>✨ หมายเหตุ: <strong>ห้องพักแบบยุคใหม่ (Modern Co-Living)</strong></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Room display options -->
-  <div style="margin-bottom:1.2rem;">
-    <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
-      <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
-      <button onclick="toggleNestRoomView('grid', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--blue);background:#e3f2fd;color:#1565c0;border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📦 ตารางกระทัดรัด</button>
-      <button onclick="toggleNestRoomView('classic', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตารางแบบดั้งเดิม</button>
-    </div>
-  </div>
-
-  <!-- Compact Grid View (Default) -->
-  <div id="nestViewCompact">
-    <div class="card" style="margin-bottom:1.2rem;">
-      <div class="card-title">🏠 ตารางแผนผัง</div>
-      <div class="room-grid" id="nestRoomGrid"></div>
-      <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:.76rem;">
-        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e3f2fd;border:2px solid #2196f3;border-radius:3px;display:inline-block"></span>Studio</span>
-        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#f3e5f5;border:2px solid #9c27b0;border-radius:3px;display:inline-block"></span>Pet Friendly</span>
-        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#fff3e0;border:2px solid #ff8f00;border-radius:3px;display:inline-block"></span>รายวัน</span>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-        <span>📦 รายชื่อห้องพัก (ตารางกระทัดรัด)</span>
-        <input type="text" id="nestCompactSearch" placeholder="🔍 ค้นหาห้อง..." style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
-      </div>
-      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="filter-btn-nest active" onclick="setNestFilter('all')" style="padding:6px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--green-dark);color:white;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ทั้งหมด</button>
-        <button class="filter-btn-nest" onclick="setNestFilter('occupied')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟢 มีผู้เช่า</button>
-        <button class="filter-btn-nest" onclick="setNestFilter('vacant')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #e0e0e0;background:white;color:#666;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚪ ว่าง</button>
-        <button class="filter-btn-nest" onclick="setNestFilter('overdue')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #d32f2f;background:white;color:#d32f2f;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🔴 ค้าง</button>
-      </div>
-      <div class="compact-grid" id="nestCompactGrid"></div>
-    </div>
-  </div>
-
-  <!-- Classic Table View (Hidden by default) -->
-  <div id="nestViewClassic" style="display:none;">
-    <div class="card">
-      <div class="card-title">ตารางห้องพัก & อัตราค่าเช่า</div>
-      <div class="scroll-x"><table class="data-table" id="nestRoomTable"></table></div>
-    </div>
-  </div>
-
-  <!-- Old Floor display (kept for reference) -->
-  <div id="nestFloorView" style="display:none;">
-  <!-- Floor 1 -->
-  <div class="floor-card">
-    <div class="floor-header f1d">
-      <div>
-        <div class="floor-title">🌇 ชั้น 1 — Studio + รายวัน</div>
-        <div class="floor-badge-row">
-          <span class="badge badge-blue">Studio 5,600 บาท</span>
-          <span class="badge badge-amber">รายวัน ~400 บาท/คืน</span>
-          <span class="badge badge-green">ค่าขยะ 40 บาท</span>
-        </div>
-      </div>
-      <div style="text-align:right;font-size:.85rem;color:var(--text-muted);">
-        <div style="font-weight:700;color:var(--accent);">฿28,000</div>
-        <div style="font-size:.75rem;">รายได้เต็มที่/เดือน</div>
-      </div>
-    </div>
-    <div class="floor-rooms">
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">101</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">102</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" daily"><div class="nr-num">103</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">📅 รายวัน</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">104</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">105</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-    </div>
-  </div>
-
-  <!-- Floor 2 -->
-  <div class="floor-card">
-    <div class="floor-header f12">
-      <div>
-        <div class="floor-title">🏠 ชั้น 2 — Studio</div>
-        <div class="floor-badge-row">
-          <span class="badge badge-blue">Studio 5,600 บาท</span>
-          <span class="badge badge-green">ค่าขยะ 40 บาท</span>
-        </div>
-      </div>
-      <div style="text-align:right;font-size:.85rem;color:var(--text-muted);">
-        <div style="font-weight:700;color:var(--blue);">฿28,000</div>
-        <div style="font-size:.75rem;">รายได้เต็มที่/เดือน</div>
-      </div>
-    </div>
-    <div class="floor-rooms">
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">201</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">202</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">203</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">204</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" studio"><div class="nr-num">205</div><div class="nr-price">5,600 บ./เดือน</div><div class="nr-tag">🏠 Studio</div></div>
-    </div>
-  </div>
-
-  <!-- Floor 3 -->
-  <div class="floor-card">
-    <div class="floor-header f34">
-      <div>
-        <div class="floor-title">🐾 ชั้น 3 — Pet Friendly</div>
-        <div class="floor-badge-row">
-          <span class="badge badge-purple">Pet Friendly 5,900 บาท</span>
-          <span class="badge badge-green">ค่าขยะ 40 บาท</span>
-        </div>
-      </div>
-      <div style="text-align:right;font-size:.85rem;color:var(--text-muted);">
-        <div style="font-weight:700;color:var(--purple);">฿29,500</div>
-        <div style="font-size:.75rem;">รายได้เต็มที่/เดือน</div>
-      </div>
-    </div>
-    <div class="floor-rooms">
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">301</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">302</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">303</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">304</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">305</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-    </div>
-  </div>
-
-  <!-- Floor 4 -->
-  <div class="floor-card">
-    <div class="floor-header f34">
-      <div>
-        <div class="floor-title">🐾 ชั้น 4 — Pet Friendly</div>
-        <div class="floor-badge-row">
-          <span class="badge badge-purple">Pet Friendly 5,900 บาท</span>
-          <span class="badge badge-green">ค่าขยะ 40 บาท</span>
-        </div>
-      </div>
-      <div style="text-align:right;font-size:.85rem;color:var(--text-muted);">
-        <div style="font-weight:700;color:var(--purple);">฿29,500</div>
-        <div style="font-size:.75rem;">รายได้เต็มที่/เดือน</div>
-      </div>
-    </div>
-    <div class="floor-rooms">
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">401</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">402</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">403</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">404</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-      <div class="new-room-pill" onclick="openTenantModal('nest', 'N' + this.querySelector('.nr-num').textContent)" style="cursor:pointer;" pet"><div class="nr-num">405</div><div class="nr-price">5,900 บ./เดือน</div><div class="nr-tag">🐾 Pet OK</div></div>
-    </div>
-  </div>
-
-  <!-- Revenue projection table -->
-  <div class="card">
-    <div class="card-title">📊 ตารางประมาณการรายได้ Nest</div>
-    <div class="scroll-x">
-      <table class="data-table">
-        <thead><tr><th>ชั้น</th><th>ประเภท</th><th>จำนวนห้อง</th><th>ค่าเช่า/เดือน</th><th>รวม/เดือน</th><th>ค่าขยะ/เดือน</th><th>หมายเหตุ</th></tr></thead>
-        <tbody>
-          <tr><td>ชั้น 1 (101-103)</td><td><span class="badge badge-amber">📅 รายวัน</span></td><td>3 ห้อง</td><td>~฿400/คืน</td><td>~฿36,000</td><td>฿40/ห้อง</td><td>คิดที่ 30 คืน/เดือน</td></tr>
-          <tr><td>ชั้น 1 (104-105)</td><td><span class="badge badge-blue">🏠 Studio</span></td><td>2 ห้อง</td><td>฿5,600</td><td>฿11,200</td><td>฿40/ห้อง</td><td>รายเดือน</td></tr>
-          <tr><td>ชั้น 2 (201-205)</td><td><span class="badge badge-blue">🏠 Studio</span></td><td>5 ห้อง</td><td>฿5,600</td><td>฿28,000</td><td>฿40/ห้อง</td><td>รายเดือน</td></tr>
-          <tr><td>ชั้น 3 (301-305)</td><td><span class="badge badge-purple">🐾 Pet Friendly</span></td><td>5 ห้อง</td><td>฿5,900</td><td>฿29,500</td><td>฿40/ห้อง</td><td>รายเดือน</td></tr>
-          <tr><td>ชั้น 4 (401-405)</td><td><span class="badge badge-purple">🐾 Pet Friendly</span></td><td>5 ห้อง</td><td>฿5,900</td><td>฿29,500</td><td>฿40/ห้อง</td><td>รายเดือน</td></tr>
-        </tbody>
-        <tfoot>
-          <tr style="background:var(--green-pale);font-weight:700;">
-            <td colspan="2">รวมทั้งหมด (เต็มที่)</td>
-            <td>20 ห้อง</td><td>—</td>
-            <td style="color:var(--green-dark)">฿134,200+</td>
-            <td>฿800/เดือน</td>
-            <td>ยังไม่รวมค่าน้ำ-ไฟ</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  </div>
-
-  <!-- Compact grid for Nest -->
-  <div class="card" style="margin-top:1.5rem;">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-      <span>📦 รายชื่อห้อง Nest (ตารางกระทัดรัด)</span>
-      <input type="text" id="nestCompactSearch" placeholder="🔍 ค้นหาห้อง..." style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
-    </div>
-    <div class="compact-grid" id="nestCompactGrid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin-top:1rem;"></div>
-  </div>
-  </div>
-  </div>
 </div>
 
 <!-- ===== MONTHLY ===== -->
@@ -2701,6 +2212,339 @@
   <!-- Room Type Info Cards -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:1.2rem;">
     <div id="roomTypeCardsContainer"></div>
+  </div>
+
+  <!-- Property Rooms Section (Building Info + Room Grid) -->
+  <div id="tenant-rooms-section">
+
+  <!-- Occupancy Dashboard -->
+  <div class="kpi-grid" style="margin-bottom:1.2rem;">
+    <div class="kpi-card green">
+      <div class="kpi-icon">🏠</div>
+      <div class="kpi-label">ห้องทั้งหมด</div>
+      <div class="kpi-value green" id="occupancy-total">0</div>
+      <div class="kpi-sub">ห้องพัก</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-icon">👤</div>
+      <div class="kpi-label">มีผู้เช่า</div>
+      <div class="kpi-value blue" id="occupancy-occupied">0</div>
+      <div class="kpi-sub">ห้อง</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-icon">🚪</div>
+      <div class="kpi-label">ว่าง</div>
+      <div class="kpi-value amber" id="occupancy-vacant">0</div>
+      <div class="kpi-sub">ห้อง</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-label">Occupancy Rate</div>
+      <div class="kpi-value purple" id="occupancy-rate">0%</div>
+      <div class="kpi-sub">อัตราการใช้</div>
+    </div>
+  </div>
+
+  <!-- Lease Expiry Alerts -->
+  <div id="lease-expiry-alerts" style="display:none;margin-bottom:1.5rem;">
+    <div class="card" style="background:#fff9c4;border-left:6px solid #fbc02d;">
+      <div class="card-title" style="color:#f57f17;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.3em;">⚠️</span>
+        <span>หมดสัญญาใน 30 วัน</span>
+      </div>
+      <div id="lease-expiry-list" style="display:grid;gap:8px;"></div>
+    </div>
+  </div>
+
+  <!-- Room Type Information Cards -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+    <div class="card" style="background:#e8f5e9;border-left:4px solid #4caf50;">
+      <div class="card-title" id="rooms-card-title" style="color:#1b5e20;">🏠 ห้องพัก</div>
+      <div style="font-size:.88rem;line-height:2;">
+        <div>💰 ค่าเช่า: <strong id="rooms-rent-tiers">฿1,200 / ฿1,500 / ฿2,000/เดือน</strong></div>
+        <div>⚡ อัตราค่าไฟ: <strong>8 บาท/หน่วย</strong></div>
+        <div>💧 อัตราค่าน้ำ: <strong>20 บาท/หน่วย</strong></div>
+        <div>🗑️ ค่าขยะ: <strong>20 บาท/เดือน</strong></div>
+      </div>
+    </div>
+    <div class="card" style="background:#f3e5f5;border-left:4px solid #9c27b0;">
+      <div class="card-title" id="rooms-total-title" style="color:#4a148c;">📊 รวมทั้งหมด</div>
+      <div style="font-size:.88rem;line-height:2;">
+        <div>💰 รายได้เช่า: <strong id="rooms-total-income">~฿40,400/เดือน</strong></div>
+        <div>👥 สัดส่วน: <strong id="rooms-total-breakdown">22 ห้องพัก + 1 พาณิชย์</strong></div>
+        <div>📍 ที่อยู่: <strong>ตึก 1 ส่วนเหนือ</strong></div>
+        <div>✏️ หมายเหตุ: <strong>โรงน้ำแข็งปิดแล้ว</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+    <div class="card" id="shop-info-card" style="background:#fff3e0;border-left:4px solid var(--accent);">
+      <div class="card-title" id="shop-info-title" style="color:#bf360c;">🏪 ร้านค้า</div>
+      <div id="shop-info-body" style="font-size:.88rem;line-height:2;">
+        <div>💰 ค่าเช่า: <strong id="shop-info-rent">—</strong></div>
+        <div>⚡ อัตราค่าไฟ: <strong id="shop-info-elec">—</strong></div>
+        <div>💧 อัตราค่าน้ำ: <strong id="shop-info-water">—</strong></div>
+        <div>🗑️ ค่าขยะ: <strong id="shop-info-trash">—</strong></div>
+      </div>
+    </div>
+    <div class="card" style="background:#fce4ec;border-left:4px solid #e91e63;">
+      <div class="card-title" style="color:#880e4f;">❌ โรงน้ำแข็ง — สิ้นสุดสัญญา</div>
+      <div style="font-size:.88rem;line-height:2;">
+        <div>📋 สถานะ: <strong>ขายกิจการแล้ว ไม่เก็บค่าเช่า</strong></div>
+        <div>📅 สิ้นสุด: <strong>กรกฎาคม 2568</strong></div>
+        <div>💰 เดิมเก็บ: <strong>฿25,000/เดือน</strong></div>
+        <div style="color:#880e4f;">⚠️ ส่งผลให้รายได้ลดลง ~25,000 บาท/เดือน</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room display options -->
+  <div style="margin-bottom:1.2rem;">
+    <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+      <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
+      <button onclick="toggleRoomView('grid', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--green);background:var(--green-pale);color:var(--green-dark);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📦 ตารางกระทัดรัด</button>
+      <button onclick="toggleRoomView('classic', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตารางแบบดั้งเดิม</button>
+    </div>
+  </div>
+
+  <!-- Compact Grid View (Default) -->
+  <div id="roomViewCompact">
+    <div class="card" style="margin-bottom:1.2rem;">
+      <div class="card-title">🏠 ตารางแผนผัง</div>
+      <div class="room-grid" id="roomGrid"></div>
+      <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:.76rem;">
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e8f5e9;border:2px solid #4caf50;border-radius:3px;display:inline-block"></span>ห้องพัก</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e3f2fd;border:2px solid #2196f3;border-radius:3px;display:inline-block"></span>พาณิชย์</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span>📦 รายชื่อห้องพัก (ตารางกระทัดรัด)</span>
+        <input type="text" id="roomCompactSearch" placeholder="🔍 ค้นหาห้อง..." style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
+      </div>
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="filter-btn active" onclick="setRoomFilter('all')" style="padding:6px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--green-dark);color:white;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ทั้งหมด</button>
+          <button class="filter-btn" onclick="setRoomFilter('occupied')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟢 มีผู้เช่า</button>
+          <button class="filter-btn" onclick="setRoomFilter('vacant')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #e0e0e0;background:white;color:#666;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚪ ว่าง</button>
+          <button class="filter-btn" onclick="setRoomFilter('overdue')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #d32f2f;background:white;color:#d32f2f;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🔴 ค้าง</button>
+        </div>
+        <button onclick="openBatchRentAdjustmentModal()" style="padding:8px 14px;border-radius:6px;border:1.5px solid #9c27b0;background:#f3e5f5;color:#6a1b9a;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚙️ ปรับค่าเช่าแบบหลายห้อง</button>
+      </div>
+      <div class="compact-grid" id="roomCompactGrid"></div>
+    </div>
+  </div>
+
+  <!-- Classic Table View (Hidden by default) -->
+  <div id="roomViewClassic" style="display:none;">
+    <div class="card">
+      <div class="card-title">ตารางห้องพัก & อัตราค่าเช่า</div>
+      <div class="scroll-x"><table class="data-table" id="roomTable"></table></div>
+    </div>
+  </div>
+
+  </div><!-- end tenant-rooms-section -->
+
+  <!-- Property Nest Section (Building Info + Room Grid) -->
+  <div id="tenant-nest-section" style="display:none;">
+
+  <!-- Occupancy Dashboard -->
+  <div class="kpi-grid" style="margin-bottom:1.2rem;">
+    <div class="kpi-card green">
+      <div class="kpi-icon">🏠</div>
+      <div class="kpi-label">ห้องทั้งหมด</div>
+      <div class="kpi-value green" id="nest-occupancy-total">0</div>
+      <div class="kpi-sub">ห้องพัก</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-icon">👤</div>
+      <div class="kpi-label">มีผู้เช่า</div>
+      <div class="kpi-value blue" id="nest-occupancy-occupied">0</div>
+      <div class="kpi-sub">ห้อง</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-icon">🚪</div>
+      <div class="kpi-label">ว่าง</div>
+      <div class="kpi-value amber" id="nest-occupancy-vacant">0</div>
+      <div class="kpi-sub">ห้อง</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-label">Occupancy Rate</div>
+      <div class="kpi-value purple" id="nest-occupancy-rate">0%</div>
+      <div class="kpi-sub">อัตราการใช้</div>
+    </div>
+  </div>
+
+  <!-- Lease Expiry Alerts -->
+  <div id="nest-lease-expiry-alerts" style="display:none;margin-bottom:1.5rem;">
+    <div class="card" style="background:#fff9c4;border-left:6px solid #fbc02d;">
+      <div class="card-title" style="color:#f57f17;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.3em;">⚠️</span>
+        <span>หมดสัญญาใน 30 วัน</span>
+      </div>
+      <div id="nest-lease-expiry-list" style="display:grid;gap:8px;"></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+    <div class="card" style="background:#f3e5f5;border-left:4px solid var(--purple);">
+      <div class="card-title" id="nest-studio-title" style="color:#6a1b9a;">🏠 Studio (N101–N205)</div>
+      <div style="font-size:.88rem;line-height:2;">
+        <div>💰 ค่าเช่า: <strong id="nest-studio-rent">—</strong></div>
+        <div>⚡ อัตราค่าไฟ: <strong id="nest-studio-elec">—</strong></div>
+        <div>💧 อัตราค่าน้ำ: <strong id="nest-studio-water">—</strong></div>
+        <div>🗑️ ค่าขยะ: <strong id="nest-studio-trash">—</strong></div>
+      </div>
+    </div>
+    <div class="card" style="background:#fff3e0;border-left:4px solid var(--accent);">
+      <div class="card-title" id="nest-pet-title" style="color:#bf360c;">🐾 Pet-Allowed (N301–N405)</div>
+      <div style="font-size:.88rem;line-height:2;">
+        <div>💰 ค่าเช่า: <strong id="nest-pet-rent">—</strong></div>
+        <div>⚡ อัตราค่าไฟ: <strong id="nest-pet-elec">—</strong></div>
+        <div>💧 อัตราค่าน้ำ: <strong id="nest-pet-water">—</strong></div>
+        <div>🗑️ ค่าขยะ: <strong id="nest-pet-trash">—</strong></div>
+      </div>
+    </div>
+    <div class="card" style="background:#f3e5f5;border-left:4px solid #9c27b0;grid-column:span 2;">
+      <div class="card-title" id="nest-total-title" style="color:#4a148c;">📊 รวมทั้งหมด</div>
+      <div style="font-size:.88rem;line-height:2;display:grid;grid-template-columns:1fr 1fr;">
+        <div>💰 รายได้เช่า: <strong id="nest-total-income">—</strong></div>
+        <div>👥 สัดส่วน: <strong id="nest-total-breakdown">—</strong></div>
+        <div>📍 ที่อยู่: <strong>Nest · เดอะ กรีน เฮฟเว่น (4 ชั้น)</strong></div>
+        <div>✨ หมายเหตุ: <strong>ห้องพักแบบยุคใหม่ (Modern Co-Living)</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room display options -->
+  <div style="margin-bottom:1.2rem;">
+    <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+      <div style="font-weight:700;color:var(--text-muted);">มุมมอง:</div>
+      <button onclick="toggleNestRoomView('grid', this)" class="view-btn active" style="padding:8px 16px;border:1.5px solid var(--blue);background:#e3f2fd;color:#1565c0;border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📦 ตารางกระทัดรัด</button>
+      <button onclick="toggleNestRoomView('classic', this)" class="view-btn" style="padding:8px 16px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:6px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">📋 ตารางแบบดั้งเดิม</button>
+    </div>
+  </div>
+
+  <!-- Compact Grid View (Default) -->
+  <div id="nestViewCompact">
+    <div class="card" style="margin-bottom:1.2rem;">
+      <div class="card-title">🏗️ ตารางแผนผัง Nest</div>
+      <div class="room-grid" id="nestRoomGrid"></div>
+      <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:.76rem;">
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#e3f2fd;border:2px solid #2196f3;border-radius:3px;display:inline-block"></span>Studio</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:13px;height:13px;background:#f3e5f5;border:2px solid #9c27b0;border-radius:3px;display:inline-block"></span>Pet-Allowed</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span>📦 รายชื่อห้อง Nest (ตารางกระทัดรัด)</span>
+        <input type="text" id="nestCompactSearch" placeholder="🔍 ค้นหาห้อง..." style="padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:250px;">
+      </div>
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="filter-btn-nest active" onclick="setNestFilter('all')" style="padding:6px 12px;border-radius:6px;border:1.5px solid var(--border);background:var(--green-dark);color:white;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">ทั้งหมด</button>
+        <button class="filter-btn-nest" onclick="setNestFilter('occupied')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🟢 มีผู้เช่า</button>
+        <button class="filter-btn-nest" onclick="setNestFilter('vacant')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #e0e0e0;background:white;color:#666;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">⚪ ว่าง</button>
+        <button class="filter-btn-nest" onclick="setNestFilter('overdue')" style="padding:6px 12px;border-radius:6px;border:1.5px solid #d32f2f;background:white;color:#d32f2f;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;">🔴 ค้าง</button>
+      </div>
+      <div class="compact-grid" id="nestCompactGrid"></div>
+    </div>
+  </div>
+
+  <!-- Classic Table View (Hidden by default) -->
+  <div id="nestViewClassic" style="display:none;">
+    <div class="card">
+      <div class="card-title">ตารางห้องพัก Nest & อัตราค่าเช่า</div>
+      <div class="scroll-x"><table class="data-table" id="nestRoomTable"></table></div>
+    </div>
+  </div>
+
+  </div><!-- end tenant-nest-section -->
+
+  <!-- Batch Rent Adjustment Modal -->
+  <div id="batchRentModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;flex-direction:column;">
+    <div style="background:white;border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h2 style="font-size:1.4rem;margin:0;color:#1b5e20;">⚙️ ปรับค่าเช่าแบบหลายห้อง</h2>
+        <button onclick="closeBatchRentAdjustmentModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;">✕</button>
+      </div>
+
+      <!-- Room Selection -->
+      <div style="margin-bottom:20px;">
+        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">📍 เลือกห้องพัก</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:8px;margin-bottom:12px;max-height:150px;overflow-y:auto;">
+          <div id="roomSelectionContainer" style="grid-column:1/-1;">
+            <p style="color:#999;text-align:center;">กำลังโหลด...</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button onclick="selectAllRooms()" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✓ เลือกทั้งหมด</button>
+          <button onclick="deselectAllRooms()" style="padding:6px 12px;border-radius:6px;border:1.5px solid #999;background:white;color:#999;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✗ ยกเลิกทั้งหมด</button>
+        </div>
+        <div style="font-size:0.85rem;color:#666;background:#f5f5f5;padding:10px;border-radius:6px;">
+          <strong id="roomSelectionCount">0</strong> ห้องได้รับการเลือก
+        </div>
+      </div>
+
+      <!-- Adjustment Type Selection -->
+      <div style="margin-bottom:20px;">
+        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">📊 วิธีการปรับค่าเช่า</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
+            <input type="radio" name="adjustType" value="fixed-increase" checked style="cursor:pointer;">
+            <span style="font-size:0.9rem;">เพิ่มเป็นจำนวนเงิน</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
+            <input type="radio" name="adjustType" value="percentage-increase" style="cursor:pointer;">
+            <span style="font-size:0.9rem;">เพิ่มเป็นเปอร์เซ็นต์</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
+            <input type="radio" name="adjustType" value="fixed-decrease" style="cursor:pointer;">
+            <span style="font-size:0.9rem;">ลดเป็นจำนวนเงิน</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
+            <input type="radio" name="adjustType" value="percentage-decrease" style="cursor:pointer;">
+            <span style="font-size:0.9rem;">ลดเป็นเปอร์เซ็นต์</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;grid-column:1/-1;" onchange="updateAdjustmentDisplay()">
+            <input type="radio" name="adjustType" value="set-fixed" style="cursor:pointer;">
+            <span style="font-size:0.9rem;">กำหนดเป็นค่าเช่าคงที่</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Adjustment Value Input -->
+      <div style="margin-bottom:20px;">
+        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">
+          <span id="adjustLabel">จำนวนที่เพิ่ม</span>
+        </h3>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="adjustSymbol" style="font-size:1.1rem;font-weight:600;color:#4caf50;">฿</span>
+          <input type="number" id="adjustmentValue" placeholder="0" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:6px;font-size:1rem;font-family:'Sarabun',sans-serif;">
+          <span id="adjustUnit" style="font-size:0.95rem;color:#666;font-weight:500;">บาท</span>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div style="margin-bottom:20px;padding:12px;background:#f5f5f5;border-radius:6px;max-height:120px;overflow-y:auto;">
+        <h3 style="font-size:0.9rem;font-weight:600;color:#333;margin:0 0 8px 0;">📋 ตัวอย่างผลลัพธ์</h3>
+        <div id="previewResult" style="font-size:0.85rem;color:#666;line-height:1.6;">
+          <p style="margin:0;color:#999;">เลือกห้องและค่าที่ต้องการปรับเพื่อดูตัวอย่าง</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="closeBatchRentAdjustmentModal()" style="padding:10px 20px;border-radius:6px;border:1.5px solid #999;background:white;color:#333;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">ยกเลิก</button>
+        <button onclick="applyBatchRentAdjustment()" style="padding:10px 20px;border-radius:6px;border:none;background:#4caf50;color:white;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✓ ปรับค่าเช่า</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tenant Section Header -->
+  <div style="display:flex;align-items:center;gap:10px;margin:1.5rem 0 1rem 0;padding-top:1rem;border-top:2px solid var(--border);">
+    <span style="font-size:1.1rem;font-weight:700;color:var(--text);">👥 ผู้เช่า & สัญญา</span>
   </div>
 
   <!-- Filter + Search Bar -->

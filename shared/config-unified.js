@@ -223,26 +223,26 @@ const ROOMS_NEW = [
 ];
 
 const NEST_ROOMS = [
-  {id:'N101', floor:1, type:'daily', rentPrice:5800, deposit:3000},
-  {id:'N102', floor:1, type:'daily', rentPrice:5800, deposit:3000},
-  {id:'N103', floor:1, type:'daily', rentPrice:5800, deposit:3000},
-  {id:'N104', floor:1, type:'daily', rentPrice:5800, deposit:3000},
-  {id:'N105', floor:1, type:'daily', rentPrice:5800, deposit:3000},
-  {id:'N201', floor:2, type:'daily', rentPrice:5800, deposit:3000},
-  {id:'N202', floor:2, type:'daily', rentPrice:5800, deposit:3000},
-  {id:'N203', floor:2, type:'daily', rentPrice:5800, deposit:3000},
-  {id:'N204', floor:2, type:'daily', rentPrice:5800, deposit:3000},
-  {id:'N205', floor:2, type:'daily', rentPrice:5800, deposit:3000},
-  {id:'N301', floor:3, type:'studio', rentPrice:6200, deposit:2500},
-  {id:'N302', floor:3, type:'studio', rentPrice:6200, deposit:2500},
-  {id:'N303', floor:3, type:'pet', rentPrice:6200, deposit:2500},
-  {id:'N304', floor:3, type:'studio', rentPrice:6200, deposit:2500},
-  {id:'N305', floor:3, type:'pet', rentPrice:6200, deposit:2500},
-  {id:'N401', floor:4, type:'studio', rentPrice:6200, deposit:2500},
-  {id:'N402', floor:4, type:'studio', rentPrice:6200, deposit:2500},
-  {id:'N403', floor:4, type:'pet', rentPrice:6200, deposit:2500},
-  {id:'N404', floor:4, type:'studio', rentPrice:6200, deposit:2500},
-  {id:'N405', floor:4, type:'pet', rentPrice:6200, deposit:2500}
+  {id:'N101', floor:1, type:'studio', rentPrice:5800, deposit:3000},
+  {id:'N102', floor:1, type:'studio', rentPrice:5800, deposit:3000},
+  {id:'N103', floor:1, type:'studio', rentPrice:5800, deposit:3000},
+  {id:'N104', floor:1, type:'studio', rentPrice:5800, deposit:3000},
+  {id:'N105', floor:1, type:'studio', rentPrice:5800, deposit:3000},
+  {id:'N201', floor:2, type:'studio', rentPrice:5800, deposit:3000},
+  {id:'N202', floor:2, type:'studio', rentPrice:5800, deposit:3000},
+  {id:'N203', floor:2, type:'studio', rentPrice:5800, deposit:3000},
+  {id:'N204', floor:2, type:'studio', rentPrice:5800, deposit:3000},
+  {id:'N205', floor:2, type:'studio', rentPrice:5800, deposit:3000},
+  {id:'N301', floor:3, type:'pet-allowed', rentPrice:6200, deposit:2500},
+  {id:'N302', floor:3, type:'pet-allowed', rentPrice:6200, deposit:2500},
+  {id:'N303', floor:3, type:'pet-allowed', rentPrice:6200, deposit:2500},
+  {id:'N304', floor:3, type:'pet-allowed', rentPrice:6200, deposit:2500},
+  {id:'N305', floor:3, type:'pet-allowed', rentPrice:6200, deposit:2500},
+  {id:'N401', floor:4, type:'pet-allowed', rentPrice:6200, deposit:2500},
+  {id:'N402', floor:4, type:'pet-allowed', rentPrice:6200, deposit:2500},
+  {id:'N403', floor:4, type:'pet-allowed', rentPrice:6200, deposit:2500},
+  {id:'N404', floor:4, type:'pet-allowed', rentPrice:6200, deposit:2500},
+  {id:'N405', floor:4, type:'pet-allowed', rentPrice:6200, deposit:2500}
 ];
 
 // ============================================================================

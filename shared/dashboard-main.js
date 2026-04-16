@@ -22,7 +22,6 @@ window._showPageImpl = function(page,btn){
     window._closeSidebarImpl();
   }
   if(page==='dashboard'){setTimeout(initDashboardCharts,100);updateDashboardLive();syncDashboardYearUI();}
-  if(page==='property')initPropertyPage();
   if(page==='monthly')initMonthlyPage();
   if(page==='tenant')initTenantPage();
   if(page==='expense')initExpensePage();
@@ -2192,12 +2191,13 @@ function showToast(message, type = 'success', duration = 3000) {
 // Display name (room.name) is editable via ⚙️ config table → "ชื่อห้อง" column
 
 function refreshPropertyPageIfActive() {
-  const propPage = document.getElementById('page-property');
-  if (propPage && propPage.classList.contains('active')) {
-    initPropertyPage();
+  // Property page removed — refresh tenant page if active
+  const tenantPage = document.getElementById('page-tenant');
+  if (tenantPage && tenantPage.classList.contains('active')) {
+    if (tenantBuilding === 'old') { initRoomsPage(); } else { initNestPage(); }
   }
-  // Also update the static shop info card
   updateShopInfoCard();
+  updateRoomsInfoCards();
 }
 
 function updateDepositDisplay() {
@@ -2997,6 +2997,10 @@ function initRoomsPage(){
   if(searchInput){
     searchInput.addEventListener('input',renderCompactRoomGrid);
   }
+
+  // Update dynamic info cards
+  updateRoomsInfoCards();
+  updateShopInfoCard();
 }
 
 // ===== ROOM FILTER FUNCTION =====
@@ -3616,12 +3620,12 @@ function initNestPage(){
   grid.innerHTML = rooms.map(r => {
     const tenant = allTenants[r.id];
     const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
-    const typeIcon = r.type === 'daily' ? '📅' : (r.type === 'pet' ? '🐾' : '🏠');
+    const typeIcon = r.type === 'pet-allowed' ? '🐾' : '🏠';
     const statusInfo = getRoomColorStatus(r.id, r);
     const bgColor = statusInfo.color+'40';
     const borderColor = statusInfo.color;
     return `
-    <div class="room-pill ${r.type === 'pet' ? 'pet' : (r.type === 'daily' ? 'daily' : 'studio')}" onclick="openTenantModal('nest', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
+    <div class="room-pill ${r.type === 'pet-allowed' ? 'pet-allowed' : 'studio'}" onclick="openTenantModal('nest', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${(r.name || r.id).replace(/^ห้อง |^Nest /, '')}</div>
       <div class="room-rent">฿${r.rentPrice.toLocaleString()}/เดือน</div>
       <div class="room-status">${typeIcon} ${tenant && tenant.name ? tenant.name : 'ว่าง'}</div>
@@ -3631,22 +3635,21 @@ function initNestPage(){
 
   // Populate classic table view
   const tbl = document.getElementById('nestRoomTable');
-  const rentStudio = rooms.filter(r => r.type === 'studio').reduce((a, r) => a + r.rent, 0);
-  const rentPet = rooms.filter(r => r.type === 'pet').reduce((a, r) => a + r.rent, 0);
-  const rentDaily = rooms.filter(r => r.type === 'daily').reduce((a, r) => a + r.rent, 0);
-  const rentTotal = rooms.reduce((a, r) => a + r.rent, 0);
+  const rentStudio = rooms.filter(r => r.type === 'studio').reduce((a, r) => a + (r.rentPrice || 0), 0);
+  const rentPet = rooms.filter(r => r.type === 'pet-allowed').reduce((a, r) => a + (r.rentPrice || 0), 0);
+  const rentTotal = rooms.reduce((a, r) => a + (r.rentPrice || 0), 0);
 
   tbl.innerHTML = `
     <thead><tr><th>ห้องเลขที่</th><th>ชั้น</th><th>ประเภท</th><th>ค่าเช่า</th><th>อัตราไฟ</th><th>ค่าขยะ</th><th>หมายเหตุ</th></tr></thead>
     <tbody>${rooms.map(r => {
-      const typeLabel = r.type === 'daily' ? '📅 รายวัน' : (r.type === 'pet' ? '🐾 Pet Friendly' : '🏠 Studio');
+      const typeLabel = r.type === 'pet-allowed' ? '🐾 Pet-Allowed' : '🏠 Studio';
       return `<tr>
         <td><strong>${r.id}</strong></td>
         <td>ชั้น ${r.floor}</td>
-        <td><span class="badge ${r.type === 'pet' ? 'badge-purple' : (r.type === 'daily' ? 'badge-orange' : 'badge-blue')}">${typeLabel}</span></td>
+        <td><span class="badge ${r.type === 'pet-allowed' ? 'badge-purple' : 'badge-blue'}">${typeLabel}</span></td>
         <td style="font-weight:700;color:var(--green-dark)">฿${r.rentPrice.toLocaleString()}</td>
-        <td>${r.elecRate} บาท/หน่วย</td>
-        <td>฿${r.trashFee}</td>
+        <td>${r.electricRate || r.elecRate || 8} บาท/หน่วย</td>
+        <td>฿${r.trashRate || r.trashFee || 40}</td>
         <td style="font-size:.8rem;color:var(--text-muted)">${r.note || '—'}</td>
       </tr>`;
     }).join('')}</tbody>
@@ -3684,8 +3687,8 @@ function updateNestInfoCards() {
   const rooms = nestConfig?.rooms?.filter(r => !r.deleted) || [];
   if (!rooms.length) return;
 
-  const byType = { daily: [], studio: [], pet: [] };
-  rooms.forEach(r => { if (byType[r.type]) byType[r.type].push(r); });
+  const byType = { studio: [], 'pet-allowed': [] };
+  rooms.forEach(r => { const key = r.type === 'pet-allowed' ? 'pet-allowed' : 'studio'; byType[key].push(r); });
 
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   const fmtRent  = v => v > 0 ? `฿${v.toLocaleString()}/เดือน` : '—';
@@ -3695,24 +3698,17 @@ function updateNestInfoCards() {
   const floorStr = arr => [...new Set(arr.map(r => r.floor).filter(Boolean))].sort((a,b)=>a-b).join(', ');
   const rep = arr => arr[0] || {};
 
-  const d = byType.daily, s = byType.studio, p = byType.pet;
-
-  const rd = rep(d);
-  set('nest-daily-title', `📅 รายวัน${d.length ? ' (' + d.length + ' ห้อง ชั้น ' + floorStr(d) + ')' : ''}`);
-  set('nest-daily-rent',  fmtRent(rd.rentPrice));
-  set('nest-daily-elec',  fmtElec(rd.electricRate));
-  set('nest-daily-water', fmtWater(rd.waterRate));
-  set('nest-daily-trash', fmtTrash(rd.trashRate));
+  const s = byType.studio, p = byType['pet-allowed'];
 
   const rs = rep(s);
-  set('nest-studio-title', `🏠 Studio${s.length ? ' (' + s.length + ' ห้อง ชั้น ' + floorStr(s) + ')' : ''}`);
+  set('nest-studio-title', `🏠 Studio (N101–N205)${s.length ? ' — ' + s.length + ' ห้อง' : ''}`);
   set('nest-studio-rent',  fmtRent(rs.rentPrice));
   set('nest-studio-elec',  fmtElec(rs.electricRate));
   set('nest-studio-water', fmtWater(rs.waterRate));
   set('nest-studio-trash', fmtTrash(rs.trashRate));
 
   const rp = rep(p);
-  set('nest-pet-title', `🐾 Pet Friendly${p.length ? ' (' + p.length + ' ห้อง ชั้น ' + floorStr(p) + ')' : ''}`);
+  set('nest-pet-title', `🐾 Pet-Allowed (N301–N405)${p.length ? ' — ' + p.length + ' ห้อง' : ''}`);
   set('nest-pet-rent',  fmtRent(rp.rentPrice));
   set('nest-pet-elec',  fmtElec(rp.electricRate));
   set('nest-pet-water', fmtWater(rp.waterRate));
@@ -3721,7 +3717,7 @@ function updateNestInfoCards() {
   const totalRent = rooms.reduce((a, r) => a + (r.rentPrice || 0), 0);
   set('nest-total-title', `📊 รวมทั้งหมด (${rooms.length} ห้อง)`);
   set('nest-total-income', `฿${totalRent.toLocaleString()}/เดือน`);
-  set('nest-total-breakdown', `${d.length} รายวัน + ${s.length} Studio + ${p.length} Pet Friendly`);
+  set('nest-total-breakdown', `${s.length} Studio + ${p.length} Pet-Allowed`);
 }
 
 // ─── Dynamic shop info card — reads from RoomConfigManager ───
@@ -3749,6 +3745,32 @@ function updateShopInfoCard() {
   if (elecEl)  elecEl.textContent  = elec  > 0 ? `${elec} บาท/หน่วย`  : '—';
   if (waterEl) waterEl.textContent = water > 0 ? `${water} บาท/หน่วย` : '—';
   if (trashEl) trashEl.textContent = trash > 0 ? `฿${trash}/เดือน`    : '—';
+}
+
+// ─── Dynamic Rooms info cards — reads from RoomConfigManager ───
+function updateRoomsInfoCards() {
+  const config = (typeof RoomConfigManager !== 'undefined') ? RoomConfigManager.getRoomsConfig('rooms') : null;
+  if (!config?.rooms) return;
+  const rooms = config.rooms.filter(r => !r.deleted && r.id !== 'ร้านใหญ่');
+
+  // Group by rent price tier
+  const tiers = {};
+  rooms.forEach(r => {
+    const p = r.rentPrice || 0;
+    tiers[p] = (tiers[p] || 0) + 1;
+  });
+  const tierStr = Object.keys(tiers).sort((a, b) => Number(a) - Number(b))
+    .map(p => `฿${Number(p).toLocaleString()} × ${tiers[p]}`)
+    .join(' | ');
+  const totalRooms = rooms.length;
+  const totalIncome = rooms.reduce((a, r) => a + (r.rentPrice || 0), 0);
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('rooms-card-title', `🏠 ห้องพัก (${totalRooms} ห้อง)`);
+  set('rooms-rent-tiers', tierStr || '฿1,200 / ฿1,500 / ฿2,000/เดือน');
+  set('rooms-total-title', `📊 รวมทั้งหมด (${totalRooms + 1} ห้อง)`);
+  set('rooms-total-income', `฿${totalIncome.toLocaleString()}/เดือน (ไม่รวมร้านค้า)`);
+  set('rooms-total-breakdown', `${totalRooms} ห้องพัก + 1 พาณิชย์`);
 }
 
 // ===== MONTHLY PAGE =====
@@ -5332,10 +5354,24 @@ function setTenantBuilding(bld,btn){
     b.style.background=i===0?'var(--green-dark)':'white';
     b.style.color=i===0?'white':b.style.borderColor||'#666';
   });
+  // Show/hide building-specific sections
+  const roomsSec = document.getElementById('tenant-rooms-section');
+  const nestSec  = document.getElementById('tenant-nest-section');
+  if(roomsSec) roomsSec.style.display = bld==='old' ? '' : 'none';
+  if(nestSec)  nestSec.style.display  = bld==='new' ? '' : 'none';
+  // Init the building's room grid & info cards
+  if(bld==='old'){ initRoomsPage(); } else { initNestPage(); }
   renderTenantPage();
 }
 
 function initTenantPage(){
+  // Show/hide building sections based on current building tab
+  const roomsSec = document.getElementById('tenant-rooms-section');
+  const nestSec  = document.getElementById('tenant-nest-section');
+  if(roomsSec) roomsSec.style.display = tenantBuilding==='old' ? '' : 'none';
+  if(nestSec)  nestSec.style.display  = tenantBuilding==='new' ? '' : 'none';
+  // Initialize the active building room grid
+  if(tenantBuilding==='old'){ initRoomsPage(); } else { initNestPage(); }
   renderTenantPage();
   renderTenantTable();
   updateTenantAlertBlock();
@@ -5459,9 +5495,9 @@ function renderTenantPage(){
       ${t.deposit?`<div class="compact-card-info"><span style="font-size:.75rem;color:var(--text-muted);">มัดจำ</span><span style="font-weight:700;color:var(--green-dark);">฿${Number(t.deposit).toLocaleString()}</span></div>`:''}
       `:`<div class="compact-card-info" style="text-align:center;padding:1rem 0;color:var(--text-muted);"><span>🚪 ไม่มีผู้เช่า</span></div>`}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
-        <button onclick="showTenantModal('${r.id}')" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">📄 สัญญา</button>
-        <button onclick="showTenantModal('${r.id}')" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">💰 ชำระ</button>
-        <button onclick="window.showPage('bill')" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🧾 บิล</button>
+        <button onclick="openTenantModal('${tenantBuilding==='old'?'rooms':'nest'}','${r.id}')" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">📄 สัญญา</button>
+        <button onclick="showBillingModal('${r.id}')" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">💰 ชำระ</button>
+        <button onclick="showBillingHistoryModal('${r.id}')" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🧾 บิล</button>
         <button onclick="window.showPage('maintenance')" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #7b1fa2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🔧 ซ่อม</button>
       </div>
     </div>`;
@@ -8049,6 +8085,191 @@ function openTenantModal(building, roomId) {
 function closeTenantModal() {
   document.getElementById('tenantModal').style.display = 'none';
   currentEditRoomId = null;
+  // Hide lease history if open
+  const hist = document.getElementById('tenantLeaseHistorySection');
+  if (hist) hist.style.display = 'none';
+}
+
+// ─── Lease History (ประวัติผู้เช่าเก่า) ───
+function showTenantLeaseHistory(building, roomId) {
+  if (!building || !roomId) return;
+  const section = document.getElementById('tenantLeaseHistorySection');
+  const content = document.getElementById('tenantLeaseHistoryContent');
+  if (!section || !content) return;
+
+  // Toggle: hide if already visible for same room
+  if (section.style.display !== 'none') { section.style.display = 'none'; return; }
+
+  const leases = (typeof LeaseAgreementManager !== 'undefined')
+    ? LeaseAgreementManager.getLeaseHistory(building, roomId)
+    : [];
+
+  if (!leases.length) {
+    content.innerHTML = '<p style="color:var(--text-muted);">ยังไม่มีประวัติผู้เช่า</p>';
+  } else {
+    content.innerHTML = leases.map(l => {
+      const moveIn  = l.moveInDate    ? new Date(l.moveInDate).toLocaleDateString('th-TH')    : '—';
+      const moveOut = l.moveOutDate   ? new Date(l.moveOutDate).toLocaleDateString('th-TH')   : (l.status==='active'?'ปัจจุบัน':'—');
+      const badge   = l.status==='active'
+        ? '<span style="background:#e8f5e9;color:#388e3c;padding:2px 8px;border-radius:10px;font-size:.7rem;">กำลังเช่า</span>'
+        : '<span style="background:#f3e5f5;color:#7b1fa2;padding:2px 8px;border-radius:10px;font-size:.7rem;">สิ้นสุดแล้ว</span>';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">
+        <div><strong>${l.tenantName||'—'}</strong> ${badge}</div>
+        <div style="font-size:.78rem;color:var(--text-muted);">${moveIn} → ${moveOut}</div>
+      </div>`;
+    }).join('');
+  }
+  section.style.display = 'block';
+}
+
+// ─── Billing Modal (ชำระค่าเช่า) ───
+function showBillingModal(roomId) {
+  const building = tenantBuilding === 'old' ? 'rooms' : 'nest';
+  const rooms = _getTenantRooms();
+  const room = rooms.find(r => r.id === roomId);
+  if (!room) return;
+
+  const tenants = loadTenants();
+  const tenant = tenants[roomId];
+  const tenantName = tenant?.name || '(ว่าง)';
+
+  // Get current month/year (Thai year)
+  const now = new Date();
+  const thMonth = now.getMonth() + 1;
+  const thYear = now.getFullYear() + 543;
+
+  // Check if bill exists for this month
+  let existingBill = null;
+  if (typeof BillingSystem !== 'undefined') {
+    existingBill = BillingSystem.getBillByMonthYear(roomId, thMonth, thYear);
+  }
+
+  const totalStr = existingBill
+    ? `฿${Number(existingBill.totalCharge).toLocaleString()} (บิลเดือนนี้)`
+    : `฿${Number(room.rentPrice||0).toLocaleString()} (ค่าเช่าเท่านั้น)`;
+
+  const statusBadge = existingBill
+    ? (existingBill.status === 'paid'
+        ? '<span style="color:#388e3c;font-weight:700;">✅ ชำระแล้ว</span>'
+        : '<span style="color:#f57c00;font-weight:700;">⏳ ค้างชำระ</span>')
+    : '';
+
+  const modal = document.createElement('div');
+  modal.id = 'billingPayModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;justify-content:center;align-items:center;padding:1rem;';
+  const MONTHS_TH_SHORT = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:var(--radius);max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#388e3c,#1b5e20);color:#fff;padding:1.2rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;font-size:1.05rem;">💰 บันทึกการชำระ</div>
+          <div style="font-size:.8rem;opacity:.85;">${roomId} · ${tenantName}</div>
+        </div>
+        <button onclick="document.getElementById('billingPayModal').remove()" style="background:rgba(255,255,255,.2);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.1rem;">✕</button>
+      </div>
+      <div style="padding:1.5rem;">
+        <div style="background:#f9fafb;border-radius:8px;padding:1rem;margin-bottom:1rem;font-size:.9rem;line-height:2;">
+          <div>📅 เดือน: <strong>${MONTHS_TH_SHORT[thMonth]} ${thYear}</strong></div>
+          <div>💰 ยอดที่ต้องชำระ: <strong style="color:var(--green-dark);font-size:1.05rem;">${totalStr}</strong></div>
+          ${existingBill ? `<div>สถานะ: ${statusBadge}</div>` : ''}
+          ${existingBill?.charges ? `
+          <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:6px;font-size:.8rem;color:var(--text-muted);">
+            ค่าเช่า ฿${Number(existingBill.charges.rent||0).toLocaleString()} +
+            ไฟ ฿${Number(existingBill.charges.electric?.cost||0).toLocaleString()} +
+            น้ำ ฿${Number(existingBill.charges.water?.cost||0).toLocaleString()} +
+            ขยะ ฿${Number(existingBill.charges.trash||0).toLocaleString()}
+          </div>` : ''}
+        </div>
+        ${existingBill && existingBill.status !== 'paid' ? `
+        <div style="margin-bottom:1rem;">
+          <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">หมายเหตุการชำระ</label>
+          <input type="text" id="billingPayNote" placeholder="เช่น โอนผ่าน PromptPay" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.9rem;">
+        </div>
+        <button onclick="markBillPaid('${roomId}',${existingBill.month},${existingBill.year},'${existingBill.billId}')" style="width:100%;padding:12px;background:linear-gradient(135deg,#388e3c,#1b5e20);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;">✅ บันทึกว่าชำระแล้ว</button>
+        ` : existingBill?.status === 'paid' ? `
+        <div style="text-align:center;padding:1rem;color:#388e3c;font-weight:700;">✅ ชำระเรียบร้อยแล้ว</div>
+        ` : `
+        <div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:.85rem;">ยังไม่มีบิลสำหรับเดือนนี้<br>กรุณาสร้างบิลจากหน้า "บิล" ก่อน</div>
+        `}
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function markBillPaid(roomId, month, year, billId) {
+  if (typeof BillingSystem === 'undefined') { showToast('ไม่พบระบบบิล', 'error'); return; }
+  const note = document.getElementById('billingPayNote')?.value || '';
+  BillingSystem.updateBillStatus(billId, 'paid', year);
+  showToast(`✅ บันทึกการชำระห้อง ${roomId} เดือน ${month}/${year} แล้ว`, 'success');
+  document.getElementById('billingPayModal')?.remove();
+}
+
+// ─── Billing History Modal (ประวัติบิล 6 เดือน) ───
+function showBillingHistoryModal(roomId) {
+  const rooms = _getTenantRooms();
+  const room = rooms.find(r => r.id === roomId);
+  const tenants = loadTenants();
+  const tenantName = tenants[roomId]?.name || '(ว่าง)';
+
+  // Collect last 6 months of bills
+  const now = new Date();
+  const months = [];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ m: d.getMonth() + 1, y: d.getFullYear() + 543 });
+  }
+
+  let bills = [];
+  if (typeof BillingSystem !== 'undefined') {
+    bills = BillingSystem.getBillsByRoom(roomId);
+  }
+
+  const MONTHS_TH_SHORT = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const rows = months.map(({m, y}) => {
+    const bill = bills.find(b => b.month === m && b.year === y);
+    if (!bill) return `<tr><td><strong>${MONTHS_TH_SHORT[m]} ${y}</strong></td><td colspan="4" style="color:var(--text-muted);text-align:center;">ไม่มีบิล</td></tr>`;
+    const statusColor = bill.status === 'paid' ? '#388e3c' : '#f57c00';
+    const statusLabel = bill.status === 'paid' ? '✅ ชำระแล้ว' : '⏳ ค้างชำระ';
+    return `<tr>
+      <td><strong>${MONTHS_TH_SHORT[m]} ${y}</strong></td>
+      <td style="text-align:right;">฿${Number(bill.charges?.rent||0).toLocaleString()}</td>
+      <td style="text-align:right;">฿${Number((bill.charges?.electric?.cost||0)+(bill.charges?.water?.cost||0)).toLocaleString()}</td>
+      <td style="text-align:right;font-weight:700;color:var(--green-dark);">฿${Number(bill.totalCharge||0).toLocaleString()}</td>
+      <td style="color:${statusColor};font-weight:700;">${statusLabel}</td>
+    </tr>`;
+  }).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'billingHistoryModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;justify-content:center;align-items:center;padding:1rem;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:var(--radius);max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#f57c00,#e65100);color:#fff;padding:1.2rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;font-size:1.05rem;">🧾 ประวัติบิล — ห้อง ${roomId}</div>
+          <div style="font-size:.8rem;opacity:.85;">${tenantName} · 6 เดือนย้อนหลัง</div>
+        </div>
+        <button onclick="document.getElementById('billingHistoryModal').remove()" style="background:rgba(255,255,255,.2);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.1rem;">✕</button>
+      </div>
+      <div style="padding:1rem;overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.88rem;">
+          <thead><tr style="background:var(--green-pale);text-align:left;">
+            <th style="padding:8px;">เดือน</th>
+            <th style="padding:8px;text-align:right;">ค่าเช่า</th>
+            <th style="padding:8px;text-align:right;">ค่าน้ำ/ไฟ</th>
+            <th style="padding:8px;text-align:right;">รวม</th>
+            <th style="padding:8px;">สถานะ</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="padding:1rem;text-align:right;border-top:1px solid var(--border);">
+        <button onclick="document.getElementById('billingHistoryModal').remove()" style="padding:8px 20px;background:var(--border);border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;">ปิด</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 }
 
 function saveTenantInfo() {
