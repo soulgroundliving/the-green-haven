@@ -63,13 +63,18 @@
     <style>
         :root {
             --primary-green: #7BA67E;
+            --primary-dark: #5F8A62;
             --soft-green: #E8F0E9;
             --text-dark: #334435;
             --bg-color: #F9FBF9;
             --white: #FFFFFF;
             --accent-gold: #D4AF37;
             --danger: #DC2626;
-            --shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            --shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+            --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.04);
+            --receipt-green: #5F8A62;
+            --radius-card: 22px;
+            --gap: 15px;
             /* Suggestion Colors */
             --suggest-bg: #F0F4FF;
             --suggest-border: #D1E1FF;
@@ -79,7 +84,6 @@
         * {
             box-sizing: border-box;
             font-family: 'Prompt', sans-serif;
-            transition: background 0.3s, color 0.3s;
         }
 
         body {
@@ -138,15 +142,21 @@
             }
         }
 
-        /* 4. Animation สำหรับการสลับหน้าแบบ Fade (Optional: เพื่อความสมูท) */
+        /* 4. Animation สำหรับการสลับหน้าแบบ Fade */
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
 
-            to {
-                opacity: 1;
-            }
+        /* 5. Loader spin */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 6. Scanline (smart key page) */
+        @keyframes scanline {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(100%); }
         }
 
         /* คลาสเสริมสำหรับเรียกใช้ได้ทันทีใน HTML */
@@ -184,11 +194,11 @@
 
         .card {
             background: var(--white);
-            margin: 15px;
+            margin: var(--gap);
             padding: 20px;
-            border-radius: 25px;
+            border-radius: var(--radius-card);
             box-shadow: var(--shadow);
-            border: 1px solid rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.03);
         }
 
         .section-title {
@@ -282,13 +292,6 @@
             overflow: hidden;
         }
 
-        .bill-details {
-            font-size: 0.9rem;
-            line-height: 1.8;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            padding-bottom: 15px;
-            margin-bottom: 15px;
-        }
 
         /* Modal Style */
         .modal {
@@ -390,29 +393,6 @@
             flex-shrink: 0;
         }
 
-        .chart-placeholder {
-            height: 120px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-around;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            margin-top: 15px;
-        }
-
-        .bar {
-            width: 8px;
-            background: var(--primary-green);
-            border-radius: 4px 4px 0 0;
-            opacity: 0.4;
-            transition: 0.3s;
-        }
-
-        .bar.active {
-            opacity: 1;
-            width: 10px;
-            background: var(--accent-gold);
-        }
 
         /* Nav Bar */
         .nav-bar {
@@ -540,36 +520,6 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
-        /* Tables & Quality Cards */
-        .usage-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 0.9rem;
-        }
-
-        .usage-table th {
-            text-align: left;
-            padding: 12px;
-            color: #888;
-            border-bottom: 2px solid #eee;
-        }
-
-        .usage-table td {
-            padding: 15px 12px;
-            border-bottom: 1px solid #eee;
-            font-weight: 500;
-        }
-
-        .pos {
-            color: var(--danger);
-            font-weight: bold;
-        }
-
-        .neg {
-            color: var(--primary-green);
-            font-weight: bold;
-        }
 
         .quality-card {
             background: var(--white);
@@ -580,20 +530,6 @@
             border-left: 8px solid var(--primary-green);
             position: relative;
             overflow: hidden;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 6px 15px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-
-        .badge-good {
-            background: #E8F0E9;
-            color: var(--primary-green);
         }
 
         .quality-score {
@@ -709,17 +645,8 @@
             font-size: 2rem;
         }
 
-        .receipt-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid #f5f5f5;
-            font-size: 0.85rem;
-        }
-
         /* ================= PAYMENT & RECEIPT STYLES ================= */
         .payment-header {
-
             padding: 20px 15px;
             text-align: center;
             border-bottom: 2px solid var(--receipt-green);
@@ -787,26 +714,39 @@
         }
 
         .step-circle {
-            width: 25px;
-            height: 25px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
-
-
+            border: 2px solid #ddd;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 0.8rem;
             font-weight: bold;
+            background: var(--white);
+            color: #aaa;
         }
 
         .step.active .step-circle {
             background: var(--receipt-green);
+            border-color: var(--receipt-green);
+            color: white;
+        }
+
+        .step.completed .step-circle {
+            background: var(--soft-green);
+            border-color: var(--primary-green);
+            color: var(--primary-dark);
         }
 
         .step-label {
-            font-size: 0.7rem;
+            font-size: 0.68rem;
             font-weight: 600;
+            color: #aaa;
+        }
 
+        .step.active .step-label {
+            color: var(--receipt-green);
         }
 
         .receipt-card {
@@ -843,20 +783,12 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
-
-        .status-unpaid {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status-paid {
-            background: #d4edda;
-            color: #155724;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: var(--soft-green);
+            color: var(--primary-dark);
         }
 
         .info-grid {
@@ -924,30 +856,11 @@
             padding-top: 15px;
         }
 
-        /* QR Code Box */
-        .qr-section {
-            text-align: center;
-            padding: 20px 0 10px;
-            border-bottom: 1px dashed #ddd;
-            margin-bottom: 15px;
-        }
-
-        .qr-box {
-            width: 150px;
-            height: 150px;
-            border: 2px solid var(--receipt-green);
+        /* QR canvas centering (rendered by QRCode lib) */
+        #pay-qr-canvas img,
+        #pay-qr-canvas canvas {
             border-radius: 10px;
-            margin: 0 auto 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: white;
-        }
-
-        .qr-box img {
-            width: 90%;
-            height: 90%;
-            object-fit: contain;
+            box-shadow: var(--shadow-sm);
         }
 
         .action-buttons {
@@ -958,16 +871,21 @@
         }
 
         .btn-receipt {
-            padding: 12px;
+            padding: 13px 16px;
             border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 0.9rem;
+            border-radius: var(--radius-btn);
+            font-weight: 600;
+            font-size: 0.88rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .btn-receipt:active {
+            opacity: 0.82;
         }
 
         .btn-green {
@@ -981,16 +899,15 @@
             border: 1px solid #ddd;
         }
 
-        /* Loader */
-        .loader {
-            display: none;
-            width: 24px;
-            height: 24px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid var(--receipt-green);
+        /* Inline spinner helper */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #eee;
+            border-top-color: var(--primary-green);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
+            animation: spin 0.8s linear infinite;
         }
 
         /* CSS เพิ่มเติมเพื่อให้เลื่อนลื่นขึ้น */
@@ -1011,17 +928,7 @@
             border-radius: 10px;
         }
 
-        /* UI สไตล์เมืองจำลอง */
-        .map-hotspot {
-            position: absolute;
-            cursor: pointer;
-            text-align: center;
-            transition: transform 0.2s;
-        }
-
-        .map-hotspot:active {
-            transform: scale(0.9);
-        }
+        /* World map icons */
 
         .map-label {
             background: rgba(123, 166, 126, 0.95);
@@ -1066,6 +973,61 @@
             padding: 2px 5px;
             border-radius: 5px;
             font-weight: bold;
+        }
+
+        /* ===== MISSING DEFINITIONS ===== */
+
+        /* Used on profile points card and reward cards — pure Tailwind-driven,
+           just needs a base so it degrades gracefully without Tailwind */
+        .muji-card {
+            background: var(--white);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Blog list wrapper on home page */
+        .blog-list {
+            padding: 0 0 4px;
+        }
+
+        /* Blog card consistent shadow */
+        .blog-card {
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Btn-main interactive feedback */
+        .btn-main {
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .btn-main:active {
+            opacity: 0.85;
+            transform: scale(0.98);
+        }
+
+        /* Back button in payment header */
+        .payment-header .back-btn {
+            border-radius: var(--radius-btn);
+            background: var(--white);
+            color: var(--text-dark);
+        }
+
+        /* Consistent section-title spacing */
+        .section-title + .card,
+        .section-title + div > .card:first-child {
+            margin-top: 0;
+        }
+
+        /* Nav item interactive state */
+        .nav-item {
+            transition: color 0.2s;
+        }
+        .nav-item:active {
+            opacity: 0.7;
+        }
+
+        /* Announcement list: let card margins handle spacing */
+        #announcements-list {
+            padding: 0;
         }
     </style>
 </head>
@@ -1512,7 +1474,7 @@
             <p>แบ่งปันและร่วมกันสร้างสังคมที่อบอุ่น 🤝</p>
         </div>
         <div class="section-title"><span>ประกาศจากเจ้าของ</span></div>
-        <div id="announcements-list" style="padding:0 15px;">
+        <div id="announcements-list">
             <div class="card" style="margin-top:0; text-align:center; color:#aaa;">
                 <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
             </div>
@@ -4122,12 +4084,12 @@
             try { ann = JSON.parse(localStorage.getItem('announcements_data') || '[]'); } catch(e) {}
             const filtered = ann.filter(a => !a.building || a.building === 'all' || a.building === _taBuilding);
             if (!filtered.length) {
-                el.innerHTML = '<div class="card" style="margin-top:0;text-align:center;color:#aaa;font-size:0.85rem;">ไม่มีประกาศในขณะนี้</div>';
+                el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:0.85rem;">ไม่มีประกาศในขณะนี้</div>';
                 return;
             }
             el.innerHTML = filtered.slice(0,5).map(a => {
                 const d = a.createdAt ? new Date(a.createdAt).toLocaleDateString('th-TH') : '';
-                return `<div class="card" style="margin-top:0;margin-bottom:8px;">
+                return `<div class="card">
                     <div style="display:flex;gap:12px;">
                         <i class="fas fa-bullhorn" style="color:var(--primary-green);font-size:1.2rem;flex-shrink:0;margin-top:3px;"></i>
                         <div style="font-size:0.85rem;">
