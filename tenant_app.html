@@ -106,6 +106,14 @@
             --text-2xl:  clamp(24px, 12.4px + 3.64vw, 28px);   /* 24→28 */
             --text-3xl:  clamp(28px, 11.6px + 5.18vw, 34px);   /* 28→34 */
 
+            /* ═══════════════════════════════════════════════════════════
+               STRICT 3-SIZE SYSTEM — ทั้งหน้าใช้แค่ 3 ขนาดนี้
+               (อ้างอิงจาก rewards-shop modal hierarchy)
+               ═══════════════════════════════════════════════════════════ */
+            --fs-sm: clamp(11px,  8.1px + 0.91vw, 12px);   /* meta/hint/badge/nav  */
+            --fs-md: clamp(13px, 10.1px + 0.91vw, 14px);   /* body/button/item     */
+            --fs-lg: clamp(17px,  8.3px + 2.73vw, 20px);   /* page title/headline  */
+
             /* Fluid spacing — gutters/gaps scale with viewport */
             --gap-xs:    clamp(4px,   2.5px + 0.46vw, 6px);
             --gap-sm:    clamp(8px,   5.1px + 0.91vw, 10px);
@@ -128,12 +136,30 @@
         html, body {
             font-family: var(--font-brand);
         }
-        body { font-size: var(--text-base); }
-        h1 { font-size: var(--text-xl); }
-        h2 { font-size: var(--text-lg); }
-        h3 { font-size: var(--text-md); }
-        h4 { font-size: var(--text-base); }
+        body { font-size: var(--fs-md); }
+        h1 { font-size: var(--fs-lg); }
+        h2 { font-size: var(--fs-lg); }
+        h3 { font-size: var(--fs-md); }
+        h4 { font-size: var(--fs-md); }
         p, label, span { font-size: inherit; }
+
+        /* Tailwind utility overrides — ยัดเข้า 3 tier */
+        .text-xs,
+        [class*="text-[5px]"], [class*="text-[6px]"], [class*="text-[7px]"], [class*="text-[8px]"],
+        [class*="text-[9px]"], [class*="text-[10px]"], [class*="text-[11px]"], [class*="text-[12px]"] {
+            font-size: var(--fs-sm) !important;
+        }
+        .text-sm, .text-base,
+        [class*="text-[13px]"], [class*="text-[14px]"], [class*="text-[15px]"], [class*="text-[16px]"] {
+            font-size: var(--fs-md) !important;
+        }
+        .text-lg, .text-xl, .text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl,
+        [class*="text-[17px"], [class*="text-[18px"], [class*="text-[19px"],
+        [class*="text-[2"], [class*="text-[3"], [class*="text-[4"], [class*="text-[5"] {
+            font-size: var(--fs-lg) !important;
+        }
+        /* HTML <small> defaults to ~80% — force into --fs-sm */
+        small, small * { font-size: var(--fs-sm) !important; }
         /* iOS auto-zoom prevention — inputs ต้อง >=16px (intentional fixed px) */
         input, select, textarea {
             font-size: 16px;
@@ -239,7 +265,7 @@
         }
 
         .date-display {
-            font-size: 0.85rem;
+            font-size: var(--fs-md);
             color: var(--primary-green);
             font-weight: 600;
             margin-bottom: 5px;
@@ -256,7 +282,7 @@
 
         .section-title {
             padding: 20px 25px 5px;
-            font-size: 1.1rem;
+            font-size: var(--fs-lg);
             font-weight: 600;
             display: flex;
             justify-content: space-between;
@@ -321,7 +347,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
+            font-size: var(--fs-lg);
             color: var(--primary-green);
         }
 
@@ -332,12 +358,12 @@
 
         .blog-content h3 {
             margin: 0;
-            font-size: 0.95rem;
+            font-size: var(--fs-md);
             color: var(--text-dark);
         }
 
         .blog-content p {
-            font-size: 0.8rem;
+            font-size: var(--fs-sm);
             margin: 8px 0 0;
             opacity: 0.7;
             display: -webkit-box;
@@ -433,7 +459,7 @@
             border-radius: 12px;
             border: 1px solid #eee;
             background: #fdfdfd;
-            font-size: 0.9rem;
+            font-size: var(--fs-md);
             margin-top: 10px;
         }
 
@@ -464,7 +490,7 @@
         .nav-item {
             text-align: center;
             color: #BDC3C7;
-            font-size: 0.75rem;
+            font-size: var(--fs-sm);
             flex: 1;
             cursor: pointer;
         }
@@ -475,7 +501,7 @@
         }
 
         .nav-item i {
-            font-size: 1.4rem;
+            font-size: var(--fs-lg);
             display: block;
             margin-bottom: 4px;
         }
@@ -511,7 +537,7 @@
             align-items: center;
             margin-right: 15px;
             color: white;
-            font-size: 1.1rem;
+            font-size: var(--fs-lg);
         }
 
         /* Theme Colors for Icons */
@@ -543,7 +569,7 @@
 
         .arrow {
             color: #CCC;
-            font-size: 0.875rem;
+            font-size: var(--fs-md);
         }
 
         /* Tabs */
@@ -586,7 +612,7 @@
         }
 
         .quality-score {
-            font-size: 3.5rem;
+            font-size: var(--fs-lg);
             font-weight: 600;
             color: var(--text-dark);
             line-height: 1;
@@ -594,7 +620,7 @@
         }
 
         .quality-score span {
-            font-size: 1rem;
+            font-size: var(--fs-md);
             color: #888;
             font-weight: normal;
         }
@@ -611,13 +637,13 @@
         .q-item small {
             display: block;
             color: #888;
-            font-size: 0.75rem;
+            font-size: var(--fs-sm);
             margin-bottom: 4px;
         }
 
         .q-item strong {
             color: var(--text-dark);
-            font-size: 1.1rem;
+            font-size: var(--fs-lg);
         }
 
         /* Night & Eco Mode */
@@ -759,7 +785,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
+            font-size: var(--fs-lg);
         }
 
         .avatar-option.active {
@@ -792,7 +818,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
+            font-size: var(--fs-lg);
         }
 
         /* ================= PAYMENT & RECEIPT STYLES ================= */
@@ -810,14 +836,14 @@
             padding: 5px 12px;
             border: 1px solid #ddd;
             border-radius: 8px;
-            font-size: 0.8rem;
+            font-size: var(--fs-sm);
             font-weight: bold;
             cursor: pointer;
         }
 
         .payment-header h1 {
             margin: 0;
-            font-size: 1.3rem;
+            font-size: var(--fs-lg);
             color: var(--receipt-green);
             display: flex;
             align-items: center;
@@ -827,7 +853,7 @@
 
         .payment-header p {
             margin: 5px 0 0;
-            font-size: 0.75rem;
+            font-size: var(--fs-sm);
         }
 
         .stepper {
@@ -871,7 +897,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.8rem;
+            font-size: var(--fs-sm);
             font-weight: bold;
             background: var(--white);
             color: #aaa;
@@ -890,7 +916,7 @@
         }
 
         .step-label {
-            font-size: 0.68rem;
+            font-size: var(--fs-sm);
             font-weight: 600;
             color: #aaa;
         }
@@ -917,14 +943,14 @@
         .receipt-title {
             text-align: center;
             color: var(--receipt-green);
-            font-size: 1.2rem;
+            font-size: var(--fs-lg);
             margin: 0 0 5px;
             font-weight: bold;
         }
 
         .receipt-subtitle {
             text-align: center;
-            font-size: 0.8rem;
+            font-size: var(--fs-sm);
 
             margin-bottom: 15px;
         }
@@ -935,7 +961,7 @@
             gap: 5px;
             padding: 5px 14px;
             border-radius: 20px;
-            font-size: 0.78rem;
+            font-size: var(--fs-sm);
             font-weight: 600;
             background: var(--soft-green);
             color: var(--primary-dark);
@@ -945,7 +971,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
-            font-size: 0.8rem;
+            font-size: var(--fs-sm);
             border-bottom: 1px dashed #ddd;
             padding-bottom: 15px;
             margin-bottom: 15px;
@@ -963,12 +989,12 @@
 
         .info-item strong {
             color: #333;
-            font-size: 0.85rem;
+            font-size: var(--fs-md);
         }
 
         .bill-table {
             width: 100%;
-            font-size: 0.85rem;
+            font-size: var(--fs-md);
             border-collapse: collapse;
         }
 
@@ -1002,7 +1028,7 @@
 
         .total-row td {
             font-weight: bold;
-            font-size: 1rem;
+            font-size: var(--fs-md);
             padding-top: 15px;
         }
 
@@ -1025,7 +1051,7 @@
             border: none;
             border-radius: var(--radius-btn);
             font-weight: 600;
-            font-size: 0.88rem;
+            font-size: var(--fs-md);
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -1085,7 +1111,7 @@
             color: white;
             padding: 4px 12px;
             border-radius: 15px;
-            font-size: var(--text-xs);
+            font-size: var(--fs-sm);
             font-weight: bold;
             white-space: nowrap;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
@@ -1119,7 +1145,7 @@
             right: -8px;
             background: #FFD700;
             color: #333;
-            font-size: 0.625rem;
+            font-size: var(--fs-sm);
             padding: 2px 5px;
             border-radius: 5px;
             font-weight: bold;
@@ -1186,7 +1212,7 @@
             border: 1px solid var(--border);
             background: #fff;
             color: var(--text-muted);
-            font-size: 0.78rem;
+            font-size: var(--fs-sm);
             font-weight: 600;
             cursor: pointer;
             transition: all 0.15s;
@@ -1199,7 +1225,7 @@
         }
         .cf-cat-badge {
             display: inline-block;
-            font-size: 0.68rem;
+            font-size: var(--fs-sm);
             font-weight: 700;
             padding: 2px 8px;
             border-radius: 10px;
@@ -1239,14 +1265,14 @@
         .app-bar > div[onclick*="goBack"] .fa-chevron-left,
         .app-bar > div[onclick*="showPage"][style*="border-radius:50%"] .fa-chevron-left,
         .app-bar > div[onclick*="showPage"][style*="border-radius: 50%"] .fa-chevron-left {
-            font-size: 14px !important;
+            font-size: var(--fs-md) !important;
             font-weight: 600 !important;
         }
 
         /* Page title — h1/h2 ใน app-bar unified: 20px / 600 */
         .app-bar h1,
         .app-bar h2 {
-            font-size: 1.25rem !important;
+            font-size: var(--fs-lg) !important;
             font-weight: 600 !important;
             color: var(--text-dark) !important;
             line-height: 1.3 !important;
@@ -1256,7 +1282,7 @@
         /* Section title — heading ย่อยระหว่าง card */
         .section-title {
             padding: 20px 20px 8px !important;
-            font-size: 1rem !important;
+            font-size: var(--fs-md) !important;
             font-weight: 600 !important;
             color: var(--text-dark) !important;
         }
@@ -1287,7 +1313,7 @@
             border-radius: 12px !important;
             border: 1px solid var(--border, #e0e6ed) !important;
             background: #fff !important;
-            font-size: 0.95rem !important;
+            font-size: var(--fs-md) !important;
             font-family: inherit !important;
             margin-bottom: 14px !important;
             box-sizing: border-box !important;
@@ -1300,7 +1326,7 @@
         }
         .card label,
         .page .card > form > label {
-            font-size: 0.85rem !important;
+            font-size: var(--fs-md) !important;
             font-weight: 600 !important;
             color: var(--text-dark) !important;
             margin-bottom: 6px !important;
@@ -1312,7 +1338,7 @@
             min-height: 52px !important;
             padding: 14px 20px !important;
             border-radius: 14px !important;
-            font-size: 1rem !important;
+            font-size: var(--fs-md) !important;
             font-weight: 600 !important;
             letter-spacing: 0.01em;
         }
@@ -1364,25 +1390,25 @@
     <!-- LIFF LINK ACCOUNT OVERLAY -->
     <div id="liff-link-overlay" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#f0fdf4,#e8f5e9);z-index:99999;flex-direction:column;align-items:center;justify-content:center;padding:2rem;">
         <div style="background:#fff;border-radius:20px;padding:2rem 1.8rem;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.12);text-align:center;">
-            <div style="font-size:2.5rem;margin-bottom:.5rem;">🌿</div>
-            <div style="font-weight:800;font-size:1.25rem;color:var(--primary-dark,#1a5c38);margin-bottom:.3rem;">Nature Haven</div>
-            <div id="liff-link-greeting" style="color:var(--text-muted,#6b7a8d);font-size:.88rem;margin-bottom:1.3rem;"></div>
+            <div style="font-size:var(--fs-lg);margin-bottom:.5rem;">🌿</div>
+            <div style="font-weight:800;font-size:var(--fs-lg);color:var(--primary-dark,#1a5c38);margin-bottom:.3rem;">Nature Haven</div>
+            <div id="liff-link-greeting" style="color:var(--text-muted,#6b7a8d);font-size:var(--fs-md);margin-bottom:1.3rem;"></div>
 
             <!-- Form -->
             <div id="liff-link-form-box" style="text-align:left;">
-                <div style="background:#fff9c4;border-left:4px solid #fbc02d;border-radius:8px;padding:.7rem .9rem;margin-bottom:1rem;font-size:.8rem;color:#5d4037;">
+                <div style="background:#fff9c4;border-left:4px solid #fbc02d;border-radius:8px;padding:.7rem .9rem;margin-bottom:1rem;font-size:var(--fs-sm);color:#5d4037;">
                     🔗 เชื่อมบัญชีเพื่อใช้งาน<br>กรอกข้อมูลห้องของคุณ admin จะอนุมัติภายใน 24 ชม.
                 </div>
-                <label style="display:block;font-weight:700;font-size:.82rem;margin-bottom:5px;">ตึก</label>
+                <label style="display:block;font-weight:700;font-size:var(--fs-sm);margin-bottom:5px;">ตึก</label>
                 <select id="liff-link-building" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:.9rem;">
                     <option value="rooms">🏠 ห้องแถว</option>
                     <option value="nest">🏢 Nest</option>
                 </select>
-                <label style="display:block;font-weight:700;font-size:.82rem;margin-bottom:5px;">หมายเลขห้อง</label>
+                <label style="display:block;font-weight:700;font-size:var(--fs-sm);margin-bottom:5px;">หมายเลขห้อง</label>
                 <input type="text" id="liff-link-room" placeholder="เช่น 15, N101" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:.9rem;box-sizing:border-box;">
-                <label style="display:block;font-weight:700;font-size:.82rem;margin-bottom:5px;">เบอร์โทรศัพท์ (optional)</label>
+                <label style="display:block;font-weight:700;font-size:var(--fs-sm);margin-bottom:5px;">เบอร์โทรศัพท์ (optional)</label>
                 <input type="tel" id="liff-link-phone" placeholder="0812345678" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:1.2rem;box-sizing:border-box;">
-                <button id="liff-link-submit-btn" onclick="submitLiffLinkRequest()" style="width:100%;padding:12px;background:var(--primary-green,#2d8653);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:.95rem;cursor:pointer;">🔗 ส่งคำขอเชื่อมบัญชี</button>
+                <button id="liff-link-submit-btn" onclick="submitLiffLinkRequest()" style="width:100%;padding:12px;background:var(--primary-green,#2d8653);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:var(--fs-md);cursor:pointer;">🔗 ส่งคำขอเชื่อมบัญชี</button>
             </div>
 
             <!-- Status (pending/rejected) -->
@@ -1398,13 +1424,13 @@
             style="position: absolute; top: 20px; left: 20px; z-index: 20; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.8); padding: 8px 15px; border-radius: 30px; backdrop-filter: blur(5px);">
 
             <div id="current-avatar"
-                style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #2d8653; display: flex; align-items: center; justify-content: center; font-size: 20px; background: white;">
+                style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #2d8653; display: flex; align-items: center; justify-content: center; font-size: var(--fs-lg); background: white;">
                 🌿
             </div>
 
             <div>
-                <p id="display-name" style="font-size: 12px; font-weight: 700; margin: 0; color: #334435;">คุณลุกตาล</p>
-                <p style="font-size: 10px; margin: 0; color: #2d8653;">Lv.1 Seedling</p>
+                <p id="display-name" style="font-size: var(--fs-sm); font-weight: 700; margin: 0; color: #334435;">คุณลุกตาล</p>
+                <p style="font-size: var(--fs-sm); margin: 0; color: #2d8653;">Lv.1 Seedling</p>
             </div>
         </div>
 
@@ -1439,9 +1465,9 @@
         <div class="animate-pop"
             style="background: white; width: 100%; max-width: 350px; border-radius: 35px; padding: 30px; position: relative; text-align: center;">
 
-            <div style="font-size: 24px; font-weight: 800; color: var(--text-dark); margin-bottom: 5px;">DAILY BONUS
+            <div style="font-size: var(--fs-lg); font-weight: 800; color: var(--text-dark); margin-bottom: 5px;">DAILY BONUS
             </div>
-            <div style="font-size: 12px; color: #666; margin-bottom: 25px;">Log in everyday and earn rewards!</div>
+            <div style="font-size: var(--fs-sm); color: #666; margin-bottom: 25px;">Log in everyday and earn rewards!</div>
 
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px;">
                 <div class="day-card active">1 Day<br>💰 1</div>
@@ -1518,9 +1544,9 @@
         <div class="card power-card"
             style="background: linear-gradient(135deg, #2d8653, #1a5c38); color:white; border:none;">
             <small>🔮 คำทรงพลังวันนี้</small>
-            <span style="display:block; font-size:1.5rem; font-weight:600; margin:10px 0;" id="power-word">เจิดจรัส
+            <span style="display:block; font-size:var(--fs-lg); font-weight:600; margin:10px 0;" id="power-word">เจิดจรัส
                 (Radiant)</span>
-            <p style="font-size:0.8rem; opacity:0.9; margin:0;" id="power-desc">วันนี้พลังงานคุณล้นเหลือ ลองทำสิ่งใหม่ๆ
+            <p style="font-size:var(--fs-sm); opacity:0.9; margin:0;" id="power-desc">วันนี้พลังงานคุณล้นเหลือ ลองทำสิ่งใหม่ๆ
                 นะครับ</p>
         </div>
         <div class="section-title"><span>Wellness Tips ลึกๆ 🌿</span></div>
@@ -1548,7 +1574,7 @@
             </div>
         </div>
         <div
-            style="text-align: center; color: var(--primary-green); font-size: 0.85rem; padding: 20px; font-weight: 600;">
+            style="text-align: center; color: var(--primary-green); font-size: var(--fs-md); padding: 20px; font-weight: 600;">
             ค้นหาแรงบันดาลใจต่อ <i class="fas fa-chevron-down"></i>
         </div>
     </div>
@@ -1579,7 +1605,7 @@
             onclick="showSubPage('laundry-page')">
             <div style="display:flex; align-items:center; gap:15px;">
                 <div
-                    style="width:50px; height:50px; background:var(--soft-green); border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--primary-green); font-size:1.5rem;">
+                    style="width:50px; height:50px; background:var(--soft-green); border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--primary-green); font-size:var(--fs-lg);">
                     <i class="fas fa-tshirt"></i>
                 </div>
                 <div>
@@ -1613,7 +1639,7 @@
         </div>
         <div class="suggest-card" style="margin-bottom: 50px;">
             <strong><i class="fas fa-comment-dots"></i> กระซิบถึงเจ้าของตึก</strong>
-            <p style="font-size: 0.8rem; opacity: 0.7; margin: 8px 0;">พบปัญหาหรือมีไอเดียพัฒนาตึก? บอกแบบไม่ระบุตัวตนสิ
+            <p style="font-size: var(--fs-sm); opacity: 0.7; margin: 8px 0;">พบปัญหาหรือมีไอเดียพัฒนาตึก? บอกแบบไม่ระบุตัวตนสิ
             </p>
             <button class="btn-suggest" onclick="openModal('suggest')">เขียนข้อความ</button>
         </div>
@@ -1626,11 +1652,11 @@
                 onclick="goBackToService()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">แจ้งซ่อมใหม่</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">แจ้งซ่อมใหม่</h1>
         </div>
         <div class="card">
             <form onsubmit="submitMaintenance(event)">
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">หมวดซ่อม *</label>
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">หมวดซ่อม *</label>
                 <select id="maintenanceCategory" required
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
                     <option value="">เลือกประเภท</option>
@@ -1643,7 +1669,7 @@
                     <option value="other">📝 อื่นๆ</option>
                 </select>
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">ความเร่งด่วน</label>
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">ความเร่งด่วน</label>
                 <select id="maintenancePriority"
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
                     <option value="normal">🟡 ปกติ</option>
@@ -1651,18 +1677,18 @@
                     <option value="low">🟢 ไม่เร่ง</option>
                 </select>
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">อธิบายรายละเอียด *</label>
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">อธิบายรายละเอียด *</label>
                 <textarea id="maintenanceDescription" required placeholder="โปรดอธิบายรายละเอียด เช่น ตำแหน่ง อาการ ..."
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px; min-height:80px; font-family:inherit;"></textarea>
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
                 <input type="file" id="maintenancePhoto" accept="image/*"
-                    style="width:100%; margin-bottom:8px; font-size:0.85rem;"
+                    style="width:100%; margin-bottom:8px; font-size:var(--fs-md);"
                     onchange="handleMaintenancePhotoChange('maintenancePhoto','maintenancePhotoPreview','maintenancePhotoImg')">
                 <div id="maintenancePhotoPreview" style="margin-bottom:10px; text-align:center; display:none;">
                     <img id="maintenancePhotoImg" style="max-width:100%; border-radius:10px; max-height:200px; object-fit:cover;">
                     <button type="button" onclick="clearMaintenancePhoto()"
-                        style="display:block; margin:6px auto 0; font-size:0.75rem; color:#ef4444; background:none; border:none; cursor:pointer;">✕ ลบรูป</button>
+                        style="display:block; margin:6px auto 0; font-size:var(--fs-sm); color:#ef4444; background:none; border:none; cursor:pointer;">✕ ลบรูป</button>
                 </div>
 
                 <button type="submit" class="btn-main" style="margin-top:10px;" id="maintenanceSubmitBtn">📤 ส่งแจ้งปัญหา</button>
@@ -1681,7 +1707,7 @@
                 onclick="goBackToService()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">จองบริการทำความสะอาด</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">จองบริการทำความสะอาด</h1>
         </div>
         <div class="section-title"><span>เลือกประเภทบริการ</span></div>
         <div class="grid grid-cols-2 gap-3 px-4 mb-6">
@@ -1742,17 +1768,17 @@
                 onclick="goBackToService()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">แจ้งนิติโดยตรง</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">แจ้งนิติโดยตรง</h1>
         </div>
 
         <!-- Tab Nav -->
         <div style="display:flex; gap:8px; padding:0 16px 16px;">
             <button id="complaint-tab-form" onclick="switchComplaintTab('form')"
-                style="flex:1; padding:8px; border-radius:20px; font-size:0.8rem; font-weight:700; background:var(--primary-green); color:#fff; border:none; cursor:pointer;">
+                style="flex:1; padding:8px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--primary-green); color:#fff; border:none; cursor:pointer;">
                 ➕ แจ้งใหม่
             </button>
             <button id="complaint-tab-history" onclick="switchComplaintTab('history')"
-                style="flex:1; padding:8px; border-radius:20px; font-size:0.8rem; font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">
+                style="flex:1; padding:8px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">
                 📋 ประวัติ
             </button>
         </div>
@@ -1760,7 +1786,7 @@
         <!-- Form Tab -->
         <div id="complaint-form-tab" class="card">
             <form onsubmit="submitComplaint(event)">
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">ประเภท *</label>
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">ประเภท *</label>
                 <select id="complaintCategory" required
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
                     <option value="">เลือกประเภท</option>
@@ -1774,32 +1800,32 @@
                     <option value="other">📌 อื่นๆ</option>
                 </select>
 
-                <label style="font-weight:700; margin-bottom:0.5rem; color:var(--text-dark); font-size:0.9rem; display:block;">ระดับความรุนแรง *</label>
+                <label style="font-weight:700; margin-bottom:0.5rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">ระดับความรุนแรง *</label>
                 <div style="display:flex; gap:8px; margin-bottom:10px;">
                     <button type="button" id="sev-low" onclick="setSeverity('low')"
-                        style="flex:1; padding:8px; border-radius:10px; font-size:0.8rem; font-weight:700; border:2px solid #4ade80; color:#16a34a; background:#f0fdf4; cursor:pointer;">
+                        style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; border:2px solid #4ade80; color:#16a34a; background:#f0fdf4; cursor:pointer;">
                         🟢 เล็กน้อย
                     </button>
                     <button type="button" id="sev-medium" onclick="setSeverity('medium')"
-                        style="flex:1; padding:8px; border-radius:10px; font-size:0.8rem; font-weight:700; border:2px solid #ddd; color:#6b7280; background:#f9fafb; cursor:pointer;">
+                        style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; border:2px solid #ddd; color:#6b7280; background:#f9fafb; cursor:pointer;">
                         🟡 ปานกลาง
                     </button>
                     <button type="button" id="sev-high" onclick="setSeverity('high')"
-                        style="flex:1; padding:8px; border-radius:10px; font-size:0.8rem; font-weight:700; border:2px solid #ddd; color:#6b7280; background:#f9fafb; cursor:pointer;">
+                        style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; border:2px solid #ddd; color:#6b7280; background:#f9fafb; cursor:pointer;">
                         🔴 เร่งด่วน
                     </button>
                 </div>
                 <input type="hidden" id="complaintSeverity" value="low">
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">สถานที่เกิดเหตุ</label>
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">สถานที่เกิดเหตุ</label>
                 <input type="text" id="complaintLocation" placeholder="เช่น ลานจอดรถ B2, ลิฟต์หลัก..."
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">วันที่เกิดเหตุ</label>
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">วันที่เกิดเหตุ</label>
                 <input type="date" id="complaintStartDate"
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:0.9rem; display:block;">รายละเอียด *</label>
+                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">รายละเอียด *</label>
                 <textarea id="complaintDescription" required placeholder="อธิบายปัญหา..."
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px; min-height:80px;"></textarea>
 
@@ -1811,16 +1837,16 @@
         <div id="complaint-history-tab" style="display:none; padding:0 16px;">
             <div style="display:flex; gap:6px; margin-bottom:12px; overflow-x:auto; padding-bottom:4px;">
                 <button onclick="filterComplaints('all')" id="filter-all"
-                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:0.75rem; font-weight:700; background:var(--primary-green); color:#fff; border:none; cursor:pointer;">ทั้งหมด</button>
+                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--primary-green); color:#fff; border:none; cursor:pointer;">ทั้งหมด</button>
                 <button onclick="filterComplaints('open')" id="filter-open"
-                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:0.75rem; font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">รอดำเนินการ</button>
+                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">รอดำเนินการ</button>
                 <button onclick="filterComplaints('in-progress')" id="filter-in-progress"
-                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:0.75rem; font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">กำลังดำเนินการ</button>
+                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">กำลังดำเนินการ</button>
                 <button onclick="filterComplaints('resolved')" id="filter-resolved"
-                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:0.75rem; font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">แก้ไขแล้ว</button>
+                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">แก้ไขแล้ว</button>
             </div>
             <div id="complaint-list">
-                <p style="text-align:center; color:#9ca3af; font-size:0.85rem; padding:20px;">ยังไม่มีประวัติการแจ้ง</p>
+                <p style="text-align:center; color:#9ca3af; font-size:var(--fs-md); padding:20px;">ยังไม่มีประวัติการแจ้ง</p>
             </div>
         </div>
     </div>
@@ -1854,14 +1880,14 @@
             style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 15px 15px;">
             <div class="card" style="margin:0; padding:12px;">
                 <div
-                    style="height:100px; background:#f9f9f9; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:2rem; color:var(--primary-green);">
+                    style="height:100px; background:#f9f9f9; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); color:var(--primary-green);">
                     <i class="fas fa-plug"></i>
                 </div>
                 <small style="display:block; margin-top:8px;">ขายต่อ: โคมไฟ</small><strong>250.-</strong>
             </div>
             <div class="card" style="margin:0; padding:12px;">
                 <div
-                    style="height:100px; background:#f9f9f9; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:2rem; color:var(--primary-green);">
+                    style="height:100px; background:#f9f9f9; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); color:var(--primary-green);">
                     <i class="fas fa-hamburger"></i>
                 </div>
                 <small style="display:block; margin-top:8px;">รับหิ้ว: อาหาร</small><strong>15.-</strong>
@@ -1900,7 +1926,7 @@
                     <h3 id="current-bill-amount" class="text-4xl font-bold mt-1 tracking-tight">฿ —</h3>
                 </div>
                 <span id="service-due-badge"
-                    style="font-size: 0.75rem; background: #FFF4E5; color: #D97706; padding: 4px 10px; border-radius: 20px;">
+                    style="font-size: var(--fs-sm); background: #FFF4E5; color: #D97706; padding: 4px 10px; border-radius: 20px;">
                     <i class="fas fa-clock"></i> รอการดูแล
                 </span>
             </div>
@@ -1957,7 +1983,7 @@
                         </tbody>
                     </table>
                     <div id="pay-qr-box" style="text-align:center; padding:15px 0;">
-                        <p style="font-size:0.8rem; color:#888; margin-bottom:8px;">สแกน QR เพื่อชำระ PromptPay</p>
+                        <p style="font-size:var(--fs-sm); color:#888; margin-bottom:8px;">สแกน QR เพื่อชำระ PromptPay</p>
                         <div id="pay-qr-canvas" style="display:inline-block;"></div>
                     </div>
                 </div>
@@ -1980,12 +2006,12 @@
                     </div>
                     <div id="slip-drop-area" style="border:2px dashed #ccc; border-radius:16px; padding:30px; text-align:center; margin:10px 0; cursor:pointer;"
                          onclick="document.getElementById('slip-file-input').click()">
-                        <i class="fas fa-cloud-upload-alt" style="font-size:2rem; color:var(--primary-green);"></i>
-                        <p style="margin:8px 0 0; font-size:0.85rem; color:#666;">แตะเพื่อเลือกรูปสลิป</p>
+                        <i class="fas fa-cloud-upload-alt" style="font-size:var(--fs-lg); color:var(--primary-green);"></i>
+                        <p style="margin:8px 0 0; font-size:var(--fs-md); color:#666;">แตะเพื่อเลือกรูปสลิป</p>
                         <small style="color:#aaa;">JPG / PNG / WEBP ไม่เกิน 5MB</small>
                     </div>
                     <input type="file" id="slip-file-input" accept="image/*" style="display:none;" onchange="handleSlipFileUpload(this)">
-                    <div id="slip-verify-status" style="display:none; margin-top:10px; padding:10px; border-radius:10px; font-size:0.85rem; text-align:center;"></div>
+                    <div id="slip-verify-status" style="display:none; margin-top:10px; padding:10px; border-radius:10px; font-size:var(--fs-md); text-align:center;"></div>
                 </div>
             </div>
             <div class="action-buttons">
@@ -2018,7 +2044,7 @@
                         <div class="info-item" style="grid-column:span 2;"><span>เลขประจำตัวผู้เสียภาษี</span><strong id="display-comp-tax">-</strong></div>
                         <div class="info-item" style="grid-column:span 2;"><span>ที่อยู่</span><strong id="display-comp-addr">-</strong></div>
                     </div>
-                    <div style="background:#e8f5e9; color:#2e7d32; padding:12px; border-radius:10px; margin-top:10px; text-align:center; font-size:0.85rem;">
+                    <div style="background:#e8f5e9; color:#2e7d32; padding:12px; border-radius:10px; margin-top:10px; text-align:center; font-size:var(--fs-md);">
                         <i class="fas fa-check-circle"></i> ส่งสลิปเรียบร้อยแล้ว รอการยืนยันจากเจ้าของ<br>
                         <small>The Green Haven Co., Ltd.</small>
                     </div>
@@ -2034,16 +2060,16 @@
     <div id="profile" class="page">
         <div class="app-bar" style="text-align:center;">
             <i class="fas fa-cog"
-                style="position:absolute; right:25px; top:45px; font-size:1.5rem; color:var(--primary-green); cursor:pointer;"
+                style="position:absolute; right:25px; top:45px; font-size:var(--fs-lg); color:var(--primary-green); cursor:pointer;"
                 onclick="showSubPage('settings')"></i>
 
             <div id="current-avatar"
-                style="width:80px; height:80px; background:var(--soft-green); border-radius:50%; margin:0 auto 10px; border:3px solid white; display:flex; align-items:center; justify-content:center; font-size:2.5rem;">
+                style="width:80px; height:80px; background:var(--soft-green); border-radius:50%; margin:0 auto 10px; border:3px solid white; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg);">
                 🌿</div>
             <h1 id="display-name" style="margin:0;">คุณลูกตาล</h1>
-            <p id="profile-room-display" style="margin:5px 0; font-size:0.85rem; opacity:0.6;">ห้อง — | —</p>
+            <p id="profile-room-display" style="margin:5px 0; font-size:var(--fs-md); opacity:0.6;">ห้อง — | —</p>
             <span
-                style="background:var(--primary-green); color:white; padding:5px 20px; border-radius:20px; font-size:0.8rem; font-weight:600; display:inline-block; margin-top:5px;">The
+                style="background:var(--primary-green); color:white; padding:5px 20px; border-radius:20px; font-size:var(--fs-sm); font-weight:600; display:inline-block; margin-top:5px;">The
                 First Generation 🥇</span>
         </div>
         <div id="profile-rewards-card" class="muji-card p-6 mb-4 text-center border-none shadow-md" style="background: var(--soft-green);">
@@ -2062,9 +2088,9 @@
                 style="border: 2px dashed #e0e0e0; padding: 30px 20px; border-radius: 25px; text-align: center; cursor: pointer; background: #fff; transition: 0.3s;"
                 onmouseover="this.style.borderColor='var(--primary-green)'"
                 onmouseout="this.style.borderColor='#e0e0e0'">
-                <div style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;">🐾</div>
-                <p style="font-size: 0.85rem; color: #888; font-weight: 500;">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
-                <p style="font-size: 0.75rem; color: var(--primary-green); font-weight: 600; margin-top: 5px;">+
+                <div style="font-size: var(--fs-lg); margin-bottom: 10px; opacity: 0.5;">🐾</div>
+                <p style="font-size: var(--fs-md); color: #888; font-weight: 500;">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
+                <p style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-top: 5px;">+
                     เพิ่มสัตว์เลี้ยงของคุณ</p>
             </div>
         </div>
@@ -2226,7 +2252,7 @@
                 onclick="goBackToHome()">
                 <i class="fas fa-chevron-left" style="color:white;"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">Smart Access</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">Smart Access</h1>
         </div>
         <div class="tabs" style="background: rgba(255,255,255,0.1); margin: 0 15px 20px;">
             <button class="tab-btn active" style="color: white; background: rgba(255,255,255,0.2);">My Key
@@ -2236,7 +2262,7 @@
         </div>
         <div class="card" style="text-align: center; padding: 40px 20px; border-radius: 30px; margin: 20px;">
             <h3 style="margin-top: 0; color: var(--primary-green);">ห้อง 402</h3>
-            <p style="font-size: 0.85rem; color: #888; margin-bottom: 20px;">สแกนที่จุดทาบบัตรเพื่อเข้าอาคารส่วนกลาง</p>
+            <p style="font-size: var(--fs-md); color: #888; margin-bottom: 20px;">สแกนที่จุดทาบบัตรเพื่อเข้าอาคารส่วนกลาง</p>
             <div
                 style="width: 200px; height: 200px; border: 3px solid var(--primary-green); border-radius: 20px; margin: 0 auto; padding: 10px; position: relative;">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
@@ -2245,7 +2271,7 @@
                     style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: rgba(123,166,126,0.8); box-shadow: 0 0 15px var(--primary-green); animation: scanline 2s linear infinite;">
                 </div>
             </div>
-            <div style="margin-top: 25px; font-size: 0.85rem; font-weight: 600; color: var(--danger);"><i
+            <div style="margin-top: 25px; font-size: var(--fs-md); font-weight: 600; color: var(--danger);"><i
                     class="fas fa-sync-alt"></i> อัปเดตอัตโนมัติใน <span id="qr-timer">59</span> วินาที</div>
         </div>
     </div>
@@ -2256,17 +2282,17 @@
                 onclick="goBackToService()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">Smart Laundry 👕</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">Smart Laundry 👕</h1>
         </div>
         <div style="padding: 15px;">
             <div class="section-title" style="padding: 0 0 10px;"><span>เครื่องซักผ้า (Washers)</span></div>
             <div class="card"
                 style="margin: 0 0 15px; display: flex; align-items: center; gap: 15px; border-left: 6px solid #22c55e;">
-                <div style="font-size: 2.5rem; color: #ccc;"><i class="fas fa-block-brick"></i> <span
-                        style="font-size:1rem;">W1</span></div>
+                <div style="font-size: var(--fs-lg); color: #ccc;"><i class="fas fa-block-brick"></i> <span
+                        style="font-size:var(--fs-md);">W1</span></div>
                 <div style="flex: 1;">
-                    <strong style="font-size: 1.1rem;">เครื่อง 1 (10kg)</strong>
-                    <div style="color: #22c55e; font-weight: 600; font-size: 0.85rem;"><i
+                    <strong style="font-size: var(--fs-lg);">เครื่อง 1 (10kg)</strong>
+                    <div style="color: #22c55e; font-weight: 600; font-size: var(--fs-md);"><i
                             class="fas fa-check-circle"></i> ว่างพร้อมใช้งาน</div>
                 </div>
                 <button
@@ -2275,15 +2301,15 @@
             </div>
             <div class="card"
                 style="margin: 0 0 15px; display: flex; align-items: center; gap: 15px; border-left: 6px solid #f59e0b; background: #fffcf5;">
-                <div style="font-size: 2.5rem; color: #f59e0b;"><i class="fas fa-spinner fa-spin"></i> <span
-                        style="font-size:1rem;">W2</span></div>
+                <div style="font-size: var(--fs-lg); color: #f59e0b;"><i class="fas fa-spinner fa-spin"></i> <span
+                        style="font-size:var(--fs-md);">W2</span></div>
                 <div style="flex: 1;">
-                    <strong style="font-size: 1.1rem;">เครื่อง 2 (15kg)</strong>
-                    <div style="color: #f59e0b; font-weight: 600; font-size: 0.85rem;"><i
+                    <strong style="font-size: var(--fs-lg);">เครื่อง 2 (15kg)</strong>
+                    <div style="color: #f59e0b; font-weight: 600; font-size: var(--fs-md);"><i
                             class="fas fa-hourglass-half"></i> กำลังทำงาน</div>
                     <small style="color:#888;">เหลือเวลาอีกประมาณ 24 นาที</small>
                 </div>
-                <i class="fas fa-bell" style="color:#ccc; font-size: 1.2rem; cursor:pointer;"
+                <i class="fas fa-bell" style="color:#ccc; font-size: var(--fs-lg); cursor:pointer;"
                     onclick="alert('ตั้งค่าแจ้งเตือนแล้ว')"></i>
             </div>
         </div>
@@ -2295,7 +2321,7 @@
                 onclick="goBackToProfile()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.5rem;">Settings</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">Settings</h1>
         </div>
 
         <div class="menu-list">
@@ -2324,7 +2350,7 @@
                 <label class="switch"><input type="checkbox" id="eco-switch" onchange="toggleEcoMode()"><span
                         class="slider"></span></label>
             </div>
-            <small style="display:block; margin-top:10px; opacity: 0.6; font-size:0.75rem;">*Eco Mode
+            <small style="display:block; margin-top:10px; opacity: 0.6; font-size:var(--fs-sm);">*Eco Mode
                 จะปิดภาพเคลื่อนไหวเพื่อประหยัดแบตเตอรี่</small>
         </div>
 
@@ -2358,7 +2384,7 @@
             </div>
         </div>
 
-        <div style="text-align: center; padding-bottom: 30px; opacity: 0.4; font-size: 0.8rem;">Nature Haven OS
+        <div style="text-align: center; padding-bottom: 30px; opacity: 0.4; font-size: var(--fs-sm);">Nature Haven OS
             v6.0.10
         </div>
     </div>
@@ -2369,7 +2395,7 @@
                 onclick="goBackToProfile()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem; color: var(--text-dark);">ข้อมูลเพื่อนตัวป่วน 🐾</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg); color: var(--text-dark);">ข้อมูลเพื่อนตัวป่วน 🐾</h1>
         </div>
 
         <div class="card"
@@ -2378,21 +2404,21 @@
 
             <div style="text-align: center; margin-bottom: 20px;">
                 <div id="new-pet-avatar"
-                    style="width:90px; height:90px; background:var(--soft-green); border-radius:30%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:2.5rem; cursor:pointer; overflow: hidden; border: 2px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                    style="width:90px; height:90px; background:var(--soft-green); border-radius:30%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); cursor:pointer; overflow: hidden; border: 2px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
                     📸
                 </div>
                 <small
                     style="color: var(--primary-green); font-weight: 600; cursor: pointer;">อัปโหลดรูปภาพโปรไฟล์</small>
             </div>
 
-            <label style="font-size: 0.85rem; font-weight: 600; color: #555;">ชื่อน้อง <span
+            <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">ชื่อน้อง <span
                     style="color:red;">*</span></label>
             <input type="text" id="pet-name" placeholder="เช่น น้องมะลิ, ลาเต้"
                 style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-bottom: 12px; font-family: inherit;">
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600; color: #555;">ประเภทสัตว์เลี้ยง</label>
+                    <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">ประเภทสัตว์เลี้ยง</label>
                     <select id="pet-type"
                         style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; background: white; font-family: inherit;">
                         <option value="🐶">สุนัข (Dog)</option>
@@ -2403,7 +2429,7 @@
                     </select>
                 </div>
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600; color: #555;">สายพันธุ์</label>
+                    <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">สายพันธุ์</label>
                     <input type="text" id="pet-breed" placeholder="เช่น โกลเด้น"
                         style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; font-family: inherit;">
                 </div>
@@ -2411,7 +2437,7 @@
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600; color: #555;">เพศ</label>
+                    <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">เพศ</label>
                     <select id="pet-gender"
                         style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; background: white; font-family: inherit;">
                         <option>ผู้</option>
@@ -2419,7 +2445,7 @@
                     </select>
                 </div>
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600; color: #555;">อายุ</label>
+                    <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">อายุ</label>
                     <input type="text" id="pet-age" placeholder="เช่น 2 ปี"
                         style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; font-family: inherit;">
                 </div>
@@ -2427,7 +2453,7 @@
 
             <div style="background: #fafafa; padding: 15px; border-radius: 18px; border: 1px solid #f0f0f0;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <span style="font-size: 0.85rem; font-weight: 600; color: #333;"><i class="fas fa-syringe"
+                    <span style="font-size: var(--fs-md); font-weight: 600; color: #333;"><i class="fas fa-syringe"
                             style="color:var(--primary-green); margin-right: 5px;"></i> สถานะวัคซีน</span>
                     <label class="switch">
                         <input type="checkbox" id="pet-vaccine" checked onchange="toggleVaccineInputs()">
@@ -2437,40 +2463,40 @@
 
                 <div id="vaccine-inputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div>
-                        <label style="font-size: 0.75rem; color: #888; font-weight: 600;">วันที่ฉีดล่าสุด</label>
+                        <label style="font-size: var(--fs-sm); color: #888; font-weight: 600;">วันที่ฉีดล่าสุด</label>
                         <input type="date" id="vaccine-date"
-                            style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 8px; font-size: 0.8rem; margin-top: 4px;">
+                            style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 8px; font-size: var(--fs-sm); margin-top: 4px;">
                     </div>
                     <div>
-                        <label style="font-size: 0.75rem; color: #888; font-weight: 600;">วันที่หมดอายุ</label>
+                        <label style="font-size: var(--fs-sm); color: #888; font-weight: 600;">วันที่หมดอายุ</label>
                         <input type="date" id="vaccine-expiry"
-                            style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 8px; font-size: 0.8rem; margin-top: 4px;">
+                            style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 8px; font-size: var(--fs-sm); margin-top: 4px;">
                     </div>
                 </div>
             </div>
 
             <label
-                style="font-size: 0.85rem; font-weight: 600; margin-top: 20px; display: block; color: #555;">สมุดวัคซีน
+                style="font-size: var(--fs-md); font-weight: 600; margin-top: 20px; display: block; color: #555;">สมุดวัคซีน
                 (บังคับแนบเพื่อตรวจสอบ)</label>
             <div onclick="document.getElementById('file-upload-input').click()"
                 style="border: 1.5px dashed var(--primary-green); padding: 25px; border-radius: 15px; text-align: center; margin-top: 8px; background: #fdfdfd; cursor: pointer; transition: 0.3s;">
                 <input type="file" id="file-upload-input" hidden onchange="updateFilePreview(this)">
                 <i class="fas fa-file-medical" id="upload-icon"
-                    style="color: var(--primary-green); font-size: 2rem; margin-bottom: 10px;"></i>
-                <div id="upload-status-text" style="font-size: 0.9rem; font-weight: 600; color: var(--text-dark);">
+                    style="color: var(--primary-green); font-size: var(--fs-lg); margin-bottom: 10px;"></i>
+                <div id="upload-status-text" style="font-size: var(--fs-md); font-weight: 600; color: var(--text-dark);">
                     คลิกเพื่อแนบไฟล์เอกสาร</div>
                 <div id="file-name-preview"
-                    style="font-size: 0.75rem; color: var(--primary-green); margin-top: 5px; font-weight: 600;"></div>
+                    style="font-size: var(--fs-sm); color: var(--primary-green); margin-top: 5px; font-weight: 600;"></div>
             </div>
         </div>
 
         <div style="padding: 10px 20px 50px;">
             <button class="btn-main" onclick="saveNewPet()"
-                style="width: 100%; background: var(--primary-green); color: white; border: none; padding: 15px; border-radius: 20px; font-weight: 600; font-size: 1rem; box-shadow: 0 10px 20px rgba(123, 166, 126, 0.2); cursor: pointer;">
+                style="width: 100%; background: var(--primary-green); color: white; border: none; padding: 15px; border-radius: 20px; font-weight: 600; font-size: var(--fs-md); box-shadow: 0 10px 20px rgba(123, 166, 126, 0.2); cursor: pointer;">
                 <i class="fas fa-save" style="margin-right: 8px;"></i> บันทึกข้อมูลสัตว์เลี้ยง
             </button>
             <button onclick="goBackToProfile()"
-                style="width: 100%; background: transparent; color: #888; border: 1px solid #ddd; padding: 15px; border-radius: 20px; font-weight: 600; font-size: 1rem; margin-top: 12px; cursor: pointer;">
+                style="width: 100%; background: transparent; color: #888; border: 1px solid #ddd; padding: 15px; border-radius: 20px; font-weight: 600; font-size: var(--fs-md); margin-top: 12px; cursor: pointer;">
                 ยกเลิก
             </button>
         </div>
@@ -2483,33 +2509,33 @@
                 onclick="goBackToCommunity()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">ลงประกาศสินค้า 🛍️</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">ลงประกาศสินค้า 🛍️</h1>
         </div>
 
         <div class="card">
             <div
                 style="border: 1.5px dashed var(--primary-green); padding: 30px 20px; border-radius: 15px; text-align: center; margin-bottom: 20px; background: #fdfdfd; cursor: pointer;">
                 <i class="fas fa-camera"
-                    style="color: var(--primary-green); font-size: 2.5rem; margin-bottom: 10px;"></i>
-                <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-dark);">เพิ่มรูปภาพสินค้า</div>
-                <div style="font-size: 0.75rem; color: #888; margin-top: 5px;">อัปโหลดได้สูงสุด 4 รูป</div>
+                    style="color: var(--primary-green); font-size: var(--fs-lg); margin-bottom: 10px;"></i>
+                <div style="font-size: var(--fs-md); font-weight: 600; color: var(--text-dark);">เพิ่มรูปภาพสินค้า</div>
+                <div style="font-size: var(--fs-sm); color: #888; margin-top: 5px;">อัปโหลดได้สูงสุด 4 รูป</div>
             </div>
 
-            <label style="font-size: 0.85rem; font-weight: 600;">ชื่อสินค้า / บริการ <span
+            <label style="font-size: var(--fs-md); font-weight: 600;">ชื่อสินค้า / บริการ <span
                     style="color:red;">*</span></label>
             <input type="text" id="market-title" placeholder="เช่น รับหิ้วกาแฟ, ขายหนังสือมือสอง"
                 style="margin-bottom: 15px;">
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600;">ราคา (บาท) <span
+                    <label style="font-size: var(--fs-md); font-weight: 600;">ราคา (บาท) <span
                             style="color:red;">*</span></label>
                     <input type="number" id="market-price"
                         style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:10px; font-family: inherit;"
                         placeholder="เช่น 150">
                 </div>
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600;">หมวดหมู่</label>
+                    <label style="font-size: var(--fs-md); font-weight: 600;">หมวดหมู่</label>
                     <select id="market-category">
                         <option value="fas fa-box">📦 ของใช้ทั่วไป</option>
                         <option value="fas fa-hamburger">🍔 อาหาร/เครื่องดื่ม</option>
@@ -2520,7 +2546,7 @@
                 </div>
             </div>
 
-            <label style="font-size: 0.85rem; font-weight: 600;">รายละเอียดเพิ่มเติม</label>
+            <label style="font-size: var(--fs-md); font-weight: 600;">รายละเอียดเพิ่มเติม</label>
             <textarea id="market-desc" placeholder="บอกรายละเอียดสินค้า สภาพสินค้า หรือเงื่อนไขการส่ง..." rows="3"
                 style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:10px; font-family: inherit;"></textarea>
 
@@ -2546,7 +2572,7 @@
                 onclick="goBackToUsage()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">ข้อมูลอาคาร</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">ข้อมูลอาคาร</h1>
         </div>
         <div class="muji-card p-5 mb-4">
             <h3 class="font-bold text-[#334435] mb-3">📍 Nature Haven - Nest</h3>
@@ -2579,7 +2605,7 @@
                 onclick="goBackToUsage()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">ปริมาณไฟที่ใช้</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">ปริมาณไฟที่ใช้</h1>
         </div>
         <div id="elec-summary-card" class="muji-card p-6 mb-4 bg-gradient-to-br from-yellow-50 to-white border-none">
             <p class="text-xs text-orange-500 font-bold mb-1">สรุปการใช้ไฟเดือนล่าสุด</p>
@@ -2595,7 +2621,7 @@
 
         <div class="muji-card p-5">
             <h4 class="text-sm font-bold mb-4">สถิติใช้ไฟรายเดือน</h4>
-            <div id="elec-history-list" style="text-align:center;color:#aaa;padding:20px;font-size:0.85rem;">
+            <div id="elec-history-list" style="text-align:center;color:#aaa;padding:20px;font-size:var(--fs-md);">
                 <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
             </div>
         </div>
@@ -2607,7 +2633,7 @@
                 onclick="goBackToUsage()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">ปริมาณน้ำที่ใช้</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">ปริมาณน้ำที่ใช้</h1>
         </div>
         <div class="muji-card p-6 mb-4 bg-gradient-to-br from-blue-50 to-white border-none">
             <p class="text-xs text-blue-500 font-bold mb-1">สรุปการใช้น้ำเดือนล่าสุด</p>
@@ -2626,7 +2652,7 @@
 
         <div class="muji-card p-5">
             <h4 class="text-sm font-bold mb-4">สถิติใช้น้ำรายเดือน</h4>
-            <div id="water-history-list" style="text-align:center;color:#aaa;padding:20px;font-size:0.85rem;">
+            <div id="water-history-list" style="text-align:center;color:#aaa;padding:20px;font-size:var(--fs-md);">
                 <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
             </div>
         </div>
@@ -2638,7 +2664,7 @@
                 onclick="goBackToUsage()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">Quest Ranking</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">Quest Ranking</h1>
         </div>
 
         <!-- Points Banner -->
@@ -2667,15 +2693,15 @@
         <!-- Tab Nav -->
         <div style="display:flex; gap:4px; margin:0 16px 16px; background:#f3f4f6; border-radius:12px; padding:4px;">
             <button id="eco-tab-rankings" onclick="switchEcoTab('rankings')"
-                style="flex:1; padding:8px; border-radius:10px; font-size:0.78rem; font-weight:700; background:white; color:var(--primary-green); border:none; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; background:white; color:var(--primary-green); border:none; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
                 👑 อันดับ
             </button>
             <button id="eco-tab-achievements" onclick="switchEcoTab('achievements')"
-                style="flex:1; padding:8px; border-radius:10px; font-size:0.78rem; font-weight:700; background:transparent; color:#6b7280; border:none; cursor:pointer;">
+                style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; background:transparent; color:#6b7280; border:none; cursor:pointer;">
                 🏆 ภารกิจ
             </button>
             <button id="eco-tab-stats" onclick="switchEcoTab('stats')"
-                style="flex:1; padding:8px; border-radius:10px; font-size:0.78rem; font-weight:700; background:transparent; color:#6b7280; border:none; cursor:pointer;">
+                style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; background:transparent; color:#6b7280; border:none; cursor:pointer;">
                 📊 สถิติ
             </button>
         </div>
@@ -2860,7 +2886,7 @@
                 onclick="showSubPage('settings')">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">ตั้งค่าความชอบ</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">ตั้งค่าความชอบ</h1>
         </div>
 
         <div class="section-title"><span>Avatar Default</span></div>
@@ -2874,7 +2900,7 @@
                         class="fas fa-camera"></i></div>
 
             </div>
-            <p style="font-size: 0.75rem; opacity: 0.5; margin-top: 10px;">* ชื่อจะแสดงในหน้า Community และ
+            <p style="font-size: var(--fs-sm); opacity: 0.5; margin-top: 10px;">* ชื่อจะแสดงในหน้า Community และ
                 Marketplace
             </p>
             <label>ชื่อเล่น</label>
@@ -2886,7 +2912,7 @@
         <div class="section-title"><span>ตั้งค่าดวงชะตา & ข้อมูล 🔮</span></div>
         <div style="padding: 0 15px;">
             <div style="border-radius:24px; padding: 20px; box-shadow: var(--shadow); background:var(--white);">
-                <label style="font-size: 0.8rem; opacity: 0.6;">เลือกวันเกิดของคุณ (เพื่อคำนวณดวงประจำวัน)</label>
+                <label style="font-size: var(--fs-sm); opacity: 0.6;">เลือกวันเกิดของคุณ (เพื่อคำนวณดวงประจำวัน)</label>
                 <select id="birth-day-select" onchange="updateAstro()">
                     <option value="Sunday">วันอาทิตย์</option>
                     <option value="Monday">วันจันทร์</option>
@@ -2902,7 +2928,7 @@
         <div class="section-title"><span>ตั้งค่าการออกใบเสร็จ</span></div>
         <div style="padding: 0 15px;">
             <div style="border-radius:24px; padding: 20px; box-shadow: var(--shadow); background:var(--white);">
-                <label style="font-size: 0.8rem; opacity: 0.6;">เลือกประเภทใบเสร็จที่คุณต้องการรับเป็นประจำ</label>
+                <label style="font-size: var(--fs-sm); opacity: 0.6;">เลือกประเภทใบเสร็จที่คุณต้องการรับเป็นประจำ</label>
                 <select id="receipt-type-select" onchange="toggleCompanyForm()">
                     <option value="personal">ใบเสร็จรับเงินทั่วไป (นามบุคคล)</option>
                     <option value="company">ใบกำกับภาษีเต็มรูปแบบ (เบิกบริษัท)</option>
@@ -2911,7 +2937,7 @@
                 <div id="company-form"
                     style="display: none; margin-top: 15px; border-top: 1px dashed #eee; padding-top: 15px;">
                     <label
-                        style="font-size: 0.8rem; color: var(--primary-green); font-weight: 600;">ข้อมูลบริษัทสำหรับการออกใบกำกับภาษี</label>
+                        style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600;">ข้อมูลบริษัทสำหรับการออกใบกำกับภาษี</label>
                     <input type="text" id="comp-name" placeholder="ชื่อบริษัท / Company Name">
                     <input type="text" id="comp-tax" placeholder="เลขประจำตัวผู้เสียภาษี / Tax ID (13 หลัก)">
                     <textarea id="comp-addr" placeholder="ที่อยู่สำนักงานใหญ่ / Address" rows="2"
@@ -2928,7 +2954,7 @@
                 onclick="showSubPage('settings')">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">ข้อมูลส่วนตัว</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">ข้อมูลส่วนตัว</h1>
         </div>
 
         <div class="section-title"><span>ข้อมูลส่วนตัว</span></div>
@@ -2957,7 +2983,7 @@
             <div class="receipt-item"><span>เงินมัดจำ (Deposit):</span><strong style="color:var(--danger);">15,000.00
                     บาท</strong></div>
             <div
-                style="display:flex; justify-content:space-between; margin-top:10px; font-size:0.85rem; color:var(--primary-green); cursor:pointer;">
+                style="display:flex; justify-content:space-between; margin-top:10px; font-size:var(--fs-md); color:var(--primary-green); cursor:pointer;">
                 <span>สัญญาเช่าห้อง 301</span><i class="fas fa-download"></i>
             </div>
             <button class="btn-main" style="margin-top: 15px; background: #334435;"
@@ -2973,27 +2999,27 @@
                 onclick="showPage('settings')"">
                 <i class=" fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">จัดการสัญญาเช่า</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">จัดการสัญญาเช่า</h1>
         </div>
         <div class="card" style="text-align: center; border-top: 5px solid var(--primary-green);">
             <i class="fas fa-file-contract"
-                style="font-size: 3rem; color: var(--primary-green); margin-bottom: 10px;"></i>
+                style="font-size: var(--fs-lg); color: var(--primary-green); margin-bottom: 10px;"></i>
             <h3 id="contract-room-title">สัญญาห้อง —</h3>
-            <p style="font-size: 0.85rem; color: #666;">วันสิ้นสุดสัญญา: <strong id="contract-end-date">—</strong></p>
+            <p style="font-size: var(--fs-md); color: #666;">วันสิ้นสุดสัญญา: <strong id="contract-end-date">—</strong></p>
             <div
-                style="background: #e8f5e9; color: var(--primary-green); padding: 10px; border-radius: 12px; font-size: 0.8rem; margin-top: 15px;">
+                style="background: #e8f5e9; color: var(--primary-green); padding: 10px; border-radius: 12px; font-size: var(--fs-sm); margin-top: 15px;">
                 แจ้งความประสงค์ต่อสัญญา หรือแจ้งย้ายออกล่วงหน้าอย่างน้อย 30 วัน
             </div>
         </div>
         <div style="padding: 15px;">
-            <label style="font-size: 0.9rem; font-weight: 600;">ความประสงค์ของคุณ</label>
+            <label style="font-size: var(--fs-md); font-weight: 600;">ความประสงค์ของคุณ</label>
             <select id="contract-decision" style="margin-bottom: 20px;" onchange="toggleContractForm()">
                 <option value="">โปรดเลือกดำเนินการ...</option>
                 <option value="renew">✅ ขอต่อสัญญาเช่า (Renew Lease)</option>
                 <option value="moveout">❌ แจ้งย้ายออก (Move-out Notice)</option>
             </select>
             <div id="renew-form" style="display: none; animation: slideUp 0.3s ease;">
-                <label style="font-size: 0.85rem; font-weight: 600;">ระยะเวลาที่ต้องการต่อสัญญาใหม่</label>
+                <label style="font-size: var(--fs-md); font-weight: 600;">ระยะเวลาที่ต้องการต่อสัญญาใหม่</label>
                 <select style="margin-bottom: 15px;">
                     <option>1 ปี (ได้รับสิทธิ์ส่วนลด)</option>
                     <option>6 เดือน</option>
@@ -3002,9 +3028,9 @@
                         class="fas fa-paper-plane"></i> ส่งคำขอต่อสัญญา</button>
             </div>
             <div id="moveout-form" style="display: none; animation: slideUp 0.3s ease;">
-                <label style="font-size: 0.85rem; font-weight: 600; color: var(--danger);">วันที่คาดว่าจะย้ายออก</label>
+                <label style="font-size: var(--fs-md); font-weight: 600; color: var(--danger);">วันที่คาดว่าจะย้ายออก</label>
                 <input type="date" style="margin-bottom: 10px;">
-                <label style="font-size: 0.85rem; font-weight: 600;">บัญชีธนาคารสำหรับรับเงินมัดจำคืน</label>
+                <label style="font-size: var(--fs-md); font-weight: 600;">บัญชีธนาคารสำหรับรับเงินมัดจำคืน</label>
                 <input type="text" placeholder="ระบุธนาคารและเลขบัญชี" style="margin-bottom: 20px;">
                 <button class="btn-main" style="background: var(--danger);"
                     onclick="alert('ยืนยันแจ้งย้ายออกเรียบร้อย'); showPage('profile', 4);"><i
@@ -3019,7 +3045,7 @@
                 onclick="showSubPage('settings')">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">Privacy Policy</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">Privacy Policy</h1>
         </div>
         <div class="card">
             <p><strong>นโยบายความเป็นส่วนตัว</strong></p>
@@ -3039,7 +3065,7 @@
                 onclick="showSubPage('settings')">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">Terms of Use</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">Terms of Use</h1>
         </div>
         <div class="card">
             <p><strong>ข้อกำหนดการใช้งาน</strong></p>
@@ -3056,7 +3082,7 @@
                 onclick="showSubPage('settings')">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">Data & Compliance</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">Data & Compliance</h1>
         </div>
         <div class="card">
             <p><strong>การปฏิบัติตามกฎระเบียบด้านข้อมูล</strong></p>
@@ -3073,7 +3099,7 @@
                 onclick="showSubPage('settings')">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: 1.3rem;">IP Infringement</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">IP Infringement</h1>
         </div>
         <div class="card">
             <p><strong>การละเมิดทรัพย์สินทางปัญญา</strong></p>
@@ -3088,7 +3114,7 @@
     <div id="mainModal" class="modal">
         <div class="modal-content">
             <i class="fas fa-times" onclick="closeModal()"
-                style="position:absolute; right:20px; top:20px; cursor:pointer; color:var(--primary-green); font-size: 1.2rem;"></i>
+                style="position:absolute; right:20px; top:20px; cursor:pointer; color:var(--primary-green); font-size: var(--fs-lg);"></i>
             <div id="modal-body"></div>
         </div>
     </div>
@@ -3097,12 +3123,12 @@
         <div class="nav-item active" onclick="showPage('home', this)"><i class="fas fa-home"></i>หน้าหลัก</div>
         <div class="nav-item" onclick="showPage('services', this)" style="position:relative;">
             <i class="fas fa-leaf"></i>บริการ
-            <span id="nav-badge-services" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:9px; display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
+            <span id="nav-badge-services" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
         </div>
         <div class="nav-item" onclick="showPage('community', this)"><i class="fas fa-comments"></i>ชุมชน</div>
         <div class="nav-item" onclick="showPage('usage', this)" style="position:relative;">
             <i class="fas fa-wallet"></i>การใช้งาน
-            <span id="nav-badge-bills" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:9px; display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
+            <span id="nav-badge-bills" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
         </div>
         <div class="nav-item" onclick="showPage('profile', this)"><i class="fas fa-user"></i>โปรไฟล์</div>
     </div>
@@ -3140,7 +3166,7 @@
             const s = styles[type] || styles.info;
             const el = document.createElement('div');
             el.id = 'app-toast';
-            el.style.cssText = `position:fixed;top:24px;left:50%;transform:translateX(-50%);background:${s.bg};color:${s.color};padding:12px 20px;border-radius:22px;font-size:0.85rem;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.12);display:flex;align-items:center;gap:8px;max-width:calc(100% - 40px);animation:slideUp 0.3s ease;pointer-events:none;`;
+            el.style.cssText = `position:fixed;top:24px;left:50%;transform:translateX(-50%);background:${s.bg};color:${s.color};padding:12px 20px;border-radius:22px;font-size:var(--fs-md);font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.12);display:flex;align-items:center;gap:8px;max-width:calc(100% - 40px);animation:slideUp 0.3s ease;pointer-events:none;`;
             el.innerHTML = `<i class="fas ${s.icon}"></i><span>${_esc(msg)}</span>`;
             document.body.appendChild(el);
             setTimeout(() => {
@@ -3163,7 +3189,7 @@
                 success: 'fa-check-circle',
                 error:   'fa-times-circle'
             };
-            el.style.cssText = `display:block;margin-top:10px;padding:10px;border-radius:12px;font-size:0.85rem;text-align:center;${styles[type] || styles.error}`;
+            el.style.cssText = `display:block;margin-top:10px;padding:10px;border-radius:12px;font-size:var(--fs-md);text-align:center;${styles[type] || styles.error}`;
             el.innerHTML = `<i class="fas ${icons[type] || icons.error}"></i> ${_esc(msg)}`;
         }
 
@@ -3634,9 +3660,9 @@
                 body.innerHTML = `<h3>ชำระเงิน</h3><p>ยอด: 2,736.00 ฿</p><div style="border:2px dashed #ccc; padding:20px; text-align:center; border-radius:15px; background:#fdfdfd;">คลิกเพื่อแนบสลิปการโอนเงินที่นี่</div><button class="btn-main" style="margin-top:15px;" onclick="closeModal()">ส่งหลักฐาน</button>`;
             } else if (type === 'suggest') {
                 body.innerHTML = `<h3 style="color: var(--primary-green); margin-top:0;">กระซิบถึงเจ้าของตึก</h3>
-                  <p style="font-size:0.85rem; opacity: 0.8; margin-bottom: 15px;">ข้อความนี้จะถูกส่งตรงเพื่อพัฒนา Nature Haven ครับ</p>
+                  <p style="font-size:var(--fs-md); opacity: 0.8; margin-bottom: 15px;">ข้อความนี้จะถูกส่งตรงเพื่อพัฒนา Nature Haven ครับ</p>
                   <textarea placeholder="บอกเราได้ทุกเรื่องเลยครับ..." rows="5" style="width:100%; border-radius:12px; border:1px solid #eee; padding:12px; font-family: inherit;"></textarea>
-                  <label style="display:flex; align-items:center; gap:8px; margin-top:15px; font-size:0.8rem;"><input type="checkbox" checked style="width:16px; height:16px;"> ส่งแบบไม่ระบุตัวตน (Anonymous)</label>
+                  <label style="display:flex; align-items:center; gap:8px; margin-top:15px; font-size:var(--fs-sm);"><input type="checkbox" checked style="width:16px; height:16px;"> ส่งแบบไม่ระบุตัวตน (Anonymous)</label>
                   <button class="btn-main" style="margin-top:20px;" onclick="alert('ขอบคุณสำหรับคำแนะนำครับ เราจะรีบรับเรื่องดูแลต่อครับ'); closeModal();">ส่งข้อความ</button>`;
             } else if (type === 'preference') {
                 body.innerHTML = `<h3 style="margin-top:0;">แก้ไขข้อมูลส่วนตัว</h3>
@@ -3674,7 +3700,7 @@
             newItem.className = 'card';
             newItem.style.cssText = 'margin:0; padding:12px; animation: slideUp 0.5s ease;';
             newItem.innerHTML = `
-                <div style="height:100px; background:#f9f9f9; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:2rem; color:var(--primary-green);">
+                <div style="height:100px; background:#f9f9f9; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); color:var(--primary-green);">
                     <i class="${_esc(iconClass)}"></i>
                 </div>`;
             const label = document.createElement('small');
@@ -3720,15 +3746,15 @@
                 container.innerHTML = `
             <div>
             <div class="class="pet-item animate-slide section-title" style="margin-top: 25px; margin-bottom: 15px;">
-                <span style="font-size: 0.9rem; font-weight: 600">สมาชิกตัวน้อย 🐾</span>
+                <span style="font-size: var(--fs-md); font-weight: 600">สมาชิกตัวน้อย 🐾</span>
             </div>
             <div onclick="showSubPage('add-pet-page')"
                 style="border: 2px dashed #e0e0e0; padding: 30px 20px; border-radius: 25px; text-align: center; cursor: pointer; transition: 0.3s;"
                 onmouseover="this.style.borderColor='var(--primary-green)'"
                 onmouseout="this.style.borderColor='#e0e0e0'">
-                <div style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;">🐾</div>
-                <p style="font-size: 0.8rem;">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
-                <p style="font-size: 0.75rem; color: var(--primary-green); font-weight: 600; margin-top: 5px;">+ เพิ่มสมาชิกของคุณ</p>
+                <div style="font-size: var(--fs-lg); margin-bottom: 10px; opacity: 0.5;">🐾</div>
+                <p style="font-size: var(--fs-sm);">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
+                <p style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-top: 5px;">+ เพิ่มสมาชิกของคุณ</p>
             </div>
             </div>
         `;
@@ -3738,9 +3764,9 @@
             // กรณีที่ 2: มีสมาชิกแล้ว (โชว์หัวข้อคู่กับปุ่ม "+" ที่มุมบนขวา)
             let headerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <span style="font-size: 0.9rem; font-weight: 600; color: #334435;">สมาชิกตัวน้อย 🐾</span>
+            <span style="font-size: var(--fs-md); font-weight: 600; color: #334435;">สมาชิกตัวน้อย 🐾</span>
             <button onclick="showSubPage('add-pet-page'); resetPetForm();" 
-                style="background: transparent; border: none; color: var(--primary-green); font-size: 0.75rem; font-weight: 600; cursor: pointer;">
+                style="background: transparent; border: none; color: var(--primary-green); font-size: var(--fs-sm); font-weight: 600; cursor: pointer;">
                 + เพิ่มสมาชิกเพิ่ม
             </button>
         </div>
@@ -3750,25 +3776,25 @@
 
             petDataList.forEach(pet => {
                 const vaxStatusHTML = pet.isVaccinated
-                    ? '<p style="margin:4px 0; font-size:0.8rem; color:#22c55e; font-weight: 600;">✓ ฉีดวัคซีนแล้ว</p>'
-                    : '<p style="margin:4px 0; font-size:0.8rem; color:#f59e0b; font-weight: 600;">⚠️ รออัปเดตวัคซีน</p>';
+                    ? '<p style="margin:4px 0; font-size:var(--fs-sm); color:#22c55e; font-weight: 600;">✓ ฉีดวัคซีนแล้ว</p>'
+                    : '<p style="margin:4px 0; font-size:var(--fs-sm); color:#f59e0b; font-weight: 600;">⚠️ รออัปเดตวัคซีน</p>';
 
                 const safeId = _esc(pet.id);
                 const html = `
         <div class="pet-item" style="animation: slideUp 0.5s ease; background: white; padding: 15px; border-radius: 20px; display: flex; align-items: center; gap: 15px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #f9f9f9;">
-            <div class="pet-avatar" style="font-size: 2rem; background: var(--soft-green); width:60px; height:60px; display:flex; align-items:center; justify-content:center; border-radius:15px;">${_esc(pet.typeEmoji)}</div>
+            <div class="pet-avatar" style="font-size: var(--fs-lg); background: var(--soft-green); width:60px; height:60px; display:flex; align-items:center; justify-content:center; border-radius:15px;">${_esc(pet.typeEmoji)}</div>
             <div style="flex:1;">
-                <strong style="font-size: 0.9rem; color: #334435;">น้อง${_esc(pet.name)} (${_esc(pet.breed)})</strong>
+                <strong style="font-size: var(--fs-md); color: #334435;">น้อง${_esc(pet.name)} (${_esc(pet.breed)})</strong>
                 ${vaxStatusHTML}
                 ${pet.alertStatusHTML || ''}
                 <div style="margin-top: 5px;">
-                    <button onclick="viewVaccineBook('${safeId}')" style="background: #e8f5e9; color: #2d8653; border: none; padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 600; cursor: pointer;">
+                    <button onclick="viewVaccineBook('${safeId}')" style="background: #e8f5e9; color: #2d8653; border: none; padding: 4px 10px; border-radius: 8px; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;">
                         <i class="fas fa-book-medical"></i> ดูสมุดวัคซีน
                     </button>
                 </div>
-                <small style="opacity: 0.5; font-size: 0.7rem; display: block; margin-top: 4px;">เพศ${_esc(pet.gender)} | อายุ ${_esc(pet.age)}</small>
+                <small style="opacity: 0.5; font-size: var(--fs-sm); display: block; margin-top: 4px;">เพศ${_esc(pet.gender)} | อายุ ${_esc(pet.age)}</small>
             </div>
-            <i class="fas fa-edit" style="color:var(--primary-green); opacity:0.5; cursor:pointer; font-size:1.1rem;" onclick="prepareEditPet('${safeId}')"></i>
+            <i class="fas fa-edit" style="color:var(--primary-green); opacity:0.5; cursor:pointer; font-size:var(--fs-lg);" onclick="prepareEditPet('${safeId}')"></i>
         </div>`;
 
                 container.insertAdjacentHTML('beforeend', html);
@@ -3801,9 +3827,9 @@
                 const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
 
                 if (diffDays <= 0) {
-                    alertStatusHTML = `<div style="color: #ef4444; font-size: 0.7rem; font-weight: 700;">🛑 วัคซีนหมดอายุแล้ว!</div>`;
+                    alertStatusHTML = `<div style="color: #ef4444; font-size: var(--fs-sm); font-weight: 700;">🛑 วัคซีนหมดอายุแล้ว!</div>`;
                 } else if (diffDays <= 30) {
-                    alertStatusHTML = `<div style="color: #f59e0b; font-size: 0.7rem; font-weight: 700;">⚠️ หมดอายุใน ${diffDays} วัน</div>`;
+                    alertStatusHTML = `<div style="color: #f59e0b; font-size: var(--fs-sm); font-weight: 700;">⚠️ หมดอายุใน ${diffDays} วัน</div>`;
                 }
             }
 
@@ -4074,7 +4100,7 @@
             if (!container) return;
             const tickets = getMaintenanceTickets();
             if (tickets.length === 0) {
-                container.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:0.85rem;padding:20px;">ยังไม่มีรายการแจ้งซ่อม</p>';
+                container.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:var(--fs-md);padding:20px;">ยังไม่มีรายการแจ้งซ่อม</p>';
                 return;
             }
             const statusText = { pending:'⏳ รอดำเนินการ', inprogress:'🔧 กำลังซ่อม', done:'✅ เสร็จสิ้น' };
@@ -4084,14 +4110,14 @@
                 const status = t.status || 'pending';
                 return `<div style="background:white;border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid #f0f0f0;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                        <span style="font-size:0.8rem;font-weight:700;color:#6b7280;">${t.id}</span>
-                        <span style="font-size:0.72rem;font-weight:700;color:${statusColor[status]||'#6b7280'};">${statusText[status]||status}</span>
+                        <span style="font-size:var(--fs-sm);font-weight:700;color:#6b7280;">${t.id}</span>
+                        <span style="font-size:var(--fs-sm);font-weight:700;color:${statusColor[status]||'#6b7280'};">${statusText[status]||status}</span>
                     </div>
-                    <p style="font-size:0.85rem;font-weight:700;margin-bottom:4px;">${getCategoryName(t.category)}</p>
-                    <p style="font-size:0.8rem;color:#6b7280;margin-bottom:4px;">${t.description||t.desc||''}</p>
-                    <p style="font-size:0.72rem;color:#9ca3af;">${date}</p>
+                    <p style="font-size:var(--fs-md);font-weight:700;margin-bottom:4px;">${getCategoryName(t.category)}</p>
+                    <p style="font-size:var(--fs-sm);color:#6b7280;margin-bottom:4px;">${t.description||t.desc||''}</p>
+                    <p style="font-size:var(--fs-sm);color:#9ca3af;">${date}</p>
                     ${t.beforePhoto ? `<img src="${t.beforePhoto}" style="margin-top:8px;width:100%;max-height:140px;object-fit:cover;border-radius:8px;">` : ''}
-                    ${status==='done' && t.workNotes ? `<p style="font-size:0.8rem;margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;color:#374151;">📝 ${t.workNotes}</p>` : ''}
+                    ${status==='done' && t.workNotes ? `<p style="font-size:var(--fs-sm);margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;color:#374151;">📝 ${t.workNotes}</p>` : ''}
                 </div>`;
             }).join('');
         }
@@ -4304,7 +4330,7 @@
             const container = document.getElementById('complaint-list');
             if (!container) return;
             if (filtered.length === 0) {
-                container.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:0.85rem;padding:20px;">ไม่พบรายการ</p>';
+                container.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:var(--fs-md);padding:20px;">ไม่พบรายการ</p>';
                 return;
             }
             const statusLabel = { open:'รอดำเนินการ', 'in-progress':'กำลังดำเนินการ', resolved:'แก้ไขแล้ว' };
@@ -4315,10 +4341,10 @@
                 const date = new Date(c.createdAt).toLocaleDateString('th-TH');
                 return `<div style="background:white;border-radius:12px;padding:12px;margin-bottom:10px;border:1px solid #f0f0f0;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-                        <span style="font-size:0.85rem;font-weight:700;">${catEmoji[c.category]||'📌'} ${desc}</span>
-                        <span style="font-size:0.7rem;font-weight:700;color:${statusColor[c.status]||'#6b7280'};white-space:nowrap;margin-left:8px;">${statusLabel[c.status]||c.status}</span>
+                        <span style="font-size:var(--fs-md);font-weight:700;">${catEmoji[c.category]||'📌'} ${desc}</span>
+                        <span style="font-size:var(--fs-sm);font-weight:700;color:${statusColor[c.status]||'#6b7280'};white-space:nowrap;margin-left:8px;">${statusLabel[c.status]||c.status}</span>
                     </div>
-                    <p style="font-size:0.75rem;color:#9ca3af;">${date}${c.location?' · '+c.location:''}</p>
+                    <p style="font-size:var(--fs-sm);color:#9ca3af;">${date}${c.location?' · '+c.location:''}</p>
                 </div>`;
             }).join('');
         }
@@ -4612,9 +4638,9 @@
             const detail = status === 'rejected'
                 ? 'กรุณาติดต่อ admin โดยตรงหรือส่งคำขอใหม่'
                 : 'เมื่ออนุมัติแล้วจะเข้าใช้งานได้อัตโนมัติ กรุณารอสักครู่';
-            box.innerHTML = `<div style="font-size:3rem;margin-bottom:1rem;">${icon}</div>
-                <div style="font-weight:800;font-size:1.1rem;margin-bottom:.5rem;">${title}</div>
-                <div style="font-size:.9rem;color:var(--text-muted);max-width:320px;margin:0 auto 1.2rem;">${detail}</div>
+            box.innerHTML = `<div style="font-size:var(--fs-lg);margin-bottom:1rem;">${icon}</div>
+                <div style="font-weight:800;font-size:var(--fs-lg);margin-bottom:.5rem;">${title}</div>
+                <div style="font-size:var(--fs-md);color:var(--text-muted);max-width:320px;margin:0 auto 1.2rem;">${detail}</div>
                 ${status === 'rejected' ? '<button onclick="showLiffLinkForm()" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;">🔄 ส่งคำขอใหม่</button>' : ''}`;
         }
 
@@ -4684,13 +4710,13 @@
             const dueBadge = document.getElementById('service-due-badge');
             if (dueBadge && latest) {
                 if (latest.status === 'paid') {
-                    dueBadge.style.cssText = 'font-size:0.75rem;background:#D1FAE5;color:#065F46;padding:4px 10px;border-radius:20px;';
+                    dueBadge.style.cssText = 'font-size:var(--fs-sm);background:#D1FAE5;color:#065F46;padding:4px 10px;border-radius:20px;';
                     dueBadge.innerHTML = '<i class="fas fa-check"></i> ชำระแล้ว';
                 } else if (latest.status === 'overdue') {
-                    dueBadge.style.cssText = 'font-size:0.75rem;background:#FEE2E2;color:#991B1B;padding:4px 10px;border-radius:20px;';
+                    dueBadge.style.cssText = 'font-size:var(--fs-sm);background:#FEE2E2;color:#991B1B;padding:4px 10px;border-radius:20px;';
                     dueBadge.innerHTML = '<i class="fas fa-exclamation-circle"></i> เกินกำหนด';
                 } else {
-                    dueBadge.style.cssText = 'font-size:0.75rem;background:#FFF4E5;color:#D97706;padding:4px 10px;border-radius:20px;';
+                    dueBadge.style.cssText = 'font-size:var(--fs-sm);background:#FFF4E5;color:#D97706;padding:4px 10px;border-radius:20px;';
                     dueBadge.innerHTML = '<i class="fas fa-clock"></i> รอชำระ';
                 }
             }
@@ -4702,13 +4728,13 @@
                 const bId = b.id || b.billId || '';
                 return `<div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f3f3;">
                     <div>
-                        <span style="font-size:0.9rem;font-weight:600;">${m} ${yr}</span>
-                        <span style="margin-left:8px;font-size:0.72rem;padding:2px 8px;border-radius:10px;${paid?'background:#D1FAE5;color:#065F46':'background:#FFF4E5;color:#D97706'}">${paid?'✓ จ่ายแล้ว':'รอชำระ'}</span>
-                        <p style="font-size:0.8rem;color:#888;margin:3px 0 0;">฿${Number(total).toLocaleString()}</p>
+                        <span style="font-size:var(--fs-md);font-weight:600;">${m} ${yr}</span>
+                        <span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;${paid?'background:#D1FAE5;color:#065F46':'background:#FFF4E5;color:#D97706'}">${paid?'✓ จ่ายแล้ว':'รอชำระ'}</span>
+                        <p style="font-size:var(--fs-sm);color:#888;margin:3px 0 0;">฿${Number(total).toLocaleString()}</p>
                     </div>
                     ${paid
-                        ? `<button onclick="openPaymentFlow(true,'${bId}')" style="background:none;border:1px solid var(--primary-green);color:var(--primary-green);padding:5px 12px;border-radius:10px;font-size:0.8rem;cursor:pointer;">ใบเสร็จ</button>`
-                        : `<button onclick="openPaymentFlow(false,'${bId}')" style="background:var(--primary-green);color:white;border:none;padding:5px 12px;border-radius:10px;font-size:0.8rem;cursor:pointer;">จ่ายเลย</button>`
+                        ? `<button onclick="openPaymentFlow(true,'${bId}')" style="background:none;border:1px solid var(--primary-green);color:var(--primary-green);padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">ใบเสร็จ</button>`
+                        : `<button onclick="openPaymentFlow(false,'${bId}')" style="background:var(--primary-green);color:white;border:none;padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">จ่ายเลย</button>`
                     }
                 </div>`;
             }).join('');
@@ -4756,7 +4782,7 @@
             filtered.sort((a, b) => (b.when || '').localeCompare(a.when || ''));
 
             if (!filtered.length) {
-                el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:0.85rem;">ไม่มีข้อมูลในหมวดนี้</div>';
+                el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:var(--fs-md);">ไม่มีข้อมูลในหมวดนี้</div>';
                 return;
             }
 
@@ -4774,15 +4800,15 @@
                     if (!isNaN(d)) dateStr = d.toLocaleDateString('th-TH');
                 }
                 const locHtml = (i.cat === 'event' && i.location)
-                    ? `<div style="font-size:0.75rem;color:#aaa;margin-top:3px;"><i class="fas fa-map-marker-alt" style="margin-right:4px;"></i>${_esc(i.location)}</div>`
+                    ? `<div style="font-size:var(--fs-sm);color:#aaa;margin-top:3px;"><i class="fas fa-map-marker-alt" style="margin-right:4px;"></i>${_esc(i.location)}</div>`
                     : '';
                 return `<div class="card">
                     <div style="display:flex;gap:12px;">
-                        <div style="font-size:1.3rem;flex-shrink:0;margin-top:2px;">${i.icon}</div>
-                        <div style="font-size:0.85rem;flex:1;">
+                        <div style="font-size:var(--fs-lg);flex-shrink:0;margin-top:2px;">${i.icon}</div>
+                        <div style="font-size:var(--fs-md);flex:1;">
                             <span class="cf-cat-badge ${catClass}">${catLabel}</span>
                             <strong>${_esc(i.title)}</strong>
-                            ${dateStr?`<div style="color:#aaa;font-size:0.72rem;margin-top:2px;">${dateStr}</div>`:''}
+                            ${dateStr?`<div style="color:#aaa;font-size:var(--fs-sm);margin-top:2px;">${dateStr}</div>`:''}
                             ${i.body?`<div style="opacity:0.75;margin-top:4px;">${_esc(i.body)}</div>`:''}
                             ${locHtml}
                         </div>
@@ -4821,16 +4847,16 @@
             try { ann = JSON.parse(localStorage.getItem('announcements_data') || '[]'); } catch(e) {}
             const filtered = ann.filter(a => !a.building || a.building === 'all' || a.building === _taBuilding);
             if (!filtered.length) {
-                el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:0.85rem;">ไม่มีประกาศในขณะนี้</div>';
+                el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:var(--fs-md);">ไม่มีประกาศในขณะนี้</div>';
                 return;
             }
             el.innerHTML = filtered.slice(0,5).map(a => {
                 const d = a.createdAt ? new Date(a.createdAt).toLocaleDateString('th-TH') : '';
                 return `<div class="card">
                     <div style="display:flex;gap:12px;">
-                        <i class="fas fa-bullhorn" style="color:var(--primary-green);font-size:1.2rem;flex-shrink:0;margin-top:3px;"></i>
-                        <div style="font-size:0.85rem;">
-                            <strong>${a.title||a.subject||'ประกาศ'}</strong>${d?`<span style="color:#aaa;font-size:0.75rem;margin-left:6px;">${d}</span>`:''}
+                        <i class="fas fa-bullhorn" style="color:var(--primary-green);font-size:var(--fs-lg);flex-shrink:0;margin-top:3px;"></i>
+                        <div style="font-size:var(--fs-md);">
+                            <strong>${a.title||a.subject||'ประกาศ'}</strong>${d?`<span style="color:#aaa;font-size:var(--fs-sm);margin-left:6px;">${d}</span>`:''}
                             <br><span style="opacity:0.7;">${a.content||a.body||''}</span>
                         </div>
                     </div>
@@ -4903,7 +4929,7 @@
             if (!rows.length) {
                 if (latestEl) latestEl.textContent = '—';
                 if (costEl) costEl.textContent = 'ยังไม่มีข้อมูล';
-                listEl.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;font-size:0.85rem;">ยังไม่มีข้อมูลมิเตอร์</div>';
+                listEl.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;font-size:var(--fs-md);">ยังไม่มีข้อมูลมิเตอร์</div>';
                 return;
             }
 
@@ -4931,14 +4957,14 @@
                 const barW = Math.round(r.units / maxUnits * 100);
                 const accent = i === 0 ? (isMeter ? '#f97316' : '#3b82f6') : '#aaa';
                 return `<div style="margin-bottom:14px;">
-                    <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:4px;">
+                    <div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);margin-bottom:4px;">
                         <span style="font-weight:${i===0?'700':'400'};color:${i===0?'var(--text-dark)':'#666'};">${monthLabel}</span>
                         <span style="font-weight:600;">${Number(r.units).toLocaleString()} ${unit} · ฿${Number(r.cost).toLocaleString()}</span>
                     </div>
                     <div style="background:#f3f4f6;border-radius:4px;height:6px;">
                         <div style="background:${accent};border-radius:4px;height:6px;width:${barW}%;transition:width .4s;"></div>
                     </div>
-                    ${r.old != null && r.new != null ? `<div style="font-size:0.72rem;color:#aaa;margin-top:2px;">${r.old} → ${r.new}</div>` : ''}
+                    ${r.old != null && r.new != null ? `<div style="font-size:var(--fs-sm);color:#aaa;margin-top:2px;">${r.old} → ${r.new}</div>` : ''}
                 </div>`;
             }).join('');
         }
@@ -4974,7 +5000,7 @@
             let events = [];
             try { events = JSON.parse(localStorage.getItem('community_events_data') || '[]'); } catch(e) {}
             if (!events.length) {
-                el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:0.85rem;">ไม่มีกิจกรรมในขณะนี้</div>';
+                el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:var(--fs-md);">ไม่มีกิจกรรมในขณะนี้</div>';
                 return;
             }
             const MONTHS_TH = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
@@ -4985,13 +5011,13 @@
                     if (!isNaN(d)) dateStr = `${d.getDate()} ${MONTHS_TH[d.getMonth()+1]} ${d.getFullYear()+543}`;
                 }
                 const timeStr = ev.time ? ` · ${ev.time}` : '';
-                const locStr = ev.location ? `<div style="font-size:0.75rem;color:#aaa;margin-top:3px;"><i class="fas fa-map-marker-alt" style="margin-right:4px;"></i>${_esc(ev.location)}</div>` : '';
+                const locStr = ev.location ? `<div style="font-size:var(--fs-sm);color:#aaa;margin-top:3px;"><i class="fas fa-map-marker-alt" style="margin-right:4px;"></i>${_esc(ev.location)}</div>` : '';
                 return `<div class="card">
                     <div style="display:flex;gap:12px;">
-                        <i class="fas fa-calendar-check" style="color:var(--primary-green);font-size:1.2rem;flex-shrink:0;margin-top:3px;"></i>
-                        <div style="font-size:0.85rem;flex:1;">
+                        <i class="fas fa-calendar-check" style="color:var(--primary-green);font-size:var(--fs-lg);flex-shrink:0;margin-top:3px;"></i>
+                        <div style="font-size:var(--fs-md);flex:1;">
                             <strong>${_esc(ev.title||'กิจกรรม')}</strong>
-                            ${dateStr ? `<span style="color:#aaa;font-size:0.75rem;margin-left:6px;">${dateStr}${timeStr}</span>` : ''}
+                            ${dateStr ? `<span style="color:#aaa;font-size:var(--fs-sm);margin-left:6px;">${dateStr}${timeStr}</span>` : ''}
                             ${ev.description ? `<div style="opacity:0.7;margin-top:2px;">${_esc(ev.description)}</div>` : ''}
                             ${locStr}
                         </div>
@@ -5031,9 +5057,9 @@
             }
             if (!pets.length) {
                 el.innerHTML = `<div onclick="showSubPage('add-pet-page')" style="border:2px dashed #e0e0e0;padding:30px 20px;border-radius:25px;text-align:center;cursor:pointer;background:#fff;">
-                    <div style="font-size:2rem;margin-bottom:10px;opacity:0.5;">🐾</div>
-                    <p style="font-size:0.85rem;color:#888;font-weight:500;">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
-                    <p style="font-size:0.75rem;color:var(--primary-green);font-weight:600;margin-top:5px;">+ เพิ่มสัตว์เลี้ยงของคุณ</p>
+                    <div style="font-size:var(--fs-lg);margin-bottom:10px;opacity:0.5;">🐾</div>
+                    <p style="font-size:var(--fs-md);color:#888;font-weight:500;">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
+                    <p style="font-size:var(--fs-sm);color:var(--primary-green);font-weight:600;margin-top:5px;">+ เพิ่มสัตว์เลี้ยงของคุณ</p>
                 </div>`;
                 return;
             }
@@ -5041,9 +5067,9 @@
             el.innerHTML = pets.map(p => {
                 const emoji = emojiMap[p.type||p.petType] || '🐾';
                 return `<div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-                    <div style="font-size:2rem;">${emoji}</div>
-                    <div><strong style="font-size:0.9rem;">${p.name||p.petName||'สัตว์เลี้ยง'}</strong>
-                    <p style="font-size:0.75rem;color:#888;margin:2px 0 0;">${p.breed||p.petBreed||''}</p></div>
+                    <div style="font-size:var(--fs-lg);">${emoji}</div>
+                    <div><strong style="font-size:var(--fs-md);">${p.name||p.petName||'สัตว์เลี้ยง'}</strong>
+                    <p style="font-size:var(--fs-sm);color:#888;margin:2px 0 0;">${p.breed||p.petBreed||''}</p></div>
                 </div>`;
             }).join('');
         }
@@ -5143,9 +5169,9 @@
                 const total2 = bill.totalAmount||bill.total||0;
                 if (phone && total2 && typeof QRCode !== 'undefined') {
                     try { new QRCode(qrBox, { text: buildPromptPayPayload(phone, total2), width:200, height:200, correctLevel: QRCode.CorrectLevel.M }); }
-                    catch(e) { qrBox.innerHTML = '<p style="color:#aaa;font-size:0.8rem;">ไม่สามารถสร้าง QR ได้</p>'; }
+                    catch(e) { qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่สามารถสร้าง QR ได้</p>'; }
                 } else {
-                    qrBox.innerHTML = '<p style="color:#aaa;font-size:0.8rem;">ไม่มีข้อมูล PromptPay</p>';
+                    qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่มีข้อมูล PromptPay</p>';
                 }
             }
         }
