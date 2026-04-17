@@ -1667,7 +1667,7 @@
                         <p style="margin:8px 0 0; font-size:0.85rem; color:#666;">แตะเพื่อเลือกรูปสลิป</p>
                         <small style="color:#aaa;">JPG / PNG / WEBP ไม่เกิน 5MB</small>
                     </div>
-                    <input type="file" id="slip-file-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleSlipFileUpload(this)">
+                    <input type="file" id="slip-file-input" accept="image/*" style="display:none;" onchange="handleSlipFileUpload(this)">
                     <div id="slip-verify-status" style="display:none; margin-top:10px; padding:10px; border-radius:10px; font-size:0.85rem; text-align:center;"></div>
                 </div>
             </div>
@@ -4668,24 +4668,62 @@
         }
 
         // ---- SLIP UPLOAD ----
-        function handleSlipFileUpload(input) {
+        // Convert any browser-decodable image (AVIF/WEBP/BMP/PNG/HEIC-Safari) → JPEG
+        // because SlipOK รองรับแค่ JPG/PNG/WEBP ถ้าเป็นฟอร์แมตอื่นจะ verify fail
+        async function _imageToJpegBase64(file, maxWidth = 1600, quality = 0.9) {
+            const objUrl = URL.createObjectURL(file);
+            try {
+                const img = await new Promise((resolve, reject) => {
+                    const im = new Image();
+                    im.onload = () => resolve(im);
+                    im.onerror = () => reject(new Error('เบราว์เซอร์ไม่รองรับไฟล์รูปนี้ (อาจเป็น HEIC) กรุณาบันทึกสลิปเป็น JPG แล้วลองใหม่'));
+                    im.src = objUrl;
+                });
+                let w = img.naturalWidth, h = img.naturalHeight;
+                if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                return canvas.toDataURL('image/jpeg', quality);
+            } finally {
+                URL.revokeObjectURL(objUrl);
+            }
+        }
+
+        async function handleSlipFileUpload(input) {
             const file = input.files[0];
             if (!file) return;
-            if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { alert('กรุณาเลือกไฟล์ JPG, PNG หรือ WEBP'); input.value=''; return; }
-            if (file.size > 5*1024*1024) { alert('ไฟล์ต้องไม่เกิน 5MB'); input.value=''; return; }
-            const reader = new FileReader();
-            reader.onload = e => {
-                _slipBase64 = e.target.result;
-                const preview = document.getElementById('slip-preview-img');
-                const wrap = document.getElementById('slip-preview-wrap');
-                const drop = document.getElementById('slip-drop-area');
-                const btn = document.getElementById('slip-verify-btn');
-                if (preview) preview.src = _slipBase64;
-                if (wrap) wrap.style.display = '';
-                if (drop) drop.style.display = 'none';
-                if (btn) btn.disabled = false;
-            };
-            reader.readAsDataURL(file);
+            if (file.size > 10*1024*1024) { alert('ไฟล์ต้องไม่เกิน 10MB'); input.value=''; return; }
+            if (!file.type.startsWith('image/')) { alert('กรุณาเลือกไฟล์รูปภาพ'); input.value=''; return; }
+
+            const preview = document.getElementById('slip-preview-img');
+            const wrap = document.getElementById('slip-preview-wrap');
+            const drop = document.getElementById('slip-drop-area');
+            const btn = document.getElementById('slip-verify-btn');
+
+            const needsConvert = !['image/jpeg','image/png','image/webp'].includes(file.type);
+            try {
+                if (needsConvert) {
+                    // AVIF/HEIC/BMP/etc → convert to JPEG via canvas
+                    _slipBase64 = await _imageToJpegBase64(file);
+                } else {
+                    _slipBase64 = await new Promise((resolve, reject) => {
+                        const r = new FileReader();
+                        r.onload = e => resolve(e.target.result);
+                        r.onerror = () => reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
+                        r.readAsDataURL(file);
+                    });
+                }
+            } catch (e) {
+                alert(e.message);
+                input.value = '';
+                return;
+            }
+
+            if (preview) preview.src = _slipBase64;
+            if (wrap) wrap.style.display = '';
+            if (drop) drop.style.display = 'none';
+            if (btn) btn.disabled = false;
         }
 
         async function verifyTenantSlip() {
