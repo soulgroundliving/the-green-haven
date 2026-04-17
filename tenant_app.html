@@ -1071,6 +1071,138 @@
         }
         .cf-cat-announcement { background: #e3f2fd; color: #1565c0; }
         .cf-cat-event { background: #fff3e0; color: #e65100; }
+
+        /* ══════════════════════════════════════════════════════════════
+           UNIFIED UI LAYER (Phase 1) — muji minimal, 4pt grid
+           ใช้ tokens จาก shared/brand.css, override inline styles ด้วย !important
+           เฉพาะจุดที่ต้องชนะ hardcoded inline
+           ══════════════════════════════════════════════════════════════ */
+
+        /* App bar — หัวหน้า subpage ให้สูง/padding เท่ากันทุกหน้า */
+        .app-bar {
+            padding: 20px 20px 20px !important;
+            border-radius: 0 0 24px 24px !important;
+            box-shadow: var(--shadow-sm, 0 2px 8px rgba(31,31,28,.05)) !important;
+        }
+        /* Home page app-bar ยังต้องสูงกว่านิดนึง (มี date + greeting + smart key) */
+        #home .app-bar,
+        #world-map-page .app-bar {
+            padding: 28px 20px 20px !important;
+        }
+
+        /* Back circle — วงกลมย้อนกลับ unified 36×36 + icon ชัดขึ้น */
+        .app-bar > div[onclick*="goBack"],
+        .app-bar > div[onclick*="showPage"][style*="border-radius:50%"],
+        .app-bar > div[onclick*="showPage"][style*="border-radius: 50%"] {
+            width: 36px !important;
+            height: 36px !important;
+            flex-shrink: 0;
+        }
+        .app-bar > div[onclick*="goBack"] .fa-chevron-left,
+        .app-bar > div[onclick*="showPage"][style*="border-radius:50%"] .fa-chevron-left,
+        .app-bar > div[onclick*="showPage"][style*="border-radius: 50%"] .fa-chevron-left {
+            font-size: 14px !important;
+            font-weight: 600 !important;
+        }
+
+        /* Page title — h1/h2 ใน app-bar unified: 20px / 600 */
+        .app-bar h1,
+        .app-bar h2 {
+            font-size: 1.25rem !important;
+            font-weight: 600 !important;
+            color: var(--text-dark) !important;
+            line-height: 1.3 !important;
+            letter-spacing: -0.01em;
+        }
+
+        /* Section title — heading ย่อยระหว่าง card */
+        .section-title {
+            padding: 20px 20px 8px !important;
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            color: var(--text-dark) !important;
+        }
+
+        /* Cards — unified radius 20px, padding 20, margin 16 */
+        .card {
+            border-radius: 20px !important;
+            padding: 20px !important;
+            margin: 0 16px 16px !important;
+            box-shadow: var(--shadow-sm, 0 2px 8px rgba(31,31,28,.05)) !important;
+            border: 1px solid rgba(0,0,0,.04) !important;
+        }
+
+        /* Form fields — height 48 ปูพื้น, padding 12 16, radius 12 */
+        .card select,
+        .card input[type="text"],
+        .card input[type="tel"],
+        .card input[type="email"],
+        .card input[type="date"],
+        .card input[type="number"],
+        .card textarea,
+        .page select:not(.app-bar select),
+        .page input[type="text"]:not(.app-bar input),
+        .page textarea {
+            width: 100% !important;
+            min-height: 48px !important;
+            padding: 12px 14px !important;
+            border-radius: 12px !important;
+            border: 1px solid var(--border, #e0e6ed) !important;
+            background: #fff !important;
+            font-size: 0.95rem !important;
+            font-family: inherit !important;
+            margin-bottom: 14px !important;
+            box-sizing: border-box !important;
+        }
+        .card textarea,
+        .page textarea {
+            min-height: 96px !important;
+            padding: 12px 14px !important;
+            line-height: 1.5 !important;
+        }
+        .card label,
+        .page .card > form > label {
+            font-size: 0.85rem !important;
+            font-weight: 600 !important;
+            color: var(--text-dark) !important;
+            margin-bottom: 6px !important;
+            display: block !important;
+        }
+
+        /* Primary button (btn-main) — unified 52 สูง, radius 14 */
+        .btn-main {
+            min-height: 52px !important;
+            padding: 14px 20px !important;
+            border-radius: 14px !important;
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.01em;
+        }
+
+        /* suggest-card (home) — เปลี่ยนจากสีฟ้าเป็น brand green wash */
+        .suggest-card {
+            background: var(--brand-primary-wash, #f0f7f2) !important;
+            border: 1px solid var(--brand-primary-soft, #d4e8dc) !important;
+            border-radius: 20px !important;
+            margin: 0 16px 16px !important;
+            padding: 16px !important;
+        }
+        .suggest-card strong {
+            color: var(--primary-dark) !important;
+        }
+        .btn-suggest {
+            background: var(--primary-green) !important;
+            border-radius: 12px !important;
+            min-height: 44px !important;
+            padding: 10px 16px !important;
+        }
+
+        /* Page container margin — ทุกหน้า gap เท่ากัน */
+        .page > .section-title + div,
+        .page > .card:first-of-type,
+        .page > div:not(.app-bar):first-of-type {
+            margin-top: 8px;
+        }
     </style>
 </head>
 
