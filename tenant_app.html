@@ -1204,12 +1204,13 @@
             margin-top: 8px;
         }
 
-        /* iPhone safe-area — nav-bar ชิดขอบล่างเสมอ, body เผื่อที่ให้ scroll สุดไม่โดน nav ทับ */
+        /* iPhone safe-area — ใช้ max() ไม่ให้ซ้อนกับ inset ที่ LIFF/iOS เติมให้เองอัตโนมัติ
+           ทำให้ nav-bar ชิดขอบล่างพอดีทุกหน้า ไม่มีช่องว่างขาวเกิน */
         .nav-bar {
-            padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+            padding-bottom: max(18px, env(safe-area-inset-bottom, 18px)) !important;
         }
         body {
-            padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
+            padding-bottom: max(100px, calc(82px + env(safe-area-inset-bottom, 0px))) !important;
         }
     </style>
 </head>
