@@ -4426,7 +4426,7 @@
             if (btn) btn.disabled = true;
             try {
                 const total = _taCurrentBill ? (_taCurrentBill.totalAmount||_taCurrentBill.total||0) : 0;
-                const resp = await fetch('https://us-central1-the-green-haven.cloudfunctions.net/verifySlip', {
+                const resp = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
                     method:'POST', headers:{'Content-Type':'application/json'},
                     body: JSON.stringify({ file: _slipBase64, expectedAmount: total, building: _taBuilding, room: _taRoom })
                 });

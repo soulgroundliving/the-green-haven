@@ -8,6 +8,7 @@
  */
 
 const functions = require('firebase-functions');
+const { defineSecret, defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const fetch = require('node-fetch');
 const FormData = require('form-data');
@@ -20,19 +21,10 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 // ==================== CONFIGURATION ====================
-// Store these in Firebase environment variables (NOT in code)
-// Get config via: firebase functions:config:get
-const config = functions.config();
-const SLIPOK_API_KEY = config.slipok?.api_key;
-const SLIPOK_API_URL = config.slipok?.api_url;
-
-// Validate configuration on startup
-if (!SLIPOK_API_KEY || !SLIPOK_API_URL) {
-  console.error('❌ CRITICAL: SlipOK API credentials not configured!');
-  console.error('Set them with:');
-  console.error('  firebase functions:config:set slipok.api_key="YOUR_KEY"');
-  console.error('  firebase functions:config:set slipok.api_url="YOUR_URL"');
-}
+// Secret: set via `firebase functions:secrets:set SLIPOK_API_KEY`
+// Param:  set in functions/.env (e.g. SLIPOK_API_URL=https://api.slipok.com/...)
+const SLIPOK_API_KEY = defineSecret('SLIPOK_API_KEY');
+const SLIPOK_API_URL = defineString('SLIPOK_API_URL');
 
 // Rate limiting configuration
 const RATE_LIMIT_CONFIG = {
@@ -177,10 +169,10 @@ async function callSlipOKAPI(fileBuffer) {
     else if (fileBuffer[0] === 0x52 && fileBuffer[1] === 0x49) { mimeType = 'image/webp'; ext = 'webp'; }
     form.append('files', fileBuffer, { filename: `slip.${ext}`, contentType: mimeType });
 
-    const response = await fetch(SLIPOK_API_URL, {
+    const response = await fetch(SLIPOK_API_URL.value(), {
       method: 'POST',
       headers: {
-        'x-authorization': SLIPOK_API_KEY
+        'x-authorization': SLIPOK_API_KEY.value()
       },
       body: form,
       timeout: 30000 // 30 second timeout
@@ -296,7 +288,10 @@ async function saveVerifiedSlip(slipData, params) {
  *   }
  * }
  */
-exports.verifySlip = functions.https.onRequest(async (req, res) => {
+exports.verifySlip = functions
+  .region('asia-southeast1')
+  .runWith({ secrets: [SLIPOK_API_KEY] })
+  .https.onRequest(async (req, res) => {
   try {
     // CORS headers
     res.set('Access-Control-Allow-Origin', '*');
