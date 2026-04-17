@@ -818,24 +818,71 @@ class TenantFirebaseSync {
    * Load tenant lease information from Firestore meta_data collection
    * Priority: Firestore FIRST → localStorage FALLBACK
    */
+  // Map code building name → Firestore building name
+  //   'rooms' → 'RentRoom'  (ตึกแถว)
+  //   'nest'  → 'nest'       (ตึก Nest)
+  // Room IDs: ใช้ตามที่ admin ตั้งใน Firestore ตรงๆ (เช่น '15ก', 'ร้านใหญ่' ภาษาไทย)
+  // หาก Firestore docId ไม่ตรง → loadLease() คืน null + console แจ้ง path ที่ค้น
+  static _fsBuilding(b) { return b === 'rooms' ? 'RentRoom' : b; }
+  static _fsRoomId(r) { return r; }
+
   static async loadLease() {
     try {
-      // Load from Firestore meta_data collection FIRST (for actual data)
+      // Firestore: buildings/{RentRoom|nest}/rooms/{roomId}
+      // Document has nested `.lease` + `.operations` + `.metadata`
       if (window.firebase?.firestore) {
         try {
-          console.log(`🔍 TenantFirebaseSync: Checking Firestore meta_data/${this.currentRoom}`);
+          const fsBuilding = TenantFirebaseSync._fsBuilding(this.currentBuilding);
+          const fsRoomId   = TenantFirebaseSync._fsRoomId(this.currentRoom);
+          console.log(`🔍 TenantFirebaseSync: Checking buildings/${fsBuilding}/rooms/${fsRoomId}`);
           const db = window.firebase.firestore();
           const fs = window.firebase.firestoreFunctions;
 
-          const docRef = fs.doc(fs.collection(db, 'meta_data'), this.currentRoom);
+          // 3-segment path: collection('buildings') → doc(fsBuilding) → collection('rooms') → doc(fsRoomId)
+          const docRef = fs.doc(db, 'buildings', fsBuilding, 'rooms', fsRoomId);
           const docSnap = await fs.getDoc(docRef);
 
           if (docSnap.exists()) {
-            const leaseData = docSnap.data();
-            console.log(`✅ TenantFirebaseSync: Loaded lease from Firestore meta_data:`, leaseData);
+            const roomData = docSnap.data();
+            // ดึง lease subsection + map fields เข้ากับที่ tenant_app ใช้
+            const lease = roomData.lease || {};
+            const ops = roomData.operations || {};
+            const t = roomData.tenant || roomData.personalInfo || {};
+            const leaseData = {
+              building: this.currentBuilding,
+              roomId: this.currentRoom,
+              rentAmount: lease.rentAmount ?? 0,
+              deposit: lease.deposit ?? 0,
+              moveInDate: lease.moveInDate,
+              moveOutDate: lease.moveOutDate,
+              endDate: lease.moveOutDate,
+              startDate: lease.moveInDate,
+              status: lease.status || 'empty',
+              contractDocument: lease.contractDocument,
+              tenantId: ops.tenantId,
+              billingCycle: ops.billingCycle ?? 1,
+              emergencyContact: ops.emergencyContact,
+              // Tenant personal info (user confirm stored in same room doc)
+              name: t.name || t.fullName || ops.tenantName,
+              phone: t.phone || t.tel || ops.tenantPhone,
+              email: t.email || ops.tenantEmail,
+              licensePlate: t.licensePlate || ops.plateNumber,
+              companyInfo: t.companyInfo || roomData.companyInfo,
+              receiptType: t.receiptType || roomData.receiptType,
+              _raw: roomData,
+            };
+            console.log(`✅ TenantFirebaseSync: Loaded from buildings/${fsBuilding}/rooms/${fsRoomId}:`, leaseData);
             return leaseData;
           } else {
-            console.log(`   ℹ️ No data in Firestore meta_data/${this.currentRoom}`);
+            console.log(`   ℹ️ No data at buildings/${fsBuilding}/rooms/${fsRoomId}`);
+          }
+
+          // Backward-compat: try old meta_data path (เผื่อบาง room ยังอยู่ที่เดิม)
+          const legacyRef = fs.doc(fs.collection(db, 'meta_data'), this.currentRoom);
+          const legacySnap = await fs.getDoc(legacyRef);
+          if (legacySnap.exists()) {
+            console.log(`✅ Fallback: loaded from legacy meta_data/${this.currentRoom}`);
+            return legacySnap.data();
           }
         } catch (e) {
           console.debug(`  ❌ Firestore query failed:`, e.message);
