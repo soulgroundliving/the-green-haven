@@ -4282,12 +4282,17 @@
 
                 if (autoApprove) {
                     toast('✅ เชื่อมบัญชีสำเร็จ กำลังเข้าสู่ระบบ...', 'success');
-                    // Set room/building and reload to enter normal flow
                     _taRoom = String(room);
                     _taBuilding = bld;
                     localStorage.setItem('tenant_app_room', _taRoom);
                     setTimeout(() => { document.getElementById('liff-link-overlay').style.display = 'none'; window.location.reload(); }, 1000);
                 } else {
+                    // Fire LINE push notification to admins (best-effort)
+                    fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/notifyLiffRequest', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ lineUserId: window._lineUserId })
+                    }).catch(e => console.warn('notifyLiffRequest failed (non-blocking):', e));
                     showLiffLinkStatus('pending');
                     toast('✅ ส่งคำขอเรียบร้อย รอ admin อนุมัติ', 'success');
                 }
