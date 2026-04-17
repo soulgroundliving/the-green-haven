@@ -5107,6 +5107,31 @@ function resetRoomPayment(){
 }
 
 // ===== MONTHLY METER TABLE =====
+// ===== Tracking start date (เริ่มติดตามการชำระ) =====
+window.loadTrackingStart = function(){
+  const raw = localStorage.getItem('system_tracking_start');
+  if(!raw) return null; // no limit set
+  const [y, m] = raw.split('-').map(Number);
+  if(!y || !m) return null;
+  return { year: y, month: m };
+};
+window.saveTrackingStart = function(){
+  const m = parseInt(document.getElementById('tracking-start-month').value);
+  const y = parseInt(document.getElementById('tracking-start-year').value);
+  if(!m || !y){ alert('กรุณาเลือกเดือน/ปี'); return; }
+  localStorage.setItem('system_tracking_start', `${y}-${String(m).padStart(2,'0')}`);
+  const info = document.getElementById('tracking-start-info');
+  if(info) info.textContent = `✅ บันทึกแล้ว: ${m}/${y}`;
+  if(typeof renderMeterTable === 'function') renderMeterTable();
+  setTimeout(()=>{ if(info) info.textContent = `บันทึกล่าสุด: ${m}/${y}`; }, 2000);
+};
+// Returns true if selected year/month is BEFORE tracking start (i.e. archived)
+window.isArchivedMonth = function(year, month){
+  const t = window.loadTrackingStart();
+  if(!t) return false;
+  return (year < t.year) || (year === t.year && month < t.month);
+};
+
 window._pvmBuilding = 'rooms';
 window.setPVMBuilding = function(bld, btn){
   window._pvmBuilding = bld;
@@ -5126,6 +5151,22 @@ function renderMeterTable(){
   const el=document.getElementById('meterTableBody');if(!el)return;
   const month=parseInt(document.getElementById('mt-month')?.value||new Date().getMonth()+1);
   const year=parseInt(document.getElementById('mt-year')?.value||(new Date().getFullYear()+543));
+
+  // Archived period: before tracking-start-date → render banner, skip per-room table
+  if(window.isArchivedMonth && window.isArchivedMonth(year, month)){
+    const t = window.loadTrackingStart();
+    const monthName=MONTHS_FULL[month]||month;
+    el.innerHTML = `<div style="padding:2rem;text-align:center;background:#fafafa;border:2px dashed var(--border);border-radius:8px;">
+      <div style="font-size:2rem;margin-bottom:.5rem;">📦</div>
+      <div style="font-weight:700;margin-bottom:.4rem;">Archived — ${monthName} ${year}</div>
+      <div style="font-size:.85rem;color:var(--text-muted);max-width:480px;margin:0 auto;">
+        ก่อนเริ่มติดตามระบบ (${t.month}/${t.year}) — ไม่นับเป็น "ค้างชำระ"<br>
+        ข้อมูลรายได้ย้อนหลังใช้จาก Excel HISTORICAL_DATA (ดูใน Meter → 📥 นำเข้าข้อมูลบิล)
+      </div>
+    </div>`;
+    return;
+  }
+
   const yy=year%100;
   const mdKey=`${yy}_${month}`;
   const psKey=`${year}_${month}`;
@@ -6310,6 +6351,22 @@ window.switchPVTab = function(tab, btn){
     if (my && !my.value) my.value = now.getFullYear() + 543;
     if (vm && !vm.value) vm.value = now.getMonth() + 1;
     if (vy && !vy.value) vy.value = now.getFullYear() + 543;
+    // Prefill tracking-start UI
+    const t = window.loadTrackingStart?.();
+    const tm = document.getElementById('tracking-start-month');
+    const ty = document.getElementById('tracking-start-year');
+    const info = document.getElementById('tracking-start-info');
+    if (tm && ty) {
+      if (t) {
+        tm.value = t.month;
+        ty.value = t.year;
+        if (info) info.textContent = `บันทึกล่าสุด: ${t.month}/${t.year}`;
+      } else {
+        tm.value = now.getMonth() + 1;
+        ty.value = now.getFullYear() + 543;
+        if (info) info.textContent = 'ยังไม่ได้ตั้งค่า';
+      }
+    }
     if (typeof renderMeterTable === 'function') setTimeout(renderMeterTable, 50);
   }
 };

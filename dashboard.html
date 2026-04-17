@@ -3240,6 +3240,25 @@
       <button id="pvm-bld-nest" class="year-tab" onclick="setPVMBuilding('nest',this)">🏢 Nest</button>
     </div>
 
+    <!-- Tracking start date setting -->
+    <div class="card" style="margin-bottom:1rem;padding:.7rem 1rem;background:#fffde7;border-left:4px solid #fbc02d;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.85rem;">
+        <span style="font-weight:700;">⚙️ เริ่มติดตามการชำระตั้งแต่:</span>
+        <select id="tracking-start-month" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.82rem;">
+          <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+          <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+          <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+          <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+          <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+          <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+        </select>
+        <input type="number" id="tracking-start-year" min="2560" max="2590" style="width:80px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.82rem;">
+        <button onclick="saveTrackingStart()" style="padding:5px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;">💾 บันทึก</button>
+        <span id="tracking-start-info" style="color:var(--text-muted);font-size:.76rem;margin-left:auto;"></span>
+      </div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">ก่อนเดือนนี้จะแสดงเป็น "📦 Archived" (ข้อมูลเก่า ไม่นับเป็นค้างชำระ) — ใช้สำหรับระบบเพิ่งเริ่ม track</div>
+    </div>
+
     <!-- Monthly meter entry table -->
     <div class="card" style="margin-bottom:1.2rem;">
       <div class="card-title" id="pvm-table-title">📋 ตารางมิเตอร์ &amp; สถานะชำระ — ห้องแถว</div>
