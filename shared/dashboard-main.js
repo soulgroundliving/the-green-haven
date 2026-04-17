@@ -2392,6 +2392,130 @@ function switchContentTab(tabName, btn) {
     if(tabName === 'announcements') initAnnouncementsPage();
     else if(tabName === 'events' && typeof initCommunityEventsPage === 'function') initCommunityEventsPage();
     else if(tabName === 'docs' && typeof initCommunityDocsPage === 'function') initCommunityDocsPage();
+    else if(tabName === 'wellness' && typeof initWellnessArticlesPage === 'function') initWellnessArticlesPage();
+  }
+}
+
+// ===== WELLNESS ARTICLES CRUD =====
+async function initWellnessArticlesPage() {
+  await renderWellnessArticlesList();
+}
+
+async function saveWellnessArticle() {
+  const title   = document.getElementById('wellness-title').value.trim();
+  const icon    = (document.getElementById('wellness-icon').value.trim() || 'fa-leaf').replace(/^fa[srlb]?\s+/, '');
+  const excerpt = document.getElementById('wellness-excerpt').value.trim();
+  const body    = document.getElementById('wellness-body').value.trim();
+  const category= document.getElementById('wellness-category').value;
+  const readtime= parseInt(document.getElementById('wellness-readtime').value) || 3;
+  const reward  = parseInt(document.getElementById('wellness-reward').value) || 0;
+  const editId  = document.getElementById('wellness-edit-id').value;
+
+  if (!title || !excerpt || !body) {
+    if (typeof showToast === 'function') showToast('กรอกหัวข้อ + คำโปรย + เนื้อหาให้ครบ', 'error');
+    return;
+  }
+  if (!window.firebase?.firestore) {
+    if (typeof showToast === 'function') showToast('Firebase ยังไม่พร้อม ลองรีเฟรชหน้า', 'error');
+    return;
+  }
+
+  const db = window.firebase.firestore();
+  const { collection, doc, addDoc, setDoc, serverTimestamp } = window.firebase.firestoreFunctions || {};
+  const data = { title, icon, excerpt, body, category, readtime, reward, updatedAt: serverTimestamp ? serverTimestamp() : new Date() };
+
+  try {
+    if (editId) {
+      await setDoc(doc(db, 'wellness_articles', editId), data, { merge: true });
+      if (typeof showToast === 'function') showToast('อัปเดตบทความเรียบร้อย', 'success');
+    } else {
+      data.createdAt = serverTimestamp ? serverTimestamp() : new Date();
+      await addDoc(collection(db, 'wellness_articles'), data);
+      if (typeof showToast === 'function') showToast('บันทึกบทความใหม่แล้ว', 'success');
+    }
+    resetWellnessForm();
+    await renderWellnessArticlesList();
+  } catch (e) {
+    console.error('saveWellnessArticle failed:', e);
+    if (typeof showToast === 'function') showToast('บันทึกไม่สำเร็จ: ' + (e.message || e), 'error');
+  }
+}
+
+function resetWellnessForm() {
+  ['wellness-title','wellness-icon','wellness-excerpt','wellness-body','wellness-edit-id'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const rt = document.getElementById('wellness-readtime'); if (rt) rt.value = '3';
+  const rw = document.getElementById('wellness-reward'); if (rw) rw.value = '5';
+  const cat = document.getElementById('wellness-category'); if (cat) cat.value = 'Wellness';
+}
+
+async function renderWellnessArticlesList() {
+  const el = document.getElementById('wellnessList');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">⌛ กำลังโหลด...</div>';
+  if (!window.firebase?.firestore) { el.innerHTML = '<div style="color:var(--danger);padding:20px;">Firebase ไม่พร้อม</div>'; return; }
+  try {
+    const db = window.firebase.firestore();
+    const { collection, getDocs, query, orderBy } = window.firebase.firestoreFunctions || {};
+    const q = query(collection(db, 'wellness_articles'), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    if (snap.empty) { el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;">ยังไม่มีบทความ — เขียนบทความแรกด้านบน</div>'; return; }
+    el.innerHTML = snap.docs.map(d => {
+      const a = d.data();
+      const title = (a.title || '').replace(/</g, '&lt;');
+      const excerpt = (a.excerpt || '').replace(/</g, '&lt;');
+      return `<div style="padding:1rem;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;">
+        <div style="width:36px;height:36px;background:var(--green-pale);color:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas ${a.icon || 'fa-leaf'}"></i></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;margin-bottom:4px;">${title}</div>
+          <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px;">${excerpt}</div>
+          <div style="font-size:.75rem;color:var(--text-muted);">${a.category || 'Wellness'} • อ่าน ${a.readtime || 3} นาที • ${a.reward > 0 ? '+' + a.reward + ' pts' : 'ไม่ให้แต้ม'}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="editWellnessArticle('${d.id}')" style="padding:6px 10px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">✏️ แก้</button>
+          <button onclick="deleteWellnessArticle('${d.id}','${title.replace(/'/g, '&#39;')}')" style="padding:6px 10px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">🗑️ ลบ</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    console.error('renderWellnessArticlesList failed:', e);
+    el.innerHTML = '<div style="color:var(--danger);padding:20px;">โหลดรายการไม่สำเร็จ: ' + (e.message || e) + '</div>';
+  }
+}
+
+async function editWellnessArticle(id) {
+  if (!window.firebase?.firestore) return;
+  const db = window.firebase.firestore();
+  const { doc, getDoc } = window.firebase.firestoreFunctions || {};
+  try {
+    const snap = await getDoc(doc(db, 'wellness_articles', id));
+    if (!snap.exists()) return;
+    const a = snap.data();
+    document.getElementById('wellness-title').value = a.title || '';
+    document.getElementById('wellness-icon').value = a.icon || '';
+    document.getElementById('wellness-excerpt').value = a.excerpt || '';
+    document.getElementById('wellness-body').value = a.body || '';
+    document.getElementById('wellness-category').value = a.category || 'Wellness';
+    document.getElementById('wellness-readtime').value = a.readtime || 3;
+    document.getElementById('wellness-reward').value = a.reward ?? 5;
+    document.getElementById('wellness-edit-id').value = id;
+    document.getElementById('wellness-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } catch (e) { console.error('editWellnessArticle failed:', e); }
+}
+
+async function deleteWellnessArticle(id, title) {
+  if (!confirm(`ลบบทความ "${title}" ใช่ไหม?`)) return;
+  if (!window.firebase?.firestore) return;
+  const db = window.firebase.firestore();
+  const { doc, deleteDoc } = window.firebase.firestoreFunctions || {};
+  try {
+    await deleteDoc(doc(db, 'wellness_articles', id));
+    if (typeof showToast === 'function') showToast('ลบบทความแล้ว', 'success');
+    await renderWellnessArticlesList();
+  } catch (e) {
+    console.error('deleteWellnessArticle failed:', e);
+    if (typeof showToast === 'function') showToast('ลบไม่สำเร็จ', 'error');
   }
 }
 

@@ -45,7 +45,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getDatabase, ref, set, get, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
   import { getAuth, signInAnonymously, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
   // Firebase configuration - loaded from /api/config endpoint
   // This keeps the API key secure while serving it to the client
@@ -101,7 +101,9 @@
           orderBy: orderBy,
           limit: limit,
           deleteDoc: deleteDoc,
-          onSnapshot: onSnapshot
+          onSnapshot: onSnapshot,
+          addDoc: addDoc,
+          serverTimestamp: serverTimestamp
         }
       };
 
@@ -2804,6 +2806,7 @@
     <button id="tab-announcements-btn" class="content-mgmt-tab year-tab active" onclick="switchContentTab('announcements', this)">📢 Announcement</button>
     <button id="tab-events-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('events', this)">📅 Events</button>
     <button id="tab-docs-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('docs', this)">📋 Documents</button>
+    <button id="tab-wellness-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('wellness', this)">🌿 Wellness</button>
   </div>
 
   <!-- TAB 1: Announcements -->
@@ -2920,6 +2923,72 @@
 
       <!-- Documents List -->
       <div id="docsList"></div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Wellness Articles -->
+  <div id="content-tab-wellness" class="content-mgmt-content" style="display: none;">
+    <!-- Create Form -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="card-title">🌿 เขียนบทความ Wellness ใหม่</div>
+      <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem;">บทความจะปรากฏใน tenant_app.html → หน้าหลัก → Wellness Tips — คลิกเข้าไปอ่านได้ + (optional) ให้ pts เมื่ออ่านจบ</div>
+
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">หัวข้อ *</label>
+          <input type="text" id="wellness-title" placeholder="เช่น 3 เคล็ดลับจัดห้องนอน" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+        </div>
+        <div>
+          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">FontAwesome icon</label>
+          <input type="text" id="wellness-icon" placeholder="fa-spa / fa-leaf / fa-gem" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">คำโปรย (Excerpt) *</label>
+        <input type="text" id="wellness-excerpt" placeholder="สรุปสั้นๆ 1-2 ประโยคให้ลูกบ้านอยากอ่านต่อ" maxlength="160" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+        <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px;">แนะนำไม่เกิน 160 ตัวอักษร</div>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เนื้อหาเต็ม *</label>
+        <textarea id="wellness-body" rows="10" placeholder="เขียนเนื้อหา... รองรับ HTML tags &lt;p&gt; &lt;strong&gt; &lt;ul&gt; &lt;li&gt; — แบ่งย่อหน้าด้วย Enter สองครั้ง" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun'; resize: vertical;"></textarea>
+        <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px;">Tip: ใส่ <code>&lt;p&gt;&lt;strong&gt;หัวข้อย่อย&lt;/strong&gt; เนื้อหา...&lt;/p&gt;</code> จะสวยกว่าข้อความธรรมดา</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">หมวดหมู่</label>
+          <select id="wellness-category" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+            <option value="Wellness">Wellness</option>
+            <option value="Lifestyle">Lifestyle</option>
+            <option value="Mindfulness">Mindfulness</option>
+            <option value="Home">Home</option>
+            <option value="Health">Health</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เวลาอ่าน (นาที)</label>
+          <input type="number" id="wellness-readtime" min="1" max="30" value="3" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px;">
+        </div>
+        <div>
+          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Reward (pts)</label>
+          <input type="number" id="wellness-reward" min="0" max="200" value="5" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px;">
+          <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px;">0 = ไม่ให้แต้ม</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.8rem;">
+        <button onclick="saveWellnessArticle()" style="flex:2; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun'; font-size: 0.95rem;">💾 บันทึกบทความ</button>
+        <button onclick="resetWellnessForm()" style="flex:1; background: var(--border); color: var(--text); border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun';">🗑️ ล้างฟอร์ม</button>
+      </div>
+      <input type="hidden" id="wellness-edit-id" value="">
+    </div>
+
+    <!-- List -->
+    <div class="card">
+      <div class="card-title">📚 รายการบทความ Wellness ทั้งหมด</div>
+      <div id="wellnessList" style="min-height: 200px;"></div>
     </div>
   </div>
 </div>

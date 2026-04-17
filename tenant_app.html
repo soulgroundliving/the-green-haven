@@ -4853,6 +4853,7 @@
             updateNavBadges();
             loadAvatar();
             renderWellness();
+            loadWellnessFromFirestore();
         }
 
         // ---- HOME ----
@@ -5326,10 +5327,38 @@
         ];
         const WELLNESS_INITIAL = 3;
         let _wellnessShown = WELLNESS_INITIAL;
+        let _wellnessList = WELLNESS_ARTICLES.slice(); // เริ่มด้วย hardcoded fallback
+
+        // โหลด wellness articles จาก Firestore (หากมี) — admin เขียนใน dashboard
+        async function loadWellnessFromFirestore() {
+            if (!window.firebaseReady || typeof firebase === 'undefined') return;
+            try {
+                const db = firebase.firestore();
+                const fns = window.firebase?.firestoreFunctions;
+                if (!fns || !fns.collection || !fns.getDocs) return;
+                const snap = await fns.getDocs(fns.query(fns.collection(db, 'wellness_articles'), fns.orderBy('createdAt', 'desc')));
+                if (snap.empty) return;
+                _wellnessList = snap.docs.map(d => {
+                    const a = d.data();
+                    return {
+                        id: d.id,
+                        icon: (a.icon || 'fa-leaf').startsWith('fa-') ? a.icon : 'fa-' + a.icon,
+                        title: a.title || '(ไม่มีชื่อ)',
+                        excerpt: a.excerpt || '',
+                        body: a.body || '',
+                        category: a.category || 'Wellness',
+                        readtime: a.readtime || 3,
+                        reward: a.reward || 0,
+                    };
+                });
+                renderWellness();
+            } catch(e) { console.warn('loadWellnessFromFirestore failed:', e); }
+        }
         function renderWellness() {
             const list = document.getElementById('wellness-list');
             if (!list) return;
-            const toShow = WELLNESS_ARTICLES.slice(0, _wellnessShown);
+            const src = _wellnessList.length ? _wellnessList : WELLNESS_ARTICLES;
+            const toShow = src.slice(0, _wellnessShown);
             list.innerHTML = toShow.map(a => `
                 <div class="blog-card" onclick="openWellnessArticle('${a.id}')" style="cursor:pointer;">
                     <div class="blog-img"><i class="fas ${a.icon}"></i></div>
@@ -5339,33 +5368,37 @@
                     </div>
                 </div>
             `).join('');
-            // ปุ่ม toggle: แสดงทั้งหมดแล้ว → เปลี่ยนเป็น 'ย่อ' (ไม่ซ่อน)
             const btn = document.getElementById('wellness-load-more');
             if (btn) {
-                const expanded = _wellnessShown >= WELLNESS_ARTICLES.length;
+                const expanded = _wellnessShown >= src.length;
                 btn.innerHTML = expanded
                     ? 'ย่อกลับไป <i class="fas fa-chevron-up"></i>'
                     : 'ค้นหาแรงบันดาลใจต่อ <i class="fas fa-chevron-down"></i>';
+                btn.style.display = src.length > WELLNESS_INITIAL ? 'block' : 'none';
             }
         }
         function loadMoreWellness() {
-            // toggle: ถ้าแสดงครบแล้ว → ย่อกลับไป INITIAL, else แสดงเพิ่มอีก 3
-            if (_wellnessShown >= WELLNESS_ARTICLES.length) {
+            const src = _wellnessList.length ? _wellnessList : WELLNESS_ARTICLES;
+            if (_wellnessShown >= src.length) {
                 _wellnessShown = WELLNESS_INITIAL;
-                // scroll ไปตำแหน่ง Wellness section เพื่อไม่ให้ user งง
                 document.getElementById('wellness-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
-                _wellnessShown = Math.min(_wellnessShown + 3, WELLNESS_ARTICLES.length);
+                _wellnessShown = Math.min(_wellnessShown + 3, src.length);
             }
             renderWellness();
         }
         function openWellnessArticle(id) {
-            const a = WELLNESS_ARTICLES.find(x => x.id === id);
+            const src = _wellnessList.length ? _wellnessList : WELLNESS_ARTICLES;
+            const a = src.find(x => x.id === id);
             if (!a) return;
             const $ = i => document.getElementById(i);
             if ($('wellness-article-title')) $('wellness-article-title').textContent = a.title;
             if ($('wellness-article-icon')) $('wellness-article-icon').innerHTML = `<i class="fas ${a.icon}"></i>`;
             if ($('wellness-article-body')) $('wellness-article-body').innerHTML = a.body;
+            const rtEl = $('wellness-article-readtime');
+            if (rtEl) rtEl.textContent = `อ่าน ${a.readtime || 3} นาที${a.reward > 0 ? ' • +' + a.reward + ' pts' : ''}`;
+            const catEl = $('wellness-article-category');
+            if (catEl) catEl.textContent = a.category || 'Wellness';
             showPage('wellness-article');
         }
 
