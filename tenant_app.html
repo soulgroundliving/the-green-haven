@@ -586,12 +586,23 @@
             --bg-color: #1A1C1A;
             --white: #2A2D2A;
             --text-dark: #e8f5e9;
+            --text-muted: #a8b5a8;
+            --border: #1f2520;
             --soft-green: #334435;
             --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             --suggest-bg: #1A1C1A;
             --suggest-border: #334435;
             --suggest-accent: #4caf50;
         }
+        /* Night-mode: flatten nav edges, match dark bg, drop white border/shadow */
+        body.night-mode .nav-bar {
+            background: #141615 !important;
+            border-top: 1px solid #252825 !important;
+            border-radius: 0 !important;
+            box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.4) !important;
+        }
+        body.night-mode .nav-item { color: #6b7a6b !important; }
+        body.night-mode .nav-item.active { color: var(--primary-green) !important; }
 
         body.eco-mode {
             --bg-color: #F2F2F2;
