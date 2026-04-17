@@ -1255,6 +1255,12 @@
             padding: 28px 20px 20px !important;
         }
 
+        /* Breathing room: ทุก element หลัง .app-bar เว้น 16px
+           ใช้ !important ชนะ .card { margin: 0 16px 16px !important } ของ unified layer */
+        .app-bar + *:not(.section-title) { margin-top: 16px !important; }
+        .app-bar + .card { margin-top: 16px !important; }
+        .app-bar + .section-title { padding-top: 20px !important; }
+
         /* Back circle — วงกลมย้อนกลับ unified 36×36 + icon ชัดขึ้น */
         .app-bar > div[onclick*="goBack"],
         .app-bar > div[onclick*="showPage"][style*="border-radius:50%"],
@@ -1902,9 +1908,7 @@
                 <p style="margin:4px 0 0; color: var(--text-muted);">สรุปบิล &amp; การใช้ประจำเดือน</p>
             </div>
             <div id="usage-room-badge"
-                style="min-width:44px; height:44px; padding:0 10px; border-radius:14px; background:var(--soft-green); color:var(--primary-green); font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);">
-                —
-            </div>
+                style="display:none; min-width:48px; height:44px; padding:0 12px; border-radius:14px; background:var(--soft-green); color:var(--primary-green); font-weight:700; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);"></div>
         </div>
         <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; padding: 0 16px;">
             <div class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('building')">
@@ -4757,7 +4761,10 @@
         function renderBillsList() {
             const el = document.getElementById('bills-history-list');
             const badge = document.getElementById('usage-room-badge');
-            if (badge && _taRoom) badge.textContent = _taRoom;
+            if (badge) {
+                if (_taRoom) { badge.textContent = _taRoom; badge.style.display = 'flex'; }
+                else { badge.style.display = 'none'; }
+            }
             if (!el) return;
             if (!_taBills.length) {
                 el.innerHTML = '<div style="padding:20px; text-align:center; color:#aaa;">ไม่พบข้อมูลบิล</div>';
@@ -5412,8 +5419,8 @@
                 try { liff.logout(); } catch(_){}
                 try { liff.closeWindow(); return; } catch(_){}
             }
-            // fallback: browser ปกติ
-            window.location.href = './index.html';
+            // fallback: browser ปกติ — ไป login.html ไม่ใช่ index.html (เพราะ index redirects ไป dashboard)
+            window.location.href = './login.html';
         }
 
         window.addEventListener('load', () => {
