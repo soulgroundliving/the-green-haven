@@ -1041,6 +1041,34 @@
         #announcements-list {
             padding: 0;
         }
+        /* Community feed category pills */
+        .cf-pill {
+            padding: 6px 14px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .cf-pill:hover { border-color: var(--primary-green); color: var(--primary-green); }
+        .cf-pill-active {
+            background: var(--primary-green);
+            color: #fff;
+            border-color: var(--primary-green);
+        }
+        .cf-cat-badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-right: 6px;
+        }
+        .cf-cat-announcement { background: #e3f2fd; color: #1565c0; }
+        .cf-cat-event { background: #fff3e0; color: #e65100; }
     </style>
 </head>
 
@@ -1485,14 +1513,20 @@
             <h1>Marketplace</h1>
             <p>แบ่งปันและร่วมกันสร้างสังคมที่อบอุ่น 🤝</p>
         </div>
-        <div class="section-title"><span>ประกาศจากเจ้าของ</span></div>
-        <div id="announcements-list">
+        <div class="section-title"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
+        <div id="community-filter-pills" style="display:flex; gap:8px; padding:0 15px 10px; flex-wrap:wrap;">
+            <button class="cf-pill cf-pill-active" data-cat="all" onclick="setCommunityFilter('all', this)">ทั้งหมด</button>
+            <button class="cf-pill" data-cat="announcement" onclick="setCommunityFilter('announcement', this)">📢 ประกาศ</button>
+            <button class="cf-pill" data-cat="event" onclick="setCommunityFilter('event', this)">📅 กิจกรรม</button>
+        </div>
+        <div id="community-feed">
             <div class="card" style="margin-top:0; text-align:center; color:#aaa;">
                 <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
             </div>
         </div>
-        <div class="section-title"><span>กิจกรรมชุมชน 📅</span></div>
-        <div id="events-list"></div>
+        <!-- Hidden legacy containers for backward-compat with existing render funcs -->
+        <div id="announcements-list" style="display:none;"></div>
+        <div id="events-list" style="display:none;"></div>
         <div class="section-title">
             <span>ตลาดนัดเพื่อนบ้าน 🛒</span>
             <small style="color:var(--primary-green); cursor: pointer; font-weight: bold;"
@@ -4187,7 +4221,84 @@
             }).join('');
         }
 
-        // ---- COMMUNITY ----
+        // ---- COMMUNITY UNIFIED FEED ----
+        let _communityFilter = 'all';
+        function setCommunityFilter(cat, btn) {
+            _communityFilter = cat;
+            document.querySelectorAll('#community-filter-pills .cf-pill').forEach(p => p.classList.remove('cf-pill-active'));
+            if (btn) btn.classList.add('cf-pill-active');
+            renderCommunityFeed();
+        }
+
+        function renderCommunityFeed() {
+            const el = document.getElementById('community-feed');
+            if (!el) return;
+            let ann = [], ev = [];
+            try { ann = JSON.parse(localStorage.getItem('announcements_data') || '[]'); } catch(e) {}
+            try { ev = JSON.parse(localStorage.getItem('community_events_data') || '[]'); } catch(e) {}
+            ann = ann.filter(a => !a.building || a.building === 'all' || a.building === _taBuilding);
+
+            const items = [];
+            ann.forEach(a => items.push({
+                cat: 'announcement',
+                title: a.title || a.subject || 'ประกาศ',
+                body: a.content || a.body || '',
+                when: a.createdAt || a.date || '',
+                icon: a.icon || '📢',
+                raw: a
+            }));
+            ev.forEach(e => items.push({
+                cat: 'event',
+                title: e.title || 'กิจกรรม',
+                body: e.description || '',
+                when: e.date || e.createdDate || '',
+                date: e.date,
+                time: e.time,
+                location: e.location,
+                icon: '📅',
+                raw: e
+            }));
+
+            const filtered = _communityFilter === 'all' ? items : items.filter(i => i.cat === _communityFilter);
+            filtered.sort((a, b) => (b.when || '').localeCompare(a.when || ''));
+
+            if (!filtered.length) {
+                el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:0.85rem;">ไม่มีข้อมูลในหมวดนี้</div>';
+                return;
+            }
+
+            const MONTHS_TH = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+            el.innerHTML = filtered.slice(0, 20).map(i => {
+                const catLabel = i.cat === 'announcement' ? 'ประกาศ' : 'กิจกรรม';
+                const catClass = i.cat === 'announcement' ? 'cf-cat-announcement' : 'cf-cat-event';
+                let dateStr = '';
+                if (i.cat === 'event' && i.date) {
+                    const d = new Date(i.date);
+                    if (!isNaN(d)) dateStr = `${d.getDate()} ${MONTHS_TH[d.getMonth()+1]} ${d.getFullYear()+543}`;
+                    if (i.time) dateStr += ` · ${i.time}`;
+                } else if (i.when) {
+                    const d = new Date(i.when);
+                    if (!isNaN(d)) dateStr = d.toLocaleDateString('th-TH');
+                }
+                const locHtml = (i.cat === 'event' && i.location)
+                    ? `<div style="font-size:0.75rem;color:#aaa;margin-top:3px;"><i class="fas fa-map-marker-alt" style="margin-right:4px;"></i>${_esc(i.location)}</div>`
+                    : '';
+                return `<div class="card">
+                    <div style="display:flex;gap:12px;">
+                        <div style="font-size:1.3rem;flex-shrink:0;margin-top:2px;">${i.icon}</div>
+                        <div style="font-size:0.85rem;flex:1;">
+                            <span class="cf-cat-badge ${catClass}">${catLabel}</span>
+                            <strong>${_esc(i.title)}</strong>
+                            ${dateStr?`<div style="color:#aaa;font-size:0.72rem;margin-top:2px;">${dateStr}</div>`:''}
+                            ${i.body?`<div style="opacity:0.75;margin-top:4px;">${_esc(i.body)}</div>`:''}
+                            ${locHtml}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ---- LEGACY COMMUNITY (kept for backward compat; unified feed above) ----
         let _taAnnUnsub = null;
         function _subscribeAnnouncementsFromFirestore() {
             if (_taAnnUnsub) return;
@@ -4209,6 +4320,7 @@
         window.addEventListener('load', () => setTimeout(_subscribeAnnouncementsFromFirestore, 1000));
 
         function renderAnnouncements() {
+            renderCommunityFeed();
             const el = document.getElementById('announcements-list');
             if (!el) return;
             _subscribeAnnouncementsFromFirestore();
@@ -4362,6 +4474,7 @@
         window.addEventListener('load', () => setTimeout(_subscribeEventsFromFirestore, 1000));
 
         function renderCommunityEvents() {
+            renderCommunityFeed();
             const el = document.getElementById('events-list');
             if (!el) return;
             _subscribeEventsFromFirestore();
