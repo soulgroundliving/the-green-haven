@@ -3467,10 +3467,11 @@
             return code != null && code >= 1 && code <= 3;
         }
         const WORLD_MAP_GRADIENTS = {
-            // Base 5 weather/time modes
+            // Base weather/time modes
             'day-clear':   'linear-gradient(180deg, #cfe5d8 0%, #e8f5e9 50%, #f3ece0 100%)',
             'day-cloudy':  'linear-gradient(180deg, #b5c5c9 0%, #d4dcdb 55%, #e4e2d6 100%)',
             'rain':        'linear-gradient(180deg, #47525e 0%, #6b7a8d 55%, #8a9aa8 100%)',
+            'dusk':        'linear-gradient(180deg, #f2a880 0%, #e8906a 50%, #7a5a6e 100%)',
             'night-clear': 'linear-gradient(180deg, #1a2332 0%, #2a3a50 45%, #3b5066 100%)',
             'night-rain':  'linear-gradient(180deg, #0d1520 0%, #1f2a38 55%, #2c3a48 100%)',
             // Holiday overrides
@@ -3478,6 +3479,7 @@
             'christmas-night':  'linear-gradient(180deg, #1e2a3e 0%, #3a4a66 45%, #6b7f99 100%)',
             'christmas-day':    'linear-gradient(180deg, #d9e0e8 0%, #e8dfd0 55%, #f2d9c2 100%)',
             'newyear':          'linear-gradient(180deg, #7bc8f0 0%, #f4c87d 55%, #e89a55 100%)',
+            'songkran':         'linear-gradient(180deg, #a0e1ff 0%, #fff2c2 55%, #ffd48a 100%)',
         };
 
         // Holiday windows (Asia/Bangkok) — ระบุ from/to เป็น {month:0-11, day, hour}
@@ -3501,6 +3503,9 @@
             // New Year: 31 ธ.ค. – 2 ม.ค.
             if ((month === 11 && day === 31) || (month === 0 && day <= 2)) return 'newyear';
 
+            // Songkran: 13-15 เม.ย. (ทั้งวัน)
+            if (month === 3 && day >= 13 && day <= 15) return 'songkran';
+
             return null;
         }
 
@@ -3508,13 +3513,15 @@
             // 1. Holiday ชนะทุกอย่าง
             const holiday = _checkHoliday();
             if (holiday) return holiday;
-            // 2. Regular 5-mode ตามเวลา + อากาศ
+            // 2. Regular modes ตามเวลา + อากาศ
             const h = _bangkokHour();
             const isNight = (h >= 19 || h < 6);
+            const isDusk  = (h >= 17 && h < 19);  // 17:00-18:59 golden hour
             const rain = _isRainCode(weatherCode);
             if (isNight && rain) return 'night-rain';
             if (isNight) return 'night-clear';
             if (rain) return 'rain';
+            if (isDusk) return 'dusk';            // NEW — ก่อนมืด golden hour
             if (_isCloudyCode(weatherCode)) return 'day-cloudy';
             return 'day-clear';
         }
@@ -3523,7 +3530,7 @@
             const container = document.querySelector('#world-map-page .map-container');
             const root = document.getElementById('world-map-page');
             if (!container) return;
-            const img = `shared/bg/nest-${mode}.webp`;
+            const img = `shared/bg/nest-${mode}.jpg`;
             // stack fallback: image first → gradient (ถ้าไฟล์ 404 browser render gradient ซ้อน)
             container.style.backgroundImage = `url('${img}'), ${WORLD_MAP_GRADIENTS[mode]}`;
             container.style.backgroundSize = 'cover, cover';
