@@ -43,7 +43,7 @@
       ]
     },
     {
-      "source": "/(dashboard|login|tenant|index)(.html)?",
+      "source": "/(dashboard|login|tenant|tenant_app|index)(.html)?",
       "headers": [
         {
           "key": "Cache-Control",
@@ -61,18 +61,16 @@
       ]
     }
   ],
-  "rewrites": [
+  "redirects": [
     {
       "source": "/Tenant_app.html",
-      "destination": "/tenant_app.html"
+      "destination": "/tenant_app",
+      "permanent": true
     },
     {
       "source": "/Tenant_app",
-      "destination": "/tenant_app.html"
-    },
-    {
-      "source": "/:path*",
-      "destination": "/:path*"
+      "destination": "/tenant_app",
+      "permanent": true
     }
   ]
 }
