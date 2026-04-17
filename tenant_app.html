@@ -86,18 +86,57 @@
             --receipt-green: #1a5c38;
             --radius-card: 22px;         /* Tenant keeps softer radii for mobile UX */
             --radius-sm: 8px;            /* Same as dashboard --radius-sm */
-            --gap: 15px;
             /* Suggestion Colors */
             --suggest-bg: #F0F4FF;
             --suggest-border: #D1E1FF;
             --suggest-accent: #2563EB;
+
+            /* ═══════════════════════════════════════════════════════════
+               FLUID TYPE SCALE — Instagram/FB pattern (clamp + rem)
+               iPhone SE (320w) → Pro Max (430w) พอดีทุกรุ่น
+               formula: clamp(min, min_px + slope*vw, max)
+               slope = (max-min)/(430-320) * 100
+               ═══════════════════════════════════════════════════════════ */
+            --text-xs:   clamp(10px,  7.1px + 0.91vw, 11px);   /* 10→11 */
+            --text-sm:   clamp(12px,  9.1px + 0.91vw, 13px);   /* 12→13 */
+            --text-base: clamp(14px, 11.1px + 0.91vw, 15px);   /* 14→15 */
+            --text-md:   clamp(15px,  9.2px + 1.82vw, 17px);   /* 15→17 */
+            --text-lg:   clamp(17px,  8.3px + 2.73vw, 20px);   /* 17→20 */
+            --text-xl:   clamp(20px,  8.4px + 3.64vw, 24px);   /* 20→24 */
+            --text-2xl:  clamp(24px, 12.4px + 3.64vw, 28px);   /* 24→28 */
+            --text-3xl:  clamp(28px, 11.6px + 5.18vw, 34px);   /* 28→34 */
+
+            /* Fluid spacing — gutters/gaps scale with viewport */
+            --gap-xs:    clamp(4px,   2.5px + 0.46vw, 6px);
+            --gap-sm:    clamp(8px,   5.1px + 0.91vw, 10px);
+            --gap:       clamp(12px,  6.2px + 1.82vw, 16px);    /* default (old 15px) */
+            --gap-md:    clamp(16px,  7.3px + 2.73vw, 20px);
+            --gap-lg:    clamp(20px, 11.3px + 2.73vw, 24px);
+            --gutter:    clamp(14px,  8.2px + 1.82vw, 20px);    /* page side padding */
         }
 
         * {
             box-sizing: border-box;
         }
+        /* Fluid root: 14px @ 320w → 16px @ 430w (pure-px math, smooth)
+           rem ทุกจุดจะ scale ตาม root อัตโนมัติ — Instagram/FB pattern */
+        html {
+            font-size: clamp(14px, 8.4px + 1.82vw, 16px);
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
         html, body {
             font-family: var(--font-brand);
+        }
+        body { font-size: var(--text-base); }
+        h1 { font-size: var(--text-xl); }
+        h2 { font-size: var(--text-lg); }
+        h3 { font-size: var(--text-md); }
+        h4 { font-size: var(--text-base); }
+        p, label, span { font-size: inherit; }
+        /* iOS auto-zoom prevention — inputs ต้อง >=16px (intentional fixed px) */
+        input, select, textarea {
+            font-size: 16px;
         }
 
         body {
@@ -504,7 +543,7 @@
 
         .arrow {
             color: #CCC;
-            font-size: 14px;
+            font-size: 0.875rem;
         }
 
         /* Tabs */
@@ -1046,7 +1085,7 @@
             color: white;
             padding: 4px 12px;
             border-radius: 15px;
-            font-size: 10px;
+            font-size: var(--text-xs);
             font-weight: bold;
             white-space: nowrap;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
@@ -1080,7 +1119,7 @@
             right: -8px;
             background: #FFD700;
             color: #333;
-            font-size: 8px;
+            font-size: 0.625rem;
             padding: 2px 5px;
             border-radius: 5px;
             font-weight: bold;
@@ -1168,6 +1207,8 @@
         }
         .cf-cat-announcement { background: #e3f2fd; color: #1565c0; }
         .cf-cat-event { background: #fff3e0; color: #e65100; }
+
+        /* Fluid typography moved to primary :root (top of stylesheet) */
 
         /* ══════════════════════════════════════════════════════════════
            UNIFIED UI LAYER (Phase 1) — muji minimal, 4pt grid
