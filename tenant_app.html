@@ -2995,31 +2995,28 @@
         <div class="section-title"><span>ข้อมูลส่วนตัว</span></div>
         <div class="card">
             <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <span>ชื่อ+นามสกุล</span><strong>บุษบา หอมกลิ่น</strong>
+                <span>ชื่อ+นามสกุล</span><strong id="profile-fullname">—</strong>
             </div>
             <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <span>เบอร์โทรศัพท์:</span><strong>081-XXX-XXXX</strong>
+                <span>เบอร์โทรศัพท์:</span><strong id="profile-phone">—</strong>
             </div>
             <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <span>อีเมล:</span><strong>looktan.n@haven.com</strong>
+                <span>อีเมล:</span><strong id="profile-email">—</strong>
             </div>
             <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <span>ป้ายทะเบียน:</span><strong>9กก9999</strong>
+                <span>ป้ายทะเบียน:</span><strong id="profile-license">—</strong>
             </div>
         </div>
 
         <div class="section-title"><span>ข้อมูลสัญญา📜</span></div>
         <div class="card">
-            <div class="receipt-item"><span>เริ่มต้นสัญญา:</span><strong>31 ธ.ค. 2025</strong></div>
-            <div class="receipt-item"><span>สิ้นสุดสัญญา:</span><strong>31 ธ.ค. 2026</strong></div>
-            <div class="receipt-item"><span>ระยะเวลาคงเหลือ:</span><strong style="color:var(--primary-green);">9
-                    เดือน 2
-                    วัน</strong></div>
-            <div class="receipt-item"><span>เงินมัดจำ (Deposit):</span><strong style="color:var(--danger);">15,000.00
-                    บาท</strong></div>
+            <div class="receipt-item"><span>เริ่มต้นสัญญา:</span><strong id="profile-lease-start">—</strong></div>
+            <div class="receipt-item"><span>สิ้นสุดสัญญา:</span><strong id="profile-lease-end">—</strong></div>
+            <div class="receipt-item"><span>ระยะเวลาคงเหลือ:</span><strong id="profile-lease-remaining" style="color:var(--primary-green);">—</strong></div>
+            <div class="receipt-item"><span>เงินมัดจำ (Deposit):</span><strong id="profile-deposit" style="color:var(--danger);">—</strong></div>
             <div
                 style="display:flex; justify-content:space-between; margin-top:10px; font-size:var(--fs-md); color:var(--primary-green); cursor:pointer;">
-                <span>สัญญาเช่าห้อง 301</span><i class="fas fa-download"></i>
+                <span id="profile-contract-label">สัญญาเช่าห้อง —</span><i class="fas fa-download"></i>
             </div>
             <button class="btn-main" style="margin-top: 15px; background: #334435;"
                 onclick="showSubPage('contract-action-page')"><i class="fas fa-file-signature"></i> แจ้งต่อสัญญา /
@@ -5141,11 +5138,42 @@
 
         // ---- PROFILE ----
         function renderProfilePage() {
+            const set = (id, val) => { const el = document.getElementById(id); if (el && val != null && val !== '') el.textContent = val; };
+
             const nameEl = document.getElementById('display-name');
             if (nameEl && _taTenant) {
                 const name = _taTenant.name || _taTenant.tenantName || '';
                 if (name) nameEl.textContent = `คุณ${name}`;
             }
+            // Personal info — ดึงจาก _taTenant (dashboard source) ไม่ hardcode
+            const t = _taTenant || {};
+            set('profile-fullname', t.name || t.tenantName || t.fullName);
+            set('profile-phone',    t.phone || t.tel || t.mobile);
+            set('profile-email',    t.email);
+            set('profile-license',  t.licensePlate || t.license || t.carPlate);
+
+            // Contract info — ดึงจาก _taLease (dashboard source)
+            const l = _taLease || {};
+            const startRaw = l.startDate || l.moveInDate;
+            const endRaw   = l.endDate   || l.moveOutDate;
+            const fmt = d => { try { return new Date(d).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}); } catch(e){ return ''; } };
+            if (startRaw) set('profile-lease-start', fmt(startRaw));
+            if (endRaw)   set('profile-lease-end',   fmt(endRaw));
+            if (endRaw) {
+                const diffMs = new Date(endRaw).getTime() - Date.now();
+                if (!isNaN(diffMs) && diffMs > 0) {
+                    const totalDays = Math.floor(diffMs / 86400000);
+                    const months = Math.floor(totalDays / 30);
+                    const days = totalDays % 30;
+                    set('profile-lease-remaining', `${months} เดือน ${days} วัน`);
+                } else if (!isNaN(diffMs)) {
+                    set('profile-lease-remaining', 'หมดอายุแล้ว');
+                }
+            }
+            const deposit = l.deposit || l.depositAmount;
+            if (deposit) set('profile-deposit', Number(deposit).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+            if (_taRoom) set('profile-contract-label', `สัญญาเช่าห้อง ${_taRoom}`);
+
             const roomEl = document.getElementById('profile-room-display');
             if (roomEl && _taRoom) {
                 roomEl.textContent = `ห้อง ${_taRoom} | ${_taBuilding === 'nest' ? 'ตึก Nest' : 'ตึก Rooms'}`;
@@ -5216,11 +5244,35 @@
             return `quiz_contract_${_taBuilding||'x'}_${_taRoom||'x'}_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`;
         }
 
+        // อ่าน rewardPoints ที่ admin ตั้งค่าไว้ (fallback 20)
+        // Admin set ผ่าน: Firestore settings/{building}/quiz.contractRewardPoints
+        //   หรือ localStorage quiz_reward_contract (dev/manual override)
+        let _quizRewardContract = 20;
+        async function loadQuizRewardConfig() {
+            // localStorage override (dev หรือ admin ส่งผ่าน window message)
+            const local = parseInt(localStorage.getItem('quiz_reward_contract') || '0');
+            if (local > 0) { _quizRewardContract = local; return; }
+            try {
+                if (!window.firebaseReady || typeof firebase === 'undefined') return;
+                const db = firebase.firestore();
+                const building = _taBuilding || 'nest';
+                const snap = await db.collection('settings').doc(building).get();
+                const data = snap.exists ? snap.data() : null;
+                const pts = data?.quiz?.contractRewardPoints;
+                if (pts && pts > 0 && pts < 1000) _quizRewardContract = pts;
+            } catch(_){}
+        }
+
         function setupContractQuizGate() {
             const section = document.getElementById('contract-quiz-section');
             const btn = document.getElementById('contract-quiz-start-btn');
             const label = document.getElementById('contract-quiz-btn-label');
             if (!section || !btn || !label) return;
+            loadQuizRewardConfig().then(() => {
+                // แสดงค่า rewardPoints ที่ admin ตั้งในคำอธิบาย
+                const descEl = section.querySelector('p');
+                if (descEl) descEl.innerHTML = `ทำ quiz ตอบถูก 2/3 ได้ <strong style="color:var(--primary-green);">+${_quizRewardContract} pts</strong> (ทำได้ 1 ครั้ง/เดือน)`;
+            });
             // already done this month?
             if (localStorage.getItem(_quizMonthKey())) {
                 btn.disabled = true;
@@ -5240,7 +5292,7 @@
                     clearInterval(_quizDwellTimer);
                     btn.disabled = false;
                     btn.style.opacity = '1';
-                    label.textContent = '📝 เริ่มทำ Quiz รับ +20 pts';
+                    label.textContent = `📝 เริ่มทำ Quiz รับ +${_quizRewardContract || 20} pts`;
                 } else {
                     label.textContent = `อ่าน ${sec} วินาที เพื่อปลดล็อก…`;
                 }
@@ -5378,14 +5430,15 @@
             const passed = correct >= 2;
             // save attempt + points
             localStorage.setItem(_quizMonthKey(), JSON.stringify({ score: correct, total, passed, at: Date.now() }));
-            if (passed) awardQuizPoints(20);
+            const reward = _quizRewardContract || 20;
+            if (passed) awardQuizPoints(reward);
             // show result
             document.getElementById('quiz-question').textContent = '';
             document.getElementById('quiz-options').innerHTML = '';
             const resEl = document.getElementById('quiz-result');
             resEl.style.display = 'block';
             resEl.innerHTML = passed
-                ? `<div style="font-size:3rem;">🎉</div><strong style="color:var(--primary-green);">ตอบถูก ${correct}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ได้รับ <strong style="color:var(--accent-gold,#D4AF37);">+20 pts</strong></p>`
+                ? `<div style="font-size:3rem;">🎉</div><strong style="color:var(--primary-green);">ตอบถูก ${correct}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ได้รับ <strong style="color:var(--accent-gold,#D4AF37);">+${reward} pts</strong></p>`
                 : `<div style="font-size:3rem;">📖</div><strong>ตอบถูก ${correct}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ต้องตอบถูก 2/3 ถึงได้แต้ม<br>ลองเดือนหน้านะครับ</p>`;
             document.getElementById('quiz-submit-btn').textContent = 'ปิด';
             document.getElementById('quiz-submit-btn').disabled = false;
