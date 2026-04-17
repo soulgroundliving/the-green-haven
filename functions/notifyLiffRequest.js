@@ -1,40 +1,45 @@
 /**
- * notifyLiffRequest — Firestore trigger: when a new liffUsers doc is created
- * with status:'pending', push a LINE message to admin(s) so they know to
- * approve the account link request.
+ * notifyLiffRequest — Firestore v2 trigger: when a new liffUsers doc is created
+ * with status:'pending', push a LINE message to admin(s).
+ *
+ * Uses v2 API because Firestore is in asia-southeast3 (Jakarta), which Gen1 doesn't support.
  *
  * Setup required:
  *   firebase functions:secrets:set LINE_CHANNEL_ACCESS_TOKEN
- *   firebase functions:secrets:set LINE_ADMIN_USER_IDS  (comma-separated LINE userIds of admins)
+ *   firebase functions:secrets:set LINE_ADMIN_USER_IDS  (comma-separated LINE userIds)
  *
- * Then: firebase deploy --only functions:notifyLiffRequest
+ * Deploy: firebase deploy --only functions:notifyLiffRequest
  */
 
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { defineSecret } = require('firebase-functions/params');
+const admin = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();
 
 const LINE_CHANNEL_ACCESS_TOKEN = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
 const LINE_ADMIN_USER_IDS = defineSecret('LINE_ADMIN_USER_IDS');
 
-exports.notifyLiffRequest = functions
-  .region('asia-southeast1')
-  .runWith({ secrets: [LINE_CHANNEL_ACCESS_TOKEN, LINE_ADMIN_USER_IDS] })
-  .firestore.document('liffUsers/{userId}')
-  .onCreate(async (snap, context) => {
+exports.notifyLiffRequest = onDocumentCreated(
+  {
+    document: 'liffUsers/{userId}',
+    region: 'asia-southeast1',
+    secrets: [LINE_CHANNEL_ACCESS_TOKEN, LINE_ADMIN_USER_IDS]
+  },
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
     const data = snap.data() || {};
     if (data.status !== 'pending') {
       console.log('Skip — not a pending request');
-      return null;
+      return;
     }
 
     const token = LINE_CHANNEL_ACCESS_TOKEN.value();
     const adminIds = (LINE_ADMIN_USER_IDS.value() || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!token || !adminIds.length) {
       console.warn('⚠️ LINE_CHANNEL_ACCESS_TOKEN / LINE_ADMIN_USER_IDS not set');
-      return null;
+      return;
     }
 
     const buildingLabel = data.building === 'nest' ? '🏢 Nest' : '🏠 ห้องแถว';
@@ -62,6 +67,5 @@ exports.notifyLiffRequest = functions
       if (r.status === 'rejected') console.error(`❌ Push to ${adminIds[i]}:`, r.reason.message);
       else console.log(`✅ Push to ${adminIds[i]} sent`);
     });
-
-    return null;
-  });
+  }
+);
