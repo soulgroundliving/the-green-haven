@@ -1467,6 +1467,23 @@
         </div>
     </div>
 
+    <!-- Contract Quiz Modal -->
+    <div id="quiz-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1500; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:#fff; border-radius:24px; max-width:420px; width:100%; padding:24px; box-shadow:var(--shadow);">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <strong id="quiz-title" style="font-size:var(--fs-lg);">Contract Quiz</strong>
+                <div id="quiz-progress" style="font-size:var(--fs-sm); color:var(--text-muted);">1/3</div>
+            </div>
+            <div id="quiz-question" style="font-size:var(--fs-md); font-weight:600; margin-bottom:14px;"></div>
+            <div id="quiz-options" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
+            <div id="quiz-result" style="display:none; text-align:center; padding:12px 0;"></div>
+            <div style="display:flex; gap:10px;">
+                <button id="quiz-cancel-btn" onclick="closeContractQuiz()" style="flex:1; padding:12px; border-radius:12px; border:1px solid var(--border); background:#fff; font-family:inherit; cursor:pointer;">ยกเลิก</button>
+                <button id="quiz-submit-btn" onclick="submitContractQuiz()" disabled class="btn-main" style="flex:2;">ส่งคำตอบ</button>
+            </div>
+        </div>
+    </div>
+
     <div id="daily-modal"
         style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(10px); padding: 20px;">
         <div class="animate-pop"
@@ -3020,6 +3037,21 @@
                 style="background: #e8f5e9; color: var(--primary-green); padding: 10px; border-radius: 12px; font-size: var(--fs-sm); margin-top: 15px;">
                 แจ้งความประสงค์ต่อสัญญา หรือแจ้งย้ายออกล่วงหน้าอย่างน้อย 30 วัน
             </div>
+        </div>
+
+        <!-- Contract Quiz MVP — อ่านสัญญาจบ → ทำ quiz → +20 pts (1 ครั้ง/เดือน) -->
+        <div id="contract-quiz-section" class="card" style="border-left: 5px solid var(--accent-gold, #D4AF37);">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                <div style="font-size:var(--fs-lg);">📝</div>
+                <div style="flex:1;">
+                    <strong>รู้จักสัญญาของคุณดีแค่ไหน?</strong>
+                    <p style="margin:2px 0 0; font-size:var(--fs-sm); color:var(--text-muted);">ทำ quiz ตอบถูก 2/3 ได้ <strong style="color:var(--primary-green);">+20 pts</strong> (ทำได้ 1 ครั้ง/เดือน)</p>
+                </div>
+            </div>
+            <button id="contract-quiz-start-btn" class="btn-main" onclick="startContractQuiz()" disabled
+                style="width:100%; background:var(--accent-gold, #D4AF37); color:#fff;">
+                <span id="contract-quiz-btn-label">อ่าน 10 วินาที เพื่อปลดล็อก…</span>
+            </button>
         </div>
         <div style="padding: 15px;">
             <label style="font-size: var(--fs-md); font-weight: 600;">ความประสงค์ของคุณ</label>
@@ -5152,14 +5184,229 @@
             if (!_taRoom) return;
             const titleEl = document.getElementById('contract-room-title');
             if (titleEl) titleEl.textContent = `สัญญาห้อง ${_taRoom}`;
-            if (!_taLease) return;
-            const endEl = document.getElementById('contract-end-date');
-            if (endEl && _taLease.endDate) {
-                try {
-                    const d = new Date(_taLease.endDate);
-                    endEl.textContent = d.toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
-                } catch(e) { endEl.textContent = _taLease.endDate; }
+            if (_taLease) {
+                const endEl = document.getElementById('contract-end-date');
+                if (endEl) {
+                    const raw = _taLease.endDate || _taLease.moveOutDate;
+                    if (raw) {
+                        try {
+                            const d = new Date(raw);
+                            endEl.textContent = d.toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+                        } catch(e) { endEl.textContent = raw; }
+                    }
+                }
             }
+            setupContractQuizGate();
+        }
+
+        // ---- Contract Quiz (MVP) ----
+        let _quizState = null; // { questions:[{q,options:[],correctIdx}], answers:{}, current:0 }
+        let _quizDwellTimer = null;
+
+        function _quizMonthKey() {
+            const d = new Date();
+            return `quiz_contract_${_taBuilding||'x'}_${_taRoom||'x'}_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`;
+        }
+
+        function setupContractQuizGate() {
+            const section = document.getElementById('contract-quiz-section');
+            const btn = document.getElementById('contract-quiz-start-btn');
+            const label = document.getElementById('contract-quiz-btn-label');
+            if (!section || !btn || !label) return;
+            // already done this month?
+            if (localStorage.getItem(_quizMonthKey())) {
+                btn.disabled = true;
+                label.textContent = '✓ ทำ quiz เดือนนี้แล้ว (เดือนหน้าทำได้อีก)';
+                btn.style.opacity = '0.6';
+                return;
+            }
+            // dwell lock — unlock หลัง 10 วิ
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            label.textContent = 'อ่าน 10 วินาที เพื่อปลดล็อก…';
+            let sec = 10;
+            if (_quizDwellTimer) clearInterval(_quizDwellTimer);
+            _quizDwellTimer = setInterval(() => {
+                sec--;
+                if (sec <= 0) {
+                    clearInterval(_quizDwellTimer);
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    label.textContent = '📝 เริ่มทำ Quiz รับ +20 pts';
+                } else {
+                    label.textContent = `อ่าน ${sec} วินาที เพื่อปลดล็อก…`;
+                }
+            }, 1000);
+        }
+
+        function _shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function _thaiDate(d) {
+            try { return new Date(d).toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'}); }
+            catch(e) { return String(d); }
+        }
+
+        function buildContractQuiz() {
+            const lease = _taLease || {};
+            const endRaw = lease.endDate || lease.moveOutDate;
+            const rent = lease.rentAmount || lease.rent || lease.monthlyRent || 0;
+
+            // Q1 — วันสิ้นสุดสัญญา
+            const q1Options = [];
+            if (endRaw) {
+                const correct = _thaiDate(endRaw);
+                const d = new Date(endRaw);
+                const opts = [
+                    correct,
+                    _thaiDate(new Date(d.getFullYear()-1, d.getMonth(), d.getDate())),
+                    _thaiDate(new Date(d.getFullYear()+1, d.getMonth(), d.getDate())),
+                    _thaiDate(new Date(d.getFullYear(), d.getMonth()+3, d.getDate())),
+                ];
+                q1Options.push(...opts);
+            }
+
+            // Q2 — ค่าเช่ารายเดือน
+            const q2Options = [];
+            if (rent) {
+                const r = Number(rent);
+                q2Options.push(r, r - 1000, r + 1000, r + 2500);
+            }
+
+            // Q3 — แจ้งย้ายออกล่วงหน้ากี่วัน (fixed rule from lease terms)
+            const questions = [];
+            if (q1Options.length) {
+                const shuffled = _shuffle([...q1Options]);
+                questions.push({
+                    q: 'สัญญาของคุณสิ้นสุดวันใด?',
+                    options: shuffled.map(x => String(x)),
+                    correctIdx: shuffled.indexOf(q1Options[0]),
+                });
+            }
+            if (q2Options.length) {
+                const shuffled = _shuffle([...q2Options]);
+                questions.push({
+                    q: 'ค่าเช่ารายเดือนของห้องคุณคือเท่าไร?',
+                    options: shuffled.map(x => Number(x).toLocaleString('th-TH') + ' บาท'),
+                    correctIdx: shuffled.indexOf(q2Options[0]),
+                });
+            }
+            // Fallback pool — นโยบายทั่วไป (ใช้เสมอเมื่อคำถามจาก lease ไม่ครบ 3)
+            const pool = [
+                { q: 'ต้องแจ้งย้ายออกล่วงหน้าอย่างน้อยกี่วัน?', opts: ['7 วัน','15 วัน','30 วัน','60 วัน'], correct: '30 วัน' },
+                { q: 'เงินประกัน (deposit) ปกติกี่เดือน?', opts: ['1 เดือน','2 เดือน','3 เดือน','6 เดือน'], correct: '2 เดือน' },
+                { q: 'ผิดสัญญาก่อนครบกำหนด จะเสียอะไร?', opts: ['ค่าปรับ 500 บาท','ไม่ได้เงินประกันคืน','ค่าเช่าเพิ่ม','ไม่เสียอะไร'], correct: 'ไม่ได้เงินประกันคืน' },
+                { q: 'ค่าเช่าต้องชำระภายในวันที่เท่าไรของเดือน?', opts: ['วันที่ 1','วันที่ 5','วันที่ 10','สิ้นเดือน'], correct: 'วันที่ 5' },
+            ];
+            _shuffle(pool);
+            while (questions.length < 3 && pool.length) {
+                const item = pool.shift();
+                const shuffled = _shuffle([...item.opts]);
+                questions.push({ q: item.q, options: shuffled, correctIdx: shuffled.indexOf(item.correct) });
+            }
+            return questions.slice(0, 3);
+        }
+
+        function startContractQuiz() {
+            if (localStorage.getItem(_quizMonthKey())) { toast('ทำ quiz เดือนนี้แล้ว เดือนหน้าค่อยทำอีก', 'info'); return; }
+            const questions = buildContractQuiz();
+            if (!questions.length) { toast('ยังไม่มีข้อมูลสัญญา ลองรีเฟรชหน้า', 'warning'); return; }
+            _quizState = { questions, answers: {}, current: 0 };
+            document.getElementById('quiz-modal').style.display = 'flex';
+            document.getElementById('quiz-result').style.display = 'none';
+            document.getElementById('quiz-submit-btn').textContent = 'ถัดไป';
+            renderQuizQuestion();
+        }
+
+        function renderQuizQuestion() {
+            const st = _quizState; if (!st) return;
+            const q = st.questions[st.current];
+            document.getElementById('quiz-progress').textContent = `${st.current+1}/${st.questions.length}`;
+            document.getElementById('quiz-question').textContent = q.q;
+            const optsEl = document.getElementById('quiz-options');
+            optsEl.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.style.cssText = 'padding:12px 14px; border-radius:12px; border:1.5px solid var(--border); background:#fff; text-align:left; font-family:inherit; font-size:var(--fs-md); cursor:pointer;';
+                btn.textContent = opt;
+                btn.onclick = () => {
+                    st.answers[st.current] = idx;
+                    [...optsEl.children].forEach(c => {
+                        c.style.borderColor = 'var(--border)';
+                        c.style.background = '#fff';
+                    });
+                    btn.style.borderColor = 'var(--primary-green)';
+                    btn.style.background = 'var(--soft-green)';
+                    document.getElementById('quiz-submit-btn').disabled = false;
+                };
+                if (st.answers[st.current] === idx) {
+                    btn.style.borderColor = 'var(--primary-green)';
+                    btn.style.background = 'var(--soft-green)';
+                }
+                optsEl.appendChild(btn);
+            });
+            const submit = document.getElementById('quiz-submit-btn');
+            submit.disabled = (st.answers[st.current] === undefined);
+            submit.textContent = (st.current === st.questions.length - 1) ? 'ส่งคำตอบ' : 'ถัดไป';
+        }
+
+        function submitContractQuiz() {
+            const st = _quizState; if (!st) return;
+            if (st.current < st.questions.length - 1) {
+                st.current++;
+                renderQuizQuestion();
+                return;
+            }
+            // score
+            let correct = 0;
+            st.questions.forEach((q, i) => { if (st.answers[i] === q.correctIdx) correct++; });
+            const total = st.questions.length;
+            const passed = correct >= 2;
+            // save attempt + points
+            localStorage.setItem(_quizMonthKey(), JSON.stringify({ score: correct, total, passed, at: Date.now() }));
+            if (passed) awardQuizPoints(20);
+            // show result
+            document.getElementById('quiz-question').textContent = '';
+            document.getElementById('quiz-options').innerHTML = '';
+            const resEl = document.getElementById('quiz-result');
+            resEl.style.display = 'block';
+            resEl.innerHTML = passed
+                ? `<div style="font-size:3rem;">🎉</div><strong style="color:var(--primary-green);">ตอบถูก ${correct}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ได้รับ <strong style="color:var(--accent-gold,#D4AF37);">+20 pts</strong></p>`
+                : `<div style="font-size:3rem;">📖</div><strong>ตอบถูก ${correct}/${total}</strong><p style="margin:6px 0; color:var(--text-muted);">ต้องตอบถูก 2/3 ถึงได้แต้ม<br>ลองเดือนหน้านะครับ</p>`;
+            document.getElementById('quiz-submit-btn').textContent = 'ปิด';
+            document.getElementById('quiz-submit-btn').disabled = false;
+            document.getElementById('quiz-submit-btn').onclick = closeContractQuiz;
+        }
+
+        function closeContractQuiz() {
+            document.getElementById('quiz-modal').style.display = 'none';
+            document.getElementById('quiz-submit-btn').onclick = submitContractQuiz;
+            _quizState = null;
+            setupContractQuizGate();
+        }
+
+        function awardQuizPoints(n) {
+            const key = `tenant_eco_points_${_taBuilding||'unknown'}_${_taRoom||'unknown'}`;
+            const cur = parseInt(localStorage.getItem(key) || '0') || 0;
+            const next = cur + n;
+            localStorage.setItem(key, String(next));
+            // best-effort Firestore sync (ถ้า TenantFirebaseSync มี)
+            try {
+                if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady && _taRoom) {
+                    const userStr = sessionStorage.getItem('user');
+                    const user = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
+                    const sync = new TenantFirebaseSync(user, _taBuilding, _taRoom);
+                    if (typeof sync.logQuizResult === 'function') sync.logQuizResult('contract', n);
+                    else if (typeof sync.addPoints === 'function') sync.addPoints(n, 'contract_quiz');
+                }
+            } catch(_){}
+            loadGamificationData();
         }
 
         // ---- NAV BADGES ----
