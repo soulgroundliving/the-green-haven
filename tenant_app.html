@@ -594,7 +594,14 @@
             --suggest-border: #334435;
             --suggest-accent: #4caf50;
         }
-        /* Night-mode: flatten nav edges, match dark bg, drop white border/shadow */
+        /* ══════════════════════════════════════════════════════════════
+           NIGHT-MODE comprehensive override — catch hardcoded whites
+           ══════════════════════════════════════════════════════════════ */
+        body.night-mode {
+            background-color: var(--bg-color) !important;
+            color: var(--text-dark) !important;
+        }
+        /* Nav-bar */
         body.night-mode .nav-bar {
             background: #141615 !important;
             border-top: 1px solid #252825 !important;
@@ -603,6 +610,80 @@
         }
         body.night-mode .nav-item { color: #6b7a6b !important; }
         body.night-mode .nav-item.active { color: var(--primary-green) !important; }
+
+        /* App-bar (top header) */
+        body.night-mode .app-bar {
+            background: #242624 !important;
+        }
+
+        /* Cards — both .card และ style="background:white" inline */
+        body.night-mode .card,
+        body.night-mode [style*="background: white"],
+        body.night-mode [style*="background:white"],
+        body.night-mode [style*="background: #fff"],
+        body.night-mode [style*="background:#fff"],
+        body.night-mode [style*="background: #FFF"],
+        body.night-mode [style*="background:#FFF"],
+        body.night-mode [style*="background: #ffffff"],
+        body.night-mode [style*="background:#ffffff"],
+        body.night-mode [style*="background-color: white"],
+        body.night-mode [style*="background-color:white"],
+        body.night-mode [style*="background-color: #fff"],
+        body.night-mode [style*="background-color:#fff"] {
+            background: #2A2D2A !important;
+            background-color: #2A2D2A !important;
+            color: var(--text-dark) !important;
+        }
+
+        /* Tab button active state (active tab ที่ใช้ background:white) */
+        body.night-mode .tab-btn.active {
+            background: #353835 !important;
+            color: var(--primary-green) !important;
+        }
+
+        /* Pet items & blog cards */
+        body.night-mode .pet-item,
+        body.night-mode .blog-card,
+        body.night-mode .menu-list,
+        body.night-mode .setting-row {
+            background: #2A2D2A !important;
+            color: var(--text-dark) !important;
+        }
+
+        /* Form fields */
+        body.night-mode .card select,
+        body.night-mode .card input,
+        body.night-mode .card textarea,
+        body.night-mode .page select,
+        body.night-mode .page input[type="text"],
+        body.night-mode .page textarea {
+            background: #1f2220 !important;
+            color: var(--text-dark) !important;
+            border-color: #3a3d3a !important;
+        }
+
+        /* Text that was hardcoded dark */
+        body.night-mode h1, body.night-mode h2, body.night-mode h3,
+        body.night-mode h4, body.night-mode p, body.night-mode label,
+        body.night-mode span:not(.nav-item span):not([style*="color"]) {
+            color: inherit;
+        }
+
+        /* Light accent badges (due/paid) ในบิล — ให้ยังอ่านได้ */
+        body.night-mode [style*="background:#FFF4E5"],
+        body.night-mode [style*="background: #FFF4E5"] {
+            background: #3d2e1a !important;
+            color: #f5c97b !important;
+        }
+        body.night-mode [style*="background:#D1FAE5"],
+        body.night-mode [style*="background: #D1FAE5"] {
+            background: #1a3d2a !important;
+            color: #7bf5b7 !important;
+        }
+        body.night-mode [style*="background:#FFF1F1"] {
+            background: #3d1a1a !important;
+            color: #f57b7b !important;
+        }
 
         body.eco-mode {
             --bg-color: #F2F2F2;
