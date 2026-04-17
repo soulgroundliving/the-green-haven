@@ -2936,11 +2936,13 @@
                 <div id="avatar-preview" class="avatar-option active" onclick="setAvatar('🌿', this)">🌿</div>
                 <div class="avatar-option" onclick="setAvatar('🌊', this)">🌊</div>
                 <div class="avatar-option" onclick="setAvatar('⛰️', this)">⛰️</div>
-                <label class="avatar-option" for="avatar-upload-input" style="display:flex; align-items:center; justify-content:center; cursor:pointer;">
-                    <i class="fas fa-camera"></i>
+                <label class="avatar-option" for="avatar-upload-input" title="อัปโหลดรูปจากเครื่อง"
+                    style="background: var(--soft-green); color: var(--primary-green); border: 2px dashed var(--primary-green); font-size: 1.5rem;">
+                    📸
                 </label>
                 <input type="file" id="avatar-upload-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
             </div>
+            <p style="font-size: var(--fs-sm); color: var(--text-muted); margin: 6px 0 0;">📸 = แตะเพื่ออัปโหลดรูปถ่ายจากเครื่อง (ระบบจะย่อให้อัตโนมัติ)</p>
             <p id="avatar-upload-status" style="font-size: var(--fs-sm); color: var(--text-muted); margin: 8px 0 0; display: none;"></p>
             <p style="font-size: var(--fs-sm); opacity: 0.5; margin-top: 10px;">* ชื่อจะแสดงในหน้า Community และ
                 Marketplace
@@ -2969,18 +2971,24 @@
 
         <div class="section-title"><span>ตั้งค่าการออกใบเสร็จ</span></div>
         <div class="card">
-            <div id="receipt-type-display" style="display:flex; justify-content:space-between; align-items:center; padding:10px 0;">
-                <span style="color: var(--text-muted);">ประเภทใบเสร็จ</span>
-                <strong id="receipt-type-label">ใบเสร็จรับเงิน (นามบุคคล)</strong>
-            </div>
-            <div id="company-info-display" style="display:none; border-top: 1px dashed #eee; padding-top: 12px; margin-top: 12px;">
-                <div style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-bottom: 8px;">ข้อมูลบริษัทสำหรับออกใบกำกับภาษี</div>
+            <label style="font-size: var(--fs-sm); color: var(--text-muted); display:block; margin-bottom:6px;">เลือกประเภทใบเสร็จที่ต้องการรับ</label>
+            <select id="receipt-type-select" onchange="onReceiptTypeChange()">
+                <option value="personal">ใบเสร็จรับเงินทั่วไป (นามบุคคล)</option>
+                <option value="company">ใบกำกับภาษีเต็มรูปแบบ (เบิกบริษัท)</option>
+            </select>
+
+            <div id="company-info-display" style="display:none; border-top: 1px dashed #eee; padding-top: 12px; margin-top: 4px;">
+                <div style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-bottom: 8px;">ข้อมูลบริษัท (admin ตั้งให้)</div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:var(--text-muted);">ชื่อบริษัท</span><strong id="comp-name-display" style="text-align:right;">—</strong></div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:var(--text-muted);">เลขผู้เสียภาษี</span><strong id="comp-tax-display">—</strong></div>
-                <div style="margin-bottom:6px;"><span style="color:var(--text-muted); display:block; margin-bottom:4px;">ที่อยู่</span><strong id="comp-addr-display" style="display:block;">—</strong></div>
+                <div style="margin-bottom:10px;"><span style="color:var(--text-muted); display:block; margin-bottom:4px;">ที่อยู่</span><strong id="comp-addr-display" style="display:block;">—</strong></div>
+                <div id="comp-info-missing-warn" style="display:none; background:#fee; color:#b71c1c; padding:8px 10px; border-radius:8px; font-size:var(--fs-sm); margin-top:6px;">
+                    ⚠️ ยังไม่มีข้อมูลบริษัทในระบบ กรุณาแจ้งนิติ เพื่อเพิ่มข้อมูลใน People Management (จะออกใบกำกับภาษีไม่ได้จนกว่าจะครบ)
+                </div>
             </div>
-            <div style="background:#fff3e0; color:#e65100; padding:10px 12px; border-radius:10px; font-size:var(--fs-sm); margin-top:12px;">
-                ℹ️ ข้อมูลเหล่านี้ admin เป็นผู้ตั้งค่าใน People Management — หากต้องแก้ไข กรุณาแจ้งนิติ
+
+            <div id="receipt-confirm-msg" style="background:var(--soft-green); color:var(--primary-dark, #1a5c38); padding:10px 12px; border-radius:10px; font-size:var(--fs-sm); margin-top:12px;">
+                ✅ ใบเสร็จจะออกในรูปแบบ <strong id="receipt-confirm-type">นามบุคคล</strong> ทุกครั้งที่ชำระ
             </div>
         </div>
     </div>
@@ -3653,15 +3661,24 @@
             setTimeout(() => goBackToService(), 1200);
         }
 
-        // ---- Load receipt/tax-invoice settings (read-only from dashboard People Management) ----
+        // ---- Receipt/tax-invoice settings ----
+        // ลูกบ้านเลือกประเภทเอง (personal/company) → persist localStorage
+        // ข้อมูลบริษัทเป็น read-only — admin ตั้งใน Dashboard → People Management
+        function _receiptTypeKey() {
+            const b = window._tenantAppBuilding || 'unknown';
+            const r = window._tenantAppRoom || 'unknown';
+            return `tenant_receipt_type_${b}_${r}`;
+        }
         function loadReceiptSettings() {
             try {
-                const type = (_taTenant && _taTenant.receiptType) || 'personal';
+                // type: ถ้าลูกบ้านเคยเลือกเอง ใช้ที่เลือก; ไม่งั้นใช้ default จาก admin; fallback personal
+                const localType = localStorage.getItem(_receiptTypeKey());
+                const adminType = (_taTenant && _taTenant.receiptType) || null;
+                const type = localType || adminType || 'personal';
                 const co = (_taTenant && (_taTenant.companyInfo || _taTenant.company)) || {};
-                const typeLabel = type === 'company' ? 'ใบกำกับภาษีเต็มรูปแบบ (เบิกบริษัท)' : 'ใบเสร็จรับเงิน (นามบุคคล)';
                 const $ = id => document.getElementById(id);
-                if ($('receipt-type-label')) $('receipt-type-label').textContent = typeLabel;
-                if ($('company-info-display')) $('company-info-display').style.display = type === 'company' ? 'block' : 'none';
+                const sel = $('receipt-type-select');
+                if (sel) sel.value = type;
                 if ($('comp-name-display')) $('comp-name-display').textContent = co.name || '—';
                 if ($('comp-tax-display'))  $('comp-tax-display').textContent  = co.taxId || '—';
                 if ($('comp-addr-display')) $('comp-addr-display').textContent = co.address || '—';
@@ -3669,8 +3686,65 @@
                 if ($('display-comp-name')) $('display-comp-name').textContent = co.name || '-';
                 if ($('display-comp-tax'))  $('display-comp-tax').textContent  = co.taxId || '-';
                 if ($('display-comp-addr')) $('display-comp-addr').textContent = co.address || '-';
+                applyReceiptUI(type, co);
             } catch(_){}
         }
+
+        function onReceiptTypeChange() {
+            const sel = document.getElementById('receipt-type-select');
+            if (!sel) return;
+            const type = sel.value;
+            try { localStorage.setItem(_receiptTypeKey(), type); } catch(_){}
+            const co = (_taTenant && (_taTenant.companyInfo || _taTenant.company)) || {};
+            applyReceiptUI(type, co);
+            // best-effort sync to Firestore (tenant choice)
+            try {
+                if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady && window._tenantAppRoom) {
+                    const userStr = sessionStorage.getItem('user');
+                    const user = userStr ? JSON.parse(userStr) : { roomNumber: window._tenantAppRoom };
+                    const sync = new TenantFirebaseSync(user, window._tenantAppBuilding, window._tenantAppRoom);
+                    if (typeof sync.saveReceiptType === 'function') sync.saveReceiptType(type);
+                }
+            } catch(_){}
+        }
+
+        function applyReceiptUI(type, co) {
+            const $ = id => document.getElementById(id);
+            const isCo = type === 'company';
+            if ($('company-info-display')) $('company-info-display').style.display = isCo ? 'block' : 'none';
+            // warn ถ้าเลือก company แต่ admin ยังไม่ใส่ข้อมูล
+            const missing = isCo && !(co && (co.name || co.taxId || co.address));
+            if ($('comp-info-missing-warn')) $('comp-info-missing-warn').style.display = missing ? 'block' : 'none';
+            if ($('receipt-confirm-type')) $('receipt-confirm-type').textContent = isCo ? 'ใบกำกับภาษีเต็มรูปแบบ (นามบริษัท)' : 'นามบุคคล';
+        }
+
+        // ออก public API — ใช้ตอน render bill/receipt: คืน metadata สำหรับ PDF/print
+        // return: { type:'personal'|'company', lines: [{label, value}], header: 'ใบกำกับ...' }
+        window.getReceiptMetaForBill = function() {
+            const type = (document.getElementById('receipt-type-select')?.value)
+                      || localStorage.getItem(_receiptTypeKey())
+                      || (_taTenant && _taTenant.receiptType)
+                      || 'personal';
+            const co = (_taTenant && (_taTenant.companyInfo || _taTenant.company)) || {};
+            if (type === 'company' && co && (co.name || co.taxId)) {
+                return {
+                    type: 'company',
+                    header: 'ใบกำกับภาษีเต็มรูปแบบ',
+                    lines: [
+                        { label: 'ออกในนาม', value: co.name || '' },
+                        { label: 'เลขประจำตัวผู้เสียภาษี', value: co.taxId || '' },
+                        { label: 'ที่อยู่', value: co.address || '' },
+                    ],
+                };
+            }
+            return {
+                type: 'personal',
+                header: 'ใบเสร็จรับเงิน',
+                lines: [
+                    { label: 'ออกในนาม', value: (_taTenant?.name || _taTenant?.tenantName || '') },
+                ],
+            };
+        };
 
 
         // ==========================================
