@@ -1531,7 +1531,7 @@
             <div class="card text-center cursor-pointer" onclick="showSubPage('elec_usage')">
                 ⚡<p class="font-semibold">ปริมาณไฟใช้</p>
             </div>
-            <div class="card text-center cursor-pointer" onclick="showSubPage('eco_score')">
+            <div id="nav-eco-score-card" class="card text-center cursor-pointer" onclick="showSubPage('eco_score')">
                 ♻️<p class="font-semibold">Eco-Score</p>
             </div>
         </div>
@@ -1689,7 +1689,7 @@
                 style="background:var(--primary-green); color:white; padding:5px 20px; border-radius:20px; font-size:0.8rem; font-weight:600; display:inline-block; margin-top:5px;">The
                 First Generation 🥇</span>
         </div>
-        <div class="muji-card p-6 mb-4 text-center border-none shadow-md" style="background: var(--soft-green);">
+        <div id="profile-rewards-card" class="muji-card p-6 mb-4 text-center border-none shadow-md" style="background: var(--soft-green);">
             <p class="text-[10px] text-[#2d8653] font-bold uppercase mb-1">คะแนนสะสมของคุณ</p>
             <div class="text-3xl font-bold mb-4">
                 <span id="user-total-points">1,250</span>
@@ -3945,7 +3945,20 @@
             }
             window._tenantAppRoom = _taRoom;
             window._tenantAppBuilding = _taBuilding;
+            applyGamificationVisibility();
             return true;
+        }
+
+        // Gamification is Nest-only. Hide entry points for Rooms building tenants.
+        function applyGamificationVisibility() {
+            if (_taBuilding === 'nest') return;
+            const ids = ['nav-eco-score-card', 'profile-rewards-card'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            // Block direct navigation to eco_score page if someone triggers it programmatically
+            window._gamificationDisabled = true;
         }
 
         async function loadTenantAppData() {

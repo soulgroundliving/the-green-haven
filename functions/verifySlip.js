@@ -271,33 +271,36 @@ async function saveVerifiedSlip(slipData, params) {
 async function recordPaymentAndAwardPoints(slipData, params) {
   if (params.building !== 'nest') return null;
 
-  const tenantSnap = await db.collection('tenants')
-    .where('building', '==', 'nest')
-    .where('room', '==', String(params.room))
-    .limit(1).get();
+  // Firestore schema: tenants/{building}/list/{roomId}
+  const roomId = String(params.room);
+  const tenantRef = db.collection('tenants').doc('nest').collection('list').doc(roomId);
+  const tenantDoc = await tenantRef.get();
 
-  if (tenantSnap.empty) {
-    console.log(`🎮 No Nest tenant found for room ${params.room}, skipping award`);
+  if (!tenantDoc.exists) {
+    console.log(`🎮 No Nest tenant doc at tenants/nest/list/${roomId}, skipping award`);
     return null;
   }
 
-  const tenantDoc = tenantSnap.docs[0];
-  const tenantId = tenantDoc.id;
   const tenantData = tenantDoc.data();
   const dueDay = tenantData.lease?.dueDay || tenantData.dueDay || 5;
 
-  // SlipOK transTimestamp is ISO with +07:00 offset (Thailand)
-  const slipDate = new Date(slipData.transTimestamp || slipData.date);
-  if (isNaN(slipDate.getTime())) {
+  const slipMs = new Date(slipData.transTimestamp || slipData.date).getTime();
+  if (isNaN(slipMs)) {
     console.warn('🎮 Invalid slip timestamp, skipping award');
     return null;
   }
 
-  const billYear = slipDate.getFullYear();
-  const billMonthIdx = slipDate.getMonth();
+  // Bangkok timezone (UTC+7) — Cloud Functions run in UTC, so shift explicitly
+  const BKK_OFFSET_MS = 7 * 3600 * 1000;
+  const slipBkk = new Date(slipMs + BKK_OFFSET_MS);
+  const billYear = slipBkk.getUTCFullYear();
+  const billMonthIdx = slipBkk.getUTCMonth();
   const monthKey = `${billYear}-${String(billMonthIdx + 1).padStart(2, '0')}`;
-  const dueDate = new Date(billYear, billMonthIdx, dueDay, 23, 59, 59);
-  const daysDiff = Math.floor((slipDate - dueDate) / 86400000);
+
+  // Due date = end of dueDay of bill month in BKK → convert to UTC ms
+  const dueBkkMs = Date.UTC(billYear, billMonthIdx, dueDay, 23, 59, 59);
+  const dueUtcMs = dueBkkMs - BKK_OFFSET_MS;
+  const daysDiff = Math.floor((slipMs - dueUtcMs) / 86400000);
 
   let points, status;
   if (daysDiff <= -4)     { points = 150; status = 'early_bird'; }
@@ -306,15 +309,13 @@ async function recordPaymentAndAwardPoints(slipData, params) {
   else if (daysDiff <= 5) { points = 15;  status = 'late'; }
   else                    { points = 0;   status = 'too_late'; }
 
-  const historyRef = db.collection('tenants').doc(tenantId)
-    .collection('paymentHistory').doc(monthKey);
+  const historyRef = tenantRef.collection('paymentHistory').doc(monthKey);
   const existing = await historyRef.get();
   if (existing.exists) {
-    console.log(`⏭ Payment ${monthKey} already recorded for ${tenantId}, skip`);
+    console.log(`⏭ Payment ${monthKey} already recorded for nest/${roomId}, skip`);
     return { skipped: true, monthKey };
   }
 
-  const tenantRef = db.collection('tenants').doc(tenantId);
   await db.runTransaction(async (tx) => {
     const fresh = await tx.get(tenantRef);
     const g = fresh.data()?.gamification || {};
@@ -322,8 +323,8 @@ async function recordPaymentAndAwardPoints(slipData, params) {
     const newStreak = isOnTime ? (g.currentStreak || 0) + 1 : 0;
 
     tx.set(historyRef, {
-      slipDate,
-      dueDate,
+      slipDate: new Date(slipMs),
+      dueDate: new Date(dueUtcMs),
       amount: slipData.amount,
       status,
       daysDiff,
@@ -344,8 +345,8 @@ async function recordPaymentAndAwardPoints(slipData, params) {
     });
   });
 
-  console.log(`🎮 Awarded ${points}pts to ${tenantId} (${status}, daysDiff=${daysDiff}, month=${monthKey})`);
-  return { tenantId, points, status, daysDiff, monthKey };
+  console.log(`🎮 Awarded ${points}pts to nest/${roomId} (${status}, daysDiff=${daysDiff}, month=${monthKey})`);
+  return { roomId, points, status, daysDiff, monthKey };
 }
 
 // ==================== MAIN CLOUD FUNCTION ====================
