@@ -601,6 +601,11 @@
             background-color: var(--bg-color) !important;
             color: var(--text-dark) !important;
         }
+        /* html bg — brand.css sets light --cloud; override so iPhone LIFF
+           safe-area/scroll-bounce ไม่โชว์สีครีมผ่านใต้ nav-bar */
+        html:has(body.night-mode) {
+            background-color: #1A1C1A !important;
+        }
         /* Nav-bar */
         body.night-mode .nav-bar {
             background: #141615 !important;
@@ -3938,10 +3943,12 @@
             if (nightSwitch && nightSwitch.checked) {
                 document.body.classList.add('night-mode');
                 document.body.classList.remove('eco-mode');
+                document.documentElement.style.background = '#1A1C1A';
                 if (ecoSwitch) ecoSwitch.checked = false;
                 localStorage.setItem('theme', 'night');
             } else {
                 document.body.classList.remove('night-mode');
+                document.documentElement.style.background = '';
                 localStorage.setItem('theme', 'light');
             }
         }
