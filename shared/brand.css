@@ -1,0 +1,158 @@
+/*
+ * Green Haven — Living OS brand system
+ * Philosophy: muji minimal, quiet living, ทางสายกลาง
+ *
+ * Load order: link this AFTER framework styles (Tailwind CDN etc.) so brand tokens win.
+ * Usage: reference via CSS variables. Avoid inline font-family / color hex in markup.
+ */
+
+/* ─── Fonts ──────────────────────────────────────────────────────────────── */
+/* Primary brand: IBM Plex Sans Thai Looped (Thai + Latin unified) */
+/* Secondary: Sarabun — kept loaded as backup for legacy hardcoded `font-family: 'Sarabun'`
+   in older templates; over time those should migrate to var(--font-brand). */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Typography ─────────────────────────────────────────────── */
+  --font-brand: 'IBM Plex Sans Thai Looped', 'IBM Plex Sans', 'Sarabun',
+                -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-numeric: 'IBM Plex Sans Thai Looped', ui-monospace, tabular-nums, sans-serif;
+
+  /* Type scale — restrained, muji leans toward fewer sizes */
+  --text-xs:   11px;
+  --text-sm:   13px;
+  --text-base: 15px;
+  --text-md:   17px;
+  --text-lg:   20px;
+  --text-xl:   26px;
+  --text-2xl:  32px;
+
+  --weight-light:    300;
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  --leading-tight:   1.25;
+  --leading-normal:  1.55;
+  --leading-relaxed: 1.75;
+
+  /* Color palette — natural, earth-toned, quiet ─────────────── */
+  /* Brand primary — verdant green, the "green haven" anchor */
+  --brand-primary:       #2d8653;
+  --brand-primary-dark:  #1f6b3f;
+  --brand-primary-soft:  #d4e8dc;  /* soft-green */
+  --brand-primary-wash:  #f0f7f2;  /* lightest tint, card backgrounds */
+
+  /* Neutrals — warm, not cold grays (muji warmth) */
+  --cloud:   #fafaf7;  /* page background — barely off-white */
+  --mist:    #f2f1ec;
+  --stone:   #dcdbd4;
+  --pebble:  #a8a7a0;
+  --shadow:  #4a4a45;
+  --ink:     #1f1f1c;  /* primary text, not pure black */
+
+  /* Accents — used sparingly */
+  --sand:    #e8dfce;  /* warm beige, dividers */
+  --moss:    #5a7a5a;  /* muted deep green, secondary */
+  --clay:    #c08468;  /* warm terracotta for warnings */
+
+  /* Semantic — intentionally muted, quiet not loud */
+  --ok:      #4a9d6e;
+  --warn:    #c89d4a;
+  --alert:   #c06458;
+  --info:    #6b8a9d;
+
+  /* Surfaces ──────────────────────────────────────────────── */
+  --surface-page:   var(--cloud);
+  --surface-card:   #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: var(--mist);
+
+  --border-subtle: #ebe9e2;
+  --border-base:   var(--stone);
+  --divider:       var(--sand);
+
+  /* Spacing — 4pt scale ──────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+
+  /* Radius — generous, rounded but not pill ─────────────── */
+  --radius-xs: 6px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* Shadow — whisper, not shout ────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(31, 31, 28, 0.04);
+  --shadow-sm: 0 2px 8px rgba(31, 31, 28, 0.05);
+  --shadow-md: 0 4px 16px rgba(31, 31, 28, 0.07);
+  --shadow-lg: 0 8px 32px rgba(31, 31, 28, 0.09);
+
+  /* Motion — calm, no bounce ────────────────────────────── */
+  --ease-quiet:  cubic-bezier(0.25, 0.1, 0.25, 1);
+  --dur-instant: 120ms;
+  --dur-quick:   200ms;
+  --dur-settle:  320ms;
+}
+
+/* ─── Base typography reset ─────────────────────────────────────────────── */
+html {
+  font-family: var(--font-brand);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--ink);
+  background: var(--surface-page);
+  font-feature-settings: "tnum" 1, "lnum" 1;  /* tabular numbers globally */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-brand);
+  font-weight: var(--weight-regular);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-brand);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;  /* slight tighten for headings */
+  color: var(--ink);
+}
+
+h1 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+h4 { font-size: var(--text-md); }
+
+p  { line-height: var(--leading-normal); }
+
+/* Numbers should not shift when values change */
+.brand-num,
+[data-num] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Prefer brand font over generic Arial/Helvetica overrides elsewhere */
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* ─── Reduced motion honoring (quiet living) ────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

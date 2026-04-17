@@ -7,7 +7,7 @@
     <title>Nature Haven - Living OS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared/brand.css">
     <!-- QR Code library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Shared logic scripts -->
@@ -89,7 +89,9 @@
 
         * {
             box-sizing: border-box;
-            font-family: 'Sarabun', 'Prompt', sans-serif;
+        }
+        html, body {
+            font-family: var(--font-brand);
         }
 
         body {
