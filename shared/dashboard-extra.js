@@ -3092,7 +3092,7 @@ function initGamificationPage() {
     return months * 10;
   };
 
-  // Write eco points to localStorage so Tenant_app can read them
+  // Write eco points to localStorage so tenant_app can read them
   [['rooms', roomsTenants], ['nest', nestTenants]].forEach(([building, list]) => {
     list.forEach(t => {
       const room = t.id || t.room;

@@ -63,6 +63,14 @@
   ],
   "rewrites": [
     {
+      "source": "/Tenant_app.html",
+      "destination": "/tenant_app.html"
+    },
+    {
+      "source": "/Tenant_app",
+      "destination": "/tenant_app.html"
+    },
+    {
       "source": "/:path*",
       "destination": "/:path*"
     }
