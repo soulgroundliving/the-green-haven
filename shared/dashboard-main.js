@@ -3865,6 +3865,7 @@ function onBuildingChange(){
   populateRoomDropdown();
   document.getElementById('f-trash').value=currentBuilding==='new'?40:20;
   document.getElementById('f-elec-rate').value=8;
+  const lf=document.getElementById('f-latefee'); if(lf) lf.value=0;
   renderPaymentStatus();
   calcBill(); resetBillFlow();
 }
@@ -4081,11 +4082,12 @@ function calcBill(){
   const wRate=parseFloat(document.getElementById('f-water-rate').value)||20;
   const trash=parseFloat(document.getElementById('f-trash').value)||0;
   const other=parseFloat(document.getElementById('f-other').value)||0;
+  const lateFee=parseFloat(document.getElementById('f-latefee')?.value)||0;
   const eUnits=Math.max(0,eNew-eOld);
   const wUnits=Math.max(0,wNew-wOld);
   const eCost=eUnits*eRate;
   const wCost=wUnits*wRate;
-  const total=rent+eCost+wCost+trash+other;
+  const total=rent+eCost+wCost+trash+other+lateFee;
 
   document.getElementById('f-elec-units').value=eUnits;
   document.getElementById('f-water-units').value=wUnits;
@@ -4098,6 +4100,10 @@ function calcBill(){
   const ot=document.getElementById('c-other-row');
   ot.style.display=other>0?'flex':'none';
   document.getElementById('c-other').textContent='฿'+other.toLocaleString();
+  const lfRow=document.getElementById('c-latefee-row');
+  if(lfRow) lfRow.style.display = lateFee>0 ? 'flex' : 'none';
+  const lfEl=document.getElementById('c-latefee');
+  if(lfEl) lfEl.textContent='฿'+lateFee.toLocaleString();
   document.getElementById('c-total').textContent='฿'+total.toLocaleString();
 }
 
@@ -4273,10 +4279,11 @@ function getBillData(){
   const wRate=parseFloat(document.getElementById('f-water-rate').value)||20;
   const trash=parseFloat(document.getElementById('f-trash').value)||0;
   const other=parseFloat(document.getElementById('f-other').value)||0;
+  const lateFee=parseFloat(document.getElementById('f-latefee')?.value)||0;
   const eUnits=Math.max(0,eNew-eOld);
   const wUnits=Math.max(0,wNew-wOld);
   const eCost=eUnits*eRate, wCost=wUnits*wRate;
-  const total=rent+eCost+wCost+trash+other;
+  const total=rent+eCost+wCost+trash+other+lateFee;
   const month=parseInt(document.getElementById('f-month').value);
   const year=document.getElementById('f-year').value;
   const note=document.getElementById('f-note').value;
@@ -4284,7 +4291,7 @@ function getBillData(){
   const now=new Date();
   const no=`TGH-${year}${String(month).padStart(2,'0')}-${room.replace(/[^0-9ก-๙A-Za-z]/g,'')}-${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
   const dateStr=now.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
-  return{room,building,rent,rentLabel,eNew,eOld,eUnits,eRate,eCost,wNew,wOld,wUnits,wRate,wCost,trash,other,total,month,year,note,no,dateStr,now};
+  return{room,building,rent,rentLabel,eNew,eOld,eUnits,eRate,eCost,wNew,wOld,wUnits,wRate,wCost,trash,other,lateFee,total,month,year,note,no,dateStr,now};
 }
 
 // ===== SLIPOK VERIFICATION =====
@@ -4602,6 +4609,7 @@ function buildDocHTML(d,type,dueDate,payDate){
       <div class="d-row" style="font-size:.8rem;color:var(--text-muted);padding-left:10px;"><span>มิเตอร์น้ำ: ${d.wOld||0} → ${d.wNew||0} (${d.wUnits||0} หน่วย × ฿${d.wRate||0})</span></div>`:''}
       ${d.trash>0?`<div class="d-row"><span>ค่าขยะ</span><span>฿${d.trash.toLocaleString()}</span></div>`:''}
       ${d.other>0?`<div class="d-row"><span>ค่าบริการอื่นๆ</span><span>฿${d.other.toLocaleString()}</span></div>`:''}
+      ${d.lateFee>0?`<div class="d-row" style="color:#c62828;"><span>⚠️ ค่าปรับ</span><span>฿${d.lateFee.toLocaleString()}</span></div>`:''}
       ${d.note?`<div class="d-row" style="font-size:.78rem;color:var(--accent);"><span>หมายเหตุ:</span><span>${d.note}</span></div>`:''}
       <div class="d-total ${type}"><span>รวมทั้งสิ้น</span><span>฿${d.total.toLocaleString()}</span></div>
     </div>

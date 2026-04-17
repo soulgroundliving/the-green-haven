@@ -3057,6 +3057,7 @@
             <div class="form-grid">
               <div class="form-field"><label>ค่าขยะ (บาท)</label><input type="number" id="f-trash" value="20" oninput="calcBill()"></div>
               <div class="form-field"><label>ค่าบริการอื่นๆ (บาท)</label><input type="number" id="f-other" value="0" oninput="calcBill()"></div>
+              <div class="form-field"><label>⚠️ ค่าปรับ (บาท)</label><input type="number" id="f-latefee" value="0" min="0" oninput="calcBill()" placeholder="0"></div>
               <div class="form-field full"><label>หมายเหตุ (ถ้ามี)</label><input type="text" id="f-note" placeholder="เช่น ชำระล่วงหน้า, ค้างชำระงวดที่แล้ว..."></div>
             </div>
           </div>
@@ -3070,6 +3071,7 @@
           <div class="calc-row"><span id="c-water-label">ค่าน้ำ (0 หน่วย × ฿20)</span><span id="c-water">฿0</span></div>
           <div class="calc-row"><span>ค่าขยะ</span><span id="c-trash">฿0</span></div>
           <div class="calc-row" id="c-other-row" style="display:none;"><span>ค่าบริการอื่นๆ</span><span id="c-other">฿0</span></div>
+          <div class="calc-row" id="c-latefee-row" style="display:none;"><span style="color:#c62828;">⚠️ ค่าปรับ</span><span id="c-latefee" style="color:#c62828;">฿0</span></div>
           <div class="calc-row total"><span>รวมทั้งสิ้น</span><span id="c-total">฿0</span></div>
         </div>
 
