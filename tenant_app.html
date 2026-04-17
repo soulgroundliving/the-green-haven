@@ -3773,9 +3773,13 @@
                   <label style="display:flex; align-items:center; gap:8px; margin-top:15px; font-size:var(--fs-sm);"><input type="checkbox" checked style="width:16px; height:16px;"> ส่งแบบไม่ระบุตัวตน (Anonymous)</label>
                   <button class="btn-main" style="margin-top:20px;" onclick="alert('ขอบคุณสำหรับคำแนะนำครับ เราจะรีบรับเรื่องดูแลต่อครับ'); closeModal();">ส่งข้อความ</button>`;
             } else if (type === 'preference') {
+                const t = _taTenant || {};
+                const curName = t.name || t.tenantName || '';
+                const curPhone = t.phone || t.tel || '';
                 body.innerHTML = `<h3 style="margin-top:0;">แก้ไขข้อมูลส่วนตัว</h3>
-                  <label>ชื่อที่แสดงผล</label><input type="text" placeholder="คุณลูกตาล" oninput="updateName(this.value)">
-                  <label style="display:block; margin-top:10px;">เบอร์โทร</label><input type="text" value="081-XXX-XXXX">
+                  <label>ชื่อที่แสดงผล</label><input type="text" placeholder="คุณ..." value="${curName}" oninput="updateName(this.value)">
+                  <label style="display:block; margin-top:10px;">เบอร์โทร</label><input type="text" value="${curPhone}">
+                  <p style="margin:8px 0 15px; font-size:var(--fs-sm); color:var(--text-muted);">* แก้เบอร์/ชื่อเพิ่มเติม กรุณาแจ้งนิติเพื่ออัปเดตระบบ</p>
                   <label style="display:block; margin-top:10px;">เปลี่ยน Avatar</label>
                   <div class="avatar-selector" style="margin-bottom:15px;">
                       <div class="avatar-option active" onclick="setAvatar('🌿', this)">🌿</div>
