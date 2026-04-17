@@ -1584,32 +1584,37 @@
                 นะครับ</p>
         </div>
         <div class="section-title"><span>Wellness Tips ลึกๆ 🌿</span></div>
-        <div class="blog-list">
-            <div class="blog-card">
-                <div class="blog-img"><i class="fas fa-spa"></i></div>
-                <div class="blog-content">
-                    <h3>3 เคล็ดลับจัดห้องนอนหลับลึก</h3>
-                    <p>ลองปรับแสงไฟโทนอุ่น และวางต้นไม้เล็กๆ ช่วยให้เช้าวันใหม่สดชื่น...</p>
-                </div>
-            </div>
-            <div class="blog-card">
-                <div class="blog-img"><i class="fas fa-gem"></i></div>
-                <div class="blog-content">
-                    <h3>พลังของ 'หินนำโชค'</h3>
-                    <p>ทำความรู้จักกับอเมทิสต์ที่จะช่วยให้ใจคุณสงบ และดึงดูดสิ่งดีๆ...</p>
-                </div>
-            </div>
-            <div class="blog-card">
-                <div class="blog-img"><i class="fas fa-mug-hot"></i></div>
-                <div class="blog-content">
-                    <h3>มุมระเบียงชาร์จพลัง</h3>
-                    <p>เปลี่ยนพื้นที่เล็กๆ ให้เป็นที่นั่งดูพระอาทิตย์ตกดินสุดพิเศษสำหรับคุณ...</p>
-                </div>
-            </div>
-        </div>
-        <div
-            style="text-align: center; color: var(--primary-green); font-size: var(--fs-md); padding: 20px; font-weight: 600;">
+        <div id="wellness-list" class="blog-list"></div>
+        <div id="wellness-load-more"
+            style="text-align: center; color: var(--primary-green); font-size: var(--fs-md); padding: 20px; font-weight: 600; cursor: pointer;"
+            onclick="loadMoreWellness()">
             ค้นหาแรงบันดาลใจต่อ <i class="fas fa-chevron-down"></i>
+        </div>
+    </div>
+
+    <!-- Wellness Article Reader Subpage -->
+    <div id="wellness-article" class="page" style="background: var(--bg-color);">
+        <div class="app-bar" style="display:flex; align-items:center; gap:15px;">
+            <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                onclick="showPage('home')">
+                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+            </div>
+            <h1 id="wellness-article-title" style="margin:0; flex:1;">บทความ</h1>
+        </div>
+        <div class="card">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                <div id="wellness-article-icon" style="width:48px; height:48px; border-radius:12px; background:var(--soft-green); color:var(--primary-green); display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                    <i class="fas fa-leaf"></i>
+                </div>
+                <div style="flex:1;">
+                    <div id="wellness-article-category" style="font-size:var(--fs-sm); color:var(--primary-green); font-weight:600;">Wellness</div>
+                    <div id="wellness-article-readtime" style="font-size:var(--fs-sm); color:var(--text-muted);">อ่าน 3 นาที</div>
+                </div>
+            </div>
+            <div id="wellness-article-body" style="font-size:var(--fs-md); line-height:1.75; color:var(--text-dark);"></div>
+            <div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center; color:var(--text-muted); font-size:var(--fs-sm);">
+                🌿 ขอบคุณที่อ่านจนจบ
+            </div>
         </div>
     </div>
 
@@ -2927,14 +2932,16 @@
         <div class="section-title"><span>Avatar Default</span></div>
         <div class="card">
 
-            <div class="avatar-selector" style="display: flex; gap: 15px; margin-top: 12px;">
-                <div class="avatar-option active" onclick="setAvatar('🌿', this)">🌿</div>
+            <div class="avatar-selector" style="display: flex; gap: 15px; margin-top: 12px; flex-wrap: wrap; align-items: center;">
+                <div id="avatar-preview" class="avatar-option active" onclick="setAvatar('🌿', this)">🌿</div>
                 <div class="avatar-option" onclick="setAvatar('🌊', this)">🌊</div>
                 <div class="avatar-option" onclick="setAvatar('⛰️', this)">⛰️</div>
-                <div class="avatar-option" style=" display:flex; align-items:center; justify-content:center;"><i
-                        class="fas fa-camera"></i></div>
-
+                <label class="avatar-option" for="avatar-upload-input" style="display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                    <i class="fas fa-camera"></i>
+                </label>
+                <input type="file" id="avatar-upload-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
             </div>
+            <p id="avatar-upload-status" style="font-size: var(--fs-sm); color: var(--text-muted); margin: 8px 0 0; display: none;"></p>
             <p style="font-size: var(--fs-sm); opacity: 0.5; margin-top: 10px;">* ชื่อจะแสดงในหน้า Community และ
                 Marketplace
             </p>
@@ -2961,23 +2968,19 @@
         </div>
 
         <div class="section-title"><span>ตั้งค่าการออกใบเสร็จ</span></div>
-        <div style="padding: 0 15px;">
-            <div style="border-radius:24px; padding: 20px; box-shadow: var(--shadow); background:var(--white);">
-                <label style="font-size: var(--fs-sm); opacity: 0.6;">เลือกประเภทใบเสร็จที่คุณต้องการรับเป็นประจำ</label>
-                <select id="receipt-type-select" onchange="toggleCompanyForm()">
-                    <option value="personal">ใบเสร็จรับเงินทั่วไป (นามบุคคล)</option>
-                    <option value="company">ใบกำกับภาษีเต็มรูปแบบ (เบิกบริษัท)</option>
-                </select>
-
-                <div id="company-form"
-                    style="display: none; margin-top: 15px; border-top: 1px dashed #eee; padding-top: 15px;">
-                    <label
-                        style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600;">ข้อมูลบริษัทสำหรับการออกใบกำกับภาษี</label>
-                    <input type="text" id="comp-name" placeholder="ชื่อบริษัท / Company Name">
-                    <input type="text" id="comp-tax" placeholder="เลขประจำตัวผู้เสียภาษี / Tax ID (13 หลัก)">
-                    <textarea id="comp-addr" placeholder="ที่อยู่สำนักงานใหญ่ / Address" rows="2"
-                        style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:10px; font-family: inherit;"></textarea>
-                </div>
+        <div class="card">
+            <div id="receipt-type-display" style="display:flex; justify-content:space-between; align-items:center; padding:10px 0;">
+                <span style="color: var(--text-muted);">ประเภทใบเสร็จ</span>
+                <strong id="receipt-type-label">ใบเสร็จรับเงิน (นามบุคคล)</strong>
+            </div>
+            <div id="company-info-display" style="display:none; border-top: 1px dashed #eee; padding-top: 12px; margin-top: 12px;">
+                <div style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-bottom: 8px;">ข้อมูลบริษัทสำหรับออกใบกำกับภาษี</div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:var(--text-muted);">ชื่อบริษัท</span><strong id="comp-name-display" style="text-align:right;">—</strong></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:var(--text-muted);">เลขผู้เสียภาษี</span><strong id="comp-tax-display">—</strong></div>
+                <div style="margin-bottom:6px;"><span style="color:var(--text-muted); display:block; margin-bottom:4px;">ที่อยู่</span><strong id="comp-addr-display" style="display:block;">—</strong></div>
+            </div>
+            <div style="background:#fff3e0; color:#e65100; padding:10px 12px; border-radius:10px; font-size:var(--fs-sm); margin-top:12px;">
+                ℹ️ ข้อมูลเหล่านี้ admin เป็นผู้ตั้งค่าใน People Management — หากต้องแก้ไข กรุณาแจ้งนิติ
             </div>
         </div>
     </div>
@@ -3650,70 +3653,24 @@
             setTimeout(() => goBackToService(), 1200);
         }
 
-        function toggleCompanyForm() {
-            const val = document.getElementById('receipt-type-select').value;
-            const compForm = document.getElementById('company-form');
-            if (compForm) compForm.style.display = (val === 'company') ? 'block' : 'none';
-            saveReceiptSettings();
-        }
-
-        // ---- Persist receipt/tax-invoice settings per tenant ----
-        function _receiptSettingsKey() {
-            const b = window._tenantAppBuilding || 'unknown';
-            const r = window._tenantAppRoom || 'unknown';
-            return `tenant_receipt_${b}_${r}`;
-        }
-        function saveReceiptSettings() {
-            try {
-                const data = {
-                    type: document.getElementById('receipt-type-select')?.value || 'personal',
-                    name: document.getElementById('comp-name')?.value || '',
-                    tax:  document.getElementById('comp-tax')?.value || '',
-                    addr: document.getElementById('comp-addr')?.value || '',
-                    updatedAt: Date.now(),
-                };
-                localStorage.setItem(_receiptSettingsKey(), JSON.stringify(data));
-                applyReceiptDisplay(data);
-            } catch(_){}
-        }
+        // ---- Load receipt/tax-invoice settings (read-only from dashboard People Management) ----
         function loadReceiptSettings() {
             try {
-                // 1. hydrate จาก tenant master (ตั้งค่าใน dashboard → People Management)
-                const profileType = _taTenant && _taTenant.receiptType;
-                const profileCo = (_taTenant && (_taTenant.companyInfo || _taTenant.company)) || null;
-                // 2. overlay with local edits (ถ้าลูกบ้านแก้เอง ให้ win เหนือ dashboard)
-                let saved = null;
-                try { saved = JSON.parse(localStorage.getItem(_receiptSettingsKey()) || 'null'); } catch(_){}
-                const data = {
-                    type: saved?.type || profileType || (profileCo ? 'company' : 'personal'),
-                    name: saved?.name || profileCo?.name || '',
-                    tax:  saved?.tax  || profileCo?.taxId || '',
-                    addr: saved?.addr || profileCo?.address || '',
-                };
-                const sel = document.getElementById('receipt-type-select');
-                if (sel) sel.value = data.type;
+                const type = (_taTenant && _taTenant.receiptType) || 'personal';
+                const co = (_taTenant && (_taTenant.companyInfo || _taTenant.company)) || {};
+                const typeLabel = type === 'company' ? 'ใบกำกับภาษีเต็มรูปแบบ (เบิกบริษัท)' : 'ใบเสร็จรับเงิน (นามบุคคล)';
                 const $ = id => document.getElementById(id);
-                if ($('comp-name')) $('comp-name').value = data.name;
-                if ($('comp-tax'))  $('comp-tax').value  = data.tax;
-                if ($('comp-addr')) $('comp-addr').value = data.addr;
-                const compForm = document.getElementById('company-form');
-                if (compForm) compForm.style.display = (data.type === 'company') ? 'block' : 'none';
-                applyReceiptDisplay(data);
+                if ($('receipt-type-label')) $('receipt-type-label').textContent = typeLabel;
+                if ($('company-info-display')) $('company-info-display').style.display = type === 'company' ? 'block' : 'none';
+                if ($('comp-name-display')) $('comp-name-display').textContent = co.name || '—';
+                if ($('comp-tax-display'))  $('comp-tax-display').textContent  = co.taxId || '—';
+                if ($('comp-addr-display')) $('comp-addr-display').textContent = co.address || '—';
+                // mirror to bill display blocks (ถ้ามีใน bill detail)
+                if ($('display-comp-name')) $('display-comp-name').textContent = co.name || '-';
+                if ($('display-comp-tax'))  $('display-comp-tax').textContent  = co.taxId || '-';
+                if ($('display-comp-addr')) $('display-comp-addr').textContent = co.address || '-';
             } catch(_){}
         }
-        function applyReceiptDisplay(data) {
-            const $ = id => document.getElementById(id);
-            if ($('display-comp-name')) $('display-comp-name').textContent = data.name || '-';
-            if ($('display-comp-tax'))  $('display-comp-tax').textContent  = data.tax  || '-';
-            if ($('display-comp-addr')) $('display-comp-addr').textContent = data.addr || '-';
-        }
-        // auto-save on blur
-        document.addEventListener('DOMContentLoaded', () => {
-            ['comp-name','comp-tax','comp-addr'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.addEventListener('blur', saveReceiptSettings);
-            });
-        });
 
 
         // ==========================================
@@ -3752,11 +3709,119 @@
 
         function setAvatar(emoji, el) {
             const curr = document.getElementById('current-avatar');
-            if (curr) curr.innerText = emoji;
+            if (curr) {
+                curr.innerText = emoji;
+                curr.style.backgroundImage = ''; // clear uploaded image if any
+            }
+            const preview = document.getElementById('avatar-preview');
+            if (preview) {
+                preview.innerHTML = emoji;
+                preview.style.backgroundImage = '';
+                preview.style.backgroundSize = '';
+            }
             if (el && el.parentElement.classList.contains('avatar-selector')) {
                 el.parentElement.querySelectorAll('.avatar-option').forEach(opt => opt.classList.remove('active'));
                 el.classList.add('active');
             }
+            saveAvatar({ type: 'emoji', value: emoji });
+        }
+
+        // ---- Avatar upload + canvas compression ----
+        function _avatarStorageKey() {
+            const b = window._tenantAppBuilding || 'unknown';
+            const r = window._tenantAppRoom || 'unknown';
+            return `tenant_avatar_${b}_${r}`;
+        }
+        function saveAvatar(data) {
+            try {
+                localStorage.setItem(_avatarStorageKey(), JSON.stringify({ ...data, at: Date.now() }));
+                // best-effort Firestore (TenantFirebaseSync)
+                try {
+                    if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady && window._tenantAppRoom) {
+                        const userStr = sessionStorage.getItem('user');
+                        const user = userStr ? JSON.parse(userStr) : { roomNumber: window._tenantAppRoom };
+                        const sync = new TenantFirebaseSync(user, window._tenantAppBuilding, window._tenantAppRoom);
+                        if (typeof sync.saveAvatar === 'function') sync.saveAvatar(data);
+                    }
+                } catch(_){}
+            } catch(_){}
+        }
+        function loadAvatar() {
+            try {
+                const raw = localStorage.getItem(_avatarStorageKey());
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                if (data.type === 'image' && data.value) applyAvatarImage(data.value);
+                else if (data.type === 'emoji' && data.value) applyAvatarEmoji(data.value);
+            } catch(_){}
+        }
+        function applyAvatarEmoji(emoji) {
+            const curr = document.getElementById('current-avatar');
+            if (curr) { curr.innerText = emoji; curr.style.backgroundImage = ''; }
+            const preview = document.getElementById('avatar-preview');
+            if (preview) { preview.innerHTML = emoji; preview.style.backgroundImage = ''; }
+        }
+        function applyAvatarImage(dataUrl) {
+            const set = el => {
+                if (!el) return;
+                el.innerHTML = '';
+                el.style.backgroundImage = `url('${dataUrl}')`;
+                el.style.backgroundSize = 'cover';
+                el.style.backgroundPosition = 'center';
+            };
+            set(document.getElementById('current-avatar'));
+            set(document.getElementById('avatar-preview'));
+        }
+
+        async function handleAvatarUpload(event) {
+            const file = event.target?.files?.[0];
+            if (!file) return;
+            const status = document.getElementById('avatar-upload-status');
+            const show = (msg, color) => { if (status) { status.style.display='block'; status.style.color=color||'var(--text-muted)'; status.textContent=msg; } };
+            if (!/^image\//.test(file.type)) { show('ไฟล์ต้องเป็นรูปภาพ (jpg/png/webp)', 'var(--danger)'); return; }
+            if (file.size > 10 * 1024 * 1024) { show('รูปใหญ่เกิน 10MB กรุณาเลือกรูปเล็กลง', 'var(--danger)'); return; }
+            show('กำลังบีบอัดรูป...');
+            try {
+                const compressed = await compressImageToDataUrl(file, { maxSize: 256, quality: 0.7 });
+                const origKB = Math.round(file.size / 1024);
+                const newKB  = Math.round((compressed.length * 0.75) / 1024);
+                applyAvatarImage(compressed);
+                saveAvatar({ type: 'image', value: compressed });
+                // mark camera option as active
+                document.querySelectorAll('.avatar-selector .avatar-option').forEach(o => o.classList.remove('active'));
+                document.getElementById('avatar-preview')?.classList.add('active');
+                show(`✓ อัปโหลดสำเร็จ (${origKB}KB → ${newKB}KB)`, 'var(--primary-green)');
+            } catch(e) {
+                show('บีบอัดล้มเหลว กรุณาลองใหม่', 'var(--danger)');
+            }
+        }
+
+        // Canvas-based image compressor — square crop + scale to maxSize px + JPEG quality
+        function compressImageToDataUrl(file, opts) {
+            const { maxSize = 256, quality = 0.7 } = opts || {};
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = reject;
+                reader.onload = () => {
+                    const img = new Image();
+                    img.onerror = reject;
+                    img.onload = () => {
+                        const side = Math.min(img.width, img.height);
+                        const sx = (img.width - side) / 2;
+                        const sy = (img.height - side) / 2;
+                        const canvas = document.createElement('canvas');
+                        canvas.width = maxSize;
+                        canvas.height = maxSize;
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, sx, sy, side, side, 0, 0, maxSize, maxSize);
+                        try { resolve(canvas.toDataURL('image/jpeg', quality)); }
+                        catch(e) { reject(e); }
+                    };
+                    img.src = reader.result;
+                };
+                reader.readAsDataURL(file);
+            });
         }
 
         function openModal(type) {
@@ -4786,6 +4851,8 @@
             renderProfilePage();
             renderContractPage();
             updateNavBadges();
+            loadAvatar();
+            renderWellness();
         }
 
         // ---- HOME ----
@@ -5238,6 +5305,55 @@
                 }
             }
             setupContractQuizGate();
+        }
+
+        // ---- Wellness Articles ----
+        const WELLNESS_ARTICLES = [
+            { id:'sleep-bedroom', icon:'fa-spa',        title:'3 เคล็ดลับจัดห้องนอนหลับลึก', excerpt:'ลองปรับแสงไฟโทนอุ่น และวางต้นไม้เล็กๆ ช่วยให้เช้าวันใหม่สดชื่น...',
+              body:'<p><strong>1. ปรับแสงให้อุ่นก่อนนอน 1 ชั่วโมง</strong> — หลอดไฟโทนเหลือง 2700K ช่วยให้ร่างกายหลั่งเมลาโทนิน เข้าสู่โหมดพักผ่อนเร็วขึ้น</p><p><strong>2. ต้นไม้ฟอกอากาศหัวเตียง</strong> — พลูด่าง หรือลิ้นมังกร ดูดซับ CO₂ ตอนกลางคืน ช่วยให้อากาศสดชื่น หลับสนิทขึ้น</p><p><strong>3. อุณหภูมิ 24-26°C</strong> — ร่างกายหลับลึกที่สุดในช่วงนี้ ตั้งแอร์ไว้และห่มผ้าบางๆ ดีกว่าห้องเย็นจัดแล้วห่มหนา</p><p>ลองปรับแค่ 1-2 ข้อแล้วสังเกตคุณภาพการนอนในสัปดาห์นี้</p>' },
+            { id:'amethyst-power', icon:'fa-gem',       title:'พลังของ \'หินนำโชค\' อเมทิสต์', excerpt:'ทำความรู้จักกับอเมทิสต์ที่จะช่วยให้ใจคุณสงบ และดึงดูดสิ่งดีๆ...',
+              body:'<p>อเมทิสต์เป็นหินในตระกูลควอตซ์สีม่วง ที่โบราณเชื่อว่าช่วย <strong>สงบจิตใจ</strong> และ <strong>ปัดเป่าพลังลบ</strong></p><p><strong>วิธีวางในห้อง:</strong> วางบนโต๊ะทำงาน (ด้านซ้ายสุด ใกล้ประตู) หรือหัวเตียง สะท้อนแสงอ่อนๆ ทำให้บรรยากาศสงบ</p><p><strong>การดูแล:</strong> ล้างด้วยน้ำเปล่าเดือนละครั้ง ตากแดดอ่อนๆ ช่วงเช้า 30 นาที เป็นการ "ชาร์จพลัง" ให้หิน</p><p>นอกจากความเชื่อ การมี object สวยๆ อยู่ในสายตาก็ช่วยลดความเครียดได้จริง</p>' },
+            { id:'balcony-charge', icon:'fa-mug-hot',   title:'มุมระเบียงชาร์จพลัง', excerpt:'เปลี่ยนพื้นที่เล็กๆ ให้เป็นที่นั่งดูพระอาทิตย์ตกดินสุดพิเศษสำหรับคุณ...',
+              body:'<p>ระเบียง 2×1 เมตร ก็สร้างมุมพักใจได้ ลองทำตามนี้</p><p><strong>เบาะนั่งพื้น</strong> — ซื้อเบาะผ้า waterproof ขนาด 60×60 ซม. + หมอนอิงใบใหญ่ จะได้มุมนั่งทันที</p><p><strong>ต้นไม้แนวตั้ง</strong> — แขวนกระถางพลูบนราวกันตก ประหยัดพื้นที่ + ช่วยกรองฝุ่น PM2.5</p><p><strong>โคมไฟ solar</strong> — ไม่ต้องเดินสายไฟ เก็บแสงกลางวัน กลางคืนให้แสงอุ่นธรรมชาติ</p><p>เวลาที่ดีที่สุดคือ 17:00-18:30 น. ดูแสงส้มกับดื่มชาร้อน</p>' },
+            { id:'morning-ritual', icon:'fa-sun',       title:'Morning Ritual 10 นาที เริ่มวันดีทั้งวัน', excerpt:'ลองสร้างนิสัยเล็กๆ ที่ทำให้สมองพร้อมก่อนเช็คโทรศัพท์ครั้งแรก...',
+              body:'<p>อย่าเพิ่งหยิบมือถือทันทีที่ตื่น เปลี่ยนเป็น 10 นาทีนี้แทน</p><p><strong>นาทีที่ 1-3:</strong> ดื่มน้ำเปล่า 1 แก้ว เปิดม่าน รับแสงแดด (รีเซ็ต circadian rhythm)</p><p><strong>นาทีที่ 4-7:</strong> ยืดกล้ามเนื้อง่ายๆ คอ ไหล่ หลัง หายใจลึกๆ 5 ครั้ง</p><p><strong>นาทีที่ 8-10:</strong> เขียน 3 สิ่งที่รู้สึกขอบคุณในสมุด (gratitude journaling)</p><p>ทำแค่ 7 วันจะเห็นความต่าง พลังงานเช้าขึ้นและอารมณ์ดีตลอดวัน</p>' },
+            { id:'aromatherapy',    icon:'fa-wind',      title:'กลิ่นที่ช่วยคลายเครียดในห้องคอนโด', excerpt:'Lavender, Bergamot, Eucalyptus — 3 กลิ่นที่ควรมีติดห้องไว้...',
+              body:'<p>Aromatherapy ไม่ใช่แค่ของสวย — มีงานวิจัยยืนยันผลจริง</p><p><strong>Lavender (ลาเวนเดอร์)</strong> — ใช้ก่อนนอน 30 นาที ลดคลื่นสมองให้ผ่อนคลาย งานวิจัยพบว่าช่วยปรับปรุงคุณภาพการนอน 20%</p><p><strong>Bergamot (เบอร์กามอท)</strong> — ใช้ช่วงบ่าย ลดความวิตกกังวล ให้อารมณ์สดชื่นขึ้น</p><p><strong>Eucalyptus (ยูคาลิปตัส)</strong> — ใช้เช้า ปลุกสมองให้ตื่นตัว เหมาะช่วง WFH</p><p>ใช้ diffuser ดีกว่าเทียนหอม (ปลอดภัยในห้องเล็ก)</p>' },
+            { id:'indoor-plants',   icon:'fa-leaf',      title:'5 ต้นไม้ในร่มที่เลี้ยงง่ายสุดๆ', excerpt:'ไม่ต้องรดน้ำบ่อย ไม่ต้องแดดเยอะ แต่ฟอกอากาศได้...',
+              body:'<p>ต้นไม้ 5 ชนิดนี้ แม้ไม่มีมือเขียวก็เลี้ยงรอด</p><p><strong>1. พลูด่าง (Pothos)</strong> — รดน้ำสัปดาห์ละครั้ง แสงน้อยได้ ฟอก formaldehyde</p><p><strong>2. ลิ้นมังกร (Snake Plant)</strong> — ทนแล้ง ปล่อย O₂ ตอนกลางคืน (วางข้างเตียงได้)</p><p><strong>3. ZZ Plant</strong> — "ต้นฆ่าไม่ตาย" รดน้ำ 2-3 สัปดาห์ครั้ง</p><p><strong>4. Peace Lily</strong> — ดอกสวย ชอบที่ชื้น เหมาะในห้องน้ำ</p><p><strong>5. Monstera</strong> — ใบใหญ่ตระการตา โตเร็ว เติม aesthetic ให้ห้อง</p>' },
+            { id:'digital-detox',   icon:'fa-mobile-alt',title:'Digital Detox 1 ชั่วโมงก่อนนอน', excerpt:'แสงสีฟ้าและการ scroll ก่อนนอน = คุณภาพการนอนแย่ลง...',
+              body:'<p>งานวิจัยชัดเจน: แสงสีฟ้าจากหน้าจอกดการหลั่ง melatonin ทำให้หลับยาก + หลับไม่ลึก</p><p><strong>วิธีทำ Digital Detox:</strong></p><p>• ตั้ง alarm "bedtime mode" 1 ชม. ก่อนนอน</p><p>• วางโทรศัพท์นอกห้องนอน (ใช้นาฬิกาปลุกแทน)</p><p>• เปลี่ยนเป็น <strong>หนังสือเล่ม</strong> ฟังพอดแคสต์เบาๆ หรือเขียน journal</p><p>ยากวันแรก ง่ายวันที่ 4 หลังจากนั้นคุณภาพการนอนดีขึ้นชัดเจน</p>' },
+        ];
+        let _wellnessShown = 3;
+        function renderWellness() {
+            const list = document.getElementById('wellness-list');
+            if (!list) return;
+            const toShow = WELLNESS_ARTICLES.slice(0, _wellnessShown);
+            list.innerHTML = toShow.map(a => `
+                <div class="blog-card" onclick="openWellnessArticle('${a.id}')" style="cursor:pointer;">
+                    <div class="blog-img"><i class="fas ${a.icon}"></i></div>
+                    <div class="blog-content">
+                        <h3>${a.title}</h3>
+                        <p>${a.excerpt}</p>
+                    </div>
+                </div>
+            `).join('');
+            // ซ่อนปุ่มถ้าหมดแล้ว
+            const btn = document.getElementById('wellness-load-more');
+            if (btn) btn.style.display = (_wellnessShown >= WELLNESS_ARTICLES.length) ? 'none' : 'block';
+        }
+        function loadMoreWellness() {
+            _wellnessShown = Math.min(_wellnessShown + 3, WELLNESS_ARTICLES.length);
+            renderWellness();
+        }
+        function openWellnessArticle(id) {
+            const a = WELLNESS_ARTICLES.find(x => x.id === id);
+            if (!a) return;
+            const $ = i => document.getElementById(i);
+            if ($('wellness-article-title')) $('wellness-article-title').textContent = a.title;
+            if ($('wellness-article-icon')) $('wellness-article-icon').innerHTML = `<i class="fas ${a.icon}"></i>`;
+            if ($('wellness-article-body')) $('wellness-article-body').innerHTML = a.body;
+            showPage('wellness-article');
         }
 
         // ---- Contract Quiz (MVP) ----
