@@ -1147,15 +1147,15 @@
 
         <div class="grid grid-cols-2">
             <div class="card rounded-[2rem] p-5 shadow-sm flex items-center gap-4">
-                <div class="text-3xl">🌤️</div>
+                <div id="weather-emoji" class="text-3xl">🌤️</div>
                 <div>
-                    <p class="text-[10px] text-gray-400 leading-tight">14 มี.ค. | 09:30</p>
-                    <p id="temp-display" class="text-lg font-bold">28°C</p>
+                    <p id="weather-date" class="text-[10px] text-gray-400 leading-tight">—</p>
+                    <p id="temp-display" class="text-lg font-bold">—</p>
                 </div>
             </div>
 
             <div class="card rounded-[2rem] p-5 shadow-sm flex items-center gap-4">
-                <div class="text-3xl">😶‍🌫️</div>
+                <div id="aqi-emoji" class="text-3xl">😶‍🌫️</div>
                 <div>
                     <p class="text-[10px] text-gray-400 leading-tight">AQI มลพิษ</p>
                     <p id="aqi-display" class="text-3xl font-bold">35</p>
@@ -2754,10 +2754,6 @@
         // ==========================================
         // 1. GLOBAL VARIABLES & CONFIG
         // ==========================================
-        const OPENWEATHER_KEY = 'YOUR_OPENWEATHER_KEY';
-        const IQAIR_KEY = 'YOUR_IQAIR_KEY';
-        const LAT = 13.92, LON = 100.64;
-
         let records = []; // สำหรับเก็บประวัติการแจ้งซ่อม/บริการ
 
         // ==========================================
@@ -3004,41 +3000,72 @@
                 btn.innerText = "การเชื่อมต่อผิดพลาด";
             }
         }
+        // Pick weather emoji from Open-Meteo WMO weather_code + temperature
+        // WMO codes: https://open-meteo.com/en/docs (0=clear, 1-3=cloudy, 45/48=fog, 51-67=rain, 71-77=snow, 80-82=showers, 95+=thunder)
+        function pickWeatherEmoji(temp, code) {
+            if (code >= 95) return '⛈️';        // thunderstorm
+            if (code >= 71 && code <= 77) return '❄️';
+            if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return '🌧️';
+            if (code === 45 || code === 48) return '🌫️';
+            if (temp >= 35) return '🥵';          // very hot
+            if (temp >= 30) return '☀️';          // hot
+            if (temp < 22) return '❄️';           // cold (for Thailand context)
+            if (code >= 2) return '⛅';
+            return '🌤️';
+        }
+
+        function pickAqiEmoji(aqi) {
+            if (aqi >= 150) return '😷';
+            if (aqi >= 100) return '😮‍💨';
+            if (aqi >= 50)  return '😶‍🌫️';
+            return '😊';
+        }
+
         async function updateDashboard() {
-            // Weather
+            const LAT = 13.92, LON = 100.64;
+
+            // Weather via Open-Meteo (no API key needed)
             try {
-                const wRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${LAT}&lon=${LON}&appid=${OPENWEATHER_KEY}&units=metric&lang=th`);
+                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weather_code&timezone=Asia%2FBangkok`);
                 const wData = await wRes.json();
-                const temp = Math.round(wData.main.temp);
+                const temp = Math.round(wData.current?.temperature_2m ?? 0);
+                const code = wData.current?.weather_code ?? 0;
+                const emoji = pickWeatherEmoji(temp, code);
+
+                const emojiEl = document.getElementById('weather-emoji');
+                if (emojiEl) emojiEl.textContent = emoji;
 
                 const tempDisplay = document.getElementById('temp-display');
-                if (tempDisplay) {
-                    tempDisplay.innerHTML = `<strong class="text-3xl font-bold">${temp}°C</strong><p class="text-[10px] text-gray-400">${wData.weather[0].description}</p>`;
+                if (tempDisplay) tempDisplay.textContent = `${temp}°C`;
+
+                const dateEl = document.getElementById('weather-date');
+                if (dateEl) {
+                    const now = new Date();
+                    dateEl.textContent = now.toLocaleString('th-TH', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
                 }
 
-                // ถ้าร้อนเกิน 35 องศา ให้แสดงแจ้งเตือนการดูแลสัตว์เลี้ยงชั้น 3-4
                 const heatAlert = document.getElementById('heat-alert');
-                if (heatAlert) {
-                    if (temp >= 35) heatAlert.classList.remove('hidden');
-                    else heatAlert.classList.add('hidden');
-                }
+                if (heatAlert) heatAlert.classList.toggle('hidden', temp < 35);
             } catch (e) {
                 console.error("Weather API Error:", e);
             }
 
-            // IQAir PM 2.5
+            // Air quality via Open-Meteo (no API key needed)
             try {
-                const pRes = await fetch(`https://api.airvisual.com/v2/nearest_city?lat=${LAT}&lon=${LON}&key=${IQAIR_KEY}`);
+                const pRes = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=pm2_5,us_aqi&timezone=Asia%2FBangkok`);
                 const pData = await pRes.json();
-                if (pData.status === "success") {
-                    const aqius = pData.data.current.pollution.aqius;
-                    const pmDisplay = document.getElementById('pm-display');
-                    if (pmDisplay) {
-                        pmDisplay.innerHTML = `<strong class="text-3xl font-bold">${aqius}</strong><span class="text-[10px] text-green-500 font-bold ml-1">US AQI</span>`;
-                    }
+                const aqi = Math.round(pData.current?.us_aqi ?? 0);
+
+                const aqiEmojiEl = document.getElementById('aqi-emoji');
+                if (aqiEmojiEl) aqiEmojiEl.textContent = pickAqiEmoji(aqi);
+
+                const pmDisplay = document.getElementById('pm-display');
+                if (pmDisplay) {
+                    const color = aqi >= 150 ? 'text-red-500' : aqi >= 100 ? 'text-orange-500' : aqi >= 50 ? 'text-yellow-600' : 'text-green-500';
+                    pmDisplay.innerHTML = `<strong class="text-3xl font-bold">${aqi}</strong><span class="text-[10px] ${color} font-bold ml-1">US AQI</span>`;
                 }
             } catch (e) {
-                console.error("PM2.5 API Error:", e);
+                console.error("Air Quality API Error:", e);
             }
         }
 
