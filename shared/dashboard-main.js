@@ -6144,6 +6144,53 @@ let _pvUnsubscribe = null;
 window._pvFilter = 'today';
 
 window._pvCachedSlips = [];
+
+// Flatten payment_status (manual "paid" entries from bill flow) into slip-like objects
+function _pvLoadManualPayments(){
+  const ps = loadPS();
+  const out = [];
+  Object.keys(ps).forEach(yearMonth => {
+    const [year, month] = yearMonth.split('_').map(Number);
+    const byRoom = ps[yearMonth] || {};
+    Object.keys(byRoom).forEach(room => {
+      const p = byRoom[room];
+      if(!p || p.status !== 'paid') return;
+      const bld = /^N\d+/.test(String(room)) ? 'nest' : 'rooms';
+      const tsSource = p.slip?.transferDate || p.date || `${year}-${String(month).padStart(2,'0')}-05`;
+      out.push({
+        id: `ps_${yearMonth}_${room}`,
+        building: bld,
+        room: String(room),
+        amount: p.amount || p.slip?.amount || 0,
+        expectedAmount: p.amount || 0,
+        sender: p.slip?.sender || '(บันทึกโดย admin)',
+        receiver: p.slip?.receiver || '',
+        bankCode: p.slip?.bankCode || '',
+        transactionId: p.receiptNo || p.slip?.ref || '',
+        timestamp: new Date(tsSource),
+        verifiedAt: new Date(p.date || tsSource),
+        source: 'manual'
+      });
+    });
+  });
+  return out;
+}
+
+function _pvMergeSlips(firestoreSlips){
+  const manual = _pvLoadManualPayments();
+  const byKey = new Map();
+  // Firestore wins (has the real slip data). Dedupe by transactionId + room + amount + approximate time.
+  firestoreSlips.forEach(s => {
+    const k = `${s.building}|${s.room}|${s.transactionId || s.id}`;
+    byKey.set(k, s);
+  });
+  manual.forEach(s => {
+    const k = `${s.building}|${s.room}|${s.transactionId || s.id}`;
+    if(!byKey.has(k)) byKey.set(k, s);
+  });
+  return Array.from(byKey.values());
+}
+
 function initPaymentVerify() {
   if (_pvUnsubscribe) { _pvUnsubscribe(); _pvUnsubscribe = null; }
 
@@ -6160,13 +6207,19 @@ function initPaymentVerify() {
   const fs = window.firebase.firestoreFunctions;
   const q = fs.query(fs.collection(db, 'verifiedSlips'), fs.orderBy('timestamp', 'desc'), fs.limit(200));
   _pvUnsubscribe = fs.onSnapshot(q, snapshot => {
-    const slips = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    const firestoreSlips = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    const slips = _pvMergeSlips(firestoreSlips);
     window._pvCachedSlips = slips;
     updatePVStats(slips);
     renderPVFeed(slips);
   }, err => {
     console.error('pv onSnapshot:', err);
-    feed.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
+    // Fallback: at least show manual payments from localStorage
+    const manual = _pvLoadManualPayments();
+    window._pvCachedSlips = manual;
+    updatePVStats(manual);
+    renderPVFeed(manual);
+    if(!manual.length) feed.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
   });
 }
 
@@ -6310,7 +6363,13 @@ window.renderPVHistory = function(){
   );
   fs.getDocs(q)
     .then(snap=>{
-      const slips = snap.docs.map(d=>({id:d.id,...d.data()}));
+      const firestoreSlips = snap.docs.map(d=>({id:d.id,...d.data()}));
+      // Also include manual payments (from payment_status) for this room
+      const manual = _pvLoadManualPayments().filter(s => s.building === building && s.room === String(room));
+      const byKey = new Map();
+      firestoreSlips.forEach(s => byKey.set(`${s.transactionId||s.id}|${s.amount}`, s));
+      manual.forEach(s => { const k = `${s.transactionId||s.id}|${s.amount}`; if(!byKey.has(k)) byKey.set(k, s); });
+      const slips = Array.from(byKey.values());
       slips.sort((a,b)=>{
         const ta = a.timestamp?.toDate?a.timestamp.toDate():new Date(a.timestamp||a.verifiedAt||0);
         const tb = b.timestamp?.toDate?b.timestamp.toDate():new Date(b.timestamp||b.verifiedAt||0);
@@ -6342,7 +6401,29 @@ window.renderPVHistory = function(){
       }).join('');
     })
     .catch(err=>{
-      list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
+      console.error('pv history query failed:', err);
+      // Fallback to manual payments only
+      const manual = _pvLoadManualPayments().filter(s => s.building === building && s.room === String(room));
+      if(!manual.length){
+        list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
+        return;
+      }
+      manual.sort((a,b) => b.timestamp - a.timestamp);
+      const total = manual.reduce((s,x)=>s+(x.amount||0),0);
+      setTxt('pvh-total-count', manual.length);
+      setTxt('pvh-total-amount', '฿'+total.toLocaleString());
+      setTxt('pvh-last-paid', manual[0].timestamp.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}));
+      list.innerHTML = manual.map(s=>{
+        const timeStr = s.timestamp.toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div style="background:var(--green-pale);color:var(--green-dark);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">✅</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.88rem;">฿${(s.amount||0).toLocaleString()} <span style="color:var(--text-muted);font-weight:400;font-size:.78rem;">· (manual)</span></div>
+            <div style="font-size:.75rem;color:var(--text-muted);">โดย ${s.sender||'—'} · ${s.transactionId||''}</div>
+          </div>
+          <div style="text-align:right;font-size:.75rem;color:var(--text-muted);flex-shrink:0;">${timeStr}</div>
+        </div>`;
+      }).join('');
     });
 };
 
