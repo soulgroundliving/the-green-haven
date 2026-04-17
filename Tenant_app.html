@@ -20,9 +20,9 @@
     <!-- Firebase init -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-      import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+      import { getDatabase, ref, get, set, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
       import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-      import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+      import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
       async function initializeFirebase() {
         try {
@@ -43,11 +43,15 @@
           window.firebaseRef = ref;
           window.firebaseGet = get;
           window.firebaseSet = set;
+          window.firebaseUpdate = update;
+          window.firebaseRemove = remove;
           window.firebaseOnValue = onValue;
+          window.firebasePush = push;
+          window.firebaseChild = child;
           window.firebaseDB = database;
           window.firebase = {
             firestore: () => firestore,
-            firestoreFunctions: { collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc }
+            firestoreFunctions: { collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp }
           };
           window.firebaseReady = true;
           window.dispatchEvent(new Event('firebaseInitialized'));
@@ -3191,20 +3195,28 @@
                 localStorage.setItem('tenant_cleaning_tickets', JSON.stringify(existing));
             } catch(e) {}
 
-            // Also write to housekeeping_data so admin Requests & Approvals page sees it
+            // Write to housekeeping_data + Firebase RTDB for admin cross-device sync
+            const hkPayload = {
+                id: record.id,
+                room: String(_taRoom),
+                building: _taBuilding,
+                service: _selectedService === 'deep' ? 'deep-clean' : 'standard-clean',
+                description: note,
+                date, time,
+                submittedAt: date || new Date().toISOString().split('T')[0],
+                status: 'pending',
+                priority: 'normal',
+                createdAt: record.createdAt
+            };
+            try {
+                if (window.firebaseReady && window.firebaseRef && window.firebaseSet && window.firebaseDatabase) {
+                    const path = `housekeeping/${hkPayload.building}/${hkPayload.room}/${hkPayload.id}`;
+                    window.firebaseSet(window.firebaseRef(window.firebaseDatabase, path), hkPayload);
+                }
+            } catch(e) { console.warn('RTDB housekeeping save failed:', e); }
             try {
                 const hk = JSON.parse(localStorage.getItem('housekeeping_data') || '[]');
-                hk.unshift({
-                    id: record.id,
-                    room: _taRoom,
-                    building: _taBuilding,
-                    service: _selectedService === 'deep' ? 'deep-clean' : 'standard-clean',
-                    description: note,
-                    date, time,
-                    status: 'pending',
-                    priority: 'normal',
-                    createdAt: record.createdAt
-                });
+                hk.unshift(hkPayload);
                 localStorage.setItem('housekeeping_data', JSON.stringify(hk));
             } catch(e) {}
 
@@ -3336,6 +3348,16 @@
 
         // เก็บข้อมูลสัตว์เลี้ยง (Global Scope)
         let petDataList = [];
+        // Load persisted pets when building/room are known
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                try {
+                    const key = `tenant_pets_${_taBuilding}_${_taRoom}`;
+                    const saved = JSON.parse(localStorage.getItem(key) || '[]');
+                    if (Array.isArray(saved) && saved.length) petDataList = saved;
+                } catch(e) {}
+            }, 500);
+        });
 
         // 1. ฟังก์ชันวาดรายการ (Render) ไปที่หน้า Profile (รวมระบบกล่องเปล่า)
         function renderPetListToProfile() {
@@ -3436,20 +3458,39 @@
 
             const petObject = {
                 id: editId || Date.now().toString(),
-                name, typeEmoji, breed, gender, age, isVaccinated, vaxDate, vaxExpiry, alertStatusHTML
+                name, typeEmoji, breed, gender, age, isVaccinated, vaxDate, vaxExpiry, alertStatusHTML,
+                type: typeEmoji,
+                room: String(_taRoom || ''),
+                building: _taBuilding || 'nest',
+                status: editId ? (petDataList.find(p=>p.id===editId)?.status || 'pending') : 'pending',
+                createdAt: editId ? undefined : new Date().toISOString()
             };
 
             if (editId) {
                 const index = petDataList.findIndex(p => p.id === editId);
-                if (index !== -1) petDataList[index] = petObject;
+                if (index !== -1) petDataList[index] = { ...petDataList[index], ...petObject };
             } else {
                 petDataList.push(petObject);
             }
 
+            // Persist to localStorage for admin fallback + Firestore for cross-device admin sync
+            try {
+                const key = `tenant_pets_${petObject.building}_${petObject.room}`;
+                localStorage.setItem(key, JSON.stringify(petDataList));
+            } catch(e) {}
+            try {
+                if (window.firebaseReady && window.firebase?.firestore) {
+                    const db = window.firebase.firestore();
+                    const fs = window.firebase.firestoreFunctions;
+                    const docRef = fs.doc(fs.collection(db, 'petApprovals'), petObject.id);
+                    fs.setDoc(docRef, petObject, { merge: true });
+                }
+            } catch(e) { console.warn('Firestore pet save failed:', e); }
+
             renderPetListToProfile();
             toast(`บันทึกข้อมูลน้อง${_esc(name)} เรียบร้อยแล้วครับ!`);
             resetPetForm();
-            goBackToProfile(); // ใช้ฟังก์ชันเดิมที่คุณมีในภาพ d9b4e8
+            goBackToProfile();
         }
 
         // 3. ฟังก์ชันเตรียมการแก้ไข (Edit)
@@ -3749,7 +3790,30 @@
         }
 
         function _saveMaintenanceTicket(ticket) {
-            // Save to maintenance_data (admin-compatible)
+            // Save to Firebase RTDB (cross-device sync with admin)
+            try {
+                if (window.firebaseReady && window.firebaseRef && window.firebaseSet && window.firebaseDatabase) {
+                    const bld = ticket.building || _taBuilding || 'rooms';
+                    const room = ticket.room || _taRoom;
+                    const path = `maintenance/${bld}/${room}/${ticket.id}`;
+                    const payload = {
+                        id: ticket.id,
+                        room: String(room),
+                        building: bld,
+                        desc: ticket.description || ticket.desc || '',
+                        category: ticket.category || 'other',
+                        priority: ticket.priority || 'normal',
+                        status: ticket.status || 'pending',
+                        reportedAt: ticket.reportedAt || new Date().toISOString().split('T')[0],
+                        beforePhoto: ticket.beforePhoto || null,
+                        photoFileName: ticket.photoFileName || null,
+                        createdAt: new Date().toISOString()
+                    };
+                    window.firebaseSet(window.firebaseRef(window.firebaseDatabase, path), payload);
+                }
+            } catch(e) { console.warn('RTDB maintenance save failed:', e); }
+
+            // Save to maintenance_data (admin-compatible localStorage fallback)
             try {
                 let adminList = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
                 adminList.unshift({ id:ticket.id, room:ticket.room, building:ticket.building, desc:ticket.description, category:ticket.category, priority:ticket.priority, status:ticket.status, reportedAt:ticket.reportedAt, beforePhoto:ticket.beforePhoto, photoFileName:ticket.photoFileName });
@@ -3846,10 +3910,20 @@
             list.unshift(complaint);
             localStorage.setItem('tenant_app_complaints', JSON.stringify(list));
 
-            // Write to admin-facing key (so admin Complaints page can review)
+            // Write to admin-facing key (fallback)
             const adminList = JSON.parse(localStorage.getItem('complaints_data') || '[]');
             adminList.push(complaint);
             localStorage.setItem('complaints_data', JSON.stringify(adminList));
+
+            // Write to Firestore collection 'complaints' for cross-device admin sync
+            try {
+                if (window.firebaseReady && window.firebase?.firestore) {
+                    const db = window.firebase.firestore();
+                    const fs = window.firebase.firestoreFunctions;
+                    const docRef = fs.doc(fs.collection(db, 'complaints'), complaint.id);
+                    fs.setDoc(docRef, complaint);
+                }
+            } catch(e) { console.warn('Firestore complaint save failed:', e); }
 
             toast('ส่งแจ้งเรียบร้อยแล้ว ทีมงานจะติดต่อกลับโดยเร็ว');
             event.target.reset();

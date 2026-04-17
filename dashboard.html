@@ -43,7 +43,7 @@
 <script type="module">
   // Import Firebase SDKs
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-  import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+  import { getDatabase, ref, set, get, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
   import { getAuth, signInAnonymously, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
   import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
@@ -79,6 +79,11 @@
       window.firebaseRef = ref;
       window.firebaseSet = set;
       window.firebaseGet = get;
+      window.firebaseUpdate = update;
+      window.firebaseRemove = remove;
+      window.firebaseOnValue = onValue;
+      window.firebasePush = push;
+      window.firebaseChild = child;
       window.firebaseAuthFunctions = {
         EmailAuthProvider: EmailAuthProvider
       };
@@ -3178,6 +3183,15 @@
 <div class="page" id="page-payment-verify">
   <div class="section-title">💳 Payment Verification</div>
 
+  <!-- Tabs -->
+  <div class="year-tabs" style="margin-bottom:1.2rem;">
+    <button id="pv-tab-live-btn" class="year-tab active" onclick="switchPVTab('live',this)">🔔 Live Feed</button>
+    <button id="pv-tab-history-btn" class="year-tab" onclick="switchPVTab('history',this)">📜 ประวัติตามห้อง</button>
+  </div>
+
+  <!-- TAB 1: Live Feed -->
+  <div id="pv-tab-live">
+
   <!-- Stats row -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
     <div class="card" style="text-align:center;padding:1rem;">
@@ -3212,6 +3226,48 @@
       </div>
     </div>
     <div id="pvFeed" style="min-height:120px;"></div>
+  </div>
+
+  </div><!-- /pv-tab-live -->
+
+  <!-- TAB 2: ประวัติตามห้อง -->
+  <div id="pv-tab-history" style="display:none;">
+
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
+      <div class="card" style="text-align:center;padding:1rem;">
+        <div style="font-size:2rem;font-weight:800;color:var(--green);" id="pvh-total-count">—</div>
+        <div style="color:var(--text-muted);font-size:.82rem;">จำนวนครั้งที่จ่าย</div>
+      </div>
+      <div class="card" style="text-align:center;padding:1rem;">
+        <div style="font-size:1.4rem;font-weight:800;color:var(--blue);" id="pvh-total-amount">฿—</div>
+        <div style="color:var(--text-muted);font-size:.82rem;">ยอดรวมทั้งหมด</div>
+      </div>
+      <div class="card" style="text-align:center;padding:1rem;">
+        <div style="font-size:1.4rem;font-weight:800;color:var(--accent);" id="pvh-last-paid">—</div>
+        <div style="color:var(--text-muted);font-size:.82rem;">จ่ายล่าสุด</div>
+      </div>
+    </div>
+
+    <!-- Room filter -->
+    <div class="year-tabs" style="margin-bottom:1rem;align-items:center;">
+      <select id="pvh-building" onchange="loadPVHistoryRooms()" class="year-tab" style="cursor:pointer;">
+        <option value="">-- เลือกตึก --</option>
+        <option value="rooms">🏠 ห้องแถว</option>
+        <option value="nest">🏢 Nest</option>
+      </select>
+      <select id="pvh-room" onchange="renderPVHistory()" class="year-tab" style="cursor:pointer;">
+        <option value="">-- เลือกห้อง --</option>
+      </select>
+    </div>
+
+    <!-- History feed -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <div class="card-title" style="margin:0;">📜 ประวัติการจ่ายของห้อง</div>
+      </div>
+      <div id="pvhList" style="min-height:120px;"></div>
+    </div>
   </div>
 </div>
 

@@ -21,7 +21,7 @@ window._showPageImpl = function(page,btn){
   if(window.innerWidth <= 600){
     window._closeSidebarImpl();
   }
-  if(page==='dashboard'){setTimeout(initDashboardCharts,100);updateDashboardLive();syncDashboardYearUI();}
+  if(page==='dashboard'){setTimeout(initDashboardCharts,100);updateDashboardLive();syncDashboardYearUI();if(typeof applyBuildingAvailability==='function')applyBuildingAvailability(currentYear);}
   if(page==='tenant')initTenantPage();
   if(page==='expense')initExpensePage();
   if(page==='requests-approvals'){
@@ -38,6 +38,20 @@ window._showPageImpl = function(page,btn){
   if(page==='tenant-master')initTenantMasterPage();
   if(page==='lease-agreements')initLeaseAgreementsPage();
   if(page==='gamification')initGamificationPage();
+  if(page==='content-management'){
+    if(typeof initAnnouncementsPage==='function')initAnnouncementsPage();
+    if(typeof initCommunityEventsPage==='function')initCommunityEventsPage();
+    if(typeof initCommunityDocsPage==='function')initCommunityDocsPage();
+  }
+  if(page==='people-management'){
+    if(typeof initOwnerInfoPage==='function')initOwnerInfoPage();
+    if(typeof initTenantMasterPage==='function')initTenantMasterPage();
+    if(typeof initServiceProvidersPage==='function')initServiceProvidersPage();
+  }
+  if(page==='lease-management'){
+    if(typeof initLeaseAgreementsPage==='function')initLeaseAgreementsPage();
+    if(typeof initLeaseSettingsPage==='function')initLeaseSettingsPage();
+  }
 };
 // Assign to global scope after definition
 window.showPage = window._showPageImpl;
@@ -2540,12 +2554,40 @@ function syncDashboardYearUI(){
 }
 
 function setYear(yr,btn){
-  document.querySelectorAll('#page-dashboard .year-tabs .year-tab').forEach(b=>b.classList.remove('active'));
+  // Only clear active state on the year row (first .year-tabs), not the building row
+  const rows = document.querySelectorAll('#page-dashboard .year-tabs');
+  if(rows[0]) rows[0].querySelectorAll('.year-tab').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   currentYear=yr;
+  applyBuildingAvailability(yr);
   syncDashboardYearUI();
   updateDashboardLive();
   initDashboardCharts();
+}
+
+// Nest building didn't exist in 2567/2568 — disable those options for those years
+function applyBuildingAvailability(yr){
+  const preNest = (yr==='67' || yr==='68');
+  const btnAll  = document.getElementById('dash-bld-all');
+  const btnNest = document.getElementById('dash-bld-nest');
+  const btnRooms= document.getElementById('dash-bld-rooms');
+  [btnAll, btnNest].forEach(b=>{
+    if(!b) return;
+    b.disabled = preNest;
+    b.style.opacity = preNest ? '.4' : '';
+    b.style.cursor = preNest ? 'not-allowed' : 'pointer';
+    b.title = preNest ? 'อาคาร Nest เปิดปี 2569 (2026)' : '';
+  });
+  if(preNest){
+    // If current filter is 'all' or 'nest', force to 'rooms'
+    if(window.dashBuildingFilter==='all' || window.dashBuildingFilter==='nest'){
+      window.dashBuildingFilter = 'rooms';
+      document.querySelectorAll('#page-dashboard .year-tabs').forEach((r,i)=>{
+        if(i===1) r.querySelectorAll('.year-tab').forEach(b=>b.classList.remove('active'));
+      });
+      if(btnRooms) btnRooms.classList.add('active');
+    }
+  }
 }
 
 function setBuilding(filter, btn) {
@@ -6197,6 +6239,94 @@ function renderPVFeed(slips) {
   }).join('');
 }
 
+// ===== Payment Verify — ประวัติตามห้อง =====
+window.switchPVTab = function(tab, btn){
+  document.querySelectorAll('#page-payment-verify .year-tab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const live = document.getElementById('pv-tab-live');
+  const hist = document.getElementById('pv-tab-history');
+  if(live) live.style.display = (tab==='live') ? '' : 'none';
+  if(hist) hist.style.display = (tab==='history') ? '' : 'none';
+};
+
+window.loadPVHistoryRooms = function(){
+  const building = document.getElementById('pvh-building').value;
+  const roomSel = document.getElementById('pvh-room');
+  roomSel.innerHTML = '<option value="">-- เลือกห้อง --</option>';
+  if(!building) return;
+  let roomNumbers = [];
+  try {
+    if(window.RoomConfigManager?.getAllRooms){
+      const rooms = window.RoomConfigManager.getAllRooms(building) || {};
+      roomNumbers = Object.keys(rooms).sort((a,b)=>parseInt(a)-parseInt(b));
+    }
+  } catch(e){}
+  if(roomNumbers.length===0){
+    const list = (building==='rooms') ? (window.ROOMS_OLD||[]) : (window.ROOMS_NEW||[]);
+    roomNumbers = list.map(r => typeof r === 'object' ? r.id : String(r));
+  }
+  roomNumbers.forEach(r=>{
+    const opt = document.createElement('option');
+    opt.value = r; opt.textContent = 'ห้อง '+r;
+    roomSel.appendChild(opt);
+  });
+};
+
+window.renderPVHistory = function(){
+  const building = document.getElementById('pvh-building').value;
+  const room = document.getElementById('pvh-room').value;
+  const list = document.getElementById('pvhList');
+  const setTxt = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  if(!building || !room){
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">📋 กรุณาเลือกตึกและห้อง</div>';
+    setTxt('pvh-total-count','—'); setTxt('pvh-total-amount','฿—'); setTxt('pvh-last-paid','—');
+    return;
+  }
+  if(!window.firebase?.firestore){
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ Firebase ยังไม่พร้อม</div>';
+    return;
+  }
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">🔄 กำลังโหลด...</div>';
+  window.firebase.firestore().collection('verifiedSlips')
+    .where('building','==',building).where('room','==',room)
+    .limit(500).get()
+    .then(snap=>{
+      const slips = snap.docs.map(d=>({id:d.id,...d.data()}));
+      slips.sort((a,b)=>{
+        const ta = a.timestamp?.toDate?a.timestamp.toDate():new Date(a.timestamp||a.verifiedAt||0);
+        const tb = b.timestamp?.toDate?b.timestamp.toDate():new Date(b.timestamp||b.verifiedAt||0);
+        return tb - ta;
+      });
+      const total = slips.reduce((s,x)=>s+(x.amount||0),0);
+      setTxt('pvh-total-count', slips.length);
+      setTxt('pvh-total-amount', '฿'+total.toLocaleString());
+      if(slips.length>0){
+        const ts = slips[0].timestamp?.toDate?slips[0].timestamp.toDate():new Date(slips[0].timestamp||slips[0].verifiedAt||0);
+        setTxt('pvh-last-paid', ts.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}));
+      } else setTxt('pvh-last-paid','—');
+      if(slips.length===0){
+        list.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--text-muted);">📭 ยังไม่มีประวัติการจ่ายของห้องนี้</div>';
+        return;
+      }
+      const bankName = code => ({'004':'กสิกรไทย','014':'ไทยพาณิชย์','025':'กรุงไทย','002':'กรุงเทพ','006':'กรุงศรี','011':'TMB','065':'ทิสโก้','069':'เกียรตินาคิน','022':'CIMB','067':'ทีทีบี'})[code] || (code||'—');
+      list.innerHTML = slips.map(s=>{
+        const ts = s.timestamp?.toDate?s.timestamp.toDate():new Date(s.timestamp||s.verifiedAt||0);
+        const timeStr = ts.toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div style="background:var(--green-pale);color:var(--green-dark);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">✅</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.88rem;">฿${(s.amount||0).toLocaleString()} <span style="color:var(--text-muted);font-weight:400;font-size:.78rem;">· ${bankName(s.bankCode)}</span></div>
+            <div style="font-size:.75rem;color:var(--text-muted);">โดย ${s.sender||'—'} · ${s.transactionId||s.transRef||''}</div>
+          </div>
+          <div style="text-align:right;font-size:.75rem;color:var(--text-muted);flex-shrink:0;">${timeStr}</div>
+        </div>`;
+      }).join('');
+    })
+    .catch(err=>{
+      list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
+    });
+};
+
 function updateLinkPreview(){
   const room = document.getElementById('linkRoomSelect').value;
   if(!room){
@@ -6395,6 +6525,61 @@ function initMaintenancePage(){
   renderHousekeepingList();
   updateMxBadge();
   updateMaintenanceBadge();
+  subscribeMaintenanceRTDB();
+  if(typeof subscribeHousekeepingRTDB === 'function') subscribeHousekeepingRTDB();
+}
+
+// ===== Firebase RTDB listener for maintenance (cross-device sync) =====
+let _mxRTDBUnsub = null;
+function subscribeMaintenanceRTDB(){
+  if(_mxRTDBUnsub) return; // already subscribed
+  if(!window.firebaseOnValue || !window.firebaseRef || !window.firebaseDatabase) return;
+  try {
+    const rootRef = window.firebaseRef(window.firebaseDatabase, 'maintenance');
+    _mxRTDBUnsub = window.firebaseOnValue(rootRef, (snap) => {
+      const data = snap.val() || {};
+      // Flatten maintenance/{building}/{room}/{id} → list
+      const fromRTDB = [];
+      Object.keys(data).forEach(bld => {
+        const rooms = data[bld] || {};
+        Object.keys(rooms).forEach(room => {
+          const tickets = rooms[room] || {};
+          Object.keys(tickets).forEach(id => {
+            const t = tickets[id] || {};
+            fromRTDB.push({
+              id: t.id || id,
+              room: t.room || room,
+              building: t.building || bld,
+              desc: t.desc || t.description || '',
+              category: t.category || 'other',
+              priority: t.priority || 'normal',
+              status: t.status || 'pending',
+              reportedAt: t.reportedAt || t.createdAt || '',
+              updatedAt: t.updatedAt || '',
+              startedAt: t.startedAt || null,
+              completedAt: t.completedAt || null,
+              assignedTo: t.assignedTo || null,
+              beforePhoto: t.beforePhoto || null,
+              afterPhoto: t.afterPhoto || null,
+              workNotes: t.workNotes || null,
+              photoFileName: t.photoFileName || null
+            });
+          });
+        });
+      });
+      // Merge with localStorage — RTDB wins on id collision
+      const local = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
+      const byId = new Map();
+      local.forEach(t => byId.set(t.id, t));
+      fromRTDB.forEach(t => byId.set(t.id, t));
+      const merged = Array.from(byId.values()).sort((a,b) => (b.reportedAt||'').localeCompare(a.reportedAt||''));
+      localStorage.setItem('maintenance_data', JSON.stringify(merged));
+      if(typeof renderMaintenancePage === 'function') renderMaintenancePage();
+      if(typeof updateMxBadge === 'function') updateMxBadge();
+      if(typeof updateMaintenanceBadge === 'function') updateMaintenanceBadge();
+      if(typeof updateNotificationBell === 'function') updateNotificationBell();
+    });
+  } catch(e) { console.warn('subscribeMaintenanceRTDB failed:', e); }
 }
 
 function updateMxBadge(){
@@ -6712,23 +6897,22 @@ function updateMaintenanceStatus(id,newStatus){
   // Sync to Firebase for tenant app to see
   if(window.firebaseRef && window.firebaseUpdate && window.firebaseDatabase) {
     try {
-      // Update in Firebase at maintenance/{building}/{room}/{id}
+      const bld = item.building || 'rooms';
       const room = item.room;
-      const maintenanceRef = window.firebaseRef(window.firebaseDatabase, `maintenance/rooms/${room}/${id}`);
+      const maintenanceRef = window.firebaseRef(window.firebaseDatabase, `maintenance/${bld}/${room}/${id}`);
       const firebaseData = {
         status: item.status,
         updatedAt: item.updatedAt,
-        startedAt: item.startedAt,
-        completedAt: item.completedAt
+        startedAt: item.startedAt || null,
+        completedAt: item.completedAt || null
       };
-      // Include admin data when completed
       if(item.status==='done'){
-        firebaseData.assignedTo = item.assignedTo;
-        firebaseData.afterPhoto = item.afterPhoto;
-        firebaseData.workNotes = item.workNotes;
+        firebaseData.assignedTo = item.assignedTo || null;
+        firebaseData.afterPhoto = item.afterPhoto || null;
+        firebaseData.workNotes = item.workNotes || null;
       }
       window.firebaseUpdate(maintenanceRef, firebaseData);
-      console.log('🔥 Updated Firebase maintenance ticket:', id, firebaseData);
+      console.log('🔥 Updated Firebase maintenance ticket:', id);
     } catch(e) {
       console.log('⚠️ Firebase update failed (fallback to localStorage only):', e.message);
     }
@@ -6945,7 +7129,17 @@ function closePhotosModal(){
 
 function deleteMaintenanceRequest(id){
   if(!confirm('ลบรายการนี้?'))return;
-  saveMaintenance(loadMaintenance().filter(x=>x.id!==id));
+  const mx=loadMaintenance();
+  const item=mx.find(x=>x.id===id);
+  saveMaintenance(mx.filter(x=>x.id!==id));
+  // Remove from RTDB so tenant app no longer sees it
+  if(item && window.firebaseRef && window.firebaseRemove && window.firebaseDatabase){
+    try {
+      const bld = item.building || 'rooms';
+      const path = `maintenance/${bld}/${item.room}/${id}`;
+      window.firebaseRemove(window.firebaseRef(window.firebaseDatabase, path));
+    } catch(e) { console.warn('RTDB delete failed:', e); }
+  }
   renderMaintenancePage();
   updateMxBadge();
   updateMaintenanceBadge();
@@ -7081,7 +7275,52 @@ function initHousekeepingPage(){
   const hd=document.getElementById('hk-date');
   if(hd&&!hd.value)hd.value=now.toISOString().split('T')[0];
   renderHousekeepingList();
-  updateMxBadge(); // Update combined badge
+  updateMxBadge();
+  subscribeHousekeepingRTDB();
+}
+
+let _hkRTDBUnsub = null;
+function subscribeHousekeepingRTDB(){
+  if(_hkRTDBUnsub) return;
+  if(!window.firebaseOnValue || !window.firebaseRef || !window.firebaseDatabase) return;
+  try {
+    const rootRef = window.firebaseRef(window.firebaseDatabase, 'housekeeping');
+    _hkRTDBUnsub = window.firebaseOnValue(rootRef, (snap) => {
+      const data = snap.val() || {};
+      const fromRTDB = [];
+      Object.keys(data).forEach(bld => {
+        const rooms = data[bld] || {};
+        Object.keys(rooms).forEach(room => {
+          const items = rooms[room] || {};
+          Object.keys(items).forEach(id => {
+            const x = items[id] || {};
+            fromRTDB.push({
+              id: x.id || id,
+              room: x.room || room,
+              building: x.building || bld,
+              service: x.service || 'standard',
+              priority: x.priority || 'normal',
+              description: x.description || x.desc || '',
+              status: x.status || 'pending',
+              submittedAt: x.submittedAt || x.date || x.createdAt || '',
+              date: x.date || null,
+              time: x.time || null,
+              updatedAt: x.updatedAt || ''
+            });
+          });
+        });
+      });
+      const local = loadHousekeeping();
+      const byId = new Map();
+      local.forEach(t => byId.set(t.id, t));
+      fromRTDB.forEach(t => byId.set(t.id, t));
+      const merged = Array.from(byId.values()).sort((a,b) => (b.submittedAt||'').localeCompare(a.submittedAt||''));
+      saveHousekeeping(merged);
+      if(typeof renderHousekeepingList === 'function') renderHousekeepingList();
+      if(typeof updateMxBadge === 'function') updateMxBadge();
+      if(typeof updateNotificationBell === 'function') updateNotificationBell();
+    });
+  } catch(e) { console.warn('subscribeHousekeepingRTDB failed:', e); }
 }
 
 const HK_SERVICE_LABEL={
@@ -7177,17 +7416,26 @@ function addHousekeepingRequest(){
   const sanitizedDesc=window.SecurityUtils.sanitizeInput(desc);
 
   const hk=loadHousekeeping();
-  hk.unshift({
+  const newItem={
     id:'HK'+Date.now(),
     room:sanitizedRoom,
+    building:'rooms',
     service:service,
     priority:priority,
     description:sanitizedDesc,
     status:'pending',
     submittedAt:date,
     updatedAt:date
-  });
+  };
+  hk.unshift(newItem);
   saveHousekeeping(hk);
+  // Sync to RTDB
+  if(window.firebaseRef && window.firebaseSet && window.firebaseDatabase){
+    try {
+      const path = `housekeeping/${newItem.building}/${newItem.room}/${newItem.id}`;
+      window.firebaseSet(window.firebaseRef(window.firebaseDatabase, path), newItem);
+    } catch(e) { console.warn('RTDB housekeeping add failed:', e); }
+  }
 
   // Clear form
   document.getElementById('hk-room').value='';
@@ -7215,20 +7463,38 @@ function updateHousekeepingStatus(id,newStatus){
   item.updatedAt=new Date().toISOString().split('T')[0];
   saveHousekeeping(hk);
 
-  // Broadcast to tenants if maintenance status changed
+  // Sync to RTDB
+  if(window.firebaseRef && window.firebaseUpdate && window.firebaseDatabase){
+    try {
+      const bld = item.building || 'rooms';
+      const path = `housekeeping/${bld}/${item.room}/${id}`;
+      window.firebaseUpdate(window.firebaseRef(window.firebaseDatabase, path), {
+        status: item.status, updatedAt: item.updatedAt
+      });
+    } catch(e) { console.warn('RTDB housekeeping update failed:', e); }
+  }
+
   window.dispatchEvent(new CustomEvent('housekeeping_status_updated', {
     detail: { id, status: newStatus, ticket: item }
   }));
 
   renderHousekeepingList();
-  updateMxBadge(); // Update combined badge
+  updateMxBadge();
 }
 
 function deleteHousekeepingRequest(id){
   if(!confirm('ลบรายการนี้?'))return;
-  saveHousekeeping(loadHousekeeping().filter(x=>x.id!==id));
+  const hk=loadHousekeeping();
+  const item=hk.find(x=>x.id===id);
+  saveHousekeeping(hk.filter(x=>x.id!==id));
+  if(item && window.firebaseRef && window.firebaseRemove && window.firebaseDatabase){
+    try {
+      const bld = item.building || 'rooms';
+      window.firebaseRemove(window.firebaseRef(window.firebaseDatabase, `housekeeping/${bld}/${item.room}/${id}`));
+    } catch(e) { console.warn('RTDB housekeeping delete failed:', e); }
+  }
   renderHousekeepingList();
-  updateMxBadge(); // Update combined badge
+  updateMxBadge();
 }
 
 function renderHousekeepingList(){

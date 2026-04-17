@@ -2697,24 +2697,42 @@ function deleteDocument(id) {
 }
 
 // ===== PET REGISTRATION APPROVALS =====
+let _petsUnsub = null;
+let _petsFromFirestore = [];
 function initPetApprovalsPage() {
   loadAndRenderPetApprovals();
+  if (_petsUnsub) return;
+  if (!window.firebase?.firestore) return;
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    const col = fs.collection(db, 'petApprovals');
+    _petsUnsub = fs.onSnapshot(col, snap => {
+      _petsFromFirestore = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      loadAndRenderPetApprovals();
+    }, err => console.warn('pets onSnapshot failed:', err));
+  } catch(e) { console.warn('pets subscribe failed:', e); }
 }
 
 function loadAndRenderPetApprovals() {
   const list = document.getElementById('petsList');
   if (!list) return;
 
-  // Load all pets from all rooms
-  let allPets = [];
+  // Load from Firestore first, then merge localStorage (fallback)
+  const byId = new Map();
+  (_petsFromFirestore || []).forEach(p => byId.set(p.id, { ...p, source: 'firestore' }));
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key.startsWith('tenant_pets_')) {
+    if (key && key.startsWith('tenant_pets_')) {
       const pets = JSON.parse(localStorage.getItem(key) || '[]');
-      const [, building, room] = key.split('_');
-      allPets = allPets.concat(pets.map(p => ({ ...p, room, building, storageKey: key })));
+      const parts = key.split('_');
+      const building = parts[2], room = parts[3];
+      pets.forEach(p => {
+        if (!byId.has(p.id)) byId.set(p.id, { ...p, room: p.room || room, building: p.building || building, storageKey: key });
+      });
     }
   }
+  let allPets = Array.from(byId.values());
 
   const searchVal = document.getElementById('petSearch')?.value.toLowerCase() || '';
   const statusFilter = document.getElementById('petFilterStatus')?.value || '';
@@ -2766,38 +2784,56 @@ function filterPetsByStatus(status) {
   loadAndRenderPetApprovals();
 }
 
+async function _writePetToFirestore(id, patch){
+  if (!window.firebase?.firestore) return;
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    const docRef = fs.doc(fs.collection(db, 'petApprovals'), id);
+    await fs.setDoc(docRef, patch, { merge: true });
+  } catch(e) { console.warn('Firestore pet update failed:', e); }
+}
+async function _deletePetFromFirestore(id){
+  if (!window.firebase?.firestore) return;
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    const docRef = fs.doc(fs.collection(db, 'petApprovals'), id);
+    await fs.deleteDoc(docRef);
+  } catch(e) { console.warn('Firestore pet delete failed:', e); }
+}
+
 function approvePet(id, room, storageKey) {
-  let pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
-  const pet = pets.find(p => p.id === id);
-  if (pet) {
-    pet.status = 'approved';
-    pet.approvalDate = new Date().toISOString();
-    localStorage.setItem(storageKey, JSON.stringify(pets));
-    loadAndRenderPetApprovals();
-    showToast('✅ Pet approved', 'success');
+  if (storageKey) {
+    const pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const pet = pets.find(p => p.id === id);
+    if (pet) { pet.status = 'approved'; pet.approvalDate = new Date().toISOString(); localStorage.setItem(storageKey, JSON.stringify(pets)); }
   }
+  _writePetToFirestore(id, { status: 'approved', approvalDate: new Date().toISOString() });
+  loadAndRenderPetApprovals();
+  showToast('✅ Pet approved', 'success');
 }
 
 function rejectPet(id, room, storageKey) {
   if (!confirm('Are you sure you want to reject this pet registration?')) return;
-
-  let pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
-  const pet = pets.find(p => p.id === id);
-  if (pet) {
-    pet.status = 'rejected';
-    pet.rejectionDate = new Date().toISOString();
-    localStorage.setItem(storageKey, JSON.stringify(pets));
-    loadAndRenderPetApprovals();
-    showToast('✅ Pet rejected', 'success');
+  if (storageKey) {
+    const pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const pet = pets.find(p => p.id === id);
+    if (pet) { pet.status = 'rejected'; pet.rejectionDate = new Date().toISOString(); localStorage.setItem(storageKey, JSON.stringify(pets)); }
   }
+  _writePetToFirestore(id, { status: 'rejected', rejectionDate: new Date().toISOString() });
+  loadAndRenderPetApprovals();
+  showToast('✅ Pet rejected', 'success');
 }
 
 function removePetApproval(id, room, storageKey) {
   if (!confirm('Are you sure you want to remove this pet registration?')) return;
-
-  let pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
-  pets = pets.filter(p => p.id !== id);
-  localStorage.setItem(storageKey, JSON.stringify(pets));
+  if (storageKey) {
+    let pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    pets = pets.filter(p => p.id !== id);
+    localStorage.setItem(storageKey, JSON.stringify(pets));
+  }
+  _deletePetFromFirestore(id);
   loadAndRenderPetApprovals();
   showToast('✅ Pet registration removed', 'success');
 }
@@ -2902,18 +2938,41 @@ function saveLeaseAlertSettings() {
 }
 
 // ===== COMPLAINTS PAGE =====
+let _complaintsUnsub = null;
 function initComplaintsPage() {
   console.log('✅ Complaints page initialized');
+  renderComplaints(JSON.parse(localStorage.getItem('complaints_data') || '[]'));
+  // Subscribe to Firestore (real-time)
+  if (_complaintsUnsub) return;
+  if (!window.firebase?.firestore) return;
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    const col = fs.collection(db, 'complaints');
+    _complaintsUnsub = fs.onSnapshot(col, snap => {
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Merge with localStorage (Firestore wins on collision)
+      const local = JSON.parse(localStorage.getItem('complaints_data') || '[]');
+      const byId = new Map();
+      local.forEach(c => byId.set(c.id, c));
+      docs.forEach(c => byId.set(c.id, c));
+      const merged = Array.from(byId.values());
+      localStorage.setItem('complaints_data', JSON.stringify(merged));
+      renderComplaints(merged);
+    }, err => console.warn('complaints onSnapshot failed:', err));
+  } catch(e) { console.warn('complaints subscribe failed:', e); }
+}
 
-  const complaints = JSON.parse(localStorage.getItem('complaints_data') || '[]');
-  const open       = complaints.filter(c => c.status === 'open').length;
-  const inProg     = complaints.filter(c => c.status === 'in-progress').length;
-  const resolved   = complaints.filter(c => c.status === 'resolved').length;
+function renderComplaints(complaints){
+  const open     = complaints.filter(c => c.status === 'open').length;
+  const inProg   = complaints.filter(c => c.status === 'in-progress').length;
+  const resolved = complaints.filter(c => c.status === 'resolved').length;
 
-  document.getElementById('totalComplaintsCount').textContent    = complaints.length;
-  document.getElementById('openComplaintsCount').textContent      = open;
-  document.getElementById('inProgressComplaintsCount').textContent = inProg;
-  document.getElementById('resolvedComplaintsCount').textContent  = resolved;
+  const setTxt = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  setTxt('totalComplaintsCount', complaints.length);
+  setTxt('openComplaintsCount', open);
+  setTxt('inProgressComplaintsCount', inProg);
+  setTxt('resolvedComplaintsCount', resolved);
 
   const list = document.getElementById('complaintsList');
   if (!list) return;
@@ -2926,12 +2985,13 @@ function initComplaintsPage() {
   const statusColor = { 'open': '#f57c00', 'in-progress': '#1976d2', 'resolved': '#388e3c' };
   const statusLabel = { 'open': '🔴 Open', 'in-progress': '🟡 In Progress', 'resolved': '🟢 Resolved' };
 
-  list.innerHTML = complaints.slice().reverse().map(c => {
+  const sorted = complaints.slice().sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  list.innerHTML = sorted.map(c => {
     const color = statusColor[c.status] || '#999';
     const label = statusLabel[c.status] || c.status;
     const date  = c.createdAt ? new Date(c.createdAt).toLocaleDateString('th-TH') : '-';
     return `
-      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.2rem;">
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.2rem;margin-bottom:.6rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
           <span style="font-weight:700;">${c.title || '(ไม่มีหัวข้อ)'}</span>
           <span style="font-size:0.8rem;color:${color};font-weight:600;">${label}</span>
@@ -2946,15 +3006,24 @@ function initComplaintsPage() {
   }).join('');
 }
 
-function updateComplaintStatus(id, newStatus) {
+async function updateComplaintStatus(id, newStatus) {
   const complaints = JSON.parse(localStorage.getItem('complaints_data') || '[]');
   const idx = complaints.findIndex(c => c.id === id);
   if (idx >= 0) {
     complaints[idx].status = newStatus;
     complaints[idx].updatedAt = new Date().toISOString();
     localStorage.setItem('complaints_data', JSON.stringify(complaints));
-    initComplaintsPage();
   }
+  // Update Firestore
+  if (window.firebase?.firestore) {
+    try {
+      const db = window.firebase.firestore();
+      const fs = window.firebase.firestoreFunctions;
+      const docRef = fs.doc(fs.collection(db, 'complaints'), id);
+      await fs.setDoc(docRef, { status: newStatus, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch(e) { console.warn('Firestore complaint update failed:', e); }
+  }
+  if (idx >= 0) renderComplaints(complaints);
 }
 
 // ===== GAMIFICATION PAGE =====
