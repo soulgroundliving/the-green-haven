@@ -154,8 +154,9 @@
             font-size: var(--fs-md) !important;
         }
         .text-lg, .text-xl, .text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl,
-        [class*="text-[17px"], [class*="text-[18px"], [class*="text-[19px"],
-        [class*="text-[2"], [class*="text-[3"], [class*="text-[4"], [class*="text-[5"] {
+        [class*="text-[17px]"], [class*="text-[18px]"], [class*="text-[19px]"],
+        [class*="text-[20px]"], [class*="text-[22px]"], [class*="text-[24px]"],
+        [class*="text-[28px]"], [class*="text-[32px]"], [class*="text-[36px]"] {
             font-size: var(--fs-lg) !important;
         }
         /* HTML <small> defaults to ~80% — force into --fs-sm */
@@ -1494,14 +1495,16 @@
 
 
     <div id="home" class="page">
-        <div class="app-bar">
+        <div class="app-bar" style="position:relative;">
             <button onclick="showSubPage('smart-key-page')"
-                style="position:absolute; right:20px; top:45px; background:var(--primary-green); color:white; border:none; border-radius:15px; padding:10px 15px; font-weight:bold; box-shadow:0 4px 10px rgba(123, 166, 126, 0.4); cursor:pointer;">
-                <i class="fas fa-qrcode"></i> Smart Key
+                style="position:absolute; right:16px; top:24px; background:var(--primary-green); color:white; border:none; border-radius:12px; padding:8px 12px; font-weight:bold; box-shadow:0 4px 10px rgba(123, 166, 126, 0.4); cursor:pointer; display:inline-flex; align-items:center; gap:6px; z-index:2;">
+                <i class="fas fa-qrcode"></i><span>Smart Key</span>
             </button>
-            <div class="date-display text-[10px]" id="current-date">--/--/--</div>
-            <h1 id="user-greeting" class="text-xl font-bold">สวัสดีครับ คุณลูกตาล</h1>
-            <p id="time-greet" class="text-xs mt-1 opacity-80">ยินดีต้อนรับกลับบ้านครับ 🌿</p>
+            <div style="padding-right: 120px;">
+                <div class="date-display text-[10px]" id="current-date">--/--/--</div>
+                <h1 id="user-greeting" class="text-xl font-bold">สวัสดีครับ คุณลูกตาล</h1>
+                <p id="time-greet" class="text-xs mt-1 opacity-80">ยินดีต้อนรับกลับบ้านครับ 🌿</p>
+            </div>
         </div>
         <div onclick="showPage('world-map-page')"
             style="background: #2d8653; color: white; padding: 10px; border-radius: 15px; margin: 15px; text-align: center; cursor: pointer;">
@@ -1896,26 +1899,32 @@
     </div>
 
     <div id="usage" class="page">
-        <header class="backdrop-blur-sm px-6 py-5 flex justify-between items-center sticky top-0 z-50 border-b">
-            <h1 class="text-xl font-bold">Nature Haven <span class="font-light text-gray-300">|</span>
-                Usage</h1>
+        <div class="app-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+            <div>
+                <h1 style="margin:0;">การใช้งาน</h1>
+                <p style="margin:4px 0 0; color: var(--text-muted);">สรุปบิล &amp; การใช้ประจำเดือน</p>
+            </div>
             <div id="usage-room-badge"
-                class="w-10 h-10 rounded-full bg-[#D6CFC7] flex items-center justify-center text-[5px] text-white font-bold border-2 border-white shadow-sm">
-                ROOM
+                style="min-width:44px; height:44px; padding:0 10px; border-radius:14px; background:var(--soft-green); color:var(--primary-green); font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);">
+                —
             </div>
-        </header>
-        <div class="grid grid-cols-4">
-            <div class="card text-center cursor-pointer" onclick="showSubPage('building')">
-                🏠<p class="font-semibold">ข้อมูลอาคาร</p>
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; padding: 0 16px;">
+            <div class="card" style="margin:0; padding:14px 8px; text-align:center; cursor:pointer;" onclick="showSubPage('building')">
+                <div style="font-size: 1.6rem; line-height:1;">🏠</div>
+                <p style="margin: 6px 0 0;">ข้อมูลอาคาร</p>
             </div>
-            <div class="card text-center cursor-pointer" onclick="showSubPage('water_usage')">
-                💧<p class="font-semibold">ปริมาณน้ำใช้</p>
+            <div class="card" style="margin:0; padding:14px 8px; text-align:center; cursor:pointer;" onclick="showSubPage('water_usage')">
+                <div style="font-size: 1.6rem; line-height:1;">💧</div>
+                <p style="margin: 6px 0 0;">ปริมาณน้ำ</p>
             </div>
-            <div class="card text-center cursor-pointer" onclick="showSubPage('elec_usage')">
-                ⚡<p class="font-semibold">ปริมาณไฟใช้</p>
+            <div class="card" style="margin:0; padding:14px 8px; text-align:center; cursor:pointer;" onclick="showSubPage('elec_usage')">
+                <div style="font-size: 1.6rem; line-height:1;">⚡</div>
+                <p style="margin: 6px 0 0;">ปริมาณไฟ</p>
             </div>
-            <div id="nav-eco-score-card" class="card text-center cursor-pointer" onclick="showSubPage('eco_score')">
-                ♻️<p class="font-semibold">Eco-Score</p>
+            <div id="nav-eco-score-card" class="card" style="margin:0; padding:14px 8px; text-align:center; cursor:pointer;" onclick="showSubPage('eco_score')">
+                <div style="font-size: 1.6rem; line-height:1;">♻️</div>
+                <p style="margin: 6px 0 0;">Eco-Score</p>
             </div>
         </div>
 
@@ -3264,6 +3273,7 @@
             // 6. อัปเดตข้อมูล API (ถ้ามี)
             if (id === 'payment' || id === 'usage') {
                 if (typeof updateDashboard === 'function') updateDashboard();
+                if (id === 'usage' && typeof renderBillsList === 'function') renderBillsList();
             }
         }
 
@@ -3291,6 +3301,7 @@
 
             if (id === 'elec_usage') renderElecUsage();
             if (id === 'water_usage') renderWaterUsage();
+            if (id === 'settings') loadReceiptSettings();
             window.scrollTo(0, 0);
         }
 
@@ -3605,7 +3616,65 @@
             const val = document.getElementById('receipt-type-select').value;
             const compForm = document.getElementById('company-form');
             if (compForm) compForm.style.display = (val === 'company') ? 'block' : 'none';
+            saveReceiptSettings();
         }
+
+        // ---- Persist receipt/tax-invoice settings per tenant ----
+        function _receiptSettingsKey() {
+            const b = window._tenantAppBuilding || 'unknown';
+            const r = window._tenantAppRoom || 'unknown';
+            return `tenant_receipt_${b}_${r}`;
+        }
+        function saveReceiptSettings() {
+            try {
+                const data = {
+                    type: document.getElementById('receipt-type-select')?.value || 'personal',
+                    name: document.getElementById('comp-name')?.value || '',
+                    tax:  document.getElementById('comp-tax')?.value || '',
+                    addr: document.getElementById('comp-addr')?.value || '',
+                    updatedAt: Date.now(),
+                };
+                localStorage.setItem(_receiptSettingsKey(), JSON.stringify(data));
+                applyReceiptDisplay(data);
+            } catch(_){}
+        }
+        function loadReceiptSettings() {
+            try {
+                // 1. hydrate from tenant profile (dashboard-synced) if available
+                const profileCo = (_taTenant && (_taTenant.companyInfo || _taTenant.company)) || null;
+                // 2. overlay with local edits
+                let saved = null;
+                try { saved = JSON.parse(localStorage.getItem(_receiptSettingsKey()) || 'null'); } catch(_){}
+                const data = {
+                    type: saved?.type || (profileCo ? 'company' : 'personal'),
+                    name: saved?.name || profileCo?.name || '',
+                    tax:  saved?.tax  || profileCo?.taxId || '',
+                    addr: saved?.addr || profileCo?.address || '',
+                };
+                const sel = document.getElementById('receipt-type-select');
+                if (sel) sel.value = data.type;
+                const $ = id => document.getElementById(id);
+                if ($('comp-name')) $('comp-name').value = data.name;
+                if ($('comp-tax'))  $('comp-tax').value  = data.tax;
+                if ($('comp-addr')) $('comp-addr').value = data.addr;
+                const compForm = document.getElementById('company-form');
+                if (compForm) compForm.style.display = (data.type === 'company') ? 'block' : 'none';
+                applyReceiptDisplay(data);
+            } catch(_){}
+        }
+        function applyReceiptDisplay(data) {
+            const $ = id => document.getElementById(id);
+            if ($('display-comp-name')) $('display-comp-name').textContent = data.name || '-';
+            if ($('display-comp-tax'))  $('display-comp-tax').textContent  = data.tax  || '-';
+            if ($('display-comp-addr')) $('display-comp-addr').textContent = data.addr || '-';
+        }
+        // auto-save on blur
+        document.addEventListener('DOMContentLoaded', () => {
+            ['comp-name','comp-tax','comp-addr'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('blur', saveReceiptSettings);
+            });
+        });
 
 
         // ==========================================
@@ -5340,6 +5409,13 @@
         function logoutTenantApp() {
             if (!confirm('ต้องการออกจากระบบ?')) return;
             sessionStorage.clear();
+            try { localStorage.removeItem('tenant_session'); } catch(_){}
+            // ใน LIFF — ปิด webview แทน redirect ไป /login (เพื่อไม่เด้งกลับเข้า login loop)
+            if (window.liff && liff.isInClient && liff.isInClient()) {
+                try { liff.logout(); } catch(_){}
+                try { liff.closeWindow(); return; } catch(_){}
+            }
+            // fallback: browser ปกติ
             window.location.href = './index.html';
         }
 
