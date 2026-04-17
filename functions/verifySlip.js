@@ -262,6 +262,92 @@ async function saveVerifiedSlip(slipData, params) {
   }
 }
 
+// ==================== PAYMENT GAMIFICATION (Nest only) ====================
+/**
+ * Record on-time/late payment stats and award gamification points.
+ * Writes tenants/{id}/paymentHistory/{YYYY-MM} + updates gamification counters.
+ * Non-blocking: caller should wrap in try/catch so failures don't break verify.
+ */
+async function recordPaymentAndAwardPoints(slipData, params) {
+  if (params.building !== 'nest') return null;
+
+  const tenantSnap = await db.collection('tenants')
+    .where('building', '==', 'nest')
+    .where('room', '==', String(params.room))
+    .limit(1).get();
+
+  if (tenantSnap.empty) {
+    console.log(`🎮 No Nest tenant found for room ${params.room}, skipping award`);
+    return null;
+  }
+
+  const tenantDoc = tenantSnap.docs[0];
+  const tenantId = tenantDoc.id;
+  const tenantData = tenantDoc.data();
+  const dueDay = tenantData.lease?.dueDay || tenantData.dueDay || 5;
+
+  // SlipOK transTimestamp is ISO with +07:00 offset (Thailand)
+  const slipDate = new Date(slipData.transTimestamp || slipData.date);
+  if (isNaN(slipDate.getTime())) {
+    console.warn('🎮 Invalid slip timestamp, skipping award');
+    return null;
+  }
+
+  const billYear = slipDate.getFullYear();
+  const billMonthIdx = slipDate.getMonth();
+  const monthKey = `${billYear}-${String(billMonthIdx + 1).padStart(2, '0')}`;
+  const dueDate = new Date(billYear, billMonthIdx, dueDay, 23, 59, 59);
+  const daysDiff = Math.floor((slipDate - dueDate) / 86400000);
+
+  let points, status;
+  if (daysDiff <= -4)     { points = 150; status = 'early_bird'; }
+  else if (daysDiff <= 0) { points = 100; status = 'on_time'; }
+  else if (daysDiff <= 3) { points = 40;  status = 'slightly_late'; }
+  else if (daysDiff <= 5) { points = 15;  status = 'late'; }
+  else                    { points = 0;   status = 'too_late'; }
+
+  const historyRef = db.collection('tenants').doc(tenantId)
+    .collection('paymentHistory').doc(monthKey);
+  const existing = await historyRef.get();
+  if (existing.exists) {
+    console.log(`⏭ Payment ${monthKey} already recorded for ${tenantId}, skip`);
+    return { skipped: true, monthKey };
+  }
+
+  const tenantRef = db.collection('tenants').doc(tenantId);
+  await db.runTransaction(async (tx) => {
+    const fresh = await tx.get(tenantRef);
+    const g = fresh.data()?.gamification || {};
+    const isOnTime = daysDiff <= 0;
+    const newStreak = isOnTime ? (g.currentStreak || 0) + 1 : 0;
+
+    tx.set(historyRef, {
+      slipDate,
+      dueDate,
+      amount: slipData.amount,
+      status,
+      daysDiff,
+      points,
+      transactionId: slipData.transactionId,
+      recordedAt: new Date()
+    });
+
+    tx.update(tenantRef, {
+      'gamification.points': (g.points || 0) + points,
+      'gamification.paymentPoints': (g.paymentPoints || 0) + points,
+      'gamification.onTimeCount': (g.onTimeCount || 0) + (isOnTime ? 1 : 0),
+      'gamification.lateCount': (g.lateCount || 0) + (isOnTime ? 0 : 1),
+      'gamification.currentStreak': newStreak,
+      'gamification.longestStreak': Math.max(g.longestStreak || 0, newStreak),
+      'gamification.lastPaymentStatus': status,
+      'gamification.lastPaymentAt': new Date()
+    });
+  });
+
+  console.log(`🎮 Awarded ${points}pts to ${tenantId} (${status}, daysDiff=${daysDiff}, month=${monthKey})`);
+  return { tenantId, points, status, daysDiff, monthKey };
+}
+
 // ==================== MAIN CLOUD FUNCTION ====================
 /**
  * HTTP Cloud Function: Verify payment slip with SlipOK
@@ -384,6 +470,13 @@ exports.verifySlip = functions
 
     // ===== SAVE VERIFIED SLIP =====
     await saveVerifiedSlip(slipData, req.body);
+
+    // ===== GAMIFICATION: record payment + award points (non-blocking) =====
+    try {
+      await recordPaymentAndAwardPoints(slipData, req.body);
+    } catch (e) {
+      console.error('⚠️ Gamification award failed (non-blocking):', e);
+    }
 
     // ===== LOG SUCCESS =====
     await logVerificationAttempt(
