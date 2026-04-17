@@ -1204,9 +1204,15 @@
             margin-top: 8px;
         }
 
-        /* iPhone safe-area — ใช้ max() ไม่ให้ซ้อนกับ inset ที่ LIFF/iOS เติมให้เองอัตโนมัติ
-           ทำให้ nav-bar ชิดขอบล่างพอดีทุกหน้า ไม่มีช่องว่างขาวเกิน */
+        /* nav-bar — pin ซ้าย/ขวา แน่ๆ + flatten ให้ดูเหมือนกันทุกหน้า
+           (เดิม border-radius 30px บน top สร้างมุมโค้งที่ดูต่างกันตามสี bg) */
         .nav-bar {
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            border-radius: 16px 16px 0 0 !important;
+            border-top: 1px solid var(--border, #e0e6ed) !important;
+            box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.04) !important;
             padding-bottom: max(18px, env(safe-area-inset-bottom, 18px)) !important;
         }
         body {
