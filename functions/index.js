@@ -32,6 +32,15 @@ try {
 }
 
 try {
+  const notifyLiff = require('./notifyLiffRequest');
+  if (notifyLiff.notifyLiffRequest) {
+    exports.notifyLiffRequest = notifyLiff.notifyLiffRequest;
+  }
+} catch (e) {
+  console.log('notifyLiffRequest not found, skipping...');
+}
+
+try {
   const cleanupRateLimits = require('./cleanupRateLimits');
   if (cleanupRateLimits.cleanupRateLimits) {
     exports.cleanupRateLimits = cleanupRateLimits.cleanupRateLimits;

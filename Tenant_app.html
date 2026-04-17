@@ -4227,6 +4227,9 @@
             } catch (e) { console.warn('liffUsers query failed:', e); return null; }
         }
 
+        // Normalize phone: keep only digits
+        function _normalizePhone(p) { return String(p||'').replace(/\D/g, ''); }
+
         async function submitLiffLinkRequest() {
             const bld = document.getElementById('liff-link-building').value;
             const room = document.getElementById('liff-link-room').value.trim();
@@ -4236,21 +4239,58 @@
             if (!window.firebase?.firestore) { toast('Firebase ยังไม่พร้อม', 'error'); return; }
             const btn = document.getElementById('liff-link-submit-btn');
             if (btn) { btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
+
+            // Auto-match: if phone matches tenants/{building}/list/{room}.phone → auto-approve
+            let autoApprove = false;
+            let matchedTenantName = '';
+            if (phone) {
+                try {
+                    const db = window.firebase.firestore();
+                    const fs = window.firebase.firestoreFunctions;
+                    const tenantSnap = await fs.getDoc(fs.doc(fs.collection(db, 'tenants'), bld, 'list', String(room)));
+                    if (tenantSnap.exists()) {
+                        const t = tenantSnap.data();
+                        const tenantPhone = _normalizePhone(t.phone || t.tenantPhone || '');
+                        const givenPhone = _normalizePhone(phone);
+                        if (tenantPhone && givenPhone && tenantPhone === givenPhone) {
+                            autoApprove = true;
+                            matchedTenantName = t.name || t.firstName || '';
+                        }
+                    }
+                } catch (e) { console.warn('tenant phone lookup failed:', e); }
+            }
+
             try {
                 const db = window.firebase.firestore();
                 const fs = window.firebase.firestoreFunctions;
-                await fs.setDoc(fs.doc(fs.collection(db, 'liffUsers'), window._lineUserId), {
+                const payload = {
                     lineUserId: window._lineUserId,
                     lineDisplayName: window._lineProfile?.displayName || '',
                     linePictureUrl: window._lineProfile?.pictureUrl || '',
                     room: String(room),
                     building: bld,
                     phone: phone || '',
-                    status: 'pending',
+                    status: autoApprove ? 'approved' : 'pending',
                     requestedAt: new Date().toISOString()
-                });
-                showLiffLinkStatus('pending');
-                toast('✅ ส่งคำขอเรียบร้อย รอ admin อนุมัติ', 'success');
+                };
+                if (autoApprove) {
+                    payload.approvedBy = 'AUTO (phone match)';
+                    payload.approvedAt = new Date().toISOString();
+                    payload.matchedTenantName = matchedTenantName;
+                }
+                await fs.setDoc(fs.doc(fs.collection(db, 'liffUsers'), window._lineUserId), payload);
+
+                if (autoApprove) {
+                    toast('✅ เชื่อมบัญชีสำเร็จ กำลังเข้าสู่ระบบ...', 'success');
+                    // Set room/building and reload to enter normal flow
+                    _taRoom = String(room);
+                    _taBuilding = bld;
+                    localStorage.setItem('tenant_app_room', _taRoom);
+                    setTimeout(() => { document.getElementById('liff-link-overlay').style.display = 'none'; window.location.reload(); }, 1000);
+                } else {
+                    showLiffLinkStatus('pending');
+                    toast('✅ ส่งคำขอเรียบร้อย รอ admin อนุมัติ', 'success');
+                }
             } catch (e) {
                 toast('❌ บันทึกไม่สำเร็จ: ' + e.message, 'error');
                 if (btn) { btn.disabled = false; btn.textContent = '🔗 ส่งคำขอเชื่อมบัญชี'; }
