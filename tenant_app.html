@@ -5324,7 +5324,8 @@
             { id:'digital-detox',   icon:'fa-mobile-alt',title:'Digital Detox 1 ชั่วโมงก่อนนอน', excerpt:'แสงสีฟ้าและการ scroll ก่อนนอน = คุณภาพการนอนแย่ลง...',
               body:'<p>งานวิจัยชัดเจน: แสงสีฟ้าจากหน้าจอกดการหลั่ง melatonin ทำให้หลับยาก + หลับไม่ลึก</p><p><strong>วิธีทำ Digital Detox:</strong></p><p>• ตั้ง alarm "bedtime mode" 1 ชม. ก่อนนอน</p><p>• วางโทรศัพท์นอกห้องนอน (ใช้นาฬิกาปลุกแทน)</p><p>• เปลี่ยนเป็น <strong>หนังสือเล่ม</strong> ฟังพอดแคสต์เบาๆ หรือเขียน journal</p><p>ยากวันแรก ง่ายวันที่ 4 หลังจากนั้นคุณภาพการนอนดีขึ้นชัดเจน</p>' },
         ];
-        let _wellnessShown = 3;
+        const WELLNESS_INITIAL = 3;
+        let _wellnessShown = WELLNESS_INITIAL;
         function renderWellness() {
             const list = document.getElementById('wellness-list');
             if (!list) return;
@@ -5338,12 +5339,24 @@
                     </div>
                 </div>
             `).join('');
-            // ซ่อนปุ่มถ้าหมดแล้ว
+            // ปุ่ม toggle: แสดงทั้งหมดแล้ว → เปลี่ยนเป็น 'ย่อ' (ไม่ซ่อน)
             const btn = document.getElementById('wellness-load-more');
-            if (btn) btn.style.display = (_wellnessShown >= WELLNESS_ARTICLES.length) ? 'none' : 'block';
+            if (btn) {
+                const expanded = _wellnessShown >= WELLNESS_ARTICLES.length;
+                btn.innerHTML = expanded
+                    ? 'ย่อกลับไป <i class="fas fa-chevron-up"></i>'
+                    : 'ค้นหาแรงบันดาลใจต่อ <i class="fas fa-chevron-down"></i>';
+            }
         }
         function loadMoreWellness() {
-            _wellnessShown = Math.min(_wellnessShown + 3, WELLNESS_ARTICLES.length);
+            // toggle: ถ้าแสดงครบแล้ว → ย่อกลับไป INITIAL, else แสดงเพิ่มอีก 3
+            if (_wellnessShown >= WELLNESS_ARTICLES.length) {
+                _wellnessShown = WELLNESS_INITIAL;
+                // scroll ไปตำแหน่ง Wellness section เพื่อไม่ให้ user งง
+                document.getElementById('wellness-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                _wellnessShown = Math.min(_wellnessShown + 3, WELLNESS_ARTICLES.length);
+            }
             renderWellness();
         }
         function openWellnessArticle(id) {
