@@ -3143,11 +3143,14 @@
 <div class="page" id="page-payment-verify">
   <div class="section-title">💳 Payment Verification</div>
 
-  <!-- Tabs -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;">
-    <button id="pv-tab-live-btn" class="year-tab active" onclick="switchPVTab('live',this)">🔔 Live Feed</button>
-    <button id="pv-tab-history-btn" class="year-tab" onclick="switchPVTab('history',this)">📜 ประวัติตามห้อง</button>
-    <button id="pv-tab-monthly-btn" class="year-tab" onclick="switchPVTab('monthly',this)">📋 สถานะชำระรายเดือน</button>
+  <!-- Tabs + manual override button -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;gap:1rem;flex-wrap:wrap;">
+    <div class="year-tabs" style="margin:0;">
+      <button id="pv-tab-live-btn" class="year-tab active" onclick="switchPVTab('live',this)">🔔 Live Feed</button>
+      <button id="pv-tab-history-btn" class="year-tab" onclick="switchPVTab('history',this)">📜 ประวัติตามห้อง</button>
+      <button id="pv-tab-monthly-btn" class="year-tab" onclick="switchPVTab('monthly',this)">📋 สถานะชำระรายเดือน</button>
+    </div>
+    <button onclick="openManualVerifyModal()" style="padding:8px 16px;background:#f57c00;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.85rem;">✍️ เพิ่มการชำระด้วยตัวเอง</button>
   </div>
 
   <!-- TAB 1: Live Feed -->

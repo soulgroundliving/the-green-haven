@@ -6339,6 +6339,118 @@ function renderPVFeed(slips) {
   }).join('');
 }
 
+// ===== Payment Verify — Manual verify override =====
+window.openManualVerifyModal = function(){
+  if(document.getElementById('mv-modal')) return;
+  const modal = document.createElement('div');
+  modal.id = 'mv-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+  const today = new Date().toISOString().split('T')[0];
+  modal.innerHTML = `<div style="background:#fff;border-radius:12px;padding:1.8rem;width:92%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <div style="font-size:1.15rem;font-weight:800;margin-bottom:1rem;color:var(--text);">✍️ บันทึกการชำระด้วยตัวเอง</div>
+    <div style="background:#fff3e0;border-left:4px solid #f57c00;border-radius:6px;padding:.7rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#bf360c;">
+      ใช้เมื่อ SlipOK ตรวจไม่ผ่าน (เช่น SCB delay ยาว, สลิปไม่คมชัด) — admin ยืนยันเอง จะบันทึกเป็น manualOverride ใน audit trail
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem;">
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">ตึก</label>
+        <select id="mv-building" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';">
+          <option value="rooms">🏠 ห้องแถว</option><option value="nest">🏢 Nest</option>
+        </select></div>
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">ห้อง</label>
+        <input type="text" id="mv-room" placeholder="เช่น 15, N101" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem;">
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">จำนวนเงิน (บาท)</label>
+        <input type="number" id="mv-amount" placeholder="0" min="0" step="0.01" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">วันที่โอน</label>
+        <input type="date" id="mv-date" value="${today}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem;">
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">ผู้โอน</label>
+        <input type="text" id="mv-sender" placeholder="ชื่อ-นามสกุล" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">ธนาคาร</label>
+        <select id="mv-bank" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';">
+          <option value="">— เลือก —</option>
+          <option value="014">ไทยพาณิชย์ (SCB)</option>
+          <option value="004">กสิกรไทย (KBANK)</option>
+          <option value="025">กรุงไทย (KTB)</option>
+          <option value="002">กรุงเทพ (BBL)</option>
+          <option value="006">กรุงศรี (BAY)</option>
+          <option value="067">ทีทีบี (TTB)</option>
+          <option value="">อื่นๆ</option>
+        </select></div>
+    </div>
+    <div style="margin-bottom:.7rem;"><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">เลขอ้างอิงสลิป (ถ้าอ่านได้)</label>
+      <input type="text" id="mv-txid" placeholder="เช่น 2024...หรือ ref number" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+    <div style="margin-bottom:1.2rem;"><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">เหตุผลการยืนยันเอง <span style="color:var(--red);">*</span></label>
+      <input type="text" id="mv-reason" placeholder="เช่น SlipOK SCB delay ยาว, สลิปไม่คมชัด, มีค่าปรับที่ไม่ได้บันทึก..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+    <div style="display:flex;gap:.6rem;">
+      <button onclick="submitManualVerify()" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Sarabun';font-weight:700;cursor:pointer;">💾 บันทึก</button>
+      <button onclick="document.getElementById('mv-modal').remove()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:8px;padding:10px;font-family:'Sarabun';font-weight:700;cursor:pointer;">ยกเลิก</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if(e.target.id==='mv-modal') modal.remove(); });
+};
+
+window.submitManualVerify = async function(){
+  const building = document.getElementById('mv-building').value;
+  const room = document.getElementById('mv-room').value.trim();
+  const amount = parseFloat(document.getElementById('mv-amount').value);
+  const dateStr = document.getElementById('mv-date').value;
+  const sender = document.getElementById('mv-sender').value.trim();
+  const bankCode = document.getElementById('mv-bank').value;
+  const txid = document.getElementById('mv-txid').value.trim();
+  const reason = document.getElementById('mv-reason').value.trim();
+  if(!building || !room || !amount || amount <= 0 || !reason){
+    alert('กรุณากรอก: ตึก, ห้อง, จำนวนเงิน, เหตุผล');
+    return;
+  }
+  const adminName = window.SecurityUtils?.getSecureSession()?.name || 'Admin';
+  const id = 'mv_' + Date.now();
+  const slipDoc = {
+    transactionId: txid || id,
+    building, room: String(room),
+    amount, expectedAmount: amount,
+    sender: sender || '(บันทึกโดย admin)',
+    receiver: '',
+    date: dateStr,
+    bankCode: bankCode || '',
+    timestamp: new Date(dateStr + 'T12:00:00'),
+    verifiedAt: new Date(),
+    verified: true,
+    manualOverride: true,
+    verifiedBy: adminName,
+    overrideReason: reason
+  };
+  if(!window.firebase?.firestore){
+    alert('Firebase ยังไม่พร้อม — ไม่สามารถบันทึกได้');
+    return;
+  }
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    await fs.setDoc(fs.doc(fs.collection(db, 'verifiedSlips'), id), slipDoc);
+    // Also mark payment_status for that month (so สถานะชำระรายเดือน shows ✅)
+    const d = new Date(dateStr);
+    const year = d.getFullYear() + 543;
+    const month = d.getMonth() + 1;
+    const ps = loadPS();
+    const key = `${year}_${month}`;
+    if(!ps[key]) ps[key] = {};
+    ps[key][room] = {
+      status: 'paid', amount, date: new Date().toISOString(),
+      receiptNo: id, manualOverride: true, overrideReason: reason,
+      slip: { amount, sender, bankCode, ref: txid, transferDate: d.toISOString() }
+    };
+    savePS(ps);
+    document.getElementById('mv-modal').remove();
+    alert('✅ บันทึกการชำระเรียบร้อย');
+  } catch(e) {
+    alert('❌ บันทึกไม่สำเร็จ: ' + e.message);
+  }
+};
+
 // ===== Payment Verify — ประวัติตามห้อง =====
 window.switchPVTab = function(tab, btn){
   document.querySelectorAll('#page-payment-verify .year-tab').forEach(b=>b.classList.remove('active'));
