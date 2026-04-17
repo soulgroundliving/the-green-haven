@@ -87,20 +87,6 @@ window._switchMeterTabImpl = function(tabName, btnElement) {
     setTimeout(() => loadRoomConfigUI(), 50);
   } else if (tabName === 'import-meter') {
     initImportMeterTab();
-  } else if (tabName === 'monthly-status') {
-    // Render meter status table + set sensible defaults
-    setTimeout(() => {
-      const now = new Date();
-      const mm = document.getElementById('mt-month');
-      const my = document.getElementById('mt-year');
-      const vm = document.getElementById('vc-month');
-      const vy = document.getElementById('vc-year');
-      if (mm && !mm.value) mm.value = now.getMonth() + 1;
-      if (my && !my.value) my.value = now.getFullYear() + 543;
-      if (vm && !vm.value) vm.value = now.getMonth() + 1;
-      if (vy && !vy.value) vy.value = now.getFullYear() + 543;
-      if (typeof renderMeterTable === 'function') renderMeterTable();
-    }, 50);
   }
 };
 // Assign to global scope
@@ -6243,10 +6229,24 @@ function renderPVFeed(slips) {
 window.switchPVTab = function(tab, btn){
   document.querySelectorAll('#page-payment-verify .year-tab').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  const live = document.getElementById('pv-tab-live');
-  const hist = document.getElementById('pv-tab-history');
-  if(live) live.style.display = (tab==='live') ? '' : 'none';
-  if(hist) hist.style.display = (tab==='history') ? '' : 'none';
+  const live    = document.getElementById('pv-tab-live');
+  const hist    = document.getElementById('pv-tab-history');
+  const monthly = document.getElementById('pv-tab-monthly');
+  if(live)    live.style.display    = (tab==='live')    ? '' : 'none';
+  if(hist)    hist.style.display    = (tab==='history') ? '' : 'none';
+  if(monthly) monthly.style.display = (tab==='monthly') ? '' : 'none';
+  if(tab==='monthly'){
+    const now = new Date();
+    const mm = document.getElementById('mt-month');
+    const my = document.getElementById('mt-year');
+    const vm = document.getElementById('vc-month');
+    const vy = document.getElementById('vc-year');
+    if (mm && !mm.value) mm.value = now.getMonth() + 1;
+    if (my && !my.value) my.value = now.getFullYear() + 543;
+    if (vm && !vm.value) vm.value = now.getMonth() + 1;
+    if (vy && !vy.value) vy.value = now.getFullYear() + 543;
+    if (typeof renderMeterTable === 'function') setTimeout(renderMeterTable, 50);
+  }
 };
 
 window.loadPVHistoryRooms = function(){
