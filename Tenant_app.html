@@ -4706,8 +4706,23 @@
                     _setStatus(statusEl, 'success', 'ตรวจสอบสำเร็จ!');
                     _saveTenantPayment({ slipOkVerified: true, ...result });
                     setTimeout(() => { goToPaymentStep(3); renderPaymentReceipt(_taCurrentBill); }, 1000);
+                } else if (result.retryable && result.code === 'scb_delay') {
+                    // SCB delay: show countdown + auto-enable retry
+                    const wait = result.retryAfterSec || 120;
+                    _setStatus(statusEl, 'warning', result.message);
+                    let remain = wait;
+                    if (btn) { btn.disabled = true; btn.textContent = `⏳ รออีก ${remain} วินาที`; }
+                    const tick = setInterval(() => {
+                        remain--;
+                        if (btn) btn.textContent = `⏳ รออีก ${remain} วินาที`;
+                        if (remain <= 0) {
+                            clearInterval(tick);
+                            if (btn) { btn.disabled = false; btn.textContent = '🔄 ลองตรวจสอบอีกครั้ง'; }
+                            _setStatus(statusEl, 'info', 'พร้อมลองใหม่ กดปุ่มด้านล่างได้เลย');
+                        }
+                    }, 1000);
                 } else {
-                    _setStatus(statusEl, 'error', result.message || 'ตรวจสอบไม่ผ่าน กรุณาลองใหม่');
+                    _setStatus(statusEl, 'error', result.message || result.error || 'ตรวจสอบไม่ผ่าน กรุณาลองใหม่');
                     if (btn) btn.disabled = false;
                 }
             } catch(e) {

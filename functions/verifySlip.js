@@ -442,6 +442,23 @@ exports.verifySlip = functions
     try {
       slipData = await callSlipOKAPI(fileBuffer);
     } catch (error) {
+      // SCB-specific delay (SlipOK code 1010): ไทยพาณิชย์ takes ~2 minutes to register the slip
+      const msg = error.message || '';
+      const isSCBDelay = msg.includes('"code":1010') || msg.includes('ไทยพาณิชย์');
+      if (isSCBDelay) {
+        await logVerificationAttempt(
+          { ...req.body, ipAddress: req.ip, userAgent: req.get('user-agent') },
+          { error: 'scb_delay' },
+          'scb_delay'
+        );
+        return res.status(200).json({
+          success: false,
+          retryable: true,
+          code: 'scb_delay',
+          retryAfterSec: 120,
+          message: 'สลิปธนาคารไทยพาณิชย์ใช้เวลาตรวจสอบประมาณ 2 นาทีหลังโอน กรุณารอแล้วลองใหม่อีกครั้ง'
+        });
+      }
       await logVerificationAttempt(
         { ...req.body, ipAddress: req.ip, userAgent: req.get('user-agent') },
         { error: error.message },
