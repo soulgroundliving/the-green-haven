@@ -3413,6 +3413,29 @@
     <button id="tab-complaints-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('complaints', this)">⚠️ Complaints</button>
     <button id="tab-pets-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('pets', this)">🐾 Pet Approvals</button>
     <button id="tab-rental-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('rental', this)">📋 Rental Approvals</button>
+    <button id="tab-liff-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('liff', this)">🔗 LINE Link Requests</button>
+  </div>
+
+  <!-- TAB: LINE Link Requests -->
+  <div id="requests-tab-liff" class="requests-mgmt-content" style="display:none;">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
+      <div class="card" style="text-align:center;padding:1rem;">
+        <div style="font-size:1.8rem;font-weight:800;color:#f57c00;" id="liff-pending-count">—</div>
+        <div style="color:var(--text-muted);font-size:.82rem;">⏳ รออนุมัติ</div>
+      </div>
+      <div class="card" style="text-align:center;padding:1rem;">
+        <div style="font-size:1.8rem;font-weight:800;color:var(--green);" id="liff-approved-count">—</div>
+        <div style="color:var(--text-muted);font-size:.82rem;">✅ อนุมัติแล้ว</div>
+      </div>
+      <div class="card" style="text-align:center;padding:1rem;">
+        <div style="font-size:1.8rem;font-weight:800;color:var(--red);" id="liff-rejected-count">—</div>
+        <div style="color:var(--text-muted);font-size:.82rem;">❌ ปฏิเสธ</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔗 คำขอเชื่อมบัญชี LINE</div>
+      <div id="liffRequestsList" style="min-height:120px;"></div>
+    </div>
   </div>
 
   <!-- TAB 1: Maintenance -->

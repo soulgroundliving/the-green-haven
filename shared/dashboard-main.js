@@ -2418,7 +2418,102 @@ function switchRequestsTab(tabName, btn) {
     else if(tabName === 'housekeeping') initHousekeepingPage();
     else if(tabName === 'complaints' && typeof initComplaintsPage === 'function') initComplaintsPage();
     else if(tabName === 'pets' && typeof initPetApprovalsPage === 'function') initPetApprovalsPage();
+    else if(tabName === 'liff' && typeof initLiffRequestsPage === 'function') initLiffRequestsPage();
   }
+}
+
+// ===== LIFF LINK REQUESTS — admin approval =====
+let _liffRequestsUnsub = null;
+function initLiffRequestsPage(){
+  if(_liffRequestsUnsub) return;
+  if(!window.firebase?.firestore){
+    const list = document.getElementById('liffRequestsList');
+    if(list) list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ Firebase ยังไม่พร้อม</div>';
+    return;
+  }
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+  const col = fs.collection(db, 'liffUsers');
+  _liffRequestsUnsub = fs.onSnapshot(col, snap => {
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderLiffRequestsList(docs);
+  }, err => console.warn('liffUsers onSnapshot:', err));
+}
+
+function renderLiffRequestsList(docs){
+  const pending = docs.filter(d => d.status === 'pending');
+  const approved = docs.filter(d => d.status === 'approved');
+  const rejected = docs.filter(d => d.status === 'rejected');
+  const setTxt = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  setTxt('liff-pending-count', pending.length);
+  setTxt('liff-approved-count', approved.length);
+  setTxt('liff-rejected-count', rejected.length);
+
+  const list = document.getElementById('liffRequestsList');
+  if(!list) return;
+  if(docs.length === 0){
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">📭 ยังไม่มีคำขอเชื่อมบัญชี</div>';
+    return;
+  }
+  // Sort: pending first, then approved, then rejected
+  const order = { pending: 0, approved: 1, rejected: 2 };
+  docs.sort((a,b) => (order[a.status]??9) - (order[b.status]??9) || (b.requestedAt||'').localeCompare(a.requestedAt||''));
+
+  list.innerHTML = docs.map(d => {
+    const colors = { pending:'#f57c00', approved:'#2d8653', rejected:'#c62828' };
+    const labels = { pending:'⏳ รออนุมัติ', approved:'✅ อนุมัติแล้ว', rejected:'❌ ปฏิเสธ' };
+    const c = colors[d.status] || '#999';
+    const when = d.requestedAt ? new Date(d.requestedAt).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+    const pic = d.linePictureUrl ? `<img src="${d.linePictureUrl}" style="width:42px;height:42px;border-radius:50%;flex-shrink:0;">` : '<div style="width:42px;height:42px;border-radius:50%;background:#eee;flex-shrink:0;"></div>';
+    const actions = d.status === 'pending' ? `
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <button onclick="approveLiffLink('${d.id}')" style="padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">✅ อนุมัติ</button>
+        <button onclick="rejectLiffLink('${d.id}')" style="padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">❌ ปฏิเสธ</button>
+      </div>` : (d.status === 'approved'
+        ? `<div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">โดย ${d.approvedBy||'Admin'} · ${d.approvedAt?new Date(d.approvedAt).toLocaleDateString('th-TH'):''}</div>`
+        : `<button onclick="approveLiffLink('${d.id}')" style="padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.75rem;margin-top:4px;">↩️ อนุมัติย้อนหลัง</button>`);
+    return `<div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+      ${pic}
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div style="font-weight:700;font-size:.92rem;">${d.lineDisplayName||'—'}</div>
+          <span style="color:${c};font-size:.78rem;font-weight:700;">${labels[d.status]||d.status}</span>
+        </div>
+        <div style="font-size:.82rem;color:var(--text);margin-top:2px;">
+          ตึก: <strong>${d.building==='nest'?'🏢 Nest':'🏠 ห้องแถว'}</strong> ·
+          ห้อง <strong>${d.room||'—'}</strong>
+          ${d.phone?` · 📱 ${d.phone}`:''}
+        </div>
+        <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;">ขอเมื่อ ${when}</div>
+        ${actions}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function approveLiffLink(lineUserId){
+  if(!window.firebase?.firestore) return;
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+  const adminName = window.SecurityUtils?.getSecureSession()?.name || 'Admin';
+  try {
+    await fs.setDoc(fs.doc(fs.collection(db, 'liffUsers'), lineUserId), {
+      status: 'approved', approvedBy: adminName, approvedAt: new Date().toISOString()
+    }, { merge: true });
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function rejectLiffLink(lineUserId){
+  if(!confirm('ปฏิเสธคำขอนี้?')) return;
+  if(!window.firebase?.firestore) return;
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+  const adminName = window.SecurityUtils?.getSecureSession()?.name || 'Admin';
+  try {
+    await fs.setDoc(fs.doc(fs.collection(db, 'liffUsers'), lineUserId), {
+      status: 'rejected', rejectedBy: adminName, rejectedAt: new Date().toISOString()
+    }, { merge: true });
+  } catch(e) { alert('❌ ' + e.message); }
 }
 
 // ===== PEOPLE MANAGEMENT TAB SWITCHING =====

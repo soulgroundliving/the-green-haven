@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="shared/brand.css">
     <!-- QR Code library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- LINE LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <!-- Shared logic scripts -->
     <script src="./shared/firebase-config-loader.js"></script>
     <script src="./shared/room-config.js"></script>
@@ -1073,6 +1075,35 @@
 </head>
 
 <body>
+    <!-- LIFF LINK ACCOUNT OVERLAY -->
+    <div id="liff-link-overlay" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#f0fdf4,#e8f5e9);z-index:99999;flex-direction:column;align-items:center;justify-content:center;padding:2rem;">
+        <div style="background:#fff;border-radius:20px;padding:2rem 1.8rem;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.12);text-align:center;">
+            <div style="font-size:2.5rem;margin-bottom:.5rem;">🌿</div>
+            <div style="font-weight:800;font-size:1.25rem;color:var(--primary-dark,#1a5c38);margin-bottom:.3rem;">Nature Haven</div>
+            <div id="liff-link-greeting" style="color:var(--text-muted,#6b7a8d);font-size:.88rem;margin-bottom:1.3rem;"></div>
+
+            <!-- Form -->
+            <div id="liff-link-form-box" style="text-align:left;">
+                <div style="background:#fff9c4;border-left:4px solid #fbc02d;border-radius:8px;padding:.7rem .9rem;margin-bottom:1rem;font-size:.8rem;color:#5d4037;">
+                    🔗 เชื่อมบัญชีเพื่อใช้งาน<br>กรอกข้อมูลห้องของคุณ admin จะอนุมัติภายใน 24 ชม.
+                </div>
+                <label style="display:block;font-weight:700;font-size:.82rem;margin-bottom:5px;">ตึก</label>
+                <select id="liff-link-building" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:.9rem;">
+                    <option value="rooms">🏠 ห้องแถว</option>
+                    <option value="nest">🏢 Nest</option>
+                </select>
+                <label style="display:block;font-weight:700;font-size:.82rem;margin-bottom:5px;">หมายเลขห้อง</label>
+                <input type="text" id="liff-link-room" placeholder="เช่น 15, N101" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:.9rem;box-sizing:border-box;">
+                <label style="display:block;font-weight:700;font-size:.82rem;margin-bottom:5px;">เบอร์โทรศัพท์ (optional)</label>
+                <input type="tel" id="liff-link-phone" placeholder="0812345678" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:1.2rem;box-sizing:border-box;">
+                <button id="liff-link-submit-btn" onclick="submitLiffLinkRequest()" style="width:100%;padding:12px;background:var(--primary-green,#2d8653);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:.95rem;cursor:pointer;">🔗 ส่งคำขอเชื่อมบัญชี</button>
+            </div>
+
+            <!-- Status (pending/rejected) -->
+            <div id="liff-link-status-box" style="display:none;text-align:center;"></div>
+        </div>
+    </div>
+
 
     <div id="world-map-page" class="page active"
         style="position: fixed; inset: 0; width: 100vw; height: 100vh; background: #FDF6F0; z-index: 5; overflow: hidden; display: block;">
@@ -4139,8 +4170,137 @@
             window._tenantAppPayments = _taPayments;
         }
 
+        // ---- LIFF (LINE Front-end Framework) integration ----
+        const LIFF_ID = '2009790149-Db7T76sd';
+        window._lineUserId = null;
+        window._lineProfile = null;
+        window._lineLinkStatus = null; // null | 'pending' | 'approved' | 'rejected'
+
+        async function initLiffAndLink() {
+            if (typeof liff === 'undefined') { console.warn('LIFF SDK not loaded'); return null; }
+            try {
+                await liff.init({ liffId: LIFF_ID });
+            } catch (e) { console.warn('LIFF init failed:', e); return null; }
+            if (!liff.isLoggedIn()) {
+                // Only force login when running inside LINE app; outside LINE, skip (allow normal web session)
+                if (liff.isInClient && liff.isInClient()) {
+                    liff.login();
+                    return null; // page will redirect
+                }
+                return null;
+            }
+            try {
+                const profile = await liff.getProfile();
+                window._lineProfile = profile;
+                window._lineUserId = profile.userId;
+                console.log('✅ LIFF profile:', profile.displayName);
+            } catch (e) { console.warn('LIFF getProfile failed:', e); return null; }
+
+            // Wait for Firebase before querying
+            if (!window.firebaseReady) {
+                await new Promise(resolve => {
+                    const t = setTimeout(resolve, 3000);
+                    window.addEventListener('firebaseInitialized', () => { clearTimeout(t); resolve(); }, { once: true });
+                });
+            }
+            if (!window.firebase?.firestore) return null;
+
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                const docRef = fs.doc(fs.collection(db, 'liffUsers'), window._lineUserId);
+                const snap = await fs.getDoc(docRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    window._lineLinkStatus = data.status || 'pending';
+                    if (data.status === 'approved' && data.room) {
+                        _taRoom = String(data.room);
+                        _taBuilding = data.building || 'rooms';
+                        localStorage.setItem('tenant_app_room', _taRoom);
+                        window._tenantAppRoom = _taRoom;
+                        window._tenantAppBuilding = _taBuilding;
+                        return { linked: true, data };
+                    }
+                    return { linked: false, status: data.status, data };
+                }
+                return { linked: false, status: null };
+            } catch (e) { console.warn('liffUsers query failed:', e); return null; }
+        }
+
+        async function submitLiffLinkRequest() {
+            const bld = document.getElementById('liff-link-building').value;
+            const room = document.getElementById('liff-link-room').value.trim();
+            const phone = document.getElementById('liff-link-phone').value.trim();
+            if (!bld || !room) { toast('กรุณาเลือกตึกและใส่หมายเลขห้อง', 'error'); return; }
+            if (!window._lineUserId) { toast('ไม่พบ LINE user — กรุณาเปิดผ่านแอป LINE', 'error'); return; }
+            if (!window.firebase?.firestore) { toast('Firebase ยังไม่พร้อม', 'error'); return; }
+            const btn = document.getElementById('liff-link-submit-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                await fs.setDoc(fs.doc(fs.collection(db, 'liffUsers'), window._lineUserId), {
+                    lineUserId: window._lineUserId,
+                    lineDisplayName: window._lineProfile?.displayName || '',
+                    linePictureUrl: window._lineProfile?.pictureUrl || '',
+                    room: String(room),
+                    building: bld,
+                    phone: phone || '',
+                    status: 'pending',
+                    requestedAt: new Date().toISOString()
+                });
+                showLiffLinkStatus('pending');
+                toast('✅ ส่งคำขอเรียบร้อย รอ admin อนุมัติ', 'success');
+            } catch (e) {
+                toast('❌ บันทึกไม่สำเร็จ: ' + e.message, 'error');
+                if (btn) { btn.disabled = false; btn.textContent = '🔗 ส่งคำขอเชื่อมบัญชี'; }
+            }
+        }
+
+        function showLiffLinkForm() {
+            const host = document.getElementById('liff-link-overlay');
+            if (!host) return;
+            host.style.display = 'flex';
+            const greet = document.getElementById('liff-link-greeting');
+            if (greet && window._lineProfile) greet.textContent = `สวัสดีคุณ ${window._lineProfile.displayName} 👋`;
+            document.getElementById('liff-link-form-box').style.display = '';
+            document.getElementById('liff-link-status-box').style.display = 'none';
+        }
+
+        function showLiffLinkStatus(status) {
+            const host = document.getElementById('liff-link-overlay');
+            if (!host) return;
+            host.style.display = 'flex';
+            document.getElementById('liff-link-form-box').style.display = 'none';
+            const box = document.getElementById('liff-link-status-box');
+            box.style.display = '';
+            const icon = status === 'rejected' ? '❌' : '⏳';
+            const title = status === 'rejected' ? 'คำขอถูกปฏิเสธ' : 'รอ admin อนุมัติ';
+            const detail = status === 'rejected'
+                ? 'กรุณาติดต่อ admin โดยตรงหรือส่งคำขอใหม่'
+                : 'เมื่ออนุมัติแล้วจะเข้าใช้งานได้อัตโนมัติ กรุณารอสักครู่';
+            box.innerHTML = `<div style="font-size:3rem;margin-bottom:1rem;">${icon}</div>
+                <div style="font-weight:800;font-size:1.1rem;margin-bottom:.5rem;">${title}</div>
+                <div style="font-size:.9rem;color:var(--text-muted);max-width:320px;margin:0 auto 1.2rem;">${detail}</div>
+                ${status === 'rejected' ? '<button onclick="showLiffLinkForm()" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;">🔄 ส่งคำขอใหม่</button>' : ''}`;
+        }
+
         async function initTenantApp() {
+            // Step 1: try LIFF auto-link first
+            const liffResult = await initLiffAndLink();
+            // Step 2: fallback — detect from session/localStorage
             const hasRoom = detectRoomBuilding();
+
+            if (!hasRoom && window._lineUserId && liffResult && !liffResult.linked) {
+                // LIFF user without linked account — show link form or pending status
+                if (liffResult.status === 'pending' || liffResult.status === 'rejected') {
+                    showLiffLinkStatus(liffResult.status);
+                } else {
+                    showLiffLinkForm();
+                }
+                return; // stop here; don't render tenant pages without room
+            }
+
             if (hasRoom && !window.firebaseReady) {
                 await new Promise(resolve => {
                     const t = setTimeout(resolve, 3000);
