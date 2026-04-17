@@ -4044,6 +4044,16 @@ async function autoFillMeters(){
     document.getElementById('f-elec-old').value='';
     document.getElementById('f-water-new').value='';
     document.getElementById('f-water-old').value='';
+    // Retry once after 1.2s if METER_DATA was still empty (Firebase not ready yet)
+    const isMDEmpty = !window.METER_DATA || (
+      Object.keys(window.METER_DATA.rooms||{}).length === 0 &&
+      Object.keys(window.METER_DATA.nest||{}).length === 0
+    );
+    if (isMDEmpty && !autoFillMeters._retried) {
+      autoFillMeters._retried = true;
+      console.log('⏳ METER_DATA empty — retrying autoFillMeters in 1.2s...');
+      setTimeout(() => { autoFillMeters._retried = false; autoFillMeters(); }, 1200);
+    }
   }
 
   calcBill();
@@ -6348,9 +6358,17 @@ window.openManualVerifyModal = function(){
   const today = new Date().toISOString().split('T')[0];
   modal.innerHTML = `<div style="background:#fff;border-radius:12px;padding:1.8rem;width:92%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
     <div style="font-size:1.15rem;font-weight:800;margin-bottom:1rem;color:var(--text);">✍️ บันทึกการชำระด้วยตัวเอง</div>
-    <div style="background:#fff3e0;border-left:4px solid #f57c00;border-radius:6px;padding:.7rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#bf360c;">
-      ใช้เมื่อ SlipOK ตรวจไม่ผ่าน (เช่น SCB delay ยาว, สลิปไม่คมชัด) — admin ยืนยันเอง จะบันทึกเป็น manualOverride ใน audit trail
+    <div style="background:#ffebee;border-left:4px solid #c62828;border-radius:6px;padding:.7rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#b71c1c;">
+      <strong>⚠️ สำคัญ:</strong> อย่ากดบันทึกถ้ายังไม่ได้เช็ค bank statement จริง<br>
+      สลิปอาจปลอมได้ — ต้องเปิดแอปธนาคารยืนยันว่าเงินเข้าบัญชีจริง
     </div>
+    <label style="display:flex;gap:8px;align-items:flex-start;padding:.7rem;background:#fff9c4;border-radius:6px;margin-bottom:1rem;cursor:pointer;">
+      <input type="checkbox" id="mv-bank-confirmed" style="margin-top:3px;flex-shrink:0;">
+      <span style="font-size:.82rem;color:#5d4037;font-weight:600;">
+        ✅ ผมได้เปิดแอปธนาคาร/bank statement แล้วว่าเงินเข้าบัญชีจริง
+        (ตรวจ amount, วันที่, ชื่อผู้โอน ตรงกับสลิป)
+      </span>
+    </label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem;">
       <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">ตึก</label>
         <select id="mv-building" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';">
@@ -6402,6 +6420,11 @@ window.submitManualVerify = async function(){
   const bankCode = document.getElementById('mv-bank').value;
   const txid = document.getElementById('mv-txid').value.trim();
   const reason = document.getElementById('mv-reason').value.trim();
+  const bankConfirmed = document.getElementById('mv-bank-confirmed')?.checked;
+  if(!bankConfirmed){
+    alert('⚠️ ต้องเช็ค bank statement จริงก่อน แล้วกด ✅ ยืนยัน\nสลิปอาจปลอมได้ — อย่าเชื่อแค่ภาพสลิป');
+    return;
+  }
   if(!building || !room || !amount || amount <= 0 || !reason){
     alert('กรุณากรอก: ตึก, ห้อง, จำนวนเงิน, เหตุผล');
     return;
@@ -6420,6 +6443,7 @@ window.submitManualVerify = async function(){
     verifiedAt: new Date(),
     verified: true,
     manualOverride: true,
+    bankStatementConfirmed: true,
     verifiedBy: adminName,
     overrideReason: reason
   };
