@@ -4188,9 +4188,30 @@
         }
 
         // ---- COMMUNITY ----
+        let _taAnnUnsub = null;
+        function _subscribeAnnouncementsFromFirestore() {
+            if (_taAnnUnsub) return;
+            if (!window.firebase?.firestore) return;
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                _taAnnUnsub = fs.onSnapshot(fs.collection(db, 'announcements'), snap => {
+                    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    const local = JSON.parse(localStorage.getItem('announcements_data') || '[]');
+                    const byId = new Map();
+                    local.forEach(a => byId.set(a.id, a));
+                    docs.forEach(a => byId.set(a.id, a));
+                    localStorage.setItem('announcements_data', JSON.stringify(Array.from(byId.values())));
+                    renderAnnouncements();
+                });
+            } catch(e) { console.warn('tenant announcements subscribe failed:', e); }
+        }
+        window.addEventListener('load', () => setTimeout(_subscribeAnnouncementsFromFirestore, 1000));
+
         function renderAnnouncements() {
             const el = document.getElementById('announcements-list');
             if (!el) return;
+            _subscribeAnnouncementsFromFirestore();
             let ann = [];
             try { ann = JSON.parse(localStorage.getItem('announcements_data') || '[]'); } catch(e) {}
             const filtered = ann.filter(a => !a.building || a.building === 'all' || a.building === _taBuilding);
@@ -4320,9 +4341,30 @@
         function renderElecUsage() { _renderMeterPage('elec'); }
         function renderWaterUsage() { _renderMeterPage('water'); }
 
+        let _taEventsUnsub = null;
+        function _subscribeEventsFromFirestore() {
+            if (_taEventsUnsub) return;
+            if (!window.firebase?.firestore) return;
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                _taEventsUnsub = fs.onSnapshot(fs.collection(db, 'communityEvents'), snap => {
+                    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    const local = JSON.parse(localStorage.getItem('community_events_data') || '[]');
+                    const byId = new Map();
+                    local.forEach(e => byId.set(e.id, e));
+                    docs.forEach(e => byId.set(e.id, e));
+                    localStorage.setItem('community_events_data', JSON.stringify(Array.from(byId.values())));
+                    renderCommunityEvents();
+                });
+            } catch(e) { console.warn('tenant events subscribe failed:', e); }
+        }
+        window.addEventListener('load', () => setTimeout(_subscribeEventsFromFirestore, 1000));
+
         function renderCommunityEvents() {
             const el = document.getElementById('events-list');
             if (!el) return;
+            _subscribeEventsFromFirestore();
             let events = [];
             try { events = JSON.parse(localStorage.getItem('community_events_data') || '[]'); } catch(e) {}
             if (!events.length) {

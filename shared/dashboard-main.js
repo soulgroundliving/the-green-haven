@@ -7622,20 +7622,14 @@ function saveAnnouncement() {
   announcements.unshift(announcement);
   saveAnnouncementsData(announcements);
 
-  // Save to Firebase
-  if (window.firebase && window.firebase.firestore) {
+  // Save to Firestore (modular SDK)
+  if (window.firebase?.firestore) {
     try {
       const db = window.firebase.firestore();
-      const docRef = db.collection('announcements').doc(announcement.building).collection('items').doc(announcement.id);
-      docRef.set(announcement)
-        .then(() => {
-          console.log('✅ Announcement saved to Firebase:', announcement.id);
-        })
-        .catch(err => {
-          console.error('❌ Error saving to Firebase:', err);
-        });
+      const fs = window.firebase.firestoreFunctions;
+      fs.setDoc(fs.doc(fs.collection(db, 'announcements'), announcement.id), announcement);
     } catch (err) {
-      console.warn('⚠️ Firebase not available, announcement saved to localStorage only');
+      console.warn('⚠️ Firestore announcement save failed:', err);
     }
   }
 
@@ -7666,20 +7660,14 @@ function deleteAnnouncement(id) {
   announcements = announcements.filter(a => a.id !== id);
   saveAnnouncementsData(announcements);
 
-  // Delete from Firebase
-  if (window.firebase && window.firebase.firestore && announcement) {
+  // Delete from Firestore (modular SDK)
+  if (window.firebase?.firestore && announcement) {
     try {
       const db = window.firebase.firestore();
-      db.collection('announcements').doc(announcement.building).collection('items').doc(id)
-        .delete()
-        .then(() => {
-          console.log('✅ Announcement deleted from Firebase:', id);
-        })
-        .catch(err => {
-          console.error('❌ Error deleting from Firebase:', err);
-        });
+      const fs = window.firebase.firestoreFunctions;
+      fs.deleteDoc(fs.doc(fs.collection(db, 'announcements'), id));
     } catch (err) {
-      console.warn('⚠️ Firebase not available, announcement deleted from localStorage only');
+      console.warn('⚠️ Firestore announcement delete failed:', err);
     }
   }
 

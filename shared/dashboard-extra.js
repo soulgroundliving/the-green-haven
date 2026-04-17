@@ -820,42 +820,30 @@ function setupAnnouncementListener() {
     console.warn('Firebase not initialized, skipping announcement listeners');
     return;
   }
-  if (!window.firebaseAuth?.currentUser) return;
+  if (realtimeListeners.announcements) return; // already subscribed
 
   const db = window.firebase.firestore();
   const { collection, onSnapshot } = window.firebase.firestoreFunctions;
 
   try {
-    const roomsAnnounceUnsubscribe = onSnapshot(
-      collection(db, 'announcements', 'rooms', 'items'),
+    const unsub = onSnapshot(
+      collection(db, 'announcements'),
       (snapshot) => {
-        console.log('✅ Rooms announcements updated in real-time');
-        if (document.getElementById('announcementsList')) {
+        const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        const local = JSON.parse(localStorage.getItem('announcements_data') || '[]');
+        const byId = new Map();
+        local.forEach(a => byId.set(a.id, a));
+        docs.forEach(a => byId.set(a.id, a));
+        localStorage.setItem('announcements_data', JSON.stringify(Array.from(byId.values())));
+        if (document.getElementById('announcementsList') && typeof renderAnnouncementsList === 'function') {
           renderAnnouncementsList();
         }
       },
-      (error) => {
-        console.error('❌ Error listening to rooms announcements:', error);
-      }
+      (err) => console.error('❌ announcements onSnapshot:', err)
     );
-
-    const nestAnnounceUnsubscribe = onSnapshot(
-      collection(db, 'announcements', 'nest', 'items'),
-      (snapshot) => {
-        console.log('✅ Nest announcements updated in real-time');
-        if (document.getElementById('announcementsList')) {
-          renderAnnouncementsList();
-        }
-      },
-      (error) => {
-        console.error('❌ Error listening to nest announcements:', error);
-      }
-    );
-
-    realtimeListeners.roomsAnnounce = roomsAnnounceUnsubscribe;
-    realtimeListeners.nestAnnounce = nestAnnounceUnsubscribe;
+    realtimeListeners.announcements = unsub;
   } catch (err) {
-    console.error('Error setting up announcement listeners:', err);
+    console.error('Error setting up announcement listener:', err);
   }
 }
 
@@ -2482,8 +2470,25 @@ function deleteServiceProvider(id) {
 }
 
 // ===== COMMUNITY EVENTS MANAGEMENT =====
+let _eventsUnsub = null;
 function initCommunityEventsPage() {
   loadAndRenderCommunityEvents();
+  if (_eventsUnsub) return;
+  if (!window.firebase?.firestore) return;
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    const col = fs.collection(db, 'communityEvents');
+    _eventsUnsub = fs.onSnapshot(col, snap => {
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const local = JSON.parse(localStorage.getItem('community_events_data') || '[]');
+      const byId = new Map();
+      local.forEach(e => byId.set(e.id, e));
+      docs.forEach(e => byId.set(e.id, e));
+      localStorage.setItem('community_events_data', JSON.stringify(Array.from(byId.values())));
+      loadAndRenderCommunityEvents();
+    }, err => console.warn('events onSnapshot failed:', err));
+  } catch(e) { console.warn('events subscribe failed:', e); }
 }
 
 function loadAndRenderCommunityEvents() {
@@ -2562,8 +2567,15 @@ function saveCommunityEvent() {
 
   events.push(newEvent);
   localStorage.setItem('community_events_data', JSON.stringify(events));
+  // Sync to Firestore (cross-device)
+  if (window.firebase?.firestore) {
+    try {
+      const db = window.firebase.firestore();
+      const fs = window.firebase.firestoreFunctions;
+      fs.setDoc(fs.doc(fs.collection(db, 'communityEvents'), newEvent.id), newEvent);
+    } catch(e) { console.warn('Firestore event save failed:', e); }
+  }
 
-  // Clear form
   document.getElementById('eventTitle').value = '';
   document.getElementById('eventDate').value = '';
   document.getElementById('eventTime').value = '';
@@ -2581,13 +2593,37 @@ function deleteEvent(id) {
   let events = JSON.parse(localStorage.getItem('community_events_data') || '[]');
   events = events.filter(e => e.id !== id);
   localStorage.setItem('community_events_data', JSON.stringify(events));
+  if (window.firebase?.firestore) {
+    try {
+      const db = window.firebase.firestore();
+      const fs = window.firebase.firestoreFunctions;
+      fs.deleteDoc(fs.doc(fs.collection(db, 'communityEvents'), id));
+    } catch(e) { console.warn('Firestore event delete failed:', e); }
+  }
   loadAndRenderCommunityEvents();
   showToast('✅ Event deleted', 'success');
 }
 
 // ===== COMMUNITY DOCUMENTS MANAGEMENT =====
+let _docsUnsub = null;
 function initCommunityDocsPage() {
   loadAndRenderCommunityDocs();
+  if (_docsUnsub) return;
+  if (!window.firebase?.firestore) return;
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    const col = fs.collection(db, 'communityDocuments');
+    _docsUnsub = fs.onSnapshot(col, snap => {
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const local = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
+      const byId = new Map();
+      local.forEach(d => byId.set(d.id, d));
+      docs.forEach(d => byId.set(d.id, d));
+      localStorage.setItem('community_documents_data', JSON.stringify(Array.from(byId.values())));
+      loadAndRenderCommunityDocs();
+    }, err => console.warn('docs onSnapshot failed:', err));
+  } catch(e) { console.warn('docs subscribe failed:', e); }
 }
 
 function loadAndRenderCommunityDocs() {
@@ -2673,8 +2709,14 @@ function saveCommunityDocument() {
 
   docs.push(newDoc);
   localStorage.setItem('community_documents_data', JSON.stringify(docs));
+  if (window.firebase?.firestore) {
+    try {
+      const db = window.firebase.firestore();
+      const fs = window.firebase.firestoreFunctions;
+      fs.setDoc(fs.doc(fs.collection(db, 'communityDocuments'), newDoc.id), newDoc);
+    } catch(e) { console.warn('Firestore doc save failed:', e); }
+  }
 
-  // Clear form
   document.getElementById('docTitle').value = '';
   document.getElementById('docCategory').value = '';
   document.getElementById('docType').value = '';
@@ -2692,6 +2734,13 @@ function deleteDocument(id) {
   let docs = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
   docs = docs.filter(d => d.id !== id);
   localStorage.setItem('community_documents_data', JSON.stringify(docs));
+  if (window.firebase?.firestore) {
+    try {
+      const db = window.firebase.firestore();
+      const fs = window.firebase.firestoreFunctions;
+      fs.deleteDoc(fs.doc(fs.collection(db, 'communityDocuments'), id));
+    } catch(e) { console.warn('Firestore doc delete failed:', e); }
+  }
   loadAndRenderCommunityDocs();
   showToast('✅ Document deleted', 'success');
 }
