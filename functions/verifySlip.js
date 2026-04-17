@@ -192,6 +192,11 @@ async function callSlipOKAPI(fileBuffer) {
       throw new Error(data.message || 'SlipOK verification failed');
     }
 
+    // Normalize: SlipOK returns `transRef` but our code uses `transactionId`
+    if (data.data && !data.data.transactionId) {
+      data.data.transactionId = data.data.transRef || data.data.ref || null;
+    }
+
     return data.data;
   } catch (error) {
     console.error('❌ SlipOK API call failed:', error);
