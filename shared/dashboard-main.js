@@ -6143,46 +6143,41 @@ function saveTenantPayments(data){
 let _pvUnsubscribe = null;
 window._pvFilter = 'today';
 
+window._pvCachedSlips = [];
 function initPaymentVerify() {
-  // Tear down previous listener
   if (_pvUnsubscribe) { _pvUnsubscribe(); _pvUnsubscribe = null; }
 
   const feed = document.getElementById('pvFeed');
   if (!feed) return;
   feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">🔄 กำลังโหลด...</div>';
 
-  if (!window.firebase?.firestore) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
     feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ Firebase ยังไม่พร้อม</div>';
     return;
   }
 
   const db = window.firebase.firestore();
-  _pvUnsubscribe = db.collection('verifiedSlips')
-    .orderBy('timestamp', 'desc')
-    .limit(200)
-    .onSnapshot(snapshot => {
-      const slips = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      updatePVStats(slips);
-      renderPVFeed(slips);
-    }, err => {
-      feed.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
-    });
+  const fs = window.firebase.firestoreFunctions;
+  const q = fs.query(fs.collection(db, 'verifiedSlips'), fs.orderBy('timestamp', 'desc'), fs.limit(200));
+  _pvUnsubscribe = fs.onSnapshot(q, snapshot => {
+    const slips = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    window._pvCachedSlips = slips;
+    updatePVStats(slips);
+    renderPVFeed(slips);
+  }, err => {
+    console.error('pv onSnapshot:', err);
+    feed.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
+  });
 }
 
 function setPVFilter(filter, btn) {
   window._pvFilter = filter;
-  document.querySelectorAll('#page-payment-verify .year-tab').forEach(b => b.classList.remove('active'));
+  // Only clear active on date-filter row (keep tab active state)
+  document.querySelectorAll('#pv-tab-live .year-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  // Re-trigger render by re-reading from snapshot cache
-  if (window.firebase?.firestore) {
-    window.firebase.firestore().collection('verifiedSlips')
-      .orderBy('timestamp', 'desc').limit(200).get()
-      .then(snap => {
-        const slips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        updatePVStats(slips);
-        renderPVFeed(slips);
-      });
-  }
+  const slips = window._pvCachedSlips || [];
+  updatePVStats(slips);
+  renderPVFeed(slips);
 }
 
 function _pvInRange(slip) {
@@ -6304,9 +6299,16 @@ window.renderPVHistory = function(){
     return;
   }
   list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">🔄 กำลังโหลด...</div>';
-  window.firebase.firestore().collection('verifiedSlips')
-    .where('building','==',building).where('room','==',room)
-    .limit(500).get()
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+  // Query for both string and number room values to avoid type-mismatch miss
+  const q = fs.query(
+    fs.collection(db, 'verifiedSlips'),
+    fs.where('building','==',building),
+    fs.where('room','in',[String(room), Number(room)].filter(v => !Number.isNaN(v))),
+    fs.limit(500)
+  );
+  fs.getDocs(q)
     .then(snap=>{
       const slips = snap.docs.map(d=>({id:d.id,...d.data()}));
       slips.sort((a,b)=>{
