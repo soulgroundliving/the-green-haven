@@ -8570,6 +8570,14 @@ function openTenantModal(building, roomId) {
   // Meter fields removed - no longer used
   document.getElementById('modalTenantNotes').value = tenant.notes || '';
 
+  // Tax invoice / company info — populate form
+  const rt = document.getElementById('modalTenantReceiptType');
+  if (rt) rt.value = tenant.receiptType || 'personal';
+  const co = tenant.companyInfo || {};
+  const cn = document.getElementById('modalTenantCompanyName'); if (cn) cn.value = co.name || '';
+  const ti = document.getElementById('modalTenantTaxId');       if (ti) ti.value = co.taxId || '';
+  const ca = document.getElementById('modalTenantCompanyAddress'); if (ca) ca.value = co.address || '';
+
 
   // Load contract document - check both tenant and lease sources
   let contractData = null;
@@ -8835,7 +8843,14 @@ function saveTenantInfo() {
     // elecMeterStart and waterMeterStart now managed by Firebase only
     notes: document.getElementById('modalTenantNotes').value,
     contractDocument: document.getElementById('modalContractDocument').value || '',
-    contractFileName: document.getElementById('modalContractFileName').value || ''
+    contractFileName: document.getElementById('modalContractFileName').value || '',
+    // Tax invoice / company info (ใช้ใน tenant_app.html receipt section)
+    receiptType: document.getElementById('modalTenantReceiptType')?.value || 'personal',
+    companyInfo: {
+      name:    (document.getElementById('modalTenantCompanyName')?.value || '').trim(),
+      taxId:   (document.getElementById('modalTenantTaxId')?.value || '').trim(),
+      address: (document.getElementById('modalTenantCompanyAddress')?.value || '').trim(),
+    }
   };
 
   // Generate or reuse tenant ID

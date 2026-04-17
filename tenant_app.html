@@ -3678,13 +3678,14 @@
         }
         function loadReceiptSettings() {
             try {
-                // 1. hydrate from tenant profile (dashboard-synced) if available
+                // 1. hydrate จาก tenant master (ตั้งค่าใน dashboard → People Management)
+                const profileType = _taTenant && _taTenant.receiptType;
                 const profileCo = (_taTenant && (_taTenant.companyInfo || _taTenant.company)) || null;
-                // 2. overlay with local edits
+                // 2. overlay with local edits (ถ้าลูกบ้านแก้เอง ให้ win เหนือ dashboard)
                 let saved = null;
                 try { saved = JSON.parse(localStorage.getItem(_receiptSettingsKey()) || 'null'); } catch(_){}
                 const data = {
-                    type: saved?.type || (profileCo ? 'company' : 'personal'),
+                    type: saved?.type || profileType || (profileCo ? 'company' : 'personal'),
                     name: saved?.name || profileCo?.name || '',
                     tax:  saved?.tax  || profileCo?.taxId || '',
                     addr: saved?.addr || profileCo?.address || '',
