@@ -3915,15 +3915,16 @@ function checkVacant(){
   const yearFull=parseInt(document.getElementById('vc-year')?.value||(new Date().getFullYear()+543));
   const yy=yearFull%100;
   const key=`${yy}_${month}`;
-  // Read from building-namespaced METER_DATA (Rooms Building)
-  const md=METER_DATA['rooms'] && METER_DATA['rooms'][key];
+  const bld = window._pvmBuilding || 'rooms';
+  const md=METER_DATA[bld] && METER_DATA[bld][key];
   if(!md){
     document.getElementById('vc-result').innerHTML=`<span style="color:var(--text-muted);">ไม่มีข้อมูลเดือนนี้ในปี ${yy+2500}</span>`;
     return;
   }
   const monthNames=window.CONFIG.months.short;
-  // ALL rooms in old building
-  const allRooms=['15ก','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','ร้านใหญ่'];
+  const allRooms = bld==='nest'
+    ? (window.NEST_ROOMS||[]).map(r=>r.id)
+    : ['15ก','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','ร้านใหญ่'];
   const vacant=[], occupied=[], noData=[];
   allRooms.forEach(r=>{
     const d=md[r];
@@ -5106,6 +5107,21 @@ function resetRoomPayment(){
 }
 
 // ===== MONTHLY METER TABLE =====
+window._pvmBuilding = 'rooms';
+window.setPVMBuilding = function(bld, btn){
+  window._pvmBuilding = bld;
+  document.querySelectorAll('#pv-tab-monthly .year-tab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const label = bld==='nest' ? 'Nest' : 'ห้องแถว';
+  const secT = document.getElementById('pvm-section-title');
+  if(secT) secT.innerHTML = `📋 สถานะชำระรายเดือน &amp; ห้องว่าง — ${label}`;
+  const tabT = document.getElementById('pvm-table-title');
+  if(tabT) tabT.innerHTML = `📋 ตารางมิเตอร์ &amp; สถานะชำระ — ${label}`;
+  if(typeof renderMeterTable === 'function') renderMeterTable();
+  const vcRes = document.getElementById('vc-result');
+  if(vcRes) vcRes.innerHTML = '';
+};
+
 function renderMeterTable(){
   const el=document.getElementById('meterTableBody');if(!el)return;
   const month=parseInt(document.getElementById('mt-month')?.value||new Date().getMonth()+1);
@@ -5117,11 +5133,12 @@ function renderMeterTable(){
   const paid=ps[psKey]||{};
   let totalPaid=0, totalPending=0, totalAmt=0;
 
-  const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
+  const bld = window._pvmBuilding || 'rooms';
+  const roomList = bld==='nest' ? (window.NEST_ROOMS||[]) : (window.ROOMS_OLD||[]);
+  const rooms = getActiveRoomsWithMetadata(bld, roomList);
   const rows=rooms.map(r=>{
-    const lookupId=r.id; // id unified as 'ร้านใหญ่' in both systems
-    // Read from building-namespaced METER_DATA (Rooms Building)
-    const md=(typeof METER_DATA!=='undefined'&&METER_DATA['rooms']&&METER_DATA['rooms'][mdKey])?METER_DATA['rooms'][mdKey][lookupId]:null;
+    const lookupId=r.id;
+    const md=(typeof METER_DATA!=='undefined'&&METER_DATA[bld]&&METER_DATA[bld][mdKey])?METER_DATA[bld][mdKey][lookupId]:null;
     const p=paid[r.id];
     // Prefer saved payment data, then METER_DATA, then —
     const eNew=p?.eNew!=null?p.eNew:(md?.eNew!=null?md.eNew:'—');
@@ -5169,15 +5186,15 @@ function renderMeterTable(){
 }
 
 function goBillFromTable(roomId, year, month){
-  // ไปที่หน้าออกบิล และเซ็ตค่า
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-bill').classList.add('active');
   document.querySelector('.nav-btn[onclick*="\'bill\'"]')?.classList.add('active');
   if(month)document.getElementById('f-month').value=month;
   if(year)document.getElementById('f-year').value=year;
-  if(document.getElementById('f-building').value!=='old'){
-    document.getElementById('f-building').value='old';
+  const wantBld = (window._pvmBuilding === 'nest') ? 'new' : 'old';
+  if(document.getElementById('f-building').value !== wantBld){
+    document.getElementById('f-building').value = wantBld;
     onBuildingChange();
   }
   document.getElementById('f-room').value=roomId;

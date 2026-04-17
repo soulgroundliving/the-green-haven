@@ -3227,13 +3227,20 @@
     </div>
   </div>
 
-  <!-- TAB 3: สถานะชำระรายเดือน & ห้องว่าง — ห้องแถว -->
+  <!-- TAB 3: สถานะชำระรายเดือน & ห้องว่าง -->
   <div id="pv-tab-monthly" style="display:none;">
-    <div class="section-title" style="margin-top:0;">📋 สถานะชำระรายเดือน &amp; ห้องว่าง — ห้องแถว</div>
+    <div class="section-title" style="margin-top:0;" id="pvm-section-title">📋 สถานะชำระรายเดือน &amp; ห้องว่าง — ห้องแถว</div>
+
+    <!-- Building selector -->
+    <div class="year-tabs" style="margin-bottom:1rem;">
+      <span class="year-tab-label">อาคาร:</span>
+      <button id="pvm-bld-rooms" class="year-tab active" onclick="setPVMBuilding('rooms',this)">🏠 ห้องแถว</button>
+      <button id="pvm-bld-nest" class="year-tab" onclick="setPVMBuilding('nest',this)">🏢 Nest</button>
+    </div>
 
     <!-- Monthly meter entry table -->
     <div class="card" style="margin-bottom:1.2rem;">
-      <div class="card-title">📋 ตารางมิเตอร์ &amp; สถานะชำระ — ห้องแถว</div>
+      <div class="card-title" id="pvm-table-title">📋 ตารางมิเตอร์ &amp; สถานะชำระ — ห้องแถว</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.9rem;">
         <select id="mt-month" onchange="renderMeterTable()" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.88rem;">
           <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
