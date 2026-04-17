@@ -1,43 +1,47 @@
-# World Map Backgrounds — Nest building dynamic scenes (5 modes)
+# World Map Backgrounds — Nest building (5 base + holiday overrides)
 
-บันทึกไฟล์ **5 ไฟล์** ลงใน `shared/bg/` ให้ตรงชื่อเป๊ะ:
+บันทึกไฟล์ใน `shared/bg/` ตามชื่อเป๊ะ
 
-| ไฟล์ | ใช้เมื่อ | ภาพควรเป็น |
-|------|---------|------------|
-| `nest-day-clear.webp`   | 06:00–19:00 + WMO code 0 (ฟ้าใส) | กลางวัน แดดจัด ฟ้าปลอดโปร่ง ป่าเขียวสดใส |
-| `nest-day-cloudy.webp`  | 06:00–19:00 + WMO 1-3 (มีเมฆ) | กลางวัน เมฆครึ้ม แต่ไม่ฝน บรรยากาศทึมอ่อน |
-| `nest-rain.webp`        | ฝน/หมอก/พายุ (WMO 45-67, 80-82, 95-99) กลางวัน | ฝนตก ฟ้าสีเทา ไม่มีแดด |
-| `nest-night-clear.webp` | 19:00–06:00 + ไม่ฝน | กลางคืน ดาวเต็มฟ้า/พระจันทร์ ไฟอาคารติด |
-| `nest-night-rain.webp`  | 19:00–06:00 + ฝน | กลางคืนฝนตก ฟ้ามืดสนิท มีแสงไฟสะท้อนบนพื้นเปียก |
+## Base 5 modes (weather + time)
 
-## Decision logic
+| ไฟล์ | เงื่อนไข |
+|------|---------|
+| `nest-day-clear.webp`   | 06:00–19:00 BKK + WMO 0 (ฟ้าใส) |
+| `nest-day-cloudy.webp`  | 06:00–19:00 BKK + WMO 1-3 (มีเมฆ) |
+| `nest-rain.webp`        | ฝน/หมอก/พายุ (WMO 45-67, 80-82, 95-99) กลางวัน |
+| `nest-night-clear.webp` | 19:00–06:00 BKK + ไม่ฝน |
+| `nest-night-rain.webp`  | 19:00–06:00 BKK + ฝน |
+
+## Holiday overrides (priority > base)
+
+| ไฟล์ | ช่วงเวลา |
+|------|---------|
+| `nest-halloween.webp`        | 31 ต.ค. 17:00 → 1 พ.ย. 06:00 |
+| `nest-christmas-night.webp`  | 24-26 ธ.ค. ช่วง 18:00-06:00 |
+| `nest-christmas-day.webp`    | 24-26 ธ.ค. ช่วง 06:00-17:59 |
+| `nest-newyear.webp`          | 31 ธ.ค. – 2 ม.ค. (ทั้งวัน) |
+
+## Priority logic
 ```
-isNight = hour ≥ 19 OR hour < 6   (Asia/Bangkok)
-rain    = WMO 45-48, 51-67, 80-82, 95-99
-cloudy  = WMO 1-3
-
-if  isNight && rain    → night-rain
-elif isNight            → night-clear
-elif rain               → rain
-elif cloudy             → day-cloudy
-else                    → day-clear  (code 0 / fallback)
-```
-
-## แนะนำ format
-- **WebP** (ประหยัด 30-50% เทียบกับ JPG) — ทุก browser ยุคใหม่รองรับ
-- ขนาดรวม < 200 KB ต่อไฟล์ (LIFF webview โหลดไว)
-- 1080×2340 px (อัตราส่วน iPhone Pro Max)
-
-## ทำ WebP จาก PNG/JPG
-```bash
-cwebp -q 80 input.jpg -o nest-day-clear.webp
-# หรือออนไลน์: https://squoosh.app/
+1. Holiday ชนะทุกอย่าง (halloween > christmas > newyear)
+2. ถ้าไม่ใช่ holiday → base 5-mode ตามเวลา + weather code
 ```
 
-## ถ้าไฟล์หาย
-CSS มี gradient fallback (เขียวสดใส / เทาอมเขียว / เทาฝน / น้ำเงินเข้ม / น้ำเงินดำ)
-ระบบยังใช้งานได้ปกติ
+## สำหรับอนาคต (ยังไม่เจน)
+- `nest-songkran.webp` — 13-15 เม.ย. (สงกรานต์)
+- `nest-valentine.webp` — 14 ก.พ.
+- `nest-loykratong.webp` — วันลอยกระทง (ขึ้น 15 ค่ำ เดือน 12)
+- `nest-mothersday.webp` — 12 ส.ค. (วันแม่)
+- `nest-fathersday.webp` — 5 ธ.ค. (วันพ่อ)
 
-## วันที่เพิ่มฟีเจอร์
-2026-04-18 — ขยายจาก 3 โหมด → 5 โหมด เพื่อแยก day-clear/day-cloudy และ
-night-clear/night-rain ให้ตรงสภาพจริงมากขึ้น
+เมื่อเจนภาพแล้ว save ลง folder นี้ + บอกแอดมินให้เพิ่มช่วง date check ใน `_checkHoliday()`
+
+## Format
+- **WebP** (30-50% เล็กกว่า JPG) < 200 KB/ไฟล์
+- 1080×2340 px (iPhone Pro Max aspect)
+
+## Fallback
+หากไฟล์หาย — CSS gradient render แทนอัตโนมัติ (9 gradient แยกตาม mode)
+
+## Updated
+2026-04-18 — base 5 + halloween/christmas-night/christmas-day/newyear

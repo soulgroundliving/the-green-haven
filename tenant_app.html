@@ -3467,13 +3467,48 @@
             return code != null && code >= 1 && code <= 3;
         }
         const WORLD_MAP_GRADIENTS = {
+            // Base 5 weather/time modes
             'day-clear':   'linear-gradient(180deg, #cfe5d8 0%, #e8f5e9 50%, #f3ece0 100%)',
             'day-cloudy':  'linear-gradient(180deg, #b5c5c9 0%, #d4dcdb 55%, #e4e2d6 100%)',
             'rain':        'linear-gradient(180deg, #47525e 0%, #6b7a8d 55%, #8a9aa8 100%)',
             'night-clear': 'linear-gradient(180deg, #1a2332 0%, #2a3a50 45%, #3b5066 100%)',
             'night-rain':  'linear-gradient(180deg, #0d1520 0%, #1f2a38 55%, #2c3a48 100%)',
+            // Holiday overrides
+            'halloween':        'linear-gradient(180deg, #2d1a3a 0%, #5b2d5c 45%, #a84e3a 100%)',
+            'christmas-night':  'linear-gradient(180deg, #1e2a3e 0%, #3a4a66 45%, #6b7f99 100%)',
+            'christmas-day':    'linear-gradient(180deg, #d9e0e8 0%, #e8dfd0 55%, #f2d9c2 100%)',
+            'newyear':          'linear-gradient(180deg, #7bc8f0 0%, #f4c87d 55%, #e89a55 100%)',
         };
+
+        // Holiday windows (Asia/Bangkok) — ระบุ from/to เป็น {month:0-11, day, hour}
+        // hour = null ครอบทั้งวัน; hour=17 คือ 17:00-24:00 ของวันนั้น; hour=6 คือ 00:00-05:59
+        function _checkHoliday() {
+            const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+            const month = d.getMonth();  // 0-11
+            const day = d.getDate();
+            const hour = d.getHours();
+
+            // Halloween: 31 ต.ค. 17:00 → 1 พ.ย. 06:00
+            if ((month === 9 && day === 31 && hour >= 17) ||
+                (month === 10 && day === 1 && hour < 6)) return 'halloween';
+
+            // Christmas: 24-26 ธ.ค. (แยก day/night)
+            if (month === 11 && day >= 24 && day <= 26) {
+                const isNight = (hour >= 18 || hour < 6);
+                return isNight ? 'christmas-night' : 'christmas-day';
+            }
+
+            // New Year: 31 ธ.ค. – 2 ม.ค.
+            if ((month === 11 && day === 31) || (month === 0 && day <= 2)) return 'newyear';
+
+            return null;
+        }
+
         function _pickBgMode(weatherCode) {
+            // 1. Holiday ชนะทุกอย่าง
+            const holiday = _checkHoliday();
+            if (holiday) return holiday;
+            // 2. Regular 5-mode ตามเวลา + อากาศ
             const h = _bangkokHour();
             const isNight = (h >= 19 || h < 6);
             const rain = _isRainCode(weatherCode);
@@ -3499,7 +3534,7 @@
             // ปรับสี text overlay สำหรับ night/rain (ตัวหนังสือขาวอ่านง่ายกว่า)
             const avatarPill = root?.querySelector(':scope > div');
             if (avatarPill) {
-                const darkModes = ['night-clear','night-rain','rain'];
+                const darkModes = ['night-clear','night-rain','rain','halloween','christmas-night'];
                 if (darkModes.includes(mode)) {
                     avatarPill.style.background = 'rgba(0,0,0,0.45)';
                     avatarPill.style.color = '#fff';
