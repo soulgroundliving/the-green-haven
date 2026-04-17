@@ -1203,6 +1203,14 @@
         .page > div:not(.app-bar):first-of-type {
             margin-top: 8px;
         }
+
+        /* iPhone safe-area — nav-bar ชิดขอบล่างเสมอ, body เผื่อที่ให้ scroll สุดไม่โดน nav ทับ */
+        .nav-bar {
+            padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+        }
+        body {
+            padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
+        }
     </style>
 </head>
 
