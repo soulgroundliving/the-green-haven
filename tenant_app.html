@@ -1659,9 +1659,8 @@
         </div>
         <div class="card">
             <form onsubmit="submitMaintenance(event)">
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">หมวดซ่อม *</label>
-                <select id="maintenanceCategory" required
-                    style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
+                <label>หมวดซ่อม *</label>
+                <select id="maintenanceCategory" required>
                     <option value="">เลือกประเภท</option>
                     <option value="electric">⚡ ไฟฟ้า</option>
                     <option value="water">💧 น้ำ/ประปา</option>
@@ -1672,17 +1671,15 @@
                     <option value="other">📝 อื่นๆ</option>
                 </select>
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">ความเร่งด่วน</label>
-                <select id="maintenancePriority"
-                    style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
+                <label>ความเร่งด่วน</label>
+                <select id="maintenancePriority">
                     <option value="normal">🟡 ปกติ</option>
                     <option value="urgent">🔴 เร่งด่วน</option>
                     <option value="low">🟢 ไม่เร่ง</option>
                 </select>
 
-                <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">อธิบายรายละเอียด *</label>
-                <textarea id="maintenanceDescription" required placeholder="โปรดอธิบายรายละเอียด เช่น ตำแหน่ง อาการ ..."
-                    style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px; min-height:80px; font-family:inherit;"></textarea>
+                <label>อธิบายรายละเอียด *</label>
+                <textarea id="maintenanceDescription" required placeholder="โปรดอธิบายรายละเอียด เช่น ตำแหน่ง อาการ ..."></textarea>
 
                 <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
                 <input type="file" id="maintenancePhoto" accept="image/*"
@@ -1777,11 +1774,11 @@
         <!-- Tab Nav -->
         <div style="display:flex; gap:8px; padding:0 16px 16px;">
             <button id="complaint-tab-form" onclick="switchComplaintTab('form')"
-                style="flex:1; padding:8px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--primary-green); color:#fff; border:none; cursor:pointer;">
+                style="flex:1; padding:12px 14px; min-height:44px; border-radius:14px; font-size:var(--fs-md); font-weight:700; background:var(--primary-green); color:#fff; border:none; cursor:pointer;">
                 ➕ แจ้งใหม่
             </button>
             <button id="complaint-tab-history" onclick="switchComplaintTab('history')"
-                style="flex:1; padding:8px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">
+                style="flex:1; padding:12px 14px; min-height:44px; border-radius:14px; font-size:var(--fs-md); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">
                 📋 ประวัติ
             </button>
         </div>
@@ -1880,20 +1877,20 @@
         </div>
 
         <div id="market-list-container"
-            style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 15px 15px;">
-            <div class="card" style="margin:0; padding:12px;">
+            style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 16px;">
+            <div class="card" style="margin:0 !important; padding:14px !important;">
                 <div
-                    style="height:100px; background:#f9f9f9; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); color:var(--primary-green);">
+                    style="height:96px; background:#f9f9f9; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); color:var(--primary-green);">
                     <i class="fas fa-plug"></i>
                 </div>
-                <small style="display:block; margin-top:8px;">ขายต่อ: โคมไฟ</small><strong>250.-</strong>
+                <small style="display:block; margin-top:10px;">ขายต่อ: โคมไฟ</small><strong>250.-</strong>
             </div>
-            <div class="card" style="margin:0; padding:12px;">
+            <div class="card" style="margin:0 !important; padding:14px !important;">
                 <div
-                    style="height:100px; background:#f9f9f9; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); color:var(--primary-green);">
+                    style="height:96px; background:#f9f9f9; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); color:var(--primary-green);">
                     <i class="fas fa-hamburger"></i>
                 </div>
-                <small style="display:block; margin-top:8px;">รับหิ้ว: อาหาร</small><strong>15.-</strong>
+                <small style="display:block; margin-top:10px;">รับหิ้ว: อาหาร</small><strong>15.-</strong>
             </div>
         </div>
     </div>
@@ -1910,19 +1907,19 @@
             </div>
         </div>
         <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; padding: 0 16px;">
-            <div class="card" style="margin:0; padding:14px 8px; text-align:center; cursor:pointer;" onclick="showSubPage('building')">
+            <div class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('building')">
                 <div style="font-size: 1.6rem; line-height:1;">🏠</div>
                 <p style="margin: 6px 0 0;">ข้อมูลอาคาร</p>
             </div>
-            <div class="card" style="margin:0; padding:14px 8px; text-align:center; cursor:pointer;" onclick="showSubPage('water_usage')">
+            <div class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('water_usage')">
                 <div style="font-size: 1.6rem; line-height:1;">💧</div>
                 <p style="margin: 6px 0 0;">ปริมาณน้ำ</p>
             </div>
-            <div class="card" style="margin:0; padding:14px 8px; text-align:center; cursor:pointer;" onclick="showSubPage('elec_usage')">
+            <div class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('elec_usage')">
                 <div style="font-size: 1.6rem; line-height:1;">⚡</div>
                 <p style="margin: 6px 0 0;">ปริมาณไฟ</p>
             </div>
-            <div id="nav-eco-score-card" class="card" style="margin:0; padding:14px 8px; text-align:center; cursor:pointer;" onclick="showSubPage('eco_score')">
+            <div id="nav-eco-score-card" class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('eco_score')">
                 <div style="font-size: 1.6rem; line-height:1;">♻️</div>
                 <p style="margin: 6px 0 0;">Eco-Score</p>
             </div>
