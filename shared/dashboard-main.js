@@ -1780,8 +1780,26 @@ function switchContentTab(tabName, btn) {
 }
 
 // ===== WELLNESS ARTICLES CRUD =====
+// Phase: Live wellness articles via onSnapshot (was one-shot getDocs)
+let _wellnessUnsub = null;
+let _wellnessCache = null;
 async function initWellnessArticlesPage() {
+  // Render immediately from cache (or empty placeholder) so user doesn't see blank
   await renderWellnessArticlesList();
+  if (_wellnessUnsub) return;
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    setTimeout(initWellnessArticlesPage, 1500);
+    return;
+  }
+  try {
+    const db = window.firebase.firestore();
+    const { collection, query, orderBy, onSnapshot } = window.firebase.firestoreFunctions;
+    const q = query(collection(db, 'wellness_articles'), orderBy('createdAt', 'desc'));
+    _wellnessUnsub = onSnapshot(q, snap => {
+      _wellnessCache = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+      renderWellnessArticlesList();
+    }, err => console.warn('wellness onSnapshot:', err?.message));
+  } catch(e) { console.warn('wellness subscribe:', e); }
 }
 
 async function saveWellnessArticle() {
@@ -1836,16 +1854,28 @@ function resetWellnessForm() {
 async function renderWellnessArticlesList() {
   const el = document.getElementById('wellnessList');
   if (!el) return;
-  el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">⌛ กำลังโหลด...</div>';
-  if (!window.firebase?.firestore) { el.innerHTML = '<div style="color:var(--danger);padding:20px;">Firebase ไม่พร้อม</div>'; return; }
+  // Use cached snapshot if available (populated by onSnapshot in initWellnessArticlesPage)
+  let docs = _wellnessCache;
+  if (!docs) {
+    el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">⌛ กำลังโหลด...</div>';
+    if (!window.firebase?.firestore) { el.innerHTML = '<div style="color:var(--danger);padding:20px;">Firebase ไม่พร้อม</div>'; return; }
+    try {
+      const db = window.firebase.firestore();
+      const { collection, getDocs, query, orderBy } = window.firebase.firestoreFunctions || {};
+      const q = query(collection(db, 'wellness_articles'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      docs = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+      _wellnessCache = docs;
+    } catch (e) {
+      console.error('renderWellnessArticlesList getDocs:', e);
+      el.innerHTML = '<div style="color:var(--danger);padding:20px;">โหลดรายการไม่สำเร็จ: ' + (e.message || e) + '</div>';
+      return;
+    }
+  }
+  if (!docs.length) { el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;">ยังไม่มีบทความ — เขียนบทความแรกด้านบน</div>'; return; }
   try {
-    const db = window.firebase.firestore();
-    const { collection, getDocs, query, orderBy } = window.firebase.firestoreFunctions || {};
-    const q = query(collection(db, 'wellness_articles'), orderBy('createdAt', 'desc'));
-    const snap = await getDocs(q);
-    if (snap.empty) { el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;">ยังไม่มีบทความ — เขียนบทความแรกด้านบน</div>'; return; }
-    el.innerHTML = snap.docs.map(d => {
-      const a = d.data();
+    el.innerHTML = docs.map(({ id, data: a }) => {
+      const d = { id };
       const title = (a.title || '').replace(/</g, '&lt;');
       const excerpt = (a.excerpt || '').replace(/</g, '&lt;');
       return `<div style="padding:1rem;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;">

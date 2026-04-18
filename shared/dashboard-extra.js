@@ -1234,8 +1234,18 @@ let _emergencyAdminUnsub = null;
 let _emergencyAdminCache = []; // array of {icon, label, number, order}
 
 function initEmergencyContactsPage() {
-  if (_emergencyAdminUnsub) return; // idempotent
-  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  if (_emergencyAdminUnsub) {
+    // Already subscribed — re-render from cache so tab open shows data instantly
+    renderEmergencyAdminTable();
+    return;
+  }
+  // Retry-when-not-ready (handles user clicking tab before Firebase init complete)
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    const tbody = document.getElementById('emergencyAdminTable');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">⌛ รอ Firebase พร้อม...</td></tr>';
+    setTimeout(initEmergencyContactsPage, 800);
+    return;
+  }
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
   const ref = fs.doc(db, 'system', 'emergencyContacts');
@@ -1245,8 +1255,15 @@ function initEmergencyContactsPage() {
     renderEmergencyAdminTable();
   }, err => {
     console.warn('emergency admin onSnapshot failed:', err);
-    document.getElementById('emergencyAdminTable').innerHTML = `<tr><td colspan="5" style="text-align:center;color:#c62828;padding:20px;">โหลดไม่สำเร็จ: ${err.message}</td></tr>`;
+    const tbody = document.getElementById('emergencyAdminTable');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#c62828;padding:20px;">โหลดไม่สำเร็จ: ${err.message}</td></tr>`;
   });
+}
+
+// Auto-subscribe on page load so cache is warm before user opens the tab
+if (typeof window !== 'undefined' && !window._emergencyEarlySubscribed) {
+  window._emergencyEarlySubscribed = true;
+  document.addEventListener('DOMContentLoaded', () => setTimeout(initEmergencyContactsPage, 1200));
 }
 
 function renderEmergencyAdminTable() {
