@@ -598,17 +598,43 @@
     <div class="card">
       <div class="card-title">💾 Export สำหรับบัญชี / ยื่นภาษี</div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom:10px;">
-        <button class="btn btn-primary" onclick="exportInvoicesCSV()">
-          <span>🧾</span>Export ใบเสร็จทั้งหมด (CSV)
+        <button class="btn btn-primary" onclick="previewInvoicesCSV()">
+          <span>🧾</span>Preview + Export ใบเสร็จ
         </button>
-        <button class="btn btn-primary" onclick="exportMonthlySummaryCSV()">
-          <span>📊</span>Export สรุปรายเดือน + ภ.ง.ด.90 (CSV)
+        <button class="btn btn-primary" onclick="previewMonthlySummaryCSV()">
+          <span>📊</span>Preview + Export สรุปรายเดือน
         </button>
       </div>
       <p style="font-size:.85rem; color:var(--text-muted); margin:0;">
-        CSV Format ใช้ได้กับ FlowAccount, Excel, Google Sheets. รวม BOM สำหรับภาษาไทย<br>
-        เลือกปีตามวันปัจจุบัน (default = ปีพุทธศักราช ปัจจุบัน) — เปลี่ยนได้ผ่าน console: <code>exportInvoicesCSV(2568)</code>
+        กดปุ่มเพื่อ Preview ข้อมูลเป็นตารางก่อน — ตรวจแล้วค่อยกด Download CSV. รองรับ FlowAccount / Excel / Google Sheets (BOM UTF-8).<br>
+        Default = ปีพุทธศักราชปัจจุบัน. เปลี่ยนผ่าน console: <code>previewInvoicesCSV(2568)</code>
       </p>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="csvPreviewModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10000; justify-content:center; align-items:center; padding:20px;">
+      <div style="background:#fff; border-radius:12px; width:100%; max-width:1100px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden;">
+        <div style="padding:14px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div id="csvPreviewTitle" style="font-weight:700; font-size:1.05rem;">Preview</div>
+            <div id="csvPreviewStats" style="font-size:.82rem; color:var(--text-muted); margin-top:2px;"></div>
+          </div>
+          <button onclick="closeCsvPreview()" style="background:#eee; border:none; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:1rem;">✕</button>
+        </div>
+        <div style="flex:1; overflow:auto; padding:10px 20px;">
+          <table id="csvPreviewTable" style="width:100%; border-collapse:collapse; font-size:.82rem; font-family:-apple-system,Segoe UI,Sarabun,sans-serif;">
+            <thead id="csvPreviewHead"></thead>
+            <tbody id="csvPreviewBody"></tbody>
+          </table>
+        </div>
+        <div style="padding:14px 20px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <div style="font-size:.78rem; color:var(--text-muted);">💡 ข้อมูลมาจาก <span id="csvPreviewSource"></span></div>
+          <div style="display:flex; gap:10px;">
+            <button onclick="closeCsvPreview()" style="padding:9px 18px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:600;">ยกเลิก</button>
+            <button onclick="confirmCsvDownload()" style="padding:9px 18px; background:var(--green, #2d8653); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">📥 Download CSV</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Quick Links -->
@@ -920,74 +946,122 @@
     });
   }
 
-  // ===== CSV EXPORT (FlowAccount-friendly) =====
-  // Exports invoices from RTDB bills/ for a given BE year.
-  // Format: วันที่, เลขที่เอกสาร, ชื่อลูกค้า, สินค้า/บริการ, จำนวน, ราคาต่อหน่วย, มูลค่า
-  async function exportInvoicesCSV(yearBE) {
-    yearBE = yearBE || (new Date().getFullYear() + 543);
-    try {
-      // Fetch via RTDB REST (no auth needed since rules allow signedIn read)
-      const dbURL = `https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app/bills.json?auth=${await window.firebaseAuth.currentUser.getIdToken()}`;
-      const resp = await fetch(dbURL);
-      const allBills = await resp.json() || {};
-      const rows = [];
-      // header
-      rows.push(['วันที่','เลขที่เอกสาร','ประเภท','ชื่อลูกบ้าน','ห้อง','ตึก','สินค้า/บริการ','จำนวน','ราคาต่อหน่วย','มูลค่า'].join(','));
-      for (const building of Object.keys(allBills)) {
-        const roomMap = allBills[building] || {};
-        for (const room of Object.keys(roomMap)) {
-          const bills = roomMap[room] || {};
-          for (const billId of Object.keys(bills)) {
-            const b = bills[billId] || {};
-            const yr = Number(b.year) < 100 ? 2500 + Number(b.year) : Number(b.year);
-            if (yr !== yearBE) continue;
-            const total = Number(b.totalCharge||b.totalAmount) || 0;
-            if (total <= 0 && !b.charges) continue;
-            const date = b.billDate || b.paidAt?.slice(0,10) || `${yr-543}-${String(b.month).padStart(2,'0')}-05`;
-            const docType = b.status === 'paid' ? 'ใบเสร็จรับเงิน' : 'ใบวางบิล';
-            const tenantName = b.tenantName || '';
-            const c = b.charges || {};
-            // One line per charge category (FlowAccount imports separate items)
-            if (c.rent)            rows.push([date, billId, docType, tenantName, room, building, 'ค่าเช่าห้อง '+room, 1, c.rent, c.rent].map(csvCell).join(','));
-            if (c.electric?.cost)  rows.push([date, billId, docType, tenantName, room, building, `ค่าไฟ ${c.electric.units||0} หน่วย`, c.electric.units||1, c.electric.rate||8, c.electric.cost].map(csvCell).join(','));
-            if (c.water?.cost)     rows.push([date, billId, docType, tenantName, room, building, `ค่าน้ำ ${c.water.units||0} หน่วย`, c.water.units||1, c.water.rate||20, c.water.cost].map(csvCell).join(','));
-            if (c.trash)           rows.push([date, billId, docType, tenantName, room, building, 'ค่าขยะ', 1, c.trash, c.trash].map(csvCell).join(','));
-          }
+  // ===== CSV BUILDERS (return structured rows — used by both preview + download) =====
+  // FlowAccount-friendly invoice CSV. One line per charge category per bill.
+  async function buildInvoicesCsv(yearBE) {
+    const headers = ['วันที่','เลขที่เอกสาร','ประเภท','ชื่อลูกบ้าน','ห้อง','ตึก','สินค้า/บริการ','จำนวน','ราคาต่อหน่วย','มูลค่า'];
+    const dbURL = `https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app/bills.json?auth=${await window.firebaseAuth.currentUser.getIdToken()}`;
+    const resp = await fetch(dbURL);
+    const allBills = await resp.json() || {};
+    const rows = [];
+    for (const building of Object.keys(allBills)) {
+      const roomMap = allBills[building] || {};
+      for (const room of Object.keys(roomMap)) {
+        const bills = roomMap[room] || {};
+        for (const billId of Object.keys(bills)) {
+          const b = bills[billId] || {};
+          const yr = Number(b.year) < 100 ? 2500 + Number(b.year) : Number(b.year);
+          if (yr !== yearBE) continue;
+          const total = Number(b.totalCharge||b.totalAmount) || 0;
+          if (total <= 0 && !b.charges) continue;
+          const date = b.billDate || b.paidAt?.slice(0,10) || `${yr-543}-${String(b.month).padStart(2,'0')}-05`;
+          const docType = b.status === 'paid' ? 'ใบเสร็จรับเงิน' : 'ใบวางบิล';
+          const tenantName = b.tenantName || '';
+          const c = b.charges || {};
+          if (c.rent)           rows.push([date, billId, docType, tenantName, room, building, 'ค่าเช่าห้อง '+room, 1, c.rent, c.rent]);
+          if (c.electric?.cost) rows.push([date, billId, docType, tenantName, room, building, `ค่าไฟ ${c.electric.units||0} หน่วย`, c.electric.units||1, c.electric.rate||8, c.electric.cost]);
+          if (c.water?.cost)    rows.push([date, billId, docType, tenantName, room, building, `ค่าน้ำ ${c.water.units||0} หน่วย`, c.water.units||1, c.water.rate||20, c.water.cost]);
+          if (c.trash)          rows.push([date, billId, docType, tenantName, room, building, 'ค่าขยะ', 1, c.trash, c.trash]);
         }
       }
-      downloadCSV(`invoices_BE${yearBE}.csv`, '\uFEFF' + rows.join('\n')); // BOM for Excel Thai
-      alert(`✅ Export สำเร็จ: ${rows.length - 1} line items`);
-    } catch (e) {
-      console.error('exportInvoicesCSV failed:', e);
-      alert('Export ล้มเหลว: ' + e.message);
     }
+    return { headers, rows, filename: `invoices_BE${yearBE}.csv`, title: `ใบเสร็จ/ใบวางบิลทั้งหมด ปี ${yearBE}`, source: 'RTDB bills/' };
   }
 
-  // Monthly summary CSV (for ภ.ง.ด.90 filing prep)
-  function exportMonthlySummaryCSV(yearBE) {
-    yearBE = yearBE || (new Date().getFullYear() + 543);
+  function buildMonthlySummaryCsv(yearBE) {
     const data = window._taxSummary;
-    if (!data) { alert('ยังไม่มีข้อมูล taxSummary — รัน aggregate CF ก่อน'); return; }
-    const rows = [['เดือน','รายได้ค่าเช่า','รายได้ค่าไฟ','รายได้ค่าน้ำ','รายได้ค่าขยะ','รายได้รวม','ชำระแล้ว','ค้างชำระ','จำนวนบิล'].join(',')];
+    if (!data) throw new Error('ยังไม่มีข้อมูล taxSummary — รัน aggregate CF ก่อน');
+    const headers = ['เดือน','รายได้ค่าเช่า','รายได้ค่าไฟ','รายได้ค่าน้ำ','รายได้ค่าขยะ','รายได้รวม','ชำระแล้ว','ค้างชำระ','จำนวนบิล'];
     const THAI_MONTHS = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    const rows = [];
     for (let m = 1; m <= 12; m++) {
       const d = (data.months||{})[m] || {};
-      rows.push([
-        THAI_MONTHS[m], d.rentIncome||0, d.electricIncome||0, d.waterIncome||0, d.trashIncome||0,
-        d.totalRevenue||0, d.paidRevenue||0, d.pendingRevenue||0, (d.paidCount||0)+(d.pendingCount||0)
-      ].map(csvCell).join(','));
+      rows.push([THAI_MONTHS[m], d.rentIncome||0, d.electricIncome||0, d.waterIncome||0, d.trashIncome||0,
+        d.totalRevenue||0, d.paidRevenue||0, d.pendingRevenue||0, (d.paidCount||0)+(d.pendingCount||0)]);
     }
     const a = data.annual || {};
-    rows.push([]);
-    rows.push(['รวมปี', a.rentIncome||0, a.electricIncome||0, a.waterIncome||0, a.trashIncome||0, a.totalRevenue||0, a.paidRevenue||0, a.pendingRevenue||0, (a.paidCount||0)+(a.pendingCount||0)].map(csvCell).join(','));
-    rows.push([]);
-    rows.push(['ภาษีประมาณการ ภ.ง.ด.90 (ม.40(5)(ก))', '', '', '', '', '', '', '', ''].map(csvCell).join(','));
-    rows.push(['รายได้รวม', a.totalRevenue||0, '', '', '', '', '', '', ''].map(csvCell).join(','));
-    rows.push(['หักค่าใช้จ่ายเหมา 30%', a.taxEstimate?.standardDeduction||0, '', '', '', '', '', '', ''].map(csvCell).join(','));
-    rows.push(['รายได้สุทธิก่อนลดหย่อน', a.taxEstimate?.netRevenue||0, '', '', '', '', '', '', ''].map(csvCell).join(','));
-    downloadCSV(`revenue_summary_BE${yearBE}.csv`, '\uFEFF' + rows.join('\n'));
-    alert('✅ Export monthly summary สำเร็จ');
+    rows.push(['— รวมทั้งปี —', a.rentIncome||0, a.electricIncome||0, a.waterIncome||0, a.trashIncome||0, a.totalRevenue||0, a.paidRevenue||0, a.pendingRevenue||0, (a.paidCount||0)+(a.pendingCount||0)]);
+    rows.push(['', '', '', '', '', '', '', '', '']);
+    rows.push(['ประเมินภาษี ภ.ง.ด.90 (ม.40(5)(ก))', '', '', '', '', '', '', '', '']);
+    rows.push(['รายได้รวม', a.totalRevenue||0, '', '', '', '', '', '', '']);
+    rows.push(['หักค่าใช้จ่ายเหมา 30%', a.taxEstimate?.standardDeduction||0, '', '', '', '', '', '', '']);
+    rows.push(['รายได้สุทธิก่อนลดหย่อน', a.taxEstimate?.netRevenue||0, '', '', '', '', '', '', '']);
+    return { headers, rows, filename: `revenue_summary_BE${yearBE}.csv`, title: `สรุปรายเดือน + ภ.ง.ด.90 ปี ${yearBE}`, source: 'Firestore taxSummary/' + yearBE };
   }
+
+  // ===== PREVIEW MODAL =====
+  let _pendingCsv = null;
+  async function previewInvoicesCSV(yearBE) {
+    yearBE = yearBE || (new Date().getFullYear() + 543);
+    try {
+      const data = await buildInvoicesCsv(yearBE);
+      showCsvPreview(data);
+    } catch (e) { alert('โหลดข้อมูลไม่สำเร็จ: ' + e.message); }
+  }
+  function previewMonthlySummaryCSV(yearBE) {
+    yearBE = yearBE || (new Date().getFullYear() + 543);
+    try {
+      const data = buildMonthlySummaryCsv(yearBE);
+      showCsvPreview(data);
+    } catch (e) { alert(e.message); }
+  }
+
+  function showCsvPreview({ headers, rows, filename, title, source }) {
+    _pendingCsv = { headers, rows, filename };
+    const modal = document.getElementById('csvPreviewModal');
+    document.getElementById('csvPreviewTitle').textContent = title;
+    document.getElementById('csvPreviewSource').textContent = source;
+    // Compute summary stats
+    const total = rows.reduce((s, r) => {
+      const v = r[r.length - 1]; // last column = value
+      const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[^\d.-]/g,''));
+      return s + (isNaN(n) ? 0 : n);
+    }, 0);
+    document.getElementById('csvPreviewStats').textContent =
+      `${rows.length} rows · มูลค่ารวม ฿${total.toLocaleString('th-TH', { maximumFractionDigits: 0 })}`;
+    // Head
+    const thead = document.getElementById('csvPreviewHead');
+    thead.innerHTML = '<tr>' + headers.map(h => `<th style="padding:8px 10px; background:#f5f5f5; border-bottom:2px solid #ddd; text-align:left; position:sticky; top:0; z-index:1;">${csvEsc(h)}</th>`).join('') + '</tr>';
+    // Body
+    const tbody = document.getElementById('csvPreviewBody');
+    tbody.innerHTML = rows.map((r, i) => {
+      const isTotal = typeof r[0] === 'string' && /รวม|ประเมิน|สุทธิ|หัก/.test(r[0]);
+      const bg = isTotal ? 'background:#fff9e5; font-weight:700;' : (i % 2 === 0 ? 'background:#fafafa;' : '');
+      return '<tr style="' + bg + '">' + r.map((c, j) => {
+        const align = (typeof c === 'number' || (typeof c === 'string' && /^-?\d+(\.\d+)?$/.test(c))) ? 'right' : 'left';
+        const val = typeof c === 'number' ? c.toLocaleString('th-TH') : csvEsc(c);
+        return `<td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:${align};">${val}</td>`;
+      }).join('') + '</tr>';
+    }).join('');
+    modal.style.display = 'flex';
+  }
+
+  function closeCsvPreview() {
+    const modal = document.getElementById('csvPreviewModal');
+    if (modal) modal.style.display = 'none';
+    _pendingCsv = null;
+  }
+
+  function confirmCsvDownload() {
+    if (!_pendingCsv) return;
+    const { headers, rows, filename } = _pendingCsv;
+    const lines = [headers.map(csvCell).join(',')];
+    rows.forEach(r => lines.push(r.map(csvCell).join(',')));
+    downloadCSV(filename, '\uFEFF' + lines.join('\n')); // BOM for Excel Thai
+    closeCsvPreview();
+  }
+
+  function csvEsc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
 
   function csvCell(v) {
     if (v == null) return '';
@@ -1005,8 +1079,10 @@
   }
   if (typeof window !== 'undefined') {
     window.subscribeTaxSummary = subscribeTaxSummary;
-    window.exportInvoicesCSV = exportInvoicesCSV;
-    window.exportMonthlySummaryCSV = exportMonthlySummaryCSV;
+    window.previewInvoicesCSV = previewInvoicesCSV;
+    window.previewMonthlySummaryCSV = previewMonthlySummaryCSV;
+    window.closeCsvPreview = closeCsvPreview;
+    window.confirmCsvDownload = confirmCsvDownload;
   }
 
   function showTaxPage(pageName, btn) {
