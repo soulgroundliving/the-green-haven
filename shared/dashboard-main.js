@@ -495,10 +495,13 @@ function parseImportExcelData(workbook, building) {
       const row = data[i];
       if (!row[0]) continue;
       const roomNum = String(row[0]).trim();
+      // Excel layout: F (col 5) = electric new (formula =B for Rooms/Amazon, direct entry for Nest)
+      //               L (col 11) = water new (formula =C for Rooms/Amazon, direct entry for Nest)
+      //               G (col 6) = electric old, M (col 12) = water old
       const meterData = {
-        eNew: parseFloat(row[1]) || 0,
+        eNew: parseFloat(row[5]) || 0,
         eOld: parseFloat(row[6]) || 0,
-        wNew: parseFloat(row[2]) || 0,
+        wNew: parseFloat(row[11]) || 0,
         wOld: parseFloat(row[12]) || 0
       };
 
@@ -538,10 +541,10 @@ function parseImportExcelData(workbook, building) {
 
     const roomNum = String(row[0]).trim();
     const meterData = {
-      eNew: parseFloat(row[1]) || 0,  // Column B: Electricity New
-      eOld: parseFloat(row[6]) || 0,  // Column G: Electricity Old
-      wNew: parseFloat(row[2]) || 0,  // Column C: Water New
-      wOld: parseFloat(row[12]) || 0  // Column M: Water Old
+      eNew: parseFloat(row[5]) || 0,   // Column F: Electricity New (formula =B for Rooms/Amazon, direct for Nest)
+      eOld: parseFloat(row[6]) || 0,   // Column G: Electricity Old
+      wNew: parseFloat(row[11]) || 0,  // Column L: Water New (formula =C for Rooms/Amazon, direct for Nest)
+      wOld: parseFloat(row[12]) || 0   // Column M: Water Old
     };
 
     // Auto-detect building from room number
@@ -6433,7 +6436,7 @@ function _pvLoadManualPayments(){
     Object.keys(byRoom).forEach(room => {
       const p = byRoom[room];
       if(!p || p.status !== 'paid') return;
-      const bld = /^N\d+/.test(String(room)) ? 'nest' : 'rooms';
+      const bld = detectBuildingFromRoomId(room);
       const tsSource = p.slip?.transferDate || p.date || `${year}-${String(month).padStart(2,'0')}-05`;
       out.push({
         id: `ps_${yearMonth}_${room}`,
@@ -6511,6 +6514,11 @@ function setPVFilter(filter, btn) {
   renderPVFeed(slips);
 }
 
+function _pvEscape(text) {
+  const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+  return String(text == null ? '' : text).replace(/[&<>"']/g, m => map[m]);
+}
+
 function _pvInRange(slip) {
   const ts = slip.timestamp?.toDate ? slip.timestamp.toDate() : new Date(slip.timestamp || slip.verifiedAt);
   const now = new Date();
@@ -6557,8 +6565,8 @@ function renderPVFeed(slips) {
     return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
       <div style="background:${amountOk ? 'var(--green-pale)' : '#fff3e0'};color:${amountOk ? 'var(--green-dark)' : '#e65100'};border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">${amountOk ? '✅' : '⚠️'}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:.9rem;">ห้อง <span style="color:var(--green-dark);">${s.room || '—'}</span> <span style="color:var(--text-muted);font-size:.78rem;">${s.building || ''}</span></div>
-        <div style="font-size:.78rem;color:var(--text-muted);">โดย ${s.sender || '—'} · ${bankName(s.bankCode)}</div>
+        <div style="font-weight:700;font-size:.9rem;">ห้อง <span style="color:var(--green-dark);">${_pvEscape(s.room || '—')}</span> <span style="color:var(--text-muted);font-size:.78rem;">${_pvEscape(s.building || '')}</span></div>
+        <div style="font-size:.78rem;color:var(--text-muted);">โดย ${_pvEscape(s.sender || '—')} · ${_pvEscape(bankName(s.bankCode))}</div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
         <div style="font-weight:800;color:var(--green-dark);font-size:.95rem;">฿${(s.amount||0).toLocaleString()}</div>
@@ -6813,8 +6821,8 @@ window.renderPVHistory = function(){
         return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
           <div style="background:var(--green-pale);color:var(--green-dark);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">✅</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:.88rem;">฿${(s.amount||0).toLocaleString()} <span style="color:var(--text-muted);font-weight:400;font-size:.78rem;">· ${bankName(s.bankCode)}</span></div>
-            <div style="font-size:.75rem;color:var(--text-muted);">โดย ${s.sender||'—'} · ${s.transactionId||s.transRef||''}</div>
+            <div style="font-weight:700;font-size:.88rem;">฿${(s.amount||0).toLocaleString()} <span style="color:var(--text-muted);font-weight:400;font-size:.78rem;">· ${_pvEscape(bankName(s.bankCode))}</span></div>
+            <div style="font-size:.75rem;color:var(--text-muted);">โดย ${_pvEscape(s.sender||'—')} · ${_pvEscape(s.transactionId||s.transRef||'')}</div>
           </div>
           <div style="text-align:right;font-size:.75rem;color:var(--text-muted);flex-shrink:0;">${timeStr}</div>
         </div>`;
@@ -6839,7 +6847,7 @@ window.renderPVHistory = function(){
           <div style="background:var(--green-pale);color:var(--green-dark);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">✅</div>
           <div style="flex:1;min-width:0;">
             <div style="font-weight:700;font-size:.88rem;">฿${(s.amount||0).toLocaleString()} <span style="color:var(--text-muted);font-weight:400;font-size:.78rem;">· (manual)</span></div>
-            <div style="font-size:.75rem;color:var(--text-muted);">โดย ${s.sender||'—'} · ${s.transactionId||''}</div>
+            <div style="font-size:.75rem;color:var(--text-muted);">โดย ${_pvEscape(s.sender||'—')} · ${_pvEscape(s.transactionId||'')}</div>
           </div>
           <div style="text-align:right;font-size:.75rem;color:var(--text-muted);flex-shrink:0;">${timeStr}</div>
         </div>`;
@@ -8605,7 +8613,15 @@ window.TenantDataEvents = TenantDataEvents;
 
 // Helper function to detect building from room ID (fallback)
 function detectBuildingFromRoomId(roomId) {
-  return roomId.startsWith('N') ? 'nest' : 'rooms';
+  // Single source of truth — delegate to BillingSystem.detectBuilding
+  // (handles both "N101" prefix style AND legacy numeric 101-405 stored as nest)
+  if (typeof BillingSystem !== 'undefined' && BillingSystem.detectBuilding) {
+    return BillingSystem.detectBuilding(roomId)[0];
+  }
+  const s = String(roomId);
+  if (s.startsWith('N') || s.startsWith('n')) return 'nest';
+  const n = parseInt(s);
+  return (n >= 101 && n <= 405) ? 'nest' : 'rooms';
 }
 
 function openTenantModal(building, roomId) {

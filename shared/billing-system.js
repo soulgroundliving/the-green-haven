@@ -305,10 +305,16 @@ class BillingSystem {
         room = RoomConfigManager.getRoom(building, roomId);
       }
 
-      const eRate = room?.elecRate || room?.electricRate || 8;
-      const wRate = room?.waterRate || 20;
-      const rent = room?.rent || 1200;
-      const trash = room?.trashFee || 40;
+      const eRate = room?.elecRate ?? room?.electricRate;
+      const wRate = room?.waterRate;
+      const rent = room?.rent;
+      const trash = room?.trashFee ?? 40;
+
+      if (eRate == null || wRate == null || rent == null) {
+        const missing = [eRate == null && 'elecRate', wRate == null && 'waterRate', rent == null && 'rent'].filter(Boolean).join(', ');
+        console.error(`❌ BillingSystem.calculateBillFromMeterData: room ${building}/${roomId} missing required field(s): ${missing}. Aborting bill generation to prevent silent overcharge.`);
+        return null;
+      }
 
       // Calculate usage
       const eUnits = Math.max(0, eNew - eOld);
@@ -649,44 +655,54 @@ class BillingSystem {
   }
 }
 
-// Auto-run when tenant app loads (if Firebase is ready)
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', async () => {
-    let waitCount = 0;
-    while (!window.firebase?.firestore && waitCount < 20) {
-      await new Promise(r => setTimeout(r, 500));
-      waitCount++;
-    }
-
-    if (window.firebase?.firestore) {
-      const params = new URLSearchParams(window.location.search);
-      const building = params.get('building') || localStorage.getItem('currentBuilding') || 'rooms';
-
-      console.log('🔔 Billing system activated');
-      await BillingSystem.autogenerateBillsForAllYears(building);
-
-      // Refresh HISTORICAL_DATA display after generation completes
-      if (typeof window.initHistoricalDataDisplay === 'function') {
-        window.initHistoricalDataDisplay();
-      }
-
-      BillingSystem.watchForNewMeterData(building);
-    }
-  });
-} else {
-  if (window.firebase?.firestore) {
-    const params = new URLSearchParams(window.location.search);
-    const building = params.get('building') || localStorage.getItem('currentBuilding') || 'rooms';
-    BillingSystem.autogenerateBillsForAllYears(building).then(() => {
-      // Refresh HISTORICAL_DATA display after generation completes
-      if (typeof window.initHistoricalDataDisplay === 'function') {
-        window.initHistoricalDataDisplay();
-      }
-    });
-
-    BillingSystem.watchForNewMeterData(building);
-  }
+// Auto-run guarded: only fire on the admin dashboard, not on tenant_app.html
+// (tenant pages should not regenerate bills for ALL years on every load —
+// that runs N rooms × N months × N years of work and leaks an onSnapshot listener)
+function _isAdminDashboard() {
+  const path = (window.location.pathname || '').toLowerCase();
+  return path.includes('dashboard') || path === '/' || path.endsWith('/index.html');
 }
+
+let _billingMeterUnsubscribe = null;
+
+async function _bootstrapAutoBilling() {
+  if (!_isAdminDashboard()) {
+    console.log('ℹ️ BillingSystem: skipping auto-regen (not admin dashboard)');
+    return;
+  }
+  let waitCount = 0;
+  while (!window.firebase?.firestore && waitCount < 20) {
+    await new Promise(r => setTimeout(r, 500));
+    waitCount++;
+  }
+  if (!window.firebase?.firestore) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const building = params.get('building') || localStorage.getItem('currentBuilding') || 'rooms';
+
+  console.log('🔔 Billing system activated (admin dashboard)');
+  await BillingSystem.autogenerateBillsForAllYears(building);
+
+  if (typeof window.initHistoricalDataDisplay === 'function') {
+    window.initHistoricalDataDisplay();
+  }
+
+  // Track unsubscribe so we can clean up on page unload / SPA navigation
+  _billingMeterUnsubscribe = BillingSystem.watchForNewMeterData(building);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _bootstrapAutoBilling);
+} else {
+  _bootstrapAutoBilling();
+}
+
+window.addEventListener('beforeunload', () => {
+  if (typeof _billingMeterUnsubscribe === 'function') {
+    _billingMeterUnsubscribe();
+    _billingMeterUnsubscribe = null;
+  }
+});
 
 // Expose globally (backward compatibility)
 if (typeof window !== 'undefined') {

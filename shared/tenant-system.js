@@ -174,12 +174,12 @@ class TenantConfigManager {
   static async loadTenantsFromFirebase(building) {
     try {
       if (!window.firebase) {
-        return this.getAllTenants();
+        return this.getAllTenants(building);
       }
 
       // Skip if not authenticated — Firestore rules require auth
       if (!window.firebaseAuth?.currentUser) {
-        return this.getAllTenants();
+        return this.getAllTenants(building);
       }
 
       const db = window.firebase.firestore();
@@ -203,7 +203,7 @@ class TenantConfigManager {
     }
 
     // Fallback to localStorage
-    return this.getAllTenants();
+    return this.getAllTenants(building);
   }
 
   static async updateTenantWithFirebase(building, tenantId, updates) {
@@ -285,7 +285,7 @@ class TenantManager {
 
       // Get tenant info
       const tenant = typeof TenantConfigManager !== 'undefined'
-        ? TenantConfigManager.getTenant(lease.tenantId)
+        ? TenantConfigManager.getTenant(building, lease.tenantId)
         : null;
 
       // Get room info
@@ -670,7 +670,7 @@ class TenantManager {
 
       // 4. Get tenant info
       const tenant = typeof TenantConfigManager !== 'undefined'
-        ? TenantConfigManager.getTenant(lease.tenantId)
+        ? TenantConfigManager.getTenant(building, lease.tenantId)
         : null;
 
       // 5. Calculate usage and charges
