@@ -2233,12 +2233,13 @@
                     <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.15rem; color:var(--primary-green); padding:6px 0;">
                         <span>รวมทั้งสิ้น</span><span id="rcpt-total">฿—</span>
                     </div>
-                    <!-- Status badge -->
+                    <!-- Status badge (dynamic: default ✅ ชำระแล้ว, or ✅ ชำระแล้ว (เงินสด) for legacy) -->
                     <div style="text-align:center; margin-top:18px;">
-                        <span style="border:1.5px solid var(--primary-green); color:var(--primary-green); padding:5px 18px; border-radius:20px; font-size:var(--fs-sm); font-weight:600; background:#e8f5e9;">
+                        <span id="rcpt-status-badge" style="border:1.5px solid var(--primary-green); color:var(--primary-green); padding:5px 18px; border-radius:20px; font-size:var(--fs-sm); font-weight:600; background:#e8f5e9;">
                             ✅ ชำระแล้ว
                         </span>
                     </div>
+                    <div id="rcpt-method-note" style="display:none; text-align:center; font-size:var(--fs-sm); color:#6b7280; margin-top:6px;"></div>
                     <!-- Company info (for tax receipt, shown only when tenant receiptType==='company') -->
                     <div id="company-info-display" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #ddd; font-size:var(--fs-sm);">
                         <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:#666;">ออกในนาม:</span><strong id="display-comp-name" style="color:var(--primary-green);">-</strong></div>
@@ -5841,15 +5842,18 @@
                 const paid = b.status === 'paid';
                 const isSynth = !!b.synthetic;
                 const bId = b.id || b.billId || '';
-                const statusPill = paid
-                    ? '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#D1FAE5;color:#065F46">✓ จ่ายแล้ว</span>'
-                    : isSynth
-                        ? '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#E0F2FE;color:#075985">⏳ รอออกบิล</span>'
-                        : '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#FFF4E5;color:#D97706">รอชำระ</span>';
-                const actionBtn = isSynth
-                    ? '<span style="color:#888;font-size:var(--fs-sm);padding:5px 10px;">แอดมินยังไม่ออกบิล</span>'
+                const isCashLegacy = paid && b.method === 'cash_legacy';
+                const statusPill = isCashLegacy
+                    ? '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#F3F4F6;color:#4B5563">✓ จ่ายแล้ว (เงินสด)</span>'
                     : paid
-                        ? `<button onclick="openPaymentFlow(true,'${bId}')" style="background:none;border:1px solid var(--primary-green);color:var(--primary-green);padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">ใบเสร็จ</button>`
+                        ? '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#D1FAE5;color:#065F46">✓ จ่ายแล้ว</span>'
+                        : isSynth
+                            ? '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#E0F2FE;color:#075985">⏳ รอออกบิล</span>'
+                            : '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#FFF4E5;color:#D97706">รอชำระ</span>';
+                const actionBtn = paid
+                    ? `<button onclick="openPaymentFlow(true,'${bId}')" style="background:none;border:1px solid var(--primary-green);color:var(--primary-green);padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">ใบเสร็จ</button>`
+                    : isSynth
+                        ? '<span style="color:#888;font-size:var(--fs-sm);padding:5px 10px;">แอดมินยังไม่ออกบิล</span>'
                         : `<button onclick="openPaymentFlow(false,'${bId}')" style="background:var(--primary-green);color:white;border:none;padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">จ่ายเลย</button>`;
                 return `<div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f3f3;">
                     <div>
@@ -6054,11 +6058,27 @@
             } catch(e) {}
             // Fallback rent from _taLease
             if (!rent && _taLease && _taLease.rentAmount) rent = Number(_taLease.rentAmount)||0;
-            const existingIds = new Set(_taBills.map(b => b.billId || b.id));
-            const existingKeys = new Set(_taBills.map(b => `${b.year}-${String(b.month).padStart(2,'0')}`));
+
+            // Status policy:
+            //   - Past months (< current) → assume paid in cash (before SlipOK era, tenant was living
+            //     here so rent must have been collected). Mark as paid + method='cash_legacy'.
+            //   - Current month → pending (active unpaid bill, will go through SlipOK)
+            // Also skip months before lease moveInDate (tenant wasn't here yet)
+            const now = new Date();
+            const currentYM = now.getFullYear() * 100 + (now.getMonth() + 1);
+            let moveInYM = 0;
+            try {
+                if (_taLease?.moveInDate) {
+                    const mi = new Date(_taLease.moveInDate);
+                    if (!isNaN(mi)) moveInYM = mi.getFullYear() * 100 + (mi.getMonth() + 1);
+                }
+            } catch(e) {}
+
             // Last 6 months of meter that don't have an RTDB bill already
             _meterHistoryCache.slice(0, 6).forEach(m => {
-                const key = `${m.year}-${String(m.month).padStart(2,'0')}`;
+                const billYM = m.year * 100 + m.month;
+                // Skip if tenant hadn't moved in yet
+                if (moveInYM && billYM < moveInYM) return;
                 // _taBills.year might be BE ("2569") or CE (2026) or short (69) — normalize
                 const hasExistingBill = _taBills.some(b => {
                     const by = Number(b.year);
@@ -6071,12 +6091,15 @@
                 const eCost = eUnits * eRate;
                 const wCost = wUnits * wRate;
                 const total = rent + eCost + wCost + trash;
+                const isPastMonth = billYM < currentYM;
                 const bill = {
                     billId: `SYNTH-${_taBuilding}-${_taRoom}-${m.year}${String(m.month).padStart(2,'0')}`,
                     synthetic: true,
                     building: _taBuilding, room: String(_taRoom),
                     month: m.month, year: m.year,
-                    status: 'pending', // real status unknown; admin hasn't generated → assume pending
+                    status: isPastMonth ? 'paid' : 'pending',
+                    method: isPastMonth ? 'cash_legacy' : null,
+                    paidAt: isPastMonth ? new Date(m.year, m.month - 1, 5).toISOString() : null,
                     totalCharge: total, totalAmount: total,
                     meterReadings: {
                         electric: { old: m.eOld, new: m.eNew, units: eUnits },
@@ -6089,7 +6112,9 @@
                         trash, common: 0
                     },
                     createdAt: m.createdAt || new Date(m.year, m.month-1, 5).toISOString(),
-                    note: '(คำนวณอัตโนมัติจากมิเตอร์ — แอดมินยังไม่ได้ออกบิลอย่างเป็นทางการ)'
+                    note: isPastMonth
+                        ? 'บันทึกย้อนหลัง — ชำระด้วยเงินสดก่อนเริ่มระบบ SlipOK'
+                        : '(คำนวณอัตโนมัติจากมิเตอร์ — แอดมินยังไม่ได้ออกบิลอย่างเป็นทางการ)'
                 };
                 _taBills.push(bill);
             });
@@ -6814,6 +6839,23 @@
             // Owner name from Firestore-cached config
             const ownerEl = document.getElementById('receipt-owner-name');
             if (ownerEl && typeof getOwnerName === 'function') ownerEl.textContent = getOwnerName();
+            // Status badge + method note: legacy-cash vs slip
+            const badge = document.getElementById('rcpt-status-badge');
+            const noteEl = document.getElementById('rcpt-method-note');
+            if (bill.method === 'cash_legacy' && badge && noteEl) {
+                badge.innerHTML = '✅ ชำระแล้ว (เงินสด)';
+                badge.style.background = '#F3F4F6';
+                badge.style.color = '#4B5563';
+                badge.style.borderColor = '#9CA3AF';
+                noteEl.style.display = 'block';
+                noteEl.textContent = 'บันทึกย้อนหลัง — ก่อนระบบ SlipOK (ไม่มีสลิปดิจิทัล)';
+            } else if (badge) {
+                badge.innerHTML = '✅ ชำระแล้ว';
+                badge.style.background = '#e8f5e9';
+                badge.style.color = 'var(--primary-green)';
+                badge.style.borderColor = 'var(--primary-green)';
+                if (noteEl) noteEl.style.display = 'none';
+            }
         }
 
         // ---- SLIP UPLOAD ----
