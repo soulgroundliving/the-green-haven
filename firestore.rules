@@ -45,27 +45,29 @@ service cloud.firestore {
     match /complaints/{id} {
       allow read:   if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow update: if isAdminOrEmail();
+      allow delete: if isAdminOrEmail();
     }
 
     // ===== LEASE REQUESTS (tenant submits renew/moveout, admin approves) =====
     match /leaseRequests/{id} {
+      // Read OK for anyone signed in (admin queue + tenant own request)
+      // Tenant should ideally only see own request — defer to launch+1 with uid mapping
       allow read:   if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow update: if isAdminOrEmail();
+      allow delete: if isAdminOrEmail();
     }
 
     // ===== VERIFIED SLIPS (CF writes, admin reads) =====
     match /verifiedSlips/{id} {
       allow read:  if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdminOrEmail();
     }
 
     // ===== TAX SUMMARY (CF writes via admin SDK, admin dashboard reads) =====
     // Sensitive financial data — locked to authenticated reads (admin only ideally,
-    // but custom claims not yet set up; tighten to isAdmin() once admin claim exists).
+    // but custom claims not yet set up; tighten to isAdminOrEmail() once admin claim exists).
     match /taxSummary/{yearDoc} {
       allow read:  if isSignedIn();
       allow write: if false; // CF-only via admin SDK
@@ -93,7 +95,7 @@ service cloud.firestore {
       // Per-room subcollection
       match /rooms/{roomId} {
         allow read:  if isSignedIn();
-        allow write: if isAdmin();
+        allow write: if isAdminOrEmail();
 
         match /maintenanceHistory/{docId} {
           allow read, write: if isSignedIn();
@@ -103,7 +105,7 @@ service cloud.firestore {
         }
         match /roomConditionReports/{docId} {
           allow read:  if isSignedIn();
-          allow write: if isAdmin();
+          allow write: if isAdminOrEmail();
         }
       }
     }
@@ -121,18 +123,18 @@ service cloud.firestore {
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['gamification', 'rentAmount', 'building', 'roomId', 'tenantId']);
 
       // Admin full access
-      allow create, delete: if isAdmin();
-      allow write: if isAdmin();
+      allow create, delete: if isAdminOrEmail();
+      allow write: if isAdminOrEmail();
 
       // Sub: paymentHistory (CF writes via verifySlip)
       match /paymentHistory/{monthKey} {
         allow read:  if isSignedIn();
-        allow write: if isAdmin();
+        allow write: if isAdminOrEmail();
       }
       // Sub: redemptions (redeemReward CF writes; tenant can read own)
       match /redemptions/{redemptionId} {
         allow read:  if isSignedIn();
-        allow write: if isAdmin();
+        allow write: if isAdminOrEmail();
       }
       // Sub: pets (Sprint B: tenant manages own pet records)
       match /pets/{petId} {
@@ -144,20 +146,20 @@ service cloud.firestore {
     // ===== METER DATA =====
     match /meter_data/{docId} {
       allow read:  if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdminOrEmail();
     }
 
     // ===== LEASES (ARCHIVE) =====
     match /leases/{building}/list/{leaseId} {
       allow read:  if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdminOrEmail();
     }
 
     // ===== LIFF USER LINKS (LINE → tenant link approval) =====
     match /liffUsers/{userId} {
       allow read:  if isSignedIn();
       allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+      allow update, delete: if isAdminOrEmail();
     }
 
     // ===== DEFAULT DENY (catch-all) =====

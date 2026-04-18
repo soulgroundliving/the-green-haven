@@ -289,12 +289,24 @@
 
     // Check if user is already authenticated
     // Note: auth?.currentUser may be null here even if logged in — Firebase restores
-    // the persistent session asynchronously via onAuthStateChanged. The admin user
-    // is authenticated via email/password; anonymous sign-in is not used.
+    // the persistent session asynchronously via onAuthStateChanged.
     const currentUser = auth?.currentUser ?? null;
     if (currentUser) {
       console.log('✅ Firebase using existing auth (Email:', currentUser.email || 'unknown', ')');
     }
+
+    // Anonymous sign-in fallback (2026-04-19): admin uses email/password, but if
+    // session lapsed or page loaded before restore, Firestore reads gated by
+    // isSignedIn() would fail. Wait briefly for email auth restore; if still null,
+    // sign in anonymously so reads work. Email auth (when restored) will replace it.
+    setTimeout(async () => {
+      try {
+        if (!auth?.currentUser) {
+          console.log('🔓 No auth after 2s — signing in anonymously as fallback');
+          await signInAnonymously(auth);
+        }
+      } catch (e) { console.warn('anonymous sign-in fallback:', e?.message); }
+    }, 2000);
 
     // Test Firebase connection — only if Firebase is already ready
     // (database is set inside initializeFirebase() which is async)
