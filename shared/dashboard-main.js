@@ -2151,12 +2151,29 @@ function setYear(yr,btn){
   // Only clear active state on the year row (first .year-tabs), not the building row
   const rows = document.querySelectorAll('#page-dashboard .year-tabs');
   if(rows[0]) rows[0].querySelectorAll('.year-tab').forEach(b=>b.classList.remove('active'));
-  if(btn)btn.classList.add('active');
+  if(btn) {
+    btn.classList.add('active');
+  } else if (rows[0]) {
+    // Programmatic call without btn — find the matching tab by its onclick handler
+    const target = rows[0].querySelector(`.year-tab[onclick*="setYear('${yr}'"]`);
+    if (target) target.classList.add('active');
+  }
   currentYear=yr;
   applyBuildingAvailability(yr);
   syncDashboardYearUI();
   updateDashboardLive();
   initDashboardCharts();
+}
+
+// Ensure 2569 (current BE year) is the active year on page load
+if (typeof window !== 'undefined' && !window._initialDashboardYear) {
+  window._initialDashboardYear = true;
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      const beYear = String(new Date().getFullYear() + 543).slice(-2);  // '69'
+      try { if (typeof setYear === 'function') setYear(beYear, null); } catch(e){}
+    }, 600);
+  });
 }
 
 // Nest building didn't exist in 2567/2568 — disable those options for those years

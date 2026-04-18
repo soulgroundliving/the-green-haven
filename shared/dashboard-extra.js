@@ -2908,136 +2908,208 @@ async function deleteServiceProvider(id) {
 
 // ===== COMMUNITY EVENTS MANAGEMENT =====
 let _eventsUnsub = null;
+// ===== CommunityEventsStore (2026-04-19) — Firestore canonical =====
+window.CommunityEventsStore = window.CommunityEventsStore || (function(){
+  let cache = null;
+  const listeners = new Set();
+  let unsub = null;
+  function _local() {
+    try { return JSON.parse(localStorage.getItem('community_events_data') || '[]'); }
+    catch(e) { return []; }
+  }
+  function _writeLocal(arr) {
+    try { localStorage.setItem('community_events_data', JSON.stringify(arr)); } catch(e){}
+  }
+  function getAll() { return cache !== null ? cache : _local(); }
+  function getById(id) { return getAll().find(e => e.id === id) || null; }
+  function onChange(fn) {
+    listeners.add(fn);
+    if (cache !== null) { try { fn(cache); } catch(e){} }
+    return () => listeners.delete(fn);
+  }
+  function _notify() { listeners.forEach(fn => { try { fn(getAll()); } catch(e){} }); }
+  async function setOne(ev) {
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+      // Local-only fallback
+      const all = getAll().filter(e => e.id !== ev.id);
+      all.push(ev);
+      cache = all; _writeLocal(all); _notify();
+      return false;
+    }
+    try {
+      const fs = window.firebase.firestoreFunctions;
+      const db = window.firebase.firestore();
+      await fs.setDoc(fs.doc(db, 'communityEvents', ev.id), ev, { merge: true });
+      return true;
+    } catch (e) { console.warn('CommunityEventsStore setOne:', e?.message); return false; }
+  }
+  async function remove(id) {
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+      cache = getAll().filter(e => e.id !== id);
+      _writeLocal(cache); _notify();
+      return false;
+    }
+    try {
+      const fs = window.firebase.firestoreFunctions;
+      const db = window.firebase.firestore();
+      await fs.deleteDoc(fs.doc(db, 'communityEvents', id));
+      return true;
+    } catch (e) { console.warn('CommunityEventsStore remove:', e?.message); return false; }
+  }
+  function subscribe() {
+    if (unsub) return;
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+      setTimeout(subscribe, 1500); return;
+    }
+    try {
+      const fs = window.firebase.firestoreFunctions;
+      const db = window.firebase.firestore();
+      unsub = fs.onSnapshot(fs.collection(db, 'communityEvents'), snap => {
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        cache = docs;
+        _writeLocal(docs);
+        _notify();
+      }, err => console.warn('communityEvents listen:', err?.message));
+    } catch(e) { console.warn('subscribe:', e); }
+  }
+  if (typeof window !== 'undefined') setTimeout(subscribe, 800);
+  return { getAll, getById, onChange, setOne, remove, subscribe };
+})();
+
 function initCommunityEventsPage() {
   loadAndRenderCommunityEvents();
-  if (_eventsUnsub) return;
-  if (!window.firebase?.firestore) return;
-  try {
-    const db = window.firebase.firestore();
-    const fs = window.firebase.firestoreFunctions;
-    const col = fs.collection(db, 'communityEvents');
-    _eventsUnsub = fs.onSnapshot(col, snap => {
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const local = JSON.parse(localStorage.getItem('community_events_data') || '[]');
-      const byId = new Map();
-      local.forEach(e => byId.set(e.id, e));
-      docs.forEach(e => byId.set(e.id, e));
-      localStorage.setItem('community_events_data', JSON.stringify(Array.from(byId.values())));
-      loadAndRenderCommunityEvents();
-    }, err => console.warn('events onSnapshot failed:', err));
-  } catch(e) { console.warn('events subscribe failed:', e); }
+  // Auto-rerender on cloud snapshot (F5 race fix)
+  if (typeof CommunityEventsStore !== 'undefined' && !window._eventsRendererSubscribed) {
+    window._eventsRendererSubscribed = true;
+    CommunityEventsStore.onChange(() => {
+      if (document.getElementById('eventsList')) loadAndRenderCommunityEvents();
+    });
+  }
+  CommunityEventsStore.subscribe(); // idempotent
 }
 
 function loadAndRenderCommunityEvents() {
   const list = document.getElementById('eventsList');
   if (!list) return;
 
-  let events = JSON.parse(localStorage.getItem('community_events_data') || '[]');
+  let events = (typeof CommunityEventsStore !== 'undefined')
+    ? CommunityEventsStore.getAll().slice()
+    : JSON.parse(localStorage.getItem('community_events_data') || '[]');
   const searchVal = document.getElementById('eventSearch')?.value.toLowerCase() || '';
+  const buildingFilter = document.getElementById('eventBuildingFilter')?.value || 'all';
 
   if (searchVal) {
     events = events.filter(e =>
-      e.title.toLowerCase().includes(searchVal) ||
-      e.location.toLowerCase().includes(searchVal)
+      (e.title || '').toLowerCase().includes(searchVal) ||
+      (e.location || '').toLowerCase().includes(searchVal)
     );
   }
+  if (buildingFilter !== 'all') {
+    events = events.filter(e => !e.building || e.building === buildingFilter || e.building === 'all');
+  }
 
-  // Sort by date
-  events.sort((a, b) => new Date(a.date) - new Date(b.date));
+  // Sort: upcoming first, then past
+  const today = new Date(); today.setHours(0,0,0,0);
+  events.sort((a, b) => {
+    const da = new Date(a.date), db = new Date(b.date);
+    const aPast = da < today, bPast = db < today;
+    if (aPast !== bPast) return aPast ? 1 : -1;
+    return da - db;
+  });
 
   if (events.length === 0) {
     list.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">📭 No events scheduled</div>';
     return;
   }
 
-  list.innerHTML = events.map(e => `
-    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid #ff8f00;">
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  list.innerHTML = events.map(e => {
+    const isPast = new Date(e.date) < today;
+    const bldgLabel = e.building === 'nest' ? '🏢 Nest' : e.building === 'rooms' ? '🏠 ห้องแถว' : '🌐 ทุกตึก';
+    return `
+    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${isPast ? '#999' : '#ff8f00'}; ${isPast ? 'opacity:0.65;' : ''}">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
         <div style="flex: 1;">
-          <div style="font-weight: 700; font-size: 1rem;">📅 ${e.title}</div>
+          <div style="font-weight: 700; font-size: 1rem;">📅 ${esc(e.title)} ${isPast ? '<span style="font-size:.7rem;color:#999;">(ผ่านแล้ว)</span>' : ''}</div>
           <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
-            📍 ${e.location} | 🕐 ${e.time}
+            ${bldgLabel} | 📍 ${esc(e.location)} | 🕐 ${esc(e.time)}
           </div>
         </div>
         <div style="display: flex; gap: 0.5rem;">
-          <button onclick="deleteEvent('${e.id}')" class="compact-btn compact-btn-delete">🗑️</button>
+          <button onclick="editEvent('${esc(e.id)}')" class="compact-btn compact-btn-edit">✏️</button>
+          <button onclick="deleteEvent('${esc(e.id)}')" class="compact-btn compact-btn-delete">🗑️</button>
         </div>
       </div>
-      <div style="font-size: 0.9rem; color: var(--text);">📝 ${e.description || '-'}</div>
+      <div style="font-size: 0.9rem; color: var(--text);">📝 ${esc(e.description || '-')}</div>
       <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">📅 ${new Date(e.date).toLocaleDateString('th-TH')}</div>
     </div>
-  `).join('');
+  `;}).join('');
 }
 
+let _editingEventId = null;
 function toggleAddEventForm() {
   const form = document.getElementById('addEventForm');
   if (!form) return;
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
-  if (form.style.display === 'block') {
-    document.getElementById('eventTitle').focus();
+  if (form.style.display !== 'none') {
+    form.style.display = 'none';
+    _editingEventId = null;
+    return;
   }
+  form.style.display = 'block';
+  document.getElementById('eventTitle')?.focus();
 }
 
-function saveCommunityEvent() {
+async function saveCommunityEvent() {
   const title = document.getElementById('eventTitle')?.value.trim();
   const date = document.getElementById('eventDate')?.value;
   const time = document.getElementById('eventTime')?.value;
   const location = document.getElementById('eventLocation')?.value.trim();
   const description = document.getElementById('eventDescription')?.value.trim();
+  const building = document.getElementById('eventBuilding')?.value || 'all';
 
   if (!title || !date || !time || !location) {
     showToast('Please fill in Title, Date, Time, and Location', 'warning');
     return;
   }
 
-  let events = JSON.parse(localStorage.getItem('community_events_data') || '[]');
-  const newEvent = {
-    id: 'evt_' + Date.now(),
-    title: title,
-    date: date,
-    time: time,
-    location: location,
-    description: description,
-    building: 'rooms',
-    createdDate: new Date().toISOString()
-  };
+  const ev = _editingEventId
+    ? { ...(CommunityEventsStore.getById(_editingEventId) || {}),
+        title, date, time, location, description, building,
+        updatedDate: new Date().toISOString() }
+    : { id: 'evt_' + Date.now(),
+        title, date, time, location, description, building,
+        createdDate: new Date().toISOString() };
 
-  events.push(newEvent);
-  localStorage.setItem('community_events_data', JSON.stringify(events));
-  // Sync to Firestore (cross-device)
-  if (window.firebase?.firestore) {
-    try {
-      const db = window.firebase.firestore();
-      const fs = window.firebase.firestoreFunctions;
-      fs.setDoc(fs.doc(fs.collection(db, 'communityEvents'), newEvent.id), newEvent);
-    } catch(e) { console.warn('Firestore event save failed:', e); }
-  }
+  await CommunityEventsStore.setOne(ev);
 
-  document.getElementById('eventTitle').value = '';
-  document.getElementById('eventDate').value = '';
-  document.getElementById('eventTime').value = '';
-  document.getElementById('eventLocation').value = '';
-  document.getElementById('eventDescription').value = '';
-
+  ['eventTitle','eventDate','eventTime','eventLocation','eventDescription']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const bldEl = document.getElementById('eventBuilding'); if (bldEl) bldEl.value = 'all';
+  const wasEdit = !!_editingEventId;
+  _editingEventId = null;
   toggleAddEventForm();
-  loadAndRenderCommunityEvents();
-  showToast('✅ Event created successfully', 'success');
+  showToast(wasEdit ? '✅ อัพเดทกิจกรรมแล้ว (☁️ Firestore)' : '✅ สร้างกิจกรรมแล้ว (☁️ Firestore)', 'success');
 }
 
-function deleteEvent(id) {
-  if (!confirm('Are you sure you want to delete this event?')) return;
+function editEvent(id) {
+  const ev = CommunityEventsStore.getById(id);
+  if (!ev) { showToast('ไม่พบกิจกรรม', 'warning'); return; }
+  _editingEventId = id;
+  const form = document.getElementById('addEventForm');
+  if (form) form.style.display = 'block';
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  set('eventTitle', ev.title);
+  set('eventDate', ev.date);
+  set('eventTime', ev.time);
+  set('eventLocation', ev.location);
+  set('eventDescription', ev.description);
+  set('eventBuilding', ev.building || 'all');
+  document.getElementById('eventTitle')?.focus();
+}
 
-  let events = JSON.parse(localStorage.getItem('community_events_data') || '[]');
-  events = events.filter(e => e.id !== id);
-  localStorage.setItem('community_events_data', JSON.stringify(events));
-  if (window.firebase?.firestore) {
-    try {
-      const db = window.firebase.firestore();
-      const fs = window.firebase.firestoreFunctions;
-      fs.deleteDoc(fs.doc(fs.collection(db, 'communityEvents'), id));
-    } catch(e) { console.warn('Firestore event delete failed:', e); }
-  }
-  loadAndRenderCommunityEvents();
+async function deleteEvent(id) {
+  if (!confirm('Are you sure you want to delete this event?')) return;
+  await CommunityEventsStore.remove(id);
   showToast('✅ Event deleted', 'success');
 }
 
