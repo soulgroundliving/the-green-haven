@@ -4382,30 +4382,52 @@
         // 1. กำหนดคะแนนเริ่มต้นของลูกบ้าน (จำลองจาก Database)
         let userPoints = 1250;
 
-        // 2. ฟังก์ชันหลักสำหรับแลกของรางวัล
-        function redeemReward(btnElement, rewardName, cost) {
-            // ตรวจสอบว่าคะแนนพอหรือไม่
+        // 2. ฟังก์ชันหลักสำหรับแลกของรางวัล (Nest only — guarded by gamification visibility)
+        async function redeemReward(btnElement, rewardName, cost) {
+            if (window._gamificationDisabled) return;
             if (userPoints < cost) {
-                alert(`❌ คะแนนไม่พอ! คุณมี ${userPoints} Points แต่ต้องใช้ ${cost} Points`);
+                toast(`คะแนนไม่พอ — คุณมี ${userPoints} Pts ต้องใช้ ${cost} Pts`, 'error');
                 return;
             }
+            if (!confirm(`ยืนยันการแลก: ${rewardName}\nแต้มจะถูกหัก ${cost} Pts`)) return;
 
-            // ยืนยันการแลก (Confirmation)
-            const confirmRedeem = confirm(`ยืนยันการแลก: ${rewardName}\nแต้มจะถูกหัก ${cost} Points`);
+            // Optimistic UI
+            const prevPoints = userPoints;
+            userPoints -= cost;
+            updateUserPointsUI();
+            btnElement.disabled = true;
+            btnElement.innerText = "กำลังบันทึก...";
 
-            if (confirmRedeem) {
-                // --- ขั้นตอนคำนวณจริง ---
-                userPoints -= cost; // หักคะแนนในตัวแปร
-                updateUserPointsUI(); // อัปเดตตัวเลขคะแนนที่โชว์บนหน้าจอ
-
-                // --- ขั้นตอนปรับ UI ปุ่ม ---
-                btnElement.disabled = true; // ทำให้กดไม่ได้
+            // Persist to Firestore — write redemption record + decrement points field
+            // (admin-side or CF can validate later; tenant cannot fake server-truth because
+            // _subscribeEcoPoints will overwrite userPoints with the canonical Firestore value)
+            try {
+                if (window.firebase?.firestore && window.firebase?.firestoreFunctions) {
+                    const fs = window.firebase.firestoreFunctions;
+                    const db = window.firebase.firestore();
+                    const redemption = {
+                        rewardName, cost, redeemedAt: new Date().toISOString(),
+                        building: _taBuilding, room: _taRoom,
+                        tenantName: _taTenant?.name || '',
+                        status: 'pending'
+                    };
+                    const colRef = fs.collection(db, 'tenants', _taBuilding, 'list', String(_taRoom), 'redemptions');
+                    await fs.addDoc(colRef, redemption);
+                    const tenantRef = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
+                    await fs.updateDoc(tenantRef, { points: userPoints });
+                }
                 btnElement.innerText = "แลกแล้ว";
-                btnElement.classList.remove('bg-[#2d8653]', 'active:scale-90'); // เอาสีเขียวและ Animation ออก
-                btnElement.classList.add('bg-gray-300', 'cursor-not-allowed'); // เพิ่มสีเทาและเปลี่ยน Cursor
-
-                // แจ้งเตือนความสำเร็จ
-                alert(`✅ แลกสำเร็จ! คงเหลือ ${userPoints} Points\nทีมงาน Nature Haven จะดำเนินการให้โดยเร็วที่สุด`);
+                btnElement.classList.remove('bg-[#2d8653]', 'active:scale-90');
+                btnElement.classList.add('bg-gray-300', 'cursor-not-allowed');
+                toast(`แลกสำเร็จ! คงเหลือ ${userPoints} Pts — ทีมงานจะดำเนินการให้`, 'success');
+            } catch (e) {
+                // Rollback optimistic update on failure
+                userPoints = prevPoints;
+                updateUserPointsUI();
+                btnElement.disabled = false;
+                btnElement.innerText = "แลกใหม่";
+                console.error('redeemReward failed:', e);
+                toast('แลกไม่สำเร็จ — กรุณาลองใหม่', 'error');
             }
         }
 
@@ -4795,9 +4817,34 @@
             });
         }
 
+        let _ecoPointsUnsub = null;
+        function _subscribeEcoPoints() {
+            // Nest-only — subscribe to authoritative points field in Firestore
+            // so what the verifySlip CF writes (tenants/{b}/list/{room}.points) is what tenant sees.
+            if (window._gamificationDisabled) return;
+            if (_ecoPointsUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                const tenantRef = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
+                _ecoPointsUnsub = fs.onSnapshot(tenantRef, snap => {
+                    if (!snap.exists()) return;
+                    const data = snap.data() || {};
+                    if (typeof data.points === 'number') {
+                        userPoints = data.points;
+                        try { localStorage.setItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`, String(userPoints)); } catch(e) {}
+                        if (typeof loadGamificationData === 'function') loadGamificationData();
+                        if (typeof updateUserPointsUI === 'function') updateUserPointsUI();
+                    }
+                }, err => console.warn('eco points subscribe failed:', err.message));
+            } catch (e) { console.warn('eco points subscribe init failed:', e.message); }
+        }
+
         function loadGamificationData() {
-            // Priority: room-specific key (written by admin gamification page) → generic key → calculate from lease → 0
-            let pts = parseInt(localStorage.getItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`))
+            // Priority: server-synced userPoints (from Firestore subscription) → room-specific localStorage → generic key → lease months
+            let pts = userPoints
+                   || parseInt(localStorage.getItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`))
                    || parseInt(localStorage.getItem('tenant_eco_points'))
                    || 0;
             if (!pts && _taLease && _taLease.startDate) {
@@ -4805,6 +4852,7 @@
                 pts = months * 10;
             }
             userPoints = pts;
+            _subscribeEcoPoints(); // idempotent — only subscribes once
             const levels = [
                 { name:'Seedling 🌱', min:0,    max:299  },
                 { name:'Sprout 🌿',   min:300,  max:699  },
@@ -6089,15 +6137,22 @@
             }
         }
 
-        function _saveTenantPayment(verifyResult) {
+        async function _saveTenantPayment(verifyResult) {
             if (!_taCurrentBill) return;
+            const billId = _taCurrentBill.id||_taCurrentBill.billId||`${_taCurrentBill.year}-${String(_taCurrentBill.month).padStart(2,'0')}`;
             const record = {
-                billId: _taCurrentBill.id||_taCurrentBill.billId||'',
+                billId,
                 month: _taCurrentBill.month, year: _taCurrentBill.year,
                 amount: _taCurrentBill.totalAmount||_taCurrentBill.total||0,
-                paidAt: new Date().toISOString(), method: 'PromptPay',
-                slipOkVerified: verifyResult.slipOkVerified||false
+                paidAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                method: 'PromptPay',
+                slipOkVerified: verifyResult.slipOkVerified||false,
+                transRef: verifyResult.transRef||verifyResult.transactionId||null,
+                building: _taBuilding,
+                room: _taRoom
             };
+            // 1. localStorage (offline cache)
             try {
                 const key = `payment_${_taBuilding}_${_taRoom}`;
                 const existing = JSON.parse(localStorage.getItem(key)||'[]');
@@ -6105,7 +6160,23 @@
                 localStorage.setItem(key, JSON.stringify(existing));
                 _taPayments = existing;
             } catch(e) {}
+            // 2. RTDB — push payment record + flip bill status. Without this, reload shows "ยังไม่จ่าย".
+            try {
+                if (window.firebaseDatabase && window.firebaseRef && window.firebaseSet && window.firebasePush) {
+                    const paymentsRef = window.firebaseRef(window.firebaseDatabase, `payments/${_taBuilding}/${_taRoom}`);
+                    const newPayRef = window.firebasePush(paymentsRef);
+                    await window.firebaseSet(newPayRef, record);
+                    const billRef = window.firebaseRef(window.firebaseDatabase, `bills/${_taBuilding}/${_taRoom}/${billId}/status`);
+                    await window.firebaseSet(billRef, 'paid');
+                    const paidAtRef = window.firebaseRef(window.firebaseDatabase, `bills/${_taBuilding}/${_taRoom}/${billId}/paidAt`);
+                    await window.firebaseSet(paidAtRef, record.paidAt);
+                    console.log('✅ Payment + bill status synced to Firebase');
+                }
+            } catch (e) { console.warn('⚠️ Firebase payment sync failed (kept in localStorage):', e.message); }
             if (_taCurrentBill) _taCurrentBill.status = 'paid';
+            // Mirror status into _taBills so render functions see it without reload
+            const idx = _taBills.findIndex(b => (b.id||b.billId) === billId);
+            if (idx >= 0) _taBills[idx].status = 'paid';
             updateNavBadges();
         }
 

@@ -404,6 +404,9 @@ class BillingSystem {
         try {
           const bills = await this.generateBillsFromMeterData(building, year);
           const saved = this.saveBillsToLocalStorage(bills);
+          // Push to RTDB so tenants on mobile see the same bills (admin-only path —
+          // _bootstrapAutoBilling already gates this to admin dashboard)
+          await this.pushBillsToFirebase(building, bills);
           totalGenerated += saved;
         } catch (e) {
           console.warn(`⚠️ Failed to generate bills for year ${year}:`, e.message);
@@ -473,6 +476,37 @@ class BillingSystem {
    * @param {Array} bills - Array of bill objects
    * @returns {number} - Number of bills saved
    */
+  /**
+   * Push generated bills to RTDB so tenant_app (any device) can read them.
+   * Path: bills/{building}/{room}/{billId} — matches what tenant TenantFirebaseSync.loadBills reads.
+   * Idempotent — overwrites existing billId (last-write-wins).
+   */
+  static async pushBillsToFirebase(building, bills) {
+    if (!bills || bills.length === 0) return 0;
+    if (!window.firebaseDatabase || !window.firebaseRef || !window.firebaseSet) {
+      console.warn('⚠️ RTDB unavailable, skipping bill Firebase push');
+      return 0;
+    }
+    // Normalize building once (rooms|nest), use canonical id everywhere downstream
+    const fbBuilding = (window.CONFIG?.getBuildingConfig?.(building)) || building;
+    let pushed = 0;
+    for (const bill of bills) {
+      try {
+        const billId = bill.billId || bill.id || `${bill.year}-${String(bill.month).padStart(2,'0')}-${bill.roomId||bill.room}`;
+        const room = bill.room || bill.roomId;
+        if (!room) { continue; }
+        const path = `bills/${fbBuilding}/${room}/${billId}`;
+        const ref = window.firebaseRef(window.firebaseDatabase, path);
+        await window.firebaseSet(ref, { ...bill, billId, building: fbBuilding, room });
+        pushed++;
+      } catch (e) {
+        console.warn(`⚠️ pushBillsToFirebase: failed for ${bill.billId}:`, e.message);
+      }
+    }
+    if (pushed > 0) console.log(`📡 Pushed ${pushed}/${bills.length} bills to RTDB (${fbBuilding})`);
+    return pushed;
+  }
+
   static saveBillsToLocalStorage(bills) {
     if (!bills || bills.length === 0) return 0;
 

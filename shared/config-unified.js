@@ -99,9 +99,22 @@ const CONFIG = {
     NEST: 'nest'
   },
 
-  // Helper to get building type from legacy name
+  // Single source of truth — normalize any legacy/Firestore alias to the canonical
+  // logical id ('rooms' | 'nest'). Used everywhere except the Firestore boundary.
+  // Aliases handled: 'old' (legacy admin), 'RentRoom' (Firestore buildings/ doc id),
+  // 'new' (legacy admin), bare 'rooms'/'nest' (passthrough).
   getBuildingConfig(type) {
-    return type === 'old' || type === 'rooms' ? 'rooms' : 'nest';
+    const t = String(type || '').toLowerCase();
+    if (t === 'rooms' || t === 'old' || t === 'rentroom') return 'rooms';
+    if (t === 'nest' || t === 'new') return 'nest';
+    return 'rooms'; // safer default — main building
+  },
+
+  // Convert canonical id → Firestore `buildings/` doc id ('RentRoom' | 'nest').
+  // Use only at the Firestore boundary; everywhere else keep the canonical id.
+  getFirestoreBuilding(type) {
+    const canonical = this.getBuildingConfig(type);
+    return canonical === 'rooms' ? 'RentRoom' : 'nest';
   },
 
   // Get month name by index
