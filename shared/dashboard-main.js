@@ -1223,207 +1223,10 @@ function initMeterRoomsTab() {
 }
 
 // Auto-fill Old readings from METER_DATA (Nest Building)
+// Phase 1c: rewritten to use MeterStore facade (was ~280 lines of duplicated
+// Firebase + METER_DATA + previous-month fallback logic).
 async function autoFillOldReadingsNest() {
-  const monthInputEl = document.getElementById('nestMeterMonth');
-  if (!monthInputEl || !monthInputEl.value) {
-    console.log('⚠️ Month input field not found or empty');
-    return;
-  }
-
-  const monthInput = monthInputEl.value;
-  const [year, month] = monthInput.split('-').map(Number);
-  if (!year || !month) {
-    console.log('⚠️ Invalid month format:', monthInput);
-    return;
-  }
-
-  // Try to load from Firebase first
-  console.log(`🔄 Loading meter data from Firebase for Nest ${monthInput}...`);
-  const nestRooms = RoomConfigManager.getAllRooms('nest');
-
-  try {
-    const fb = window.firebase;
-    if (fb && fb.firestore) {
-      const firestore = fb.firestore();
-      const fs = fb.firestoreFunctions;
-      const buddhistYear = year + 543;
-      const yy = buddhistYear % 100;
-
-      // Try to load current month data from Firebase
-      let foundData = false;
-      for (const room of nestRooms) {
-        const docId = `nest_${yy}_${month}_${room}`;
-        try {
-          const docRef = fs.doc(fs.collection(firestore, 'meter_data'), docId);
-          const docSnapshot = await fs.getDoc(docRef);
-          if (docSnapshot.exists()) {
-            const data = docSnapshot.data();
-            const eOldInput = document.getElementById(`meter-nest-${room}-electric-old`);
-            const wOldInput = document.getElementById(`meter-nest-${room}-water-old`);
-            const eNewInput = document.getElementById(`meter-nest-${room}-electric-new`);
-            const wNewInput = document.getElementById(`meter-nest-${room}-water-new`);
-
-            if (eNewInput && data.eNew !== null && data.eNew !== undefined) {
-              eNewInput.value = data.eNew;
-              eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            if (wNewInput && data.wNew !== null && data.wNew !== undefined) {
-              wNewInput.value = data.wNew;
-              wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            if (eOldInput && data.eOld !== null && data.eOld !== undefined) {
-              eOldInput.value = data.eOld;
-              eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            if (wOldInput && data.wOld !== null && data.wOld !== undefined) {
-              wOldInput.value = data.wOld;
-              wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            foundData = true;
-            console.log(`✅ Loaded Firebase data for room ${room}`);
-          }
-        } catch (err) {
-          console.log(`⚠️ No Firebase data for ${room}: ${err.message}`);
-        }
-      }
-
-      if (foundData) {
-        console.log('✅ Loaded data from Firebase successfully');
-        return;
-      }
-    }
-  } catch (firebaseErr) {
-    console.log('⚠️ Firebase loading failed:', firebaseErr.message);
-  }
-
-  // Fallback to METER_DATA if Firebase fails
-  if (typeof METER_DATA === 'undefined') {
-    console.log('⚠️ METER_DATA not available');
-    return;
-  }
-
-  const buddhistYear = year + 543;
-  const yy = buddhistYear % 100;
-  const key = `${yy}_${month}`;
-
-  console.log(`📊 Fallback: Looking up METER_DATA['nest'][${key}]...`);
-  // Read from building-namespaced METER_DATA (METER_DATA.nest.{key})
-  let monthData = METER_DATA['nest'] && METER_DATA['nest'][key];
-
-  if (!monthData) {
-    console.log(`⚠️ No data for ${key}, trying previous month as fallback...`);
-    // For unrecorded months, try to get previous month's data
-    const prevMonth = month === 1 ? 12 : month - 1;
-    const prevYear = month === 1 ? year - 1 : year;
-    const prevBuddhistYear = prevYear + 543;
-    const prevYy = prevBuddhistYear % 100;
-    const prevKey = `${prevYy}_${prevMonth}`;
-
-    // Read from building-namespaced structure
-    const prevMonthData = METER_DATA['nest'] && METER_DATA['nest'][prevKey];
-    if (prevMonthData) {
-      console.log(`📊 Found previous month data ${prevKey}, using eNew/wNew as old readings for current month...`);
-      // Use previous month's NEW readings as current month's OLD readings
-      nestRooms.forEach(room => {
-        const lookupId = room === 'AMAZON' ? 'ร้านใหญ่' : room;
-        const prevD = prevMonthData[lookupId];
-
-        const eOldInput = document.getElementById(`meter-nest-${room}-electric-old`);
-        const wOldInput = document.getElementById(`meter-nest-${room}-water-old`);
-        const eNewInput = document.getElementById(`meter-nest-${room}-electric-new`);
-        const wNewInput = document.getElementById(`meter-nest-${room}-water-new`);
-
-        if (prevD) {
-          // Set old readings from previous month's new readings
-          if (prevD.eNew !== null && prevD.eNew !== undefined && eOldInput) {
-            eOldInput.value = prevD.eNew;
-            eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (prevD.wNew !== null && prevD.wNew !== undefined && wOldInput) {
-            wOldInput.value = prevD.wNew;
-            wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          // Clear new readings field (not recorded yet)
-          if (eNewInput) {
-            eNewInput.value = '';
-            eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (wNewInput) {
-            wNewInput.value = '';
-            wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-        } else {
-          // No previous month data either, show "-"
-          if (eOldInput) {
-            eOldInput.value = '-';
-            eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (wOldInput) {
-            wOldInput.value = '-';
-            wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (eNewInput) {
-            eNewInput.value = '-';
-            eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (wNewInput) {
-            wNewInput.value = '-';
-            wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-        }
-      });
-      return;
-    } else {
-      // No previous month data found either, show "-" for all
-      nestRooms.forEach(room => {
-        const eOldInput = document.getElementById(`meter-nest-${room}-electric-old`);
-        const wOldInput = document.getElementById(`meter-nest-${room}-water-old`);
-        const eNewInput = document.getElementById(`meter-nest-${room}-electric-new`);
-        const wNewInput = document.getElementById(`meter-nest-${room}-water-new`);
-        if (eOldInput) eOldInput.value = '-';
-        if (wOldInput) wOldInput.value = '-';
-        if (eNewInput) eNewInput.value = '-';
-        if (wNewInput) wNewInput.value = '-';
-      });
-      return;
-    }
-  }
-
-  // If current month has data, use it
-  nestRooms.forEach(room => {
-    const lookupId = room === 'AMAZON' ? 'ร้านใหญ่' : room;
-    const d = monthData[lookupId];
-
-    const eOldInput = document.getElementById(`meter-nest-${room}-electric-old`);
-    const wOldInput = document.getElementById(`meter-nest-${room}-water-old`);
-    const eNewInput = document.getElementById(`meter-nest-${room}-electric-new`);
-    const wNewInput = document.getElementById(`meter-nest-${room}-water-new`);
-
-    if (d) {
-      if (d.eNew !== null && d.eNew !== undefined && eNewInput) {
-        eNewInput.value = d.eNew;
-        eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (d.eOld !== null && d.eOld !== undefined && eOldInput) {
-        eOldInput.value = d.eOld;
-        eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (d.wNew !== null && d.wNew !== undefined && wNewInput) {
-        wNewInput.value = d.wNew;
-        wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (d.wOld !== null && d.wOld !== undefined && wOldInput) {
-        wOldInput.value = d.wOld;
-        wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    } else {
-      // No data for this room
-      if (eOldInput) eOldInput.value = '-';
-      if (wOldInput) wOldInput.value = '-';
-      if (eNewInput) eNewInput.value = '-';
-      if (wNewInput) wNewInput.value = '-';
-    }
-  });
+  return _autoFillReadingsForGrid('nest');
 }
 
 function renderNestMeterGrid() {
@@ -1510,252 +1313,64 @@ function renderNestMeterGrid() {
 }
 
 // Auto-fill Old readings from METER_DATA (Rooms Building)
-async function autoFillOldReadingsRooms() {
-  const monthInputEl = document.getElementById('roomsMeterMonth');
-  if (!monthInputEl || !monthInputEl.value) {
-    console.log('⚠️ Month input field not found or empty');
-    return;
-  }
+// Phase 1c shared helper: per-room meter input grid auto-fill via MeterStore.
+// Replaces ~500 lines of duplicated Firebase + METER_DATA fallback logic in
+// autoFillOldReadingsNest / autoFillOldReadingsRooms.
+async function _autoFillReadingsForGrid(building) {
+  const monthInputId = building === 'nest' ? 'nestMeterMonth' : 'roomsMeterMonth';
+  const inputPrefix  = building === 'nest' ? 'meter-nest-'    : 'meter-rooms-';
+  const monthInputEl = document.getElementById(monthInputId);
+  if (!monthInputEl || !monthInputEl.value) return;
+  const [year, month] = monthInputEl.value.split('-').map(Number);
+  if (!year || !month) return;
 
-  const monthInput = monthInputEl.value;
-  const [year, month] = monthInput.split('-').map(Number);
-  if (!year || !month) {
-    console.log('⚠️ Invalid month format:', monthInput);
-    return;
-  }
+  const rooms = (typeof RoomConfigManager !== 'undefined')
+    ? RoomConfigManager.getAllRooms(building) : [];
+  if (!rooms.length) return;
 
-  // Try to load from Firebase first
-  console.log(`🔄 Loading meter data from Firebase for ${monthInput}...`);
-  const roomsRooms = RoomConfigManager.getAllRooms('rooms');
+  const setVal = (id, v) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = v == null ? '' : v;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  };
 
-  try {
-    const fb = window.firebase;
-    if (fb && fb.firestore) {
-      const firestore = fb.firestore();
-      const fs = fb.firestoreFunctions;
-      const buddhistYear = year + 543;
-      const yy = buddhistYear % 100;
-
-      // Try to load current month data from Firebase
-      let foundData = false;
-      for (const room of roomsRooms) {
-        const docId = `rooms_${yy}_${month}_${room}`;
-        try {
-          const docRef = fs.doc(fs.collection(firestore, 'meter_data'), docId);
-          const docSnapshot = await fs.getDoc(docRef);
-          if (docSnapshot.exists()) {
-            const data = docSnapshot.data();
-            const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
-            const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
-            const eNewInput = document.getElementById(`meter-rooms-${room}-electric-new`);
-            const wNewInput = document.getElementById(`meter-rooms-${room}-water-new`);
-
-            if (eNewInput && data.eNew !== null && data.eNew !== undefined) {
-              eNewInput.value = data.eNew;
-              eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            if (wNewInput && data.wNew !== null && data.wNew !== undefined) {
-              wNewInput.value = data.wNew;
-              wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            if (eOldInput && data.eOld !== null && data.eOld !== undefined) {
-              eOldInput.value = data.eOld;
-              eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            if (wOldInput && data.wOld !== null && data.wOld !== undefined) {
-              wOldInput.value = data.wOld;
-              wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            foundData = true;
-            console.log(`✅ Loaded Firebase data for room ${room}`);
-          }
-        } catch (err) {
-          console.log(`⚠️ No Firebase data for ${room}: ${err.message}`);
-        }
-      }
-
-      if (foundData) {
-        console.log('✅ Loaded data from Firebase successfully');
-        return;
-      }
+  for (const room of rooms) {
+    const lookupId = (building === 'nest' && room === 'AMAZON') ? 'ร้านใหญ่' : room;
+    let d = await MeterStore.get(building, year, month, lookupId);
+    let usePrev = false;
+    if (!d) {
+      d = await MeterStore.getPrev(building, year, month, lookupId);
+      usePrev = !!d;
     }
-  } catch (firebaseErr) {
-    console.log('⚠️ Firebase loading failed:', firebaseErr.message);
-  }
-
-  // Fallback to METER_DATA if Firebase fails
-  if (typeof METER_DATA === 'undefined') {
-    console.log('⚠️ METER_DATA not available');
-    return;
-  }
-
-  // monthInputEl already defined above, just verify it's still valid
-  if (!monthInputEl || !monthInputEl.value) {
-    console.log('⚠️ Month input field not found or empty');
-    return;
-  }
-
-  // monthInput and year/month already parsed above, use them directly
-
-  // Convert Gregorian year to Buddhist year (2-digit), then to 2-digit year
-  // 2026 (Gregorian) = 2569 (Buddhist) = 69 (2-digit)
-  const buddhistYear = year + 543;
-  const yy = buddhistYear % 100;
-  const key = `${yy}_${month}`;
-
-  console.log(`📊 Looking up METER_DATA['rooms'][${key}] for ${monthInput}...`);
-  // Read from building-namespaced METER_DATA (METER_DATA.rooms.{key})
-  let monthData = METER_DATA['rooms'] && METER_DATA['rooms'][key];
-  // roomsRooms already declared above, reuse it
-  let loadCount = 0;
-
-  if (!monthData) {
-    console.log(`⚠️ No data for ${key}, trying previous month as fallback...`);
-    // For unrecorded months, try to get previous month's data
-    const prevMonth = month === 1 ? 12 : month - 1;
-    const prevYear = month === 1 ? year - 1 : year;
-    const prevBuddhistYear = prevYear + 543;
-    const prevYy = prevBuddhistYear % 100;
-    const prevKey = `${prevYy}_${prevMonth}`;
-
-    // Read from building-namespaced structure
-    const prevMonthData = METER_DATA['rooms'] && METER_DATA['rooms'][prevKey];
-    if (prevMonthData) {
-      console.log(`📊 Found previous month data ${prevKey}, using eNew/wNew as old readings for current month...`);
-      // Use previous month's NEW readings as current month's OLD readings
-      roomsRooms.forEach(room => {
-        const lookupId = room === 'AMAZON' ? 'ร้านใหญ่' : room;
-        const prevD = prevMonthData[lookupId];
-
-        const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
-        const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
-        const eNewInput = document.getElementById(`meter-rooms-${room}-electric-new`);
-        const wNewInput = document.getElementById(`meter-rooms-${room}-water-new`);
-
-        if (prevD) {
-          // Set old readings from previous month's new readings
-          // For unrecorded months (e.g., April): place March's ending values in the right field (เดิม/old)
-          if (prevD.eNew !== null && prevD.eNew !== undefined && eOldInput) {
-            eOldInput.value = prevD.eNew;
-            eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (prevD.wNew !== null && prevD.wNew !== undefined && wOldInput) {
-            wOldInput.value = prevD.wNew;
-            wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          // Clear new readings field (not recorded yet)
-          if (eNewInput) {
-            eNewInput.value = '';
-            eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (wNewInput) {
-            wNewInput.value = '';
-            wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-        } else {
-          // No previous month data either, show "-"
-          if (eOldInput) {
-            eOldInput.value = '-';
-            eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (wOldInput) {
-            wOldInput.value = '-';
-            wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (eNewInput) {
-            eNewInput.value = '-';
-            eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (wNewInput) {
-            wNewInput.value = '-';
-            wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-        }
-      });
-      return;
+    const eOldId = `${inputPrefix}${room}-electric-old`;
+    const wOldId = `${inputPrefix}${room}-water-old`;
+    const eNewId = `${inputPrefix}${room}-electric-new`;
+    const wNewId = `${inputPrefix}${room}-water-new`;
+    if (!d) {
+      setVal(eOldId, '-'); setVal(wOldId, '-');
+      setVal(eNewId, '-'); setVal(wNewId, '-');
+      continue;
+    }
+    if (usePrev) {
+      // Previous month found — use its eNew/wNew as current month's eOld/wOld
+      setVal(eOldId, d.eNew);
+      setVal(wOldId, d.wNew);
+      setVal(eNewId, '');
+      setVal(wNewId, '');
     } else {
-      // No current or previous month data, show "-"
-      console.log(`⚠️ No data for previous month ${prevKey} either, showing "-"...`);
-      roomsRooms.forEach(room => {
-        const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
-        const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
-        const eNewInput = document.getElementById(`meter-rooms-${room}-electric-new`);
-        const wNewInput = document.getElementById(`meter-rooms-${room}-water-new`);
-        if (eOldInput) {
-          eOldInput.value = '-';
-          eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        if (wOldInput) {
-          wOldInput.value = '-';
-          wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        if (eNewInput) {
-          eNewInput.value = '-';
-          eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        if (wNewInput) {
-          wNewInput.value = '-';
-          wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-      });
-      return;
+      setVal(eOldId, d.eOld);
+      setVal(wOldId, d.wOld);
+      setVal(eNewId, d.eNew);
+      setVal(wNewId, d.wNew);
     }
   }
-
-  // Load data from METER_DATA
-  roomsRooms.forEach(room => {
-    // Map room names to METER_DATA keys
-    const lookupId = room === 'AMAZON' ? 'ร้านใหญ่' : room;
-    const d = monthData[lookupId];
-
-    const eOldInput = document.getElementById(`meter-rooms-${room}-electric-old`);
-    const wOldInput = document.getElementById(`meter-rooms-${room}-water-old`);
-    const eNewInput = document.getElementById(`meter-rooms-${room}-electric-new`);
-    const wNewInput = document.getElementById(`meter-rooms-${room}-water-new`);
-
-    if (d) {
-      // For recorded months: eOld/wOld in the "เดิม" (old) input fields, eNew/wNew in "ล่าสุด" (new) input fields
-      if (d.eOld !== null && d.eOld !== undefined && eOldInput) {
-        eOldInput.value = d.eOld;
-        eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-        loadCount++;
-      }
-      if (d.wOld !== null && d.wOld !== undefined && wOldInput) {
-        wOldInput.value = d.wOld;
-        wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      // Load current/new readings from METER_DATA in "ล่าสุด" (new) fields
-      if (d.eNew !== null && d.eNew !== undefined && eNewInput) {
-        eNewInput.value = d.eNew;
-        eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (d.wNew !== null && d.wNew !== undefined && wNewInput) {
-        wNewInput.value = d.wNew;
-        wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    } else {
-      // No data for this room, show "-"
-      if (eOldInput) {
-        eOldInput.value = '-';
-        eOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (wOldInput) {
-        wOldInput.value = '-';
-        wOldInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (eNewInput) {
-        eNewInput.value = '-';
-        eNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (wNewInput) {
-        wNewInput.value = '-';
-        wNewInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    }
-  });
-
-  console.log(`✅ Loaded old readings for ${loadCount} rooms from METER_DATA[${key}]`);
 }
+
+async function autoFillOldReadingsRooms() {
+  return _autoFillReadingsForGrid('rooms');
+}
+
 
 function renderRoomsMeterGrid() {
   const gridEl = document.getElementById('roomsMeterGrid');
