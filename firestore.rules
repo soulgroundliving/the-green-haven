@@ -141,6 +141,13 @@ service cloud.firestore {
         allow read:  if isSignedIn();
         allow write: if isSignedIn();
       }
+      // Sub: wellnessClaimed (tenant claims +pts for reading wellness articles)
+      // One doc per article id; create-only (idempotent), no update/delete
+      match /wellnessClaimed/{articleId} {
+        allow read:   if isSignedIn();
+        allow create: if isSignedIn();
+        allow update, delete: if isAdminOrEmail();
+      }
     }
 
     // ===== METER DATA =====

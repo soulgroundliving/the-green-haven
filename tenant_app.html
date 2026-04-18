@@ -1640,8 +1640,11 @@
                 </div>
             </div>
             <div id="wellness-article-body" style="font-size:var(--fs-md); line-height:1.75; color:var(--text-dark);"></div>
-            <div style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center; color:var(--text-muted); font-size:var(--fs-sm);">
-                🌿 ขอบคุณที่อ่านจนจบ
+            <div id="wellness-claim-area" style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;">
+                <button id="wellness-claim-btn" class="btn-main" onclick="claimWellnessReward()" style="width:100%; padding:14px;">
+                    🎁 อ่านจบ — รับ <span id="wellness-claim-pts">0</span> pts
+                </button>
+                <div id="wellness-claim-status" style="margin-top:10px; color:var(--text-muted); font-size:var(--fs-sm);"></div>
             </div>
         </div>
     </div>
@@ -6531,10 +6534,12 @@
             }
             renderWellness();
         }
-        function openWellnessArticle(id) {
+        let _currentWellnessArticle = null;
+        async function openWellnessArticle(id) {
             const src = _wellnessList.length ? _wellnessList : WELLNESS_ARTICLES;
             const a = src.find(x => x.id === id);
             if (!a) return;
+            _currentWellnessArticle = a;
             const $ = i => document.getElementById(i);
             if ($('wellness-article-title')) $('wellness-article-title').textContent = a.title;
             if ($('wellness-article-icon')) $('wellness-article-icon').innerHTML = `<i class="fas ${a.icon}"></i>`;
@@ -6543,7 +6548,102 @@
             if (rtEl) rtEl.textContent = `อ่าน ${a.readtime || 3} นาที${a.reward > 0 ? ' • +' + a.reward + ' pts' : ''}`;
             const catEl = $('wellness-article-category');
             if (catEl) catEl.textContent = a.category || 'Wellness';
+            // Setup claim button
+            await _setupWellnessClaimUI(a);
             showPage('wellness-article');
+        }
+
+        // Check claim status + show appropriate UI (button enabled / already claimed / no reward)
+        async function _setupWellnessClaimUI(a) {
+            const $ = i => document.getElementById(i);
+            const area = $('wellness-claim-area');
+            const btn = $('wellness-claim-btn');
+            const pts = $('wellness-claim-pts');
+            const status = $('wellness-claim-status');
+            if (!area || !btn || !pts || !status) return;
+            if (!a.reward || a.reward <= 0) {
+                btn.style.display = 'none';
+                status.textContent = '🌿 ขอบคุณที่อ่านจนจบ';
+                return;
+            }
+            pts.textContent = a.reward;
+            btn.style.display = 'block';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            status.textContent = '';
+            // Check if already claimed
+            try {
+                if (window.firebaseReady && typeof firebase !== 'undefined' && _taBuilding && _taRoom) {
+                    const fns = window.firebase?.firestoreFunctions;
+                    if (fns) {
+                        const db = firebase.firestore();
+                        const ref = fns.doc(db, `tenants/${_taBuilding}/list/${_taRoom}/wellnessClaimed/${a.id}`);
+                        const snap = await fns.getDoc(ref);
+                        if (snap.exists()) {
+                            btn.disabled = true;
+                            btn.style.opacity = '.5';
+                            btn.textContent = '✅ ได้รับแต้มแล้ว';
+                            const claimedDate = snap.data().claimedAt;
+                            status.textContent = `รับเมื่อ ${new Date(claimedDate).toLocaleDateString('th-TH')}`;
+                        }
+                    }
+                }
+            } catch(e) { console.warn('check claim:', e?.message); }
+        }
+
+        async function claimWellnessReward() {
+            const a = _currentWellnessArticle;
+            if (!a || !a.reward || a.reward <= 0) return;
+            const btn = document.getElementById('wellness-claim-btn');
+            const status = document.getElementById('wellness-claim-status');
+            if (!btn) return;
+            if (!window.firebaseReady || typeof firebase === 'undefined' || !_taBuilding || !_taRoom) {
+                if (status) status.textContent = '⚠️ ระบบยังไม่พร้อม ลองใหม่อีกครั้ง';
+                return;
+            }
+            btn.disabled = true; btn.textContent = 'กำลังรับ...';
+            try {
+                const fns = window.firebase.firestoreFunctions;
+                const db = firebase.firestore();
+                // Idempotent check
+                const claimRef = fns.doc(db, `tenants/${_taBuilding}/list/${_taRoom}/wellnessClaimed/${a.id}`);
+                const claimSnap = await fns.getDoc(claimRef);
+                if (claimSnap.exists()) {
+                    btn.textContent = '✅ ได้รับแต้มแล้ว';
+                    btn.style.opacity = '.5';
+                    if (status) status.textContent = 'คุณรับแต้มบทความนี้ไปแล้ว';
+                    return;
+                }
+                // Write claim doc
+                await fns.setDoc(claimRef, {
+                    articleId: a.id,
+                    title: a.title,
+                    reward: a.reward,
+                    claimedAt: new Date().toISOString()
+                });
+                // Increment tenant gamification points (transaction-like increment)
+                const tenantRef = fns.doc(db, `tenants/${_taBuilding}/list/${_taRoom}`);
+                const tenantSnap = await fns.getDoc(tenantRef);
+                const cur = tenantSnap.data() || {};
+                const g = cur.gamification || {};
+                const newPts = (g.totalPoints || 0) + a.reward;
+                await fns.setDoc(tenantRef, {
+                    gamification: { ...g, totalPoints: newPts, wellnessPts: (g.wellnessPts || 0) + a.reward }
+                }, { merge: true });
+                btn.textContent = `✅ +${a.reward} pts! (รวม ${newPts})`;
+                btn.style.opacity = '.5';
+                if (status) status.textContent = '🌿 ขอบคุณที่อ่านจนจบ';
+                if (typeof showToast === 'function') showToast(`🎁 ได้รับ +${a.reward} pts!`, 'success');
+            } catch(e) {
+                console.error('claim wellness:', e);
+                if (status) status.textContent = '❌ บันทึกไม่สำเร็จ — ลองใหม่อีกครั้ง';
+                btn.disabled = false;
+                btn.innerHTML = `🎁 อ่านจบ — รับ ${a.reward} pts`;
+            }
+        }
+        if (typeof window !== 'undefined') {
+            window.openWellnessArticle = openWellnessArticle;
+            window.claimWellnessReward = claimWellnessReward;
         }
 
         // ---- Contract Quiz (MVP) ----

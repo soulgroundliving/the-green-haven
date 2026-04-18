@@ -1914,6 +1914,118 @@ function wellnessHtmlToText(html) {
 }
 window.wellnessHtmlToText = wellnessHtmlToText;
 
+/** Compress image File → base64 data URL (max 800px wide, JPEG q=0.78). */
+function compressImageToBase64(file, maxWidth = 800, quality = 0.78) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read fail'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('decode fail'));
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const useFmt = (file.type === 'image/png') ? 'image/png' : 'image/jpeg';
+        const dataUrl = canvas.toDataURL(useFmt, quality);
+        resolve(dataUrl);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+window.compressImageToBase64 = compressImageToBase64;
+
+// Store image data URLs by index so textarea stays readable with [img:N] placeholders
+window._wellnessImages = window._wellnessImages || []; // array of dataUrl strings
+
+/** Handle multiple image upload — compress + store + add [img:N] placeholder to body. */
+window.onWellnessImagesPicked = async function(ev) {
+  const files = Array.from(ev.target.files || []);
+  if (!files.length) return;
+  const previewEl = document.getElementById('wellness-images-preview');
+  const bodyEl = document.getElementById('wellness-body');
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) continue;
+    if (f.size > 10 * 1024 * 1024) {
+      showToast(`ไฟล์ ${f.name} ใหญ่เกิน 10MB — ข้าม`, 'warning');
+      continue;
+    }
+    try {
+      const dataUrl = await compressImageToBase64(f);
+      const idx = window._wellnessImages.length;
+      window._wellnessImages.push(dataUrl);
+      _renderWellnessImageThumb(idx);
+      // Insert [img:N] placeholder at cursor position in body
+      if (bodyEl) {
+        const marker = `\n\n[img:${idx}]\n\n`;
+        const start = bodyEl.selectionStart || bodyEl.value.length;
+        bodyEl.value = bodyEl.value.slice(0, start) + marker + bodyEl.value.slice(start);
+      }
+    } catch (e) {
+      console.error('image upload failed:', f.name, e);
+      showToast(`อัพโหลด ${f.name} ไม่สำเร็จ`, 'error');
+    }
+  }
+  ev.target.value = ''; // reset for re-pick
+};
+
+function _renderWellnessImageThumb(idx) {
+  const previewEl = document.getElementById('wellness-images-preview');
+  if (!previewEl) return;
+  const dataUrl = window._wellnessImages[idx];
+  if (!dataUrl) return;
+  const thumb = document.createElement('div');
+  thumb.id = `_wellness-thumb-${idx}`;
+  thumb.style.cssText = 'position:relative;width:100px;height:100px;border:1px solid var(--border);border-radius:6px;overflow:hidden;';
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+  const label = document.createElement('div');
+  label.textContent = `[img:${idx}]`;
+  label.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.7);color:#fff;font-size:.65rem;text-align:center;padding:2px;font-family:monospace;';
+  thumb.appendChild(img);
+  thumb.appendChild(label);
+  previewEl.appendChild(thumb);
+}
+
+/** Replace [img:N] placeholders with <img src="..."> in saved HTML body. */
+function expandWellnessImages(html) {
+  if (!html || !window._wellnessImages?.length) return html;
+  return html.replace(/\[img:(\d+)\]/g, (_m, n) => {
+    const url = window._wellnessImages[Number(n)];
+    if (!url) return '';
+    return `<img src="${url}" style="max-width:100%;border-radius:8px;margin:8px 0;display:block;" alt="">`;
+  });
+}
+window.expandWellnessImages = expandWellnessImages;
+
+/** Reverse: convert <img src="data:..."> back into [img:N] placeholders + restore _wellnessImages. */
+function collapseWellnessImages(html) {
+  if (!html) return html;
+  window._wellnessImages = [];
+  let idx = 0;
+  return html.replace(/<img[^>]*src="(data:image\/[^"]+)"[^>]*\/?>/gi, (_m, src) => {
+    window._wellnessImages.push(src);
+    return `\n\n[img:${idx++}]\n\n`;
+  });
+}
+window.collapseWellnessImages = collapseWellnessImages;
+
+function resetWellnessImages() {
+  window._wellnessImages = [];
+  const p = document.getElementById('wellness-images-preview');
+  if (p) p.innerHTML = '';
+}
+window.resetWellnessImages = resetWellnessImages;
+
 // Phase: Live wellness articles via onSnapshot (was one-shot getDocs)
 let _wellnessUnsub = null;
 let _wellnessCache = null;
@@ -1951,8 +2063,8 @@ async function saveWellnessArticle() {
   const icon    = (document.getElementById('wellness-icon').value.trim() || 'fa-leaf').replace(/^fa[srlb]?\s+/, '');
   const excerpt = document.getElementById('wellness-excerpt').value.trim();
   const bodyRaw = document.getElementById('wellness-body').value.trim();
-  // Auto-convert plain text → HTML so admin doesn't hand-type tags
-  const body = wellnessBodyToHtml(bodyRaw);
+  // Auto-convert plain text → HTML, then expand [img:N] placeholders → <img>
+  const body = expandWellnessImages(wellnessBodyToHtml(bodyRaw));
   const category= document.getElementById('wellness-category').value;
   const readtime= parseInt(document.getElementById('wellness-readtime').value) || 3;
   const reward  = parseInt(document.getElementById('wellness-reward').value) || 0;
@@ -1995,6 +2107,8 @@ function resetWellnessForm() {
   const rt = document.getElementById('wellness-readtime'); if (rt) rt.value = '3';
   const rw = document.getElementById('wellness-reward'); if (rw) rw.value = '5';
   const cat = document.getElementById('wellness-category'); if (cat) cat.value = 'Wellness';
+  if (typeof resetWellnessImages === 'function') resetWellnessImages();
+  if (typeof window.pickWellnessIcon === 'function') window.pickWellnessIcon('fa-leaf');
 }
 
 async function renderWellnessArticlesList() {
@@ -2061,9 +2175,14 @@ async function editWellnessArticle(id) {
     if (typeof window.pickWellnessIcon === 'function') window.pickWellnessIcon(a.icon || 'fa-leaf');
     else { const ic = document.getElementById('wellness-icon'); if (ic) ic.value = a.icon || 'fa-leaf'; }
     document.getElementById('wellness-excerpt').value = a.excerpt || '';
+    // Reset images, then collapse <img> back to [img:N] for editing
+    resetWellnessImages();
+    const collapsed = collapseWellnessImages(a.body || '');
+    // Re-render thumbnails for restored images
+    (window._wellnessImages || []).forEach((_, idx) => _renderWellnessImageThumb(idx));
     // Convert stored HTML back to plain text for editing
     document.getElementById('wellness-body').value = (typeof wellnessHtmlToText === 'function')
-      ? wellnessHtmlToText(a.body || '') : (a.body || '');
+      ? wellnessHtmlToText(collapsed) : collapsed;
     document.getElementById('wellness-category').value = a.category || 'Wellness';
     document.getElementById('wellness-readtime').value = a.readtime || 3;
     document.getElementById('wellness-reward').value = a.reward ?? 5;
