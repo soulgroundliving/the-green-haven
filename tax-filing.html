@@ -1005,6 +1005,20 @@
         rate: 'progressive (ภ.ง.ด.90)'
       };
     };
+    // Replace blocking alert() in showError/showSuccess with non-blocking toast
+    // (alert() freezes the whole tab — bad UX, also blocks programmatic test)
+    function _taxToast(msg, type) {
+      const div = document.createElement('div');
+      div.style.cssText = `position:fixed; top:20px; right:20px; z-index:99999; padding:14px 22px; border-radius:10px; color:#fff; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.2); font-family:Sarabun,system-ui,sans-serif; max-width:360px; background:${type==='error'?'#dc2626':type==='warn'?'#f59e0b':'#16a34a'};`;
+      div.textContent = msg;
+      document.body.appendChild(div);
+      setTimeout(() => div.style.opacity = '0', 3500);
+      setTimeout(() => div.remove(), 4000);
+    }
+    window.showError = function(m) { console.warn('❌ ' + m); _taxToast(m, 'error'); };
+    window.showSuccess = function(m) { console.log('✅ ' + m); _taxToast(m, 'success'); };
+    window.showInfo = function(m) { console.log(m); _taxToast(m, 'warn'); };
+
     console.log('✅ tax-filing calculations rewired to live data');
     // ===== Populate year dropdowns + default to current BE year + month =====
     const now = new Date();
