@@ -4468,7 +4468,54 @@ function _subscribeBuildingPaymentForBill(){
 }
 document.addEventListener('DOMContentLoaded', () => setTimeout(_subscribeBuildingPaymentForBill, 500));
 
-// ===== GLOBAL verifiedSlips SYNC → payment_status + bill page pills =====
+// ===== PaymentStore — single facade for payment lookups (Phase 2b 2026-04-19) =====
+// Single Source of Truth: Firestore verifiedSlips (CF-written by SlipOK).
+//   In-memory cache keyed [yearBE_month][room] — populated by the global
+//   onSnapshot below. Falls back to legacy localStorage payment_status for
+//   admin manual entries that never flowed through SlipOK.
+//   Use PaymentStore.isPaid / .getSlip / .onChange instead of touching
+//   loadPS()/payment_status directly.
+window.PaymentStore = window.PaymentStore || (function(){
+  const cache = {};       // {yearBE_month: {room: paymentEntry}}
+  const listeners = new Set();
+  function _key(year, month) {
+    const beYear = Number(year) < 2400 ? Number(year) + 543 : Number(year);
+    return `${beYear}_${Number(month)}`;
+  }
+  function _readLegacy() {
+    try { return JSON.parse(localStorage.getItem('payment_status')||'{}'); }
+    catch(e) { return {}; }
+  }
+  function isPaid(building, room, year, month) {
+    const k = _key(year, month);
+    const r = String(room);
+    if (cache[k]?.[r]?.status === 'paid') return true;
+    const legacy = _readLegacy();
+    return legacy[k]?.[r]?.status === 'paid';
+  }
+  function getSlip(building, room, year, month) {
+    const k = _key(year, month);
+    const r = String(room);
+    return cache[k]?.[r] || _readLegacy()[k]?.[r] || null;
+  }
+  function listForMonth(year, month) {
+    const k = _key(year, month);
+    return { ...(_readLegacy()[k] || {}), ...(cache[k] || {}) };
+  }
+  function onChange(fn) {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  }
+  function _ingest(yearBE, month, room, entry) {
+    const k = `${yearBE}_${month}`;
+    if (!cache[k]) cache[k] = {};
+    cache[k][room] = entry;
+  }
+  function _notify() { listeners.forEach(fn => { try { fn(); } catch(e){} }); }
+  return { isPaid, getSlip, listForMonth, onChange, _ingest, _notify };
+})();
+
+// ===== GLOBAL verifiedSlips SYNC → PaymentStore + payment_status + bill pills =====
 // Runs once on load; when tenant pays via tenant_app, the slip arrives here and
 // flips the bill-page pill to ✅ in real-time (ครอบคลุมทั้ง Rooms + Nest)
 window._globalSlipsUnsub = null;
@@ -4498,14 +4545,13 @@ function _subscribeGlobalVerifiedSlips(){
         const yearBE = ts.getFullYear() + 543;
         const month = ts.getMonth() + 1;
         const key = `${yearBE}_${month}`;
-        if (!ps[key]) ps[key] = {};
-        if (ps[key][room]?.status === 'paid') return;
-        ps[key][room] = {
+        const entry = {
           status: 'paid',
           amount: s.amount || 0,
           date: ts.toISOString(),
           receiptNo: s.transactionId || s.transRef || ch.doc.id,
           fromTenantApp: true,
+          building: s.building || null,
           slip: {
             amount: s.amount || 0,
             sender: s.sender || '',
@@ -4514,10 +4560,17 @@ function _subscribeGlobalVerifiedSlips(){
             transferDate: ts.toISOString()
           }
         };
+        // Always feed PaymentStore in-memory cache (idempotent)
+        try { window.PaymentStore._ingest(yearBE, month, room, entry); } catch(e){}
+        // Mirror to legacy payment_status (skip if already paid there)
+        if (ps[key]?.[room]?.status === 'paid') return;
+        if (!ps[key]) ps[key] = {};
+        ps[key][room] = entry;
         changed = true;
       });
       if (changed) {
         savePS(ps);
+        try { window.PaymentStore._notify(); } catch(e){}
         // Re-render bill page pills if open
         if (typeof renderPaymentStatus === 'function' &&
             document.getElementById('page-bill')?.classList.contains('active')) {
@@ -4528,12 +4581,30 @@ function _subscribeGlobalVerifiedSlips(){
             document.getElementById('page-monthly')?.classList.contains('active')) {
           try { renderMonthlyReport(); } catch(e){}
         }
-        console.log('💸 Synced tenant-app payment → payment_status');
+        console.log('💸 Synced tenant-app payment → PaymentStore + payment_status');
+      } else {
+        // Even when no new slips, fire ingestion of the snapshot's full state
+        // so PaymentStore cache is populated at startup
+        try { window.PaymentStore._notify(); } catch(e){}
       }
     }, err => console.warn('global verifiedSlips listen:', err?.message));
   } catch(e) { console.warn('subscribeGlobalVerifiedSlips:', e); }
 }
 document.addEventListener('DOMContentLoaded', () => setTimeout(_subscribeGlobalVerifiedSlips, 800));
+
+// PaymentStore listener: auto-rerender payment grid when a new slip arrives
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    if (typeof window.PaymentStore !== 'undefined') {
+      window.PaymentStore.onChange(() => {
+        if (typeof renderPaymentStatus === 'function' &&
+            document.getElementById('page-bill')?.classList.contains('active')) {
+          try { renderPaymentStatus(); } catch(e){}
+        }
+      });
+    }
+  }, 1000);
+});
 
 function buildPromptPayPayload(phone,amount){
   const s=phone.replace(/[^0-9]/g,'');
@@ -5055,9 +5126,10 @@ function renderPaymentStatus(){
   const el=document.getElementById('payStatusGrid');if(!el)return;
   const month=parseInt(document.getElementById('f-month').value);
   const year=document.getElementById('f-year').value;
-  const ps=loadPS();
-  const key=`${year}_${month}`;
-  const paid=ps[key]||{};
+  // Phase 2b: PaymentStore unifies verifiedSlips (Firestore) + payment_status (legacy)
+  const paid = (typeof PaymentStore !== 'undefined')
+    ? PaymentStore.listForMonth(year, month)
+    : (loadPS()[`${year}_${month}`] || {});
   // Map building names and get active rooms
   const bldgInfo = getBuildingInfo(currentBuilding);
   const rooms = getActiveRoomsWithMetadata(bldgInfo.firebaseBuilding, bldgInfo.metadataArray);
