@@ -3862,8 +3862,8 @@
                 if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady && window._tenantAppRoom) {
                     const userStr = sessionStorage.getItem('user');
                     const user = userStr ? JSON.parse(userStr) : { roomNumber: window._tenantAppRoom };
-                    const sync = new TenantFirebaseSync(user, window._tenantAppBuilding, window._tenantAppRoom);
-                    if (typeof sync.saveReceiptType === 'function') sync.saveReceiptType(type);
+                    TenantFirebaseSync.initialize(user, window._tenantAppBuilding, window._tenantAppRoom);
+                    if (typeof TenantFirebaseSync.saveReceiptType === 'function') TenantFirebaseSync.saveReceiptType(type);
                 }
             } catch(_){}
         }
@@ -3974,8 +3974,8 @@
                     if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady && window._tenantAppRoom) {
                         const userStr = sessionStorage.getItem('user');
                         const user = userStr ? JSON.parse(userStr) : { roomNumber: window._tenantAppRoom };
-                        const sync = new TenantFirebaseSync(user, window._tenantAppBuilding, window._tenantAppRoom);
-                        if (typeof sync.saveAvatar === 'function') sync.saveAvatar(data);
+                        TenantFirebaseSync.initialize(user, window._tenantAppBuilding, window._tenantAppRoom);
+                        if (typeof TenantFirebaseSync.saveAvatar === 'function') TenantFirebaseSync.saveAvatar(data);
                     }
                 } catch(_){}
             } catch(_){}
@@ -5198,8 +5198,9 @@
                 try {
                     const userStr = sessionStorage.getItem('user');
                     const user = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
-                    const sync = new TenantFirebaseSync(user, _taBuilding, _taRoom);
-                    const data = await sync.loadAllData();
+                    // TenantFirebaseSync is fully static — initialize() then call statics
+                    TenantFirebaseSync.initialize(user, _taBuilding, _taRoom);
+                    const data = await TenantFirebaseSync.loadAllData();
                     if (data.lease) _taLease = data.lease;
                     if (data.tenant) _taTenant = data.tenant;
                     if (data.bills && data.bills.length) _taBills = data.bills;
@@ -5244,8 +5245,8 @@
             try {
                 const userStr = sessionStorage.getItem('user');
                 const user = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
-                const sync = new TenantFirebaseSync(user, _taBuilding, _taRoom);
-                _billsUnsub = sync.constructor.subscribeBills.call(sync, (bills) => {
+                TenantFirebaseSync.initialize(user, _taBuilding, _taRoom);
+                _billsUnsub = TenantFirebaseSync.subscribeBills((bills) => {
                     if (!Array.isArray(bills)) return;
                     // Merge with existing (Firestore wins on billId collision)
                     const byId = new Map();
@@ -6229,9 +6230,9 @@
                 if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady && _taRoom) {
                     const userStr = sessionStorage.getItem('user');
                     const user = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
-                    const sync = new TenantFirebaseSync(user, _taBuilding, _taRoom);
-                    if (typeof sync.logQuizResult === 'function') sync.logQuizResult('contract', n);
-                    else if (typeof sync.addPoints === 'function') sync.addPoints(n, 'contract_quiz');
+                    TenantFirebaseSync.initialize(user, _taBuilding, _taRoom);
+                    if (typeof TenantFirebaseSync.logQuizResult === 'function') TenantFirebaseSync.logQuizResult('contract', n);
+                    else if (typeof TenantFirebaseSync.addPoints === 'function') TenantFirebaseSync.addPoints(n, 'contract_quiz');
                 }
             } catch(_){}
             loadGamificationData();
