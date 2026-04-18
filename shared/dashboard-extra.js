@@ -2694,11 +2694,91 @@ function initServiceProvidersPage() {
   loadAndRenderServiceProviders();
 }
 
+// ===== ServiceProvidersStore (Phase 4 2026-04-19) =====
+// Single Source of Truth: Firestore system/serviceProviders.items
+//   localStorage cache only; cloud canonical so admin from any device sees same list
+window.ServiceProvidersStore = window.ServiceProvidersStore || (function(){
+  let cache = null;            // null = not loaded yet
+  const listeners = new Set();
+  let unsub = null;
+
+  function _local() {
+    try { return JSON.parse(localStorage.getItem('service_providers_data') || '[]'); }
+    catch(e) { return []; }
+  }
+  function _writeLocal(arr) {
+    try { localStorage.setItem('service_providers_data', JSON.stringify(arr)); } catch(e){}
+  }
+  function getAll() { return cache !== null ? cache : _local(); }
+  function onChange(fn) {
+    listeners.add(fn);
+    if (cache !== null) { try { fn(cache); } catch(e){} }
+    return () => listeners.delete(fn);
+  }
+  function _notify() { listeners.forEach(fn => { try { fn(getAll()); } catch(e){} }); }
+
+  async function _push(items) {
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return false;
+    try {
+      const fs = window.firebase.firestoreFunctions;
+      const db = window.firebase.firestore();
+      await fs.setDoc(fs.doc(db, 'system', 'serviceProviders'), {
+        items, updatedAt: new Date().toISOString()
+      }, { merge: true });
+      return true;
+    } catch (e) { console.warn('ServiceProvidersStore push:', e?.message); return false; }
+  }
+  async function setAll(items) {
+    cache = Array.isArray(items) ? items : [];
+    _writeLocal(cache);
+    _notify();
+    await _push(cache);
+  }
+  async function add(provider) {
+    const list = getAll().slice();
+    list.push(provider);
+    return setAll(list);
+  }
+  async function update(id, changes) {
+    const list = getAll().slice();
+    const idx = list.findIndex(p => p.id === id);
+    if (idx < 0) return false;
+    list[idx] = { ...list[idx], ...changes, updatedDate: new Date().toISOString() };
+    return setAll(list);
+  }
+  async function remove(id) {
+    return setAll(getAll().filter(p => p.id !== id));
+  }
+  async function migrateLocalToCloud() {
+    return _push(_local()) ? { pushed: _local().length } : { pushed: 0 };
+  }
+  function subscribe() {
+    if (unsub) return;
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+      setTimeout(subscribe, 1500); return;
+    }
+    try {
+      const fs = window.firebase.firestoreFunctions;
+      const db = window.firebase.firestore();
+      unsub = fs.onSnapshot(fs.doc(db, 'system', 'serviceProviders'), snap => {
+        const items = snap.exists() ? ((snap.data() || {}).items || []) : [];
+        cache = items;
+        _writeLocal(items);
+        _notify();
+      }, err => console.warn('serviceProviders listen:', err?.message));
+    } catch(e) { console.warn('subscribe:', e); }
+  }
+  if (typeof window !== 'undefined') setTimeout(subscribe, 800);
+  return { getAll, onChange, setAll, add, update, remove, migrateLocalToCloud, subscribe };
+})();
+
 function loadAndRenderServiceProviders() {
   const list = document.getElementById('providersList');
   if (!list) return;
 
-  let providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
+  let providers = (typeof ServiceProvidersStore !== 'undefined')
+    ? ServiceProvidersStore.getAll()
+    : JSON.parse(localStorage.getItem('service_providers_data') || '[]');
   const searchVal = document.getElementById('providerSearch')?.value.toLowerCase() || '';
 
   if (searchVal) {
@@ -2744,7 +2824,7 @@ function toggleAddProviderForm() {
   }
 }
 
-function saveServiceProvider() {
+async function saveServiceProvider() {
   const type = document.getElementById('providerType')?.value.trim();
   const name = document.getElementById('providerName')?.value.trim();
   const phone = document.getElementById('providerPhone')?.value.trim();
@@ -2756,34 +2836,24 @@ function saveServiceProvider() {
     return;
   }
 
-  let providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
   const newProvider = {
     id: 'sp_' + Date.now(),
-    type: type,
-    name: name,
-    phone: phone,
-    email: email,
-    website: website,
+    type, name, phone, email, website,
     createdDate: new Date().toISOString()
   };
 
-  providers.push(newProvider);
-  localStorage.setItem('service_providers_data', JSON.stringify(providers));
+  // Phase 4: dual-write via ServiceProvidersStore (Firestore + localStorage)
+  await ServiceProvidersStore.add(newProvider);
 
-  // Clear form
-  document.getElementById('providerType').value = '';
-  document.getElementById('providerName').value = '';
-  document.getElementById('providerPhone').value = '';
-  document.getElementById('providerEmail').value = '';
-  document.getElementById('providerWebsite').value = '';
-
+  ['providerType','providerName','providerPhone','providerEmail','providerWebsite']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   toggleAddProviderForm();
   loadAndRenderServiceProviders();
-  showToast('✅ Service provider added successfully', 'success');
+  showToast('✅ Service provider added successfully (☁️ Firestore)', 'success');
 }
 
 function editServiceProvider(id) {
-  const providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
+  const providers = ServiceProvidersStore.getAll();
   const provider = providers.find(p => p.id === id);
   if (!provider) return;
 
@@ -2799,27 +2869,18 @@ function editServiceProvider(id) {
   const button = form.querySelector('button.btn-receipt');
   const originalText = button.textContent;
   button.textContent = '✏️ Update Provider';
-  button.onclick = function() {
-    const updatedProvider = {
-      id: provider.id,
+  button.onclick = async function() {
+    const changes = {
       type: document.getElementById('providerType').value.trim(),
       name: document.getElementById('providerName').value.trim(),
       phone: document.getElementById('providerPhone').value.trim(),
       email: document.getElementById('providerEmail').value.trim(),
-      website: document.getElementById('providerWebsite').value.trim(),
-      createdDate: provider.createdDate,
-      updatedDate: new Date().toISOString()
+      website: document.getElementById('providerWebsite').value.trim()
     };
-
-    const idx = providers.findIndex(p => p.id === id);
-    if (idx >= 0) {
-      providers[idx] = updatedProvider;
-      localStorage.setItem('service_providers_data', JSON.stringify(providers));
-      document.getElementById('providerType').value = '';
-      document.getElementById('providerName').value = '';
-      document.getElementById('providerPhone').value = '';
-      document.getElementById('providerEmail').value = '';
-      document.getElementById('providerWebsite').value = '';
+    const ok = await ServiceProvidersStore.update(id, changes);
+    if (ok !== false) {
+      ['providerType','providerName','providerPhone','providerEmail','providerWebsite']
+        .forEach(i => { const el = document.getElementById(i); if (el) el.value = ''; });
       form.style.display = 'none';
       button.textContent = originalText;
       button.onclick = null;
@@ -2829,12 +2890,9 @@ function editServiceProvider(id) {
   };
 }
 
-function deleteServiceProvider(id) {
+async function deleteServiceProvider(id) {
   if (!confirm('Are you sure you want to delete this provider?')) return;
-
-  let providers = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
-  providers = providers.filter(p => p.id !== id);
-  localStorage.setItem('service_providers_data', JSON.stringify(providers));
+  await ServiceProvidersStore.remove(id);
   loadAndRenderServiceProviders();
   showToast('✅ Service provider deleted', 'success');
 }
