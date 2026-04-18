@@ -21,6 +21,10 @@ exports.checkAndAwardBadges = require('./complaintAndGamification').checkAndAwar
 exports.calculateTenantRank = require('./complaintAndGamification').calculateTenantRank;
 exports.getLeaderboard = require('./complaintAndGamification').getLeaderboard;
 
+// Rewards (Phase A.2 — Firestore-managed reward catalog)
+exports.seedRewards = require('./seedRewards').seedRewards;
+exports.redeemReward = require('./redeemReward').redeemReward;
+
 // Import existing functions if available
 try {
   const verifySlip = require('./verifySlip');

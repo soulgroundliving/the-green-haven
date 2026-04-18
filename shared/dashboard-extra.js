@@ -3132,6 +3132,152 @@ function switchGamificationTab(tabName, btn) {
   document.querySelectorAll('#page-gamification button').forEach(b => b.style.borderBottom = '3px solid transparent');
   btn.style.color = '#2d8653';
   btn.style.borderBottom = '3px solid #2d8653';
+  // Lazy-load rewards admin when its tab opens (idempotent — _rewardsAdminUnsub guards)
+  if (tabName === 'rewards' && typeof loadRewardsAdmin === 'function') loadRewardsAdmin();
+}
+
+// ===== REWARDS ADMIN CRUD (Firestore `rewards/` collection) =====
+let _rewardsAdminUnsub = null;
+let _rewardsAdminCache = [];
+
+function loadRewardsAdmin() {
+  if (_rewardsAdminUnsub) return; // idempotent
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  const colRef = fs.collection(db, 'rewards');
+  _rewardsAdminUnsub = fs.onSnapshot(colRef, snap => {
+    _rewardsAdminCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.order || 999) - (b.order || 999));
+    renderRewardsAdminTable();
+  }, err => {
+    console.warn('rewards admin onSnapshot failed:', err);
+    document.getElementById('rewardsAdminTable').innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828;padding:20px;">Failed to load: ${err.message}</td></tr>`;
+  });
+}
+
+function renderRewardsAdminTable() {
+  const tbody = document.getElementById('rewardsAdminTable');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (!_rewardsAdminCache.length) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">No rewards yet — click "+ Add Reward" to create one</td>';
+    tbody.appendChild(tr);
+    return;
+  }
+  // DOM API to avoid XSS — admin-controlled fields still escape to be safe
+  const esc = s => String(s == null ? '' : s);
+  _rewardsAdminCache.forEach(r => {
+    const tr = document.createElement('tr');
+    const tdOrder = document.createElement('td'); tdOrder.textContent = r.order || '—'; tr.appendChild(tdOrder);
+    const tdIcon = document.createElement('td'); tdIcon.style.fontSize = '1.4rem'; tdIcon.textContent = r.icon || '🎁'; tr.appendChild(tdIcon);
+    const tdName = document.createElement('td'); tdName.textContent = esc(r.name); tr.appendChild(tdName);
+    const tdCost = document.createElement('td'); tdCost.textContent = Number(r.cost || 0).toLocaleString(); tr.appendChild(tdCost);
+    const tdActive = document.createElement('td');
+    tdActive.innerHTML = r.active === false
+      ? '<span style="color:#c62828;font-weight:600;">No</span>'
+      : '<span style="color:var(--green-dark);font-weight:600;">Yes</span>';
+    tr.appendChild(tdActive);
+    const tdNote = document.createElement('td'); tdNote.style.fontSize = '.8rem'; tdNote.style.color = 'var(--text-muted)'; tdNote.textContent = esc(r.note); tr.appendChild(tdNote);
+    const tdActions = document.createElement('td');
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'Edit'; editBtn.style.cssText = 'padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:4px;cursor:pointer;margin-right:4px;font-family:Sarabun,sans-serif;font-size:.8rem;';
+    editBtn.addEventListener('click', () => openRewardEdit(r.id));
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'Delete'; delBtn.style.cssText = 'padding:4px 10px;background:#ffebee;color:#c62828;border:1px solid #c62828;border-radius:4px;cursor:pointer;font-family:Sarabun,sans-serif;font-size:.8rem;';
+    delBtn.addEventListener('click', () => deleteReward(r.id, r.name));
+    tdActions.appendChild(editBtn); tdActions.appendChild(delBtn);
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
+  });
+}
+
+function openRewardEdit(rewardId) {
+  const modal = document.getElementById('rewardEditModal');
+  if (!modal) return;
+  const isNew = !rewardId;
+  document.getElementById('rewardEditTitle').textContent = isNew ? '+ Add Reward' : 'Edit Reward';
+  document.getElementById('rewardEditId').value = rewardId || '';
+  if (isNew) {
+    document.getElementById('rewardEditName').value = '';
+    document.getElementById('rewardEditCost').value = '';
+    document.getElementById('rewardEditIcon').value = '🎁';
+    document.getElementById('rewardEditOrder').value = (_rewardsAdminCache.length + 1);
+    document.getElementById('rewardEditNote').value = '';
+    document.getElementById('rewardEditActive').checked = true;
+  } else {
+    const r = _rewardsAdminCache.find(x => x.id === rewardId);
+    if (!r) return;
+    document.getElementById('rewardEditName').value = r.name || '';
+    document.getElementById('rewardEditCost').value = r.cost || '';
+    document.getElementById('rewardEditIcon').value = r.icon || '🎁';
+    document.getElementById('rewardEditOrder').value = r.order || 99;
+    document.getElementById('rewardEditNote').value = r.note || '';
+    document.getElementById('rewardEditActive').checked = r.active !== false;
+  }
+  modal.style.display = 'flex';
+}
+
+function closeRewardEdit() {
+  const modal = document.getElementById('rewardEditModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveReward() {
+  const id = document.getElementById('rewardEditId').value;
+  const name = document.getElementById('rewardEditName').value.trim();
+  const cost = parseInt(document.getElementById('rewardEditCost').value, 10);
+  const icon = document.getElementById('rewardEditIcon').value.trim() || '🎁';
+  const order = parseInt(document.getElementById('rewardEditOrder').value, 10) || 99;
+  const note = document.getElementById('rewardEditNote').value.trim();
+  const active = document.getElementById('rewardEditActive').checked;
+  if (!name || !cost || cost < 1) {
+    alert('Name and cost (>0) are required');
+    return;
+  }
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    alert('Firestore unavailable');
+    return;
+  }
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  const now = new Date().toISOString();
+  const data = { name, cost, icon, order, note, active, updatedAt: now };
+  try {
+    if (id) {
+      await fs.updateDoc(fs.doc(db, 'rewards', id), data);
+    } else {
+      // Auto-generate id from name slug + timestamp suffix for stable URL-friendly key
+      const slug = name.toLowerCase().replace(/[^\u0E00-\u0E7Fa-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
+      const newId = `${slug}-${Date.now().toString(36)}`;
+      await fs.setDoc(fs.doc(db, 'rewards', newId), { ...data, createdAt: now });
+    }
+    closeRewardEdit();
+  } catch (e) {
+    alert('Save failed: ' + e.message);
+  }
+}
+
+async function deleteReward(rewardId, rewardName) {
+  if (!confirm(`Delete reward "${rewardName}"? This is permanent.`)) return;
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  try {
+    await fs.deleteDoc(fs.doc(db, 'rewards', rewardId));
+  } catch (e) {
+    alert('Delete failed: ' + e.message);
+  }
+}
+
+// Expose for inline onclick handlers
+if (typeof window !== 'undefined') {
+  window.loadRewardsAdmin = loadRewardsAdmin;
+  window.openRewardEdit = openRewardEdit;
+  window.closeRewardEdit = closeRewardEdit;
+  window.saveReward = saveReward;
+  window.deleteReward = deleteReward;
 }
 
 // ===== REPORTS PAGE =====

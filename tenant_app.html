@@ -29,6 +29,7 @@
       import { getDatabase, ref, get, set, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
       import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
       import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+      import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
 
       async function initializeFirebase() {
         try {
@@ -42,6 +43,8 @@
           const database = getDatabase(app);
           const auth = getAuth(app);
           const firestore = getFirestore(app);
+          // Region must match CF deployment (asia-southeast1)
+          const fns = getFunctions(app, 'asia-southeast1');
 
           window.firebaseApp = app;
           window.firebaseDatabase = database;
@@ -57,7 +60,8 @@
           window.firebaseDB = database;
           window.firebase = {
             firestore: () => firestore,
-            firestoreFunctions: { collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp }
+            firestoreFunctions: { collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp },
+            functions: { httpsCallable: (name) => httpsCallable(fns, name) }
           };
           window.firebaseReady = true;
           window.dispatchEvent(new Event('firebaseInitialized'));
@@ -2205,91 +2209,9 @@
             </button>
             <h3 class="text-xl font-bold mb-6 text-center text-[#334435]">เลือกของรางวัล</h3>
             <div class="overflow-y-auto pr-2 space-y-4 custom-scrollbar" id="rewards-list">
-                <div
-                    class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
-                    <div class="flex items-center gap-4">
-                        <span class="text-3xl">❄️</span>
-                        <div>
-                            <p class="font-bold text-sm">บริการล้างแอร์พิเศษ</p>
-                            <p class="text-[10px] text-gray-400">ใช้ 3,500 Points</p>
-                            <p class="text-[9px] text-orange-500 font-bold">เหลือเพียง 2 สิทธิ์สุดท้ายของเดือน!</p>
-                        </div>
-                    </div>
-                    <button onclick="redeemReward(this, 'บริการล้างแอร์พิเศษ', 3500)"
-                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
-                </div>
-                <div
-                    class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
-                    <div class="flex items-center gap-4">
-                        <span class="text-3xl">⚡</span>
-                        <div>
-                            <p class="font-bold text-sm">ส่วนลดค่าไฟ 100 บาท</p>
-                            <p class="text-[10px] text-gray-400">ใช้ 1,200 Points</p>
-                        </div>
-                    </div>
-                    <button onclick="redeemReward(this, 'ส่วนลดค่าไฟ 100 บาท', 1200)"
-                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
-                </div>
-                <div
-                    class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
-                    <div class="flex items-center gap-4">
-                        <span class="text-3xl">💆🏻‍♀</span>
-                        <div>
-                            <p class="font-bold text-sm">บริการนวดในส่วนกลาง 60 นาที</p>
-                            <p class="text-[10px] text-gray-400">ใช้ 1,800 Points</p>
-                        </div>
-                    </div>
-                    <button onclick="redeemReward(this, 'บริการนวดในส่วนกลาง 60 นาที', 1800)"
-                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
-                </div>
-                <div
-                    class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
-                    <div class="flex items-center gap-4">
-                        <span class="text-3xl">🚗</span>
-                        <div>
-                            <p class="font-bold text-sm">ที่จอดรถส่วนตัว</p>
-                            <p class="text-[10px] text-gray-400">ใช้ 2,500 Points</p>
-                        </div>
-                    </div>
-                    <button onclick="redeemReward(this, 'ที่จอดรถส่วนตัว', 2500)"
-                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
-                </div>
-                <div
-                    class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
-                    <div class="flex items-center gap-4">
-                        <span class="text-3xl">🍃</span>
-                        <div>
-                            <p class="font-bold text-sm">แผ่นกรองอากาศ Pet Grade</p>
-                            <p class="text-[10px] text-gray-400">ใช้ 3,500 Points</p>
-                        </div>
-                    </div>
-                    <button onclick="redeemReward(this, 'แผ่นกรองอากาศ Pet Grade', 3500)"
-                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
-                </div>
-                <div
-                    class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
-                    <div class="flex items-center gap-4">
-                        <span class="text-3xl">🧼</span>
-                        <div>
-                            <p class="font-bold text-sm">Deep Clean ห้องพัก</p>
-                            <p class="text-[10px] text-gray-400">ใช้ 4,500 Points</p>
-                        </div>
-                    </div>
-                    <button onclick="redeemReward(this, 'Deep Clean ห้องพัก', 4500)"
-                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
-                </div>
-                <div
-                    class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
-                    <div class="flex items-center gap-4">
-                        <span class="text-3xl">✨</span>
-                        <div>
-                            <p class="font-bold text-sm">น้ำยาฆ่าเชื่อ pet safe grade</p>
-                            <p class="text-[10px] text-gray-400">ใช้ 3,000 Points</p>
-                        </div>
-                    </div>
-                    <button onclick="redeemReward(this, 'น้ำยาฆ่าเชื่อ pet safe grade', 3000)"
-                        class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
-                </div>
+                <!-- Rewards rendered dynamically by _subscribeRewards() from Firestore `rewards` collection.
+                     Admin manages via dashboard.html → Settings → Rewards. -->
+                <div class="text-center text-xs text-gray-400 py-8" id="rewards-list-empty">กำลังโหลดของรางวัล…</div>
                 <div class="space-y-4">
                     <div class="muji-card p-5 border-none shadow-sm relative overflow-hidden">
                         <div class="flex justify-between items-start mb-4">
@@ -4383,7 +4305,8 @@
         let userPoints = 1250;
 
         // 2. ฟังก์ชันหลักสำหรับแลกของรางวัล (Nest only — guarded by gamification visibility)
-        async function redeemReward(btnElement, rewardName, cost) {
+        // rewardId is the Firestore doc id (passed by _renderRewardsList; legacy onclick callers omit it)
+        async function redeemReward(btnElement, rewardName, cost, rewardId) {
             if (window._gamificationDisabled) return;
             if (userPoints < cost) {
                 toast(`คะแนนไม่พอ — คุณมี ${userPoints} Pts ต้องใช้ ${cost} Pts`, 'error');
@@ -4398,23 +4321,27 @@
             btnElement.disabled = true;
             btnElement.innerText = "กำลังบันทึก...";
 
-            // Persist to Firestore — write redemption record + decrement points field
-            // (admin-side or CF can validate later; tenant cannot fake server-truth because
-            // _subscribeEcoPoints will overwrite userPoints with the canonical Firestore value)
+            // Server-side atomic redemption via Cloud Function — validates points server-side,
+            // runs decrement + redemption-record write in a single Firestore transaction so a
+            // tenant cannot exploit concurrent calls or browser-debugger to fake points.
             try {
-                if (window.firebase?.firestore && window.firebase?.firestoreFunctions) {
-                    const fs = window.firebase.firestoreFunctions;
-                    const db = window.firebase.firestore();
-                    const redemption = {
-                        rewardName, cost, redeemedAt: new Date().toISOString(),
-                        building: _taBuilding, room: _taRoom,
-                        tenantName: _taTenant?.name || '',
-                        status: 'pending'
-                    };
-                    const colRef = fs.collection(db, 'tenants', _taBuilding, 'list', String(_taRoom), 'redemptions');
-                    await fs.addDoc(colRef, redemption);
-                    const tenantRef = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
-                    await fs.updateDoc(tenantRef, { points: userPoints });
+                if (!rewardId) {
+                    // Legacy callers (old hardcoded onclick) won't work — they predate Firestore catalog
+                    throw new Error('Missing rewardId — refresh page to load latest rewards');
+                }
+                const fns = window.firebase?.functions;
+                if (!fns) throw new Error('Firebase Functions SDK not loaded');
+                const callable = fns.httpsCallable('redeemReward');
+                const resp = await callable({
+                    building: _taBuilding,
+                    roomId: String(_taRoom),
+                    rewardId
+                });
+                // _subscribeEcoPoints will pick up the canonical points value via onSnapshot,
+                // but update local UI immediately for responsiveness
+                if (resp.data && typeof resp.data.pointsAfter === 'number') {
+                    userPoints = resp.data.pointsAfter;
+                    updateUserPointsUI();
                 }
                 btnElement.innerText = "แลกแล้ว";
                 btnElement.classList.remove('bg-[#2d8653]', 'active:scale-90');
@@ -4817,6 +4744,73 @@
             });
         }
 
+        // ===== REWARDS COLLECTION SUBSCRIBE =====
+        // Admin manages rewards in Firestore `rewards/{id}`. Tenant app renders dynamically
+        // so adding/removing/repricing rewards never requires a redeploy.
+        let _rewardsUnsub = null;
+        let _rewardsCache = [];
+        function _subscribeRewards() {
+            if (_rewardsUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                const colRef = fs.collection(db, 'rewards');
+                _rewardsUnsub = fs.onSnapshot(colRef, snap => {
+                    _rewardsCache = snap.docs
+                        .map(d => ({ id: d.id, ...d.data() }))
+                        .filter(r => r.active !== false)
+                        .sort((a, b) => (a.order || 999) - (b.order || 999));
+                    _renderRewardsList();
+                }, err => console.warn('rewards subscribe failed:', err.message));
+            } catch (e) { console.warn('rewards subscribe init failed:', e.message); }
+        }
+        function _renderRewardsList() {
+            const container = document.getElementById('rewards-list');
+            if (!container) return;
+            container.innerHTML = '';
+            if (!_rewardsCache.length) {
+                const empty = document.createElement('div');
+                empty.className = 'text-center text-xs text-gray-400 py-8';
+                empty.textContent = 'ยังไม่มีของรางวัลในขณะนี้';
+                container.appendChild(empty);
+                return;
+            }
+            _rewardsCache.forEach(r => {
+                const card = document.createElement('div');
+                card.className = 'p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition';
+                const left = document.createElement('div');
+                left.className = 'flex items-center gap-4';
+                const icon = document.createElement('span');
+                icon.className = 'text-3xl';
+                icon.textContent = r.icon || '🎁';
+                const info = document.createElement('div');
+                const title = document.createElement('p');
+                title.className = 'font-bold text-sm';
+                title.textContent = r.name || '(unnamed)';
+                const cost = document.createElement('p');
+                cost.className = 'text-[10px] text-gray-400';
+                cost.textContent = `ใช้ ${Number(r.cost || 0).toLocaleString()} Points`;
+                info.appendChild(title); info.appendChild(cost);
+                if (r.note) {
+                    const note = document.createElement('p');
+                    note.className = 'text-[9px] text-orange-500 font-bold';
+                    note.textContent = r.note;
+                    info.appendChild(note);
+                }
+                left.appendChild(icon); left.appendChild(info);
+                const btn = document.createElement('button');
+                btn.className = 'bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition';
+                btn.textContent = 'แลก';
+                btn.addEventListener('click', () => redeemReward(btn, r.name, Number(r.cost || 0), r.id));
+                card.appendChild(left); card.appendChild(btn);
+                container.appendChild(card);
+            });
+        }
+        // Auto-subscribe on app ready (rewards visible to all buildings, not Nest-only)
+        window.addEventListener('firebaseInitialized', _subscribeRewards);
+        if (window.firebaseReady) _subscribeRewards();
+
         let _ecoPointsUnsub = null;
         function _subscribeEcoPoints() {
             // Nest-only — subscribe to authoritative points field in Firestore
@@ -4831,8 +4825,13 @@
                 _ecoPointsUnsub = fs.onSnapshot(tenantRef, snap => {
                     if (!snap.exists()) return;
                     const data = snap.data() || {};
-                    if (typeof data.points === 'number') {
-                        userPoints = data.points;
+                    // Schema: tenants/{building}/list/{roomId} stores gamification subobject
+                    // (verifySlip CF writes data.gamification.points; flat data.points is a legacy fallback)
+                    const pts = (data.gamification && typeof data.gamification.points === 'number')
+                              ? data.gamification.points
+                              : (typeof data.points === 'number' ? data.points : null);
+                    if (pts !== null) {
+                        userPoints = pts;
                         try { localStorage.setItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`, String(userPoints)); } catch(e) {}
                         if (typeof loadGamificationData === 'function') loadGamificationData();
                         if (typeof updateUserPointsUI === 'function') updateUserPointsUI();

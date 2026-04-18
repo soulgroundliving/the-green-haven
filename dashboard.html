@@ -3698,24 +3698,60 @@
 
     <!-- Rewards Tab -->
     <div id="gamificationRewards" style="display: none;">
-      <div style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm);">
-        <div style="font-weight: 700; margin-bottom: 1rem;">Point Distribution System</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <div>
-            <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">On-Time Payment</small>
-            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);">+50 pts</div>
+      <!-- Earning rates (read-only reference) -->
+      <div style="background: var(--green-pale); padding: 1rem 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+        <div style="font-weight: 700; margin-bottom: .5rem; font-size: .95rem;">Point Earning Rates (defined in Cloud Functions)</div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; font-size: .85rem;">
+          <div><small style="color: var(--text-muted);">On-Time Payment</small><div style="font-weight: 700; color: var(--green-dark);">+150 pts</div></div>
+          <div><small style="color: var(--text-muted);">≤3 days late</small><div style="font-weight: 700; color: var(--green-dark);">+100 pts</div></div>
+          <div><small style="color: var(--text-muted);">≤7 days late</small><div style="font-weight: 700; color: var(--green-dark);">+40 pts</div></div>
+          <div><small style="color: var(--text-muted);">No Complaints</small><div style="font-weight: 700; color: var(--green-dark);">+40 pts</div></div>
+        </div>
+      </div>
+
+      <!-- Redemption Catalog CRUD (Firestore `rewards/` collection) -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div style="font-weight: 700; font-size: 1.05rem;">🎁 Redemption Catalog</div>
+        <button onclick="openRewardEdit(null)" style="background: var(--green-dark); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: 'Sarabun', sans-serif;">+ Add Reward</button>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="data-table" style="width: 100%;">
+          <thead>
+            <tr>
+              <th style="width: 50px;">Order</th>
+              <th style="width: 50px;">Icon</th>
+              <th>Name</th>
+              <th style="width: 100px;">Cost (Pts)</th>
+              <th style="width: 80px;">Active</th>
+              <th style="width: 200px;">Note</th>
+              <th style="width: 140px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="rewardsAdminTable">
+            <tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted);">Loading rewards…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top: 1rem; padding: .75rem 1rem; background: #fff8e1; border-left: 3px solid #ffc107; border-radius: 4px; font-size: .82rem; color: #6c5005;">
+        <strong>Note:</strong> Rewards live in Firestore <code>rewards/</code> collection. Tenant app subscribes via onSnapshot — changes appear instantly. Only items with <code>active: true</code> are shown to tenants.
+      </div>
+
+      <!-- Edit modal -->
+      <div id="rewardEditModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 500px;">
+          <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="rewardEditTitle">Add Reward</div>
+          <input type="hidden" id="rewardEditId">
+          <div style="display: grid; gap: .85rem;">
+            <label>Name<input type="text" id="rewardEditName" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
+            <label>Cost (Points)<input type="number" id="rewardEditCost" min="1" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
+            <label>Icon (emoji)<input type="text" id="rewardEditIcon" placeholder="🎁" maxlength="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
+            <label>Order (lower shows first)<input type="number" id="rewardEditOrder" min="1" value="99" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
+            <label>Note (optional, e.g. "limited stock")<input type="text" id="rewardEditNote" maxlength="80" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
+            <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rewardEditActive" checked> Active (visible to tenants)</label>
           </div>
-          <div>
-            <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">No Complaints</small>
-            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);">+40 pts</div>
-          </div>
-          <div>
-            <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Community Event</small>
-            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);">+30 pts</div>
-          </div>
-          <div>
-            <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Cleanliness</small>
-            <div style="font-size: 1.3rem; font-weight: 700; color: var(--green-dark);">+25 pts</div>
+          <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.5rem;">
+            <button onclick="closeRewardEdit()" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">Cancel</button>
+            <button onclick="saveReward()" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;">Save</button>
           </div>
         </div>
       </div>
