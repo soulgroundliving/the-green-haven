@@ -4706,8 +4706,13 @@ function _refreshPromptPayDisplay(){
     if (!bldg) return;
     const canonical = (bldg === 'new' || bldg === 'nest') ? 'nest' : 'rooms';
     const cfg = window._buildingPaymentCache[canonical] || {};
-    const num = cfg.promptpayNumber || cfg.payment?.promptpayNumber || '';
-    const payee = cfg.companyName || cfg.payment?.companyName || '';
+    // Fallback chain: Firestore per-building → legacy localStorage.promptpay → empty
+    const num = cfg.promptpayNumber || cfg.payment?.promptpayNumber
+                || localStorage.getItem('promptpay') || '';
+    let ownerInfo = {};
+    try { ownerInfo = JSON.parse(localStorage.getItem('owner_info') || '{}'); } catch(e){}
+    const payee = cfg.companyName || cfg.payment?.companyName
+                || ownerInfo.companyLegalNameTH || '';
     PROMPTPAY_NUMBER = num;
     localStorage.setItem('promptpay', num); // mirror for legacy code paths
     const numEl = document.getElementById('pp-display-number');
