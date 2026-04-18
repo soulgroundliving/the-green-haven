@@ -23,6 +23,9 @@
   "database": {
     "rules": "config/database.rules.json"
   },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "functions": [
     {
       "source": "functions",
