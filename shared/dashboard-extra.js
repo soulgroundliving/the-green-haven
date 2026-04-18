@@ -4423,7 +4423,15 @@ window.HistoricalDataStore = window.HistoricalDataStore || (function(){
   }
   function getYear(year) { return getAll()[String(year)] || null; }
   function listYears() { return Object.keys(getAll()).sort(); }
-  function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+  function onChange(fn) {
+    listeners.add(fn);
+    // Catch-up: if cloud data already loaded, fire immediately so late
+    // subscribers don't miss the initial snapshot
+    if (cloudCache !== null) {
+      try { fn(getAll()); } catch(e) {}
+    }
+    return () => listeners.delete(fn);
+  }
   function _notify() { listeners.forEach(fn => { try { fn(getAll()); } catch(e){} }); }
 
   /** Write a single year (used by Excel import); dual-writes to local + cloud. */

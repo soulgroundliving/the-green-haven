@@ -2678,20 +2678,20 @@ async function loadDashboardDataFromFirebase() {
 
 // Phase 2c: re-render dashboard charts whenever HistoricalDataStore cloud data
 // arrives (handles F5 → Firestore subscribe lag where localStorage is empty).
+// Polls until HistoricalDataStore exists, then registers the listener immediately.
 if (typeof window !== 'undefined' && !window._dashHistSubscribed) {
   window._dashHistSubscribed = true;
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-      if (typeof HistoricalDataStore !== 'undefined') {
-        HistoricalDataStore.onChange(() => {
-          if (document.getElementById('page-dashboard')?.classList.contains('active')
-              && typeof initDashboardCharts === 'function') {
-            try { initDashboardCharts(); } catch(e){}
-          }
-        });
-      }
-    }, 1200);
-  });
+  (function _waitForHistStore() {
+    if (typeof HistoricalDataStore !== 'undefined' && HistoricalDataStore.onChange) {
+      HistoricalDataStore.onChange(() => {
+        if (typeof initDashboardCharts === 'function') {
+          try { initDashboardCharts(); } catch(e){}
+        }
+      });
+    } else {
+      setTimeout(_waitForHistStore, 100);
+    }
+  })();
 }
 
 async function initDashboardCharts(){
