@@ -7,6 +7,14 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && request.auth.token.admin == true;
     }
+    // Temporary admin check until custom claims are set up:
+    // admin logs in via email/password, tenants via anonymous.
+    // Any non-anonymous signed-in user is treated as admin.
+    function isAdminOrEmail() {
+      return isSignedIn() &&
+        (request.auth.token.admin == true ||
+         request.auth.token.firebase.sign_in_provider != 'anonymous');
+    }
 
     // ===== REWARDS COLLECTION (admin-managed catalog, all auth users can read) =====
     match /rewards/{rewardId} {
@@ -70,7 +78,7 @@ service cloud.firestore {
     match /buildings/{buildingId} {
       // Anyone signed in can read building config (PromptPay #, company name)
       allow read:  if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdminOrEmail();
 
       // Per-room subcollection
       match /rooms/{roomId} {
