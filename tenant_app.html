@@ -5498,6 +5498,9 @@
             // Subscribe to real-time bill updates so admin-generated bills appear instantly
             // (replaces the previous one-shot loadBills which only ran on app open)
             _subscribeBillsRealtime();
+            // Load 6-month meter history from Firestore (used by elec/water usage pages
+            // AND to synthesize pending bills for months admin hasn't generated yet)
+            _loadMeterHistoryFromFirestore();
         }
 
         let _billsUnsub = null;
@@ -5917,50 +5920,134 @@
         }
 
         // ---- METER HISTORY ----
-        function _getMeterHistory(type) {
-            // type: 'elec' or 'water'
-            const key = `METER_READINGS_${_taBuilding.toUpperCase()}`;
-            let records = [];
-            try { records = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
-
-            // Extract this room's readings from each month entry, newest first
-            const rows = records
-                .filter(entry => entry.readings && entry.readings[_taRoom])
-                .map(entry => {
-                    const r = entry.readings[_taRoom];
+        // ===== FIRESTORE METER HISTORY LOADER =====
+        // Firestore: meter_data/{building_year_month_roomId} — each doc has
+        // {building, roomId, year(BE 2-digit), month, eOld, eNew, wOld, wNew, yearMonth}
+        // Cache populated by _loadMeterHistoryFromFirestore(); used by _getMeterHistory for render.
+        // Also drives synthesis of missing past bills (fills gap between admin-generated RTDB bills).
+        let _meterHistoryCache = []; // sorted newest first, normalized rows
+        let _meterHistoryLoading = false;
+        async function _loadMeterHistoryFromFirestore() {
+            if (!_taBuilding || !_taRoom) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            if (_meterHistoryLoading) return;
+            _meterHistoryLoading = true;
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                const q = fs.query(
+                    fs.collection(db, 'meter_data'),
+                    fs.where('building', '==', _taBuilding),
+                    fs.where('roomId', '==', String(_taRoom))
+                );
+                const snap = await fs.getDocs(q);
+                _meterHistoryCache = snap.docs.map(d => {
+                    const m = d.data() || {};
+                    // Convert BE 2-digit year to CE 4-digit
+                    const yrCE = Number(m.year) < 100 ? 2500 + Number(m.year) - 543 : Number(m.year);
+                    const mo = Number(m.month) || 0;
                     return {
-                        month: entry.month,           // "YYYY-MM"
-                        old: type === 'elec' ? r.eOld : r.wOld,
-                        new: type === 'elec' ? r.eNew : r.wNew,
-                        units: Math.max(0, (type === 'elec' ? r.eNew - r.eOld : r.wNew - r.wOld)),
-                        cost: Math.max(0, (type === 'elec' ? r.eNew - r.eOld : r.wNew - r.wOld)) * (type === 'elec' ? 8 : 20)
+                        monthKey: `${yrCE}-${String(mo).padStart(2,'0')}`, // "2026-04"
+                        year: yrCE, month: mo,
+                        eOld: Number(m.eOld)||0, eNew: Number(m.eNew)||0,
+                        wOld: Number(m.wOld)||0, wNew: Number(m.wNew)||0,
+                        createdAt: m.createdAt || m.updatedAt || null
                     };
-                })
-                .sort((a, b) => b.month.localeCompare(a.month))
-                .slice(0, 6);
-
-            // Fallback to bills_YYYY if no meter readings
-            if (!rows.length) {
-                for (const yr of [2570, 2569, 2568, 2567]) {
-                    const bills = JSON.parse(localStorage.getItem(`bills_${yr}`) || '[]');
-                    bills.filter(b => (b.roomId || b.room) === _taRoom && b.building === _taBuilding)
-                        .forEach(b => {
-                            const m = String(b.month).padStart(2, '0');
-                            const yr_ce = yr - 543;
-                            rows.push({
-                                month: `${yr_ce}-${m}`,
-                                old: b.meterReadings?.[type === 'elec' ? 'electric' : 'water']?.old || 0,
-                                new: b.meterReadings?.[type === 'elec' ? 'electric' : 'water']?.new || 0,
-                                units: b.meterReadings?.[type === 'elec' ? 'electric' : 'water']?.units
-                                    || Math.round((b.charges?.[type === 'elec' ? 'electric' : 'water'] || 0) / (type === 'elec' ? 8 : 20)),
-                                cost: b.charges?.[type === 'elec' ? 'electric' : 'water'] || 0
-                            });
-                        });
-                }
-                rows.sort((a, b) => b.month.localeCompare(a.month));
-                rows.splice(6);
+                }).sort((a,b) => b.monthKey.localeCompare(a.monthKey));
+                // Mirror to localStorage so offline/early-render has data
+                try { localStorage.setItem(`meter_history_${_taBuilding}_${_taRoom}`, JSON.stringify(_meterHistoryCache)); } catch(e) {}
+                // Synthesize missing bills + re-render UI
+                _synthesizeBillsFromMeter();
+                if (typeof renderBillsList === 'function') renderBillsList();
+                if (typeof renderElecUsage === 'function') renderElecUsage();
+                if (typeof renderWaterUsage === 'function') renderWaterUsage();
+                console.log(`✅ Meter history loaded: ${_meterHistoryCache.length} months (${_taBuilding}/${_taRoom})`);
+            } catch (e) {
+                console.warn('⚠️ meter history load failed:', e.message);
+            } finally {
+                _meterHistoryLoading = false;
             }
-            return rows;
+        }
+
+        function _synthesizeBillsFromMeter() {
+            if (!_meterHistoryCache.length) return;
+            // Determine rates: prefer RoomConfigManager, fallback defaults
+            let rent = 0, eRate = 8, wRate = 20, trash = 40;
+            try {
+                if (typeof RoomConfigManager !== 'undefined') {
+                    const rc = RoomConfigManager.getRoom?.(_taBuilding, _taRoom);
+                    if (rc) {
+                        rent = Number(rc.rent)||0;
+                        eRate = Number(rc.elecRate||rc.electricRate)||8;
+                        wRate = Number(rc.waterRate)||20;
+                        trash = Number(rc.trashFee)||40;
+                    }
+                }
+            } catch(e) {}
+            // Fallback rent from _taLease
+            if (!rent && _taLease && _taLease.rentAmount) rent = Number(_taLease.rentAmount)||0;
+            const existingIds = new Set(_taBills.map(b => b.billId || b.id));
+            const existingKeys = new Set(_taBills.map(b => `${b.year}-${String(b.month).padStart(2,'0')}`));
+            // Last 6 months of meter that don't have an RTDB bill already
+            _meterHistoryCache.slice(0, 6).forEach(m => {
+                const key = `${m.year}-${String(m.month).padStart(2,'0')}`;
+                // _taBills.year might be BE ("2569") or CE (2026) or short (69) — normalize
+                const hasExistingBill = _taBills.some(b => {
+                    const by = Number(b.year);
+                    const byCE = by < 100 ? 2500 + by - 543 : (by > 2500 ? by - 543 : by);
+                    return byCE === m.year && Number(b.month) === m.month;
+                });
+                if (hasExistingBill) return;
+                const eUnits = Math.max(0, m.eNew - m.eOld);
+                const wUnits = Math.max(0, m.wNew - m.wOld);
+                const eCost = eUnits * eRate;
+                const wCost = wUnits * wRate;
+                const total = rent + eCost + wCost + trash;
+                const bill = {
+                    billId: `SYNTH-${_taBuilding}-${_taRoom}-${m.year}${String(m.month).padStart(2,'0')}`,
+                    synthetic: true,
+                    building: _taBuilding, room: String(_taRoom),
+                    month: m.month, year: m.year,
+                    status: 'pending', // real status unknown; admin hasn't generated → assume pending
+                    totalCharge: total, totalAmount: total,
+                    meterReadings: {
+                        electric: { old: m.eOld, new: m.eNew, units: eUnits },
+                        water: { old: m.wOld, new: m.wNew, units: wUnits }
+                    },
+                    charges: {
+                        rent, rentLabel: 'ค่าเช่าห้อง',
+                        electric: { cost: eCost, old: m.eOld, new: m.eNew, units: eUnits, rate: eRate },
+                        water: { cost: wCost, old: m.wOld, new: m.wNew, units: wUnits, rate: wRate },
+                        trash, common: 0
+                    },
+                    createdAt: m.createdAt || new Date(m.year, m.month-1, 5).toISOString(),
+                    note: '(คำนวณอัตโนมัติจากมิเตอร์ — แอดมินยังไม่ได้ออกบิลอย่างเป็นทางการ)'
+                };
+                _taBills.push(bill);
+            });
+            _taBills.sort((a,b) => {
+                const ay = Number(a.year); const by_ = Number(b.year);
+                const aCE = ay < 100 ? 2500+ay-543 : (ay > 2500 ? ay-543 : ay);
+                const bCE = by_ < 100 ? 2500+by_-543 : (by_ > 2500 ? by_-543 : by_);
+                return (bCE*100+Number(b.month)) - (aCE*100+Number(a.month));
+            });
+            window._tenantAppBills = _taBills;
+        }
+
+        function _getMeterHistory(type) {
+            // Uses Firestore-loaded _meterHistoryCache (fresh) OR localStorage mirror (cold start)
+            let source = _meterHistoryCache;
+            if (!source.length) {
+                try { source = JSON.parse(localStorage.getItem(`meter_history_${_taBuilding}_${_taRoom}`) || '[]'); } catch(e) {}
+            }
+            if (!source.length) return [];
+            return source.slice(0, 6).map(m => ({
+                month: m.monthKey, // "YYYY-MM"
+                old: type === 'elec' ? m.eOld : m.wOld,
+                new: type === 'elec' ? m.eNew : m.wNew,
+                units: Math.max(0, type === 'elec' ? (m.eNew - m.eOld) : (m.wNew - m.wOld)),
+                cost: Math.max(0, type === 'elec' ? (m.eNew - m.eOld) : (m.wNew - m.wOld)) * (type === 'elec' ? 8 : 20)
+            }));
         }
 
         function _renderMeterPage(type) {
