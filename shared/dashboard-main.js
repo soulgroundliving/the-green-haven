@@ -1814,6 +1814,10 @@ function ensureWellnessIconPicker() {
 window.pickWellnessIcon = function(icon, btn) {
   const hidden = document.getElementById('wellness-icon');
   if (hidden) hidden.value = icon;
+  // Update large preview
+  const preview = document.getElementById('wellness-icon-preview');
+  if (preview) preview.innerHTML = `<i class="fas ${icon}"></i>`;
+  // Highlight selected button
   document.querySelectorAll('#wellness-icon-picker button').forEach(b => {
     if (b.dataset.icon === icon) {
       b.style.background = 'var(--green-pale)';

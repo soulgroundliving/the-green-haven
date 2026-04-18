@@ -7,6 +7,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https: wss:;">
 <title>The Green Haven — ระบบจัดการอพาร์ทเมนต์</title>
 <link rel="stylesheet" href="./shared/brand.css">
+<!-- FontAwesome 6 (icons used in Wellness picker, sidebar, etc.) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="./shared/security.js"></script>
 <script src="./shared/firebase-config-loader.js"></script>
 <script src="./shared/access-control.js"></script>
@@ -2959,6 +2961,12 @@
       <!-- Icon picker (no more typing fa-spa manually) -->
       <div style="margin-bottom: 1rem;">
         <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เลือกไอคอน</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div id="wellness-icon-preview" style="width:48px;height:48px;background:var(--green-pale);color:var(--green-dark);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;border:2px solid var(--green);">
+            <i class="fas fa-leaf"></i>
+          </div>
+          <div style="font-size:.78rem;color:var(--text-muted);">ไอคอนนี้จะแสดงเป็น thumbnail ของบทความใน tenant app</div>
+        </div>
         <div id="wellness-icon-picker" style="display:flex;flex-wrap:wrap;gap:6px;">
           <!-- buttons inserted by JS in ensureWellnessIconPicker() -->
         </div>
