@@ -2508,7 +2508,10 @@ window.addEventListener('resize',function(){
 
 // ===== DASHBOARD =====
 // Auto-detect latest year from HISTORICAL_DATA, fallback to 69 (2026)
-const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+// Phase 2c: prefer HistoricalDataStore (cloud-aware) when available
+const historicalData = (typeof HistoricalDataStore !== 'undefined')
+  ? HistoricalDataStore.getAll()
+  : JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
 const availableYears = Object.keys(historicalData).map(y => parseInt(y)).sort((a,b) => b-a);
 let currentYear = '69';
 window.dashBuildingFilter = 'all';
@@ -2673,6 +2676,24 @@ async function loadDashboardDataFromFirebase() {
   }
 }
 
+// Phase 2c: re-render dashboard charts whenever HistoricalDataStore cloud data
+// arrives (handles F5 → Firestore subscribe lag where localStorage is empty).
+if (typeof window !== 'undefined' && !window._dashHistSubscribed) {
+  window._dashHistSubscribed = true;
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      if (typeof HistoricalDataStore !== 'undefined') {
+        HistoricalDataStore.onChange(() => {
+          if (document.getElementById('page-dashboard')?.classList.contains('active')
+              && typeof initDashboardCharts === 'function') {
+            try { initDashboardCharts(); } catch(e){}
+          }
+        });
+      }
+    }, 1200);
+  });
+}
+
 async function initDashboardCharts(){
   const yr=currentYear;
   let labels,totals,elecs,waters,rents;
@@ -2689,7 +2710,10 @@ async function initDashboardCharts(){
   }
 
   // Use HISTORICAL_DATA first (imported bills take priority), then Firebase
-  const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+  // Phase 2c: pull from HistoricalDataStore so cloud-only years are visible
+  const historicalData = (typeof HistoricalDataStore !== 'undefined')
+    ? HistoricalDataStore.getAll()
+    : JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
   const dataSource = historicalData && Object.keys(historicalData).length > 0 ? historicalData : (firebaseData || {});
 
   // ─── HELPER: รองรับ 2 รูปแบบ month entry ───
