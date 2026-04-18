@@ -1370,70 +1370,117 @@
     const wrap = document.createElement('div');
     wrap.className = '_a4Wrap';
     wrap.style.cssText = 'max-width:794px; margin:0 auto; padding:48px 44px; background:#fff; box-shadow:0 4px 16px rgba(0,0,0,.12); font-family:"Sarabun",-apple-system,sans-serif; color:#222; font-size:12.5px; line-height:1.5; border-radius:6px;';
-    wrap.innerHTML = `
-      <!-- Letterhead — company identity block -->
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px double #1a5c38; padding-bottom:14px; margin-bottom:18px;">
+    // Common letterhead block (reused on each page so PDF pages all look professional)
+    const letterhead = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px double #1a5c38; padding-bottom:14px; margin-bottom:16px;">
         <div>
-          <div style="font-size:18px; font-weight:700; color:#1a5c38; line-height:1.2;">${_esc(owner.legalName)}</div>
-          <div style="font-size:12px; color:#555; margin-top:2px;">${_esc(owner.englishName)}</div>
-          <div style="font-size:11px; color:#666; margin-top:6px; line-height:1.55;">
+          <div style="font-size:17px; font-weight:700; color:#1a5c38; line-height:1.2;">${_esc(owner.legalName)}</div>
+          <div style="font-size:11px; color:#555; margin-top:2px;">${_esc(owner.englishName)}</div>
+          <div style="font-size:10.5px; color:#666; margin-top:6px; line-height:1.55;">
             <div>📍 ${_esc(owner.address)}</div>
             <div>📞 ${_esc(owner.phone)} &nbsp;·&nbsp; ✉️ ${_esc(owner.email)}</div>
             <div>เลขประจำตัวผู้เสียภาษี: <strong>${_esc(owner.taxId)}</strong></div>
           </div>
         </div>
-        <div style="text-align:center; padding:10px 14px; border:2px solid #1a5c38; border-radius:8px; min-width:100px;">
-          <div style="font-size:22px; line-height:1;">🌿</div>
-          <div style="font-size:9px; font-weight:700; color:#1a5c38; letter-spacing:.5px; margin-top:4px;">THE GREEN</div>
-          <div style="font-size:9px; font-weight:700; color:#1a5c38; letter-spacing:.5px;">HAVEN</div>
+        <div style="text-align:center; padding:8px 12px; border:2px solid #1a5c38; border-radius:8px; min-width:90px;">
+          <div style="font-size:20px; line-height:1;">🌿</div>
+          <div style="font-size:8.5px; font-weight:700; color:#1a5c38; letter-spacing:.5px; margin-top:4px;">THE GREEN</div>
+          <div style="font-size:8.5px; font-weight:700; color:#1a5c38; letter-spacing:.5px;">HAVEN</div>
         </div>
       </div>
-
-      <!-- Report title -->
-      <div style="text-align:center; margin-bottom:16px;">
-        <h1 style="font-size:20px; margin:0 0 2px; color:#1a5c38; font-weight:700;">รายงานภาษีรายเดือน</h1>
-        <div style="font-size:11px; color:#888; letter-spacing:1.5px; text-transform:uppercase;">Monthly Tax Report</div>
-        <div data-a4-title style="font-size:14px; color:#333; margin-top:6px; font-weight:600;">เดือน ${THAI_MONTHS_FULL[month]} ${yearBE}</div>
+    `;
+    const reportTitle = `
+      <div style="text-align:center; margin-bottom:14px;">
+        <h1 style="font-size:19px; margin:0 0 2px; color:#1a5c38; font-weight:700;">รายงานภาษีรายเดือน</h1>
+        <div style="font-size:10px; color:#888; letter-spacing:1.5px; text-transform:uppercase;">Monthly Tax Report</div>
+        <div data-a4-title style="font-size:13px; color:#333; margin-top:5px; font-weight:600;">เดือน ${THAI_MONTHS_FULL[month]} ${yearBE}</div>
       </div>
-
-      <!-- Document meta: ref, date, category, form -->
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px 20px; font-size:11.5px; background:#f8faf9; padding:10px 14px; border-left:4px solid #2d8653; border-radius:4px; margin-bottom:18px;">
+    `;
+    const docMeta = `
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px 20px; font-size:10.5px; background:#f8faf9; padding:9px 12px; border-left:4px solid #2d8653; border-radius:4px; margin-bottom:14px;">
         <div><strong>เลขที่เอกสาร:</strong> <span data-a4-ref style="font-family:monospace;">${docRef}</span></div>
         <div><strong>วันที่ออกรายงาน:</strong> ${today}</div>
         <div><strong>ประเภทรายได้:</strong> ม.40(5)(ก) ทรัพย์สิน (VAT-exempt)</div>
         <div><strong>แบบภาษี:</strong> ภ.ง.ด.90 (บุคคลธรรมดา)</div>
       </div>
-
-      <!-- Body (populated by displayMonthlyReport) -->
-      <div data-a4-body></div>
-
-      <!-- Notes / legal -->
-      <div style="margin-top:20px; padding:10px 12px; background:#fff8e5; border-left:3px solid #f59e0b; border-radius:4px; font-size:10.5px; color:#6c5005; line-height:1.55;">
-        <strong>หมายเหตุ:</strong>
-        <ul style="margin:4px 0 0; padding-left:18px;">
-          <li>รายงานนี้แสดงรายได้ค่าเช่าทรัพย์สิน (ม.40(5)(ก)) ซึ่งได้รับยกเว้น VAT ตามประมวลรัษฎากร ม.81(1)(น)</li>
-          <li>ประมาณภาษีเป็นการคำนวณเบื้องต้นโดยใช้ค่าใช้จ่ายเหมา 30% — ภาษีจริงขึ้นกับรายได้จากแหล่งอื่นและค่าลดหย่อนส่วนบุคคล</li>
-          <li>ต้องยื่นแบบ ภ.ง.ด.90 ภายใน 31 มีนาคม ของปีถัดไป หรือ ภ.ง.ด.94 (รายได้ครึ่งปี) ภายใน 30 กันยายน</li>
-        </ul>
-      </div>
-
-      <!-- Signature block -->
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:40px; margin-top:36px; font-size:11px; color:#444;">
-        <div style="text-align:center;">
-          <div style="border-top:1px dotted #888; padding-top:4px; margin-top:40px;">ผู้จัดทำรายงาน</div>
-          <div style="margin-top:2px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="border-top:1px dotted #888; padding-top:4px; margin-top:40px;">ผู้ตรวจสอบ</div>
-          <div style="margin-top:2px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:28px; padding-top:10px; border-top:1px solid #ddd; font-size:9.5px; color:#888;">
+    `;
+    const pageFooter = (pageNum, totalPages) => `
+      <div style="position:absolute; bottom:24px; left:44px; right:44px; display:flex; justify-content:space-between; align-items:center; padding-top:8px; border-top:1px solid #ddd; font-size:9px; color:#888;">
         <div>Generated by The Green Haven Tax Filing System</div>
         <div>${nowStr}</div>
-        <div>หน้า 1 / 1</div>
+        <div>หน้า ${pageNum} / ${totalPages}</div>
+      </div>
+    `;
+
+    wrap.innerHTML = `
+      <!-- ===== PAGE 1: Letterhead + meta + revenue/expense tables + KPIs ===== -->
+      <div data-pdf-page="1" style="position:relative; min-height:1095px; padding-bottom:56px; box-sizing:border-box;">
+        ${letterhead}
+        ${reportTitle}
+        ${docMeta}
+        <div data-a4-body></div>
+        ${pageFooter(1, 2)}
+      </div>
+
+      <!-- Visible page break separator (inline only, hidden in PDF since each page captured separately) -->
+      <div data-pdf-no-print style="margin:24px 0; padding:8px 14px; background:#f0f0f0; border-radius:4px; text-align:center; font-size:10.5px; color:#666; border:1px dashed #999;">
+        — ขอบหน้ากระดาษ A4 — Page 1 / 2 —
+      </div>
+
+      <!-- ===== PAGE 2: Notes + signatures + filing checklist ===== -->
+      <div data-pdf-page="2" style="position:relative; min-height:1095px; padding-bottom:56px; box-sizing:border-box;">
+        ${letterhead}
+        <div style="text-align:center; margin-bottom:16px;">
+          <h2 style="font-size:16px; margin:0; color:#1a5c38;">หมายเหตุประกอบรายงาน &amp; เอกสารยืนยัน</h2>
+          <div style="font-size:10px; color:#888; letter-spacing:1px; text-transform:uppercase;">Notes &amp; Confirmation</div>
+        </div>
+
+        <!-- Legal notes -->
+        <div style="margin-top:6px; padding:12px 14px; background:#fff8e5; border-left:4px solid #f59e0b; border-radius:4px; font-size:11px; color:#6c5005; line-height:1.6;">
+          <strong style="display:block; margin-bottom:6px; color:#92400e; font-size:12px;">📌 หมายเหตุทางกฎหมายและภาษี</strong>
+          <ul style="margin:0; padding-left:20px;">
+            <li>รายงานนี้แสดงรายได้ค่าเช่าทรัพย์สิน (ม.40(5)(ก)) ซึ่งได้รับยกเว้นภาษีมูลค่าเพิ่ม (VAT) ตามประมวลรัษฎากร <strong>ม.81(1)(น)</strong></li>
+            <li>ประมาณภาษีเป็นการคำนวณเบื้องต้นโดยใช้<strong>ค่าใช้จ่ายเหมา 30%</strong> ของรายได้รวม — ภาษีจริงขึ้นกับรายได้จากแหล่งอื่นและค่าลดหย่อนส่วนบุคคล</li>
+            <li>ต้องยื่นแบบ <strong>ภ.ง.ด.90</strong> ภายใน <strong>31 มีนาคม</strong> ของปีถัดไป หรือ <strong>ภ.ง.ด.94</strong> (รายได้ครึ่งปี) ภายใน <strong>30 กันยายน</strong></li>
+            <li>หากผู้เช่าเป็นบริษัท/นิติบุคคล จะ<strong>หักภาษี ณ ที่จ่าย 5%</strong> ของค่าเช่า — เก็บใบกำกับการหักไว้เป็นหลักฐานเพื่อหักลดหย่อนภาษี</li>
+          </ul>
+        </div>
+
+        <!-- Filing checklist -->
+        <div style="margin-top:18px; padding:12px 14px; background:#f0f9ff; border-left:4px solid #3b82f6; border-radius:4px; font-size:11px; color:#1e40af; line-height:1.65;">
+          <strong style="display:block; margin-bottom:6px; color:#1e3a8a; font-size:12px;">✅ เช็คลิสต์ก่อนยื่น ภ.ง.ด.</strong>
+          <ul style="margin:0; padding-left:20px;">
+            <li>☐ รวบรวมใบเสร็จรับเงินทั้งหมด (export CSV จากปุ่ม "Preview + Export ใบเสร็จ")</li>
+            <li>☐ ตรวจสอบยอดรายได้รวมตรงกับใบเสร็จ + payment record ใน RTDB</li>
+            <li>☐ รวบรวมใบหัก ณ ที่จ่าย (ภ.ง.ด.3) จากผู้เช่าที่เป็นบริษัท</li>
+            <li>☐ คำนวณค่าใช้จ่ายตามจริง (ถ้าเลือกหักตามจริงแทนเหมา 30%)</li>
+            <li>☐ ยื่นออนไลน์ผ่าน rd.go.th หรือผู้แทนยื่นภาษี</li>
+          </ul>
+        </div>
+
+        <!-- Signature block -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:50px; margin-top:48px; font-size:11px; color:#444;">
+          <div style="text-align:center;">
+            <div style="border-top:1px dotted #888; padding-top:6px; margin-top:54px;">ผู้จัดทำรายงาน</div>
+            <div style="margin-top:3px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="border-top:1px dotted #888; padding-top:6px; margin-top:54px;">ผู้ตรวจสอบ</div>
+            <div style="margin-top:3px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:50px; margin-top:30px; font-size:11px; color:#444;">
+          <div style="text-align:center;">
+            <div style="border-top:1px dotted #888; padding-top:6px; margin-top:54px;">ที่ปรึกษาบัญชี / ผู้สอบบัญชี</div>
+            <div style="margin-top:3px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="border-top:1px dotted #888; padding-top:6px; margin-top:54px;">เจ้าของกิจการ</div>
+            <div style="margin-top:3px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
+          </div>
+        </div>
+
+        ${pageFooter(2, 2)}
       </div>
     `;
     const body = wrap.querySelector('[data-a4-body]');
