@@ -3084,29 +3084,15 @@
     <div>
       <div class="card bill-form">
 
-        <!-- PromptPay Settings (collapsible) -->
-        <details id="ppDetails" class="pp-details-wrap">
-          <summary class="pp-details-summary">⚙️ พร้อมเพย์ / QR Code
-            <span id="pp-status" style="font-size:.72rem;color:var(--green);white-space:nowrap;margin-left:6px;"></span>
-          </summary>
-          <div class="pp-settings" style="border-radius:0 0 8px 8px;padding:.7rem .9rem;">
-            <div style="font-size:.8rem;font-weight:700;color:#e65100;margin-bottom:6px;">📱 เลขพร้อมเพย์ (สำหรับ QR Code ในใบวางบิล)</div>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <input type="text" id="pp-input" placeholder="เบอร์โทร / เลขบัตรประชาชน" style="flex:1;padding:6px 10px;border:1px solid #ffe082;border-radius:6px;font-size:.83rem;font-family:'Sarabun';" oninput="savePromptPay()">
-            </div>
+        <!-- PromptPay Info (read-only, loaded per-building from Firestore) -->
+        <div id="pp-display" style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:.6rem .9rem;margin-bottom:.8rem;font-size:.82rem;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <div>
+            <span style="font-weight:700;color:#e65100;">📱 PromptPay:</span>
+            <span id="pp-display-number" style="font-family:monospace;font-weight:700;color:#424242;">—</span>
+            <span id="pp-display-payee" style="color:var(--text-muted);font-size:.76rem;margin-left:6px;"></span>
           </div>
-        </details>
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-          setTimeout(function() {
-            var ppInput = document.getElementById('pp-input');
-            var ppDetails = document.getElementById('ppDetails');
-            if (ppInput && ppDetails) {
-              ppDetails.open = (!ppInput.value || ppInput.value.trim() === '');
-            }
-          }, 200);
-        });
-        </script>
+          <a href="#" onclick="showPage('people-management');setTimeout(()=>document.querySelector('[onclick*=\\'showPeopleTab(\\\\\\'owner\\\\\\'\\']')?.click(),50);return false;" style="font-size:.74rem;color:#1565c0;text-decoration:none;">⚙️ แก้ไขในหน้า Owner</a>
+        </div>
 
         <!-- Step 1: Building + Room (merged) -->
         <div class="form-section amber">

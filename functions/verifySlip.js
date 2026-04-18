@@ -267,6 +267,50 @@ async function saveVerifiedSlip(slipData, params) {
   }
 }
 
+/**
+ * Mark matching RTDB bill as paid so admin dashboard + tax aggregation stay in sync.
+ * Looks up bills/{building}/{room}/* and flips the bill matching slip's billing month.
+ * Non-blocking.
+ */
+async function markBillPaidInRTDB(slipData, params) {
+  try {
+    const rtdb = admin.database();
+    const buildingRaw = params.building === 'nest' ? 'nest' : 'rooms';
+    const room = String(params.room);
+    if (!room) return;
+    // Determine billing month (BKK)
+    const BKK_OFFSET_MS = 7 * 3600 * 1000;
+    const slipMs = new Date(slipData.transTimestamp || slipData.date || Date.now()).getTime();
+    const bkk = new Date(slipMs + BKK_OFFSET_MS);
+    const billYearBE = bkk.getUTCFullYear() + 543;
+    const billMonth = bkk.getUTCMonth() + 1;
+    const ref = rtdb.ref(`bills/${buildingRaw}/${room}`);
+    const snap = await ref.once('value');
+    const bills = snap.val() || {};
+    const updates = {};
+    let matched = 0;
+    Object.keys(bills).forEach(billId => {
+      const b = bills[billId];
+      if (!b || b.status === 'paid') return;
+      const by = Number(b.year); const bm = Number(b.month);
+      const byBE = by < 2400 ? 2500 + (by % 100) : by;
+      if (byBE === billYearBE && bm === billMonth) {
+        updates[`${billId}/status`] = 'paid';
+        updates[`${billId}/paidAt`] = Date.now();
+        updates[`${billId}/paidVia`] = 'tenant_app_slipok';
+        updates[`${billId}/paidRef`] = slipData.transactionId || '';
+        matched++;
+      }
+    });
+    if (matched > 0) {
+      await ref.update(updates);
+      console.log(`💸 RTDB bill(s) marked paid: ${buildingRaw}/${room} × ${matched} (${billMonth}/${billYearBE})`);
+    }
+  } catch (e) {
+    console.error('⚠️ markBillPaidInRTDB failed:', e?.message);
+  }
+}
+
 // ==================== PAYMENT GAMIFICATION (Nest only) ====================
 /**
  * Record on-time/late payment stats and award gamification points.
@@ -493,6 +537,13 @@ exports.verifySlip = functions
 
     // ===== SAVE VERIFIED SLIP =====
     await saveVerifiedSlip(slipData, req.body);
+
+    // ===== MARK RTDB BILL AS PAID (non-blocking) =====
+    try {
+      await markBillPaidInRTDB(slipData, req.body);
+    } catch (e) {
+      console.error('⚠️ markBillPaidInRTDB failed (non-blocking):', e);
+    }
 
     // ===== GAMIFICATION: record payment + award points (non-blocking) =====
     try {

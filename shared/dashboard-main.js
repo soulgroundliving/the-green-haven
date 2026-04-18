@@ -4093,6 +4093,7 @@ function onBuildingChange(){
   document.getElementById('f-elec-rate').value=8;
   const lf=document.getElementById('f-latefee'); if(lf) lf.value=0;
   renderPaymentStatus();
+  if (typeof _refreshPromptPayDisplay === 'function') _refreshPromptPayDisplay();
   calcBill(); resetBillFlow();
 }
 
@@ -4691,16 +4692,117 @@ function enableReceiptBtn(){
     : '✅ พร้อมออกใบเสร็จ — กดปุ่มด้านบน';
 }
 
-// ===== PROMPTPAY QR =====
+// ===== PROMPTPAY QR (per-building, sourced from Firestore buildings/{id}) =====
 let PROMPTPAY_NUMBER = (typeof SecureConfig !== 'undefined' ? localStorage.getItem(SecureConfig.promptpay.storageKey) : localStorage.getItem('promptpay')) || '';
+window._buildingPaymentCache = window._buildingPaymentCache || { rooms: {}, nest: {} };
 
-function savePromptPay(){
-  const v=(document.getElementById('pp-input')?.value||'').trim();
-  PROMPTPAY_NUMBER=v;
-  localStorage.setItem('promptpay',v);
-  const st=document.getElementById('pp-status');
-  if(st)st.textContent=v?'✅ บันทึกแล้ว':'';
+// Back-compat shim — now a no-op (PromptPay edited in Owner tab → Firestore)
+function savePromptPay(){ /* deprecated: edit in Owner tab → building payment */ }
+
+// Refresh PromptPay display on bill page based on currently selected building
+function _refreshPromptPayDisplay(){
+  try {
+    const bldg = document.getElementById('f-building')?.value;
+    if (!bldg) return;
+    const canonical = (bldg === 'new' || bldg === 'nest') ? 'nest' : 'rooms';
+    const cfg = window._buildingPaymentCache[canonical] || {};
+    const num = cfg.promptpayNumber || cfg.payment?.promptpayNumber || '';
+    const payee = cfg.companyName || cfg.payment?.companyName || '';
+    PROMPTPAY_NUMBER = num;
+    localStorage.setItem('promptpay', num); // mirror for legacy code paths
+    const numEl = document.getElementById('pp-display-number');
+    const payeeEl = document.getElementById('pp-display-payee');
+    if (numEl) numEl.textContent = num ? num.replace(/(\d{3})(\d{3})(\d+)/, '$1-$2-$3') : '— (ยังไม่ตั้ง)';
+    if (payeeEl) payeeEl.textContent = payee ? `· ${payee}` : '';
+  } catch(e) { console.warn('_refreshPromptPayDisplay:', e); }
 }
+
+// Subscribe Firestore buildings/{RentRoom|nest} once Firebase ready
+function _subscribeBuildingPaymentForBill(){
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    setTimeout(_subscribeBuildingPaymentForBill, 1000);
+    return;
+  }
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+  const map = { rooms: 'RentRoom', nest: 'nest' };
+  Object.entries(map).forEach(([canonical, fsId]) => {
+    try {
+      fs.onSnapshot(fs.doc(db, 'buildings', fsId), snap => {
+        window._buildingPaymentCache[canonical] = snap.exists ? snap.data() : {};
+        _refreshPromptPayDisplay();
+      }, err => console.warn('buildings/'+fsId+' listen:', err?.message));
+    } catch(e) { console.warn('buildings subscribe error:', e); }
+  });
+}
+document.addEventListener('DOMContentLoaded', () => setTimeout(_subscribeBuildingPaymentForBill, 500));
+
+// ===== GLOBAL verifiedSlips SYNC → payment_status + bill page pills =====
+// Runs once on load; when tenant pays via tenant_app, the slip arrives here and
+// flips the bill-page pill to ✅ in real-time (ครอบคลุมทั้ง Rooms + Nest)
+window._globalSlipsUnsub = null;
+function _subscribeGlobalVerifiedSlips(){
+  if (window._globalSlipsUnsub) return;
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    setTimeout(_subscribeGlobalVerifiedSlips, 1500);
+    return;
+  }
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    const q = fs.query(fs.collection(db, 'verifiedSlips'), fs.orderBy('timestamp','desc'), fs.limit(300));
+    window._globalSlipsUnsub = fs.onSnapshot(q, snap => {
+      const ps = loadPS();
+      let changed = false;
+      snap.docChanges().forEach(ch => {
+        if (ch.type === 'removed') return;
+        const s = ch.doc.data();
+        if (!s || s.verified === false) return;
+        const room = String(s.room || '');
+        if (!room) return;
+        // Derive year_month (BE year) from slip timestamp
+        const ts = s.timestamp?.toDate ? s.timestamp.toDate()
+                 : (s.transTimestamp ? new Date(s.transTimestamp)
+                 : (s.date ? new Date(s.date) : new Date()));
+        const yearBE = ts.getFullYear() + 543;
+        const month = ts.getMonth() + 1;
+        const key = `${yearBE}_${month}`;
+        if (!ps[key]) ps[key] = {};
+        if (ps[key][room]?.status === 'paid') return;
+        ps[key][room] = {
+          status: 'paid',
+          amount: s.amount || 0,
+          date: ts.toISOString(),
+          receiptNo: s.transactionId || s.transRef || ch.doc.id,
+          fromTenantApp: true,
+          slip: {
+            amount: s.amount || 0,
+            sender: s.sender || '',
+            bankCode: s.bankCode || '',
+            ref: s.transactionId || s.transRef || '',
+            transferDate: ts.toISOString()
+          }
+        };
+        changed = true;
+      });
+      if (changed) {
+        savePS(ps);
+        // Re-render bill page pills if open
+        if (typeof renderPaymentStatus === 'function' &&
+            document.getElementById('page-bill')?.classList.contains('active')) {
+          try { renderPaymentStatus(); } catch(e){}
+        }
+        // Re-render monthly report if open
+        if (typeof renderMonthlyReport === 'function' &&
+            document.getElementById('page-monthly')?.classList.contains('active')) {
+          try { renderMonthlyReport(); } catch(e){}
+        }
+        console.log('💸 Synced tenant-app payment → payment_status');
+      }
+    }, err => console.warn('global verifiedSlips listen:', err?.message));
+  } catch(e) { console.warn('subscribeGlobalVerifiedSlips:', e); }
+}
+document.addEventListener('DOMContentLoaded', () => setTimeout(_subscribeGlobalVerifiedSlips, 800));
 
 function buildPromptPayPayload(phone,amount){
   const s=phone.replace(/[^0-9]/g,'');
