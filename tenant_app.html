@@ -1536,7 +1536,7 @@
 
     <div id="home" class="page">
         <div class="app-bar" style="position:relative;">
-            <button onclick="showSubPage('smart-key-page')"
+            <button id="nav-smart-key-btn" onclick="showSubPage('smart-key-page')"
                 style="position:absolute; right:16px; top:24px; background:var(--primary-green); color:white; border:none; border-radius:12px; padding:8px 12px; font-weight:bold; box-shadow:0 4px 10px rgba(123, 166, 126, 0.4); cursor:pointer; display:inline-flex; align-items:center; gap:6px; z-index:2;">
                 <i class="fas fa-qrcode"></i><span>Smart Key</span>
             </button>
@@ -1999,16 +1999,16 @@
             <div id="usage-room-badge"
                 style="display:none; min-width:48px; height:44px; padding:0 12px; border-radius:14px; background:var(--soft-green); color:var(--primary-green); font-weight:700; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);"></div>
         </div>
-        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; padding: 0 16px;">
-            <div class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('building')">
+        <div id="usage-feature-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; padding: 0 16px;">
+            <div id="nav-building-card" class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('building')">
                 <div style="font-size: 1.6rem; line-height:1;">🏠</div>
                 <p style="margin: 6px 0 0;">ข้อมูลอาคาร</p>
             </div>
-            <div class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('water_usage')">
+            <div id="nav-water-usage-card" class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('water_usage')">
                 <div style="font-size: 1.6rem; line-height:1;">💧</div>
                 <p style="margin: 6px 0 0;">ปริมาณน้ำ</p>
             </div>
-            <div class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('elec_usage')">
+            <div id="nav-elec-usage-card" class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('elec_usage')">
                 <div style="font-size: 1.6rem; line-height:1;">⚡</div>
                 <p style="margin: 6px 0 0;">ปริมาณไฟ</p>
             </div>
@@ -3369,6 +3369,12 @@
 
         // ฟังก์ชันเข้าหน้าย่อย (แก้บั๊กเนื้อหาซ้อนกัน)
         function showSubPage(id) {
+            // Guard: Nest-only sub-pages — block for Rooms (ห้องแถว) tenants
+            const NEST_ONLY_PAGES = ['eco_score', 'building', 'water_usage', 'elec_usage', 'smart-key-page'];
+            if (window._nestOnlyDisabled && NEST_ONLY_PAGES.includes(id)) {
+                if (typeof toast === 'function') toast('ฟีเจอร์นี้สำหรับลูกบ้านตึก Nest เท่านั้น', 'info');
+                return;
+            }
             // 1. สั่งปิดทุกหน้าให้สนิทจริงๆ ก่อน
             document.querySelectorAll('.page').forEach(p => {
                 p.classList.remove('active');
@@ -5147,16 +5153,43 @@
             return true;
         }
 
-        // Gamification is Nest-only. Hide entry points for Rooms building tenants.
-        function applyGamificationVisibility() {
-            if (_taBuilding === 'nest') return;
-            const ids = ['nav-eco-score-card', 'profile-rewards-card'];
-            ids.forEach(id => {
+        // Nest-only features. Hide entry points for Rooms (ห้องแถว) tenants.
+        // Items hidden for Rooms building:
+        //   - Eco-Score + rewards (gamification, Nest-only economy)
+        //   - Building info page (Nest is the only building with shared facility info card)
+        //   - Water/Electricity usage charts (Nest has shared meter dashboards; Rooms bills cover this)
+        //   - Smart Key (Nest QR door access; Rooms uses physical keys)
+        function applyGamificationVisibility() { applyBuildingVisibility(); } // backward-compat alias
+        function applyBuildingVisibility() {
+            if (_taBuilding === 'nest') {
+                // Nest tenants see everything. If they were previously hidden (e.g. logged in as
+                // Rooms first then switched), restore visibility.
+                ['nav-eco-score-card', 'profile-rewards-card', 'nav-building-card',
+                 'nav-water-usage-card', 'nav-elec-usage-card', 'nav-smart-key-btn'
+                ].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = '';
+                });
+                const grid = document.getElementById('usage-feature-grid');
+                if (grid) grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+                window._gamificationDisabled = false;
+                return;
+            }
+            // Rooms building — hide Nest-only items
+            ['nav-eco-score-card', 'profile-rewards-card', 'nav-building-card',
+             'nav-water-usage-card', 'nav-elec-usage-card', 'nav-smart-key-btn'
+            ].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             });
-            // Block direct navigation to eco_score page if someone triggers it programmatically
+            // Block direct navigation to Nest-only pages if triggered programmatically
             window._gamificationDisabled = true;
+            window._nestOnlyDisabled = true;
+            // Note: usage page only has 4 cards, all 3 Nest-only ones hidden →
+            // grid renders empty. The page-usage `usage` view still shows current bill +
+            // history below (which is what Rooms tenants need). Hide the empty grid.
+            const grid = document.getElementById('usage-feature-grid');
+            if (grid) grid.style.display = 'none';
         }
 
         async function loadTenantAppData() {
