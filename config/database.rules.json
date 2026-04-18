@@ -1,40 +1,72 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true,
+    ".read": false,
+    ".write": false,
+
     "users": {
       "$uid": {
-        ".read": true,
-        ".write": true
+        ".read": "auth != null && (auth.uid == $uid || auth.token.admin == true)",
+        ".write": "auth != null && (auth.uid == $uid || auth.token.admin == true)"
       }
     },
-    "financials": {
-      ".read": true,
-      ".write": true
-    },
+
     "bills": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$building": {
+        "$room": {
+          "$billId": {
+            ".validate": "newData.hasChildren(['billId']) || !newData.exists()"
+          }
+        }
+      }
     },
-    "tenants": {
-      ".read": true,
-      ".write": true
+
+    "payments": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$building": {
+        "$room": {
+          "$pushId": {
+            ".validate": "newData.hasChildren(['amount']) || !newData.exists()"
+          }
+        }
+      }
     },
+
     "maintenance": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
+
+    "housekeeping": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
     "meter_readings": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.admin == true"
     },
-    "audit_logs": {
-      ".read": true,
-      ".write": true
+
+    "tenants": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.admin == true"
     },
+
     "system": {
-      ".read": true,
-      ".write": true
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.admin == true"
+    },
+
+    "financials": {
+      ".read": "auth != null && auth.token.admin == true",
+      ".write": "auth != null && auth.token.admin == true"
+    },
+
+    "audit_logs": {
+      ".read": "auth != null && auth.token.admin == true",
+      ".write": "auth != null"
     }
   }
 }
