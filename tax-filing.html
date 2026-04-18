@@ -899,7 +899,10 @@
   // ===== OVERRIDE STUB CALCULATIONS IN tax-filing.js to use live data =====
   // tax-filing.js reads localStorage.bills (empty in production). Patch the functions
   // to use our live Firestore taxSummary + RTDB bills cache.
-  window.addEventListener('load', () => {
+  // Runs immediately (tax-filing.js is loaded via <script src> before this inline
+  // block parses, so its functions are already on window). Wrapping in 'load'
+  // listener missed the event when it had already fired.
+  (function applyTaxFilingPatches() {
     // Patch revenue calcs
     window.calculateMonthlyRevenue = function(month, year) {
       const d = window._taxSummary?.months?.[month];
@@ -1003,7 +1006,7 @@
       };
     };
     console.log('✅ tax-filing calculations rewired to live data');
-  });
+  })();
 
   function renderTaxDashboardLive(data) {
     if (!data) return;
