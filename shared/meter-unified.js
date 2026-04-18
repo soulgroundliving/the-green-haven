@@ -707,12 +707,101 @@ function matchMeterDataWithPrevious(importedData) {
   return results;
 }
 
+// ===== PART 5: MeterStore — single facade for all meter reads =====
+// Single Source of Truth (Phase 1b 2026-04-19):
+//   Read order: window.METER_DATA (in-memory) → Firestore meter_data → null
+//   Hot cache backfilled from Firestore so repeated reads stay fast.
+//   All call sites should use MeterStore.get / .getPrev instead of touching
+//   window.METER_DATA / localStorage.METER_DATA / Firestore directly.
+class MeterStore {
+  /** Normalize year to 2-digit (Firestore docId convention: 67/68/69) */
+  static _yy(year) {
+    const n = Number(year);
+    return n > 2400 ? n - 2500 : n;
+  }
+  /** Coerce building → 'rooms' | 'nest' (canonical) */
+  static _bld(b) {
+    if (b === 'old' || b === 'rooms' || b === 'RentRoom') return 'rooms';
+    if (b === 'new' || b === 'nest') return 'nest';
+    return b;
+  }
+
+  /** In-memory hot cache — window.METER_DATA[building][yy_m][roomId] */
+  static _readMemory(building, yy, month, roomId) {
+    const key = `${yy}_${month}`;
+    const md = (typeof window !== 'undefined' && window.METER_DATA) || (() => {
+      try { return JSON.parse(localStorage.getItem('METER_DATA') || 'null'); }
+      catch(e) { return null; }
+    })();
+    if (md && md[building] && md[building][key] && md[building][key][roomId]) {
+      return md[building][key][roomId];
+    }
+    return null;
+  }
+
+  /** Backfill in-memory cache after Firestore read (so next call is sync-fast) */
+  static _writeMemory(building, yy, month, roomId, data) {
+    if (typeof window === 'undefined') return;
+    if (!window.METER_DATA) window.METER_DATA = { rooms: {}, nest: {} };
+    const key = `${yy}_${month}`;
+    window.METER_DATA[building] = window.METER_DATA[building] || {};
+    window.METER_DATA[building][key] = window.METER_DATA[building][key] || {};
+    window.METER_DATA[building][key][roomId] = data;
+  }
+
+  /**
+   * Get meter reading for a specific room/month.
+   * @param {string} building - 'rooms' | 'nest' (also accepts 'old'/'new'/'RentRoom')
+   * @param {number} year - BE (2569) or short (69)
+   * @param {number} month - 1-12
+   * @param {string|number} roomId
+   * @returns {Promise<{eNew,eOld,wNew,wOld}|null>}
+   */
+  static async get(building, year, month, roomId) {
+    const bld = this._bld(building);
+    const yy = this._yy(year);
+    const m = Number(month);
+    const room = String(roomId);
+
+    // 1. In-memory hot path
+    const mem = this._readMemory(bld, yy, m, room);
+    if (mem) return mem;
+
+    // 2. Firestore canonical
+    try {
+      if (window.firebase?.firestore && window.firebase?.firestoreFunctions) {
+        const db = window.firebase.firestore();
+        const fs = window.firebase.firestoreFunctions;
+        const docId = `${bld}_${yy}_${m}_${room}`;
+        const snap = await fs.getDoc(fs.doc(db, 'meter_data', docId));
+        if (snap.exists()) {
+          const data = snap.data();
+          this._writeMemory(bld, yy, m, room, data);
+          return data;
+        }
+      }
+    } catch (e) {
+      console.warn(`MeterStore.get(${bld}/${yy}_${m}/${room}):`, e.message);
+    }
+
+    return null;
+  }
+
+  /** Get previous month's reading (used as eOld/wOld baseline for new bills). */
+  static async getPrev(building, year, month, roomId) {
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? Number(year) - 1 : Number(year);
+    return this.get(building, prevYear, prevMonth, roomId);
+  }
+}
+
 // ===== GLOBAL EXPORTS & ALIASES =====
 
 // Expose globally for backward compatibility
 if (typeof window !== 'undefined') {
   window.FirebaseMeterHelper = FirebaseMeterHelper;
   window.MeterDataManager = MeterDataManager;
+  window.MeterStore = MeterStore;
   window.validateWaterReading = validateWaterReading;
   window.validateElectricReading = validateElectricReading;
   window.calculateWaterUsage = calculateWaterUsage;

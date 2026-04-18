@@ -3960,40 +3960,12 @@ async function autoFillMeters(){
   const psKey=`${year}_${month}`;
   const meterDataBuilding = getBuildingInfo(currentBuilding).firebaseBuilding;
 
-  // Helper: fetch one meter doc from Firestore
-  async function fetchFirestoreDoc(building, yyVal, monthVal, room){
-    try {
-      if(!window.firebaseAuth?.currentUser) return null;
-      const db=window.firebase?.firestore?.();
-      const fs=window.firebase?.firestoreFunctions;
-      if(!db||!fs?.doc||!fs?.getDoc) return null;
-      const docId=`${building}_${yyVal}_${monthVal}_${room}`;
-      const snap=await fs.getDoc(fs.doc(db,'meter_data',docId));
-      return snap.exists()?snap.data():null;
-    } catch(e){
-      console.warn('Firestore meter fetch failed:',e.message);
-      return null;
-    }
-  }
-
-  // Try METER_DATA (window global → localStorage)
-  const _md = (typeof METER_DATA!=='undefined' && METER_DATA)
-    || (() => { try { return JSON.parse(localStorage.getItem('METER_DATA')||'null'); } catch(e){ return null; } })();
-
-  let d=null;
-  if(_md&&_md[meterDataBuilding]&&_md[meterDataBuilding][key]){
-    d=_md[meterDataBuilding][key][roomId];
-  }
-
-  // Try localStorage payment_status
-  if(!d){
-    const ps=JSON.parse(localStorage.getItem('payment_status')||'{}');
-    if(ps[psKey]&&ps[psKey][roomId]) d=ps[psKey][roomId];
-  }
-
-  // Try Firestore for current month
-  if(!d){
-    d=await fetchFirestoreDoc(meterDataBuilding,yy,month,roomId);
+  // Phase 1b: single facade — MeterStore handles in-memory + Firestore.
+  // Falls back to legacy payment_status only if MeterStore returns null.
+  let d = await MeterStore.get(meterDataBuilding, year, month, roomId);
+  if (!d) {
+    const ps = JSON.parse(localStorage.getItem('payment_status')||'{}');
+    if (ps[psKey] && ps[psKey][roomId]) d = ps[psKey][roomId];
   }
 
   let meterData=null;
@@ -4001,25 +3973,15 @@ async function autoFillMeters(){
   if(d){
     meterData=d;
   } else {
-    // Try previous month as eOld baseline
+    // No current-month reading — pull previous month as eOld/wOld baseline
     const prevMonth=month===1?12:month-1;
     const prevYear=month===1?year-1:year;
-    const prevYy=prevYear%100;
-    const prevKey=`${prevYy}_${prevMonth}`;
     const prevPsKey=`${prevYear}_${prevMonth}`;
-    let prevD=null;
-
-    if(_md&&_md[meterDataBuilding]&&_md[meterDataBuilding][prevKey]){
-      prevD=_md[meterDataBuilding][prevKey][roomId];
-    }
-    if(!prevD){
+    let prevD = await MeterStore.getPrev(meterDataBuilding, year, month, roomId);
+    if (!prevD) {
       const ps=JSON.parse(localStorage.getItem('payment_status')||'{}');
-      if(ps[prevPsKey]&&ps[prevPsKey][roomId]) prevD=ps[prevPsKey][roomId];
+      if (ps[prevPsKey] && ps[prevPsKey][roomId]) prevD = ps[prevPsKey][roomId];
     }
-    if(!prevD){
-      prevD=await fetchFirestoreDoc(meterDataBuilding,prevYy,prevMonth,roomId);
-    }
-
     if(prevD){
       meterData={eNew:'',eOld:prevD.eNew,wNew:'',wOld:prevD.wNew};
     }
