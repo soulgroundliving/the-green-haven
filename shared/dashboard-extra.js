@@ -1114,7 +1114,340 @@ function renderOwnerInfoPage() {
         🗑️ ลบข้อมูล
       </button>
     </div>
+
+    <!-- Per-building Payment Config (subscribed by tenant_app _subscribePaymentConfig) -->
+    <hr style="margin: 2.5rem 0 1.5rem; border: none; border-top: 1px solid var(--border);">
+    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: .25rem;">💳 ข้อมูลการชำระเงิน (ต่อตึก)</div>
+    <div style="font-size: .85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+      ตั้งค่า PromptPay + ชื่อบริษัทแยกตามตึก — ลูกบ้านแต่ละตึกจะเห็น QR + ชื่อ payee ของตึกตัวเอง.
+      <br>เก็บที่ Firestore <code>buildings/{RentRoom|nest}</code>
+    </div>
+    <div id="buildingPaymentConfigContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+      <div style="text-align:center;color:var(--text-muted);padding:1rem;grid-column:span 2;">กำลังโหลด...</div>
+    </div>
   `;
+  // Lazy-load building payment config (after Firebase ready)
+  if (typeof renderBuildingPaymentConfig === 'function') renderBuildingPaymentConfig();
+}
+
+// ===== BUILDING PAYMENT CONFIG (per-building PromptPay + company name) =====
+async function renderBuildingPaymentConfig() {
+  const container = document.getElementById('buildingPaymentConfigContainer');
+  if (!container) return;
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    container.innerHTML = '<div style="color:#c62828;text-align:center;padding:1rem;grid-column:span 2;">Firestore unavailable</div>';
+    return;
+  }
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  // Load both building docs in parallel
+  const [rrSnap, nestSnap] = await Promise.all([
+    fs.getDoc(fs.doc(db, 'buildings', 'RentRoom')).catch(() => null),
+    fs.getDoc(fs.doc(db, 'buildings', 'nest')).catch(() => null)
+  ]);
+  const rr = rrSnap?.exists() ? rrSnap.data() : {};
+  const nest = nestSnap?.exists() ? nestSnap.data() : {};
+  const cardHtml = (label, fsId, data) => `
+    <div style="border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.25rem; background: #fafafa;">
+      <div style="font-weight: 700; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+        <span>${label}</span>
+        <span style="font-size: .72rem; color: var(--text-muted); font-family: monospace;">buildings/${fsId}</span>
+      </div>
+      <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">PromptPay (เบอร์โทร)</label>
+      <input type="tel" id="bp-${fsId}-promptpay" value="${(data.promptpayNumber||data.payment?.promptpayNumber||'').replace(/"/g,'&quot;')}" placeholder="0xxxxxxxxx" maxlength="13" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.8rem;">
+      <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">ชื่อบริษัท / ผู้รับเงิน (ใบเสร็จ)</label>
+      <input type="text" id="bp-${fsId}-company" value="${(data.companyName||data.payment?.companyName||'').replace(/"/g,'&quot;')}" placeholder="เช่น The Green Haven Co., Ltd." style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.8rem;">
+      <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">ชื่อเจ้าของ (Owner)</label>
+      <input type="text" id="bp-${fsId}-owner" value="${(data.ownerName||data.payment?.ownerName||'').replace(/"/g,'&quot;')}" placeholder="ชื่อเจ้าของอาคารนี้" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:1rem;">
+      <button onclick="saveBuildingPaymentConfig('${fsId}')" style="width:100%;padding:.65rem;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun,sans-serif;">💾 บันทึก ${label}</button>
+    </div>
+  `;
+  container.innerHTML = cardHtml('🏠 ห้องแถว', 'RentRoom', rr) + cardHtml('🏢 Nest', 'nest', nest);
+}
+
+async function saveBuildingPaymentConfig(fsId) {
+  if (!['RentRoom', 'nest'].includes(fsId)) return;
+  const promptpayNumber = document.getElementById(`bp-${fsId}-promptpay`)?.value?.trim() || '';
+  const companyName = document.getElementById(`bp-${fsId}-company`)?.value?.trim() || '';
+  const ownerName = document.getElementById(`bp-${fsId}-owner`)?.value?.trim() || '';
+  if (promptpayNumber && !/^\d{9,13}$/.test(promptpayNumber.replace(/\D/g, ''))) {
+    showToast('PromptPay ต้องเป็นตัวเลข 9-13 หลัก', 'warning');
+    return;
+  }
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    showToast('Firestore ไม่พร้อม', 'error');
+    return;
+  }
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    await fs.setDoc(fs.doc(db, 'buildings', fsId), {
+      promptpayNumber, companyName, ownerName,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    showToast(`✅ บันทึกข้อมูล ${fsId === 'RentRoom' ? 'ห้องแถว' : 'Nest'} แล้ว`, 'success');
+  } catch (e) {
+    console.error('saveBuildingPaymentConfig failed:', e);
+    showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.renderBuildingPaymentConfig = renderBuildingPaymentConfig;
+  window.saveBuildingPaymentConfig = saveBuildingPaymentConfig;
+}
+
+// ===== EMERGENCY CONTACTS ADMIN CRUD (Firestore system/emergencyContacts.items) =====
+let _emergencyAdminUnsub = null;
+let _emergencyAdminCache = []; // array of {icon, label, number, order}
+
+function initEmergencyContactsPage() {
+  if (_emergencyAdminUnsub) return; // idempotent
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  const ref = fs.doc(db, 'system', 'emergencyContacts');
+  _emergencyAdminUnsub = fs.onSnapshot(ref, snap => {
+    _emergencyAdminCache = snap.exists() ? ((snap.data() || {}).items || []) : [];
+    _emergencyAdminCache.sort((a, b) => (a.order || 99) - (b.order || 99));
+    renderEmergencyAdminTable();
+  }, err => {
+    console.warn('emergency admin onSnapshot failed:', err);
+    document.getElementById('emergencyAdminTable').innerHTML = `<tr><td colspan="5" style="text-align:center;color:#c62828;padding:20px;">โหลดไม่สำเร็จ: ${err.message}</td></tr>`;
+  });
+}
+
+function renderEmergencyAdminTable() {
+  const tbody = document.getElementById('emergencyAdminTable');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (!_emergencyAdminCache.length) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">ยังไม่มีเบอร์ฉุกเฉิน — กด "+ เพิ่มเบอร์" เพื่อเริ่ม</td>';
+    tbody.appendChild(tr);
+    return;
+  }
+  _emergencyAdminCache.forEach((c, idx) => {
+    const tr = document.createElement('tr');
+    const tdOrder = document.createElement('td'); tdOrder.textContent = c.order || '—'; tr.appendChild(tdOrder);
+    const tdIcon = document.createElement('td'); tdIcon.style.fontSize = '1.4rem'; tdIcon.textContent = c.icon || '📞'; tr.appendChild(tdIcon);
+    const tdLabel = document.createElement('td'); tdLabel.textContent = String(c.label || ''); tr.appendChild(tdLabel);
+    const tdNumber = document.createElement('td'); tdNumber.style.fontFamily = 'monospace'; tdNumber.textContent = String(c.number || ''); tr.appendChild(tdNumber);
+    const tdActions = document.createElement('td');
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'แก้'; editBtn.style.cssText = 'padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:4px;cursor:pointer;margin-right:4px;font-family:Sarabun,sans-serif;font-size:.8rem;';
+    editBtn.addEventListener('click', () => openEmergencyEdit(idx));
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'ลบ'; delBtn.style.cssText = 'padding:4px 10px;background:#ffebee;color:#c62828;border:1px solid #c62828;border-radius:4px;cursor:pointer;font-family:Sarabun,sans-serif;font-size:.8rem;';
+    delBtn.addEventListener('click', () => deleteEmergencyContact(idx, c.label));
+    tdActions.appendChild(editBtn); tdActions.appendChild(delBtn);
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
+  });
+}
+
+function openEmergencyEdit(idx) {
+  const modal = document.getElementById('emergencyEditModal');
+  if (!modal) return;
+  const isNew = idx === null || idx === undefined;
+  document.getElementById('emergencyEditTitle').textContent = isNew ? '+ เพิ่มเบอร์ฉุกเฉิน' : 'แก้ไขเบอร์ฉุกเฉิน';
+  document.getElementById('emergencyEditIndex').value = isNew ? '' : String(idx);
+  if (isNew) {
+    document.getElementById('emergencyEditIcon').value = '📞';
+    document.getElementById('emergencyEditLabel').value = '';
+    document.getElementById('emergencyEditNumber').value = '';
+    document.getElementById('emergencyEditOrder').value = (_emergencyAdminCache.length + 1);
+  } else {
+    const c = _emergencyAdminCache[idx];
+    if (!c) return;
+    document.getElementById('emergencyEditIcon').value = c.icon || '📞';
+    document.getElementById('emergencyEditLabel').value = c.label || '';
+    document.getElementById('emergencyEditNumber').value = c.number || '';
+    document.getElementById('emergencyEditOrder').value = c.order || 99;
+  }
+  modal.style.display = 'flex';
+}
+
+function closeEmergencyEdit() {
+  const modal = document.getElementById('emergencyEditModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveEmergencyContact() {
+  const idxStr = document.getElementById('emergencyEditIndex').value;
+  const icon = document.getElementById('emergencyEditIcon').value.trim() || '📞';
+  const label = document.getElementById('emergencyEditLabel').value.trim();
+  const number = document.getElementById('emergencyEditNumber').value.trim();
+  const order = parseInt(document.getElementById('emergencyEditOrder').value, 10) || 99;
+  if (!label || !number) {
+    showToast('กรุณากรอก Label และ Number', 'warning');
+    return;
+  }
+  const newItems = [..._emergencyAdminCache];
+  const entry = { icon, label, number, order };
+  if (idxStr === '' || idxStr === null) {
+    newItems.push(entry);
+  } else {
+    newItems[parseInt(idxStr, 10)] = entry;
+  }
+  newItems.sort((a, b) => (a.order || 99) - (b.order || 99));
+  await _saveEmergencyArray(newItems);
+  closeEmergencyEdit();
+}
+
+async function deleteEmergencyContact(idx, label) {
+  if (!confirm(`ลบเบอร์ "${label}" ออกจากลิสต์?`)) return;
+  const newItems = _emergencyAdminCache.filter((_, i) => i !== idx);
+  await _saveEmergencyArray(newItems);
+}
+
+async function _saveEmergencyArray(items) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    showToast('Firestore ไม่พร้อม', 'error');
+    return;
+  }
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    await fs.setDoc(fs.doc(db, 'system', 'emergencyContacts'), {
+      items, updatedAt: new Date().toISOString()
+    }, { merge: true });
+    showToast('✅ บันทึกแล้ว — ลูกบ้านเห็นทันที', 'success');
+  } catch (e) {
+    console.error('_saveEmergencyArray failed:', e);
+    showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.initEmergencyContactsPage = initEmergencyContactsPage;
+  window.openEmergencyEdit = openEmergencyEdit;
+  window.closeEmergencyEdit = closeEmergencyEdit;
+  window.saveEmergencyContact = saveEmergencyContact;
+  window.deleteEmergencyContact = deleteEmergencyContact;
+}
+
+// ===== LEASE REQUESTS QUEUE (Firestore leaseRequests) =====
+let _leaseRequestsUnsub = null;
+let _leaseRequestsCache = [];
+let _leaseRequestsFilter = 'all';
+
+function _esc(s) {
+  const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'};
+  return String(s == null ? '' : s).replace(/[&<>"']/g, m => map[m]);
+}
+
+function initLeaseRequestsPage() {
+  if (_leaseRequestsUnsub) return; // idempotent
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  const colRef = fs.collection(db, 'leaseRequests');
+  _leaseRequestsUnsub = fs.onSnapshot(colRef, snap => {
+    _leaseRequestsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    renderLeaseRequestsList();
+    updateLeaseRequestsBadge();
+  }, err => {
+    console.warn('lease requests onSnapshot failed:', err);
+    document.getElementById('leaseRequestsList').innerHTML = `<div style="text-align:center;padding:30px;color:#c62828;">โหลดไม่สำเร็จ: ${err.message}</div>`;
+  });
+}
+
+function setLeaseRequestFilter(filter, btn) {
+  _leaseRequestsFilter = filter;
+  document.querySelectorAll('.lease-req-filter-btn').forEach(b => {
+    b.style.background = '#eee'; b.style.color = '#333';
+  });
+  if (btn) { btn.style.background = 'var(--green-dark)'; btn.style.color = 'white'; }
+  renderLeaseRequestsList();
+}
+
+function updateLeaseRequestsBadge() {
+  const badge = document.getElementById('leaseRequestsBadge');
+  if (!badge) return;
+  const pending = _leaseRequestsCache.filter(r => r.status === 'pending').length;
+  if (pending > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = pending;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderLeaseRequestsList() {
+  const list = document.getElementById('leaseRequestsList');
+  if (!list) return;
+  let items = _leaseRequestsCache;
+  if (_leaseRequestsFilter === 'pending') items = items.filter(r => r.status === 'pending');
+  else if (_leaseRequestsFilter === 'done') items = items.filter(r => r.status !== 'pending');
+  list.innerHTML = '';
+  if (!items.length) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);">ไม่มีคำขอในหมวดนี้</div>';
+    return;
+  }
+  items.forEach(r => {
+    const card = document.createElement('div');
+    const statusColor = r.status === 'pending' ? '#f57c00'
+                      : r.status === 'approved' ? '#388e3c'
+                      : r.status === 'rejected' ? '#c62828' : '#999';
+    const statusLabel = r.status === 'pending' ? '⏳ รอดำเนินการ'
+                      : r.status === 'approved' ? '✅ อนุมัติแล้ว'
+                      : r.status === 'rejected' ? '❌ ปฏิเสธ' : r.status;
+    const typeLabel = r.type === 'renew' ? '✅ ขอต่อสัญญา' : (r.type === 'moveout' ? '❌ แจ้งย้ายออก' : r.type);
+    const buildingLabel = r.building === 'rooms' ? 'ห้องแถว' : (r.building === 'nest' ? 'Nest' : r.building);
+    const created = r.createdAt ? new Date(r.createdAt).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' }) : '—';
+    const detailsHtml = r.type === 'renew'
+      ? `<div style="font-size:.88rem;line-height:1.7;"><div><strong>ระยะเวลา:</strong> ${_esc(r.duration === '1y' ? '1 ปี (มีส่วนลด)' : '6 เดือน')}</div>${r.note ? `<div><strong>หมายเหตุ:</strong> ${_esc(r.note)}</div>` : ''}</div>`
+      : `<div style="font-size:.88rem;line-height:1.7;"><div><strong>วันย้ายออก:</strong> ${_esc(r.moveOutDate || '—')}</div><div><strong>บัญชีคืนมัดจำ:</strong> ${_esc(r.depositRefundBank || '—')}</div>${r.reason ? `<div><strong>เหตุผล:</strong> ${_esc(r.reason)}</div>` : ''}</div>`;
+    card.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:1.25rem;background:#fafafa;';
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:.75rem;">
+        <div>
+          <div style="font-size:1.05rem;font-weight:700;">${_esc(typeLabel)} — ห้อง ${_esc(r.room)} (${_esc(buildingLabel)})</div>
+          <div style="font-size:.85rem;color:var(--text-muted);margin-top:2px;">${_esc(r.tenantName || '(ไม่มีชื่อ)')} · ${_esc(r.phone || '')} · ส่งเมื่อ ${_esc(created)}</div>
+        </div>
+        <span style="background:${statusColor};color:white;padding:4px 12px;border-radius:12px;font-size:.78rem;font-weight:600;white-space:nowrap;">${_esc(statusLabel)}</span>
+      </div>
+      ${detailsHtml}
+      ${r.adminNote ? `<div style="margin-top:.75rem;padding:.5rem;background:#fff8e1;border-radius:4px;font-size:.82rem;"><strong>บันทึกแอดมิน:</strong> ${_esc(r.adminNote)}</div>` : ''}
+      ${r.status === 'pending' ? `
+        <div style="margin-top:1rem;display:flex;gap:.5rem;">
+          <button onclick="actLeaseRequest('${r.id}','approve')" style="flex:1;padding:8px;background:#388e3c;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun;">✅ อนุมัติ</button>
+          <button onclick="actLeaseRequest('${r.id}','reject')" style="flex:1;padding:8px;background:#c62828;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun;">❌ ปฏิเสธ</button>
+        </div>
+      ` : ''}
+    `;
+    list.appendChild(card);
+  });
+}
+
+async function actLeaseRequest(id, action) {
+  const note = prompt(action === 'approve' ? 'หมายเหตุ (ถ้ามี) — เช่น เงื่อนไขสัญญาใหม่' : 'เหตุผลที่ปฏิเสธ:') || '';
+  if (action === 'reject' && !note.trim()) {
+    showToast('กรุณาระบุเหตุผลที่ปฏิเสธ', 'warning');
+    return;
+  }
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    await fs.updateDoc(fs.doc(db, 'leaseRequests', id), {
+      status: action === 'approve' ? 'approved' : 'rejected',
+      adminNote: note.trim(),
+      processedAt: new Date().toISOString()
+    });
+    showToast(action === 'approve' ? '✅ อนุมัติคำขอแล้ว' : '❌ ปฏิเสธคำขอแล้ว', 'success');
+  } catch (e) {
+    console.error('actLeaseRequest failed:', e);
+    showToast('ดำเนินการไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.initLeaseRequestsPage = initLeaseRequestsPage;
+  window.setLeaseRequestFilter = setLeaseRequestFilter;
+  window.actLeaseRequest = actLeaseRequest;
 }
 
 function saveOwnerInfo() {

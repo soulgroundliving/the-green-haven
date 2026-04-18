@@ -2396,6 +2396,7 @@ function switchContentTab(tabName, btn) {
     else if(tabName === 'events' && typeof initCommunityEventsPage === 'function') initCommunityEventsPage();
     else if(tabName === 'docs' && typeof initCommunityDocsPage === 'function') initCommunityDocsPage();
     else if(tabName === 'wellness' && typeof initWellnessArticlesPage === 'function') initWellnessArticlesPage();
+    else if(tabName === 'emergency' && typeof initEmergencyContactsPage === 'function') initEmergencyContactsPage();
   }
 }
 
@@ -2693,6 +2694,9 @@ function switchLeaseTab(tabName, btn) {
     btn.style.color = 'var(--green)';
     btn.style.borderBottomColor = 'var(--green)';
   }
+
+  // Lazy-init tab content
+  if (tabName === 'requests' && typeof initLeaseRequestsPage === 'function') initLeaseRequestsPage();
 }
 
 // ===== SIDEBAR FUNCTIONS =====

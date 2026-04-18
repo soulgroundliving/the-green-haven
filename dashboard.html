@@ -2807,6 +2807,7 @@
     <button id="tab-events-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('events', this)">📅 Events</button>
     <button id="tab-docs-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('docs', this)">📋 Documents</button>
     <button id="tab-wellness-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('wellness', this)">🌿 Wellness</button>
+    <button id="tab-emergency-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('emergency', this)">🚨 Emergency</button>
   </div>
 
   <!-- TAB 1: Announcements -->
@@ -2990,6 +2991,56 @@
     <div class="card">
       <div class="card-title">📚 รายการบทความ Wellness ทั้งหมด</div>
       <div id="wellnessList" style="min-height: 200px;"></div>
+    </div>
+  </div>
+
+  <!-- TAB 5: Emergency Contacts (Firestore system/emergencyContacts) -->
+  <div id="content-tab-emergency" class="content-mgmt-content" style="display: none;">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+          <div class="card-title" style="margin-bottom: .25rem;">🚨 เบอร์ติดต่อฉุกเฉิน</div>
+          <small style="color: var(--text-muted);">ลูกบ้านเห็นในหน้า Community ของ tenant_app — แก้ที่นี่ → sync ทันที (real-time)</small>
+        </div>
+        <button onclick="openEmergencyEdit(null)" style="background: var(--green-dark); color: white; border: none; padding: .6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: 'Sarabun';">+ เพิ่มเบอร์</button>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="data-table" style="width: 100%;">
+          <thead>
+            <tr>
+              <th style="width: 50px;">Order</th>
+              <th style="width: 50px;">Icon</th>
+              <th>Label</th>
+              <th style="width: 140px;">Number</th>
+              <th style="width: 140px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="emergencyAdminTable">
+            <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">กำลังโหลด…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top: 1rem; padding: .75rem 1rem; background: #fff8e1; border-left: 3px solid #ffc107; border-radius: 4px; font-size: .82rem; color: #6c5005;">
+        <strong>Note:</strong> ค่าเริ่มต้นในแอปคือ 191/199/1669 — กดเพิ่มเพื่อใส่เบอร์อื่น (รพ.ใกล้สุด, ช่างประจำตึก, รปภ. ฯลฯ). ลูกบ้านเห็นเรียงตาม Order น้อยไปมาก
+      </div>
+
+      <!-- Edit modal -->
+      <div id="emergencyEditModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 460px;">
+          <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="emergencyEditTitle">+ เพิ่มเบอร์ฉุกเฉิน</div>
+          <input type="hidden" id="emergencyEditIndex">
+          <div style="display: grid; gap: .85rem;">
+            <label>Icon (emoji)<input type="text" id="emergencyEditIcon" placeholder="🚓" maxlength="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
+            <label>Label (ชื่อหน่วย)<input type="text" id="emergencyEditLabel" placeholder="เช่น ตำรวจ, รพ.ใกล้บ้าน" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
+            <label>Number (เบอร์โทร)<input type="tel" id="emergencyEditNumber" placeholder="191" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
+            <label>Order (น้อย = ขึ้นก่อน)<input type="number" id="emergencyEditOrder" min="1" value="99" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
+          </div>
+          <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.5rem;">
+            <button onclick="closeEmergencyEdit()" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">ยกเลิก</button>
+            <button onclick="saveEmergencyContact()" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;">บันทึก</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -3458,6 +3509,7 @@
   <!-- Tab Navigation -->
   <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
     <button id="tab-agreements-btn" class="lease-mgmt-tab active" onclick="switchLeaseTab('agreements', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📋 Agreements</button>
+    <button id="tab-requests-btn" class="lease-mgmt-tab" onclick="switchLeaseTab('requests', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem; position: relative;">📨 คำขอจากลูกบ้าน <span id="leaseRequestsBadge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
     <button id="tab-alerts-btn" class="lease-mgmt-tab" onclick="switchLeaseTab('alerts', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">🔔 Alert Settings</button>
   </div>
 
@@ -3466,7 +3518,27 @@
     <div id="leaseAgreementsContainer"></div>
   </div>
 
-  <!-- TAB 2: Alert Settings -->
+  <!-- TAB 2: Pending Requests (Firestore leaseRequests) -->
+  <div id="lease-tab-requests" class="lease-mgmt-content" style="display: none;">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+          <div style="font-size: 1.05rem; font-weight: 700;">📨 คำขอต่อสัญญา / แจ้งย้ายออก</div>
+          <small style="color: var(--text-muted);">ลูกบ้านส่งจากหน้า Profile → "แจ้งต่อสัญญา / ย้ายออก" — real-time</small>
+        </div>
+        <div style="display: flex; gap: .5rem;">
+          <button id="leaseFilterAllBtn" onclick="setLeaseRequestFilter('all', this)" class="lease-req-filter-btn" style="padding:6px 14px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ทั้งหมด</button>
+          <button id="leaseFilterPendingBtn" onclick="setLeaseRequestFilter('pending', this)" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">รอดำเนินการ</button>
+          <button id="leaseFilterDoneBtn" onclick="setLeaseRequestFilter('done', this)" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ดำเนินการแล้ว</button>
+        </div>
+      </div>
+      <div id="leaseRequestsList" style="display: grid; gap: 1rem;">
+        <div style="text-align:center;padding:30px;color:var(--text-muted);">กำลังโหลด…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Alert Settings -->
   <div id="lease-tab-alerts" class="lease-mgmt-content" style="display: none;">
     <div class="card">
       <div style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
