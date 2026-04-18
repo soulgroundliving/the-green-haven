@@ -53,6 +53,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ===== TAX SUMMARY (CF writes via admin SDK, admin dashboard reads) =====
+    // Sensitive financial data — locked to authenticated reads (admin only ideally,
+    // but custom claims not yet set up; tighten to isAdmin() once admin claim exists).
+    match /taxSummary/{yearDoc} {
+      allow read:  if isSignedIn();
+      allow write: if false; // CF-only via admin SDK
+    }
+
     // ===== RATE LIMITS (CF only) =====
     match /rateLimits/{key} {
       allow read, write: if false;

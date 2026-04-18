@@ -31,6 +31,10 @@ exports.seedAppConfig = require('./seedAppConfig').seedAppConfig;
 // Auto-bill generation (Phase 1 automation — fires on meter_data Firestore write)
 exports.generateBillsOnMeterUpdate = require('./generateBillsOnMeterUpdate').generateBillsOnMeterUpdate;
 
+// Tax revenue aggregation (Phase 2 — scheduled monthly + on-demand HTTP)
+exports.aggregateMonthlyRevenueScheduled = require('./aggregateMonthlyRevenue').aggregateMonthlyRevenueScheduled;
+exports.aggregateMonthlyRevenue = require('./aggregateMonthlyRevenue').aggregateMonthlyRevenue;
+
 // Import existing functions if available
 try {
   const verifySlip = require('./verifySlip');
