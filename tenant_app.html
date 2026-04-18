@@ -1634,24 +1634,6 @@
             <p>เราพร้อมดูแลคุณในทุกรายละเอียดครับ ✨</p>
         </div>
 
-        <!-- Emergency contacts — top of services page so they're discoverable when user opens "บริการ" in panic.
-             Rendered dynamically by _subscribeEmergencyContacts() from Firestore system/emergencyContacts.
-             Defaults (191/199/1669) shown until first Firestore snapshot lands. Admin manages via dashboard. -->
-        <div class="section-title"><span>เบอร์ติดต่อฉุกเฉิน 🚨</span></div>
-        <div id="emergencyContactsSection" class="card" style="margin: 0 15px 12px;">
-            <div id="emergencyContactsList" style="display:grid; gap:8px;">
-                <button onclick="makeCall('191')" style="display:flex; align-items:center; gap:10px; padding:10px; background:#FFF1F1; color:#DC2626; border:none; border-radius:10px; font-weight:700; cursor:pointer; text-align:left;">
-                    <span style="font-size:1.4rem;">🚓</span> <span style="flex:1;">ตำรวจ</span> <strong>191</strong>
-                </button>
-                <button onclick="makeCall('199')" style="display:flex; align-items:center; gap:10px; padding:10px; background:#FFF1F1; color:#DC2626; border:none; border-radius:10px; font-weight:700; cursor:pointer; text-align:left;">
-                    <span style="font-size:1.4rem;">🚒</span> <span style="flex:1;">ดับเพลิง</span> <strong>199</strong>
-                </button>
-                <button onclick="makeCall('1669')" style="display:flex; align-items:center; gap:10px; padding:10px; background:#FFF1F1; color:#DC2626; border:none; border-radius:10px; font-weight:700; cursor:pointer; text-align:left;">
-                    <span style="font-size:1.4rem;">🚑</span> <span style="flex:1;">การแพทย์ฉุกเฉิน</span> <strong>1669</strong>
-                </button>
-            </div>
-        </div>
-
         <!-- ported from tenant.html: displayBuildingInternetStatus -->
         <div id="internetStatusSection" class="card" style="display:none;">
             <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
@@ -1679,16 +1661,36 @@
             </div>
         </div>
 
-        <!-- ported: emergency contacts shortcut + service providers list -->
-        <div class="card">
-            <strong>📞 สายด่วน & ผู้ให้บริการ</strong>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-                <button onclick="scrollToEmergencyContacts()"
-                    style="padding:12px; border-radius:12px; border:none; background:#FFF1F1; color:#DC2626; font-weight:bold; cursor:pointer;">สายด่วนฉุกเฉิน</button>
-                <button onclick="makeCall(localStorage.getItem('building_internet_contact')||'1-2700-1700')"
-                    style="padding:12px; border-radius:12px; border:none; background:#EBF5FF; color:#2563EB; font-weight:bold; cursor:pointer;">ติดต่อค่ายเน็ต</button>
+        <!-- Merged accordion: emergency contacts (🚨) + service providers.
+             Uses same toggleAccordion() pattern as internetStatusSection above. -->
+        <div id="emergencyContactsSection" class="card">
+            <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                <strong style="flex:1;">📞 สายด่วน &amp; ผู้ให้บริการ</strong>
+                <span style="font-size:var(--fs-sm); font-weight:600; color:#DC2626;">🚨 ฉุกเฉิน</span>
+                <i class="fas fa-chevron-down" style="color:#aaa;"></i>
             </div>
-            <div id="serviceProvidersList" style="display:grid; gap:10px; margin-top:12px;"></div>
+            <div class="accordion-content" style="display:none;">
+                <!-- Emergency numbers (rendered dynamically by _subscribeEmergencyContacts() from Firestore system/emergencyContacts) -->
+                <div id="emergencyContactsList" style="display:grid; gap:8px; margin-top:10px;">
+                    <button onclick="makeCall('191')" style="display:flex; align-items:center; gap:10px; padding:10px; background:#FFF1F1; color:#DC2626; border:none; border-radius:10px; font-weight:700; cursor:pointer; text-align:left;">
+                        <span style="font-size:1.4rem;">🚓</span> <span style="flex:1;">ตำรวจ</span> <strong>191</strong>
+                    </button>
+                    <button onclick="makeCall('199')" style="display:flex; align-items:center; gap:10px; padding:10px; background:#FFF1F1; color:#DC2626; border:none; border-radius:10px; font-weight:700; cursor:pointer; text-align:left;">
+                        <span style="font-size:1.4rem;">🚒</span> <span style="flex:1;">ดับเพลิง</span> <strong>199</strong>
+                    </button>
+                    <button onclick="makeCall('1669')" style="display:flex; align-items:center; gap:10px; padding:10px; background:#FFF1F1; color:#DC2626; border:none; border-radius:10px; font-weight:700; cursor:pointer; text-align:left;">
+                        <span style="font-size:1.4rem;">🚑</span> <span style="flex:1;">การแพทย์ฉุกเฉิน</span> <strong>1669</strong>
+                    </button>
+                </div>
+                <!-- Divider -->
+                <hr style="margin:14px 0; border:none; border-top:1px solid #eee;">
+                <!-- Service providers shortcut + dynamic list -->
+                <div style="display:grid; grid-template-columns:1fr; gap:10px;">
+                    <button onclick="makeCall(localStorage.getItem('building_internet_contact')||'1-2700-1700')"
+                        style="padding:12px; border-radius:12px; border:none; background:#EBF5FF; color:#2563EB; font-weight:bold; cursor:pointer;">📶 ติดต่อค่ายเน็ต</button>
+                </div>
+                <div id="serviceProvidersList" style="display:grid; gap:10px; margin-top:12px;"></div>
+            </div>
         </div>
         <div class="section-title" style="margin-top: 10px;"><span>พื้นที่ส่วนกลาง (Facilities)</span></div>
         <div class="card"
