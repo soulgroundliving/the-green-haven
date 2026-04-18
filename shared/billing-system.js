@@ -558,21 +558,26 @@ class BillingSystem {
    * @returns {array} - Array of bills for the room
    */
   static getBillsByRoom(roomId, year = null) {
+    // Phase 2a: delegate to BillStore (RTDB primary + localStorage fallback)
+    if (typeof BillStore !== 'undefined') {
+      // Try both buildings; BillStore will dedupe via cache
+      const r = BillStore.getByRoom('rooms', roomId, year);
+      const n = BillStore.getByRoom('nest', roomId, year);
+      const merged = [...r, ...n];
+      if (merged.length > 0) return merged;
+    }
+    // Final fallback: raw localStorage scan (legacy)
     const bills = [];
-
     if (year) {
       const key = `bills_${year}`;
       const yearBills = JSON.parse(localStorage.getItem(key) || '[]');
       return yearBills.filter((bill) => bill.roomId === roomId);
     }
-
-    // Get all years
     for (let y = 2567; y <= 2570; y++) {
       const key = `bills_${y}`;
       const yearBills = JSON.parse(localStorage.getItem(key) || '[]');
       bills.push(...yearBills.filter((bill) => bill.roomId === roomId));
     }
-
     return bills;
   }
 
@@ -584,9 +589,16 @@ class BillingSystem {
    * @returns {object|null} - Bill object or null
    */
   static getBillByMonthYear(roomId, month, year) {
+    // Phase 2a: delegate to BillStore
+    if (typeof BillStore !== 'undefined') {
+      const r = BillStore.getByMonth('rooms', roomId, year, month);
+      if (r) return r;
+      const n = BillStore.getByMonth('nest', roomId, year, month);
+      if (n) return n;
+    }
+    // Fallback: localStorage
     const key = `bills_${year}`;
     const yearBills = JSON.parse(localStorage.getItem(key) || '[]');
-
     return yearBills.find((bill) => bill.month === month && bill.roomId === roomId) || null;
   }
 
@@ -619,9 +631,16 @@ class BillingSystem {
    * @returns {object} - Summary with totals
    */
   static generateMonthlySummary(month, year) {
-    const key = `bills_${year}`;
-    const yearBills = JSON.parse(localStorage.getItem(key) || '[]');
-    const monthBills = yearBills.filter((bill) => bill.month === month);
+    // Phase 2a: pull from BillStore (RTDB) — fall back to localStorage
+    let yearBills = [];
+    if (typeof BillStore !== 'undefined') {
+      yearBills = BillStore.listAllForYear(year);
+    }
+    if (yearBills.length === 0) {
+      const key = `bills_${year}`;
+      yearBills = JSON.parse(localStorage.getItem(key) || '[]');
+    }
+    const monthBills = yearBills.filter((bill) => Number(bill.month) === Number(month));
 
     const summary = {
       year,
@@ -738,9 +757,129 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
+// ===== BillStore — single facade for all bill reads (Phase 2a 2026-04-19) =====
+// Single Source of Truth: RTDB bills/{building}/{roomId}/{billId}
+//   Read order: in-memory cache (populated by RTDB onValue) → direct RTDB read
+//                → localStorage bills_{year} (legacy fallback) → []
+//   Subscribe once; receives live updates when CF auto-creates bills or
+//   verifySlip flips status='paid'. All call sites should prefer this over
+//   raw localStorage.bills_YYYY reads.
+class BillStore {
+  static _cache = { rooms: {}, nest: {} };  // [building][room][billId] = bill
+  static _subscribed = false;
+  static _listeners = new Set();
+  static _ready = false;
+
+  /** Coerce building → 'rooms' | 'nest' canonical */
+  static _bld(b) {
+    if (b === 'old' || b === 'rooms' || b === 'RentRoom') return 'rooms';
+    if (b === 'new' || b === 'nest') return 'nest';
+    return b;
+  }
+  /** Normalize year to BE 4-digit (2569) */
+  static _be(year) {
+    const n = Number(year);
+    if (n < 100) return 2500 + n;
+    if (n < 2400) return 2500 + (n % 100);
+    return n;
+  }
+
+  /** Subscribe to RTDB bills (idempotent). Auto-fires on first BillStore use. */
+  static subscribe() {
+    if (this._subscribed) return;
+    if (!window.firebaseDatabase || !window.firebaseRef || !window.firebaseOnValue) {
+      // Firebase not ready yet — retry shortly
+      setTimeout(() => this.subscribe(), 1500);
+      return;
+    }
+    this._subscribed = true;
+    ['rooms', 'nest'].forEach(building => {
+      try {
+        const ref = window.firebaseRef(window.firebaseDatabase, `bills/${building}`);
+        window.firebaseOnValue(ref, snap => {
+          this._cache[building] = snap.val() || {};
+          this._ready = true;
+          this._listeners.forEach(fn => { try { fn(building, this._cache[building]); } catch(e) {} });
+        }, err => console.warn(`BillStore subscribe bills/${building}:`, err?.message));
+      } catch(e) { console.warn('BillStore subscribe error:', e); }
+    });
+  }
+
+  /** Add a listener that fires whenever bills change for a building. */
+  static onChange(fn) {
+    this._listeners.add(fn);
+    this.subscribe();
+    return () => this._listeners.delete(fn);
+  }
+
+  /** Get all bills for a room (optionally a single year). */
+  static getByRoom(building, roomId, year = null) {
+    this.subscribe();
+    const bld = this._bld(building);
+    const room = String(roomId);
+    const all = this._cache[bld]?.[room] || {};
+    let bills = Object.values(all);
+    if (year != null) {
+      const beYear = this._be(year);
+      bills = bills.filter(b => this._be(b.year) === beYear);
+    }
+    // Fallback to localStorage if cache empty (e.g., before subscribe completes)
+    if (bills.length === 0 && year != null) {
+      try {
+        const ls = JSON.parse(localStorage.getItem(`bills_${this._be(year)}`) || '[]');
+        bills = ls.filter(b => String(b.roomId || b.room) === room &&
+                              (this._bld(b.building) === bld || !b.building));
+      } catch(e) {}
+    }
+    return bills;
+  }
+
+  /** Get a single bill by month/year for a room. */
+  static getByMonth(building, roomId, year, month) {
+    return this.getByRoom(building, roomId, year)
+              .find(b => Number(b.month) === Number(month)) || null;
+  }
+
+  /** Get all bills across all rooms for a building+year. */
+  static listForYear(building, year) {
+    this.subscribe();
+    const bld = this._bld(building);
+    const beYear = this._be(year);
+    const out = [];
+    const rooms = this._cache[bld] || {};
+    Object.keys(rooms).forEach(room => {
+      Object.values(rooms[room] || {}).forEach(b => {
+        if (this._be(b.year) === beYear) out.push(b);
+      });
+    });
+    if (out.length === 0) {
+      try {
+        const ls = JSON.parse(localStorage.getItem(`bills_${beYear}`) || '[]');
+        ls.forEach(b => {
+          if (!b.building || this._bld(b.building) === bld) out.push(b);
+        });
+      } catch(e) {}
+    }
+    return out;
+  }
+
+  /** Get all bills across all buildings for a year. */
+  static listAllForYear(year) {
+    return [...this.listForYear('rooms', year), ...this.listForYear('nest', year)];
+  }
+
+  static get isReady() { return this._ready; }
+}
+
+// Auto-subscribe once globals are wired
+if (typeof window !== 'undefined') {
+  setTimeout(() => BillStore.subscribe(), 600);
+}
+
 // Expose globally (backward compatibility)
 if (typeof window !== 'undefined') {
   window.BillingSystem = BillingSystem;
+  window.BillStore = BillStore;
   window.AutoBillCalculator = BillingSystem; // Alias for backward compatibility
   window.BillingCalculator = BillingSystem; // Alias for backward compatibility
 }
