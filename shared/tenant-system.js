@@ -1200,31 +1200,13 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Load building announcements from Firebase
+   * Load building announcements from Firebase.
+   * NOTE: Admin writes announcements to Firestore (`announcements/{id}`), not RTDB.
+   * This RTDB path was legacy. tenant_app subscribes Firestore directly via
+   * its own onSnapshot, so we just return [] here to avoid noisy permission errors.
    */
   static async loadAnnouncements() {
-    try {
-      if (!this.database || !window.firebaseRef || !window.firebaseGet) {
-        return [];
-      }
-
-      const announcementsRef = window.firebaseRef(this.database,
-        `announcements/${this.currentBuilding}`);
-      const snapshot = await window.firebaseGet(announcementsRef);
-
-      if (snapshot.exists()) {
-        const announcementsData = Object.values(snapshot.val() || {});
-        console.log(`✅ Loaded ${announcementsData.length} announcements from Firebase`);
-        return announcementsData.sort((a, b) =>
-          new Date(b.createdAt) - new Date(a.createdAt)
-        );
-      }
-
-      return [];
-    } catch (error) {
-      console.error('❌ Error loading announcements:', error);
-      return [];
-    }
+    return []; // Firestore subscriber in tenant_app handles announcements end-to-end
   }
 
   /**
