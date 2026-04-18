@@ -897,7 +897,10 @@
       water.push(d.waterIncome || 0);
       trash.push(d.trashIncome || 0);
     }
-    if (window._revenueChart) window._revenueChart.destroy();
+    // Destroy any existing chart on this canvas — including the stub one created by
+    // tax-filing.js loadTaxDashboard() before we got real data.
+    try { (Chart.getChart && Chart.getChart(ctx))?.destroy(); } catch(e) {}
+    if (window._revenueChart) try { window._revenueChart.destroy(); } catch(e) {}
     window._revenueChart = new Chart(ctx, {
       type: 'bar',
       data: {
