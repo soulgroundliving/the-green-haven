@@ -28,6 +28,9 @@ exports.redeemReward = require('./redeemReward').redeemReward;
 // App config seed (Sprint B + C — populate system/* + buildings/{X}.info defaults)
 exports.seedAppConfig = require('./seedAppConfig').seedAppConfig;
 
+// Auto-bill generation (Phase 1 automation — fires on meter_data Firestore write)
+exports.generateBillsOnMeterUpdate = require('./generateBillsOnMeterUpdate').generateBillsOnMeterUpdate;
+
 // Import existing functions if available
 try {
   const verifySlip = require('./verifySlip');

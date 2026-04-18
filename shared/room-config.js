@@ -112,6 +112,49 @@ class RoomConfigManager {
 
   static saveRoomsConfig(building, config) {
     localStorage.setItem(`rooms_config_${building}`, JSON.stringify(config));
+    // Mirror to RTDB so generateBillsOnMeterUpdate CF can read per-room rates
+    // (CF reads rooms_config/{building}/{roomId} when a meter_data doc is written)
+    this.syncToFirebase(building, config);
+  }
+
+  static syncToFirebase(building, config) {
+    if (!window.firebaseDatabase || !window.firebaseRef || !window.firebaseSet) return;
+    if (!config?.rooms) return;
+    try {
+      const updates = {};
+      config.rooms.forEach(r => {
+        if (!r.id) return;
+        updates[r.id] = {
+          id: String(r.id),
+          name: r.name || '',
+          rentPrice: Number(r.rentPrice) || 0,
+          electricRate: Number(r.electricRate) || 8,
+          waterRate: Number(r.waterRate) || 20,
+          trashRate: Number(r.trashRate) || 20,
+          deleted: !!r.deleted,
+          updatedAt: new Date().toISOString()
+        };
+      });
+      // Write each room individually (parallel) so partial failure doesn't lose others
+      Object.entries(updates).forEach(([roomId, data]) => {
+        const ref = window.firebaseRef(window.firebaseDatabase, `rooms_config/${building}/${roomId}`);
+        window.firebaseSet(ref, data).catch(e => console.warn(`rooms_config sync ${building}/${roomId}:`, e.message));
+      });
+    } catch (e) { console.warn('RoomConfigManager.syncToFirebase failed:', e.message); }
+  }
+
+  /**
+   * One-time bulk sync — call from admin dashboard to populate RTDB rooms_config.
+   * Idempotent (setDoc overwrite). Admin runs once after first deploy; later saves
+   * auto-sync via saveRoomsConfig above.
+   */
+  static async bulkSyncAllToFirebase() {
+    const buildings = ['rooms', 'nest'];
+    for (const b of buildings) {
+      const cfg = this.getRoomsConfig(b);
+      this.syncToFirebase(b, cfg);
+    }
+    console.log('✅ RoomConfigManager: bulk synced rooms_config to RTDB');
   }
 
   static getRoom(building, roomId) {
