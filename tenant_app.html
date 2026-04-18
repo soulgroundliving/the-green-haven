@@ -5977,10 +5977,11 @@
                 if (typeof RoomConfigManager !== 'undefined') {
                     const rc = RoomConfigManager.getRoom?.(_taBuilding, _taRoom);
                     if (rc) {
-                        rent = Number(rc.rent)||0;
-                        eRate = Number(rc.elecRate||rc.electricRate)||8;
-                        wRate = Number(rc.waterRate)||20;
-                        trash = Number(rc.trashFee)||40;
+                        // Support both legacy field names (rent/elecRate/trashFee) and current (rentPrice/electricRate/trashRate)
+                        rent = Number(rc.rentPrice ?? rc.rent) || 0;
+                        eRate = Number(rc.electricRate ?? rc.elecRate) || 8;
+                        wRate = Number(rc.waterRate) || 20;
+                        trash = Number(rc.trashRate ?? rc.trashFee) || 40;
                     }
                 }
             } catch(e) {}
