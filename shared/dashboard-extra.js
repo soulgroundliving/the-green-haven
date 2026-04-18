@@ -3357,29 +3357,92 @@ function saveLeaseAlertSettings() {
 }
 
 // ===== COMPLAINTS PAGE =====
+// ===== RequestsStore — single facade for complaints/maintenance/housekeeping =====
+// Phase 3 (2026-04-19): Source of truth = Firestore complaints/{id} for complaints,
+// RTDB for maintenance + housekeeping. localStorage retained as offline cache only.
+window.RequestsStore = window.RequestsStore || (function(){
+  const cache = { complaints: [], maintenance: [], housekeeping: [] };
+  const listeners = { complaints: new Set(), maintenance: new Set(), housekeeping: new Set() };
+  const subscribed = { complaints: false, maintenance: false, housekeeping: false };
+
+  function _legacy(key) {
+    try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { return []; }
+  }
+
+  function getComplaints() {
+    if (cache.complaints.length === 0) return _legacy('complaints_data');
+    return cache.complaints;
+  }
+  function getMaintenance() {
+    if (cache.maintenance.length === 0) return _legacy('maintenance_data');
+    return cache.maintenance;
+  }
+  function getHousekeeping() {
+    if (cache.housekeeping.length === 0) return _legacy('housekeeping_data');
+    return cache.housekeeping;
+  }
+
+  function onChange(type, fn) {
+    if (!listeners[type]) return () => {};
+    listeners[type].add(fn);
+    // Catch-up: fire immediately if cache populated
+    if (cache[type].length > 0) {
+      try { fn(cache[type]); } catch(e) {}
+    }
+    return () => listeners[type].delete(fn);
+  }
+
+  function _notify(type) {
+    listeners[type].forEach(fn => { try { fn(cache[type]); } catch(e) {} });
+  }
+
+  function _ingest(type, list) {
+    cache[type] = list || [];
+    // Backfill localStorage for offline cache
+    try { localStorage.setItem(`${type}_data`, JSON.stringify(cache[type])); } catch(e) {}
+    _notify(type);
+  }
+
+  function subscribeComplaints() {
+    if (subscribed.complaints) return;
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+      setTimeout(subscribeComplaints, 1500);
+      return;
+    }
+    subscribed.complaints = true;
+    try {
+      const db = window.firebase.firestore();
+      const fs = window.firebase.firestoreFunctions;
+      fs.onSnapshot(fs.collection(db, 'complaints'), snap => {
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Merge with any local-only entries (Firestore wins on collision)
+        const local = _legacy('complaints_data');
+        const byId = new Map();
+        local.forEach(c => byId.set(c.id, c));
+        docs.forEach(c => byId.set(c.id, c));
+        _ingest('complaints', Array.from(byId.values()));
+      }, err => console.warn('RequestsStore complaints listen:', err?.message));
+    } catch(e) { subscribed.complaints = false; console.warn('subscribeComplaints:', e); }
+  }
+
+  // Auto-subscribe complaints on load (admin dashboard always wants live data)
+  if (typeof window !== 'undefined') setTimeout(subscribeComplaints, 800);
+
+  return { getComplaints, getMaintenance, getHousekeeping, onChange,
+           subscribeComplaints, _ingest };
+})();
+
 let _complaintsUnsub = null;
 function initComplaintsPage() {
   console.log('✅ Complaints page initialized');
-  renderComplaints(JSON.parse(localStorage.getItem('complaints_data') || '[]'));
-  // Subscribe to Firestore (real-time)
-  if (_complaintsUnsub) return;
-  if (!window.firebase?.firestore) return;
-  try {
-    const db = window.firebase.firestore();
-    const fs = window.firebase.firestoreFunctions;
-    const col = fs.collection(db, 'complaints');
-    _complaintsUnsub = fs.onSnapshot(col, snap => {
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // Merge with localStorage (Firestore wins on collision)
-      const local = JSON.parse(localStorage.getItem('complaints_data') || '[]');
-      const byId = new Map();
-      local.forEach(c => byId.set(c.id, c));
-      docs.forEach(c => byId.set(c.id, c));
-      const merged = Array.from(byId.values());
-      localStorage.setItem('complaints_data', JSON.stringify(merged));
-      renderComplaints(merged);
-    }, err => console.warn('complaints onSnapshot failed:', err));
-  } catch(e) { console.warn('complaints subscribe failed:', e); }
+  // Phase 3: pull from RequestsStore (cache + Firestore subscription auto-runs)
+  renderComplaints(window.RequestsStore.getComplaints());
+  if (typeof window !== 'undefined' && !window._complaintsRendererSubscribed) {
+    window._complaintsRendererSubscribed = true;
+    window.RequestsStore.onChange('complaints', list => renderComplaints(list));
+  }
+  // Idempotent: ensure subscription is live (no-op if already subscribed)
+  window.RequestsStore.subscribeComplaints();
 }
 
 function renderComplaints(complaints){
