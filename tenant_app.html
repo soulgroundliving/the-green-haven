@@ -1906,19 +1906,7 @@
             <h1 style="margin:0; font-size: var(--fs-lg);">แจ้งนิติโดยตรง</h1>
         </div>
 
-        <!-- Tab Nav -->
-        <div style="display:flex; gap:8px; padding:0 16px 16px;">
-            <button id="complaint-tab-form" onclick="switchComplaintTab('form')"
-                style="flex:1; padding:12px 14px; min-height:44px; border-radius:14px; font-size:var(--fs-md); font-weight:700; background:var(--primary-green); color:#fff; border:none; cursor:pointer;">
-                ➕ แจ้งใหม่
-            </button>
-            <button id="complaint-tab-history" onclick="switchComplaintTab('history')"
-                style="flex:1; padding:12px 14px; min-height:44px; border-radius:14px; font-size:var(--fs-md); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">
-                📋 ประวัติ
-            </button>
-        </div>
-
-        <!-- Form Tab -->
+        <!-- Form (always visible — matches maintenance page layout) -->
         <div id="complaint-form-tab" class="card">
             <form onsubmit="submitComplaint(event)">
                 <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">ประเภท *</label>
@@ -1968,21 +1956,20 @@
             </form>
         </div>
 
-        <!-- History Tab -->
-        <div id="complaint-history-tab" style="display:none; padding:0 16px;">
-            <div style="display:flex; gap:6px; margin-bottom:12px; overflow-x:auto; padding-bottom:4px;">
-                <button onclick="filterComplaints('all')" id="filter-all"
-                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--primary-green); color:#fff; border:none; cursor:pointer;">ทั้งหมด</button>
-                <button onclick="filterComplaints('open')" id="filter-open"
-                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">รอดำเนินการ</button>
-                <button onclick="filterComplaints('in-progress')" id="filter-in-progress"
-                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">กำลังดำเนินการ</button>
-                <button onclick="filterComplaints('resolved')" id="filter-resolved"
-                    style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">แก้ไขแล้ว</button>
-            </div>
-            <div id="complaint-list">
-                <p style="text-align:center; color:#9ca3af; font-size:var(--fs-md); padding:20px;">ยังไม่มีประวัติการแจ้ง</p>
-            </div>
+        <!-- History (real-time via _subscribeComplaintsFromFirestore) -->
+        <div class="section-title"><span>ประวัติการแจ้ง</span></div>
+        <div style="display:flex; gap:6px; padding:0 16px 10px; overflow-x:auto;">
+            <button onclick="filterComplaints('all')" id="filter-all"
+                style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--primary-green); color:#fff; border:none; cursor:pointer;">ทั้งหมด</button>
+            <button onclick="filterComplaints('open')" id="filter-open"
+                style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">รอดำเนินการ</button>
+            <button onclick="filterComplaints('in-progress')" id="filter-in-progress"
+                style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">กำลังดำเนินการ</button>
+            <button onclick="filterComplaints('resolved')" id="filter-resolved"
+                style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">แก้ไขแล้ว</button>
+        </div>
+        <div id="complaint-list" style="padding:0 16px 80px;">
+            <p style="text-align:center; color:#9ca3af; font-size:var(--fs-md); padding:20px;">ยังไม่มีประวัติการแจ้ง</p>
         </div>
     </div>
 
@@ -2094,12 +2081,15 @@
     </div>
 
     <div id="payment-page" class="page">
-        <div class="payment-header">
-            <button class="back-btn" onclick="goBackFromPayment()"><i class="fas fa-arrow-left"></i>
-
-                ย้อนกลับ</button>
-            <h1><i class="fas fa-credit-card"></i> ชำระเงิน</h1>
-            <p>ทำตามขั้นตอนด้านล่างเพื่อชำระเงินค่าบิล</p>
+        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
+            <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                onclick="goBackFromPayment()">
+                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+            </div>
+            <div>
+                <h1 style="margin:0; font-size: var(--fs-lg);"><i class="fas fa-credit-card" style="color:var(--primary-green); margin-right:6px;"></i>ชำระเงิน</h1>
+                <p style="margin:4px 0 0; color: var(--text-muted); font-size:var(--fs-sm);">ทำตามขั้นตอนด้านล่างเพื่อชำระเงินค่าบิล</p>
+            </div>
         </div>
 
         <div class="stepper">
@@ -3468,6 +3458,7 @@
             if (id === 'elec_usage') renderElecUsage();
             if (id === 'water_usage') renderWaterUsage();
             if (id === 'settings') loadReceiptSettings();
+            if (id === 'complaint') loadComplaints();
             window.scrollTo(0, 0);
         }
 
@@ -4833,7 +4824,42 @@
             toast('ส่งแจ้งเรียบร้อยแล้ว ทีมงานจะติดต่อกลับโดยเร็ว');
             event.target.reset();
             setSeverity('low');
+            // Immediate render — Firestore subscriber will update again when server acks
+            loadComplaints();
         }
+
+        // Firestore realtime subscribe — admin updates status, tenant sees it live
+        let _complaintsUnsub = null;
+        function _subscribeComplaintsFromFirestore() {
+            if (_complaintsUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            if (!_taBuilding || !_taRoom) return;
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                // Query own complaints only
+                const q = fs.query(
+                    fs.collection(db, 'complaints'),
+                    fs.where('building', '==', _taBuilding),
+                    fs.where('room', '==', String(_taRoom))
+                );
+                _complaintsUnsub = fs.onSnapshot(q, snap => {
+                    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    // Merge with localStorage (Firestore wins on collision)
+                    let local = [];
+                    try { local = JSON.parse(localStorage.getItem('tenant_app_complaints') || '[]'); } catch(e) {}
+                    const byId = new Map();
+                    local.forEach(c => byId.set(c.id, c));
+                    docs.forEach(c => byId.set(c.id, c));
+                    const merged = Array.from(byId.values()).sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+                    try { localStorage.setItem('tenant_app_complaints', JSON.stringify(merged)); } catch(e) {}
+                    // Re-render if complaint page is visible (or force-render regardless — cheap)
+                    filterComplaints(currentComplaintFilter || 'all', merged);
+                }, err => console.warn('complaints subscribe failed:', err.message));
+            } catch (e) { console.warn('complaints subscribe init failed:', e.message); }
+        }
+        window.addEventListener('authReady', _subscribeComplaintsFromFirestore);
+        if (window.firebaseReady && window._authUid) _subscribeComplaintsFromFirestore();
 
         function loadComplaints() {
             const all = JSON.parse(localStorage.getItem('tenant_app_complaints') || '[]');
