@@ -69,6 +69,14 @@ service cloud.firestore {
       allow write: if false; // CF-only via admin SDK
     }
 
+    // ===== HISTORICAL REVENUE (Excel-imported pre-launch annual summaries) =====
+    // Phase 2c: persist HISTORICAL_DATA across devices. Admin (email auth) writes
+    // via Excel import or migration button; tenants read for charts.
+    match /historicalRevenue/{yearDoc} {
+      allow read:  if isSignedIn();
+      allow write: if isAdminOrEmail();
+    }
+
     // ===== RATE LIMITS (CF only) =====
     match /rateLimits/{key} {
       allow read, write: if false;

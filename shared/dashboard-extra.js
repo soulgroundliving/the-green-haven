@@ -4166,7 +4166,7 @@ function displayBillingImportPreview(monthlyData, year) {
 }
 
 // Handle billing import data that comes from meter import flow (V1/V2 billing format)
-function approveBillingImportDataFromMeter(importData, matchResults) {
+async function approveBillingImportDataFromMeter(importData, matchResults) {
   console.log('💾 Processing billing data import to localStorage', { importData, matchResults });
 
   try {
@@ -4223,9 +4223,6 @@ function approveBillingImportDataFromMeter(importData, matchResults) {
     monthlyData[0].trash = monthlyData[0].breakdown.rooms.trash + monthlyData[0].breakdown.nest.trash + monthlyData[0].breakdown.amazon.trash;
     monthlyData[0].total = monthlyData[0].rent + monthlyData[0].electricity + monthlyData[0].water + monthlyData[0].trash;
 
-    // Get or create HISTORICAL_DATA
-    let historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
-
     // Create months array for this year
     const months = monthlyData.map(m => ({
       total: [m.rent, m.electricity, m.water, m.trash, m.total],
@@ -4234,16 +4231,21 @@ function approveBillingImportDataFromMeter(importData, matchResults) {
       amazon: [m.breakdown.amazon.rent, m.breakdown.amazon.elec, m.breakdown.amazon.water, m.breakdown.amazon.trash, m.breakdown.amazon.total]
     }));
 
-    // Add/update year data
-    historicalData[year] = {
+    const yearPayload = {
       label: `ปี ${2500 + parseInt(year)} (${year})`,
       months: months
     };
 
-    // Save to localStorage
-    localStorage.setItem('HISTORICAL_DATA', JSON.stringify(historicalData));
+    // Phase 2c: dual-write local + Firestore (persist across devices)
+    if (typeof HistoricalDataStore !== 'undefined') {
+      await HistoricalDataStore.setYear(year, yearPayload);
+    } else {
+      const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+      historicalData[year] = yearPayload;
+      localStorage.setItem('HISTORICAL_DATA', JSON.stringify(historicalData));
+    }
 
-    showImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) สำเร็จ!`, 'success');
+    showImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) → ☁️ Firestore สำเร็จ!`, 'success');
 
     // Clean up and refresh
     setTimeout(() => {
@@ -4259,7 +4261,7 @@ function approveBillingImportDataFromMeter(importData, matchResults) {
   }
 }
 
-function approveBillingImportData() {
+async function approveBillingImportData() {
   if (!window.pendingBillingData) {
     showBillingImportStatus('❌ ไม่มีข้อมูลที่รออนุมัติ', 'error');
     return;
@@ -4298,19 +4300,21 @@ function approveBillingImportData() {
       };
     });
 
-  // Get or create HISTORICAL_DATA
-  let historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
-
-  // Add/update year data
-  historicalData[year] = {
+  const yearPayload = {
     label: `ปี ${2500 + parseInt(year)} (${year})`,
     months: months
   };
 
-  // Save to localStorage
-  localStorage.setItem('HISTORICAL_DATA', JSON.stringify(historicalData));
+  // Phase 2c: dual-write local + Firestore historicalRevenue/{year}
+  if (typeof HistoricalDataStore !== 'undefined') {
+    await HistoricalDataStore.setYear(year, yearPayload);
+  } else {
+    const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+    historicalData[year] = yearPayload;
+    localStorage.setItem('HISTORICAL_DATA', JSON.stringify(historicalData));
+  }
 
-  showBillingImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) รวมข้อมูล Rooms/Nest สำเร็จ!`, 'success');
+  showBillingImportStatus(`✅ บันทึกข้อมูลบิลปี ${year} (${months.length} เดือน) → ☁️ Firestore สำเร็จ!`, 'success');
 
   // Reload dashboard charts with new data
   showBillingImportStatus(`✅ กำลังอัพเดทข้อมูล...`, 'info');
@@ -4392,9 +4396,146 @@ function showBillingImportStatus(message, type) {
   statusDiv.innerHTML = `<div style="padding:0.8rem;background:${bgColor};border:1px solid ${borderColor};border-radius:var(--radius-sm);color:var(--text);">${message}</div>`;
 }
 
+// ===== HistoricalDataStore (Phase 2c 2026-04-19) =====
+// Single Source of Truth for legacy/pre-launch annual bill summaries.
+//   Firestore canonical: historicalRevenue/{yearShort}  (e.g., 67/68/69)
+//   localStorage cache:  HISTORICAL_DATA  (read-through, fast)
+//   Excel imports dual-write to both. Migration helper pushes any local-only
+//   years up to Firestore so they persist across devices.
+window.HistoricalDataStore = window.HistoricalDataStore || (function(){
+  let cloudCache = null;            // {yearShort: {label, months}}
+  let cloudUnsub = null;
+  const listeners = new Set();
+
+  function _local() {
+    try { return JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}'); }
+    catch(e) { return {}; }
+  }
+  function _writeLocal(data) {
+    try { localStorage.setItem('HISTORICAL_DATA', JSON.stringify(data)); } catch(e) {}
+  }
+
+  /** Merge cloud + local; cloud wins per-year if both exist. */
+  function getAll() {
+    const local = _local();
+    if (!cloudCache) return local;
+    return { ...local, ...cloudCache };
+  }
+  function getYear(year) { return getAll()[String(year)] || null; }
+  function listYears() { return Object.keys(getAll()).sort(); }
+  function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+  function _notify() { listeners.forEach(fn => { try { fn(getAll()); } catch(e){} }); }
+
+  /** Write a single year (used by Excel import); dual-writes to local + cloud. */
+  async function setYear(year, payload) {
+    const local = _local();
+    local[String(year)] = payload;
+    _writeLocal(local);
+    if (!cloudCache) cloudCache = {};
+    cloudCache[String(year)] = payload;
+    _notify();
+    await _pushYearToCloud(year, payload);
+  }
+
+  async function _pushYearToCloud(year, payload) {
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+      console.warn('HistoricalDataStore: Firestore not ready, year saved locally only');
+      return false;
+    }
+    try {
+      const fs = window.firebase.firestoreFunctions;
+      const db = window.firebase.firestore();
+      await fs.setDoc(fs.doc(db, 'historicalRevenue', String(year)), {
+        ...payload,
+        year: Number(year),
+        savedAt: new Date().toISOString()
+      }, { merge: true });
+      console.log(`☁️ historicalRevenue/${year} pushed to Firestore`);
+      return true;
+    } catch (e) {
+      console.warn(`HistoricalDataStore push failed for year ${year}:`, e?.message);
+      return false;
+    }
+  }
+
+  /** One-shot migration: push every localStorage year to Firestore. */
+  async function migrateLocalToCloud() {
+    const local = _local();
+    const years = Object.keys(local);
+    if (years.length === 0) return { pushed: 0, failed: 0, skipped: 0 };
+    let pushed = 0, failed = 0;
+    for (const y of years) {
+      const ok = await _pushYearToCloud(y, local[y]);
+      if (ok) pushed++; else failed++;
+    }
+    console.log(`☁️ Migration done: ${pushed} pushed, ${failed} failed`);
+    return { pushed, failed, skipped: 0, years };
+  }
+
+  /** Subscribe to Firestore historicalRevenue collection (live). */
+  function subscribe() {
+    if (cloudUnsub) return;
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+      setTimeout(subscribe, 1500);
+      return;
+    }
+    try {
+      const fs = window.firebase.firestoreFunctions;
+      const db = window.firebase.firestore();
+      cloudUnsub = fs.onSnapshot(fs.collection(db, 'historicalRevenue'), snap => {
+        const next = {};
+        snap.forEach(doc => { next[doc.id] = doc.data(); });
+        cloudCache = next;
+        // Backfill localStorage so dashboard charts work offline next time
+        const local = _local();
+        Object.keys(next).forEach(y => { local[y] = next[y]; });
+        _writeLocal(local);
+        _notify();
+      }, err => console.warn('historicalRevenue subscribe:', err?.message));
+    } catch(e) { console.warn('subscribe error:', e); }
+  }
+
+  // Auto-subscribe
+  if (typeof window !== 'undefined') setTimeout(subscribe, 700);
+
+  return { getAll, getYear, listYears, setYear, migrateLocalToCloud, subscribe, onChange };
+})();
+
+// One-shot migrate button — appears above the historical year dropdown
+async function _renderHistoricalCloudMigrateButton(historicalData) {
+  const yearSelect = document.getElementById('historicalDataYearSelect');
+  if (!yearSelect) return;
+  const parent = yearSelect.parentElement;
+  if (!parent) return;
+  let btn = document.getElementById('historicalDataMigrateBtn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'historicalDataMigrateBtn';
+    btn.style.cssText = 'background:#1565c0;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:.78rem;font-weight:700;cursor:pointer;margin-left:8px;font-family:inherit;';
+    btn.onclick = async () => {
+      btn.disabled = true; btn.textContent = '☁️ กำลังอัพโหลด...';
+      try {
+        const r = await HistoricalDataStore.migrateLocalToCloud();
+        const msg = `☁️ Migrate เสร็จ: ${r.pushed} ปี → Firestore${r.failed?` (${r.failed} ล้มเหลว)`:''}`;
+        if (typeof showToast === 'function') showToast(msg, r.failed ? 'warning' : 'success');
+        else alert(msg);
+        btn.textContent = `☁️ ขึ้น cloud แล้ว (${r.pushed})`;
+        setTimeout(() => { btn.disabled = false; btn.textContent = '☁️ อัพข้อมูลเก่าขึ้น Firestore อีกครั้ง'; }, 3000);
+      } catch (e) {
+        if (typeof showToast === 'function') showToast('Migration ล้มเหลว: ' + e.message, 'error');
+        btn.disabled = false; btn.textContent = '☁️ อัพข้อมูลเก่าขึ้น Firestore';
+      }
+    };
+    btn.textContent = '☁️ อัพข้อมูลเก่าขึ้น Firestore';
+    parent.appendChild(btn);
+  }
+}
+
 // Initialize HISTORICAL_DATA dropdown and display
 function initHistoricalDataDisplay() {
-  const historicalData = JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
+  const historicalData = (typeof HistoricalDataStore !== 'undefined')
+    ? HistoricalDataStore.getAll()
+    : JSON.parse(localStorage.getItem('HISTORICAL_DATA') || '{}');
   const yearSelect = document.getElementById('historicalDataYearSelect');
   const displayDiv = document.getElementById('historicalDataDisplay');
 
@@ -4407,6 +4548,17 @@ function initHistoricalDataDisplay() {
   }
 
   yearSelect.disabled = false;
+
+  // Phase 2c: Cloud migration button (visible if any year only in localStorage)
+  _renderHistoricalCloudMigrateButton(historicalData);
+
+  // Auto-rerender on cloud updates
+  if (typeof HistoricalDataStore !== 'undefined' && !window._histStoreSubscribed) {
+    window._histStoreSubscribed = true;
+    HistoricalDataStore.onChange(() => {
+      try { initHistoricalDataDisplay(); } catch(e){}
+    });
+  }
 
   // Populate dropdown with available years (sorted descending)
   const years = Object.keys(historicalData).sort((a, b) => parseInt(b) - parseInt(a));
