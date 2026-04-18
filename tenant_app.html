@@ -28,7 +28,7 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
       import { getDatabase, ref, get, set, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
       import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-      import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+      import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
       import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
 
       async function initializeFirebase() {
@@ -60,7 +60,7 @@
           window.firebaseDB = database;
           window.firebase = {
             firestore: () => firestore,
-            firestoreFunctions: { collection, doc, setDoc, getDoc, getDocs, query, where, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp },
+            firestoreFunctions: { collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp },
             functions: { httpsCallable: (name) => httpsCallable(fns, name) }
           };
           window.firebaseReady = true;
@@ -5125,8 +5125,17 @@
                     _taRoom = emailMatch ? emailMatch[1] : raw.replace(/[^0-9A-Za-z]/g, '');
                 }
             } catch(e) {}
+            // URL param fallback (?room=15) — login flow uses this to redirect tenants
+            if (!_taRoom) {
+                try {
+                    const urlRoom = new URLSearchParams(window.location.search).get('room');
+                    if (urlRoom) _taRoom = urlRoom.replace(/[^0-9A-Za-zก-๙]/g, '');
+                } catch(e) {}
+            }
             if (!_taRoom) _taRoom = localStorage.getItem('tenant_app_room') || '';
             if (!_taRoom) return false;
+            // Cache in localStorage so reload without ?room= still works
+            try { localStorage.setItem('tenant_app_room', _taRoom); } catch(e) {}
             if (/^N/i.test(_taRoom) || (/^\d+$/.test(_taRoom) && parseInt(_taRoom) >= 101 && parseInt(_taRoom) <= 405)) {
                 _taBuilding = 'nest';
             } else {
