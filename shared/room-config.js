@@ -157,6 +157,56 @@ class RoomConfigManager {
     console.log('✅ RoomConfigManager: bulk synced rooms_config to RTDB');
   }
 
+  /**
+   * Phase 5 (2026-04-19): Subscribe to RTDB rooms_config so edits made on any
+   * admin device propagate to all others. Backfills localStorage cache live.
+   * Call once on dashboard load (idempotent). DEFAULT_ROOMS_CONFIG above remains
+   * a SEED only — used when both RTDB and localStorage are empty.
+   */
+  static subscribeFromFirebase() {
+    if (this._subscribed) return;
+    if (!window.firebaseDatabase || !window.firebaseRef || !window.firebaseOnValue) {
+      setTimeout(() => this.subscribeFromFirebase(), 1500);
+      return;
+    }
+    this._subscribed = true;
+    ['rooms', 'nest'].forEach(building => {
+      try {
+        const ref = window.firebaseRef(window.firebaseDatabase, `rooms_config/${building}`);
+        window.firebaseOnValue(ref, snap => {
+          const remote = snap.val();
+          if (!remote || Object.keys(remote).length === 0) return;
+          const rooms = Object.values(remote)
+            .filter(r => r && r.id)
+            .map(r => ({
+              id: String(r.id),
+              name: r.name || r.id,
+              rentPrice: Number(r.rentPrice) || 0,
+              electricRate: Number(r.electricRate) || 8,
+              waterRate: Number(r.waterRate) || 20,
+              trashRate: Number(r.trashRate) || (building === 'nest' ? 40 : 20),
+              deleted: !!r.deleted
+            }));
+          // Preserve any extra fields (floor/type/deposit) from local copy
+          const local = JSON.parse(localStorage.getItem(`rooms_config_${building}`) || '{}');
+          if (local?.rooms) {
+            const localById = new Map(local.rooms.map(r => [r.id, r]));
+            rooms.forEach(r => {
+              const lr = localById.get(r.id);
+              if (lr) Object.assign(r, { floor: lr.floor, type: lr.type, deposit: lr.deposit });
+            });
+          }
+          const config = {
+            name: building === 'nest' ? 'Nest Building' : 'ห้องแถว (Rooms Building)',
+            building, rooms
+          };
+          localStorage.setItem(`rooms_config_${building}`, JSON.stringify(config));
+          console.log(`☁️ RoomConfigManager synced ${building}: ${rooms.length} rooms`);
+        }, err => console.warn(`rooms_config/${building} listen:`, err?.message));
+      } catch(e) { console.warn(`subscribe rooms_config/${building}:`, e); }
+    });
+  }
+
   static getRoom(building, roomId) {
     const config = this.getRoomsConfig(building);
     return config.rooms.find(r => r.id === roomId);
@@ -266,4 +316,12 @@ class RoomConfigManager {
     console.warn(`⚠️ Room ${roomId} not found`);
     return false;
   }
+}
+
+// Static field initializer (cross-engine safe)
+RoomConfigManager._subscribed = false;
+
+// Phase 5: auto-subscribe RTDB rooms_config for live multi-device sync
+if (typeof window !== 'undefined') {
+  setTimeout(() => RoomConfigManager.subscribeFromFirebase(), 1000);
 }
