@@ -639,33 +639,6 @@
       </div>
     </div>
 
-    <!-- A4 Paper Preview Modal (WYSIWYG — what you see is what gets printed) -->
-    <div id="paperPreviewModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:10001; justify-content:center; align-items:flex-start; padding:20px; overflow-y:auto;">
-      <div style="background:#fff; border-radius:12px; width:100%; max-width:900px; display:flex; flex-direction:column; max-height:95vh;">
-        <div style="padding:14px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div id="paperPreviewTitle" style="font-weight:700; font-size:1.05rem;">📄 ตัวอย่างก่อนพิมพ์ (A4)</div>
-            <div style="font-size:.78rem; color:var(--text-muted); margin-top:2px;">ที่เห็นนี้ = ไฟล์ PDF ที่จะ download เป๊ะๆ</div>
-          </div>
-          <button onclick="closePaperPreview()" style="background:#eee; border:none; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:1rem;">✕</button>
-        </div>
-        <div style="flex:1; overflow:auto; background:#525659; padding:20px; display:flex; justify-content:center;">
-          <!-- A4 paper: 210mm × 297mm at 96dpi ≈ 794 × 1123px. Show at full width inside scrollable container. -->
-          <div id="paperPreviewSheet" style="width:794px; min-height:1123px; background:#fff; box-shadow:0 4px 16px rgba(0,0,0,.4); padding:50px 40px; font-family:'Sarabun',-apple-system,sans-serif; color:#222; transform-origin:top center; font-size:12px; line-height:1.45;">
-            <!-- populated by buildMonthlyReportPaperHTML -->
-          </div>
-        </div>
-        <div style="padding:14px 20px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:10px;">
-          <div style="font-size:.78rem; color:var(--text-muted);">📐 ขนาดกระดาษ A4 (210 × 297 mm)</div>
-          <div style="display:flex; gap:10px;">
-            <button onclick="closePaperPreview()" style="padding:9px 16px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:600;">ยกเลิก</button>
-            <button onclick="exportMonthlyReportExcel(); showSuccess && showSuccess('Excel downloading');" style="padding:9px 16px; background:#1a73e8; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">📊 Excel</button>
-            <button onclick="downloadPaperAsPDF()" style="padding:9px 16px; background:var(--green, #2d8653); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">📥 PDF</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Quick Links -->
     <div class="card">
       <div class="card-title">⚡ Quick Actions</div>
@@ -716,13 +689,16 @@
             <select id="monthly-year" onchange="updateMonthlyReport()"></select>
           </div>
         </div>
-        <div>
-          <button class="btn btn-primary" style="width:100%; padding:12px;" onclick="previewMonthlyReportPaper()">
-            <span>✨</span>สร้าง / Preview
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+          <button class="btn btn-primary" onclick="updateMonthlyReport()">
+            <span>✨</span>สร้าง / Refresh
           </button>
-          <p style="font-size:.78rem; color:var(--text-muted); margin:8px 0 0; text-align:center;">
-            กดเพื่อดู preview แบบ A4 — ดาวน์โหลด PDF / Excel ได้จาก preview
-          </p>
+          <button class="btn btn-secondary" onclick="downloadCurrentReportAsPDF()">
+            <span>📥</span>PDF
+          </button>
+          <button class="btn btn-secondary" onclick="exportMonthlyReportExcel()">
+            <span>📊</span>Excel
+          </button>
         </div>
       </div>
 
@@ -1345,10 +1321,9 @@
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
   }
-  // ===== WYSIWYG A4 PAPER PREVIEW + html2canvas → PDF =====
-  // Build an A4-sized HTML "page" (794×1123px ≈ 210×297mm at 96dpi) so user can
-  // see exactly what will print, then convert to PDF via html2canvas. This sidesteps
-  // jsPDF's font/layout limitations entirely — what's on screen IS what's in the PDF.
+  // ===== INLINE PREVIEW + html2canvas → PDF (no popup) =====
+  // The dashboard's #monthly-report-content already shows the styled report inline.
+  // PDF download captures THAT element directly — what user sees = what's in the PDF.
   let _paperPdfFilename = 'report.pdf';
 
   function _fmt(n) { return '฿' + Number(n||0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -1432,32 +1407,26 @@
     `;
   }
 
-  async function previewMonthlyReportPaper() {
-    const month = parseInt(document.getElementById('monthly-month').value) || (new Date().getMonth() + 1);
-    const yearBE = parseInt(document.getElementById('monthly-year').value) || (new Date().getFullYear() + 543);
-    const modal = document.getElementById('paperPreviewModal');
-    const sheet = document.getElementById('paperPreviewSheet');
-    if (!sheet || !modal) return;
-    // Move modal to body so it escapes any parent .page stacking / display context.
-    // Inactive .page has display:none which was zero-sizing the modal even though
-    // computed display was 'flex'.
-    if (modal.parentElement !== document.body) document.body.appendChild(modal);
-
-    // Force regenerate the dashboard report so #monthly-report-content has fresh data
-    if (typeof updateMonthlyReport === 'function') {
-      try { updateMonthlyReport(); } catch(e) {}
-      await new Promise(r => setTimeout(r, 400)); // wait for setTimeout(100) inside updateMonthlyReport + render
-    }
-
+  // Download whatever is currently rendered in #monthly-report-content as PDF.
+  // No modal — captures the inline view user already sees on the page (= image #2).
+  async function downloadCurrentReportAsPDF() {
     const sourceContent = document.getElementById('monthly-report-content');
     if (!sourceContent || sourceContent.children.length === 0) {
-      window.showError?.('ยังไม่มีข้อมูลรายงาน — กรุณาเลือกเดือน/ปี แล้วกด "สร้าง" ก่อน');
+      window.showError?.('ยังไม่มีข้อมูลรายงาน — กดปุ่ม "สร้าง" ก่อน');
       return;
     }
+    if (typeof html2canvas !== 'function') { window.showError?.('html2canvas ยังไม่โหลด'); return; }
+    if (!window.jspdf?.jsPDF) { window.showError?.('jsPDF ยังไม่โหลด'); return; }
 
-    // Build A4 paper: title + company info + cloned dashboard content
+    const month = parseInt(document.getElementById('monthly-month').value) || (new Date().getMonth() + 1);
+    const yearBE = parseInt(document.getElementById('monthly-year').value) || (new Date().getFullYear() + 543);
+
+    // Build a temporary off-screen "A4 sheet" wrapper so the captured PDF has
+    // proper page header + margins regardless of the dashboard's outer styling.
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed; left:-99999px; top:0; width:794px; padding:50px 40px; background:#fff; font-family:"Sarabun",-apple-system,sans-serif; color:#222; font-size:12px; line-height:1.45;';
     const today = new Date().toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' });
-    sheet.innerHTML = `
+    wrap.innerHTML = `
       <div style="text-align:center; margin-bottom:18px;">
         <h1 style="font-size:22px; margin:0 0 4px; color:#1a5c38;">รายงานภาษีรายเดือน</h1>
         <div style="font-size:14px; color:#666;">เดือน ${THAI_MONTHS_FULL[month]} ${yearBE}</div>
@@ -1466,44 +1435,25 @@
         <div><strong>บริษัท:</strong> The Green Haven</div>
         <div><strong>วันที่ออกรายงาน:</strong> ${today}</div>
       </div>
-      <div id="paperContentClone"></div>
+      <div id="_pdfWrapInner"></div>
       <div style="text-align:right; margin-top:36px; font-size:10px; color:#888; border-top:1px solid #ddd; padding-top:10px;">
         Generated by The Green Haven Tax Filing System · ${new Date().toLocaleString('th-TH')}
       </div>
     `;
-    // Clone the rendered report content (includes styled tables, KPI cards, etc — exact dashboard view)
     const clone = sourceContent.cloneNode(true);
-    // Remove background + padding from cloned wrapper so it fits A4 cleanly
     clone.style.background = 'transparent';
     clone.style.padding = '0';
-    document.getElementById('paperContentClone').appendChild(clone);
+    wrap.querySelector('#_pdfWrapInner').appendChild(clone);
+    document.body.appendChild(wrap);
 
-    document.getElementById('paperPreviewTitle').textContent = `📄 รายงานภาษีรายเดือน — ${THAI_MONTHS_FULL[month]} ${yearBE}`;
-    _paperPdfFilename = `tax_report_${yearBE}_${String(month).padStart(2,'0')}.pdf`;
-    document.getElementById('paperPreviewModal').style.display = 'flex';
-  }
-
-  function closePaperPreview() {
-    const m = document.getElementById('paperPreviewModal');
-    if (m) m.style.display = 'none';
-  }
-
-  async function downloadPaperAsPDF() {
-    const sheet = document.getElementById('paperPreviewSheet');
-    if (!sheet) return;
-    if (typeof html2canvas !== 'function') { window.showError?.('html2canvas ยังไม่โหลด'); return; }
-    if (!window.jspdf?.jsPDF) { window.showError?.('jsPDF ยังไม่โหลด'); return; }
     try {
-      // Capture sheet as canvas at 2x for crisp PDF
-      const canvas = await html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const canvas = await html2canvas(wrap, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/jpeg', 0.92);
-      // A4 portrait: 210 × 297 mm
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageWidth = 210, pageHeight = 297;
       const imgWidth = pageWidth;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      // If content taller than 1 page, paginate by drawing slices
       let heightLeft = imgHeight;
       let position = 0;
       pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
@@ -1514,12 +1464,13 @@
         pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      pdf.save(_paperPdfFilename);
+      pdf.save(`tax_report_${yearBE}_${String(month).padStart(2,'0')}.pdf`);
       window.showSuccess?.('Download PDF สำเร็จ');
-      closePaperPreview();
     } catch (e) {
-      console.error('downloadPaperAsPDF failed:', e);
+      console.error('downloadCurrentReportAsPDF failed:', e);
       window.showError?.('สร้าง PDF ไม่สำเร็จ: ' + e.message);
+    } finally {
+      wrap.remove();
     }
   }
 
@@ -1529,9 +1480,7 @@
     window.previewMonthlySummaryCSV = previewMonthlySummaryCSV;
     window.closeCsvPreview = closeCsvPreview;
     window.confirmCsvDownload = confirmCsvDownload;
-    window.previewMonthlyReportPaper = previewMonthlyReportPaper;
-    window.closePaperPreview = closePaperPreview;
-    window.downloadPaperAsPDF = downloadPaperAsPDF;
+    window.downloadCurrentReportAsPDF = downloadCurrentReportAsPDF;
   }
 
   function showTaxPage(pageName, btn) {
