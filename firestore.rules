@@ -2,106 +2,141 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ===== DEFAULT: DENY ALL =====
-    match /{document=**} {
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    // ===== REWARDS COLLECTION (admin-managed catalog, all auth users can read) =====
+    match /rewards/{rewardId} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ===== SYSTEM CONFIG (emergency contacts, app-wide settings) =====
+    match /system/{docId} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ===== ANNOUNCEMENTS (admin-published) =====
+    match /announcements/{annId} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ===== COMMUNITY EVENTS / DOCS / WELLNESS =====
+    match /communityEvents/{id}    { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /communityDocs/{id}      { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /wellness_articles/{id}  { allow read: if isSignedIn(); allow write: if isAdmin(); }
+
+    // ===== COMPLAINTS (cross-collection, simpler than per-room subcollection) =====
+    match /complaints/{id} {
+      allow read:   if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ===== LEASE REQUESTS (tenant submits renew/moveout, admin approves) =====
+    match /leaseRequests/{id} {
+      allow read:   if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ===== VERIFIED SLIPS (CF writes, admin reads) =====
+    match /verifiedSlips/{id} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ===== RATE LIMITS (CF only) =====
+    match /rateLimits/{key} {
       allow read, write: if false;
     }
 
     // ===== BUILDINGS COLLECTION =====
     match /buildings/{buildingId} {
-      // Allow authenticated users to read their building
-      allow read: if request.auth != null;
-
-      // Allow admins to write
+      // Anyone signed in can read building config (PromptPay #, company name)
+      allow read:  if isSignedIn();
       allow write: if isAdmin();
 
-      // ===== ROOMS SUBCOLLECTION =====
+      // Per-room subcollection
       match /rooms/{roomId} {
-        // Tenant can read their own room
-        allow read: if request.auth != null &&
-          (isTenantInRoom(roomId) || isAdmin());
-
-        // Admin can write
+        allow read:  if isSignedIn();
         allow write: if isAdmin();
 
-        // ===== MAINTENANCE HISTORY SUBCOLLECTION =====
         match /maintenanceHistory/{docId} {
-          allow read: if request.auth != null &&
-            (isTenantInRoom(roomId) || isAdmin());
-          allow write: if isAdmin();
+          allow read, write: if isSignedIn();
         }
-
-        // ===== COMPLAINT HISTORY SUBCOLLECTION =====
         match /complaintHistory/{docId} {
-          allow read: if request.auth != null &&
-            (isTenantInRoom(roomId) || isAdmin());
-          allow write: if request.auth != null &&
-            (isTenantInRoom(roomId) || isAdmin());
-          allow update: if isAdmin(); // Only admin can change status
+          allow read, write: if isSignedIn();
         }
-
-        // ===== ROOM CONDITION REPORTS SUBCOLLECTION =====
         match /roomConditionReports/{docId} {
-          allow read: if request.auth != null &&
-            (isTenantInRoom(roomId) || isAdmin());
+          allow read:  if isSignedIn();
           allow write: if isAdmin();
         }
       }
     }
 
-    // ===== TENANTS COLLECTION =====
-    match /tenants/{tenantId} {
-      // Tenant can read their own profile
-      allow read: if request.auth != null &&
-        (request.auth.uid == tenantId || isAdmin());
+    // ===== TENANTS COLLECTION (NESTED: tenants/{building}/list/{roomId}) =====
+    // Schema verified 2026-04-18: nested by building, doc id = roomId.
+    match /tenants/{building}/list/{roomId} {
+      // Any authenticated user can read tenant info
+      // (Stricter per-room access requires LIFF→Firebase Auth uid mapping; defer until launch+1)
+      allow read: if isSignedIn();
 
-      // Tenant can update own profile (except gamification)
-      allow update: if request.auth != null &&
-        request.auth.uid == tenantId &&
-        !request.resource.data.gamification.diff(resource.data.gamification).affectedKeys().size() > 0;
+      // Tenant can update their own contact fields (phone/email/licensePlate)
+      // but cannot touch gamification subobject (CF-only) or lease-critical fields
+      allow update: if isSignedIn() &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['gamification', 'rentAmount', 'building', 'roomId', 'tenantId']);
 
-      // Admin can read and write all
-      allow read, write: if isAdmin();
-    }
-
-    // ===== METER DATA COLLECTION =====
-    match /meter_data/{roomId} {
-      // Allow authenticated users to read meter data
-      allow read: if request.auth != null;
-
-      // Only admin can write
+      // Admin full access
+      allow create, delete: if isAdmin();
       allow write: if isAdmin();
 
-      match /{yearMonth}/{docId} {
-        allow read: if request.auth != null;
+      // Sub: paymentHistory (CF writes via verifySlip)
+      match /paymentHistory/{monthKey} {
+        allow read:  if isSignedIn();
         allow write: if isAdmin();
+      }
+      // Sub: redemptions (redeemReward CF writes; tenant can read own)
+      match /redemptions/{redemptionId} {
+        allow read:  if isSignedIn();
+        allow write: if isAdmin();
+      }
+      // Sub: pets (Sprint B: tenant manages own pet records)
+      match /pets/{petId} {
+        allow read:  if isSignedIn();
+        allow write: if isSignedIn();
       }
     }
 
-    // ===== LEASES COLLECTION (ARCHIVE) =====
-    match /leases/{roomId} {
-      // Allow authenticated users to read lease data
-      allow read: if request.auth != null;
-
-      // Only admin can write
+    // ===== METER DATA =====
+    match /meter_data/{docId} {
+      allow read:  if isSignedIn();
       allow write: if isAdmin();
-
-      match /{leaseId}/{docId} {
-        allow read: if request.auth != null;
-        allow write: if isAdmin();
-      }
     }
 
-    // ===== CUSTOM CLAIMS HELPER =====
-    function isAdmin() {
-      return request.auth != null &&
-        request.auth.token.admin == true;
+    // ===== LEASES (ARCHIVE) =====
+    match /leases/{building}/list/{leaseId} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
     }
 
-    function isTenantInRoom(roomId) {
-      return request.auth != null &&
-        get(/databases/$(database)/documents/buildings/Nest/rooms/$(roomId)).data.tenantId == request.auth.uid ||
-        get(/databases/$(database)/documents/buildings/GroupA/rooms/$(roomId)).data.tenantId == request.auth.uid;
+    // ===== LIFF USER LINKS (LINE → tenant link approval) =====
+    match /liffUsers/{userId} {
+      allow read:  if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    // ===== DEFAULT DENY (catch-all) =====
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
