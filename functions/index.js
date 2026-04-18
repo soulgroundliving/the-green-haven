@@ -25,6 +25,9 @@ exports.getLeaderboard = require('./complaintAndGamification').getLeaderboard;
 exports.seedRewards = require('./seedRewards').seedRewards;
 exports.redeemReward = require('./redeemReward').redeemReward;
 
+// App config seed (Sprint B + C — populate system/* + buildings/{X}.info defaults)
+exports.seedAppConfig = require('./seedAppConfig').seedAppConfig;
+
 // Import existing functions if available
 try {
   const verifySlip = require('./verifySlip');
