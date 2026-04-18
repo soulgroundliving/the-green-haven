@@ -15,6 +15,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 
   <style>
@@ -638,6 +639,32 @@
       </div>
     </div>
 
+    <!-- A4 Paper Preview Modal (WYSIWYG — what you see is what gets printed) -->
+    <div id="paperPreviewModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:10001; justify-content:center; align-items:flex-start; padding:20px; overflow-y:auto;">
+      <div style="background:#fff; border-radius:12px; width:100%; max-width:900px; display:flex; flex-direction:column; max-height:95vh;">
+        <div style="padding:14px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div id="paperPreviewTitle" style="font-weight:700; font-size:1.05rem;">📄 ตัวอย่างก่อนพิมพ์ (A4)</div>
+            <div style="font-size:.78rem; color:var(--text-muted); margin-top:2px;">ที่เห็นนี้ = ไฟล์ PDF ที่จะ download เป๊ะๆ</div>
+          </div>
+          <button onclick="closePaperPreview()" style="background:#eee; border:none; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:1rem;">✕</button>
+        </div>
+        <div style="flex:1; overflow:auto; background:#525659; padding:20px; display:flex; justify-content:center;">
+          <!-- A4 paper: 210mm × 297mm at 96dpi ≈ 794 × 1123px. Show at full width inside scrollable container. -->
+          <div id="paperPreviewSheet" style="width:794px; min-height:1123px; background:#fff; box-shadow:0 4px 16px rgba(0,0,0,.4); padding:60px 50px; font-family:'Sarabun',-apple-system,sans-serif; color:#222; transform-origin:top center;">
+            <!-- populated by buildMonthlyReportPaperHTML -->
+          </div>
+        </div>
+        <div style="padding:14px 20px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <div style="font-size:.78rem; color:var(--text-muted);">📐 ขนาดกระดาษ A4 (210 × 297 mm)</div>
+          <div style="display:flex; gap:10px;">
+            <button onclick="closePaperPreview()" style="padding:9px 18px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:600;">ยกเลิก</button>
+            <button onclick="downloadPaperAsPDF()" style="padding:9px 18px; background:var(--green, #2d8653); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">📥 Download PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Quick Links -->
     <div class="card">
       <div class="card-title">⚡ Quick Actions</div>
@@ -692,8 +719,8 @@
           <button class="btn btn-primary" onclick="generateMonthlyReport()">
             <span>✨</span>สร้าง
           </button>
-          <button class="btn btn-secondary" onclick="exportMonthlyReportPDF()">
-            <span>📥</span>PDF
+          <button class="btn btn-secondary" onclick="previewMonthlyReportPaper()">
+            <span>📄</span>Preview + PDF
           </button>
           <button class="btn btn-secondary" onclick="exportMonthlyReportExcel()">
             <span>📊</span>Excel
@@ -1320,12 +1347,153 @@
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
   }
+  // ===== WYSIWYG A4 PAPER PREVIEW + html2canvas → PDF =====
+  // Build an A4-sized HTML "page" (794×1123px ≈ 210×297mm at 96dpi) so user can
+  // see exactly what will print, then convert to PDF via html2canvas. This sidesteps
+  // jsPDF's font/layout limitations entirely — what's on screen IS what's in the PDF.
+  let _paperPdfFilename = 'report.pdf';
+
+  function _fmt(n) { return '฿' + Number(n||0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function _esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+  const THAI_MONTHS_FULL = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+  function buildMonthlyReportPaperHTML(month, yearBE) {
+    const monthName = THAI_MONTHS_FULL[month] || month;
+    const data = window._taxSummary?.months?.[month] || {};
+    const byRoom = window.getRevenueByRoom?.(month, yearBE - 543) || {};
+    const rooms = Object.keys(byRoom).sort((a, b) => {
+      // Numeric sort with Thai room IDs at end
+      const na = parseInt(a.split('/')[1]) || 9999, nb = parseInt(b.split('/')[1]) || 9999;
+      return na - nb;
+    });
+    const total = data.totalRevenue || 0;
+    const taxInfo = window.calculateMonthlyIncomeTax?.(month, yearBE - 543) || {};
+    const today = new Date().toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' });
+    return `
+      <div style="text-align:center; margin-bottom:24px;">
+        <h1 style="font-size:22px; margin:0 0 6px; color:#1a5c38;">รายงานภาษีรายเดือน</h1>
+        <div style="font-size:14px; color:#666;">เดือน ${monthName} ${yearBE}</div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:#444; margin-bottom:18px; border-bottom:1px solid #ddd; padding-bottom:12px;">
+        <div><strong>บริษัท:</strong> The Green Haven</div>
+        <div><strong>วันที่ออกรายงาน:</strong> ${today}</div>
+      </div>
+
+      <h2 style="font-size:15px; margin:0 0 8px; color:#1a5c38;">📊 รายได้แยกตามห้อง</h2>
+      <table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:18px;">
+        <thead>
+          <tr style="background:#1a5c38; color:#fff;">
+            <th style="padding:7px 10px; text-align:left; border:1px solid #1a5c38;">ห้อง</th>
+            <th style="padding:7px 10px; text-align:right; border:1px solid #1a5c38;">ค่าเช่า</th>
+            <th style="padding:7px 10px; text-align:right; border:1px solid #1a5c38;">ค่าไฟ</th>
+            <th style="padding:7px 10px; text-align:right; border:1px solid #1a5c38;">ค่าน้ำ</th>
+            <th style="padding:7px 10px; text-align:right; border:1px solid #1a5c38;">ค่าขยะ</th>
+            <th style="padding:7px 10px; text-align:right; border:1px solid #1a5c38;">รวม</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rooms.map((k, i) => {
+            const r = byRoom[k];
+            return `<tr style="background:${i%2?'#f9f9f9':'#fff'};">
+              <td style="padding:6px 10px; border:1px solid #ddd;">${_esc(r.room)}</td>
+              <td style="padding:6px 10px; border:1px solid #ddd; text-align:right;">${_fmt(r.rent)}</td>
+              <td style="padding:6px 10px; border:1px solid #ddd; text-align:right;">${_fmt(r.electricity)}</td>
+              <td style="padding:6px 10px; border:1px solid #ddd; text-align:right;">${_fmt(r.water)}</td>
+              <td style="padding:6px 10px; border:1px solid #ddd; text-align:right;">${_fmt(r.trash)}</td>
+              <td style="padding:6px 10px; border:1px solid #ddd; text-align:right; font-weight:700;">${_fmt(r.total)}</td>
+            </tr>`;
+          }).join('')}
+          <tr style="background:#1a5c38; color:#fff; font-weight:700;">
+            <td style="padding:8px 10px; border:1px solid #1a5c38;">รวมทั้งหมด (${rooms.length} ห้อง)</td>
+            <td style="padding:8px 10px; border:1px solid #1a5c38; text-align:right;">${_fmt(data.rentIncome)}</td>
+            <td style="padding:8px 10px; border:1px solid #1a5c38; text-align:right;">${_fmt(data.electricIncome)}</td>
+            <td style="padding:8px 10px; border:1px solid #1a5c38; text-align:right;">${_fmt(data.waterIncome)}</td>
+            <td style="padding:8px 10px; border:1px solid #1a5c38; text-align:right;">${_fmt(data.trashIncome)}</td>
+            <td style="padding:8px 10px; border:1px solid #1a5c38; text-align:right;">${_fmt(total)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 style="font-size:15px; margin:18px 0 8px; color:#1a5c38;">💰 สรุปประมาณภาษี (ภ.ง.ด.90)</h2>
+      <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:18px;">
+        <tbody>
+          <tr><td style="padding:8px 12px; border:1px solid #ddd; background:#f5f5f5; width:60%;">รายได้รวม (Gross Revenue)</td><td style="padding:8px 12px; border:1px solid #ddd; text-align:right; font-weight:600;">${_fmt(taxInfo.grossRevenue)}</td></tr>
+          <tr><td style="padding:8px 12px; border:1px solid #ddd; background:#f5f5f5;">หักค่าใช้จ่ายเหมา 30% (ม.40(5)(ก))</td><td style="padding:8px 12px; border:1px solid #ddd; text-align:right; color:#dc2626;">- ${_fmt(taxInfo.deductibleExpenses)}</td></tr>
+          <tr><td style="padding:8px 12px; border:1px solid #ddd; background:#f5f5f5; font-weight:700;">รายได้สุทธิ (Net Income)</td><td style="padding:8px 12px; border:1px solid #ddd; text-align:right; font-weight:700; color:#1a5c38;">${_fmt(taxInfo.taxableIncome)}</td></tr>
+          <tr><td style="padding:8px 12px; border:1px solid #ddd; background:#fff8e5; font-weight:700;">ภาษีประมาณการ (รายเดือน)</td><td style="padding:8px 12px; border:1px solid #ddd; text-align:right; font-weight:700; color:#dc2626;">${_fmt(taxInfo.incomeTax)}</td></tr>
+        </tbody>
+      </table>
+
+      <div style="padding:10px 14px; background:#fff8e5; border-left:4px solid #f59e0b; border-radius:4px; font-size:11px; color:#6c5005; margin-bottom:18px;">
+        <strong>หมายเหตุ:</strong> ภาษีจริงคำนวณจากรายได้รวมประจำปี + ค่าลดหย่อนส่วนบุคคล. ใช้รายงานนี้เป็นข้อมูลประกอบการยื่น ภ.ง.ด.90 ปลายปี
+      </div>
+
+      <div style="text-align:right; margin-top:36px; font-size:11px; color:#888; border-top:1px solid #ddd; padding-top:10px;">
+        Generated by The Green Haven Tax Filing System · ${new Date().toLocaleString('th-TH')}
+      </div>
+    `;
+  }
+
+  function previewMonthlyReportPaper() {
+    const month = parseInt(document.getElementById('monthly-month').value) || (new Date().getMonth() + 1);
+    const yearBE = parseInt(document.getElementById('monthly-year').value) || (new Date().getFullYear() + 543);
+    const sheet = document.getElementById('paperPreviewSheet');
+    if (!sheet) return;
+    sheet.innerHTML = buildMonthlyReportPaperHTML(month, yearBE);
+    document.getElementById('paperPreviewTitle').textContent = `📄 รายงานภาษีรายเดือน — ${THAI_MONTHS_FULL[month]} ${yearBE}`;
+    _paperPdfFilename = `tax_report_${yearBE}_${String(month).padStart(2,'0')}.pdf`;
+    document.getElementById('paperPreviewModal').style.display = 'flex';
+  }
+
+  function closePaperPreview() {
+    const m = document.getElementById('paperPreviewModal');
+    if (m) m.style.display = 'none';
+  }
+
+  async function downloadPaperAsPDF() {
+    const sheet = document.getElementById('paperPreviewSheet');
+    if (!sheet) return;
+    if (typeof html2canvas !== 'function') { window.showError?.('html2canvas ยังไม่โหลด'); return; }
+    if (!window.jspdf?.jsPDF) { window.showError?.('jsPDF ยังไม่โหลด'); return; }
+    try {
+      // Capture sheet as canvas at 2x for crisp PDF
+      const canvas = await html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      // A4 portrait: 210 × 297 mm
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = 210, pageHeight = 297;
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      // If content taller than 1 page, paginate by drawing slices
+      let heightLeft = imgHeight;
+      let position = 0;
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while (heightLeft > 0) {
+        position = -(imgHeight - heightLeft);
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      pdf.save(_paperPdfFilename);
+      window.showSuccess?.('Download PDF สำเร็จ');
+      closePaperPreview();
+    } catch (e) {
+      console.error('downloadPaperAsPDF failed:', e);
+      window.showError?.('สร้าง PDF ไม่สำเร็จ: ' + e.message);
+    }
+  }
+
   if (typeof window !== 'undefined') {
     window.subscribeTaxSummary = subscribeTaxSummary;
     window.previewInvoicesCSV = previewInvoicesCSV;
     window.previewMonthlySummaryCSV = previewMonthlySummaryCSV;
     window.closeCsvPreview = closeCsvPreview;
     window.confirmCsvDownload = confirmCsvDownload;
+    window.previewMonthlyReportPaper = previewMonthlyReportPaper;
+    window.closePaperPreview = closePaperPreview;
+    window.downloadPaperAsPDF = downloadPaperAsPDF;
   }
 
   function showTaxPage(pageName, btn) {
