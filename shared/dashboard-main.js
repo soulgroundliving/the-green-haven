@@ -8289,13 +8289,17 @@ function openTenantModal(building, roomId) {
   // Meter fields removed - no longer used
   document.getElementById('modalTenantNotes').value = tenant.notes || '';
 
-  // Tax invoice / company info — populate form
-  const rt = document.getElementById('modalTenantReceiptType');
-  if (rt) rt.value = tenant.receiptType || 'personal';
+  // Receipt/company info display (read-only — tenants self-serve via tenant_app)
   const co = tenant.companyInfo || {};
-  const cn = document.getElementById('modalTenantCompanyName'); if (cn) cn.value = co.name || '';
-  const ti = document.getElementById('modalTenantTaxId');       if (ti) ti.value = co.taxId || '';
-  const ca = document.getElementById('modalTenantCompanyAddress'); if (ca) ca.value = co.address || '';
+  const hasCo = !!(co.name || co.taxId || co.address);
+  const dispEl = document.getElementById('modalTenantCompanyDisplay');
+  if (dispEl) {
+    dispEl.style.display = hasCo ? 'block' : 'none';
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || '—'; };
+    set('modalTenantCompanyDisplayName',    co.name);
+    set('modalTenantCompanyDisplayTaxId',   co.taxId);
+    set('modalTenantCompanyDisplayAddress', co.address);
+  }
 
 
   // Load contract document - check both tenant and lease sources
@@ -8588,13 +8592,9 @@ function saveTenantInfo() {
     notes: document.getElementById('modalTenantNotes').value,
     contractDocument: document.getElementById('modalContractDocument').value || '',
     contractFileName: document.getElementById('modalContractFileName').value || '',
-    // Tax invoice / company info (ใช้ใน tenant_app.html receipt section)
-    receiptType: document.getElementById('modalTenantReceiptType')?.value || 'personal',
-    companyInfo: {
-      name:    (document.getElementById('modalTenantCompanyName')?.value || '').trim(),
-      taxId:   (document.getElementById('modalTenantTaxId')?.value || '').trim(),
-      address: (document.getElementById('modalTenantCompanyAddress')?.value || '').trim(),
-    }
+    // receiptType + companyInfo are tenant-self-serve via tenant_app — admin
+    // does NOT overwrite from this modal. They flow into the doc separately
+    // when the tenant edits in their app (TenantFirebaseSync.saveCompanyInfo).
   };
 
   // Generate or reuse tenant ID

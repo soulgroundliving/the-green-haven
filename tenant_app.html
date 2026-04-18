@@ -3039,17 +3039,22 @@
         <div class="card">
             <label style="font-size: var(--fs-sm); color: var(--text-muted); display:block; margin-bottom:6px;">เลือกประเภทใบเสร็จที่ต้องการรับ</label>
             <select id="receipt-type-select" onchange="onReceiptTypeChange()">
-                <option value="personal">ใบเสร็จรับเงินทั่วไป (นามบุคคล)</option>
-                <option value="company">ใบกำกับภาษีเต็มรูปแบบ (เบิกบริษัท)</option>
+                <option value="personal">ใบเสร็จรับเงิน — นามบุคคล</option>
+                <option value="company">ใบเสร็จเต็มรูป — นามบริษัท (สำหรับเบิกบริษัท)</option>
             </select>
 
             <div id="company-info-display" style="display:none; border-top: 1px dashed #eee; padding-top: 12px; margin-top: 4px;">
-                <div style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-bottom: 8px;">ข้อมูลบริษัท (admin ตั้งให้)</div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:var(--text-muted);">ชื่อบริษัท</span><strong id="comp-name-display" style="text-align:right;">—</strong></div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:var(--text-muted);">เลขผู้เสียภาษี</span><strong id="comp-tax-display">—</strong></div>
-                <div style="margin-bottom:10px;"><span style="color:var(--text-muted); display:block; margin-bottom:4px;">ที่อยู่</span><strong id="comp-addr-display" style="display:block;">—</strong></div>
-                <div id="comp-info-missing-warn" style="display:none; background:#fee; color:#b71c1c; padding:8px 10px; border-radius:8px; font-size:var(--fs-sm); margin-top:6px;">
-                    ⚠️ ยังไม่มีข้อมูลบริษัทในระบบ กรุณาแจ้งนิติ เพื่อเพิ่มข้อมูลใน People Management (จะออกใบกำกับภาษีไม่ได้จนกว่าจะครบ)
+                <div style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-bottom: 8px;">ข้อมูลบริษัทผู้เช่า (กรอกเองเพื่อใช้ในใบเสร็จ)</div>
+                <label style="font-size:var(--fs-sm); color:#666; display:block; margin-top:8px;">ชื่อบริษัท</label>
+                <input type="text" id="comp-name-input" placeholder="เช่น บริษัท ABC จำกัด" style="margin-bottom:8px;">
+                <label style="font-size:var(--fs-sm); color:#666; display:block;">เลขประจำตัวผู้เสียภาษี (13 หลัก)</label>
+                <input type="text" id="comp-tax-input" inputmode="numeric" maxlength="13" placeholder="0105555555555" style="margin-bottom:8px;">
+                <label style="font-size:var(--fs-sm); color:#666; display:block;">ที่อยู่สำนักงานใหญ่</label>
+                <textarea id="comp-addr-input" rows="2" placeholder="เลขที่ ... ถนน ... แขวง/ตำบล ... เขต/อำเภอ ... จังหวัด ... 10xxx" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-family:inherit; resize:vertical; margin-bottom:10px;"></textarea>
+                <button class="btn-main" id="comp-save-btn" onclick="saveCompanyInfo()" style="width:100%;"><i class="fas fa-save"></i> บันทึกข้อมูลบริษัท</button>
+                <div id="comp-save-msg" style="display:none; background:var(--soft-green); color:var(--primary-dark, #1a5c38); padding:8px 10px; border-radius:8px; font-size:var(--fs-sm); margin-top:8px; text-align:center;"></div>
+                <div id="comp-info-missing-warn" style="display:none; background:#fff3cd; color:#856404; padding:8px 10px; border-radius:8px; font-size:var(--fs-sm); margin-top:8px;">
+                    ℹ️ กรอกข้อมูลด้านบนแล้วกดบันทึก — ใบเสร็จเดือนถัดไปจะออกในนามบริษัทอัตโนมัติ
                 </div>
             </div>
 
@@ -3902,9 +3907,10 @@
                 const $ = id => document.getElementById(id);
                 const sel = $('receipt-type-select');
                 if (sel) sel.value = type;
-                if ($('comp-name-display')) $('comp-name-display').textContent = co.name || '—';
-                if ($('comp-tax-display'))  $('comp-tax-display').textContent  = co.taxId || '—';
-                if ($('comp-addr-display')) $('comp-addr-display').textContent = co.address || '—';
+                // Tenant-self-serve inputs (replaces old admin-set read-only displays)
+                if ($('comp-name-input')) $('comp-name-input').value = co.name || '';
+                if ($('comp-tax-input'))  $('comp-tax-input').value  = co.taxId || '';
+                if ($('comp-addr-input')) $('comp-addr-input').value = co.address || '';
                 // mirror to bill display blocks (ถ้ามีใน bill detail)
                 if ($('display-comp-name')) $('display-comp-name').textContent = co.name || '-';
                 if ($('display-comp-tax'))  $('display-comp-tax').textContent  = co.taxId || '-';
@@ -3912,6 +3918,61 @@
                 applyReceiptUI(type, co);
             } catch(_){}
         }
+
+        // Tenant self-saves company info → Firestore tenants/{b}/list/{r}.companyInfo
+        async function saveCompanyInfo() {
+            const $ = id => document.getElementById(id);
+            const co = {
+                name:    $('comp-name-input')?.value.trim() || '',
+                taxId:   $('comp-tax-input')?.value.trim() || '',
+                address: $('comp-addr-input')?.value.trim() || ''
+            };
+            if (!co.name && !co.taxId) {
+                _showCompMsg('⚠️ กรุณากรอกอย่างน้อยชื่อบริษัทหรือเลขผู้เสียภาษี', '#fee', '#b71c1c');
+                return;
+            }
+            if (co.taxId && !/^\d{13}$/.test(co.taxId)) {
+                _showCompMsg('⚠️ เลขผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก', '#fee', '#b71c1c');
+                return;
+            }
+            const btn = $('comp-save-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'กำลังบันทึก...'; }
+            try {
+                if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady && window._tenantAppRoom) {
+                    const userStr = sessionStorage.getItem('user');
+                    const user = userStr ? JSON.parse(userStr) : { roomNumber: window._tenantAppRoom };
+                    TenantFirebaseSync.initialize(user, window._tenantAppBuilding, window._tenantAppRoom);
+                    if (typeof TenantFirebaseSync.saveCompanyInfo === 'function') {
+                        await TenantFirebaseSync.saveCompanyInfo(co);
+                    } else {
+                        // Fallback: write directly via Firestore client
+                        const db = window.firebase?.firestore?.();
+                        const fs = window.firebase?.firestoreFunctions;
+                        if (db && fs) {
+                            const ref = fs.doc(db, `tenants/${window._tenantAppBuilding}/list/${window._tenantAppRoom}`);
+                            await fs.setDoc(ref, { companyInfo: co }, { merge: true });
+                        }
+                    }
+                    // Update in-memory tenant for downstream reads
+                    if (_taTenant) _taTenant.companyInfo = co;
+                }
+                _showCompMsg('✅ บันทึกข้อมูลบริษัทเรียบร้อย — ใบเสร็จเดือนถัดไปจะออกในนามนี้', 'var(--soft-green)', 'var(--primary-dark, #1a5c38)');
+            } catch(e) {
+                _showCompMsg('❌ บันทึกไม่สำเร็จ: ' + (e?.message || 'unknown'), '#fee', '#b71c1c');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> บันทึกข้อมูลบริษัท'; }
+            }
+        }
+        function _showCompMsg(text, bg, color) {
+            const el = document.getElementById('comp-save-msg');
+            if (!el) return;
+            el.textContent = text;
+            el.style.background = bg;
+            el.style.color = color;
+            el.style.display = 'block';
+            setTimeout(() => { if (el) el.style.display = 'none'; }, 4500);
+        }
+        if (typeof window !== 'undefined') window.saveCompanyInfo = saveCompanyInfo;
 
         function onReceiptTypeChange() {
             const sel = document.getElementById('receipt-type-select');
@@ -3935,10 +3996,10 @@
             const $ = id => document.getElementById(id);
             const isCo = type === 'company';
             if ($('company-info-display')) $('company-info-display').style.display = isCo ? 'block' : 'none';
-            // warn ถ้าเลือก company แต่ admin ยังไม่ใส่ข้อมูล
+            // Info banner if user hasn't filled company yet
             const missing = isCo && !(co && (co.name || co.taxId || co.address));
             if ($('comp-info-missing-warn')) $('comp-info-missing-warn').style.display = missing ? 'block' : 'none';
-            if ($('receipt-confirm-type')) $('receipt-confirm-type').textContent = isCo ? 'ใบกำกับภาษีเต็มรูปแบบ (นามบริษัท)' : 'นามบุคคล';
+            if ($('receipt-confirm-type')) $('receipt-confirm-type').textContent = isCo ? 'ใบเสร็จเต็มรูป (นามบริษัทผู้เช่า)' : 'นามบุคคล';
         }
 
         // ออก public API — ใช้ตอน render bill/receipt: คืน metadata สำหรับ PDF/print

@@ -2039,30 +2039,15 @@
         <div id="tenantLeaseHistoryContent" style="font-size:.85rem;"></div>
       </div>
 
-      <!-- Tax Invoice / Company Info Section -->
-      <div style="padding:1rem;background:#f0f9f3;border-radius:var(--radius-sm);border:1px solid #c8e6d1;margin-top:1rem;">
-        <label style="font-size:.85rem;font-weight:700;color:var(--green-dark);display:block;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;">🧾 ข้อมูลใบเสร็จ / ใบกำกับภาษี</label>
-        <div style="display:grid;grid-template-columns:1fr;gap:10px;">
-          <div>
-            <label style="font-size:.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">ประเภทใบเสร็จที่ออกให้ลูกบ้านรายนี้</label>
-            <select id="modalTenantReceiptType" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;background:#fff;">
-              <option value="personal">ใบเสร็จรับเงินทั่วไป (นามบุคคล)</option>
-              <option value="company">ใบกำกับภาษีเต็มรูปแบบ (เบิกบริษัท)</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">ชื่อบริษัท (Company Name)</label>
-            <input type="text" id="modalTenantCompanyName" placeholder="บริษัท ตัวอย่าง จำกัด" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;">
-          </div>
-          <div>
-            <label style="font-size:.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">เลขประจำตัวผู้เสียภาษี (Tax ID — 13 หลัก)</label>
-            <input type="text" id="modalTenantTaxId" inputmode="numeric" maxlength="13" placeholder="0105555555555" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;">
-          </div>
-          <div>
-            <label style="font-size:.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">ที่อยู่สำนักงานใหญ่ (Head Office Address)</label>
-            <textarea id="modalTenantCompanyAddress" rows="2" placeholder="เลขที่ 123 ถนน... แขวง/ตำบล... เขต/อำเภอ... จังหวัด... 10xxx" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;resize:vertical;"></textarea>
-          </div>
-        </div>
+      <!-- 🧾 Receipt/company info: removed — tenants now self-serve in tenant_app
+           Settings → ตั้งค่าการออกใบเสร็จ. Admin can view what tenant entered in
+           the read-only profile panel below. -->
+      <!-- Read-only display of tenant-entered company info (if any) -->
+      <div id="modalTenantCompanyDisplay" style="display:none;padding:.75rem 1rem;background:#f0f9f3;border-radius:var(--radius-sm);border:1px solid #c8e6d1;margin-top:1rem;font-size:.85rem;">
+        <div style="font-weight:700;color:var(--green-dark);margin-bottom:6px;">🧾 ข้อมูลใบเสร็จ (ลูกบ้านกรอกในแอป)</div>
+        <div>บริษัท: <strong id="modalTenantCompanyDisplayName">—</strong></div>
+        <div>Tax ID: <strong id="modalTenantCompanyDisplayTaxId">—</strong></div>
+        <div style="margin-top:4px;">ที่อยู่: <span id="modalTenantCompanyDisplayAddress">—</span></div>
       </div>
 
       <!-- Additional Notes Section -->
