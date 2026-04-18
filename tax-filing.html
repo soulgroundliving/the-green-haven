@@ -1047,6 +1047,19 @@
               return origSetFont(font, style);
             };
             doc.setFont('Sarabun', 'normal');
+            // Wrap autoTable so table head/body/foot all use Sarabun (default = Helvetica which lacks Thai glyphs)
+            if (typeof doc.autoTable === 'function') {
+              const origAT = doc.autoTable.bind(doc);
+              doc.autoTable = function(opts) {
+                opts = opts || {};
+                opts.styles      = Object.assign({ font: 'Sarabun', fontStyle: 'normal' }, opts.styles || {});
+                opts.headStyles  = Object.assign({ font: 'Sarabun', fontStyle: 'normal' }, opts.headStyles || {});
+                opts.bodyStyles  = Object.assign({ font: 'Sarabun', fontStyle: 'normal' }, opts.bodyStyles || {});
+                opts.footStyles  = Object.assign({ font: 'Sarabun', fontStyle: 'normal' }, opts.footStyles || {});
+                opts.styles.font = 'Sarabun';
+                return origAT(opts);
+              };
+            }
           } catch (e) { console.warn('jsPDF font setup failed:', e.message); }
         }
         return doc;
