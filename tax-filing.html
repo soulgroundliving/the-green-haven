@@ -11,6 +11,7 @@
   <script src="./shared/audit.js"></script>
   <script src="./accounting/tax-filing.js"></script>
   <script src="./accounting/tax-export.js"></script>
+  <script src="./shared/firebase-config-loader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -593,6 +594,23 @@
       </div>
     </div>
 
+    <!-- Export for FlowAccount / ภ.ง.ด.90 -->
+    <div class="card">
+      <div class="card-title">💾 Export สำหรับบัญชี / ยื่นภาษี</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom:10px;">
+        <button class="btn btn-primary" onclick="exportInvoicesCSV()">
+          <span>🧾</span>Export ใบเสร็จทั้งหมด (CSV)
+        </button>
+        <button class="btn btn-primary" onclick="exportMonthlySummaryCSV()">
+          <span>📊</span>Export สรุปรายเดือน + ภ.ง.ด.90 (CSV)
+        </button>
+      </div>
+      <p style="font-size:.85rem; color:var(--text-muted); margin:0;">
+        CSV Format ใช้ได้กับ FlowAccount, Excel, Google Sheets. รวม BOM สำหรับภาษาไทย<br>
+        เลือกปีตามวันปัจจุบัน (default = ปีพุทธศักราช ปัจจุบัน) — เปลี่ยนได้ผ่าน console: <code>exportInvoicesCSV(2568)</code>
+      </p>
+    </div>
+
     <!-- Quick Links -->
     <div class="card">
       <div class="card-title">⚡ Quick Actions</div>
@@ -783,6 +801,28 @@
 
 </div>
 
+<script type="module">
+  // Firebase (ESM) for taxSummary subscription + anonymous auth
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+  import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+  (async () => {
+    try {
+      const cfg = await window.loadFirebaseConfig();
+      const app = initializeApp(cfg);
+      const auth = getAuth(app);
+      const firestore = getFirestore(app);
+      window.firebaseApp = app;
+      window.firebaseAuth = auth;
+      window.firebase = { firestore: () => firestore, firestoreFunctions: { doc, onSnapshot } };
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) { try { await signInAnonymously(auth); } catch(e) { console.warn('anon sign-in failed:', e); } return; }
+        window._authUid = user.uid;
+        window.dispatchEvent(new Event('authReady'));
+      });
+    } catch (e) { console.error('Firebase init failed in tax-filing:', e); }
+  })();
+</script>
 <script>
   // Initialize on load
   window.addEventListener('load', initializeTaxFiling);
@@ -790,6 +830,180 @@
   function initializeTaxFiling() {
     console.log('🚀 Tax Filing System Initialized');
     loadTaxDashboard();
+    // Subscribe taxSummary once Firebase is ready (via anonymous auth)
+    if (window._authUid) subscribeTaxSummary();
+    else window.addEventListener('authReady', subscribeTaxSummary, { once: true });
+  }
+
+  // ===== LIVE TAX SUMMARY SUBSCRIBER (from Firestore taxSummary/{BE-year}) =====
+  let _taxSummaryUnsub = null;
+  function subscribeTaxSummary() {
+    if (_taxSummaryUnsub) _taxSummaryUnsub();
+    const currentBE = new Date().getFullYear() + 543;
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) { console.warn('Firebase not ready'); return; }
+    const { doc, onSnapshot } = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    try {
+      _taxSummaryUnsub = onSnapshot(doc(db, 'taxSummary', String(currentBE)), snap => {
+        if (!snap.exists()) { console.warn('taxSummary doc missing — run aggregateMonthlyRevenue CF first'); return; }
+        window._taxSummary = snap.data();
+        renderTaxDashboardLive(window._taxSummary);
+      }, err => console.warn('taxSummary subscribe error:', err.message));
+    } catch (e) { console.warn('subscribeTaxSummary init failed:', e.message); }
+  }
+
+  function renderTaxDashboardLive(data) {
+    if (!data) return;
+    const annual = data.annual || {};
+    const fmt = n => '฿' + Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setTxt('annual-revenue',  fmt(annual.totalRevenue));
+    // Expenses TBD — user hasn't entered PEA/MWA cost yet. For now show 30% standard deduction as "expense equivalent"
+    const stdDed = annual.taxEstimate?.standardDeduction || Math.round((annual.totalRevenue||0) * 0.30);
+    setTxt('annual-expenses', fmt(stdDed));
+    const net = annual.taxEstimate?.netRevenue || ((annual.totalRevenue||0) - stdDed);
+    setTxt('net-income', fmt(net));
+    // Thai personal progressive tax estimate on netRevenue — rough
+    setTxt('estimated-tax', fmt(estimateThaiPersonalTax(net)));
+    // Monthly trend chart
+    renderLiveRevenueChart(data);
+  }
+
+  // Progressive rate for บุคคลธรรมดา 2567+ (simplified — ignores allowances)
+  function estimateThaiPersonalTax(net) {
+    const brackets = [
+      [150000, 0.00], [300000, 0.05], [500000, 0.10], [750000, 0.15],
+      [1000000, 0.20], [2000000, 0.25], [5000000, 0.30], [Infinity, 0.35]
+    ];
+    let tax = 0, prev = 0;
+    for (const [cap, rate] of brackets) {
+      if (net <= cap) { tax += (net - prev) * rate; break; }
+      tax += (cap - prev) * rate;
+      prev = cap;
+    }
+    return Math.max(0, Math.round(tax));
+  }
+
+  function renderLiveRevenueChart(data) {
+    const ctx = document.getElementById('revenueChart');
+    if (!ctx || typeof Chart === 'undefined') return;
+    const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    const monthData = data.months || {};
+    const rent  = [], elec = [], water = [], trash = [];
+    for (let m = 1; m <= 12; m++) {
+      const d = monthData[m] || {};
+      rent.push(d.rentIncome || 0);
+      elec.push(d.electricIncome || 0);
+      water.push(d.waterIncome || 0);
+      trash.push(d.trashIncome || 0);
+    }
+    if (window._revenueChart) window._revenueChart.destroy();
+    window._revenueChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: THAI_MONTHS,
+        datasets: [
+          { label: 'ค่าเช่า',  data: rent,  backgroundColor: '#2d8653' },
+          { label: 'ค่าไฟ',   data: elec,  backgroundColor: '#f59e0b' },
+          { label: 'ค่าน้ำ',   data: water, backgroundColor: '#3b82f6' },
+          { label: 'ค่าขยะ',  data: trash, backgroundColor: '#6b7280' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+
+  // ===== CSV EXPORT (FlowAccount-friendly) =====
+  // Exports invoices from RTDB bills/ for a given BE year.
+  // Format: วันที่, เลขที่เอกสาร, ชื่อลูกค้า, สินค้า/บริการ, จำนวน, ราคาต่อหน่วย, มูลค่า
+  async function exportInvoicesCSV(yearBE) {
+    yearBE = yearBE || (new Date().getFullYear() + 543);
+    try {
+      // Fetch via RTDB REST (no auth needed since rules allow signedIn read)
+      const dbURL = `https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app/bills.json?auth=${await window.firebaseAuth.currentUser.getIdToken()}`;
+      const resp = await fetch(dbURL);
+      const allBills = await resp.json() || {};
+      const rows = [];
+      // header
+      rows.push(['วันที่','เลขที่เอกสาร','ประเภท','ชื่อลูกบ้าน','ห้อง','ตึก','สินค้า/บริการ','จำนวน','ราคาต่อหน่วย','มูลค่า'].join(','));
+      for (const building of Object.keys(allBills)) {
+        const roomMap = allBills[building] || {};
+        for (const room of Object.keys(roomMap)) {
+          const bills = roomMap[room] || {};
+          for (const billId of Object.keys(bills)) {
+            const b = bills[billId] || {};
+            const yr = Number(b.year) < 100 ? 2500 + Number(b.year) : Number(b.year);
+            if (yr !== yearBE) continue;
+            const total = Number(b.totalCharge||b.totalAmount) || 0;
+            if (total <= 0 && !b.charges) continue;
+            const date = b.billDate || b.paidAt?.slice(0,10) || `${yr-543}-${String(b.month).padStart(2,'0')}-05`;
+            const docType = b.status === 'paid' ? 'ใบเสร็จรับเงิน' : 'ใบวางบิล';
+            const tenantName = b.tenantName || '';
+            const c = b.charges || {};
+            // One line per charge category (FlowAccount imports separate items)
+            if (c.rent)            rows.push([date, billId, docType, tenantName, room, building, 'ค่าเช่าห้อง '+room, 1, c.rent, c.rent].map(csvCell).join(','));
+            if (c.electric?.cost)  rows.push([date, billId, docType, tenantName, room, building, `ค่าไฟ ${c.electric.units||0} หน่วย`, c.electric.units||1, c.electric.rate||8, c.electric.cost].map(csvCell).join(','));
+            if (c.water?.cost)     rows.push([date, billId, docType, tenantName, room, building, `ค่าน้ำ ${c.water.units||0} หน่วย`, c.water.units||1, c.water.rate||20, c.water.cost].map(csvCell).join(','));
+            if (c.trash)           rows.push([date, billId, docType, tenantName, room, building, 'ค่าขยะ', 1, c.trash, c.trash].map(csvCell).join(','));
+          }
+        }
+      }
+      downloadCSV(`invoices_BE${yearBE}.csv`, '\uFEFF' + rows.join('\n')); // BOM for Excel Thai
+      alert(`✅ Export สำเร็จ: ${rows.length - 1} line items`);
+    } catch (e) {
+      console.error('exportInvoicesCSV failed:', e);
+      alert('Export ล้มเหลว: ' + e.message);
+    }
+  }
+
+  // Monthly summary CSV (for ภ.ง.ด.90 filing prep)
+  function exportMonthlySummaryCSV(yearBE) {
+    yearBE = yearBE || (new Date().getFullYear() + 543);
+    const data = window._taxSummary;
+    if (!data) { alert('ยังไม่มีข้อมูล taxSummary — รัน aggregate CF ก่อน'); return; }
+    const rows = [['เดือน','รายได้ค่าเช่า','รายได้ค่าไฟ','รายได้ค่าน้ำ','รายได้ค่าขยะ','รายได้รวม','ชำระแล้ว','ค้างชำระ','จำนวนบิล'].join(',')];
+    const THAI_MONTHS = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    for (let m = 1; m <= 12; m++) {
+      const d = (data.months||{})[m] || {};
+      rows.push([
+        THAI_MONTHS[m], d.rentIncome||0, d.electricIncome||0, d.waterIncome||0, d.trashIncome||0,
+        d.totalRevenue||0, d.paidRevenue||0, d.pendingRevenue||0, (d.paidCount||0)+(d.pendingCount||0)
+      ].map(csvCell).join(','));
+    }
+    const a = data.annual || {};
+    rows.push([]);
+    rows.push(['รวมปี', a.rentIncome||0, a.electricIncome||0, a.waterIncome||0, a.trashIncome||0, a.totalRevenue||0, a.paidRevenue||0, a.pendingRevenue||0, (a.paidCount||0)+(a.pendingCount||0)].map(csvCell).join(','));
+    rows.push([]);
+    rows.push(['ภาษีประมาณการ ภ.ง.ด.90 (ม.40(5)(ก))', '', '', '', '', '', '', '', ''].map(csvCell).join(','));
+    rows.push(['รายได้รวม', a.totalRevenue||0, '', '', '', '', '', '', ''].map(csvCell).join(','));
+    rows.push(['หักค่าใช้จ่ายเหมา 30%', a.taxEstimate?.standardDeduction||0, '', '', '', '', '', '', ''].map(csvCell).join(','));
+    rows.push(['รายได้สุทธิก่อนลดหย่อน', a.taxEstimate?.netRevenue||0, '', '', '', '', '', '', ''].map(csvCell).join(','));
+    downloadCSV(`revenue_summary_BE${yearBE}.csv`, '\uFEFF' + rows.join('\n'));
+    alert('✅ Export monthly summary สำเร็จ');
+  }
+
+  function csvCell(v) {
+    if (v == null) return '';
+    const s = String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g,'""') + '"';
+    return s;
+  }
+  function downloadCSV(filename, content) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+  if (typeof window !== 'undefined') {
+    window.subscribeTaxSummary = subscribeTaxSummary;
+    window.exportInvoicesCSV = exportInvoicesCSV;
+    window.exportMonthlySummaryCSV = exportMonthlySummaryCSV;
   }
 
   function showTaxPage(pageName, btn) {
