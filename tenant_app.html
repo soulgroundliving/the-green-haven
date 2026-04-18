@@ -10,6 +10,10 @@
     <link rel="stylesheet" href="shared/brand.css">
     <!-- QR Code library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- html2canvas for receipt download (ported from tenant.html) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF (optional PDF export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- LINE LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <!-- Shared logic scripts -->
@@ -1624,20 +1628,43 @@
             <h1>การดูแลห้องพัก</h1>
             <p>เราพร้อมดูแลคุณในทุกรายละเอียดครับ ✨</p>
         </div>
+        <!-- ported from tenant.html: displayBuildingInternetStatus -->
+        <div id="internetStatusSection" class="card" style="display:none;">
+            <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                <strong style="flex:1;">🌐 สถานะอินเทอร์เน็ตอาคาร</strong>
+                <span id="internetStatusIcon" style="font-size:var(--fs-md);">🟢</span>
+                <span id="internetStatusText" style="font-size:var(--fs-sm); font-weight:600;">เชื่อมต่อแล้ว</span>
+                <i class="fas fa-chevron-down" style="color:#aaa;"></i>
+            </div>
+            <div class="accordion-content" style="display:none;">
+                <div id="internetSpeedSection" style="display:none; margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
+                        <small style="color:#666;">⬇️ Download</small>
+                        <div id="internetDownloadSpeed" style="font-weight:700;">-</div>
+                    </div>
+                    <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
+                        <small style="color:#666;">⬆️ Upload</small>
+                        <div id="internetUploadSpeed" style="font-weight:700;">-</div>
+                    </div>
+                </div>
+                <div id="internetProviderSection" style="display:none; margin-top:10px; font-size:var(--fs-sm);">
+                    <div>ผู้ให้บริการ: <strong id="internetProvider">-</strong></div>
+                    <div>ติดต่อ: <span id="internetContact">-</span></div>
+                </div>
+                <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="internetLastCheck">-</span></small>
+            </div>
+        </div>
+
+        <!-- ported: emergency contacts shortcut + service providers list -->
         <div class="card">
-            <strong>🌐 ระบบเน็ต & สายด่วน</strong>
-            <div
-                style="display:flex; align-items:center; gap:10px; margin-top:10px; padding:10px; border-radius:12px; background:var(--soft-green);">
-                <div style="width:8px; height:8px; background:#22c55e; border-radius:50%;"></div>
-                <small>ความเร็วเน็ตตึก: <b>500/500 Mbps</b> (ปกติ)</small>
-                <i class="fas fa-wifi" style="color: var(--primary-green); margin-left:auto;"></i>
-            </div>
+            <strong>📞 สายด่วน & ผู้ให้บริการ</strong>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-                <button
-                    style="padding:12px; border-radius:12px; border:none; background:#FFF1F1; color:#DC2626; font-weight:bold;">สายด่วนนิติ</button>
-                <button
-                    style="padding:12px; border-radius:12px; border:none; background:#EBF5FF; color:#2563EB; font-weight:bold;">ติดต่อค่ายเน็ต</button>
+                <button onclick="scrollToEmergencyContacts()"
+                    style="padding:12px; border-radius:12px; border:none; background:#FFF1F1; color:#DC2626; font-weight:bold; cursor:pointer;">สายด่วนฉุกเฉิน</button>
+                <button onclick="makeCall(localStorage.getItem('building_internet_contact')||'1-2700-1700')"
+                    style="padding:12px; border-radius:12px; border:none; background:#EBF5FF; color:#2563EB; font-weight:bold; cursor:pointer;">ติดต่อค่ายเน็ต</button>
             </div>
+            <div id="serviceProvidersList" style="display:grid; gap:10px; margin-top:12px;"></div>
         </div>
         <div class="section-title" style="margin-top: 10px;"><span>พื้นที่ส่วนกลาง (Facilities)</span></div>
         <div class="card"
@@ -1907,6 +1934,32 @@
         <!-- Hidden legacy containers for backward-compat with existing render funcs -->
         <div id="announcements-list" style="display:none;"></div>
         <div id="events-list" style="display:none;"></div>
+
+        <!-- ported from tenant.html: lease renewal alert -->
+        <div id="leaseRenewalAlert" class="card" style="display:none; background:#fff8e1; border-left:5px solid #ffc107; margin: 0 15px 12px;">
+            <strong id="leaseAlertTitle">⚠️ สัญญาเช่าใกล้หมดอายุ</strong>
+            <p id="leaseAlertMessage" style="margin:6px 0; font-size:var(--fs-sm);"></p>
+            <small>วันสิ้นสุด: <strong id="leaseAlertDate">—</strong></small>
+        </div>
+
+        <!-- ported from tenant.html: emergency contacts + community docs -->
+        <div class="section-title"><span>เบอร์ติดต่อฉุกเฉิน 🚨</span></div>
+        <div id="emergencyContactsSection" class="card" style="margin: 0 15px 12px;">
+            <div style="display:grid; gap:8px;">
+                <button onclick="makeCall('191')" style="display:flex; align-items:center; gap:10px; padding:10px; background:#FFF1F1; color:#DC2626; border:none; border-radius:10px; font-weight:700; cursor:pointer; text-align:left;">
+                    <span style="font-size:1.4rem;">🚓</span> <span style="flex:1;">ตำรวจ</span> <strong>191</strong>
+                </button>
+                <button onclick="makeCall('199')" style="display:flex; align-items:center; gap:10px; padding:10px; background:#FFF1F1; color:#DC2626; border:none; border-radius:10px; font-weight:700; cursor:pointer; text-align:left;">
+                    <span style="font-size:1.4rem;">🚒</span> <span style="flex:1;">ดับเพลิง</span> <strong>199</strong>
+                </button>
+                <button onclick="makeCall('1669')" style="display:flex; align-items:center; gap:10px; padding:10px; background:#FFF1F1; color:#DC2626; border:none; border-radius:10px; font-weight:700; cursor:pointer; text-align:left;">
+                    <span style="font-size:1.4rem;">🚑</span> <span style="flex:1;">การแพทย์ฉุกเฉิน</span> <strong>1669</strong>
+                </button>
+            </div>
+        </div>
+
+        <div class="section-title"><span>เอกสารชุมชน 📄</span></div>
+        <div id="documentsList" style="padding: 0 15px 12px; display:grid; gap:10px;"></div>
         <div class="section-title">
             <span>ตลาดนัดเพื่อนบ้าน 🛒</span>
             <small style="color:var(--primary-green); cursor: pointer; font-weight: bold;"
@@ -2091,10 +2144,13 @@
                     </div>
                 </div>
             </div>
-            <div class="action-buttons">
-                <button class="btn-receipt btn-outline" onclick="window.print()"><i class="fas fa-print"></i> พิมพ์</button>
+            <div class="action-buttons" style="flex-wrap:wrap; gap:8px;">
+                <button class="btn-receipt btn-outline" onclick="printReceipt()"><i class="fas fa-print"></i> พิมพ์</button>
+                <button class="btn-receipt btn-outline" onclick="downloadReceipt()"><i class="fas fa-download"></i> ดาวน์โหลด</button>
                 <button class="btn-receipt btn-green" onclick="goBackFromPayment()">← กลับไปบิล</button>
             </div>
+            <!-- ported: hidden container so downloadReceipt() finds receiptContent fallback -->
+            <div id="receiptContent" style="display:none;"></div>
         </div>
     </div>
 
@@ -3053,6 +3109,15 @@
             <div
                 style="background: #e8f5e9; color: var(--primary-green); padding: 10px; border-radius: 12px; font-size: var(--fs-sm); margin-top: 15px;">
                 แจ้งความประสงค์ต่อสัญญา หรือแจ้งย้ายออกล่วงหน้าอย่างน้อย 30 วัน
+            </div>
+            <!-- ported from tenant.html: viewLeaseAgreement / downloadLeaseAgreement -->
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button class="btn-main" style="flex:1; background:var(--soft-green); color:var(--primary-green);" onclick="viewLeaseAgreement()">
+                    <i class="fas fa-eye"></i> ดูเอกสารสัญญา
+                </button>
+                <button class="btn-main" style="flex:1;" onclick="downloadLeaseAgreement()">
+                    <i class="fas fa-download"></i> ดาวน์โหลด
+                </button>
             </div>
         </div>
 
@@ -6134,10 +6199,653 @@
             renderTicketsList();
             // Initialize tenant data integration
             initTenantApp();
+            // ported: render service providers + internet status + docs on services/community pages
+            try { displayServiceProviders(); } catch(e){}
+            try { displayBuildingInternetStatus(); } catch(e){}
+            try { displayDocuments(); } catch(e){}
+            try { displayLeaseRenewalAlert(); } catch(e){}
+            // photo modal click-outside-to-close
+            const _pm = document.getElementById('photoModal');
+            if (_pm) _pm.addEventListener('click', e => { if (e.target === _pm) closePhotoModal(); });
         });
 
+        // =========================================================
+        // ===== PORTED FROM tenant.html (legacy) — 2026-04-18 =====
+        // Adapted to tenant_app.html helpers: _esc, toast, _setStatus
+        // State refs: _taRoom / _taBuilding / _taLease / _taTenant / _taCurrentBill
+        // =========================================================
+
+        // Lightweight legacy aliases so ported code can stay close to original
+        function _legacyRoom()     { return _taRoom || ''; }
+        function _legacyBuilding() { return _taBuilding || 'rooms'; }
+        function _legacyTenant()   { return _taTenant || _taLease || {}; }
+        function _legacyLease()    { return _taLease || {}; }
+        function getOwnerName() {
+            try { return localStorage.getItem('owner_name') || 'The Green Haven Co., Ltd.'; } catch(e){ return 'The Green Haven Co., Ltd.'; }
+        }
+        function getBuildingDisplayName() {
+            return _legacyBuilding() === 'nest' ? 'Nest Building' : 'Rent Rooms';
+        }
+
+        // ---- TOGGLE ACCORDION ----
+        function toggleAccordion(headerElement) {
+            const content = headerElement.nextElementSibling;
+            if (!content || !content.classList.contains('accordion-content')) {
+                console.warn('toggleAccordion: missing .accordion-content');
+                return;
+            }
+            const isOpen = content.style.display !== 'none';
+            content.style.display = isOpen ? 'none' : 'block';
+            content.classList.toggle('active');
+            headerElement.classList.toggle('active');
+        }
+
+        // ---- BUILDING INTERNET STATUS ----
+        function displayBuildingInternetStatus() {
+            const section = document.getElementById('internetStatusSection');
+            if (!section) return;
+            let internetStatus = {
+                status: 'online', provider: 'True Internet',
+                contact: '1-2700-1700',
+                downloadSpeed: '500 Mbps', uploadSpeed: '500 Mbps',
+                lastCheck: new Date().toLocaleString('th-TH')
+            };
+            try {
+                const stored = JSON.parse(localStorage.getItem('building_internet_status') || '{}');
+                if (stored && Object.keys(stored).length) internetStatus = { ...internetStatus, ...stored };
+            } catch(e) {}
+            section.style.display = 'block';
+            const icon = document.getElementById('internetStatusIcon');
+            const txt  = document.getElementById('internetStatusText');
+            if (internetStatus.status === 'online') {
+                if (icon) icon.textContent = '🟢';
+                if (txt)  { txt.textContent = 'เชื่อมต่อแล้ว'; txt.style.color = '#16A34A'; }
+            } else if (internetStatus.status === 'offline') {
+                if (icon) icon.textContent = '🔴';
+                if (txt)  { txt.textContent = 'ไม่เชื่อมต่อ'; txt.style.color = '#DC2626'; }
+            } else {
+                if (icon) icon.textContent = '🟡';
+                if (txt)  { txt.textContent = 'กำลังบำรุงรักษา'; txt.style.color = '#D97706'; }
+            }
+            const speedSec = document.getElementById('internetSpeedSection');
+            if (speedSec) speedSec.style.display = 'grid';
+            const dl = document.getElementById('internetDownloadSpeed');
+            const ul = document.getElementById('internetUploadSpeed');
+            if (dl) dl.textContent = internetStatus.downloadSpeed || '-';
+            if (ul) ul.textContent = internetStatus.uploadSpeed || '-';
+            const provSec = document.getElementById('internetProviderSection');
+            const prov = document.getElementById('internetProvider');
+            const cont = document.getElementById('internetContact');
+            if (prov) prov.textContent = internetStatus.provider || '-';
+            if (cont) cont.textContent = internetStatus.contact || '-';
+            if (provSec && internetStatus.provider) provSec.style.display = 'block';
+            const last = document.getElementById('internetLastCheck');
+            if (last) last.textContent = internetStatus.lastCheck || new Date().toLocaleString('th-TH');
+        }
+
+        // ---- LEASE RENEWAL ALERT ----
+        function displayLeaseRenewalAlert() {
+            const banner = document.getElementById('leaseRenewalAlert');
+            const lease = _legacyLease();
+            if (!banner || !lease || !(lease.endDate || lease.moveOutDate)) return;
+            try {
+                const endDate = new Date(lease.endDate || lease.moveOutDate);
+                const today = new Date();
+                const daysRemaining = Math.ceil((endDate - today) / 86400000);
+                const titleEl = document.getElementById('leaseAlertTitle');
+                const msgEl   = document.getElementById('leaseAlertMessage');
+                const dateEl  = document.getElementById('leaseAlertDate');
+                if (daysRemaining <= 0) {
+                    banner.style.display = 'block';
+                    banner.style.background = '#f8d7da';
+                    banner.style.borderLeftColor = '#dc3545';
+                    if (titleEl) titleEl.textContent = '❌ สัญญาเช่าหมดอายุแล้ว';
+                    if (msgEl)   msgEl.textContent = 'โปรดติดต่อ Admin ทันทีเพื่อจัดการสัญญา';
+                    if (dateEl)  dateEl.textContent = endDate.toLocaleDateString('th-TH');
+                } else if (daysRemaining <= 60) {
+                    banner.style.display = 'block';
+                    if (daysRemaining <= 7 && titleEl) titleEl.textContent = '🚨 สัญญาเช่าใกล้หมดอายุ!';
+                    else if (daysRemaining <= 30 && titleEl) titleEl.textContent = '⚠️ สัญญาเช่าใกล้หมดอายุ';
+                    else if (titleEl) titleEl.textContent = '📢 แจ้งเตือนการต่ออายุสัญญา';
+                    if (msgEl) msgEl.textContent = `สัญญาของคุณจะหมดอายุในอีก ${daysRemaining} วัน`;
+                    if (dateEl) dateEl.textContent = endDate.toLocaleDateString('th-TH', {year:'numeric',month:'long',day:'numeric'});
+                } else {
+                    banner.style.display = 'none';
+                }
+            } catch(e) { console.warn('displayLeaseRenewalAlert:', e); }
+        }
+
+        // ---- EMERGENCY CALL ----
+        function makeCall(phoneNumber) {
+            if (!phoneNumber) { toast('ไม่มีหมายเลขโทรศัพท์', 'error'); return; }
+            const clean = String(phoneNumber).replace(/[^0-9+]/g, '');
+            window.location.href = `tel:${clean}`;
+        }
+        function scrollToEmergencyContacts() {
+            showPage('community');
+            setTimeout(() => {
+                const sec = document.getElementById('emergencyContactsSection');
+                if (sec) sec.scrollIntoView({ behavior:'smooth', block:'start' });
+            }, 300);
+        }
+
+        // ---- SERVICE PROVIDERS ----
+        function displayServiceProviders() {
+            const container = document.getElementById('serviceProvidersList');
+            if (!container) return;
+            let providers = [];
+            try {
+                const stored = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
+                if (stored && stored.length) providers = stored;
+            } catch(e) {}
+            if (!providers.length) {
+                providers = [
+                    { id:'sp001', type:'internet',    name:'True Internet',         icon:'📱', phone:'1-2700-1700', email:'support@true.co.th', website:'true.co.th' },
+                    { id:'sp004', type:'maintenance', name:'Building Maintenance',  icon:'🔧', phone:'086-XXX-XXXX', email:'maintenance@building.co.th', website:'' }
+                ];
+            }
+            // Build via DOM API to avoid XSS from stored data
+            container.textContent = '';
+            providers.forEach(p => {
+                const card = document.createElement('div');
+                card.style.cssText = 'padding:12px; background:#EFF6FF; border-radius:12px; border-left:4px solid #3B82F6;';
+                const head = document.createElement('div');
+                head.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:6px;';
+                head.innerHTML = `<span style="font-size:1.6rem;">${_esc(p.icon||'🔧')}</span>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;">${_esc(p.name||'-')}</div>
+                        <small style="color:#666;">ประเภท: ${_esc(p.type||'-')}</small>
+                    </div>`;
+                card.appendChild(head);
+                const info = document.createElement('div');
+                info.style.cssText = 'font-size:var(--fs-sm); color:#333; display:grid; gap:4px; margin-bottom:6px;';
+                if (p.phone)   info.innerHTML += `<div>📞 ${_esc(p.phone)}</div>`;
+                if (p.email)   info.innerHTML += `<div>📧 ${_esc(p.email)}</div>`;
+                if (p.website) info.innerHTML += `<div>🌐 ${_esc(p.website)}</div>`;
+                card.appendChild(info);
+                if (p.phone) {
+                    const btn = document.createElement('button');
+                    btn.textContent = '📞 เรียกตอนนี้';
+                    btn.style.cssText = 'width:100%; padding:10px; background:#3B82F6; color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer;';
+                    btn.onclick = () => makeCall(p.phone);
+                    card.appendChild(btn);
+                }
+                container.appendChild(card);
+            });
+        }
+
+        // ---- COMMUNITY DOCUMENTS ----
+        function displayDocuments() {
+            const container = document.getElementById('documentsList');
+            if (!container) return;
+            let documents = [];
+            try { documents = JSON.parse(localStorage.getItem('community_documents_data') || '[]'); } catch(e) {}
+            if (!documents.length) {
+                documents = [
+                    { id:'doc001', title:'กฎระเบียบอาคาร', category:'Rules',     fileUrl:'#', description:'กฎและข้อบังคับการอยู่อาศัย' },
+                    { id:'doc002', title:'ขั้นตอนฉุกเฉิน', category:'Emergency', fileUrl:'#', description:'ขั้นตอนการจัดการในกรณีฉุกเฉิน' }
+                ];
+            }
+            container.textContent = '';
+            documents.forEach(d => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.cssText = 'border-left:4px solid #3B82F6; margin:0;';
+                const left = document.createElement('div');
+                left.innerHTML = `<strong>📄 ${_esc(d.title||'-')}</strong>
+                    <p style="margin:4px 0; font-size:var(--fs-sm); color:#666;">${_esc(d.description||'')}</p>
+                    <span style="display:inline-block; padding:3px 10px; background:#EFF6FF; border-radius:6px; font-size:var(--fs-xs); color:#3B82F6; font-weight:700;">${_esc(d.category||'-')}</span>`;
+                card.appendChild(left);
+                if (d.fileUrl && d.fileUrl !== '#') {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-main';
+                    btn.style.cssText = 'margin-top:10px; padding:8px 14px;';
+                    btn.textContent = '⬇️ ดาวน์โหลด';
+                    btn.onclick = () => window.open(d.fileUrl, '_blank');
+                    card.appendChild(btn);
+                }
+                container.appendChild(card);
+            });
+        }
+
+        // ---- BILL RECEIPT VIEWING ----
+        // Adapted: choose tier-1 (the 7146 implementation) — full receipt HTML, not the alert stub
+        function viewBillReceipt(billId, monthName, year) {
+            try {
+                let bill = null;
+                for (const y of [2567, 2568, 2569, 2570]) {
+                    const data = localStorage.getItem(`bills_${y}`);
+                    if (!data) continue;
+                    try {
+                        const arr = JSON.parse(data);
+                        const found = arr.find(b => b.billId === billId);
+                        if (found) { bill = found; break; }
+                    } catch(e) {}
+                }
+                if (!bill && typeof BillingCalculator !== 'undefined') {
+                    const bills = BillingCalculator.getBillsByRoom(_legacyRoom()) || [];
+                    bill = bills.find(b => b.billId === billId);
+                }
+                if (!bill) { toast('ไม่พบข้อมูลบิล: ' + billId, 'error'); return; }
+                if (bill.status !== 'paid') {
+                    toast('บิลนี้ยังไม่ได้ชำระเงิน', 'warning');
+                }
+                const receiptHTML = `
+                    <div style="padding:1rem; background:#fff; border-radius:8px; border:2px dashed #2d8653;">
+                        <div style="text-align:center; margin-bottom:0.8rem; border-bottom:2px solid var(--primary-green); padding-bottom:0.5rem;">
+                            <h2 style="margin:0 0 0.5rem; color:var(--primary-green);">ใบเสร็จรับเงิน</h2>
+                            <small style="color:#888;">Receipt</small>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:var(--fs-sm); margin-bottom:10px;">
+                            <div><small style="color:#888;">อ้างอิงบิล</small><div><strong>${_esc(bill.billId)}</strong></div></div>
+                            <div><small style="color:#888;">งวด</small><div><strong>${_esc(monthName)} ${_esc(year)}</strong></div></div>
+                            <div><small style="color:#888;">ห้อง</small><div><strong>${_esc(bill.roomId || _legacyRoom())}</strong></div></div>
+                            <div><small style="color:#888;">วิธีชำระ</small><div><strong>PromptPay</strong></div></div>
+                        </div>
+                        <div style="border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;">
+                            <div style="background:var(--primary-green); color:#fff; padding:8px 10px; font-weight:700;">รายละเอียด</div>
+                            <div style="padding:10px;">
+                                ${bill.charges?.rent ? `<div style="display:flex; justify-content:space-between; padding:4px 0;"><span>🏠 ค่าเช่า</span><strong>฿${Number(bill.charges.rent).toLocaleString('th-TH')}</strong></div>` : ''}
+                                ${bill.charges?.electric?.cost ? `<div style="display:flex; justify-content:space-between; padding:4px 0;"><span>⚡ ค่าไฟ</span><strong>฿${Number(bill.charges.electric.cost).toLocaleString('th-TH')}</strong></div>` : ''}
+                                ${bill.charges?.water?.cost ? `<div style="display:flex; justify-content:space-between; padding:4px 0;"><span>💧 ค่าน้ำ</span><strong>฿${Number(bill.charges.water.cost).toLocaleString('th-TH')}</strong></div>` : ''}
+                                ${bill.charges?.trash ? `<div style="display:flex; justify-content:space-between; padding:4px 0;"><span>🗑️ ค่าขยะ</span><strong>฿${Number(bill.charges.trash).toLocaleString('th-TH')}</strong></div>` : ''}
+                                <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:2px solid var(--primary-green); margin-top:6px;">
+                                    <strong>รวมทั้งสิ้น</strong>
+                                    <strong style="color:var(--primary-green);">฿${Number(bill.totalCharge||bill.total||0).toLocaleString('th-TH')}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                const rc = document.getElementById('receiptContent');
+                if (rc) { rc.style.display = 'block'; rc.innerHTML = receiptHTML; }
+                showPage('payment');
+                goToPaymentStep && goToPaymentStep(3);
+            } catch(error) {
+                console.error('viewBillReceipt:', error);
+                toast('เกิดข้อผิดพลาดในการแสดงใบเสร็จ', 'error');
+            }
+        }
+
+        // Generate printable receipt for a bill (opens new window) — ported
+        function generateReceiptForBill(billId, monthName, year) {
+            try {
+                let billData = null;
+                for (const y of [2567, 2568, 2569, 2570]) {
+                    const data = localStorage.getItem(`bills_${y}`);
+                    if (!data) continue;
+                    try {
+                        const arr = JSON.parse(data);
+                        billData = arr.find(b => b.billId === billId && b.building === _legacyBuilding() && b.roomId === _legacyRoom());
+                        if (billData) break;
+                    } catch(e) {}
+                }
+                if (!billData) { toast('ไม่พบข้อมูลบิล', 'error'); return; }
+                const ch = billData.charges || {};
+                const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>ใบเสร็จ ${_esc(billId)}</title>
+                    <style>body{font-family:Arial;padding:1rem;max-width:800px;margin:auto}.header{text-align:center;border-bottom:2px solid #333;padding-bottom:0.5rem;margin-bottom:1rem}.row{display:flex;justify-content:space-between;margin:0.4rem 0}table{width:100%;border-collapse:collapse;margin:1rem 0}th,td{padding:0.6rem;border-bottom:1px solid #ddd;text-align:left}th{background:#f5f5f5}.amt{text-align:right}.total{font-weight:bold;background:#f5f5f5}</style>
+                    </head><body>
+                    <div class="header"><h2>✅ ใบเสร็จรับเงิน</h2><small>Receipt</small></div>
+                    <div class="row"><span>เลขที่:</span><strong>${_esc(billId)}</strong></div>
+                    <div class="row"><span>ห้อง:</span><strong>${_esc(_legacyRoom())}</strong></div>
+                    <div class="row"><span>อาคาร:</span><strong>${_esc(getBuildingDisplayName())}</strong></div>
+                    <div class="row"><span>เดือน:</span><strong>${_esc(monthName)} ${_esc(year)}</strong></div>
+                    <div class="row"><span>วันที่:</span><strong>${new Date().toLocaleDateString('th-TH')}</strong></div>
+                    <table><thead><tr><th>รายการ</th><th class="amt">จำนวน (บาท)</th></tr></thead><tbody>
+                        <tr><td>💰 ค่าเช่า</td><td class="amt">฿${Number(ch.rent||0).toLocaleString('th-TH')}</td></tr>
+                        <tr><td>⚡ ค่าไฟ</td><td class="amt">฿${Number(ch.electric?.cost||0).toLocaleString('th-TH')}</td></tr>
+                        <tr><td>💧 ค่าน้ำ</td><td class="amt">฿${Number(ch.water?.cost||0).toLocaleString('th-TH')}</td></tr>
+                        <tr><td>🗑️ ค่าขยะ</td><td class="amt">฿${Number(ch.trash||0).toLocaleString('th-TH')}</td></tr>
+                        <tr class="total"><td>รวม</td><td class="amt">฿${Number(billData.totalCharge||0).toLocaleString('th-TH')}</td></tr>
+                    </tbody></table>
+                    <div style="text-align:center;color:#666;font-size:12px;border-top:1px solid #ddd;padding-top:0.5rem;">ขอบคุณที่ชำระตรงเวลา · ${_esc(getOwnerName())}</div>
+                    </body></html>`;
+                const w = window.open('', '_blank');
+                if (!w) { toast('โปรดอนุญาต popup', 'error'); return; }
+                w.document.write(html); w.document.close(); w.focus(); w.print();
+            } catch(error) {
+                console.error('generateReceiptForBill:', error);
+                toast('เกิดข้อผิดพลาดในการสร้างใบเสร็จ', 'error');
+            }
+        }
+
+        // ---- INVOICE WITH DETAILS (ported, lightweight) ----
+        function generateInvoiceWithDetails(bill, monthYear) {
+            try {
+                const target = document.getElementById('invoiceContent') || document.getElementById('receiptContent');
+                if (!target) { console.warn('generateInvoiceWithDetails: no target container'); return; }
+                const billNo = bill?.billId || ('INV-' + Date.now());
+                const ppNumber = localStorage.getItem('promptpay') || '';
+                const rent  = bill?.charges?.rent || bill?.rent || 0;
+                const elec  = bill?.charges?.electric?.cost || bill?.electric || 0;
+                const water = bill?.charges?.water?.cost || bill?.water || 0;
+                const trash = bill?.charges?.trash || bill?.trash || 0;
+                const total = bill?.totalCharge || bill?.total || (rent+elec+water+trash);
+                target.style.display = 'block';
+                target.innerHTML = `
+                    <div style="padding:1rem; background:#fff; border-radius:8px;">
+                        <div style="text-align:center; border-bottom:2px solid var(--primary-green); padding-bottom:8px; margin-bottom:10px;">
+                            <strong style="font-size:1.1rem;">🌿 ${_esc(getOwnerName())}</strong>
+                            <div style="color:#666; font-size:var(--fs-sm);">ใบวางบิล · เลขที่ ${_esc(billNo)}</div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:var(--fs-sm); margin-bottom:10px;">
+                            <div><small>ห้อง</small><div><strong>${_esc(_legacyRoom())}</strong></div></div>
+                            <div><small>ประจำเดือน</small><div><strong>${_esc(monthYear||'-')}</strong></div></div>
+                        </div>
+                        <div style="border:1px solid #eee; border-radius:8px; overflow:hidden;">
+                            <div style="background:var(--primary-green); color:#fff; padding:8px;">รายละเอียด</div>
+                            <div style="padding:10px;">
+                                <div style="display:flex; justify-content:space-between; padding:4px 0;"><span>💰 ค่าเช่า</span><strong>฿${rent.toLocaleString('th-TH')}</strong></div>
+                                <div style="display:flex; justify-content:space-between; padding:4px 0;"><span>⚡ ค่าไฟ</span><strong>฿${elec.toLocaleString('th-TH')}</strong></div>
+                                <div style="display:flex; justify-content:space-between; padding:4px 0;"><span>💧 ค่าน้ำ</span><strong>฿${water.toLocaleString('th-TH')}</strong></div>
+                                <div style="display:flex; justify-content:space-between; padding:4px 0;"><span>🗑️ ค่าขยะ</span><strong>฿${trash.toLocaleString('th-TH')}</strong></div>
+                                <div style="display:flex; justify-content:space-between; padding:8px 0; border-top:2px solid var(--primary-green); margin-top:6px;"><strong>รวม</strong><strong style="color:var(--primary-green);">฿${total.toLocaleString('th-TH')}</strong></div>
+                            </div>
+                        </div>
+                        ${ppNumber ? `<div style="text-align:center; margin-top:10px; font-size:var(--fs-sm); color:#666;">PromptPay: ${_esc(ppNumber)}</div>` : ''}
+                    </div>`;
+            } catch(e) { console.warn('generateInvoiceWithDetails:', e); }
+        }
+
+        // ---- ADMIN NOTIFY (localStorage events) ----
+        function notifyAdminPaymentVerified() {
+            try {
+                const arr = JSON.parse(localStorage.getItem('payment_notifications') || '[]');
+                arr.push({
+                    type:'payment_verified',
+                    building:_legacyBuilding(), room:_legacyRoom(),
+                    amount:(_taCurrentBill?.totalAmount||_taCurrentBill?.total||0),
+                    timestamp:new Date().toISOString(),
+                    slipId:(_taCurrentBill?.slipData?.transactionId)||null,
+                    status:'verified'
+                });
+                localStorage.setItem('payment_notifications', JSON.stringify(arr));
+                window.dispatchEvent(new Event('payment_verified'));
+            } catch(e){ console.warn('notifyAdminPaymentVerified:', e); }
+        }
+        function notifyAdminReceiptGenerated(receipt) {
+            try {
+                const arr = JSON.parse(localStorage.getItem('payment_notifications') || '[]');
+                arr.push({
+                    type:'receipt_generated',
+                    building:_legacyBuilding(), room:_legacyRoom(),
+                    amount:(_taCurrentBill?.totalAmount||_taCurrentBill?.total||0),
+                    receiptId:receipt?.id, timestamp:new Date().toISOString(),
+                    status:'completed', verified:true
+                });
+                localStorage.setItem('payment_notifications', JSON.stringify(arr));
+                window.dispatchEvent(new Event('receipt_generated'));
+            } catch(e){ console.warn('notifyAdminReceiptGenerated:', e); }
+        }
+
+        // ---- GENERATE RECEIPT (called after slip verified) ----
+        function generateReceipt() {
+            try {
+                const bill = _taCurrentBill || {};
+                const total = bill.totalAmount || bill.total || 0;
+                let receipt = null;
+                if (typeof InvoiceReceiptManager !== 'undefined') {
+                    try {
+                        receipt = InvoiceReceiptManager.createReceipt(
+                            _legacyBuilding(),
+                            bill.billId || `INV-${_legacyRoom()}-${bill.month||''}`,
+                            { amount: total, paymentMethod:'slip',
+                              slipOkVerified:true, verifiedBy:'SlipOK',
+                              verifiedAt:new Date().toISOString() }
+                        );
+                        InvoiceReceiptManager.updateInvoiceStatus(_legacyBuilding(), bill.billId || `INV-${_legacyRoom()}-${bill.month||''}`, 'paid');
+                        InvoiceReceiptManager.syncToDashboard(_legacyBuilding());
+                    } catch(e) { console.warn('InvoiceReceiptManager:', e); }
+                }
+                const receiptNo = receipt?.id || ('RCP-' + Date.now());
+                const rc = document.getElementById('receiptContent');
+                if (rc) {
+                    rc.style.display = 'block';
+                    rc.innerHTML = `
+                        <div style="padding:1rem; background:#fff; border-radius:8px; border:2px dashed var(--primary-green);">
+                            <div style="text-align:center; border-bottom:2px solid var(--primary-green); padding-bottom:8px; margin-bottom:10px;">
+                                <h3 style="margin:0; color:var(--primary-green);">✅ ใบเสร็จรับเงิน</h3>
+                                <small>${_esc(receiptNo)}</small>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:var(--fs-sm);">
+                                <div><small>ห้อง</small><div><strong>${_esc(_legacyRoom())}</strong></div></div>
+                                <div><small>วันที่</small><div><strong>${new Date().toLocaleDateString('th-TH')}</strong></div></div>
+                            </div>
+                            <div style="text-align:center; padding:14px; background:#f0fff4; border-radius:8px; margin-top:10px;">
+                                <small>ยอดชำระ</small>
+                                <div style="font-size:1.5rem; font-weight:800; color:var(--primary-green);">฿${Number(total).toLocaleString('th-TH')}</div>
+                            </div>
+                            <div style="text-align:center; margin-top:10px; color:var(--primary-green); font-size:var(--fs-sm);">✅ ยืนยันโดย SlipOK</div>
+                        </div>`;
+                }
+                notifyAdminReceiptGenerated(receipt);
+                if (typeof goToPaymentStep === 'function') goToPaymentStep(3);
+            } catch(error) {
+                console.error('generateReceipt:', error);
+                toast('เกิดข้อผิดพลาดในการสร้างใบเสร็จ', 'error');
+            }
+        }
+
+        // ---- PRINT / DOWNLOAD RECEIPT ----
+        function printReceipt() { window.print(); }
+
+        async function downloadReceipt() {
+            try {
+                const src = document.getElementById('receiptContent') || document.querySelector('#payment-step-3 .receipt-card');
+                if (!src) { toast('ไม่พบข้อมูลใบเสร็จ', 'error'); return; }
+                if (typeof html2canvas !== 'function') { toast('กำลังโหลดไลบรารี โปรดลองใหม่', 'error'); return; }
+                const tmp = document.createElement('div');
+                tmp.style.cssText = 'position:fixed; left:-9999px; background:#fff; padding:2rem; width:600px;';
+                tmp.innerHTML = src.innerHTML;
+                document.body.appendChild(tmp);
+                const canvas = await html2canvas(tmp, { backgroundColor:'#ffffff', scale:2, logging:false });
+                const link = document.createElement('a');
+                const now = new Date();
+                const ds = now.toISOString().split('T')[0];
+                const ts = now.toTimeString().split(' ')[0].replace(/:/g, '');
+                link.href = canvas.toDataURL('image/png');
+                link.download = `receipt-${_legacyRoom()}-${ds}-${ts}.png`;
+                document.body.appendChild(link); link.click();
+                document.body.removeChild(link); document.body.removeChild(tmp);
+                toast('ดาวน์โหลดสำเร็จ', 'success');
+            } catch(error) {
+                console.error('downloadReceipt:', error);
+                toast('เกิดข้อผิดพลาดในการดาวน์โหลด', 'error');
+            }
+        }
+
+        async function downloadReceiptForBill(billId, monthName, year) {
+            try {
+                if (typeof html2canvas !== 'function') { toast('กำลังโหลดไลบรารี', 'error'); return; }
+                let bill = null;
+                for (const y of [2567, 2568, 2569, 2570]) {
+                    const data = localStorage.getItem(`bills_${y}`);
+                    if (!data) continue;
+                    try { const arr = JSON.parse(data); bill = arr.find(b => b.billId === billId); if (bill) break; } catch(e){}
+                }
+                if (!bill) { toast('ไม่พบข้อมูลบิล: ' + billId, 'error'); return; }
+                const tmp = document.createElement('div');
+                tmp.style.cssText = 'position:fixed; left:-9999px; background:#fff; padding:2rem; width:600px;';
+                tmp.innerHTML = `
+                    <div style="padding:1rem; background:#fff; border:2px dashed #2d8653;">
+                        <div style="text-align:center; border-bottom:2px solid #2d8653; padding-bottom:8px;">
+                            <h2 style="color:#2d8653; margin:0 0 4px;">ใบเสร็จรับเงิน</h2>
+                            <small>Receipt · ${_esc(billId)}</small>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0;">
+                            <div><small style="color:#999;">ห้อง</small><div><strong>${_esc(_legacyRoom())}</strong></div></div>
+                            <div><small style="color:#999;">งวด</small><div><strong>${_esc(monthName)} ${_esc(year)}</strong></div></div>
+                        </div>
+                        <div style="text-align:center; background:#f0fff4; padding:14px; border-radius:8px;">
+                            <small>ยอดชำระ</small>
+                            <div style="font-size:1.6rem; font-weight:800; color:#2d8653;">฿${Number(bill.totalCharge||bill.total||0).toLocaleString('th-TH')}</div>
+                        </div>
+                        <div style="text-align:center; margin-top:10px; font-size:var(--fs-sm); color:#999;">${_esc(getOwnerName())}</div>
+                    </div>`;
+                document.body.appendChild(tmp);
+                const canvas = await html2canvas(tmp, { backgroundColor:'#ffffff', scale:2, logging:false });
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = `receipt-${_legacyRoom()}-${billId}-${new Date().toISOString().split('T')[0]}.png`;
+                document.body.appendChild(link); link.click();
+                document.body.removeChild(link); document.body.removeChild(tmp);
+                toast('ดาวน์โหลดสำเร็จ', 'success');
+            } catch(error) {
+                console.error('downloadReceiptForBill:', error);
+                toast('เกิดข้อผิดพลาดในการดาวน์โหลด', 'error');
+            }
+        }
+
+        // ---- BILL TEMPLATE ----
+        async function downloadBillTemplate() {
+            try {
+                const preview = document.getElementById('billTemplatePreview');
+                if (!preview) { toast('ไม่มีเทมเพลทบิล', 'error'); return; }
+                if (typeof html2canvas !== 'function') { toast('กำลังโหลดไลบรารี', 'error'); return; }
+                const tmp = document.createElement('div');
+                tmp.style.cssText = 'position:fixed; left:-9999px; background:#fff; padding:2rem; width:800px;';
+                tmp.innerHTML = `<div style="padding:1rem;">${preview.innerHTML}</div>`;
+                document.body.appendChild(tmp);
+                const canvas = await html2canvas(tmp, { backgroundColor:'#ffffff', scale:2, logging:false });
+                const fileName = getOwnerName().replace(/\s+/g, '-').toLowerCase();
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = `bill-template-${fileName}.png`;
+                document.body.appendChild(link); link.click();
+                document.body.removeChild(link); document.body.removeChild(tmp);
+                toast('ดาวน์โหลดเทมเพลทสำเร็จ', 'success');
+            } catch(error) {
+                console.error('downloadBillTemplate:', error);
+                toast('เกิดข้อผิดพลาดในการดาวน์โหลดเทมเพลท', 'error');
+            }
+        }
+
+        function updateBillTemplateWithOwnerInfo() {
+            const owner = getOwnerName();
+            const bld   = getBuildingDisplayName();
+            const a = document.getElementById('billTemplateCompanyName');
+            const b = document.getElementById('billTemplateBuildingName');
+            const c = document.getElementById('billTemplateFooterCompany');
+            if (a) a.textContent = owner;
+            if (b) b.textContent = bld;
+            if (c) c.textContent = owner;
+        }
+
+        // ---- PHOTO MODAL ----
+        function openPhotoModal(beforePhoto, afterPhoto) {
+            const modal = document.getElementById('photoModal');
+            const photos = document.getElementById('photoModalPhotos');
+            if (!modal || !photos) return;
+            photos.textContent = '';
+            const mk = (label, src) => {
+                const wrap = document.createElement('div');
+                wrap.className = 'photo-modal-item';
+                wrap.style.cssText = 'margin-bottom:12px; text-align:center;';
+                const lab = document.createElement('div');
+                lab.textContent = label;
+                lab.style.cssText = 'font-weight:700; margin-bottom:6px; color:var(--primary-green);';
+                const img = document.createElement('img');
+                img.src = src; // src is base64 from FileReader, not user input HTML — safe
+                img.alt = label;
+                img.style.cssText = 'max-width:100%; border-radius:10px; border:1px solid #eee;';
+                wrap.appendChild(lab); wrap.appendChild(img);
+                photos.appendChild(wrap);
+            };
+            if (beforePhoto) mk('ก่อนซ่อม (Before)', beforePhoto);
+            if (afterPhoto)  mk('หลังซ่อม (After)',  afterPhoto);
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
+        function closePhotoModal() {
+            const modal = document.getElementById('photoModal');
+            if (!modal) return;
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+        }
+
+        // ---- PHOTO COMPRESSION + UPLOAD ----
+        async function _compressImage(base64Data, maxW=1280, maxH=1280, q=0.75) {
+            return new Promise(resolve => {
+                try {
+                    const img = new Image();
+                    img.onload = () => {
+                        let w = img.width, h = img.height;
+                        if (w > maxW || h > maxH) {
+                            const r = Math.min(maxW/w, maxH/h);
+                            w = Math.round(w*r); h = Math.round(h*r);
+                        }
+                        const cv = document.createElement('canvas');
+                        cv.width = w; cv.height = h;
+                        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+                        resolve(cv.toDataURL('image/jpeg', q));
+                    };
+                    img.onerror = () => resolve(base64Data);
+                    img.src = base64Data;
+                } catch(e) { resolve(base64Data); }
+            });
+        }
+        async function uploadPhotoToStorage(base64Data, ticketId) {
+            // Firebase Storage disabled (CORS) — store compressed Base64 instead
+            if (!base64Data) return null;
+            try { return await _compressImage(base64Data, 1280, 1280, 0.75); }
+            catch(e) { console.warn('uploadPhotoToStorage:', e); return base64Data; }
+        }
+
+        // ---- LEASE AGREEMENT VIEW / DOWNLOAD ----
+        function viewLeaseAgreement() {
+            if (window.currentContractDocument) {
+                window.open(window.currentContractDocument, '_blank');
+            } else {
+                toast('ไม่มีเอกสารสัญญาเช่า', 'warning');
+            }
+        }
+        function downloadLeaseAgreement() {
+            if (window.currentContractDocument) {
+                const link = document.createElement('a');
+                link.href = window.currentContractDocument;
+                link.download = `lease-agreement-${_legacyBuilding()}-${_legacyRoom()}.pdf`;
+                document.body.appendChild(link); link.click();
+                document.body.removeChild(link);
+                toast('เริ่มดาวน์โหลดสัญญา', 'success');
+            } else {
+                toast('ไม่มีเอกสารสัญญาเช่า', 'warning');
+            }
+        }
+
+        // expose key ones to window for inline onclick reliability
+        window.toggleAccordion = toggleAccordion;
+        window.makeCall = makeCall;
+        window.scrollToEmergencyContacts = scrollToEmergencyContacts;
+        window.openPhotoModal = openPhotoModal;
+        window.closePhotoModal = closePhotoModal;
+        window.viewBillReceipt = viewBillReceipt;
+        window.generateReceiptForBill = generateReceiptForBill;
+        window.downloadReceipt = downloadReceipt;
+        window.downloadReceiptForBill = downloadReceiptForBill;
+        window.printReceipt = printReceipt;
+        window.viewLeaseAgreement = viewLeaseAgreement;
+        window.downloadLeaseAgreement = downloadLeaseAgreement;
+        window.downloadBillTemplate = downloadBillTemplate;
+        window.uploadPhotoToStorage = uploadPhotoToStorage;
+        window.generateReceipt = generateReceipt;
+        window.notifyAdminPaymentVerified = notifyAdminPaymentVerified;
+        window.notifyAdminReceiptGenerated = notifyAdminReceiptGenerated;
+        window.generateInvoiceWithDetails = generateInvoiceWithDetails;
+        window.updateBillTemplateWithOwnerInfo = updateBillTemplateWithOwnerInfo;
+        window.displayBuildingInternetStatus = displayBuildingInternetStatus;
+        window.displayLeaseRenewalAlert = displayLeaseRenewalAlert;
+        window.displayServiceProviders = displayServiceProviders;
+        window.displayDocuments = displayDocuments;
 
     </script>
+
+    <!-- ported from tenant.html: photo modal -->
+    <div id="photoModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:#fff; max-width:600px; width:100%; max-height:90vh; overflow:auto; border-radius:18px; padding:20px; position:relative;">
+            <button onclick="closePhotoModal()" style="position:absolute; top:10px; right:10px; width:36px; height:36px; border-radius:50%; border:none; background:#f3f4f6; cursor:pointer; font-size:1.2rem;">✕</button>
+            <h3 style="margin:0 0 14px; color:var(--primary-green);">📸 รูปภาพ</h3>
+            <div id="photoModalPhotos"></div>
+        </div>
+    </div>
 </body>
 
 </html>

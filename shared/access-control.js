@@ -24,8 +24,8 @@ class AccessControl {
     '/accounting': ['accountant', 'admin'],
 
     // Tenant Pages
-    '/tenant.html': ['tenant'],
-    '/tenant': ['tenant'],
+    '/tenant_app.html': ['tenant'],
+    '/tenant_app': ['tenant'],
 
     // Auth Pages (accessible to all)
     '/login.html': ['admin', 'accountant', 'tenant', 'guest'],
@@ -273,7 +273,7 @@ class AccessControl {
         window.location.href = '/accounting.html';
         break;
       case 'tenant':
-        window.location.href = `/tenant.html?room=${user.roomNumber || ''}`;
+        window.location.href = `/tenant_app.html?room=${user.roomNumber || ''}`;
         break;
       default:
         window.location.href = '/login.html';

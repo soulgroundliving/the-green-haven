@@ -24,7 +24,7 @@ else
   sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./tenant/tenant-payment.html
   sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./tenant/meter.html
   sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./login.html
-  sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./tenant.html
+  sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./tenant_app.html
   sed -i "s/__FIREBASE_API_KEY__/$FIREBASE_API_KEY/g" ./dashboard.html
 
   echo "✅ Environment variables have been injected into all files"
