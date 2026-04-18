@@ -1006,6 +1006,60 @@
         rate: 'progressive (ภ.ง.ด.90)'
       };
     };
+    // ===== Thai font support for jsPDF (Sarabun) =====
+    // jsPDF default fonts (Helvetica/Arial) don't include Thai glyphs → mojibake.
+    // Load Sarabun TTF from jsdelivr (Google Fonts mirror) once, register in jsPDF VFS,
+    // then monkey-patch the jsPDF constructor so every new doc gets Sarabun + an
+    // overridden setFont() that maps 'Arial'/'Helvetica' → 'Sarabun' transparently.
+    function _bufToB64(buf) {
+      const bytes = new Uint8Array(buf);
+      let bin = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+      }
+      return btoa(bin);
+    }
+    async function _loadSarabunFont() {
+      if (window._sarabunB64) return;
+      try {
+        const resp = await fetch('https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun/Sarabun-Regular.ttf');
+        if (!resp.ok) throw new Error('fetch failed: ' + resp.status);
+        const buf = await resp.arrayBuffer();
+        window._sarabunB64 = _bufToB64(buf);
+        console.log('✅ Sarabun font loaded for PDF (', Math.round(buf.byteLength/1024), 'KB)');
+      } catch (e) { console.warn('⚠️ Sarabun font load failed:', e.message); }
+    }
+    function _patchJsPDFForThai() {
+      if (!window.jspdf?.jsPDF) return;
+      const origPDF = window.jspdf.jsPDF;
+      if (origPDF._thaiPatched) return;
+      function ThaiPDF(...args) {
+        const doc = new origPDF(...args);
+        if (window._sarabunB64) {
+          try {
+            doc.addFileToVFS('Sarabun-Regular.ttf', window._sarabunB64);
+            doc.addFont('Sarabun-Regular.ttf', 'Sarabun', 'normal');
+            const origSetFont = doc.setFont.bind(doc);
+            doc.setFont = function(font, style) {
+              // Map common ASCII-only fonts → Sarabun so existing tax-export.js code works as-is
+              if (font === 'Arial' || font === 'Helvetica' || font === 'helvetica' || font === 'arial') font = 'Sarabun';
+              return origSetFont(font, style);
+            };
+            doc.setFont('Sarabun', 'normal');
+          } catch (e) { console.warn('jsPDF font setup failed:', e.message); }
+        }
+        return doc;
+      }
+      // Preserve static methods from original jsPDF
+      Object.setPrototypeOf(ThaiPDF, origPDF);
+      ThaiPDF.prototype = origPDF.prototype;
+      ThaiPDF._thaiPatched = true;
+      window.jspdf.jsPDF = ThaiPDF;
+    }
+    // Kick off font load + patch (font fetch ~250KB, async, doesn't block UI)
+    _loadSarabunFont().then(_patchJsPDFForThai);
+
     // Replace blocking alert() in showError/showSuccess with non-blocking toast
     // (alert() freezes the whole tab — bad UX, also blocks programmatic test)
     function _taxToast(msg, type) {
