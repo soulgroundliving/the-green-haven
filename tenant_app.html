@@ -5487,8 +5487,11 @@
                 NEST_ONLY_ELEMENT_IDS.forEach(id => {
                     const el = document.getElementById(id);
                     if (!el) return;
-                    // Respect modal's own state — don't force-show if it's intentionally closed
-                    if (id === 'daily-modal') { el.style.display = ''; return; }
+                    // usage-feature-grid needs display:grid explicitly — empty string removes
+                    // the inline 'display:grid' from HTML and falls back to CSS default (block),
+                    // which breaks the 4-column layout.
+                    if (id === 'usage-feature-grid') { el.style.display = 'grid'; return; }
+                    if (id === 'daily-modal') { el.style.display = ''; return; } // keep closed
                     el.style.display = '';
                 });
                 const grid = document.getElementById('usage-feature-grid');
