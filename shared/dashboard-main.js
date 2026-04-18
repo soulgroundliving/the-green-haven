@@ -2309,6 +2309,32 @@ if (typeof window !== 'undefined' && !window._dashHistSubscribed) {
   })();
 }
 
+// Phase 5 race fix: re-render UI pages when RTDB rooms_config lands (F5 + cloud lag)
+if (typeof window !== 'undefined' && !window._roomConfigListenerAdded) {
+  window._roomConfigListenerAdded = true;
+  document.addEventListener('roomconfig-updated', () => {
+    // Re-render whichever admin page is currently showing room data
+    try {
+      if (document.getElementById('page-bill')?.classList.contains('active')) {
+        if (typeof populateRoomDropdown === 'function') populateRoomDropdown();
+        if (typeof renderPaymentStatus === 'function') renderPaymentStatus();
+      }
+      if (document.getElementById('page-tenant')?.classList.contains('active')
+          && typeof initTenantPage === 'function') {
+        initTenantPage();
+      }
+      if (document.getElementById('page-property')?.classList.contains('active')) {
+        if (typeof initRoomsPage === 'function') initRoomsPage();
+        if (typeof initNestPage === 'function') initNestPage();
+      }
+      if (document.getElementById('page-dashboard')?.classList.contains('active')
+          && typeof initDashboardCharts === 'function') {
+        initDashboardCharts();
+      }
+    } catch(e) { console.warn('roomconfig-updated rerender:', e?.message); }
+  });
+}
+
 async function initDashboardCharts(){
   const yr=currentYear;
   let labels,totals,elecs,waters,rents;

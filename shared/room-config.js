@@ -202,6 +202,14 @@ class RoomConfigManager {
           };
           localStorage.setItem(`rooms_config_${building}`, JSON.stringify(config));
           console.log(`☁️ RoomConfigManager synced ${building}: ${rooms.length} rooms`);
+          // Phase 5 race fix: notify listeners so pages re-render after F5 + cloud arrival
+          (this._listeners || []).forEach(fn => { try { fn(building, config); } catch(e){} });
+          // Generic event so any page can listen
+          try {
+            document.dispatchEvent(new CustomEvent('roomconfig-updated', {
+              detail: { building, count: rooms.length }
+            }));
+          } catch(e) {}
         }, err => console.warn(`rooms_config/${building} listen:`, err?.message));
       } catch(e) { console.warn(`subscribe rooms_config/${building}:`, e); }
     });
@@ -320,6 +328,11 @@ class RoomConfigManager {
 
 // Static field initializer (cross-engine safe)
 RoomConfigManager._subscribed = false;
+RoomConfigManager._listeners = [];
+RoomConfigManager.onChange = function(fn) {
+  this._listeners.push(fn);
+  return () => { this._listeners = this._listeners.filter(f => f !== fn); };
+};
 
 // Phase 5: auto-subscribe RTDB rooms_config for live multi-device sync
 if (typeof window !== 'undefined') {

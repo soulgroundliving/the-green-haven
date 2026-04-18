@@ -2776,6 +2776,15 @@ function loadAndRenderServiceProviders() {
   const list = document.getElementById('providersList');
   if (!list) return;
 
+  // Phase 4 race fix: auto-rerender when cloud snapshot arrives after initial render
+  if (typeof ServiceProvidersStore !== 'undefined' && !window._spRendererSubscribed) {
+    window._spRendererSubscribed = true;
+    ServiceProvidersStore.onChange(() => {
+      // Only rerender if the providers list element is currently in the DOM
+      if (document.getElementById('providersList')) loadAndRenderServiceProviders();
+    });
+  }
+
   let providers = (typeof ServiceProvidersStore !== 'undefined')
     ? ServiceProvidersStore.getAll()
     : JSON.parse(localStorage.getItem('service_providers_data') || '[]');
