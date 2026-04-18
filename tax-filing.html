@@ -658,8 +658,9 @@
         <div style="padding:14px 20px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:10px;">
           <div style="font-size:.78rem; color:var(--text-muted);">📐 ขนาดกระดาษ A4 (210 × 297 mm)</div>
           <div style="display:flex; gap:10px;">
-            <button onclick="closePaperPreview()" style="padding:9px 18px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:600;">ยกเลิก</button>
-            <button onclick="downloadPaperAsPDF()" style="padding:9px 18px; background:var(--green, #2d8653); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">📥 Download PDF</button>
+            <button onclick="closePaperPreview()" style="padding:9px 16px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:600;">ยกเลิก</button>
+            <button onclick="exportMonthlyReportExcel(); showSuccess && showSuccess('Excel downloading');" style="padding:9px 16px; background:#1a73e8; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">📊 Excel</button>
+            <button onclick="downloadPaperAsPDF()" style="padding:9px 16px; background:var(--green, #2d8653); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">📥 PDF</button>
           </div>
         </div>
       </div>
@@ -715,16 +716,13 @@
             <select id="monthly-year" onchange="updateMonthlyReport()"></select>
           </div>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-          <button class="btn btn-primary" onclick="generateMonthlyReport()">
-            <span>✨</span>สร้าง
+        <div>
+          <button class="btn btn-primary" style="width:100%; padding:12px;" onclick="previewMonthlyReportPaper()">
+            <span>✨</span>สร้าง / Preview
           </button>
-          <button class="btn btn-secondary" onclick="previewMonthlyReportPaper()">
-            <span>📄</span>Preview + PDF
-          </button>
-          <button class="btn btn-secondary" onclick="exportMonthlyReportExcel()">
-            <span>📊</span>Excel
-          </button>
+          <p style="font-size:.78rem; color:var(--text-muted); margin:8px 0 0; text-align:center;">
+            กดเพื่อดู preview แบบ A4 — ดาวน์โหลด PDF / Excel ได้จาก preview
+          </p>
         </div>
       </div>
 
@@ -1437,8 +1435,13 @@
   async function previewMonthlyReportPaper() {
     const month = parseInt(document.getElementById('monthly-month').value) || (new Date().getMonth() + 1);
     const yearBE = parseInt(document.getElementById('monthly-year').value) || (new Date().getFullYear() + 543);
+    const modal = document.getElementById('paperPreviewModal');
     const sheet = document.getElementById('paperPreviewSheet');
-    if (!sheet) return;
+    if (!sheet || !modal) return;
+    // Move modal to body so it escapes any parent .page stacking / display context.
+    // Inactive .page has display:none which was zero-sizing the modal even though
+    // computed display was 'flex'.
+    if (modal.parentElement !== document.body) document.body.appendChild(modal);
 
     // Force regenerate the dashboard report so #monthly-report-content has fresh data
     if (typeof updateMonthlyReport === 'function') {
