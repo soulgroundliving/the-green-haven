@@ -3440,7 +3440,7 @@
         // ฟังก์ชันเข้าหน้าย่อย (แก้บั๊กเนื้อหาซ้อนกัน)
         function showSubPage(id) {
             // Guard: Nest-only sub-pages — block for Rooms (ห้องแถว) tenants
-            const NEST_ONLY_PAGES = ['eco_score', 'building', 'water_usage', 'elec_usage', 'smart-key-page'];
+            const NEST_ONLY_PAGES = ['eco_score', 'building', 'water_usage', 'elec_usage', 'smart-key-page', 'add-pet-page'];
             if (window._nestOnlyDisabled && NEST_ONLY_PAGES.includes(id)) {
                 if (typeof toast === 'function') toast('ฟีเจอร์นี้สำหรับลูกบ้านตึก Nest เท่านั้น', 'info');
                 return;
@@ -3490,16 +3490,18 @@
         // ------------------------------------------
         // ส่วนที่ 2: ระบบเช็กอินรับแต้มรายวัน
         // ------------------------------------------
-        // 1. ฟังก์ชันเช็ก (ปรับให้เด้งเสมอเพื่อทดสอบ)
+        // 1. ฟังก์ชันเช็ก — Nest only (Rooms tenants don't earn points)
         function checkDailyLogin() {
+            if (window._nestOnlyDisabled) return; // Rooms tenant — skip
             const modal = document.getElementById('daily-modal');
             if (modal) {
-                modal.style.display = 'flex'; // สั่งให้โชว์ทุกครั้งที่โหลดหน้า
+                modal.style.display = 'flex';
             }
         }
 
-        // 2. ฟังก์ชันกดรับพ้อยท์ (กดกี่ครั้งก็ได้ ไม่เซฟวันที่)
+        // 2. ฟังก์ชันกดรับพ้อยท์ — Nest only
         function claimDailyPoints() {
+            if (window._nestOnlyDisabled) return;
             // อัปเดตพ้อยท์บนหน้าจอ
             userPoints += 1;
             const pointDisplay = document.getElementById('display-points');
@@ -5466,40 +5468,43 @@
         // Nest-only features. Hide entry points for Rooms (ห้องแถว) tenants.
         // Items hidden for Rooms building:
         //   - Eco-Score + rewards (gamification, Nest-only economy)
+        //   - Points display (profile rewards card)
+        //   - Daily bonus modal (check-in points)
+        //   - Pets section (profile pet-list, add-pet-page)
         //   - Building info page (Nest is the only building with shared facility info card)
         //   - Water/Electricity usage charts (Nest has shared meter dashboards; Rooms bills cover this)
         //   - Smart Key (Nest QR door access; Rooms uses physical keys)
+        const NEST_ONLY_ELEMENT_IDS = [
+            'nav-eco-score-card', 'profile-rewards-card', 'nav-building-card',
+            'nav-water-usage-card', 'nav-elec-usage-card', 'nav-smart-key-btn',
+            'pet-list-container', 'daily-modal', 'usage-feature-grid'
+        ];
         function applyGamificationVisibility() { applyBuildingVisibility(); } // backward-compat alias
         function applyBuildingVisibility() {
             if (_taBuilding === 'nest') {
                 // Nest tenants see everything. If they were previously hidden (e.g. logged in as
                 // Rooms first then switched), restore visibility.
-                ['nav-eco-score-card', 'profile-rewards-card', 'nav-building-card',
-                 'nav-water-usage-card', 'nav-elec-usage-card', 'nav-smart-key-btn'
-                ].forEach(id => {
+                NEST_ONLY_ELEMENT_IDS.forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.style.display = '';
+                    if (!el) return;
+                    // Respect modal's own state — don't force-show if it's intentionally closed
+                    if (id === 'daily-modal') { el.style.display = ''; return; }
+                    el.style.display = '';
                 });
                 const grid = document.getElementById('usage-feature-grid');
                 if (grid) grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
                 window._gamificationDisabled = false;
+                window._nestOnlyDisabled = false;
                 return;
             }
             // Rooms building — hide Nest-only items
-            ['nav-eco-score-card', 'profile-rewards-card', 'nav-building-card',
-             'nav-water-usage-card', 'nav-elec-usage-card', 'nav-smart-key-btn'
-            ].forEach(id => {
+            NEST_ONLY_ELEMENT_IDS.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             });
             // Block direct navigation to Nest-only pages if triggered programmatically
             window._gamificationDisabled = true;
             window._nestOnlyDisabled = true;
-            // Note: usage page only has 4 cards, all 3 Nest-only ones hidden →
-            // grid renders empty. The page-usage `usage` view still shows current bill +
-            // history below (which is what Rooms tenants need). Hide the empty grid.
-            const grid = document.getElementById('usage-feature-grid');
-            if (grid) grid.style.display = 'none';
         }
 
         async function loadTenantAppData() {
