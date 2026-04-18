@@ -1326,39 +1326,114 @@
   // header + footer. The inline view = exact PDF preview. PDF/Excel capture same node.
   let _paperPdfFilename = 'report.pdf';
 
+  function _getOwnerInfoForReport() {
+    // Owner info is set in dashboard People Management → Owner tab (localStorage owner_info)
+    // Plus Firestore buildings/{b}.companyName/ownerName cached via _subscribePaymentConfig
+    let owner = {};
+    try { owner = JSON.parse(localStorage.getItem('owner_info') || '{}'); } catch(e) {}
+    const fullAddress = [owner.address, owner.subDistrict, owner.district, owner.province, owner.postalCode].filter(Boolean).join(' ');
+    return {
+      legalName: (localStorage.getItem('company_name') || 'บริษัท เดอะ กรีนเฮฟเว่น จำกัด') + (owner.registrationStatus === 'pending' ? ' (อยู่ระหว่างจดทะเบียน)' : ''),
+      englishName: 'The Green Haven Co., Ltd.',
+      ownerName: owner.name || localStorage.getItem('owner_name') || '—',
+      taxId: owner.taxId || '— (รอจดทะเบียน)',
+      address: fullAddress || '—',
+      phone: owner.phone || '—',
+      email: owner.email || '—',
+      bankName: owner.bankName || '',
+      bankAccount: owner.bankAccount || ''
+    };
+  }
+
   function _enhanceMonthlyReportToA4View() {
     const container = document.getElementById('monthly-report-content');
     if (!container) return;
-    // Idempotent: don't re-enhance if already wrapped
-    if (container.querySelector('._a4Wrap')) {
-      // Just update the title (in case month/year selection changed)
-      const month = parseInt(document.getElementById('monthly-month')?.value) || (new Date().getMonth() + 1);
-      const yearBE = parseInt(document.getElementById('monthly-year')?.value) || (new Date().getFullYear() + 543);
-      const titleEl = container.querySelector('._a4Wrap [data-a4-title]');
-      if (titleEl) titleEl.textContent = `เดือน ${THAI_MONTHS_FULL[month]} ${yearBE}`;
-      return;
-    }
     const month = parseInt(document.getElementById('monthly-month')?.value) || (new Date().getMonth() + 1);
     const yearBE = parseInt(document.getElementById('monthly-year')?.value) || (new Date().getFullYear() + 543);
+    const monthPadded = String(month).padStart(2, '0');
     const today = new Date().toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' });
-    // Move existing children into a wrapper, prepend header, append footer
+    const nowStr = new Date().toLocaleString('th-TH', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const owner = _getOwnerInfoForReport();
+    const docRef = `TGH-TAX-${yearBE}${monthPadded}-M`; // M = Monthly
+
+    // Idempotent: if wrapper exists, only refresh title + doc ref; body content already updated by displayMonthlyReport
+    if (container.querySelector('._a4Wrap')) {
+      const titleEl = container.querySelector('._a4Wrap [data-a4-title]');
+      if (titleEl) titleEl.textContent = `เดือน ${THAI_MONTHS_FULL[month]} ${yearBE}`;
+      const refEl = container.querySelector('._a4Wrap [data-a4-ref]');
+      if (refEl) refEl.textContent = docRef;
+      return;
+    }
+
     const existing = Array.from(container.children);
     container.innerHTML = '';
     const wrap = document.createElement('div');
     wrap.className = '_a4Wrap';
-    wrap.style.cssText = 'max-width:794px; margin:0 auto; padding:50px 40px; background:#fff; box-shadow:0 4px 16px rgba(0,0,0,.12); font-family:"Sarabun",-apple-system,sans-serif; color:#222; font-size:13px; line-height:1.5; border-radius:6px;';
+    wrap.style.cssText = 'max-width:794px; margin:0 auto; padding:48px 44px; background:#fff; box-shadow:0 4px 16px rgba(0,0,0,.12); font-family:"Sarabun",-apple-system,sans-serif; color:#222; font-size:12.5px; line-height:1.5; border-radius:6px;';
     wrap.innerHTML = `
-      <div style="text-align:center; margin-bottom:18px;">
-        <h1 style="font-size:22px; margin:0 0 4px; color:#1a5c38;">รายงานภาษีรายเดือน</h1>
-        <div data-a4-title style="font-size:14px; color:#666;">เดือน ${THAI_MONTHS_FULL[month]} ${yearBE}</div>
+      <!-- Letterhead — company identity block -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px double #1a5c38; padding-bottom:14px; margin-bottom:18px;">
+        <div>
+          <div style="font-size:18px; font-weight:700; color:#1a5c38; line-height:1.2;">${_esc(owner.legalName)}</div>
+          <div style="font-size:12px; color:#555; margin-top:2px;">${_esc(owner.englishName)}</div>
+          <div style="font-size:11px; color:#666; margin-top:6px; line-height:1.55;">
+            <div>📍 ${_esc(owner.address)}</div>
+            <div>📞 ${_esc(owner.phone)} &nbsp;·&nbsp; ✉️ ${_esc(owner.email)}</div>
+            <div>เลขประจำตัวผู้เสียภาษี: <strong>${_esc(owner.taxId)}</strong></div>
+          </div>
+        </div>
+        <div style="text-align:center; padding:10px 14px; border:2px solid #1a5c38; border-radius:8px; min-width:100px;">
+          <div style="font-size:22px; line-height:1;">🌿</div>
+          <div style="font-size:9px; font-weight:700; color:#1a5c38; letter-spacing:.5px; margin-top:4px;">THE GREEN</div>
+          <div style="font-size:9px; font-weight:700; color:#1a5c38; letter-spacing:.5px;">HAVEN</div>
+        </div>
       </div>
-      <div style="display:flex; justify-content:space-between; font-size:12px; color:#444; margin-bottom:18px; border-bottom:1px solid #ddd; padding-bottom:10px;">
-        <div><strong>บริษัท:</strong> The Green Haven</div>
+
+      <!-- Report title -->
+      <div style="text-align:center; margin-bottom:16px;">
+        <h1 style="font-size:20px; margin:0 0 2px; color:#1a5c38; font-weight:700;">รายงานภาษีรายเดือน</h1>
+        <div style="font-size:11px; color:#888; letter-spacing:1.5px; text-transform:uppercase;">Monthly Tax Report</div>
+        <div data-a4-title style="font-size:14px; color:#333; margin-top:6px; font-weight:600;">เดือน ${THAI_MONTHS_FULL[month]} ${yearBE}</div>
+      </div>
+
+      <!-- Document meta: ref, date, category, form -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px 20px; font-size:11.5px; background:#f8faf9; padding:10px 14px; border-left:4px solid #2d8653; border-radius:4px; margin-bottom:18px;">
+        <div><strong>เลขที่เอกสาร:</strong> <span data-a4-ref style="font-family:monospace;">${docRef}</span></div>
         <div><strong>วันที่ออกรายงาน:</strong> ${today}</div>
+        <div><strong>ประเภทรายได้:</strong> ม.40(5)(ก) ทรัพย์สิน (VAT-exempt)</div>
+        <div><strong>แบบภาษี:</strong> ภ.ง.ด.90 (บุคคลธรรมดา)</div>
       </div>
+
+      <!-- Body (populated by displayMonthlyReport) -->
       <div data-a4-body></div>
-      <div style="text-align:right; margin-top:36px; font-size:10px; color:#888; border-top:1px solid #ddd; padding-top:10px;">
-        Generated by The Green Haven Tax Filing System · ${new Date().toLocaleString('th-TH')}
+
+      <!-- Notes / legal -->
+      <div style="margin-top:20px; padding:10px 12px; background:#fff8e5; border-left:3px solid #f59e0b; border-radius:4px; font-size:10.5px; color:#6c5005; line-height:1.55;">
+        <strong>หมายเหตุ:</strong>
+        <ul style="margin:4px 0 0; padding-left:18px;">
+          <li>รายงานนี้แสดงรายได้ค่าเช่าทรัพย์สิน (ม.40(5)(ก)) ซึ่งได้รับยกเว้น VAT ตามประมวลรัษฎากร ม.81(1)(น)</li>
+          <li>ประมาณภาษีเป็นการคำนวณเบื้องต้นโดยใช้ค่าใช้จ่ายเหมา 30% — ภาษีจริงขึ้นกับรายได้จากแหล่งอื่นและค่าลดหย่อนส่วนบุคคล</li>
+          <li>ต้องยื่นแบบ ภ.ง.ด.90 ภายใน 31 มีนาคม ของปีถัดไป หรือ ภ.ง.ด.94 (รายได้ครึ่งปี) ภายใน 30 กันยายน</li>
+        </ul>
+      </div>
+
+      <!-- Signature block -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:40px; margin-top:36px; font-size:11px; color:#444;">
+        <div style="text-align:center;">
+          <div style="border-top:1px dotted #888; padding-top:4px; margin-top:40px;">ผู้จัดทำรายงาน</div>
+          <div style="margin-top:2px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="border-top:1px dotted #888; padding-top:4px; margin-top:40px;">ผู้ตรวจสอบ</div>
+          <div style="margin-top:2px; color:#888; font-size:10px;">(ลงชื่อ / วันที่)</div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:28px; padding-top:10px; border-top:1px solid #ddd; font-size:9.5px; color:#888;">
+        <div>Generated by The Green Haven Tax Filing System</div>
+        <div>${nowStr}</div>
+        <div>หน้า 1 / 1</div>
       </div>
     `;
     const body = wrap.querySelector('[data-a4-body]');
