@@ -19,25 +19,27 @@ service cloud.firestore {
     // ===== REWARDS COLLECTION (admin-managed catalog, all auth users can read) =====
     match /rewards/{rewardId} {
       allow read:  if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdminOrEmail();
     }
 
     // ===== SYSTEM CONFIG (emergency contacts, app-wide settings) =====
     match /system/{docId} {
       allow read:  if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdminOrEmail();
     }
 
     // ===== ANNOUNCEMENTS (admin-published) =====
     match /announcements/{annId} {
-      allow read:  if isSignedIn();
-      allow write: if isAdmin();
+      allow read:  if true;  // public-ish tenant content
+      allow write: if isAdminOrEmail();
     }
 
     // ===== COMMUNITY EVENTS / DOCS / WELLNESS =====
-    match /communityEvents/{id}    { allow read: if isSignedIn(); allow write: if isAdmin(); }
-    match /communityDocs/{id}      { allow read: if isSignedIn(); allow write: if isAdmin(); }
-    match /wellness_articles/{id}  { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    // Read is public-ish (tenant-facing content, no PII) — avoids auth race on F5.
+    // Write still requires admin (email auth via isAdminOrEmail until claims set up).
+    match /communityEvents/{id}    { allow read: if true; allow write: if isAdminOrEmail(); }
+    match /communityDocs/{id}      { allow read: if true; allow write: if isAdminOrEmail(); }
+    match /wellness_articles/{id}  { allow read: if true; allow write: if isAdminOrEmail(); }
 
     // ===== COMPLAINTS (cross-collection, simpler than per-room subcollection) =====
     match /complaints/{id} {
