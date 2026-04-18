@@ -2119,30 +2119,58 @@
 
         <!-- STEP 1: Invoice + QR -->
         <div id="payment-step-1">
-            <div class="receipt-card">
+            <div class="receipt-card" style="border-color:#3b82f6;">
                 <div class="receipt-inner">
-                    <h2 class="receipt-title">ใบวางบิล</h2>
-                    <div class="receipt-subtitle">Invoice</div>
-                    <div class="info-grid" id="pay-invoice-info">
-                        <div class="info-item"><span>ห้อง</span><strong id="pay-room-no">—</strong></div>
-                        <div class="info-item"><span>งวด</span><strong id="pay-period">—</strong></div>
+                    <!-- Brand header -->
+                    <div style="text-align:center; margin-bottom:4px;">
+                        <span style="font-size:1.2rem; margin-right:4px;">🌿</span>
+                        <strong style="color:var(--primary-green); font-size:1.15rem;">The Green Haven</strong>
                     </div>
-                    <table class="bill-table">
-                        <thead><tr><th>รายการ</th><th></th></tr></thead>
-                        <tbody id="pay-items-tbody">
-                            <tr><td colspan="2" style="text-align:center;color:#aaa;">กำลังโหลด...</td></tr>
-                        </tbody>
-                    </table>
-                    <div id="pay-qr-box" style="text-align:center; padding:15px 0;">
-                        <p style="font-size:var(--fs-sm); color:#888; margin-bottom:8px;">สแกน QR เพื่อชำระ PromptPay</p>
+                    <p style="text-align:center; font-size:var(--fs-sm); color:#888; margin:0 0 14px;">เดอะ กรีน เฮฟเว่น</p>
+                    <!-- Document title -->
+                    <h2 class="receipt-title" style="margin-bottom:2px;">ใบวางบิล / Invoice</h2>
+                    <p style="text-align:center; color:#888; font-size:var(--fs-sm); margin:0 0 18px;">เลขที่: <span id="inv-bill-no">—</span></p>
+                    <!-- Info rows -->
+                    <div style="font-size:var(--fs-md);">
+                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                            <span style="color:#666;">ห้องเลขที่:</span><strong id="inv-room">—</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                            <span style="color:#666;">ประจำเดือน:</span><strong id="inv-period">—</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                            <span style="color:#666;">วันที่ออกบิล:</span><strong id="inv-date">—</strong>
+                        </div>
+                    </div>
+                    <hr style="border:none; border-top:1px dashed #ddd; margin:12px 0;">
+                    <!-- Line items (populated by renderPaymentInvoice) -->
+                    <div id="inv-items" style="font-size:var(--fs-md);"></div>
+                    <hr style="border:none; border-top:1px dashed #ddd; margin:12px 0;">
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.15rem; color:var(--primary-green); padding:6px 0;">
+                        <span>รวมทั้งสิ้น</span><span id="inv-total">฿—</span>
+                    </div>
+                    <!-- QR PromptPay -->
+                    <div id="pay-qr-box" style="background:linear-gradient(135deg,#e8f5e9,#f0faf1); border-radius:12px; padding:16px; margin-top:18px; text-align:center;">
+                        <p style="margin:0 0 10px; font-weight:600; color:var(--primary-green);">📱 สแกน QR เพื่อชำระเงิน</p>
                         <div id="pay-qr-canvas" style="display:inline-block;"></div>
+                        <div id="inv-qr-amount" style="background:var(--primary-green); color:#fff; border-radius:20px; padding:5px 18px; font-weight:bold; margin:10px auto 6px; display:inline-block;">฿—</div>
+                        <p style="margin:4px 0 0; font-size:var(--fs-sm);">พร้อมเพย์: <strong id="inv-promptpay">—</strong></p>
+                        <p style="margin:0; font-size:var(--fs-sm); color:#888;">สแกนแล้วยอดจะขึ้นอัตโนมัติ ไม่ต้องพิมพ์ตัวเลข</p>
                     </div>
+                    <!-- Due date warning -->
+                    <div style="background:#fff4e5; border:1px solid #ffd591; border-radius:10px; padding:10px; margin-top:14px; text-align:center; font-size:var(--fs-sm); color:#b45309;">
+                        📅 กรุณาชำระภายใน <strong id="inv-due-date">—</strong>
+                    </div>
+                    <!-- Status badge -->
+                    <div style="text-align:center; margin-top:14px;">
+                        <span style="border:1.5px solid #d97706; color:#b45309; padding:5px 18px; border-radius:20px; font-size:var(--fs-sm); font-weight:600; background:#fff9e5;">⏳ รอชำระ</span>
+                    </div>
+                    <p style="text-align:center; font-size:var(--fs-sm); color:#888; margin:10px 0 0;">ขอบคุณที่ใช้บริการ The Green Haven</p>
                 </div>
             </div>
-            <div class="action-buttons">
-                <button class="btn-receipt btn-green" style="grid-column:span 2;" onclick="goToPaymentStep(2)">
-                    <i class="fas fa-camera"></i> อัปโหลดสลิปยืนยัน
-                </button>
+            <div class="action-buttons" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <button class="btn-receipt btn-outline" onclick="printReceipt()"><i class="fas fa-print"></i> พิมพ์ / PDF</button>
+                <button class="btn-receipt btn-green" onclick="goToPaymentStep(2)"><i class="fas fa-camera"></i> อัปโหลดสลิป</button>
             </div>
         </div>
 
@@ -2177,33 +2205,52 @@
         <div id="payment-step-3" style="display:none;">
             <div class="receipt-card">
                 <div class="receipt-inner">
-                    <h2 class="receipt-title" id="card-main-title">ใบเสร็จรับเงิน</h2>
-                    <div class="receipt-subtitle" id="card-sub-title">Receipt</div>
-                    <div style="text-align:center; margin-bottom:20px;">
-                        <span class="status-badge" id="payment-status-badge">
-                            <i class="fas fa-check"></i> ชำระเงินแล้ว
+                    <!-- Brand header -->
+                    <div style="text-align:center; margin-bottom:4px;">
+                        <span style="font-size:1.2rem; margin-right:4px;">🌿</span>
+                        <strong style="color:var(--primary-green); font-size:1.15rem;">The Green Haven</strong>
+                    </div>
+                    <p style="text-align:center; font-size:var(--fs-sm); color:#888; margin:0 0 14px;">เดอะ กรีน เฮฟเว่น</p>
+                    <!-- Document title -->
+                    <h2 class="receipt-title" style="margin-bottom:2px;" id="card-main-title">ใบเสร็จรับเงิน / Receipt</h2>
+                    <p style="text-align:center; color:#888; font-size:var(--fs-sm); margin:0 0 18px;">เลขที่: <span id="rcpt-bill-no">—</span></p>
+                    <!-- Info rows -->
+                    <div style="font-size:var(--fs-md);">
+                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                            <span style="color:#666;">ห้องเลขที่:</span><strong id="rcpt-room">—</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                            <span style="color:#666;">ประจำเดือน:</span><strong id="rcpt-period">—</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                            <span style="color:#666;">วันที่ชำระ:</span><strong id="rcpt-paid-date">—</strong>
+                        </div>
+                    </div>
+                    <hr style="border:none; border-top:1px dashed #ddd; margin:12px 0;">
+                    <!-- Line items (populated by renderPaymentReceipt) -->
+                    <div id="rcpt-items" style="font-size:var(--fs-md);"></div>
+                    <hr style="border:none; border-top:1px dashed #ddd; margin:12px 0;">
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.15rem; color:var(--primary-green); padding:6px 0;">
+                        <span>รวมทั้งสิ้น</span><span id="rcpt-total">฿—</span>
+                    </div>
+                    <!-- Status badge -->
+                    <div style="text-align:center; margin-top:18px;">
+                        <span style="border:1.5px solid var(--primary-green); color:var(--primary-green); padding:5px 18px; border-radius:20px; font-size:var(--fs-sm); font-weight:600; background:#e8f5e9;">
+                            ✅ ชำระแล้ว
                         </span>
                     </div>
-                    <div class="info-grid" id="receipt-info-grid">
-                        <div class="info-item"><span>ห้องเลขที่</span><strong id="receipt-room">—</strong></div>
-                        <div class="info-item"><span>งวด</span><strong id="receipt-period">—</strong></div>
-                        <div class="info-item"><span>ยอดชำระ</span><strong id="receipt-total">—</strong></div>
-                        <div class="info-item"><span>วิธีชำระ</span><strong>PromptPay</strong></div>
+                    <!-- Company info (for tax receipt, shown only when tenant receiptType==='company') -->
+                    <div id="company-info-display" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #ddd; font-size:var(--fs-sm);">
+                        <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:#666;">ออกในนาม:</span><strong id="display-comp-name" style="color:var(--primary-green);">-</strong></div>
+                        <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:#666;">เลขผู้เสียภาษี:</span><strong id="display-comp-tax">-</strong></div>
+                        <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:#666;">ที่อยู่:</span><strong id="display-comp-addr" style="text-align:right;">-</strong></div>
                     </div>
-                    <div id="company-info-display" class="info-grid" style="display:none; border-top:none; padding-top:0;">
-                        <div class="info-item" style="grid-column:span 2;"><span>ออกในนาม</span><strong id="display-comp-name" style="color:var(--primary-green);">-</strong></div>
-                        <div class="info-item" style="grid-column:span 2;"><span>เลขประจำตัวผู้เสียภาษี</span><strong id="display-comp-tax">-</strong></div>
-                        <div class="info-item" style="grid-column:span 2;"><span>ที่อยู่</span><strong id="display-comp-addr">-</strong></div>
-                    </div>
-                    <div style="background:#e8f5e9; color:#2e7d32; padding:12px; border-radius:10px; margin-top:10px; text-align:center; font-size:var(--fs-md);">
-                        <i class="fas fa-check-circle"></i> ส่งสลิปเรียบร้อยแล้ว รอการยืนยันจากเจ้าของ<br>
-                        <small id="receipt-owner-name">The Green Haven Co., Ltd.</small>
-                    </div>
+                    <p style="text-align:center; font-size:var(--fs-sm); color:#888; margin:12px 0 0;">ขอบคุณที่ใช้บริการ <span id="receipt-owner-name">The Green Haven</span></p>
+                    <p style="text-align:center; font-size:var(--fs-sm); color:#888; margin:2px 0 0;">กรุณาเก็บใบเสร็จไว้เป็นหลักฐาน</p>
                 </div>
             </div>
-            <div class="action-buttons" style="flex-wrap:wrap; gap:8px;">
-                <button class="btn-receipt btn-outline" onclick="printReceipt()"><i class="fas fa-print"></i> พิมพ์</button>
-                <button class="btn-receipt btn-outline" onclick="downloadReceipt()"><i class="fas fa-download"></i> ดาวน์โหลด</button>
+            <div class="action-buttons" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <button class="btn-receipt btn-outline" onclick="printReceipt()"><i class="fas fa-print"></i> พิมพ์ / PDF</button>
                 <button class="btn-receipt btn-green" onclick="goBackFromPayment()">← กลับไปบิล</button>
             </div>
             <!-- ported: hidden container so downloadReceipt() finds receiptContent fallback -->
@@ -5759,7 +5806,7 @@
             _taCurrentBill = latest;
             const amtEl = document.getElementById('current-bill-amount');
             if (amtEl && latest) {
-                const total = latest.totalAmount || latest.total || latest.rentAmount || 0;
+                const total = Number(latest.totalAmount || latest.total || latest.totalCharge || latest.rentAmount) || 0;
                 amtEl.textContent = `฿ ${Number(total).toLocaleString('th-TH',{minimumFractionDigits:2})}`;
             }
             const dueBadge = document.getElementById('service-due-badge');
@@ -5775,22 +5822,42 @@
                     dueBadge.innerHTML = '<i class="fas fa-clock"></i> รอชำระ';
                 }
             }
-            el.innerHTML = _taBills.slice(0,12).map(b => {
+            // Filter orphan/ghost entries: bills written by accidental double-pay on a synth
+            // ended up in RTDB as stubs like {status:'paid', paidAt:...} with no totalCharge.
+            // They display as "฿0 เม.ย. 2569 ✓ จ่ายแล้ว" duplicates — filter them out.
+            const validBills = _taBills.filter(b => {
+                const t = Number(b.totalAmount || b.total || b.totalCharge || b.rentAmount) || 0;
+                const hasCharges = b.charges && (b.charges.rent || b.charges.electric?.cost || b.charges.water?.cost);
+                const hasMeter = b.meterReadings?.electric?.new || b.meterReadings?.water?.new;
+                if (t > 0) return true;        // has a real total
+                if (hasCharges) return true;    // has itemized charges even if total missing
+                if (hasMeter) return true;      // has meter readings — synth-able
+                return false;                   // orphan stub
+            });
+            el.innerHTML = validBills.slice(0,12).map(b => {
                 const m = THAI_MONTHS_SHORT[b.month] || b.month || '?';
                 const yr = b.year ? (Number(b.year) + (b.year < 100 ? 2500 : 0)) : '?';
-                const total = b.totalAmount || b.total || b.rentAmount || 0;
+                const total = Number(b.totalAmount || b.total || b.totalCharge || b.rentAmount) || 0;
                 const paid = b.status === 'paid';
+                const isSynth = !!b.synthetic;
                 const bId = b.id || b.billId || '';
+                const statusPill = paid
+                    ? '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#D1FAE5;color:#065F46">✓ จ่ายแล้ว</span>'
+                    : isSynth
+                        ? '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#E0F2FE;color:#075985">⏳ รอออกบิล</span>'
+                        : '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#FFF4E5;color:#D97706">รอชำระ</span>';
+                const actionBtn = isSynth
+                    ? '<span style="color:#888;font-size:var(--fs-sm);padding:5px 10px;">แอดมินยังไม่ออกบิล</span>'
+                    : paid
+                        ? `<button onclick="openPaymentFlow(true,'${bId}')" style="background:none;border:1px solid var(--primary-green);color:var(--primary-green);padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">ใบเสร็จ</button>`
+                        : `<button onclick="openPaymentFlow(false,'${bId}')" style="background:var(--primary-green);color:white;border:none;padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">จ่ายเลย</button>`;
                 return `<div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f3f3;">
                     <div>
                         <span style="font-size:var(--fs-md);font-weight:600;">${m} ${yr}</span>
-                        <span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;${paid?'background:#D1FAE5;color:#065F46':'background:#FFF4E5;color:#D97706'}">${paid?'✓ จ่ายแล้ว':'รอชำระ'}</span>
+                        ${statusPill}
                         <p style="font-size:var(--fs-sm);color:#888;margin:3px 0 0;">฿${Number(total).toLocaleString()}</p>
                     </div>
-                    ${paid
-                        ? `<button onclick="openPaymentFlow(true,'${bId}')" style="background:none;border:1px solid var(--primary-green);color:var(--primary-green);padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">ใบเสร็จ</button>`
-                        : `<button onclick="openPaymentFlow(false,'${bId}')" style="background:var(--primary-green);color:white;border:none;padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">จ่ายเลย</button>`
-                    }
+                    ${actionBtn}
                 </div>`;
             }).join('');
         }
@@ -6647,33 +6714,57 @@
         }
 
         function renderPaymentInvoice(bill) {
-            if (!bill) { document.getElementById('pay-items-tbody').innerHTML = '<tr><td colspan="2" style="text-align:center;color:#aaa;">ไม่พบข้อมูลบิล</td></tr>'; return; }
-            const m = THAI_MONTHS_SHORT[bill.month] || bill.month || '?';
-            const yr = bill.year ? (Number(bill.year) + (bill.year < 100 ? 2500 : 0)) : '?';
-            const roomEl = document.getElementById('pay-room-no');
-            if (roomEl) roomEl.textContent = _taRoom;
-            const periodEl = document.getElementById('pay-period');
-            if (periodEl) periodEl.textContent = `${m} ${yr}`;
-            const tbody = document.getElementById('pay-items-tbody');
-            if (tbody) {
-                const rent = bill.rentAmount||bill.rent||0, elec = bill.electricityAmount||bill.electricity||0;
-                const water = bill.waterAmount||bill.water||0, trash = bill.trashAmount||bill.trash||0;
-                const total = bill.totalAmount||bill.total||(rent+elec+water+trash);
-                tbody.innerHTML = [
-                    rent  ? `<tr><td>🏠 ค่าเช่า</td><td>฿${Number(rent).toLocaleString()}</td></tr>` : '',
-                    elec  ? `<tr><td>⚡ ค่าไฟ${bill.electricityUnits?` (${bill.electricityUnits} หน่วย)`:''}</td><td>฿${Number(elec).toLocaleString()}</td></tr>` : '',
-                    water ? `<tr><td>💧 ค่าน้ำ${bill.waterUnits?` (${bill.waterUnits} หน่วย)`:''}</td><td>฿${Number(water).toLocaleString()}</td></tr>` : '',
-                    trash ? `<tr><td>🗑️ ค่าขยะ</td><td>฿${Number(trash).toLocaleString()}</td></tr>` : '',
-                    `<tr class="total-row"><td>รวมทั้งสิ้น</td><td>฿${Number(total).toLocaleString()}</td></tr>`
+            if (!bill) return;
+            const THAI_MONTHS_FULL = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+            const mFull = THAI_MONTHS_FULL[bill.month] || bill.month || '?';
+            const yr = bill.year ? (Number(bill.year) + (bill.year < 100 ? 2500 : (bill.year < 2500 ? 543 : 0))) : '?';
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            set('inv-bill-no', bill.billId || bill.id || '—');
+            set('inv-room', `ห้อง ${_taRoom || '—'}`);
+            set('inv-period', `${mFull} ${yr}`);
+            // Issue date: prefer billDate, else createdAt, else now
+            const issueDate = bill.billDate || (bill.createdAt ? new Date(bill.createdAt).toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}) : new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}));
+            set('inv-date', issueDate);
+            // Due date: 5th of next month
+            const dueDate = `5 ${THAI_MONTHS_FULL[bill.month === 12 ? 1 : bill.month + 1] || '?'} ${bill.month === 12 ? yr + 1 : yr}`;
+            set('inv-due-date', dueDate);
+            // Line items with meter readings sub-line
+            const items = document.getElementById('inv-items');
+            if (items) {
+                const rent  = Number(bill.charges?.rent)    || Number(bill.rentAmount||bill.rent) || 0;
+                const elecC = Number(bill.charges?.electric?.cost) || Number(bill.electricityAmount||bill.electricity) || 0;
+                const waterC= Number(bill.charges?.water?.cost)    || Number(bill.waterAmount||bill.water) || 0;
+                const trash = Number(bill.charges?.trash)   || Number(bill.trashAmount||bill.trash) || 0;
+                const eOld = bill.charges?.electric?.old ?? bill.meterReadings?.electric?.old;
+                const eNew = bill.charges?.electric?.new ?? bill.meterReadings?.electric?.new;
+                const eU   = bill.charges?.electric?.units ?? bill.meterReadings?.electric?.units;
+                const eR   = bill.charges?.electric?.rate  ?? 8;
+                const wOld = bill.charges?.water?.old ?? bill.meterReadings?.water?.old;
+                const wNew = bill.charges?.water?.new ?? bill.meterReadings?.water?.new;
+                const wU   = bill.charges?.water?.units ?? bill.meterReadings?.water?.units;
+                const wR   = bill.charges?.water?.rate  ?? 20;
+                const row = (label, amount, subline) => `
+                    <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                        <span>${label}</span><strong>฿${Number(amount).toLocaleString()}</strong>
+                    </div>${subline ? `<div style="font-size:var(--fs-sm); color:#6b7280; padding:0 0 6px 8px;">${subline}</div>` : ''}`;
+                items.innerHTML = [
+                    rent  ? row('ค่าเช่าห้อง', rent) : '',
+                    elecC !== null ? row('ค่าไฟฟ้า', elecC, (eOld!=null&&eNew!=null) ? `มิเตอร์ไฟ: ${eOld} → ${eNew} (${eU||0} หน่วย × ฿${eR})` : '') : '',
+                    waterC!== null ? row('ค่าน้ำประปา', waterC, (wOld!=null&&wNew!=null) ? `มิเตอร์น้ำ: ${wOld} → ${wNew} (${wU||0} หน่วย × ฿${wR})` : '') : '',
+                    trash ? row('ค่าขยะ', trash) : ''
                 ].join('');
             }
+            const total = Number(bill.totalAmount||bill.total||bill.totalCharge) || 0;
+            set('inv-total', `฿${total.toLocaleString()}`);
+            set('inv-qr-amount', `฿${total.toLocaleString()}`);
+            const phone = localStorage.getItem('promptpay') || '';
+            set('inv-promptpay', phone || '—');
+            // QR
             const qrBox = document.getElementById('pay-qr-canvas');
             if (qrBox) {
                 qrBox.innerHTML = '';
-                const phone = localStorage.getItem('promptpay') || '';
-                const total2 = bill.totalAmount||bill.total||0;
-                if (phone && total2 && typeof QRCode !== 'undefined') {
-                    try { new QRCode(qrBox, { text: buildPromptPayPayload(phone, total2), width:200, height:200, correctLevel: QRCode.CorrectLevel.M }); }
+                if (phone && total && typeof QRCode !== 'undefined') {
+                    try { new QRCode(qrBox, { text: buildPromptPayPayload(phone, total), width:180, height:180, correctLevel: QRCode.CorrectLevel.M }); }
                     catch(e) { qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่สามารถสร้าง QR ได้</p>'; }
                 } else {
                     qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่มีข้อมูล PromptPay</p>';
@@ -6683,12 +6774,46 @@
 
         function renderPaymentReceipt(bill) {
             if (!bill) return;
-            const m = THAI_MONTHS_SHORT[bill.month] || bill.month || '?';
-            const yr = bill.year ? (Number(bill.year) + (bill.year < 100 ? 2500 : 0)) : '?';
-            const roomEl = document.getElementById('receipt-room'); if (roomEl) roomEl.textContent = _taRoom;
-            const periodEl = document.getElementById('receipt-period'); if (periodEl) periodEl.textContent = `${m} ${yr}`;
-            const totalEl = document.getElementById('receipt-total');
-            if (totalEl) totalEl.textContent = `฿${Number(bill.totalAmount||bill.total||0).toLocaleString()}`;
+            const THAI_MONTHS_FULL = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+            const mFull = THAI_MONTHS_FULL[bill.month] || bill.month || '?';
+            const yr = bill.year ? (Number(bill.year) + (bill.year < 100 ? 2500 : (bill.year < 2500 ? 543 : 0))) : '?';
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            set('rcpt-bill-no', bill.billId || bill.id || '—');
+            set('rcpt-room', `ห้อง ${_taRoom || '—'}`);
+            set('rcpt-period', `${mFull} ${yr}`);
+            const paidAt = bill.paidAt ? new Date(bill.paidAt).toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}) : new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+            set('rcpt-paid-date', paidAt);
+            // Line items same as invoice
+            const items = document.getElementById('rcpt-items');
+            if (items) {
+                const rent  = Number(bill.charges?.rent)    || Number(bill.rentAmount||bill.rent) || 0;
+                const elecC = Number(bill.charges?.electric?.cost) || Number(bill.electricityAmount||bill.electricity) || 0;
+                const waterC= Number(bill.charges?.water?.cost)    || Number(bill.waterAmount||bill.water) || 0;
+                const trash = Number(bill.charges?.trash)   || Number(bill.trashAmount||bill.trash) || 0;
+                const eOld = bill.charges?.electric?.old ?? bill.meterReadings?.electric?.old;
+                const eNew = bill.charges?.electric?.new ?? bill.meterReadings?.electric?.new;
+                const eU   = bill.charges?.electric?.units ?? bill.meterReadings?.electric?.units;
+                const eR   = bill.charges?.electric?.rate  ?? 8;
+                const wOld = bill.charges?.water?.old ?? bill.meterReadings?.water?.old;
+                const wNew = bill.charges?.water?.new ?? bill.meterReadings?.water?.new;
+                const wU   = bill.charges?.water?.units ?? bill.meterReadings?.water?.units;
+                const wR   = bill.charges?.water?.rate  ?? 20;
+                const row = (label, amount, subline) => `
+                    <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                        <span>${label}</span><strong>฿${Number(amount).toLocaleString()}</strong>
+                    </div>${subline ? `<div style="font-size:var(--fs-sm); color:#6b7280; padding:0 0 6px 8px;">${subline}</div>` : ''}`;
+                items.innerHTML = [
+                    rent  ? row('ค่าเช่าห้อง', rent) : '',
+                    elecC ? row('ค่าไฟฟ้า', elecC, (eOld!=null&&eNew!=null) ? `มิเตอร์ไฟ: ${eOld} → ${eNew} (${eU||0} หน่วย × ฿${eR})` : '') : '',
+                    waterC? row('ค่าน้ำประปา', waterC, (wOld!=null&&wNew!=null) ? `มิเตอร์น้ำ: ${wOld} → ${wNew} (${wU||0} หน่วย × ฿${wR})` : '') : '',
+                    trash ? row('ค่าขยะ', trash) : ''
+                ].join('');
+            }
+            const total = Number(bill.totalAmount||bill.total||bill.totalCharge) || 0;
+            set('rcpt-total', `฿${total.toLocaleString()}`);
+            // Owner name from Firestore-cached config
+            const ownerEl = document.getElementById('receipt-owner-name');
+            if (ownerEl && typeof getOwnerName === 'function') ownerEl.textContent = getOwnerName();
         }
 
         // ---- SLIP UPLOAD ----
@@ -6795,11 +6920,25 @@
 
         async function _saveTenantPayment(verifyResult) {
             if (!_taCurrentBill) return;
+            // Guard against double-pay: if bill is already marked paid, skip RTDB writes
+            // (verifySlip already went through — show receipt + exit; no new RTDB stub)
+            if (_taCurrentBill.status === 'paid') {
+                if (typeof toast === 'function') toast('บิลนี้ชำระเรียบร้อยแล้ว — ไม่ต้องจ่ายซ้ำ', 'info');
+                console.log('⏭ Skip _saveTenantPayment: bill already paid', _taCurrentBill.billId);
+                return;
+            }
+            // Guard against paying synthetic bills (auto-calculated from meter, not yet issued by admin)
+            // Paying these creates orphan RTDB stubs that show as "฿0 จ่ายแล้ว" duplicates.
+            if (_taCurrentBill.synthetic) {
+                if (typeof toast === 'function') toast('บิลนี้ยังเป็นการคำนวณล่วงหน้า รอแอดมินออกบิลอย่างเป็นทางการก่อน', 'warning');
+                console.log('⏭ Skip _saveTenantPayment: synthetic bill', _taCurrentBill.billId);
+                return;
+            }
             const billId = _taCurrentBill.id||_taCurrentBill.billId||`${_taCurrentBill.year}-${String(_taCurrentBill.month).padStart(2,'0')}`;
             const record = {
                 billId,
                 month: _taCurrentBill.month, year: _taCurrentBill.year,
-                amount: _taCurrentBill.totalAmount||_taCurrentBill.total||0,
+                amount: Number(_taCurrentBill.totalAmount||_taCurrentBill.total||_taCurrentBill.totalCharge)||0,
                 paidAt: new Date().toISOString(),
                 createdAt: new Date().toISOString(),
                 method: 'PromptPay',
