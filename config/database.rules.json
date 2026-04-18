@@ -49,6 +49,11 @@
       ".write": "auth != null && auth.token.admin == true"
     },
 
+    "rooms_config": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
     "tenants": {
       ".read": "auth != null",
       ".write": "auth != null && auth.token.admin == true"
