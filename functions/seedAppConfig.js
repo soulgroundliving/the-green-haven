@@ -38,10 +38,10 @@ const DEFAULTS = {
     ]
   },
   serviceProviders: {
-    items: [
-      { id: 'sp001', type: 'internet',    name: 'True Internet',        icon: '📱', phone: '1-2700-1700',   email: 'support@true.co.th',         website: 'true.co.th' },
-      { id: 'sp002', type: 'maintenance', name: 'Building Maintenance', icon: '🔧', phone: '086-XXX-XXXX',  email: 'maintenance@building.co.th', website: '' }
-    ]
+    // Empty by default — tenants can request/admin can add via future Firestore CRUD UI.
+    // (Internet + Maintenance entries were removed — internet lives in Internet Status
+    // accordion; maintenance is its own dedicated page.)
+    items: []
   },
   maintenanceCategories: {
     items: [

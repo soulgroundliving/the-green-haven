@@ -1661,6 +1661,34 @@
             </div>
         </div>
 
+        <!-- ROOM-level internet status — same accordion pattern as building above.
+             Data source: tenants/{building}/list/{roomId}.roomInternet or localStorage fallback. -->
+        <div id="roomInternetStatusSection" class="card" style="display:none;">
+            <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                <strong style="flex:1;">📡 สถานะอินเทอร์เน็ตห้องพัก</strong>
+                <span id="roomInternetStatusIcon" style="font-size:var(--fs-md);">🟢</span>
+                <span id="roomInternetStatusText" style="font-size:var(--fs-sm); font-weight:600;">เชื่อมต่อแล้ว</span>
+                <i class="fas fa-chevron-down" style="color:#aaa;"></i>
+            </div>
+            <div class="accordion-content" style="display:none;">
+                <div id="roomInternetSpeedSection" style="display:none; margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
+                        <small style="color:#666;">⬇️ Download</small>
+                        <div id="roomInternetDownloadSpeed" style="font-weight:700;">-</div>
+                    </div>
+                    <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
+                        <small style="color:#666;">⬆️ Upload</small>
+                        <div id="roomInternetUploadSpeed" style="font-weight:700;">-</div>
+                    </div>
+                </div>
+                <div id="roomInternetProviderSection" style="display:none; margin-top:10px; font-size:var(--fs-sm);">
+                    <div>ห้อง: <strong id="roomInternetRoom">-</strong></div>
+                    <div>SSID: <span id="roomInternetSSID">-</span></div>
+                </div>
+                <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="roomInternetLastCheck">-</span></small>
+            </div>
+        </div>
+
         <!-- Merged accordion: emergency contacts (🚨) + service providers.
              Uses same toggleAccordion() pattern as internetStatusSection above. -->
         <div id="emergencyContactsSection" class="card">
@@ -1682,13 +1710,8 @@
                         <span style="font-size:1.4rem;">🚑</span> <span style="flex:1;">การแพทย์ฉุกเฉิน</span> <strong>1669</strong>
                     </button>
                 </div>
-                <!-- Divider -->
-                <hr style="margin:14px 0; border:none; border-top:1px solid #eee;">
-                <!-- Service providers shortcut + dynamic list -->
-                <div style="display:grid; grid-template-columns:1fr; gap:10px;">
-                    <button onclick="makeCall(localStorage.getItem('building_internet_contact')||'1-2700-1700')"
-                        style="padding:12px; border-radius:12px; border:none; background:#EBF5FF; color:#2563EB; font-weight:bold; cursor:pointer;">📶 ติดต่อค่ายเน็ต</button>
-                </div>
+                <!-- Service providers (dynamic list from Firestore system/serviceProviders).
+                     Internet provider contact now lives in สถานะอินเทอร์เน็ตอาคาร accordion above. -->
                 <div id="serviceProvidersList" style="display:grid; gap:10px; margin-top:12px;"></div>
             </div>
         </div>
@@ -6794,6 +6817,7 @@
             // ported: render service providers + internet status + docs on services/community pages
             try { displayServiceProviders(); } catch(e){}
             try { displayBuildingInternetStatus(); } catch(e){}
+            try { displayRoomInternetStatus(); } catch(e){}
             try { displayDocuments(); } catch(e){}
             try { displayLeaseRenewalAlert(); } catch(e){}
             // photo modal click-outside-to-close
@@ -6879,6 +6903,54 @@
             if (last) last.textContent = internetStatus.lastCheck || new Date().toLocaleString('th-TH');
         }
 
+        // ---- ROOM-LEVEL INTERNET STATUS ----
+        // Data source priority: _taTenant.roomInternet (Firestore) → localStorage → defaults.
+        // When wifi IoT integration lands, admin can push per-room status to
+        // tenants/{building}/list/{roomId}.roomInternet and tenant_app picks it up here.
+        function displayRoomInternetStatus() {
+            const section = document.getElementById('roomInternetStatusSection');
+            if (!section) return;
+            let roomInternet = {
+                status: 'online',
+                ssid: 'GH-Room-' + (_taRoom || '—'),
+                downloadSpeed: '-',
+                uploadSpeed: '-',
+                lastCheck: new Date().toLocaleString('th-TH')
+            };
+            try {
+                if (_taTenant && _taTenant.roomInternet) roomInternet = { ...roomInternet, ..._taTenant.roomInternet };
+                const stored = JSON.parse(localStorage.getItem('room_internet_status') || '{}');
+                if (stored && Object.keys(stored).length) roomInternet = { ...roomInternet, ...stored };
+            } catch(e) {}
+            section.style.display = 'block';
+            const icon = document.getElementById('roomInternetStatusIcon');
+            const txt  = document.getElementById('roomInternetStatusText');
+            if (roomInternet.status === 'online') {
+                if (icon) icon.textContent = '🟢';
+                if (txt)  { txt.textContent = 'เชื่อมต่อแล้ว'; txt.style.color = '#16A34A'; }
+            } else if (roomInternet.status === 'offline') {
+                if (icon) icon.textContent = '🔴';
+                if (txt)  { txt.textContent = 'ไม่เชื่อมต่อ'; txt.style.color = '#DC2626'; }
+            } else {
+                if (icon) icon.textContent = '🟡';
+                if (txt)  { txt.textContent = 'สัญญาณไม่เสถียร'; txt.style.color = '#D97706'; }
+            }
+            const speedSec = document.getElementById('roomInternetSpeedSection');
+            if (speedSec) speedSec.style.display = 'grid';
+            const dl = document.getElementById('roomInternetDownloadSpeed');
+            const ul = document.getElementById('roomInternetUploadSpeed');
+            if (dl) dl.textContent = roomInternet.downloadSpeed || '-';
+            if (ul) ul.textContent = roomInternet.uploadSpeed || '-';
+            const provSec = document.getElementById('roomInternetProviderSection');
+            const roomEl  = document.getElementById('roomInternetRoom');
+            const ssidEl  = document.getElementById('roomInternetSSID');
+            if (roomEl) roomEl.textContent = _taRoom || '-';
+            if (ssidEl) ssidEl.textContent = roomInternet.ssid || '-';
+            if (provSec) provSec.style.display = 'block';
+            const last = document.getElementById('roomInternetLastCheck');
+            if (last) last.textContent = roomInternet.lastCheck || new Date().toLocaleString('th-TH');
+        }
+
         // ---- LEASE RENEWAL ALERT ----
         function displayLeaseRenewalAlert() {
             const banner = document.getElementById('leaseRenewalAlert');
@@ -6954,11 +7026,13 @@
                 const stored = JSON.parse(localStorage.getItem('service_providers_data') || '[]');
                 if (stored && stored.length) providers = stored;
             } catch(e) {}
+            // Filter out legacy internet + maintenance entries — they're redundant with
+            // the Internet Status accordions and Maintenance page respectively.
+            providers = providers.filter(p => p.type !== 'internet' && p.type !== 'maintenance');
             if (!providers.length) {
-                providers = [
-                    { id:'sp001', type:'internet',    name:'True Internet',         icon:'📱', phone:'1-2700-1700', email:'support@true.co.th', website:'true.co.th' },
-                    { id:'sp004', type:'maintenance', name:'Building Maintenance',  icon:'🔧', phone:'086-XXX-XXXX', email:'maintenance@building.co.th', website:'' }
-                ];
+                // No providers to show — hide container to avoid empty space
+                container.textContent = '';
+                return;
             }
             // Build via DOM API to avoid XSS from stored data
             container.textContent = '';
@@ -7448,6 +7522,7 @@
         window.generateInvoiceWithDetails = generateInvoiceWithDetails;
         window.updateBillTemplateWithOwnerInfo = updateBillTemplateWithOwnerInfo;
         window.displayBuildingInternetStatus = displayBuildingInternetStatus;
+        window.displayRoomInternetStatus = displayRoomInternetStatus;
         window.displayLeaseRenewalAlert = displayLeaseRenewalAlert;
         window.displayServiceProviders = displayServiceProviders;
         window.displayDocuments = displayDocuments;
