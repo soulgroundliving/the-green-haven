@@ -1116,6 +1116,34 @@ class TenantFirebaseSync {
   }
 
   /**
+   * Subscribe to real-time bill updates from RTDB.
+   * Calls callback whenever bills/{building}/{room} changes.
+   * Returns unsubscribe function. Use one-shot loadBills() for initial render,
+   * then subscribeBills() to receive updates while the user has the app open.
+   */
+  static subscribeBills(callback) {
+    if (!this.database || !window.firebaseRef || !window.firebaseOnValue) {
+      console.warn('⚠️ Firebase not available for bill subscription');
+      return () => {};
+    }
+    try {
+      const billsRef = window.firebaseRef(this.database, `bills/${this.currentBuilding}/${this.currentRoom}`);
+      const unsub = window.firebaseOnValue(billsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const bills = Object.values(snapshot.val() || {});
+          callback(bills);
+        } else {
+          callback([]);
+        }
+      }, (err) => console.warn('⚠️ subscribeBills error:', err.message));
+      return typeof unsub === 'function' ? unsub : () => {};
+    } catch (e) {
+      console.warn('⚠️ subscribeBills failed:', e.message);
+      return () => {};
+    }
+  }
+
+  /**
    * Load payment history from Firebase
    */
   static async loadPaymentHistory() {

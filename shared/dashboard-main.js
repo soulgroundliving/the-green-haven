@@ -8088,7 +8088,9 @@ function switchMaintenanceTab(tabName, btn) {
 }
 
 // ===== ANNOUNCEMENTS MANAGEMENT =====
-let announcementBuilding = 'rooms';
+// 'all' = broadcast to both buildings (default). 'rooms' / 'nest' = building-specific.
+// Tenants in either building see announcements where building === 'all' OR matches their own.
+let announcementBuilding = 'all';
 
 function setAnnouncementBuilding(bld, btn) {
   document.querySelectorAll('#page-announcements .year-tab').forEach(b => b.classList.remove('active'));
@@ -8204,7 +8206,10 @@ function deleteAnnouncement(id) {
 
 function renderAnnouncementsList() {
   const announcements = loadAnnouncements();
-  const filtered = announcements.filter(a => a.building === announcementBuilding);
+  // 'all' filter shows everything. Building-specific filters show that building + global ('all') announcements.
+  const filtered = announcements.filter(a =>
+    announcementBuilding === 'all' || a.building === 'all' || a.building === announcementBuilding
+  );
 
   const container = document.getElementById('announcementsList');
   if (!container) return;
@@ -8874,10 +8879,35 @@ function showBillingModal(roomId) {
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 }
 
-function markBillPaid(roomId, month, year, billId) {
+async function markBillPaid(roomId, month, year, billId) {
   if (typeof BillingSystem === 'undefined') { showToast('ไม่พบระบบบิล', 'error'); return; }
   const note = document.getElementById('billingPayNote')?.value || '';
   BillingSystem.updateBillStatus(billId, 'paid', year);
+
+  // Mirror status flip into RTDB so tenant_app's onValue subscriber sees it instantly
+  // (without this, lookbook stays "ยังไม่จ่าย" even after admin manually approves)
+  try {
+    if (window.firebaseDatabase && window.firebaseRef && window.firebaseSet) {
+      const fbBuilding = (window.CONFIG?.getBuildingConfig?.(typeof currentBuilding !== 'undefined' ? currentBuilding : 'rooms')) || 'rooms';
+      const paidAt = new Date().toISOString();
+      const statusRef = window.firebaseRef(window.firebaseDatabase, `bills/${fbBuilding}/${roomId}/${billId}/status`);
+      const paidAtRef = window.firebaseRef(window.firebaseDatabase, `bills/${fbBuilding}/${roomId}/${billId}/paidAt`);
+      await window.firebaseSet(statusRef, 'paid');
+      await window.firebaseSet(paidAtRef, paidAt);
+      // Also push payment record so tenant payment history reflects manual approval
+      if (window.firebasePush) {
+        const paymentsRef = window.firebaseRef(window.firebaseDatabase, `payments/${fbBuilding}/${roomId}`);
+        const newRef = window.firebasePush(paymentsRef);
+        await window.firebaseSet(newRef, {
+          billId, month, year, paidAt, createdAt: paidAt,
+          method: 'manual_admin', note, building: fbBuilding, room: roomId,
+          verifiedBy: 'admin_manual'
+        });
+      }
+      console.log(`✅ markBillPaid: synced bill ${billId} status to RTDB`);
+    }
+  } catch (e) { console.warn('⚠️ markBillPaid RTDB sync failed:', e.message); }
+
   showToast(`✅ บันทึกการชำระห้อง ${roomId} เดือน ${month}/${year} แล้ว`, 'success');
   document.getElementById('billingPayModal')?.remove();
 }

@@ -1946,10 +1946,11 @@
             <small>วันสิ้นสุด: <strong id="leaseAlertDate">—</strong></small>
         </div>
 
-        <!-- ported from tenant.html: emergency contacts + community docs -->
+        <!-- Rendered dynamically by _subscribeEmergencyContacts() from Firestore system/emergencyContacts.
+             Defaults (191/199/1669) shown until first Firestore snapshot lands. Admin manages via dashboard.html. -->
         <div class="section-title"><span>เบอร์ติดต่อฉุกเฉิน 🚨</span></div>
         <div id="emergencyContactsSection" class="card" style="margin: 0 15px 12px;">
-            <div style="display:grid; gap:8px;">
+            <div id="emergencyContactsList" style="display:grid; gap:8px;">
                 <button onclick="makeCall('191')" style="display:flex; align-items:center; gap:10px; padding:10px; background:#FFF1F1; color:#DC2626; border:none; border-radius:10px; font-weight:700; cursor:pointer; text-align:left;">
                     <span style="font-size:1.4rem;">🚓</span> <span style="flex:1;">ตำรวจ</span> <strong>191</strong>
                 </button>
@@ -2144,7 +2145,7 @@
                     </div>
                     <div style="background:#e8f5e9; color:#2e7d32; padding:12px; border-radius:10px; margin-top:10px; text-align:center; font-size:var(--fs-md);">
                         <i class="fas fa-check-circle"></i> ส่งสลิปเรียบร้อยแล้ว รอการยืนยันจากเจ้าของ<br>
-                        <small>The Green Haven Co., Ltd.</small>
+                        <small id="receipt-owner-name">The Green Haven Co., Ltd.</small>
                     </div>
                 </div>
             </div>
@@ -2838,25 +2839,51 @@
                     </div>
                     <span class="text-xs font-bold text-[#2d8653]">+30 Pts</span>
                 </div>
-                <div class="muji-card p-3 flex justify-between items-center">
-                    <div class="flex items-center gap-3">
+                <div class="muji-card p-3">
+                    <div class="flex items-center gap-3 mb-2">
                         <span class="text-lg">📅</span>
-                        <div>
-                            <p class="text-xs font-bold">จ่ายค่าเช่าตรงวัน</p>
-                            <p class="text-[9px] text-gray-400">ก่อนวันที่ 5 ของเดือน</p>
+                        <div class="flex-1">
+                            <p class="text-xs font-bold">จ่ายค่าเช่าตรงเวลา</p>
+                            <p class="text-[9px] text-gray-400">วันครบกำหนด: วันที่ 5 ของเดือน</p>
                         </div>
                     </div>
-                    <span class="text-xs font-bold text-[#2d8653]">+50 Pts</span>
+                    <div class="grid grid-cols-5 gap-1 text-[9px] text-center mt-2">
+                        <div class="bg-green-50 rounded py-1"><div class="font-bold text-[#2d8653]">+150</div><div class="text-gray-500">ก่อน 4 วัน</div></div>
+                        <div class="bg-green-50 rounded py-1"><div class="font-bold text-[#2d8653]">+100</div><div class="text-gray-500">ตรงเวลา</div></div>
+                        <div class="bg-yellow-50 rounded py-1"><div class="font-bold text-yellow-700">+40</div><div class="text-gray-500">ช้า 1-3 วัน</div></div>
+                        <div class="bg-orange-50 rounded py-1"><div class="font-bold text-orange-700">+15</div><div class="text-gray-500">ช้า 4-5 วัน</div></div>
+                        <div class="bg-gray-100 rounded py-1"><div class="font-bold text-gray-500">0</div><div class="text-gray-500">ช้า ≥6 วัน</div></div>
+                    </div>
                 </div>
                 <div class="muji-card p-3 flex justify-between items-center">
                     <div class="flex items-center gap-3">
                         <span class="text-lg">🌱</span>
                         <div>
                             <p class="text-xs font-bold">เข้าร่วมกิจกรรมชุมชน</p>
-                            <p class="text-[9px] text-gray-400">ต่อครั้ง</p>
+                            <p class="text-[9px] text-gray-400">สูงสุด 2 ครั้ง/เดือน</p>
                         </div>
                     </div>
                     <span class="text-xs font-bold text-[#2d8653]">+100 Pts</span>
+                </div>
+                <div class="muji-card p-3 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <span class="text-lg">🤝</span>
+                        <div>
+                            <p class="text-xs font-bold">ไม่มีการร้องเรียน 3+ เดือน</p>
+                            <p class="text-[9px] text-gray-400">โบนัสรายไตรมาส</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-bold text-[#2d8653]">+50 Pts</span>
+                </div>
+                <div class="muji-card p-3 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <span class="text-lg">📱</span>
+                        <div>
+                            <p class="text-xs font-bold">เช็คอินรายวัน</p>
+                            <p class="text-[9px] text-gray-400">โบนัสครบ 7 วัน +3</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-bold text-[#2d8653]">+1 Pt/วัน</span>
                 </div>
             </div>
         </div>
@@ -2982,19 +3009,41 @@
             <h1 style="margin:0; font-size: var(--fs-lg);">ข้อมูลส่วนตัว</h1>
         </div>
 
-        <div class="section-title"><span>ข้อมูลส่วนตัว</span></div>
+        <div class="section-title">
+            <span>ข้อมูลส่วนตัว</span>
+            <small id="profile-edit-toggle" style="color:var(--primary-green); cursor:pointer; font-weight:bold;" onclick="toggleProfileEditMode()">✏️ แก้ไข</small>
+        </div>
         <div class="card">
-            <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <span>ชื่อ+นามสกุล</span><strong id="profile-fullname">—</strong>
+            <!-- Read-only view (default) -->
+            <div id="profile-readonly-view">
+                <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span>ชื่อ+นามสกุล</span><strong id="profile-fullname">—</strong>
+                </div>
+                <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span>เบอร์โทรศัพท์:</span><strong id="profile-phone">—</strong>
+                </div>
+                <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span>อีเมล:</span><strong id="profile-email">—</strong>
+                </div>
+                <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span>ป้ายทะเบียน:</span><strong id="profile-license">—</strong>
+                </div>
             </div>
-            <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <span>เบอร์โทรศัพท์:</span><strong id="profile-phone">—</strong>
-            </div>
-            <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <span>อีเมล:</span><strong id="profile-email">—</strong>
-            </div>
-            <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <span>ป้ายทะเบียน:</span><strong id="profile-license">—</strong>
+            <!-- Edit form (hidden by default — toggled by toggleProfileEditMode) -->
+            <div id="profile-edit-form" style="display:none;">
+                <label style="font-size:var(--fs-sm); color:#666;">เบอร์โทรศัพท์</label>
+                <input type="tel" id="profile-edit-phone" placeholder="0xxxxxxxxx" style="margin-bottom:10px;">
+                <label style="font-size:var(--fs-sm); color:#666;">อีเมล</label>
+                <input type="email" id="profile-edit-email" placeholder="example@gmail.com" style="margin-bottom:10px;">
+                <label style="font-size:var(--fs-sm); color:#666;">ป้ายทะเบียน</label>
+                <input type="text" id="profile-edit-license" placeholder="กข 1234 / —" style="margin-bottom:15px;">
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-main" style="flex:1; background:#999;" onclick="toggleProfileEditMode(false)">ยกเลิก</button>
+                    <button class="btn-main" style="flex:1;" onclick="saveProfileEdit()"><i class="fas fa-save"></i> บันทึก</button>
+                </div>
+                <p style="font-size:var(--fs-sm); color:#888; margin-top:10px;">
+                    <i class="fas fa-info-circle"></i> ชื่อ+นามสกุลกับสัญญาเช่า แก้ไม่ได้ — กรุณาติดต่อเจ้าของหากต้องการเปลี่ยน
+                </p>
             </div>
         </div>
 
@@ -3066,20 +3115,24 @@
             </select>
             <div id="renew-form" style="display: none; animation: slideUp 0.3s ease;">
                 <label style="font-size: var(--fs-md); font-weight: 600;">ระยะเวลาที่ต้องการต่อสัญญาใหม่</label>
-                <select style="margin-bottom: 15px;">
-                    <option>1 ปี (ได้รับสิทธิ์ส่วนลด)</option>
-                    <option>6 เดือน</option>
+                <select id="renew-duration" style="margin-bottom: 15px;">
+                    <option value="1y">1 ปี (ได้รับสิทธิ์ส่วนลด)</option>
+                    <option value="6m">6 เดือน</option>
                 </select>
-                <button class="btn-main" onclick="alert('ส่งคำขอต่อสัญญาเรียบร้อย'); showPage('profile', 4);"><i
+                <label style="font-size: var(--fs-md); font-weight: 600;">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
+                <textarea id="renew-note" rows="2" placeholder="เช่น ขอลดราคาเล็กน้อย, ขอเปลี่ยนสภาพห้อง..." style="margin-bottom: 15px;"></textarea>
+                <button class="btn-main" onclick="submitLeaseRequest('renew')"><i
                         class="fas fa-paper-plane"></i> ส่งคำขอต่อสัญญา</button>
             </div>
             <div id="moveout-form" style="display: none; animation: slideUp 0.3s ease;">
                 <label style="font-size: var(--fs-md); font-weight: 600; color: var(--danger);">วันที่คาดว่าจะย้ายออก</label>
-                <input type="date" style="margin-bottom: 10px;">
+                <input type="date" id="moveout-date" style="margin-bottom: 10px;">
                 <label style="font-size: var(--fs-md); font-weight: 600;">บัญชีธนาคารสำหรับรับเงินมัดจำคืน</label>
-                <input type="text" placeholder="ระบุธนาคารและเลขบัญชี" style="margin-bottom: 20px;">
+                <input type="text" id="moveout-bank" placeholder="ระบุธนาคารและเลขบัญชี" style="margin-bottom: 15px;">
+                <label style="font-size: var(--fs-md); font-weight: 600;">เหตุผลที่ย้ายออก (ถ้าสะดวกบอก)</label>
+                <textarea id="moveout-reason" rows="2" placeholder="เพื่อช่วยปรับปรุงบริการในอนาคต" style="margin-bottom: 15px;"></textarea>
                 <button class="btn-main" style="background: var(--danger);"
-                    onclick="alert('ยืนยันแจ้งย้ายออกเรียบร้อย'); showPage('profile', 4);"><i
+                    onclick="submitLeaseRequest('moveout')"><i
                         class="fas fa-sign-out-alt"></i> ยืนยันการแจ้งย้ายออก</button>
             </div>
         </div>
@@ -4744,6 +4797,183 @@
             });
         }
 
+        // ===== PROFILE EDIT (phone / email / license plate) =====
+        // Allows tenant to update their own contact fields. Writes directly to
+        // tenants/{building}/list/{roomId} — name + lease fields stay locked (admin only).
+        function toggleProfileEditMode(show) {
+            const view = document.getElementById('profile-readonly-view');
+            const form = document.getElementById('profile-edit-form');
+            const tgl  = document.getElementById('profile-edit-toggle');
+            if (!view || !form) return;
+            const showForm = (show === undefined) ? form.style.display === 'none' : !!show;
+            if (showForm) {
+                // Pre-fill current values
+                document.getElementById('profile-edit-phone').value   = _taTenant?.phone   || '';
+                document.getElementById('profile-edit-email').value   = _taTenant?.email   || '';
+                document.getElementById('profile-edit-license').value = _taTenant?.licensePlate || _taTenant?.plateNumber || '';
+                view.style.display = 'none';
+                form.style.display = 'block';
+                if (tgl) tgl.textContent = '↩️ ยกเลิก';
+            } else {
+                view.style.display = 'block';
+                form.style.display = 'none';
+                if (tgl) tgl.textContent = '✏️ แก้ไข';
+            }
+        }
+        async function saveProfileEdit() {
+            const phone   = document.getElementById('profile-edit-phone').value.trim();
+            const email   = document.getElementById('profile-edit-email').value.trim();
+            const license = document.getElementById('profile-edit-license').value.trim();
+            // Light validation
+            if (phone && !/^\d{9,10}$/.test(phone.replace(/\D/g, ''))) {
+                toast('เบอร์โทรไม่ถูกต้อง', 'error'); return;
+            }
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                toast('อีเมลไม่ถูกต้อง', 'error'); return;
+            }
+            if (!_taRoom || !_taBuilding) { toast('ข้อมูลห้องไม่พร้อม', 'error'); return; }
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+                toast('ระบบยังไม่พร้อม', 'error'); return;
+            }
+            const fs = window.firebase.firestoreFunctions;
+            const db = window.firebase.firestore();
+            const updates = { phone, email, licensePlate: license, updatedAt: new Date().toISOString() };
+            try {
+                const ref = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
+                await fs.updateDoc(ref, updates);
+                // Mirror locally so UI updates immediately without waiting for next loadAllData
+                _taTenant = { ..._taTenant, ...updates };
+                window._tenantAppTenant = _taTenant;
+                if (typeof renderProfilePage === 'function') renderProfilePage();
+                if (typeof loadProfilePage === 'function') loadProfilePage();
+                toggleProfileEditMode(false);
+                toast('บันทึกข้อมูลส่วนตัวแล้ว', 'success');
+            } catch (e) {
+                console.error('saveProfileEdit failed:', e);
+                toast('บันทึกไม่สำเร็จ — กรุณาลองใหม่', 'error');
+            }
+        }
+        if (typeof window !== 'undefined') {
+            window.toggleProfileEditMode = toggleProfileEditMode;
+            window.saveProfileEdit = saveProfileEdit;
+        }
+
+        // ===== LEASE REQUEST (renew / moveout) =====
+        // Persists tenant decision to Firestore `leaseRequests/{auto}` so admin sees it in
+        // dashboard's Lease Management page. Replaces the old alert()-only stub.
+        async function submitLeaseRequest(type) {
+            if (!_taRoom || !_taBuilding) { toast('ข้อมูลห้องไม่พร้อม กรุณาลองใหม่', 'error'); return; }
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+                toast('ระบบยังไม่พร้อม', 'error'); return;
+            }
+            const fs = window.firebase.firestoreFunctions;
+            const db = window.firebase.firestore();
+            let payload = {
+                type, building: _taBuilding, room: String(_taRoom),
+                tenantId: _taLease?.tenantId || _taTenant?.id || '',
+                tenantName: _taTenant?.name || _taLease?.tenantName || '',
+                phone: _taTenant?.phone || '',
+                leaseId: _taLease?.id || _taLease?.leaseId || '',
+                createdAt: new Date().toISOString(),
+                status: 'pending'
+            };
+            if (type === 'renew') {
+                payload.duration = document.getElementById('renew-duration')?.value || '1y';
+                payload.note     = document.getElementById('renew-note')?.value?.trim() || '';
+            } else if (type === 'moveout') {
+                const date = document.getElementById('moveout-date')?.value;
+                const bank = document.getElementById('moveout-bank')?.value?.trim();
+                if (!date) { toast('กรุณาระบุวันที่ย้ายออก', 'warning'); return; }
+                if (!bank) { toast('กรุณาระบุบัญชีธนาคารรับมัดจำ', 'warning'); return; }
+                payload.moveOutDate = date;
+                payload.depositRefundBank = bank;
+                payload.reason = document.getElementById('moveout-reason')?.value?.trim() || '';
+            }
+            try {
+                await fs.addDoc(fs.collection(db, 'leaseRequests'), payload);
+                toast(type === 'renew' ? '✅ ส่งคำขอต่อสัญญาแล้ว — รอเจ้าของยืนยัน' : '✅ แจ้งย้ายออกแล้ว — เจ้าของจะติดต่อกลับ', 'success');
+                showPage('profile');
+            } catch (e) {
+                console.error('submitLeaseRequest failed:', e);
+                toast('ส่งคำขอไม่สำเร็จ — กรุณาลองใหม่', 'error');
+            }
+        }
+        if (typeof window !== 'undefined') window.submitLeaseRequest = submitLeaseRequest;
+
+        // ===== EMERGENCY CONTACTS SUBSCRIBE =====
+        // Firestore: system/emergencyContacts doc with field `items: [{ icon, label, number }]`.
+        // Admin manages via dashboard.html. Falls back to hardcoded 191/199/1669 if no Firestore data.
+        let _emergencyUnsub = null;
+        function _subscribeEmergencyContacts() {
+            if (_emergencyUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                const ref = fs.doc(db, 'system', 'emergencyContacts');
+                _emergencyUnsub = fs.onSnapshot(ref, snap => {
+                    if (!snap.exists()) return;
+                    const items = (snap.data() || {}).items;
+                    if (!Array.isArray(items) || !items.length) return;
+                    const list = document.getElementById('emergencyContactsList');
+                    if (!list) return;
+                    list.innerHTML = '';
+                    items.forEach(c => {
+                        const btn = document.createElement('button');
+                        btn.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;background:#FFF1F1;color:#DC2626;border:none;border-radius:10px;font-weight:700;cursor:pointer;text-align:left;';
+                        const icon = document.createElement('span');
+                        icon.style.fontSize = '1.4rem';
+                        icon.textContent = c.icon || '📞';
+                        const label = document.createElement('span');
+                        label.style.flex = '1';
+                        label.textContent = c.label || '(unnamed)';
+                        const num = document.createElement('strong');
+                        num.textContent = c.number || '';
+                        btn.appendChild(icon); btn.appendChild(label); btn.appendChild(num);
+                        btn.addEventListener('click', () => makeCall(c.number));
+                        list.appendChild(btn);
+                    });
+                }, err => console.warn('emergency contacts subscribe failed:', err.message));
+            } catch (e) { console.warn('emergency contacts subscribe init failed:', e.message); }
+        }
+        window.addEventListener('firebaseInitialized', _subscribeEmergencyContacts);
+        if (window.firebaseReady) _subscribeEmergencyContacts();
+
+        // ===== PAYMENT CONFIG SUBSCRIBE (PromptPay # + company name) =====
+        // Firestore: buildings/{RentRoom|nest} doc fields { promptpayNumber, companyName, ownerName }
+        // Mirrors values to localStorage so legacy callers (buildPromptPayPayload, getOwnerName)
+        // keep working without refactor. Admin sets this in dashboard.html → Settings → Payment.
+        let _paymentCfgUnsub = null;
+        function _subscribePaymentConfig() {
+            if (_paymentCfgUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                const fsBuilding = (window.CONFIG?.getFirestoreBuilding?.(_taBuilding)) || (_taBuilding === 'rooms' ? 'RentRoom' : 'nest');
+                const ref = fs.doc(db, 'buildings', fsBuilding);
+                _paymentCfgUnsub = fs.onSnapshot(ref, snap => {
+                    if (!snap.exists()) return;
+                    const data = snap.data() || {};
+                    const pp = data.promptpayNumber || data.payment?.promptpayNumber;
+                    const cn = data.companyName    || data.payment?.companyName;
+                    const on = data.ownerName      || data.payment?.ownerName;
+                    if (pp) try { localStorage.setItem('promptpay', String(pp)); } catch(e) {}
+                    if (cn) try { localStorage.setItem('company_name', String(cn)); } catch(e) {}
+                    if (on) try { localStorage.setItem('owner_name', String(on)); } catch(e) {}
+                    // Update visible footer label without waiting for re-render
+                    const ownerEl = document.getElementById('receipt-owner-name');
+                    if (ownerEl && (cn || on)) ownerEl.textContent = cn || on;
+                    // Re-render visible payment screens so changes appear without reload
+                    if (document.getElementById('pay-qr-canvas') && _taCurrentBill) {
+                        if (typeof renderPaymentInvoice === 'function') renderPaymentInvoice(_taCurrentBill);
+                    }
+                }, err => console.warn('payment config subscribe failed:', err.message));
+            } catch (e) { console.warn('payment config subscribe init failed:', e.message); }
+        }
+        window.addEventListener('firebaseInitialized', _subscribePaymentConfig);
+        if (window.firebaseReady) _subscribePaymentConfig();
+
         // ===== REWARDS COLLECTION SUBSCRIBE =====
         // Admin manages rewards in Firestore `rewards/{id}`. Tenant app renders dynamically
         // so adding/removing/repricing rewards never requires a redeploy.
@@ -4959,6 +5189,34 @@
             window._tenantAppTenant = _taTenant;
             window._tenantAppBills = _taBills;
             window._tenantAppPayments = _taPayments;
+
+            // Subscribe to real-time bill updates so admin-generated bills appear instantly
+            // (replaces the previous one-shot loadBills which only ran on app open)
+            _subscribeBillsRealtime();
+        }
+
+        let _billsUnsub = null;
+        function _subscribeBillsRealtime() {
+            if (_billsUnsub) return;
+            if (typeof TenantFirebaseSync === 'undefined') return;
+            try {
+                const userStr = sessionStorage.getItem('user');
+                const user = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
+                const sync = new TenantFirebaseSync(user, _taBuilding, _taRoom);
+                _billsUnsub = sync.constructor.subscribeBills.call(sync, (bills) => {
+                    if (!Array.isArray(bills)) return;
+                    // Merge with existing (Firestore wins on billId collision)
+                    const byId = new Map();
+                    _taBills.forEach(b => byId.set(b.billId || b.id, b));
+                    bills.forEach(b => byId.set(b.billId || b.id, b));
+                    _taBills = Array.from(byId.values()).sort((a, b) =>
+                        ((b.year || 0) - (a.year || 0)) || ((b.month || 0) - (a.month || 0))
+                    );
+                    window._tenantAppBills = _taBills;
+                    if (typeof renderBillsList === 'function') renderBillsList();
+                    if (typeof updateNavBadges === 'function') updateNavBadges();
+                });
+            } catch (e) { console.warn('subscribeBillsRealtime failed:', e.message); }
         }
 
         // ---- LIFF (LINE Front-end Framework) integration ----
@@ -6291,7 +6549,11 @@
         function _legacyTenant()   { return _taTenant || _taLease || {}; }
         function _legacyLease()    { return _taLease || {}; }
         function getOwnerName() {
-            try { return localStorage.getItem('owner_name') || 'The Green Haven Co., Ltd.'; } catch(e){ return 'The Green Haven Co., Ltd.'; }
+            // Cached by _subscribePaymentConfig from Firestore buildings/{b}.ownerName/companyName
+            try { return localStorage.getItem('owner_name') || localStorage.getItem('company_name') || 'The Green Haven Co., Ltd.'; } catch(e){ return 'The Green Haven Co., Ltd.'; }
+        }
+        function getCompanyName() {
+            try { return localStorage.getItem('company_name') || getOwnerName(); } catch(e) { return 'The Green Haven Co., Ltd.'; }
         }
         function getBuildingDisplayName() {
             return _legacyBuilding() === 'nest' ? 'Nest Building' : 'Rent Rooms';
