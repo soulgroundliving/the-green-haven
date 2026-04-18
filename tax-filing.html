@@ -670,7 +670,7 @@
             <select id="monthly-month" onchange="updateMonthlyReport()">
               <option value="1">มกราคม</option>
               <option value="2">กุมภาพันธ์</option>
-              <option value="3" selected>มีนาคม</option>
+              <option value="3">มีนาคม</option>
               <option value="4">เมษายน</option>
               <option value="5">พฤษภาคม</option>
               <option value="6">มิถุนายน</option>
@@ -684,7 +684,7 @@
           </div>
           <div class="form-group">
             <label>ปี</label>
-            <input type="number" id="monthly-year" value="2567" onchange="updateMonthlyReport()">
+            <select id="monthly-year" onchange="updateMonthlyReport()"></select>
           </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
@@ -761,7 +761,7 @@
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: flex-end;">
         <div class="form-group">
           <label>ปี</label>
-          <input type="number" id="annual-year" value="2567">
+          <select id="annual-year"></select>
         </div>
         <div style="display: flex; gap: 10px;">
           <button class="btn btn-primary" onclick="displayAnnualReport()">
@@ -794,7 +794,7 @@
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: flex-end;">
         <div class="form-group">
           <label>ปี</label>
-          <input type="number" id="withholding-year" value="2567">
+          <select id="withholding-year"></select>
         </div>
         <div></div>
         <div></div>
@@ -1006,6 +1006,37 @@
       };
     };
     console.log('✅ tax-filing calculations rewired to live data');
+    // ===== Populate year dropdowns + default to current BE year + month =====
+    const now = new Date();
+    const currentBE = now.getFullYear() + 543;
+    const currentMonth = now.getMonth() + 1; // 1-12
+    const YEARS_BACK = 5;
+    const fillYearSelect = (id, selected) => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      sel.innerHTML = '';
+      for (let y = currentBE; y >= currentBE - YEARS_BACK; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === selected) opt.selected = true;
+        sel.appendChild(opt);
+      }
+    };
+    // Wait a tick so DOM is ready
+    const initSelectors = () => {
+      fillYearSelect('monthly-year', currentBE);
+      fillYearSelect('annual-year', currentBE);
+      fillYearSelect('withholding-year', currentBE);
+      const mSel = document.getElementById('monthly-month');
+      if (mSel) mSel.value = String(currentMonth);
+      // Trigger initial report so user sees current month on load
+      if (typeof updateMonthlyReport === 'function') {
+        try { updateMonthlyReport(); } catch(e) {}
+      }
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initSelectors);
+    else initSelectors();
   })();
 
   function renderTaxDashboardLive(data) {
