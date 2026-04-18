@@ -1040,10 +1040,42 @@ function renderOwnerInfoPage() {
   const owner = OwnerConfigManager.getOwnerInfo();
 
   container.innerHTML = `
+    <!-- Company identity (used in tax report letterhead) -->
+    <div style="background:#f8faf9; padding:1.2rem; border-left:4px solid var(--green); border-radius:6px; margin-bottom:1.5rem;">
+      <div style="font-weight:700; color:var(--green-dark); margin-bottom:.6rem;">🏢 ข้อมูลบริษัท / นิติบุคคล (สำหรับใบเสร็จ + รายงานภาษี)</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div>
+          <label style="display:block; margin-bottom:.4rem; font-weight:600; font-size:.9rem;">ชื่อนิติบุคคล (ภาษาไทย)</label>
+          <input type="text" id="companyLegalNameTH" value="${(owner.companyLegalNameTH || 'บริษัท เดอะ กรีนเฮฟเว่น จำกัด').replace(/"/g,'&quot;')}" placeholder="บริษัท เดอะ กรีนเฮฟเว่น จำกัด" style="width:100%; padding:.6rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; margin-bottom:.4rem; font-weight:600; font-size:.9rem;">ชื่อนิติบุคคล (ภาษาอังกฤษ)</label>
+          <input type="text" id="companyLegalNameEN" value="${(owner.companyLegalNameEN || 'The Green Haven Co., Ltd.').replace(/"/g,'&quot;')}" placeholder="The Green Haven Co., Ltd." style="width:100%; padding:.6rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; margin-bottom:.4rem; font-weight:600; font-size:.9rem;">สถานะการจดทะเบียน</label>
+          <select id="registrationStatus" style="width:100%; padding:.6rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box;">
+            <option value="active" ${owner.registrationStatus !== 'pending' ? 'selected' : ''}>✅ จดทะเบียนแล้ว</option>
+            <option value="pending" ${owner.registrationStatus === 'pending' ? 'selected' : ''}>⏳ อยู่ระหว่างจดทะเบียน</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; margin-bottom:.4rem; font-weight:600; font-size:.9rem;">ประเภทเอกสารที่แสดงในรายงาน</label>
+          <select id="ownerEntityType" style="width:100%; padding:.6rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box;">
+            <option value="personal" ${owner.entityType !== 'company' ? 'selected' : ''}>บุคคลธรรมดา (ภ.ง.ด.90)</option>
+            <option value="company" ${owner.entityType === 'company' ? 'selected' : ''}>นิติบุคคล (ภ.ง.ด.50)</option>
+          </select>
+        </div>
+      </div>
+      <small style="display:block; margin-top:.6rem; color:var(--text-muted); font-size:.8rem;">
+        ค่าเหล่านี้จะแสดงใน letterhead ของรายงานภาษี (Tax Filing) + ใบเสร็จลูกบ้าน อัตโนมัติ
+      </small>
+    </div>
+
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
       <!-- Left column -->
       <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ชื่อ-นามสกุล *</label>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ชื่อ-นามสกุล (เจ้าของ/ผู้จัดทำ) *</label>
         <input type="text" id="ownerName" value="${owner.name || ''}" placeholder="ชื่อเจ้าของ" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
       </div>
       <div>
@@ -1458,6 +1490,11 @@ function saveOwnerInfo() {
   }
 
   const ownerData = {
+    // ===== COMPANY IDENTITY (used in tax report letterhead + tenant receipts) =====
+    companyLegalNameTH: document.getElementById('companyLegalNameTH')?.value?.trim() || '',
+    companyLegalNameEN: document.getElementById('companyLegalNameEN')?.value?.trim() || '',
+    registrationStatus: document.getElementById('registrationStatus')?.value || 'active',
+    entityType: document.getElementById('ownerEntityType')?.value || 'personal',
     // ===== BASIC INFO =====
     name: name,
     idCardNumber: document.getElementById('ownerIdCard').value.trim(),

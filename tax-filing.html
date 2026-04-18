@@ -1327,21 +1327,25 @@
   let _paperPdfFilename = 'report.pdf';
 
   function _getOwnerInfoForReport() {
-    // Owner info is set in dashboard People Management → Owner tab (localStorage owner_info)
-    // Plus Firestore buildings/{b}.companyName/ownerName cached via _subscribePaymentConfig
+    // Owner info is set in dashboard People Management → Owner tab (localStorage owner_info).
+    // All fields editable there including: companyLegalNameTH, companyLegalNameEN,
+    // registrationStatus, entityType, taxId, address parts, phone, email.
     let owner = {};
     try { owner = JSON.parse(localStorage.getItem('owner_info') || '{}'); } catch(e) {}
     const fullAddress = [owner.address, owner.subDistrict, owner.district, owner.province, owner.postalCode].filter(Boolean).join(' ');
+    const baseLegalName = owner.companyLegalNameTH || localStorage.getItem('company_name') || 'บริษัท เดอะ กรีนเฮฟเว่น จำกัด';
     return {
-      legalName: (localStorage.getItem('company_name') || 'บริษัท เดอะ กรีนเฮฟเว่น จำกัด') + (owner.registrationStatus === 'pending' ? ' (อยู่ระหว่างจดทะเบียน)' : ''),
-      englishName: 'The Green Haven Co., Ltd.',
+      legalName: baseLegalName + (owner.registrationStatus === 'pending' ? ' (อยู่ระหว่างจดทะเบียน)' : ''),
+      englishName: owner.companyLegalNameEN || 'The Green Haven Co., Ltd.',
       ownerName: owner.name || localStorage.getItem('owner_name') || '—',
       taxId: owner.taxId || '— (รอจดทะเบียน)',
       address: fullAddress || '—',
       phone: owner.phone || '—',
       email: owner.email || '—',
       bankName: owner.bankName || '',
-      bankAccount: owner.bankAccount || ''
+      bankAccount: owner.bankAccount || '',
+      entityType: owner.entityType || 'personal',
+      taxFormName: owner.entityType === 'company' ? 'ภ.ง.ด.50 (นิติบุคคล)' : 'ภ.ง.ด.90 (บุคคลธรรมดา)'
     };
   }
 
@@ -1401,7 +1405,7 @@
         <div><strong>เลขที่เอกสาร:</strong> <span data-a4-ref style="font-family:monospace;">${docRef}</span></div>
         <div><strong>วันที่ออกรายงาน:</strong> ${today}</div>
         <div><strong>ประเภทรายได้:</strong> ม.40(5)(ก) ทรัพย์สิน (VAT-exempt)</div>
-        <div><strong>แบบภาษี:</strong> ภ.ง.ด.90 (บุคคลธรรมดา)</div>
+        <div><strong>แบบภาษี:</strong> ${_esc(owner.taxFormName)}</div>
       </div>
     `;
     const pageFooter = (pageNum, totalPages) => `
