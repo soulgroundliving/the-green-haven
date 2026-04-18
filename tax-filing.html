@@ -874,9 +874,136 @@
         if (!snap.exists()) { console.warn('taxSummary doc missing — run aggregateMonthlyRevenue CF first'); return; }
         window._taxSummary = snap.data();
         renderTaxDashboardLive(window._taxSummary);
+        // Auto-refresh monthly/quarterly/annual reports if user is on them
+        if (document.getElementById('monthly-page')?.classList.contains('active') && typeof updateMonthlyReport === 'function') {
+          try { updateMonthlyReport(); } catch(e) {}
+        }
       }, err => console.warn('taxSummary subscribe error:', err.message));
+      // Also fetch RTDB bills once for per-room breakdowns used by monthly report
+      _loadBillsCache();
     } catch (e) { console.warn('subscribeTaxSummary init failed:', e.message); }
   }
+
+  // Fetch RTDB bills snapshot for per-room breakdowns in monthly/quarterly reports.
+  // Refresh on demand (e.g., when user opens monthly report).
+  async function _loadBillsCache() {
+    try {
+      const token = await window.firebaseAuth.currentUser.getIdToken();
+      const resp = await fetch(`https://the-green-haven-default-rtdb.asia-southeast1.firebasedatabase.app/bills.json?auth=${token}`);
+      window._billsCache = await resp.json() || {};
+      console.log('✅ Bills cache loaded:', Object.keys(window._billsCache).length, 'buildings');
+    } catch (e) { console.warn('bills cache load failed:', e.message); }
+  }
+  window._loadBillsCache = _loadBillsCache;
+
+  // ===== OVERRIDE STUB CALCULATIONS IN tax-filing.js to use live data =====
+  // tax-filing.js reads localStorage.bills (empty in production). Patch the functions
+  // to use our live Firestore taxSummary + RTDB bills cache.
+  window.addEventListener('load', () => {
+    // Patch revenue calcs
+    window.calculateMonthlyRevenue = function(month, year) {
+      const d = window._taxSummary?.months?.[month];
+      return d ? Number(d.totalRevenue) || 0 : 0;
+    };
+    window.calculateAnnualRevenue = function(year) {
+      // year passed in CE — convert to BE for taxSummary lookup
+      const be = year + 543;
+      if (window._taxSummary?.year === be) {
+        return Number(window._taxSummary.annual?.totalRevenue) || 0;
+      }
+      return 0;
+    };
+    window.calculateQuarterlyRevenue = function(quarter, year) {
+      if (!window._taxSummary) return 0;
+      const startM = (quarter - 1) * 3 + 1;
+      let total = 0;
+      for (let m = startM; m < startM + 3; m++) {
+        total += Number(window._taxSummary.months?.[m]?.totalRevenue) || 0;
+      }
+      return total;
+    };
+    // Patch per-room breakdown using RTDB bills cache
+    window.getRevenueByRoom = function(month, year) {
+      const byRoom = {};
+      const bills = window._billsCache || {};
+      for (const building of Object.keys(bills)) {
+        const roomMap = bills[building] || {};
+        for (const room of Object.keys(roomMap)) {
+          const billsObj = roomMap[room] || {};
+          for (const billId of Object.keys(billsObj)) {
+            const b = billsObj[billId];
+            if (!b) continue;
+            const by = Number(b.year);
+            const ceYear = by < 100 ? 2500 + by - 543 : (by > 2500 ? by - 543 : by);
+            if (ceYear !== year) continue;
+            if (Number(b.month) !== Number(month)) continue;
+            const total = Number(b.totalCharge || b.totalAmount) || 0;
+            if (total <= 0 && !b.charges) continue;
+            const key = `${building}/${room}`;
+            if (!byRoom[key]) byRoom[key] = { room, building, rent: 0, electricity: 0, water: 0, trash: 0, total: 0 };
+            const c = b.charges || {};
+            byRoom[key].rent        += Number(c.rent) || 0;
+            byRoom[key].electricity += Number(c.electric?.cost) || 0;
+            byRoom[key].water       += Number(c.water?.cost) || 0;
+            byRoom[key].trash       += Number(c.trash) || 0;
+            byRoom[key].total       += total;
+          }
+        }
+      }
+      return byRoom;
+    };
+    // Patch getExpenseBreakdown to return empty (we don't track expenses yet in system)
+    window.getExpenseBreakdown = function(month, year) {
+      // TODO: wire to page-expense when that's migrated to Firestore
+      return { utilities: 0, maintenance: 0, insurance: 0, other: 0 };
+    };
+    window.calculateMonthlyExpenses = function() { return 0; };
+    window.calculateAnnualExpenses = function() { return 0; };
+    window.calculateQuarterlyExpenses = function() { return 0; };
+    // Withholding empty for now (no tenant-corporate data yet)
+    window.getWithholdingDetails = function() { return []; };
+    window.calculateWithholdingTax = function() { return 0; };
+    window.calculateAnnualWithholdingTax = function() { return 0; };
+    // Income tax using our estimator (not a fixed-rate corporate calc)
+    window.calculateMonthlyIncomeTax = function(month, year, rate) {
+      const rev = window.calculateMonthlyRevenue(month, year);
+      const net = Math.max(0, rev * 0.70);
+      // Rough monthly estimate = annual-equivalent tax / 12
+      const annualEq = net * 12;
+      const annualTax = estimateThaiPersonalTax(annualEq);
+      return {
+        grossRevenue: rev,
+        deductibleExpenses: Math.round(rev * 0.30),
+        taxableIncome: Math.round(net),
+        incomeTax: Math.round(annualTax / 12),
+        rate: 'progressive (ภ.ง.ด.90)'
+      };
+    };
+    window.calculateAnnualIncomeTax = function(year, rate) {
+      const rev = window.calculateAnnualRevenue(year);
+      const net = Math.max(0, rev * 0.70);
+      return {
+        grossRevenue: rev,
+        deductibleExpenses: Math.round(rev * 0.30),
+        taxableIncome: Math.round(net),
+        incomeTax: estimateThaiPersonalTax(net),
+        rate: 'progressive (ภ.ง.ด.90)'
+      };
+    };
+    window.calculateQuarterlyIncomeTax = function(quarter, year, rate) {
+      const rev = window.calculateQuarterlyRevenue(quarter, year);
+      const net = Math.max(0, rev * 0.70);
+      const annualEq = net * 4;
+      return {
+        grossRevenue: rev,
+        deductibleExpenses: Math.round(rev * 0.30),
+        taxableIncome: Math.round(net),
+        incomeTax: Math.round(estimateThaiPersonalTax(annualEq) / 4),
+        rate: 'progressive (ภ.ง.ด.90)'
+      };
+    };
+    console.log('✅ tax-filing calculations rewired to live data');
+  });
 
   function renderTaxDashboardLive(data) {
     if (!data) return;
