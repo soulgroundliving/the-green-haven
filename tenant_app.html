@@ -27,7 +27,7 @@
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
       import { getDatabase, ref, get, set, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-      import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+      import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
       import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
       import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
 
@@ -65,6 +65,24 @@
           };
           window.firebaseReady = true;
           window.dispatchEvent(new Event('firebaseInitialized'));
+          // Anonymous sign-in so Firestore rules (require auth != null) don't block
+          // the public-ish reads (rewards, emergency contacts, building info, bills, etc.).
+          // LIFF flow can still link a real user later — anonymous UID is just a temp slot.
+          onAuthStateChanged(auth, async (user) => {
+            if (user) {
+              window._authUid = user.uid;
+              window.dispatchEvent(new Event('authReady'));
+              return;
+            }
+            try {
+              await signInAnonymously(auth);
+              // authStateChanged fires again with the new anon user → dispatches authReady there
+            } catch (err) {
+              console.warn('⚠️ Anonymous sign-in failed:', err.message);
+              // Dispatch anyway so subscribers don't hang forever
+              window.dispatchEvent(new Event('authReady'));
+            }
+          });
         } catch (e) {
           console.warn('Firebase init failed:', e);
           window.firebaseReady = false;
@@ -4929,8 +4947,8 @@
                 } catch (e) {}
             }
         }
-        window.addEventListener('firebaseInitialized', _subscribeCategories);
-        if (window.firebaseReady) _subscribeCategories();
+        window.addEventListener('authReady', _subscribeCategories);
+        if (window.firebaseReady && window._authUid) _subscribeCategories();
 
         // ===== CLEANING SERVICE CONFIG SUBSCRIBE =====
         // Firestore: system/cleaningServices doc with { services: [{id, label, icon, price, free, note, priceLabel}], timeSlots: ['09:00 - 12:00 น.', ...] }
@@ -4989,8 +5007,8 @@
                 sel.appendChild(opt);
             });
         }
-        window.addEventListener('firebaseInitialized', _subscribeCleaningConfig);
-        if (window.firebaseReady) _subscribeCleaningConfig();
+        window.addEventListener('authReady', _subscribeCleaningConfig);
+        if (window.firebaseReady && window._authUid) _subscribeCleaningConfig();
 
         // ===== LEASE REQUEST (renew / moveout) =====
         // Persists tenant decision to Firestore `leaseRequests/{auto}` so admin sees it in
@@ -5070,8 +5088,8 @@
                 }, err => console.warn('emergency contacts subscribe failed:', err.message));
             } catch (e) { console.warn('emergency contacts subscribe init failed:', e.message); }
         }
-        window.addEventListener('firebaseInitialized', _subscribeEmergencyContacts);
-        if (window.firebaseReady) _subscribeEmergencyContacts();
+        window.addEventListener('authReady', _subscribeEmergencyContacts);
+        if (window.firebaseReady && window._authUid) _subscribeEmergencyContacts();
 
         // ===== PAYMENT CONFIG SUBSCRIBE (PromptPay # + company name) =====
         // Firestore: buildings/{RentRoom|nest} doc fields { promptpayNumber, companyName, ownerName }
@@ -5114,8 +5132,8 @@
                 }, err => console.warn('payment config subscribe failed:', err.message));
             } catch (e) { console.warn('payment config subscribe init failed:', e.message); }
         }
-        window.addEventListener('firebaseInitialized', _subscribePaymentConfig);
-        if (window.firebaseReady) _subscribePaymentConfig();
+        window.addEventListener('authReady', _subscribePaymentConfig);
+        if (window.firebaseReady && window._authUid) _subscribePaymentConfig();
 
         // ===== REWARDS COLLECTION SUBSCRIBE =====
         // Admin manages rewards in Firestore `rewards/{id}`. Tenant app renders dynamically
@@ -5181,8 +5199,8 @@
             });
         }
         // Auto-subscribe on app ready (rewards visible to all buildings, not Nest-only)
-        window.addEventListener('firebaseInitialized', _subscribeRewards);
-        if (window.firebaseReady) _subscribeRewards();
+        window.addEventListener('authReady', _subscribeRewards);
+        if (window.firebaseReady && window._authUid) _subscribeRewards();
 
         // ===== LEADERBOARD (Nest-only) =====
         // Queries tenants/nest/list orderBy gamification.points desc limit 10.
@@ -7015,8 +7033,8 @@
                 }, err => console.warn('serviceProviders subscribe failed:', err.message));
             } catch (e) { console.warn('serviceProviders subscribe init failed:', e.message); }
         }
-        window.addEventListener('firebaseInitialized', _subscribeServiceProviders);
-        if (window.firebaseReady) _subscribeServiceProviders();
+        window.addEventListener('authReady', _subscribeServiceProviders);
+        if (window.firebaseReady && window._authUid) _subscribeServiceProviders();
 
         function displayServiceProviders() {
             const container = document.getElementById('serviceProvidersList');
