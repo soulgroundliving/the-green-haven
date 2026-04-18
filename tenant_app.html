@@ -1539,6 +1539,7 @@
             <button id="nav-smart-key-btn" onclick="showSubPage('smart-key-page')"
                 style="position:absolute; right:16px; top:24px; background:var(--primary-green); color:white; border:none; border-radius:12px; padding:8px 12px; font-weight:bold; box-shadow:0 4px 10px rgba(123, 166, 126, 0.4); cursor:pointer; display:inline-flex; align-items:center; gap:6px; z-index:2;">
                 <i class="fas fa-qrcode"></i><span>Smart Key</span>
+                <span style="position:absolute; top:-6px; right:-6px; background:#f59e0b; color:#fff; font-size:8px; padding:2px 5px; border-radius:6px; font-weight:bold;">SOON</span>
             </button>
             <div style="padding-right: 120px;">
                 <div class="date-display text-[10px]" id="current-date">--/--/--</div>
@@ -1680,7 +1681,8 @@
                     <i class="fas fa-tshirt"></i>
                 </div>
                 <div>
-                    <strong>Smart Laundry</strong><br>
+                    <strong>Smart Laundry</strong>
+                    <span style="display:inline-block; background:#f59e0b; color:#fff; font-size:9px; padding:2px 6px; border-radius:8px; font-weight:bold; margin-left:6px; vertical-align:middle;">เร็ว ๆ นี้</span><br>
                     <small style="color:#888;">เช็คสถานะเครื่องซักผ้า / อบผ้า 👕</small>
                 </div>
             </div>
@@ -1778,7 +1780,9 @@
             <h1 style="margin:0; font-size: var(--fs-lg);">จองบริการทำความสะอาด</h1>
         </div>
         <div class="section-title"><span>เลือกประเภทบริการ</span></div>
-        <div class="grid grid-cols-2 gap-3 px-4 mb-6">
+        <!-- Rendered dynamically by _renderCleaningServices() from Firestore system/cleaningServices.
+             Admin manages prices/labels/slots in dashboard. Defaults shown until Firestore loads. -->
+        <div id="cleaning-service-list" class="grid grid-cols-2 gap-3 px-4 mb-6">
             <div class="card p-4 border-2 border-transparent active-service" id="service-free"
                 onclick="selectService('free')">
                 <div class="flex flex-col items-center text-center">
@@ -1805,6 +1809,7 @@
             <div class="mb-4">
                 <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">ช่วงเวลา</label>
                 <select id="clean-time" class="mt-2 block w-full rounded-xl border-gray-200 shadow-sm">
+                    <!-- Populated from Firestore system/cleaningServices.timeSlots -->
                     <option>09:00 - 12:00 น.</option>
                     <option>13:00 - 16:00 น.</option>
                 </select>
@@ -2594,27 +2599,29 @@
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">ข้อมูลอาคาร</h1>
         </div>
+        <!-- Rendered dynamically by _renderBuildingInfo() from Firestore buildings/{Firestore name}.info
+             Defaults shown until first snapshot. Admin manages via dashboard buildings doc. -->
         <div class="muji-card p-5 mb-4">
-            <h3 class="font-bold text-[#334435] mb-3">📍 Nature Haven - Nest</h3>
-            <p class="text-xs text-gray-500 leading-relaxed">โครงการที่พักอาศัยแบบ Pet-Friendly และ Well-being
+            <h3 id="bld-name" class="font-bold text-[#334435] mb-3">📍 Nature Haven - Nest</h3>
+            <p id="bld-tagline" class="text-xs text-gray-500 leading-relaxed">โครงการที่พักอาศัยแบบ Pet-Friendly และ Well-being
                 ที่ใส่ใจการใช้ชีวิตที่เรียบง่าย</p>
         </div>
         <div class="grid grid-cols-2 gap-3">
             <div class="muji-card p-4">
                 <p class="text-[10px] text-gray-400">จำนวนยูนิต</p>
-                <p class="text-lg font-bold">20 ห้อง</p>
+                <p id="bld-units" class="text-lg font-bold">— ห้อง</p>
             </div>
             <div class="muji-card p-4">
                 <p class="text-[10px] text-gray-400">โซนสัตว์เลี้ยง</p>
-                <p class="text-lg font-bold">ชั้น 3 - 4</p>
+                <p id="bld-petzone" class="text-lg font-bold">—</p>
             </div>
             <div class="muji-card p-4">
                 <p class="text-[10px] text-gray-400">สถานะไฟฟ้า</p>
-                <p class="text-sm font-bold text-green-500">ปกติ</p>
+                <p id="bld-elec-status" class="text-sm font-bold text-green-500">ปกติ</p>
             </div>
             <div class="muji-card p-4">
                 <p class="text-[10px] text-gray-400">สถานะน้ำ</p>
-                <p class="text-sm font-bold text-green-500">ปกติ</p>
+                <p id="bld-water-status" class="text-sm font-bold text-green-500">ปกติ</p>
             </div>
         </div>
     </div>
@@ -2730,41 +2737,9 @@
         <div id="eco-panel-rankings">
             <div class="muji-card p-5 mb-4 mx-4">
                 <h3 class="font-bold text-sm mb-4">👑 ผู้พิทักษ์ป่าประจำสัปดาห์</h3>
-                <div class="space-y-3">
-                    <div class="flex items-center gap-3 bg-[#F0F7F2] p-3 rounded-2xl">
-                        <span class="text-lg font-bold text-[#2d8653] w-5 text-center">1</span>
-                        <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-sm">🏡</div>
-                        <div class="flex-1">
-                            <p class="text-xs font-bold">คุณมิน (ห้อง 402)</p>
-                            <p class="text-[9px] text-gray-400">2,450 Pts</p>
-                        </div>
-                        <span class="text-xl">🥇</span>
-                    </div>
-                    <div class="flex items-center gap-3 p-3">
-                        <span class="text-lg font-bold text-gray-300 w-5 text-center">2</span>
-                        <div class="w-10 h-10 bg-[#e8f5e9] rounded-full flex items-center justify-center text-sm">🐈</div>
-                        <div class="flex-1">
-                            <p class="text-xs font-bold">คุณอาร์ม (ห้อง 215)</p>
-                            <p class="text-[9px] text-gray-400">2,100 Pts</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3 p-3">
-                        <span class="text-lg font-bold text-gray-300 w-5 text-center">3</span>
-                        <div class="w-10 h-10 bg-[#e8f5e9] rounded-full flex items-center justify-center text-sm">🌿</div>
-                        <div class="flex-1">
-                            <p class="text-xs font-bold">คุณแพม (ห้อง 308)</p>
-                            <p class="text-[9px] text-gray-400">1,890 Pts</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3 p-3 bg-[#FFF8E7] rounded-2xl border-2 border-[#D4AF37]">
-                        <span class="text-lg font-bold text-[#D4AF37] w-5 text-center">4</span>
-                        <div class="w-10 h-10 bg-[#e8f5e9] rounded-full flex items-center justify-center text-sm">👤</div>
-                        <div class="flex-1">
-                            <p class="text-xs font-bold">คุณ (ห้องของฉัน)</p>
-                            <p class="text-[9px] text-gray-400" id="eco-my-pts">1,250 Pts</p>
-                        </div>
-                        <span class="text-[10px] bg-[#D4AF37] text-white px-2 py-0.5 rounded-full font-bold">คุณ</span>
-                    </div>
+                <!-- Rendered dynamically by _loadLeaderboard() querying tenants/nest/list ordered by gamification.points desc -->
+                <div id="eco-leaderboard" class="space-y-3">
+                    <div class="text-center text-xs text-gray-400 py-4">กำลังโหลดอันดับ…</div>
                 </div>
             </div>
             <div class="mx-4 mb-6">
@@ -4136,16 +4111,31 @@
 
         // เก็บข้อมูลสัตว์เลี้ยง (Global Scope)
         let petDataList = [];
-        // Load persisted pets when building/room are known
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                try {
-                    const key = `tenant_pets_${_taBuilding}_${_taRoom}`;
-                    const saved = JSON.parse(localStorage.getItem(key) || '[]');
-                    if (Array.isArray(saved) && saved.length) petDataList = saved;
-                } catch(e) {}
-            }, 500);
-        });
+        let _petsUnsub = null;
+        // Subscribe to Firestore pets subcollection so data syncs across devices.
+        // Falls back to localStorage on first load if Firestore is slow/unavailable.
+        function _subscribePets() {
+            if (_petsUnsub) return;
+            // Fallback: localStorage
+            try {
+                const key = `tenant_pets_${_taBuilding}_${_taRoom}`;
+                const saved = JSON.parse(localStorage.getItem(key) || '[]');
+                if (Array.isArray(saved) && saved.length) { petDataList = saved; if (typeof renderPetListToProfile==='function') renderPetListToProfile(); }
+            } catch(e) {}
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            if (!_taBuilding || !_taRoom) return;
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                const petsRef = fs.collection(db, 'tenants', _taBuilding, 'list', String(_taRoom), 'pets');
+                _petsUnsub = fs.onSnapshot(petsRef, snap => {
+                    petDataList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    try { localStorage.setItem(`tenant_pets_${_taBuilding}_${_taRoom}`, JSON.stringify(petDataList)); } catch(e) {}
+                    if (typeof renderPetListToProfile === 'function') renderPetListToProfile();
+                }, err => console.warn('pets subscribe failed:', err.message));
+            } catch (e) { console.warn('pets subscribe init failed:', e.message); }
+        }
+        window.addEventListener('load', () => { setTimeout(_subscribePets, 500); });
 
         // 1. ฟังก์ชันวาดรายการ (Render) ไปที่หน้า Profile (รวมระบบกล่องเปล่า)
         function renderPetListToProfile() {
@@ -4267,11 +4257,12 @@
                 localStorage.setItem(key, JSON.stringify(petDataList));
             } catch(e) {}
             try {
-                if (window.firebaseReady && window.firebase?.firestore) {
+                if (window.firebaseReady && window.firebase?.firestore && _taBuilding && _taRoom) {
                     const db = window.firebase.firestore();
                     const fs = window.firebase.firestoreFunctions;
-                    const docRef = fs.doc(fs.collection(db, 'petApprovals'), petObject.id);
-                    fs.setDoc(docRef, petObject, { merge: true });
+                    // Canonical: tenants/{building}/list/{roomId}/pets/{petId} — matches schema rule
+                    const petRef = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom), 'pets', petObject.id);
+                    fs.setDoc(petRef, petObject, { merge: true });
                 }
             } catch(e) { console.warn('Firestore pet save failed:', e); }
 
@@ -4864,6 +4855,114 @@
             window.saveProfileEdit = saveProfileEdit;
         }
 
+        // ===== MAINTENANCE + COMPLAINT CATEGORIES SUBSCRIBE =====
+        // Firestore: system/maintenanceCategories.items + system/complaintCategories.items
+        // Each item: { value, label, icon } — admin adds/removes via dashboard.
+        // Fallback: existing hardcoded <option>s remain until first Firestore snapshot.
+        let _mxCatUnsub = null, _cplCatUnsub = null;
+        function _populateCategorySelect(selectId, items, placeholder) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            const prev = sel.value;
+            sel.innerHTML = '';
+            const opt0 = document.createElement('option');
+            opt0.value = '';
+            opt0.textContent = placeholder || 'เลือกประเภท';
+            sel.appendChild(opt0);
+            items.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.value || c.id || '';
+                opt.textContent = (c.icon ? c.icon + ' ' : '') + (c.label || c.value || '(unnamed)');
+                sel.appendChild(opt);
+            });
+            if (prev) sel.value = prev;
+        }
+        function _subscribeCategories() {
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            const fs = window.firebase.firestoreFunctions;
+            const db = window.firebase.firestore();
+            if (!_mxCatUnsub) {
+                try {
+                    _mxCatUnsub = fs.onSnapshot(fs.doc(db, 'system', 'maintenanceCategories'), snap => {
+                        if (!snap.exists()) return;
+                        const items = (snap.data() || {}).items || [];
+                        _populateCategorySelect('maintenanceCategory', items);
+                    }, err => console.warn('maintenanceCategories sub failed:', err.message));
+                } catch (e) {}
+            }
+            if (!_cplCatUnsub) {
+                try {
+                    _cplCatUnsub = fs.onSnapshot(fs.doc(db, 'system', 'complaintCategories'), snap => {
+                        if (!snap.exists()) return;
+                        const items = (snap.data() || {}).items || [];
+                        _populateCategorySelect('complaintCategory', items);
+                    }, err => console.warn('complaintCategories sub failed:', err.message));
+                } catch (e) {}
+            }
+        }
+        window.addEventListener('firebaseInitialized', _subscribeCategories);
+        if (window.firebaseReady) _subscribeCategories();
+
+        // ===== CLEANING SERVICE CONFIG SUBSCRIBE =====
+        // Firestore: system/cleaningServices doc with { services: [{id, label, icon, price, free, note, priceLabel}], timeSlots: ['09:00 - 12:00 น.', ...] }
+        // Admin manages via dashboard → Content → Cleaning tab. Fallback to hardcoded defaults.
+        let _cleaningCfgUnsub = null;
+        let _cleaningCfgCache = null;
+        function _subscribeCleaningConfig() {
+            if (_cleaningCfgUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                const ref = fs.doc(db, 'system', 'cleaningServices');
+                _cleaningCfgUnsub = fs.onSnapshot(ref, snap => {
+                    if (!snap.exists()) return;
+                    _cleaningCfgCache = snap.data() || null;
+                    _renderCleaningServices();
+                    _renderCleaningTimeSlots();
+                }, err => console.warn('cleaningConfig subscribe failed:', err.message));
+            } catch (e) { console.warn('cleaningConfig subscribe init failed:', e.message); }
+        }
+        function _renderCleaningServices() {
+            if (!_cleaningCfgCache || !Array.isArray(_cleaningCfgCache.services)) return;
+            const list = document.getElementById('cleaning-service-list');
+            if (!list) return;
+            list.innerHTML = '';
+            _cleaningCfgCache.services.forEach((svc, idx) => {
+                const card = document.createElement('div');
+                card.id = `service-${svc.id || idx}`;
+                card.className = 'card p-4 border-2 border-transparent' + (idx === 0 ? ' active-service' : '');
+                card.addEventListener('click', () => selectService(svc.id));
+                const inner = document.createElement('div');
+                inner.className = 'flex flex-col items-center text-center';
+                const icon = document.createElement('span');
+                icon.className = 'text-2xl mb-2';
+                icon.textContent = svc.icon || '✨';
+                const title = document.createElement('strong');
+                title.className = 'text-sm';
+                title.textContent = svc.label || '(service)';
+                const price = document.createElement('p');
+                price.className = `text-[10px] font-bold mt-1 ${svc.free ? 'text-green-600' : 'text-blue-600'}`;
+                price.textContent = svc.priceLabel || (svc.free ? 'ฟรี' : `${svc.price || 0} ฿ / ครั้ง`);
+                inner.appendChild(icon); inner.appendChild(title); inner.appendChild(price);
+                card.appendChild(inner);
+                list.appendChild(card);
+            });
+        }
+        function _renderCleaningTimeSlots() {
+            if (!_cleaningCfgCache || !Array.isArray(_cleaningCfgCache.timeSlots)) return;
+            const sel = document.getElementById('clean-time');
+            if (!sel) return;
+            sel.innerHTML = '';
+            _cleaningCfgCache.timeSlots.forEach(ts => {
+                const opt = document.createElement('option');
+                opt.textContent = ts;
+                sel.appendChild(opt);
+            });
+        }
+        window.addEventListener('firebaseInitialized', _subscribeCleaningConfig);
+        if (window.firebaseReady) _subscribeCleaningConfig();
+
         // ===== LEASE REQUEST (renew / moveout) =====
         // Persists tenant decision to Firestore `leaseRequests/{auto}` so admin sees it in
         // dashboard's Lease Management page. Replaces the old alert()-only stub.
@@ -4974,6 +5073,15 @@
                     if (document.getElementById('pay-qr-canvas') && _taCurrentBill) {
                         if (typeof renderPaymentInvoice === 'function') renderPaymentInvoice(_taCurrentBill);
                     }
+                    // Render building-info page from same doc
+                    const info = data.info || {};
+                    const setBld = (id, v) => { const el = document.getElementById(id); if (el && v != null && v !== '') el.textContent = v; };
+                    setBld('bld-name', info.name);
+                    setBld('bld-tagline', info.tagline);
+                    setBld('bld-units', info.units ? `${info.units} ห้อง` : null);
+                    setBld('bld-petzone', info.petZone);
+                    setBld('bld-elec-status', info.electricStatus);
+                    setBld('bld-water-status', info.waterStatus);
                 }, err => console.warn('payment config subscribe failed:', err.message));
             } catch (e) { console.warn('payment config subscribe init failed:', e.message); }
         }
@@ -5047,6 +5155,112 @@
         window.addEventListener('firebaseInitialized', _subscribeRewards);
         if (window.firebaseReady) _subscribeRewards();
 
+        // ===== LEADERBOARD (Nest-only) =====
+        // Queries tenants/nest/list orderBy gamification.points desc limit 10.
+        // Renders top 3 + current tenant row (highlighted) using DOM API (XSS-safe).
+        let _leaderboardLoaded = false;
+        async function _loadLeaderboard() {
+            if (_leaderboardLoaded) return;
+            if (window._gamificationDisabled) return; // Rooms tenants
+            const cont = document.getElementById('eco-leaderboard');
+            if (!cont) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                const q = fs.query(
+                    fs.collection(db, 'tenants', 'nest', 'list'),
+                    fs.orderBy('gamification.points', 'desc'),
+                    fs.limit(10)
+                );
+                const snap = await fs.getDocs(q);
+                const rows = snap.docs.map(d => {
+                    const data = d.data() || {};
+                    return {
+                        roomId: d.id,
+                        name: data.name || data.firstName || '(ไม่มีชื่อ)',
+                        points: (data.gamification && data.gamification.points) || 0,
+                        avatar: data.avatar || '🏡'
+                    };
+                });
+                _leaderboardLoaded = true;
+                cont.innerHTML = '';
+                if (!rows.length) {
+                    cont.innerHTML = '<div class="text-center text-xs text-gray-400 py-4">ยังไม่มีข้อมูลอันดับ — ลูกบ้าน Nest ยังไม่ได้สะสมแต้ม</div>';
+                    return;
+                }
+                const myRoom = String(_taRoom);
+                const top3 = rows.slice(0, 3);
+                top3.forEach((r, i) => {
+                    const isMe = r.roomId === myRoom;
+                    const rank = i + 1;
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center gap-3 p-3' + (rank === 1 ? ' bg-[#F0F7F2] rounded-2xl' : '') + (isMe ? ' bg-[#FFF8E7] rounded-2xl border-2 border-[#D4AF37]' : '');
+                    const num = document.createElement('span');
+                    num.className = 'text-lg font-bold w-5 text-center ' + (rank === 1 ? 'text-[#2d8653]' : 'text-gray-300');
+                    num.textContent = String(rank);
+                    const av = document.createElement('div');
+                    av.className = 'w-10 h-10 ' + (rank === 1 ? 'bg-white' : 'bg-[#e8f5e9]') + ' rounded-full flex items-center justify-center text-sm';
+                    av.textContent = r.avatar;
+                    const info = document.createElement('div');
+                    info.className = 'flex-1';
+                    const nameEl = document.createElement('p');
+                    nameEl.className = 'text-xs font-bold';
+                    nameEl.textContent = isMe ? `คุณ (ห้อง ${r.roomId})` : `คุณ${r.name} (ห้อง ${r.roomId})`;
+                    const ptsEl = document.createElement('p');
+                    ptsEl.className = 'text-[9px] text-gray-400';
+                    ptsEl.textContent = r.points.toLocaleString() + ' Pts';
+                    info.appendChild(nameEl); info.appendChild(ptsEl);
+                    row.appendChild(num); row.appendChild(av); row.appendChild(info);
+                    if (rank === 1) {
+                        const medal = document.createElement('span');
+                        medal.className = 'text-xl';
+                        medal.textContent = '🥇';
+                        row.appendChild(medal);
+                    }
+                    if (isMe) {
+                        const tag = document.createElement('span');
+                        tag.className = 'text-[10px] bg-[#D4AF37] text-white px-2 py-0.5 rounded-full font-bold';
+                        tag.textContent = 'คุณ';
+                        row.appendChild(tag);
+                    }
+                    cont.appendChild(row);
+                });
+                // Add current tenant row if not in top 3
+                if (!top3.some(r => r.roomId === myRoom)) {
+                    const myRank = rows.findIndex(r => r.roomId === myRoom);
+                    const myData = myRank >= 0 ? rows[myRank] : { roomId: myRoom, name: 'ของฉัน', points: userPoints };
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center gap-3 p-3 bg-[#FFF8E7] rounded-2xl border-2 border-[#D4AF37] mt-2';
+                    const num = document.createElement('span');
+                    num.className = 'text-lg font-bold text-[#D4AF37] w-5 text-center';
+                    num.textContent = myRank >= 0 ? String(myRank + 1) : '?';
+                    const av = document.createElement('div');
+                    av.className = 'w-10 h-10 bg-[#e8f5e9] rounded-full flex items-center justify-center text-sm';
+                    av.textContent = '👤';
+                    const info = document.createElement('div');
+                    info.className = 'flex-1';
+                    const nameEl = document.createElement('p');
+                    nameEl.className = 'text-xs font-bold';
+                    nameEl.textContent = `คุณ (ห้อง ${myRoom || '—'})`;
+                    const ptsEl = document.createElement('p');
+                    ptsEl.className = 'text-[9px] text-gray-400';
+                    ptsEl.id = 'eco-my-pts';
+                    ptsEl.textContent = (myData.points || userPoints).toLocaleString() + ' Pts';
+                    info.appendChild(nameEl); info.appendChild(ptsEl);
+                    row.appendChild(num); row.appendChild(av); row.appendChild(info);
+                    const tag = document.createElement('span');
+                    tag.className = 'text-[10px] bg-[#D4AF37] text-white px-2 py-0.5 rounded-full font-bold';
+                    tag.textContent = 'คุณ';
+                    row.appendChild(tag);
+                    cont.appendChild(row);
+                }
+            } catch (e) {
+                console.warn('leaderboard load failed:', e.message);
+                cont.innerHTML = '<div class="text-center text-xs text-gray-400 py-4">ไม่สามารถโหลดอันดับได้ในขณะนี้</div>';
+            }
+        }
+
         let _ecoPointsUnsub = null;
         function _subscribeEcoPoints() {
             // Nest-only — subscribe to authoritative points field in Firestore
@@ -5088,6 +5302,7 @@
             }
             userPoints = pts;
             _subscribeEcoPoints(); // idempotent — only subscribes once
+            _loadLeaderboard(); // Nest-only, idempotent
             const levels = [
                 { name:'Seedling 🌱', min:0,    max:299  },
                 { name:'Sprout 🌿',   min:300,  max:699  },
@@ -6705,6 +6920,26 @@
         }
 
         // ---- SERVICE PROVIDERS ----
+        let _providersUnsub = null;
+        function _subscribeServiceProviders() {
+            if (_providersUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                const ref = fs.doc(db, 'system', 'serviceProviders');
+                _providersUnsub = fs.onSnapshot(ref, snap => {
+                    if (!snap.exists()) return;
+                    const items = (snap.data() || {}).items || [];
+                    try { localStorage.setItem('service_providers_data', JSON.stringify(items)); } catch(e) {}
+                    // Re-render if list currently visible
+                    if (document.getElementById('serviceProvidersList')) displayServiceProviders();
+                }, err => console.warn('serviceProviders subscribe failed:', err.message));
+            } catch (e) { console.warn('serviceProviders subscribe init failed:', e.message); }
+        }
+        window.addEventListener('firebaseInitialized', _subscribeServiceProviders);
+        if (window.firebaseReady) _subscribeServiceProviders();
+
         function displayServiceProviders() {
             const container = document.getElementById('serviceProvidersList');
             if (!container) return;
