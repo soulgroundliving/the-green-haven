@@ -5,7 +5,8 @@ let invoiceData=null;
 // Helper: Convert legacy building names to Firebase config + metadata
 function getBuildingInfo(legacyBuilding) {
   const firebaseBuilding = window.CONFIG?.getBuildingConfig?.(legacyBuilding) || (legacyBuilding === 'old' ? 'rooms' : 'nest');
-  const metadataArray = legacyBuilding === 'old' ? window.ROOMS_OLD : window.ROOMS_NEW;
+  // Nest building uses NEST_ROOMS (N101-N405) so bill room IDs match tenant app reads (bills/nest/N201)
+  const metadataArray = legacyBuilding === 'old' ? window.ROOMS_OLD : (window.NEST_ROOMS || window.ROOMS_NEW);
   const displayName = legacyBuilding === 'old' ? 'เดอะ กรีน เฮฟเว่น' : 'Nest · เดอะ กรีน เฮฟเว่น';
   return { firebaseBuilding, metadataArray, displayName };
 }

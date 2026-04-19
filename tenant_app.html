@@ -7274,9 +7274,9 @@
 
         // โหลด wellness articles จาก Firestore (หากมี) — admin เขียนใน dashboard
         async function loadWellnessFromFirestore() {
-            if (!window.firebaseReady || typeof firebase === 'undefined') return;
+            if (!window.firebaseReady || !window.firebase?.firestore) return;
             try {
-                const db = firebase.firestore();
+                const db = window.firebase.firestore();
                 const fns = window.firebase?.firestoreFunctions;
                 if (!fns || !fns.collection || !fns.getDocs) return;
                 const snap = await fns.getDocs(fns.query(fns.collection(db, 'wellness_articles'), fns.orderBy('createdAt', 'desc')));
