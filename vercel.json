@@ -43,7 +43,7 @@
       ]
     },
     {
-      "source": "/(dashboard|login|tenant|tenant_app|index)(.html)?",
+      "source": "/(dashboard|login|tenant|tenant_app|tax-filing|index)(.html)?",
       "headers": [
         {
           "key": "Cache-Control",
