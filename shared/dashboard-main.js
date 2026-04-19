@@ -30,7 +30,20 @@ window._showPageImpl = function(page,btn){
   }
   if(page==='announcements')initAnnouncementsPage();
   if(page==='tenant-portal')initTenantPortal();
-  if(page==='payment-verify')initPaymentVerify();
+  if(page==='payment-verify'){
+    // Redirect: content moved to page-bill ตรวจสลิป tab
+    document.getElementById('page-payment-verify').classList.remove('active');
+    document.getElementById('page-bill').classList.add('active');
+    setTimeout(()=>switchBillingMainTab('verify', document.getElementById('bill-main-tab-btn-verify')), 50);
+    return;
+  }
+  if(page==='lease-management'){
+    // Redirect: content moved to page-tenant สัญญา tab
+    document.getElementById('page-lease-management').classList.remove('active');
+    document.getElementById('page-tenant').classList.add('active');
+    setTimeout(()=>switchTenantMainTab('leases', document.getElementById('tenant-main-tab-btn-leases')), 50);
+    return;
+  }
   if(page==='analytics')initAnalyticsPage();
   if(page==='contract')initContractPage();
   if(page==='meter')initMeterPage();
@@ -45,16 +58,33 @@ window._showPageImpl = function(page,btn){
   }
   if(page==='people-management'){
     if(typeof initOwnerInfoPage==='function')initOwnerInfoPage();
-    if(typeof initTenantMasterPage==='function')initTenantMasterPage();
     if(typeof initServiceProvidersPage==='function')initServiceProvidersPage();
-  }
-  if(page==='lease-management'){
-    if(typeof initLeaseAgreementsPage==='function')initLeaseAgreementsPage();
-    if(typeof initLeaseSettingsPage==='function')initLeaseSettingsPage();
   }
 };
 // Assign to global scope after definition
 window.showPage = window._showPageImpl;
+
+window.switchTenantMainTab = function(tab, btn) {
+  ['tenants','leases','requests','alerts'].forEach(t => {
+    const el = document.getElementById('tenant-main-tab-' + t);
+    if(el) el.style.display = (t === tab) ? '' : 'none';
+  });
+  document.querySelectorAll('#tenant-main-tab-btn-tenants,#tenant-main-tab-btn-leases,#tenant-main-tab-btn-requests,#tenant-main-tab-btn-alerts').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(tab === 'leases' && typeof initLeaseAgreementsPage === 'function') initLeaseAgreementsPage();
+  if(tab === 'requests' && typeof initLeaseRequestsPage === 'function') initLeaseRequestsPage();
+  if(tab === 'alerts' && typeof initLeaseSettingsPage === 'function') initLeaseSettingsPage();
+};
+
+window.switchBillingMainTab = function(tab, btn) {
+  ['billing','verify'].forEach(t => {
+    const el = document.getElementById('bill-main-tab-' + t);
+    if(el) el.style.display = (t === tab) ? '' : 'none';
+  });
+  document.querySelectorAll('#bill-main-tab-btn-billing,#bill-main-tab-btn-verify').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(tab === 'verify' && typeof initPaymentVerify === 'function') initPaymentVerify();
+};
 
 // Meter Tab Switching Function
 window._switchMeterTabImpl = function(tabName, btnElement) {
@@ -6647,7 +6677,7 @@ window.submitManualVerify = async function(){
 
 // ===== Payment Verify — ประวัติตามห้อง =====
 window.switchPVTab = function(tab, btn){
-  document.querySelectorAll('#page-payment-verify .year-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#bill-main-tab-verify .year-tab').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   const live    = document.getElementById('pv-tab-live');
   const hist    = document.getElementById('pv-tab-history');

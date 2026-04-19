@@ -1876,18 +1876,10 @@
         <span class="sidebar-item-icon">📊</span>Meter Upload
       </button>
       <button class="sidebar-item" onclick="window.showPage('bill',this)">
-        <span class="sidebar-item-icon">💳</span>Billing<span class="sidebar-badge" id="billBadge" style="display:none"></span>
+        <span class="sidebar-item-icon">💳</span>บิล & ชำระ<span class="sidebar-badge" id="billBadge" style="display:none"></span><span class="sidebar-badge" id="paymentBadge" style="display:none"></span>
       </button>
       <button class="sidebar-item" onclick="window.showPage('expense',this)">
         <span class="sidebar-item-icon">💸</span>ค่าใช้จ่าย
-      </button>
-    </div>
-
-    <!-- VERIFICATION -->
-    <div class="sidebar-group">
-      <div class="sidebar-group-title">Verification</div>
-      <button class="sidebar-item" onclick="window.showPage('payment-verify',this)">
-        <span class="sidebar-item-icon">✓</span>Payment Verification<span class="sidebar-badge" id="paymentBadge" style="display:none"></span>
       </button>
     </div>
 
@@ -1912,9 +1904,6 @@
       <div class="sidebar-group-title">Management</div>
       <button class="sidebar-item" onclick="window.showPage('people-management',this)">
         <span class="sidebar-item-icon">👨‍💼</span>People Management
-      </button>
-      <button class="sidebar-item" onclick="window.showPage('lease-management',this)">
-        <span class="sidebar-item-icon">📋</span>Lease Management
       </button>
     </div>
 
@@ -2259,6 +2248,15 @@
 <div class="page" id="page-tenant">
   <div class="section-title">👥 ผู้เช่า & สัญญา</div>
 
+  <!-- Main Tab Nav -->
+  <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
+    <button id="tenant-main-tab-btn-tenants" class="year-tab active" onclick="switchTenantMainTab('tenants',this)">👥 ผู้เช่า</button>
+    <button id="tenant-main-tab-btn-leases" class="year-tab" onclick="switchTenantMainTab('leases',this)">📋 สัญญา</button>
+    <button id="tenant-main-tab-btn-requests" class="year-tab" onclick="switchTenantMainTab('requests',this)">📨 คำขอ <span id="leaseRequestsBadge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
+    <button id="tenant-main-tab-btn-alerts" class="year-tab" onclick="switchTenantMainTab('alerts',this)">🔔 แจ้งเตือน</button>
+  </div>
+  <div id="tenant-main-tab-tenants">
+
   <!-- Building Selection -->
   <div class="year-tabs" style="margin-bottom:1.2rem;">
     <span class="year-tab-label">ตึก:</span>
@@ -2482,6 +2480,61 @@
           </thead>
           <tbody id="tenantTableBody"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+  </div><!-- /tenant-main-tab-tenants -->
+
+  <!-- TAB 2: สัญญาเช่า -->
+  <div id="tenant-main-tab-leases" style="display:none;">
+    <div id="leaseAgreementsContainer"></div>
+  </div>
+
+  <!-- TAB 3: คำขอจากลูกบ้าน -->
+  <div id="tenant-main-tab-requests" style="display:none;">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <div>
+          <div style="font-size:1.05rem;font-weight:700;">📨 คำขอต่อสัญญา / แจ้งย้ายออก</div>
+          <small style="color:var(--text-muted);">ลูกบ้านส่งจากหน้า Profile → "แจ้งต่อสัญญา / ย้ายออก" — real-time</small>
+        </div>
+        <div style="display:flex;gap:.5rem;">
+          <button id="leaseFilterAllBtn" onclick="setLeaseRequestFilter('all',this)" class="lease-req-filter-btn" style="padding:6px 14px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ทั้งหมด</button>
+          <button id="leaseFilterPendingBtn" onclick="setLeaseRequestFilter('pending',this)" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">รอดำเนินการ</button>
+          <button id="leaseFilterDoneBtn" onclick="setLeaseRequestFilter('done',this)" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ดำเนินการแล้ว</button>
+        </div>
+      </div>
+      <div id="leaseRequestsList" style="display:grid;gap:1rem;">
+        <div style="text-align:center;padding:30px;color:var(--text-muted);">กำลังโหลด…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: แจ้งเตือน -->
+  <div id="tenant-main-tab-alerts" style="display:none;">
+    <div class="card">
+      <div style="background:var(--green-pale);padding:1.5rem;border-radius:var(--radius-sm);margin-bottom:1.5rem;">
+        <div style="font-weight:700;margin-bottom:1rem;">Alert Configuration</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+          <div>
+            <label style="display:block;margin-bottom:.5rem;font-weight:600;">Alert Threshold (days)</label>
+            <input type="number" id="alertThreshold" min="1" max="365" value="60" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);">
+            <small style="color:var(--text-muted);">Show alert when lease expires within X days</small>
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:.5rem;font-weight:600;">Alert Severity Level</label>
+            <select id="alertSeverity" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);">
+              <option value="notice">ℹ️ Notice</option>
+              <option value="warning">⚠️ Warning</option>
+              <option value="urgent">🚨 Urgent</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="saveLeaseAlertSettings()" class="btn-receipt" style="margin-top:1rem;padding:10px 20px;">💾 Save Settings</button>
+      </div>
+      <div style="margin-top:2rem;">
+        <div style="font-weight:700;margin-bottom:1rem;font-size:1.05rem;">📋 Upcoming Lease Expirations</div>
+        <div id="leaseExpiryList"></div>
       </div>
     </div>
   </div>
@@ -3176,7 +3229,14 @@
 
 <!-- ===== BILL GENERATOR ===== -->
 <div class="page" id="page-bill">
-  <div class="section-title">🧾 ออกบิล — ระบบ 2 ขั้นตอน</div>
+  <div class="section-title">💳 บิล & ชำระ</div>
+
+  <!-- Main Tab Nav -->
+  <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
+    <button id="bill-main-tab-btn-billing" class="year-tab active" onclick="switchBillingMainTab('billing',this)">🧾 ออกบิล</button>
+    <button id="bill-main-tab-btn-verify" class="year-tab" onclick="switchBillingMainTab('verify',this)">✅ ตรวจสลิป <span id="paymentBadge2" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
+  </div>
+  <div id="bill-main-tab-billing">
 
   <!-- Step indicator -->
   <div class="bill-steps" id="billSteps">
@@ -3376,11 +3436,10 @@
       </div>
     </div>
   </div>
-</div>
+  </div><!-- /bill-main-tab-billing -->
 
-<!-- ===== PAYMENT VERIFICATION ===== -->
-<div class="page" id="page-payment-verify">
-  <div class="section-title">💳 Payment Verification</div>
+  <!-- TAB 2: ตรวจสลิป (payment verify) -->
+  <div id="bill-main-tab-verify" style="display:none;">
 
   <!-- Tabs -->
   <div class="year-tabs" style="margin-bottom:1.2rem;">
@@ -3539,7 +3598,11 @@
       <div id="vc-result"></div>
     </div>
   </div>
-</div>
+  </div><!-- /bill-main-tab-verify -->
+</div><!-- /page-bill -->
+
+<!-- Payment Verify Page (content moved to page-bill ตรวจสลิป tab) -->
+<div class="page" id="page-payment-verify" style="display:none;"></div>
 
 <!-- Owner Info Page -->
 <div class="page" id="page-people-management">
@@ -3548,7 +3611,6 @@
   <!-- Tab Navigation -->
   <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
     <button id="tab-owner-btn" class="people-mgmt-tab active" onclick="switchPeopleTab('owner', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">🏢 Owner</button>
-    <button id="tab-tenant-btn" class="people-mgmt-tab" onclick="switchPeopleTab('tenant', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">👥 Tenants</button>
     <button id="tab-providers-btn" class="people-mgmt-tab" onclick="switchPeopleTab('providers', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📞 Service Providers</button>
   </div>
 
@@ -3557,12 +3619,7 @@
     <div id="ownerInfoContainer"></div>
   </div>
 
-  <!-- TAB 2: Tenant Master -->
-  <div id="people-tab-tenant" class="people-mgmt-content" style="display: none;">
-    <div id="tenantMasterContainer"></div>
-  </div>
-
-  <!-- TAB 3: Service Providers -->
+  <!-- TAB 2: Service Providers -->
   <div id="people-tab-providers" class="people-mgmt-content" style="display: none;">
     <div class="card" style="margin-bottom: 1.5rem;">
       <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
@@ -3594,73 +3651,8 @@
   </div>
 </div>
 
-<!-- Lease Agreements Page -->
-<div class="page" id="page-lease-management">
-  <div class="section-title">📋 Lease Management</div>
-
-  <!-- Tab Navigation -->
-  <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
-    <button id="tab-agreements-btn" class="lease-mgmt-tab active" onclick="switchLeaseTab('agreements', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📋 Agreements</button>
-    <button id="tab-requests-btn" class="lease-mgmt-tab" onclick="switchLeaseTab('requests', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem; position: relative;">📨 คำขอจากลูกบ้าน <span id="leaseRequestsBadge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
-    <button id="tab-alerts-btn" class="lease-mgmt-tab" onclick="switchLeaseTab('alerts', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">🔔 Alert Settings</button>
-  </div>
-
-  <!-- TAB 1: Lease Agreements -->
-  <div id="lease-tab-agreements" class="lease-mgmt-content active">
-    <div id="leaseAgreementsContainer"></div>
-  </div>
-
-  <!-- TAB 2: Pending Requests (Firestore leaseRequests) -->
-  <div id="lease-tab-requests" class="lease-mgmt-content" style="display: none;">
-    <div class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <div>
-          <div style="font-size: 1.05rem; font-weight: 700;">📨 คำขอต่อสัญญา / แจ้งย้ายออก</div>
-          <small style="color: var(--text-muted);">ลูกบ้านส่งจากหน้า Profile → "แจ้งต่อสัญญา / ย้ายออก" — real-time</small>
-        </div>
-        <div style="display: flex; gap: .5rem;">
-          <button id="leaseFilterAllBtn" onclick="setLeaseRequestFilter('all', this)" class="lease-req-filter-btn" style="padding:6px 14px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ทั้งหมด</button>
-          <button id="leaseFilterPendingBtn" onclick="setLeaseRequestFilter('pending', this)" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">รอดำเนินการ</button>
-          <button id="leaseFilterDoneBtn" onclick="setLeaseRequestFilter('done', this)" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ดำเนินการแล้ว</button>
-        </div>
-      </div>
-      <div id="leaseRequestsList" style="display: grid; gap: 1rem;">
-        <div style="text-align:center;padding:30px;color:var(--text-muted);">กำลังโหลด…</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB 3: Alert Settings -->
-  <div id="lease-tab-alerts" class="lease-mgmt-content" style="display: none;">
-    <div class="card">
-      <div style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
-        <div style="font-weight: 700; margin-bottom: 1rem;">Alert Configuration</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-          <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Alert Threshold (days)</label>
-            <input type="number" id="alertThreshold" min="1" max="365" value="60" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-            <small style="color: var(--text-muted);">Show alert when lease expires within X days</small>
-          </div>
-          <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Alert Severity Level</label>
-            <select id="alertSeverity" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-              <option value="notice">ℹ️ Notice</option>
-              <option value="warning">⚠️ Warning</option>
-              <option value="urgent">🚨 Urgent</option>
-            </select>
-          </div>
-        </div>
-        <button onclick="saveLeaseAlertSettings()" class="btn-receipt" style="margin-top: 1rem; padding: 10px 20px;">💾 Save Settings</button>
-      </div>
-
-      <!-- Upcoming Lease Expirations -->
-      <div style="margin-top: 2rem;">
-        <div style="font-weight: 700; margin-bottom: 1rem; font-size: 1.05rem;">📋 Upcoming Lease Expirations</div>
-        <div id="leaseExpiryList"></div>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Lease Agreements Page (content moved to page-tenant tabs) -->
+<div class="page" id="page-lease-management" style="display:none;"></div>
 
 <!-- ===== PET REGISTRATIONS APPROVAL ===== -->
 <div class="page" id="page-requests-approvals">
@@ -3672,7 +3664,6 @@
     <button id="tab-housekeeping-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('housekeeping', this)">🧹 Housekeeping</button>
     <button id="tab-complaints-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('complaints', this)">⚠️ Complaints</button>
     <button id="tab-pets-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('pets', this)">🐾 Pet Approvals</button>
-    <button id="tab-rental-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('rental', this)">📋 Rental Approvals</button>
     <button id="tab-liff-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('liff', this)">🔗 LINE Link Requests</button>
   </div>
 
@@ -3797,15 +3788,6 @@
     </div>
   </div>
 
-  <!-- TAB 5: Rental Approvals -->
-  <div id="requests-tab-rental" class="requests-mgmt-content" style="display:none;">
-    <div class="card" style="text-align:center;padding:2rem;color:var(--text-muted);">
-      <div style="font-size:2.5rem;margin-bottom:1rem;">📋</div>
-      <div style="font-size:1.1rem;font-weight:700;margin-bottom:.5rem;">Rental Approvals</div>
-      <div style="font-size:.9rem;">สัญญาเช่าที่รอการอนุมัติ — จัดการใน Lease Management</div>
-      <button onclick="window.showPage('lease-management',this)" style="margin-top:1.5rem;padding:10px 24px;background:var(--green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.95rem;">ไปที่ Lease Management →</button>
-    </div>
-  </div>
 
 </div>
 
