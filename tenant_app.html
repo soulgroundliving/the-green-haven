@@ -1556,7 +1556,7 @@
     </div>
 
     <div id="daily-modal"
-        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(10px); padding: 20px;">
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1500; align-items: center; justify-content: center; backdrop-filter: blur(10px); padding: 20px;">
         <div class="animate-pop"
             style="background: white; width: 100%; max-width: 350px; border-radius: 35px; padding: 30px; position: relative; text-align: center;">
 
@@ -1750,8 +1750,7 @@
              Uses same toggleAccordion() pattern as internetStatusSection above. -->
         <div id="emergencyContactsSection" class="card">
             <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                <strong style="flex:1;">📞 สายด่วน &amp; ผู้ให้บริการ</strong>
-                <span style="font-size:var(--fs-sm); font-weight:600; color:#DC2626;">🚨 ฉุกเฉิน</span>
+                <strong style="flex:1;">📋 ขั้นตอนเมื่อเกิดเหตุฉุกเฉิน</strong>
                 <i class="fas fa-chevron-down" style="color:#aaa;"></i>
             </div>
             <div class="accordion-content" style="display:none;">
@@ -1760,11 +1759,6 @@
                 <!-- Service providers (dynamic list from Firestore system/serviceProviders).
                      Internet provider contact now lives in สถานะอินเทอร์เน็ตอาคาร accordion above. -->
                 <div id="serviceProvidersList" style="display:grid; gap:10px; margin-top:12px;"></div>
-
-                <!-- Emergency procedures sub-sections -->
-                <div style="margin-top:16px; padding-top:14px; border-top:1px solid #f0f0f0;">
-                    <strong style="font-size:var(--fs-sm); color:var(--text-dark);">📋 ขั้นตอนเมื่อเกิดเหตุฉุกเฉิน</strong>
-                </div>
 
                 <div style="display:grid; gap:8px; margin-top:10px;">
 
@@ -3705,9 +3699,10 @@
         function checkDailyLogin() {
             if (window._nestOnlyDisabled) return; // Rooms tenant — skip
             const modal = document.getElementById('daily-modal');
-            if (modal) {
-                modal.style.display = 'flex';
-            }
+            if (!modal) return;
+            const nav = document.getElementById('main-nav-bar');
+            if (nav) nav.style.display = 'none';
+            modal.style.display = 'flex';
         }
 
         // 2. ฟังก์ชันกดรับพ้อยท์ — Nest only
@@ -3720,9 +3715,11 @@
                 pointDisplay.innerText = userPoints.toLocaleString();
             }
 
-            // ปิด Modal
+            // ปิด Modal + คืน nav-bar
             const modal = document.getElementById('daily-modal');
             if (modal) modal.style.display = 'none';
+            const nav = document.getElementById('main-nav-bar');
+            if (nav) nav.style.display = '';
 
             // กลับไปหน้าแผนที่ และปลดล็อกการกด
             showPage('world-map');
@@ -5406,7 +5403,9 @@
 
         // ===== EMERGENCY CONTACTS SUBSCRIBE =====
         // Firestore: system/emergencyContacts doc with field `items: [{ icon, label, number }]`.
-        // Admin manages via dashboard.html. Falls back to hardcoded 191/199/1669 if no Firestore data.
+        // Admin manages via dashboard.html — สำหรับเบอร์เฉพาะอาคาร (รพ./ช่าง/รปภ.)
+        // 191/199/1669 ถูก filter ออก เพราะอยู่ในขั้นตอนฉุกเฉินแล้ว
+        const _NATIONAL_EMERGENCY = new Set(['191','199','1669','1599']);
         let _emergencyUnsub = null;
         function _subscribeEmergencyContacts() {
             if (_emergencyUnsub) return;
@@ -5422,7 +5421,7 @@
                     const list = document.getElementById('emergencyContactsList');
                     if (!list) return;
                     list.innerHTML = '';
-                    items.forEach(c => {
+                    items.filter(c => !_NATIONAL_EMERGENCY.has(String(c.number || '').trim())).forEach(c => {
                         const btn = document.createElement('button');
                         btn.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;background:#FFF1F1;color:#DC2626;border:none;border-radius:10px;font-weight:700;cursor:pointer;text-align:left;';
                         const icon = document.createElement('span');
