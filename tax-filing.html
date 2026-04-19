@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./shared/brand.css">
   <script src="./shared/security.js"></script>
   <script src="./shared/audit.js"></script>
+  <script src="./shared/owner-config.js"></script>
   <script src="./accounting/tax-filing.js"></script>
   <script src="./accounting/tax-export.js"></script>
   <script src="./shared/firebase-config-loader.js"></script>
@@ -1330,8 +1331,7 @@
     // Owner info is set in dashboard People Management → Owner tab (localStorage owner_info).
     // All fields editable there including: companyLegalNameTH, companyLegalNameEN,
     // registrationStatus, entityType, taxId, address parts, phone, email.
-    let owner = {};
-    try { owner = JSON.parse(localStorage.getItem('owner_info') || '{}'); } catch(e) {}
+    const owner = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
     const fullAddress = [owner.address, owner.subDistrict, owner.district, owner.province, owner.postalCode].filter(Boolean).join(' ');
     const baseLegalName = owner.companyLegalNameTH || localStorage.getItem('company_name') || 'บริษัท เดอะ กรีนเฮฟเว่น จำกัด';
     return {

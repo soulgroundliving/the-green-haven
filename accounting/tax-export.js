@@ -3,9 +3,10 @@
  * Handles PDF and Excel exports for tax reports
  */
 
-// Load owner info (logo + company name) for PDF letterhead
+// Load owner info (logo + company name) for PDF letterhead.
+// OwnerConfigManager is loaded by tax-filing.html before this script.
 function _getOwnerForPDF() {
-  try { return JSON.parse(localStorage.getItem('owner_info') || '{}'); } catch(e) { return {}; }
+  return (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
 }
 
 // Inject company logo + name into a jsPDF doc header; returns next y-position
