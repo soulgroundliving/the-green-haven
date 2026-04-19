@@ -8654,6 +8654,23 @@ function openTenantModal(building, roomId) {
   // Meter fields removed - no longer used
   document.getElementById('modalTenantNotes').value = tenant.notes || '';
 
+  // New fields
+  const idCardEl = document.getElementById('modalTenantIdCard');
+  if (idCardEl) idCardEl.value = tenant.idCardNumber || '';
+  const addrEl = document.getElementById('modalTenantAddress');
+  if (addrEl) addrEl.value = tenant.address || '';
+  const emNameEl = document.getElementById('modalEmergencyName');
+  if (emNameEl) emNameEl.value = (tenant.emergencyContact && tenant.emergencyContact.name) || '';
+  const emPhoneEl = document.getElementById('modalEmergencyPhone');
+  if (emPhoneEl) emPhoneEl.value = (tenant.emergencyContact && tenant.emergencyContact.phone) || '';
+  const hasPet = !!(tenant.pets && tenant.pets.hasPet);
+  const hasPetEl = document.getElementById('modalHasPet');
+  if (hasPetEl) hasPetEl.checked = hasPet;
+  const petTypeRow = document.getElementById('modalPetTypeRow');
+  if (petTypeRow) petTypeRow.style.display = hasPet ? 'block' : 'none';
+  const petTypeEl = document.getElementById('modalPetType');
+  if (petTypeEl) petTypeEl.value = (tenant.pets && tenant.pets.type) || '';
+
   // Receipt/company info display (read-only — tenants self-serve via tenant_app)
   const co = tenant.companyInfo || {};
   const hasCo = !!(co.name || co.taxId || co.address);
@@ -8955,6 +8972,14 @@ function saveTenantInfo() {
     // Meter fields removed - no longer used
     // elecMeterStart and waterMeterStart now managed by Firebase only
     notes: document.getElementById('modalTenantNotes').value,
+    emergencyContact: {
+      name: document.getElementById('modalEmergencyName')?.value?.trim() || '',
+      phone: document.getElementById('modalEmergencyPhone')?.value?.trim() || ''
+    },
+    pets: {
+      hasPet: document.getElementById('modalHasPet')?.checked || false,
+      type: document.getElementById('modalPetType')?.value?.trim() || ''
+    },
     contractDocument: document.getElementById('modalContractDocument').value || '',
     contractFileName: document.getElementById('modalContractFileName').value || '',
     // receiptType + companyInfo are tenant-self-serve via tenant_app — admin
