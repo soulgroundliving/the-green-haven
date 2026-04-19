@@ -41,6 +41,14 @@ service cloud.firestore {
     match /communityDocs/{id}      { allow read: if true; allow write: if isAdminOrEmail(); }
     match /wellness_articles/{id}  { allow read: if true; allow write: if isAdminOrEmail(); }
 
+    // ===== MARKETPLACE (tenant-to-tenant listings, building-scoped) =====
+    match /marketplace/{id} {
+      allow read:   if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (isAdminOrEmail() || request.auth.uid == resource.data.ownerUid);
+      allow delete: if isAdminOrEmail() || (isSignedIn() && request.auth.uid == resource.data.ownerUid);
+    }
+
     // ===== COMPLAINTS (cross-collection, simpler than per-room subcollection) =====
     match /complaints/{id} {
       allow read:   if isSignedIn();

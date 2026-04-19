@@ -1460,6 +1460,26 @@
         }
         body.night-mode .emergency-call-btn { background: #3b1a1a; color: #f87171; }
         body.night-mode .emergency-step { border-bottom-color: #2a2d2a; }
+
+        /* --- MARKETPLACE --- */
+        .market-pill {
+            flex-shrink: 0; padding: 6px 14px; border-radius: 20px;
+            border: 1px solid #e5e7eb; background: #fff;
+            font-family: inherit; font-size: var(--fs-sm);
+            cursor: pointer; touch-action: manipulation; color: #555;
+        }
+        .market-pill-active { background: var(--primary-green); color: #fff; border-color: var(--primary-green); }
+        .cat-radio-pill {
+            flex: 1; text-align: center; padding: 9px 4px; border-radius: 10px;
+            border: 1.5px solid #e5e7eb; background: #fff;
+            font-family: inherit; font-size: var(--fs-sm);
+            cursor: pointer; touch-action: manipulation; display: block;
+        }
+        .cat-radio-pill input[type="radio"] { display: none; }
+        .cat-radio-pill:has(input:checked) {
+            border-color: var(--primary-green); background: var(--soft-green);
+            font-weight: 700; color: var(--primary-green);
+        }
     </style>
 </head>
 
@@ -2130,22 +2150,22 @@
                 onclick="showSubPage('add-market-page')">+ ลงประกาศ</small>
         </div>
 
-        <div id="market-list-container"
-            style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 16px;">
-            <div class="card" style="margin:0 !important; padding:14px !important;">
-                <div
-                    style="height:96px; background:#f9f9f9; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); color:var(--primary-green);">
-                    <i class="fas fa-plug"></i>
-                </div>
-                <small style="display:block; margin-top:10px;">ขายต่อ: โคมไฟ</small><strong>250.-</strong>
+        <div id="market-filter-pills" style="display:flex; gap:8px; padding:0 16px 12px; overflow-x:auto; -webkit-overflow-scrolling:touch;">
+            <button class="market-pill market-pill-active" data-filter="all" onclick="filterMarket('all',this)">ทั้งหมด</button>
+            <button class="market-pill" data-filter="item" onclick="filterMarket('item',this)">🛍️ ของมือสอง</button>
+            <button class="market-pill" data-filter="service" onclick="filterMarket('service',this)">💅 บริการ</button>
+            <button class="market-pill" data-filter="free" onclick="filterMarket('free',this)">🎁 แจกฟรี</button>
+        </div>
+
+        <div id="market-list-container" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 8px;">
+            <div style="grid-column:1/-1; text-align:center; padding:30px; color:#aaa;">
+                <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
             </div>
-            <div class="card" style="margin:0 !important; padding:14px !important;">
-                <div
-                    style="height:96px; background:#f9f9f9; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); color:var(--primary-green);">
-                    <i class="fas fa-hamburger"></i>
-                </div>
-                <small style="display:block; margin-top:10px;">รับหิ้ว: อาหาร</small><strong>15.-</strong>
-            </div>
+        </div>
+
+        <div id="my-listings-section" style="display:none; padding:0 16px 16px;">
+            <div class="section-title" style="padding:0; margin-bottom:8px;"><span>ประกาศของฉัน</span></div>
+            <div id="my-listings-container" style="display:grid; gap:8px;"></div>
         </div>
     </div>
 
@@ -2735,63 +2755,60 @@
 
     <div id="add-market-page" class="page" style="background: var(--bg-color);">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+            <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; touch-action:manipulation;"
                 onclick="goBackToCommunity()">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">ลงประกาศสินค้า 🛍️</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">ลงประกาศ 📢</h1>
         </div>
 
         <div class="card">
-            <div
-                style="border: 1.5px dashed var(--primary-green); padding: 30px 20px; border-radius: 15px; text-align: center; margin-bottom: 20px; background: #fdfdfd; cursor: pointer;">
-                <i class="fas fa-camera"
-                    style="color: var(--primary-green); font-size: var(--fs-lg); margin-bottom: 10px;"></i>
-                <div style="font-size: var(--fs-md); font-weight: 600; color: var(--text-dark);">เพิ่มรูปภาพสินค้า</div>
-                <div style="font-size: var(--fs-sm); color: #888; margin-top: 5px;">อัปโหลดได้สูงสุด 4 รูป</div>
-            </div>
-
-            <label style="font-size: var(--fs-md); font-weight: 600;">ชื่อสินค้า / บริการ <span
-                    style="color:red;">*</span></label>
-            <input type="text" id="market-title" placeholder="เช่น รับหิ้วกาแฟ, ขายหนังสือมือสอง"
-                style="margin-bottom: 15px;">
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                <div>
-                    <label style="font-size: var(--fs-md); font-weight: 600;">ราคา (บาท) <span
-                            style="color:red;">*</span></label>
-                    <input type="number" id="market-price"
-                        style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:10px; font-family: inherit;"
-                        placeholder="เช่น 150">
-                </div>
-                <div>
-                    <label style="font-size: var(--fs-md); font-weight: 600;">หมวดหมู่</label>
-                    <select id="market-category">
-                        <option value="fas fa-box">📦 ของใช้ทั่วไป</option>
-                        <option value="fas fa-hamburger">🍔 อาหาร/เครื่องดื่ม</option>
-                        <option value="fas fa-tshirt">👕 เสื้อผ้า/แฟชั่น</option>
-                        <option value="fas fa-book">📚 หนังสือ/อุปกรณ์</option>
-                        <option value="fas fa-hands-helping">🤝 บริการ/รับหิ้ว</option>
-                    </select>
+            <!-- Image upload -->
+            <div id="market-image-zone" style="border:1.5px dashed var(--primary-green); border-radius:15px; text-align:center; margin-bottom:20px; background:#fdfdfd; cursor:pointer; position:relative; overflow:hidden; min-height:110px; display:flex; align-items:center; justify-content:center; touch-action:manipulation;">
+                <img id="market-image-preview" src="" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;">
+                <div id="market-image-placeholder" style="padding:24px 20px;">
+                    <i class="fas fa-camera" style="color:var(--primary-green); font-size:var(--fs-lg); display:block; margin-bottom:8px;"></i>
+                    <div style="font-size:var(--fs-md); font-weight:600; color:var(--text-dark);">เพิ่มรูปภาพ</div>
+                    <div style="font-size:var(--fs-sm); color:#888; margin-top:4px;">กดเพื่อเลือกรูปจากคลัง</div>
                 </div>
             </div>
+            <input type="file" id="market-image-input" accept="image/*" style="display:none;">
 
-            <label style="font-size: var(--fs-md); font-weight: 600;">รายละเอียดเพิ่มเติม</label>
-            <textarea id="market-desc" placeholder="บอกรายละเอียดสินค้า สภาพสินค้า หรือเงื่อนไขการส่ง..." rows="3"
-                style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:10px; font-family: inherit;"></textarea>
+            <!-- Category pills -->
+            <label style="font-size:var(--fs-md); font-weight:600; display:block; margin-bottom:10px;">หมวดหมู่ <span style="color:red;">*</span></label>
+            <div style="display:flex; gap:8px; margin-bottom:20px;">
+                <label class="cat-radio-pill"><input type="radio" name="mcat" value="item" checked onchange="_onMarketCatChange()"> 🛍️ ของมือสอง</label>
+                <label class="cat-radio-pill"><input type="radio" name="mcat" value="service" onchange="_onMarketCatChange()"> 💅 บริการ</label>
+                <label class="cat-radio-pill"><input type="radio" name="mcat" value="free" onchange="_onMarketCatChange()"> 🎁 แจกฟรี</label>
+            </div>
 
-            <div class="setting-row" style="margin-top: 15px; padding: 12px 15px; border: 1px solid #eee;">
-                <span><i class="fas fa-door-open" style="color:#888; width:25px;"></i>
-                    แสดงเลขห้องให้ผู้ซื้อติดต่อ</span>
-                <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+            <!-- Title -->
+            <label style="font-size:var(--fs-md); font-weight:600;">ชื่อสินค้า / บริการ <span style="color:red;">*</span></label>
+            <input type="text" id="market-title" placeholder="เช่น รับทำเล็บ, ขายหนังสือมือสอง" style="margin-bottom:15px;">
+
+            <!-- Price (hidden when free) -->
+            <div id="market-price-row" style="margin-bottom:15px;">
+                <label style="font-size:var(--fs-md); font-weight:600;">ราคา (บาท) <span style="color:red;">*</span></label>
+                <input type="number" id="market-price" style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:10px; font-family:inherit;" placeholder="เช่น 150">
+            </div>
+
+            <!-- Description -->
+            <label style="font-size:var(--fs-md); font-weight:600;">รายละเอียดเพิ่มเติม</label>
+            <textarea id="market-desc" placeholder="บอกรายละเอียด สภาพสินค้า หรือเงื่อนไข..." rows="3"
+                style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:10px; font-family:inherit;"></textarea>
+
+            <!-- Show room toggle -->
+            <div class="setting-row" style="margin-top:15px; padding:12px 15px; border:1px solid #eee;">
+                <span><i class="fas fa-door-open" style="color:#888; width:25px;"></i> แสดงเลขห้องให้ผู้ซื้อติดต่อ</span>
+                <label class="switch"><input type="checkbox" id="market-show-room" checked><span class="slider"></span></label>
             </div>
         </div>
 
-        <div style="padding: 10px 15px 50px;">
-            <button class="btn-main" onclick="saveNewMarketItem()"><i class="fas fa-paper-plane"></i>
-                โพสต์ลงตลาดนัด</button>
-            <button class="btn-main"
-                style="background: transparent; color: #888; border: 1px solid #ddd; margin-top: 10px;"
+        <div style="padding:10px 15px 50px;">
+            <button id="market-submit-btn" class="btn-main" onclick="saveNewMarketItem()" style="touch-action:manipulation;">
+                <i class="fas fa-paper-plane"></i> โพสต์ลงตลาดนัด
+            </button>
+            <button class="btn-main" style="background:transparent; color:#888; border:1px solid #ddd; margin-top:10px; touch-action:manipulation;"
                 onclick="goBackToCommunity()">ยกเลิก</button>
         </div>
     </div>
@@ -4464,44 +4481,276 @@
             }
         }
 
-        function saveNewMarketItem() {
-            const title = document.getElementById('market-title')?.value.trim();
-            const price = document.getElementById('market-price')?.value.trim();
-            const iconClass = document.getElementById('market-category')?.value;
+        // ===== MARKETPLACE =====
+        let _marketUnsub = null;
+        let _marketItems = [];
+        let _marketFilter = 'all';
+        let _marketImageData = null;
 
-            if (!title || !price) {
-                alert('กรุณาระบุชื่อสินค้าและราคาให้ครบถ้วนก่อนนะครับ 🛒');
-                if (!title) document.getElementById('market-title').focus();
-                else document.getElementById('market-price').focus();
+        function _subscribeMarketplace() {
+            if (_marketUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions || !_taBuilding) return;
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                const q = fs.query(
+                    fs.collection(db, 'marketplace'),
+                    fs.where('building', '==', _taBuilding),
+                    fs.where('status', '==', 'active'),
+                    fs.orderBy('createdAt', 'desc')
+                );
+                _marketUnsub = fs.onSnapshot(q, snap => {
+                    const now = new Date().toISOString();
+                    _marketItems = snap.docs
+                        .map(d => ({ id: d.id, ...d.data() }))
+                        .filter(i => !i.expiresAt || i.expiresAt > now);
+                    renderMarketFeed();
+                }, err => console.warn('marketplace subscribe:', err?.message));
+            } catch(e) { console.warn('subscribeMarketplace:', e); }
+        }
+
+        function renderMarketFeed() {
+            const container = document.getElementById('market-list-container');
+            if (!container) return;
+            const filtered = _marketFilter === 'all'
+                ? _marketItems
+                : _marketItems.filter(i => i.category === _marketFilter);
+
+            container.textContent = '';
+
+            if (filtered.length === 0) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'grid-column:1/-1;text-align:center;padding:40px 20px;color:#aaa;';
+                const isFiltered = _marketFilter !== 'all';
+                empty.innerHTML = `<div style="font-size:2.5rem;margin-bottom:10px;">🛒</div>
+                    <div style="font-weight:600;color:#666;">${isFiltered ? 'ไม่มีประกาศในหมวดนี้' : 'ยังไม่มีประกาศ'}</div>
+                    <div style="font-size:var(--fs-sm);margin-top:6px;">${isFiltered ? 'ลองดูหมวดอื่นครับ' : 'เป็นคนแรกที่ลงประกาศสิครับ!'}</div>`;
+                container.appendChild(empty);
+                renderMyListings();
                 return;
             }
 
-            const newItem = document.createElement('div');
-            newItem.className = 'card';
-            newItem.style.cssText = 'margin:0; padding:12px; animation: slideUp 0.5s ease;';
-            newItem.innerHTML = `
-                <div style="height:100px; background:#f9f9f9; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); color:var(--primary-green);">
-                    <i class="${_esc(iconClass)}"></i>
-                </div>`;
-            const label = document.createElement('small');
-            label.style.cssText = 'display:block; margin-top:8px;';
-            label.textContent = title;
-            const priceEl = document.createElement('strong');
-            priceEl.textContent = price + '.-';
-            newItem.appendChild(label);
-            newItem.appendChild(priceEl);
+            const catColors = {
+                item:    { bg: '#EFF6FF', text: '#3B82F6', label: '🛍️' },
+                service: { bg: '#FAF5FF', text: '#7C3AED', label: '💅' },
+                free:    { bg: '#F0FDF4', text: '#16A34A', label: '🎁' }
+            };
 
-            const container = document.getElementById('market-list-container');
-            if (container) container.insertBefore(newItem, container.firstChild);
+            filtered.forEach(item => {
+                const col = catColors[item.category] || catColors.item;
+                const isFree = item.category === 'free';
+                const priceText = isFree ? 'ฟรี' : '฿' + (item.price || 0);
+                const priceBg  = isFree ? '#F0FDF4' : '#FFF7ED';
+                const priceCol = isFree ? '#16A34A' : '#D97706';
+                const isOwn    = item.ownerUid === window._authUid;
 
-            toast('ลงประกาศ "' + title + '" เรียบร้อยแล้วครับ! ขอให้ขายดีนะครับ 🎉');
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.cssText = 'margin:0;padding:0;overflow:hidden;';
 
-            document.getElementById('market-title').value = '';
-            document.getElementById('market-price').value = '';
-            if (document.getElementById('market-desc')) document.getElementById('market-desc').value = '';
+                // Image / placeholder
+                const imgDiv = document.createElement('div');
+                imgDiv.style.cssText = 'height:100px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;';
+                if (item.imageData) {
+                    const img = document.createElement('img');
+                    img.src = item.imageData;
+                    img.alt = item.title || '';
+                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                    imgDiv.appendChild(img);
+                } else {
+                    const emo = document.createElement('span');
+                    emo.style.cssText = 'font-size:2.2rem;';
+                    emo.textContent = col.label;
+                    imgDiv.appendChild(emo);
+                }
+                card.appendChild(imgDiv);
 
-            goBackToCommunity();
+                const body = document.createElement('div');
+                body.style.cssText = 'padding:10px;';
+
+                const titleEl = document.createElement('div');
+                titleEl.style.cssText = 'font-weight:700;font-size:var(--fs-sm);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:6px;line-height:1.3;';
+                titleEl.textContent = item.title || '';
+                body.appendChild(titleEl);
+
+                const meta = document.createElement('div');
+                meta.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;';
+                const badge = document.createElement('span');
+                badge.style.cssText = `background:${priceBg};color:${priceCol};font-weight:700;font-size:var(--fs-xs);padding:2px 8px;border-radius:6px;`;
+                badge.textContent = priceText;
+                meta.appendChild(badge);
+                if (item.showRoom && item.room) {
+                    const roomEl = document.createElement('span');
+                    roomEl.style.cssText = 'font-size:var(--fs-xs);color:#888;';
+                    roomEl.textContent = 'ห้อง ' + item.room;
+                    meta.appendChild(roomEl);
+                }
+                body.appendChild(meta);
+
+                if (isOwn) {
+                    const closeBtn = document.createElement('button');
+                    closeBtn.style.cssText = 'width:100%;padding:7px;background:#f3f4f6;color:#555;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;touch-action:manipulation;';
+                    closeBtn.textContent = '✅ ปิดประกาศ';
+                    closeBtn.onclick = () => markMarketClosed(item.id);
+                    body.appendChild(closeBtn);
+                } else {
+                    const contactBtn = document.createElement('button');
+                    contactBtn.className = 'btn-main';
+                    contactBtn.style.cssText = 'width:100%;padding:7px;font-size:var(--fs-xs);margin:0;touch-action:manipulation;';
+                    contactBtn.textContent = item.category === 'service' ? '📞 นัดหมาย' : isFree ? '🙋 ขอรับ' : '💬 สนใจ';
+                    contactBtn.onclick = () => contactSeller(item);
+                    body.appendChild(contactBtn);
+                }
+
+                card.appendChild(body);
+                container.appendChild(card);
+            });
+
+            renderMyListings();
         }
+
+        function renderMyListings() {
+            const section = document.getElementById('my-listings-section');
+            const cont = document.getElementById('my-listings-container');
+            if (!section || !cont) return;
+            const mine = _marketItems.filter(i => i.ownerUid === window._authUid);
+            if (!mine.length) { section.style.display = 'none'; return; }
+            section.style.display = 'block';
+            cont.textContent = '';
+            mine.forEach(item => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:10px 12px;border:1px solid #eee;';
+                const info = document.createElement('div');
+                info.style.cssText = 'flex:1;min-width:0;';
+                const t = document.createElement('div');
+                t.style.cssText = 'font-weight:700;font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+                t.textContent = item.title || '';
+                const sub = document.createElement('div');
+                sub.style.cssText = 'font-size:var(--fs-xs);color:#888;';
+                sub.textContent = (item.category === 'free' ? 'แจกฟรี' : '฿' + (item.price || 0)) + (item.showRoom && item.room ? ' · ห้อง ' + item.room : '');
+                info.appendChild(t);
+                info.appendChild(sub);
+                const closeBtn = document.createElement('button');
+                closeBtn.style.cssText = 'padding:5px 12px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
+                closeBtn.textContent = 'ปิด';
+                closeBtn.onclick = () => markMarketClosed(item.id);
+                row.appendChild(info);
+                row.appendChild(closeBtn);
+                cont.appendChild(row);
+            });
+        }
+
+        function filterMarket(filter, btn) {
+            _marketFilter = filter;
+            document.querySelectorAll('.market-pill').forEach(p => p.classList.remove('market-pill-active'));
+            if (btn) btn.classList.add('market-pill-active');
+            renderMarketFeed();
+        }
+
+        function contactSeller(item) {
+            if (item.lineUserId) {
+                const url = 'https://line.me/ti/p/' + item.lineUserId;
+                if (typeof liff !== 'undefined' && liff.isInClient?.()) {
+                    liff.openWindow({ url, external: false });
+                } else {
+                    window.open(url, '_blank');
+                }
+            } else if (item.showRoom && item.room) {
+                toast('ติดต่อผู้ขายได้ที่ ห้อง ' + item.room + ' ครับ', 'info');
+            } else {
+                toast('ผู้ขายไม่ได้ระบุช่องทางติดต่อครับ', 'warning');
+            }
+        }
+
+        async function markMarketClosed(id) {
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                await fs.setDoc(fs.doc(db, 'marketplace', id), { status: 'closed' }, { merge: true });
+                toast('ปิดประกาศแล้วครับ', 'success');
+            } catch(e) {
+                console.warn('markMarketClosed:', e);
+                toast('เกิดข้อผิดพลาด ลองใหม่ครับ', 'error');
+            }
+        }
+
+        function _initMarketImageUpload() {
+            const zone = document.getElementById('market-image-zone');
+            const inp  = document.getElementById('market-image-input');
+            const prev = document.getElementById('market-image-preview');
+            const ph   = document.getElementById('market-image-placeholder');
+            if (!zone || !inp) return;
+            zone.addEventListener('click', () => inp.click());
+            inp.addEventListener('change', async e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                    _marketImageData = await compressImage(file, 400, 0.75);
+                    if (prev) { prev.src = _marketImageData; prev.style.display = 'block'; }
+                    if (ph) ph.style.display = 'none';
+                } catch(err) { console.warn('compress market image:', err); }
+            });
+        }
+
+        function _onMarketCatChange() {
+            const cat = document.querySelector('input[name="mcat"]:checked')?.value;
+            const row = document.getElementById('market-price-row');
+            if (row) row.style.display = cat === 'free' ? 'none' : '';
+        }
+
+        async function saveNewMarketItem() {
+            const title = document.getElementById('market-title')?.value.trim();
+            const cat   = document.querySelector('input[name="mcat"]:checked')?.value || 'item';
+            const price = cat === 'free' ? 0 : parseFloat(document.getElementById('market-price')?.value || '0');
+            const desc  = document.getElementById('market-desc')?.value.trim() || '';
+            const showRoom = document.getElementById('market-show-room')?.checked ?? true;
+
+            if (!title) { toast('กรุณาใส่ชื่อสินค้า/บริการครับ', 'warning'); document.getElementById('market-title')?.focus(); return; }
+            if (cat !== 'free' && (!price || isNaN(price) || price <= 0)) { toast('กรุณาระบุราคาครับ', 'warning'); document.getElementById('market-price')?.focus(); return; }
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions || !window._authUid) { toast('ระบบยังไม่พร้อม ลองใหม่ครับ', 'error'); return; }
+
+            const btn = document.getElementById('market-submit-btn');
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ กำลังโพสต์...'; }
+
+            try {
+                const db  = window.firebase.firestore();
+                const fs  = window.firebase.firestoreFunctions;
+                const now = new Date();
+                await fs.addDoc(fs.collection(db, 'marketplace'), {
+                    title, category: cat, price,
+                    desc, showRoom,
+                    room: showRoom ? String(_taRoom || '') : '',
+                    building: _taBuilding || '',
+                    imageData: _marketImageData || '',
+                    status: 'active',
+                    lineUserId: window._lineUserId || '',
+                    lineDisplayName: window._lineProfile?.displayName || '',
+                    ownerUid: window._authUid,
+                    createdAt: now.toISOString(),
+                    expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                });
+                toast('ลงประกาศแล้วครับ! 🎉', 'success');
+                // reset form
+                ['market-title','market-price','market-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                _marketImageData = null;
+                const prev = document.getElementById('market-image-preview');
+                const ph   = document.getElementById('market-image-placeholder');
+                if (prev) { prev.style.display = 'none'; prev.src = ''; }
+                if (ph) ph.style.display = '';
+                document.querySelectorAll('input[name="mcat"]').forEach(r => { r.checked = r.value === 'item'; });
+                _onMarketCatChange();
+                goBackToCommunity();
+            } catch(e) {
+                console.warn('saveNewMarketItem:', e);
+                toast('โพสต์ไม่สำเร็จ ลองใหม่ครับ', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> โพสต์ลงตลาดนัด'; }
+            }
+        }
+
+        window.addEventListener('authReady', _subscribeMarketplace);
+        if (window.firebaseReady && window._authUid) _subscribeMarketplace();
 
         // เก็บข้อมูลสัตว์เลี้ยง (Global Scope)
         let petDataList = [];
@@ -7555,6 +7804,7 @@
             try { displayRoomInternetStatus(); } catch(e){}
             try { displayDocuments(); } catch(e){}
             try { displayLeaseRenewalAlert(); } catch(e){}
+            try { _initMarketImageUpload(); } catch(e){}
             // photo modal click-outside-to-close
             const _pm = document.getElementById('photoModal');
             if (_pm) _pm.addEventListener('click', e => { if (e.target === _pm) closePhotoModal(); });
