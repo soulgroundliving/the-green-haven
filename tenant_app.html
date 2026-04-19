@@ -5937,11 +5937,22 @@
             setU('udb-bld-name', bldName);
             setU('udb-promptpay', promptpay);
             if (!_taCurrentBill) return;
-            const month = _taCurrentBill.month || _taCurrentBill.period || _taCurrentBill.billingMonth || '';
-            if (month) {
-                const [y, m] = month.split('-');
+            const rawMonth = _taCurrentBill.month || _taCurrentBill.period || _taCurrentBill.billingMonth || '';
+            if (rawMonth) {
                 const thM = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-                setU('udb-month', `ประจำเดือน ${thM[(parseInt(m)||1)-1]} ${(parseInt(y)||2568)+543}`);
+                let mIdx, displayYear;
+                if (typeof rawMonth === 'string' && rawMonth.includes('-')) {
+                    // Synthetic bills: "2026-04" (CE year)
+                    const [y, m] = rawMonth.split('-');
+                    mIdx = (parseInt(m) || 1) - 1;
+                    displayYear = (parseInt(y) || 0) + 543;
+                } else {
+                    // RTDB bills: month is numeric (1-12), year is BE (e.g. "2569" or 69)
+                    mIdx = (parseInt(rawMonth) || 1) - 1;
+                    const rawYear = _taCurrentBill.year || 0;
+                    displayYear = Number(rawYear) < 100 ? 2500 + Number(rawYear) : Number(rawYear);
+                }
+                setU('udb-month', `ประจำเดือน ${thM[mIdx]} ${displayYear}`);
             }
             const w = _taCurrentBill.charges?.water || _taCurrentBill.meterReadings?.water || {};
             const e = _taCurrentBill.charges?.electric || _taCurrentBill.meterReadings?.electric || {};
