@@ -1601,41 +1601,30 @@
     const yearBE = parseInt(document.getElementById('monthly-year').value) || (new Date().getFullYear() + 543);
 
     try {
-      const canvas = await html2canvas(a4, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      // Capture each designed [data-pdf-page] as its own A4 page.
+      // This respects the authored page breaks — avoids slicing tables mid-row.
+      const pages = a4.querySelectorAll('[data-pdf-page]');
+      if (!pages.length) {
+        window.showError?.('ไม่พบส่วนของหน้ากระดาษในรายงาน');
+        return;
+      }
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageWidth = 210, pageHeight = 297;
-      const naturalWidth = pageWidth;
-      const naturalHeight = (canvas.height * naturalWidth) / canvas.width;
-      // Scale-to-fit logic:
-      //   - If content fits 1 page: center vertically (no ugly empty bottom).
-      //   - If overflows by up to 40%: shrink to 1 page (avoids cutting table mid-row).
-      //   - Else: paginate normally (too large to scale readably).
-      const overflowRatio = naturalHeight / pageHeight;
-      if (overflowRatio <= 1) {
-        // Fits — place at top with small margin, no scaling needed
-        const topMargin = Math.max(0, (pageHeight - naturalHeight) / 4); // slight centering if very short
-        pdf.addImage(imgData, 'JPEG', 0, topMargin, naturalWidth, naturalHeight);
-      } else if (overflowRatio <= 1.4) {
-        // Moderate overflow — scale whole image down to fit exactly 1 page
-        const scale = pageHeight / naturalHeight;
-        const fitWidth = naturalWidth * scale;
-        const fitHeight = pageHeight;
-        const xOffset = (pageWidth - fitWidth) / 2; // center horizontally
-        pdf.addImage(imgData, 'JPEG', xOffset, 0, fitWidth, fitHeight);
-      } else {
-        // Large content — paginate by slicing. Each page shows pageHeight worth of content.
-        let heightLeft = naturalHeight;
-        let position = 0;
-        pdf.addImage(imgData, 'JPEG', 0, position, naturalWidth, naturalHeight);
-        heightLeft -= pageHeight;
-        while (heightLeft > 0) {
-          position = -(naturalHeight - heightLeft);
-          pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', 0, position, naturalWidth, naturalHeight);
-          heightLeft -= pageHeight;
+
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i], { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        // Fit width to 210mm; if resulting height > 297mm, scale down to fit.
+        let imgWidth = pageWidth;
+        let imgHeight = (canvas.height * imgWidth) / canvas.width;
+        if (imgHeight > pageHeight) {
+          imgHeight = pageHeight;
+          imgWidth = (canvas.width * imgHeight) / canvas.height;
         }
+        const xOffset = (pageWidth - imgWidth) / 2;
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', xOffset, 0, imgWidth, imgHeight);
       }
       pdf.save(`tax_report_${yearBE}_${String(month).padStart(2,'0')}.pdf`);
       window.showSuccess?.('Download PDF สำเร็จ');
