@@ -1513,6 +1513,25 @@ if (typeof window !== 'undefined') {
   window.actLeaseRequest = actLeaseRequest;
 }
 
+// Low-level logo write that bypasses name-required validation in OwnerConfigManager.saveOwnerInfo.
+// Needed because users may upload a logo before filling in the owner name.
+function _writeOwnerLogo(dataUrl) {
+  const current = OwnerConfigManager.getOwnerInfo();
+  const updated = { ...current, logoDataUrl: dataUrl };
+  // Direct localStorage write (no name check)
+  localStorage.setItem('owner_info', JSON.stringify(updated));
+  // Best-effort Firestore sync (if signed in)
+  try {
+    if (window.firebase && window.firebaseAuth?.currentUser) {
+      const db = window.firebase.firestore();
+      const fn = window.firebase.firestoreFunctions;
+      const ref = fn.doc(fn.collection(db, 'owner_info'), 'main');
+      fn.setDoc(ref, { ...updated, updatedAt: new Date().toISOString() }, { merge: true })
+        .catch(e => console.warn('logo Firestore sync:', e?.message));
+    }
+  } catch(e) { console.warn('logo sync:', e?.message); }
+}
+
 window.uploadOwnerLogo = function(event) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -1534,30 +1553,20 @@ window.uploadOwnerLogo = function(event) {
       const dataUrl = file.type === 'image/png' || file.type === 'image/svg+xml'
         ? canvas.toDataURL('image/png')
         : canvas.toDataURL('image/jpeg', 0.85);
-      const current = OwnerConfigManager.getOwnerInfo();
-      const updated = { ...current, logoDataUrl: dataUrl };
-      if (typeof OwnerConfigManager.saveOwnerInfoWithFirebase === 'function') {
-        OwnerConfigManager.saveOwnerInfoWithFirebase(updated);
-      } else {
-        OwnerConfigManager.saveOwnerInfo(updated);
-      }
+      _writeOwnerLogo(dataUrl);
       showToast('✅ อัปโหลดโลโก้เรียบร้อย', 'success');
       renderOwnerInfoPage();
     };
+    img.onerror = () => showToast('อ่านรูปไม่ได้ — ลองไฟล์อื่น', 'warning');
     img.src = e.target.result;
   };
+  reader.onerror = () => showToast('อ่านไฟล์ไม่สำเร็จ', 'warning');
   reader.readAsDataURL(file);
 };
 
 window.removeOwnerLogo = function() {
   if (!confirm('ยืนยันการลบโลโก้?')) return;
-  const current = OwnerConfigManager.getOwnerInfo();
-  const updated = { ...current, logoDataUrl: '' };
-  if (typeof OwnerConfigManager.saveOwnerInfoWithFirebase === 'function') {
-    OwnerConfigManager.saveOwnerInfoWithFirebase(updated);
-  } else {
-    OwnerConfigManager.saveOwnerInfo(updated);
-  }
+  _writeOwnerLogo('');
   showToast('ลบโลโก้แล้ว', 'success');
   renderOwnerInfoPage();
 };
