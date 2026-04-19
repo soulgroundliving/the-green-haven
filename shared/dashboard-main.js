@@ -4440,11 +4440,11 @@ function enableReceiptBtn(){
 }
 
 // ===== PROMPTPAY QR (per-building, sourced from Firestore buildings/{id}) =====
-let PROMPTPAY_NUMBER = (typeof SecureConfig !== 'undefined' ? localStorage.getItem(SecureConfig.promptpay.storageKey) : localStorage.getItem('promptpay')) || '';
+// Legacy localStorage key ('promptpay') kept as cross-page cache — tenant_app.html
+// reads it; dashboard mirrors the Firestore per-building value into it on each
+// building change (see below).
+let PROMPTPAY_NUMBER = localStorage.getItem('promptpay') || '';
 window._buildingPaymentCache = window._buildingPaymentCache || { rooms: {}, nest: {} };
-
-// Back-compat shim — now a no-op (PromptPay edited in Owner tab → Firestore)
-function savePromptPay(){ /* deprecated: edit in Owner tab → building payment */ }
 
 // Refresh PromptPay display on bill page based on currently selected building
 function _refreshPromptPayDisplay(){
@@ -6877,16 +6877,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   // Pre-select current month in vacant room checker
   document.getElementById('vc-month').value=now.getMonth()+1;
   renderPaymentStatus();
-  // PromptPay number must be set by admin in settings
-  // No hardcoded default for security reasons
-  if(!localStorage.getItem('promptpay')){
-    console.warn('⚠️ PromptPay number not configured. Admin must set this in dashboard settings.');
-  }
-  // Restore saved PromptPay number
-  if(PROMPTPAY_NUMBER){
-    document.getElementById('pp-input').value=PROMPTPAY_NUMBER;
-    document.getElementById('pp-status').textContent='✅ บันทึกแล้ว: '+PROMPTPAY_NUMBER;
-  }
+  // PromptPay is edited in People Management → Owner tab → per-building payment.
+  // Legacy pp-input/pp-status DOM was removed; the old display-restore block is gone too.
   // Pre-select current month in meter table
   document.getElementById('mt-month').value=now.getMonth()+1;
   document.getElementById('mt-year').value=now.getFullYear()+543;
