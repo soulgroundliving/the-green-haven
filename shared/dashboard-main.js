@@ -8606,9 +8606,8 @@ function openTenantModal(building, roomId) {
   document.getElementById('modalRoomNumber').textContent = `ห้อง ${roomId}`;
   const roomType = room.type === 'commercial' ? '🏪 พาณิชย์' : (room.type === 'pet' ? '🐾 Pet Friendly' : '🏠 ห้องพัก');
   document.getElementById('modalRoomType').textContent = roomType || '🏠 ห้องพัก';
-  document.getElementById('modalRoomRent').textContent = `฿${rentPrice.toLocaleString('th-TH')}`;
 
-  // Store rent in modal for editing
+  // Pre-fill rent price in contract section
   if (document.getElementById('modalRentPrice')) {
     document.getElementById('modalRentPrice').value = rentPrice || '';
   }
@@ -8616,22 +8615,15 @@ function openTenantModal(building, roomId) {
   // Determine occupancy status
   const isOccupied = tenant && tenant.name;
   const statusBadge = document.getElementById('modalRoomStatus');
-  const occupancyBadge = document.getElementById('modalOccupancyBadge');
 
   if (isOccupied) {
     statusBadge.textContent = '🟢 มีผู้เช่า';
     statusBadge.style.background = 'var(--green-pale)';
     statusBadge.style.color = 'var(--green-dark)';
-    occupancyBadge.textContent = 'มีผู้เช่า';
-    occupancyBadge.style.background = 'var(--green-pale)';
-    occupancyBadge.style.color = 'var(--green-dark)';
   } else {
     statusBadge.textContent = '🔴 ว่าง';
     statusBadge.style.background = '#ffebee';
     statusBadge.style.color = '#c62828';
-    occupancyBadge.textContent = 'ว่าง';
-    occupancyBadge.style.background = '#e3f2fd';
-    occupancyBadge.style.color = '#1565c0';
   }
 
   // Fill form with tenant data
