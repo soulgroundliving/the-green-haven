@@ -1628,11 +1628,29 @@
           isFirstPdfPage = false;
           const imgData = canvas.toDataURL('image/jpeg', 0.92);
           pdf.addImage(imgData, 'JPEG', margin, margin, contentW, scaledH);
+        } else if (scaledH <= contentH * 1.2) {
+          // Slight overflow (≤20%) — shrink-fit to one page.
+          // Avoids orphan footer alone on a new page from a tiny leftover slice.
+          const scale = contentH / scaledH;
+          const newW = contentW * scale;
+          const xOffset = margin + (contentW - newW) / 2;
+          if (!isFirstPdfPage) pdf.addPage();
+          isFirstPdfPage = false;
+          const imgData = canvas.toDataURL('image/jpeg', 0.92);
+          pdf.addImage(imgData, 'JPEG', xOffset, margin, newW, contentH);
         } else {
-          // Too tall — slice into sequential PDF pages at contentH boundaries.
+          // Real overflow — slice into sequential PDF pages.
           // pxPerMm derived from width-fit: canvas.width px = contentW mm.
           const pxPerMm = canvas.width / contentW;
-          const sliceHeightPx = Math.floor(contentH * pxPerMm);
+          const fullSlicePx = Math.floor(contentH * pxPerMm);
+          const numSlices = Math.ceil(canvas.height / fullSlicePx);
+          const lastSliceMm = (canvas.height - (numSlices - 1) * fullSlicePx) / pxPerMm;
+          // If last slice would be < 40mm (e.g., lonely footer), redistribute evenly
+          // across the same number of pages so no page is nearly empty.
+          const sliceHeightPx = (numSlices > 1 && lastSliceMm < 40)
+            ? Math.ceil(canvas.height / numSlices)
+            : fullSlicePx;
+
           let offsetPx = 0;
           while (offsetPx < canvas.height) {
             const thisSlicePx = Math.min(sliceHeightPx, canvas.height - offsetPx);
