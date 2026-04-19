@@ -2242,11 +2242,7 @@
         </div>
 
         <div class="section-title"><span>ประวัติย้อนหลัง</span></div>
-        <div class="card" id="bills-history-list">
-            <div style="text-align:center; padding:20px; color:#aaa;">
-                <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
-            </div>
-        </div>
+        <div class="card" id="bills-history-list"></div>
     </div>
 
     <div id="payment-page" class="page">
@@ -6675,7 +6671,7 @@
             }
             if (!el) return;
             if (!_taBills.length) {
-                el.innerHTML = '<div style="padding:20px; text-align:center; color:#aaa;">ไม่พบข้อมูลบิล</div>';
+                el.innerHTML = '<div style="padding:20px; text-align:center; color:#aaa;"><i class="fas fa-spinner fa-spin"></i> กำลังโหลด...</div>';
                 const amtEl = document.getElementById('current-bill-amount');
                 if (amtEl) amtEl.textContent = '฿ —';
                 return;
@@ -6700,6 +6696,18 @@
                 } else {
                     dueBadge.style.cssText = 'font-size:var(--fs-sm);background:#FFF4E5;color:#D97706;padding:4px 10px;border-radius:20px;';
                     dueBadge.innerHTML = '<i class="fas fa-clock"></i> รอชำระ';
+                }
+            }
+            // Update ชำระบิล button: show receipt if already paid
+            const payBtn = document.getElementById('service-pay-btn');
+            if (payBtn && latest) {
+                const bId = latest.id || latest.billId || '';
+                if (latest.status === 'paid') {
+                    payBtn.textContent = 'ดูใบเสร็จ';
+                    payBtn.onclick = () => openPaymentFlow(true, bId);
+                } else {
+                    payBtn.textContent = 'ชำระบิล';
+                    payBtn.onclick = () => openPaymentFlow(false, bId);
                 }
             }
             // Filter orphan/ghost entries: bills written by accidental double-pay on a synth
@@ -7705,6 +7713,11 @@
                 if (found) _taCurrentBill = found;
             } else if (!_taCurrentBill) {
                 _taCurrentBill = _taBills.find(b => b.status !== 'paid') || _taBills[0] || null;
+            }
+            // Auto-redirect to receipt if bill already paid
+            if (!isReceipt && _taCurrentBill?.status === 'paid') {
+                isReceipt = true;
+                _payIsReceipt = true;
             }
             showPage('payment-page');
             _slipBase64 = null;
