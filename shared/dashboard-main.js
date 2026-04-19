@@ -4456,8 +4456,7 @@ function _refreshPromptPayDisplay(){
     // Fallback chain: Firestore per-building → legacy localStorage.promptpay → empty
     const num = cfg.promptpayNumber || cfg.payment?.promptpayNumber
                 || localStorage.getItem('promptpay') || '';
-    let ownerInfo = {};
-    try { ownerInfo = JSON.parse(localStorage.getItem('owner_info') || '{}'); } catch(e){}
+    const ownerInfo = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
     const payee = cfg.companyName || cfg.payment?.companyName
                 || ownerInfo.companyLegalNameTH || '';
     PROMPTPAY_NUMBER = num;
@@ -4750,8 +4749,7 @@ function buildDocHTML(d,type,dueDate,payDate){
     </div>` : '';
 
   const docId = isInvoice ? 'doc-invoice' : 'doc-receipt';
-  let _ownerForDoc = {};
-  try { _ownerForDoc = JSON.parse(localStorage.getItem('owner_info') || '{}'); } catch(e){}
+  const _ownerForDoc = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
   const logoName = _ownerForDoc.companyLegalNameTH || 'The Green Haven';
   const logoHTML = _ownerForDoc.logoDataUrl
     ? `<img src="${_ownerForDoc.logoDataUrl}" alt="logo" style="max-height:56px;max-width:180px;object-fit:contain;vertical-align:middle;"><div style="font-size:.85rem;color:var(--text-muted);margin-top:4px;">${logoName}</div>`
