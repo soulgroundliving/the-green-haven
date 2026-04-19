@@ -6263,6 +6263,20 @@
         let _slipBase64 = null;
 
         function detectRoomBuilding() {
+            // ?room=201&building=nest — admin preview shortcut (sets sessionStorage so whole app works)
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const urlRoom = params.get('room');
+                if (urlRoom) {
+                    const cleanRoom = urlRoom.replace(/[^0-9A-Za-zก-๙]/g, '');
+                    const urlBuilding = (params.get('building') || '').toLowerCase();
+                    const resolvedBuilding = urlBuilding === 'rooms' ? 'rooms'
+                        : urlBuilding === 'nest' ? 'nest'
+                        : (/^N/i.test(cleanRoom) || (/^\d+$/.test(cleanRoom) && parseInt(cleanRoom) >= 101 && parseInt(cleanRoom) <= 405)) ? 'nest' : 'rooms';
+                    sessionStorage.setItem('user', JSON.stringify({ roomNumber: cleanRoom, building: resolvedBuilding }));
+                }
+            } catch(e) {}
+
             try {
                 const userStr = sessionStorage.getItem('user');
                 if (userStr) {
@@ -6272,13 +6286,6 @@
                     _taRoom = emailMatch ? emailMatch[1] : raw.replace(/[^0-9A-Za-z]/g, '');
                 }
             } catch(e) {}
-            // URL param fallback (?room=15) — login flow uses this to redirect tenants
-            if (!_taRoom) {
-                try {
-                    const urlRoom = new URLSearchParams(window.location.search).get('room');
-                    if (urlRoom) _taRoom = urlRoom.replace(/[^0-9A-Za-zก-๙]/g, '');
-                } catch(e) {}
-            }
             if (!_taRoom) _taRoom = localStorage.getItem('tenant_app_room') || '';
             if (!_taRoom) return false;
             // Cache in localStorage so reload without ?room= still works
