@@ -5952,16 +5952,9 @@ function toggleTenantView(view, btn){
 // ===== TENANT FILTER =====
 function setTenantFilter(filter){
   currentTenantFilter=filter;
-  document.querySelectorAll('.filter-btn-tenant').forEach(btn=>{
-    btn.classList.remove('active');
-    btn.style.background='white';
-    btn.style.color=btn.style.borderColor||'#666';
-  });
-  if(event?.target){
-    event.target.classList.add('active');
-    event.target.style.background='var(--green-dark)';
-    event.target.style.color='white';
-  }
+  // Active state styled purely by CSS (.filter-btn-tenant.active); just toggle class.
+  document.querySelectorAll('.filter-btn-tenant').forEach(btn=>btn.classList.remove('active'));
+  if(event?.target) event.target.classList.add('active');
   renderTenantPage();
   renderTenantTable();
 }
