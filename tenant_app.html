@@ -4404,9 +4404,8 @@
             } else if (type === 'suggest') {
                 body.innerHTML = `<h3 style="color: var(--primary-green); margin-top:0;">กระซิบถึงเจ้าของตึก</h3>
                   <p style="font-size:var(--fs-md); opacity: 0.8; margin-bottom: 15px;">ข้อความนี้จะถูกส่งตรงเพื่อพัฒนา Nature Haven ครับ</p>
-                  <textarea placeholder="บอกเราได้ทุกเรื่องเลยครับ..." rows="5" style="width:100%; border-radius:12px; border:1px solid #eee; padding:12px; font-family: inherit;"></textarea>
-                  <label style="display:flex; align-items:center; gap:8px; margin-top:15px; font-size:var(--fs-sm);"><input type="checkbox" checked style="width:16px; height:16px;"> ส่งแบบไม่ระบุตัวตน (Anonymous)</label>
-                  <button class="btn-main" style="margin-top:20px;" onclick="alert('ขอบคุณสำหรับคำแนะนำครับ เราจะรีบรับเรื่องดูแลต่อครับ'); closeModal();">ส่งข้อความ</button>`;
+                  <textarea id="suggest-text" placeholder="บอกเราได้ทุกเรื่องเลยครับ..." rows="5" style="width:100%; border-radius:12px; border:1px solid #eee; padding:12px; font-family:inherit; font-size:16px; box-sizing:border-box;"></textarea>
+                  <button id="suggest-submit-btn" class="btn-main" style="margin-top:20px;" onclick="submitSuggestion()">ส่งข้อความ</button>`;
             } else if (type === 'preference') {
                 const t = _taTenant || {};
                 const curName = t.name || t.tenantName || '';
@@ -4429,6 +4428,32 @@
         function closeModal() {
             const modal = document.getElementById('mainModal');
             if (modal) modal.style.display = 'none';
+        }
+
+        async function submitSuggestion() {
+            const msg = (document.getElementById('suggest-text')?.value || '').trim();
+            if (!msg) { toast('กรุณาพิมพ์ข้อความก่อนนะครับ', 'warning'); return; }
+            const btn = document.getElementById('suggest-submit-btn');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังส่ง...'; }
+            try {
+                const db = window.firebase?.firestore?.();
+                const fs = window.firebase?.firestoreFunctions;
+                if (db && fs) {
+                    await fs.addDoc(fs.collection(db, 'complaints'), {
+                        title: '💬 กระซิบถึงเจ้าของตึก',
+                        desc: msg,
+                        room: 'Anonymous',
+                        status: 'open',
+                        createdAt: new Date().toISOString()
+                    });
+                }
+                closeModal();
+                toast('✅ ส่งแล้ว ขอบคุณสำหรับคำแนะนำครับ', 'success');
+            } catch(e) {
+                console.warn('submitSuggestion failed:', e);
+                toast('ส่งไม่สำเร็จ กรุณาลองใหม่ครับ', 'error');
+                if (btn) { btn.disabled = false; btn.textContent = 'ส่งข้อความ'; }
+            }
         }
 
         function saveNewMarketItem() {
