@@ -4438,15 +4438,18 @@
             try {
                 const db = window.firebase?.firestore?.();
                 const fs = window.firebase?.firestoreFunctions;
-                if (db && fs) {
-                    await fs.addDoc(fs.collection(db, 'complaints'), {
-                        title: '💬 กระซิบถึงเจ้าของตึก',
-                        desc: msg,
-                        room: 'Anonymous',
-                        status: 'open',
-                        createdAt: new Date().toISOString()
-                    });
+                if (!db || !fs || !window._authUid) {
+                    toast('ระบบยังไม่พร้อม กรุณาลองใหม่ครับ', 'error');
+                    if (btn) { btn.disabled = false; btn.textContent = 'ส่งข้อความ'; }
+                    return;
                 }
+                await fs.addDoc(fs.collection(db, 'complaints'), {
+                    title: '💬 กระซิบถึงเจ้าของตึก',
+                    desc: msg,
+                    room: 'Anonymous',
+                    status: 'open',
+                    createdAt: new Date().toISOString()
+                });
                 closeModal();
                 toast('✅ ส่งแล้ว ขอบคุณสำหรับคำแนะนำครับ', 'success');
             } catch(e) {
