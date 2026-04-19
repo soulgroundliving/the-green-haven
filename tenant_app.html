@@ -2184,22 +2184,32 @@
             <div id="usage-room-badge"
                 style="display:none; min-width:48px; height:44px; padding:0 12px; border-radius:14px; background:var(--soft-green); color:var(--primary-green); font-weight:700; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);"></div>
         </div>
-        <div id="usage-feature-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; padding: 0 16px;">
-            <div id="nav-building-card" class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('building')">
-                <div style="font-size: 1.6rem; line-height:1;">🏠</div>
-                <p style="margin: 6px 0 0;">ข้อมูลอาคาร</p>
+        <!-- Usage Dashboard — building info + water + elec inline, no nav needed -->
+        <div id="usage-dashboard-card" class="card" style="margin-bottom:0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f0f0f0;">
+                <div>
+                    <p style="font-size:9px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin:0 0 2px; letter-spacing:.05em;">อาคาร</p>
+                    <p id="udb-bld-name" style="font-size:var(--fs-md); font-weight:700; margin:0; color:#334435;">—</p>
+                </div>
+                <div style="text-align:right;">
+                    <p style="font-size:9px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin:0 0 2px; letter-spacing:.05em;">พร้อมเพย์</p>
+                    <p id="udb-promptpay" style="font-size:var(--fs-sm); font-weight:600; margin:0; color:#555;">—</p>
+                </div>
             </div>
-            <div id="nav-water-usage-card" class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('water_usage')">
-                <div style="font-size: 1.6rem; line-height:1;">💧</div>
-                <p style="margin: 6px 0 0;">ปริมาณน้ำ</p>
-            </div>
-            <div id="nav-elec-usage-card" class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showSubPage('elec_usage')">
-                <div style="font-size: 1.6rem; line-height:1;">⚡</div>
-                <p style="margin: 6px 0 0;">ปริมาณไฟ</p>
-            </div>
-            <div id="nav-eco-score-card" class="card" style="margin:0 !important; padding:14px 8px !important; text-align:center; cursor:pointer; min-height:92px; display:flex; flex-direction:column; justify-content:center; align-items:center;" onclick="showPage('profile'); updateNavActiveIndex(4);">
-                <div style="font-size: 1.6rem; line-height:1;">♻️</div>
-                <p style="margin: 6px 0 0;">Eco-Score</p>
+            <p id="udb-month" style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin:0 0 10px; text-align:center; letter-spacing:.06em;">ประจำเดือน —</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div style="background:#f0f9ff; border-radius:12px; padding:12px; text-align:center;">
+                    <div style="font-size:1.4rem; margin-bottom:4px;">💧</div>
+                    <div id="udb-water-units" style="font-size:var(--fs-lg); font-weight:800; color:#0369a1; line-height:1.1;">—</div>
+                    <div style="font-size:9px; color:#64748b; font-weight:600; margin:2px 0;">หน่วย</div>
+                    <div id="udb-water-cost" style="font-size:var(--fs-sm); font-weight:700; color:#0369a1;">฿ —</div>
+                </div>
+                <div style="background:#fffbeb; border-radius:12px; padding:12px; text-align:center;">
+                    <div style="font-size:1.4rem; margin-bottom:4px;">⚡</div>
+                    <div id="udb-elec-units" style="font-size:var(--fs-lg); font-weight:800; color:#d97706; line-height:1.1;">—</div>
+                    <div style="font-size:9px; color:#64748b; font-weight:600; margin:2px 0;">หน่วย</div>
+                    <div id="udb-elec-cost" style="font-size:var(--fs-sm); font-weight:700; color:#d97706;">฿ —</div>
+                </div>
             </div>
         </div>
 
@@ -5902,11 +5912,33 @@
                     setBld('bld-petzone', info.petZone);
                     setBld('bld-elec-status', info.electricStatus);
                     setBld('bld-water-status', info.waterStatus);
+                    if (typeof _renderUsageDashboard === 'function') _renderUsageDashboard();
                 }, err => console.warn('payment config subscribe failed:', err.message));
             } catch (e) { console.warn('payment config subscribe init failed:', e.message); }
         }
         window.addEventListener('authReady', _subscribePaymentConfig);
         if (window.firebaseReady && window._authUid) _subscribePaymentConfig();
+
+        function _renderUsageDashboard() {
+            const setU = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            const bldName = localStorage.getItem('company_name') || localStorage.getItem('owner_name') || '—';
+            const promptpay = localStorage.getItem('promptpay') || '—';
+            setU('udb-bld-name', bldName);
+            setU('udb-promptpay', promptpay);
+            if (!_taCurrentBill) return;
+            const month = _taCurrentBill.month || _taCurrentBill.period || _taCurrentBill.billingMonth || '';
+            if (month) {
+                const [y, m] = month.split('-');
+                const thM = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+                setU('udb-month', `ประจำเดือน ${thM[(parseInt(m)||1)-1]} ${(parseInt(y)||2568)+543}`);
+            }
+            const w = _taCurrentBill.charges?.water || _taCurrentBill.meterReadings?.water || {};
+            const e = _taCurrentBill.charges?.electric || _taCurrentBill.meterReadings?.electric || {};
+            setU('udb-water-units', w.units != null ? String(w.units) : '—');
+            setU('udb-water-cost',  w.cost  != null ? `฿ ${Number(w.cost).toLocaleString()}` : '฿ —');
+            setU('udb-elec-units',  e.units != null ? String(e.units) : '—');
+            setU('udb-elec-cost',   e.cost  != null ? `฿ ${Number(e.cost).toLocaleString()}` : '฿ —');
+        }
 
         // ===== REWARDS COLLECTION SUBSCRIBE =====
         // Admin manages rewards in Firestore `rewards/{id}`. Tenant app renders dynamically
@@ -6265,9 +6297,8 @@
         //   - Water/Electricity usage charts (Nest has shared meter dashboards; Rooms bills cover this)
         //   - Smart Key (Nest QR door access; Rooms uses physical keys)
         const NEST_ONLY_ELEMENT_IDS = [
-            'nav-eco-score-card', 'profile-points-banner', 'profile-tab-nav', 'profile-rewards-card', 'nav-building-card',
-            'nav-water-usage-card', 'nav-elec-usage-card', 'nav-smart-key-btn',
-            'pet-list-container', 'daily-modal', 'usage-feature-grid'
+            'profile-points-banner', 'profile-tab-nav', 'profile-rewards-card',
+            'nav-smart-key-btn', 'pet-list-container', 'daily-modal'
         ];
         function applyGamificationVisibility() { applyBuildingVisibility(); } // backward-compat alias
         function applyBuildingVisibility() {
@@ -6280,12 +6311,9 @@
                     // usage-feature-grid needs display:grid explicitly — empty string removes
                     // the inline 'display:grid' from HTML and falls back to CSS default (block),
                     // which breaks the 4-column layout.
-                    if (id === 'usage-feature-grid') { el.style.display = 'grid'; return; }
                     if (id === 'daily-modal') { el.style.display = ''; return; } // keep closed
                     el.style.display = '';
                 });
-                const grid = document.getElementById('usage-feature-grid');
-                if (grid) grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
                 window._gamificationDisabled = false;
                 window._nestOnlyDisabled = false;
                 return;
@@ -6606,6 +6634,7 @@
             const unpaid = _taBills.find(b => b.status !== 'paid');
             const latest = unpaid || _taBills[0];
             _taCurrentBill = latest;
+            if (typeof _renderUsageDashboard === 'function') _renderUsageDashboard();
             const amtEl = document.getElementById('current-bill-amount');
             if (amtEl && latest) {
                 const total = Number(latest.totalAmount || latest.total || latest.totalCharge || latest.rentAmount) || 0;
