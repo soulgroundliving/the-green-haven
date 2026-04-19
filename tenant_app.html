@@ -2125,7 +2125,7 @@
 
     <div id="community" class="page">
         <div class="app-bar">
-            <h1>Marketplace</h1>
+            <h1>ชุมชน</h1>
             <p>แบ่งปันและร่วมกันสร้างสังคมที่อบอุ่น 🤝</p>
         </div>
         <div class="section-title"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
@@ -3526,9 +3526,12 @@
             <i class="fas fa-leaf"></i>บริการ
             <span id="nav-badge-services" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
         </div>
-        <div class="nav-item" onclick="showPage('community', this)"><i class="fas fa-comments"></i>ชุมชน</div>
+        <div class="nav-item" onclick="showPage('community', this); markCommunityRead();" style="position:relative;">
+            <i class="fas fa-comments"></i>ชุมชน
+            <span id="nav-badge-community" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
+        </div>
         <div class="nav-item" onclick="showPage('usage', this)" style="position:relative;">
-            <i class="fas fa-wallet"></i>การใช้งาน
+            <i class="fas fa-wallet"></i>บิล
             <span id="nav-badge-bills" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
         </div>
         <div class="nav-item" onclick="showPage('profile', this)"><i class="fas fa-user"></i>โปรไฟล์</div>
@@ -4794,20 +4797,10 @@
             // กรณีที่ 1: ยังไม่มีสมาชิก (Hide ปุ่มเพิ่ม และโชว์แค่กล่อง Empty State)
             if (petDataList.length === 0) {
                 container.innerHTML = `
-            <div>
-            <div class="class="pet-item animate-slide section-title" style="margin-top: 25px; margin-bottom: 15px;">
-                <span style="font-size: var(--fs-md); font-weight: 600">สมาชิกตัวน้อย 🐾</span>
-            </div>
-            <div onclick="showSubPage('add-pet-page')"
-                style="border: 2px dashed #e0e0e0; padding: 30px 20px; border-radius: 25px; text-align: center; cursor: pointer; transition: 0.3s;"
-                onmouseover="this.style.borderColor='var(--primary-green)'"
-                onmouseout="this.style.borderColor='#e0e0e0'">
-                <div style="font-size: var(--fs-lg); margin-bottom: 10px; opacity: 0.5;">🐾</div>
-                <p style="font-size: var(--fs-sm);">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
-                <p style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-top: 5px;">+ เพิ่มสมาชิกของคุณ</p>
-            </div>
-            </div>
-        `;
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0;">
+                    <span style="font-size:var(--fs-md); font-weight:600; color:var(--text-muted);">สมาชิกตัวน้อย 🐾</span>
+                    <span onclick="showSubPage('add-pet-page')" style="font-size:var(--fs-sm); color:var(--primary-green); font-weight:700; cursor:pointer; touch-action:manipulation;">+ เพิ่ม</span>
+                </div>`;
                 return;
             }
 
@@ -6559,10 +6552,25 @@
                     docs.forEach(a => byId.set(a.id, a));
                     localStorage.setItem('announcements_data', JSON.stringify(Array.from(byId.values())));
                     renderAnnouncements();
+                    _updateCommunityBadge(docs);
                 });
             } catch(e) { console.warn('tenant announcements subscribe failed:', e); }
         }
         window.addEventListener('load', () => setTimeout(_subscribeAnnouncementsFromFirestore, 1000));
+
+        function _updateCommunityBadge(docs) {
+            const badge = document.getElementById('nav-badge-community');
+            if (!badge) return;
+            const lastSeen = localStorage.getItem('ta_community_seen_at') || '0';
+            const hasNew = docs.some(a => (a.createdAt || '') > lastSeen);
+            badge.style.display = hasNew ? 'block' : 'none';
+        }
+
+        function markCommunityRead() {
+            localStorage.setItem('ta_community_seen_at', new Date().toISOString());
+            const badge = document.getElementById('nav-badge-community');
+            if (badge) badge.style.display = 'none';
+        }
 
         function renderAnnouncements() {
             renderCommunityFeed();
