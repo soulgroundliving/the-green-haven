@@ -1848,6 +1848,15 @@
                 </div>
             </div>
         </div>
+        <div class="card">
+            <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer; touch-action:manipulation;">
+                <strong style="flex:1;">📄 เอกสารอาคาร</strong>
+                <i class="fas fa-chevron-down" style="color:#aaa;"></i>
+            </div>
+            <div class="accordion-content" style="display:none; padding-top:10px;">
+                <div id="documentsList" style="display:grid; gap:10px;"></div>
+            </div>
+        </div>
         <div class="section-title" style="margin-top: 10px;"><span>พื้นที่ส่วนกลาง (Facilities)</span></div>
         <div class="card"
             style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin-top: 0;"
@@ -2115,10 +2124,6 @@
             <small>วันสิ้นสุด: <strong id="leaseAlertDate">—</strong></small>
         </div>
 
-        <!-- Emergency contacts moved to services page (more discoverable when something goes wrong) -->
-
-        <div class="section-title"><span>เอกสารชุมชน 📄</span></div>
-        <div id="documentsList" style="padding: 0 15px 12px; display:grid; gap:10px;"></div>
         <div class="section-title">
             <span>ตลาดนัดเพื่อนบ้าน 🛒</span>
             <small style="color:var(--primary-green); cursor: pointer; font-weight: bold;"
