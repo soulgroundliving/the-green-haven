@@ -1894,25 +1894,15 @@
       </button>
     </div>
 
-    <!-- OPERATIONS -->
+    <!-- SYSTEM -->
     <div class="sidebar-group">
-      <div class="sidebar-group-title">Operations</div>
-      <button class="sidebar-item" onclick="window.location.href='/audit-log-viewer'">
-        <span class="sidebar-item-icon">📋</span>Audit Logs
-      </button>
-    </div>
-
-    <!-- MANAGEMENT -->
-    <div class="sidebar-group">
-      <div class="sidebar-group-title">Management</div>
+      <div class="sidebar-group-title">System</div>
       <button class="sidebar-item" onclick="window.showPage('people-management',this)">
         <span class="sidebar-item-icon">👨‍💼</span>People Management
       </button>
-    </div>
-
-    <!-- ACCOUNT -->
-    <div class="sidebar-group">
-      <div class="sidebar-group-title">Account</div>
+      <button class="sidebar-item" onclick="window.location.href='/audit-log-viewer'">
+        <span class="sidebar-item-icon">📋</span>Audit Logs
+      </button>
       <button class="sidebar-item" onclick="openChangePasswordModal()">
         <span class="sidebar-item-icon">🔐</span>เปลี่ยนรหัสผ่าน
       </button>
@@ -3595,9 +3585,6 @@
   </div><!-- /bill-main-tab-verify -->
 </div><!-- /page-bill -->
 
-<!-- Payment Verify Page (content moved to page-bill ตรวจสลิป tab) -->
-<div class="page" id="page-payment-verify" style="display:none;"></div>
-
 <!-- Owner Info Page -->
 <div class="page" id="page-people-management">
   <div class="section-title">👨‍💼 People Management</div>
@@ -3645,8 +3632,6 @@
   </div>
 </div>
 
-<!-- Lease Agreements Page (content moved to page-tenant tabs) -->
-<div class="page" id="page-lease-management" style="display:none;"></div>
 
 <!-- ===== PET REGISTRATIONS APPROVAL ===== -->
 <div class="page" id="page-requests-approvals">

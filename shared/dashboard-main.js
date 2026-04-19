@@ -30,20 +30,6 @@ window._showPageImpl = function(page,btn){
   }
   if(page==='announcements')initAnnouncementsPage();
   if(page==='tenant-portal')initTenantPortal();
-  if(page==='payment-verify'){
-    // Redirect: content moved to page-bill ตรวจสลิป tab
-    document.getElementById('page-payment-verify').classList.remove('active');
-    document.getElementById('page-bill').classList.add('active');
-    setTimeout(()=>switchBillingMainTab('verify', document.getElementById('bill-main-tab-btn-verify')), 50);
-    return;
-  }
-  if(page==='lease-management'){
-    // Redirect: content moved to page-tenant สัญญา tab
-    document.getElementById('page-lease-management').classList.remove('active');
-    document.getElementById('page-tenant').classList.add('active');
-    setTimeout(()=>switchTenantMainTab('leases', document.getElementById('tenant-main-tab-btn-leases')), 50);
-    return;
-  }
   if(page==='analytics')initAnalyticsPage();
   if(page==='contract')initContractPage();
   if(page==='meter')initMeterPage();
@@ -2427,34 +2413,6 @@ function switchPeopleTab(tabName, btn) {
 }
 
 // ===== LEASE MANAGEMENT TAB SWITCHING =====
-function switchLeaseTab(tabName, btn) {
-  // Hide all lease tabs
-  document.querySelectorAll('.lease-mgmt-content').forEach(tab => {
-    tab.style.display = 'none';
-  });
-
-  // Remove active style from all tab buttons
-  document.querySelectorAll('.lease-mgmt-tab').forEach(button => {
-    button.style.color = '#999';
-    button.style.borderBottomColor = 'transparent';
-  });
-
-  // Show selected tab
-  const tabElement = document.getElementById('lease-tab-' + tabName);
-  if(tabElement) {
-    tabElement.style.display = 'block';
-  }
-
-  // Highlight active button
-  if(btn) {
-    btn.style.color = 'var(--green)';
-    btn.style.borderBottomColor = 'var(--green)';
-  }
-
-  // Lazy-init tab content
-  if (tabName === 'requests' && typeof initLeaseRequestsPage === 'function') initLeaseRequestsPage();
-}
-
 // ===== SIDEBAR FUNCTIONS =====
 function toggleSidebar(){
   const sidebar=document.getElementById('sidebar');
