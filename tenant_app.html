@@ -6735,7 +6735,8 @@
             });
             el.innerHTML = validBills.slice(0,12).map(b => {
                 const m = THAI_MONTHS_SHORT[b.month] || b.month || '?';
-                const yr = b.year ? (Number(b.year) + (b.year < 100 ? 2500 : 0)) : '?';
+                const rawYr = Number(b.year) || 0;
+                const yr = rawYr === 0 ? '?' : rawYr < 100 ? rawYr + 2500 : rawYr < 2500 ? rawYr + 543 : rawYr;
                 const total = Number(b.totalAmount || b.total || b.totalCharge || b.rentAmount) || 0;
                 const paid = b.status === 'paid';
                 const isSynth = !!b.synthetic;
