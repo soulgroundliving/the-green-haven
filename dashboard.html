@@ -1688,6 +1688,20 @@
     animation: slideOut 0.3s ease-out forwards;
   }
 
+  /* Generic modal backdrop — used by tenantModal / batchRentModal / emergencyEditModal / rewardEditModal / changePasswordModal.
+     Keep style="display:none" inline; JS toggles to 'flex' to show. */
+  .ui-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    backdrop-filter: blur(2px);
+  }
+  .ui-modal--top { z-index: 10000; }
+
   /* Photo Viewer Modal */
   .photo-modal {
     display: none;
@@ -1918,7 +1932,7 @@
 </aside>
 
 <!-- ===== TENANT EDIT MODAL ===== -->
-<div class="modal" id="tenantModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;padding:1rem;backdrop-filter:blur(2px);">
+<div class="ui-modal" id="tenantModal" style="display:none;">
   <div style="background:#fff;border-radius:var(--radius);max-width:680px;width:100%;max-height:95vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;">
     <!-- Modal Header with Gradient -->
     <div style="background:linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
@@ -2367,7 +2381,7 @@
   </div>
 
   <!-- Batch Rent Adjustment Modal -->
-  <div id="batchRentModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;flex-direction:column;">
+  <div class="ui-modal" id="batchRentModal" style="display:none;">
     <div style="background:white;border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <h2 style="font-size:1.4rem;margin:0;color:#1b5e20;">⚙️ ปรับค่าเช่าแบบหลายห้อง</h2>
@@ -3168,7 +3182,7 @@
       </div>
 
       <!-- Edit modal -->
-      <div id="emergencyEditModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 10000; align-items: center; justify-content: center;">
+      <div class="ui-modal ui-modal--top" id="emergencyEditModal" style="display:none;">
         <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 460px;">
           <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="emergencyEditTitle">+ เพิ่มเบอร์ฉุกเฉิน</div>
           <input type="hidden" id="emergencyEditIndex">
@@ -3863,7 +3877,7 @@
       </div>
 
       <!-- Edit modal -->
-      <div id="rewardEditModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 10000; align-items: center; justify-content: center;">
+      <div class="ui-modal ui-modal--top" id="rewardEditModal" style="display:none;">
         <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 500px;">
           <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="rewardEditTitle">Add Reward</div>
           <input type="hidden" id="rewardEditId">
@@ -3943,7 +3957,7 @@
 </div>
 
 <!-- ===== CHANGE PASSWORD MODAL ===== -->
-<div id="changePasswordModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;padding:1rem;backdrop-filter:blur(2px);">
+<div class="ui-modal" id="changePasswordModal" style="display:none;">
   <div style="background:#fff;border-radius:var(--radius);max-width:420px;width:100%;max-height:95vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;">
     <!-- Modal Header -->
     <div style="background:linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
