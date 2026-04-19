@@ -1087,6 +1087,20 @@
   .filter-btn-tenant.expiring { border-color: #f57c00; color: #f57c00; }
   .filter-btn-tenant.active   { background: var(--green-dark); color: white; border-color: var(--border); }
 
+  /* Stats strips — colored pill row with stats across */
+  .stats-strip { display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 12px; border-radius:8px; margin-bottom:10px; font-size:.83rem; }
+  .stats-strip--green { background: var(--green-pale); }
+  .stats-strip--blue  { background: #e3f2fd; }
+
+  /* Info chips — small card tiles with colored left-border accent */
+  .info-chip { padding:8px 10px; background:white; border:1px solid; border-left:3px solid; border-radius:6px; font-size:.78rem; line-height:1.6; }
+  .info-chip--green   { border-color: #c8e6c9; border-left-color: #4caf50; }
+  .info-chip--orange  { border-color: #ffe0b2; border-left-color: #ff9800; }
+  .info-chip--indigo  { border-color: #c5cae9; border-left-color: #3f51b5; }
+  .info-chip--purple  { border-color: #e1bee7; border-left-color: #9c27b0; }
+  .info-chip--pink    { border-color: #f8bbd0; border-left-color: #e91e63; background: #fce4ec; }
+  .info-chip--purple-bg { border-color: #e1bee7; border-left-color: #9c27b0; background: #f3e5f5; }
+
   /* Status Pills */
   .mx-status-pill{display:inline-block;padding:6px 14px;border-radius:20px;font-size:.75rem;font-weight:700;cursor:default;font-family:'Sarabun',sans-serif;}
   .mx-pending{background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;}
@@ -2258,7 +2272,7 @@
   <!-- ===== Compact Summary: ห้องแถว ===== -->
   <div id="tenant-rooms-section">
     <!-- Stats strip -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 12px;background:var(--green-pale);border-radius:8px;margin-bottom:10px;font-size:.83rem;">
+    <div class="stats-strip stats-strip--green">
       <span style="font-weight:700;">🏠 <span id="occupancy-total">0</span> ห้อง</span>
       <span style="color:#ccc;">|</span>
       <span style="color:#2e7d32;">👤 <b id="occupancy-occupied">0</b> มีผู้เช่า</span>
@@ -2279,22 +2293,22 @@
     </div>
     <!-- Mini info chips -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem;">
-      <div style="padding:8px 10px;background:white;border:1px solid #c8e6c9;border-left:3px solid #4caf50;border-radius:6px;font-size:.78rem;line-height:1.6;">
+      <div class="info-chip info-chip--green">
         <div style="font-weight:700;color:#1b5e20;margin-bottom:2px;" id="rooms-card-title">🏠 ห้องพัก</div>
         <div>💰 <span id="rooms-rent-tiers">—</span></div>
         <div style="color:#555;" id="rooms-rates-row">⚡ — · 💧 — · 🗑️ —</div>
       </div>
-      <div id="shop-info-card" style="padding:8px 10px;background:white;border:1px solid #ffe0b2;border-left:3px solid #ff9800;border-radius:6px;font-size:.78rem;line-height:1.6;">
+      <div id="shop-info-card" class="info-chip info-chip--orange">
         <div style="font-weight:700;color:#bf360c;margin-bottom:2px;" id="shop-info-title">🏪 ร้านใหญ่</div>
         <div>💰 <span id="shop-info-rent">—</span></div>
         <div style="color:#555;">⚡ <span id="shop-info-elec">—</span> · 💧 <span id="shop-info-water">—</span> · 🗑️ <span id="shop-info-trash">—</span></div>
       </div>
-      <div style="padding:8px 10px;background:#fce4ec;border:1px solid #f8bbd0;border-left:3px solid #e91e63;border-radius:6px;font-size:.78rem;line-height:1.6;">
+      <div class="info-chip info-chip--pink">
         <div style="font-weight:700;color:#880e4f;margin-bottom:2px;">❌ โรงน้ำแข็ง</div>
         <div>สิ้นสุด ก.ค. 2568</div>
         <div style="color:#880e4f;font-weight:600;">⚠️ รายได้ลด ฿25,000/เดือน</div>
       </div>
-      <div style="padding:8px 10px;background:#f3e5f5;border:1px solid #e1bee7;border-left:3px solid #9c27b0;border-radius:6px;font-size:.78rem;line-height:1.6;">
+      <div class="info-chip info-chip--purple-bg">
         <div style="font-weight:700;color:#4a148c;margin-bottom:2px;" id="rooms-total-title">📊 รวมทั้งหมด</div>
         <div style="color:var(--green-dark);font-weight:700;"><span id="rooms-total-income2">—</span></div>
         <div style="color:#555;"><span id="rooms-total-breakdown">—</span></div>
@@ -2305,7 +2319,7 @@
   <!-- ===== Compact Summary: Nest ===== -->
   <div id="tenant-nest-section" style="display:none;">
     <!-- Stats strip -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 12px;background:#e3f2fd;border-radius:8px;margin-bottom:10px;font-size:.83rem;">
+    <div class="stats-strip stats-strip--blue">
       <span style="font-weight:700;">🏗️ <span id="nest-occupancy-total">0</span> ห้อง</span>
       <span style="color:#ccc;">|</span>
       <span style="color:#1565c0;">👤 <b id="nest-occupancy-occupied">0</b> มีผู้เช่า</span>
@@ -2326,17 +2340,17 @@
     </div>
     <!-- Mini info chips -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem;">
-      <div style="padding:8px 10px;background:white;border:1px solid #c5cae9;border-left:3px solid #3f51b5;border-radius:6px;font-size:.78rem;line-height:1.6;">
+      <div class="info-chip info-chip--indigo">
         <div style="font-weight:700;color:#1a237e;margin-bottom:2px;" id="nest-studio-title">🏠 Studio (N101–N205)</div>
         <div>💰 <span id="nest-studio-rent">—</span></div>
         <div style="color:#555;">⚡ <span id="nest-studio-elec">—</span> · 💧 <span id="nest-studio-water">—</span> · 🗑️ <span id="nest-studio-trash">—</span></div>
       </div>
-      <div style="padding:8px 10px;background:white;border:1px solid #e1bee7;border-left:3px solid #9c27b0;border-radius:6px;font-size:.78rem;line-height:1.6;">
+      <div class="info-chip info-chip--purple">
         <div style="font-weight:700;color:#4a148c;margin-bottom:2px;" id="nest-pet-title">🐾 Pet-Allowed (N301–N405)</div>
         <div>💰 <span id="nest-pet-rent">—</span></div>
         <div style="color:#555;">⚡ <span id="nest-pet-elec">—</span> · 💧 <span id="nest-pet-water">—</span> · 🗑️ <span id="nest-pet-trash">—</span></div>
       </div>
-      <div style="padding:8px 10px;background:#f3e5f5;border:1px solid #e1bee7;border-left:3px solid #9c27b0;border-radius:6px;font-size:.78rem;line-height:1.6;">
+      <div class="info-chip info-chip--purple-bg">
         <div style="font-weight:700;color:#4a148c;margin-bottom:2px;" id="nest-total-title">📊 รวมทั้งหมด</div>
         <div style="color:#1565c0;font-weight:700;"><span id="nest-total-income2">—</span></div>
         <div style="color:#555;"><span id="nest-total-breakdown">—</span> · Nest 4 ชั้น</div>
