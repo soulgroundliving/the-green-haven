@@ -1554,7 +1554,6 @@ function loadRoomConfigUI() {
         <td style="border:1px solid var(--border);padding:0.8rem;">
           <input type="number" value="${room.trashRate || 20}" step="1" onchange="updateTrashRate('${building}', '${room.id}', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
         </td>
-        <td style="border:1px solid var(--border);padding:0.8rem;font-size:.85rem;color:var(--text-muted);">${(loadTenants()||{})[room.id]?.name||'—'}</td>
         <td style="border:1px solid var(--border);padding:0.8rem;text-align:center;">
           <button onclick="deleteRoom('${building}', '${room.id}')" style="padding:0.4rem 0.8rem;background:#f44336;color:white;border:none;border-radius:4px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:0.85rem;">ลบ</button>
         </td>
