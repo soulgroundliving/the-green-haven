@@ -6283,9 +6283,10 @@
                 if (urlRoom) {
                     const cleanRoom = urlRoom.replace(/[^0-9A-Za-zก-๙]/g, '');
                     const urlBuilding = (params.get('building') || '').toLowerCase();
+                    // Nest rooms always start with N (N101-N405); everything else is rooms building
                     const resolvedBuilding = urlBuilding === 'rooms' ? 'rooms'
                         : urlBuilding === 'nest' ? 'nest'
-                        : (/^N/i.test(cleanRoom) || (/^\d+$/.test(cleanRoom) && parseInt(cleanRoom) >= 101 && parseInt(cleanRoom) <= 405)) ? 'nest' : 'rooms';
+                        : /^N/i.test(cleanRoom) ? 'nest' : 'rooms';
                     sessionStorage.setItem('user', JSON.stringify({ roomNumber: cleanRoom, building: resolvedBuilding }));
                     sessionStorage.setItem('_adminPreview', '1');
                 }
@@ -6297,18 +6298,15 @@
                     const user = JSON.parse(userStr);
                     const raw = String(user.roomNumber || user.room || user.email || '');
                     const emailMatch = raw.match(/tenant(\w+)@/);
-                    _taRoom = emailMatch ? emailMatch[1] : raw.replace(/[^0-9A-Za-z]/g, '');
+                    _taRoom = emailMatch ? emailMatch[1] : raw.replace(/[^0-9A-Za-zก-๙]/g, '');
                 }
             } catch(e) {}
             if (!_taRoom) _taRoom = localStorage.getItem('tenant_app_room') || '';
             if (!_taRoom) return false;
             // Cache in localStorage so reload without ?room= still works
             try { localStorage.setItem('tenant_app_room', _taRoom); } catch(e) {}
-            if (/^N/i.test(_taRoom) || (/^\d+$/.test(_taRoom) && parseInt(_taRoom) >= 101 && parseInt(_taRoom) <= 405)) {
-                _taBuilding = 'nest';
-            } else {
-                _taBuilding = 'rooms';
-            }
+            // Nest rooms always start with N (N101-N405); rooms building = everything else (13-33, 15ก, ร้านใหญ่)
+            _taBuilding = /^N/i.test(_taRoom) ? 'nest' : 'rooms';
             window._tenantAppRoom = _taRoom;
             window._tenantAppBuilding = _taBuilding;
             applyGamificationVisibility();
