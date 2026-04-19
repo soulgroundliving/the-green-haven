@@ -1833,6 +1833,31 @@
   .notif-item-count { background:var(--green); color:#fff; font-size:.7rem; font-weight:800; padding:2px 7px; border-radius:10px; margin-left:auto; flex-shrink:0; }
   .notif-empty { padding:24px; text-align:center; color:var(--text-muted); font-size:.85rem; }
 
+  /* ===== UTILITY CLASSES ===== */
+  .d-none{display:none;}
+  .mb-4{margin-bottom:1rem;}.mb-5{margin-bottom:1.2rem;}.mb-6{margin-bottom:1.5rem;}
+  .grid-2col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+  .grid-2col-lg{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;}
+  .cell-center{text-align:center;padding:1rem;}
+  .clickable{cursor:pointer;}
+  .color-muted{color:var(--text-muted);}
+  .color-silver{color:#ccc;}
+  .color-gray{color:#555;}
+  .font-09{font-size:.9rem;}
+  .text-sm-muted{color:var(--text-muted);font-size:.82rem;}
+  .text-xs-muted{color:var(--text-muted);font-size:.85rem;}
+  .form-label-upper{font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
+  .field-label{font-weight:700;display:block;margin-bottom:.5rem;font-size:.9rem;}
+  .input-lg{width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;}
+  .input-sm{width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;}
+  .input-md{padding:.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;}
+  .input-pad10{width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:1rem;}
+  .pad-box{padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .table-th{border:1px solid var(--border);padding:.8rem;text-align:left;font-weight:600;color:var(--text);}
+  .table-cell-center{padding:10px;text-align:center;border-bottom:2px solid var(--border);}
+  .w-50{width:50px;}
+  .card.cell-center{padding:1rem;}
+
 </style>
 </head>
 <body>
@@ -1840,7 +1865,7 @@
 <!-- Photo Viewer Modal -->
 <div id="photoModal" class="photo-modal">
   <div class="photo-modal-content">
-    <button class="photo-modal-close" onclick="closePhotoModal()">✕</button>
+    <button class="photo-modal-close" data-action="closePhotoModal">✕</button>
     <h2 style="text-align: center; margin-bottom: 1rem; color: var(--text);">รูปภาพซ่อม</h2>
     <div class="photo-modal-photos" id="photoModalPhotos"></div>
   </div>
@@ -1850,7 +1875,7 @@
 <div id="toastContainer" class="toast-container"></div>
 
 <!-- Hamburger Menu for Mobile -->
-<button class="hamburger" id="hamburger" onclick="toggleSidebar()">
+<button class="hamburger" id="hamburger" data-action="toggleSidebar">
   <span></span>
   <span></span>
   <span></span>
@@ -1870,10 +1895,10 @@
     <!-- MAIN -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Main</div>
-      <button class="sidebar-item active" onclick="window.showPage('dashboard',this)">
+      <button class="sidebar-item active" data-action="showPage" data-page="dashboard">
         <span class="sidebar-item-icon">📊</span>Dashboard
       </button>
-      <button class="sidebar-item" onclick="window.showPage('gamification',this)">
+      <button class="sidebar-item" data-action="showPage" data-page="gamification">
         <span class="sidebar-item-icon">🏆</span>Gamification
       </button>
     </div>
@@ -1881,13 +1906,13 @@
     <!-- PROPERTY -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Property</div>
-      <button class="sidebar-item" onclick="window.showPage('tenant',this)">
+      <button class="sidebar-item" data-action="showPage" data-page="tenant">
         <span class="sidebar-item-icon">👥</span>Tenant Information
       </button>
-      <button class="sidebar-item" onclick="window.showPage('requests-approvals',this)">
+      <button class="sidebar-item" data-action="showPage" data-page="requests-approvals">
         <span class="sidebar-item-icon">🔧</span>Requests & Approvals<span class="sidebar-badge" id="mxBadge" style="display:none"></span>
       </button>
-      <button class="sidebar-item" onclick="window.showPage('content-management',this)">
+      <button class="sidebar-item" data-action="showPage" data-page="content-management">
         <span class="sidebar-item-icon">📚</span>Community Events
       </button>
     </div>
@@ -1895,13 +1920,13 @@
     <!-- DATA ENTRY -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Data Entry</div>
-      <button class="sidebar-item" onclick="window.showPage('meter',this)">
+      <button class="sidebar-item" data-action="showPage" data-page="meter">
         <span class="sidebar-item-icon">📊</span>Meter Upload
       </button>
-      <button class="sidebar-item" onclick="window.showPage('bill',this)">
+      <button class="sidebar-item" data-action="showPage" data-page="bill">
         <span class="sidebar-item-icon">💳</span>บิล & ชำระ<span class="sidebar-badge" id="billBadge" style="display:none"></span><span class="sidebar-badge" id="paymentBadge" style="display:none"></span>
       </button>
-      <button class="sidebar-item" onclick="window.showPage('expense',this)">
+      <button class="sidebar-item" data-action="showPage" data-page="expense">
         <span class="sidebar-item-icon">💸</span>ค่าใช้จ่าย
       </button>
     </div>
@@ -1909,7 +1934,7 @@
     <!-- TAX FILING -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">Tax Filing</div>
-      <button class="sidebar-item" onclick="goToTaxFiling('dashboard')">
+      <button class="sidebar-item" data-action="goToTaxFiling" data-value="dashboard">
         <span class="sidebar-item-icon">🏛️</span>Tax Dashboard
       </button>
     </div>
@@ -1917,13 +1942,13 @@
     <!-- SYSTEM -->
     <div class="sidebar-group">
       <div class="sidebar-group-title">System</div>
-      <button class="sidebar-item" onclick="window.showPage('people-management',this)">
+      <button class="sidebar-item" data-action="showPage" data-page="people-management">
         <span class="sidebar-item-icon">👨‍💼</span>People Management
       </button>
-      <button class="sidebar-item" onclick="window.location.href='/audit-log-viewer'">
+      <button class="sidebar-item" data-action="goToAuditLog">
         <span class="sidebar-item-icon">📋</span>Audit Logs
       </button>
-      <button class="sidebar-item" onclick="openChangePasswordModal()">
+      <button class="sidebar-item" data-action="openChangePasswordModal">
         <span class="sidebar-item-icon">🔐</span>เปลี่ยนรหัสผ่าน
       </button>
     </div>
@@ -1931,7 +1956,7 @@
   </nav>
 
   <div class="sidebar-footer">
-    <button class="sidebar-logout" onclick="handleLogout()">
+    <button class="sidebar-logout" data-action="handleLogout">
       <span class="sidebar-item-icon">🚪</span>Logout
     </button>
   </div>
@@ -1946,7 +1971,7 @@
         <h2 style="margin:0;font-size:1.25rem;font-weight:700;">📋 จัดการข้อมูลห้อง</h2>
         <small style="opacity:.85;font-size:.85rem;">แก้ไขข้อมูลผู้เช่าและสัญญา</small>
       </div>
-      <button onclick="closeTenantModal()" style="background:rgba(255,255,255,.2);border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:all .2s;hover:background:rgba(255,255,255,.3);">✕</button>
+      <button data-action="closeTenantModal" style="background:rgba(255,255,255,.2);border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:all .2s;hover:background:rgba(255,255,255,.3);">✕</button>
     </div>
 
     <!-- Modal Content -->
@@ -1974,47 +1999,47 @@
           <span>ข้อมูลผู้เช่า</span>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;">
+        <div class="grid-2col-lg">
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">ชื่อ</label>
-            <input type="text" id="modalTenantFirstName" placeholder="ชื่อ" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">ชื่อ</label>
+            <input type="text" id="modalTenantFirstName" placeholder="ชื่อ" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">นามสกุล</label>
-            <input type="text" id="modalTenantLastName" placeholder="นามสกุล" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">นามสกุล</label>
+            <input type="text" id="modalTenantLastName" placeholder="นามสกุล" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;">
+        <div class="grid-2col-lg">
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📱 โทรศัพท์</label>
-            <input type="tel" id="modalTenantPhone" placeholder="0XX-XXX-XXXX" maxlength="10" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">📱 โทรศัพท์</label>
+            <input type="tel" id="modalTenantPhone" placeholder="0XX-XXX-XXXX" maxlength="10" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
             <small id="modalTenantPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
           </div>
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">💬 Line ID</label>
-            <input type="text" id="modalTenantLineID" placeholder="line_id (ตัวอักษรเล็ก เครื่องหมายขีด)" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">💬 Line ID</label>
+            <input type="text" id="modalTenantLineID" placeholder="line_id (ตัวอักษรเล็ก เครื่องหมายขีด)" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;">
+        <div class="grid-2col-lg">
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📧 อีเมล</label>
-            <input type="email" id="modalTenantEmail" placeholder="example@email.com" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">📧 อีเมล</label>
+            <input type="email" id="modalTenantEmail" placeholder="example@email.com" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">🚗 ป้ายทะเบียน</label>
-            <input type="text" id="modalTenantVehiclePlate" placeholder="เช่น 9กก9999" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">🚗 ป้ายทะเบียน</label>
+            <input type="text" id="modalTenantVehiclePlate" placeholder="เช่น 9กก9999" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
         </div>
 
-        <div style="margin-bottom:1.5rem;">
-          <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">🪪 เลขบัตรประชาชน / Passport</label>
-          <input type="text" id="modalTenantIdCard" placeholder="1-XXXX-XXXXX-XX-X" maxlength="17" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+        <div class="mb-6">
+          <label class="form-label-upper">🪪 เลขบัตรประชาชน / Passport</label>
+          <input type="text" id="modalTenantIdCard" placeholder="1-XXXX-XXXXX-XX-X" maxlength="17" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
         </div>
 
         <div>
-          <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📍 ที่อยู่เดิม</label>
-          <input type="text" id="modalTenantAddress" placeholder="บ้านเลขที่ ถนน แขวง เขต จังหวัด" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+          <label class="form-label-upper">📍 ที่อยู่เดิม</label>
+          <input type="text" id="modalTenantAddress" placeholder="บ้านเลขที่ ถนน แขวง เขต จังหวัด" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
         </div>
       </div>
 
@@ -2026,12 +2051,12 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;">
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">👤 ชื่อ-นามสกุล</label>
-            <input type="text" id="modalEmergencyName" placeholder="ชื่อผู้ติดต่อฉุกเฉิน" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">👤 ชื่อ-นามสกุล</label>
+            <input type="text" id="modalEmergencyName" placeholder="ชื่อผู้ติดต่อฉุกเฉิน" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📱 เบอร์โทร</label>
-            <input type="tel" id="modalEmergencyPhone" placeholder="0XX-XXX-XXXX" maxlength="10" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">📱 เบอร์โทร</label>
+            <input type="tel" id="modalEmergencyPhone" placeholder="0XX-XXX-XXXX" maxlength="10" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
         </div>
       </div>
@@ -2047,8 +2072,8 @@
           <label for="modalHasPet" style="font-size:.95rem;cursor:pointer;">มีสัตว์เลี้ยง</label>
         </div>
         <div id="modalPetTypeRow" style="display:none;">
-          <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">ชนิดสัตว์เลี้ยง</label>
-          <input type="text" id="modalPetType" placeholder="เช่น สุนัข แมว กระต่าย" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+          <label class="form-label-upper">ชนิดสัตว์เลี้ยง</label>
+          <input type="text" id="modalPetType" placeholder="เช่น สุนัข แมว กระต่าย" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
         </div>
       </div>
 
@@ -2059,36 +2084,36 @@
           <span>ข้อมูลสัญญา</span>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;">
+        <div class="grid-2col-lg">
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📍 วันเข้าพัก</label>
-            <input type="date" id="modalTenantMoveIn" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">📍 วันเข้าพัก</label>
+            <input type="date" id="modalTenantMoveIn" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">⏰ สัญญาสิ้นสุด</label>
-            <input type="date" id="modalTenantContractEnd" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">⏰ สัญญาสิ้นสุด</label>
+            <input type="date" id="modalTenantContractEnd" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;">
+        <div class="grid-2col-lg">
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">💵 ค่าเช่า/เดือน (บาท)</label>
-            <input type="number" id="modalRentPrice" placeholder="0" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">💵 ค่าเช่า/เดือน (บาท)</label>
+            <input type="number" id="modalRentPrice" placeholder="0" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
             <small style="color:var(--text-muted);font-size:.75rem;margin-top:4px;display:block;">แก้ได้ถ้าราคาต่อรองจาก config</small>
           </div>
           <div>
-            <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">💰 มัดจำ (บาท)</label>
-            <input type="number" id="modalTenantDeposit" placeholder="0" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <label class="form-label-upper">💰 มัดจำ (บาท)</label>
+            <input type="number" id="modalTenantDeposit" placeholder="0" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
         </div>
 
         <div>
-          <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📄 ไฟล์สัญญาเช่า (PDF/รูป)</label>
+          <label class="form-label-upper">📄 ไฟล์สัญญาเช่า (PDF/รูป)</label>
           <input type="file" id="modalContractFile" accept=".pdf,.jpg,.jpeg,.png" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.85rem;" onchange="uploadContractDocument()">
           <input type="hidden" id="modalContractDocument" value="">
           <input type="hidden" id="modalContractFileName" value="">
           <small id="contractDocStatus" style="color:#666;margin-top:6px;display:block;"></small>
-          <a href="#" onclick="showTenantLeaseHistory(currentEditBuilding, currentEditRoomId); return false;" style="font-size:.75rem;color:var(--green);text-decoration:underline;display:inline-block;margin-top:6px;">📋 ดูประวัติผู้เช่าเก่า</a>
+          <a href="#" data-action="showTenantLease" style="font-size:.75rem;color:var(--green);text-decoration:underline;display:inline-block;margin-top:6px;">📋 ดูประวัติผู้เช่าเก่า</a>
         </div>
 
       </div>
@@ -2111,8 +2136,8 @@
       </div>
 
       <!-- Additional Notes Section -->
-      <div style="margin-bottom:1.5rem;">
-        <label style="font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">📝 หมายเหตุเพิ่มเติม</label>
+      <div class="mb-6">
+        <label class="form-label-upper">📝 หมายเหตุเพิ่มเติม</label>
         <textarea id="modalTenantNotes" placeholder="เช่น หมายเหตุพิเศษ เงื่อนไข ข้อตกลงอื่น..." rows="3" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;resize:vertical;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'"></textarea>
       </div>
 
@@ -2120,18 +2145,18 @@
       <div style="border-top:2px solid var(--border);padding-top:1.2rem;">
         <div style="font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">ข้อมูลเพิ่มเติม →</div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-          <button onclick="closeTenantModal();window.showPage('bill')" style="padding:10px 6px;background:#e8f5e9;color:#2e7d32;border:1.5px solid #a5d6a7;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;line-height:1.4;transition:background .15s;" onmouseover="this.style.background='#c8e6c9'" onmouseout="this.style.background='#e8f5e9'">💳 บิล &amp;<br>ประวัติชำระ</button>
-          <button onclick="closeTenantModal();window.showPage('meter')" style="padding:10px 6px;background:#e3f2fd;color:#1565c0;border:1.5px solid #90caf9;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;line-height:1.4;transition:background .15s;" onmouseover="this.style.background='#bbdefb'" onmouseout="this.style.background='#e3f2fd'">⚡ มิเตอร์<br>ไฟ / น้ำ</button>
-          <button onclick="closeTenantModal();window.showPage('gamification')" style="padding:10px 6px;background:#f3e5f5;color:#6a1b9a;border:1.5px solid #ce93d8;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;line-height:1.4;transition:background .15s;" onmouseover="this.style.background='#e1bee7'" onmouseout="this.style.background='#f3e5f5'">🏆 คะแนน<br>&amp; รางวัล</button>
-          <button onclick="closeTenantModal();window.showPage('requests-approvals')" style="padding:10px 6px;background:#fff3e0;color:#e65100;border:1.5px solid #ffcc80;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;line-height:1.4;transition:background .15s;" onmouseover="this.style.background='#ffe0b2'" onmouseout="this.style.background='#fff3e0'">🔧 คำขอ<br>&amp; ซ่อม</button>
+          <button data-action="closeThenNavigate" data-page="bill" style="padding:10px 6px;background:#e8f5e9;color:#2e7d32;border:1.5px solid #a5d6a7;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;line-height:1.4;transition:background .15s;" onmouseover="this.style.background='#c8e6c9'" onmouseout="this.style.background='#e8f5e9'">💳 บิล &amp;<br>ประวัติชำระ</button>
+          <button data-action="closeThenNavigate" data-page="meter" style="padding:10px 6px;background:#e3f2fd;color:#1565c0;border:1.5px solid #90caf9;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;line-height:1.4;transition:background .15s;" onmouseover="this.style.background='#bbdefb'" onmouseout="this.style.background='#e3f2fd'">⚡ มิเตอร์<br>ไฟ / น้ำ</button>
+          <button data-action="closeThenNavigate" data-page="gamification" style="padding:10px 6px;background:#f3e5f5;color:#6a1b9a;border:1.5px solid #ce93d8;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;line-height:1.4;transition:background .15s;" onmouseover="this.style.background='#e1bee7'" onmouseout="this.style.background='#f3e5f5'">🏆 คะแนน<br>&amp; รางวัล</button>
+          <button data-action="closeThenNavigate" data-page="requests-approvals" style="padding:10px 6px;background:#fff3e0;color:#e65100;border:1.5px solid #ffcc80;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;line-height:1.4;transition:background .15s;" onmouseover="this.style.background='#ffe0b2'" onmouseout="this.style.background='#fff3e0'">🔧 คำขอ<br>&amp; ซ่อม</button>
         </div>
       </div>
     </div>
 
     <!-- Modal Footer -->
     <div style="padding:1.5rem 2rem;background:#f9fafb;border-top:1px solid var(--border);display:flex;gap:12px;flex-shrink:0;">
-      <button onclick="saveTenantInfo()" style="flex:1;padding:14px 24px;background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;box-shadow:0 4px 12px rgba(45,134,83,.2);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(45,134,83,.4)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(45,134,83,.2)'">💾 บันทึกข้อมูล</button>
-      <button onclick="closeTenantModal()" style="flex:1;padding:14px 24px;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;" onmouseover="this.style.background='#d0d7e0'" onmouseout="this.style.background='var(--border)'">ปิด</button>
+      <button data-action="saveTenantInfo" style="flex:1;padding:14px 24px;background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;box-shadow:0 4px 12px rgba(45,134,83,.2);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(45,134,83,.4)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(45,134,83,.2)'">💾 บันทึกข้อมูล</button>
+      <button data-action="closeTenantModal" style="flex:1;padding:14px 24px;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;" onmouseover="this.style.background='#d0d7e0'" onmouseout="this.style.background='var(--border)'">ปิด</button>
     </div>
   </div>
 </div>
@@ -2146,16 +2171,16 @@
   <div id="dashboard-overview-tab" class="dashboard-tab-content active">
   <div class="year-tabs" style="margin-bottom:.4rem;">
     <span class="year-tab-label">ปีงบประมาณ:</span>
-    <button class="year-tab" onclick="setYear('all',this)">ทั้งหมด</button>
-    <button class="year-tab" onclick="setYear('67',this)">2567 (2024)</button>
-    <button class="year-tab" onclick="setYear('68',this)">2568 (2025)</button>
-    <button class="year-tab active" onclick="setYear('69',this)">2569 (2026)</button>
+    <button class="year-tab" data-action="setYear" data-year="all">ทั้งหมด</button>
+    <button class="year-tab" data-action="setYear" data-year="67">2567 (2024)</button>
+    <button class="year-tab" data-action="setYear" data-year="68">2568 (2025)</button>
+    <button class="year-tab active" data-action="setYear" data-year="69">2569 (2026)</button>
   </div>
   <div class="year-tabs" style="margin-bottom:.8rem;">
     <span class="year-tab-label">อาคาร:</span>
-    <button id="dash-bld-all" class="year-tab active" onclick="setBuilding('all',this)">ทั้งหมด</button>
-    <button id="dash-bld-rooms" class="year-tab" onclick="setBuilding('rooms',this)">🏠 ห้องแถว</button>
-    <button id="dash-bld-nest" class="year-tab" onclick="setBuilding('nest',this)">🏢 Nest</button>
+    <button id="dash-bld-all" class="year-tab active" data-action="setBuilding" data-building="all">ทั้งหมด</button>
+    <button id="dash-bld-rooms" class="year-tab" data-action="setBuilding" data-building="rooms">🏠 ห้องแถว</button>
+    <button id="dash-bld-nest" class="year-tab" data-action="setBuilding" data-building="nest">🏢 Nest</button>
   </div>
   <div class="kpi-grid">
     <!-- Combined Total (Both Buildings) -->
@@ -2166,9 +2191,9 @@
     <!-- Average Monthly -->
     <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
     <!-- Occupancy Combined — live only -->
-    <div class="kpi-card kpi-live blue" style="cursor:pointer;" onclick="window.showPage('tenant',document.querySelector('[onclick*=\'tenant\']'))"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (รวม 2 อาคาร)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
+    <div class="kpi-card kpi-live blue clickable" data-action="showPage" data-page="tenant"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (รวม 2 อาคาร)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
     <!-- Payment Status — live only -->
-    <div class="kpi-card kpi-live purple" style="cursor:pointer;" onclick="window.showPage('bill',document.querySelector('[onclick*=\'bill\']'))"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
+    <div class="kpi-card kpi-live purple clickable" data-action="showPage" data-page="bill"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
     <!-- Expected Revenue — live only -->
     <div class="kpi-card kpi-live" style="background:linear-gradient(135deg, #e8f5e9, #f1f8e9); border-left: 4px solid #4caf50;"><div class="kpi-icon">📊</div><div class="kpi-label">รายได้คาดหวัง (เดือนนี้)</div><div class="kpi-value" id="kpi-expected" style="color:#2d8653;">฿0</div><div class="kpi-sub" id="kpi-expected-sub">จากห้องที่มีผู้เช่า</div></div>
     <!-- Overdue — live only -->
@@ -2236,7 +2261,7 @@
     <div class="card">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
         <span>🏆 Top Tenants</span>
-        <button onclick="window.showPage('gamification',this)" style="font-size:.72rem;padding:2px 8px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">ดูทั้งหมด →</button>
+        <button data-action="showPage" data-page="gamification" style="font-size:.72rem;padding:2px 8px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">ดูทั้งหมด →</button>
       </div>
       <div id="dashTopTenants" style="min-height:60px;"></div>
     </div>
@@ -2255,18 +2280,18 @@
 
   <!-- Main Tab Nav -->
   <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
-    <button id="tenant-main-tab-btn-tenants" class="year-tab active" onclick="switchTenantMainTab('tenants',this)">👥 ผู้เช่า</button>
-    <button id="tenant-main-tab-btn-leases" class="year-tab" onclick="switchTenantMainTab('leases',this)">📋 สัญญา</button>
-    <button id="tenant-main-tab-btn-requests" class="year-tab" onclick="switchTenantMainTab('requests',this)">📨 คำขอ <span id="leaseRequestsBadge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
-    <button id="tenant-main-tab-btn-alerts" class="year-tab" onclick="switchTenantMainTab('alerts',this)">🔔 แจ้งเตือน</button>
+    <button id="tenant-main-tab-btn-tenants" class="year-tab active" data-action="switchTenantMainTab" data-tab="tenants">👥 ผู้เช่า</button>
+    <button id="tenant-main-tab-btn-leases" class="year-tab" data-action="switchTenantMainTab" data-tab="leases">📋 สัญญา</button>
+    <button id="tenant-main-tab-btn-requests" class="year-tab" data-action="switchTenantMainTab" data-tab="requests">📨 คำขอ <span id="leaseRequestsBadge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
+    <button id="tenant-main-tab-btn-alerts" class="year-tab" data-action="switchTenantMainTab" data-tab="alerts">🔔 แจ้งเตือน</button>
   </div>
   <div id="tenant-main-tab-tenants">
 
   <!-- Building Selection -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;">
+  <div class="year-tabs" class="mb-5">
     <span class="year-tab-label">ตึก:</span>
-    <button class="year-tab active" onclick="setTenantBuilding('old',this)">🏠 ห้องแถว</button>
-    <button class="year-tab" onclick="setTenantBuilding('new',this)">🏗️ Nest</button>
+    <button class="year-tab active" data-action="setTenantBuilding" data-building="old">🏠 ห้องแถว</button>
+    <button class="year-tab" data-action="setTenantBuilding" data-building="new">🏗️ Nest</button>
   </div>
 
   <!-- ===== Compact Summary: ห้องแถว ===== -->
@@ -2274,13 +2299,13 @@
     <!-- Stats strip -->
     <div class="stats-strip stats-strip--green">
       <span style="font-weight:700;">🏠 <span id="occupancy-total">0</span> ห้อง</span>
-      <span style="color:#ccc;">|</span>
+      <span class="color-silver">|</span>
       <span style="color:#2e7d32;">👤 <b id="occupancy-occupied">0</b> มีผู้เช่า</span>
-      <span style="color:#ccc;">|</span>
+      <span class="color-silver">|</span>
       <span style="color:#e65100;">🚪 <b id="occupancy-vacant">0</b> ว่าง</span>
-      <span style="color:#ccc;">|</span>
+      <span class="color-silver">|</span>
       <span style="color:#6a1b9a;">📊 <b id="occupancy-rate">0%</b></span>
-      <span style="color:#ccc;">|</span>
+      <span class="color-silver">|</span>
       <span style="color:#c62828;">⏰ <b id="occupancy-soon">0</b> ใกล้หมด</span>
       <span style="margin-left:auto;color:var(--green-dark);font-weight:700;">💰 <span id="rooms-total-income">—</span></span>
     </div>
@@ -2296,12 +2321,12 @@
       <div class="info-chip info-chip--green">
         <div style="font-weight:700;color:#1b5e20;margin-bottom:2px;" id="rooms-card-title">🏠 ห้องพัก</div>
         <div>💰 <span id="rooms-rent-tiers">—</span></div>
-        <div style="color:#555;" id="rooms-rates-row">⚡ — · 💧 — · 🗑️ —</div>
+        <div class="color-gray" id="rooms-rates-row">⚡ — · 💧 — · 🗑️ —</div>
       </div>
       <div id="shop-info-card" class="info-chip info-chip--orange">
         <div style="font-weight:700;color:#bf360c;margin-bottom:2px;" id="shop-info-title">🏪 ร้านใหญ่</div>
         <div>💰 <span id="shop-info-rent">—</span></div>
-        <div style="color:#555;">⚡ <span id="shop-info-elec">—</span> · 💧 <span id="shop-info-water">—</span> · 🗑️ <span id="shop-info-trash">—</span></div>
+        <div class="color-gray">⚡ <span id="shop-info-elec">—</span> · 💧 <span id="shop-info-water">—</span> · 🗑️ <span id="shop-info-trash">—</span></div>
       </div>
       <div class="info-chip info-chip--pink">
         <div style="font-weight:700;color:#880e4f;margin-bottom:2px;">❌ โรงน้ำแข็ง</div>
@@ -2311,7 +2336,7 @@
       <div class="info-chip info-chip--purple-bg">
         <div style="font-weight:700;color:#4a148c;margin-bottom:2px;" id="rooms-total-title">📊 รวมทั้งหมด</div>
         <div style="color:var(--green-dark);font-weight:700;"><span id="rooms-total-income2">—</span></div>
-        <div style="color:#555;"><span id="rooms-total-breakdown">—</span></div>
+        <div class="color-gray"><span id="rooms-total-breakdown">—</span></div>
       </div>
     </div>
   </div><!-- end tenant-rooms-section -->
@@ -2321,13 +2346,13 @@
     <!-- Stats strip -->
     <div class="stats-strip stats-strip--blue">
       <span style="font-weight:700;">🏗️ <span id="nest-occupancy-total">0</span> ห้อง</span>
-      <span style="color:#ccc;">|</span>
+      <span class="color-silver">|</span>
       <span style="color:#1565c0;">👤 <b id="nest-occupancy-occupied">0</b> มีผู้เช่า</span>
-      <span style="color:#ccc;">|</span>
+      <span class="color-silver">|</span>
       <span style="color:#e65100;">🚪 <b id="nest-occupancy-vacant">0</b> ว่าง</span>
-      <span style="color:#ccc;">|</span>
+      <span class="color-silver">|</span>
       <span style="color:#6a1b9a;">📊 <b id="nest-occupancy-rate">0%</b></span>
-      <span style="color:#ccc;">|</span>
+      <span class="color-silver">|</span>
       <span style="color:#c62828;">⏰ <b id="nest-occupancy-soon">0</b> ใกล้หมด</span>
       <span style="margin-left:auto;color:#1565c0;font-weight:700;">💰 <span id="nest-total-income">—</span></span>
     </div>
@@ -2343,17 +2368,17 @@
       <div class="info-chip info-chip--indigo">
         <div style="font-weight:700;color:#1a237e;margin-bottom:2px;" id="nest-studio-title">🏠 Studio (N101–N205)</div>
         <div>💰 <span id="nest-studio-rent">—</span></div>
-        <div style="color:#555;">⚡ <span id="nest-studio-elec">—</span> · 💧 <span id="nest-studio-water">—</span> · 🗑️ <span id="nest-studio-trash">—</span></div>
+        <div class="color-gray">⚡ <span id="nest-studio-elec">—</span> · 💧 <span id="nest-studio-water">—</span> · 🗑️ <span id="nest-studio-trash">—</span></div>
       </div>
       <div class="info-chip info-chip--purple">
         <div style="font-weight:700;color:#4a148c;margin-bottom:2px;" id="nest-pet-title">🐾 Pet-Allowed (N301–N405)</div>
         <div>💰 <span id="nest-pet-rent">—</span></div>
-        <div style="color:#555;">⚡ <span id="nest-pet-elec">—</span> · 💧 <span id="nest-pet-water">—</span> · 🗑️ <span id="nest-pet-trash">—</span></div>
+        <div class="color-gray">⚡ <span id="nest-pet-elec">—</span> · 💧 <span id="nest-pet-water">—</span> · 🗑️ <span id="nest-pet-trash">—</span></div>
       </div>
       <div class="info-chip info-chip--purple-bg">
         <div style="font-weight:700;color:#4a148c;margin-bottom:2px;" id="nest-total-title">📊 รวมทั้งหมด</div>
         <div style="color:#1565c0;font-weight:700;"><span id="nest-total-income2">—</span></div>
-        <div style="color:#555;"><span id="nest-total-breakdown">—</span> · Nest 4 ชั้น</div>
+        <div class="color-gray"><span id="nest-total-breakdown">—</span> · Nest 4 ชั้น</div>
       </div>
     </div>
     <!-- Classic Table View -->
@@ -2366,17 +2391,17 @@
   </div><!-- end tenant-nest-section -->
 
   <!-- Filter + Search Bar -->
-  <div style="margin-bottom:1.2rem;">
+  <div class="mb-5">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="filter-btn-tenant active" onclick="setTenantFilter('all')">ทั้งหมด</button>
-        <button class="filter-btn-tenant occupied" onclick="setTenantFilter('occupied')">🟢 มีผู้เช่า</button>
-        <button class="filter-btn-tenant vacant" onclick="setTenantFilter('vacant')">⚪ ว่าง</button>
-        <button class="filter-btn-tenant expiring" onclick="setTenantFilter('expiring')">🟠 ใกล้หมด</button>
+        <button class="filter-btn-tenant active" data-action="setTenantFilter" data-filter="all">ทั้งหมด</button>
+        <button class="filter-btn-tenant occupied" data-action="setTenantFilter" data-filter="occupied">🟢 มีผู้เช่า</button>
+        <button class="filter-btn-tenant vacant" data-action="setTenantFilter" data-filter="vacant">⚪ ว่าง</button>
+        <button class="filter-btn-tenant expiring" data-action="setTenantFilter" data-filter="expiring">🟠 ใกล้หมด</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
         <input type="text" id="tenantSearch" placeholder="🔍 ค้นหาห้อง/ชื่อ..." style="padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:200px;">
-        <button onclick="exportTenantCSV()" style="padding:8px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.85rem;cursor:pointer;font-weight:600;">📥 CSV</button>
+        <button data-action="exportTenantCSV" style="padding:8px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.85rem;cursor:pointer;font-weight:600;">📥 CSV</button>
       </div>
     </div>
   </div>
@@ -2391,7 +2416,7 @@
     <div style="background:white;border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <h2 style="font-size:1.4rem;margin:0;color:#1b5e20;">⚙️ ปรับค่าเช่าแบบหลายห้อง</h2>
-        <button onclick="closeBatchRentAdjustmentModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;">✕</button>
+        <button data-action="closeBatchRentAdjustmentModal" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;">✕</button>
       </div>
 
       <!-- Room Selection -->
@@ -2403,8 +2428,8 @@
           </div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <button onclick="selectAllRooms()" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✓ เลือกทั้งหมด</button>
-          <button onclick="deselectAllRooms()" style="padding:6px 12px;border-radius:6px;border:1.5px solid #999;background:white;color:#999;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✗ ยกเลิกทั้งหมด</button>
+          <button data-action="selectAllRooms" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✓ เลือกทั้งหมด</button>
+          <button data-action="deselectAllRooms" style="padding:6px 12px;border-radius:6px;border:1.5px solid #999;background:white;color:#999;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✗ ยกเลิกทั้งหมด</button>
         </div>
         <div style="font-size:0.85rem;color:#666;background:#f5f5f5;padding:10px;border-radius:6px;">
           <strong id="roomSelectionCount">0</strong> ห้องได้รับการเลือก
@@ -2417,23 +2442,23 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
           <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
             <input type="radio" name="adjustType" value="fixed-increase" checked style="cursor:pointer;">
-            <span style="font-size:0.9rem;">เพิ่มเป็นจำนวนเงิน</span>
+            <span class="font-09">เพิ่มเป็นจำนวนเงิน</span>
           </label>
           <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
             <input type="radio" name="adjustType" value="percentage-increase" style="cursor:pointer;">
-            <span style="font-size:0.9rem;">เพิ่มเป็นเปอร์เซ็นต์</span>
+            <span class="font-09">เพิ่มเป็นเปอร์เซ็นต์</span>
           </label>
           <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
             <input type="radio" name="adjustType" value="fixed-decrease" style="cursor:pointer;">
-            <span style="font-size:0.9rem;">ลดเป็นจำนวนเงิน</span>
+            <span class="font-09">ลดเป็นจำนวนเงิน</span>
           </label>
           <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
             <input type="radio" name="adjustType" value="percentage-decrease" style="cursor:pointer;">
-            <span style="font-size:0.9rem;">ลดเป็นเปอร์เซ็นต์</span>
+            <span class="font-09">ลดเป็นเปอร์เซ็นต์</span>
           </label>
           <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;grid-column:1/-1;" onchange="updateAdjustmentDisplay()">
             <input type="radio" name="adjustType" value="set-fixed" style="cursor:pointer;">
-            <span style="font-size:0.9rem;">กำหนดเป็นค่าเช่าคงที่</span>
+            <span class="font-09">กำหนดเป็นค่าเช่าคงที่</span>
           </label>
         </div>
       </div>
@@ -2460,8 +2485,8 @@
 
       <!-- Action Buttons -->
       <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button onclick="closeBatchRentAdjustmentModal()" style="padding:10px 20px;border-radius:6px;border:1.5px solid #999;background:white;color:#333;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">ยกเลิก</button>
-        <button onclick="applyBatchRentAdjustment()" style="padding:10px 20px;border-radius:6px;border:none;background:#4caf50;color:white;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✓ ปรับค่าเช่า</button>
+        <button data-action="closeBatchRentAdjustmentModal" style="padding:10px 20px;border-radius:6px;border:1.5px solid #999;background:white;color:#333;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">ยกเลิก</button>
+        <button data-action="applyBatchRentAdjustment" style="padding:10px 20px;border-radius:6px;border:none;background:#4caf50;color:white;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✓ ปรับค่าเช่า</button>
       </div>
     </div>
   </div>
@@ -2476,11 +2501,11 @@
             <tr>
               <th style="padding:10px;text-align:left;border-bottom:2px solid var(--border);">ห้อง</th>
               <th style="padding:10px;text-align:left;border-bottom:2px solid var(--border);">ชื่อ-นามสกุล</th>
-              <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">เบอร์โทร</th>
-              <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">เข้า</th>
-              <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">สัญญา</th>
-              <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">มัดจำ</th>
-              <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border);">สถานะ</th>
+              <th class="table-cell-center">เบอร์โทร</th>
+              <th class="table-cell-center">เข้า</th>
+              <th class="table-cell-center">สัญญา</th>
+              <th class="table-cell-center">มัดจำ</th>
+              <th class="table-cell-center">สถานะ</th>
             </tr>
           </thead>
           <tbody id="tenantTableBody"></tbody>
@@ -2504,9 +2529,9 @@
           <small style="color:var(--text-muted);">ลูกบ้านส่งจากหน้า Profile → "แจ้งต่อสัญญา / ย้ายออก" — real-time</small>
         </div>
         <div style="display:flex;gap:.5rem;">
-          <button id="leaseFilterAllBtn" onclick="setLeaseRequestFilter('all',this)" class="lease-req-filter-btn" style="padding:6px 14px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ทั้งหมด</button>
-          <button id="leaseFilterPendingBtn" onclick="setLeaseRequestFilter('pending',this)" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">รอดำเนินการ</button>
-          <button id="leaseFilterDoneBtn" onclick="setLeaseRequestFilter('done',this)" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ดำเนินการแล้ว</button>
+          <button id="leaseFilterAllBtn" data-action="setLeaseRequestFilter" data-filter="all" class="lease-req-filter-btn" style="padding:6px 14px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ทั้งหมด</button>
+          <button id="leaseFilterPendingBtn" data-action="setLeaseRequestFilter" data-filter="pending" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">รอดำเนินการ</button>
+          <button id="leaseFilterDoneBtn" data-action="setLeaseRequestFilter" data-filter="done" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ดำเนินการแล้ว</button>
         </div>
       </div>
       <div id="leaseRequestsList" style="display:grid;gap:1rem;">
@@ -2535,7 +2560,7 @@
             </select>
           </div>
         </div>
-        <button onclick="saveLeaseAlertSettings()" class="btn-receipt" style="margin-top:1rem;padding:10px 20px;">💾 Save Settings</button>
+        <button data-action="saveLeaseAlertSettings" class="btn-receipt" style="margin-top:1rem;padding:10px 20px;">💾 Save Settings</button>
       </div>
       <div style="margin-top:2rem;">
         <div style="font-weight:700;margin-bottom:1rem;font-size:1.05rem;">📋 Upcoming Lease Expirations</div>
@@ -2550,10 +2575,10 @@
   <div class="section-title">📊 Meter Upload</div>
 
   <!-- Meter Tabs -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;">
-    <button id="tab-room-config-btn" class="meter-tab year-tab active" onclick="window.switchMeterTab('room-config', this)">⚙️ จัดการห้อง & อัตรา</button>
-    <button id="tab-import-meter-btn" class="meter-tab year-tab" onclick="window.switchMeterTab('import-meter', this)">📥 นำเข้าข้อมูลมิเตอร์</button>
-    <button id="tab-import-billing-btn" class="meter-tab year-tab" onclick="window.switchMeterTab('import-billing', this)">📥 นำเข้าข้อมูลบิล</button>
+  <div class="year-tabs" class="mb-5">
+    <button id="tab-room-config-btn" class="meter-tab year-tab active" data-action="switchMeterTab" data-tab="room-config">⚙️ จัดการห้อง & อัตรา</button>
+    <button id="tab-import-meter-btn" class="meter-tab year-tab" data-action="switchMeterTab" data-tab="import-meter">📥 นำเข้าข้อมูลมิเตอร์</button>
+    <button id="tab-import-billing-btn" class="meter-tab year-tab" data-action="switchMeterTab" data-tab="import-billing">📥 นำเข้าข้อมูลบิล</button>
   </div>
 
   <!-- Tab Content: Room Configuration -->
@@ -2561,7 +2586,7 @@
     <div class="section-title">⚙️ จัดการห้องพัก และ ตั้งค่าอัตรา</div>
 
     <!-- Building Selection -->
-    <div style="margin-bottom:1.5rem;">
+    <div class="mb-6">
       <label style="font-weight:600;display:block;margin-bottom:0.5rem;color:var(--text);">เลือกอาคาร</label>
       <select id="roomConfigBuilding" onchange="loadRoomConfigUI()" style="padding:0.7rem;margin-top:0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;width:100%;max-width:300px;">
         <option value="rooms" selected>ห้องแถว (Rooms Building)</option>
@@ -2584,12 +2609,12 @@
       <table id="roomConfigTable" style="width:100%;border-collapse:collapse;background:white;">
         <thead>
           <tr style="background:#f5f5f5;border-bottom:2px solid var(--border);">
-            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ชื่อห้อง</th>
-            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ราคา (บาท/เดือน)</th>
-            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">มัดจำ (บาท)</th>
-            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">น้ำ (บาท/หน่วย)</th>
-            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ไฟ (บาท/หน่วย)</th>
-            <th style="border:1px solid var(--border);padding:0.8rem;text-align:left;font-weight:600;color:var(--text);">ขยะ (บาท)</th>
+            <th class="table-th">ชื่อห้อง</th>
+            <th class="table-th">ราคา (บาท/เดือน)</th>
+            <th class="table-th">มัดจำ (บาท)</th>
+            <th class="table-th">น้ำ (บาท/หน่วย)</th>
+            <th class="table-th">ไฟ (บาท/หน่วย)</th>
+            <th class="table-th">ขยะ (บาท)</th>
             <th style="border:1px solid var(--border);padding:0.8rem;text-align:center;font-weight:600;color:var(--text);">การกระทำ</th>
           </tr>
         </thead>
@@ -2623,25 +2648,25 @@
 
       <!-- Manual Entry Mode -->
       <div id="manualEntryMode" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:1rem;margin-bottom:1rem;">
-        <input type="text" id="newRoomId" placeholder="ห้อง ID (เช่น 34)" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
-        <input type="text" id="newRoomName" placeholder="ชื่อห้อง" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
-        <input type="number" id="newRoomRent" placeholder="ราคาห้องพัก" value="1500" step="1" oninput="updateDepositDisplay()" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <input type="text" id="newRoomId" placeholder="ห้อง ID (เช่น 34)" class="input-md">
+        <input type="text" id="newRoomName" placeholder="ชื่อห้อง" class="input-md">
+        <input type="number" id="newRoomRent" placeholder="ราคาห้องพัก" value="1500" step="1" oninput="updateDepositDisplay()" class="input-md">
         <input type="number" id="newRoomDeposit" placeholder="มัดจำ (อัตโนมัติ)" value="3000" readonly style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;background:#f5f5f5;color:#666;">
-        <input type="number" id="newRoomWater" placeholder="อัตราน้ำ" value="20" step="0.01" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
-        <input type="number" id="newRoomElectric" placeholder="อัตราไฟ" value="8" step="0.01" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <input type="number" id="newRoomWater" placeholder="อัตราน้ำ" value="20" step="0.01" class="input-md">
+        <input type="number" id="newRoomElectric" placeholder="อัตราไฟ" value="8" step="0.01" class="input-md">
       </div>
 
       <!-- Copy Mode -->
       <div id="copyEntryMode" style="display:none;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:1rem;margin-bottom:1rem;">
-        <select id="templateRoomSelect" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <select id="templateRoomSelect" class="input-md">
           <option value="">-- เลือกห้อง --</option>
         </select>
-        <input type="text" id="newRoomIdCopy" placeholder="ห้อง ID ใหม่" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
-        <input type="text" id="newRoomNameCopy" placeholder="ชื่อห้องใหม่" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
-        <input type="number" id="newRoomRentCopy" placeholder="ราคาห้องพัก" value="1500" step="1" style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;">
+        <input type="text" id="newRoomIdCopy" placeholder="ห้อง ID ใหม่" class="input-md">
+        <input type="text" id="newRoomNameCopy" placeholder="ชื่อห้องใหม่" class="input-md">
+        <input type="number" id="newRoomRentCopy" placeholder="ราคาห้องพัก" value="1500" step="1" class="input-md">
       </div>
 
-      <button onclick="addNewRoom()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">➕ เพิ่มห้อง</button>
+      <button data-action="addNewRoom" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">➕ เพิ่มห้อง</button>
     </div>
   </div>
 
@@ -2653,7 +2678,7 @@
     <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;">
 
       <!-- File Upload -->
-      <div style="margin-bottom:1.5rem;">
+      <div class="mb-6">
         <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📤 อัพโหลดไฟล์ Excel:</label>
         <div class="import-drop-zone" id="importDropZone"
              style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
@@ -2662,13 +2687,13 @@
              ondrop="handleImportDrop(event);">
           <div style="font-size:2rem;margin-bottom:0.5rem;">📊</div>
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์มาวางที่นี่ หรือคลิก</div>
-          <div style="color:var(--text-muted);font-size:0.85rem;">ไฟล์ Excel (.xlsx, .xls)</div>
+          <div class="text-xs-muted">ไฟล์ Excel (.xlsx, .xls)</div>
         </div>
         <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event);">
       </div>
 
       <!-- Month Selector (Optional manual selection) -->
-      <div style="margin-bottom:1.5rem;">
+      <div class="mb-6">
         <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📅 เลือกเดือน (ถ้าไม่อัตโนมัติ):</label>
         <select id="importMonthSelect" style="width:100%;padding:0.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-secondary);color:var(--text);font-size:0.9rem;cursor:pointer;">
           <option value="">-- อัตโนมัติ (จากชื่อไฟล์) --</option>
@@ -2688,7 +2713,7 @@
       </div>
 
       <!-- Status Messages -->
-      <div id="importStatusMessage" style="margin-bottom:1.5rem;"></div>
+      <div id="importStatusMessage" class="mb-6"></div>
 
       <!-- Import Results -->
       <div id="importResultsSection" style="display:none;margin-bottom:1.5rem;">
@@ -2701,8 +2726,8 @@
         <div id="importMatchSummary" style="background:#e8f5e9;border:1px solid #4caf50;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;"></div>
 
         <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
-          <button id="approveImportBtn" onclick="approveImportData()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
-          <button onclick="cancelImportProcess()" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">❌ ยกเลิก</button>
+          <button id="approveImportBtn" data-action="approveImportData" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
+          <button data-action="cancelImportProcess" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">❌ ยกเลิก</button>
         </div>
       </div>
 
@@ -2714,15 +2739,15 @@
           <!-- Period Info -->
           <div style="background:white;border:1px solid #c8e6c9;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
             <div style="text-align:center;">
-              <div style="color:var(--text-muted);font-size:0.85rem;">📅 ปี</div>
+              <div class="text-xs-muted">📅 ปี</div>
               <div id="recordedYear" style="font-size:1.2rem;font-weight:600;color:#2e7d32;">-</div>
             </div>
             <div style="text-align:center;">
-              <div style="color:var(--text-muted);font-size:0.85rem;">📆 เดือน</div>
+              <div class="text-xs-muted">📆 เดือน</div>
               <div id="recordedMonth" style="font-size:1.2rem;font-weight:600;color:#2e7d32;">-</div>
             </div>
             <div style="text-align:center;">
-              <div style="color:var(--text-muted);font-size:0.85rem;">⏰ เวลา</div>
+              <div class="text-xs-muted">⏰ เวลา</div>
               <div id="recordedTime" style="font-size:1.2rem;font-weight:600;color:#2e7d32;">-</div>
             </div>
           </div>
@@ -2733,19 +2758,19 @@
             <div style="background:white;border:1px solid #c8e6c9;border-radius:var(--radius-sm);padding:1rem;">
               <div style="color:#2e7d32;font-weight:600;margin-bottom:0.8rem;">🏠 Rooms Building</div>
               <div id="recordedRoomsCount" style="font-size:1.5rem;font-weight:600;color:#2e7d32;">0</div>
-              <div style="color:var(--text-muted);font-size:0.85rem;">ห้องที่บันทึก</div>
+              <div class="text-xs-muted">ห้องที่บันทึก</div>
             </div>
             <!-- Nest -->
             <div style="background:white;border:1px solid #e1bee7;border-radius:var(--radius-sm);padding:1rem;">
               <div style="color:#6a1b9a;font-weight:600;margin-bottom:0.8rem;">🏢 Nest Building</div>
               <div id="recordedNestCount" style="font-size:1.5rem;font-weight:600;color:#6a1b9a;">0</div>
-              <div style="color:var(--text-muted);font-size:0.85rem;">ห้องที่บันทึก</div>
+              <div class="text-xs-muted">ห้องที่บันทึก</div>
             </div>
             <!-- Amazon -->
             <div style="background:white;border:1px solid #fff9c4;border-radius:var(--radius-sm);padding:1rem;">
               <div style="color:#f57f17;font-weight:600;margin-bottom:0.8rem;">📦 Amazon Meters</div>
               <div id="recordedAmazonCount" style="font-size:1.5rem;font-weight:600;color:#f57f17;">0</div>
-              <div style="color:var(--text-muted);font-size:0.85rem;">หน่วยที่บันทึก</div>
+              <div class="text-xs-muted">หน่วยที่บันทึก</div>
             </div>
           </div>
 
@@ -2783,24 +2808,24 @@
 
     <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;">
       <!-- File Upload -->
-      <div style="margin-bottom:1.5rem;">
+      <div class="mb-6">
         <label style="display:block;margin-bottom:0.8rem;font-weight:600;font-size:0.9rem;color:var(--text);">📤 อัพโหลดไฟล์บิล Excel:</label>
         <div class="import-drop-zone" id="billingDropZone"
              style="border:2px dashed var(--green);border-radius:var(--radius);padding:2rem;text-align:center;background:var(--accent-light);cursor:pointer;transition:all 0.3s ease;"
              ondragover="event.preventDefault();this.style.background='var(--border)';"
              ondragleave="this.style.background='var(--accent-light)';"
              ondrop="handleBillingImportDrop(event);"
-             onclick="document.getElementById('billingFileInput').click();">
+             data-action="clickInput" data-target="billingFileInput">
           <div style="font-size:2rem;margin-bottom:0.5rem;">💳</div>
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์บิล Excel มาวางที่นี่ หรือคลิก</div>
-          <div style="color:var(--text-muted);font-size:0.85rem;">ไฟล์ Excel (.xlsx, .xls) เช่น บิลปี68.xlsx</div>
+          <div class="text-xs-muted">ไฟล์ Excel (.xlsx, .xls) เช่น บิลปี68.xlsx</div>
         </div>
         <input type="file" id="billingFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleBillingImportFile(event);">
       </div>
 
 
       <!-- Status Messages -->
-      <div id="billingStatusMessage" style="margin-bottom:1.5rem;"></div>
+      <div id="billingStatusMessage" class="mb-6"></div>
 
       <!-- HTML FILE INPUT EXPLANATION:
            Line 2981: <input id="billingFileInput" onchange="window.handleBillingImportFile && window.handleBillingImportFile(event);">
@@ -2825,8 +2850,8 @@
         </div>
 
         <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
-          <button id="approveBillingBtn" onclick="approveBillingImportData()" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
-          <button onclick="cancelBillingImportProcess()" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">❌ ยกเลิก</button>
+          <button id="approveBillingBtn" data-action="approveBillingImportData" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
+          <button data-action="cancelBillingImportProcess" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">❌ ยกเลิก</button>
         </div>
       </div>
 
@@ -2846,7 +2871,7 @@
         <div class="section-title">📊 ข้อมูลที่บันทึก (HISTORICAL_DATA)</div>
         <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;">
           <!-- Year Selector -->
-          <div style="margin-bottom:1.5rem;">
+          <div class="mb-6">
             <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">📅 เลือกปี:</label>
             <select id="historicalDataYearSelect" style="width:100%;padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.95rem;background:white;cursor:pointer;">
               <option value="">-- เลือกปี --</option>
@@ -2888,7 +2913,7 @@
         <div><label>ห้องที่เกี่ยวข้อง (ถ้ามี)</label><input type="text" id="exp-room" placeholder="เช่น 15, Amazon..."></div>
         <div><label>จำนวนเงิน (บาท)</label><input type="number" id="exp-amount" placeholder="0" min="0"></div>
       </div>
-      <button onclick="addExpense()" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:11px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:4px;">💾 บันทึกรายจ่าย</button>
+      <button data-action="addExpense" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:11px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:4px;">💾 บันทึกรายจ่าย</button>
     </div>
     <!-- Summary -->
     <div>
@@ -2921,58 +2946,58 @@
   <div class="section-title">📚 Community Events</div>
 
   <!-- Tab Navigation -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;">
-    <button id="tab-announcements-btn" class="content-mgmt-tab year-tab active" onclick="switchContentTab('announcements', this)">📢 Announcement</button>
-    <button id="tab-events-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('events', this)">📅 Events</button>
-    <button id="tab-docs-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('docs', this)">📋 Documents</button>
-    <button id="tab-wellness-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('wellness', this)">🌿 Wellness</button>
-    <button id="tab-emergency-btn" class="content-mgmt-tab year-tab" onclick="switchContentTab('emergency', this)">🚨 Emergency</button>
+  <div class="year-tabs" class="mb-5">
+    <button id="tab-announcements-btn" class="content-mgmt-tab year-tab active" data-action="switchContentTab" data-tab="announcements">📢 Announcement</button>
+    <button id="tab-events-btn" class="content-mgmt-tab year-tab" data-action="switchContentTab" data-tab="events">📅 Events</button>
+    <button id="tab-docs-btn" class="content-mgmt-tab year-tab" data-action="switchContentTab" data-tab="docs">📋 Documents</button>
+    <button id="tab-wellness-btn" class="content-mgmt-tab year-tab" data-action="switchContentTab" data-tab="wellness">🌿 Wellness</button>
+    <button id="tab-emergency-btn" class="content-mgmt-tab year-tab" data-action="switchContentTab" data-tab="emergency">🚨 Emergency</button>
   </div>
 
   <!-- TAB 1: Announcements -->
   <div id="content-tab-announcements" class="content-mgmt-content active">
     <!-- Building Selection -->
-    <div class="year-tabs" style="margin-bottom:1.2rem;">
+    <div class="year-tabs" class="mb-5">
       <span class="year-tab-label">ตึก:</span>
-      <button class="year-tab active" onclick="setAnnouncementBuilding('all', this)">🌐 ทุกตึก</button>
-      <button class="year-tab" onclick="setAnnouncementBuilding('rooms', this)">🏠 ห้องแถว</button>
-      <button class="year-tab" onclick="setAnnouncementBuilding('nest', this)">🏢 Nest</button>
+      <button class="year-tab active" data-action="setAnnouncementBuilding" data-building="all">🌐 ทุกตึก</button>
+      <button class="year-tab" data-action="setAnnouncementBuilding" data-building="rooms">🏠 ห้องแถว</button>
+      <button class="year-tab" data-action="setAnnouncementBuilding" data-building="nest">🏢 Nest</button>
     </div>
 
     <!-- Create Form -->
     <div class="card" style="margin-bottom: 2rem;">
       <div class="card-title">➕ สร้างประกาศใหม่</div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+      <div class="grid-2col">
         <div>
-          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">หัวข้อ *</label>
+          <label class="field-label">หัวข้อ *</label>
           <input type="text" id="ann-title" placeholder="เช่น แจ้งปิดน้ำ" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
         </div>
 
         <div>
-          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">ไอคอน Emoji</label>
+          <label class="field-label">ไอคอน Emoji</label>
           <input type="text" id="ann-icon" placeholder="💧 🧹 🔧" maxlength="2" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun'; font-size: 1.2rem;">
         </div>
       </div>
 
-      <div style="margin-bottom: 1rem;">
-        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เนื้อหา *</label>
+      <div class="mb-4">
+        <label class="field-label">เนื้อหา *</label>
         <textarea id="ann-content" rows="4" placeholder="รายละเอียดประกาศ..." style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun'; resize: vertical;"></textarea>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+      <div class="grid-2col">
         <div>
-          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">วันที่ (optional)</label>
+          <label class="field-label">วันที่ (optional)</label>
           <input type="date" id="ann-date" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px;">
         </div>
 
         <div>
-          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เวลา (optional)</label>
+          <label class="field-label">เวลา (optional)</label>
           <input type="text" id="ann-time" placeholder="เช่น 10:00 - 14:00" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
         </div>
       </div>
 
-      <button onclick="saveAnnouncement()" style="width: 100%; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun'; font-size: 0.95rem;">📢 สร้างประกาศ</button>
+      <button data-action="saveAnnouncement" style="width: 100%; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun'; font-size: 0.95rem;">📢 สร้างประกาศ</button>
     </div>
 
     <!-- List of Announcements -->
@@ -2992,27 +3017,27 @@
           <option value="rooms">🏠 ห้องแถว</option>
           <option value="nest">🏢 Nest</option>
         </select>
-        <button onclick="toggleAddEventForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Event</button>
+        <button data-action="toggleAddEventForm" class="btn-invoice" style="padding: 10px 20px;">➕ Add Event</button>
       </div>
 
       <!-- Add Event Form (Hidden) -->
       <div id="addEventForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
         <div style="font-weight: 700; margin-bottom: 1rem;">Add / Edit Community Event</div>
-        <input type="text" id="eventTitle" placeholder="Event Title" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <input type="date" id="eventDate" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-          <input type="time" id="eventTime" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <input type="text" id="eventTitle" placeholder="Event Title" class="input-pad10">
+        <div class="grid-2col">
+          <input type="date" id="eventDate" class="pad-box">
+          <input type="time" id="eventTime" class="pad-box">
         </div>
         <select id="eventBuilding" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:1rem;">
           <option value="all">🌐 ทุกตึก (ทั้งห้องแถว + Nest เห็น)</option>
           <option value="rooms">🏠 ห้องแถว เท่านั้น</option>
           <option value="nest">🏢 Nest เท่านั้น</option>
         </select>
-        <input type="text" id="eventLocation" placeholder="Location" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+        <input type="text" id="eventLocation" placeholder="Location" class="input-pad10">
         <textarea id="eventDescription" placeholder="Description" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
         <div style="display: flex; gap: 1rem;">
-          <button onclick="saveCommunityEvent()" class="btn-receipt">💾 Save</button>
-          <button onclick="toggleAddEventForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+          <button data-action="saveCommunityEvent" class="btn-receipt">💾 Save</button>
+          <button data-action="toggleAddEventForm" class="btn-invoice" style="background: #999;">✕ Cancel</button>
         </div>
       </div>
 
@@ -3026,15 +3051,15 @@
     <div class="card" style="margin-bottom: 1.5rem;">
       <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
         <input type="text" id="docSearch" placeholder="Search documents..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-        <button onclick="toggleAddDocForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Document</button>
+        <button data-action="toggleAddDocForm" class="btn-invoice" style="padding: 10px 20px;">➕ Add Document</button>
       </div>
 
       <!-- Add Document Form (Hidden) -->
       <div id="addDocForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
         <div style="font-weight: 700; margin-bottom: 1rem;">Add New Document</div>
-        <input type="text" id="docTitle" placeholder="Document Title" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <select id="docCategory" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <input type="text" id="docTitle" placeholder="Document Title" class="input-pad10">
+        <div class="grid-2col">
+          <select id="docCategory" class="pad-box">
             <option value="">Select Category</option>
             <option value="Rules">Building Rules</option>
             <option value="Emergency">Emergency Procedures</option>
@@ -3042,13 +3067,13 @@
             <option value="Policies">Policies</option>
             <option value="Other">Other</option>
           </select>
-          <input type="text" id="docType" placeholder="File Type (pdf, doc, etc.)" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+          <input type="text" id="docType" placeholder="File Type (pdf, doc, etc.)" class="pad-box">
         </div>
-        <input type="text" id="docUrl" placeholder="Document URL / Link" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+        <input type="text" id="docUrl" placeholder="Document URL / Link" class="input-pad10">
         <textarea id="docDescription" placeholder="Description (optional)" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem; height: 80px;"></textarea>
         <div style="display: flex; gap: 1rem;">
-          <button onclick="saveCommunityDocument()" class="btn-receipt">💾 Save</button>
-          <button onclick="toggleAddDocForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+          <button data-action="saveCommunityDocument" class="btn-receipt">💾 Save</button>
+          <button data-action="toggleAddDocForm" class="btn-invoice" style="background: #999;">✕ Cancel</button>
         </div>
       </div>
 
@@ -3064,14 +3089,14 @@
       <div class="card-title">🌿 เขียนบทความ Wellness ใหม่</div>
       <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem;">บทความจะปรากฏใน tenant_app.html → หน้าหลัก → Wellness Tips — คลิกเข้าไปอ่านได้ + (optional) ให้ pts เมื่ออ่านจบ</div>
 
-      <div style="margin-bottom: 1rem;">
-        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">หัวข้อ *</label>
+      <div class="mb-4">
+        <label class="field-label">หัวข้อ *</label>
         <input type="text" id="wellness-title" placeholder="เช่น 3 เคล็ดลับจัดห้องนอน" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
       </div>
 
       <!-- Icon picker (no more typing fa-spa manually) -->
-      <div style="margin-bottom: 1rem;">
-        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เลือกไอคอน</label>
+      <div class="mb-4">
+        <label class="field-label">เลือกไอคอน</label>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
           <div id="wellness-icon-preview" style="width:48px;height:48px;background:var(--green-pale);color:var(--green-dark);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;border:2px solid var(--green);">
             <i class="fas fa-leaf"></i>
@@ -3084,29 +3109,29 @@
         <input type="hidden" id="wellness-icon" value="fa-leaf">
       </div>
 
-      <div style="margin-bottom: 1rem;">
-        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">คำโปรย (Excerpt) *</label>
+      <div class="mb-4">
+        <label class="field-label">คำโปรย (Excerpt) *</label>
         <input type="text" id="wellness-excerpt" placeholder="สรุปสั้นๆ 1-2 ประโยคให้ลูกบ้านอยากอ่านต่อ" maxlength="160" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
         <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px;">แนะนำไม่เกิน 160 ตัวอักษร</div>
       </div>
 
       <!-- Image upload (multiple, compressed inline base64) -->
-      <div style="margin-bottom: 1rem;">
-        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">📷 รูปประกอบ (เลือกหลายรูปได้)</label>
+      <div class="mb-4">
+        <label class="field-label">📷 รูปประกอบ (เลือกหลายรูปได้)</label>
         <input type="file" id="wellness-images-input" accept="image/*" multiple onchange="onWellnessImagesPicked(event)" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:'Sarabun';">
         <div id="wellness-images-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
         <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">รูปจะถูกย่อเป็น 800px width + แทรกเข้าเนื้อหาให้อัตโนมัติ — รองรับ JPG/PNG/WEBP</div>
       </div>
 
-      <div style="margin-bottom: 1rem;">
-        <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เนื้อหาเต็ม *</label>
+      <div class="mb-4">
+        <label class="field-label">เนื้อหาเต็ม *</label>
         <!-- Mini formatting toolbar (no HTML typing required) -->
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;background:#f5f7fa;padding:6px 8px;border-radius:6px 6px 0 0;border:1px solid var(--border);border-bottom:none;">
-          <button type="button" onclick="wellnessFormat('bold')" title="ตัวหนา (Ctrl+B)" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-weight:bold;font-family:'Sarabun';">B</button>
-          <button type="button" onclick="wellnessFormat('italic')" title="ตัวเอียง (Ctrl+I)" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-style:italic;font-family:'Sarabun';">I</button>
-          <button type="button" onclick="wellnessFormat('ul')" title="หัวข้อแบบ bullet" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:'Sarabun';">• รายการ</button>
-          <button type="button" onclick="wellnessFormat('ol')" title="หัวข้อแบบเลข" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:'Sarabun';">1. ลำดับ</button>
-          <button type="button" onclick="wellnessFormat('h3')" title="หัวข้อย่อย" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:'Sarabun';font-weight:600;">H</button>
+          <button type="button" data-action="wellnessFormat" data-fmt="bold" title="ตัวหนา (Ctrl+B)" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-weight:bold;font-family:'Sarabun';">B</button>
+          <button type="button" data-action="wellnessFormat" data-fmt="italic" title="ตัวเอียง (Ctrl+I)" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-style:italic;font-family:'Sarabun';">I</button>
+          <button type="button" data-action="wellnessFormat" data-fmt="ul" title="หัวข้อแบบ bullet" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:'Sarabun';">• รายการ</button>
+          <button type="button" data-action="wellnessFormat" data-fmt="ol" title="หัวข้อแบบเลข" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:'Sarabun';">1. ลำดับ</button>
+          <button type="button" data-action="wellnessFormat" data-fmt="h3" title="หัวข้อย่อย" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:'Sarabun';font-weight:600;">H</button>
           <span style="flex:1;"></span>
           <span style="font-size:.7rem;color:var(--text-muted);align-self:center;">พิมพ์ข้อความปกติ — ขึ้นบรรทัดเปล่าจะกลายเป็นย่อหน้าใหม่</span>
         </div>
@@ -3119,7 +3144,7 @@
 
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
         <div>
-          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">หมวดหมู่</label>
+          <label class="field-label">หมวดหมู่</label>
           <select id="wellness-category" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
             <option value="Wellness">Wellness</option>
             <option value="Lifestyle">Lifestyle</option>
@@ -3129,19 +3154,19 @@
           </select>
         </div>
         <div>
-          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">เวลาอ่าน (นาที)</label>
+          <label class="field-label">เวลาอ่าน (นาที)</label>
           <input type="number" id="wellness-readtime" min="1" max="30" value="3" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px;">
         </div>
         <div>
-          <label style="font-weight: 700; display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Reward (pts)</label>
+          <label class="field-label">Reward (pts)</label>
           <input type="number" id="wellness-reward" min="0" max="200" value="5" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px;">
           <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px;">0 = ไม่ให้แต้ม</div>
         </div>
       </div>
 
       <div style="display: flex; gap: 0.8rem;">
-        <button onclick="saveWellnessArticle()" style="flex:2; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun'; font-size: 0.95rem;">💾 บันทึกบทความ</button>
-        <button onclick="resetWellnessForm()" style="flex:1; background: var(--border); color: var(--text); border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun';">🗑️ ล้างฟอร์ม</button>
+        <button data-action="saveWellnessArticle" style="flex:2; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun'; font-size: 0.95rem;">💾 บันทึกบทความ</button>
+        <button data-action="resetWellnessForm" style="flex:1; background: var(--border); color: var(--text); border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun';">🗑️ ล้างฟอร์ม</button>
       </div>
       <input type="hidden" id="wellness-edit-id" value="">
     </div>
@@ -3150,7 +3175,7 @@
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div class="card-title" style="margin-bottom:0;">📚 รายการบทความ Wellness ทั้งหมด</div>
-        <button onclick="seedWellnessStarters()" style="padding:6px 12px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.78rem;">📥 นำเข้าบทความเริ่มต้น (7 บทความ)</button>
+        <button data-action="seedWellnessStarters" style="padding:6px 12px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.78rem;">📥 นำเข้าบทความเริ่มต้น (7 บทความ)</button>
       </div>
       <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:10px;">ลูกบ้านในแอปเห็นบทความเริ่มต้น 7 บทความ (hardcoded) — กดปุ่มเพื่อ migrate ไป Firestore แล้วจะแก้ไขได้จากที่นี่</div>
       <div id="wellnessList" style="min-height: 200px;"></div>
@@ -3163,16 +3188,16 @@
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <div>
           <div class="card-title" style="margin-bottom: .25rem;">🚨 เบอร์ติดต่อฉุกเฉิน</div>
-          <small style="color: var(--text-muted);">ลูกบ้านเห็นในหน้า Community ของ tenant_app — แก้ที่นี่ → sync ทันที (real-time)</small>
+          <small class="color-muted">ลูกบ้านเห็นในหน้า Community ของ tenant_app — แก้ที่นี่ → sync ทันที (real-time)</small>
         </div>
-        <button onclick="openEmergencyEdit(null)" style="background: var(--green-dark); color: white; border: none; padding: .6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: 'Sarabun';">+ เพิ่มเบอร์</button>
+        <button data-action="openEmergencyEdit" style="background: var(--green-dark); color: white; border: none; padding: .6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: 'Sarabun';">+ เพิ่มเบอร์</button>
       </div>
       <div style="overflow-x: auto;">
         <table class="data-table" style="width: 100%;">
           <thead>
             <tr>
-              <th style="width: 50px;">Order</th>
-              <th style="width: 50px;">Icon</th>
+              <th class="w-50">Order</th>
+              <th class="w-50">Icon</th>
               <th>Label</th>
               <th style="width: 140px;">Number</th>
               <th style="width: 140px;">Actions</th>
@@ -3193,14 +3218,14 @@
           <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="emergencyEditTitle">+ เพิ่มเบอร์ฉุกเฉิน</div>
           <input type="hidden" id="emergencyEditIndex">
           <div style="display: grid; gap: .85rem;">
-            <label>Icon (emoji)<input type="text" id="emergencyEditIcon" placeholder="🚓" maxlength="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
-            <label>Label (ชื่อหน่วย)<input type="text" id="emergencyEditLabel" placeholder="เช่น ตำรวจ, รพ.ใกล้บ้าน" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
-            <label>Number (เบอร์โทร)<input type="tel" id="emergencyEditNumber" placeholder="191" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
-            <label>Order (น้อย = ขึ้นก่อน)<input type="number" id="emergencyEditOrder" min="1" value="99" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
+            <label>Icon (emoji)<input type="text" id="emergencyEditIcon" placeholder="🚓" maxlength="4" class="input-sm"></label>
+            <label>Label (ชื่อหน่วย)<input type="text" id="emergencyEditLabel" placeholder="เช่น ตำรวจ, รพ.ใกล้บ้าน" class="input-sm"></label>
+            <label>Number (เบอร์โทร)<input type="tel" id="emergencyEditNumber" placeholder="191" class="input-sm"></label>
+            <label>Order (น้อย = ขึ้นก่อน)<input type="number" id="emergencyEditOrder" min="1" value="99" class="input-sm"></label>
           </div>
           <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.5rem;">
-            <button onclick="closeEmergencyEdit()" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">ยกเลิก</button>
-            <button onclick="saveEmergencyContact()" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;">บันทึก</button>
+            <button data-action="closeEmergencyEdit" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">ยกเลิก</button>
+            <button data-action="saveEmergencyContact" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;">บันทึก</button>
           </div>
         </div>
       </div>
@@ -3217,8 +3242,8 @@
 
   <!-- Main Tab Nav -->
   <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
-    <button id="bill-main-tab-btn-billing" class="year-tab active" onclick="switchBillingMainTab('billing',this)">🧾 ออกบิล</button>
-    <button id="bill-main-tab-btn-verify" class="year-tab" onclick="switchBillingMainTab('verify',this)">✅ ตรวจสลิป <span id="paymentBadge2" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
+    <button id="bill-main-tab-btn-billing" class="year-tab active" data-action="switchBillingMainTab" data-tab="billing">🧾 ออกบิล</button>
+    <button id="bill-main-tab-btn-verify" class="year-tab" data-action="switchBillingMainTab" data-tab="verify">✅ ตรวจสลิป <span id="paymentBadge2" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
   </div>
   <div id="bill-main-tab-billing">
 
@@ -3365,7 +3390,7 @@
         <div class="slip-verify-section" id="slipVerifySection">
           <div style="font-size:.83rem;font-weight:700;color:#e65100;margin-bottom:.7rem;">📲 ขั้นตอน 2 — ตรวจสลิปโอนเงิน</div>
           <div class="slip-drop-area" id="slipDropArea"
-               onclick="document.getElementById('slipFileInput').click()"
+               data-action="clickInput" data-target="slipFileInput"
                ondragover="event.preventDefault();this.classList.add('dragging')"
                ondragleave="this.classList.remove('dragging')"
                ondrop="handleSlipDrop(event)">
@@ -3377,15 +3402,15 @@
           </div>
           <div id="slipResult"></div>
           <div style="text-align:right;margin-top:.4rem;">
-            <button onclick="skipSlipVerify()" style="font-size:.75rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;padding:2px 0;">รับเงินสด / ข้ามการตรวจสลิป →</button>
+            <button data-action="skipSlipVerify" style="font-size:.75rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;padding:2px 0;">รับเงินสด / ข้ามการตรวจสลิป →</button>
           </div>
         </div>
 
         <!-- Action buttons -->
         <div class="bill-actions bill-actions-col">
           <div class="bill-actions-row">
-            <button class="btn-invoice" onclick="generateInvoice()">📄 ส่งใบวางบิล</button>
-            <button class="btn-receipt" onclick="generateReceipt()" id="btnReceipt" disabled style="opacity:.4;cursor:not-allowed;">✅ ออกใบเสร็จรับเงิน</button>
+            <button class="btn-invoice" data-action="generateInvoice">📄 ส่งใบวางบิล</button>
+            <button class="btn-receipt" data-action="generateReceipt" id="btnReceipt" disabled style="opacity:.4;cursor:not-allowed;">✅ ออกใบเสร็จรับเงิน</button>
           </div>
         </div>
         <div id="billHint" style="font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:8px;">📄 ส่งใบวางบิลก่อน → อัปโหลดสลิป → ออกใบเสร็จรับเงิน</div>
@@ -3426,10 +3451,10 @@
   <div id="bill-main-tab-verify" style="display:none;">
 
   <!-- Tabs -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;">
-    <button id="pv-tab-live-btn" class="year-tab active" onclick="switchPVTab('live',this)">🔔 Live Feed</button>
-    <button id="pv-tab-history-btn" class="year-tab" onclick="switchPVTab('history',this)">📜 ประวัติตามห้อง</button>
-    <button id="pv-tab-monthly-btn" class="year-tab" onclick="switchPVTab('monthly',this)">📋 สถานะชำระรายเดือน</button>
+  <div class="year-tabs" class="mb-5">
+    <button id="pv-tab-live-btn" class="year-tab active" data-action="switchPVTab" data-tab="live">🔔 Live Feed</button>
+    <button id="pv-tab-history-btn" class="year-tab" data-action="switchPVTab" data-tab="history">📜 ประวัติตามห้อง</button>
+    <button id="pv-tab-monthly-btn" class="year-tab" data-action="switchPVTab" data-tab="monthly">📋 สถานะชำระรายเดือน</button>
   </div>
 
   <!-- TAB 1: Live Feed -->
@@ -3437,26 +3462,26 @@
 
   <!-- Stats row -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
-    <div class="card" style="text-align:center;padding:1rem;">
+    <div class="card cell-center">
       <div style="font-size:2rem;font-weight:800;color:var(--green);" id="pv-today-count">—</div>
-      <div style="color:var(--text-muted);font-size:.82rem;">โอนวันนี้</div>
+      <div class="text-sm-muted">โอนวันนี้</div>
     </div>
-    <div class="card" style="text-align:center;padding:1rem;">
+    <div class="card cell-center">
       <div style="font-size:2rem;font-weight:800;color:var(--blue);" id="pv-month-count">—</div>
-      <div style="color:var(--text-muted);font-size:.82rem;">โอนเดือนนี้</div>
+      <div class="text-sm-muted">โอนเดือนนี้</div>
     </div>
-    <div class="card" style="text-align:center;padding:1rem;">
+    <div class="card cell-center">
       <div style="font-size:1.4rem;font-weight:800;color:var(--accent);" id="pv-month-total">฿—</div>
-      <div style="color:var(--text-muted);font-size:.82rem;">ยอดรวมเดือนนี้</div>
+      <div class="text-sm-muted">ยอดรวมเดือนนี้</div>
     </div>
   </div>
 
   <!-- Date filter -->
   <div class="year-tabs" style="margin-bottom:1rem;">
-    <button id="pvf-today" class="year-tab active" onclick="setPVFilter('today',this)">วันนี้</button>
-    <button id="pvf-week" class="year-tab" onclick="setPVFilter('week',this)">7 วันล่าสุด</button>
-    <button id="pvf-month" class="year-tab" onclick="setPVFilter('month',this)">เดือนนี้</button>
-    <button id="pvf-all" class="year-tab" onclick="setPVFilter('all',this)">ทั้งหมด</button>
+    <button id="pvf-today" class="year-tab active" data-action="setPVFilter" data-filter="today">วันนี้</button>
+    <button id="pvf-week" class="year-tab" data-action="setPVFilter" data-filter="week">7 วันล่าสุด</button>
+    <button id="pvf-month" class="year-tab" data-action="setPVFilter" data-filter="month">เดือนนี้</button>
+    <button id="pvf-all" class="year-tab" data-action="setPVFilter" data-filter="all">ทั้งหมด</button>
   </div>
 
   <!-- Real-time feed -->
@@ -3478,17 +3503,17 @@
 
     <!-- Stats row -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
-      <div class="card" style="text-align:center;padding:1rem;">
+      <div class="card cell-center">
         <div style="font-size:2rem;font-weight:800;color:var(--green);" id="pvh-total-count">—</div>
-        <div style="color:var(--text-muted);font-size:.82rem;">จำนวนครั้งที่จ่าย</div>
+        <div class="text-sm-muted">จำนวนครั้งที่จ่าย</div>
       </div>
-      <div class="card" style="text-align:center;padding:1rem;">
+      <div class="card cell-center">
         <div style="font-size:1.4rem;font-weight:800;color:var(--blue);" id="pvh-total-amount">฿—</div>
-        <div style="color:var(--text-muted);font-size:.82rem;">ยอดรวมทั้งหมด</div>
+        <div class="text-sm-muted">ยอดรวมทั้งหมด</div>
       </div>
-      <div class="card" style="text-align:center;padding:1rem;">
+      <div class="card cell-center">
         <div style="font-size:1.4rem;font-weight:800;color:var(--accent);" id="pvh-last-paid">—</div>
-        <div style="color:var(--text-muted);font-size:.82rem;">จ่ายล่าสุด</div>
+        <div class="text-sm-muted">จ่ายล่าสุด</div>
       </div>
     </div>
 
@@ -3520,8 +3545,8 @@
     <!-- Building selector -->
     <div class="year-tabs" style="margin-bottom:1rem;">
       <span class="year-tab-label">อาคาร:</span>
-      <button id="pvm-bld-rooms" class="year-tab active" onclick="setPVMBuilding('rooms',this)">🏠 ห้องแถว</button>
-      <button id="pvm-bld-nest" class="year-tab" onclick="setPVMBuilding('nest',this)">🏢 Nest</button>
+      <button id="pvm-bld-rooms" class="year-tab active" data-action="setPVMBuilding" data-building="rooms">🏠 ห้องแถว</button>
+      <button id="pvm-bld-nest" class="year-tab" data-action="setPVMBuilding" data-building="nest">🏢 Nest</button>
     </div>
 
     <!-- Tracking start date setting -->
@@ -3537,14 +3562,14 @@
           <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
         </select>
         <input type="number" id="tracking-start-year" min="2560" max="2590" style="width:80px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.82rem;">
-        <button onclick="saveTrackingStart()" style="padding:5px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;">💾 บันทึก</button>
+        <button data-action="saveTrackingStart" style="padding:5px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;">💾 บันทึก</button>
         <span id="tracking-start-info" style="color:var(--text-muted);font-size:.76rem;margin-left:auto;"></span>
       </div>
       <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">ก่อนเดือนนี้จะแสดงเป็น "📦 Archived" (ข้อมูลเก่า ไม่นับเป็นค้างชำระ) — ใช้สำหรับระบบเพิ่งเริ่ม track</div>
     </div>
 
     <!-- Monthly meter entry table -->
-    <div class="card" style="margin-bottom:1.2rem;">
+    <div class="card" class="mb-5">
       <div class="card-title" id="pvm-table-title">📋 ตารางมิเตอร์ &amp; สถานะชำระ — ห้องแถว</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.9rem;">
         <select id="mt-month" onchange="renderMeterTable()" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.88rem;">
@@ -3563,7 +3588,7 @@
     </div>
 
     <!-- Vacant room checker -->
-    <div class="card" style="margin-bottom:1.2rem;" id="vacantCard">
+    <div class="card" class="mb-5" id="vacantCard">
       <div class="card-title">🚪 ตรวจสอบห้องว่าง — เลือกเดือน/ปี ที่ต้องการดู</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
         <select id="vc-month" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;">
@@ -3576,7 +3601,7 @@
         </select>
         <input type="number" id="vc-year" value="2569" min="2560" max="2590"
           style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;">
-        <button onclick="checkVacant()" style="padding:6px 18px;background:var(--green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:600;">🔍 ตรวจสอบ</button>
+        <button data-action="checkVacant" style="padding:6px 18px;background:var(--green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:600;">🔍 ตรวจสอบ</button>
         <span style="font-size:.8rem;color:var(--text-muted);">ดูจากการใช้ไฟฟ้า (ถ้ามิเตอร์ไม่เพิ่ม = อาจว่าง)</span>
       </div>
       <div id="vc-result"></div>
@@ -3591,8 +3616,8 @@
 
   <!-- Tab Navigation -->
   <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
-    <button id="tab-owner-btn" class="people-mgmt-tab active" onclick="switchPeopleTab('owner', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">🏢 Owner</button>
-    <button id="tab-providers-btn" class="people-mgmt-tab" onclick="switchPeopleTab('providers', this)" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📞 Service Providers</button>
+    <button id="tab-owner-btn" class="people-mgmt-tab active" data-action="switchPeopleTab" data-tab="owner" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">🏢 Owner</button>
+    <button id="tab-providers-btn" class="people-mgmt-tab" data-action="switchPeopleTab" data-tab="providers" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📞 Service Providers</button>
   </div>
 
   <!-- TAB 1: Owner Info -->
@@ -3605,24 +3630,24 @@
     <div class="card" style="margin-bottom: 1.5rem;">
       <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
         <input type="text" id="providerSearch" placeholder="Search providers..." style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-        <button onclick="toggleAddProviderForm()" class="btn-invoice" style="padding: 10px 20px;">➕ Add Provider</button>
+        <button data-action="toggleAddProviderForm" class="btn-invoice" style="padding: 10px 20px;">➕ Add Provider</button>
       </div>
 
       <!-- Add Provider Form (Hidden) -->
       <div id="addProviderForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
         <div style="font-weight: 700; margin-bottom: 1rem;">Add New Service Provider</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <input type="text" id="providerType" placeholder="Type (internet, electricity, water, etc.)" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-          <input type="text" id="providerName" placeholder="Provider Name" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <div class="grid-2col">
+          <input type="text" id="providerType" placeholder="Type (internet, electricity, water, etc.)" class="pad-box">
+          <input type="text" id="providerName" placeholder="Provider Name" class="pad-box">
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <input type="tel" id="providerPhone" placeholder="Phone" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-          <input type="email" id="providerEmail" placeholder="Email" style="padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <div class="grid-2col">
+          <input type="tel" id="providerPhone" placeholder="Phone" class="pad-box">
+          <input type="email" id="providerEmail" placeholder="Email" class="pad-box">
         </div>
-        <input type="text" id="providerWebsite" placeholder="Website" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+        <input type="text" id="providerWebsite" placeholder="Website" class="input-pad10">
         <div style="display: flex; gap: 1rem;">
-          <button onclick="saveServiceProvider()" class="btn-receipt">💾 Save</button>
-          <button onclick="toggleAddProviderForm()" class="btn-invoice" style="background: #999;">✕ Cancel</button>
+          <button data-action="saveServiceProvider" class="btn-receipt">💾 Save</button>
+          <button data-action="toggleAddProviderForm" class="btn-invoice" style="background: #999;">✕ Cancel</button>
         </div>
       </div>
 
@@ -3638,28 +3663,28 @@
   <div class="section-title">✅ Requests & Approvals</div>
 
   <!-- Tab Navigation -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;">
-    <button id="tab-maintenance-btn" class="requests-mgmt-tab year-tab active" onclick="switchRequestsTab('maintenance', this)">🔧 Maintenance</button>
-    <button id="tab-housekeeping-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('housekeeping', this)">🧹 Housekeeping</button>
-    <button id="tab-complaints-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('complaints', this)">⚠️ Complaints</button>
-    <button id="tab-pets-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('pets', this)">🐾 Pet Approvals</button>
-    <button id="tab-liff-btn" class="requests-mgmt-tab year-tab" onclick="switchRequestsTab('liff', this)">🔗 LINE Link Requests</button>
+  <div class="year-tabs" class="mb-5">
+    <button id="tab-maintenance-btn" class="requests-mgmt-tab year-tab active" data-action="switchRequestsTab" data-tab="maintenance">🔧 Maintenance</button>
+    <button id="tab-housekeeping-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="housekeeping">🧹 Housekeeping</button>
+    <button id="tab-complaints-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="complaints">⚠️ Complaints</button>
+    <button id="tab-pets-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="pets">🐾 Pet Approvals</button>
+    <button id="tab-liff-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="liff">🔗 LINE Link Requests</button>
   </div>
 
   <!-- TAB: LINE Link Requests -->
   <div id="requests-tab-liff" class="requests-mgmt-content" style="display:none;">
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
-      <div class="card" style="text-align:center;padding:1rem;">
+      <div class="card cell-center">
         <div style="font-size:1.8rem;font-weight:800;color:#f57c00;" id="liff-pending-count">—</div>
-        <div style="color:var(--text-muted);font-size:.82rem;">⏳ รออนุมัติ</div>
+        <div class="text-sm-muted">⏳ รออนุมัติ</div>
       </div>
-      <div class="card" style="text-align:center;padding:1rem;">
+      <div class="card cell-center">
         <div style="font-size:1.8rem;font-weight:800;color:var(--green);" id="liff-approved-count">—</div>
-        <div style="color:var(--text-muted);font-size:.82rem;">✅ อนุมัติแล้ว</div>
+        <div class="text-sm-muted">✅ อนุมัติแล้ว</div>
       </div>
-      <div class="card" style="text-align:center;padding:1rem;">
+      <div class="card cell-center">
         <div style="font-size:1.8rem;font-weight:800;color:var(--red);" id="liff-rejected-count">—</div>
-        <div style="color:var(--text-muted);font-size:.82rem;">❌ ปฏิเสธ</div>
+        <div class="text-sm-muted">❌ ปฏิเสธ</div>
       </div>
     </div>
     <div class="card">
@@ -3686,7 +3711,7 @@
         <option value="inprogress">🔨 กำลังดำเนินการ</option>
         <option value="done">✅ เสร็จแล้ว</option>
       </select>
-      <button onclick="showAddMaintenanceModal()" style="padding:10px 18px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">➕ แจ้งซ่อมใหม่</button>
+      <button data-action="showAddMaintenanceModal" style="padding:10px 18px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">➕ แจ้งซ่อมใหม่</button>
     </div>
     <div class="card">
       <div class="card-title">📋 รายการงานซ่อมทั้งหมด</div>
@@ -3709,7 +3734,7 @@
         <option value="inprogress">🔨 กำลังดำเนินการ</option>
         <option value="done">✅ เสร็จแล้ว</option>
       </select>
-      <button onclick="showAddHousekeepingModal()" style="padding:10px 18px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">➕ ขอบริการใหม่</button>
+      <button data-action="showAddHousekeepingModal" style="padding:10px 18px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">➕ ขอบริการใหม่</button>
     </div>
     <div class="card">
       <div class="card-title">📋 รายการบริการทำความสะอาดทั้งหมด</div>
@@ -3719,7 +3744,7 @@
 
   <!-- TAB 3: Complaints -->
   <div id="requests-tab-complaints" class="requests-mgmt-content" style="display:none;">
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card" class="mb-6">
       <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
         <input type="text" id="complaintSearch" placeholder="Search complaints..." style="flex:1;min-width:200px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);">
         <select id="complaintStatusFilter" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);min-width:150px;">
@@ -3753,7 +3778,7 @@
 
   <!-- TAB 4: Pet Approvals -->
   <div id="requests-tab-pets" class="requests-mgmt-content" style="display:none;">
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card" class="mb-6">
       <div style="display:flex;gap:1rem;margin-bottom:1rem;">
         <select id="petFilterStatus" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;" onchange="filterPetsByStatus(this.value)">
           <option value="">All Status</option>
@@ -3776,9 +3801,9 @@
   <div class="card" style="margin-bottom: 1.5rem;">
     <!-- Tabs -->
     <div style="border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
-      <button onclick="switchGamificationTab('leaderboard', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🏅 Leaderboard</button>
-      <button onclick="switchGamificationTab('badges', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🎖️ Badges</button>
-      <button onclick="switchGamificationTab('rewards', this)" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🎁 Rewards</button>
+      <button data-action="switchGamificationTab" data-tab="leaderboard" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🏅 Leaderboard</button>
+      <button data-action="switchGamificationTab" data-tab="badges" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🎖️ Badges</button>
+      <button data-action="switchGamificationTab" data-tab="rewards" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;">🎁 Rewards</button>
     </div>
 
     <!-- Leaderboard Tab -->
@@ -3787,7 +3812,7 @@
         <table class="data-table" style="width: 100%; margin-bottom: 1rem;">
           <thead>
             <tr>
-              <th style="width: 50px;">Rank</th>
+              <th class="w-50">Rank</th>
               <th>Tenant Name</th>
               <th style="width: 100px;">Points</th>
               <th style="width: 100px;">Badges</th>
@@ -3807,17 +3832,17 @@
         <div style="text-align: center; padding: 1rem; background: var(--green-pale); border-radius: var(--radius-sm);">
           <div style="font-size: 2rem; margin-bottom: 0.5rem;">🌟</div>
           <div style="font-weight: 600;">First Month</div>
-          <small style="color: var(--text-muted);">Complete first month</small>
+          <small class="color-muted">Complete first month</small>
         </div>
         <div style="text-align: center; padding: 1rem; background: var(--green-pale); border-radius: var(--radius-sm);">
           <div style="font-size: 2rem; margin-bottom: 0.5rem;">💎</div>
           <div style="font-weight: 600;">On Time</div>
-          <small style="color: var(--text-muted);">Pay rent on time</small>
+          <small class="color-muted">Pay rent on time</small>
         </div>
         <div style="text-align: center; padding: 1rem; background: #f5f5f5; border-radius: var(--radius-sm); opacity: 0.6;">
           <div style="font-size: 2rem; margin-bottom: 0.5rem;">👑</div>
           <div style="font-weight: 600;">Master</div>
-          <small style="color: var(--text-muted);">1000+ points</small>
+          <small class="color-muted">1000+ points</small>
         </div>
       </div>
     </div>
@@ -3828,24 +3853,24 @@
       <div style="background: var(--green-pale); padding: 1rem 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
         <div style="font-weight: 700; margin-bottom: .5rem; font-size: .95rem;">Point Earning Rates (defined in Cloud Functions)</div>
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; font-size: .85rem;">
-          <div><small style="color: var(--text-muted);">On-Time Payment</small><div style="font-weight: 700; color: var(--green-dark);">+150 pts</div></div>
-          <div><small style="color: var(--text-muted);">≤3 days late</small><div style="font-weight: 700; color: var(--green-dark);">+100 pts</div></div>
-          <div><small style="color: var(--text-muted);">≤7 days late</small><div style="font-weight: 700; color: var(--green-dark);">+40 pts</div></div>
-          <div><small style="color: var(--text-muted);">No Complaints</small><div style="font-weight: 700; color: var(--green-dark);">+40 pts</div></div>
+          <div><small class="color-muted">On-Time Payment</small><div style="font-weight: 700; color: var(--green-dark);">+150 pts</div></div>
+          <div><small class="color-muted">≤3 days late</small><div style="font-weight: 700; color: var(--green-dark);">+100 pts</div></div>
+          <div><small class="color-muted">≤7 days late</small><div style="font-weight: 700; color: var(--green-dark);">+40 pts</div></div>
+          <div><small class="color-muted">No Complaints</small><div style="font-weight: 700; color: var(--green-dark);">+40 pts</div></div>
         </div>
       </div>
 
       <!-- Redemption Catalog CRUD (Firestore `rewards/` collection) -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <div style="font-weight: 700; font-size: 1.05rem;">🎁 Redemption Catalog</div>
-        <button onclick="openRewardEdit(null)" style="background: var(--green-dark); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: 'Sarabun', sans-serif;">+ Add Reward</button>
+        <button data-action="openRewardEdit" style="background: var(--green-dark); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: 'Sarabun', sans-serif;">+ Add Reward</button>
       </div>
       <div style="overflow-x: auto;">
         <table class="data-table" style="width: 100%;">
           <thead>
             <tr>
-              <th style="width: 50px;">Order</th>
-              <th style="width: 50px;">Icon</th>
+              <th class="w-50">Order</th>
+              <th class="w-50">Icon</th>
               <th>Name</th>
               <th style="width: 100px;">Cost (Pts)</th>
               <th style="width: 80px;">Active</th>
@@ -3868,16 +3893,16 @@
           <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="rewardEditTitle">Add Reward</div>
           <input type="hidden" id="rewardEditId">
           <div style="display: grid; gap: .85rem;">
-            <label>Name<input type="text" id="rewardEditName" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
-            <label>Cost (Points)<input type="number" id="rewardEditCost" min="1" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
-            <label>Icon (emoji)<input type="text" id="rewardEditIcon" placeholder="🎁" maxlength="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
-            <label>Order (lower shows first)<input type="number" id="rewardEditOrder" min="1" value="99" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
-            <label>Note (optional, e.g. "limited stock")<input type="text" id="rewardEditNote" maxlength="80" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;"></label>
+            <label>Name<input type="text" id="rewardEditName" class="input-sm"></label>
+            <label>Cost (Points)<input type="number" id="rewardEditCost" min="1" class="input-sm"></label>
+            <label>Icon (emoji)<input type="text" id="rewardEditIcon" placeholder="🎁" maxlength="4" class="input-sm"></label>
+            <label>Order (lower shows first)<input type="number" id="rewardEditOrder" min="1" value="99" class="input-sm"></label>
+            <label>Note (optional, e.g. "limited stock")<input type="text" id="rewardEditNote" maxlength="80" class="input-sm"></label>
             <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rewardEditActive" checked> Active (visible to tenants)</label>
           </div>
           <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.5rem;">
-            <button onclick="closeRewardEdit()" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">Cancel</button>
-            <button onclick="saveReward()" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;">Save</button>
+            <button data-action="closeRewardEdit" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">Cancel</button>
+            <button data-action="saveReward" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;">Save</button>
           </div>
         </div>
       </div>
@@ -3891,7 +3916,7 @@
 <div id="firebaseMonitorPanel" style="position:fixed;bottom:20px;right:20px;width:320px;background:white;border:2px solid #2d8653;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:9999;font-family:'Sarabun',sans-serif;display:none;">
   <div style="background:#2d8653;color:white;padding:12px;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center;">
     <span style="font-weight:700;font-size:14px;">🔥 Firebase Monitor</span>
-    <button onclick="toggleFirebasePanel()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;padding:0;">×</button>
+    <button data-action="toggleFirebasePanel" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;padding:0;">×</button>
   </div>
 
   <div style="padding:14px;">
@@ -3929,6 +3954,7 @@
 <!-- Toggle Button for Firebase Panel - REMOVED FOR PRODUCTION (was blocking content on scroll) -->
 
 <script src="./shared/dashboard-main.js"></script>
+<script src="./shared/dashboard-room-config.js"></script>
 <script src="./shared/dashboard-home-live.js"></script>
 <script src="./shared/dashboard-meter-import.js"></script>
 <script src="./shared/dashboard-bill.js"></script>
@@ -3945,7 +3971,7 @@
   <div class="pay-modal">
     <div class="pay-modal-header">
       <div class="pay-modal-title" id="payModalTitle">รายละเอียดการชำระ</div>
-      <button class="pay-modal-close" onclick="closePayModal()">✕</button>
+      <button class="pay-modal-close" data-action="closePayModal">✕</button>
     </div>
     <div class="pay-modal-body" id="payModalBody"></div>
     <div class="pay-modal-footer" id="payModalFooter"></div>
@@ -3961,7 +3987,7 @@
         <h2 style="margin:0;font-size:1.25rem;font-weight:700;">🔐 เปลี่ยนรหัสผ่าน</h2>
         <small style="opacity:.85;font-size:.85rem;">อัปเดตรหัสผ่านของคุณ</small>
       </div>
-      <button onclick="closeChangePasswordModal()" style="background:rgba(255,255,255,.2);border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:all .2s;">✕</button>
+      <button data-action="closeChangePasswordModal" style="background:rgba(255,255,255,.2);border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:all .2s;">✕</button>
     </div>
 
     <!-- Modal Content -->
@@ -3980,7 +4006,7 @@
               onkeypress="if(event.key==='Enter')changePassword()"
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <button type="button" onclick="togglePasswordVisibility('oldPassword')" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
+            <button type="button" data-action="togglePasswordVisibility" data-field="oldPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
               <span id="icon-oldPassword">👁️</span>
             </button>
           </div>
@@ -3995,7 +4021,7 @@
               onkeypress="if(event.key==='Enter')changePassword()"
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <button type="button" onclick="togglePasswordVisibility('newPassword')" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
+            <button type="button" data-action="togglePasswordVisibility" data-field="newPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
               <span id="icon-newPassword">👁️</span>
             </button>
           </div>
@@ -4010,7 +4036,7 @@
               onkeypress="if(event.key==='Enter')changePassword()"
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-            <button type="button" onclick="togglePasswordVisibility('confirmPassword')" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
+            <button type="button" data-action="togglePasswordVisibility" data-field="confirmPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
               <span id="icon-confirmPassword">👁️</span>
             </button>
           </div>
@@ -4021,7 +4047,7 @@
           <button type="submit" style="flex:1;padding:.9rem;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;font-size:.9rem;">
             ✅ เปลี่ยนรหัสผ่าน
           </button>
-          <button type="button" onclick="closeChangePasswordModal()" style="flex:1;padding:.9rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;font-size:.9rem;">
+          <button type="button" data-action="closeChangePasswordModal" style="flex:1;padding:.9rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;font-size:.9rem;">
             ✕ ยกเลิก
           </button>
         </div>
@@ -4034,13 +4060,13 @@
 
 <!-- ===== NOTIFICATION BELL ===== -->
 <div id="notifBellWrapper">
-  <button id="notifBellBtn" onclick="toggleNotifPanel()">
+  <button id="notifBellBtn" data-action="toggleNotifPanel">
     🔔<span id="notifBadge">0</span>
   </button>
   <div id="notifDropdown">
     <div class="notif-header">
       <h3>🔔 การแจ้งเตือน</h3>
-      <button onclick="toggleNotifPanel()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);">✕</button>
+      <button data-action="toggleNotifPanel" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted);">✕</button>
     </div>
     <div id="notifContent"></div>
   </div>
