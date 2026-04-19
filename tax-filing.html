@@ -1601,8 +1601,10 @@
     const yearBE = parseInt(document.getElementById('monthly-year').value) || (new Date().getFullYear() + 543);
 
     try {
-      // Capture each designed [data-pdf-page] as its own A4 page.
-      // This respects the authored page breaks — avoids slicing tables mid-row.
+      // Capture each designed [data-pdf-page] as its own PDF page(s).
+      // Layout: 12mm margin on all sides (professional letterhead feel).
+      // If a single authored page is taller than one A4 (after width-fit),
+      // slice it into multiple PDF pages — never shrink content to fit.
       const pages = a4.querySelectorAll('[data-pdf-page]');
       if (!pages.length) {
         window.showError?.('ไม่พบส่วนของหน้ากระดาษในรายงาน');
@@ -1610,21 +1612,42 @@
       }
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pageWidth = 210, pageHeight = 297;
+      const pageW = 210, pageH = 297;
+      const margin = 12; // mm
+      const contentW = pageW - 2 * margin; // 186mm
+      const contentH = pageH - 2 * margin; // 273mm
 
+      let isFirstPdfPage = true;
       for (let i = 0; i < pages.length; i++) {
         const canvas = await html2canvas(pages[i], { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-        const imgData = canvas.toDataURL('image/jpeg', 0.92);
-        // Fit width to 210mm; if resulting height > 297mm, scale down to fit.
-        let imgWidth = pageWidth;
-        let imgHeight = (canvas.height * imgWidth) / canvas.width;
-        if (imgHeight > pageHeight) {
-          imgHeight = pageHeight;
-          imgWidth = (canvas.width * imgHeight) / canvas.height;
+        const scaledH = (canvas.height * contentW) / canvas.width; // mm if fitted to contentW
+
+        if (scaledH <= contentH) {
+          // Fits on one PDF page with margins
+          if (!isFirstPdfPage) pdf.addPage();
+          isFirstPdfPage = false;
+          const imgData = canvas.toDataURL('image/jpeg', 0.92);
+          pdf.addImage(imgData, 'JPEG', margin, margin, contentW, scaledH);
+        } else {
+          // Too tall — slice into sequential PDF pages at contentH boundaries.
+          // pxPerMm derived from width-fit: canvas.width px = contentW mm.
+          const pxPerMm = canvas.width / contentW;
+          const sliceHeightPx = Math.floor(contentH * pxPerMm);
+          let offsetPx = 0;
+          while (offsetPx < canvas.height) {
+            const thisSlicePx = Math.min(sliceHeightPx, canvas.height - offsetPx);
+            const slice = document.createElement('canvas');
+            slice.width = canvas.width;
+            slice.height = thisSlicePx;
+            slice.getContext('2d').drawImage(canvas, 0, -offsetPx);
+            const imgData = slice.toDataURL('image/jpeg', 0.92);
+            const sliceHeightMm = thisSlicePx / pxPerMm;
+            if (!isFirstPdfPage) pdf.addPage();
+            isFirstPdfPage = false;
+            pdf.addImage(imgData, 'JPEG', margin, margin, contentW, sliceHeightMm);
+            offsetPx += thisSlicePx;
+          }
         }
-        const xOffset = (pageWidth - imgWidth) / 2;
-        if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', xOffset, 0, imgWidth, imgHeight);
       }
       pdf.save(`tax_report_${yearBE}_${String(month).padStart(2,'0')}.pdf`);
       window.showSuccess?.('Download PDF สำเร็จ');
