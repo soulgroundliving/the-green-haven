@@ -6141,6 +6141,7 @@
                         if (pts !== lastPts) { sessionStorage.setItem('_badgeCheckPts', String(pts)); _checkBadgesViaFF(); }
                     }
                     const badges = (data.gamification && Array.isArray(data.gamification.badges)) ? data.gamification.badges : [];
+                    _lastKnownBadges = badges;
                     _renderBadgeGrid(badges);
                     _renderProfileBadge(badges);
                 }, err => console.warn('eco points subscribe failed:', err.message));
@@ -6181,7 +6182,11 @@
                 const pct = Math.min(100, Math.round(((pts - level.min) / (nextLevel.min - level.min)) * 100));
                 bar.style.width = pct + '%';
             }
+            // Render locked badge grid immediately; _subscribeEcoPoints will update with earned badges
+            if (typeof _renderBadgeGrid === 'function') _renderBadgeGrid(_lastKnownBadges || []);
         }
+
+        let _lastKnownBadges = null;
 
         const _BADGE_CATALOG = [
             { id:'first_month',     emoji:'🥇', label:'The First Generation', minPts:0    },
