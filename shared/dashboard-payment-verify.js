@@ -1,0 +1,502 @@
+// ===== PAYMENT VERIFICATION =====
+function loadTenantPayments(){
+  return JSON.parse(localStorage.getItem('tenant_payments')||'[]');
+}
+
+function saveTenantPayments(data){
+  localStorage.setItem('tenant_payments',JSON.stringify(data));
+}
+
+// ===== PAYMENT VERIFICATION — Firestore real-time feed =====
+let _pvUnsubscribe = null;
+window._pvFilter = 'today';
+
+window._pvCachedSlips = [];
+
+// Flatten payment_status (manual "paid" entries from bill flow) into slip-like objects
+function _pvLoadManualPayments(){
+  const ps = loadPS();
+  const out = [];
+  Object.keys(ps).forEach(yearMonth => {
+    const [year, month] = yearMonth.split('_').map(Number);
+    const byRoom = ps[yearMonth] || {};
+    Object.keys(byRoom).forEach(room => {
+      const p = byRoom[room];
+      if(!p || p.status !== 'paid') return;
+      const bld = detectBuildingFromRoomId(room);
+      const tsSource = p.slip?.transferDate || p.date || `${year}-${String(month).padStart(2,'0')}-05`;
+      out.push({
+        id: `ps_${yearMonth}_${room}`,
+        building: bld,
+        room: String(room),
+        amount: p.amount || p.slip?.amount || 0,
+        expectedAmount: p.amount || 0,
+        sender: p.slip?.sender || '(บันทึกโดย admin)',
+        receiver: p.slip?.receiver || '',
+        bankCode: p.slip?.bankCode || '',
+        transactionId: p.receiptNo || p.slip?.ref || '',
+        timestamp: new Date(tsSource),
+        verifiedAt: new Date(p.date || tsSource),
+        source: 'manual'
+      });
+    });
+  });
+  return out;
+}
+
+function _pvMergeSlips(firestoreSlips){
+  const manual = _pvLoadManualPayments();
+  const byKey = new Map();
+  // Firestore wins (has the real slip data). Dedupe by transactionId + room + amount + approximate time.
+  firestoreSlips.forEach(s => {
+    const k = `${s.building}|${s.room}|${s.transactionId || s.id}`;
+    byKey.set(k, s);
+  });
+  manual.forEach(s => {
+    const k = `${s.building}|${s.room}|${s.transactionId || s.id}`;
+    if(!byKey.has(k)) byKey.set(k, s);
+  });
+  return Array.from(byKey.values());
+}
+
+function initPaymentVerify() {
+  if (_pvUnsubscribe) { _pvUnsubscribe(); _pvUnsubscribe = null; }
+
+  const feed = document.getElementById('pvFeed');
+  if (!feed) return;
+  feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">🔄 กำลังโหลด...</div>';
+
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ Firebase ยังไม่พร้อม</div>';
+    return;
+  }
+
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+  const q = fs.query(fs.collection(db, 'verifiedSlips'), fs.orderBy('timestamp', 'desc'), fs.limit(200));
+  _pvUnsubscribe = fs.onSnapshot(q, snapshot => {
+    const firestoreSlips = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    const slips = _pvMergeSlips(firestoreSlips);
+    window._pvCachedSlips = slips;
+    updatePVStats(slips);
+    renderPVFeed(slips);
+  }, err => {
+    console.error('pv onSnapshot:', err);
+    // Fallback: at least show manual payments from localStorage
+    const manual = _pvLoadManualPayments();
+    window._pvCachedSlips = manual;
+    updatePVStats(manual);
+    renderPVFeed(manual);
+    if(!manual.length) feed.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
+  });
+}
+
+function setPVFilter(filter, btn) {
+  window._pvFilter = filter;
+  // Only clear active on date-filter row (keep tab active state)
+  document.querySelectorAll('#pv-tab-live .year-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const slips = window._pvCachedSlips || [];
+  updatePVStats(slips);
+  renderPVFeed(slips);
+}
+
+function _pvEscape(text) {
+  const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+  return String(text == null ? '' : text).replace(/[&<>"']/g, m => map[m]);
+}
+
+function _pvInRange(slip) {
+  const ts = slip.timestamp?.toDate ? slip.timestamp.toDate() : new Date(slip.timestamp || slip.verifiedAt);
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(todayStart - 6 * 86400000);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const f = window._pvFilter || 'today';
+  if (f === 'today')  return ts >= todayStart;
+  if (f === 'week')   return ts >= weekStart;
+  if (f === 'month')  return ts >= monthStart;
+  return true; // 'all'
+}
+
+function updatePVStats(slips) {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const toDate = s => s.timestamp?.toDate ? s.timestamp.toDate() : new Date(s.timestamp || s.verifiedAt);
+  const todaySlips = slips.filter(s => toDate(s) >= todayStart);
+  const monthSlips = slips.filter(s => toDate(s) >= monthStart);
+  const monthTotal = monthSlips.reduce((sum, s) => sum + (s.amount || 0), 0);
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('pv-today-count', todaySlips.length);
+  set('pv-month-count', monthSlips.length);
+  set('pv-month-total', '฿' + monthTotal.toLocaleString());
+  // Update notification badge
+  const badge = document.getElementById('paymentBadge');
+  if (badge) { badge.style.display = 'none'; }
+}
+
+function renderPVFeed(slips) {
+  const feed = document.getElementById('pvFeed');
+  if (!feed) return;
+  const filtered = slips.filter(_pvInRange);
+  if (filtered.length === 0) {
+    feed.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--text-muted);">📭 ยังไม่มีการโอนในช่วงนี้</div>';
+    return;
+  }
+  const bankName = code => ({'004':'กสิกรไทย','014':'ไทยพาณิชย์','025':'กรุงไทย','002':'กรุงเทพ','006':'กรุงศรี','011':'TMB','065':'ทิสโก้','069':'เกียรตินาคิน','022':'CIMB','067':'ทีทีบี'})[code] || (code || '—');
+  feed.innerHTML = filtered.map(s => {
+    const ts = s.timestamp?.toDate ? s.timestamp.toDate() : new Date(s.timestamp || s.verifiedAt);
+    const timeStr = ts.toLocaleString('th-TH', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+    const amountOk = !s.expectedAmount || Math.abs(s.amount - s.expectedAmount) < 1;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+      <div style="background:${amountOk ? 'var(--green-pale)' : '#fff3e0'};color:${amountOk ? 'var(--green-dark)' : '#e65100'};border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">${amountOk ? '✅' : '⚠️'}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:.9rem;">ห้อง <span style="color:var(--green-dark);">${_pvEscape(s.room || '—')}</span> <span style="color:var(--text-muted);font-size:.78rem;">${_pvEscape(s.building || '')}</span></div>
+        <div style="font-size:.78rem;color:var(--text-muted);">โดย ${_pvEscape(s.sender || '—')} · ${_pvEscape(bankName(s.bankCode))}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-weight:800;color:var(--green-dark);font-size:.95rem;">฿${(s.amount||0).toLocaleString()}</div>
+        <div style="font-size:.72rem;color:var(--text-muted);">${timeStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== Payment Verify — Manual verify override =====
+window.openManualVerifyModal = function(){
+  if(document.getElementById('mv-modal')) return;
+  const modal = document.createElement('div');
+  modal.id = 'mv-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+  const today = new Date().toISOString().split('T')[0];
+  modal.innerHTML = `<div style="background:#fff;border-radius:12px;padding:1.8rem;width:92%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <div style="font-size:1.15rem;font-weight:800;margin-bottom:1rem;color:var(--text);">✍️ บันทึกการชำระด้วยตัวเอง</div>
+    <div style="background:#ffebee;border-left:4px solid #c62828;border-radius:6px;padding:.7rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#b71c1c;">
+      <strong>⚠️ สำคัญ:</strong> อย่ากดบันทึกถ้ายังไม่ได้เช็ค bank statement จริง<br>
+      สลิปอาจปลอมได้ — ต้องเปิดแอปธนาคารยืนยันว่าเงินเข้าบัญชีจริง
+    </div>
+    <label style="display:flex;gap:8px;align-items:flex-start;padding:.7rem;background:#fff9c4;border-radius:6px;margin-bottom:1rem;cursor:pointer;">
+      <input type="checkbox" id="mv-bank-confirmed" style="margin-top:3px;flex-shrink:0;">
+      <span style="font-size:.82rem;color:#5d4037;font-weight:600;">
+        ✅ ผมได้เปิดแอปธนาคาร/bank statement แล้วว่าเงินเข้าบัญชีจริง
+        (ตรวจ amount, วันที่, ชื่อผู้โอน ตรงกับสลิป)
+      </span>
+    </label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem;">
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">ตึก</label>
+        <select id="mv-building" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';">
+          <option value="rooms">🏠 ห้องแถว</option><option value="nest">🏢 Nest</option>
+        </select></div>
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">ห้อง</label>
+        <input type="text" id="mv-room" placeholder="เช่น 15, N101" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem;">
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">จำนวนเงิน (บาท)</label>
+        <input type="number" id="mv-amount" placeholder="0" min="0" step="0.01" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">วันที่โอน</label>
+        <input type="date" id="mv-date" value="${today}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem;">
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">ผู้โอน</label>
+        <input type="text" id="mv-sender" placeholder="ชื่อ-นามสกุล" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+      <div><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">ธนาคาร</label>
+        <select id="mv-bank" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';">
+          <option value="">— เลือก —</option>
+          <option value="014">ไทยพาณิชย์ (SCB)</option>
+          <option value="004">กสิกรไทย (KBANK)</option>
+          <option value="025">กรุงไทย (KTB)</option>
+          <option value="002">กรุงเทพ (BBL)</option>
+          <option value="006">กรุงศรี (BAY)</option>
+          <option value="067">ทีทีบี (TTB)</option>
+          <option value="">อื่นๆ</option>
+        </select></div>
+    </div>
+    <div style="margin-bottom:.7rem;"><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">เลขอ้างอิงสลิป (ถ้าอ่านได้)</label>
+      <input type="text" id="mv-txid" placeholder="เช่น 2024...หรือ ref number" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+    <div style="margin-bottom:1.2rem;"><label style="font-weight:600;font-size:.82rem;display:block;margin-bottom:4px;">เหตุผลการยืนยันเอง <span style="color:var(--red);">*</span></label>
+      <input type="text" id="mv-reason" placeholder="เช่น SlipOK SCB delay ยาว, สลิปไม่คมชัด, มีค่าปรับที่ไม่ได้บันทึก..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun';"></div>
+    <div style="display:flex;gap:.6rem;">
+      <button onclick="submitManualVerify()" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Sarabun';font-weight:700;cursor:pointer;">💾 บันทึก</button>
+      <button onclick="document.getElementById('mv-modal').remove()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:8px;padding:10px;font-family:'Sarabun';font-weight:700;cursor:pointer;">ยกเลิก</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if(e.target.id==='mv-modal') modal.remove(); });
+};
+
+window.submitManualVerify = async function(){
+  const building = document.getElementById('mv-building').value;
+  const room = document.getElementById('mv-room').value.trim();
+  const amount = parseFloat(document.getElementById('mv-amount').value);
+  const dateStr = document.getElementById('mv-date').value;
+  const sender = document.getElementById('mv-sender').value.trim();
+  const bankCode = document.getElementById('mv-bank').value;
+  const txid = document.getElementById('mv-txid').value.trim();
+  const reason = document.getElementById('mv-reason').value.trim();
+  const bankConfirmed = document.getElementById('mv-bank-confirmed')?.checked;
+  if(!bankConfirmed){
+    alert('⚠️ ต้องเช็ค bank statement จริงก่อน แล้วกด ✅ ยืนยัน\nสลิปอาจปลอมได้ — อย่าเชื่อแค่ภาพสลิป');
+    return;
+  }
+  if(!building || !room || !amount || amount <= 0 || !reason){
+    alert('กรุณากรอก: ตึก, ห้อง, จำนวนเงิน, เหตุผล');
+    return;
+  }
+  const adminName = window.SecurityUtils?.getSecureSession()?.name || 'Admin';
+  const id = 'mv_' + Date.now();
+  const slipDoc = {
+    transactionId: txid || id,
+    building, room: String(room),
+    amount, expectedAmount: amount,
+    sender: sender || '(บันทึกโดย admin)',
+    receiver: '',
+    date: dateStr,
+    bankCode: bankCode || '',
+    timestamp: new Date(dateStr + 'T12:00:00'),
+    verifiedAt: new Date(),
+    verified: true,
+    manualOverride: true,
+    bankStatementConfirmed: true,
+    verifiedBy: adminName,
+    overrideReason: reason
+  };
+  if(!window.firebase?.firestore){
+    alert('Firebase ยังไม่พร้อม — ไม่สามารถบันทึกได้');
+    return;
+  }
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    await fs.setDoc(fs.doc(fs.collection(db, 'verifiedSlips'), id), slipDoc);
+    // Also mark payment_status for that month (so สถานะชำระรายเดือน shows ✅)
+    const d = new Date(dateStr);
+    const year = d.getFullYear() + 543;
+    const month = d.getMonth() + 1;
+    const ps = loadPS();
+    const key = `${year}_${month}`;
+    if(!ps[key]) ps[key] = {};
+    ps[key][room] = {
+      status: 'paid', amount, date: new Date().toISOString(),
+      receiptNo: id, manualOverride: true, overrideReason: reason,
+      slip: { amount, sender, bankCode, ref: txid, transferDate: d.toISOString() }
+    };
+    savePS(ps);
+    document.getElementById('mv-modal').remove();
+    alert('✅ บันทึกการชำระเรียบร้อย');
+  } catch(e) {
+    alert('❌ บันทึกไม่สำเร็จ: ' + e.message);
+  }
+};
+
+// ===== Payment Verify — ประวัติตามห้อง =====
+window.switchPVTab = function(tab, btn){
+  document.querySelectorAll('#bill-main-tab-verify .year-tab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const live    = document.getElementById('pv-tab-live');
+  const hist    = document.getElementById('pv-tab-history');
+  const monthly = document.getElementById('pv-tab-monthly');
+  if(live)    live.style.display    = (tab==='live')    ? '' : 'none';
+  if(hist)    hist.style.display    = (tab==='history') ? '' : 'none';
+  if(monthly) monthly.style.display = (tab==='monthly') ? '' : 'none';
+  if(tab==='monthly'){
+    const now = new Date();
+    const mm = document.getElementById('mt-month');
+    const my = document.getElementById('mt-year');
+    const vm = document.getElementById('vc-month');
+    const vy = document.getElementById('vc-year');
+    if (mm && !mm.value) mm.value = now.getMonth() + 1;
+    if (my && !my.value) my.value = now.getFullYear() + 543;
+    if (vm && !vm.value) vm.value = now.getMonth() + 1;
+    if (vy && !vy.value) vy.value = now.getFullYear() + 543;
+    // Prefill tracking-start UI
+    const t = window.loadTrackingStart?.();
+    const tm = document.getElementById('tracking-start-month');
+    const ty = document.getElementById('tracking-start-year');
+    const info = document.getElementById('tracking-start-info');
+    if (tm && ty) {
+      if (t) {
+        tm.value = t.month;
+        ty.value = t.year;
+        if (info) info.textContent = `บันทึกล่าสุด: ${t.month}/${t.year}`;
+      } else {
+        tm.value = now.getMonth() + 1;
+        ty.value = now.getFullYear() + 543;
+        if (info) info.textContent = 'ยังไม่ได้ตั้งค่า';
+      }
+    }
+    if (typeof renderMeterTable === 'function') setTimeout(renderMeterTable, 50);
+  }
+};
+
+window.loadPVHistoryRooms = function(){
+  const building = document.getElementById('pvh-building').value;
+  const roomSel = document.getElementById('pvh-room');
+  roomSel.innerHTML = '<option value="">-- เลือกห้อง --</option>';
+  if(!building) return;
+  let roomNumbers = [];
+  try {
+    if(window.RoomConfigManager?.getAllRooms){
+      const rooms = window.RoomConfigManager.getAllRooms(building) || {};
+      roomNumbers = Object.keys(rooms).sort((a,b)=>parseInt(a)-parseInt(b));
+    }
+  } catch(e){}
+  if(roomNumbers.length===0){
+    const list = (building==='rooms') ? (window.ROOMS_OLD||[]) : (window.ROOMS_NEW||[]);
+    roomNumbers = list.map(r => typeof r === 'object' ? r.id : String(r));
+  }
+  roomNumbers.forEach(r=>{
+    const opt = document.createElement('option');
+    opt.value = r; opt.textContent = 'ห้อง '+r;
+    roomSel.appendChild(opt);
+  });
+};
+
+window.renderPVHistory = function(){
+  const building = document.getElementById('pvh-building').value;
+  const room = document.getElementById('pvh-room').value;
+  const list = document.getElementById('pvhList');
+  const setTxt = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  if(!building || !room){
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">📋 กรุณาเลือกตึกและห้อง</div>';
+    setTxt('pvh-total-count','—'); setTxt('pvh-total-amount','฿—'); setTxt('pvh-last-paid','—');
+    return;
+  }
+  if(!window.firebase?.firestore){
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ Firebase ยังไม่พร้อม</div>';
+    return;
+  }
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">🔄 กำลังโหลด...</div>';
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+  // Query for both string and number room values to avoid type-mismatch miss
+  const q = fs.query(
+    fs.collection(db, 'verifiedSlips'),
+    fs.where('building','==',building),
+    fs.where('room','in',[String(room), Number(room)].filter(v => !Number.isNaN(v))),
+    fs.limit(500)
+  );
+  fs.getDocs(q)
+    .then(snap=>{
+      const firestoreSlips = snap.docs.map(d=>({id:d.id,...d.data()}));
+      // Also include manual payments (from payment_status) for this room
+      const manual = _pvLoadManualPayments().filter(s => s.building === building && s.room === String(room));
+      const byKey = new Map();
+      firestoreSlips.forEach(s => byKey.set(`${s.transactionId||s.id}|${s.amount}`, s));
+      manual.forEach(s => { const k = `${s.transactionId||s.id}|${s.amount}`; if(!byKey.has(k)) byKey.set(k, s); });
+      const slips = Array.from(byKey.values());
+      slips.sort((a,b)=>{
+        const ta = a.timestamp?.toDate?a.timestamp.toDate():new Date(a.timestamp||a.verifiedAt||0);
+        const tb = b.timestamp?.toDate?b.timestamp.toDate():new Date(b.timestamp||b.verifiedAt||0);
+        return tb - ta;
+      });
+      const total = slips.reduce((s,x)=>s+(x.amount||0),0);
+      setTxt('pvh-total-count', slips.length);
+      setTxt('pvh-total-amount', '฿'+total.toLocaleString());
+      if(slips.length>0){
+        const ts = slips[0].timestamp?.toDate?slips[0].timestamp.toDate():new Date(slips[0].timestamp||slips[0].verifiedAt||0);
+        setTxt('pvh-last-paid', ts.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}));
+      } else setTxt('pvh-last-paid','—');
+      if(slips.length===0){
+        list.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--text-muted);">📭 ยังไม่มีประวัติการจ่ายของห้องนี้</div>';
+        return;
+      }
+      const bankName = code => ({'004':'กสิกรไทย','014':'ไทยพาณิชย์','025':'กรุงไทย','002':'กรุงเทพ','006':'กรุงศรี','011':'TMB','065':'ทิสโก้','069':'เกียรตินาคิน','022':'CIMB','067':'ทีทีบี'})[code] || (code||'—');
+      list.innerHTML = slips.map(s=>{
+        const ts = s.timestamp?.toDate?s.timestamp.toDate():new Date(s.timestamp||s.verifiedAt||0);
+        const timeStr = ts.toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div style="background:var(--green-pale);color:var(--green-dark);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">✅</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.88rem;">฿${(s.amount||0).toLocaleString()} <span style="color:var(--text-muted);font-weight:400;font-size:.78rem;">· ${_pvEscape(bankName(s.bankCode))}</span></div>
+            <div style="font-size:.75rem;color:var(--text-muted);">โดย ${_pvEscape(s.sender||'—')} · ${_pvEscape(s.transactionId||s.transRef||'')}</div>
+          </div>
+          <div style="text-align:right;font-size:.75rem;color:var(--text-muted);flex-shrink:0;">${timeStr}</div>
+        </div>`;
+      }).join('');
+    })
+    .catch(err=>{
+      console.error('pv history query failed:', err);
+      // Fallback to manual payments only
+      const manual = _pvLoadManualPayments().filter(s => s.building === building && s.room === String(room));
+      if(!manual.length){
+        list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
+        return;
+      }
+      manual.sort((a,b) => b.timestamp - a.timestamp);
+      const total = manual.reduce((s,x)=>s+(x.amount||0),0);
+      setTxt('pvh-total-count', manual.length);
+      setTxt('pvh-total-amount', '฿'+total.toLocaleString());
+      setTxt('pvh-last-paid', manual[0].timestamp.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}));
+      list.innerHTML = manual.map(s=>{
+        const timeStr = s.timestamp.toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div style="background:var(--green-pale);color:var(--green-dark);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">✅</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.88rem;">฿${(s.amount||0).toLocaleString()} <span style="color:var(--text-muted);font-weight:400;font-size:.78rem;">· (manual)</span></div>
+            <div style="font-size:.75rem;color:var(--text-muted);">โดย ${_pvEscape(s.sender||'—')} · ${_pvEscape(s.transactionId||'')}</div>
+          </div>
+          <div style="text-align:right;font-size:.75rem;color:var(--text-muted);flex-shrink:0;">${timeStr}</div>
+        </div>`;
+      }).join('');
+    });
+};
+
+function updateLinkPreview(){
+  const room = document.getElementById('linkRoomSelect').value;
+  if(!room){
+    document.getElementById('linkPreview').innerHTML = '';
+    return;
+  }
+
+  const paymentLink = `${window.location.origin}/payment?room=${room}`;
+  const qrId = 'qr-' + room;
+
+  document.getElementById('linkPreview').innerHTML = `
+    <div style="background:#fff;border-radius:8px;padding:1.5rem;margin-top:1rem;">
+      <div style="margin-bottom:1.5rem;">
+        <label style="display:block;margin-bottom:.5rem;font-weight:700;color:var(--text);">📱 ลิ้งค์ชำระเงิน:</label>
+        <div style="background:#f5f5f5;padding:10px;border-radius:6px;word-break:break-all;font-size:.9rem;font-family:monospace;margin-bottom:10px;">
+          ${paymentLink}
+        </div>
+        <button onclick="copyToClipboard('${paymentLink}')" style="padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.9rem;">📋 คัดลอก</button>
+      </div>
+
+      <div>
+        <label style="display:block;margin-bottom:.5rem;font-weight:700;color:var(--text);">📲 QR Code:</label>
+        <div style="background:#f5f5f5;border-radius:6px;padding:1rem;text-align:center;" id="${qrId}"></div>
+        <button onclick="downloadQRCode('${qrId}', 'payment-room-${room}')" style="width:100%;margin-top:10px;padding:8px 16px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;font-size:.9rem;">⬇️ ดาวน์โหลด QR Code</button>
+      </div>
+    </div>
+  `;
+
+  setTimeout(() => {
+    new QRCode(document.getElementById(qrId), {
+      text: paymentLink,
+      width: 180,
+      height: 180,
+      colorDark: '#000',
+      colorLight: '#fff'
+    });
+  }, 50);
+}
+
+function copyToClipboard(text){
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('คัดลอกลิ้งค์เรียบร้อย', 'success');
+  });
+}
+
+function downloadQRCode(elementId, filename){
+  const canvas = document.querySelector(`#${elementId} canvas`);
+  if(!canvas){
+    showToast('QR Code ยังสร้างไม่เสร็จ', 'warning');
+    return;
+  }
+  const link = document.createElement('a');
+  link.href = canvas.toDataURL('image/png');
+  link.download = filename + '.png';
+  link.click();
+}
+
+
