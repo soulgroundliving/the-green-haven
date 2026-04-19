@@ -3194,28 +3194,8 @@
   </div>
 </div>
 
-<!-- ===== DEBUG PAGE ===== -->
-<div class="page" id="page-debug">
-  <div class="section-title">🔍 DEBUG: localStorage Inspector</div>
-
-  <div class="card">
-    <div class="card-title">🔧 Maintenance Data (maintenance_data)</div>
-    <button onclick="debugShowMaintenance()" class="btn-primary" style="margin-bottom:12px;">🔄 Refresh Data</button>
-    <pre id="debugMaintenanceOutput" style="background:#1a1a1a;color:#0f0;padding:12px;border-radius:8px;font-size:11px;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all;"></pre>
-  </div>
-
-  <div class="card" style="margin-top:12px;">
-    <div class="card-title">📢 Announcements Data (announcements_data)</div>
-    <button onclick="debugShowAnnouncements()" class="btn-primary" style="margin-bottom:12px;">🔄 Refresh Data</button>
-    <pre id="debugAnnouncementsOutput" style="background:#1a1a1a;color:#0f0;padding:12px;border-radius:8px;font-size:11px;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all;"></pre>
-  </div>
-
-  <div class="card" style="margin-top:12px;">
-    <div class="card-title">💾 All localStorage Keys</div>
-    <button onclick="debugShowAllKeys()" class="btn-primary" style="margin-bottom:12px;">🔄 Refresh Data</button>
-    <pre id="debugAllKeysOutput" style="background:#1a1a1a;color:#0f0;padding:12px;border-radius:8px;font-size:11px;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all;"></pre>
-  </div>
-</div>
+<!-- Debug UI removed — use console helpers instead:
+     debugShowMaintenance(), debugShowAnnouncements(), debugShowAllKeys() -->
 
 <!-- ===== BILL GENERATOR ===== -->
 <div class="page" id="page-bill">

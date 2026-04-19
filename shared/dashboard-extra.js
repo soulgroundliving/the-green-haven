@@ -2734,52 +2734,37 @@ function clearPaymentNotifications() {
   }
 }
 
-// ===== DEBUG FUNCTIONS =====
+// ===== DEBUG CONSOLE HELPERS =====
+// UI removed — call these from DevTools console. They return the data so you
+// can chain (e.g. `debugShowMaintenance().filter(r => r.priority === 'high')`).
 function debugShowMaintenance() {
-  try {
-    const data = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
-    const output = document.getElementById('debugMaintenanceOutput');
-    output.textContent = '📊 maintenance_data (' + data.length + ' items)\n\n' + JSON.stringify(data, null, 2);
-    console.log('🔍 DEBUG: maintenance_data =', data);
-  } catch (e) {
-    document.getElementById('debugMaintenanceOutput').textContent = '❌ Error: ' + e.message;
-  }
+  const data = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
+  console.log('🔍 maintenance_data (' + data.length + ' items):', data);
+  return data;
 }
 
 function debugShowAnnouncements() {
-  try {
-    const data = JSON.parse(localStorage.getItem('announcements_data') || '[]');
-    const output = document.getElementById('debugAnnouncementsOutput');
-    output.textContent = '📊 announcements_data (' + data.length + ' items)\n\n' + JSON.stringify(data, null, 2);
-    console.log('🔍 DEBUG: announcements_data =', data);
-  } catch (e) {
-    document.getElementById('debugAnnouncementsOutput').textContent = '❌ Error: ' + e.message;
-  }
+  const data = JSON.parse(localStorage.getItem('announcements_data') || '[]');
+  console.log('🔍 announcements_data (' + data.length + ' items):', data);
+  return data;
 }
 
 function debugShowAllKeys() {
-  try {
-    const keys = [];
-    const output = document.getElementById('debugAllKeysOutput');
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      const value = localStorage.getItem(key);
-      const size = new Blob([value]).size;
-      keys.push({ key: key, size: size + ' bytes' });
-    }
-    output.textContent = '📊 All localStorage keys (' + keys.length + ' items)\n\n' + JSON.stringify(keys, null, 2);
-    console.log('🔍 DEBUG: All localStorage keys =', keys);
-  } catch (e) {
-    document.getElementById('debugAllKeysOutput').textContent = '❌ Error: ' + e.message;
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    const size = new Blob([localStorage.getItem(key)]).size;
+    keys.push({ key, size: size + ' bytes' });
   }
+  console.log('🔍 All localStorage keys (' + keys.length + '):', keys);
+  return keys;
 }
 
-// Show debug page on demand
-function showDebugPage() {
-  window.showPage('debug');
-  debugShowMaintenance();
-  debugShowAnnouncements();
-  debugShowAllKeys();
+// Expose on window so they're invokable from devtools console
+if (typeof window !== 'undefined') {
+  window.debugShowMaintenance = debugShowMaintenance;
+  window.debugShowAnnouncements = debugShowAnnouncements;
+  window.debugShowAllKeys = debugShowAllKeys;
 }
 
 // ===== SERVICE PROVIDERS MANAGEMENT =====
