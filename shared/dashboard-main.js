@@ -4792,10 +4792,16 @@ function buildDocHTML(d,type,dueDate,payDate){
     </div>` : '';
 
   const docId = isInvoice ? 'doc-invoice' : 'doc-receipt';
+  let _ownerForDoc = {};
+  try { _ownerForDoc = JSON.parse(localStorage.getItem('owner_info') || '{}'); } catch(e){}
+  const logoName = _ownerForDoc.companyLegalNameTH || 'The Green Haven';
+  const logoHTML = _ownerForDoc.logoDataUrl
+    ? `<img src="${_ownerForDoc.logoDataUrl}" alt="logo" style="max-height:56px;max-width:180px;object-fit:contain;vertical-align:middle;"><div style="font-size:.85rem;color:var(--text-muted);margin-top:4px;">${logoName}</div>`
+    : `🌿 ${logoName}`;
   return`
   <div id="${docId}" class="doc-body">
     <div class="doc-header">
-      <div class="doc-logo">🌿 The Green Haven</div>
+      <div class="doc-logo">${logoHTML}</div>
       <div class="doc-sub">${d.building}</div>
       <div class="doc-title ${type}">${titleText}</div>
       <div class="doc-no">เลขที่: ${d.no}</div>

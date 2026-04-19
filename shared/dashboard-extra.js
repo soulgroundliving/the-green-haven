@@ -1043,6 +1043,20 @@ function renderOwnerInfoPage() {
     <!-- Company identity (used in tax report letterhead) -->
     <div style="background:#f8faf9; padding:1.2rem; border-left:4px solid var(--green); border-radius:6px; margin-bottom:1.5rem;">
       <div style="font-weight:700; color:var(--green-dark); margin-bottom:.6rem;">🏢 ข้อมูลบริษัท / นิติบุคคล (สำหรับใบเสร็จ + รายงานภาษี)</div>
+
+      <!-- Logo upload -->
+      <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed #c8e6c9; border-radius:6px;">
+        <div id="logoPreviewBox" style="width:80px; height:80px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden; flex-shrink:0;">
+          ${owner.logoDataUrl ? `<img src="${owner.logoDataUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" alt="logo">` : `<span style="font-size:2rem; color:#ccc;">🏢</span>`}
+        </div>
+        <div style="flex:1;">
+          <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">โลโก้บริษัท (แสดงบนบิล + รายงานภาษี)</label>
+          <input type="file" id="ownerLogoInput" accept="image/png,image/jpeg,image/svg+xml" onchange="uploadOwnerLogo(event)" style="font-size:.85rem;">
+          <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: PNG โปร่งแสง, สี่เหลี่ยมจัตุรัส, ≤ 512px</div>
+          ${owner.logoDataUrl ? `<button type="button" onclick="removeOwnerLogo()" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้</button>` : ''}
+        </div>
+      </div>
+
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
         <div>
           <label style="display:block; margin-bottom:.4rem; font-weight:600; font-size:.9rem;">ชื่อนิติบุคคล (ภาษาไทย)</label>
@@ -1499,6 +1513,55 @@ if (typeof window !== 'undefined') {
   window.actLeaseRequest = actLeaseRequest;
 }
 
+window.uploadOwnerLogo = function(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('ไฟล์ใหญ่เกิน 2MB', 'warning');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 512;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = file.type === 'image/png' || file.type === 'image/svg+xml'
+        ? canvas.toDataURL('image/png')
+        : canvas.toDataURL('image/jpeg', 0.85);
+      const current = OwnerConfigManager.getOwnerInfo();
+      const updated = { ...current, logoDataUrl: dataUrl };
+      if (typeof OwnerConfigManager.saveOwnerInfoWithFirebase === 'function') {
+        OwnerConfigManager.saveOwnerInfoWithFirebase(updated);
+      } else {
+        OwnerConfigManager.saveOwnerInfo(updated);
+      }
+      showToast('✅ อัปโหลดโลโก้เรียบร้อย', 'success');
+      renderOwnerInfoPage();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.removeOwnerLogo = function() {
+  if (!confirm('ยืนยันการลบโลโก้?')) return;
+  const current = OwnerConfigManager.getOwnerInfo();
+  const updated = { ...current, logoDataUrl: '' };
+  if (typeof OwnerConfigManager.saveOwnerInfoWithFirebase === 'function') {
+    OwnerConfigManager.saveOwnerInfoWithFirebase(updated);
+  } else {
+    OwnerConfigManager.saveOwnerInfo(updated);
+  }
+  showToast('ลบโลโก้แล้ว', 'success');
+  renderOwnerInfoPage();
+};
+
 function saveOwnerInfo() {
   const name = document.getElementById('ownerName').value.trim();
   if (!name) {
@@ -1506,7 +1569,11 @@ function saveOwnerInfo() {
     return;
   }
 
+  const existing = OwnerConfigManager.getOwnerInfo();
+
   const ownerData = {
+    // Preserve existing logo (uploaded separately via uploadOwnerLogo)
+    logoDataUrl: existing.logoDataUrl || '',
     // ===== COMPANY IDENTITY (used in tax report letterhead + tenant receipts) =====
     companyLegalNameTH: document.getElementById('companyLegalNameTH')?.value?.trim() || '',
     companyLegalNameEN: document.getElementById('companyLegalNameEN')?.value?.trim() || '',

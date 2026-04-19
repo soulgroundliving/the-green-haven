@@ -3,6 +3,25 @@
  * Handles PDF and Excel exports for tax reports
  */
 
+// Load owner info (logo + company name) for PDF letterhead
+function _getOwnerForPDF() {
+  try { return JSON.parse(localStorage.getItem('owner_info') || '{}'); } catch(e) { return {}; }
+}
+
+// Inject company logo + name into a jsPDF doc header; returns next y-position
+function _addPDFLetterhead(doc, owner) {
+  let nextY = 36;
+  if (owner.logoDataUrl) {
+    try {
+      const fmt = owner.logoDataUrl.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
+      doc.addImage(owner.logoDataUrl, fmt, 15, 8, 20, 20);
+    } catch(e) { /* ignore bad logo */ }
+  }
+  const companyName = owner.companyLegalNameTH || owner.companyLegalNameEN || 'The Green Haven';
+  doc.text(`บริษัท: ${companyName}`, owner.logoDataUrl ? 40 : 15, nextY);
+  return nextY;
+}
+
 // ===== PDF EXPORT FUNCTIONS =====
 
 /**
@@ -41,7 +60,7 @@ function exportMonthlyReportPDF() {
     doc.text(`เดือน ${report.period}`, 105, 28, { align: 'center' });
 
     doc.setFontSize(10);
-    doc.text(`บริษัท: The Green Haven`, 15, 36);
+    _addPDFLetterhead(doc, _getOwnerForPDF());
     doc.text(`วันที่สร้าง: ${new Date().toLocaleDateString('th-TH')}`, 15, 41);
 
     // Revenue Section
@@ -190,7 +209,7 @@ function exportQuarterlyReturnPDF() {
     doc.text(`ไตรมาส ${quarter}/${currentYear + 543}`, 105, 28, { align: 'center' });
 
     doc.setFontSize(10);
-    doc.text(`บริษัท: The Green Haven`, 15, 36);
+    _addPDFLetterhead(doc, _getOwnerForPDF());
     doc.text(`วันที่สร้าง: ${new Date().toLocaleDateString('th-TH')}`, 15, 41);
     doc.text(`กำหนดส่ง: ${report.dueDate}`, 15, 46);
 
@@ -299,7 +318,7 @@ function exportAnnualReportPDF() {
     doc.text(`ปีภาษี ${report.buddhYear}`, 105, 28, { align: 'center' });
 
     doc.setFontSize(10);
-    doc.text(`บริษัท: The Green Haven`, 15, 36);
+    _addPDFLetterhead(doc, _getOwnerForPDF());
     doc.text(`วันที่สร้าง: ${new Date().toLocaleDateString('th-TH')}`, 15, 41);
     doc.text(`กำหนดส่ง: ${report.filingDeadline}`, 15, 46);
 
@@ -448,7 +467,7 @@ function exportMonthlyReportExcel() {
 
     worksheet.mergeCells('A2:E2');
     const infoCell = worksheet.getCell('A2');
-    infoCell.value = `The Green Haven | วันที่: ${new Date().toLocaleDateString('th-TH')}`;
+    infoCell.value = `${_getOwnerForPDF().companyLegalNameTH || 'The Green Haven'} | วันที่: ${new Date().toLocaleDateString('th-TH')}`;
     infoCell.font = { size: 10 };
     infoCell.alignment = { horizontal: 'center' };
 
