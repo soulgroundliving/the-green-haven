@@ -289,14 +289,44 @@ exports.awardComplaintFreeMonth = functions.region('asia-southeast1').pubsub
     }
   });
 
+const BADGE_CATALOG = [
+  { id: 'first_month',     emoji: '🥇', label: 'The First Generation', minPts: 0    },
+  { id: 'on_time',         emoji: '⏰', label: 'On Time',               minPts: 50   },
+  { id: 'community_star',  emoji: '⭐', label: 'Community Star',        minPts: 75   },
+  { id: 'green_guardian',  emoji: '🌿', label: 'Green Guardian',        minPts: 100  },
+  { id: 'loyal_resident',  emoji: '💎', label: 'Loyal Resident',        minPts: 250  },
+  { id: 'rising_star',     emoji: '🌟', label: 'Rising Star',           minPts: 300  },
+  { id: 'perfect_record',  emoji: '🏆', label: 'Perfect Record',        minPts: 500  },
+  { id: 'master_resident', emoji: '👑', label: 'Master Resident',       minPts: 1000 }
+];
+
+function _badgeId(b) {
+  return typeof b === 'string' ? b.toLowerCase().replace(/ /g, '_') : b.id;
+}
+
+function _normaliseBadges(raw, now) {
+  return raw.map(b => {
+    if (typeof b === 'string') {
+      const match = BADGE_CATALOG.find(c => c.label === b || c.id === b.toLowerCase().replace(/ /g, '_'));
+      return match ? { id: match.id, emoji: match.emoji, label: match.label, earnedAt: now } : { id: b, emoji: '🏅', label: b, earnedAt: now };
+    }
+    return b;
+  });
+}
+
 /**
- * Check and award badges based on points and milestones
+ * Check and award badges based on points milestones.
+ * Accepts { building, roomId } — uses canonical tenants/{building}/list/{roomId} path.
+ * Stores badges as [{ id, emoji, label, earnedAt }] (migrates legacy string[] automatically).
  */
 exports.checkAndAwardBadges = functions.region('asia-southeast1').https.onCall(async (data, context) => {
   try {
-    const { tenantId } = data;
+    const { building, roomId } = data;
+    if (!building || !roomId) {
+      throw new functions.https.HttpsError('invalid-argument', 'building and roomId are required');
+    }
 
-    const tenantRef = firestore.collection('tenants').doc(tenantId);
+    const tenantRef = firestore.collection('tenants').doc(building).collection('list').doc(String(roomId));
     const tenantDoc = await tenantRef.get();
 
     if (!tenantDoc.exists) {
@@ -305,43 +335,24 @@ exports.checkAndAwardBadges = functions.region('asia-southeast1').https.onCall(a
 
     const tenantData = tenantDoc.data();
     const points = tenantData.gamification?.points || 0;
-    const currentBadges = tenantData.gamification?.badges || [];
-    let newBadges = [...currentBadges];
+    const rawBadges = tenantData.gamification?.badges || [];
 
-    // Check milestone badges
-    const badgeRules = {
-      'First Month': { condition: () => true, points: 0 }, // Awarded on move-in
-      'On Time': { condition: () => points >= 50, points: 50 },
-      'Community Star': { condition: () => points >= 75, points: 75 },
-      'Green Guardian': { condition: () => points >= 100, points: 100 },
-      'Loyal Resident': { condition: () => points >= 250, points: 250 },
-      'Master Resident': { condition: () => points >= 1000, points: 1000 },
-      'Perfect Record': { condition: () => points >= 500, points: 500 },
-      'Rising Star': { condition: () => points >= 300, points: 300 }
-    };
+    const now = new Date().toISOString();
+    const normalised = _normaliseBadges(rawBadges, now);
+    const earnedIds = new Set(normalised.map(_badgeId));
 
-    let badgesAwarded = 0;
+    const toAward = BADGE_CATALOG.filter(c => !earnedIds.has(c.id) && points >= c.minPts)
+      .map(c => ({ id: c.id, emoji: c.emoji, label: c.label, earnedAt: now }));
 
-    for (const [badgeName, rule] of Object.entries(badgeRules)) {
-      if (!currentBadges.includes(badgeName) && rule.condition()) {
-        newBadges.push(badgeName);
-        badgesAwarded++;
-        console.log(`🎖️ Awarded badge "${badgeName}" to ${tenantId}`);
-      }
-    }
-
-    if (badgesAwarded > 0) {
+    if (toAward.length > 0) {
       await tenantRef.update({
-        'gamification.badges': newBadges,
-        'metadata.updatedAt': new Date().toISOString()
+        'gamification.badges': [...normalised, ...toAward],
+        'metadata.updatedAt': now
       });
+      toAward.forEach(b => console.log(`🎖️ Awarded "${b.label}" to ${building}/${roomId}`));
     }
 
-    return {
-      success: true,
-      badgesAwarded,
-      newBadges
-    };
+    return { success: true, badgesAwarded: toAward.length, newBadges: toAward };
   } catch (error) {
     console.error('❌ Error checking badges:', error);
     throw error;
