@@ -3861,7 +3861,11 @@ function updateRoomsInfoCards() {
 
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   set('rooms-card-title', `🏠 ห้องพัก (${totalRooms} ห้อง)`);
-  set('rooms-rent-tiers', tierStr || '฿1,200 / ฿1,500 / ฿2,000/เดือน');
+  set('rooms-rent-tiers', tierStr || '—');
+  const elecRate = config.elecRate || config.electricityRate || 8;
+  const waterRate = config.waterRate || 20;
+  const trashFee = config.trashFee || 20;
+  set('rooms-rates-row', `⚡ ${elecRate} · 💧 ${waterRate} บ/หน่วย · 🗑️ ${trashFee} บ/เดือน`);
   set('rooms-total-title', `📊 รวมทั้งหมด (${totalRooms + 1} ห้อง)`);
   set('rooms-total-income',  `฿${totalIncome.toLocaleString()}/เดือน (ไม่รวมร้านค้า)`);
   set('rooms-total-income2', `฿${totalIncome.toLocaleString()}/เดือน (ไม่รวมร้านค้า)`);
@@ -5887,7 +5891,7 @@ function renderTenantPage(){
         <button onclick="openTenantModal('${tenantBuilding==='old'?'rooms':'nest'}','${r.id}')" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">📄 สัญญา</button>
         <button onclick="showBillingModal('${r.id}')" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">💰 ชำระ</button>
         <button onclick="showBillingHistoryModal('${r.id}')" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🧾 บิล</button>
-        <button onclick="window.showPage('maintenance')" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #7b1fa2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🔧 ซ่อม</button>
+        <button onclick="window.showPage('requests-approvals')" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #7b1fa2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🔧 ซ่อม</button>
       </div>
     </div>`;
   }).join('');

@@ -2299,9 +2299,9 @@
     <!-- Mini info chips -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem;">
       <div style="padding:8px 10px;background:white;border:1px solid #c8e6c9;border-left:3px solid #4caf50;border-radius:6px;font-size:.78rem;line-height:1.6;">
-        <div style="font-weight:700;color:#1b5e20;margin-bottom:2px;">🏠 ห้องพัก (22)</div>
+        <div style="font-weight:700;color:#1b5e20;margin-bottom:2px;" id="rooms-card-title">🏠 ห้องพัก</div>
         <div>💰 <span id="rooms-rent-tiers">—</span></div>
-        <div style="color:#555;">⚡ 8 · 💧 20 บ/หน่วย · 🗑️ 20 บ/เดือน</div>
+        <div style="color:#555;" id="rooms-rates-row">⚡ — · 💧 — · 🗑️ —</div>
       </div>
       <div id="shop-info-card" style="padding:8px 10px;background:white;border:1px solid #ffe0b2;border-left:3px solid #ff9800;border-radius:6px;font-size:.78rem;line-height:1.6;">
         <div style="font-weight:700;color:#bf360c;margin-bottom:2px;" id="shop-info-title">🏪 ร้านใหญ่</div>
@@ -2314,7 +2314,7 @@
         <div style="color:#880e4f;font-weight:600;">⚠️ รายได้ลด ฿25,000/เดือน</div>
       </div>
       <div style="padding:8px 10px;background:#f3e5f5;border:1px solid #e1bee7;border-left:3px solid #9c27b0;border-radius:6px;font-size:.78rem;line-height:1.6;">
-        <div style="font-weight:700;color:#4a148c;margin-bottom:2px;">📊 รวมทั้งหมด (23)</div>
+        <div style="font-weight:700;color:#4a148c;margin-bottom:2px;" id="rooms-total-title">📊 รวมทั้งหมด</div>
         <div style="color:var(--green-dark);font-weight:700;"><span id="rooms-total-income2">—</span></div>
         <div style="color:#555;"><span id="rooms-total-breakdown">—</span></div>
       </div>
