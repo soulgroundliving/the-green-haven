@@ -1534,12 +1534,6 @@
     .room-status { font-size: 10px; padding: 3px 6px; }
     .room-actions { gap: 4px; }
     .room-actions button { padding: 4px 8px; font-size: 11px; }
-    .modal { padding: 15px; }
-    .modal-content { max-width: 95vw; max-height: 90vh; }
-    .modal-header { padding: 15px; }
-    .modal-title { font-size: 16px; }
-    .modal-close { font-size: 20px; }
-    .modal-body { padding: 15px; font-size: 13px; }
     .form-group { margin-bottom: 15px; }
     .form-group label { font-size: 13px; margin-bottom: 5px; }
     .form-group input, .form-group select, .form-group textarea { padding: 10px; font-size: 13px; }
@@ -1582,9 +1576,6 @@
     .room-status { font-size: 9px; padding: 2px 4px; }
     .room-actions { gap: 3px; }
     .room-actions button { padding: 3px 6px; font-size: 10px; }
-    .modal-header { padding: 12px; }
-    .modal-title { font-size: 15px; }
-    .modal-body { padding: 12px; font-size: 12px; }
     .form-group label { font-size: 12px; }
     .form-group input, .form-group select, .form-group textarea { padding: 8px; font-size: 12px; }
     .button { padding: 9px 12px; font-size: 12px; }
@@ -1597,8 +1588,6 @@
     .ct-card { padding: 10px; }
     .ct-card-room { font-size: 10px; }
     .ct-card-name { font-size: 13px; }
-    .modal { padding: 10px; }
-    .modal-content { max-height: 85vh; }
     .sidebar { width: 200px; }
     .nav-badge { display: inline !important; font-size: 10px; }
     .sidebar-footer { flex-direction: column; gap: 6px; }
@@ -1614,7 +1603,6 @@
     .button { padding: 8px 10px; font-size: 11px; }
     .data-table { font-size: 10px; }
     .data-table th, .data-table td { padding: 4px 3px; }
-    .modal-body { font-size: 11px; padding: 10px; }
     .form-group input, .form-group select { font-size: 11px; padding: 7px; }
   }
 
@@ -1627,7 +1615,7 @@
   @media print {
     .sidebar { display: none; }
     .header-nav { display: none; }
-    .modal { display: none; }
+    .ui-modal { display: none !important; }
     .button { display: none; }
     body { padding: 20px; }
     .main { padding: 0; }
