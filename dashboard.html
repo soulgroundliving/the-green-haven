@@ -2953,7 +2953,6 @@
     <button id="tab-events-btn" class="content-mgmt-tab year-tab" data-action="switchContentTab" data-tab="events">📅 Events</button>
     <button id="tab-docs-btn" class="content-mgmt-tab year-tab" data-action="switchContentTab" data-tab="docs">📋 Documents</button>
     <button id="tab-wellness-btn" class="content-mgmt-tab year-tab" data-action="switchContentTab" data-tab="wellness">🌿 Wellness</button>
-    <button id="tab-emergency-btn" class="content-mgmt-tab year-tab" data-action="switchContentTab" data-tab="emergency">🚨 Emergency</button>
   </div>
 
   <!-- TAB 1: Announcements -->
@@ -3184,55 +3183,6 @@
     </div>
   </div>
 
-  <!-- TAB 5: Emergency Contacts (Firestore system/emergencyContacts) -->
-  <div id="content-tab-emergency" class="content-mgmt-content" style="display: none;">
-    <div class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <div>
-          <div class="card-title" style="margin-bottom: .25rem;">🚨 เบอร์ติดต่อฉุกเฉิน</div>
-          <small class="color-muted">ลูกบ้านเห็นในหน้า Community ของ tenant_app — แก้ที่นี่ → sync ทันที (real-time)</small>
-        </div>
-        <button data-action="openEmergencyEdit" style="background: var(--green-dark); color: white; border: none; padding: .6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: 'Sarabun';">+ เพิ่มเบอร์</button>
-      </div>
-      <div style="overflow-x: auto;">
-        <table class="data-table" style="width: 100%;">
-          <thead>
-            <tr>
-              <th class="w-50">Order</th>
-              <th class="w-50">Icon</th>
-              <th>Label</th>
-              <th style="width: 140px;">Number</th>
-              <th style="width: 140px;">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="emergencyAdminTable">
-            <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">กำลังโหลด…</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top: 1rem; padding: .75rem 1rem; background: #fff8e1; border-left: 3px solid #ffc107; border-radius: 4px; font-size: .82rem; color: #6c5005;">
-        <strong>Note:</strong> 191/199/1669 ย้ายไปอยู่ในขั้นตอนฉุกเฉินของแอปลูกบ้านแล้ว — ใช้ส่วนนี้สำหรับเบอร์เฉพาะอาคาร (รพ.ใกล้บ้าน, ช่างประจำตึก, รปภ. ฯลฯ). ลูกบ้านเห็นเรียงตาม Order น้อยไปมาก
-      </div>
-
-      <!-- Edit modal -->
-      <div class="ui-modal ui-modal--top" id="emergencyEditModal" role="dialog" aria-modal="true" aria-labelledby="emergencyEditTitle" style="display:none;">
-        <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 460px;">
-          <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="emergencyEditTitle">+ เพิ่มเบอร์ฉุกเฉิน</div>
-          <input type="hidden" id="emergencyEditIndex">
-          <div style="display: grid; gap: .85rem;">
-            <label>Icon (emoji)<input type="text" id="emergencyEditIcon" placeholder="🚓" maxlength="4" class="input-sm"></label>
-            <label>Label (ชื่อหน่วย)<input type="text" id="emergencyEditLabel" placeholder="เช่น ตำรวจ, รพ.ใกล้บ้าน" class="input-sm"></label>
-            <label>Number (เบอร์โทร)<input type="tel" id="emergencyEditNumber" placeholder="191" class="input-sm"></label>
-            <label>Order (น้อย = ขึ้นก่อน)<input type="number" id="emergencyEditOrder" min="1" value="99" class="input-sm"></label>
-          </div>
-          <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.5rem;">
-            <button data-action="closeEmergencyEdit" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">ยกเลิก</button>
-            <button data-action="saveEmergencyContact" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;">บันทึก</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- Debug UI removed — use console helpers instead:
