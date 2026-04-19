@@ -1520,7 +1520,7 @@
         <div
             style="position: absolute; top: 20px; left: 20px; z-index: 20; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.8); padding: 8px 15px; border-radius: 30px; backdrop-filter: blur(5px);">
 
-            <div id="current-avatar"
+            <div id="current-avatar-map"
                 style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #2d8653; display: flex; align-items: center; justify-content: center; font-size: var(--fs-lg); background: white;">
                 🌿
             </div>
@@ -4461,11 +4461,10 @@
         }
 
         function setAvatar(emoji, el) {
-            const curr = document.getElementById('current-avatar');
-            if (curr) {
-                curr.innerText = emoji;
-                curr.style.backgroundImage = ''; // clear uploaded image if any
-            }
+            ['current-avatar', 'current-avatar-map'].forEach(id => {
+                const curr = document.getElementById(id);
+                if (curr) { curr.innerText = emoji; curr.style.backgroundImage = ''; }
+            });
             const preview = document.getElementById('avatar-preview');
             if (preview) {
                 preview.innerHTML = emoji;
@@ -4509,8 +4508,10 @@
             } catch(_){}
         }
         function applyAvatarEmoji(emoji) {
-            const curr = document.getElementById('current-avatar');
-            if (curr) { curr.innerText = emoji; curr.style.backgroundImage = ''; }
+            ['current-avatar', 'current-avatar-map'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.innerText = emoji; el.style.backgroundImage = ''; }
+            });
             const preview = document.getElementById('avatar-preview');
             if (preview) { preview.innerHTML = emoji; preview.style.backgroundImage = ''; }
         }
@@ -4522,7 +4523,7 @@
                 el.style.backgroundSize = 'cover';
                 el.style.backgroundPosition = 'center';
             };
-            set(document.getElementById('current-avatar'));
+            ['current-avatar', 'current-avatar-map'].forEach(id => set(document.getElementById(id)));
             set(document.getElementById('avatar-preview'));
         }
 
