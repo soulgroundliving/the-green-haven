@@ -352,8 +352,9 @@ function switchPeopleTab(tabName, btn) {
 function toggleSidebar(){
   const sidebar=document.getElementById('sidebar');
   const hamburger=document.getElementById('hamburger');
-  sidebar.classList.toggle('visible');
+  const visible=sidebar.classList.toggle('visible');
   hamburger.classList.toggle('active');
+  hamburger.setAttribute('aria-expanded', String(visible));
 }
 
 window._closeSidebarImpl = function(){
@@ -361,6 +362,7 @@ window._closeSidebarImpl = function(){
   const hamburger=document.getElementById('hamburger');
   sidebar.classList.remove('visible');
   hamburger.classList.remove('active');
+  hamburger.setAttribute('aria-expanded', 'false');
 };
 // Assign to global scope
 window.closeSidebar = window._closeSidebarImpl;
@@ -444,6 +446,10 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     const el = e.target.closest('[data-action]');
     if (!el) return;
     const a = el.dataset.action;
+    // Overlay guard — only trigger if the overlay itself was clicked (not children)
+    if (a === 'closePayModalIfOverlay') { if (e.target === el && typeof closePayModal === 'function') closePayModal(); return; }
+    // Prevent default navigation for <a> elements carrying data-action
+    if (el.tagName === 'A') e.preventDefault();
     const page = el.dataset.page;
     const tab = el.dataset.tab;
     const year = el.dataset.year;
@@ -459,6 +465,15 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'goToAuditLog') { window.location.href = '/audit-log-viewer'; return; }
     if (a === 'goToTaxFiling') { goToTaxFiling(v || 'dashboard'); return; }
     if (a === 'clickInput') { const t = document.getElementById(el.dataset.target); if(t) t.click(); return; }
+    if (a === 'reload') { window.location.reload(); return; }
+    if (a === 'navToOwnerTab') {
+      window.showPage('people-management');
+      setTimeout(() => document.querySelector('[data-action="switchPeopleTab"][data-tab="owner"]')?.click(), 50);
+      return;
+    }
+    if (a === 'testFirebaseConnection') { typeof window.testFirebaseConnection === 'function' && window.testFirebaseConnection(); return; }
+    if (a === 'syncDataToFirebase') { typeof window.syncDataToFirebase === 'function' && window.syncDataToFirebase(); return; }
+    if (a === 'removeParent') { el.parentElement && el.parentElement.remove(); return; }
 
     // Sidebar / app chrome
     if (a === 'toggleSidebar') { toggleSidebar(); return; }

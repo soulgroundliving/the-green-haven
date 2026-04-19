@@ -6,6 +6,8 @@
 <meta http-equiv="X-UA-Compatible" content="ie=edge">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https: wss:;">
 <title>The Green Haven — ระบบจัดการอพาร์ทเมนต์</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="./shared/brand.css">
 <!-- FontAwesome 6 (icons used in Wellness picker, sidebar, etc.) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -310,7 +312,7 @@
           const banner = document.createElement('div');
           banner.id = 'fbAuthLapsedBanner';
           banner.style.cssText = 'position:fixed;top:60px;right:12px;z-index:9999;background:#fff3cd;color:#856404;border:1px solid #ffeaa7;border-radius:8px;padding:10px 14px;font-size:.85rem;font-family:Sarabun,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:320px;';
-          banner.innerHTML = '⚠️ Firebase session หมดอายุ — read ได้แต่ write ใช้ไม่ได้ <br><a href="/login" style="color:#1565c0;font-weight:700;text-decoration:underline;">→ Login ใหม่</a> <span style="float:right;cursor:pointer;color:#856404;" onclick="this.parentElement.remove()">✕</span>';
+          banner.innerHTML = '⚠️ Firebase session หมดอายุ — read ได้แต่ write ใช้ไม่ได้ <br><a href="/login" style="color:#1565c0;font-weight:700;text-decoration:underline;">→ Login ใหม่</a> <span style="float:right;cursor:pointer;color:#856404;" data-action="removeParent">✕</span>';
           document.body.appendChild(banner);
           setTimeout(() => banner?.remove(), 30000);
         } else {
@@ -430,7 +432,7 @@
             <div style="color: #856404; font-weight: 700;">⏰ หมดเวลาเซสชัน</div>
             <div style="color: #856404; font-size: 0.9rem;">เซสชั่นของคุณจะหมดในอีก ${minutes} นาที โปรดรีเฟรชเพื่อเพิ่มเวลา</div>
           </div>
-          <button onclick="location.reload()" style="background: #ffc107; border: none; color: #000; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; margin-left: 1rem;">🔄 รีเฟรช</button>
+          <button data-action="reload" style="background: #ffc107; border: none; color: #000; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-weight: 600; margin-left: 1rem;">🔄 รีเฟรช</button>
         `;
 
         document.body.insertBefore(banner, document.body.firstChild);
@@ -1244,7 +1246,7 @@
   .sidebar-title {
     font-size: 1.1rem;
     font-weight: 700;
-    margin-bottom: 2px;
+    margin: 0 0 2px;
     letter-spacing: 0.3px;
   }
 
@@ -1863,10 +1865,10 @@
 <body>
 
 <!-- Photo Viewer Modal -->
-<div id="photoModal" class="photo-modal">
+<div id="photoModal" class="photo-modal" role="dialog" aria-modal="true" aria-labelledby="photoModalTitle">
   <div class="photo-modal-content">
-    <button class="photo-modal-close" data-action="closePhotoModal">✕</button>
-    <h2 style="text-align: center; margin-bottom: 1rem; color: var(--text);">รูปภาพซ่อม</h2>
+    <button class="photo-modal-close" data-action="closePhotoModal" aria-label="ปิด">✕</button>
+    <h2 id="photoModalTitle" style="text-align: center; margin-bottom: 1rem; color: var(--text);">รูปภาพซ่อม</h2>
     <div class="photo-modal-photos" id="photoModalPhotos"></div>
   </div>
 </div>
@@ -1875,7 +1877,7 @@
 <div id="toastContainer" class="toast-container"></div>
 
 <!-- Hamburger Menu for Mobile -->
-<button class="hamburger" id="hamburger" data-action="toggleSidebar">
+<button class="hamburger" id="hamburger" data-action="toggleSidebar" aria-label="เปิด/ปิดเมนู" aria-expanded="false" aria-controls="sidebar">
   <span></span>
   <span></span>
   <span></span>
@@ -1884,8 +1886,8 @@
 <!-- Vertical Sidebar Navigation -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
-    <div class="sidebar-logo">🏢</div>
-    <div class="sidebar-title">Nature Haven</div>
+    <div class="sidebar-logo" aria-hidden="true">🏢</div>
+    <h1 class="sidebar-title">Nature Haven</h1>
     <div class="sidebar-subtitle">Professional Edition</div>
     <div id="sidebarUserInfo" style="margin-top:12px;font-size:0.8rem;opacity:0.85;"></div>
   </div>
@@ -1963,12 +1965,12 @@
 </aside>
 
 <!-- ===== TENANT EDIT MODAL ===== -->
-<div class="ui-modal" id="tenantModal" style="display:none;">
+<div class="ui-modal" id="tenantModal" role="dialog" aria-modal="true" aria-labelledby="tenantModalTitle" style="display:none;">
   <div style="background:#fff;border-radius:var(--radius);max-width:680px;width:100%;max-height:95vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;">
     <!-- Modal Header with Gradient -->
     <div style="background:linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
       <div>
-        <h2 style="margin:0;font-size:1.25rem;font-weight:700;">📋 จัดการข้อมูลห้อง</h2>
+        <h2 id="tenantModalTitle" style="margin:0;font-size:1.25rem;font-weight:700;">📋 จัดการข้อมูลห้อง</h2>
         <small style="opacity:.85;font-size:.85rem;">แก้ไขข้อมูลผู้เช่าและสัญญา</small>
       </div>
       <button data-action="closeTenantModal" style="background:rgba(255,255,255,.2);border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:all .2s;hover:background:rgba(255,255,255,.3);">✕</button>
@@ -2161,7 +2163,7 @@
   </div>
 </div>
 
-<div class="main">
+<main class="main">
 
 <!-- ===== DASHBOARD ===== -->
 <div class="page active" id="page-dashboard">
@@ -2412,10 +2414,10 @@
   </div>
 
   <!-- Batch Rent Adjustment Modal -->
-  <div class="ui-modal" id="batchRentModal" style="display:none;">
+  <div class="ui-modal" id="batchRentModal" role="dialog" aria-modal="true" aria-labelledby="batchRentModalTitle" style="display:none;">
     <div style="background:white;border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h2 style="font-size:1.4rem;margin:0;color:#1b5e20;">⚙️ ปรับค่าเช่าแบบหลายห้อง</h2>
+        <h2 id="batchRentModalTitle" style="font-size:1.4rem;margin:0;color:#1b5e20;">⚙️ ปรับค่าเช่าแบบหลายห้อง</h2>
         <button data-action="closeBatchRentAdjustmentModal" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;">✕</button>
       </div>
 
@@ -3213,7 +3215,7 @@
       </div>
 
       <!-- Edit modal -->
-      <div class="ui-modal ui-modal--top" id="emergencyEditModal" style="display:none;">
+      <div class="ui-modal ui-modal--top" id="emergencyEditModal" role="dialog" aria-modal="true" aria-labelledby="emergencyEditTitle" style="display:none;">
         <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 460px;">
           <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="emergencyEditTitle">+ เพิ่มเบอร์ฉุกเฉิน</div>
           <input type="hidden" id="emergencyEditIndex">
@@ -3266,7 +3268,7 @@
             <span id="pp-display-number" style="font-family:monospace;font-weight:700;color:#424242;">—</span>
             <span id="pp-display-payee" style="color:var(--text-muted);font-size:.76rem;margin-left:6px;"></span>
           </div>
-          <a href="#" onclick="showPage('people-management');setTimeout(()=>document.querySelector('[onclick*=\\'showPeopleTab(\\\\\\'owner\\\\\\'\\']')?.click(),50);return false;" style="font-size:.74rem;color:#1565c0;text-decoration:none;">⚙️ แก้ไขในหน้า Owner</a>
+          <a href="#" data-action="navToOwnerTab" style="font-size:.74rem;color:#1565c0;text-decoration:none;">⚙️ แก้ไขในหน้า Owner</a>
         </div>
 
         <!-- Step 1: Building + Room (merged) -->
@@ -3888,7 +3890,7 @@
       </div>
 
       <!-- Edit modal -->
-      <div class="ui-modal ui-modal--top" id="rewardEditModal" style="display:none;">
+      <div class="ui-modal ui-modal--top" id="rewardEditModal" role="dialog" aria-modal="true" aria-labelledby="rewardEditTitle" style="display:none;">
         <div style="background: white; border-radius: 12px; padding: 2rem; width: 90%; max-width: 500px;">
           <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;" id="rewardEditTitle">Add Reward</div>
           <input type="hidden" id="rewardEditId">
@@ -3910,7 +3912,7 @@
   </div>
 </div>
 
-</div><!-- end main -->
+</main>
 
 <!-- Firebase Monitoring Panel -->
 <div id="firebaseMonitorPanel" style="position:fixed;bottom:20px;right:20px;width:320px;background:white;border:2px solid #2d8653;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:9999;font-family:'Sarabun',sans-serif;display:none;">
@@ -3938,8 +3940,8 @@
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
-      <button onclick="window.testFirebaseConnection && window.testFirebaseConnection()" style="padding:8px;background:#2d8653;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Sarabun',sans-serif;">🧪 Test</button>
-      <button onclick="window.syncDataToFirebase && window.syncDataToFirebase()" style="padding:8px;background:#1976d2;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Sarabun',sans-serif;">📤 Sync</button>
+      <button data-action="testFirebaseConnection" style="padding:8px;background:#2d8653;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Sarabun',sans-serif;">🧪 Test</button>
+      <button data-action="syncDataToFirebase" style="padding:8px;background:#1976d2;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Sarabun',sans-serif;">📤 Sync</button>
     </div>
 
     <div style="margin-top:12px;padding:10px;background:#f5f5f5;border-radius:6px;max-height:100px;overflow-y:auto;">
@@ -3967,7 +3969,7 @@
 <script src="./shared/dashboard-payment-verify.js"></script>
 
 <!-- ===== PAYMENT DETAIL MODAL ===== -->
-<div class="pay-modal-overlay" id="payModalOverlay" onclick="if(event.target===this)closePayModal()">
+<div class="pay-modal-overlay" id="payModalOverlay" role="dialog" aria-modal="true" aria-labelledby="payModalTitle" data-action="closePayModalIfOverlay">
   <div class="pay-modal">
     <div class="pay-modal-header">
       <div class="pay-modal-title" id="payModalTitle">รายละเอียดการชำระ</div>
@@ -3979,12 +3981,12 @@
 </div>
 
 <!-- ===== CHANGE PASSWORD MODAL ===== -->
-<div class="ui-modal" id="changePasswordModal" style="display:none;">
+<div class="ui-modal" id="changePasswordModal" role="dialog" aria-modal="true" aria-labelledby="changePasswordModalTitle" style="display:none;">
   <div style="background:#fff;border-radius:var(--radius);max-width:420px;width:100%;max-height:95vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;">
     <!-- Modal Header -->
     <div style="background:linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
       <div>
-        <h2 style="margin:0;font-size:1.25rem;font-weight:700;">🔐 เปลี่ยนรหัสผ่าน</h2>
+        <h2 id="changePasswordModalTitle" style="margin:0;font-size:1.25rem;font-weight:700;">🔐 เปลี่ยนรหัสผ่าน</h2>
         <small style="opacity:.85;font-size:.85rem;">อัปเดตรหัสผ่านของคุณ</small>
       </div>
       <button data-action="closeChangePasswordModal" style="background:rgba(255,255,255,.2);border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:all .2s;">✕</button>
