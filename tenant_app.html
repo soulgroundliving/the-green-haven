@@ -1480,6 +1480,39 @@
             border-color: var(--primary-green); background: var(--soft-green);
             font-weight: 700; color: var(--primary-green);
         }
+
+        /* ===== COMING SOON BADGE (pre-launch gamification) ===== */
+        .coming-soon-locked {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.55;
+            filter: grayscale(0.25);
+        }
+        .coming-soon-locked::after {
+            content: '🚧 Coming Soon';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #fff;
+            padding: 5px 11px;
+            border-radius: 14px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            box-shadow: 0 3px 10px rgba(245, 158, 11, 0.35);
+            z-index: 10;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        /* Nav button variant — smaller badge */
+        #nav-smart-key-btn.coming-soon-locked::after {
+            top: 2px;
+            right: 2px;
+            padding: 2px 6px;
+            font-size: 0.6rem;
+            content: '🚧';
+        }
     </style>
 </head>
 
@@ -6340,14 +6373,54 @@
             'profile-points-banner', 'profile-tab-nav', 'profile-rewards-card',
             'nav-smart-key-btn', 'pet-list-container', 'daily-modal'
         ];
+
+        // ===== PRE-LAUNCH FEATURE FLAG =====
+        // Flip to true when building opens (Jul-Aug 2026) to enable gamification fully.
+        // While false: daily modal hidden, Nest cards show Coming Soon badge, points/rewards
+        // remain visible but locked. Rooms tenants see nothing gamification-related either way.
+        window.GAMIFICATION_LIVE = false;
+
+        // Nest-only elements that stay visible with a Coming Soon badge during pre-launch
+        const COMING_SOON_IDS = [
+            'profile-points-banner', 'profile-rewards-card', 'nav-smart-key-btn', 'pet-list-container'
+        ];
+
         function applyGamificationVisibility() { applyBuildingVisibility(); } // backward-compat alias
         function applyBuildingVisibility() {
+            // ===== PRE-LAUNCH MODE =====
+            if (!window.GAMIFICATION_LIVE) {
+                // Daily modal: always hidden (TEST MODE + no daily cooldown yet)
+                const dm = document.getElementById('daily-modal');
+                if (dm) dm.style.display = 'none';
+
+                if (_taBuilding === 'nest') {
+                    // Nest tenants: show the features, mark as Coming Soon
+                    COMING_SOON_IDS.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) { el.style.display = ''; el.classList.add('coming-soon-locked'); }
+                    });
+                    const tabNav = document.getElementById('profile-tab-nav');
+                    if (tabNav) tabNav.style.display = 'none'; // hide tab switcher (rewards tab not live)
+                } else {
+                    // Rooms tenants: hide all gamification (Nest-only economy)
+                    NEST_ONLY_ELEMENT_IDS.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.style.display = 'none';
+                    });
+                }
+                window._gamificationDisabled = true;
+                window._nestOnlyDisabled = true;
+                return;
+            }
+
+            // ===== LIVE MODE =====
             if (_taBuilding === 'nest') {
                 // Nest tenants see everything. If they were previously hidden (e.g. logged in as
                 // Rooms first then switched), restore visibility.
                 NEST_ONLY_ELEMENT_IDS.forEach(id => {
                     const el = document.getElementById(id);
                     if (!el) return;
+                    el.classList.remove('coming-soon-locked');
                     // usage-feature-grid needs display:grid explicitly — empty string removes
                     // the inline 'display:grid' from HTML and falls back to CSS default (block),
                     // which breaks the 4-column layout.
@@ -6669,6 +6742,8 @@
             loadWellnessFromFirestore();
             // Daily bonus — safe to run now: _nestOnlyDisabled is set by detectRoomBuilding() above
             checkDailyLogin();
+            // Pre-launch: land on home instead of world-map (no game content yet)
+            if (!window.GAMIFICATION_LIVE) showPage('home');
             document.getElementById('app-loading-splash')?.remove();
         }
 
