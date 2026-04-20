@@ -1675,13 +1675,13 @@
             </button>
             <div style="padding-right: 120px;">
                 <div class="date-display text-[10px]" id="current-date">--/--/--</div>
-                <h1 id="user-greeting" class="text-xl font-bold">สวัสดีครับ คุณลูกตาล</h1>
+                <h1 id="user-greeting" class="text-xl font-bold">สวัสดีครับ คุณลูกบ้าน</h1>
                 <p id="time-greet" class="text-xs mt-1 opacity-80">ยินดีต้อนรับกลับบ้านครับ 🌿</p>
             </div>
         </div>
         <div onclick="showPage('world-map-page')"
             style="background: #2d8653; color: white; padding: 10px; border-radius: 15px; margin: 15px; text-align: center; cursor: pointer;">
-            <i class="fas fa-arrow-left"></i> กลับไปหน้าแผนที่ (The Maze)
+            <i class="fas fa-arrow-left"></i> กลับไปหน้าแผนที่ (Nature Map)
         </div>
 
         <div id="heat-alert" class=" card bg-[#FFF9F2] rounded-[2rem] p-5 border border-[#FFEDE0] flex gap-4 shadow-sm">
@@ -1693,7 +1693,7 @@
             <div>
                 <strong class="text-[#8B4513] text-sm font-bold">อากาศร้อนจัดเป็นพิเศษ</strong>
                 <p class="text-[#A67C52] text-[11px] leading-relaxed mt-1">
-                    อย่าลืมดูแลน้องสัตว์เลี้ยงชั้น 3-4 และปิดม่านเพื่อลดความร้อนในห้องนะครับ
+                    อย่าลืมดื่มน้ำบ่อยๆ ปิดม่าน และดูแลสัตว์เลี้ยงของคุณเพื่อลดความร้อนในห้องนะครับ
                 </p>
             </div>
         </div>
@@ -2187,8 +2187,10 @@
             <button class="cf-pill" data-cat="event" onclick="setCommunityFilter('event', this)">📅 กิจกรรม</button>
         </div>
         <div id="community-feed">
-            <div class="card" style="margin-top:0; text-align:center; color:#aaa;">
-                <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
+            <div class="card" style="margin-top:0; text-align:center; color:#999; padding:28px 16px;">
+                <div style="font-size:2rem; margin-bottom:6px;">📭</div>
+                <div style="font-weight:600; color:#666;">ยังไม่มีประกาศหรือกิจกรรม</div>
+                <div style="font-size:var(--fs-sm); margin-top:4px;">เมื่อมีข่าวสารจากแอดมินจะขึ้นที่นี่ครับ</div>
             </div>
         </div>
         <!-- Hidden legacy containers for backward-compat with existing render funcs -->
@@ -2216,8 +2218,14 @@
         </div>
 
         <div id="market-list-container" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 8px;">
-            <div style="grid-column:1/-1; text-align:center; padding:30px; color:#aaa;">
-                <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
+            <div style="grid-column:1/-1; text-align:center; padding:30px 16px; color:#666;">
+                <div style="font-size:2.2rem; margin-bottom:8px;">🛒</div>
+                <div style="font-weight:700; color:#444; font-size:var(--fs-md);">ยังไม่มีใครลงประกาศ</div>
+                <div style="font-size:var(--fs-sm); color:#888; margin:6px 0 14px;">เป็นคนแรกของตึกสิครับ — ของที่ไม่ใช้ ขายต่อให้เพื่อนบ้านได้นะ!</div>
+                <button onclick="showSubPage('add-market-page')"
+                    style="background:var(--primary-green); color:#fff; border:none; padding:10px 20px; border-radius:12px; font-weight:700; cursor:pointer; font-family:inherit;">
+                    ✨ ลงประกาศแรกของฉัน
+                </button>
             </div>
         </div>
 
@@ -2268,7 +2276,7 @@
         <div class="card" style="border-left: 5px solid var(--primary-green);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <p class="text-sm font-light uppercase tracking-wider">ยอดที่ต้องชำระ</p>
+                    <p id="bill-label" class="text-sm font-light uppercase tracking-wider">ยอดที่ต้องชำระ</p>
                     <h3 id="current-bill-amount" class="text-4xl font-bold mt-1 tracking-tight">฿ —</h3>
                 </div>
                 <span id="service-due-badge"
@@ -2461,8 +2469,30 @@
             <div id="current-avatar"
                 style="width:80px; height:80px; background:var(--soft-green); border-radius:50%; margin:0 auto 10px; border:3px solid white; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg);">
                 🌿</div>
-            <h1 id="display-name" style="margin:0;">คุณลูกตาล</h1>
+            <h1 id="display-name" style="margin:0;">คุณลูกบ้าน</h1>
             <p id="profile-room-display" style="margin:5px 0; font-size:var(--fs-md); opacity:0.6;">ห้อง — | —</p>
+        </div>
+
+        <!-- Rooms tenant fallback (shown only for ตึกห้องแถว — no gamification) -->
+        <div id="profile-rooms-fallback" style="display:none; padding:0 16px; margin-bottom:16px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div onclick="showPage('contract-action-page')" style="background:var(--soft-green); padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                    <div style="font-size:1.8rem; margin-bottom:4px;">📄</div>
+                    <div style="font-weight:700; font-size:var(--fs-sm); color:var(--primary-dark);">สัญญาเช่า</div>
+                </div>
+                <div onclick="showPage('usage')" style="background:#FFF9E6; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                    <div style="font-size:1.8rem; margin-bottom:4px;">💳</div>
+                    <div style="font-weight:700; font-size:var(--fs-sm); color:#8B6F00;">ชำระบิล</div>
+                </div>
+                <div onclick="showSubPage('maintenance')" style="background:#FFF0F0; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                    <div style="font-size:1.8rem; margin-bottom:4px;">🔧</div>
+                    <div style="font-weight:700; font-size:var(--fs-sm); color:#B00020;">แจ้งซ่อม</div>
+                </div>
+                <div onclick="showSubPage('complaint')" style="background:#F0F4FF; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                    <div style="font-size:1.8rem; margin-bottom:4px;">💬</div>
+                    <div style="font-weight:700; font-size:var(--fs-sm); color:#003D99;">ร้องเรียน</div>
+                </div>
+            </div>
         </div>
 
         <!-- Points Banner (Nest only) -->
@@ -2515,7 +2545,7 @@
             <div id="profile-rewards-card" class="muji-card p-6 mb-4 text-center border-none shadow-md" style="background: var(--soft-green);">
                 <p class="text-[10px] text-[#2d8653] font-bold uppercase mb-1">คะแนนสะสมของคุณ</p>
                 <div class="text-3xl font-bold mb-4">
-                    <span id="user-total-points">1,250</span>
+                    <span id="user-total-points">0</span>
                     <small class="text-sm font-normal">Points</small>
                 </div>
                 <button onclick="openRewardsShop()"
@@ -2614,11 +2644,12 @@
             <div class="muji-card p-5 mb-4">
                 <h3 class="font-bold text-sm mb-4">📊 สถิติรายเดือน</h3>
                 <div class="space-y-3">
-                    <div class="flex justify-between items-center text-sm"><span class="text-gray-500">คะแนนสะสมเดือนนี้</span><span class="font-bold text-[#2d8653]">+180 Pts</span></div>
-                    <div class="flex justify-between items-center text-sm border-t pt-2"><span class="text-gray-500">จ่ายตรงเวลา</span><span class="font-bold">3 เดือนติดต่อกัน</span></div>
-                    <div class="flex justify-between items-center text-sm border-t pt-2"><span class="text-gray-500">ประหยัดน้ำจากเดือนก่อน</span><span class="font-bold text-blue-500">-8%</span></div>
-                    <div class="flex justify-between items-center text-sm border-t pt-2"><span class="text-gray-500">ประหยัดไฟจากเดือนก่อน</span><span class="font-bold text-yellow-500">-12%</span></div>
+                    <div class="flex justify-between items-center text-sm"><span class="text-gray-500">คะแนนสะสมเดือนนี้</span><span id="stat-monthly-pts" class="font-bold text-[#2d8653]">— Pts</span></div>
+                    <div class="flex justify-between items-center text-sm border-t pt-2"><span class="text-gray-500">จ่ายตรงเวลา</span><span id="stat-ontime-streak" class="font-bold">— เดือน</span></div>
+                    <div class="flex justify-between items-center text-sm border-t pt-2"><span class="text-gray-500">ประหยัดน้ำจากเดือนก่อน</span><span id="stat-water-diff" class="font-bold text-blue-500">—</span></div>
+                    <div class="flex justify-between items-center text-sm border-t pt-2"><span class="text-gray-500">ประหยัดไฟจากเดือนก่อน</span><span id="stat-elec-diff" class="font-bold text-yellow-500">—</span></div>
                 </div>
+                <p style="font-size:10px; color:#aaa; text-align:center; margin-top:12px; font-style:italic;">ระบบจะเริ่มรวบรวมสถิติหลังคุณมีบิลอย่างน้อย 1 รอบ</p>
             </div>
             <div class="muji-card p-5 mb-6">
                 <h3 class="font-bold text-sm mb-3">🎯 ระดับในระบบ</h3>
@@ -2647,52 +2678,7 @@
             <div class="overflow-y-auto pr-2 space-y-4 custom-scrollbar" id="rewards-list">
                 <!-- Rewards rendered dynamically by _subscribeRewards() from Firestore `rewards` collection.
                      Admin manages via dashboard.html → Settings → Rewards. -->
-                <div class="text-center text-xs text-gray-400 py-8" id="rewards-list-empty">กำลังโหลดของรางวัล…</div>
-                <div class="space-y-4">
-                    <div class="muji-card p-5 border-none shadow-sm relative overflow-hidden">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-sm font-bold text-[#334435]">จ่ายตรงเวลาครบ 10 รอบ</p>
-                                <p class="text-[10px] text-gray-400 mt-1">ขอบคุณที่ดูแลบ้านหลังนี้</p>
-                            </div>
-                            <span class="text-[11px] font-bold text-[#2d8653]">+100 Pts</span>
-                        </div>
-                        <div class="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden mb-2">
-                            <div class="bg-[#2d8653] h-full rounded-full" style="width: 83%"></div>
-                        </div>
-                        <div class="flex justify-between text-[10px] text-gray-400">
-                            <span>สะสม 9 / 10 ครั้ง</span>
-                            <span>อีก 2 ครั้งเพื่อเคลม!</span>
-                        </div>
-                    </div>
-                    <div class="muji-card p-5 border-none shadow-sm relative overflow-hidden">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-sm font-bold text-[#334435]">📅 ครบรอบ 1 ปีที่ Nature Haven</p>
-                                <p class="text-[10px] text-gray-400 mt-1">ขอบคุณที่เป็นส่วนหนึ่งของครอบครัวเรา</p>
-                            </div>
-                            <span class="text-[11px] font-bold text-[#2d8653]">+200 Pts</span>
-                        </div>
-                        <div class="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden mb-2">
-                            <div class="bg-[#2d8653] h-full rounded-full" style="width: 83%"></div>
-                        </div>
-                        <div class="flex justify-between text-[10px] text-gray-400">
-                            <span>สะสม 10 / 12 เดือน</span>
-                            <span>อีก 2 เดือนเพื่อเคลม!</span>
-                        </div>
-                    </div>
-
-                    <div class="muji-card p-5 border-none shadow-sm bg-[#F0F7F2]">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <p class="text-sm font-bold text-[#334435]">🤝 เพื่อนบ้านชวนเพื่อน</p>
-                                <p class="text-[10px] text-gray-400">แนะนำเพื่อนมาเช่าสำเร็จ รับคะแนนก้อนใหญ่</p>
-                            </div>
-                            <button onclick="alert('แชร์รหัสแนะนำของคุณ: NEST-304')"
-                                class="bg-white text-[#2d8653] text-[10px] px-4 py-2 rounded-xl font-bold shadow-sm">แชร์รหัส</button>
-                        </div>
-                    </div>
-                </div>
+                <div class="text-center text-xs text-gray-400 py-8" id="rewards-list-empty">ยังไม่มีของรางวัลในขณะนี้ — แอดมินจะเพิ่มเร็วๆ นี้</div>
             </div>
             <p class="text-center text-[10px] text-gray-400 mt-6 mb-20 shrink-0 italic">
                 แต้มของคุณจะถูกหักทันทีหลังกดยืนยัน
@@ -2716,7 +2702,7 @@
                 onclick="alert('ระบบสร้าง QR ให้แขก (Visitor Pass) กำลังพัฒนาครับ')">Visitor Pass</button>
         </div>
         <div class="card" style="text-align: center; padding: 40px 20px; border-radius: 30px; margin: 20px;">
-            <h3 style="margin-top: 0; color: var(--primary-green);">ห้อง 402</h3>
+            <h3 id="smart-key-room-label" style="margin-top: 0; color: var(--primary-green);">ห้อง —</h3>
             <p style="font-size: var(--fs-md); color: #888; margin-bottom: 20px;">สแกนที่จุดทาบบัตรเพื่อเข้าอาคารส่วนกลาง</p>
             <div
                 style="width: 200px; height: 200px; border: 3px solid var(--primary-green); border-radius: 20px; margin: 0 auto; padding: 10px; position: relative;">
@@ -4505,7 +4491,7 @@
 
         function updateName(val) {
             const dName = document.getElementById('display-name');
-            if (dName) dName.innerText = val || "คุณลูกตาล";
+            if (dName) dName.innerText = val || "คุณลูกบ้าน";
         }
 
         function setAvatar(emoji, el) {
@@ -6371,7 +6357,8 @@
         //   - Smart Key (Nest QR door access; Rooms uses physical keys)
         const NEST_ONLY_ELEMENT_IDS = [
             'profile-points-banner', 'profile-tab-nav', 'profile-rewards-card',
-            'nav-smart-key-btn', 'pet-list-container', 'daily-modal'
+            'nav-smart-key-btn', 'pet-list-container', 'daily-modal',
+            'contract-quiz-section', 'wellness-claim-area'
         ];
 
         // ===== PRE-LAUNCH FEATURE FLAG =====
@@ -6382,11 +6369,18 @@
 
         // Nest-only elements that stay visible with a Coming Soon badge during pre-launch
         const COMING_SOON_IDS = [
-            'profile-points-banner', 'profile-rewards-card', 'nav-smart-key-btn', 'pet-list-container'
+            'profile-points-banner', 'profile-rewards-card', 'nav-smart-key-btn',
+            'pet-list-container', 'contract-quiz-section', 'wellness-claim-area'
         ];
 
         function applyGamificationVisibility() { applyBuildingVisibility(); } // backward-compat alias
         function applyBuildingVisibility() {
+            // Rooms fallback: show shortcut tiles only for Rooms tenants
+            const roomsFallback = document.getElementById('profile-rooms-fallback');
+            if (roomsFallback) {
+                roomsFallback.style.display = _taBuilding === 'rooms' ? 'block' : 'none';
+            }
+
             // ===== PRE-LAUNCH MODE =====
             if (!window.GAMIFICATION_LIVE) {
                 // Daily modal: always hidden (TEST MODE + no daily cooldown yet)
@@ -6781,6 +6775,13 @@
             if (amtEl && latest) {
                 const total = Number(latest.totalAmount || latest.total || latest.totalCharge || latest.rentAmount) || 0;
                 amtEl.textContent = `฿ ${Number(total).toLocaleString('th-TH',{minimumFractionDigits:2})}`;
+            }
+            const labelEl = document.getElementById('bill-label');
+            if (labelEl && latest) {
+                const mName = THAI_MONTHS_SHORT[latest.month] || '';
+                const yBE = latest.year ? ` ${(latest.year < 2500 ? latest.year + 543 : latest.year)}` : '';
+                const suffix = mName ? ` ประจำเดือน ${mName}${yBE}` : '';
+                labelEl.textContent = (latest.status === 'paid' ? 'ยอดที่ชำระ' : 'ยอดที่ต้องชำระ') + suffix;
             }
             const dueBadge = document.getElementById('service-due-badge');
             if (dueBadge && latest) {
@@ -7300,6 +7301,8 @@
             if (roomEl && _taRoom) {
                 roomEl.textContent = `ห้อง ${_taRoom} | ${_taBuilding === 'nest' ? 'ตึก Nest' : 'ตึก Rooms'}`;
             }
+            const skLabel = document.getElementById('smart-key-room-label');
+            if (skLabel && _taRoom) skLabel.textContent = `ห้อง ${_taRoom}`;
             const ptEl = document.getElementById('user-total-points');
             if (ptEl) {
                 const pts = parseInt(localStorage.getItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`))
