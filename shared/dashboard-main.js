@@ -441,6 +441,24 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   setTimeout(updateDashboardLive,100);
   setTimeout(initDashboardCharts,300);
 
+  // ===== URL DEEP LINK: ?page=requests-approvals&tab=liff =====
+  const _dlParams = new URLSearchParams(window.location.search);
+  const _dlPage = _dlParams.get('page');
+  const _dlTab  = _dlParams.get('tab');
+  if (_dlPage) {
+    setTimeout(() => {
+      showPage(_dlPage);
+      if (_dlTab) {
+        setTimeout(() => {
+          if (_dlPage === 'requests-approvals') {
+            const btn = document.getElementById(`tab-${_dlTab}-btn`);
+            if (typeof switchRequestsTab === 'function') switchRequestsTab(_dlTab, btn);
+          }
+        }, 200);
+      }
+    }, 500);
+  }
+
   // ===== CENTRALIZED EVENT DELEGATION HUB =====
   document.addEventListener('click', function(e) {
     const el = e.target.closest('[data-action]');

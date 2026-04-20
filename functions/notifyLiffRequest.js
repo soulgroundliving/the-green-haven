@@ -54,11 +54,12 @@ exports.notifyLiffRequest = onRequest(
       }
 
       const buildingLabel = data.building === 'nest' ? '🏢 Nest' : '🏠 ห้องแถว';
+      const dashboardUrl = 'https://the-green-haven.vercel.app/dashboard.html?page=requests-approvals&tab=liff';
       const text = `🔗 คำขอเชื่อมบัญชีใหม่\n\n`
         + `👤 ${data.lineDisplayName || '—'}\n`
         + `🏠 ห้อง ${data.room || '—'} (${buildingLabel})\n`
         + (data.phone ? `📱 ${data.phone}\n` : '')
-        + `\nเข้า dashboard เพื่ออนุมัติ`;
+        + `\nอนุมัติได้ที่:\n${dashboardUrl}`;
 
       const results = await Promise.allSettled(adminIds.map(to =>
         fetch('https://api.line.me/v2/bot/message/push', {
