@@ -1127,7 +1127,7 @@
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #e8f5e9;
+            background: var(--soft-green);
             border-radius: 10px;
         }
 
@@ -7805,7 +7805,7 @@
                 noteEl.textContent = 'บันทึกย้อนหลัง — ก่อนระบบ SlipOK (ไม่มีสลิปดิจิทัล)';
             } else if (badge) {
                 badge.innerHTML = '✅ ชำระแล้ว';
-                badge.style.background = '#e8f5e9';
+                badge.style.background = 'var(--soft-green)';
                 badge.style.color = 'var(--primary-green)';
                 badge.style.borderColor = 'var(--primary-green)';
                 if (noteEl) noteEl.style.display = 'none';
