@@ -6479,8 +6479,6 @@
             loadWellnessFromFirestore();
             // Daily bonus — safe to run now: _nestOnlyDisabled is set by detectRoomBuilding() above
             checkDailyLogin();
-            // Pre-launch: land on home instead of world-map (no game content yet)
-            if (!window.GAMIFICATION_LIVE) showPage('home');
             document.getElementById('app-loading-splash')?.remove();
         }
 
