@@ -18,6 +18,7 @@
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <!-- Shared logic scripts -->
     <script src="./shared/firebase-config-loader.js"></script>
+    <script src="./shared/gamification-rules.js"></script>
     <script src="./shared/room-config.js"></script>
     <script src="./shared/tenant-system.js"></script>
     <script src="./shared/lease-config.js"></script>
@@ -6212,44 +6213,26 @@
             userPoints = pts;
             _subscribeEcoPoints(); // idempotent — only subscribes once
             _loadLeaderboard(); // Nest-only, idempotent
-            const levels = [
-                { name:'Seedling 🌱', min:0,    max:299  },
-                { name:'Sprout 🌿',   min:300,  max:699  },
-                { name:'Blooming 🌸', min:700,  max:1499 },
-                { name:'Guardian 🌳', min:1500, max:2999 },
-                { name:'Forest Master 🏆', min:3000, max:Infinity }
-            ];
-            const level = levels.find(l => pts >= l.min && pts <= l.max) || levels[0];
-            const nextLevel = levels[levels.indexOf(level) + 1];
-
+            // Level + progress from SSoT (shared/gamification-rules.js)
+            const lp = window.GamificationRules.getLevelProgress(pts);
             const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-            setEl('eco-level-name', level.name);
+            setEl('eco-level-name', `${lp.tier.name} ${lp.tier.emoji}`);
             setEl('eco-points-display', pts.toLocaleString() + ' Pts');
             setEl('eco-my-pts', pts.toLocaleString() + ' Pts');
             setEl('eco-stat-pts', pts.toLocaleString() + ' Pts');
-            if (nextLevel) setEl('eco-next-goal', `เป้าหมายถัดไป: ${nextLevel.name.split(' ')[0]} (${nextLevel.min.toLocaleString()} Pts)`);
+            if (lp.next) setEl('eco-next-goal', `เป้าหมายถัดไป: ${lp.next.name} (${lp.next.min.toLocaleString()} Pts)`);
             const bar = document.getElementById('eco-progress-bar');
-            if (bar && nextLevel) {
-                const pct = Math.min(100, Math.round(((pts - level.min) / (nextLevel.min - level.min)) * 100));
-                bar.style.width = pct + '%';
-            }
+            if (bar) bar.style.width = Math.round(lp.progress) + '%';
             // Render locked badge grid immediately; _subscribeEcoPoints will update with earned badges
             if (typeof _renderBadgeGrid === 'function') _renderBadgeGrid(_lastKnownBadges || []);
         }
 
         let _lastKnownBadges = null;
 
-        const _BADGE_CATALOG = [
-            { id:'first_month',     emoji:'🥇', label:'The First Generation', minPts:0    },
-            { id:'on_time',         emoji:'⏰', label:'On Time',               minPts:50   },
-            { id:'community_star',  emoji:'⭐', label:'Community Star',        minPts:75   },
-            { id:'green_guardian',  emoji:'🌿', label:'Green Guardian',        minPts:100  },
-            { id:'loyal_resident',  emoji:'💎', label:'Loyal Resident',        minPts:250  },
-            { id:'rising_star',     emoji:'🌟', label:'Rising Star',           minPts:300  },
-            { id:'perfect_record',  emoji:'🏆', label:'Perfect Record',        minPts:500  },
-            { id:'master_resident', emoji:'👑', label:'Master Resident',       minPts:1000 }
-        ];
-        function _badgeId(b) { return typeof b === 'string' ? b.toLowerCase().replace(/ /g,'_') : b.id; }
+        // Badge catalog + helpers come from SSoT (shared/gamification-rules.js).
+        // Kept as local aliases so legacy references below stay readable.
+        const _BADGE_CATALOG = window.GamificationRules.BADGE_CATALOG;
+        const _badgeId = window.GamificationRules.badgeId;
 
         function _renderBadgeGrid(badges) {
             const container = document.getElementById('badge-grid-container');

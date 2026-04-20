@@ -47,6 +47,9 @@ build/
 .next/
 .firebase/
 
+# Auto-generated at functions deploy (copied from shared/gamification-rules.js)
+functions/gamification-rules.js
+
 # Logs
 *.log
 logs/

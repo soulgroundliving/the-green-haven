@@ -30,6 +30,7 @@
     {
       "source": "functions",
       "codebase": "default",
+      "predeploy": "npm --prefix \"$RESOURCE_DIR\" run sync-shared",
       "ignore": [
         "node_modules",
         ".git",
