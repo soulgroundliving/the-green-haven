@@ -17,8 +17,10 @@ const firestore = admin.firestore();
 exports.verifyMigrationComplete = functions.region('asia-southeast1').https.onRequest(async (req, res) => {
   try {
     const token = req.query.token;
-    const MIGRATION_TOKEN = process.env.MIGRATION_TOKEN || 'the-green-haven-migrate-secure-2026-march-key';
-
+    const MIGRATION_TOKEN = process.env.MIGRATION_TOKEN;
+    if (!MIGRATION_TOKEN) {
+      return res.status(500).json({ error: 'Server misconfigured: MIGRATION_TOKEN not set' });
+    }
     if (token !== MIGRATION_TOKEN) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -93,8 +95,10 @@ exports.verifyMigrationComplete = functions.region('asia-southeast1').https.onRe
 exports.deleteRealtimeDBData = functions.region('asia-southeast1').https.onRequest(async (req, res) => {
   try {
     const token = req.query.token;
-    const CLEANUP_TOKEN = process.env.CLEANUP_TOKEN || 'the-green-haven-cleanup-secure-2026-march-key';
-
+    const CLEANUP_TOKEN = process.env.CLEANUP_TOKEN;
+    if (!CLEANUP_TOKEN) {
+      return res.status(500).json({ error: 'Server misconfigured: CLEANUP_TOKEN not set' });
+    }
     if (token !== CLEANUP_TOKEN) {
       return res.status(403).json({ error: 'Unauthorized - invalid cleanup token' });
     }

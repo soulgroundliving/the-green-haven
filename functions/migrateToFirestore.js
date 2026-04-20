@@ -17,9 +17,10 @@ const firestore = admin.firestore();
 exports.migrateToFirestore = functions.region('asia-southeast1').https.onRequest(async (req, res) => {
   try {
     const token = req.query.token;
-    const MIGRATION_TOKEN = process.env.MIGRATION_TOKEN || 'the-green-haven-migrate-secure-2026-march-key';
-
-    // Verify token
+    const MIGRATION_TOKEN = process.env.MIGRATION_TOKEN;
+    if (!MIGRATION_TOKEN) {
+      return res.status(500).json({ error: 'Server misconfigured: MIGRATION_TOKEN not set' });
+    }
     if (token !== MIGRATION_TOKEN) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -177,8 +178,10 @@ exports.migrateToFirestore = functions.region('asia-southeast1').https.onRequest
 exports.setupFirestoreIndexes = functions.region('asia-southeast1').https.onRequest(async (req, res) => {
   try {
     const token = req.query.token;
-    const MIGRATION_TOKEN = process.env.MIGRATION_TOKEN || 'the-green-haven-migrate-secure-2026-march-key';
-
+    const MIGRATION_TOKEN = process.env.MIGRATION_TOKEN;
+    if (!MIGRATION_TOKEN) {
+      return res.status(500).json({ error: 'Server misconfigured: MIGRATION_TOKEN not set' });
+    }
     if (token !== MIGRATION_TOKEN) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
