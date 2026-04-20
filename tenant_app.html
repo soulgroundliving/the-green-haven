@@ -1580,7 +1580,8 @@
 
             <div>
                 <p id="display-name-map" style="font-size: var(--fs-sm); font-weight: 700; margin: 0; color: #334435;">คุณลูกบ้าน</p>
-                <p style="font-size: var(--fs-sm); margin: 0; color: #2d8653;">Lv.1 Seedling</p>
+                <!-- Rendered by loadGamificationData() from LEVEL_TIERS (SSoT) -->
+                <p id="world-map-level" style="font-size: var(--fs-sm); margin: 0; color: #2d8653;">Lv.1 Seedling</p>
             </div>
         </div>
 
@@ -5998,6 +5999,7 @@
             setEl('eco-level-name', `${lp.tier.name} ${lp.tier.emoji}`);
             setEl('eco-points-display', pts.toLocaleString() + ' Pts');
             setEl('eco-my-pts', pts.toLocaleString() + ' Pts');
+            setEl('world-map-level', `Lv.${lp.tier.level} ${lp.tier.name}`);
             if (lp.next) setEl('eco-next-goal', `เป้าหมายถัดไป: ${lp.next.name} (${lp.next.min.toLocaleString()} Pts)`);
             const bar = document.getElementById('eco-progress-bar');
             if (bar) bar.style.width = Math.round(lp.progress) + '%';

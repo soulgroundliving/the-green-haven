@@ -28,12 +28,15 @@
     // ===== LEVEL TIERS (tenant-facing) =====
     // Point thresholds matched to memory/point_economy_rules.md earning rates.
     // Max plausible earn ~5,800 pts/คน/ปี, so Forest Master (3000+) is a 2-year target.
+    // `level` is the 1-based tier index — used by UI that shows "Lv.N {name}"
+    // (e.g. the world-map badge). Keep sequential; if a tier is added/removed,
+    // renumber all levels.
     const LEVEL_TIERS = [
-        { id: 'seedling',      name: 'Seedling',      emoji: '🌱', min: 0,    max: 299 },
-        { id: 'sprout',        name: 'Sprout',        emoji: '🌿', min: 300,  max: 699 },
-        { id: 'blooming',      name: 'Blooming',      emoji: '🌸', min: 700,  max: 1499 },
-        { id: 'guardian',      name: 'Guardian',      emoji: '🌳', min: 1500, max: 2999 },
-        { id: 'forest_master', name: 'Forest Master', emoji: '🏆', min: 3000, max: Infinity }
+        { id: 'seedling',      name: 'Seedling',      emoji: '🌱', level: 1, min: 0,    max: 299 },
+        { id: 'sprout',        name: 'Sprout',        emoji: '🌿', level: 2, min: 300,  max: 699 },
+        { id: 'blooming',      name: 'Blooming',      emoji: '🌸', level: 3, min: 700,  max: 1499 },
+        { id: 'guardian',      name: 'Guardian',      emoji: '🌳', level: 4, min: 1500, max: 2999 },
+        { id: 'forest_master', name: 'Forest Master', emoji: '🏆', level: 5, min: 3000, max: Infinity }
     ];
 
     // ===== BADGE CATALOG =====
