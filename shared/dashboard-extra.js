@@ -1171,9 +1171,21 @@ function renderOwnerInfoPage() {
     <div id="buildingPaymentConfigContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
       <div style="text-align:center;color:var(--text-muted);padding:1rem;grid-column:span 2;">กำลังโหลด...</div>
     </div>
+
+    <!-- Per-building Internet Status (subscribed by tenant_app displayBuildingInternetStatus) -->
+    <hr style="margin: 2.5rem 0 1.5rem; border: none; border-top: 1px solid var(--border);">
+    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: .25rem;">🌐 สถานะอินเทอร์เน็ตอาคาร</div>
+    <div style="font-size: .85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+      ตั้งค่าสถานะเน็ต/ผู้ให้บริการ/ความเร็ว แยกตามตึก — ลูกบ้านจะเห็น status จริงในหน้า Services.
+      <br>เก็บที่ Firestore <code>buildings/{RentRoom|nest}.internet</code> (real-time ผ่าน onSnapshot)
+    </div>
+    <div id="buildingInternetConfigContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+      <div style="text-align:center;color:var(--text-muted);padding:1rem;grid-column:span 2;">กำลังโหลด...</div>
+    </div>
   `;
-  // Lazy-load building payment config (after Firebase ready)
+  // Lazy-load building payment + internet config (after Firebase ready)
   if (typeof renderBuildingPaymentConfig === 'function') renderBuildingPaymentConfig();
+  if (typeof renderBuildingInternetConfig === 'function') renderBuildingInternetConfig();
 }
 
 // ===== BUILDING PAYMENT CONFIG (per-building PromptPay + company name) =====
@@ -1241,6 +1253,91 @@ async function saveBuildingPaymentConfig(fsId) {
 if (typeof window !== 'undefined') {
   window.renderBuildingPaymentConfig = renderBuildingPaymentConfig;
   window.saveBuildingPaymentConfig = saveBuildingPaymentConfig;
+}
+
+
+// ===== BUILDING INTERNET CONFIG (per-building ISP + status + speed) =====
+// Same pattern as payment config: writes buildings/{RentRoom|nest}.internet (merged).
+// Tenant_app subscribes via displayBuildingInternetStatus onSnapshot.
+async function renderBuildingInternetConfig() {
+  const container = document.getElementById('buildingInternetConfigContainer');
+  if (!container) return;
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    container.innerHTML = '<div style="color:#c62828;text-align:center;padding:1rem;grid-column:span 2;">Firestore unavailable</div>';
+    return;
+  }
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  const [rrSnap, nestSnap] = await Promise.all([
+    fs.getDoc(fs.doc(db, 'buildings', 'RentRoom')).catch(() => null),
+    fs.getDoc(fs.doc(db, 'buildings', 'nest')).catch(() => null)
+  ]);
+  const rr = rrSnap?.exists() ? (rrSnap.data().internet || {}) : {};
+  const nest = nestSnap?.exists() ? (nestSnap.data().internet || {}) : {};
+  const esc = s => String(s ?? '').replace(/"/g, '&quot;');
+  const statusOpt = (cur, v, lbl) => `<option value="${v}"${cur === v ? ' selected' : ''}>${lbl}</option>`;
+  const cardHtml = (label, fsId, data) => `
+    <div style="border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.25rem; background: #fafafa;">
+      <div style="font-weight: 700; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+        <span>${label}</span>
+        <span style="font-size: .72rem; color: var(--text-muted); font-family: monospace;">buildings/${fsId}.internet</span>
+      </div>
+      <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">สถานะ</label>
+      <select id="bi-${fsId}-status" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.8rem;font-family:Sarabun,sans-serif;">
+        ${statusOpt(data.status, 'online', '🟢 เชื่อมต่อแล้ว')}
+        ${statusOpt(data.status, 'maintenance', '🟡 กำลังบำรุงรักษา')}
+        ${statusOpt(data.status, 'offline', '🔴 ไม่เชื่อมต่อ')}
+      </select>
+      <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">ผู้ให้บริการ</label>
+      <input type="text" id="bi-${fsId}-provider" value="${esc(data.provider)}" placeholder="เช่น True Internet" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.8rem;">
+      <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">เบอร์ติดต่อ</label>
+      <input type="tel" id="bi-${fsId}-contact" value="${esc(data.contact)}" placeholder="เช่น 1686" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.8rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1rem;">
+        <div>
+          <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">Download</label>
+          <input type="text" id="bi-${fsId}-download" value="${esc(data.downloadSpeed)}" placeholder="500 Mbps" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">Upload</label>
+          <input type="text" id="bi-${fsId}-upload" value="${esc(data.uploadSpeed)}" placeholder="500 Mbps" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;">
+        </div>
+      </div>
+      <button onclick="saveBuildingInternetConfig('${fsId}')" style="width:100%;padding:.65rem;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun,sans-serif;">💾 บันทึก ${label}</button>
+    </div>
+  `;
+  container.innerHTML = cardHtml('🏠 ห้องแถว', 'RentRoom', rr) + cardHtml('🏢 Nest', 'nest', nest);
+}
+
+async function saveBuildingInternetConfig(fsId) {
+  if (!['RentRoom', 'nest'].includes(fsId)) return;
+  const status = document.getElementById(`bi-${fsId}-status`)?.value || 'online';
+  const provider = document.getElementById(`bi-${fsId}-provider`)?.value?.trim() || '';
+  const contact = document.getElementById(`bi-${fsId}-contact`)?.value?.trim() || '';
+  const downloadSpeed = document.getElementById(`bi-${fsId}-download`)?.value?.trim() || '';
+  const uploadSpeed = document.getElementById(`bi-${fsId}-upload`)?.value?.trim() || '';
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    showToast('Firestore ไม่พร้อม', 'error');
+    return;
+  }
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    await fs.setDoc(fs.doc(db, 'buildings', fsId), {
+      internet: {
+        status, provider, contact, downloadSpeed, uploadSpeed,
+        updatedAt: new Date().toISOString()
+      }
+    }, { merge: true });
+    showToast(`✅ บันทึกสถานะเน็ต ${fsId === 'RentRoom' ? 'ห้องแถว' : 'Nest'} แล้ว`, 'success');
+  } catch (e) {
+    console.error('saveBuildingInternetConfig failed:', e);
+    showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.renderBuildingInternetConfig = renderBuildingInternetConfig;
+  window.saveBuildingInternetConfig = saveBuildingInternetConfig;
 }
 
 

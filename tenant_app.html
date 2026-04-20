@@ -8115,12 +8115,15 @@
             section.style.display = 'none';
             if (_buildingInternetUnsub) { _buildingInternetUnsub(); _buildingInternetUnsub = null; }
             if (!_taBuilding || !window.firebase?.firestore || !window.firebase.firestoreFunctions) return;
+            // Map canonical _taBuilding → Firestore display id (matches dashboard's saveBuildingPaymentConfig)
+            const fsId = _taBuilding === 'rooms' ? 'RentRoom' : 'nest';
             try {
                 const db = window.firebase.firestore();
                 const fs = window.firebase.firestoreFunctions;
-                const ref = fs.doc(db, `buildings/${_taBuilding}/meta/internet`);
+                const ref = fs.doc(db, 'buildings', fsId);
                 _buildingInternetUnsub = fs.onSnapshot(ref, snap => {
-                    _applyBuildingInternetStatus(snap.exists() ? snap.data() : null);
+                    const doc = snap.exists() ? snap.data() : null;
+                    _applyBuildingInternetStatus(doc?.internet || null);
                 }, () => { _applyBuildingInternetStatus(null); });
             } catch (e) {
                 _applyBuildingInternetStatus(null);
