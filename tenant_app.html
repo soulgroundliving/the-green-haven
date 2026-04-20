@@ -2209,7 +2209,7 @@
 
         <div class="section-title">
             <span>ตลาดนัดเพื่อนบ้าน 🛒</span>
-            <small style="color:var(--primary-green); cursor: pointer; font-weight: bold;"
+            <small id="market-post-trigger" style="color:var(--primary-green); cursor: pointer; font-weight: bold;"
                 onclick="showSubPage('add-market-page')">+ ลงประกาศ</small>
         </div>
 
@@ -2221,11 +2221,11 @@
         </div>
 
         <div id="market-list-container" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 8px;">
-            <div style="grid-column:1/-1; text-align:center; padding:30px 16px; color:#666;">
+            <div id="market-empty-state" style="grid-column:1/-1; text-align:center; padding:30px 16px; color:#666;">
                 <div style="font-size:2.2rem; margin-bottom:8px;">🛒</div>
                 <div style="font-weight:700; color:#444; font-size:var(--fs-md);">ยังไม่มีใครลงประกาศ</div>
-                <div style="font-size:var(--fs-sm); color:#888; margin:6px 0 14px;">เป็นคนแรกของตึกสิครับ — ของที่ไม่ใช้ ขายต่อให้เพื่อนบ้านได้นะ!</div>
-                <button onclick="showSubPage('add-market-page')"
+                <div id="market-empty-sub" style="font-size:var(--fs-sm); color:#888; margin:6px 0 14px;">เป็นคนแรกของตึกสิครับ — ของที่ไม่ใช้ ขายต่อให้เพื่อนบ้านได้นะ!</div>
+                <button id="market-empty-cta" onclick="showSubPage('add-market-page')"
                     style="background:var(--primary-green); color:#fff; border:none; padding:10px 20px; border-radius:12px; font-weight:700; cursor:pointer; font-family:inherit;">
                     ✨ ลงประกาศแรกของฉัน
                 </button>
@@ -4601,6 +4601,10 @@
         }
 
         async function saveNewMarketItem() {
+            if (!window.GAMIFICATION_LIVE) {
+                toast('ตลาดนัดจะเปิดให้ลงประกาศเมื่อตึกเปิดจริงครับ 🌿', 'warning');
+                return;
+            }
             const title = document.getElementById('market-title')?.value.trim();
             const cat   = document.querySelector('input[name="mcat"]:checked')?.value || 'item';
             const price = cat === 'free' ? 0 : parseFloat(document.getElementById('market-price')?.value || '0');
@@ -6129,7 +6133,17 @@
         ];
 
         function applyGamificationVisibility() { applyBuildingVisibility(); } // backward-compat alias
+        function _applyCommunityPostGating() {
+            const live = !!window.GAMIFICATION_LIVE;
+            const trigger = document.getElementById('market-post-trigger');
+            if (trigger) trigger.style.display = live ? '' : 'none';
+            const cta = document.getElementById('market-empty-cta');
+            if (cta) cta.style.display = live ? '' : 'none';
+            const sub = document.getElementById('market-empty-sub');
+            if (sub && !live) sub.innerText = 'ตลาดนัดจะเปิดให้ลงประกาศเมื่อตึกเปิดจริงครับ 🌿 (ก.ค.-ส.ค. 2569)';
+        }
         function applyBuildingVisibility() {
+            _applyCommunityPostGating();
             // Rooms fallback: show shortcut tiles only for Rooms tenants
             const roomsFallback = document.getElementById('profile-rooms-fallback');
             if (roomsFallback) {
