@@ -2290,8 +2290,10 @@
                 style="margin-top:15px;">ชำระบิล</button>
         </div>
 
-        <div class="section-title"><span>ประวัติย้อนหลัง</span></div>
-        <div class="card" id="bills-history-list"></div>
+        <div id="bills-history-section" style="display:none;">
+            <div class="section-title"><span>ประวัติย้อนหลัง</span></div>
+            <div class="card" id="bills-history-list"></div>
+        </div>
     </div>
 
     <div id="payment-page" class="page">
@@ -6542,6 +6544,7 @@
 
         function renderBillsList() {
             const el = document.getElementById('bills-history-list');
+            const section = document.getElementById('bills-history-section');
             const badge = document.getElementById('usage-room-badge');
             if (badge) {
                 if (_taRoom) { badge.textContent = _taRoom; badge.style.display = 'flex'; }
@@ -6549,11 +6552,14 @@
             }
             if (!el) return;
             if (!_taBills.length) {
-                el.innerHTML = '<div style="padding:20px; text-align:center; color:#aaa;"><i class="fas fa-spinner fa-spin"></i> กำลังโหลด...</div>';
+                // No bills yet — hide the section entirely (no spinner, no empty card)
+                if (section) section.style.display = 'none';
+                el.innerHTML = '';
                 const amtEl = document.getElementById('current-bill-amount');
                 if (amtEl) amtEl.textContent = '฿ —';
                 return;
             }
+            if (section) section.style.display = '';
             const unpaid = _taBills.find(b => b.status !== 'paid');
             const latest = unpaid || _taBills[0];
             _taCurrentBill = latest;
