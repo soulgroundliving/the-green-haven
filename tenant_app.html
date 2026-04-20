@@ -3614,25 +3614,47 @@
         }
 
         // 2. ฟังก์ชันกดรับพ้อยท์ — Nest only
-        function claimDailyPoints() {
+        async function claimDailyPoints() {
             if (window._nestOnlyDisabled) return;
-            // อัปเดตพ้อยท์บนหน้าจอ
-            userPoints += 1;
-            const pointDisplay = document.getElementById('display-points');
-            if (pointDisplay) {
-                pointDisplay.innerText = userPoints.toLocaleString();
+
+            const btn = document.querySelector('[onclick="claimDailyPoints()"]');
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+
+            const closeModal = () => {
+                const modal = document.getElementById('daily-modal');
+                if (modal) modal.style.display = 'none';
+                const nav = document.getElementById('main-nav-bar');
+                if (nav) nav.style.display = '';
+                showPage('world-map');
+            };
+
+            try {
+                const fns = window.firebase?.functions;
+                if (!fns) throw new Error('Firebase Functions SDK not loaded');
+                if (!_taBuilding || !_taRoom) throw new Error('ยังไม่พบข้อมูลห้อง');
+                const callable = fns.httpsCallable('claimDailyLoginPoints');
+                const resp = await callable({ building: _taBuilding, roomId: String(_taRoom) });
+                const r = resp.data || {};
+                if (typeof r.pointsAfter === 'number') {
+                    userPoints = r.pointsAfter;
+                    if (typeof updateUserPointsUI === 'function') updateUserPointsUI();
+                }
+                const streakMsg = r.bonus > 0
+                    ? `รับ +${r.reward} Pts! 🔥 ครบ ${r.streak} วัน โบนัสพิเศษ +${r.bonus}`
+                    : `รับ +${r.reward} Pt แล้ว (สตรีค ${r.streak} วัน)`;
+                toast(streakMsg, 'success');
+                closeModal();
+            } catch (e) {
+                const code = e?.code || e?.details?.code || '';
+                if (code === 'functions/already-exists' || /already/i.test(String(e?.message))) {
+                    toast('รับพ้อยท์ของวันนี้ไปแล้วครับ 🌿', 'warning');
+                    closeModal();
+                } else {
+                    console.error('claimDailyPoints failed:', e);
+                    toast('บันทึกไม่สำเร็จ — ลองใหม่ครับ', 'error');
+                    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+                }
             }
-
-            // ปิด Modal + คืน nav-bar
-            const modal = document.getElementById('daily-modal');
-            if (modal) modal.style.display = 'none';
-            const nav = document.getElementById('main-nav-bar');
-            if (nav) nav.style.display = '';
-
-            // กลับไปหน้าแผนที่ และปลดล็อกการกด
-            showPage('world-map');
-
-            console.log("TEST MODE: รับพ้อยท์ชั่วคราวแล้ว (ไม่บันทึกข้อมูล)");
         }
 
         // ==========================================

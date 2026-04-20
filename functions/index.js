@@ -25,6 +25,9 @@ exports.getLeaderboard = require('./complaintAndGamification').getLeaderboard;
 exports.seedRewards = require('./seedRewards').seedRewards;
 exports.redeemReward = require('./redeemReward').redeemReward;
 
+// Daily login check-in (1 pt/day + streak bonus every 7 days)
+exports.claimDailyLoginPoints = require('./claimDailyLoginPoints').claimDailyLoginPoints;
+
 // App config seed (Sprint B + C — populate system/* + buildings/{X}.info defaults)
 exports.seedAppConfig = require('./seedAppConfig').seedAppConfig;
 
