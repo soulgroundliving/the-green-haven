@@ -53,6 +53,40 @@
         { id: 'master_resident', emoji: '👑', label: 'Master Resident',       minPts: 1000 }
     ];
 
+    // ===== RENT PAYMENT TIERS =====
+    // daysDiff (slip transfer date vs dueDate) → points table.
+    // Computed server-side in functions/verifySlip.js recordPaymentAndAwardPoints().
+    // Client uses this to render the 5-column grid in "วิธีสะสมคะแนน".
+    const RENT_POINT_TIERS = [
+        { id: 'early_bird',    points: 150, label: 'ก่อน 4 วัน',  color: 'green'  },
+        { id: 'on_time',       points: 100, label: 'ตรงเวลา',     color: 'green'  },
+        { id: 'slightly_late', points: 40,  label: 'ช้า 1-3 วัน', color: 'yellow' },
+        { id: 'late',          points: 15,  label: 'ช้า 4-5 วัน', color: 'orange' },
+        { id: 'too_late',      points: 0,   label: 'ช้า ≥6 วัน',  color: 'gray'   }
+    ];
+
+    // ===== EARNING SOURCES =====
+    // The "วิธีสะสมคะแนน" list shown on Profile → Achievements tab.
+    // Values match memory/point_economy_rules.md earning table.
+    // `tiered: true` means the card renders the RENT_POINT_TIERS grid instead
+    // of a single "+N Pts" badge.
+    const EARNING_SOURCES = [
+        { id: 'save_water',     emoji: '💧', title: 'ประหยัดน้ำ (-10%)',       subtitle: 'เทียบกับค่าเฉลี่ย',               points: 20,  display: '+20 Pts' },
+        { id: 'save_elec',      emoji: '⚡', title: 'ประหยัดไฟ (-10%)',       subtitle: 'เทียบกับค่าเฉลี่ย',               points: 30,  display: '+30 Pts' },
+        { id: 'rent_ontime',    emoji: '📅', title: 'จ่ายค่าเช่าตรงเวลา',     subtitle: 'วันครบกำหนด: วันที่ 5 ของเดือน', tiered: true },
+        { id: 'community',      emoji: '🌱', title: 'เข้าร่วมกิจกรรมชุมชน',   subtitle: 'สูงสุด 2 ครั้ง/เดือน',           points: 100, display: '+100 Pts' },
+        { id: 'complaint_free', emoji: '🤝', title: 'ไม่มีการร้องเรียน 3+ เดือน', subtitle: 'โบนัสรายไตรมาส',             points: 50,  display: '+50 Pts' },
+        { id: 'daily_login',    emoji: '📱', title: 'เช็คอินรายวัน',           subtitle: 'โบนัสครบ 7 วัน +3',              points: 1,   display: '+1 Pt/วัน' }
+    ];
+
+    // ===== URGENT QUESTS =====
+    // Featured time-bound quests shown on Profile → Rankings tab "ภารกิจเร่งด่วน".
+    // Keep short (1-3 entries). Pre-launch this is a UX placeholder; post-launch
+    // admin can move to a Firestore `quests` collection and subscribe if needed.
+    const URGENT_QUESTS = [
+        { id: 'solar_afternoon', emoji: '☀️', title: 'ลดใช้ไฟช่วงบ่าย', subtitle: 'สะสมพลังงานแสงอาทิตย์', points: 10, borderColor: 'orange' }
+    ];
+
     // ===== HELPERS =====
 
     function getLevelForPoints(pts) {
@@ -98,6 +132,9 @@
     return {
         LEVEL_TIERS,
         BADGE_CATALOG,
+        RENT_POINT_TIERS,
+        EARNING_SOURCES,
+        URGENT_QUESTS,
         getLevelForPoints,
         getLevelProgress,
         badgeId,

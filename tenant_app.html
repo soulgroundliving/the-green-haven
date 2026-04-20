@@ -2575,50 +2575,8 @@
                 <p style="grid-column:1/-1; text-align:center; font-size:var(--fs-sm); color:#aaa; padding:16px 0;">กำลังโหลด...</p>
             </div>
             <h3 class="font-bold text-sm mb-3">💡 วิธีสะสมคะแนน</h3>
-            <div class="space-y-2 mb-6">
-                <div class="muji-card p-3 flex justify-between items-center">
-                    <div class="flex items-center gap-3"><span class="text-lg">💧</span>
-                        <div><p class="text-xs font-bold">ประหยัดน้ำ (-10%)</p><p class="text-[9px] text-gray-400">เทียบกับค่าเฉลี่ย</p></div>
-                    </div>
-                    <span class="text-xs font-bold text-[#2d8653]">+20 Pts</span>
-                </div>
-                <div class="muji-card p-3 flex justify-between items-center">
-                    <div class="flex items-center gap-3"><span class="text-lg">⚡</span>
-                        <div><p class="text-xs font-bold">ประหยัดไฟ (-10%)</p><p class="text-[9px] text-gray-400">เทียบกับค่าเฉลี่ย</p></div>
-                    </div>
-                    <span class="text-xs font-bold text-[#2d8653]">+30 Pts</span>
-                </div>
-                <div class="muji-card p-3">
-                    <div class="flex items-center gap-3 mb-2"><span class="text-lg">📅</span>
-                        <div class="flex-1"><p class="text-xs font-bold">จ่ายค่าเช่าตรงเวลา</p><p class="text-[9px] text-gray-400">วันครบกำหนด: วันที่ 5 ของเดือน</p></div>
-                    </div>
-                    <div class="grid grid-cols-5 gap-1 text-[9px] text-center mt-2">
-                        <div class="bg-green-50 rounded py-1"><div class="font-bold text-[#2d8653]">+150</div><div class="text-gray-500">ก่อน 4 วัน</div></div>
-                        <div class="bg-green-50 rounded py-1"><div class="font-bold text-[#2d8653]">+100</div><div class="text-gray-500">ตรงเวลา</div></div>
-                        <div class="bg-yellow-50 rounded py-1"><div class="font-bold text-yellow-700">+40</div><div class="text-gray-500">ช้า 1-3 วัน</div></div>
-                        <div class="bg-orange-50 rounded py-1"><div class="font-bold text-orange-700">+15</div><div class="text-gray-500">ช้า 4-5 วัน</div></div>
-                        <div class="bg-gray-100 rounded py-1"><div class="font-bold text-gray-500">0</div><div class="text-gray-500">ช้า ≥6 วัน</div></div>
-                    </div>
-                </div>
-                <div class="muji-card p-3 flex justify-between items-center">
-                    <div class="flex items-center gap-3"><span class="text-lg">🌱</span>
-                        <div><p class="text-xs font-bold">เข้าร่วมกิจกรรมชุมชน</p><p class="text-[9px] text-gray-400">สูงสุด 2 ครั้ง/เดือน</p></div>
-                    </div>
-                    <span class="text-xs font-bold text-[#2d8653]">+100 Pts</span>
-                </div>
-                <div class="muji-card p-3 flex justify-between items-center">
-                    <div class="flex items-center gap-3"><span class="text-lg">🤝</span>
-                        <div><p class="text-xs font-bold">ไม่มีการร้องเรียน 3+ เดือน</p><p class="text-[9px] text-gray-400">โบนัสรายไตรมาส</p></div>
-                    </div>
-                    <span class="text-xs font-bold text-[#2d8653]">+50 Pts</span>
-                </div>
-                <div class="muji-card p-3 flex justify-between items-center">
-                    <div class="flex items-center gap-3"><span class="text-lg">📱</span>
-                        <div><p class="text-xs font-bold">เช็คอินรายวัน</p><p class="text-[9px] text-gray-400">โบนัสครบ 7 วัน +3</p></div>
-                    </div>
-                    <span class="text-xs font-bold text-[#2d8653]">+1 Pt/วัน</span>
-                </div>
-            </div>
+            <!-- Rendered by _renderEarningGuide() from EARNING_SOURCES + RENT_POINT_TIERS (SSoT) -->
+            <div id="earning-guide-list" class="space-y-2 mb-6"></div>
         </div>
 
         <!-- Rankings Tab -->
@@ -2631,13 +2589,8 @@
             </div>
             <div class="mx-4 mb-6">
                 <h3 class="font-bold text-sm mb-3">🎯 ภารกิจเร่งด่วน</h3>
-                <div class="muji-card p-4 flex justify-between items-center border-l-4 border-orange-400">
-                    <div class="flex items-center gap-3">
-                        <span class="text-xl">☀️</span>
-                        <div><p class="text-xs font-bold">ลดใช้ไฟช่วงบ่าย</p><p class="text-[9px] text-gray-400">สะสมพลังงานแสงอาทิตย์</p></div>
-                    </div>
-                    <button class="bg-[#2d8653] text-white text-[10px] px-4 py-1.5 rounded-full font-bold">รับ 10 Pts</button>
-                </div>
+                <!-- Rendered by _renderUrgentQuests() from URGENT_QUESTS (SSoT) -->
+                <div id="urgent-quests-list" class="space-y-2"></div>
             </div>
         </div>
 
@@ -6004,8 +5957,58 @@
             const bar = document.getElementById('eco-progress-bar');
             if (bar) bar.style.width = Math.round(lp.progress) + '%';
             _renderTierLegend(pts);
+            _renderEarningGuide();
+            _renderUrgentQuests();
             // Render locked badge grid immediately; _subscribeEcoPoints will update with earned badges
             if (typeof _renderBadgeGrid === 'function') _renderBadgeGrid(_lastKnownBadges || []);
+        }
+
+        // Render "วิธีสะสมคะแนน" (earning guide) from SSoT — EARNING_SOURCES + RENT_POINT_TIERS.
+        function _renderEarningGuide() {
+            const el = document.getElementById('earning-guide-list');
+            if (!el || !window.GamificationRules) return;
+            const R = window.GamificationRules;
+            const tierBg = { green: 'bg-green-50', yellow: 'bg-yellow-50', orange: 'bg-orange-50', gray: 'bg-gray-100' };
+            const tierFg = { green: 'text-[#2d8653]', yellow: 'text-yellow-700', orange: 'text-orange-700', gray: 'text-gray-500' };
+            el.innerHTML = R.EARNING_SOURCES.map(s => {
+                if (s.tiered) {
+                    const grid = R.RENT_POINT_TIERS.map(t => {
+                        const bg = tierBg[t.color] || 'bg-gray-100';
+                        const fg = tierFg[t.color] || 'text-gray-500';
+                        return `<div class="${bg} rounded py-1"><div class="font-bold ${fg}">+${t.points}</div><div class="text-gray-500">${t.label}</div></div>`;
+                    }).join('');
+                    return `<div class="muji-card p-3">
+                        <div class="flex items-center gap-3 mb-2"><span class="text-lg">${s.emoji}</span>
+                            <div class="flex-1"><p class="text-xs font-bold">${s.title}</p><p class="text-[9px] text-gray-400">${s.subtitle}</p></div>
+                        </div>
+                        <div class="grid grid-cols-5 gap-1 text-[9px] text-center mt-2">${grid}</div>
+                    </div>`;
+                }
+                return `<div class="muji-card p-3 flex justify-between items-center">
+                    <div class="flex items-center gap-3"><span class="text-lg">${s.emoji}</span>
+                        <div><p class="text-xs font-bold">${s.title}</p><p class="text-[9px] text-gray-400">${s.subtitle}</p></div>
+                    </div>
+                    <span class="text-xs font-bold text-[#2d8653]">${s.display}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // Render "ภารกิจเร่งด่วน" (urgent quests) from SSoT URGENT_QUESTS.
+        // Only fixed set of border colors to keep Tailwind JIT-safe.
+        const URGENT_QUEST_BORDER = { orange: 'border-orange-400', green: 'border-green-400', blue: 'border-blue-400', red: 'border-red-400' };
+        function _renderUrgentQuests() {
+            const el = document.getElementById('urgent-quests-list');
+            if (!el || !window.GamificationRules) return;
+            el.innerHTML = window.GamificationRules.URGENT_QUESTS.map(q => {
+                const border = URGENT_QUEST_BORDER[q.borderColor] || 'border-gray-400';
+                return `<div class="muji-card p-4 flex justify-between items-center border-l-4 ${border}">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xl">${q.emoji}</span>
+                        <div><p class="text-xs font-bold">${q.title}</p><p class="text-[9px] text-gray-400">${q.subtitle}</p></div>
+                    </div>
+                    <button class="bg-[#2d8653] text-white text-[10px] px-4 py-1.5 rounded-full font-bold" disabled title="Coming soon">รับ ${q.points} Pts</button>
+                </div>`;
+            }).join('');
         }
 
         // Render the "ระดับในระบบ" legend from SSoT LEVEL_TIERS. Current tier highlighted.
