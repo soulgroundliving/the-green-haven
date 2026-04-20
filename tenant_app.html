@@ -6527,6 +6527,16 @@
             loadWellnessFromFirestore();
             // Daily bonus — safe to run now: _nestOnlyDisabled is set by detectRoomBuilding() above
             checkDailyLogin();
+            // Deep-link: ?page=bill from LINE bill-ready notification → jump to bill list
+            // Bill history list lives inside the "usage" page (bills-history-section)
+            try {
+                const qp = new URLSearchParams(window.location.search);
+                const target = (qp.get('page') || '').toLowerCase();
+                if ((target === 'bill' || target === 'bills' || target === 'usage') && typeof showPage === 'function') {
+                    showPage('usage');
+                    if (typeof updateNavActiveIndex === 'function') updateNavActiveIndex(3);
+                }
+            } catch(e) {}
             document.getElementById('app-loading-splash')?.remove();
         }
 
