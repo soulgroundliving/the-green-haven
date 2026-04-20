@@ -5161,8 +5161,9 @@
             }
         }
 
-        // 1. กำหนดคะแนนเริ่มต้นของลูกบ้าน (จำลองจาก Database)
-        let userPoints = 1250;
+        // 1. กำหนดคะแนนเริ่มต้นของลูกบ้าน — เริ่มที่ 0 เสมอ (pre-launch, TEST MODE)
+        //    loadGamificationData() จะ override จาก Firestore/localStorage หากมีค่า
+        let userPoints = 0;
 
         // 2. ฟังก์ชันหลักสำหรับแลกของรางวัล (Nest only — guarded by gamification visibility)
         // rewardId is the Firestore doc id (passed by _renderRewardsList; legacy onclick callers omit it)
@@ -6666,6 +6667,8 @@
             loadAvatar();
             renderWellness();
             loadWellnessFromFirestore();
+            // Daily bonus — safe to run now: _nestOnlyDisabled is set by detectRoomBuilding() above
+            checkDailyLogin();
             document.getElementById('app-loading-splash')?.remove();
         }
 
@@ -8110,10 +8113,8 @@
             // refresh bg ทุก 30 นาที เพื่อเปลี่ยนจาก day → night ตามเวลาจริง
             setInterval(() => { if (typeof updateWorldMapBg === 'function') updateWorldMapBg(null); }, 30 * 60 * 1000);
 
-            // 2. หน่วงเวลาเช็ก Daily Bonus
-            setTimeout(() => {
-                checkDailyLogin();
-            }, 500);
+            // 2. Daily Bonus ถูกเรียกใน initTenantApp() หลัง detectRoomBuilding()
+            //    เพื่อให้ window._nestOnlyDisabled ถูกเซ็ตก่อน (แก้ race ที่ห้องแถวเห็น modal)
 
             // 3. โค้ดเดิมของคุณลุกตาล
             initGreeting();
