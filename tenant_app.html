@@ -1810,18 +1810,19 @@
             <div class="accordion-content" style="display:none;">
                 <div id="roomInternetSpeedSection" style="display:none; margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                     <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
-                        <small style="color:#666;">⬇️ Download</small>
+                        <small style="color:#666;">⬇️ ความเร็วประมาณ</small>
                         <div id="roomInternetDownloadSpeed" style="font-weight:700;">-</div>
                     </div>
                     <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
-                        <small style="color:#666;">⬆️ Upload</small>
+                        <small style="color:#666;">🕐 Latency</small>
                         <div id="roomInternetUploadSpeed" style="font-weight:700;">-</div>
                     </div>
                 </div>
                 <div id="roomInternetProviderSection" style="display:none; margin-top:10px; font-size:var(--fs-sm);">
                     <div>ห้อง: <strong id="roomInternetRoom">-</strong></div>
-                    <div>SSID: <span id="roomInternetSSID">-</span></div>
+                    <div>ชนิดเครือข่าย: <span id="roomInternetSSID">-</span></div>
                 </div>
+                <small style="display:block; margin-top:6px; color:#aaa; font-style:italic;">* วัดจากอุปกรณ์ของคุณเอง</small>
                 <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="roomInternetLastCheck">-</span></small>
             </div>
         </div>
@@ -8059,94 +8060,136 @@
         }
 
         // ---- BUILDING INTERNET STATUS ----
-        function displayBuildingInternetStatus() {
+        // Real status only — subscribes to Firestore `buildings/{building}/meta/internet`
+        // (admin maintains via dashboard). If doc missing/unavailable → hide section
+        // (no fake "online" default leaking to UI).
+        function _applyBuildingInternetStatus(data) {
             const section = document.getElementById('internetStatusSection');
             if (!section) return;
-            let internetStatus = {
-                status: 'online', provider: 'True Internet',
-                contact: '1-2700-1700',
-                downloadSpeed: '500 Mbps', uploadSpeed: '500 Mbps',
-                lastCheck: new Date().toLocaleString('th-TH')
-            };
-            try {
-                const stored = JSON.parse(localStorage.getItem('building_internet_status') || '{}');
-                if (stored && Object.keys(stored).length) internetStatus = { ...internetStatus, ...stored };
-            } catch(e) {}
+            if (!data) { section.style.display = 'none'; return; }
             section.style.display = 'block';
+
             const icon = document.getElementById('internetStatusIcon');
             const txt  = document.getElementById('internetStatusText');
-            if (internetStatus.status === 'online') {
+            if (data.status === 'online') {
                 if (icon) icon.textContent = '🟢';
                 if (txt)  { txt.textContent = 'เชื่อมต่อแล้ว'; txt.style.color = '#16A34A'; }
-            } else if (internetStatus.status === 'offline') {
+            } else if (data.status === 'offline') {
                 if (icon) icon.textContent = '🔴';
                 if (txt)  { txt.textContent = 'ไม่เชื่อมต่อ'; txt.style.color = '#DC2626'; }
-            } else {
+            } else if (data.status === 'maintenance') {
                 if (icon) icon.textContent = '🟡';
                 if (txt)  { txt.textContent = 'กำลังบำรุงรักษา'; txt.style.color = '#D97706'; }
+            } else {
+                if (icon) icon.textContent = '⚪';
+                if (txt)  { txt.textContent = 'ยังไม่มีข้อมูล'; txt.style.color = '#6b7280'; }
             }
+
             const speedSec = document.getElementById('internetSpeedSection');
-            if (speedSec) speedSec.style.display = 'grid';
             const dl = document.getElementById('internetDownloadSpeed');
             const ul = document.getElementById('internetUploadSpeed');
-            if (dl) dl.textContent = internetStatus.downloadSpeed || '-';
-            if (ul) ul.textContent = internetStatus.uploadSpeed || '-';
+            const hasSpeed = data.downloadSpeed || data.uploadSpeed;
+            if (speedSec) speedSec.style.display = hasSpeed ? 'grid' : 'none';
+            if (dl) dl.textContent = data.downloadSpeed || '-';
+            if (ul) ul.textContent = data.uploadSpeed || '-';
+
             const provSec = document.getElementById('internetProviderSection');
             const prov = document.getElementById('internetProvider');
             const cont = document.getElementById('internetContact');
-            if (prov) prov.textContent = internetStatus.provider || '-';
-            if (cont) cont.textContent = internetStatus.contact || '-';
-            if (provSec && internetStatus.provider) provSec.style.display = 'block';
+            if (prov) prov.textContent = data.provider || '-';
+            if (cont) cont.textContent = data.contact || '-';
+            if (provSec) provSec.style.display = data.provider ? 'block' : 'none';
+
             const last = document.getElementById('internetLastCheck');
-            if (last) last.textContent = internetStatus.lastCheck || new Date().toLocaleString('th-TH');
+            if (last) {
+                const t = data.updatedAt?.toDate ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : null);
+                last.textContent = t ? t.toLocaleString('th-TH') : '-';
+            }
+        }
+
+        let _buildingInternetUnsub = null;
+        function displayBuildingInternetStatus() {
+            const section = document.getElementById('internetStatusSection');
+            if (!section) return;
+            // Default: hide until we get real data from Firestore
+            section.style.display = 'none';
+            if (_buildingInternetUnsub) { _buildingInternetUnsub(); _buildingInternetUnsub = null; }
+            if (!_taBuilding || !window.firebase?.firestore || !window.firebase.firestoreFunctions) return;
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                const ref = fs.doc(db, `buildings/${_taBuilding}/meta/internet`);
+                _buildingInternetUnsub = fs.onSnapshot(ref, snap => {
+                    _applyBuildingInternetStatus(snap.exists() ? snap.data() : null);
+                }, () => { _applyBuildingInternetStatus(null); });
+            } catch (e) {
+                _applyBuildingInternetStatus(null);
+            }
         }
 
         // ---- ROOM-LEVEL INTERNET STATUS ----
-        // Data source priority: _taTenant.roomInternet (Firestore) → localStorage → defaults.
-        // When wifi IoT integration lands, admin can push per-room status to
-        // tenants/{building}/list/{roomId}.roomInternet and tenant_app picks it up here.
-        function displayRoomInternetStatus() {
+        // Real browser-measured status. Uses navigator.onLine (always supported)
+        // and Network Information API (navigator.connection, Chromium-based) when
+        // available. Live updates on online/offline + connection change events.
+        // SSID / per-room speed cannot be read from browser for security reasons —
+        // those fields are removed from the UI (replaced with effectiveType + rtt).
+        let _roomInternetWired = false;
+        function _applyRoomInternetStatus() {
             const section = document.getElementById('roomInternetStatusSection');
             if (!section) return;
-            let roomInternet = {
-                status: 'online',
-                ssid: 'GH-Room-' + (_taRoom || '—'),
-                downloadSpeed: '-',
-                uploadSpeed: '-',
-                lastCheck: new Date().toLocaleString('th-TH')
-            };
-            try {
-                if (_taTenant && _taTenant.roomInternet) roomInternet = { ...roomInternet, ..._taTenant.roomInternet };
-                const stored = JSON.parse(localStorage.getItem('room_internet_status') || '{}');
-                if (stored && Object.keys(stored).length) roomInternet = { ...roomInternet, ...stored };
-            } catch(e) {}
             section.style.display = 'block';
+
+            const online = navigator.onLine;
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+
             const icon = document.getElementById('roomInternetStatusIcon');
             const txt  = document.getElementById('roomInternetStatusText');
-            if (roomInternet.status === 'online') {
-                if (icon) icon.textContent = '🟢';
-                if (txt)  { txt.textContent = 'เชื่อมต่อแล้ว'; txt.style.color = '#16A34A'; }
-            } else if (roomInternet.status === 'offline') {
+            if (!online) {
                 if (icon) icon.textContent = '🔴';
                 if (txt)  { txt.textContent = 'ไม่เชื่อมต่อ'; txt.style.color = '#DC2626'; }
-            } else {
+            } else if (conn && (conn.effectiveType === '2g' || conn.effectiveType === 'slow-2g')) {
                 if (icon) icon.textContent = '🟡';
-                if (txt)  { txt.textContent = 'สัญญาณไม่เสถียร'; txt.style.color = '#D97706'; }
+                if (txt)  { txt.textContent = 'สัญญาณอ่อน'; txt.style.color = '#D97706'; }
+            } else {
+                if (icon) icon.textContent = '🟢';
+                if (txt)  { txt.textContent = 'เชื่อมต่อแล้ว'; txt.style.color = '#16A34A'; }
             }
+
             const speedSec = document.getElementById('roomInternetSpeedSection');
-            if (speedSec) speedSec.style.display = 'grid';
             const dl = document.getElementById('roomInternetDownloadSpeed');
             const ul = document.getElementById('roomInternetUploadSpeed');
-            if (dl) dl.textContent = roomInternet.downloadSpeed || '-';
-            if (ul) ul.textContent = roomInternet.uploadSpeed || '-';
+            if (conn && typeof conn.downlink === 'number') {
+                if (speedSec) speedSec.style.display = 'grid';
+                if (dl) dl.textContent = `~${conn.downlink.toFixed(1)} Mbps`;
+                if (ul) ul.textContent = conn.rtt != null ? `RTT ${Math.round(conn.rtt)} ms` : '-';
+            } else if (speedSec) {
+                speedSec.style.display = 'none';
+            }
+
             const provSec = document.getElementById('roomInternetProviderSection');
             const roomEl  = document.getElementById('roomInternetRoom');
             const ssidEl  = document.getElementById('roomInternetSSID');
             if (roomEl) roomEl.textContent = _taRoom || '-';
-            if (ssidEl) ssidEl.textContent = roomInternet.ssid || '-';
+            if (ssidEl) {
+                // Browser can't read SSID; show effectiveType as the useful proxy
+                ssidEl.textContent = conn?.effectiveType ? conn.effectiveType.toUpperCase() : 'ไม่ทราบ';
+            }
             if (provSec) provSec.style.display = 'block';
+
             const last = document.getElementById('roomInternetLastCheck');
-            if (last) last.textContent = roomInternet.lastCheck || new Date().toLocaleString('th-TH');
+            if (last) last.textContent = new Date().toLocaleString('th-TH');
+        }
+
+        function displayRoomInternetStatus() {
+            _applyRoomInternetStatus();
+            if (_roomInternetWired) return;
+            _roomInternetWired = true;
+            window.addEventListener('online',  _applyRoomInternetStatus);
+            window.addEventListener('offline', _applyRoomInternetStatus);
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            if (conn && typeof conn.addEventListener === 'function') {
+                conn.addEventListener('change', _applyRoomInternetStatus);
+            }
         }
 
         // ---- LEASE RENEWAL ALERT ----
