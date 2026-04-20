@@ -1519,7 +1519,7 @@
 
 <body>
     <!-- ADMIN PREVIEW BAR (shown only when room set via ?room= URL param) -->
-    <div id="admin-preview-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#1a5c38;color:#fff;font-size:12px;padding:6px 12px;display:none;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div id="admin-preview-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:var(--primary-dark);color:#fff;font-size:12px;padding:6px 12px;display:none;align-items:center;gap:8px;flex-wrap:wrap;">
       <span style="font-weight:700;letter-spacing:.5px;">👁 ADMIN PREVIEW</span>
       <span id="apb-current" style="background:rgba(255,255,255,.2);border-radius:4px;padding:2px 8px;font-family:monospace;"></span>
       <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
@@ -1534,11 +1534,11 @@
     <!-- APP INIT SPLASH: covers screen while LIFF auth resolves so world-map never flashes -->
     <div id="app-loading-splash" style="display:flex;position:fixed;inset:0;background:#f0fdf4;z-index:999999;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
         <div style="font-size:3rem;">🌿</div>
-        <div style="font-weight:700;font-size:1.1rem;color:#1a5c38;">กำลังโหลด...</div>
+        <div style="font-weight:700;font-size:1.1rem;color:var(--primary-dark);">กำลังโหลด...</div>
     </div>
 
     <!-- LIFF LINK ACCOUNT OVERLAY -->
-    <div id="liff-link-overlay" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#f0fdf4,#e8f5e9);z-index:99999;flex-direction:column;align-items:center;justify-content:center;padding:2rem;">
+    <div id="liff-link-overlay" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,var(--bg-color,#f0fdf4),var(--soft-green));z-index:99999;flex-direction:column;align-items:center;justify-content:center;padding:2rem;">
         <div style="background:#fff;border-radius:20px;padding:2rem 1.8rem;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.12);text-align:center;">
             <div style="font-size:var(--fs-lg);margin-bottom:.5rem;">🌿</div>
             <div style="font-weight:800;font-size:var(--fs-lg);color:var(--primary-dark,#1a5c38);margin-bottom:.3rem;">Nature Haven</div>
@@ -1574,14 +1574,14 @@
             style="position: absolute; top: 20px; left: 20px; z-index: 20; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.8); padding: 8px 15px; border-radius: 30px; backdrop-filter: blur(5px);">
 
             <div id="current-avatar-map"
-                style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #2d8653; display: flex; align-items: center; justify-content: center; font-size: var(--fs-lg); background: white;">
+                style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--primary-green); display: flex; align-items: center; justify-content: center; font-size: var(--fs-lg); background: white;">
                 🌿
             </div>
 
             <div>
                 <p id="display-name-map" style="font-size: var(--fs-sm); font-weight: 700; margin: 0; color: #334435;">คุณลูกบ้าน</p>
                 <!-- Rendered by loadGamificationData() from LEVEL_TIERS (SSoT) -->
-                <p id="world-map-level" style="font-size: var(--fs-sm); margin: 0; color: #2d8653;">Lv.1 Seedling</p>
+                <p id="world-map-level" style="font-size: var(--fs-sm); margin: 0; color: var(--primary-green);">Lv.1 Seedling</p>
             </div>
         </div>
 
@@ -1682,7 +1682,7 @@
             </div>
         </div>
         <div onclick="showPage('world-map-page')"
-            style="background: #2d8653; color: white; padding: 10px; border-radius: 15px; margin: 15px; text-align: center; cursor: pointer;">
+            style="background: var(--primary-green); color: white; padding: 10px; border-radius: 15px; margin: 15px; text-align: center; cursor: pointer;">
             <i class="fas fa-arrow-left"></i> กลับไปหน้าแผนที่ (Nature Map)
         </div>
 
@@ -1720,7 +1720,7 @@
         </div>
 
         <div class="card power-card"
-            style="background: linear-gradient(135deg, #2d8653, #1a5c38); color:white; border:none;">
+            style="background: linear-gradient(135deg, var(--primary-green), var(--primary-dark)); color:white; border:none;">
             <small>🔮 คำทรงพลังวันนี้</small>
             <span style="display:block; font-size:var(--fs-lg); font-weight:600; margin:10px 0;" id="power-word">เจิดจรัส
                 (Radiant)</span>
@@ -2372,7 +2372,7 @@
                         <span>รวมทั้งสิ้น</span><span id="inv-total">฿—</span>
                     </div>
                     <!-- QR PromptPay -->
-                    <div id="pay-qr-box" style="background:linear-gradient(135deg,#e8f5e9,#f0faf1); border-radius:12px; padding:16px; margin-top:18px; text-align:center;">
+                    <div id="pay-qr-box" style="background:linear-gradient(135deg,var(--soft-green),#f0faf1); border-radius:12px; padding:16px; margin-top:18px; text-align:center;">
                         <p style="margin:0 0 10px; font-weight:600; color:var(--primary-green);">📱 สแกน QR เพื่อชำระเงิน</p>
                         <div id="pay-qr-canvas" style="display:inline-block;"></div>
                         <div id="inv-qr-amount" style="background:var(--primary-green); color:#fff; border-radius:20px; padding:5px 18px; font-weight:bold; margin:10px auto 6px; display:inline-block;">฿—</div>
@@ -2457,7 +2457,7 @@
                     </div>
                     <!-- Status badge (dynamic: default ✅ ชำระแล้ว, or ✅ ชำระแล้ว (เงินสด) for legacy) -->
                     <div style="text-align:center; margin-top:18px;">
-                        <span id="rcpt-status-badge" style="border:1.5px solid var(--primary-green); color:var(--primary-green); padding:5px 18px; border-radius:20px; font-size:var(--fs-sm); font-weight:600; background:#e8f5e9;">
+                        <span id="rcpt-status-badge" style="border:1.5px solid var(--primary-green); color:var(--primary-green); padding:5px 18px; border-radius:20px; font-size:var(--fs-sm); font-weight:600; background:var(--soft-green);">
                             ✅ ชำระแล้ว
                         </span>
                     </div>
@@ -2516,7 +2516,7 @@
         </div>
 
         <!-- Points Banner (Nest only) -->
-        <div id="profile-points-banner" class="border-none mx-4 p-5" style="background:linear-gradient(135deg,#2d8653,#1a5c38); color:white; border-radius:18px 18px 0 0;">
+        <div id="profile-points-banner" class="border-none mx-4 p-5" style="background:linear-gradient(135deg,var(--primary-green),var(--primary-dark)); color:white; border-radius:18px 18px 0 0;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <div>
                     <p style="font-size:9px; opacity:0.8; font-weight:700; text-transform:uppercase; margin:0 0 2px; letter-spacing:.06em;">ระดับปัจจุบัน</p>
@@ -3164,7 +3164,7 @@
             <h3 id="contract-room-title">สัญญาห้อง —</h3>
             <p style="font-size: var(--fs-md); color: #666;">วันสิ้นสุดสัญญา: <strong id="contract-end-date">—</strong></p>
             <div
-                style="background: #e8f5e9; color: var(--primary-green); padding: 10px; border-radius: 12px; font-size: var(--fs-sm); margin-top: 15px;">
+                style="background: var(--soft-green); color: var(--primary-green); padding: 10px; border-radius: 12px; font-size: var(--fs-sm); margin-top: 15px;">
                 แจ้งความประสงค์ต่อสัญญา หรือแจ้งย้ายออกล่วงหน้าอย่างน้อย 30 วัน
             </div>
             <!-- ported from tenant.html: viewLeaseAgreement / downloadLeaseAgreement -->
