@@ -1578,7 +1578,7 @@
             </div>
 
             <div>
-                <p id="display-name" style="font-size: var(--fs-sm); font-weight: 700; margin: 0; color: #334435;">คุณลุกตาล</p>
+                <p id="display-name-map" style="font-size: var(--fs-sm); font-weight: 700; margin: 0; color: #334435;">คุณลูกบ้าน</p>
                 <p style="font-size: var(--fs-sm); margin: 0; color: #2d8653;">Lv.1 Seedling</p>
             </div>
         </div>
@@ -4490,8 +4490,11 @@
         }
 
         function updateName(val) {
-            const dName = document.getElementById('display-name');
-            if (dName) dName.innerText = val || "คุณลูกบ้าน";
+            const name = val || "คุณลูกบ้าน";
+            ['display-name', 'display-name-map'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = name;
+            });
         }
 
         function setAvatar(emoji, el) {
@@ -7263,10 +7266,14 @@
         function renderProfilePage() {
             const set = (id, val) => { const el = document.getElementById(id); if (el && val != null && val !== '') el.textContent = val; };
 
-            const nameEl = document.getElementById('display-name');
-            if (nameEl && _taTenant) {
+            if (_taTenant) {
                 const name = _taTenant.name || _taTenant.tenantName || '';
-                if (name) nameEl.textContent = `คุณ${name}`;
+                if (name) {
+                    ['display-name', 'display-name-map'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = `คุณ${name}`;
+                    });
+                }
             }
             // Personal info — ดึงจาก _taTenant (dashboard source) ไม่ hardcode
             const t = _taTenant || {};
