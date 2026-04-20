@@ -4171,6 +4171,17 @@
             }
         }
 
+        function updatePowerWordOfDay() {
+            const today = new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Bangkok' });
+            const data = astroData[today];
+            const wordEl = document.getElementById('power-word');
+            const descEl = document.getElementById('power-desc');
+            if (data && wordEl && descEl) {
+                wordEl.innerText = data.word;
+                descEl.innerText = data.desc;
+            }
+        }
+
         function initGreeting() {
             const hour = new Date().getHours();
             const text = document.getElementById('time-greet');
@@ -7998,6 +8009,7 @@
 
             // 3. โค้ดเดิมของคุณลุกตาล
             initGreeting();
+            updatePowerWordOfDay();
             updateAstro();
 
             const dateElement = document.getElementById('current-date');
