@@ -1497,6 +1497,12 @@
         <button id="apb-switch-btn" style="padding:3px 10px;border-radius:4px;border:none;background:#4ade80;color:#14532d;font-weight:700;cursor:pointer;font-size:12px;">สวิตช์</button>
       </span>
     </div>
+    <!-- APP INIT SPLASH: covers screen while LIFF auth resolves so world-map never flashes -->
+    <div id="app-loading-splash" style="display:flex;position:fixed;inset:0;background:#f0fdf4;z-index:999999;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+        <div style="font-size:3rem;">🌿</div>
+        <div style="font-weight:700;font-size:1.1rem;color:#1a5c38;">กำลังโหลด...</div>
+    </div>
+
     <!-- LIFF LINK ACCOUNT OVERLAY -->
     <div id="liff-link-overlay" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#f0fdf4,#e8f5e9);z-index:99999;flex-direction:column;align-items:center;justify-content:center;padding:2rem;">
         <div style="background:#fff;border-radius:20px;padding:2rem 1.8rem;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.12);text-align:center;">
@@ -6633,6 +6639,7 @@
                 } else {
                     showLiffLinkForm();
                 }
+                document.getElementById('app-loading-splash')?.remove();
                 return; // stop here; don't render tenant pages without room
             }
 
@@ -6659,6 +6666,7 @@
             loadAvatar();
             renderWellness();
             loadWellnessFromFirestore();
+            document.getElementById('app-loading-splash')?.remove();
         }
 
         // ---- HOME ----
