@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="./shared/security.js"></script>
 <script src="./shared/firebase-config-loader.js"></script>
+<script src="./shared/gamification-rules.js"></script>
 <script src="./shared/access-control.js"></script>
 <script src="./shared/audit.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -3764,15 +3765,14 @@
         <table class="data-table" style="width: 100%; margin-bottom: 1rem;">
           <thead>
             <tr>
-              <th class="w-50">Rank</th>
+              <th class="w-50">#</th>
               <th>Tenant Name</th>
               <th style="width: 100px;">Points</th>
-              <th style="width: 100px;">Badges</th>
-              <th style="width: 100px;">Rank</th>
+              <th style="width: 140px;">Level</th>
             </tr>
           </thead>
           <tbody id="leaderboardTable">
-            <tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">Loading leaderboard...</td></tr>
+            <tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">Loading leaderboard...</td></tr>
           </tbody>
         </table>
       </div>

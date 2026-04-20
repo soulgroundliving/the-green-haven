@@ -3604,18 +3604,20 @@ function initGamificationPage() {
     });
   });
 
+  // Rank from SSoT LEVEL_TIERS (shared/gamification-rules.js) — same tier system as tenant-facing profile
   const scored = allTenants.map(t => {
     const points = score(t);
-    const badges = points >= 1200 ? '🌟🏅' : points >= 600 ? '🌟' : '';
-    const rank   = points >= 1000 ? '🥇 Gold' : points >= 500 ? '🥈 Silver' : '🥉 Bronze';
-    return { name: t.name || t.id, points, badges, rank };
+    const tier = window.GamificationRules
+      ? window.GamificationRules.getLevelForPoints(points)
+      : { emoji: '🌱', name: 'Seedling' };
+    return { name: t.name || t.id, points, rank: `${tier.emoji} ${tier.name}` };
   }).sort((a, b) => b.points - a.points);
 
   const tbody = document.getElementById('leaderboardTable');
   if (!tbody) return;
 
   if (scored.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">ยังไม่มีข้อมูลผู้เช่า</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">ยังไม่มีข้อมูลผู้เช่า</td></tr>';
     return;
   }
 
@@ -3624,7 +3626,6 @@ function initGamificationPage() {
       <td style="text-align:center;font-weight:700;">${i + 1}</td>
       <td>${t.name}</td>
       <td style="text-align:center;font-weight:600;">${t.points}</td>
-      <td style="text-align:center;">${t.badges}</td>
       <td style="text-align:center;font-size:0.85rem;">${t.rank}</td>
     </tr>`).join('');
 }

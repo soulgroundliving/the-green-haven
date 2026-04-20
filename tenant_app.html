@@ -2654,14 +2654,8 @@
             </div>
             <div class="muji-card p-5 mb-6">
                 <h3 class="font-bold text-sm mb-3">🎯 ระดับในระบบ</h3>
-                <div class="space-y-2 text-xs">
-                    <div class="flex justify-between text-gray-400"><span>🌱 Seedling</span><span>0 – 299 Pts</span></div>
-                    <div class="flex justify-between text-gray-400"><span>🌿 Sprout</span><span>300 – 699 Pts</span></div>
-                    <div class="flex justify-between text-gray-400"><span>🌸 Blooming</span><span>700 – 1,499 Pts</span></div>
-                    <div class="flex justify-between font-bold text-[#2d8653]"><span>⬆️ คุณอยู่ที่นี่</span><span id="eco-stat-pts">— Pts</span></div>
-                    <div class="flex justify-between text-gray-400"><span>🌳 Guardian</span><span>1,500 – 2,999 Pts</span></div>
-                    <div class="flex justify-between text-gray-400"><span>🏆 Forest Master</span><span>3,000+ Pts</span></div>
-                </div>
+                <!-- Rendered by _renderTierLegend() from LEVEL_TIERS (SSoT) -->
+                <div id="tier-legend" class="space-y-2 text-xs"></div>
             </div>
         </div>
     </div>
@@ -6223,8 +6217,26 @@
             if (lp.next) setEl('eco-next-goal', `เป้าหมายถัดไป: ${lp.next.name} (${lp.next.min.toLocaleString()} Pts)`);
             const bar = document.getElementById('eco-progress-bar');
             if (bar) bar.style.width = Math.round(lp.progress) + '%';
+            _renderTierLegend(pts);
             // Render locked badge grid immediately; _subscribeEcoPoints will update with earned badges
             if (typeof _renderBadgeGrid === 'function') _renderBadgeGrid(_lastKnownBadges || []);
+        }
+
+        // Render the "ระดับในระบบ" legend from SSoT LEVEL_TIERS. Current tier highlighted.
+        function _renderTierLegend(pts) {
+            const el = document.getElementById('tier-legend');
+            if (!el || !window.GamificationRules) return;
+            const lp = window.GamificationRules.getLevelProgress(pts);
+            const rows = window.GamificationRules.LEVEL_TIERS.map(t => {
+                const range = t.max === Infinity
+                    ? `${t.min.toLocaleString()}+ Pts`
+                    : `${t.min.toLocaleString()} – ${t.max.toLocaleString()} Pts`;
+                if (t.id === lp.tier.id) {
+                    return `<div class="flex justify-between font-bold text-[#2d8653]"><span>⬆️ คุณอยู่ที่นี่ (${t.name})</span><span>${Number(pts).toLocaleString()} Pts</span></div>`;
+                }
+                return `<div class="flex justify-between text-gray-400"><span>${t.emoji} ${t.name}</span><span>${range}</span></div>`;
+            });
+            el.innerHTML = rows.join('');
         }
 
         let _lastKnownBadges = null;

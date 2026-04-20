@@ -5,7 +5,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 // Shared gamification rules (auto-synced from shared/gamification-rules.js on deploy)
-const { BADGE_CATALOG, badgeId, normaliseBadges } = require('./gamification-rules');
+const { BADGE_CATALOG, badgeId, normaliseBadges, getLevelProgress } = require('./gamification-rules');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -338,7 +338,9 @@ exports.checkAndAwardBadges = functions.region('asia-southeast1').https.onCall(a
 });
 
 /**
- * Calculate tenant rank based on points
+ * Calculate tenant rank (level tier) based on points.
+ * Unified with tenant-facing LEVEL_TIERS via SSoT (shared/gamification-rules.js).
+ * Legacy Bronze/Silver/Gold/Platinum was replaced with Seedling/Sprout/…/Forest Master.
  */
 exports.calculateTenantRank = functions.region('asia-southeast1').https.onCall(async (data, context) => {
   try {
@@ -351,34 +353,15 @@ exports.calculateTenantRank = functions.region('asia-southeast1').https.onCall(a
     }
 
     const points = tenantDoc.data().gamification?.points || 0;
-
-    let rank, rankIcon, nextMilestone;
-
-    if (points < 250) {
-      rank = 'Bronze';
-      rankIcon = '🥉';
-      nextMilestone = { name: 'Silver', points: 250 };
-    } else if (points < 500) {
-      rank = 'Silver';
-      rankIcon = '🌟';
-      nextMilestone = { name: 'Gold', points: 500 };
-    } else if (points < 1000) {
-      rank = 'Gold';
-      rankIcon = '💎';
-      nextMilestone = { name: 'Platinum', points: 1000 };
-    } else {
-      rank = 'Platinum';
-      rankIcon = '👑';
-      nextMilestone = null;
-    }
+    const lp = getLevelProgress(points);
 
     return {
       success: true,
-      rank,
-      rankIcon,
+      rank: lp.tier.name,
+      rankIcon: lp.tier.emoji,
       points,
-      nextMilestone,
-      progressToNext: nextMilestone ? points - (nextMilestone.points - 250) : 0
+      nextMilestone: lp.next ? { name: lp.next.name, points: lp.next.min } : null,
+      progressToNext: lp.next ? lp.next.min - points : 0
     };
   } catch (error) {
     console.error('❌ Error calculating rank:', error);
