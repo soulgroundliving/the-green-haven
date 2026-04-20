@@ -2275,6 +2275,21 @@
             </div>
         </div>
 
+        <!-- 6-month usage chart: tap a month point for detail. Hidden when no meter data. -->
+        <div class="card" id="usage-chart-card" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h4 style="margin:0; font-size:var(--fs-md); font-weight:700; color:#334435;">📈 แนวโน้ม 6 เดือน</h4>
+                <div style="display:flex; gap:4px; background:#f3f4f6; border-radius:10px; padding:3px;">
+                    <button class="usage-chart-tab usage-chart-tab-elec" data-type="elec" onclick="switchUsageChartTab('elec')" style="padding:6px 14px; border:none; border-radius:8px; font-size:var(--fs-sm); font-weight:700; cursor:pointer; font-family:inherit; background:white; color:#d97706; box-shadow:0 1px 3px rgba(0,0,0,0.08);">⚡ ไฟ</button>
+                    <button class="usage-chart-tab usage-chart-tab-water" data-type="water" onclick="switchUsageChartTab('water')" style="padding:6px 14px; border:none; border-radius:8px; font-size:var(--fs-sm); font-weight:700; cursor:pointer; font-family:inherit; background:transparent; color:#64748b;">💧 น้ำ</button>
+                </div>
+            </div>
+            <div id="usage-chart-svg-wrap" style="min-height:170px;"></div>
+            <p style="font-size:10px; color:#9ca3af; text-align:center; margin:6px 0 4px; font-style:normal;">แตะจุดใดจุดหนึ่งเพื่อดูรายละเอียด</p>
+            <div id="usage-chart-detail" style="display:none; margin-top:10px; padding:12px; background:#f9fafb; border-radius:12px;"></div>
+            <p style="font-size:9px; color:#9ca3af; margin:10px 0 0; text-align:center; font-style:italic;">ⓘ ข้อมูลรายวันสำหรับไฟจะพร้อมใช้เมื่อเชื่อม Smart Home (ก.ค.-ส.ค.) ส่วนน้ำคำนวณค่าเฉลี่ยจากยอดรวมเดือน</p>
+        </div>
+
         <div class="card" style="border-left: 5px solid var(--primary-green);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
@@ -2990,65 +3005,6 @@
         </div>
     </div>
 
-    <div id="elec_usage" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="goBackToUsage()">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
-            </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">ปริมาณไฟที่ใช้</h1>
-        </div>
-        <div id="elec-summary-card" class="muji-card p-6 mb-4 bg-gradient-to-br from-yellow-50 to-white border-none">
-            <p class="text-xs text-orange-500 font-bold mb-1">สรุปการใช้ไฟเดือนล่าสุด</p>
-            <div class="flex justify-between items-end">
-                <div><span id="elec-latest-units" class="text-3xl font-bold text-orange-600">—</span><span class="text-sm text-gray-500 ml-1">kWh</span></div>
-                <p id="elec-latest-cost" class="text-[10px] text-gray-400 pb-1">ประมาณการ ฿ —</p>
-            </div>
-            <div class="w-full bg-orange-100 h-2 rounded-full mt-4">
-                <div id="elec-progress-bar" class="bg-orange-400 h-2 rounded-full" style="width:0%"></div>
-            </div>
-            <p id="elec-compare-note" class="text-[9px] text-gray-400 mt-2"> </p>
-        </div>
-
-        <div class="muji-card p-5">
-            <h4 class="text-sm font-bold mb-4">สถิติใช้ไฟรายเดือน</h4>
-            <div id="elec-history-list" style="text-align:center;color:#aaa;padding:20px;font-size:var(--fs-md);">
-                <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
-            </div>
-        </div>
-    </div>
-
-    <div id="water_usage" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="goBackToUsage()">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
-            </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">ปริมาณน้ำที่ใช้</h1>
-        </div>
-        <div class="muji-card p-6 mb-4 bg-gradient-to-br from-blue-50 to-white border-none">
-            <p class="text-xs text-blue-500 font-bold mb-1">สรุปการใช้น้ำเดือนล่าสุด</p>
-            <div class="flex justify-between items-end">
-                <div>
-                    <span id="water-latest-units" class="text-3xl font-bold text-blue-600">—</span>
-                    <span class="text-sm text-gray-500 ml-1">ลบ.ม. (Unit)</span>
-                </div>
-                <p id="water-latest-cost" class="text-[10px] text-gray-400 pb-1">ประมาณการ ฿ —</p>
-            </div>
-            <div class="w-full bg-blue-100 h-2 rounded-full mt-4">
-                <div id="water-progress-bar" class="bg-blue-400 h-2 rounded-full" style="width:0%"></div>
-            </div>
-            <p id="water-compare-note" class="text-[9px] text-gray-400 mt-2"> </p>
-        </div>
-
-        <div class="muji-card p-5">
-            <h4 class="text-sm font-bold mb-4">สถิติใช้น้ำรายเดือน</h4>
-            <div id="water-history-list" style="text-align:center;color:#aaa;padding:20px;font-size:var(--fs-md);">
-                <i class="fas fa-spinner fa-spin"></i> กำลังโหลด...
-            </div>
-        </div>
-    </div>
-
 
     <div id="preference" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
@@ -3596,7 +3552,7 @@
         // ฟังก์ชันเข้าหน้าย่อย (แก้บั๊กเนื้อหาซ้อนกัน)
         function showSubPage(id) {
             // Guard: Nest-only sub-pages — block for Rooms (ห้องแถว) tenants
-            const NEST_ONLY_PAGES = ['building', 'water_usage', 'elec_usage', 'smart-key-page', 'add-pet-page'];
+            const NEST_ONLY_PAGES = ['building', 'smart-key-page', 'add-pet-page'];
             if (window._nestOnlyDisabled && NEST_ONLY_PAGES.includes(id)) {
                 if (typeof toast === 'function') toast('ฟีเจอร์นี้สำหรับลูกบ้านตึก Nest เท่านั้น', 'info');
                 return;
@@ -3621,8 +3577,6 @@
             const navBar = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
             if (navBar) navBar.style.display = 'none';
 
-            if (id === 'elec_usage') renderElecUsage();
-            if (id === 'water_usage') renderWaterUsage();
             if (id === 'settings') loadReceiptSettings();
             if (id === 'complaint') loadComplaints();
             window.scrollTo(0, 0);
@@ -6824,8 +6778,7 @@
                 // Synthesize missing bills + re-render UI
                 _synthesizeBillsFromMeter();
                 if (typeof renderBillsList === 'function') renderBillsList();
-                if (typeof renderElecUsage === 'function') renderElecUsage();
-                if (typeof renderWaterUsage === 'function') renderWaterUsage();
+                if (typeof _renderUsageChart === 'function') _renderUsageChart();
                 console.log(`✅ Meter history loaded: ${_meterHistoryCache.length} months (${_taBuilding}/${_taRoom})`);
             } catch (e) {
                 console.warn('⚠️ meter history load failed:', e.message);
@@ -6937,66 +6890,119 @@
             }));
         }
 
-        function _renderMeterPage(type) {
-            const isMeter = type === 'elec';
-            const MONTHS_TH = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-            const prefix = isMeter ? 'elec' : 'water';
-            const unit = isMeter ? 'kWh' : 'Unit';
-            const rows = _getMeterHistory(type);
+        // ===== 6-month Usage Chart (combined elec+water, tab toggle, tap-for-detail) =====
+        let _usageChartType = 'elec';
+        const _MONTHS_TH_SHORT = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
-            const latestEl = document.getElementById(`${prefix}-latest-units`);
-            const costEl = document.getElementById(`${prefix}-latest-cost`);
-            const noteEl = document.getElementById(`${prefix}-compare-note`);
-            const barEl = document.getElementById(`${prefix}-progress-bar`);
-            const listEl = document.getElementById(`${prefix}-history-list`);
-
-            if (!listEl) return;
-
-            if (!rows.length) {
-                if (latestEl) latestEl.textContent = '—';
-                if (costEl) costEl.textContent = 'ยังไม่มีข้อมูล';
-                listEl.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;font-size:var(--fs-md);">ยังไม่มีข้อมูลมิเตอร์</div>';
-                return;
-            }
-
-            const latest = rows[0];
-            if (latestEl) latestEl.textContent = Number(latest.units).toLocaleString();
-            if (costEl) costEl.textContent = `ประมาณการ ฿ ${Number(latest.cost).toLocaleString()}`;
-
-            // Compare with previous month
-            if (rows.length >= 2 && noteEl) {
-                const prev = rows[1];
-                if (prev.units > 0) {
-                    const diff = ((latest.units - prev.units) / prev.units * 100).toFixed(0);
-                    noteEl.textContent = diff > 0 ? `ใช้มากกว่าเดือนที่แล้ว ${Math.abs(diff)}%` : `ประหยัดกว่าเดือนที่แล้ว ${Math.abs(diff)}% ✨`;
-                }
-            }
-
-            // Progress bar relative to max in history
-            const maxUnits = Math.max(...rows.map(r => r.units), 1);
-            if (barEl) barEl.style.width = Math.min(100, Math.round(latest.units / maxUnits * 100)) + '%';
-
-            // History rows
-            listEl.innerHTML = rows.map((r, i) => {
-                const [yr, mo] = r.month.split('-');
-                const monthLabel = `${MONTHS_TH[parseInt(mo)]} ${parseInt(yr) + 543}`;
-                const barW = Math.round(r.units / maxUnits * 100);
-                const accent = i === 0 ? (isMeter ? '#f97316' : '#3b82f6') : '#aaa';
-                return `<div style="margin-bottom:14px;">
-                    <div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);margin-bottom:4px;">
-                        <span style="font-weight:${i===0?'700':'400'};color:${i===0?'var(--text-dark)':'#666'};">${monthLabel}</span>
-                        <span style="font-weight:600;">${Number(r.units).toLocaleString()} ${unit} · ฿${Number(r.cost).toLocaleString()}</span>
-                    </div>
-                    <div style="background:#f3f4f6;border-radius:4px;height:6px;">
-                        <div style="background:${accent};border-radius:4px;height:6px;width:${barW}%;transition:width .4s;"></div>
-                    </div>
-                    ${r.old != null && r.new != null ? `<div style="font-size:var(--fs-sm);color:#aaa;margin-top:2px;">${r.old} → ${r.new}</div>` : ''}
-                </div>`;
-            }).join('');
+        function switchUsageChartTab(type) {
+            _usageChartType = type;
+            document.querySelectorAll('.usage-chart-tab').forEach(btn => {
+                const active = btn.dataset.type === type;
+                btn.style.background = active ? 'white' : 'transparent';
+                btn.style.color = active ? (type === 'elec' ? '#d97706' : '#0369a1') : '#64748b';
+                btn.style.boxShadow = active ? '0 1px 3px rgba(0,0,0,0.08)' : 'none';
+            });
+            const detail = document.getElementById('usage-chart-detail');
+            if (detail) detail.style.display = 'none';
+            _renderUsageChart();
         }
+        window.switchUsageChartTab = switchUsageChartTab;
 
-        function renderElecUsage() { _renderMeterPage('elec'); }
-        function renderWaterUsage() { _renderMeterPage('water'); }
+        function _renderUsageChart() {
+            const card = document.getElementById('usage-chart-card');
+            const wrap = document.getElementById('usage-chart-svg-wrap');
+            if (!card || !wrap) return;
+            const rows = _getMeterHistory(_usageChartType);
+            if (!rows.length) { card.style.display = 'none'; return; }
+            card.style.display = '';
+
+            // rows are newest first; reverse for left-to-right timeline
+            const data = [...rows].reverse();
+            const maxUnits = Math.max(...data.map(r => r.units), 1);
+            const W = 320, H = 170, PAD_X = 24, PAD_TOP = 14, PAD_BOTTOM = 24;
+            const PLOT_W = W - 2 * PAD_X;
+            const PLOT_H = H - PAD_TOP - PAD_BOTTOM;
+            const isElec = _usageChartType === 'elec';
+            const stroke = isElec ? '#f97316' : '#3b82f6';
+            const fill   = isElec ? '#fef3c7' : '#dbeafe';
+
+            const points = data.map((r, i) => {
+                const x = PAD_X + (PLOT_W * i) / Math.max(1, data.length - 1);
+                const y = PAD_TOP + PLOT_H - (PLOT_H * r.units / maxUnits);
+                return { x, y, r };
+            });
+            const linePath = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+            const areaPath = linePath + ` L${points[points.length-1].x.toFixed(1)},${PAD_TOP+PLOT_H} L${points[0].x.toFixed(1)},${PAD_TOP+PLOT_H} Z`;
+
+            let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:170px; display:block;" preserveAspectRatio="none">`;
+            // 3 horizontal gridlines
+            for (let k = 0; k <= 2; k++) {
+                const gy = PAD_TOP + (PLOT_H * k / 2);
+                svg += `<line x1="${PAD_X}" y1="${gy}" x2="${W-PAD_X}" y2="${gy}" stroke="#f1f5f9" stroke-width="1"/>`;
+            }
+            svg += `<path d="${areaPath}" fill="${fill}" opacity="0.65"/>`;
+            svg += `<path d="${linePath}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+            points.forEach(p => {
+                const [, mo] = p.r.month.split('-');
+                const label = _MONTHS_TH_SHORT[parseInt(mo)] || '';
+                svg += `<circle cx="${p.x}" cy="${p.y}" r="6" fill="white" stroke="${stroke}" stroke-width="2.5" style="cursor:pointer;" onclick="_showUsageMonthDetail('${p.r.month}')"/>`;
+                svg += `<text x="${p.x}" y="${H-6}" text-anchor="middle" font-size="10" fill="#6b7280" font-family="inherit">${label}</text>`;
+            });
+            svg += '</svg>';
+            wrap.innerHTML = svg;
+        }
+        window._renderUsageChart = _renderUsageChart;
+
+        function _showUsageMonthDetail(monthKey) {
+            const rows = _getMeterHistory(_usageChartType);
+            const idx = rows.findIndex(r => r.month === monthKey);
+            if (idx < 0) return;
+            const row = rows[idx];
+            const prev = rows[idx + 1]; // rows[0] is newest, prev = older
+            const detail = document.getElementById('usage-chart-detail');
+            if (!detail) return;
+
+            const [yr, mo] = monthKey.split('-');
+            const monthLabel = `${_MONTHS_TH_SHORT[parseInt(mo)]} ${parseInt(yr) + 543}`;
+            const isElec = _usageChartType === 'elec';
+            const unit = isElec ? 'kWh' : 'ลบ.ม.';
+            const icon = isElec ? '⚡' : '💧';
+            const color = isElec ? '#d97706' : '#0369a1';
+
+            let diffHtml = '';
+            if (prev && prev.units > 0) {
+                const diff = Math.round((row.units - prev.units) / prev.units * 100);
+                diffHtml = diff > 0
+                    ? `<span style="color:#dc2626; font-weight:700;">+${diff}% จากเดือนก่อน</span>`
+                    : diff < 0
+                        ? `<span style="color:#059669; font-weight:700;">${diff}% จากเดือนก่อน ✨</span>`
+                        : `<span style="color:#6b7280;">เท่ากับเดือนก่อน</span>`;
+            }
+
+            const daysInMonth = new Date(parseInt(yr) < 2500 ? parseInt(yr) : parseInt(yr) - 543, parseInt(mo), 0).getDate() || 30;
+            const avgPerDay = (row.units / daysInMonth).toFixed(1);
+            const dailyNote = isElec
+                ? `เฉลี่ย ${avgPerDay} ${unit}/วัน <span style="color:#aaa;">(ประมาณ — รอ Smart Home)</span>`
+                : `เฉลี่ย ${avgPerDay} ${unit}/วัน <span style="color:#aaa;">(ค่าเฉลี่ยจากยอดเดือน)</span>`;
+
+            detail.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                    <div>
+                        <div style="font-size:var(--fs-md); font-weight:700; color:#334435;">${icon} ${monthLabel}</div>
+                        ${row.old != null && row.new != null ? `<div style="font-size:10px; color:#9ca3af; margin-top:3px;">มิเตอร์ ${row.old} → ${row.new}</div>` : ''}
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:1.3rem; font-weight:800; color:${color}; line-height:1.1;">${Number(row.units).toLocaleString()}<span style="font-size:var(--fs-sm); color:#888; font-weight:600; margin-left:4px;">${unit}</span></div>
+                        <div style="font-size:var(--fs-sm); font-weight:700; color:#555;">฿ ${Number(row.cost).toLocaleString()}</div>
+                    </div>
+                </div>
+                <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #e5e7eb; font-size:10px; color:#6b7280; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                    <span>${dailyNote}</span>
+                    <span>${diffHtml}</span>
+                </div>`;
+            detail.style.display = '';
+        }
+        window._showUsageMonthDetail = _showUsageMonthDetail;
 
         let _taEventsUnsub = null;
         function _subscribeEventsFromFirestore() {
