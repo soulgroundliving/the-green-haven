@@ -1619,7 +1619,7 @@
     </div>
 
     <!-- Contract Quiz Modal -->
-    <div id="quiz-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1500; align-items:center; justify-content:center; padding:20px;">
+    <div id="quiz-modal" role="dialog" aria-modal="true" aria-labelledby="quiz-title" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1500; align-items:center; justify-content:center; padding:20px;">
         <div style="background:#fff; border-radius:24px; max-width:420px; width:100%; padding:24px; box-shadow:var(--shadow);">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
                 <strong id="quiz-title" style="font-size:var(--fs-lg);">Contract Quiz</strong>
@@ -1635,12 +1635,12 @@
         </div>
     </div>
 
-    <div id="daily-modal"
+    <div id="daily-modal" role="dialog" aria-modal="true" aria-labelledby="daily-modal-title"
         style="display: none; position: fixed; top: 0; left: 0; width: 100%; background: rgba(0,0,0,0.8); z-index: 1500; align-items: center; justify-content: center; backdrop-filter: blur(10px); padding: 20px; box-sizing: border-box;">
         <div class="animate-pop"
             style="background: white; width: 100%; max-width: 350px; border-radius: 35px; padding: 30px; position: relative; text-align: center;">
 
-            <div style="font-size: var(--fs-lg); font-weight: 800; color: var(--text-dark); margin-bottom: 5px;">DAILY BONUS
+            <div id="daily-modal-title" style="font-size: var(--fs-lg); font-weight: 800; color: var(--text-dark); margin-bottom: 5px;">DAILY BONUS
             </div>
             <div style="font-size: var(--fs-sm); color: #666; margin-bottom: 25px;">Log in everyday and earn rewards!</div>
 
@@ -2632,7 +2632,7 @@
         </div>
     </div>
 
-    <div id="rewards-modal"
+    <div id="rewards-modal" role="dialog" aria-modal="true" aria-labelledby="rewards-modal-title"
         class="hidden fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="w-full max-w-lg bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl animate-slide-up relative overflow-hidden flex flex-col"
             style="max-height: 85vh;">
@@ -2641,7 +2641,7 @@
                 class="absolute top-6 right-6 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">
                 ✕
             </button>
-            <h3 class="text-xl font-bold mb-6 text-center text-[#334435]">เลือกของรางวัล</h3>
+            <h3 id="rewards-modal-title" class="text-xl font-bold mb-6 text-center text-[#334435]">เลือกของรางวัล</h3>
             <div class="overflow-y-auto pr-2 space-y-4 custom-scrollbar" id="rewards-list">
                 <!-- Rewards rendered dynamically by _subscribeRewards() from Firestore `rewards` collection.
                      Admin manages via dashboard.html → Settings → Rewards. -->
@@ -3390,9 +3390,9 @@
         </div>
     </div>
 
-    <div id="mainModal" class="modal">
+    <div id="mainModal" class="modal" role="dialog" aria-modal="true" aria-label="กล่องข้อความ">
         <div class="modal-content">
-            <i class="fas fa-times" onclick="closeModal()"
+            <i class="fas fa-times" onclick="closeModal()" role="button" aria-label="ปิดกล่องข้อความ" tabindex="0"
                 style="position:absolute; right:20px; top:20px; cursor:pointer; color:var(--primary-green); font-size: var(--fs-lg);"></i>
             <div id="modal-body"></div>
         </div>
@@ -8852,10 +8852,10 @@
     </script>
 
     <!-- ported from tenant.html: photo modal -->
-    <div id="photoModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+    <div id="photoModal" role="dialog" aria-modal="true" aria-labelledby="photoModal-title" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:20px;">
         <div style="background:#fff; max-width:600px; width:100%; max-height:90vh; overflow:auto; border-radius:18px; padding:20px; position:relative;">
-            <button onclick="closePhotoModal()" style="position:absolute; top:10px; right:10px; width:36px; height:36px; border-radius:50%; border:none; background:#f3f4f6; cursor:pointer; font-size:1.2rem;">✕</button>
-            <h3 style="margin:0 0 14px; color:var(--primary-green);">📸 รูปภาพ</h3>
+            <button onclick="closePhotoModal()" aria-label="ปิด" style="position:absolute; top:10px; right:10px; width:36px; height:36px; border-radius:50%; border:none; background:#f3f4f6; cursor:pointer; font-size:1.2rem;">✕</button>
+            <h3 id="photoModal-title" style="margin:0 0 14px; color:var(--primary-green);">📸 รูปภาพ</h3>
             <div id="photoModalPhotos"></div>
         </div>
     </div>
