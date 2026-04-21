@@ -1678,6 +1678,50 @@
         </div>
     </div>
 
+    <!-- Standard Clean Monthly Opt-in Modal: pops up when admin opens a cleaning campaign month -->
+    <div id="standard-clean-modal" role="dialog" aria-modal="true" aria-labelledby="scm-title"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1500; align-items:center; justify-content:center; padding:16px; overflow-y:auto;">
+        <div style="background:white; width:100%; max-width:380px; border-radius:24px; padding:20px; position:relative; margin:auto; box-sizing:border-box;">
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                <div style="text-align:center;">
+                    <div style="font-size:2.2rem; margin-bottom:4px;">🧹</div>
+                    <div id="scm-title" style="font-size:var(--fs-lg); font-weight:800; color:var(--primary-green); margin-bottom:4px;">
+                        Standard Clean เดือนนี้ฟรี!
+                    </div>
+                    <div style="color:#666; font-size:var(--fs-sm);">
+                        อาคารกำลังเก็บคำขอ แจ้งเวลาที่สะดวกได้เลย
+                    </div>
+                </div>
+                <div style="background:var(--soft-green); border-radius:14px; padding:14px; font-size:var(--fs-sm); display:flex; flex-direction:column; gap:10px;">
+                    <div>
+                        <label style="display:block; font-weight:700; margin-bottom:4px;">📅 วันที่ต้องการ</label>
+                        <input type="date" id="scm-date" style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd; font-family:inherit; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:700; margin-bottom:4px;">⏰ ช่วงเวลา</label>
+                        <select id="scm-time" style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd; font-family:inherit; background:white; box-sizing:border-box;">
+                            <option>09:00 - 12:00 น.</option>
+                            <option>13:00 - 16:00 น.</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:700; margin-bottom:4px;">📝 หมายเหตุ (ไม่บังคับ)</label>
+                        <input type="text" id="scm-note" placeholder="เช่น มีสัตว์เลี้ยง เน้นระเบียง..."
+                            style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd; font-family:inherit; box-sizing:border-box;">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <button onclick="dismissStandardCleanModal()"
+                        style="padding:13px; border-radius:12px; border:1px solid #ddd; background:white; color:#666; font-family:inherit; font-weight:700; cursor:pointer;">ไว้คราวหลัง</button>
+                    <button id="scm-book-btn" onclick="bookStandardCleanFromModal()"
+                        style="padding:13px; border-radius:12px; border:none; background:var(--primary-green); color:white; font-family:inherit; font-weight:700; cursor:pointer;">
+                        จองเลย
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Deep Cleaning Payment Modal: requires 500฿ slip before booking is saved -->
     <div id="cleaning-payment-modal" role="dialog" aria-modal="true" aria-labelledby="cpm-title"
         style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1500; align-items:center; justify-content:center; padding:16px; overflow-y:auto;">
@@ -5729,6 +5773,7 @@
                     _cleaningCfgCache = snap.data() || null;
                     _renderCleaningServices();
                     _renderCleaningTimeSlots();
+                    _maybeOpenStandardCleanModal();
                 }, err => console.warn('cleaningConfig subscribe failed:', err.message));
             } catch (e) { console.warn('cleaningConfig subscribe init failed:', e.message); }
         }
@@ -5773,6 +5818,94 @@
         }
         window.addEventListener('authReady', _subscribeCleaningConfig);
         if (window.firebaseReady && window._authUid) _subscribeCleaningConfig();
+
+        // ===== STANDARD CLEAN MONTHLY OPT-IN MODAL =====
+        // Admin sets system/cleaningServices.activeMonth = 'YYYY-MM' to open a campaign.
+        // All Nest tenants who haven't already booked or dismissed this month see the modal.
+        // Rooms building tenants are skipped (Standard Clean is Nest-only facility service).
+        function _maybeOpenStandardCleanModal() {
+            if (!_cleaningCfgCache) return;
+            if (_taBuilding !== 'nest') return; // Nest-only
+            const activeMonth = String(_cleaningCfgCache.activeMonth || '').trim();
+            if (!activeMonth) return;
+            const now = new Date();
+            const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+            if (activeMonth !== currentMonth) return;
+            // Per-tenant per-month dismissal flag
+            const seenKey = `cleaning_campaign_seen_${activeMonth}_${_taRoom}`;
+            if (localStorage.getItem(seenKey)) return;
+            // Already has a booking for this month? skip
+            let tickets = [];
+            try { tickets = JSON.parse(localStorage.getItem('tenant_cleaning_tickets') || '[]'); } catch(e) {}
+            const [ay, am] = activeMonth.split('-').map(Number);
+            const hasThisMonth = tickets.some(t => {
+                if (!t.date) return false;
+                const d = new Date(t.date);
+                return d.getFullYear() === ay && (d.getMonth()+1) === am && t.service === 'standard-clean';
+            });
+            if (hasThisMonth) return;
+            _openStandardCleanModal(activeMonth);
+        }
+
+        function _openStandardCleanModal(activeMonth) {
+            const modal = document.getElementById('standard-clean-modal');
+            if (!modal) return;
+            // Set date input min/max to the active month range
+            const [ay, am] = activeMonth.split('-').map(Number);
+            const first = `${ay}-${String(am).padStart(2,'0')}-01`;
+            const lastDay = new Date(ay, am, 0).getDate();
+            const last = `${ay}-${String(am).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+            const dateInput = document.getElementById('scm-date');
+            if (dateInput) {
+                dateInput.min = first;
+                dateInput.max = last;
+                // Default to today if in range, else the 1st of active month
+                const todayStr = new Date().toISOString().split('T')[0];
+                dateInput.value = (todayStr >= first && todayStr <= last) ? todayStr : first;
+            }
+            // Populate time slots from config (fallback to defaults)
+            const sel = document.getElementById('scm-time');
+            if (sel && _cleaningCfgCache && Array.isArray(_cleaningCfgCache.timeSlots) && _cleaningCfgCache.timeSlots.length) {
+                sel.innerHTML = '';
+                _cleaningCfgCache.timeSlots.forEach(ts => {
+                    const opt = document.createElement('option');
+                    opt.textContent = ts;
+                    sel.appendChild(opt);
+                });
+            }
+            const noteEl = document.getElementById('scm-note');
+            if (noteEl) noteEl.value = '';
+            modal.style.display = 'flex';
+        }
+
+        function dismissStandardCleanModal() {
+            const modal = document.getElementById('standard-clean-modal');
+            if (modal) modal.style.display = 'none';
+            const activeMonth = String(_cleaningCfgCache?.activeMonth || '').trim();
+            if (activeMonth && _taRoom) {
+                try { localStorage.setItem(`cleaning_campaign_seen_${activeMonth}_${_taRoom}`, '1'); } catch(e) {}
+            }
+        }
+
+        function bookStandardCleanFromModal() {
+            const date = document.getElementById('scm-date')?.value;
+            const time = document.getElementById('scm-time')?.value;
+            const note = document.getElementById('scm-note')?.value.trim() || '';
+            if (!date) { toast('กรุณาเลือกวันที่ต้องการ', 'warning'); return; }
+            const record = {
+                id: 'CLN-' + Date.now().toString().slice(-5),
+                type: 'Standard Clean',
+                service: 'standard-clean',
+                date, time, note,
+                status: 'รอดำเนินการ',
+                createdAt: new Date().toISOString(),
+                campaign: String(_cleaningCfgCache?.activeMonth || '')
+            };
+            _saveCleaningBooking(record);
+            _renderCleaningHistory();
+            dismissStandardCleanModal(); // also sets seen flag
+            toast('จองสำเร็จ 🧹 ทีมงานจะติดต่อยืนยันเวลา', 'success');
+        }
 
         // ===== LEASE REQUEST (renew / moveout) =====
         // Persists tenant decision to Firestore `leaseRequests/{auto}` so admin sees it in

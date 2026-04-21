@@ -3679,6 +3679,23 @@
       <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
       <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
     </div>
+    <!-- Standard Clean monthly campaign: opens popup on all Nest tenants' phones -->
+    <div class="card" style="margin-bottom:1.5rem; background:linear-gradient(135deg,#e8f5e9,#f1f8e9); border:1px solid #a5d6a7;">
+      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:200px;">
+          <div style="font-weight:700; color:var(--green-dark); margin-bottom:4px;">🧹 รอบเก็บคำขอ Standard Clean</div>
+          <div id="hkCampaignStatus" style="font-size:.88rem; color:var(--text-muted);">กำลังตรวจสอบ...</div>
+        </div>
+        <button onclick="startCleaningCampaign()" id="hkCampaignStartBtn"
+          style="padding:10px 16px; background:var(--green-dark); color:#fff; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer;">
+          🚀 เริ่มรอบเดือนนี้
+        </button>
+        <button onclick="stopCleaningCampaign()" id="hkCampaignStopBtn"
+          style="display:none; padding:10px 16px; background:#c62828; color:#fff; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer;">
+          ⏹ หยุดรอบ
+        </button>
+      </div>
+    </div>
     <div style="display:flex;gap:12px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
       <input type="text" id="hk-filter-room" oninput="renderHousekeepingList()" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
       <select id="hk-filter-status" onchange="renderHousekeepingList()" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">

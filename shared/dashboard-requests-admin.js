@@ -834,6 +834,83 @@ function initHousekeepingPage(){
   renderHousekeepingList();
   updateMxBadge();
   subscribeHousekeepingRTDB();
+  subscribeCleaningCampaign();
+}
+
+// ===== STANDARD CLEAN CAMPAIGN — one-button push to all Nest tenants =====
+// Writes system/cleaningServices.activeMonth = 'YYYY-MM'. Tenant app subscribes
+// via onSnapshot and auto-pops modal asking which rooms want the free service.
+let _campaignUnsub = null;
+function subscribeCleaningCampaign(){
+  if(_campaignUnsub) return;
+  if(!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    const ref = fs.doc(db, 'system', 'cleaningServices');
+    _campaignUnsub = fs.onSnapshot(ref, snap => {
+      const data = snap.exists() ? (snap.data() || {}) : {};
+      renderCampaignStatus(data.activeMonth || '');
+    }, err => console.warn('campaign subscribe failed:', err.message));
+  } catch(e) { console.warn('campaign subscribe init failed:', e.message); }
+}
+function renderCampaignStatus(activeMonth){
+  const statusEl = document.getElementById('hkCampaignStatus');
+  const startBtn = document.getElementById('hkCampaignStartBtn');
+  const stopBtn = document.getElementById('hkCampaignStopBtn');
+  if(!statusEl) return;
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  if(activeMonth === currentMonth){
+    statusEl.textContent = `✅ เปิดรอบอยู่ (${activeMonth}) — ทุกห้อง Nest เห็นป๊อปอัพให้จองภายใน ~1 นาที`;
+    statusEl.style.color = 'var(--green-dark)';
+    if(startBtn) startBtn.style.display = 'none';
+    if(stopBtn) stopBtn.style.display = '';
+  } else if(activeMonth){
+    statusEl.textContent = `⏸ รอบที่ตั้งไว้: ${activeMonth} (ไม่ใช่เดือนปัจจุบัน ${currentMonth})`;
+    statusEl.style.color = '#b45309';
+    if(startBtn) { startBtn.style.display = ''; startBtn.textContent = `🚀 เริ่มรอบ ${currentMonth}`; }
+    if(stopBtn) stopBtn.style.display = '';
+  } else {
+    statusEl.textContent = `ยังไม่ได้เปิดรอบ — กดเพื่อส่งป๊อปอัพให้ทุกห้อง Nest`;
+    statusEl.style.color = 'var(--text-muted)';
+    if(startBtn) { startBtn.style.display = ''; startBtn.textContent = `🚀 เริ่มรอบ ${currentMonth}`; }
+    if(stopBtn) stopBtn.style.display = 'none';
+  }
+}
+async function startCleaningCampaign(){
+  if(!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    if(typeof showToast==='function') showToast('Firestore ไม่พร้อม','error');
+    return;
+  }
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  if(!confirm(`เริ่มรอบเก็บคำขอ Standard Clean สำหรับ ${currentMonth}?\nทุกห้อง Nest จะเห็นป๊อปอัพให้จอง`)) return;
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    await fs.setDoc(fs.doc(db, 'system', 'cleaningServices'), { activeMonth: currentMonth, activeStartedAt: new Date().toISOString() }, { merge: true });
+    if(typeof showToast==='function') showToast('✅ เริ่มรอบแล้ว — ป๊อปอัพจะไปถึงลูกบ้านภายใน ~1 นาที','success');
+  } catch(e) {
+    console.error('startCleaningCampaign failed:', e);
+    if(typeof showToast==='function') showToast('เริ่มรอบไม่สำเร็จ: '+e.message,'error');
+  }
+}
+async function stopCleaningCampaign(){
+  if(!confirm('หยุดรอบเก็บคำขอ? ลูกบ้านจะไม่เห็นป๊อปอัพอีก')) return;
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    await fs.setDoc(fs.doc(db, 'system', 'cleaningServices'), { activeMonth: '', activeEndedAt: new Date().toISOString() }, { merge: true });
+    if(typeof showToast==='function') showToast('⏹ หยุดรอบแล้ว','success');
+  } catch(e) {
+    console.error('stopCleaningCampaign failed:', e);
+    if(typeof showToast==='function') showToast('หยุดรอบไม่สำเร็จ: '+e.message,'error');
+  }
+}
+if (typeof window !== 'undefined') {
+  window.startCleaningCampaign = startCleaningCampaign;
+  window.stopCleaningCampaign = stopCleaningCampaign;
 }
 
 let _hkRTDBUnsub = null;
