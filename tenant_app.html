@@ -4071,39 +4071,81 @@
             btn.disabled = false; btn.style.opacity = '1';
         }
 
+        function _setCpmStatus(kind, msg) {
+            const el = document.getElementById('cpm-status');
+            if (!el) return;
+            el.style.display = '';
+            const palette = {
+                loading: { bg:'#fff7ed', fg:'#b45309' },
+                success: { bg:'#ecfdf5', fg:'#16a34a' },
+                error:   { bg:'#fef2f2', fg:'#dc2626' },
+                warning: { bg:'#fffbeb', fg:'#d97706' },
+                info:    { bg:'#eff6ff', fg:'#2563eb' }
+            }[kind] || { bg:'#f3f4f6', fg:'#374151' };
+            el.style.background = palette.bg;
+            el.style.color = palette.fg;
+            el.textContent = msg;
+        }
+
         async function confirmCleaningPayment() {
             if (!_cleaningSlipBase64 || !_pendingCleaningRecord) return;
-            const statusEl = document.getElementById('cpm-status');
             const btn = document.getElementById('cpm-confirm-btn');
-            statusEl.style.display = ''; statusEl.style.background = '#fff7ed'; statusEl.style.color = '#b45309';
-            statusEl.textContent = '⏳ กำลังตรวจสอบสลิป...';
-            btn.disabled = true; btn.style.opacity = '0.5';
-            let slipOkVerified = false, transRef = null;
+            if (typeof _tenantRateLimit === 'function' && !_tenantRateLimit()) {
+                _setCpmStatus('error', 'ส่งคำขอบ่อยเกินไป กรุณารอสักครู่');
+                return;
+            }
+            _setCpmStatus('loading', '⏳ กำลังตรวจสอบสลิป...');
+            btn.disabled = true; btn.style.opacity = '0.5'; btn.textContent = 'กำลังตรวจสอบ...';
+            let result;
             try {
-                if (typeof _tenantRateLimit === 'function' && !_tenantRateLimit()) {
-                    throw new Error('ส่งคำขอบ่อยเกินไป');
-                }
                 const resp = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
                     method:'POST', headers:{'Content-Type':'application/json'},
                     body: JSON.stringify({ file: _cleaningSlipBase64, expectedAmount: 500, building: _taBuilding, room: _taRoom, context: 'cleaning' })
                 });
-                const result = await resp.json();
-                slipOkVerified = !!(result.success || result.verified);
-                transRef = result.transRef || result.transactionId || null;
-            } catch(e) { console.warn('verifySlip (cleaning) failed:', e.message); }
+                result = await resp.json();
+            } catch(e) {
+                console.warn('verifySlip (cleaning) network error:', e.message);
+                _setCpmStatus('error', 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่');
+                btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'ยืนยันชำระเงิน';
+                return;
+            }
 
-            const record = _pendingCleaningRecord;
-            record.paymentSlip = _cleaningSlipBase64;
-            record.paymentVerified = slipOkVerified;
-            record.paymentTransRef = transRef;
-            record.status = slipOkVerified ? 'รอดำเนินการ' : 'รอตรวจสอบสลิป';
-            _saveCleaningBooking(record);
-            _renderCleaningHistory();
+            // Success → save booking with verified payment
+            if (result.success || result.verified) {
+                const record = _pendingCleaningRecord;
+                record.paymentSlip = _cleaningSlipBase64;
+                record.paymentVerified = true;
+                record.paymentTransRef = result.transRef || result.transactionId || null;
+                record.status = 'รอดำเนินการ';
+                _saveCleaningBooking(record);
+                _renderCleaningHistory();
+                _setCpmStatus('success', '✅ ชำระเงินยืนยันแล้ว — จองสำเร็จ');
+                toast('จองสำเร็จ ✅ ชำระเงินยืนยันแล้ว', 'success');
+                setTimeout(() => { closeCleaningPaymentModal(); goBackToService(); }, 1500);
+                return;
+            }
 
-            statusEl.style.background = '#ecfdf5'; statusEl.style.color = '#16a34a';
-            statusEl.textContent = slipOkVerified ? '✅ ชำระเงินยืนยันแล้ว' : '📎 บันทึกสลิปแล้ว ทีมงานจะตรวจสอบ';
-            toast(slipOkVerified ? 'จองสำเร็จ ✅ ชำระเงินยืนยันแล้ว' : 'จองสำเร็จ — ทีมงานกำลังตรวจสอบสลิป', 'success');
-            setTimeout(() => { closeCleaningPaymentModal(); goBackToService(); }, 1500);
+            // SCB delay (bank data not yet available) → countdown + auto-enable retry
+            if (result.retryable && result.code === 'scb_delay') {
+                const wait = result.retryAfterSec || 120;
+                _setCpmStatus('warning', result.message || `ธนาคารยังไม่ปล่อยข้อมูล กรุณารอ ${wait} วินาทีแล้วลองใหม่`);
+                let remain = wait;
+                btn.textContent = `⏳ รออีก ${remain} วินาที`;
+                const tick = setInterval(() => {
+                    remain--;
+                    btn.textContent = `⏳ รออีก ${remain} วินาที`;
+                    if (remain <= 0) {
+                        clearInterval(tick);
+                        btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '🔄 ลองตรวจสอบอีกครั้ง';
+                        _setCpmStatus('info', 'พร้อมลองใหม่ กดปุ่มด้านล่างได้เลย');
+                    }
+                }, 1000);
+                return;
+            }
+
+            // Hard failure → show error, allow retry with a new slip, do NOT save
+            _setCpmStatus('error', result.message || result.error || 'ตรวจสอบไม่ผ่าน กรุณาอัปโหลดสลิปใหม่');
+            btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'ยืนยันชำระเงิน';
         }
 
         function _renderCleaningHistory() {
