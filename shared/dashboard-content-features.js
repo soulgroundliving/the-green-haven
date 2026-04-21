@@ -1,6 +1,7 @@
 // ===== ANNOUNCEMENTS MANAGEMENT =====
 // 'all' = broadcast to both buildings (default). 'rooms' / 'nest' = building-specific.
 // Tenants in either building see announcements where building === 'all' OR matches their own.
+const _escCF = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 let announcementBuilding = 'all';
 
 function setAnnouncementBuilding(bld, btn) {
@@ -147,11 +148,11 @@ function renderAnnouncementsList() {
         <div style="display: flex; justify-content: space-between; align-items: start;">
           <div style="flex: 1;">
             <div style="font-size: 1.3rem; margin-bottom: 0.5rem;">${ann.icon}</div>
-            <div style="font-size: 1.05rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem;">${ann.title}</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem;">${_escCF(ann.title)}</div>
             <div style="color: var(--text-muted); margin-bottom: 0.5rem; font-size: 0.85rem;">
               📅 ${fmtDate(ann.date)} ${ann.time ? '⏰ ' + ann.time : ''}
             </div>
-            <div style="color: var(--text); line-height: 1.6; white-space: pre-wrap;">${ann.content}</div>
+            <div style="color: var(--text); line-height: 1.6; white-space: pre-wrap;">${_escCF(ann.content)}</div>
           </div>
           <button onclick="deleteAnnouncement('${ann.id}')" style="padding: 6px 12px; background: #ffebee; color: var(--red); border: 1px solid var(--red); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">🗑️ ลบ</button>
         </div>
@@ -230,7 +231,7 @@ function renderContractPage(){
       ${(t?.moveInDate||t?.moveIn)?`<div class="ct-card-info">📅 เข้าอยู่: ${fmtDate(t.moveInDate||t.moveIn)}</div>`:''}
       ${t?.contractEnd?`<div class="ct-card-info">⏰ หมดสัญญา: <strong>${fmtDate(t.contractEnd)}</strong></div>`:''}
       ${t?.deposit?`<div class="ct-card-info">💰 มัดจำ: ฿${Number(t.deposit).toLocaleString()}</div>`:''}
-      ${t?.note?`<div class="ct-card-info" style="color:var(--text-muted);font-style:italic;">📝 ${t.note}</div>`:''}
+      ${t?.note?`<div class="ct-card-info" style="color:var(--text-muted);font-style:italic;">📝 ${_escCF(t.note)}</div>`:''}
       <div class="ct-actions">
         ${t?.name?`<button class="ct-btn ct-btn-view" onclick="showTenantModal('${r.id}')">✏️ แก้ไข</button>
         <button class="ct-btn ct-btn-print" onclick="printContract('${r.id}')">🖨️ พิมพ์สัญญา</button>
@@ -409,7 +410,7 @@ function renderAnalyticsPage(){
         const expWarn=exp&&(exp.getTime()-now.getTime()<60*86400000)&&exp>now?'color:var(--red);font-weight:700;':'';
         return`<div class="ana-room-row">
           <div><strong>${r.id}</strong></div>
-          <div style="font-size:.81rem;">${t?.name||'<span style="color:var(--text-muted)">ว่าง</span>'}</div>
+          <div style="font-size:.81rem;">${t?.name ? _escCF(t.name) : '<span style="color:var(--text-muted)">ว่าง</span>'}</div>
           <div>${occ?'<span class="ana-occ-tag">เช่าอยู่</span>':'<span class="ana-vacant-tag">ว่าง</span>'}</div>
           <div style="${expWarn}font-size:.8rem;">${expFmt}</div>
         </div>`;

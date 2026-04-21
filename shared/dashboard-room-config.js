@@ -1,6 +1,7 @@
 // ===== ROOM CONFIGURATION FUNCTIONS =====
 // Extracted from dashboard-main.js
 // Depends on globals: RoomConfigManager, showToast (main.js), initMeterRoomsTab (meter-import.js)
+const _escRC = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 
 function loadRoomConfigUI() {
   try {
@@ -41,7 +42,7 @@ function loadRoomConfigUI() {
       return `
       <tr style="border-bottom:1px solid var(--border);">
         <td class="table-th">
-          <input type="text" value="${room.name}" onchange="updateRoomField('${building}', '${room.id}', 'name', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
+          <input type="text" value="${_escRC(room.name)}" onchange="updateRoomField('${building}', '${room.id}', 'name', this.value)" style="width:100%;padding:0.2rem;border:1px solid var(--border);border-radius:4px;font-family:'Sarabun',sans-serif;">
           <div style="font-size:.7rem;color:#bbb;margin-top:3px;">ID: ${room.id}</div>
         </td>
         <td class="table-th">

@@ -1,3 +1,4 @@
+const _escWC = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 // ===== CONTENT MANAGEMENT TAB SWITCHING =====
 function switchContentTab(tabName, btn) {
   // Hide all content tabs
@@ -376,7 +377,7 @@ async function renderWellnessArticlesList() {
       _wellnessCache = docs;
     } catch (e) {
       console.error('renderWellnessArticlesList getDocs:', e);
-      el.innerHTML = '<div style="color:var(--danger);padding:20px;">โหลดรายการไม่สำเร็จ: ' + (e.message || e) + '</div>';
+      el.innerHTML = '<div style="color:var(--danger);padding:20px;">โหลดรายการไม่สำเร็จ: ' + _escWC(e.message || String(e)) + '</div>';
       return;
     }
   }
@@ -384,8 +385,8 @@ async function renderWellnessArticlesList() {
   try {
     el.innerHTML = docs.map(({ id, data: a }) => {
       const d = { id };
-      const title = (a.title || '').replace(/</g, '&lt;');
-      const excerpt = (a.excerpt || '').replace(/</g, '&lt;');
+      const title = _escWC(a.title || '');
+      const excerpt = _escWC(a.excerpt || '');
       return `<div style="padding:1rem;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;">
         <div style="width:36px;height:36px;background:var(--green-pale);color:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas ${a.icon || 'fa-leaf'}"></i></div>
         <div style="flex:1;min-width:0;">
@@ -395,7 +396,7 @@ async function renderWellnessArticlesList() {
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
           <button onclick="editWellnessArticle('${d.id}')" style="padding:6px 10px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">✏️ แก้</button>
-          <button onclick="deleteWellnessArticle('${d.id}','${title.replace(/'/g, '&#39;')}')" style="padding:6px 10px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">🗑️ ลบ</button>
+          <button data-wid="${_escWC(d.id)}" data-wtitle="${title}" onclick="deleteWellnessArticle(this.dataset.wid,this.dataset.wtitle)" style="padding:6px 10px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.8rem;">🗑️ ลบ</button>
         </div>
       </div>`;
     }).join('');

@@ -1,4 +1,5 @@
 // ===== ROOM FILTER STATE =====
+const _escProp = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 let currentRoomFilter = 'all'; // all, occupied, vacant, overdue
 let currentNestFilter = 'all'; // all, occupied, vacant, overdue
 
@@ -61,7 +62,7 @@ function initRoomsPage(){
     <div class="room-pill ${r.type==='commercial'?'commercial':'occupied'}" onclick="openTenantModal('rooms', '${r.id}')" style="cursor:pointer;transition:transform 0.2s;background:${bgColor};border:2px solid ${borderColor};">
       <div class="room-num">${displayId}</div>
       <div class="room-rent">฿${r.rentPrice.toLocaleString()}/เดือน</div>
-      <div class="room-status">${r.type==='commercial'?'🏪 พาณิชย์':occupancyIcon + (tenant && tenant.name ? ' ' + tenant.name : ' ว่าง')}</div>
+      <div class="room-status">${r.type==='commercial'?'🏪 พาณิชย์':occupancyIcon + (tenant && tenant.name ? ' ' + _escProp(tenant.name) : ' ว่าง')}</div>
       <div style="font-size:0.8rem;margin-top:4px;text-align:center;color:${borderColor};font-weight:600;">${statusInfo.icon} ${statusInfo.label}</div>
     </div>`;
   }).join('');
@@ -214,7 +215,7 @@ function renderCompactRoomGrid(){
       ${isOccupied ? `
       <div class="compact-card-info">
         <span style="font-weight:600;color:var(--text);">ชื่อ</span>
-        <span class="compact-card-value">${tenant.name}</span>
+        <span class="compact-card-value">${_escProp(tenant.name)}</span>
       </div>
       <div class="compact-card-info">
         <span>โทร</span>
