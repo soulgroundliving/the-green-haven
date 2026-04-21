@@ -2252,8 +2252,10 @@
                 style="display:none; min-width:48px; height:44px; padding:0 12px; border-radius:14px; background:var(--soft-green); color:var(--primary-green); font-weight:700; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);"></div>
         </div>
 
+        <div style="display:flex; flex-direction:column; gap:16px; padding:0 var(--gap) var(--gap);">
+
         <!-- 6-month usage chart: tap a month point for detail. Hidden when no meter data. -->
-        <div class="card" id="usage-chart-card" style="display:none;">
+        <div class="card" id="usage-chart-card" style="display:none; margin:0;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <h4 style="margin:0; font-size:var(--fs-md); font-weight:700; color:#334435;">📈 แนวโน้ม 6 เดือน</h4>
                 <div style="display:flex; gap:4px; background:#f3f4f6; border-radius:10px; padding:3px;">
@@ -2267,7 +2269,7 @@
             <p style="font-size:9px; color:#9ca3af; margin:10px 0 0; text-align:center; font-style:italic;">ⓘ ข้อมูลรายวันสำหรับไฟจะพร้อมใช้เมื่อเชื่อม Smart Home (ก.ค.-ส.ค.) ส่วนน้ำคำนวณค่าเฉลี่ยจากยอดรวมเดือน</p>
         </div>
 
-        <div class="card" style="border-left: 5px solid var(--primary-green);">
+        <div class="card" style="border-left: 5px solid var(--primary-green); margin:0;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <p id="bill-label" class="text-sm font-light uppercase tracking-wider">ยอดที่ต้องชำระ</p>
@@ -2281,6 +2283,8 @@
             <button id="service-pay-btn" onclick="openPaymentFlow(false)" class="btn-main"
                 style="margin-top:15px;">ชำระบิล</button>
         </div>
+
+        </div><!-- end usage flex wrapper -->
 
         <div id="bills-history-section" style="display:none;">
             <div class="section-title"><span>ประวัติย้อนหลัง</span></div>
