@@ -195,7 +195,23 @@ function openTenantModal(building, roomId) {
   if (contractData) {
     document.getElementById('modalContractDocument').value = contractData;
     document.getElementById('modalContractFileName').value = contractFileName;
-    document.getElementById('contractDocStatus').innerHTML = `✅ <strong>${contractFileName}</strong> <button type="button" onclick="previewContractDocument('${building}', '${roomId}')" style="margin-left:8px;padding:6px 12px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:'Sarabun',sans-serif;">👁️ ดูตัวอย่าง</button> <button type="button" onclick="deleteContractDocument('${building}', '${roomId}')" style="margin-left:4px;padding:6px 12px;background:#d32f2f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:'Sarabun',sans-serif;">🗑️ ลบ</button>`;
+    // Use DOM API — contractFileName comes from Firestore and must not be injected into innerHTML
+    const statusEl = document.getElementById('contractDocStatus');
+    statusEl.textContent = '';
+    const tick = document.createTextNode('✅ ');
+    const strong = document.createElement('strong');
+    strong.textContent = contractFileName;
+    const previewBtn = document.createElement('button');
+    previewBtn.type = 'button';
+    previewBtn.textContent = '👁️ ดูตัวอย่าง';
+    previewBtn.style.cssText = 'margin-left:8px;padding:6px 12px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:\'Sarabun\',sans-serif;';
+    previewBtn.addEventListener('click', () => previewContractDocument(building, roomId));
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = '🗑️ ลบ';
+    deleteBtn.style.cssText = 'margin-left:4px;padding:6px 12px;background:#d32f2f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:\'Sarabun\',sans-serif;';
+    deleteBtn.addEventListener('click', () => deleteContractDocument(building, roomId));
+    statusEl.append(tick, strong, previewBtn, deleteBtn);
   } else {
     document.getElementById('modalContractDocument').value = '';
     document.getElementById('modalContractFileName').value = '';
