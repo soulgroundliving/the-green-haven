@@ -8511,10 +8511,13 @@
                         <tr class="total"><td>รวม</td><td class="amt">฿${Number(billData.totalCharge||0).toLocaleString('th-TH')}</td></tr>
                     </tbody></table>
                     <div style="text-align:center;color:#666;font-size:12px;border-top:1px solid #ddd;padding-top:0.5rem;">ขอบคุณที่ชำระตรงเวลา · ${_esc(getOwnerName())}</div>
+                    <script>window.addEventListener('load',function(){window.focus();window.print();});<\/script>
                     </body></html>`;
-                const w = window.open('', '_blank');
-                if (!w) { toast('โปรดอนุญาต popup', 'error'); return; }
-                w.document.write(html); w.document.close(); w.focus(); w.print();
+                const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+                const blobUrl = URL.createObjectURL(blob);
+                const w = window.open(blobUrl, '_blank');
+                if (!w) { toast('โปรดอนุญาต popup', 'error'); URL.revokeObjectURL(blobUrl); return; }
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
             } catch(error) {
                 console.error('generateReceiptForBill:', error);
                 toast('เกิดข้อผิดพลาดในการสร้างใบเสร็จ', 'error');
