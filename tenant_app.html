@@ -3399,8 +3399,6 @@
         // ==========================================
         // 1. GLOBAL VARIABLES & CONFIG
         // ==========================================
-        let records = []; // สำหรับเก็บประวัติการแจ้งซ่อม/บริการ
-
         // ==========================================
         // UTILITIES
         // ==========================================
@@ -3859,81 +3857,6 @@
                 }
             } catch (e) {
                 console.error("Air Quality API Error:", e);
-            }
-        }
-
-        // ==========================================
-        // 4. SERVICE FORM (ระบบแจ้งเรื่องนิติบุคคล)
-        // ==========================================
-        function openForm(title) {
-            document.getElementById('form-title').innerText = title;
-
-            // เปลี่ยนจาก 'service-page' เป็น 'services'
-            const servicePage = document.getElementById('services');
-            const formPage = document.getElementById('form-page');
-
-            if (servicePage) servicePage.classList.remove('active');
-            if (formPage) formPage.classList.add('active');
-
-            window.scrollTo(0, 0);
-
-            // ซ่อน Nav ตอนกรอกฟอร์ม
-            const navBar = document.getElementById('main-nav-bar');
-            if (navBar) navBar.style.display = 'none';
-        }
-
-        function closeForm() {
-            // เปลี่ยนจาก 'service-page' เป็น 'services'
-            const servicePage = document.getElementById('services');
-            const formPage = document.getElementById('form-page');
-
-            if (formPage) formPage.classList.remove('active');
-            if (servicePage) servicePage.classList.add('active');
-
-            const serviceForm = document.getElementById('service-form');
-            if (serviceForm) serviceForm.reset();
-
-            // แสดง Nav คืน
-            const navBar = document.getElementById('main-nav-bar');
-            if (navBar) navBar.style.display = 'flex';
-        }
-
-        function submitForm(event) {
-            event.preventDefault();
-            const title = document.getElementById('form-title').innerText;
-            const detail = document.getElementById('issue-detail').value;
-            const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-
-            records.unshift({
-                id: 'OS-' + Math.floor(1000 + Math.random() * 9000),
-                type: title,
-                detail: detail,
-                status: 'รอรับเรื่อง',
-                time: timeStr
-            });
-
-            renderRecords();
-            closeForm();
-        }
-
-        function renderRecords() {
-            const recordsSection = document.getElementById('records-section');
-            const recordsContainer = document.getElementById('records-container');
-
-            if (records.length > 0 && recordsSection && recordsContainer) {
-                recordsSection.style.display = 'block';
-                recordsContainer.innerHTML = records.map(record => `
-                <div class="card record-card" style="margin: 0 0 15px 0;">
-                    <div class="record-header">
-                        <div>
-                            <div class="record-id">รหัสอ้างอิง: ${_esc(record.id)} • ${_esc(record.time)}</div>
-                            <strong style="color: var(--text-dark);">${_esc(record.type)}</strong>
-                        </div>
-                        <div class="record-badge">${_esc(record.status)}</div>
-                    </div>
-                    <div class="record-detail">${_esc(record.detail)}</div>
-                </div>
-            `).join('');
             }
         }
 
@@ -5189,25 +5112,6 @@
         // ==========================================
         let currentSeverity = 'low';
         let currentComplaintFilter = 'all';
-
-        function switchComplaintTab(tab) {
-            const formTab = document.getElementById('complaint-form-tab');
-            const histTab = document.getElementById('complaint-history-tab');
-            const btnForm = document.getElementById('complaint-tab-form');
-            const btnHist = document.getElementById('complaint-tab-history');
-            if (tab === 'form') {
-                formTab.style.display = '';
-                histTab.style.display = 'none';
-                btnForm.style.background = 'var(--primary-green)'; btnForm.style.color = '#fff';
-                btnHist.style.background = 'var(--soft-green)'; btnHist.style.color = 'var(--primary-green)';
-            } else {
-                formTab.style.display = 'none';
-                histTab.style.display = '';
-                btnHist.style.background = 'var(--primary-green)'; btnHist.style.color = '#fff';
-                btnForm.style.background = 'var(--soft-green)'; btnForm.style.color = 'var(--primary-green)';
-                loadComplaints();
-            }
-        }
 
         function setSeverity(level) {
             currentSeverity = level;
