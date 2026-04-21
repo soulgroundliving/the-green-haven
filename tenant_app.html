@@ -309,6 +309,18 @@
             border: 1px solid rgba(0, 0, 0, 0.03);
         }
 
+        /* Cleaning service cards — visual affordance for tappability */
+        #cleaning-service-list .card {
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.15s ease;
+            margin: 0;
+        }
+        #cleaning-service-list .card:active { transform: scale(0.97); }
+        #cleaning-service-list .card.active-service {
+            border-color: var(--primary-green) !important;
+            box-shadow: 0 4px 14px rgba(45,134,83,0.18);
+        }
+
         .section-title {
             padding: 20px 25px 5px;
             font-size: var(--fs-lg);
@@ -3551,7 +3563,10 @@
 
             if (id === 'preference') loadReceiptSettings();
             if (id === 'complaint') loadComplaints();
-            if (id === 'cleaning-service' && typeof _renderCleaningHistory === 'function') _renderCleaningHistory();
+            if (id === 'cleaning-service') {
+                if (typeof _renderCleaningHistory === 'function') _renderCleaningHistory();
+                if (typeof selectService === 'function') selectService(_selectedService || 'free');
+            }
             if (id === 'maintenance' && typeof renderTicketsList === 'function') renderTicketsList();
             window.scrollTo(0, 0);
         }
@@ -3869,10 +3884,14 @@
 
         function selectService(type) {
             _selectedService = type;
-            const freeCard = document.getElementById('service-free');
-            const deepCard = document.getElementById('service-deep');
-            if (freeCard) freeCard.style.borderColor = type === 'free' ? 'var(--primary-green)' : 'transparent';
-            if (deepCard) deepCard.style.borderColor = type === 'deep' ? '#3b82f6' : 'transparent';
+            // Toggle active-service class on all cleaning cards (handles both static + dynamic render)
+            const list = document.getElementById('cleaning-service-list');
+            if (list) {
+                list.querySelectorAll('.card').forEach(c => {
+                    const isActive = c.id === 'service-' + type;
+                    c.classList.toggle('active-service', isActive);
+                });
+            }
         }
 
         function submitCleaning() {
@@ -5511,7 +5530,7 @@
             _cleaningCfgCache.services.forEach((svc, idx) => {
                 const card = document.createElement('div');
                 card.id = `service-${svc.id || idx}`;
-                card.className = 'card p-4 border-2 border-transparent' + (idx === 0 ? ' active-service' : '');
+                card.className = 'card p-4 border-2 border-transparent';
                 card.addEventListener('click', () => selectService(svc.id));
                 const inner = document.createElement('div');
                 inner.className = 'flex flex-col items-center text-center';
@@ -5528,6 +5547,8 @@
                 card.appendChild(inner);
                 list.appendChild(card);
             });
+            // Re-apply selection so the active-service border persists after re-render
+            selectService(_selectedService || 'free');
         }
         function _renderCleaningTimeSlots() {
             if (!_cleaningCfgCache || !Array.isArray(_cleaningCfgCache.timeSlots)) return;
