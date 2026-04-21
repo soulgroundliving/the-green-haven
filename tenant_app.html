@@ -2095,14 +2095,7 @@
 
         <div class="section-title"><span>ประวัติการรับบริการ</span></div>
         <div id="cleaning-records" class="px-4 pb-10">
-            <div
-                class="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 flex justify-between items-center">
-                <div>
-                    <p class="text-xs text-gray-400">20 เม.ย. 69 | 09:00</p>
-                    <strong class="text-sm">Standard Clean (ฟรี)</strong>
-                </div>
-                <span class="text-[10px] bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold">สำเร็จแล้ว</span>
-            </div>
+            <p style="text-align:center;color:#9ca3af;font-size:var(--fs-sm);padding:20px;">ยังไม่มีประวัติการจอง</p>
         </div>
     </div>
 
@@ -3558,6 +3551,8 @@
 
             if (id === 'preference') loadReceiptSettings();
             if (id === 'complaint') loadComplaints();
+            if (id === 'cleaning-service' && typeof _renderCleaningHistory === 'function') _renderCleaningHistory();
+            if (id === 'maintenance' && typeof renderTicketsList === 'function') renderTicketsList();
             window.scrollTo(0, 0);
         }
 
@@ -3931,8 +3926,71 @@
             } catch(e) {}
 
             toast('จองบริการทำความสะอาดเรียบร้อยแล้วครับ 🧹', 'success');
+            _renderCleaningHistory();
             setTimeout(() => goBackToService(), 1200);
         }
+
+        function _renderCleaningHistory() {
+            const container = document.getElementById('cleaning-records');
+            if (!container) return;
+            let tickets = [];
+            try { tickets = JSON.parse(localStorage.getItem('tenant_cleaning_tickets') || '[]'); } catch(e) {}
+            if (!tickets.length) {
+                container.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:var(--fs-sm);padding:20px;">ยังไม่มีประวัติการจอง</p>';
+                return;
+            }
+            const statusColor = { 'รอดำเนินการ':'#f59e0b', 'pending':'#f59e0b', 'inprogress':'#3b82f6', 'กำลังทำความสะอาด':'#3b82f6', 'done':'#22c55e', 'สำเร็จแล้ว':'#22c55e' };
+            const statusLabel = { pending:'⏳ รอดำเนินการ', inprogress:'🧹 กำลังทำความสะอาด', done:'✅ สำเร็จแล้ว' };
+            container.innerHTML = tickets.slice(0, 20).map(t => {
+                const label = statusLabel[t.status] || t.status || 'รอดำเนินการ';
+                const color = statusColor[t.status] || '#6b7280';
+                const dateStr = t.date ? new Date(t.date).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' }) : '';
+                return `<div class="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 flex justify-between items-center">
+                    <div>
+                        <p class="text-xs text-gray-400">${_esc(dateStr)}${t.time ? ' | ' + _esc(t.time) : ''}</p>
+                        <strong class="text-sm">${_esc(t.type || t.service || 'Standard Clean')}</strong>
+                        ${t.note ? `<p class="text-xs text-gray-500 mt-1">${_esc(t.note)}</p>` : ''}
+                    </div>
+                    <span style="font-size:10px;background:${color}22;color:${color};padding:4px 12px;border-radius:20px;font-weight:700;white-space:nowrap;">${_esc(label)}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // RTDB realtime subscribe — admin writes cleaning ticket status to housekeeping/{bld}/{room},
+        // tenant sees updates live (same pattern as maintenance)
+        let _cleaningRtdbOff = null;
+        function _subscribeCleaningFromRTDB() {
+            if (_cleaningRtdbOff) return;
+            if (!window.firebaseReady || !window.firebaseDatabase || !window.firebaseRef || !window.firebaseOnValue) return;
+            if (!_taBuilding || !_taRoom) return;
+            try {
+                const path = `housekeeping/${_taBuilding}/${_taRoom}`;
+                const ref = window.firebaseRef(window.firebaseDatabase, path);
+                _cleaningRtdbOff = window.firebaseOnValue(ref, snap => {
+                    if (!snap.exists()) return;
+                    const rtdbMap = snap.val() || {};
+                    let local = [];
+                    try { local = JSON.parse(localStorage.getItem('tenant_cleaning_tickets') || '[]'); } catch(e) {}
+                    const byId = new Map(local.map(t => [t.id, t]));
+                    Object.values(rtdbMap).forEach(rt => {
+                        if (!rt || !rt.id) return;
+                        const existing = byId.get(rt.id);
+                        if (existing) {
+                            byId.set(rt.id, { ...existing, status: rt.status || existing.status, updatedAt: rt.updatedAt || existing.updatedAt });
+                        } else {
+                            byId.set(rt.id, { id: rt.id, type: rt.service === 'deep-clean' ? 'Deep Cleaning' : 'Standard Clean',
+                                date: rt.date, time: rt.time, note: rt.description || '',
+                                status: rt.status || 'pending', createdAt: rt.createdAt });
+                        }
+                    });
+                    const merged = Array.from(byId.values()).sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+                    try { localStorage.setItem('tenant_cleaning_tickets', JSON.stringify(merged)); } catch(e) {}
+                    _renderCleaningHistory();
+                }, err => console.warn('cleaning RTDB subscribe failed:', err.message));
+            } catch (e) { console.warn('cleaning RTDB subscribe init failed:', e.message); }
+        }
+        window.addEventListener('authReady', _subscribeCleaningFromRTDB);
+        if (window.firebaseReady && window._authUid) _subscribeCleaningFromRTDB();
 
         // ---- Receipt/tax-invoice settings ----
         // ลูกบ้านเลือกประเภทเอง (personal/company) → persist localStorage
