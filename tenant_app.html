@@ -5982,18 +5982,34 @@
         let _taBills = [], _taPayments = [], _taCurrentBill = null;
         let _slipBase64 = null;
 
+        // SSoT: Nest rooms are N101-N405 (N prefix OR legacy numeric 101-405).
+        // Everything else (13-33, 15ก, ร้านใหญ่) is the rooms/ห้องแถว building.
+        // Matches dashboard-tenant-modal.js detectBuildingFromRoomId.
+        function _taDetectBuilding(roomId) {
+            const s = String(roomId || '');
+            if (/^N/i.test(s)) return 'nest';
+            const n = parseInt(s, 10);
+            return (n >= 101 && n <= 405) ? 'nest' : 'rooms';
+        }
+        // Normalize room ID: Nest bills live at bills/nest/N101, so N prefix is canonical for nest.
+        function _taNormalizeRoom(roomId, building) {
+            const s = String(roomId || '').replace(/[^0-9A-Za-zก-๙]/g, '');
+            if (building === 'nest' && !/^N/i.test(s)) return 'N' + s;
+            if (building === 'rooms') return s.replace(/^N/i, '');
+            return s;
+        }
+
         function detectRoomBuilding() {
             // ?room=201&building=nest — admin preview shortcut (sets sessionStorage so whole app works)
             try {
                 const params = new URLSearchParams(window.location.search);
                 const urlRoom = params.get('room');
                 if (urlRoom) {
-                    const cleanRoom = urlRoom.replace(/[^0-9A-Za-zก-๙]/g, '');
-                    const urlBuilding = (params.get('building') || '').toLowerCase();
-                    // Nest rooms always start with N (N101-N405); everything else is rooms building
-                    const resolvedBuilding = urlBuilding === 'rooms' ? 'rooms'
-                        : urlBuilding === 'nest' ? 'nest'
-                        : /^N/i.test(cleanRoom) ? 'nest' : 'rooms';
+                    let cleanRoom = urlRoom.replace(/[^0-9A-Za-zก-๙]/g, '');
+                    // Derive building from the room itself, not the URL — 101 is always Nest
+                    // regardless of what ?building= says. rooms/101 does not exist.
+                    const resolvedBuilding = _taDetectBuilding(cleanRoom);
+                    cleanRoom = _taNormalizeRoom(cleanRoom, resolvedBuilding);
                     sessionStorage.setItem('user', JSON.stringify({ roomNumber: cleanRoom, building: resolvedBuilding }));
                     sessionStorage.setItem('_adminPreview', '1');
                 }
@@ -6013,8 +6029,10 @@
             if (!_taRoom) return false;
             // Cache in localStorage so reload without ?room= still works
             try { localStorage.setItem('tenant_app_room', _taRoom); } catch(e) {}
-            // Nest rooms always start with N (N101-N405); rooms building = everything else
-            if (!_taBuilding) _taBuilding = /^N/i.test(_taRoom) ? 'nest' : 'rooms';
+            // Always derive building from room — sessionStorage building is a hint but room wins
+            const derivedBuilding = _taDetectBuilding(_taRoom);
+            _taBuilding = derivedBuilding;
+            _taRoom = _taNormalizeRoom(_taRoom, _taBuilding);
             window._tenantAppRoom = _taRoom;
             window._tenantAppBuilding = _taBuilding;
             applyGamificationVisibility();
@@ -6370,11 +6388,11 @@
             if (buildingSelect && _taBuilding) buildingSelect.value = _taBuilding;
             document.getElementById('apb-switch-btn')?.addEventListener('click', () => {
                 let r = (roomInput?.value || '').trim().replace(/[^0-9A-Za-zก-๙]/g, '');
-                const b = buildingSelect?.value || 'nest';
                 if (!r) return;
-                // Auto-normalize: nest rooms must have N prefix, rooms building must not
-                if (b === 'nest' && !/^N/i.test(r)) r = 'N' + r;
-                if (b === 'rooms') r = r.replace(/^N/i, '');
+                // Room number dictates building — 101 is always nest, 15ก is always rooms.
+                // The select is a hint but room wins (so typo-proof).
+                const b = _taDetectBuilding(r);
+                r = _taNormalizeRoom(r, b);
                 const url = new URL(window.location.href);
                 url.searchParams.set('room', r);
                 url.searchParams.set('building', b);
