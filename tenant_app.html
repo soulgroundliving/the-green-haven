@@ -4051,12 +4051,24 @@
                 paymentTransRef: record.paymentTransRef || null,
                 paymentAmount: record.service === 'deep-clean' ? 500 : 0
             };
-            try {
-                if (window.firebaseReady && window.firebaseRef && window.firebaseSet && window.firebaseDatabase) {
-                    const path = `housekeeping/${hkPayload.building}/${hkPayload.room}/${hkPayload.id}`;
-                    window.firebaseSet(window.firebaseRef(window.firebaseDatabase, path), hkPayload);
-                }
-            } catch(e) { console.warn('RTDB housekeeping save failed:', e); }
+            if (window.firebaseReady && window.firebaseRef && window.firebaseSet && window.firebaseDatabase) {
+                const path = `housekeeping/${hkPayload.building}/${hkPayload.room}/${hkPayload.id}`;
+                try {
+                    const writePromise = window.firebaseSet(window.firebaseRef(window.firebaseDatabase, path), hkPayload);
+                    if (writePromise && typeof writePromise.then === 'function') {
+                        writePromise
+                            .then(() => console.log('✅ RTDB housekeeping write OK:', path))
+                            .catch(err => console.error('❌ RTDB housekeeping write failed:', path, err?.message || err));
+                    }
+                } catch(e) { console.error('❌ RTDB housekeeping save threw:', e); }
+            } else {
+                console.warn('⚠️ RTDB not ready — housekeeping save skipped', {
+                    firebaseReady: !!window.firebaseReady,
+                    hasRef: !!window.firebaseRef,
+                    hasSet: !!window.firebaseSet,
+                    hasDB: !!window.firebaseDatabase
+                });
+            }
             try {
                 const hk = JSON.parse(localStorage.getItem('housekeeping_data') || '[]');
                 hk.unshift(hkPayload);

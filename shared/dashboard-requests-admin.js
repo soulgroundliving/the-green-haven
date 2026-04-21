@@ -916,7 +916,12 @@ if (typeof window !== 'undefined') {
 let _hkRTDBUnsub = null;
 function subscribeHousekeepingRTDB(){
   if(_hkRTDBUnsub) return;
-  if(!window.firebaseOnValue || !window.firebaseRef || !window.firebaseDatabase) return;
+  if(!window.firebaseOnValue || !window.firebaseRef || !window.firebaseDatabase) {
+    console.warn('⚠️ subscribeHousekeepingRTDB skipped — firebase not ready', {
+      onValue: !!window.firebaseOnValue, ref: !!window.firebaseRef, db: !!window.firebaseDatabase
+    });
+    return;
+  }
   try {
     const rootRef = window.firebaseRef(window.firebaseDatabase, 'housekeeping');
     _hkRTDBUnsub = window.firebaseOnValue(rootRef, (snap) => {
@@ -939,11 +944,20 @@ function subscribeHousekeepingRTDB(){
               submittedAt: x.submittedAt || x.date || x.createdAt || '',
               date: x.date || null,
               time: x.time || null,
-              updatedAt: x.updatedAt || ''
+              updatedAt: x.updatedAt || '',
+              // Payment fields (Deep Cleaning slip flow)
+              paymentSlip: x.paymentSlip || null,
+              paymentVerified: !!x.paymentVerified,
+              paymentTransRef: x.paymentTransRef || null,
+              paymentAmount: Number(x.paymentAmount || 0),
+              // Campaign linkage
+              campaign: x.campaign || null,
+              createdAt: x.createdAt || null
             });
           });
         });
       });
+      console.log(`📥 RTDB housekeeping snapshot: ${fromRTDB.length} items`);
       const local = loadHousekeeping();
       const byId = new Map();
       local.forEach(t => byId.set(t.id, t));
@@ -953,8 +967,10 @@ function subscribeHousekeepingRTDB(){
       if(typeof renderHousekeepingList === 'function') renderHousekeepingList();
       if(typeof updateMxBadge === 'function') updateMxBadge();
       if(typeof updateNotificationBell === 'function') updateNotificationBell();
+    }, (err) => {
+      console.error('❌ subscribeHousekeepingRTDB onValue error:', err?.message || err);
     });
-  } catch(e) { console.warn('subscribeHousekeepingRTDB failed:', e); }
+  } catch(e) { console.error('❌ subscribeHousekeepingRTDB threw:', e); }
 }
 
 const HK_SERVICE_LABEL={
