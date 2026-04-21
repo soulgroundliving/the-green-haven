@@ -959,12 +959,23 @@ function subscribeHousekeepingRTDB(){
 
 const HK_SERVICE_LABEL={
   'standard':'🧹 Standard (ทำความสะอาดมาตรฐาน)',
+  'standard-clean':'🧹 Standard (ทำความสะอาดมาตรฐาน)',
   'deep-clean':'🧼 Deep-Clean (ทำความสะอาดเชิงลึก)',
   'linen-change':'🛏️ Linen Change (เปลี่ยนผ้านวม/หมอน)',
   'urgent':'⚡ Urgent (ด่วนพิเศษ)'
 };
-const HK_STATUS_LABEL={'pending':'⏳ รอดำเนินการ','inprogress':'🔨 กำลังดำเนินการ','done':'✅ เสร็จแล้ว'};
-const HK_STATUS_CLASS={'pending':'mx-pending','inprogress':'mx-inprogress','done':'mx-done'};
+const HK_STATUS_LABEL={
+  'pending':'⏳ รอดำเนินการ',
+  'inprogress':'🔨 กำลังดำเนินการ',
+  'done':'✅ เสร็จแล้ว',
+  'pending_payment':'💳 รอชำระเงิน'
+};
+const HK_STATUS_CLASS={
+  'pending':'mx-pending',
+  'inprogress':'mx-inprogress',
+  'done':'mx-done',
+  'pending_payment':'mx-pending'
+};
 
 function showAddHousekeepingModal(){
   const modal=document.createElement('div');
@@ -1158,34 +1169,60 @@ function renderHousekeepingList(){
     return`${parseInt(p[2])} ${['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][parseInt(p[1])]}`;
   };
 
-  el.innerHTML=filtered.map(x=>`
+  el.innerHTML=filtered.map(x=>{
+    const pay = x.paymentAmount ? `<div style="font-size:.78rem;margin-bottom:4px;">
+      💰 ชำระแล้ว ฿${Number(x.paymentAmount).toLocaleString()}
+      ${x.paymentVerified?'<span style="color:var(--green-dark);font-weight:700;">· ✅ SlipOK ยืนยัน</span>':'<span style="color:#b45309;font-weight:700;">· ⏳ รอตรวจ</span>'}
+      ${x.paymentTransRef?'<span style="color:var(--text-muted);"> · '+_escReq(x.paymentTransRef)+'</span>':''}
+      ${x.paymentSlip?` <button onclick="viewHousekeepingSlip('${_escReq(x.id)}')" style="margin-left:6px;padding:2px 8px;background:#eff6ff;color:#2563eb;border:1px solid #93c5fd;border-radius:10px;cursor:pointer;font-size:.72rem;font-family:inherit;">📎 ดูสลิป</button>`:''}
+    </div>` : '';
+    return `
     <div class="mx-row" style="${x.status==='done'?'opacity:.7;':''}">
       <div>
         <div style="width:60px;height:60px;background:linear-gradient(135deg, #2196f3 0%, #1976d2 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;flex-shrink:0;box-shadow:0 2px 8px rgba(33, 150, 243, 0.3);">
-          ${x.room.substring(0,2)}
+          ${_escReq(String(x.room||'').substring(0,2))}
         </div>
         <div>
-          <div class="mx-row-header">${x.room} ${x.priority==='urgent'?'<span class="mx-urgent">ด่วน!</span>':''}</div>
-          <div style="font-size:.85rem;color:#555;line-height:1.5;margin-bottom:6px;">${HK_SERVICE_LABEL[x.service]||x.service}</div>
-          ${x.description?'<div style="font-size:.8rem;color:var(--text-muted);margin-bottom:6px;">หมายเหตุ: '+x.description+'</div>':''}
+          <div class="mx-row-header">${_escReq(x.room)} ${x.priority==='urgent'?'<span class="mx-urgent">ด่วน!</span>':''}</div>
+          <div style="font-size:.85rem;color:#555;line-height:1.5;margin-bottom:6px;">${HK_SERVICE_LABEL[x.service]||_escReq(x.service)}</div>
+          ${pay}
+          ${x.description?'<div style="font-size:.8rem;color:var(--text-muted);margin-bottom:6px;">หมายเหตุ: '+_escReq(x.description)+'</div>':''}
+          ${x.time?'<div style="font-size:.78rem;color:var(--text-muted);margin-bottom:6px;">⏰ ช่วงเวลา: '+_escReq(x.time)+'</div>':''}
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-            <span class="mx-status-pill ${HK_STATUS_CLASS[x.status]||'mx-pending'}">${HK_STATUS_LABEL[x.status]||x.status}</span>
+            <span class="mx-status-pill ${HK_STATUS_CLASS[x.status]||'mx-pending'}">${HK_STATUS_LABEL[x.status]||_escReq(x.status)}</span>
           </div>
           <div class="mx-row-meta">
             <div><strong>วันที่ขอ:</strong> ${fmt(x.submittedAt)}</div>
-            <div><strong>ประเภท:</strong> ${x.service}</div>
-            <div><strong>สถานะ:</strong> ${HK_STATUS_LABEL[x.status]||x.status}</div>
+            <div><strong>ประเภท:</strong> ${_escReq(x.service)}</div>
+            <div><strong>สถานะ:</strong> ${HK_STATUS_LABEL[x.status]||_escReq(x.status)}</div>
           </div>
           <div class="mx-row-actions">
-            ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus('${x.id}','inprogress')">🔨 เริ่มทำความสะอาด</button>`:''}
-            ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateHousekeepingStatus('${x.id}','done')">✅ เสร็จสิ้น</button>`:''}
-            ${x.status==='done'?`<button class="mx-btn mx-btn-reopen" onclick="updateHousekeepingStatus('${x.id}','pending')">↩ เปิดใหม่</button>`:''}
-            <button class="mx-btn mx-btn-del" onclick="deleteHousekeepingRequest('${x.id}')">🗑️ ลบ</button>
+            ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateHousekeepingStatus('${_escReq(x.id)}','inprogress')">🔨 เริ่มทำความสะอาด</button>`:''}
+            ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateHousekeepingStatus('${_escReq(x.id)}','done')">✅ เสร็จสิ้น</button>`:''}
+            ${x.status==='done'?`<button class="mx-btn mx-btn-reopen" onclick="updateHousekeepingStatus('${_escReq(x.id)}','pending')">↩ เปิดใหม่</button>`:''}
+            <button class="mx-btn mx-btn-del" onclick="deleteHousekeepingRequest('${_escReq(x.id)}')">🗑️ ลบ</button>
           </div>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
+
+// View payment slip attached to a Deep Cleaning booking
+function viewHousekeepingSlip(id){
+  const hk = loadHousekeeping();
+  const item = hk.find(x => x.id === id);
+  if(!item || !item.paymentSlip) { if(typeof showToast==='function') showToast('ไม่พบสลิป','warning'); return; }
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.onclick = e => { if(e.target === modal) modal.remove(); };
+  const img = document.createElement('img');
+  img.src = item.paymentSlip;
+  img.style.cssText = 'max-width:100%;max-height:90vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+  modal.appendChild(img);
+  document.body.appendChild(modal);
+}
+if (typeof window !== 'undefined') window.viewHousekeepingSlip = viewHousekeepingSlip;
 
 function switchMaintenanceTab(tabName, btn) {
   // Shim: redirect to unified switchRequestsTab
