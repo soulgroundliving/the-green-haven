@@ -5964,14 +5964,15 @@
                     const raw = String(user.roomNumber || user.room || user.email || '');
                     const emailMatch = raw.match(/tenant(\w+)@/);
                     _taRoom = emailMatch ? emailMatch[1] : raw.replace(/[^0-9A-Za-zก-๙]/g, '');
+                    if (user.building) _taBuilding = user.building;
                 }
             } catch(e) {}
             if (!_taRoom) _taRoom = localStorage.getItem('tenant_app_room') || '';
             if (!_taRoom) return false;
             // Cache in localStorage so reload without ?room= still works
             try { localStorage.setItem('tenant_app_room', _taRoom); } catch(e) {}
-            // Nest rooms always start with N (N101-N405); rooms building = everything else (13-33, 15ก, ร้านใหญ่)
-            _taBuilding = /^N/i.test(_taRoom) ? 'nest' : 'rooms';
+            // Nest rooms always start with N (N101-N405); rooms building = everything else
+            if (!_taBuilding) _taBuilding = /^N/i.test(_taRoom) ? 'nest' : 'rooms';
             window._tenantAppRoom = _taRoom;
             window._tenantAppBuilding = _taBuilding;
             applyGamificationVisibility();
@@ -6323,11 +6324,15 @@
             const roomInput = document.getElementById('apb-room-input');
             const buildingSelect = document.getElementById('apb-building-select');
             if (label) label.textContent = `ห้อง ${_taRoom} / ${_taBuilding}`;
+            if (roomInput) roomInput.value = _taRoom;
             if (buildingSelect && _taBuilding) buildingSelect.value = _taBuilding;
             document.getElementById('apb-switch-btn')?.addEventListener('click', () => {
-                const r = (roomInput?.value || '').trim().replace(/[^0-9A-Za-zก-๙]/g, '');
+                let r = (roomInput?.value || '').trim().replace(/[^0-9A-Za-zก-๙]/g, '');
                 const b = buildingSelect?.value || 'nest';
                 if (!r) return;
+                // Auto-normalize: nest rooms must have N prefix, rooms building must not
+                if (b === 'nest' && !/^N/i.test(r)) r = 'N' + r;
+                if (b === 'rooms') r = r.replace(/^N/i, '');
                 const url = new URL(window.location.href);
                 url.searchParams.set('room', r);
                 url.searchParams.set('building', b);
