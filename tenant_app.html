@@ -308,7 +308,6 @@
             box-shadow: var(--shadow);
             border: 1px solid rgba(0, 0, 0, 0.03);
         }
-        #services > .card { margin-bottom: var(--gap-md); }
 
         .section-title {
             padding: 20px 25px 5px;
@@ -1772,8 +1771,10 @@
             <p>เราพร้อมดูแลคุณในทุกรายละเอียดครับ ✨</p>
         </div>
 
+        <div style="display:flex; flex-direction:column; gap:16px; padding:0 var(--gap) var(--gap);">
+
         <!-- ported from tenant.html: displayBuildingInternetStatus -->
-        <div id="internetStatusSection" class="card" style="display:none;">
+        <div id="internetStatusSection" class="card" style="display:none; margin:0;">
             <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                 <span style="flex:1; font-weight:600; font-size:var(--fs-md);">🌐 สถานะอินเทอร์เน็ตอาคาร</span>
                 <span id="internetStatusIcon" style="font-size:var(--fs-md);">🟢</span>
@@ -1801,7 +1802,7 @@
 
         <!-- ROOM-level internet status — same accordion pattern as building above.
              Data source: tenants/{building}/list/{roomId}.roomInternet or localStorage fallback. -->
-        <div id="roomInternetStatusSection" class="card" style="display:none;">
+        <div id="roomInternetStatusSection" class="card" style="display:none; margin:0;">
             <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                 <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📡 สถานะอินเทอร์เน็ตห้องพัก</span>
                 <span id="roomInternetStatusIcon" style="font-size:var(--fs-md);">🟢</span>
@@ -1830,7 +1831,7 @@
 
         <!-- Merged accordion: emergency contacts (🚨) + service providers.
              Uses same toggleAccordion() pattern as internetStatusSection above. -->
-        <div id="emergencyContactsSection" class="card">
+        <div id="emergencyContactsSection" class="card" style="margin:0;">
             <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                 <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📋 ขั้นตอนเมื่อเกิดเหตุฉุกเฉิน</span>
                 <i class="fas fa-chevron-down" style="color:#aaa;"></i>
@@ -1930,15 +1931,17 @@
                 </div>
             </div>
         </div>
-        <div class="card">
+        <div class="card" style="margin:0;">
             <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer; touch-action:manipulation;">
-                <strong style="flex:1;">📄 เอกสารอาคาร</strong>
+                <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📄 เอกสารอาคาร</span>
                 <i class="fas fa-chevron-down" style="color:#aaa;"></i>
             </div>
             <div class="accordion-content" style="display:none; padding-top:10px;">
                 <div id="documentsList" style="display:grid; gap:10px;"></div>
             </div>
         </div>
+
+        </div><!-- end accordion flex wrapper -->
         <div class="section-title" style="margin-top: 10px;"><span>พื้นที่ส่วนกลาง (Facilities)</span></div>
         <div class="card"
             style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin-top: 0;"
