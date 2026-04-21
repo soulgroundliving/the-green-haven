@@ -6457,11 +6457,22 @@
         }
 
         async function initTenantApp() {
-            // Step 1: try LIFF auto-link first
-            const liffResult = await initLiffAndLink();
-            // Step 2: fallback — detect from session/localStorage
+            // Safety net: remove splash after 10s regardless, so a silent error never leaves user stuck
+            const _splashTimeout = setTimeout(() => document.getElementById('app-loading-splash')?.remove(), 10000);
+
+            // Fast-path: if room already in storage/URL, don't block on liff.init() (~2-5s)
+            const hasRoomEarly = !!(
+                new URLSearchParams(window.location.search).get('room') ||
+                sessionStorage.getItem('user') ||
+                localStorage.getItem('tenant_app_room')
+            );
+            // Start LIFF; only await it when we don't yet know the room (first-time LINE user)
+            const liffPromise = initLiffAndLink();
+            const liffResult = hasRoomEarly ? null : await liffPromise;
+
             const hasRoom = detectRoomBuilding();
             _initAdminPreviewBar();
+            clearTimeout(_splashTimeout);
 
             if (!hasRoom && window._lineUserId && liffResult && !liffResult.linked) {
                 // LIFF user without linked account — show link form or pending status
