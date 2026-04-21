@@ -4027,7 +4027,7 @@
             document.getElementById('cpm-time').textContent = record.time || '—';
             const noteRow = document.getElementById('cpm-note-row');
             const noteEl = document.getElementById('cpm-note');
-            if (record.note) { noteRow.style.display = ''; noteEl.textContent = record.note; }
+            if (record.note) { noteRow.style.display = 'flex'; noteEl.textContent = record.note; }
             else noteRow.style.display = 'none';
             const phone = localStorage.getItem('promptpay') || '';
             document.getElementById('cpm-promptpay').textContent = phone || '—';
