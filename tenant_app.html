@@ -2247,34 +2247,6 @@
             <div id="usage-room-badge"
                 style="display:none; min-width:48px; height:44px; padding:0 12px; border-radius:14px; background:var(--soft-green); color:var(--primary-green); font-weight:700; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);"></div>
         </div>
-        <!-- Usage Dashboard — building info + water + elec inline, no nav needed -->
-        <div id="usage-dashboard-card" class="card" style="margin-bottom:0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f0f0f0;">
-                <div>
-                    <p style="font-size:9px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin:0 0 2px; letter-spacing:.05em;">อาคาร</p>
-                    <p id="udb-bld-name" style="font-size:var(--fs-md); font-weight:700; margin:0; color:#334435;">—</p>
-                </div>
-                <div style="text-align:right;">
-                    <p style="font-size:9px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin:0 0 2px; letter-spacing:.05em;">พร้อมเพย์</p>
-                    <p id="udb-promptpay" style="font-size:var(--fs-sm); font-weight:600; margin:0; color:#555;">—</p>
-                </div>
-            </div>
-            <p id="udb-month" style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin:0 0 10px; text-align:center; letter-spacing:.06em;">ประจำเดือน —</p>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div style="background:#f0f9ff; border-radius:12px; padding:12px; text-align:center;">
-                    <div style="font-size:1.4rem; margin-bottom:4px;">💧</div>
-                    <div id="udb-water-units" style="font-size:var(--fs-lg); font-weight:800; color:#0369a1; line-height:1.1;">—</div>
-                    <div style="font-size:9px; color:#64748b; font-weight:600; margin:2px 0;">หน่วย</div>
-                    <div id="udb-water-cost" style="font-size:var(--fs-sm); font-weight:700; color:#0369a1;">฿ —</div>
-                </div>
-                <div style="background:#fffbeb; border-radius:12px; padding:12px; text-align:center;">
-                    <div style="font-size:1.4rem; margin-bottom:4px;">⚡</div>
-                    <div id="udb-elec-units" style="font-size:var(--fs-lg); font-weight:800; color:#d97706; line-height:1.1;">—</div>
-                    <div style="font-size:9px; color:#64748b; font-weight:600; margin:2px 0;">หน่วย</div>
-                    <div id="udb-elec-cost" style="font-size:var(--fs-sm); font-weight:700; color:#d97706;">฿ —</div>
-                </div>
-            </div>
-        </div>
 
         <!-- 6-month usage chart: tap a month point for detail. Hidden when no meter data. -->
         <div class="card" id="usage-chart-card" style="display:none;">
