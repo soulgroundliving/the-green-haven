@@ -5218,6 +5218,47 @@
         window.addEventListener('authReady', _subscribeComplaintsFromFirestore);
         if (window.firebaseReady && window._authUid) _subscribeComplaintsFromFirestore();
 
+        // RTDB realtime subscribe — admin writes status/workNotes/afterPhoto to RTDB,
+        // tenant sees updates live without having to be on the same device
+        let _maintenanceRtdbOff = null;
+        function _subscribeMaintenanceFromRTDB() {
+            if (_maintenanceRtdbOff) return;
+            if (!window.firebaseReady || !window.firebaseDatabase || !window.firebaseRef || !window.firebaseOnValue) return;
+            if (!_taBuilding || !_taRoom) return;
+            try {
+                const path = `maintenance/${_taBuilding}/${_taRoom}`;
+                const ref = window.firebaseRef(window.firebaseDatabase, path);
+                _maintenanceRtdbOff = window.firebaseOnValue(ref, snap => {
+                    if (!snap.exists()) return;
+                    const rtdbMap = snap.val() || {};
+                    let local = getMaintenanceTickets();
+                    const byId = new Map(local.map(t => [t.id, t]));
+                    Object.values(rtdbMap).forEach(rt => {
+                        if (!rt || !rt.id) return;
+                        const existing = byId.get(rt.id);
+                        if (existing) {
+                            // RTDB wins for admin-written fields
+                            byId.set(rt.id, { ...existing, status: rt.status || existing.status,
+                                workNotes: rt.workNotes || existing.workNotes,
+                                updatedAt: rt.updatedAt || existing.updatedAt });
+                        } else {
+                            // Ticket submitted from another device — add it
+                            byId.set(rt.id, { id: rt.id, category: rt.category || 'other',
+                                description: rt.desc || '', desc: rt.desc || '',
+                                status: rt.status || 'pending', priority: rt.priority || 'normal',
+                                submittedDate: rt.createdAt || new Date().toISOString() });
+                        }
+                    });
+                    const merged = Array.from(byId.values()).sort((a,b) =>
+                        (b.submittedDate||b.createdAt||'').localeCompare(a.submittedDate||a.createdAt||''));
+                    try { localStorage.setItem('tenant_maintenance_tickets', JSON.stringify(merged)); } catch(e) {}
+                    renderTicketsList();
+                }, err => console.warn('maintenance RTDB subscribe failed:', err.message));
+            } catch (e) { console.warn('maintenance RTDB subscribe init failed:', e.message); }
+        }
+        window.addEventListener('authReady', _subscribeMaintenanceFromRTDB);
+        if (window.firebaseReady && window._authUid) _subscribeMaintenanceFromRTDB();
+
         function loadComplaints() {
             const all = JSON.parse(localStorage.getItem('tenant_app_complaints') || '[]');
             filterComplaints(currentComplaintFilter, all);
