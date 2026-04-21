@@ -1,4 +1,5 @@
 // ===== MAINTENANCE SYSTEM =====
+const _escReq = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 
 // Auto-cleanup old completed tickets (delete after 30 days of completion)
 function autoCleanupOldCompletedTickets(tickets) {
@@ -509,7 +510,7 @@ function showAssignModal(id){
     <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">👤 อัปเดตผู้รับผิดชอบ</h2>
     <div style="margin-bottom:20px;">
       <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">ชื่อช่าง/ชื่อคน</label>
-      <input type="text" id="assigned-name" placeholder="เช่น สมชาย, นายช่างสมบูรณ์" value="${item.assignedTo||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
+      <input type="text" id="assigned-name" placeholder="เช่น สมชาย, นายช่างสมบูรณ์" value="${_escReq(item.assignedTo||'')}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
     </div>
     <div style="display:flex;gap:10px;">
       <button onclick="assignMaintenanceWorker('${id}')" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ ยืนยัน</button>
@@ -539,7 +540,7 @@ function showNotesModal(id){
     <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">📝 หมายเหตุการทำงาน</h2>
     <div style="margin-bottom:20px;">
       <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">รายละเอียดการทำงาน</label>
-      <textarea id="work-notes" placeholder="อธิบายสิ่งที่ทำแล้ว เช่น ซ่อมแซมไฟฟ้า เปลี่ยนสวิตช์..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;resize:vertical;min-height:100px;">${item.workNotes||''}</textarea>
+      <textarea id="work-notes" placeholder="อธิบายสิ่งที่ทำแล้ว เช่น ซ่อมแซมไฟฟ้า เปลี่ยนสวิตช์..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;resize:vertical;min-height:100px;">${_escReq(item.workNotes||'')}</textarea>
     </div>
     <div style="display:flex;gap:10px;">
       <button onclick="saveWorkNotes('${id}')" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
@@ -794,11 +795,11 @@ function renderMaintenancePage(){
         <div>
           <div style="font-weight: 700; font-size: 1rem; color: var(--green); margin-bottom: 0.5rem; padding: 0.4rem 0.8rem; background: #f0f9f0; border-radius: 4px; border-left: 4px solid var(--green); display: inline-block;">🎟️ ${x.id}</div>
           <div class="mx-row-header">${x.room} ${x.priority==='urgent'?'<span class="mx-urgent">ด่วน!</span>':''}</div>
-          <div style="font-size:.85rem;color:#555;line-height:1.5;margin-bottom:6px;">${x.desc}</div>
+          <div style="font-size:.85rem;color:#555;line-height:1.5;margin-bottom:6px;">${_escReq(x.desc||'')}</div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
             <span class="mx-status-pill ${MX_STATUS_CLASS[x.status]||'mx-pending'}">${MX_STATUS_LABEL[x.status]||x.status}</span>
             ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?'<span style="font-size:.75rem;color:var(--blue);background:#e3f2fd;padding:4px 10px;border-radius:20px;">📸 มีรูปภาพ</span>':''}
-            ${x.assignedTo?'<span style="font-size:.75rem;color:#5e35b1;background:#e8e4f3;padding:4px 10px;border-radius:20px;">👤 '+x.assignedTo+'</span>':''}
+            ${x.assignedTo?'<span style="font-size:.75rem;color:#5e35b1;background:#e8e4f3;padding:4px 10px;border-radius:20px;">👤 '+_escReq(x.assignedTo)+'</span>':''}
           </div>
           ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?`<div style="margin-top:8px;"><button class="photo-viewer-btn" onclick="openPhotoModal('${x.beforePhoto||x.photoUrl||x.photo||''}', '${x.afterPhoto||''}')">📸 รูปภาพ</button></div>`:''}
 

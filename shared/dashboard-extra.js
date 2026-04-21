@@ -412,7 +412,7 @@ function showContractDocument(roomId, tenant) {
     align-items: center;
   `;
   header.innerHTML = `
-    <h2 style="margin:0;color:#333;">📄 สัญญาเช่า - ห้อง ${roomId} (${tenant.name})</h2>
+    <h2 style="margin:0;color:#333;">📄 สัญญาเช่า - ห้อง ${_esc(roomId)} (${_esc(tenant.name)})</h2>
     <button onclick="this.closest('[data-modal]').remove()" style="background:#f0f0f0;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:600;">✕ ปิด</button>
   `;
 
@@ -451,10 +451,16 @@ function showContractDocument(roomId, tenant) {
     display: flex;
     gap: 10px;
   `;
-  footer.innerHTML = `
-    <button onclick="downloadContractAsFile('${roomId}', '${tenant.name}')" style="flex:1;padding:12px;background:#1976d2;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">⬇️ ดาวน์โหลด</button>
-    <button onclick="this.closest('[data-modal]').remove()" style="flex:1;padding:12px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;font-weight:600;">ปิด</button>
-  `;
+  const dlBtn = document.createElement('button');
+  dlBtn.textContent = '⬇️ ดาวน์โหลด';
+  dlBtn.style.cssText = 'flex:1;padding:12px;background:#1976d2;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;';
+  dlBtn.addEventListener('click', () => downloadContractAsFile(roomId, tenant.name));
+  const closeBtn2 = document.createElement('button');
+  closeBtn2.textContent = 'ปิด';
+  closeBtn2.style.cssText = 'flex:1;padding:12px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;font-weight:600;';
+  closeBtn2.addEventListener('click', () => modal.remove());
+  footer.appendChild(dlBtn);
+  footer.appendChild(closeBtn2);
 
   container.appendChild(header);
   container.appendChild(content);
@@ -1364,7 +1370,7 @@ function initLeaseRequestsPage() {
     updateLeaseRequestsBadge();
   }, err => {
     console.warn('lease requests onSnapshot failed:', err);
-    document.getElementById('leaseRequestsList').innerHTML = `<div style="text-align:center;padding:30px;color:#c62828;">โหลดไม่สำเร็จ: ${err.message}</div>`;
+    document.getElementById('leaseRequestsList').innerHTML = `<div style="text-align:center;padding:30px;color:#c62828;">โหลดไม่สำเร็จ: ${_esc(err.message)}</div>`;
   });
 }
 
@@ -2557,10 +2563,10 @@ function updatePaymentVerificationUI(notification) {
     const timeStr = new Date(notification.timestamp).toLocaleTimeString('th-TH');
     notifItem.innerHTML = `
       <div style="font-weight: 600; color: #2e7d32;">
-        ✅ ห้อง ${notification.room} - โอนเงิน ฿${notification.amount?.toLocaleString('th-TH')}
+        ✅ ห้อง ${_esc(notification.room)} - โอนเงิน ฿${notification.amount?.toLocaleString('th-TH')}
       </div>
       <div style="font-size: 12px; color: #666; margin-top: 4px;">
-        เวลา: ${timeStr} | SlipID: ${notification.slipId || 'N/A'}
+        เวลา: ${timeStr} | SlipID: ${_esc(notification.slipId || 'N/A')}
       </div>
     `;
 
@@ -3754,7 +3760,7 @@ function loadRewardsAdmin() {
     renderRewardsAdminTable();
   }, err => {
     console.warn('rewards admin onSnapshot failed:', err);
-    document.getElementById('rewardsAdminTable').innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828;padding:20px;">Failed to load: ${err.message}</td></tr>`;
+    document.getElementById('rewardsAdminTable').innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828;padding:20px;">Failed to load: ${_esc(err.message)}</td></tr>`;
   });
 }
 
