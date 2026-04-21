@@ -312,13 +312,30 @@
         /* Cleaning service cards — visual affordance for tappability */
         #cleaning-service-list .card {
             cursor: pointer;
-            transition: transform 0.1s ease, box-shadow 0.15s ease;
+            transition: transform 0.1s ease, box-shadow 0.15s ease, opacity 0.15s ease;
             margin: 0;
+            position: relative;
         }
         #cleaning-service-list .card:active { transform: scale(0.97); }
         #cleaning-service-list .card.active-service {
             border-color: var(--primary-green) !important;
             box-shadow: 0 4px 14px rgba(45,134,83,0.18);
+        }
+        #cleaning-service-list .card.svc-disabled {
+            cursor: not-allowed;
+            opacity: 0.45;
+            filter: grayscale(0.6);
+        }
+        #cleaning-service-list .card.svc-disabled:active { transform: none; }
+        .svc-disabled-badge {
+            position: absolute;
+            top: 6px; right: 6px;
+            background: #9ca3af;
+            color: white;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
         }
 
         .section-title {
@@ -3661,7 +3678,10 @@
             if (id === 'complaint') loadComplaints();
             if (id === 'cleaning-service') {
                 if (typeof _renderCleaningHistory === 'function') _renderCleaningHistory();
-                if (typeof selectService === 'function') selectService(_selectedService || 'free');
+                if (typeof _refreshStandardCleanAvailability === 'function') _refreshStandardCleanAvailability();
+                // Default to deep if Standard Clean isn't available this month
+                const def = _isStandardCleanAvailable?.() ? (_selectedService || 'free') : 'deep';
+                if (typeof selectService === 'function') selectService(def);
             }
             if (id === 'maintenance' && typeof renderTicketsList === 'function') renderTicketsList();
             window.scrollTo(0, 0);
@@ -3979,14 +3999,45 @@
         let _selectedService = 'free';
 
         function selectService(type) {
+            // Standard Clean only selectable when admin has opened a campaign for current month.
+            // Deep Cleaning is always selectable (paid on-demand).
+            if (type === 'free' && !_isStandardCleanAvailable()) {
+                toast('Standard Clean จะเปิดรอบให้จองเฉพาะเดือนที่มีรอบบริการเท่านั้น 🙏', 'info');
+                return;
+            }
             _selectedService = type;
-            // Toggle active-service class on all cleaning cards (handles both static + dynamic render)
             const list = document.getElementById('cleaning-service-list');
             if (list) {
                 list.querySelectorAll('.card').forEach(c => {
                     const isActive = c.id === 'service-' + type;
                     c.classList.toggle('active-service', isActive);
                 });
+            }
+        }
+
+        function _isStandardCleanAvailable() {
+            if (_taBuilding !== 'nest') return false;
+            const activeMonth = String(_cleaningCfgCache?.activeMonth || '').trim();
+            if (!activeMonth) return false;
+            const now = new Date();
+            const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+            return activeMonth === currentMonth;
+        }
+
+        function _refreshStandardCleanAvailability() {
+            const freeCard = document.getElementById('service-free');
+            if (!freeCard) return;
+            const available = _isStandardCleanAvailable();
+            freeCard.classList.toggle('svc-disabled', !available);
+            // Remove existing badge
+            freeCard.querySelector('.svc-disabled-badge')?.remove();
+            if (!available) {
+                const badge = document.createElement('span');
+                badge.className = 'svc-disabled-badge';
+                badge.textContent = '🚧 ยังไม่เปิด';
+                freeCard.appendChild(badge);
+                // If the disabled service was selected, auto-switch to Deep
+                if (_selectedService === 'free') selectService('deep');
             }
         }
 
@@ -5785,6 +5836,7 @@
                     _cleaningCfgCache = snap.data() || null;
                     _renderCleaningServices();
                     _renderCleaningTimeSlots();
+                    _refreshStandardCleanAvailability();
                     _maybeOpenStandardCleanModal();
                 }, err => console.warn('cleaningConfig subscribe failed:', err.message));
             } catch (e) { console.warn('cleaningConfig subscribe init failed:', e.message); }
@@ -5816,6 +5868,7 @@
             });
             // Re-apply selection so the active-service border persists after re-render
             selectService(_selectedService || 'free');
+            _refreshStandardCleanAvailability();
         }
         function _renderCleaningTimeSlots() {
             if (!_cleaningCfgCache || !Array.isArray(_cleaningCfgCache.timeSlots)) return;
