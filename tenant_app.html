@@ -1678,7 +1678,48 @@
         </div>
     </div>
 
-
+    <!-- Deep Cleaning Payment Modal: requires 500฿ slip before booking is saved -->
+    <div id="cleaning-payment-modal" role="dialog" aria-modal="true" aria-labelledby="cpm-title"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1500; align-items:center; justify-content:center; padding:16px; overflow-y:auto;">
+        <div style="background:white; width:100%; max-width:380px; border-radius:24px; padding:22px; position:relative; margin:auto;">
+            <div id="cpm-title" style="font-size:var(--fs-lg); font-weight:800; color:var(--primary-green); text-align:center; margin-bottom:6px;">
+                🧼 ชำระค่า Deep Cleaning
+            </div>
+            <div style="text-align:center; color:#666; font-size:var(--fs-sm); margin-bottom:14px;">
+                โอน ฿500 ก่อน ระบบจะบันทึกคำขอพร้อมสลิป
+            </div>
+            <div id="cpm-summary" style="background:var(--soft-green); border-radius:12px; padding:10px 14px; margin-bottom:14px; font-size:var(--fs-sm);">
+                <div style="display:flex; justify-content:space-between;"><span>วันที่:</span><strong id="cpm-date">—</strong></div>
+                <div style="display:flex; justify-content:space-between;"><span>เวลา:</span><strong id="cpm-time">—</strong></div>
+                <div id="cpm-note-row" style="display:none; margin-top:4px;"><span>หมายเหตุ:</span> <span id="cpm-note"></span></div>
+            </div>
+            <div style="background:linear-gradient(135deg,var(--soft-green),#f0faf1); border-radius:14px; padding:14px; text-align:center; margin-bottom:14px;">
+                <p style="margin:0 0 8px; font-weight:600; color:var(--primary-green); font-size:var(--fs-sm);">📱 สแกน QR เพื่อชำระ</p>
+                <div id="cpm-qr-canvas" style="display:inline-block;"></div>
+                <div style="background:var(--primary-green); color:#fff; border-radius:20px; padding:5px 18px; font-weight:bold; margin:10px auto 4px; display:inline-block;">฿500</div>
+                <p style="margin:4px 0 0; font-size:var(--fs-sm);">พร้อมเพย์: <strong id="cpm-promptpay">—</strong></p>
+            </div>
+            <div id="cpm-slip-drop" onclick="document.getElementById('cpm-slip-input').click()"
+                style="border:2px dashed #ccc; border-radius:14px; padding:20px; text-align:center; cursor:pointer; margin-bottom:10px;">
+                <i class="fas fa-cloud-upload-alt" style="font-size:var(--fs-lg); color:var(--primary-green);"></i>
+                <p style="margin:6px 0 0; font-size:var(--fs-md); color:#666;">แตะเพื่ออัปโหลดสลิป</p>
+                <small style="color:#aaa;">JPG / PNG / WEBP ไม่เกิน 10MB</small>
+            </div>
+            <div id="cpm-slip-preview" style="display:none; text-align:center; margin-bottom:10px;">
+                <img id="cpm-slip-img" src="" alt="slip preview" style="max-width:100%; max-height:200px; border-radius:12px;">
+            </div>
+            <input type="file" id="cpm-slip-input" accept="image/*" style="display:none;" onchange="handleCleaningSlipUpload(this)">
+            <div id="cpm-status" style="display:none; margin-bottom:10px; padding:10px; border-radius:10px; font-size:var(--fs-sm); text-align:center;"></div>
+            <div style="display:grid; grid-template-columns:1fr 2fr; gap:8px;">
+                <button onclick="closeCleaningPaymentModal()"
+                    style="padding:12px; border-radius:12px; border:1px solid #ddd; background:white; color:#666; font-family:inherit; font-weight:700; cursor:pointer;">ยกเลิก</button>
+                <button id="cpm-confirm-btn" onclick="confirmCleaningPayment()" disabled
+                    style="padding:12px; border-radius:12px; border:none; background:var(--primary-green); color:white; font-family:inherit; font-weight:700; cursor:pointer; opacity:0.5;">
+                    ยืนยันชำระเงิน
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div id="home" class="page">
         <div class="app-bar" style="position:relative;">
@@ -3894,6 +3935,10 @@
             }
         }
 
+        // Pending Deep Cleaning booking: held until slip is uploaded and confirmed
+        let _pendingCleaningRecord = null;
+        let _cleaningSlipBase64 = null;
+
         function submitCleaning() {
             const date = document.getElementById('clean-date')?.value;
             const time = document.getElementById('clean-time')?.value;
@@ -3908,29 +3953,48 @@
             const record = {
                 id: 'CLN-' + Date.now().toString().slice(-5),
                 type: _selectedService === 'deep' ? 'Deep Cleaning' : 'Standard Clean',
+                service: _selectedService === 'deep' ? 'deep-clean' : 'standard-clean',
                 date, time, note,
-                status: 'รอดำเนินการ',
+                status: _selectedService === 'deep' ? 'pending_payment' : 'รอดำเนินการ',
                 createdAt: new Date().toISOString()
             };
 
+            // Deep Cleaning requires 500฿ payment before booking is saved
+            if (_selectedService === 'deep') {
+                _pendingCleaningRecord = record;
+                _openCleaningPaymentModal(record);
+                return;
+            }
+
+            // Standard Clean (ฟรี) — save directly
+            _saveCleaningBooking(record);
+            toast('จองบริการทำความสะอาดเรียบร้อยแล้วครับ 🧹', 'success');
+            _renderCleaningHistory();
+            setTimeout(() => goBackToService(), 1200);
+        }
+
+        function _saveCleaningBooking(record) {
             try {
                 const existing = JSON.parse(localStorage.getItem('tenant_cleaning_tickets') || '[]');
                 existing.unshift(record);
                 localStorage.setItem('tenant_cleaning_tickets', JSON.stringify(existing));
             } catch(e) {}
-
-            // Write to housekeeping_data + Firebase RTDB for admin cross-device sync
             const hkPayload = {
                 id: record.id,
                 room: String(_taRoom),
                 building: _taBuilding,
-                service: _selectedService === 'deep' ? 'deep-clean' : 'standard-clean',
-                description: note,
-                date, time,
-                submittedAt: date || new Date().toISOString().split('T')[0],
-                status: 'pending',
+                service: record.service,
+                description: record.note || '',
+                date: record.date,
+                time: record.time,
+                submittedAt: record.date || new Date().toISOString().split('T')[0],
+                status: record.status === 'pending_payment' ? 'pending_payment' : 'pending',
                 priority: 'normal',
-                createdAt: record.createdAt
+                createdAt: record.createdAt,
+                paymentSlip: record.paymentSlip || null,
+                paymentVerified: !!record.paymentVerified,
+                paymentTransRef: record.paymentTransRef || null,
+                paymentAmount: record.service === 'deep-clean' ? 500 : 0
             };
             try {
                 if (window.firebaseReady && window.firebaseRef && window.firebaseSet && window.firebaseDatabase) {
@@ -3943,10 +4007,103 @@
                 hk.unshift(hkPayload);
                 localStorage.setItem('housekeeping_data', JSON.stringify(hk));
             } catch(e) {}
+        }
 
-            toast('จองบริการทำความสะอาดเรียบร้อยแล้วครับ 🧹', 'success');
+        function _openCleaningPaymentModal(record) {
+            const modal = document.getElementById('cleaning-payment-modal');
+            if (!modal) return;
+            document.getElementById('cpm-date').textContent = record.date || '—';
+            document.getElementById('cpm-time').textContent = record.time || '—';
+            const noteRow = document.getElementById('cpm-note-row');
+            const noteEl = document.getElementById('cpm-note');
+            if (record.note) { noteRow.style.display = ''; noteEl.textContent = record.note; }
+            else noteRow.style.display = 'none';
+            const phone = localStorage.getItem('promptpay') || '';
+            document.getElementById('cpm-promptpay').textContent = phone || '—';
+            const qrBox = document.getElementById('cpm-qr-canvas');
+            qrBox.innerHTML = '';
+            if (phone && typeof QRCode !== 'undefined') {
+                try { new QRCode(qrBox, { text: buildPromptPayPayload(phone, 500), width:170, height:170, correctLevel: QRCode.CorrectLevel.M }); }
+                catch(e) { qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">สร้าง QR ไม่ได้</p>'; }
+            } else qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่มีข้อมูล PromptPay</p>';
+            // Reset slip state
+            _cleaningSlipBase64 = null;
+            document.getElementById('cpm-slip-preview').style.display = 'none';
+            document.getElementById('cpm-slip-drop').style.display = '';
+            const confirmBtn = document.getElementById('cpm-confirm-btn');
+            confirmBtn.disabled = true; confirmBtn.style.opacity = '0.5';
+            const statusEl = document.getElementById('cpm-status');
+            statusEl.style.display = 'none'; statusEl.textContent = '';
+            const slipInput = document.getElementById('cpm-slip-input');
+            if (slipInput) slipInput.value = '';
+            modal.style.display = 'flex';
+        }
+
+        function closeCleaningPaymentModal() {
+            const modal = document.getElementById('cleaning-payment-modal');
+            if (modal) modal.style.display = 'none';
+            _pendingCleaningRecord = null;
+            _cleaningSlipBase64 = null;
+        }
+
+        async function handleCleaningSlipUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 10*1024*1024) { alert('ไฟล์ต้องไม่เกิน 10MB'); input.value=''; return; }
+            if (!file.type.startsWith('image/')) { alert('กรุณาเลือกไฟล์รูปภาพ'); input.value=''; return; }
+            const needsConvert = !['image/jpeg','image/png','image/webp'].includes(file.type);
+            try {
+                if (needsConvert) _cleaningSlipBase64 = await _imageToJpegBase64(file);
+                else _cleaningSlipBase64 = await new Promise((resolve, reject) => {
+                    const r = new FileReader();
+                    r.onload = e => resolve(e.target.result);
+                    r.onerror = () => reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
+                    r.readAsDataURL(file);
+                });
+            } catch(e) { alert(e.message); input.value=''; return; }
+            const img = document.getElementById('cpm-slip-img');
+            const wrap = document.getElementById('cpm-slip-preview');
+            const drop = document.getElementById('cpm-slip-drop');
+            if (img) img.src = _cleaningSlipBase64;
+            if (wrap) wrap.style.display = '';
+            if (drop) drop.style.display = 'none';
+            const btn = document.getElementById('cpm-confirm-btn');
+            btn.disabled = false; btn.style.opacity = '1';
+        }
+
+        async function confirmCleaningPayment() {
+            if (!_cleaningSlipBase64 || !_pendingCleaningRecord) return;
+            const statusEl = document.getElementById('cpm-status');
+            const btn = document.getElementById('cpm-confirm-btn');
+            statusEl.style.display = ''; statusEl.style.background = '#fff7ed'; statusEl.style.color = '#b45309';
+            statusEl.textContent = '⏳ กำลังตรวจสอบสลิป...';
+            btn.disabled = true; btn.style.opacity = '0.5';
+            let slipOkVerified = false, transRef = null;
+            try {
+                if (typeof _tenantRateLimit === 'function' && !_tenantRateLimit()) {
+                    throw new Error('ส่งคำขอบ่อยเกินไป');
+                }
+                const resp = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ file: _cleaningSlipBase64, expectedAmount: 500, building: _taBuilding, room: _taRoom, context: 'cleaning' })
+                });
+                const result = await resp.json();
+                slipOkVerified = !!(result.success || result.verified);
+                transRef = result.transRef || result.transactionId || null;
+            } catch(e) { console.warn('verifySlip (cleaning) failed:', e.message); }
+
+            const record = _pendingCleaningRecord;
+            record.paymentSlip = _cleaningSlipBase64;
+            record.paymentVerified = slipOkVerified;
+            record.paymentTransRef = transRef;
+            record.status = slipOkVerified ? 'รอดำเนินการ' : 'รอตรวจสอบสลิป';
+            _saveCleaningBooking(record);
             _renderCleaningHistory();
-            setTimeout(() => goBackToService(), 1200);
+
+            statusEl.style.background = '#ecfdf5'; statusEl.style.color = '#16a34a';
+            statusEl.textContent = slipOkVerified ? '✅ ชำระเงินยืนยันแล้ว' : '📎 บันทึกสลิปแล้ว ทีมงานจะตรวจสอบ';
+            toast(slipOkVerified ? 'จองสำเร็จ ✅ ชำระเงินยืนยันแล้ว' : 'จองสำเร็จ — ทีมงานกำลังตรวจสอบสลิป', 'success');
+            setTimeout(() => { closeCleaningPaymentModal(); goBackToService(); }, 1500);
         }
 
         function _renderCleaningHistory() {
@@ -3958,8 +4115,8 @@
                 container.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:var(--fs-sm);padding:20px;">ยังไม่มีประวัติการจอง</p>';
                 return;
             }
-            const statusColor = { 'รอดำเนินการ':'#f59e0b', 'pending':'#f59e0b', 'inprogress':'#3b82f6', 'กำลังทำความสะอาด':'#3b82f6', 'done':'#22c55e', 'สำเร็จแล้ว':'#22c55e' };
-            const statusLabel = { pending:'⏳ รอดำเนินการ', inprogress:'🧹 กำลังทำความสะอาด', done:'✅ สำเร็จแล้ว' };
+            const statusColor = { 'รอดำเนินการ':'#f59e0b', 'pending':'#f59e0b', 'inprogress':'#3b82f6', 'กำลังทำความสะอาด':'#3b82f6', 'done':'#22c55e', 'สำเร็จแล้ว':'#22c55e', 'รอตรวจสอบสลิป':'#6366f1', 'pending_payment':'#dc2626' };
+            const statusLabel = { pending:'⏳ รอดำเนินการ', inprogress:'🧹 กำลังทำความสะอาด', done:'✅ สำเร็จแล้ว', pending_payment:'💳 รอชำระเงิน' };
             container.innerHTML = tickets.slice(0, 20).map(t => {
                 const label = statusLabel[t.status] || t.status || 'รอดำเนินการ';
                 const color = statusColor[t.status] || '#6b7280';
