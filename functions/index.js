@@ -45,6 +45,10 @@ exports.aggregateMonthlyRevenue = require('./aggregateMonthlyRevenue').aggregate
 exports.archiveSlipLogsScheduled = require('./archiveSlipLogs').archiveSlipLogsScheduled;
 exports.archiveSlipLogs = require('./archiveSlipLogs').archiveSlipLogs;
 
+// Late-payment LINE reminders — daily 09:00 BKK; HTTP endpoint for manual trigger
+exports.remindLatePaymentsScheduled = require('./remindLatePayments').remindLatePaymentsScheduled;
+exports.remindLatePayments = require('./remindLatePayments').remindLatePayments;
+
 // Import existing functions if available
 try {
   const verifySlip = require('./verifySlip');
