@@ -9062,12 +9062,11 @@
             if (!container) return;
             let documents = [];
             try { documents = JSON.parse(localStorage.getItem('community_documents_data') || '[]'); } catch(e) {}
-            if (!documents.length) {
-                documents = [
-                    { id:'doc001', title:'กฎระเบียบอาคาร', category:'Rules', fileUrl:'#', description:'กฎและข้อบังคับการอยู่อาศัย' }
-                ];
-            }
             container.textContent = '';
+            if (!documents.length) {
+                container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px 0;">ยังไม่มีเอกสาร</p>';
+                return;
+            }
             documents.forEach(d => {
                 const isEmergency = d.id === 'doc002' || d.category === 'Emergency';
                 const accentColor = isEmergency ? '#DC2626' : '#3B82F6';

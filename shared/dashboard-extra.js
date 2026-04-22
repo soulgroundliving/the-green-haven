@@ -3794,10 +3794,37 @@ async function loadPoliciesAdmin() {
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
+  const KEYS = ['privacy', 'terms', 'compliance', 'ip'];
+  const ID_MAP = {
+    privacy: 'policy-privacy-content',
+    terms:   'policy-terms-content',
+    compliance: 'policy-compliance-content',
+    ip:      'policy-ip-content'
+  };
   try {
     const snap = await fs.getDoc(fs.doc(db, 'system', 'policies'));
     const data = snap.exists() ? (snap.data() || {}) : {};
-    ['privacy', 'terms', 'compliance', 'ip'].forEach(key => {
+
+    const missing = KEYS.filter(k => !data[k]);
+    if (missing.length) {
+      try {
+        const resp = await fetch('/tenant_app.html');
+        const html = await resp.text();
+        const parser = new DOMParser();
+        const tenantDoc = parser.parseFromString(html, 'text/html');
+        const seedData = {};
+        missing.forEach(k => {
+          const el = tenantDoc.getElementById(ID_MAP[k]);
+          if (el) seedData[k] = el.innerHTML.trim();
+        });
+        if (Object.keys(seedData).length) {
+          await fs.setDoc(fs.doc(db, 'system', 'policies'), seedData, { merge: true });
+          Object.assign(data, seedData);
+        }
+      } catch(e) { console.warn('policy seed failed:', e.message); }
+    }
+
+    KEYS.forEach(key => {
       const ta = document.getElementById(`policy-admin-${key}`);
       if (ta && data[key]) ta.value = data[key];
     });
