@@ -177,49 +177,58 @@ function openTenantModal(building, roomId) {
   }
 
 
-  // Load contract document — lease is SSoT (Phase 3), tenant record kept as legacy fallback
+  // Load contract status — 3 possible sources, checked in priority order:
+  //   1. lease.documentURLs.agreement (Firebase Storage — Tab สัญญา uploads, current SSoT)
+  //   2. lease.contractDocument (Firestore base64 — legacy Tab ผู้เช่า uploads, still supported)
+  //   3. tenant.contractDocument (Firestore base64 — pre-Phase-3 legacy)
   let contractData = null;
   let contractFileName = '';
+  let contractStorageURL = null;
 
-  if (lease && lease.contractDocument) {
+  const agreementDoc = lease?.documentURLs?.agreement;
+  if (agreementDoc) {
+    contractStorageURL = typeof agreementDoc === 'string' ? agreementDoc : agreementDoc.url;
+    contractFileName = (typeof agreementDoc === 'object' && agreementDoc.fileName)
+      ? agreementDoc.fileName
+      : 'สัญญาเช่า.pdf';
+  } else if (lease && lease.contractDocument) {
     contractData = lease.contractDocument;
     contractFileName = lease.contractFileName || 'สัญญาเช่า';
   } else if (tenant && tenant.contractDocument) {
-    // Legacy: pre-Phase-3 data still living in tenant record
     contractData = tenant.contractDocument;
     contractFileName = tenant.contractFileName || 'สัญญาเช่า';
   }
 
-  if (contractData) {
-    document.getElementById('modalContractDocument').value = contractData;
-    document.getElementById('modalContractFileName').value = contractFileName;
-    // Use DOM API — contractFileName comes from Firestore and must not be injected into innerHTML
-    const statusEl = document.getElementById('contractDocStatus');
-    statusEl.textContent = '';
-    const tick = document.createTextNode('✅ ');
+  // Read-only contract status — upload/delete UI moved to Tab สัญญา (SSoT).
+  // We keep preview here for convenience so admin can quickly eyeball the doc
+  // from the tenant modal without switching tabs.
+  const statusEl = document.getElementById('contractDocStatus');
+  if (statusEl) statusEl.textContent = '';
+
+  // Keep hidden fields in sync so saveTenantInfo → lease update doesn't wipe
+  // the existing contract. For Storage-based contracts we leave them empty
+  // (the real source is lease.documentURLs, not this modal's hidden fields).
+  document.getElementById('modalContractDocument').value = contractData || '';
+  document.getElementById('modalContractFileName').value = contractFileName || '';
+
+  if (contractStorageURL || contractData) {
+    const tick = document.createTextNode('✅ มีสัญญา: ');
     const strong = document.createElement('strong');
     strong.textContent = contractFileName;
     const previewBtn = document.createElement('button');
     previewBtn.type = 'button';
     previewBtn.textContent = '👁️ ดูตัวอย่าง';
     previewBtn.style.cssText = 'margin-left:8px;padding:6px 12px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:\'Sarabun\',sans-serif;';
-    previewBtn.addEventListener('click', () => previewContractDocument(building, roomId));
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.textContent = '🗑️ ลบ';
-    deleteBtn.style.cssText = 'margin-left:4px;padding:6px 12px;background:#d32f2f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:\'Sarabun\',sans-serif;';
-    deleteBtn.addEventListener('click', () => deleteContractDocument(building, roomId));
-    statusEl.append(tick, strong, previewBtn, deleteBtn);
+    previewBtn.addEventListener('click', () => {
+      if (contractStorageURL) {
+        window.open(contractStorageURL, '_blank', 'noopener,noreferrer');
+      } else {
+        previewContractDocument(building, roomId);
+      }
+    });
+    if (statusEl) statusEl.append(tick, strong, previewBtn);
   } else {
-    document.getElementById('modalContractDocument').value = '';
-    document.getElementById('modalContractFileName').value = '';
-    document.getElementById('contractDocStatus').textContent = '';
-  }
-
-  // IMPORTANT: Clear file input to prevent showing previous room's file
-  const fileInput = document.getElementById('modalContractFile');
-  if (fileInput) {
-    fileInput.value = '';
+    if (statusEl) statusEl.textContent = '📋 ยังไม่มีสัญญา — อัพโหลดได้ที่ Tab สัญญา';
   }
 
   // Show modal

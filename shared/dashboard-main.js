@@ -483,6 +483,19 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     // Navigation
     if (a === 'showPage') { window.showPage(page, el); return; }
     if (a === 'closeThenNavigate') { closeTenantModal(); window.showPage(page); return; }
+    if (a === 'showPageTab') {
+      // Close any open tenant modal + navigate to a page and auto-switch to a sub-tab.
+      // Used by tenant modal's "→ Tab สัญญา" link to jump admin to the document hub.
+      if (typeof closeTenantModal === 'function') closeTenantModal();
+      window.showPage(page);
+      setTimeout(() => {
+        if (page === 'tenant' && typeof switchTenantMainTab === 'function') {
+          const tabBtn = document.getElementById(`tenant-main-tab-btn-${tab}`);
+          switchTenantMainTab(tab, tabBtn);
+        }
+      }, 80);
+      return;
+    }
     if (a === 'goToAuditLog') { window.location.href = '/audit-log-viewer'; return; }
     if (a === 'goToTaxFiling') { goToTaxFiling(v || 'dashboard'); return; }
     if (a === 'clickInput') { const t = document.getElementById(el.dataset.target); if(t) t.click(); return; }

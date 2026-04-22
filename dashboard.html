@@ -2111,12 +2111,16 @@
         </div>
 
         <div>
-          <label class="form-label-upper">📄 ไฟล์สัญญาเช่า (PDF/รูป)</label>
-          <input type="file" id="modalContractFile" accept=".pdf,.jpg,.jpeg,.png" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.85rem;" onchange="uploadContractDocument()">
+          <label class="form-label-upper">📄 สัญญาเช่าและเอกสารประกอบ</label>
+          <!-- Read-only status. Upload & document management live in Tab สัญญา (SSoT).
+               Hidden fields retained so legacy save path stays a no-op for contract data. -->
           <input type="hidden" id="modalContractDocument" value="">
           <input type="hidden" id="modalContractFileName" value="">
-          <small id="contractDocStatus" style="color:#666;margin-top:6px;display:block;"></small>
-          <a href="#" data-action="showTenantLease" style="font-size:.75rem;color:var(--green);text-decoration:underline;display:inline-block;margin-top:6px;">📋 ดูประวัติผู้เช่าเก่า</a>
+          <div id="contractDocStatus" style="color:#666;font-size:.85rem;padding:10px 12px;background:#f5f5f5;border:1px solid var(--border);border-radius:var(--radius-sm);"></div>
+          <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+            <a href="#" data-action="showPageTab" data-page="tenant" data-tab="leases" style="font-size:.8rem;color:var(--green);text-decoration:underline;font-weight:600;">📎 อัพโหลด/จัดการเอกสาร → Tab สัญญา</a>
+            <a href="#" data-action="showTenantLease" style="font-size:.75rem;color:var(--text-muted);text-decoration:underline;">📋 ประวัติผู้เช่าเก่า</a>
+          </div>
         </div>
 
       </div>
