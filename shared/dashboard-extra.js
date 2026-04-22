@@ -297,24 +297,36 @@ function previewContractDocument(building, roomId) {
     building = currentEditBuilding || detectBuildingFromRoomId(roomId);
   }
 
-  // Try to get tenant from TenantConfigManager first
-  let tenant = null;
-  if (currentEditTenantId && typeof TenantConfigManager !== 'undefined') {
-    tenant = TenantConfigManager.getTenant(building, currentEditTenantId);
+  // Phase 3: lease is SSoT for contract document — check lease first, tenant only as legacy fallback
+  let contractDocument = null;
+  let contractFileName = null;
+  const lease = LeaseAgreementManager.getActiveLease(building, roomId);
+  if (lease && lease.contractDocument) {
+    contractDocument = lease.contractDocument;
+    contractFileName = lease.contractFileName;
   }
 
-  // Fallback to legacy tenant_data
-  if (!tenant) {
-    const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
-    tenant = tenantData[roomId];
+  if (!contractDocument) {
+    let tenant = null;
+    if (currentEditTenantId && typeof TenantConfigManager !== 'undefined') {
+      tenant = TenantConfigManager.getTenant(building, currentEditTenantId);
+    }
+    if (!tenant) {
+      const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
+      tenant = tenantData[roomId];
+    }
+    if (tenant?.contractDocument) {
+      contractDocument = tenant.contractDocument;
+      contractFileName = tenant.contractFileName;
+    }
   }
 
-  if (!tenant || !tenant.contractDocument) {
+  if (!contractDocument) {
     showToast('ไม่มีไฟล์สัญญา', 'error');
     return;
   }
 
-  showContractDocument(roomId, tenant);
+  showContractDocument(roomId, { contractDocument, contractFileName });
 }
 
 /**
@@ -1949,9 +1961,10 @@ function renderLeaseAgreementsPage() {
                     ${lease.status === 'active' ? '✅ กำลังเช่า' : '❌ เลิกเช่า'}
                   </span>
                 </td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">
-                  ${lease.status === 'active' ? `<button onclick="endLease('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;">🚪</button>` : ''}
-                  <button onclick="deleteLease('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
+                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: center; white-space: nowrap;">
+                  <button onclick="viewLeaseDocuments('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 4px;" title="ดูเอกสาร">📁</button>
+                  ${lease.status === 'active' ? `<button onclick="endLease('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;" title="สิ้นสุดสัญญา">🚪</button>` : ''}
+                  <button onclick="deleteLease('${lease.id}')" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;" title="ลบ">🗑️</button>
                 </td>
               </tr>
             `).join('')}
@@ -2110,7 +2123,8 @@ async function uploadLeaseDocuments(leaseId, building, roomId, documents) {
 
       const ext = file.name.split('.').pop();
       const fileName = `${fileTypeMap[docType]}-${Date.now()}.${ext}`;
-      const storageRef = storage.ref(`leases/${building}/${roomId}/${leaseId}/${fileName}`);
+      const storagePath = `leases/${building}/${roomId}/${leaseId}/${fileName}`;
+      const storageRef = storage.ref(storagePath);
 
       storageRef.put(file)
         .then((snapshot) => {
@@ -2120,6 +2134,17 @@ async function uploadLeaseDocuments(leaseId, building, roomId, documents) {
         })
         .then((downloadURL) => {
           console.log(`📄 Download URL: ${downloadURL}`);
+          // Persist URL to lease record so Document Hub can render instantly without listAll()
+          try {
+            if (typeof LeaseAgreementManager.updateLeaseWithFirebase === 'function') {
+              const existing = LeaseAgreementManager.getLease(leaseId) || {};
+              const documentURLs = { ...(existing.documentURLs || {}) };
+              documentURLs[docType] = { url: downloadURL, fileName, path: storagePath, uploadedAt: new Date().toISOString() };
+              LeaseAgreementManager.updateLeaseWithFirebase(leaseId, building, { documentURLs });
+            }
+          } catch (e) {
+            console.warn('⚠️ Failed to persist document URL to lease:', e.message);
+          }
         })
         .catch((error) => {
           console.error(`❌ Error uploading ${docType}:`, error);
@@ -2130,6 +2155,202 @@ async function uploadLeaseDocuments(leaseId, building, roomId, documents) {
   } catch (err) {
     console.warn('⚠️ Firebase Storage not available, documents will be uploaded later');
   }
+}
+
+// ===== Document Hub — Phase 2 SSoT =====
+// Aggregates all documents for a lease: uploads from admin dashboard (leases/ Storage)
+// + legacy base64 contractDocument from tenant record + company info from tenant_app.
+const LEASE_DOC_LABELS = {
+  agreement: { label: 'สัญญาเช่า', icon: '📋' },
+  id: { label: 'สำเนาบัตรประชาชน', icon: '🆔' },
+  petCert: { label: 'ใบรับรองวัคซีนสัตว์เลี้ยง', icon: '💉' },
+  tenantContact: { label: 'ข้อมูลติดต่อผู้เช่า', icon: '📞' },
+  income: { label: 'หลักฐานรายได้', icon: '💰' }
+};
+
+async function viewLeaseDocuments(leaseId) {
+  const lease = LeaseAgreementManager.getLease(leaseId);
+  if (!lease) {
+    showToast('ไม่พบสัญญานี้', 'error');
+    return;
+  }
+
+  // getTenant signature is (building, id), but lease only has tenantId — use the any-building lookup
+  const tenant = (typeof TenantConfigManager !== 'undefined')
+    ? (TenantConfigManager.getTenant(lease.building, lease.tenantId)
+       || TenantConfigManager.getTenantByIdAnyBuilding?.(lease.tenantId)
+       || null)
+    : null;
+
+  // Build modal
+  let modal = document.getElementById('leaseDocumentsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'leaseDocumentsModal';
+    modal.className = 'ui-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'leaseDocumentsTitle');
+    modal.style.cssText = 'display:flex;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10000;align-items:center;justify-content:center;padding:1rem;';
+    document.body.appendChild(modal);
+  }
+
+  const moveIn = lease.moveInDate ? new Date(lease.moveInDate).toLocaleDateString('th-TH') : '—';
+  const buildingLabel = lease.building === 'rooms' ? 'ห้องแถว' : 'Nest';
+
+  modal.innerHTML = `
+    <div style="background:white;border-radius:12px;max-width:720px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+      <div style="padding:20px 24px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <h2 id="leaseDocumentsTitle" style="font-size:1.3rem;margin:0;color:#1b5e20;">📁 เอกสารสัญญา — ${buildingLabel} ห้อง ${lease.roomId}</h2>
+          <div style="font-size:.85rem;color:#666;margin-top:4px;">${lease.tenantName || lease.tenantId} · เข้า ${moveIn} · ฿${lease.rentAmount?.toLocaleString() || '-'}</div>
+        </div>
+        <button onclick="document.getElementById('leaseDocumentsModal').remove()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;">✕</button>
+      </div>
+      <div id="leaseDocumentsBody" style="padding:20px 24px;">
+        <div style="text-align:center;padding:30px;color:#999;">⏳ กำลังโหลดเอกสาร...</div>
+      </div>
+    </div>
+  `;
+
+  const body = document.getElementById('leaseDocumentsBody');
+  const sections = [];
+
+  // Section 1a: Contract base64 stored directly in lease record (from tenant modal upload)
+  if (lease.contractDocument) {
+    const fname = lease.contractFileName || 'lease-contract';
+    sections.push(`
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-weight:700;color:#1b5e20;margin-bottom:.5rem;font-size:.95rem;">📋 สัญญาเช่า (อัพโหลดผ่าน Tab ผู้เช่า)</div>
+        <div style="padding:10px 12px;background:#e8f5e9;border-left:3px solid #4caf50;border-radius:4px;font-size:.88rem;">
+          <a href="${_escapeAttr(lease.contractDocument)}" download="${_escapeAttr(fname)}" style="color:#2e7d32;font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>
+          ${lease.contractUploadedAt ? `<div style="font-size:.75rem;color:#999;margin-top:3px;">อัพโหลด: ${new Date(lease.contractUploadedAt).toLocaleString('th-TH')}</div>` : ''}
+        </div>
+      </div>
+    `);
+  }
+
+  // Section 1b: Lease documents from Firebase Storage (uploaded via Tab สัญญา form)
+  const leaseDocsHTML = await _renderLeaseStorageDocs(lease);
+  sections.push(`
+    <div style="margin-bottom:1.5rem;">
+      <div style="font-weight:700;color:#1b5e20;margin-bottom:.5rem;font-size:.95rem;">📎 เอกสารแนบสัญญา (อัพโหลดผ่าน Tab สัญญา)</div>
+      ${leaseDocsHTML}
+    </div>
+  `);
+
+  // Section 2: Legacy contractDocument (base64 in tenant record — pre-Phase-3 data)
+  if (tenant?.contractDocument) {
+    const fname = tenant.contractFileName || 'contract-legacy';
+    sections.push(`
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-weight:700;color:#bf360c;margin-bottom:.5rem;font-size:.95rem;">📄 สัญญาเช่า (Legacy — อยู่ใน tenant record, รอย้าย)</div>
+        <div style="padding:10px 12px;background:#fff3e0;border-left:3px solid #ff9800;border-radius:4px;font-size:.88rem;">
+          <a href="${_escapeAttr(tenant.contractDocument)}" download="${_escapeAttr(fname)}" style="color:#e65100;font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>
+          <div style="font-size:.75rem;color:#999;margin-top:3px;">ข้อมูลเก่าก่อน Phase 3 — จะย้ายไป lease SSoT อัตโนมัติเมื่อมีการแก้ไขผ่าน Tab ผู้เช่า</div>
+        </div>
+      </div>
+    `);
+  }
+
+  // Section 3: Tenant-side data (company info, avatar, etc.)
+  if (tenant?.companyInfo?.name) {
+    const ci = tenant.companyInfo;
+    sections.push(`
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-weight:700;color:#01579b;margin-bottom:.5rem;font-size:.95rem;">🏢 ข้อมูลบริษัท (จาก tenant_app)</div>
+        <div style="padding:10px 12px;background:#e1f5fe;border-left:3px solid #0288d1;border-radius:4px;font-size:.88rem;line-height:1.6;">
+          <div><b>ชื่อ:</b> ${_escapeHTML(ci.name || '-')}</div>
+          ${ci.taxId ? `<div><b>เลขผู้เสียภาษี:</b> ${_escapeHTML(ci.taxId)}</div>` : ''}
+          ${ci.address ? `<div><b>ที่อยู่:</b> ${_escapeHTML(ci.address)}</div>` : ''}
+        </div>
+      </div>
+    `);
+  }
+
+  // Section 4: Tenant contact info (always show for completeness)
+  if (tenant) {
+    sections.push(`
+      <div>
+        <div style="font-weight:700;color:#4a148c;margin-bottom:.5rem;font-size:.95rem;">👤 ข้อมูลผู้เช่า (SSoT: Tab ผู้เช่า)</div>
+        <div style="padding:10px 12px;background:#f3e5f5;border-left:3px solid #7b1fa2;border-radius:4px;font-size:.88rem;line-height:1.6;">
+          <div><b>ชื่อ:</b> ${_escapeHTML(tenant.name || '-')}</div>
+          ${tenant.phone ? `<div><b>เบอร์:</b> ${_escapeHTML(tenant.phone)}</div>` : ''}
+          ${tenant.lineID ? `<div><b>LINE ID:</b> ${_escapeHTML(tenant.lineID)}</div>` : ''}
+          ${tenant.idCardNumber ? `<div><b>เลขบัตรประชาชน:</b> ${_escapeHTML(tenant.idCardNumber)}</div>` : ''}
+          ${tenant.emergencyContact?.name ? `<div><b>ติดต่อฉุกเฉิน:</b> ${_escapeHTML(tenant.emergencyContact.name)} ${tenant.emergencyContact.phone || ''}</div>` : ''}
+        </div>
+      </div>
+    `);
+  }
+
+  body.innerHTML = sections.join('');
+}
+
+async function _renderLeaseStorageDocs(lease) {
+  const { documentURLs, building, roomId, id: leaseId, documents = [] } = lease;
+
+  // Prefer stored URLs (new uploads)
+  if (documentURLs && Object.keys(documentURLs).length > 0) {
+    return Object.entries(documentURLs).map(([key, v]) => {
+      const meta = LEASE_DOC_LABELS[key] || { label: key, icon: '📄' };
+      const url = typeof v === 'string' ? v : v?.url;
+      const fname = (typeof v === 'object' && v?.fileName) || `${key}`;
+      if (!url) return '';
+      return `
+        <div style="padding:10px 12px;background:#e8f5e9;border-left:3px solid #4caf50;border-radius:4px;margin-bottom:6px;font-size:.88rem;display:flex;justify-content:space-between;align-items:center;">
+          <span>${meta.icon} <b>${meta.label}</b> <span style="color:#999;font-size:.78rem;">(${_escapeHTML(fname)})</span></span>
+          <a href="${_escapeAttr(url)}" target="_blank" rel="noopener noreferrer" style="color:#2e7d32;font-weight:600;text-decoration:none;">⬇️ ดาวน์โหลด</a>
+        </div>`;
+    }).join('') || '<div style="color:#999;font-size:.85rem;">ยังไม่มีเอกสาร</div>';
+  }
+
+  // Fallback: list Storage folder (for legacy leases without documentURLs)
+  try {
+    if (!window.firebase?.storage) {
+      return '<div style="color:#999;font-size:.85rem;">Firebase Storage ไม่พร้อมใช้งาน</div>';
+    }
+    const storage = window.firebase.storage();
+    const folderRef = storage.ref(`leases/${building}/${roomId}/${leaseId}`);
+    const result = await folderRef.listAll();
+    if (!result.items.length) {
+      return '<div style="color:#999;font-size:.85rem;padding:8px;">ยังไม่มีไฟล์เอกสาร (admin ยังไม่ได้อัพโหลด)</div>';
+    }
+    const urls = await Promise.all(result.items.map(async (ref) => ({
+      name: ref.name,
+      url: await ref.getDownloadURL()
+    })));
+    return urls.map(({ name, url }) => {
+      // Guess doc type from filename prefix
+      const docType = Object.entries({
+        'lease-agreement': 'agreement',
+        'tenant-id': 'id',
+        'pet-vaccine-certificate': 'petCert',
+        'tenant-contact': 'tenantContact',
+        'proof-of-income': 'income'
+      }).find(([prefix]) => name.startsWith(prefix))?.[1] || 'other';
+      const meta = LEASE_DOC_LABELS[docType] || { label: 'เอกสารอื่น', icon: '📄' };
+      return `
+        <div style="padding:10px 12px;background:#e8f5e9;border-left:3px solid #4caf50;border-radius:4px;margin-bottom:6px;font-size:.88rem;display:flex;justify-content:space-between;align-items:center;">
+          <span>${meta.icon} <b>${meta.label}</b> <span style="color:#999;font-size:.78rem;">(${_escapeHTML(name)})</span></span>
+          <a href="${_escapeAttr(url)}" target="_blank" rel="noopener noreferrer" style="color:#2e7d32;font-weight:600;text-decoration:none;">⬇️ ดาวน์โหลด</a>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    console.warn('⚠️ listAll failed:', e.message);
+    return '<div style="color:#c62828;font-size:.85rem;padding:8px;">โหลดเอกสารล้มเหลว: ' + _escapeHTML(e.message) + '</div>';
+  }
+}
+
+function _escapeHTML(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function _escapeAttr(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+if (typeof window !== 'undefined') {
+  window.viewLeaseDocuments = viewLeaseDocuments;
 }
 
 function endLease(leaseId) {

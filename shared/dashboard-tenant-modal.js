@@ -177,19 +177,17 @@ function openTenantModal(building, roomId) {
   }
 
 
-  // Load contract document - check both tenant and lease sources
+  // Load contract document — lease is SSoT (Phase 3), tenant record kept as legacy fallback
   let contractData = null;
   let contractFileName = '';
 
-  // Check tenant data first
-  if (tenant && tenant.contractDocument) {
-    contractData = tenant.contractDocument;
-    contractFileName = tenant.contractFileName || 'สัญญาเช่า';
-  }
-  // Also check lease for contracts
-  else if (lease && lease.contractDocument) {
+  if (lease && lease.contractDocument) {
     contractData = lease.contractDocument;
     contractFileName = lease.contractFileName || 'สัญญาเช่า';
+  } else if (tenant && tenant.contractDocument) {
+    // Legacy: pre-Phase-3 data still living in tenant record
+    contractData = tenant.contractDocument;
+    contractFileName = tenant.contractFileName || 'สัญญาเช่า';
   }
 
   if (contractData) {
@@ -489,12 +487,15 @@ function saveTenantInfo() {
       hasPet: document.getElementById('modalHasPet')?.checked || false,
       type: document.getElementById('modalPetType')?.value?.trim() || ''
     },
-    contractDocument: document.getElementById('modalContractDocument').value || '',
-    contractFileName: document.getElementById('modalContractFileName').value || '',
+    // Phase 3: contractDocument moved to lease record (SSoT). Tenant record no longer
+    // stores the base64 — uploadContractDocument() writes directly to lease.
     // receiptType + companyInfo are tenant-self-serve via tenant_app — admin
     // does NOT overwrite from this modal. They flow into the doc separately
     // when the tenant edits in their app (TenantFirebaseSync.saveCompanyInfo).
   };
+  // Capture contract fields separately — written only to lease, not tenant
+  const contractDocumentValue = document.getElementById('modalContractDocument').value || '';
+  const contractFileNameValue = document.getElementById('modalContractFileName').value || '';
 
   // Generate or reuse tenant ID
   const tenantId = currentEditTenantId || `TENANT_${Date.now()}_${roomId}`;
@@ -514,9 +515,10 @@ function saveTenantInfo() {
   let leaseId;
 
   if (currentLease) {
-    // Update existing lease
+    // Update existing lease — lease is SSoT for contract document
+    // Phase 4: use Firebase-aware update so tenant→lease sync reaches Firestore, not just localStorage
     const rentPrice = RoomConfigManager.getRentPrice(building, roomId);
-    LeaseAgreementManager.updateLease(currentLease.id, {
+    const leaseUpdates = {
       tenantName: fullName,
       tenantId: tenantId,
       moveInDate: tenantData.moveInDate,
@@ -524,12 +526,17 @@ function saveTenantInfo() {
       rentAmount: rentPrice,
       deposit: tenantData.deposit,
       status: 'active',
-      contractFileName: tenantData.contractFileName,
-      contractDocument: tenantData.contractDocument
-    });
+      contractFileName: contractFileNameValue,
+      contractDocument: contractDocumentValue
+    };
+    if (typeof LeaseAgreementManager.updateLeaseWithFirebase === 'function') {
+      LeaseAgreementManager.updateLeaseWithFirebase(currentLease.id, building, leaseUpdates);
+    } else {
+      LeaseAgreementManager.updateLease(currentLease.id, leaseUpdates);
+    }
     leaseId = currentLease.id;
   } else {
-    // Create new lease
+    // Create new lease — lease is SSoT for contract document
     const rentPrice = RoomConfigManager.getRentPrice(building, roomId);
     leaseId = LeaseAgreementManager.createLease({
       building: building,
@@ -541,8 +548,8 @@ function saveTenantInfo() {
       rentAmount: rentPrice,
       deposit: tenantData.deposit,
       status: 'active',
-      contractFileName: tenantData.contractFileName,
-      contractDocument: tenantData.contractDocument
+      contractFileName: contractFileNameValue,
+      contractDocument: contractDocumentValue
     });
     currentEditTenantId = tenantId; // Update for future edits
   }
@@ -555,7 +562,12 @@ function saveTenantInfo() {
     if (newRent !== currentRent) {
       RoomConfigManager.updateRentPrice(building, roomId, newRent);
       if (currentLease) {
-        LeaseAgreementManager.updateLease(currentLease.id, {rentAmount: newRent});
+        // Phase 4: Firebase-aware update to keep lease rent in sync across local+Firestore
+        if (typeof LeaseAgreementManager.updateLeaseWithFirebase === 'function') {
+          LeaseAgreementManager.updateLeaseWithFirebase(currentLease.id, building, {rentAmount: newRent});
+        } else {
+          LeaseAgreementManager.updateLease(currentLease.id, {rentAmount: newRent});
+        }
       }
     }
   }
@@ -664,12 +676,18 @@ function uploadContractDocument() {
         let leaseId = Object.keys(leases).find(id => leases[id].roomId === currentEditRoomId);
 
         if (leaseId) {
-          // Update existing lease with contract
-          LeaseAgreementManager.updateLease(leaseId, {
+          // Phase 4: Firebase-aware update so contract PDF sync to Firestore
+          const contractUpdates = {
             contractDocument: base64Data,
             contractFileName: fileName,
             contractUploadedAt: new Date().toISOString()
-          });
+          };
+          const building = leases[leaseId].building;
+          if (typeof LeaseAgreementManager.updateLeaseWithFirebase === 'function' && building) {
+            LeaseAgreementManager.updateLeaseWithFirebase(leaseId, building, contractUpdates);
+          } else {
+            LeaseAgreementManager.updateLease(leaseId, contractUpdates);
+          }
           console.log(`✅ Contract saved to lease: ${leaseId}`);
         }
       } catch (error) {
