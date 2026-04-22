@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "echo 'Static site'",
+  "buildCommand": "npm run build",
   "outputDirectory": ".",
   "cleanUrls": true,
   "headers": [

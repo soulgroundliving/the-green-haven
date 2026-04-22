@@ -1,5 +1,12 @@
 {
+  "scripts": {
+    "build": "node build.js"
+  },
   "dependencies": {
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "glob": "^11.0.0"
   }
 }
