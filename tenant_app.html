@@ -9052,7 +9052,7 @@
                 Object.entries(map).forEach(([key, elId]) => {
                     if (!data[key]) return;
                     const el = document.getElementById(elId);
-                    if (el) el.innerHTML = data[key];
+                    if (el) { el.style.whiteSpace = 'pre-wrap'; el.textContent = data[key]; }
                 });
             }, err => console.warn('policies subscribe:', err.message));
         }

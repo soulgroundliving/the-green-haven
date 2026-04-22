@@ -3812,10 +3812,15 @@ async function loadPoliciesAdmin() {
         const html = await resp.text();
         const parser = new DOMParser();
         const tenantDoc = parser.parseFromString(html, 'text/html');
+        function _htmlToPlain(el) {
+          el.querySelectorAll('br').forEach(b => b.replaceWith('\n'));
+          el.querySelectorAll('p,div').forEach(b => { if (b.nextSibling) b.insertAdjacentText('afterend', '\n'); });
+          return (el.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+        }
         const seedData = {};
         missing.forEach(k => {
           const el = tenantDoc.getElementById(ID_MAP[k]);
-          if (el) seedData[k] = el.innerHTML.trim();
+          if (el) seedData[k] = _htmlToPlain(el);
         });
         if (Object.keys(seedData).length) {
           await fs.setDoc(fs.doc(db, 'system', 'policies'), seedData, { merge: true });

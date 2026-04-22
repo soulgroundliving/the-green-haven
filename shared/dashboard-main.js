@@ -440,9 +440,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('mt-year').value=now.getFullYear()+543;
   // Sync year UI state immediately (hide/show live cards based on default currentYear)
   syncDashboardYearUI();
-  // Delay KPI updates to ensure data is loaded from localStorage
-  setTimeout(updateDashboardLive,100);
-  setTimeout(initDashboardCharts,300);
+  // KPI + charts are rendered by setYear('69') in dashboard-home-live.js DOMContentLoaded (600ms)
+  // — do not add extra calls here; they cause the dashboard to re-render 4 times on load.
 
   // ===== URL DEEP LINK: ?page=requests-approvals&tab=liff =====
   const _dlParams = new URLSearchParams(window.location.search);
