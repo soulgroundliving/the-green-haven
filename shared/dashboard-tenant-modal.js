@@ -496,8 +496,9 @@ function saveTenantInfo() {
       hasPet: document.getElementById('modalHasPet')?.checked || false,
       type: document.getElementById('modalPetType')?.value?.trim() || ''
     },
-    // Phase 3: contractDocument moved to lease record (SSoT). Tenant record no longer
-    // stores the base64 — uploadContractDocument() writes directly to lease.
+    // Phase 3: contractDocument moved to lease record (SSoT). Tenant record no
+    // longer stores the base64 — contract uploads now happen in Tab สัญญา and
+    // land in Firebase Storage (lease.documentURLs.agreement).
     // receiptType + companyInfo are tenant-self-serve via tenant_app — admin
     // does NOT overwrite from this modal. They flow into the doc separately
     // when the tenant edits in their app (TenantFirebaseSync.saveCompanyInfo).
