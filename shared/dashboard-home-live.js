@@ -31,8 +31,8 @@ function setYear(yr,btn){
   if(btn) {
     btn.classList.add('active');
   } else if (rows[0]) {
-    // Programmatic call without btn — find the matching tab by its onclick handler
-    const target = rows[0].querySelector(`.year-tab[onclick*="setYear('${yr}'"]`);
+    // Programmatic call without btn — buttons use data-action/data-year (not onclick=)
+    const target = rows[0].querySelector(`[data-action="setYear"][data-year="${yr}"]`);
     if (target) target.classList.add('active');
   }
   currentYear=yr;
@@ -46,12 +46,26 @@ function setYear(yr,btn){
 // Delayed to 900ms so Firestore historicalRevenue + RTDB rooms_config have a
 // chance to land first — setYear's initDashboardCharts then renders once with
 // live data instead of rendering twice (once stale, once fresh).
+// We click() the actual 2569 button so the event-delegation hub receives it
+// like a real user click (keeps the button visually active + routes through
+// the standard setYear(yr, btn) path instead of the programmatic fallback).
 if (typeof window !== 'undefined' && !window._initialDashboardYear) {
   window._initialDashboardYear = true;
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       const beYear = String(new Date().getFullYear() + 543).slice(-2);  // '69'
-      try { if (typeof setYear === 'function') setYear(beYear, null); } catch(e){}
+      try {
+        const btn = document.querySelector(`#page-dashboard [data-action="setYear"][data-year="${beYear}"]`);
+        if (btn) {
+          btn.click();
+        } else if (typeof setYear === 'function') {
+          setYear(beYear, null);
+        }
+        // Block debounced re-renders for 1s — Firestore/RTDB bursts that arrive
+        // right after the initial render would redundantly re-render the same
+        // data we just painted.
+        _dashRenderCooldownUntil = Date.now() + 1000;
+      } catch(e){}
     }, 900);
   });
 }
@@ -190,11 +204,16 @@ async function loadDashboardDataFromFirebase() {
 
 // Debounce helper — coalesces bursts of async data-arrival events into one render.
 // Separate timer per key so different pages don't block each other.
+// A cooldown window (set by initial setYear) blocks debounced re-renders during
+// the first second after the initial render, preventing the "one-extra-reload"
+// flash caused by Firestore/RTDB bursts arriving right after setYear painted.
 const _dashboardRerenderTimers = {};
+let _dashRenderCooldownUntil = 0;
 function _debouncedRerender(key, fn, delay = 250) {
   if (_dashboardRerenderTimers[key]) clearTimeout(_dashboardRerenderTimers[key]);
   _dashboardRerenderTimers[key] = setTimeout(() => {
     _dashboardRerenderTimers[key] = null;
+    if (Date.now() < _dashRenderCooldownUntil) return;  // initial-load cooldown
     try { fn(); } catch (e) { console.warn(`[rerender:${key}]`, e?.message); }
   }, delay);
 }
