@@ -1,0 +1,49 @@
+# Weekly npm audit — surfaces known CVEs in both package trees.
+#
+# Dependabot handles patchable fixes; this audit catches:
+#  1. Unpatchable criticals (no fix available) so we can plan workaround
+#  2. Regressions introduced by manual dep changes between Dependabot runs
+#  3. Anything `npm audit` flags at "critical" or "high"
+#
+# Runs weekly (Monday 10:00 BKK — 1h after Dependabot) and on every PR
+# touching a package.json / package-lock.json so reviewers see the state.
+#
+# Cost: free on all GitHub plans.
+
+name: npm audit
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"  # 10:00 BKK Mondays (UTC+7 = 03:00 UTC)
+  pull_request:
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "functions/package.json"
+      - "functions/package-lock.json"
+  workflow_dispatch:  # manual trigger from Actions UI
+
+jobs:
+  audit-root:
+    name: audit root (build tools + runtime)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: npm audit (fail on high/critical)
+        run: npm audit --audit-level=high
+        working-directory: .
+
+  audit-functions:
+    name: audit functions (Cloud Functions server code)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: npm audit (fail on high/critical)
+        run: npm audit --audit-level=high
+        working-directory: functions

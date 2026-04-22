@@ -1,0 +1,61 @@
+# Dependabot config — scan both package manifests weekly.
+#
+# Why: CVEs land in npm transitive deps constantly. Without automation
+# we'd miss patched versions until a customer / audit flags them.
+# Cost: free on any GitHub plan.
+#
+# Scope:
+#   /          → root package.json (esbuild + glob build tools + xlsx)
+#   /functions → Cloud Functions deps (firebase-admin, @google-cloud/*, etc.)
+#
+# Strategy: grouped PRs (one PR per ecosystem per week) so the review
+# queue doesn't explode when many libs tick up at once.
+
+version: 2
+updates:
+  # Root — build tooling + tenant/admin app runtime deps
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  # Cloud Functions — server-side, higher risk surface
+  - package-ecosystem: "npm"
+    directory: "/functions"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "chore(deps-functions)"
+      include: "scope"
+
+  # GitHub Actions workflow files — keep CI runners up-to-date
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
+    commit-message:
+      prefix: "chore(ci)"
