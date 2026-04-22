@@ -2561,7 +2561,7 @@
                     </div>
                     <div id="rcpt-method-note" style="display:none; text-align:center; font-size:var(--fs-sm); color:#6b7280; margin-top:6px;"></div>
                     <!-- Company info (for tax receipt, shown only when tenant receiptType==='company') -->
-                    <div id="company-info-display" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #ddd; font-size:var(--fs-sm);">
+                    <div id="receipt-company-info-block" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #ddd; font-size:var(--fs-sm);">
                         <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:#666;">ออกในนาม:</span><strong id="display-comp-name" style="color:var(--primary-green);">-</strong></div>
                         <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:#666;">เลขผู้เสียภาษี:</span><strong id="display-comp-tax">-</strong></div>
                         <div style="display:flex; justify-content:space-between; padding:3px 0;"><span style="color:#666;">ที่อยู่:</span><strong id="display-comp-addr" style="text-align:right;">-</strong></div>
@@ -4434,7 +4434,10 @@
         function applyReceiptUI(type, co) {
             const $ = id => document.getElementById(id);
             const isCo = type === 'company';
+            // Preference-page input form (where tenant fills their own company info)
             if ($('company-info-display')) $('company-info-display').style.display = isCo ? 'block' : 'none';
+            // Receipt-display block (shown on printed receipt when receiptType === 'company')
+            if ($('receipt-company-info-block')) $('receipt-company-info-block').style.display = isCo ? 'block' : 'none';
             // Info banner if user hasn't filled company yet
             const missing = isCo && !(co && (co.name || co.taxId || co.address));
             if ($('comp-info-missing-warn')) $('comp-info-missing-warn').style.display = missing ? 'block' : 'none';
