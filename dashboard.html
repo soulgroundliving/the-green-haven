@@ -28,8 +28,29 @@
 <script src="./shared/meter-unified.js"></script>
 <script src="./shared/billing-system.js"></script>
 <script src="./shared/bill-generator.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<!-- Perf #3: jsPDF (+ html2pdf bundle ~400KB combined) lazy-loaded on first
+     invoice/receipt export via window.ensurePDFLibs(). Not needed on every
+     page load — only the Bill tab generates PDFs. -->
+<script>
+  window.ensurePDFLibs = (function() {
+    let pending = null;
+    return function ensurePDFLibs() {
+      if (typeof window.jspdf !== 'undefined' || typeof window.jsPDF !== 'undefined') return Promise.resolve();
+      if (pending) return pending;
+      const load = (src) => new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = src; s.async = false;
+        s.onload = res; s.onerror = () => rej(new Error('Failed to load ' + src));
+        document.head.appendChild(s);
+      });
+      pending = Promise.all([
+        load('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'),
+        load('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js')
+      ]);
+      return pending;
+    };
+  })();
+</script>
 <script src="./shared/invoice-pdf-generator.js"></script>
 <script src="./shared/config-unified.js"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>

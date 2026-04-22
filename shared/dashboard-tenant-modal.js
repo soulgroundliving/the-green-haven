@@ -637,83 +637,11 @@ function saveTenantInfo() {
   showToast('บันทึกข้อมูลสำเร็จ', 'success');
 }
 
-/**
- * Upload contract document and auto-save to Lease Agreement
- */
-function uploadContractDocument() {
-  const fileInput = document.getElementById('modalContractFile');
-  const file = fileInput.files[0];
-  const statusEl = document.getElementById('contractDocStatus');
-
-  if (!file) {
-    statusEl.textContent = '❌ กรุณาเลือกไฟล์';
-    return;
-  }
-
-  // File size limit 5MB
-  if (file.size > 5 * 1024 * 1024) {
-    statusEl.textContent = '❌ ไฟล์ใหญ่เกินไป (สูงสุด 5MB)';
-    return;
-  }
-
-  statusEl.textContent = '⏳ กำลังอัพโหลด...';
-
-  // Read file as base64
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const base64Data = e.target.result;
-    const fileName = file.name;
-
-    // Store base64 and filename in hidden fields for tenant data
-    document.getElementById('modalContractDocument').value = base64Data;
-    document.getElementById('modalContractFileName').value = fileName;
-
-    // Update file input display to show filename
-    const newFileInput = document.createElement('input');
-    newFileInput.type = 'file';
-    newFileInput.id = 'modalContractFile';
-    newFileInput.accept = '.pdf,.jpg,.jpeg,.png';
-    newFileInput.onchange = uploadContractDocument;
-    fileInput.parentNode.replaceChild(newFileInput, fileInput);
-
-    // Auto-save to Lease Agreement if LeaseAgreementManager exists
-    if (typeof LeaseAgreementManager !== 'undefined' && currentEditRoomId) {
-      try {
-        const leases = LeaseAgreementManager.getAllLeases();
-
-        // Find active lease for this room
-        let leaseId = Object.keys(leases).find(id => leases[id].roomId === currentEditRoomId);
-
-        if (leaseId) {
-          // Phase 4: Firebase-aware update so contract PDF sync to Firestore
-          const contractUpdates = {
-            contractDocument: base64Data,
-            contractFileName: fileName,
-            contractUploadedAt: new Date().toISOString()
-          };
-          const building = leases[leaseId].building;
-          if (typeof LeaseAgreementManager.updateLeaseWithFirebase === 'function' && building) {
-            LeaseAgreementManager.updateLeaseWithFirebase(leaseId, building, contractUpdates);
-          } else {
-            LeaseAgreementManager.updateLease(leaseId, contractUpdates);
-          }
-          console.log(`✅ Contract saved to lease: ${leaseId}`);
-        }
-      } catch (error) {
-        console.warn('Could not auto-save to lease agreement:', error.message);
-      }
-    }
-
-    // Show success with filename
-    statusEl.innerHTML = `✅ อัพโหลด: <strong>${fileName}</strong> (${(file.size / 1024).toFixed(1)}KB)<br><span style="color:#2d8653;font-size:0.85rem;font-weight:600;">✓ บันทึกใน Lease Agreement แล้ว</span>`;
-  };
-
-  reader.onerror = function() {
-    statusEl.textContent = '❌ ข้อผิดพลาดในการอ่านไฟล์';
-  };
-
-  reader.readAsDataURL(file);
-}
+// Perf #4: uploadContractDocument() was removed in the "Tab ผู้เช่า drops
+// contract upload" refactor — its file input + onchange handler were replaced
+// with a read-only status line that points to Tab สัญญา. The function had
+// no remaining callers and was writing base64 into Firestore docs (the exact
+// pattern we consolidated away to Firebase Storage).
 
 // Close modal when clicking outside
 document.addEventListener('click', function(e) {

@@ -66,6 +66,26 @@ function initPaymentVerify() {
   if (!feed) return;
   feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">🔄 กำลังโหลด...</div>';
 
+  // Perf #1: prefer the global verifiedSlips listener (dashboard-bill.js) when
+  // it's already warm — avoids opening a second Firestore onSnapshot on the
+  // same collection. Falls through to direct subscribe if the global cache
+  // hasn't been populated yet (rare: user opens Payment Verify within the
+  // first ~800ms of page load before _subscribeGlobalVerifiedSlips runs).
+  const renderFromList = (firestoreSlips) => {
+    const slips = _pvMergeSlips(firestoreSlips || []);
+    window._pvCachedSlips = slips;
+    updatePVStats(slips);
+    renderPVFeed(slips);
+  };
+
+  if (Array.isArray(window._verifiedSlipsRawCache)) {
+    renderFromList(window._verifiedSlipsRawCache);
+    const handler = (e) => renderFromList(e.detail);
+    window.addEventListener('verified-slips-updated', handler);
+    _pvUnsubscribe = () => window.removeEventListener('verified-slips-updated', handler);
+    return;
+  }
+
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
     feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ Firebase ยังไม่พร้อม</div>';
     return;
@@ -73,16 +93,11 @@ function initPaymentVerify() {
 
   const db = window.firebase.firestore();
   const fs = window.firebase.firestoreFunctions;
-  const q = fs.query(fs.collection(db, 'verifiedSlips'), fs.orderBy('timestamp', 'desc'), fs.limit(200));
+  const q = fs.query(fs.collection(db, 'verifiedSlips'), fs.orderBy('timestamp', 'desc'), fs.limit(300));
   _pvUnsubscribe = fs.onSnapshot(q, snapshot => {
-    const firestoreSlips = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-    const slips = _pvMergeSlips(firestoreSlips);
-    window._pvCachedSlips = slips;
-    updatePVStats(slips);
-    renderPVFeed(slips);
+    renderFromList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
   }, err => {
     console.error('pv onSnapshot:', err);
-    // Fallback: at least show manual payments from localStorage
     const manual = _pvLoadManualPayments();
     window._pvCachedSlips = manual;
     updatePVStats(manual);

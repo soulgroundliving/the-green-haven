@@ -503,12 +503,30 @@ async function verifySlip(file){
     if (!checkDashboardRateLimit('slipVerification')) {
       throw new Error('⏱️ คำขอมากเกินไป โปรดลองใหม่ในเวลาไม่กี่วินาที');
     }
+    // Perf #2: compress slip image before sending to SlipOK. Slips only need
+    // text legibility for OCR, so 1200px / q=0.8 is plenty and cuts the
+    // base64 payload (and SlipOK bandwidth) typically by 60–80% for phone
+    // photos. Files already under 800KB pass through untouched.
+    let slipFile = file;
+    if (typeof window._compressImageIfLarge === 'function') {
+      try {
+        slipFile = await window._compressImageIfLarge(file, {
+          threshold: 800 * 1024,
+          maxPx: 1200,
+          quality: 0.8
+        });
+        if (slipFile !== file) {
+          const saved = ((file.size - slipFile.size) / 1024).toFixed(0);
+          console.log(`🗜️ Slip compressed: saved ${saved}KB`);
+        }
+      } catch(e) { /* fall through with original file */ slipFile = file; }
+    }
     // Convert file to base64 for Cloud Function
     const base64 = await new Promise((resolve, reject) => {
       const r = new FileReader();
       r.onload = () => resolve(r.result.split(',')[1]);
       r.onerror = reject;
-      r.readAsDataURL(file);
+      r.readAsDataURL(slipFile);
     });
     const billTotal = invoiceData?.total || 0;
     const room = invoiceData?.room || 'unknown';
@@ -747,6 +765,13 @@ function _subscribeGlobalVerifiedSlips(){
         // so PaymentStore cache is populated at startup
         try { window.PaymentStore._notify(); } catch(e){}
       }
+      // Perf #1: expose the full slip list so Payment Verify tab can render
+      // from this cache instead of opening its own onSnapshot listener.
+      try {
+        const allSlips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        window._verifiedSlipsRawCache = allSlips;
+        window.dispatchEvent(new CustomEvent('verified-slips-updated', { detail: allSlips }));
+      } catch(e){}
     }, err => console.warn('global verifiedSlips listen:', err?.message));
   } catch(e) { console.warn('subscribeGlobalVerifiedSlips:', e); }
 }

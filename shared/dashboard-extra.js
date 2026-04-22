@@ -2118,10 +2118,16 @@ const LEASE_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;     // 5MB hard cap per file
 const LEASE_COMPRESS_THRESHOLD = 2 * 1024 * 1024;   // Images above this get resized
 const LEASE_MAX_IMAGE_PX = 1600;                    // Max long-edge for images
 
-function _compressImageIfLarge(file) {
-  // Only compress images above threshold. PDFs/legal docs pass through unchanged.
+// Perf #2: shared compressor — now parameterized + exposed on window so other
+// upload flows (SlipOK verification, future maintenance photos) can reuse it.
+// opts: { threshold, maxPx, quality }
+function _compressImageIfLarge(file, opts) {
+  const threshold = opts?.threshold ?? LEASE_COMPRESS_THRESHOLD;
+  const maxPx = opts?.maxPx ?? LEASE_MAX_IMAGE_PX;
+  const quality = opts?.quality ?? 0.85;
+
   return new Promise((resolve) => {
-    if (!file.type || !file.type.startsWith('image/') || file.size <= LEASE_COMPRESS_THRESHOLD) {
+    if (!file.type || !file.type.startsWith('image/') || file.size <= threshold) {
       resolve(file);
       return;
     }
@@ -2130,7 +2136,7 @@ function _compressImageIfLarge(file) {
       const img = new Image();
       img.onload = () => {
         const longest = Math.max(img.width, img.height);
-        const ratio = longest > LEASE_MAX_IMAGE_PX ? LEASE_MAX_IMAGE_PX / longest : 1;
+        const ratio = longest > maxPx ? maxPx / longest : 1;
         const w = Math.round(img.width * ratio);
         const h = Math.round(img.height * ratio);
         const canvas = document.createElement('canvas');
@@ -2142,7 +2148,7 @@ function _compressImageIfLarge(file) {
           } else {
             resolve(file);
           }
-        }, 'image/jpeg', 0.85);
+        }, 'image/jpeg', quality);
       };
       img.onerror = () => resolve(file);
       img.src = e.target.result;
@@ -2150,6 +2156,10 @@ function _compressImageIfLarge(file) {
     reader.onerror = () => resolve(file);
     reader.readAsDataURL(file);
   });
+}
+
+if (typeof window !== 'undefined') {
+  window._compressImageIfLarge = _compressImageIfLarge;
 }
 
 async function uploadLeaseDocuments(leaseId, building, roomId, documents) {
@@ -2627,16 +2637,21 @@ function downloadInvoicesPDF() {
     return;
   }
 
-  showToast(`ดาวน์โหลด ${allInvoices.length} ใบวางบิล (ระบบจะดาวน์โหลดแต่ละไฟล์)`, 'warning')
+  showToast(`ดาวน์โหลด ${allInvoices.length} ใบวางบิล (ระบบจะดาวน์โหลดแต่ละไฟล์)`, 'warning');
 
- allInvoices.forEach((invoice, idx) => {
-    setTimeout(() => {
-      const pdf = InvoicePDFGenerator.generateInvoicePDF(invoice);
-      if (pdf) {
-        InvoicePDFGenerator.downloadPDF(pdf, `INV-${invoice.id}.pdf`);
-      }
-    }, idx * 500);  // Delay to avoid browser blocking
-  });
+  // Perf #3: lazy-load jsPDF/html2pdf before first use
+  (typeof window.ensurePDFLibs === 'function' ? window.ensurePDFLibs() : Promise.resolve())
+    .then(() => {
+      allInvoices.forEach((invoice, idx) => {
+        setTimeout(() => {
+          const pdf = InvoicePDFGenerator.generateInvoicePDF(invoice);
+          if (pdf) {
+            InvoicePDFGenerator.downloadPDF(pdf, `INV-${invoice.id}.pdf`);
+          }
+        }, idx * 500);  // Delay to avoid browser blocking
+      });
+    })
+    .catch(err => showToast('โหลด PDF library ล้มเหลว: ' + err.message, 'error'));
 }
 
 /**
