@@ -187,6 +187,33 @@ function compressImageToBase64(file, maxWidth = 800, quality = 0.78) {
 }
 window.compressImageToBase64 = compressImageToBase64;
 
+// Cover image (single thumbnail shown in tenant article list)
+window._wellnessCoverImage = window._wellnessCoverImage || null;
+
+window.onWellnessCoverPicked = async function(ev) {
+  const file = ev.target.files?.[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  try {
+    const dataUrl = await compressImageToBase64(file, 600, 0.75);
+    window._wellnessCoverImage = dataUrl;
+    const preview = document.getElementById('wellness-cover-preview');
+    const img = document.getElementById('wellness-cover-img');
+    if (preview) preview.style.display = 'block';
+    if (img) img.src = dataUrl;
+  } catch(e) { console.error('cover image upload failed:', e); }
+  ev.target.value = '';
+};
+
+window.clearWellnessCover = function() {
+  window._wellnessCoverImage = null;
+  const preview = document.getElementById('wellness-cover-preview');
+  const img = document.getElementById('wellness-cover-img');
+  if (preview) preview.style.display = 'none';
+  if (img) img.src = '';
+  const inp = document.getElementById('wellness-cover-input');
+  if (inp) inp.value = '';
+};
+
 // Store image data URLs by index so textarea stays readable with [img:N] placeholders
 window._wellnessImages = window._wellnessImages || []; // array of dataUrl strings
 
@@ -325,7 +352,7 @@ async function saveWellnessArticle() {
 
   const db = window.firebase.firestore();
   const { collection, doc, addDoc, setDoc, serverTimestamp } = window.firebase.firestoreFunctions || {};
-  const data = { title, icon, excerpt, body, category, readtime, reward, updatedAt: serverTimestamp ? serverTimestamp() : new Date() };
+  const data = { title, icon, excerpt, body, category, readtime, reward, updatedAt: serverTimestamp ? serverTimestamp() : new Date(), coverImage: window._wellnessCoverImage || null };
 
   try {
     if (editId) {
@@ -352,6 +379,7 @@ function resetWellnessForm() {
   const rw = document.getElementById('wellness-reward'); if (rw) rw.value = '5';
   const cat = document.getElementById('wellness-category'); if (cat) cat.value = 'Wellness';
   if (typeof resetWellnessImages === 'function') resetWellnessImages();
+  if (typeof window.clearWellnessCover === 'function') window.clearWellnessCover();
   if (typeof window.pickWellnessIcon === 'function') window.pickWellnessIcon('fa-leaf');
 }
 
@@ -431,6 +459,16 @@ async function editWellnessArticle(id) {
     document.getElementById('wellness-readtime').value = a.readtime || 3;
     document.getElementById('wellness-reward').value = a.reward ?? 5;
     document.getElementById('wellness-edit-id').value = id;
+    // Restore cover image if saved
+    if (a.coverImage) {
+      window._wellnessCoverImage = a.coverImage;
+      const preview = document.getElementById('wellness-cover-preview');
+      const img = document.getElementById('wellness-cover-img');
+      if (preview) preview.style.display = 'block';
+      if (img) img.src = a.coverImage;
+    } else {
+      if (typeof window.clearWellnessCover === 'function') window.clearWellnessCover();
+    }
     document.getElementById('wellness-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (e) { console.error('editWellnessArticle failed:', e); }
 }

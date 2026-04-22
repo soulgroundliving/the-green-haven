@@ -3354,12 +3354,19 @@ function loadAndRenderPetApprovals() {
           </div>
           <span style="padding: 0.4rem 0.8rem; border-radius: 20px; background: ${statusColor}; color: white; font-size: 0.85rem; font-weight: 600;">${statusBadge}</span>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; font-size: 0.9rem; margin-bottom: 1rem;">
-          <div>🐕 Breed: <strong>${p.breed || '-'}</strong></div>
-          <div>⚖️ Weight: <strong>${p.weight || '-'}</strong></div>
-          <div>🎨 Color: <strong>${p.color || '-'}</strong></div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem 1rem; font-size: 0.9rem; margin-bottom: 0.8rem;">
+          <div>🐕 สายพันธุ์: <strong>${p.breed || '-'}</strong></div>
+          <div>⚧️ เพศ: <strong>${p.gender || '-'}</strong></div>
+          <div>🎂 อายุ: <strong>${p.age || '-'}</strong></div>
+          ${p.weight ? `<div>⚖️ น้ำหนัก: <strong>${p.weight}</strong></div>` : ''}
+          ${p.color ? `<div>🎨 สี: <strong>${p.color}</strong></div>` : ''}
         </div>
-        ${p.notes ? `<div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">📝 ${p.notes}</div>` : ''}
+        <div style="font-size:0.85rem; margin-bottom:0.8rem; padding:6px 10px; border-radius:8px; background:${p.isVaccinated ? '#f0fdf4' : '#fef2f2'}; color:${p.isVaccinated ? '#166534' : '#991b1b'};">
+          💉 วัคซีน: <strong>${p.isVaccinated ? '✅ ฉีดแล้ว' : '❌ ยังไม่ฉีด'}</strong>
+          ${p.vaxDate ? ` · วันฉีด: ${p.vaxDate}` : ''}
+          ${p.vaxExpiry ? ` · หมดอายุ: ${p.vaxExpiry}` : ''}
+        </div>
+        ${p.notes ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.8rem;">📝 ${p.notes}</div>` : ''}
         ${p.status === 'pending' ? `
           <div style="display: flex; gap: 0.5rem;">
             <button onclick="approvePet('${p.id}', '${p.room}', '${p.storageKey}')" class="compact-btn compact-btn-view">✅ Approve</button>
@@ -3683,41 +3690,47 @@ async function updateComplaintStatus(id, newStatus) {
 }
 
 // ===== GAMIFICATION PAGE =====
-function initGamificationPage() {
+async function initGamificationPage() {
   console.log('✅ Gamification page initialized');
-
-  // Build leaderboard from TenantConfigManager data across both buildings
-  const roomsTenants = TenantConfigManager.getTenantList('rooms');
-  const nestTenants  = TenantConfigManager.getTenantList('nest');
-  const allTenants   = [...roomsTenants, ...nestTenants];
-
-  // Score: 10 pts per month of tenancy (createdDate → now), capped at 120 pts
-  const score = t => {
-    const months = t.createdDate
-      ? Math.min(120, Math.floor((Date.now() - new Date(t.createdDate).getTime()) / (1000 * 60 * 60 * 24 * 30)))
-      : 0;
-    return months * 10;
-  };
-
-  // Write eco points to localStorage so tenant_app can read them
-  [['rooms', roomsTenants], ['nest', nestTenants]].forEach(([building, list]) => {
-    list.forEach(t => {
-      const room = t.id || t.room;
-      if (room) localStorage.setItem(`tenant_eco_points_${building}_${room}`, score(t));
-    });
-  });
-
-  // Rank from SSoT LEVEL_TIERS (shared/gamification-rules.js) — same tier system as tenant-facing profile
-  const scored = allTenants.map(t => {
-    const points = score(t);
-    const tier = window.GamificationRules
-      ? window.GamificationRules.getLevelForPoints(points)
-      : { emoji: '🌱', name: 'Seedling' };
-    return { name: t.name || t.id, points, rank: `${tier.emoji} ${tier.name}` };
-  }).sort((a, b) => b.points - a.points);
 
   const tbody = document.getElementById('leaderboardTable');
   if (!tbody) return;
+
+  // Build tenant list from TenantConfigManager across both buildings
+  const roomsTenants = TenantConfigManager.getTenantList('rooms').map(t => ({ ...t, building: 'rooms' }));
+  const nestTenants  = TenantConfigManager.getTenantList('nest').map(t => ({ ...t, building: 'nest' }));
+  const allTenants   = [...roomsTenants, ...nestTenants];
+
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">กำลังโหลด…</td></tr>';
+    window.addEventListener('firebaseInitialized', () => initGamificationPage(), { once: true });
+    return;
+  }
+
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">กำลังโหลดข้อมูลจาก Firestore…</td></tr>';
+
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+
+  // Read actual gamification.points from Firestore for each tenant
+  const results = await Promise.all(allTenants.map(async t => {
+    const roomId = t.id || t.room;
+    if (!roomId) return { ...t, points: 0, badges: [] };
+    try {
+      const snap = await fs.getDoc(fs.doc(db, `tenants/${t.building}/list/${roomId}`));
+      const data = snap.exists() ? snap.data() : {};
+      return { ...t, points: data.gamification?.points || 0, badges: data.gamification?.badges || [] };
+    } catch(e) {
+      return { ...t, points: 0, badges: [] };
+    }
+  }));
+
+  const scored = results.map(t => {
+    const tier = window.GamificationRules
+      ? window.GamificationRules.getLevelForPoints(t.points)
+      : { emoji: '🌱', name: 'Seedling' };
+    return { name: t.name || t.id || t.room, points: t.points, rank: `${tier.emoji} ${tier.name}`, badges: t.badges };
+  }).sort((a, b) => b.points - a.points);
 
   if (scored.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">ยังไม่มีข้อมูลผู้เช่า</td></tr>';
@@ -3728,9 +3741,12 @@ function initGamificationPage() {
     <tr>
       <td style="text-align:center;font-weight:700;">${i + 1}</td>
       <td>${t.name}</td>
-      <td style="text-align:center;font-weight:600;">${t.points}</td>
+      <td style="text-align:center;font-weight:600;">${t.points.toLocaleString()}</td>
       <td style="text-align:center;font-size:0.85rem;">${t.rank}</td>
     </tr>`).join('');
+
+  // Cache for badge tab use
+  window._gamificationScored = scored;
 }
 
 function switchGamificationTab(tabName, btn) {
@@ -3740,8 +3756,36 @@ function switchGamificationTab(tabName, btn) {
   document.querySelectorAll('#page-gamification button').forEach(b => b.style.borderBottom = '3px solid transparent');
   btn.style.color = '#2d8653';
   btn.style.borderBottom = '3px solid #2d8653';
-  // Lazy-load rewards admin when its tab opens (idempotent — _rewardsAdminUnsub guards)
   if (tabName === 'rewards' && typeof loadRewardsAdmin === 'function') loadRewardsAdmin();
+  if (tabName === 'badges') loadBadgesAdmin();
+}
+
+function loadBadgesAdmin() {
+  const container = document.getElementById('gamificationBadgesContent');
+  if (!container) return;
+
+  const catalog = window.GamificationRules?.BADGE_CATALOG;
+  if (!catalog) {
+    container.innerHTML = '<p style="color:var(--text-muted)">ไม่พบ BADGE_CATALOG — โหลด shared/gamification-rules.js</p>';
+    return;
+  }
+
+  const scored = window._gamificationScored || [];
+
+  container.innerHTML = catalog.map(badge => {
+    const earnedBy = scored.filter(t => Array.isArray(t.badges) && t.badges.some(b => (b.id || b) === badge.id));
+    const count = earnedBy.length;
+    return `
+      <div style="background:var(--green-pale);border-radius:10px;padding:1rem;text-align:center;position:relative;">
+        <div style="font-size:2rem;margin-bottom:.4rem;">${badge.emoji || '🏅'}</div>
+        <div style="font-weight:700;font-size:.95rem;">${badge.label || badge.name || badge.id}</div>
+        <div style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem;">≥ ${(badge.minPts || 0).toLocaleString()} pts</div>
+        <div style="margin-top:.6rem;background:${count > 0 ? '#dcfce7' : '#f1f5f9'};color:${count > 0 ? '#166534' : '#64748b'};border-radius:20px;padding:2px 10px;font-size:.8rem;font-weight:600;display:inline-block;">
+          ${count > 0 ? `${count} คน ได้รับแล้ว` : 'ยังไม่มีผู้รับ'}
+        </div>
+        ${count > 0 ? `<div style="margin-top:.4rem;font-size:.75rem;color:var(--text-muted);">${earnedBy.slice(0,3).map(t=>t.name).join(', ')}${count > 3 ? ` +${count-3}` : ''}</div>` : ''}
+      </div>`;
+  }).join('');
 }
 
 // ===== REWARDS ADMIN CRUD (Firestore `rewards/` collection) =====

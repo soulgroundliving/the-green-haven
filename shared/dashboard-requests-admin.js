@@ -917,9 +917,8 @@ let _hkRTDBUnsub = null;
 function subscribeHousekeepingRTDB(){
   if(_hkRTDBUnsub) return;
   if(!window.firebaseOnValue || !window.firebaseRef || !window.firebaseDatabase) {
-    console.warn('⚠️ subscribeHousekeepingRTDB skipped — firebase not ready', {
-      onValue: !!window.firebaseOnValue, ref: !!window.firebaseRef, db: !!window.firebaseDatabase
-    });
+    console.warn('⚠️ subscribeHousekeepingRTDB skipped — firebase not ready, will retry on firebaseInitialized');
+    window.addEventListener('firebaseInitialized', () => subscribeHousekeepingRTDB(), { once: true });
     return;
   }
   try {

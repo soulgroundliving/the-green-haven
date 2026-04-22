@@ -1825,6 +1825,23 @@
             </div>
         </div>
 
+        <div class="section-title"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
+        <div id="community-filter-pills" style="display:flex; gap:8px; padding:0 15px 10px; flex-wrap:wrap;">
+            <button class="cf-pill cf-pill-active" data-cat="all" onclick="setCommunityFilter('all', this)">ทั้งหมด</button>
+            <button class="cf-pill" data-cat="announcement" onclick="setCommunityFilter('announcement', this)">📢 ประกาศ</button>
+            <button class="cf-pill" data-cat="event" onclick="setCommunityFilter('event', this)">📅 กิจกรรม</button>
+        </div>
+        <div id="community-feed">
+            <div class="card" style="margin-top:0; text-align:center; color:#999; padding:28px 16px;">
+                <div style="font-size:2rem; margin-bottom:6px;">📭</div>
+                <div style="font-weight:600; color:#666;">ยังไม่มีประกาศหรือกิจกรรม</div>
+                <div style="font-size:var(--fs-sm); margin-top:4px;">เมื่อมีข่าวสารจากแอดมินจะขึ้นที่นี่ครับ</div>
+            </div>
+        </div>
+        <!-- Hidden legacy containers for backward-compat with existing render funcs -->
+        <div id="announcements-list" style="display:none;"></div>
+        <div id="events-list" style="display:none;"></div>
+
         <div class="grid grid-cols-2">
             <div class="card rounded-[2rem] p-5 shadow-sm flex items-center gap-4">
                 <div id="weather-emoji" class="text-3xl">🌤️</div>
@@ -2305,22 +2322,6 @@
             <h1>ชุมชน</h1>
             <p>แบ่งปันและร่วมกันสร้างสังคมที่อบอุ่น 🤝</p>
         </div>
-        <div class="section-title"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
-        <div id="community-filter-pills" style="display:flex; gap:8px; padding:0 15px 10px; flex-wrap:wrap;">
-            <button class="cf-pill cf-pill-active" data-cat="all" onclick="setCommunityFilter('all', this)">ทั้งหมด</button>
-            <button class="cf-pill" data-cat="announcement" onclick="setCommunityFilter('announcement', this)">📢 ประกาศ</button>
-            <button class="cf-pill" data-cat="event" onclick="setCommunityFilter('event', this)">📅 กิจกรรม</button>
-        </div>
-        <div id="community-feed">
-            <div class="card" style="margin-top:0; text-align:center; color:#999; padding:28px 16px;">
-                <div style="font-size:2rem; margin-bottom:6px;">📭</div>
-                <div style="font-weight:600; color:#666;">ยังไม่มีประกาศหรือกิจกรรม</div>
-                <div style="font-size:var(--fs-sm); margin-top:4px;">เมื่อมีข่าวสารจากแอดมินจะขึ้นที่นี่ครับ</div>
-            </div>
-        </div>
-        <!-- Hidden legacy containers for backward-compat with existing render funcs -->
-        <div id="announcements-list" style="display:none;"></div>
-        <div id="events-list" style="display:none;"></div>
 
         <!-- ported from tenant.html: lease renewal alert -->
         <div id="leaseRenewalAlert" class="card" style="display:none; background:#fff8e1; border-left:5px solid #ffc107; margin: 0 15px 12px;">
@@ -2330,7 +2331,7 @@
         </div>
 
         <div class="section-title">
-            <span>ตลาดนัดเพื่อนบ้าน 🛒</span>
+            <span>Marketplace 🛒</span>
             <small id="market-post-trigger" style="color:var(--primary-green); cursor: pointer; font-weight: bold;"
                 onclick="showSubPage('add-market-page')">+ ลงประกาศ</small>
         </div>
@@ -2411,11 +2412,7 @@
     </div>
 
     <div id="payment-page" class="page">
-        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
-            <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="goBackFromPayment()">
-                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
-            </div>
+        <div class="app-bar" style="padding-bottom: 25px;">
             <div>
                 <h1 style="margin:0; font-size: var(--fs-lg);"><i class="fas fa-credit-card" style="color:var(--primary-green); margin-right:6px;"></i>ชำระเงิน</h1>
                 <p style="margin:4px 0 0; color: var(--text-muted); font-size:var(--fs-sm);">ทำตามขั้นตอนด้านล่างเพื่อชำระเงินค่าบิล</p>
@@ -3122,7 +3119,7 @@
                 <div class="avatar-option" onclick="setAvatar('🌊', this)">🌊</div>
                 <div class="avatar-option" onclick="setAvatar('⛰️', this)">⛰️</div>
                 <label class="avatar-option" for="avatar-upload-input" title="อัปโหลดรูปจากเครื่อง"
-                    style="background: var(--soft-green); color: var(--primary-green); border: 2px dashed var(--primary-green); font-size: 1.9rem !important; line-height: 1;">
+                    style="background: var(--soft-green); color: var(--primary-green); border: 2px dashed var(--primary-green); font-size: 1.9rem !important; line-height: 1; display:flex; align-items:center; justify-content:center;">
                     📸
                 </label>
                 <input type="file" id="avatar-upload-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
@@ -3330,15 +3327,65 @@
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">Privacy Policy</h1>
         </div>
-        <div class="card">
-            <p><strong>นโยบายความเป็นส่วนตัว</strong></p>
-            <p>Apps collecting data must have a privacy policy to comply with global laws (GDPR, CCPA) and platform
-                requirements (Apple App Store, Google Play).</p>
-            <p><strong>Policies must clearly disclose:</strong><br>
-                • What data is collected<br>
-                • How it is used<br>
-                • How it is shared<br>
-                • How users can opt out</p>
+        <div class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
+            <p style="font-weight:700; font-size:var(--fs-md); margin-bottom:4px;">นโยบายความเป็นส่วนตัว</p>
+            <p style="color:var(--text-muted); margin-bottom:16px;">มีผลบังคับใช้ตั้งแต่ 1 พฤษภาคม 2568 | The Green Haven Co., Ltd.</p>
+
+            <p style="font-weight:700;">1. ข้อมูลที่เราเก็บรวบรวม</p>
+            <p>แอปพลิเคชัน Nature Haven เก็บข้อมูลต่อไปนี้เพื่อให้บริการแก่ผู้เช่า:</p>
+            <p><strong>ข้อมูลส่วนตัว</strong><br>
+            • ชื่อ-นามสกุล, เบอร์โทรศัพท์, อีเมล, ทะเบียนรถยนต์<br>
+            • หมายเลขห้อง และอาคารที่พักอาศัย<br>
+            • วันเกิด (เพื่อคำนวณดวงชะตาประจำวัน — เก็บเฉพาะวันในสัปดาห์)<br>
+            • ชื่อเล่นที่กำหนดเอง และรูปโปรไฟล์ (Avatar)</p>
+            <p><strong>ข้อมูลสัตว์เลี้ยง</strong><br>
+            • ชื่อ, ประเภท, สายพันธุ์, เพศ, อายุ<br>
+            • สถานะการฉีดวัคซีน, วันที่ฉีดและวันหมดอายุ</p>
+            <p><strong>ข้อมูลการชำระเงิน</strong><br>
+            • ยอดบิลค่าเช่า, ค่าไฟ, ค่าน้ำ<br>
+            • สลิปการโอนเงิน (ภาพ) สำหรับการยืนยันผ่าน SlipOK API<br>
+            • Transaction Reference จาก SlipOK<br>
+            • ข้อมูลบริษัท (ชื่อ, เลขประจำตัวผู้เสียภาษี, ที่อยู่) สำหรับใบเสร็จนามบริษัท</p>
+            <p><strong>ข้อมูลการใช้งานและมิเตอร์</strong><br>
+            • ข้อมูลมิเตอร์ไฟฟ้า (หน่วยเก่า-ใหม่) และน้ำประปา<br>
+            • ประวัติการใช้งานย้อนหลัง 6 เดือน</p>
+            <p><strong>ข้อมูลการแจ้งและบริการ</strong><br>
+            • คำขอแจ้งซ่อม (หมวดหมู่, รายละเอียด, รูปภาพ, ความเร่งด่วน)<br>
+            • คำขอทำความสะอาด (วันที่, ช่วงเวลา, หมายเหตุ)<br>
+            • การแจ้งนิติ/ร้องเรียน (ประเภท, ความรุนแรง, สถานที่, รายละเอียด)<br>
+            • รูปภาพประกอบการแจ้งซ่อม</p>
+            <p><strong>ข้อมูลชุมชนและ Marketplace</strong><br>
+            • โพสต์ Marketplace (ชื่อสินค้า, ราคา, รายละเอียด, รูปภาพ)<br>
+            • LINE User ID (เมื่อผูกบัญชี LINE LIFF)</p>
+            <p><strong>ข้อมูล Gamification</strong><br>
+            • คะแนน, ระดับ, ป้าย (Badge), ความสำเร็จ (Achievement)<br>
+            • สถิติการ Login ต่อเนื่อง (Login Streak)<br>
+            • ประวัติการอ่านบทความ Wellness และการรับคะแนน</p>
+
+            <p style="font-weight:700; margin-top:12px;">2. วัตถุประสงค์การใช้ข้อมูล</p>
+            <p>• เพื่อให้บริการจัดการอาคารพักอาศัย เช่น ออกบิล, รับแจ้งซ่อม<br>
+            • เพื่อยืนยันการชำระเงินและออกใบเสร็จ<br>
+            • เพื่อการอนุมัติสัตว์เลี้ยงและบริการต่างๆ<br>
+            • เพื่อส่งการแจ้งเตือนผ่าน LINE<br>
+            • เพื่อระบบ Gamification สร้างแรงจูงใจในชุมชน</p>
+
+            <p style="font-weight:700; margin-top:12px;">3. การแบ่งปันข้อมูล</p>
+            <p>• <strong>ผู้ดูแลระบบ (Admin)</strong>: เข้าถึงข้อมูลทุกประเภทเพื่อการบริหารจัดการ<br>
+            • <strong>SlipOK API</strong>: รับสลิปการโอนเงินเพื่อยืนยัน (ไม่เก็บข้อมูลบัตรเครดิต)<br>
+            • <strong>LINE Corporation</strong>: ผ่าน LIFF SDK สำหรับการแจ้งเตือน<br>
+            • <strong>Google Firebase</strong>: สำหรับการจัดเก็บและซิงค์ข้อมูลแบบ Real-time<br>
+            • เราไม่ขายหรือเผยแพร่ข้อมูลส่วนตัวแก่บุคคลภายนอกเพื่อวัตถุประสงค์ทางการค้า</p>
+
+            <p style="font-weight:700; margin-top:12px;">4. สิทธิ์ของเจ้าของข้อมูล (PDPA)</p>
+            <p>ภายใต้ พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 คุณมีสิทธิ์:<br>
+            • เข้าถึงและรับสำเนาข้อมูลของตนเอง<br>
+            • แก้ไขข้อมูลที่ไม่ถูกต้อง<br>
+            • ลบข้อมูล (เมื่อสิ้นสุดการเช่า)<br>
+            • คัดค้านหรือจำกัดการประมวลผลข้อมูล<br>
+            ติดต่อได้ที่: admin@the-green-haven.com</p>
+
+            <p style="font-weight:700; margin-top:12px;">5. การเก็บรักษาข้อมูล</p>
+            <p>ข้อมูลจะถูกเก็บตลอดระยะเวลาการเช่า และลบออกภายใน 90 วันหลังสิ้นสุดสัญญา ยกเว้นข้อมูลทางบัญชีที่กฎหมายกำหนดให้เก็บ 5 ปี</p>
         </div>
     </div>
 
@@ -3348,14 +3395,52 @@
                 onclick="showSubPage('settings')">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
-            <h1 style="margin:0; font-size: var(--fs-lg);">Terms of Use</h1>
+            <h1 style="margin:0; font-size: var(--fs-lg);">คู่มือการใช้งาน</h1>
         </div>
-        <div class="card">
-            <p><strong>ข้อกำหนดการใช้งาน</strong></p>
-            <p>Terms of Use (also known as Terms and Conditions or Terms of Service) is a <strong>legally binding
-                    agreement</strong> between a service provider (website or app owner) and its users.</p>
-            <p>It defines the rules, rights, and responsibilities governing the use of the service, protecting the
-                owner's intellectual property and limiting their legal liability.</p>
+        <div class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
+            <p style="font-weight:700; font-size:var(--fs-md); margin-bottom:4px;">คู่มือการใช้งาน Nature Haven App</p>
+            <p style="color:var(--text-muted); margin-bottom:16px;">เวอร์ชัน 6.0 | อัปเดต พฤษภาคม 2568</p>
+
+            <p style="font-weight:700;">🏠 หน้าหลัก (Home)</p>
+            <p>• <strong>ประกาศ & กิจกรรม</strong>: ประกาศจากแอดมิน กรองตามประเภทได้<br>
+            • <strong>สภาพอากาศ</strong>: อุณหภูมิและ AQI แบบ Real-time เขตสายไหม<br>
+            • <strong>คำทรงพลัง</strong>: แรงบันดาลใจประจำวัน<br>
+            • <strong>Wellness Tips</strong>: บทความสุขภาพ — กดอ่านครบแล้วรับคะแนน</p>
+
+            <p style="font-weight:700; margin-top:12px;">🔧 หน้าบริการ (Service)</p>
+            <p>• <strong>แจ้งซ่อม</strong>: เลือกหมวดหมู่ → กรอกรายละเอียด → แนบรูป → ส่ง<br>
+            • <strong>จองทำความสะอาด</strong>: เลือก Standard Clean (ฟรี) หรือ Deep Cleaning (500฿) → เลือกวัน-เวลา<br>
+              &nbsp;&nbsp;- Deep Cleaning: ต้องชำระก่อนผ่าน PromptPay แล้วแนบสลิป<br>
+            • <strong>แจ้งนิติ</strong>: เลือกประเภท → ระบุความรุนแรง → กรอกรายละเอียด → ส่ง<br>
+            • ดูประวัติการแจ้งได้ในแต่ละหน้า</p>
+
+            <p style="font-weight:700; margin-top:12px;">👥 หน้าชุมชน (Community)</p>
+            <p>• <strong>Marketplace</strong>: ลงประกาศขาย/แจกของ หรือบริการ<br>
+              &nbsp;&nbsp;- กด "+ ลงประกาศ" → กรอกข้อมูล → โพสต์<br>
+              &nbsp;&nbsp;- จัดการประกาศตัวเองได้ที่ "ประกาศของฉัน" (ปิด หรือ ลบ)<br>
+            • ติดต่อผู้ขายผ่าน LINE หรือหมายเลขห้อง</p>
+
+            <p style="font-weight:700; margin-top:12px;">💳 หน้าการใช้งาน (Usage)</p>
+            <p>• ดูยอดบิลปัจจุบันและประวัติย้อนหลัง<br>
+            • กด "ชำระบิล" → สแกน PromptPay → อัปโหลดสลิป → รอยืนยัน<br>
+            • ดูกราฟการใช้ไฟ/น้ำย้อนหลัง 6 เดือน</p>
+
+            <p style="font-weight:700; margin-top:12px;">👤 หน้าโปรไฟล์ (Profile)</p>
+            <p>• ดูข้อมูลส่วนตัว สัญญาเช่า และสัตว์เลี้ยง<br>
+            • แก้ไขเบอร์โทร อีเมล ทะเบียนรถ<br>
+            • ลงทะเบียนสัตว์เลี้ยงใหม่ → รอแอดมินอนุมัติ<br>
+            • ดูคะแนน, ระดับ, ป้าย และ Quests ในระบบ Gamification</p>
+
+            <p style="font-weight:700; margin-top:12px;">⚙️ หน้าตั้งค่า (Settings)</p>
+            <p>• <strong>ตั้งค่าความชอบ</strong>: เปลี่ยน Avatar, ชื่อเล่น, วันเกิด, ประเภทใบเสร็จ<br>
+            • <strong>ข้อมูลอาคาร</strong>: ดูสถานะสาธารณูปโภค<br>
+            • ออกจากระบบ</p>
+
+            <p style="font-weight:700; margin-top:12px;">🔔 การแจ้งเตือน LINE</p>
+            <p>เชื่อมบัญชี LINE เพื่อรับแจ้งเตือนเมื่อ:<br>
+            • มีบิลใหม่<br>
+            • สถานะการซ่อมเปลี่ยน<br>
+            • การอนุมัติสัตว์เลี้ยง/การชำระเงิน</p>
         </div>
     </div>
 
@@ -3367,12 +3452,45 @@
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">Data & Compliance</h1>
         </div>
-        <div class="card">
-            <p><strong>การปฏิบัติตามกฎระเบียบด้านข้อมูล</strong></p>
-            <p>เรามุ่งมั่นที่จะปฏิบัติตามกฎระเบียบด้านการคุ้มครองข้อมูลส่วนบุคคลและมาตรฐานการแสดงผลข้อมูลคุณภาพน้ำเพื่อให้มั่นใจว่าผู้ใช้จะได้รับข้อมูลที่ถูกต้อง
-                แม่นยำ และปลอดภัยตามมาตรฐานสากล</p>
-            <p>การจัดการข้อมูลทั้งหมดถูกจัดเก็บด้วยระบบที่มีความปลอดภัยสูงและมีการตรวจสอบการเข้าถึงอย่างเคร่งครัด
-            </p>
+        <div class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
+            <p style="font-weight:700; font-size:var(--fs-md); margin-bottom:4px;">การปฏิบัติตามกฎระเบียบด้านข้อมูล</p>
+            <p style="color:var(--text-muted); margin-bottom:16px;">The Green Haven Co., Ltd. | มีผลบังคับใช้ 1 พฤษภาคม 2568</p>
+
+            <p style="font-weight:700;">1. พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA) พ.ศ. 2562</p>
+            <p>เราดำเนินการตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 อย่างเคร่งครัด:<br>
+            • เก็บรวบรวมข้อมูลเฉพาะที่จำเป็นต่อการให้บริการ (Data Minimization)<br>
+            • ได้รับความยินยอมก่อนประมวลผลข้อมูลส่วนบุคคล<br>
+            • แจ้งวัตถุประสงค์การใช้ข้อมูลอย่างชัดเจน<br>
+            • มีมาตรการรักษาความปลอดภัยของข้อมูลที่เหมาะสม</p>
+
+            <p style="font-weight:700; margin-top:12px;">2. ระบบจัดเก็บข้อมูล</p>
+            <p>• <strong>Google Firebase Firestore</strong>: เก็บข้อมูลผู้เช่า, บิล, สัตว์เลี้ยง, Marketplace, Wellness<br>
+            • <strong>Google Firebase RTDB</strong>: ข้อมูล Real-time (มิเตอร์, การซ่อม, การทำความสะอาด, Gamification)<br>
+            • <strong>Vercel (CDN)</strong>: ให้บริการ Frontend Application<br>
+            • เซิร์ฟเวอร์ทั้งหมดตั้งอยู่ในภูมิภาค Asia (Singapore/Tokyo)<br>
+            • ข้อมูลถูกเข้ารหัสระหว่างการส่ง (TLS 1.3) และเมื่อจัดเก็บ (AES-256)</p>
+
+            <p style="font-weight:700; margin-top:12px;">3. การเข้าถึงข้อมูล</p>
+            <p>• <strong>ผู้เช่า</strong>: เข้าถึงเฉพาะข้อมูลของตนเอง ผ่าน Firebase Security Rules<br>
+            • <strong>แอดมิน</strong>: เข้าถึงข้อมูลทุกห้องผ่านการยืนยันตัวตน Firebase Auth<br>
+            • <strong>ระบบอัตโนมัติ</strong>: Cloud Functions ประมวลผลตาม Business Logic ที่กำหนด<br>
+            • ไม่มีพนักงานบุคคลภายนอกเข้าถึงข้อมูล</p>
+
+            <p style="font-weight:700; margin-top:12px;">4. การยืนยันการชำระเงิน (SlipOK)</p>
+            <p>สลิปการโอนเงินถูกส่งผ่าน SlipOK API เพื่อยืนยันความถูกต้อง:<br>
+            • ข้อมูลที่ส่ง: ภาพสลิปและจำนวนเงิน<br>
+            • SlipOK ไม่เก็บข้อมูลส่วนตัวของผู้โอน<br>
+            • Transaction Reference ถูกเก็บเพื่อการตรวจสอบย้อนหลัง</p>
+
+            <p style="font-weight:700; margin-top:12px;">5. การแจ้งเหตุละเมิดข้อมูล</p>
+            <p>หากเกิดเหตุละเมิดข้อมูลส่วนบุคคล เราจะ:<br>
+            • แจ้ง PDPA Office ภายใน 72 ชั่วโมง<br>
+            • แจ้งผู้ที่ได้รับผลกระทบโดยตรงโดยเร็วที่สุด<br>
+            • ดำเนินมาตรการแก้ไขและป้องกันทันที</p>
+
+            <p style="font-weight:700; margin-top:12px;">6. ติดต่อเจ้าหน้าที่คุ้มครองข้อมูล (DPO)</p>
+            <p>อีเมล: dpo@the-green-haven.com<br>
+            โทร: 02-XXX-XXXX (จ-ศ 9:00-18:00 น.)</p>
         </div>
     </div>
 
@@ -3384,13 +3502,42 @@
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">IP Infringement</h1>
         </div>
-        <div class="card">
-            <p><strong>การละเมิดทรัพย์สินทางปัญญา</strong></p>
-            <p>เนื้อหาทั้งหมดที่ปรากฏในแอปพลิเคชันนี้ รวมถึงแต่ไม่จำกัดเพียง ข้อความ กราฟิก โลโก้ ไอคอน และซอฟต์แวร์
-                เป็นทรัพย์สินของหน่วยงานหรือผู้สร้างสรรค์ที่ได้รับอนุญาต</p>
-            <p>ห้ามมิให้ผู้ใดคัดลอก ทำซ้ำ ดัดแปลง
-                หรือนำข้อมูลไปใช้เพื่อประโยชน์ทางการค้าโดยไม่ได้รับอนุญาตเป็นลายลักษณ์อักษร
-                การละเมิดจะถูกดำเนินคดีตามกฎหมายสูงสุด</p>
+        <div class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
+            <p style="font-weight:700; font-size:var(--fs-md); margin-bottom:4px;">นโยบายทรัพย์สินทางปัญญา</p>
+            <p style="color:var(--text-muted); margin-bottom:16px;">The Green Haven Co., Ltd. | มีผลบังคับใช้ 1 พฤษภาคม 2568</p>
+
+            <p style="font-weight:700;">1. ทรัพย์สินทางปัญญาของเรา</p>
+            <p>เนื้อหาทั้งหมดในแอปพลิเคชัน Nature Haven รวมถึง:<br>
+            • ชื่อแบรนด์ "Nature Haven", "The Green Haven" และโลโก้<br>
+            • การออกแบบ UI/UX, ธีมสี, ฟอนต์ และรูปแบบภาพ<br>
+            • ซอร์สโค้ดและโครงสร้างระบบ<br>
+            • เนื้อหาบทความ Wellness ที่จัดทำโดยทีมงาน<br>
+            • ระบบ Gamification, คะแนน และ Badge Design<br>
+            ล้วนเป็นทรัพย์สินทางปัญญาของ The Green Haven Co., Ltd. และได้รับการคุ้มครองตามกฎหมายลิขสิทธิ์ไทย</p>
+
+            <p style="font-weight:700; margin-top:12px;">2. สิ่งที่ห้ามทำ</p>
+            <p>• คัดลอก ทำซ้ำ หรือดัดแปลงซอร์สโค้ดโดยไม่ได้รับอนุญาต<br>
+            • นำบทความ Wellness, Gamification Content หรือเนื้อหาใดๆ ไปใช้เชิงพาณิชย์<br>
+            • Reverse Engineer หรือ Decompile ระบบ Backend<br>
+            • ใช้ชื่อแบรนด์หรือโลโก้ในสื่อใดๆ โดยไม่ได้รับอนุญาตเป็นลายลักษณ์อักษร<br>
+            • สร้างแอปพลิเคชันที่มีลักษณะคล้ายคลึงเพื่อแข่งขัน</p>
+
+            <p style="font-weight:700; margin-top:12px;">3. เนื้อหาที่ผู้ใช้สร้าง (UGC)</p>
+            <p>• โพสต์ Marketplace และรูปภาพที่ผู้เช่าลงประกาศ: ผู้เช่าคือเจ้าของลิขสิทธิ์<br>
+            • โดยการโพสต์ คุณอนุญาตให้เราแสดงเนื้อหาในระบบแก่ผู้เช่าคนอื่นในโครงการ<br>
+            • เราไม่นำ UGC ไปใช้เชิงพาณิชย์หรือเผยแพร่สู่สาธารณะ<br>
+            • ห้ามโพสต์เนื้อหาที่ละเมิดลิขสิทธิ์ผู้อื่น, หมิ่นประมาท หรือผิดกฎหมาย</p>
+
+            <p style="font-weight:700; margin-top:12px;">4. การรายงานการละเมิด</p>
+            <p>หากพบการละเมิดทรัพย์สินทางปัญญา กรุณาแจ้ง:<br>
+            อีเมล: legal@the-green-haven.com<br>
+            ระบุ: URL/เนื้อหาที่ละเมิด, รายละเอียดสิทธิ์ที่ถูกละเมิด, ข้อมูลติดต่อ</p>
+
+            <p style="font-weight:700; margin-top:12px;">5. บทลงโทษ</p>
+            <p>การละเมิดทรัพย์สินทางปัญญาอาจถูกดำเนินการตามกฎหมาย:<br>
+            • พ.ร.บ. ลิขสิทธิ์ พ.ศ. 2537 (โทษจำคุกไม่เกิน 4 ปี และ/หรือปรับไม่เกิน 800,000 บาท)<br>
+            • พ.ร.บ. ว่าด้วยการกระทำความผิดเกี่ยวกับคอมพิวเตอร์ พ.ศ. 2550<br>
+            • การเรียกค่าเสียหายทางแพ่งเพิ่มเติม</p>
         </div>
     </div>
 
@@ -3682,6 +3829,8 @@
                 // Default to deep if Standard Clean isn't available this month
                 const def = _isStandardCleanAvailable?.() ? (_selectedService || 'free') : 'deep';
                 if (typeof selectService === 'function') selectService(def);
+                // Show opt-in modal only when user navigates here, not at app load
+                if (typeof _maybeOpenStandardCleanModal === 'function') _maybeOpenStandardCleanModal();
             }
             if (id === 'maintenance' && typeof renderTicketsList === 'function') renderTicketsList();
             window.scrollTo(0, 0);
@@ -4519,6 +4668,25 @@
                 const el = document.getElementById(id);
                 if (el) el.innerText = name;
             });
+            const greetEl = document.getElementById('user-greeting');
+            if (greetEl) greetEl.textContent = val ? `สวัสดีครับ คุณ${val}` : 'สวัสดีครับ คุณลูกบ้าน';
+            try {
+                const k = `tenant_nickname_${window._tenantAppBuilding||'x'}_${window._tenantAppRoom||'x'}`;
+                if (val) localStorage.setItem(k, val);
+                else localStorage.removeItem(k);
+            } catch(_) {}
+        }
+
+        function _loadNickname() {
+            try {
+                const k = `tenant_nickname_${window._tenantAppBuilding||'x'}_${window._tenantAppRoom||'x'}`;
+                const saved = localStorage.getItem(k);
+                if (saved) {
+                    updateName(saved);
+                    const inp = document.getElementById('nickname-input');
+                    if (inp) inp.value = saved;
+                }
+            } catch(_) {}
         }
 
         function setAvatar(emoji, el) {
@@ -4853,12 +5021,26 @@
                 sub.textContent = (item.category === 'free' ? 'แจกฟรี' : '฿' + (item.price || 0)) + (item.showRoom && item.room ? ' · ห้อง ' + item.room : '');
                 info.appendChild(t);
                 info.appendChild(sub);
-                const closeBtn = document.createElement('button');
-                closeBtn.style.cssText = 'padding:5px 12px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
-                closeBtn.textContent = 'ปิด';
-                closeBtn.onclick = () => markMarketClosed(item.id);
+                const statusBadge = document.createElement('div');
+                statusBadge.style.cssText = 'font-size:var(--fs-xs);color:#888;margin-top:2px;';
+                statusBadge.textContent = item.status === 'closed' ? '🔒 ปิดแล้ว' : '✅ เปิดอยู่';
+                info.appendChild(statusBadge);
+                const btns = document.createElement('div');
+                btns.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+                if (item.status !== 'closed') {
+                    const closeBtn = document.createElement('button');
+                    closeBtn.style.cssText = 'padding:4px 10px;background:#fef9c3;color:#92400e;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
+                    closeBtn.textContent = 'ปิด';
+                    closeBtn.onclick = () => markMarketClosed(item.id);
+                    btns.appendChild(closeBtn);
+                }
+                const delBtn = document.createElement('button');
+                delBtn.style.cssText = 'padding:4px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;touch-action:manipulation;';
+                delBtn.textContent = 'ลบ';
+                delBtn.onclick = () => deleteMarketItem(item.id);
+                btns.appendChild(delBtn);
                 row.appendChild(info);
-                row.appendChild(closeBtn);
+                row.appendChild(btns);
                 cont.appendChild(row);
             });
         }
@@ -4895,6 +5077,22 @@
             } catch(e) {
                 console.warn('markMarketClosed:', e);
                 toast('เกิดข้อผิดพลาด ลองใหม่ครับ', 'error');
+            }
+        }
+
+        async function deleteMarketItem(id) {
+            if (!confirm('ลบประกาศนี้ถาวรเลยไหมครับ? ไม่สามารถกู้คืนได้')) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                await fs.deleteDoc(fs.doc(db, 'marketplace', id));
+                _marketItems = _marketItems.filter(i => i.id !== id);
+                renderMarketFeed();
+                toast('ลบประกาศแล้วครับ', 'success');
+            } catch(e) {
+                console.warn('deleteMarketItem:', e);
+                toast('ลบไม่สำเร็จ ลองใหม่ครับ', 'error');
             }
         }
 
@@ -5680,19 +5878,21 @@
                 container.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:var(--fs-md);padding:20px;">ไม่พบรายการ</p>';
                 return;
             }
-            const statusLabel = { open:'รอดำเนินการ', 'in-progress':'กำลังดำเนินการ', resolved:'แก้ไขแล้ว' };
-            const statusColor = { open:'#ef4444', 'in-progress':'#f59e0b', resolved:'#22c55e' };
-            const catEmoji = { noise:'🔊', security:'🔒', parking:'🅿️', cleanliness:'🧹', facilities:'🔧', neighbor:'👥', staff:'👤', other:'📌' };
+            const statusLabel = { open:'⏳ รอดำเนินการ', 'in-progress':'🔧 กำลังดำเนินการ', resolved:'✅ แก้ไขแล้ว' };
+            const statusColor = { open:'#f59e0b', 'in-progress':'#3b82f6', resolved:'#22c55e' };
+            const catLabel = { noise:'🔊 เสียงดัง', security:'🔒 ความปลอดภัย', parking:'🅿️ ที่จอดรถ', cleanliness:'🧹 ความสะอาด', facilities:'🔧 สิ่งอำนวยความสะดวก', neighbor:'👥 ปัญหาเพื่อนบ้าน', staff:'👤 พนักงาน', other:'📌 อื่นๆ' };
             container.innerHTML = filtered.map(c => {
-                const rawDesc = c.description || '';
-                const desc = _esc(rawDesc.length > 55 ? rawDesc.substring(0,55) + '…' : rawDesc);
-                const date = new Date(c.createdAt).toLocaleDateString('th-TH');
-                return `<div style="background:white;border-radius:12px;padding:12px;margin-bottom:10px;border:1px solid #f0f0f0;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-                        <span style="font-size:var(--fs-md);font-weight:700;">${catEmoji[c.category]||'📌'} ${desc}</span>
-                        <span style="font-size:var(--fs-sm);font-weight:700;color:${statusColor[c.status]||'#6b7280'};white-space:nowrap;margin-left:8px;">${_esc(statusLabel[c.status]||c.status)}</span>
+                const date = c.createdAt ? new Date(c.createdAt).toLocaleDateString('th-TH') : '—';
+                const status = c.status || 'open';
+                return `<div style="background:white;border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid #f0f0f0;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span style="font-size:var(--fs-sm);font-weight:700;color:#6b7280;">${_esc(c.id || '—')}</span>
+                        <span style="font-size:var(--fs-sm);font-weight:700;color:${statusColor[status]||'#6b7280'};">${_esc(statusLabel[status]||status)}</span>
                     </div>
+                    <p style="font-size:var(--fs-md);font-weight:700;margin-bottom:4px;">${_esc(catLabel[c.category]||c.category||'—')}</p>
+                    <p style="font-size:var(--fs-sm);color:#6b7280;margin-bottom:4px;">${_esc(c.description||'')}</p>
                     <p style="font-size:var(--fs-sm);color:#9ca3af;">${date}${c.location?' · '+_esc(c.location):''}</p>
+                    ${c.adminNote ? `<p style="font-size:var(--fs-sm);margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;color:#374151;">📝 ${_esc(c.adminNote)}</p>` : ''}
                 </div>`;
             }).join('');
         }
@@ -5840,7 +6040,6 @@
                     _renderCleaningServices();
                     _renderCleaningTimeSlots();
                     _refreshStandardCleanAvailability();
-                    _maybeOpenStandardCleanModal();
                 }, err => console.warn('cleaningConfig subscribe failed:', err.message));
             } catch (e) { console.warn('cleaningConfig subscribe init failed:', e.message); }
         }
@@ -6942,6 +7141,7 @@
             loadAvatar();
             renderWellness();
             loadWellnessFromFirestore();
+            _loadNickname();
             // Daily bonus — safe to run now: _nestOnlyDisabled is set by detectRoomBuilding() above
             checkDailyLogin();
             // Deep-link: ?page=bill from LINE bill-ready notification → jump to bill list
@@ -7668,6 +7868,12 @@
                 if (snap.empty) return;
                 _wellnessList = snap.docs.map(d => {
                     const a = d.data();
+                    // Derive cover image: explicit field first, else first <img> in body
+                    let coverImage = a.coverImage || null;
+                    if (!coverImage) {
+                        const m = (a.body || '').match(/<img[^>]*src="([^"]+)"/i);
+                        if (m) coverImage = m[1];
+                    }
                     return {
                         id: d.id,
                         icon: (a.icon || 'fa-leaf').startsWith('fa-') ? a.icon : 'fa-' + a.icon,
@@ -7677,6 +7883,7 @@
                         category: a.category || 'Wellness',
                         readtime: a.readtime || 3,
                         reward: a.reward || 0,
+                        coverImage,
                     };
                 });
                 renderWellness();
@@ -7689,7 +7896,9 @@
             const toShow = src.slice(0, _wellnessShown);
             list.innerHTML = toShow.map(a => `
                 <div class="blog-card" onclick="openWellnessArticle('${a.id}')" style="cursor:pointer;">
-                    <div class="blog-img"><i class="fas ${a.icon}"></i></div>
+                    <div class="blog-img">${a.coverImage
+                        ? `<img src="${a.coverImage}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" alt="">`
+                        : `<i class="fas ${a.icon}"></i>`}</div>
                     <div class="blog-content">
                         <h3>${a.title}</h3>
                         <p>${a.excerpt}</p>
@@ -7723,7 +7932,11 @@
             _currentWellnessArticle = a;
             const $ = i => document.getElementById(i);
             if ($('wellness-article-title')) $('wellness-article-title').textContent = a.title;
-            if ($('wellness-article-icon')) $('wellness-article-icon').innerHTML = `<i class="fas ${a.icon}"></i>`;
+            if ($('wellness-article-icon')) {
+                $('wellness-article-icon').innerHTML = a.coverImage
+                    ? `<img src="${a.coverImage}" style="width:48px;height:48px;object-fit:cover;border-radius:12px;" alt="">`
+                    : `<i class="fas ${a.icon}"></i>`;
+            }
             if ($('wellness-article-body')) $('wellness-article-body').innerHTML = a.body;
             const rtEl = $('wellness-article-readtime');
             if (rtEl) rtEl.textContent = `อ่าน ${a.readtime || 3} นาที${a.reward > 0 ? ' • +' + a.reward + ' pts' : ''}`;
@@ -7807,9 +8020,9 @@
                 const tenantSnap = await fns.getDoc(tenantRef);
                 const cur = tenantSnap.data() || {};
                 const g = cur.gamification || {};
-                const newPts = (g.totalPoints || 0) + a.reward;
+                const newPts = (g.points || 0) + a.reward;
                 await fns.setDoc(tenantRef, {
-                    gamification: { ...g, totalPoints: newPts, wellnessPts: (g.wellnessPts || 0) + a.reward }
+                    gamification: { ...g, points: newPts, wellnessPts: (g.wellnessPts || 0) + a.reward }
                 }, { merge: true });
                 btn.textContent = `✅ +${a.reward} pts! (รวม ${newPts})`;
                 btn.style.opacity = '.5';

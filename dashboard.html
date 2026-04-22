@@ -3117,6 +3117,17 @@
         <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px;">แนะนำไม่เกิน 160 ตัวอักษร</div>
       </div>
 
+      <!-- Cover image upload (single, shown as thumbnail in tenant article list) -->
+      <div class="mb-4">
+        <label class="field-label">🖼️ ภาพปก (แสดงหน้าปกในแอพลูกบ้าน)</label>
+        <input type="file" id="wellness-cover-input" accept="image/*" onchange="onWellnessCoverPicked(event)" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:'Sarabun';">
+        <div id="wellness-cover-preview" style="margin-top:8px;display:none;">
+          <img id="wellness-cover-img" src="" alt="ภาพปก" style="width:120px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
+          <button type="button" onclick="clearWellnessCover()" style="display:block;margin-top:4px;font-size:.72rem;background:none;border:none;color:var(--danger);cursor:pointer;font-family:'Sarabun';">✕ ลบภาพปก</button>
+        </div>
+        <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">ภาพปกจะแสดงแทน icon ในรายการ Wellness Tips — รองรับ JPG/PNG/WEBP</div>
+      </div>
+
       <!-- Image upload (multiple, compressed inline base64) -->
       <div class="mb-4">
         <label class="field-label">📷 รูปประกอบ (เลือกหลายรูปได้)</label>
@@ -3798,22 +3809,9 @@
 
     <!-- Badges Tab -->
     <div id="gamificationBadges" style="display: none;">
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1.5rem;">
-        <div style="text-align: center; padding: 1rem; background: var(--green-pale); border-radius: var(--radius-sm);">
-          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🌟</div>
-          <div style="font-weight: 600;">First Month</div>
-          <small class="color-muted">Complete first month</small>
-        </div>
-        <div style="text-align: center; padding: 1rem; background: var(--green-pale); border-radius: var(--radius-sm);">
-          <div style="font-size: 2rem; margin-bottom: 0.5rem;">💎</div>
-          <div style="font-weight: 600;">On Time</div>
-          <small class="color-muted">Pay rent on time</small>
-        </div>
-        <div style="text-align: center; padding: 1rem; background: #f5f5f5; border-radius: var(--radius-sm); opacity: 0.6;">
-          <div style="font-size: 2rem; margin-bottom: 0.5rem;">👑</div>
-          <div style="font-weight: 600;">Master</div>
-          <small class="color-muted">1000+ points</small>
-        </div>
+      <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">แสดงผลจาก BADGE_CATALOG ใน shared/gamification-rules.js — อัปเดตอัตโนมัติเมื่อเปิดแท็บนี้</div>
+      <div id="gamificationBadgesContent" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1.2rem;">
+        <p style="color:var(--text-muted);">เปิดแท็บ Badges เพื่อโหลด</p>
       </div>
     </div>
 
