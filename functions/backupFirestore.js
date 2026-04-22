@@ -46,7 +46,14 @@ const firestoreClient = new firestoreLib.v1.FirestoreAdminClient();
 const storage = new Storage();
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT;
-const BUCKET_NAME = `${PROJECT_ID}.firebasestorage.app`;
+// Dedicated bucket for Firestore exports. MUST live in the same region as
+// the Firestore database (asia-southeast3 / Jakarta) — Firestore Admin's
+// exportDocuments rejects cross-region destinations. We can't reuse the
+// default Firebase Storage bucket because that's in asia-southeast1
+// (chosen for low-latency tenant uploads). Two-bucket setup is the official
+// pattern recommended in Google's Firestore backup docs.
+const BACKUP_BUCKET = `${PROJECT_ID}-firestore-backups`;
+const BACKUP_BUCKET_LOCATION = 'asia-southeast3';
 const PREFIX = 'firestore-backups';
 const RETENTION_DAYS = 30;
 
@@ -56,13 +63,31 @@ function tsStamp() {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}_${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}`;
 }
 
+async function ensureBackupBucket() {
+  // Idempotent: create the dedicated backup bucket on first run so a fresh
+  // checkout self-heals. Bucket lives in asia-southeast3 to match Firestore.
+  // Storage Admin permission required (already granted to the default SA).
+  const bucket = storage.bucket(BACKUP_BUCKET);
+  const [exists] = await bucket.exists();
+  if (exists) return BACKUP_BUCKET;
+
+  console.log(`📦 Creating backup bucket gs://${BACKUP_BUCKET} in ${BACKUP_BUCKET_LOCATION}...`);
+  await storage.createBucket(BACKUP_BUCKET, {
+    location: BACKUP_BUCKET_LOCATION,
+    storageClass: 'STANDARD'
+  });
+  console.log(`✅ Created bucket gs://${BACKUP_BUCKET}`);
+  return BACKUP_BUCKET;
+}
+
 async function runBackup() {
   if (!PROJECT_ID) {
     throw new Error('GCLOUD_PROJECT / GCP_PROJECT env not set');
   }
 
+  const bucketName = await ensureBackupBucket();
   const stamp = tsStamp();
-  const outputUriPrefix = `gs://${BUCKET_NAME}/${PREFIX}/${stamp}`;
+  const outputUriPrefix = `gs://${bucketName}/${PREFIX}/${stamp}`;
   const databaseName = firestoreClient.databasePath(PROJECT_ID, '(default)');
 
   console.log(`📦 Starting Firestore export → ${outputUriPrefix}`);
@@ -78,7 +103,7 @@ async function runBackup() {
   console.log(`✅ Export operation queued: ${operation.name}`);
 
   // Prune old snapshots past retention window. Cheap: listFiles + delete.
-  const pruned = await pruneOldBackups();
+  const pruned = await pruneOldBackups(bucketName);
 
   return {
     stamp,
@@ -88,13 +113,13 @@ async function runBackup() {
   };
 }
 
-async function pruneOldBackups() {
+async function pruneOldBackups(bucketName) {
   const cutoffMs = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000;
   let deleted = 0;
   let scanned = 0;
 
   try {
-    const bucket = storage.bucket(BUCKET_NAME);
+    const bucket = storage.bucket(bucketName);
     const [files] = await bucket.getFiles({ prefix: `${PREFIX}/` });
     for (const file of files) {
       scanned++;
