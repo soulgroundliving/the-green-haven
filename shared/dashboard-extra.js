@@ -1838,61 +1838,51 @@ function renderLeaseAgreementsPage() {
   if (!container) return;
 
   const leases = LeaseAgreementManager.getAllLeasesList();
-  const rooms = RoomConfigManager.getRoomsConfig('rooms').rooms;
-  const nestRooms = RoomConfigManager.getRoomsConfig('nest').rooms;
-  const allRooms = [...rooms, ...nestRooms];
-  const tenants = TenantConfigManager.getTenantList();
 
-  const buildingOptions = '<option value="rooms">ห้องแถว</option><option value="nest">Nest Building</option>';
-  const roomOptions = allRooms.map(r => `<option value="${r.id}">${r.id} - ${r.name}</option>`).join('');
-  const tenantOptions = tenants.map(t => `<option value="${t.id}">${t.id} - ${t.name}</option>`).join('');
+  // Aggregate tenants from both buildings (SSoT: Tab ผู้เช่า)
+  // We tag each tenant with its building so the info card can show it without re-asking.
+  const allTenants = [];
+  ['rooms', 'nest'].forEach(b => {
+    const list = (typeof TenantConfigManager !== 'undefined')
+      ? TenantConfigManager.getTenantList(b) || []
+      : [];
+    list.forEach(t => {
+      // Find the tenantId key (saveTenantInfo stores by generated id, not by name)
+      const raw = TenantConfigManager.getAllTenants(b);
+      const id = Object.keys(raw).find(k => raw[k] === t) || t.id;
+      allTenants.push({ ...t, id, building: b });
+    });
+  });
+
+  const tenantOptions = allTenants
+    .map(t => {
+      const activeLease = LeaseAgreementManager.getLeasesByTenant(t.id).find(l => l.status === 'active');
+      const roomLabel = activeLease ? `ห้อง ${activeLease.roomId}` : 'ยังไม่ผูกห้อง';
+      const buildingLabel = t.building === 'rooms' ? 'ห้องแถว' : 'Nest';
+      return `<option value="${t.id}">${_escapeHTML(t.name || t.id)} — ${roomLabel} (${buildingLabel})</option>`;
+    }).join('');
 
   container.innerHTML = `
     <div style="margin-top: 1.5rem;">
-      <!-- Add Lease Form -->
+      <!-- Add Lease Form — SSoT: tenant data from Tab ผู้เช่า, rent from Tab จัดการห้อง -->
       <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 2rem;">
-        <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">➕ สร้างสัญญาเช่าใหม่</div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">อาคาร *</label>
-            <select id="leaseBuilding" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-              ${buildingOptions}
-            </select>
-          </div>
-          <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ห้อง *</label>
-            <select id="leaseRoom" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-              <option value="">-- เลือกห้อง --</option>
-              ${roomOptions}
-            </select>
-          </div>
+        <div style="font-weight: 600; margin-bottom: 0.3rem; font-size: 1.1rem;">📎 แนบเอกสารสัญญา</div>
+        <div style="font-size: 0.82rem; color: #666; margin-bottom: 1rem;">
+          ข้อมูลลูกบ้านและค่าเช่าดึงจาก SSoT อัตโนมัติ — ต้องแก้ที่ต้นทาง:
+          <a href="#" data-action="showPage" data-page="tenant" style="color: #2e7d32; font-weight: 600; text-decoration: underline;">Tab ผู้เช่า</a> ·
+          <a href="#" data-action="showPage" data-page="meter" style="color: #2e7d32; font-weight: 600; text-decoration: underline;">Tab จัดการห้อง</a>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ผู้เช่า *</label>
-            <select id="leaseTenant" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-              <option value="">-- เลือกผู้เช่า --</option>
-              ${tenantOptions}
-            </select>
-          </div>
-          <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">วันเข้าเช่า *</label>
-            <input type="date" id="leaseMoveIn" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-          </div>
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลือกผู้เช่า *</label>
+          <select id="leaseTenant" onchange="_updateLeasePreview()" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <option value="">-- เลือกผู้เช่า --</option>
+            ${tenantOptions}
+          </select>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ค่าเช่า/เดือน (บาท) *</label>
-            <input type="number" id="leaseRent" placeholder="0" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-          </div>
-          <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">มัดจำ (บาท)</label>
-            <input type="number" id="leaseDeposit" placeholder="0" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-          </div>
-        </div>
+        <!-- Auto-filled info card (populated by _updateLeasePreview on change) -->
+        <div id="leasePreviewCard" style="display: none; padding: 12px 14px; background: #e8f5e9; border-left: 3px solid #4caf50; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; line-height: 1.6;"></div>
 
         <!-- FILE UPLOADS SECTION -->
         <div style="background: #f0f9ff; padding: 1rem; border-radius: 6px; border: 1px solid #b3e5fc; margin-bottom: 1rem;">
@@ -1928,7 +1918,7 @@ function renderLeaseAgreementsPage() {
         </div>
 
         <button onclick="createNewLease()" style="padding: 0.8rem 1.5rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
-          ➕ สร้างสัญญา
+          💾 บันทึกสัญญา & แนบเอกสาร
         </button>
       </div>
 
@@ -1975,18 +1965,39 @@ function renderLeaseAgreementsPage() {
   `;
 }
 
+// SSoT-aware lease creation:
+// - tenant data (name, moveIn, deposit) comes from Tab ผู้เช่า
+// - rent comes from Tab จัดการห้อง (room config)
+// - this form only accepts tenant selection + file uploads
 function createNewLease() {
-  const building = document.getElementById('leaseBuilding').value;
-  const roomId = document.getElementById('leaseRoom').value;
   const tenantId = document.getElementById('leaseTenant').value;
-  const moveInDate = document.getElementById('leaseMoveIn').value;
-  const rentAmount = parseFloat(document.getElementById('leaseRent').value);
-  const deposit = parseFloat(document.getElementById('leaseDeposit').value) || 0;
-
-  if (!building || !roomId || !tenantId || !moveInDate || !rentAmount) {
-    showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+  if (!tenantId) {
+    showToast('กรุณาเลือกผู้เช่า', 'warning');
     return;
   }
+
+  // Find tenant + building across all buildings
+  const tenantInfo = _findTenantWithBuilding(tenantId);
+  if (!tenantInfo) {
+    showToast('ไม่พบข้อมูลผู้เช่าใน Tab ผู้เช่า — กรุณาสร้างผู้เช่าก่อน', 'error');
+    return;
+  }
+  const { tenant, building } = tenantInfo;
+
+  // Derive room from active lease (tenant→lease→room relationship)
+  // If no active lease exists yet, that's a data gap — tenant wasn't fully saved in Tab ผู้เช่า
+  const activeLease = LeaseAgreementManager.getLeasesByTenant(tenantId).find(l => l.status === 'active');
+  const roomId = activeLease?.roomId;
+  if (!roomId) {
+    showToast('ผู้เช่านี้ยังไม่มีห้อง กรุณาแก้ไขผ่าน Tab ผู้เช่าก่อน', 'error');
+    return;
+  }
+
+  const rentAmount = (typeof RoomConfigManager !== 'undefined')
+    ? (RoomConfigManager.getRentPrice(building, roomId) || 0)
+    : 0;
+  const moveInDate = tenant.moveInDate ? new Date(tenant.moveInDate).toISOString() : new Date().toISOString();
+  const deposit = Number(tenant.deposit) || 0;
 
   // Collect uploaded files
   const documentsToUpload = {};
@@ -2002,51 +2013,104 @@ function createNewLease() {
   if (idFile) documentsToUpload.id = idFile;
   if (incomeFile) documentsToUpload.income = incomeFile;
 
-  const tenant = TenantConfigManager.getTenant(tenantId);
-  const leaseData = {
-    building: building,
-    roomId: roomId,
-    tenantId: tenantId,
-    tenantName: tenant ? tenant.name : tenantId,
-    moveInDate: new Date(moveInDate).toISOString(),
-    moveOutDate: null,
-    rentAmount: rentAmount,
-    deposit: deposit,
-    status: 'active',
-    documents: Object.keys(documentsToUpload).length > 0 ? Object.keys(documentsToUpload) : []
-  };
+  let leaseId = activeLease?.id;
 
-  // Use Firebase-enabled create if available
-  const leaseId = typeof LeaseAgreementManager.createLeaseWithFirebase === 'function'
-    ? LeaseAgreementManager.createLeaseWithFirebase(leaseData)
-    : LeaseAgreementManager.createLease(leaseData);
+  if (activeLease) {
+    // Reuse the existing active lease (tenant already has one from saveTenantInfo)
+    const leaseUpdates = {
+      tenantName: tenant.name,
+      moveInDate,
+      rentAmount,
+      deposit,
+      documents: Array.from(new Set([...(activeLease.documents || []), ...Object.keys(documentsToUpload)]))
+    };
+    if (typeof LeaseAgreementManager.updateLeaseWithFirebase === 'function') {
+      LeaseAgreementManager.updateLeaseWithFirebase(leaseId, building, leaseUpdates);
+    } else {
+      LeaseAgreementManager.updateLease(leaseId, leaseUpdates);
+    }
+  } else {
+    // Historical record — create a new lease entirely from SSoT
+    const leaseData = {
+      building,
+      roomId,
+      tenantId,
+      tenantName: tenant.name,
+      moveInDate,
+      moveOutDate: null,
+      rentAmount,
+      deposit,
+      status: 'active',
+      documents: Object.keys(documentsToUpload)
+    };
+    leaseId = typeof LeaseAgreementManager.createLeaseWithFirebase === 'function'
+      ? LeaseAgreementManager.createLeaseWithFirebase(leaseData)
+      : LeaseAgreementManager.createLease(leaseData);
+  }
 
   if (leaseId) {
-    // Upload documents to Firebase Storage if available
     if (Object.keys(documentsToUpload).length > 0 && window.firebase && window.firebase.storage) {
       uploadLeaseDocuments(leaseId, building, roomId, documentsToUpload);
-      showToast(`สร้างสัญญาเช่าสำเร็จ กำลังอัพโหลดเอกสาร...`, 'success');
+      showToast(`บันทึกสัญญาสำเร็จ กำลังอัพโหลดเอกสาร...`, 'success');
     } else {
-      showToast(`สร้างสัญญาเช่าสำเร็จ`, 'success');
+      showToast(`บันทึกสัญญาสำเร็จ`, 'success');
     }
 
-    // Clear inputs
-    document.getElementById('leaseBuilding').value = 'rooms';
-    document.getElementById('leaseRoom').value = '';
+    // Clear form
     document.getElementById('leaseTenant').value = '';
-    document.getElementById('leaseMoveIn').value = '';
-    document.getElementById('leaseRent').value = '';
-    document.getElementById('leaseDeposit').value = '';
-
-    // Clear file inputs
-    document.getElementById('leaseFilePetCert').value = '';
-    document.getElementById('leaseFileTenantContact').value = '';
-    document.getElementById('leaseFileAgreement').value = '';
-    document.getElementById('leaseFileId').value = '';
-    document.getElementById('leaseFileIncome').value = '';
+    const preview = document.getElementById('leasePreviewCard');
+    if (preview) preview.style.display = 'none';
+    ['leaseFilePetCert', 'leaseFileTenantContact', 'leaseFileAgreement', 'leaseFileId', 'leaseFileIncome']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
     renderLeaseAgreementsPage();
   }
+}
+
+// Find a tenant record across both buildings, return with building tag
+function _findTenantWithBuilding(tenantId) {
+  if (typeof TenantConfigManager === 'undefined') return null;
+  for (const b of ['rooms', 'nest']) {
+    const raw = TenantConfigManager.getAllTenants(b);
+    if (raw[tenantId]) return { tenant: raw[tenantId], building: b };
+  }
+  return null;
+}
+
+// Populate the read-only info card below the tenant select
+function _updateLeasePreview() {
+  const tenantId = document.getElementById('leaseTenant')?.value;
+  const card = document.getElementById('leasePreviewCard');
+  if (!card) return;
+  if (!tenantId) { card.style.display = 'none'; card.innerHTML = ''; return; }
+
+  const info = _findTenantWithBuilding(tenantId);
+  if (!info) { card.style.display = 'none'; return; }
+  const { tenant, building } = info;
+
+  const activeLease = LeaseAgreementManager.getLeasesByTenant(tenantId).find(l => l.status === 'active');
+  const roomId = activeLease?.roomId;
+  const rent = roomId && typeof RoomConfigManager !== 'undefined'
+    ? RoomConfigManager.getRentPrice(building, roomId) || 0
+    : 0;
+  const buildingLabel = building === 'rooms' ? 'ห้องแถว' : 'Nest';
+  const moveIn = tenant.moveInDate ? new Date(tenant.moveInDate).toLocaleDateString('th-TH') : '—';
+  const deposit = Number(tenant.deposit) || 0;
+
+  card.style.display = 'block';
+  card.innerHTML = `
+    <div style="font-weight: 700; color: #1b5e20; margin-bottom: 6px;">📋 ข้อมูลจาก SSoT (read-only)</div>
+    <div>🏠 <b>${buildingLabel} ${roomId ? 'ห้อง ' + _escapeHTML(roomId) : '(ยังไม่ผูกห้อง)'}</b></div>
+    <div>👤 ${_escapeHTML(tenant.name || '-')} ${tenant.phone ? '· 📱 ' + _escapeHTML(tenant.phone) : ''}</div>
+    <div>📅 วันเข้าเช่า: ${_escapeHTML(moveIn)} <span style="color:#666;font-size:.78rem;">(จาก Tab ผู้เช่า)</span></div>
+    <div>💰 ค่าเช่า: ฿${rent.toLocaleString()}/เดือน <span style="color:#666;font-size:.78rem;">(จาก Tab จัดการห้อง)</span></div>
+    <div>💵 มัดจำ: ฿${deposit.toLocaleString()} <span style="color:#666;font-size:.78rem;">(จาก Tab ผู้เช่า)</span></div>
+    ${!roomId ? '<div style="color:#c62828;margin-top:6px;">⚠️ ต้องกำหนดห้องใน Tab ผู้เช่าก่อนบันทึกสัญญา</div>' : ''}
+  `;
+}
+
+if (typeof window !== 'undefined') {
+  window._updateLeasePreview = _updateLeasePreview;
 }
 
 // Storage cost control — enforced client-side before upload
