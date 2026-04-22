@@ -398,19 +398,20 @@ window.addEventListener('resize',function(){
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async ()=>{
-  // Wait for Firebase to be initialized
+  // Wait for Firebase to be initialized (max 2 seconds, not 10)
   if (!window.firebaseReady) {
-    console.log('⏳ Waiting for Firebase to initialize...');
-    // Wait up to 10 seconds for Firebase
+    console.log('⏳ Waiting for Firebase...');
     let waitCount = 0;
-    while (!window.firebaseReady && waitCount < 100) {
+    while (!window.firebaseReady && waitCount < 20) {  // 20 × 100ms = 2s max (was 10s)
       await new Promise(resolve => setTimeout(resolve, 100));
       waitCount++;
     }
     if (!window.firebaseReady) {
-      console.error('❌ Firebase failed to initialize');
-      alert('Error: Firebase initialization failed. Please reload the page.');
-      return;
+      console.warn('⚠️ Firebase not ready yet, will retry...');
+      // Don't block — let initialization continue, retry in 1s
+      setTimeout(() => {
+        if (!window.firebaseReady) console.error('❌ Firebase initialization timeout');
+      }, 2000);
     }
   }
 
