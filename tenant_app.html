@@ -224,6 +224,12 @@
             }
         }
 
+        /* Toast animation — opacity + translateY only (no translateX so auto-margin centering is preserved) */
+        @keyframes toastIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
         /* 2. Animation สำหรับรายการที่เลื่อนขึ้น (จากหน้า Profile / Pet List) */
         @keyframes slideUp {
             from {
@@ -1811,20 +1817,6 @@
             <i class="fas fa-arrow-left"></i> กลับไปหน้าแผนที่ (Nature Map)
         </div>
 
-        <div id="heat-alert" class=" card bg-[#FFF9F2] rounded-[2rem] p-5 border border-[#FFEDE0] flex gap-4 shadow-sm">
-            <div class="flex-shrink-0">
-                <div class="w-10 h-10 bg-[#FFEDE0] rounded-full flex items-center justify-center">
-                    <i class="fas fa-exclamation-triangle text-[#FF9F43]"></i>
-                </div>
-            </div>
-            <div>
-                <strong class="text-[#8B4513] text-sm font-bold">อากาศร้อนจัดเป็นพิเศษ</strong>
-                <p class="text-[#A67C52] text-[11px] leading-relaxed mt-1">
-                    อย่าลืมดื่มน้ำบ่อยๆ ปิดม่าน และดูแลสัตว์เลี้ยงของคุณเพื่อลดความร้อนในห้องนะครับ
-                </p>
-            </div>
-        </div>
-
         <div class="section-title"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
         <div id="community-filter-pills" style="display:flex; gap:8px; padding:0 15px 10px; flex-wrap:wrap;">
             <button class="cf-pill cf-pill-active" data-cat="all" onclick="setCommunityFilter('all', this)">ทั้งหมด</button>
@@ -1858,6 +1850,20 @@
                     <p id="aqi-display" class="text-3xl font-bold">35</p>
                 </div>
                 <div class="w-2.5 h-2.5 bg-[#59E3A2] rounded-full shadow-[0_0_8px_rgba(89,227,162,0.6)]"></div>
+            </div>
+        </div>
+
+        <div id="heat-alert" class=" card bg-[#FFF9F2] rounded-[2rem] p-5 border border-[#FFEDE0] flex gap-4 shadow-sm">
+            <div class="flex-shrink-0">
+                <div class="w-10 h-10 bg-[#FFEDE0] rounded-full flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-[#FF9F43]"></i>
+                </div>
+            </div>
+            <div>
+                <strong class="text-[#8B4513] text-sm font-bold">อากาศร้อนจัดเป็นพิเศษ</strong>
+                <p class="text-[#A67C52] text-[11px] leading-relaxed mt-1">
+                    อย่าลืมดื่มน้ำบ่อยๆ ปิดม่าน และดูแลสัตว์เลี้ยงของคุณเพื่อลดความร้อนในห้องนะครับ
+                </p>
             </div>
         </div>
 
@@ -2302,16 +2308,6 @@
 
         <!-- History (real-time via _subscribeComplaintsFromFirestore) -->
         <div class="section-title"><span>ประวัติการแจ้ง</span></div>
-        <div style="display:flex; gap:6px; padding:0 16px 10px; overflow-x:auto;">
-            <button onclick="filterComplaints('all')" id="filter-all"
-                style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--primary-green); color:#fff; border:none; cursor:pointer;">ทั้งหมด</button>
-            <button onclick="filterComplaints('open')" id="filter-open"
-                style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">รอดำเนินการ</button>
-            <button onclick="filterComplaints('in-progress')" id="filter-in-progress"
-                style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">กำลังดำเนินการ</button>
-            <button onclick="filterComplaints('resolved')" id="filter-resolved"
-                style="white-space:nowrap; padding:6px 14px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; background:var(--soft-green); color:var(--primary-green); border:none; cursor:pointer;">แก้ไขแล้ว</button>
-        </div>
         <div id="complaint-list" style="padding:0 16px 80px;">
             <p style="text-align:center; color:#9ca3af; font-size:var(--fs-md); padding:20px;">ยังไม่มีประวัติการแจ้ง</p>
         </div>
@@ -3119,8 +3115,8 @@
                 <div class="avatar-option" onclick="setAvatar('🌊', this)">🌊</div>
                 <div class="avatar-option" onclick="setAvatar('⛰️', this)">⛰️</div>
                 <label class="avatar-option" for="avatar-upload-input" title="อัปโหลดรูปจากเครื่อง"
-                    style="background: var(--soft-green); color: var(--primary-green); border: 2px dashed var(--primary-green); font-size: 1.9rem !important; line-height: 1; display:flex; align-items:center; justify-content:center;">
-                    📸
+                    style="background: var(--soft-green); color: var(--primary-green); border: 2px dashed var(--primary-green); font-size: 1.4rem !important; display:flex; align-items:center; justify-content:center; padding:0;">
+                    <i class="fas fa-camera" style="line-height:1;"></i>
                 </label>
                 <input type="file" id="avatar-upload-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
             </div>
@@ -3691,7 +3687,7 @@
             const s = styles[type] || styles.info;
             const el = document.createElement('div');
             el.id = 'app-toast';
-            el.style.cssText = `position:fixed;top:24px;left:50%;transform:translateX(-50%);background:${s.bg};color:${s.color};padding:12px 20px;border-radius:22px;font-size:var(--fs-md);font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.12);display:flex;align-items:center;gap:8px;max-width:calc(100% - 40px);animation:slideUp 0.3s ease;pointer-events:none;`;
+            el.style.cssText = `position:fixed;top:24px;left:0;right:0;margin:0 auto;width:max-content;max-width:calc(100% - 40px);background:${s.bg};color:${s.color};padding:12px 20px;border-radius:22px;font-size:var(--fs-md);font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.12);display:flex;align-items:center;gap:8px;animation:toastIn 0.3s ease;pointer-events:none;`;
             el.innerHTML = `<i class="fas ${s.icon}"></i><span>${_esc(msg)}</span>`;
             document.body.appendChild(el);
             setTimeout(() => {
@@ -6068,8 +6064,11 @@
                 card.appendChild(inner);
                 list.appendChild(card);
             });
-            // Re-apply selection so the active-service border persists after re-render
-            selectService(_selectedService || 'free');
+            // Re-apply selection so the active-service border persists after re-render.
+            // Default to 'deep' when Standard Clean is unavailable — avoids firing the
+            // "unavailable" toast on app init (fires on every onSnapshot re-render otherwise).
+            const defaultSvc = _isStandardCleanAvailable() ? 'free' : 'deep';
+            selectService(_selectedService && _selectedService !== 'free' ? _selectedService : defaultSvc);
             _refreshStandardCleanAvailability();
         }
         function _renderCleaningTimeSlots() {
