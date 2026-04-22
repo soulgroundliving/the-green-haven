@@ -42,14 +42,17 @@ function setYear(yr,btn){
   initDashboardCharts();
 }
 
-// Ensure 2569 (current BE year) is the active year on page load
+// Ensure 2569 (current BE year) is the active year on page load.
+// Delayed to 900ms so Firestore historicalRevenue + RTDB rooms_config have a
+// chance to land first — setYear's initDashboardCharts then renders once with
+// live data instead of rendering twice (once stale, once fresh).
 if (typeof window !== 'undefined' && !window._initialDashboardYear) {
   window._initialDashboardYear = true;
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       const beYear = String(new Date().getFullYear() + 543).slice(-2);  // '69'
       try { if (typeof setYear === 'function') setYear(beYear, null); } catch(e){}
-    }, 600);
+    }, 900);
   });
 }
 
@@ -185,16 +188,27 @@ async function loadDashboardDataFromFirebase() {
   }
 }
 
+// Debounce helper — coalesces bursts of async data-arrival events into one render.
+// Separate timer per key so different pages don't block each other.
+const _dashboardRerenderTimers = {};
+function _debouncedRerender(key, fn, delay = 250) {
+  if (_dashboardRerenderTimers[key]) clearTimeout(_dashboardRerenderTimers[key]);
+  _dashboardRerenderTimers[key] = setTimeout(() => {
+    _dashboardRerenderTimers[key] = null;
+    try { fn(); } catch (e) { console.warn(`[rerender:${key}]`, e?.message); }
+  }, delay);
+}
+
 // Phase 2c: re-render dashboard charts whenever HistoricalDataStore cloud data
 // arrives (handles F5 → Firestore subscribe lag where localStorage is empty).
-// Polls until HistoricalDataStore exists, then registers the listener immediately.
+// Debounced: Firestore often emits several updates in quick succession on initial load.
 if (typeof window !== 'undefined' && !window._dashHistSubscribed) {
   window._dashHistSubscribed = true;
   (function _waitForHistStore() {
     if (typeof HistoricalDataStore !== 'undefined' && HistoricalDataStore.onChange) {
       HistoricalDataStore.onChange(() => {
         if (typeof initDashboardCharts === 'function') {
-          try { initDashboardCharts(); } catch(e){}
+          _debouncedRerender('dashboard-charts', initDashboardCharts);
         }
       });
     } else {
@@ -204,26 +218,30 @@ if (typeof window !== 'undefined' && !window._dashHistSubscribed) {
 }
 
 // Phase 5 race fix: re-render UI pages when RTDB rooms_config lands (F5 + cloud lag)
+// Debounced per-page so RTDB burst updates coalesce into one re-render.
 if (typeof window !== 'undefined' && !window._roomConfigListenerAdded) {
   window._roomConfigListenerAdded = true;
   document.addEventListener('roomconfig-updated', () => {
-    // Re-render whichever admin page is currently showing room data
     try {
       if (document.getElementById('page-bill')?.classList.contains('active')) {
-        if (typeof populateRoomDropdown === 'function') populateRoomDropdown();
-        if (typeof renderPaymentStatus === 'function') renderPaymentStatus();
+        _debouncedRerender('page-bill', () => {
+          if (typeof populateRoomDropdown === 'function') populateRoomDropdown();
+          if (typeof renderPaymentStatus === 'function') renderPaymentStatus();
+        });
       }
       if (document.getElementById('page-tenant')?.classList.contains('active')
           && typeof initTenantPage === 'function') {
-        initTenantPage();
+        _debouncedRerender('page-tenant', initTenantPage);
       }
       if (document.getElementById('page-property')?.classList.contains('active')) {
-        if (typeof initRoomsPage === 'function') initRoomsPage();
-        if (typeof initNestPage === 'function') initNestPage();
+        _debouncedRerender('page-property', () => {
+          if (typeof initRoomsPage === 'function') initRoomsPage();
+          if (typeof initNestPage === 'function') initNestPage();
+        });
       }
       if (document.getElementById('page-dashboard')?.classList.contains('active')
           && typeof initDashboardCharts === 'function') {
-        initDashboardCharts();
+        _debouncedRerender('dashboard-charts', initDashboardCharts);
       }
     } catch(e) { console.warn('roomconfig-updated rerender:', e?.message); }
   });
