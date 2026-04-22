@@ -1919,10 +1919,10 @@
             <p>เราพร้อมดูแลคุณในทุกรายละเอียดครับ ✨</p>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:var(--gap); padding:0 var(--gap);">
+        <div style="display:flex; flex-direction:column; gap:var(--gap);">
 
         <!-- ported from tenant.html: displayBuildingInternetStatus -->
-        <div id="internetStatusSection" class="card" style="display:none; margin:0;">
+        <div id="internetStatusSection" class="card" style="display:none; margin:0 var(--gap);">
             <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                 <span style="flex:1; font-weight:600; font-size:var(--fs-md);">🌐 สถานะอินเทอร์เน็ตอาคาร</span>
                 <span id="internetStatusIcon" style="font-size:var(--fs-md);">🟢</span>
@@ -1950,7 +1950,7 @@
 
         <!-- ROOM-level internet status — same accordion pattern as building above.
              Data source: tenants/{building}/list/{roomId}.roomInternet or localStorage fallback. -->
-        <div id="roomInternetStatusSection" class="card" style="display:none; margin:0;">
+        <div id="roomInternetStatusSection" class="card" style="display:none; margin:0 var(--gap);">
             <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                 <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📡 สถานะอินเทอร์เน็ตห้องพัก</span>
                 <span id="roomInternetStatusIcon" style="font-size:var(--fs-md);">🟢</span>
@@ -1979,7 +1979,7 @@
 
         <!-- Merged accordion: emergency contacts (🚨) + service providers.
              Uses same toggleAccordion() pattern as internetStatusSection above. -->
-        <div id="emergencyContactsSection" class="card" style="margin:0;">
+        <div id="emergencyContactsSection" class="card" style="margin:0 var(--gap);">
             <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                 <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📋 ขั้นตอนเมื่อเกิดเหตุฉุกเฉิน</span>
                 <i class="fas fa-chevron-down" style="color:#aaa;"></i>
@@ -2079,7 +2079,7 @@
                 </div>
             </div>
         </div>
-        <div class="card" style="margin:0;">
+        <div class="card" style="margin:0 var(--gap);">
             <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer; touch-action:manipulation;">
                 <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📄 เอกสารอาคาร</span>
                 <i class="fas fa-chevron-down" style="color:#aaa;"></i>
