@@ -49,6 +49,10 @@ exports.archiveSlipLogs = require('./archiveSlipLogs').archiveSlipLogs;
 exports.remindLatePaymentsScheduled = require('./remindLatePayments').remindLatePaymentsScheduled;
 exports.remindLatePayments = require('./remindLatePayments').remindLatePayments;
 
+// Lease-expiry LINE alerts (tiered 60/30/14/0 days) — daily 08:00 BKK; HTTP for manual
+exports.remindLeaseExpiryScheduled = require('./remindLeaseExpiry').remindLeaseExpiryScheduled;
+exports.remindLeaseExpiry = require('./remindLeaseExpiry').remindLeaseExpiry;
+
 // Import existing functions if available
 try {
   const verifySlip = require('./verifySlip');
