@@ -55,8 +55,8 @@ if (!process.env.VERCEL && !process.env.FORCE_BUILD) {
         outfile: file,
         allowOverwrite: true,
         minifyWhitespace: true,
-        minifySyntax: false,       // safety: no if/else → ternary rewrites
-        minifyIdentifiers: false,  // safety: keep every function/var name
+        minifySyntax: true,        // Phase B.1: ?: rewrites, dead-code elim, etc.
+        minifyIdentifiers: false,  // safety: keep every function/var name (Phase B.2 would need bundling)
         legalComments: 'none',
         logLevel: 'warning',
         bundle: false,
