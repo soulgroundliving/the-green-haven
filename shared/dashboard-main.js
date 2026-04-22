@@ -345,6 +345,9 @@ function switchPeopleTab(tabName, btn) {
     btn.style.color = 'var(--green)';
     btn.style.borderBottomColor = 'var(--green)';
   }
+
+  // Lazy-load policies from Firestore when tab first opens
+  if (tabName === 'policies' && typeof loadPoliciesAdmin === 'function') loadPoliciesAdmin();
 }
 
 // ===== LEASE MANAGEMENT TAB SWITCHING =====

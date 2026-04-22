@@ -3323,7 +3323,7 @@
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">Privacy Policy</h1>
         </div>
-        <div class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
+        <div id="policy-privacy-content" class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
             <p style="font-weight:700; font-size:var(--fs-md); margin-bottom:4px;">นโยบายความเป็นส่วนตัว</p>
             <p style="color:var(--text-muted); margin-bottom:16px;">มีผลบังคับใช้ตั้งแต่ 1 พฤษภาคม 2568 | The Green Haven Co., Ltd.</p>
 
@@ -3393,7 +3393,7 @@
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">คู่มือการใช้งาน</h1>
         </div>
-        <div class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
+        <div id="policy-terms-content" class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
             <p style="font-weight:700; font-size:var(--fs-md); margin-bottom:4px;">คู่มือการใช้งาน Nature Haven App</p>
             <p style="color:var(--text-muted); margin-bottom:16px;">เวอร์ชัน 6.0 | อัปเดต พฤษภาคม 2568</p>
 
@@ -3448,7 +3448,7 @@
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">Data & Compliance</h1>
         </div>
-        <div class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
+        <div id="policy-compliance-content" class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
             <p style="font-weight:700; font-size:var(--fs-md); margin-bottom:4px;">การปฏิบัติตามกฎระเบียบด้านข้อมูล</p>
             <p style="color:var(--text-muted); margin-bottom:16px;">The Green Haven Co., Ltd. | มีผลบังคับใช้ 1 พฤษภาคม 2568</p>
 
@@ -3498,7 +3498,7 @@
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">IP Infringement</h1>
         </div>
-        <div class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
+        <div id="policy-ip-content" class="card" style="font-size:var(--fs-sm); line-height:1.7; padding-bottom:80px;">
             <p style="font-weight:700; font-size:var(--fs-md); margin-bottom:4px;">นโยบายทรัพย์สินทางปัญญา</p>
             <p style="color:var(--text-muted); margin-bottom:16px;">The Green Haven Co., Ltd. | มีผลบังคับใช้ 1 พฤษภาคม 2568</p>
 
@@ -8704,6 +8704,9 @@
             try { displayBuildingInternetStatus(); } catch(e){}
             try { displayRoomInternetStatus(); } catch(e){}
             try { displayDocuments(); } catch(e){}
+            // SSoT subscriptions — admin writes, tenant reads live
+            _subscribeCommunityDocuments();
+            _subscribePolicies();
             try { displayLeaseRenewalAlert(); } catch(e){}
             try { _initMarketImageUpload(); } catch(e){}
             // photo modal click-outside-to-close
@@ -9011,7 +9014,49 @@
             });
         }
 
-        // ---- COMMUNITY DOCUMENTS ----
+        // ---- COMMUNITY DOCUMENTS — SSoT from Firestore (admin writes via dashboard Documents tab) ----
+        function _subscribeCommunityDocuments() {
+            if (!window.firebaseReady || !window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+                window.addEventListener('firebaseInitialized', _subscribeCommunityDocuments, { once: true });
+                return;
+            }
+            const fs = window.firebase.firestoreFunctions;
+            const db = window.firebase.firestore();
+            fs.onSnapshot(fs.collection(db, 'communityDocuments'), snap => {
+                const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                if (docs.length) {
+                    try { localStorage.setItem('community_documents_data', JSON.stringify(docs)); } catch(e) {}
+                    displayDocuments();
+                }
+            }, err => console.warn('communityDocuments subscribe:', err.message));
+        }
+
+        // ---- POLICIES — SSoT from Firestore `system/policies` (admin writes via dashboard People → Policies tab) ----
+        function _subscribePolicies() {
+            if (!window.firebaseReady || !window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+                window.addEventListener('firebaseInitialized', _subscribePolicies, { once: true });
+                return;
+            }
+            const fs = window.firebase.firestoreFunctions;
+            const db = window.firebase.firestore();
+            const ref = fs.doc(db, 'system', 'policies');
+            fs.onSnapshot(ref, snap => {
+                if (!snap.exists()) return;
+                const data = snap.data() || {};
+                const map = {
+                    privacy: 'policy-privacy-content',
+                    terms:   'policy-terms-content',
+                    compliance: 'policy-compliance-content',
+                    ip:      'policy-ip-content'
+                };
+                Object.entries(map).forEach(([key, elId]) => {
+                    if (!data[key]) return;
+                    const el = document.getElementById(elId);
+                    if (el) el.innerHTML = data[key];
+                });
+            }, err => console.warn('policies subscribe:', err.message));
+        }
+
         function displayDocuments() {
             const container = document.getElementById('documentsList');
             if (!container) return;

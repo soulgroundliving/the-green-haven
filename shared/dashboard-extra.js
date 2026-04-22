@@ -3788,6 +3788,42 @@ function loadBadgesAdmin() {
   }).join('');
 }
 
+// ===== POLICY ADMIN CRUD (Firestore `system/policies`) =====
+// Tenant app subscribes via _subscribePolicies() and renders content live.
+async function loadPoliciesAdmin() {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  try {
+    const snap = await fs.getDoc(fs.doc(db, 'system', 'policies'));
+    const data = snap.exists() ? (snap.data() || {}) : {};
+    ['privacy', 'terms', 'compliance', 'ip'].forEach(key => {
+      const ta = document.getElementById(`policy-admin-${key}`);
+      if (ta && data[key]) ta.value = data[key];
+    });
+  } catch(e) { console.warn('loadPoliciesAdmin:', e.message); }
+}
+
+async function savePolicyDoc(key) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const ta = document.getElementById(`policy-admin-${key}`);
+  if (!ta) return;
+  const content = ta.value.trim();
+  const btn = document.getElementById(`policy-save-${key}`);
+  const orig = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = 'กำลังบันทึก...'; }
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    await fs.setDoc(fs.doc(db, 'system', 'policies'), { [key]: content }, { merge: true });
+    if (btn) { btn.textContent = '✅ บันทึกแล้ว'; setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 2000); }
+    if (typeof showToast === 'function') showToast('บันทึก Policy แล้ว — ลูกบ้านเห็นทันที', 'success');
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
+    if (typeof showToast === 'function') showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
 // ===== REWARDS ADMIN CRUD (Firestore `rewards/` collection) =====
 let _rewardsAdminUnsub = null;
 let _rewardsAdminCache = [];

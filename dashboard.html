@@ -3582,11 +3582,45 @@
   <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
     <button id="tab-owner-btn" class="people-mgmt-tab active" data-action="switchPeopleTab" data-tab="owner" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: var(--green); cursor: pointer; border-bottom: 3px solid var(--green); margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">🏢 Owner</button>
     <button id="tab-providers-btn" class="people-mgmt-tab" data-action="switchPeopleTab" data-tab="providers" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📞 Service Providers</button>
+    <button id="tab-policies-btn" class="people-mgmt-tab" data-action="switchPeopleTab" data-tab="policies" style="background: none; border: none; padding: 0.7rem 1rem; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -0.5rem; font-family: 'Sarabun'; font-size: 0.95rem;">📋 Policies</button>
   </div>
 
   <!-- TAB 1: Owner Info -->
   <div id="people-tab-owner" class="people-mgmt-content active">
     <div id="ownerInfoContainer"></div>
+  </div>
+
+  <!-- TAB 3: Policies (SSoT → Firestore system/policies → tenant app reads live) -->
+  <div id="people-tab-policies" class="people-mgmt-content" style="display: none;">
+    <div class="card" style="margin-bottom:1.5rem;">
+      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.5rem;">เนื้อหาที่บันทึกจะถูกส่งไปแสดงในแอปลูกบ้านทันที (Firestore <code>system/policies</code>) — รองรับ HTML ธรรมดา เช่น &lt;p&gt;, &lt;strong&gt;, &lt;br&gt;</p>
+      <div style="display:flex;flex-direction:column;gap:1.5rem;">
+        <!-- Privacy -->
+        <div>
+          <div style="font-weight:700;margin-bottom:.5rem;">🔒 Privacy Policy</div>
+          <textarea id="policy-admin-privacy" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;" placeholder="วางเนื้อหา HTML หรือข้อความสำหรับหน้า Privacy Policy..."></textarea>
+          <button id="policy-save-privacy" onclick="savePolicyDoc('privacy')" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก Privacy</button>
+        </div>
+        <!-- Terms / User Manual -->
+        <div>
+          <div style="font-weight:700;margin-bottom:.5rem;">📖 คู่มือการใช้งาน (Terms)</div>
+          <textarea id="policy-admin-terms" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;" placeholder="วางเนื้อหา HTML หรือข้อความสำหรับหน้า คู่มือการใช้งาน..."></textarea>
+          <button id="policy-save-terms" onclick="savePolicyDoc('terms')" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก Terms</button>
+        </div>
+        <!-- Compliance -->
+        <div>
+          <div style="font-weight:700;margin-bottom:.5rem;">⚖️ Data & Compliance</div>
+          <textarea id="policy-admin-compliance" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;" placeholder="วางเนื้อหา HTML หรือข้อความสำหรับหน้า Compliance..."></textarea>
+          <button id="policy-save-compliance" onclick="savePolicyDoc('compliance')" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก Compliance</button>
+        </div>
+        <!-- IP -->
+        <div>
+          <div style="font-weight:700;margin-bottom:.5rem;">™️ IP Infringement</div>
+          <textarea id="policy-admin-ip" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;" placeholder="วางเนื้อหา HTML หรือข้อความสำหรับหน้า IP Infringement..."></textarea>
+          <button id="policy-save-ip" onclick="savePolicyDoc('ip')" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก IP</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- TAB 2: Service Providers -->
