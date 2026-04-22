@@ -41,6 +41,10 @@ exports.notifyBillOnCreate = require('./notifyBillOnCreate').notifyBillOnCreate;
 exports.aggregateMonthlyRevenueScheduled = require('./aggregateMonthlyRevenue').aggregateMonthlyRevenueScheduled;
 exports.aggregateMonthlyRevenue = require('./aggregateMonthlyRevenue').aggregateMonthlyRevenue;
 
+// Slip log archive to BigQuery — daily 02:00 BKK; HTTP endpoint for manual trigger
+exports.archiveSlipLogsScheduled = require('./archiveSlipLogs').archiveSlipLogsScheduled;
+exports.archiveSlipLogs = require('./archiveSlipLogs').archiveSlipLogs;
+
 // Import existing functions if available
 try {
   const verifySlip = require('./verifySlip');
