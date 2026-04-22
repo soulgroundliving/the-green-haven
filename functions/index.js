@@ -53,6 +53,10 @@ exports.remindLatePayments = require('./remindLatePayments').remindLatePayments;
 exports.remindLeaseExpiryScheduled = require('./remindLeaseExpiry').remindLeaseExpiryScheduled;
 exports.remindLeaseExpiry = require('./remindLeaseExpiry').remindLeaseExpiry;
 
+// Firestore disaster-recovery backup — daily 03:00 BKK, 30-day rolling retention
+exports.backupFirestoreScheduled = require('./backupFirestore').backupFirestoreScheduled;
+exports.backupFirestore = require('./backupFirestore').backupFirestore;
+
 // Import existing functions if available
 try {
   const verifySlip = require('./verifySlip');
