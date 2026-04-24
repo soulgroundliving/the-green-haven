@@ -59,6 +59,7 @@
       import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
       import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
       import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
+      import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app-check.js";
 
       async function initializeFirebase() {
         try {
@@ -69,6 +70,7 @@
           firebaseConfig.appId = "1:523697750767:web:89b253f92d8d5cfe8a111a";
 
           const app = initializeApp(firebaseConfig);
+          initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeJX8gsAAAAAN7mD2p2uutB31ryWXYXNA1ndZwA'), isTokenAutoRefreshEnabled: true });
           const database = getDatabase(app);
           const auth = getAuth(app);
           const firestore = getFirestore(app);

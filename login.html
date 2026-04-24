@@ -666,6 +666,7 @@
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
     import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
     import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app-check.js";
 
     // Firebase configuration - loaded from /api/config endpoint
     // This keeps the API key secure while serving it to the client
@@ -680,6 +681,7 @@
       try {
         firebaseConfig = await window.loadFirebaseConfig();
         app = initializeApp(firebaseConfig);
+        initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeJX8gsAAAAAN7mD2p2uutB31ryWXYXNA1ndZwA'), isTokenAutoRefreshEnabled: true });
         auth = getAuth(app);
         database = getDatabase(app);
         db = getFirestore(app);
