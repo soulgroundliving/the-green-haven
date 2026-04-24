@@ -304,6 +304,52 @@ describe('marketplace — owner-only mutations', () => {
   });
 });
 
+describe('auth_events — failed-login audit log (Phase 4B)', () => {
+  it('unauthenticated user can create an auth_event (login failed, no uid yet)', async () => {
+    await assertSucceeds(addDoc(
+      collection(UNAUTH().firestore(), 'auth_events'),
+      { maskedEmail: 'te***@test.com', ua: 'Mozilla', errorCode: 'auth/wrong-password', ts: new Date() }
+    ));
+  });
+
+  it('anonymous user can also create an auth_event', async () => {
+    await assertSucceeds(addDoc(
+      collection(ANON().firestore(), 'auth_events'),
+      { maskedEmail: 'te***@test.com', ua: 'Mozilla', errorCode: 'auth/wrong-password', ts: new Date() }
+    ));
+  });
+
+  it('CANNOT create with extra fields (schema enforcement)', async () => {
+    await assertFails(addDoc(
+      collection(UNAUTH().firestore(), 'auth_events'),
+      { maskedEmail: 'te***@test.com', ua: 'Mozilla', errorCode: 'x', ts: new Date(), extra: 'injected' }
+    ));
+  });
+
+  it('CANNOT create with maskedEmail longer than 100 chars', async () => {
+    await assertFails(addDoc(
+      collection(UNAUTH().firestore(), 'auth_events'),
+      { maskedEmail: 'a'.repeat(101), ua: 'Mozilla', errorCode: 'x', ts: new Date() }
+    ));
+  });
+
+  it('anonymous tenant CANNOT read auth_events (admin-only)', async () => {
+    await seedDoc('auth_events/ev1', { maskedEmail: 'te***@test.com', ua: 'Mozilla', errorCode: 'x', ts: new Date() });
+    await assertFails(getDoc(doc(ANON().firestore(), 'auth_events/ev1')));
+  });
+
+  it('admin CAN read auth_events', async () => {
+    await seedDoc('auth_events/ev1', { maskedEmail: 'te***@test.com', ua: 'Mozilla', errorCode: 'x', ts: new Date() });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'auth_events/ev1')));
+  });
+
+  it('CANNOT update or delete auth_events (immutable log)', async () => {
+    await seedDoc('auth_events/ev1', { maskedEmail: 'te***@test.com', ua: 'x', errorCode: 'x', ts: new Date() });
+    await assertFails(updateDoc(doc(EMAIL_ADMIN().firestore(), 'auth_events/ev1'), { ua: 'changed' }));
+    await assertFails(deleteDoc(doc(EMAIL_ADMIN().firestore(), 'auth_events/ev1')));
+  });
+});
+
 describe('wellnessClaimed — tenant create-only (idempotent)', () => {
   it('anon tenant can create claim doc', async () => {
     await assertSucceeds(setDoc(

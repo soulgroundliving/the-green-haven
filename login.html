@@ -665,6 +665,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
     import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
     // Firebase configuration - loaded from /api/config endpoint
     // This keeps the API key secure while serving it to the client
@@ -672,6 +673,7 @@
     let app;
     let auth;
     let database;
+    let db;
 
     // Initialize Firebase once config is loaded
     async function initializeFirebase() {
@@ -680,6 +682,7 @@
         app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         database = getDatabase(app);
+        db = getFirestore(app);
 
         window.auth = auth;
         window.database = database;
@@ -1034,6 +1037,20 @@
         // ===== FAILURE: RECORD RATE LIMIT ATTEMPT =====
         RateLimiter.recordFailure(email);
         const remaining = RateLimiter.getRemainingAttempts(email);
+
+        // ===== AUDIT: write failed attempt to Firestore auth_events =====
+        if (db) {
+          const atIdx = email.indexOf('@');
+          const maskedEmail = atIdx > 2
+            ? email.slice(0, 2) + '***' + email.slice(atIdx)
+            : '***' + (atIdx >= 0 ? email.slice(atIdx) : '');
+          addDoc(collection(db, 'auth_events'), {
+            maskedEmail,
+            ua: navigator.userAgent.slice(0, 200),
+            errorCode: error.code || 'unknown',
+            ts: serverTimestamp(),
+          }).catch(() => {}); // fire-and-forget
+        }
 
         let errorMessage = error.message || 'เข้าสู่ระบบไม่สำเร็จ';
         if (remaining > 0) {

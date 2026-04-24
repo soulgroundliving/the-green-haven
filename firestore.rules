@@ -97,6 +97,22 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ===== AUTH EVENTS (failed-login audit log — 4B) =====
+    // Anyone can create (login hasn't succeeded yet, so auth uid unavailable).
+    // Schema-constrained to 4 known fields with size caps to prevent abuse.
+    // Only admins can read the audit log.
+    match /auth_events/{eventId} {
+      allow create: if request.resource.data.keys().hasOnly(['maskedEmail', 'ua', 'errorCode', 'ts'])
+                    && request.resource.data.maskedEmail is string
+                    && request.resource.data.maskedEmail.size() <= 100
+                    && request.resource.data.ua is string
+                    && request.resource.data.ua.size() <= 200
+                    && request.resource.data.errorCode is string
+                    && request.resource.data.errorCode.size() <= 64;
+      allow read:   if isAdminOrEmail();
+      allow update, delete: if false;
+    }
+
     // ===== BUILDINGS COLLECTION =====
     match /buildings/{buildingId} {
       // Anyone signed in can read building config (PromptPay #, company name)
