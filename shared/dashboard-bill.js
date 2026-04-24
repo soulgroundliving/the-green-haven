@@ -532,8 +532,10 @@ async function verifySlip(file){
     const room = invoiceData?.room || 'unknown';
     // invoiceData.building is a display name — map to 'rooms' or 'nest' for Cloud Function
     const buildingRaw = (currentBuilding === 'nest') ? 'nest' : 'rooms';
-    // Get Firebase ID token so the CF can verify this is a signed-in admin
-    const idToken = await window.auth?.currentUser?.getIdToken?.();
+    // Get Firebase ID token so the CF can verify this is a signed-in admin.
+    // dashboard.html exposes auth as window.firebaseAuth; login.html as window.auth.
+    const authInstance = window.firebaseAuth || window.auth;
+    const idToken = await authInstance?.currentUser?.getIdToken?.();
     if (!idToken) {
       throw new Error('กรุณาเข้าสู่ระบบใหม่ก่อนตรวจสลิป (Session หมดอายุ)');
     }
