@@ -59,7 +59,10 @@
       import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
       import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
       import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
-      import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app-check.js";
+      // Phase 4D App Check disabled 2026-04-25 — Firebase backend returns 403 on token
+      // validation (secret-key/config mismatch); triggers 24hr client throttle on every
+      // page load. Re-enable after dedicated debug session (see next_session_handoff.md).
+      // import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app-check.js";
 
       async function initializeFirebase() {
         try {
@@ -70,7 +73,7 @@
           firebaseConfig.appId = "1:523697750767:web:89b253f92d8d5cfe8a111a";
 
           const app = initializeApp(firebaseConfig);
-          initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeJX8gsAAAAAN7mD2p2uutB31ryWXYXNA1ndZwA'), isTokenAutoRefreshEnabled: true });
+          // initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeJX8gsAAAAAN7mD2p2uutB31ryWXYXNA1ndZwA'), isTokenAutoRefreshEnabled: true });
           const database = getDatabase(app);
           const auth = getAuth(app);
           const firestore = getFirestore(app);

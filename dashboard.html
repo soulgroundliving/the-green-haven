@@ -76,7 +76,8 @@
   import { getDatabase, ref, set, get, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
   import { getAuth, signInAnonymously, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
   import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-  import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app-check.js";
+  // Phase 4D App Check disabled 2026-04-25 — see next_session_handoff.md
+  // import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app-check.js";
 
   // Firebase configuration - loaded from /api/config endpoint
   // This keeps the API key secure while serving it to the client
@@ -99,7 +100,7 @@
       firebaseConfig.measurementId = "G-93J1CBN1BZ";
 
       app = initializeApp(firebaseConfig);
-      initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeJX8gsAAAAAN7mD2p2uutB31ryWXYXNA1ndZwA'), isTokenAutoRefreshEnabled: true });
+      // initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LeJX8gsAAAAAN7mD2p2uutB31ryWXYXNA1ndZwA'), isTokenAutoRefreshEnabled: true });
       database = getDatabase(app);
       auth = getAuth(app);
       firestore = getFirestore(app);
