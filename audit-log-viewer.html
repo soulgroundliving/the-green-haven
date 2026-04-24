@@ -180,6 +180,11 @@
       color: var(--green);
     }
 
+    /* Phase 4E Step 2: color modifiers for stat-value (replace inline style="color:..."). */
+    .stat-value.stat-green { color: var(--green-light); }
+    .stat-value.stat-red   { color: var(--red); }
+    .stat-value.stat-blue  { color: var(--blue); }
+
     .logs-container {
       background: var(--card);
       border-radius: 12px;
@@ -417,17 +422,17 @@
       </div>
 
       <div class="button-group">
-        <button class="btn-primary" onclick="applyFilters()">🔍 Apply Filters</button>
-        <button class="btn-secondary" onclick="clearFilters()">↻ Clear</button>
+        <button class="btn-primary" data-action="apply-filters">🔍 Apply Filters</button>
+        <button class="btn-secondary" data-action="clear-filters">↻ Clear</button>
         <div class="export-menu">
-          <button class="btn-warning" onclick="toggleExportMenu()">📥 Export</button>
+          <button class="btn-warning" data-action="toggle-export-menu">📥 Export</button>
           <div class="dropdown-content" id="exportMenu">
-            <a onclick="exportToCSV()">📊 Export as CSV</a>
-            <a onclick="exportToJSON()">📄 Export as JSON</a>
-            <a onclick="printLogs()">🖨️ Print</a>
+            <a data-action="export-csv">📊 Export as CSV</a>
+            <a data-action="export-json">📄 Export as JSON</a>
+            <a data-action="print-logs">🖨️ Print</a>
           </div>
         </div>
-        <button class="btn-primary" onclick="goBackToDashboard()">← Back to Dashboard</button>
+        <button class="btn-primary" data-action="back-to-dashboard">← Back to Dashboard</button>
       </div>
     </div>
 
@@ -513,15 +518,15 @@
         </div>
         <div class="stat-card">
           <div class="stat-label">✅ Successful</div>
-          <div class="stat-value" style="color: var(--green-light)">${successfulAccess}</div>
+          <div class="stat-value stat-green">${successfulAccess}</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">❌ Denied</div>
-          <div class="stat-value" style="color: var(--red)">${deniedAccess}</div>
+          <div class="stat-value stat-red">${deniedAccess}</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">👥 Unique Users</div>
-          <div class="stat-value" style="color: var(--blue)">${uniqueUsers}</div>
+          <div class="stat-value stat-blue">${uniqueUsers}</div>
         </div>
       `;
     }
@@ -711,6 +716,23 @@
     function goBackToDashboard() {
       window.location.href = '/dashboard';
     }
+
+    // Phase 4E Step 2: event-delegation dispatcher (replaces 7 inline onclick= handlers).
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      const action = el.getAttribute('data-action');
+      const map = {
+        'apply-filters': applyFilters,
+        'clear-filters': clearFilters,
+        'toggle-export-menu': toggleExportMenu,
+        'export-csv': exportToCSV,
+        'export-json': exportToJSON,
+        'print-logs': printLogs,
+        'back-to-dashboard': goBackToDashboard,
+      };
+      if (typeof map[action] === 'function') map[action]();
+    });
   </script>
 </body>
 </html>
