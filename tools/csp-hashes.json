@@ -17,24 +17,24 @@
   "dashboard.html": {
     "scriptHashes": [
       "yfGMR3xvKC8i0dh7xhmGW94RyzXWfPhsCqkxpKGodd4=",
-      "T1zT3pMaJR67mx9Dk2SVkYEWFPxGrFVbx5zT3+Ho24s=",
-      "o9zoIBX8Q3tQls458InJeYhGh28J+h/xKE/Uzo2dNVM=",
-      "BMA7Pufoi7Fy9TV83hgiOFUMWCeXFNI5fzQTQ+wXibU=",
-      "bqrJ7kdyWaf8xqxDq84f90Ju+DsPI0fRafHt+VgF2Tk="
+      "dFSAp9Kgfr6gvfhNihDrNKRxSCfOskGRMbDyMhcXqCg=",
+      "VHYshmD6q2VGh+KjLfnrnidAh94OjfyfXJyBveCGYWI=",
+      "koEExLU0s72SXJjRQ9A9HlQrDFW66D3GkF1lBApuBZ4=",
+      "lIQc6Jvd7aZn3+QvbxOQwTDMsMCo4sAN6d1MpJf5F3Y="
     ],
     "styleHashes": [
-      "t7mh3kH65sBu6mQrQm+Z0XwQhwvkrKTHjEf9fniNyic="
+      "oO2YYrec7gtreaoIOFTB1pj+kBIkOGfHV9UnAD2TF5Q="
     ]
   },
   "tenant_app.html": {
     "scriptHashes": [
-      "l1bl+P7l30vyCnwK5vNs1zGYdTWAEbhBpSoJbWTHMBM=",
+      "+dMEhGTpvRQm1W301xvKKDpHZebohbTGCRnNdCQETWs=",
       "Ic0bOeaKv88b2nOmtCwqO4v5NlJbOuUg9edQ8ZsXQpE=",
-      "D2p7ER56m3dpfiSrT0u6ykgfjp2CBG6EFFUwllNz6jE=",
-      "/go54pGRn1wp+M14XmIZwofNxk3xLygmhTDcjT1UvII="
+      "UPr9qHs36R86KDaN54b/CMq386C3uvX7kDHoUd4P/xM=",
+      "6crYzXxe5APfpxs6cjVTol1SU+RunbwaSXbOei/5LhY="
     ],
     "styleHashes": [
-      "sFbUKpRsMU9tsLAx6JCnlCt85DYnb8fqm39s5OecELc=",
+      "vf+7+KFVKuEO1pTkKRPZNvMOoaT2ufOF6kbeiCQAOy0=",
       "3fk03lCBnSsRdem3+NjS/HiChFZwsKi+8TYYYEhnza4="
     ]
   },
@@ -49,10 +49,10 @@
   },
   "meter_history.html": {
     "scriptHashes": [
-      "T6qPWoGvtCqKzQN97RXdg6BVzGJgVw6xO3cUP/FLM3Y="
+      "z4fIqLiIJPfHtplVWz6u/M+K+Vuf7TNjVbbDV2DpURY="
     ],
     "styleHashes": [
-      "dEYdV0sn+ExC/82SaMc1ZXVHjf0DkZooz8kKOphxjOA="
+      "Vwf+Jd2bxp5X7aMTiQ5pK+te68WDCKjfYlYyB2oemr4="
     ]
   },
   "audit-log-viewer.html": {

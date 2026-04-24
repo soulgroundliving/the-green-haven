@@ -26,8 +26,13 @@ const FILES = [
   'payment.html',
 ];
 
+// Normalize to LF. Git is configured with core.autocrlf=true on Windows, so the
+// working-copy file has CRLF but Git stores LF and Vercel serves LF. Browsers
+// hash what they receive (LF), so we must hash the LF form — not the CRLF one
+// sitting on local disk — or every CSP hash will mismatch in production.
 function sha256b64(content) {
-  return crypto.createHash('sha256').update(content, 'utf8').digest('base64');
+  const lf = content.replace(/\r\n/g, '\n');
+  return crypto.createHash('sha256').update(lf, 'utf8').digest('base64');
 }
 
 // Extract inline <script>...</script> blocks (no src= attribute).
