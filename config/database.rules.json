@@ -11,6 +11,7 @@
     },
 
     "bills": {
+      ".read": "auth != null && (auth.token.admin == true || auth.token.accountant == true)",
       "$building": {
         "$room": {
           ".read": "auth != null && (auth.token.admin == true || (auth.token.room == $room && auth.token.building == $building))",
