@@ -29,7 +29,8 @@
       }
     </script>
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind: pre-built via `npm run tailwind:build` (committed to repo) instead of CDN JIT (~200KB JS) -->
+    <link rel="stylesheet" href="/shared/tailwind.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="shared/brand.css">
     <!-- Sentry error monitoring (~5KB loader stub; full SDK pulls only on first error) -->

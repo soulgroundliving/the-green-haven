@@ -24,6 +24,7 @@
 const esbuild = require('esbuild');
 const { glob } = require('glob');
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 // Safety: this script rewrites source files in place. That's desirable inside
 // Vercel's ephemeral build checkout, but catastrophic if run locally against
@@ -35,6 +36,20 @@ if (!process.env.VERCEL && !process.env.FORCE_BUILD) {
 }
 
 (async () => {
+  // Phase 4E Tailwind migration: compile shared/tailwind.input.css → shared/tailwind.css
+  // so tenant_app.html can link a tiny pre-built stylesheet instead of pulling the
+  // ~200KB Tailwind JIT runtime from cdn.tailwindcss.com on every page load.
+  // Runs BEFORE the JS minify loop so the generated CSS ships in the same deploy.
+  try {
+    console.log('🎨 Building Tailwind CSS...');
+    execSync('npx tailwindcss -i shared/tailwind.input.css -o shared/tailwind.css --minify', { stdio: 'inherit' });
+    const tailwindKB = (fs.statSync('shared/tailwind.css').size / 1024).toFixed(1);
+    console.log(`   shared/tailwind.css = ${tailwindKB}KB\n`);
+  } catch (e) {
+    console.error('❌ Tailwind build failed:', e.message);
+    process.exit(1);
+  }
+
   const files = await glob(['shared/**/*.js', 'accounting/**/*.js'], { nodir: true });
   if (files.length === 0) {
     console.error('❌ No JS files matched. Aborting build.');

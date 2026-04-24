@@ -35,10 +35,10 @@ const scriptHashTokens = [...scriptHashes].map(h => `'sha256-${h}'`).join(' ');
 const styleHashTokens  = [...styleHashes].map(h => `'sha256-${h}'`).join(' ');
 
 // External origins actually used across the 8 HTML files (audited 2026-04-25).
+// cdn.tailwindcss.com removed after Phase 4E Tailwind migration (pre-built CSS).
 const SCRIPT_SRC_EXTERNAL = [
   'https://cdnjs.cloudflare.com',
   'https://cdn.jsdelivr.net',
-  'https://cdn.tailwindcss.com',
   'https://js.sentry-cdn.com',
   'https://unpkg.com',
   'https://static.line-scdn.net',
@@ -52,7 +52,6 @@ const STYLE_SRC_EXTERNAL = [
   'https://fonts.googleapis.com',
   'https://cdnjs.cloudflare.com',
   'https://cdn.jsdelivr.net',
-  'https://cdn.tailwindcss.com',
 ].join(' ');
 
 const FONT_SRC = [
