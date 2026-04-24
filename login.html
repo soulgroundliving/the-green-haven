@@ -1018,7 +1018,10 @@
             email: userData.email
           });
 
-          if (userData.userType === 'accountant' || userData.userType === 'admin') {
+          if (userData.userType === 'accountant') {
+            console.log('➡️ Redirecting to: /tax-filing#dashboard');
+            window.location.href = '/tax-filing#dashboard';
+          } else if (userData.userType === 'admin') {
             console.log('➡️ Redirecting to: /dashboard');
             window.location.href = '/dashboard';
           } else if (userData.userType === 'tenant') {
@@ -1179,12 +1182,14 @@
 
         // Redirect based on user type (use userData.userType instead of currentUserType)
         setTimeout(() => {
-          if (userData.userType === 'accountant' || userData.userType === 'admin') {
+          if (userData.userType === 'accountant') {
+            window.location.href = '/tax-filing#dashboard';
+          } else if (userData.userType === 'admin') {
             window.location.href = '/dashboard';
           } else if (userData.userType === 'tenant') {
             window.location.href = `/tenant?room=${userData.roomNumber}`;
           } else {
-            window.location.href = '/dashboard'; // Default to dashboard
+            window.location.href = '/dashboard';
           }
         }, 1500);
 
