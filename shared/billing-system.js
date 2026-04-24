@@ -784,9 +784,23 @@ class BillStore {
     return n;
   }
 
-  /** Subscribe to RTDB bills (idempotent). Auto-fires on first BillStore use. */
+  /** Subscribe to RTDB bills (idempotent). Auto-fires on first BillStore use.
+   *
+   * Phase 4C scoping: RTDB rules deny reads of `bills/{building}` to everyone
+   * except admins — tenants can only read their own `bills/{building}/{room}`.
+   * Skip the building-level subscribe outside the admin dashboard; tenants
+   * read their room through tenant-system.js narrow subscribe, which is
+   * already scoped correctly. This also keeps the console free of the
+   * permission_denied log spam that shows up on every tenant page load. */
   static subscribe() {
     if (this._subscribed) return;
+    try {
+      const path = (typeof location !== 'undefined' ? location.pathname : '') || '';
+      if (!/^\/dashboard(\.html)?$/.test(path)) {
+        this._subscribed = true;
+        return;
+      }
+    } catch (_) {}
     if (!window.firebaseDatabase || !window.firebaseRef || !window.firebaseOnValue) {
       // Firebase not ready yet — retry shortly
       setTimeout(() => this.subscribe(), 1500);
