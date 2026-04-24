@@ -7195,7 +7195,26 @@
                     check();
                 });
             }
-            if (hasRoom) await loadTenantAppData();
+            if (hasRoom) {
+                // Phase 4C: loadTenantAppData reads RTDB paths scoped to {room,building} claims
+                // set by linkAuthUid. On the fast-path we didn't await liffPromise, so claims
+                // might not be on the token yet — checks real claim state, waits on liffLinked
+                // only if needed, and caps the wait so we never block the UI indefinitely.
+                try {
+                    const user = window.firebaseAuth?.currentUser;
+                    if (user) {
+                        const tr = await user.getIdTokenResult();
+                        const hasClaim = tr.claims.admin || (tr.claims.room && tr.claims.building);
+                        if (!hasClaim && window._lineUserId) {
+                            await Promise.race([
+                                new Promise(r => window.addEventListener('liffLinked', r, { once: true })),
+                                new Promise(r => setTimeout(r, 5000)),
+                            ]);
+                        }
+                    }
+                } catch (_) {}
+                await loadTenantAppData();
+            }
             renderHomePage();
             renderBillsList();
             renderAnnouncements();
