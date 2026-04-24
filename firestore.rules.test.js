@@ -18,7 +18,7 @@
  *   7. leaseRequests: any auth creates, only admin updates
  *   8. complaints: any auth creates, only admin modifies/deletes
  *   9. rewards / system / announcements / wellness_articles: admin write only
- *  10. communityEvents / communityDocs: admin write only, public read
+ *  10. communityEvents / communityDocuments: admin write only, public read
  *  11. buildings + nested rooms: admin write only
  *  12. liffUsers: any auth creates, only admin approves/deletes
  *  13. Anonymous tenant cannot escalate to admin paths
@@ -292,7 +292,7 @@ describe('complaints — any auth creates, only admin modifies/deletes', () => {
 
 describe('admin-only collections — anon tenant denied write', () => {
   for (const path of ['rewards/r1', 'system/cfg', 'announcements/a1', 'wellness_articles/w1',
-                      'communityEvents/e1', 'communityDocs/d1', 'historicalRevenue/2569',
+                      'communityEvents/e1', 'communityDocuments/d1', 'historicalRevenue/2569',
                       'meter_data/m1', 'leases/rooms/list/L1', 'buildings/b1']) {
     it(`anon tenant CANNOT write ${path}`, async () => {
       await assertFails(setDoc(doc(ANON().firestore(), path), { v: 1 }));
@@ -304,7 +304,7 @@ describe('admin-only collections — anon tenant denied write', () => {
 });
 
 describe('public-read content — unauth user can read', () => {
-  for (const path of ['announcements/a1', 'communityEvents/e1', 'communityDocs/d1', 'wellness_articles/w1']) {
+  for (const path of ['announcements/a1', 'communityEvents/e1', 'communityDocuments/d1', 'wellness_articles/w1']) {
     it(`unauthenticated user CAN read ${path}`, async () => {
       await seedDoc(path);
       await assertSucceeds(getDoc(doc(UNAUTH().firestore(), path)));

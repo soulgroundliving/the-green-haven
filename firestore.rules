@@ -32,7 +32,7 @@ service cloud.firestore {
 
     // ===== COMMUNITY EVENTS / DOCS / WELLNESS =====
     match /communityEvents/{id}    { allow read: if true; allow write: if isAdmin(); }
-    match /communityDocs/{id}      { allow read: if true; allow write: if isAdmin(); }
+    match /communityDocuments/{id} { allow read: if true; allow write: if isAdmin(); }
     match /wellness_articles/{id}  { allow read: if true; allow write: if isAdmin(); }
 
     // ===== MARKETPLACE (tenant-to-tenant listings, building-scoped) =====
