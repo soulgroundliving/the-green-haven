@@ -48,11 +48,12 @@ jobs:
 
       # Firestore emulator JAR runs on the JVM. Ubuntu runners ship with
       # OpenJDK already, but pin a known major version so a runner image
-      # bump can't surprise us.
+      # bump can't surprise us. firebase-tools as of late-2025 requires
+      # Java 21+ — pin Temurin 21 explicitly.
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
