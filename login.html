@@ -553,6 +553,15 @@
         padding: 45px 35px;
       }
     }
+
+    /* Phase 4E Step 2 classes (replace inline style="") */
+    .hidden { display: none; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .form-group-flush { margin-bottom: 0; }
+    .password-strength-box { font-size: 12px; margin-top: 6px; padding: 8px; background: #f5f5f5; border-radius: 4px; }
+    .password-req-grid { margin-top: 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .password-req-pill { font-size: 11px; padding: 4px; background: #ddd; border-radius: 2px; text-align: center; }
+    .loading-text { margin-top: 12px; color: #6b7a8d; }
   </style>
 </head>
 <body>
@@ -565,16 +574,16 @@
     <div class="login-body">
       <!-- User Type Selection -->
       <div class="user-type">
-        <button class="user-type-btn active" onclick="selectUserType('admin', this)">👨‍💼 Admin</button>
-        <button class="user-type-btn" onclick="selectUserType('accountant', this)">📊 บัญชี</button>
-        <button class="user-type-btn" onclick="selectUserType('tenant', this)">👤 Tenant</button>
+        <button class="user-type-btn active" data-action="user-type" data-type="admin">👨‍💼 Admin</button>
+        <button class="user-type-btn" data-action="user-type" data-type="accountant">📊 บัญชี</button>
+        <button class="user-type-btn" data-action="user-type" data-type="tenant">👤 Tenant</button>
       </div>
 
       <div id="errorMessage" class="error-message"></div>
       <div id="successMessage" class="success-message"></div>
 
       <!-- Login Form -->
-      <form id="loginForm" class="form-mode active" onsubmit="handleLogin(event)">
+      <form id="loginForm" class="form-mode active" data-action="login-submit">
         <div class="form-group">
           <label>Email</label>
           <input type="email" id="loginEmail" required placeholder="your@email.com" autocomplete="email">
@@ -584,25 +593,25 @@
           <label>Password</label>
           <div class="password-wrapper">
             <input type="password" id="loginPassword" required placeholder="••••••••" autocomplete="password">
-            <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)" title="Show/Hide password">👁️</button>
+            <button type="button" class="password-toggle" data-action="toggle-password" data-target="loginPassword" title="Show/Hide password">👁️</button>
           </div>
         </div>
 
         <div class="forgot-password">
-          <a onclick="showForgotPassword()">ลืมรหัสผ่าน?</a>
+          <a data-action="forgot-password">ลืมรหัสผ่าน?</a>
         </div>
 
         <button type="submit" class="login-btn" id="loginBtn">เข้าสู่ระบบ</button>
       </form>
 
       <!-- Register Form -->
-      <form id="registerForm" class="form-mode" onsubmit="handleRegister(event)">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-          <div class="form-group" style="margin-bottom:0;">
+      <form id="registerForm" class="form-mode" data-action="register-submit">
+        <div class="form-row-2">
+          <div class="form-group form-group-flush">
             <label>ชื่อ</label>
             <input type="text" id="registerFirstName" required placeholder="ชื่อ" autocomplete="given-name">
           </div>
-          <div class="form-group" style="margin-bottom:0;">
+          <div class="form-group form-group-flush">
             <label>นามสกุล</label>
             <input type="text" id="registerLastName" required placeholder="นามสกุล" autocomplete="family-name">
           </div>
@@ -616,16 +625,16 @@
         <div class="form-group">
           <label>Password</label>
           <div class="password-wrapper">
-            <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6" autocomplete="new-password" oninput="updatePasswordStrength()">
-            <button type="button" class="password-toggle" onclick="togglePassword('registerPassword', this)" title="Show/Hide password">👁️</button>
+            <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6" autocomplete="new-password" data-action="password-strength">
+            <button type="button" class="password-toggle" data-action="toggle-password" data-target="registerPassword" title="Show/Hide password">👁️</button>
           </div>
-          <div id="passwordStrength" style="font-size:12px;margin-top:6px;padding:8px;background:#f5f5f5;border-radius:4px;display:none;">
+          <div id="passwordStrength" class="password-strength-box hidden">
             <div id="strengthFeedback">ตรวจสอบความแข็งแรง...</div>
-            <div style="margin-top:6px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
-              <div id="req-length" style="font-size:11px;padding:4px;background:#ddd;border-radius:2px;text-align:center;">8+ ตัว</div>
-              <div id="req-upper" style="font-size:11px;padding:4px;background:#ddd;border-radius:2px;text-align:center;">A-Z</div>
-              <div id="req-lower" style="font-size:11px;padding:4px;background:#ddd;border-radius:2px;text-align:center;">a-z</div>
-              <div id="req-number" style="font-size:11px;padding:4px;background:#ddd;border-radius:2px;text-align:center;">0-9</div>
+            <div class="password-req-grid">
+              <div id="req-length" class="password-req-pill">8+ ตัว</div>
+              <div id="req-upper" class="password-req-pill">A-Z</div>
+              <div id="req-lower" class="password-req-pill">a-z</div>
+              <div id="req-number" class="password-req-pill">0-9</div>
             </div>
           </div>
         </div>
@@ -634,11 +643,11 @@
           <label>ยืนยัน Password</label>
           <div class="password-wrapper">
             <input type="password" id="registerPasswordConfirm" required placeholder="••••••••" autocomplete="new-password">
-            <button type="button" class="password-toggle" onclick="togglePassword('registerPasswordConfirm', this)" title="Show/Hide password">👁️</button>
+            <button type="button" class="password-toggle" data-action="toggle-password" data-target="registerPasswordConfirm" title="Show/Hide password">👁️</button>
           </div>
         </div>
 
-        <div id="tenantFields" style="display: none;">
+        <div id="tenantFields" class="hidden">
           <div class="form-group">
             <label>หมายเลขห้อง</label>
             <input type="text" id="roomNumber" placeholder="เช่น 15, 101" autocomplete="off">
@@ -650,12 +659,12 @@
 
       <div class="loading" id="loading">
         <div class="spinner"></div>
-        <p style="margin-top: 12px; color: #6b7a8d;">กำลังประมวลผล...</p>
+        <p class="loading-text">กำลังประมวลผล...</p>
       </div>
 
       <!-- Form Toggle -->
       <div class="signup-toggle" id="formToggle">
-        ยังไม่มีบัญชี? <a onclick="toggleForm()">สมัครสมาชิก</a>
+        ยังไม่มีบัญชี? <a data-action="toggle-form">สมัครสมาชิก</a>
       </div>
     </div>
   </div>
@@ -749,11 +758,7 @@
       }
 
       const tenantFields = document.getElementById('tenantFields');
-      if (type === 'tenant') {
-        tenantFields.style.display = 'block';
-      } else {
-        tenantFields.style.display = 'none';
-      }
+      tenantFields.classList.toggle('hidden', type !== 'tenant');
     }
 
     function togglePassword(fieldId, button) {
@@ -771,9 +776,9 @@
 
       const toggle = document.getElementById('formToggle');
       if (isLoginMode) {
-        toggle.innerHTML = 'ยังไม่มีบัญชี? <a onclick="toggleForm()">สมัครสมาชิก</a>';
+        toggle.innerHTML = 'ยังไม่มีบัญชี? <a data-action="toggle-form">สมัครสมาชิก</a>';
       } else {
-        toggle.innerHTML = 'มีบัญชีอยู่แล้ว? <a onclick="toggleForm()">เข้าสู่ระบบ</a>';
+        toggle.innerHTML = 'มีบัญชีอยู่แล้ว? <a data-action="toggle-form">เข้าสู่ระบบ</a>';
       }
 
       clearMessages();
@@ -1074,11 +1079,11 @@
       const feedbackEl = document.getElementById('strengthFeedback');
 
       if (!password) {
-        strengthEl.style.display = 'none';
+        strengthEl.classList.add('hidden');
         return;
       }
 
-      strengthEl.style.display = 'block';
+      strengthEl.classList.remove('hidden');
       const strength = window.SecurityUtils.validatePasswordStrength(password);
 
       feedbackEl.textContent = strength.feedback;
@@ -1225,6 +1230,30 @@
     }
 
     console.log('✅ Authentication logic loaded');
+
+    // Phase 4E Step 2: event-delegation dispatcher (replaces 13 inline onclick/onsubmit/oninput handlers).
+    // One listener per event type; the dispatcher routes by data-action attribute.
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      // Skip form elements — they're routed by submit/input handlers below.
+      if (el.tagName === 'FORM' || el.tagName === 'INPUT') return;
+      const action = el.getAttribute('data-action');
+      if (action === 'user-type') selectUserType(el.getAttribute('data-type'), el);
+      else if (action === 'toggle-password') togglePassword(el.getAttribute('data-target'), el);
+      else if (action === 'forgot-password') showForgotPassword();
+      else if (action === 'toggle-form') toggleForm();
+    });
+    document.addEventListener('submit', (e) => {
+      const action = e.target.getAttribute && e.target.getAttribute('data-action');
+      if (action === 'login-submit') handleLogin(e);
+      else if (action === 'register-submit') handleRegister(e);
+    });
+    document.addEventListener('input', (e) => {
+      if (e.target.getAttribute && e.target.getAttribute('data-action') === 'password-strength') {
+        updatePasswordStrength();
+      }
+    });
   </script>
 </body>
 </html>
