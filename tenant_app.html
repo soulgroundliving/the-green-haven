@@ -6933,6 +6933,36 @@
         window._lineProfile = null;
         window._lineLinkStatus = null; // null | 'pending' | 'approved' | 'rejected'
 
+        // Call linkAuthUid CF to bind anonymous UID → room custom claims.
+        // Skipped if the same UID was already linked this session (sessionStorage guard).
+        async function _callLinkAuthUid(lineUserId) {
+            const auth = window.firebaseAuth;
+            if (!auth?.currentUser) return;
+            const cachedUid = sessionStorage.getItem('liff_claim_uid');
+            if (cachedUid === auth.currentUser.uid) return; // already linked this session
+            try {
+                const idToken = await auth.currentUser.getIdToken();
+                const resp = await fetch(
+                    'https://asia-southeast1-the-green-haven.cloudfunctions.net/linkAuthUid',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                        body: JSON.stringify({ lineUserId })
+                    }
+                );
+                if (resp.ok) {
+                    await auth.currentUser.getIdToken(true); // force-refresh → picks up { room, building } claims
+                    sessionStorage.setItem('liff_claim_uid', auth.currentUser.uid);
+                    console.log('✅ LIFF auth UID linked — room claims set');
+                } else {
+                    const err = await resp.json().catch(() => ({}));
+                    console.warn('linkAuthUid CF error:', err.error || resp.status);
+                }
+            } catch (e) {
+                console.warn('linkAuthUid failed (non-blocking):', e.message);
+            }
+        }
+
         async function initLiffAndLink() {
             if (typeof liff === 'undefined') { console.warn('LIFF SDK not loaded'); return null; }
             try {
@@ -6976,6 +7006,9 @@
                         localStorage.setItem('tenant_app_room', _taRoom);
                         window._tenantAppRoom = _taRoom;
                         window._tenantAppBuilding = _taBuilding;
+                        // Bind anonymous UID → { room, building } custom claims (4C).
+                        // Non-blocking: RTDB rules enforce this after claim is set.
+                        _callLinkAuthUid(window._lineUserId).catch(() => {});
                         return { linked: true, data };
                     }
                     return { linked: false, status: data.status, data };

@@ -4,6 +4,9 @@
 // Admin custom-claims management (Phase 4A)
 exports.setAdminClaim = require('./setAdminClaim').setAdminClaim;
 
+// Tenant LIFF → Firebase Auth UID room binding (Phase 4C)
+exports.linkAuthUid = require('./linkAuthUid').linkAuthUid;
+
 // Complaint & Gamification
 exports.onComplaintCreated = require('./complaintAndGamification').onComplaintCreated;
 exports.sendComplaintConfirmation = require('./complaintAndGamification').sendComplaintConfirmation;

@@ -11,10 +11,10 @@
     },
 
     "bills": {
-      ".read": "auth != null",
-      ".write": "auth != null",
       "$building": {
         "$room": {
+          ".read": "auth != null && (auth.token.admin == true || (auth.token.room == $room && auth.token.building == $building))",
+          ".write": "auth != null && auth.token.admin == true",
           "$billId": {
             ".validate": "newData.hasChildren(['billId']) || !newData.exists()"
           }
@@ -23,10 +23,10 @@
     },
 
     "payments": {
-      ".read": "auth != null",
-      ".write": "auth != null",
       "$building": {
         "$room": {
+          ".read": "auth != null && (auth.token.admin == true || (auth.token.room == $room && auth.token.building == $building))",
+          ".write": "auth != null && (auth.token.admin == true || (auth.token.room == $room && auth.token.building == $building))",
           "$pushId": {
             ".validate": "newData.hasChildren(['amount']) || !newData.exists()"
           }
@@ -35,13 +35,17 @@
     },
 
     "maintenance": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      "$building": {
+        "$room": {
+          ".read": "auth != null && (auth.token.admin == true || (auth.token.room == $room && auth.token.building == $building))",
+          ".write": "auth != null && (auth.token.admin == true || (auth.token.room == $room && auth.token.building == $building))"
+        }
+      }
     },
 
     "housekeeping": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      ".read": "auth != null && auth.token.admin == true",
+      ".write": "auth != null && auth.token.admin == true"
     },
 
     "meter_readings": {
