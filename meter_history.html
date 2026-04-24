@@ -292,6 +292,18 @@
         padding: .7rem;
       }
     }
+
+    /* Phase 4E Step 2: replace inline style="" attributes with classes */
+    .filter-actions {
+      display: flex;
+      align-items: flex-end;
+      gap: 1rem;
+    }
+
+    .empty-center {
+      text-align: center;
+      color: #6b7a8d;
+    }
   </style>
 </head>
 <body>
@@ -304,9 +316,9 @@
       </div>
     </div>
     <div class="header-nav">
-      <button class="nav-btn" onclick="window.location.href='/meter'">📊 บันทึกมิเตอร์</button>
-      <button class="nav-btn" onclick="window.location.href='/dashboard'">🏠 หน้าหลัก</button>
-      <button class="logout-btn" onclick="logout()">🚪 ออกจากระบบ</button>
+      <button class="nav-btn" data-action="nav" data-href="/meter">📊 บันทึกมิเตอร์</button>
+      <button class="nav-btn" data-action="nav" data-href="/dashboard">🏠 หน้าหลัก</button>
+      <button class="logout-btn" data-action="logout">🚪 ออกจากระบบ</button>
     </div>
   </div>
 
@@ -327,9 +339,9 @@
           <option value="12">12 เดือน</option>
         </select>
       </div>
-      <div style="display: flex; align-items: flex-end; gap: 1rem;">
-        <button class="btn btn-primary" onclick="loadHistory()">🔍 ค้นหา</button>
-        <button class="btn btn-secondary" onclick="exportHistory()">📥 ดาวน์โหลด CSV</button>
+      <div class="filter-actions">
+        <button class="btn btn-primary" data-action="load-history">🔍 ค้นหา</button>
+        <button class="btn btn-secondary" data-action="export-history">📥 ดาวน์โหลด CSV</button>
       </div>
     </div>
 
@@ -382,7 +394,7 @@
           </thead>
           <tbody id="historyTable">
             <tr>
-              <td colspan="7" style="text-align: center; color: #6b7a8d;">เลือกห้องและค้นหา</td>
+              <td colspan="7" class="empty-center">เลือกห้องและค้นหา</td>
             </tr>
           </tbody>
         </table>
@@ -392,7 +404,7 @@
     <!-- Comparison -->
     <div class="card">
       <div class="card-title">📊 เปรียบเทียบเดือนต่อเดือน</div>
-      <div id="comparisonTable" style="text-align: center; color: #6b7a8d;">
+      <div id="comparisonTable" class="empty-center">
         เลือกห้องและค้นหาเพื่อดูเปรียบเทียบ
       </div>
     </div>
@@ -413,6 +425,20 @@
         window.location.href = '/login';
       }
     }
+
+    // Phase 4E Step 2: event-delegation dispatcher replaces inline onclick= handlers.
+    // CSP without 'unsafe-inline' blocks inline attribute handlers entirely; hooking
+    // one listener per page lets us keep <button data-action="..."> markup without
+    // needing per-handler hashes ('unsafe-hashes' wouldn't scale to 322 handlers).
+    document.addEventListener('click', function(e) {
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      const action = el.getAttribute('data-action');
+      if (action === 'nav') { window.location.href = el.getAttribute('data-href'); return; }
+      if (action === 'logout') { logout(); return; }
+      if (action === 'load-history') { if (typeof loadHistory === 'function') loadHistory(); return; }
+      if (action === 'export-history') { if (typeof exportHistory === 'function') exportHistory(); return; }
+    });
   </script>
 </body>
 </html>
