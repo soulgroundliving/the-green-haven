@@ -21,7 +21,6 @@ const FILES = [
   'dashboard.html',
   'tenant_app.html',
   'tax-filing.html',
-  'meter_history.html',
   'audit-log-viewer.html',
   'payment.html',
 ];
