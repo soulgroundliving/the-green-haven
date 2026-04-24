@@ -1,0 +1,33 @@
+{
+  "$comment": "PWA manifest for tenant_app. Lets tenants install the site as a standalone app on Android (Chrome 'Add to Home Screen') and iOS (Share -> Add to Home Screen). The service-worker.js handles offline caching so installed users see their last-loaded bills + announcements without network.",
+
+  "name": "Nature Haven",
+  "short_name": "Nature Haven",
+  "description": "ระบบผู้เช่าสำหรับโครงการ Nature Haven — ดูบิล แจ้งซ่อม จองทำความสะอาด",
+  "start_url": "/tenant_app.html",
+  "scope": "/",
+  "id": "/tenant_app.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#2d8653",
+  "lang": "th-TH",
+  "dir": "ltr",
+
+  "icons": [
+    {
+      "src": "/shared/pwa-icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+
+  "categories": ["lifestyle", "utilities"],
+
+  "shortcuts": [
+    { "name": "ดูบิล",       "short_name": "บิล",     "url": "/tenant_app.html?page=bill" },
+    { "name": "แจ้งซ่อม",   "short_name": "ซ่อม",    "url": "/tenant_app.html?page=maintenance" },
+    { "name": "ประกาศ",     "short_name": "ประกาศ", "url": "/tenant_app.html?page=announcements" }
+  ]
+}

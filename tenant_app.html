@@ -5,6 +5,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Nature Haven</title>
+
+    <!-- ===== PWA: install + offline support ===== -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2d8653">
+    <meta name="application-name" content="Nature Haven">
+    <!-- iOS Safari "Add to Home Screen" support (Android Chrome reads from manifest) -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Nature Haven">
+    <link rel="apple-touch-icon" href="/shared/pwa-icon.svg">
+    <link rel="icon" type="image/svg+xml" href="/shared/pwa-icon.svg">
+    <script>
+      // Register service worker (cache-first static + network-first shell + bypass for writes).
+      // Defer to load event so SW install never competes with Firebase init for network.
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(reg => console.log('🛡️ SW registered (scope:', reg.scope, ')'))
+            .catch(err => console.warn('SW registration failed:', err.message));
+        });
+      }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="shared/brand.css">

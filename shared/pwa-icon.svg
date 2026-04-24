@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- PWA icon for Nature Haven tenant app.
+       Brand-green rounded square + leaf glyph echoing the project name.
+       Maskable-safe: all visible content inside the central 80% so
+       Android's adaptive-icon mask can't crop the meaningful pixels. -->
+  <rect width="512" height="512" rx="96" fill="#2d8653"/>
+  <g transform="translate(256 256)" fill="#ffffff">
+    <!-- Stylised leaf -->
+    <path d="M -110 80
+             C -110 -20, -20 -110, 110 -110
+             C 110 20, 20 110, -110 110
+             Z"
+          fill="#ffffff" opacity="0.95"/>
+    <!-- Leaf vein -->
+    <path d="M -90 90 L 100 -100"
+          stroke="#2d8653" stroke-width="14" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>

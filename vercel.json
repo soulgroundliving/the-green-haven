@@ -59,6 +59,20 @@
           "value": "no-cache, no-store, must-revalidate"
         }
       ]
+    },
+    {
+      "$comment": "PWA: SW file MUST be no-cache so browsers detect new versions; manifest no-cache so install metadata updates take effect immediately.",
+      "source": "/(service-worker\\.js|manifest\\.json)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
     }
   ],
   "redirects": [
