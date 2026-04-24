@@ -41,10 +41,9 @@ async function requireAdmin(req, res) {
   const decoded = await verifyIdTokenFromHeader(req, res);
   if (!decoded) return null;
 
-  // Admin = non-anonymous email user. Mirrors firestore.rules isAdminOrEmail().
-  // Anonymous auth has no email / no provider; email-password auth has both.
-  const isEmailUser = !!decoded.email && decoded.firebase?.sign_in_provider !== 'anonymous';
-  if (!isEmailUser) {
+  // Admin = custom claim admin:true (set via setAdminClaim CF).
+  // Mirrors firestore.rules isAdmin(). Phase 4A Stage 2.
+  if (decoded.admin !== true) {
     res.status(403).json({ error: 'Admin access required' });
     return null;
   }

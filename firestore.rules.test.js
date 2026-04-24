@@ -40,7 +40,18 @@ let testEnv;
 const ANON = (uid = 'tenant-1') => testEnv.authenticatedContext(uid, {
   firebase: { sign_in_provider: 'anonymous' }
 });
+// Phase 4A Stage 2: admin requires custom claim admin:true
 const EMAIL_ADMIN = (uid = 'admin-1') => testEnv.authenticatedContext(uid, {
+  admin: true,
+  firebase: { sign_in_provider: 'password' }
+});
+// accountant1@test.com: tax-filing read-only, no admin claim
+const ACCOUNTANT = (uid = 'accountant-1') => testEnv.authenticatedContext(uid, {
+  accountant: true,
+  firebase: { sign_in_provider: 'password' }
+});
+// Email user with no custom claim — must be denied admin paths after Stage 2
+const EMAIL_NO_CLAIM = (uid = 'noclaim-1') => testEnv.authenticatedContext(uid, {
   firebase: { sign_in_provider: 'password' }
 });
 const UNAUTH = () => testEnv.unauthenticatedContext();
@@ -347,6 +358,41 @@ describe('auth_events — failed-login audit log (Phase 4B)', () => {
     await seedDoc('auth_events/ev1', { maskedEmail: 'te***@test.com', ua: 'x', errorCode: 'x', ts: new Date() });
     await assertFails(updateDoc(doc(EMAIL_ADMIN().firestore(), 'auth_events/ev1'), { ua: 'changed' }));
     await assertFails(deleteDoc(doc(EMAIL_ADMIN().firestore(), 'auth_events/ev1')));
+  });
+});
+
+describe('accountant role — tax-filing read access, no admin paths (Phase 4A Stage 2)', () => {
+  it('accountant CAN read taxSummary', async () => {
+    await seedDoc('taxSummary/2569', { totalRevenue: 100000 });
+    await assertSucceeds(getDoc(doc(ACCOUNTANT().firestore(), 'taxSummary/2569')));
+  });
+
+  it('accountant CAN read historicalRevenue', async () => {
+    await seedDoc('historicalRevenue/2568', { totalRevenue: 80000 });
+    await assertSucceeds(getDoc(doc(ACCOUNTANT().firestore(), 'historicalRevenue/2568')));
+  });
+
+  it('accountant CANNOT write historicalRevenue (read-only role)', async () => {
+    await assertFails(setDoc(doc(ACCOUNTANT().firestore(), 'historicalRevenue/2568'), { totalRevenue: 999 }));
+  });
+
+  it('accountant CANNOT read leaseRequests (admin-only)', async () => {
+    await seedDoc('leaseRequests/lr1', { status: 'pending' });
+    await assertFails(getDoc(doc(ACCOUNTANT().firestore(), 'leaseRequests/lr1')));
+  });
+
+  it('accountant CANNOT read verifiedSlips (admin-only)', async () => {
+    await seedDoc('verifiedSlips/s1', { amount: 100 });
+    await assertFails(getDoc(doc(ACCOUNTANT().firestore(), 'verifiedSlips/s1')));
+  });
+
+  it('email user with NO custom claim is denied admin paths (Stage 2 regression)', async () => {
+    await seedDoc('leaseRequests/lr1', { status: 'pending' });
+    await assertFails(getDoc(doc(EMAIL_NO_CLAIM().firestore(), 'leaseRequests/lr1')));
+  });
+
+  it('email user with NO claim CANNOT write system config', async () => {
+    await assertFails(setDoc(doc(EMAIL_NO_CLAIM().firestore(), 'system/config'), { v: 1 }));
   });
 });
 

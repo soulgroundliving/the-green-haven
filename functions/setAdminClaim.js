@@ -66,17 +66,21 @@ exports.setAdminClaim = functions.region('asia-southeast1').https.onRequest(asyn
   }
 
   // ── Validate body ─────────────────────────────────────────────────────────
-  const { email } = req.body || {};
+  const { email, role = 'admin' } = req.body || {};
   if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ error: 'Body must be JSON { "email": "..." } with a valid email' });
+    return res.status(400).json({ error: 'Body must be JSON { "email": "...", "role": "admin"|"accountant" }' });
+  }
+  if (!['admin', 'accountant'].includes(role)) {
+    return res.status(400).json({ error: 'role must be "admin" or "accountant"' });
   }
 
   // ── Set claim ─────────────────────────────────────────────────────────────
+  const claims = role === 'accountant' ? { accountant: true } : { admin: true };
   try {
     const user = await admin.auth().getUserByEmail(email.trim().toLowerCase());
-    await admin.auth().setCustomUserClaims(user.uid, { admin: true });
-    console.log(`✅ setAdminClaim: admin:true set on uid=${user.uid} email=${email}`);
-    return res.status(200).json({ success: true, uid: user.uid, email: user.email });
+    await admin.auth().setCustomUserClaims(user.uid, claims);
+    console.log(`✅ setAdminClaim: ${JSON.stringify(claims)} set on uid=${user.uid} email=${email}`);
+    return res.status(200).json({ success: true, uid: user.uid, email: user.email, claims });
   } catch (e) {
     console.error('setAdminClaim error:', e.code, e.message);
     if (e.code === 'auth/user-not-found') {

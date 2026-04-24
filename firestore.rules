@@ -7,89 +7,76 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && request.auth.token.admin == true;
     }
-    // Temporary admin check until custom claims are set up:
-    // admin logs in via email/password, tenants via anonymous.
-    // Any non-anonymous signed-in user is treated as admin.
-    function isAdminOrEmail() {
-      return isSignedIn() &&
-        (request.auth.token.admin == true ||
-         request.auth.token.firebase.sign_in_provider != 'anonymous');
+    // accountant1@test.com: read-only access to tax-filing.html data only
+    function isAccountant() {
+      return isSignedIn() && request.auth.token.accountant == true;
     }
 
     // ===== REWARDS COLLECTION (admin-managed catalog, all auth users can read) =====
     match /rewards/{rewardId} {
       allow read:  if isSignedIn();
-      allow write: if isAdminOrEmail();
+      allow write: if isAdmin();
     }
 
     // ===== SYSTEM CONFIG (emergency contacts, app-wide settings) =====
     match /system/{docId} {
       allow read:  if isSignedIn();
-      allow write: if isAdminOrEmail();
+      allow write: if isAdmin();
     }
 
     // ===== ANNOUNCEMENTS (admin-published) =====
     match /announcements/{annId} {
       allow read:  if true;  // public-ish tenant content
-      allow write: if isAdminOrEmail();
+      allow write: if isAdmin();
     }
 
     // ===== COMMUNITY EVENTS / DOCS / WELLNESS =====
-    // Read is public-ish (tenant-facing content, no PII) — avoids auth race on F5.
-    // Write still requires admin (email auth via isAdminOrEmail until claims set up).
-    match /communityEvents/{id}    { allow read: if true; allow write: if isAdminOrEmail(); }
-    match /communityDocs/{id}      { allow read: if true; allow write: if isAdminOrEmail(); }
-    match /wellness_articles/{id}  { allow read: if true; allow write: if isAdminOrEmail(); }
+    match /communityEvents/{id}    { allow read: if true; allow write: if isAdmin(); }
+    match /communityDocs/{id}      { allow read: if true; allow write: if isAdmin(); }
+    match /wellness_articles/{id}  { allow read: if true; allow write: if isAdmin(); }
 
     // ===== MARKETPLACE (tenant-to-tenant listings, building-scoped) =====
     match /marketplace/{id} {
       allow read:   if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && (isAdminOrEmail() || request.auth.uid == resource.data.ownerUid);
-      allow delete: if isAdminOrEmail() || (isSignedIn() && request.auth.uid == resource.data.ownerUid);
+      allow update: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.ownerUid);
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerUid);
     }
 
-    // ===== COMPLAINTS (cross-collection, simpler than per-room subcollection) =====
+    // ===== COMPLAINTS =====
     match /complaints/{id} {
       allow read:   if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isAdminOrEmail();
-      allow delete: if isAdminOrEmail();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // ===== LEASE REQUESTS (tenant submits renew/moveout, admin approves) =====
     match /leaseRequests/{id} {
-      // Tenant writes only; admin reads the queue. Tenants don't need to browse
-      // others' requests — if "see own status" lands later, gate via uid mapping.
-      allow read:   if isAdminOrEmail();
+      allow read:   if isAdmin();
       allow create: if isSignedIn();
-      allow update: if isAdminOrEmail();
-      allow delete: if isAdminOrEmail();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // ===== VERIFIED SLIPS (CF writes, admin reads) =====
-    // Tightened 2026-04-24 Phase 3: read admin-only. Contains bank-sender names,
-    // amounts, refs — no tenant read path exists in the client.
     match /verifiedSlips/{id} {
-      allow read:  if isAdminOrEmail();
-      allow write: if isAdminOrEmail();
+      allow read:  if isAdmin();
+      allow write: if isAdmin();
     }
 
-    // ===== TAX SUMMARY (CF writes via admin SDK, admin dashboard reads) =====
-    // Sensitive financial aggregate (annual revenue totals). Admin-only read.
-    // Admin session lapse → tax-filing.html shows re-login banner instead of
-    // falling through to anon reads.
+    // ===== TAX SUMMARY (CF writes via admin SDK) =====
+    // Accountant (tax-filing.html) also needs read; write is CF-only.
     match /taxSummary/{yearDoc} {
-      allow read:  if isAdminOrEmail();
+      allow read:  if isAdmin() || isAccountant();
       allow write: if false; // CF-only via admin SDK
     }
 
-    // ===== HISTORICAL REVENUE (Excel-imported pre-launch annual summaries) =====
-    // Admin-only: dashboard-extra.js subscribes from admin dashboard only.
-    // Tenant app does NOT read this.
+    // ===== HISTORICAL REVENUE (Excel-imported pre-launch summaries) =====
+    // Accountant reads for tax-filing; only admin can write.
     match /historicalRevenue/{yearDoc} {
-      allow read:  if isAdminOrEmail();
-      allow write: if isAdminOrEmail();
+      allow read:  if isAdmin() || isAccountant();
+      allow write: if isAdmin();
     }
 
     // ===== RATE LIMITS (CF only) =====
@@ -100,7 +87,6 @@ service cloud.firestore {
     // ===== AUTH EVENTS (failed-login audit log — 4B) =====
     // Anyone can create (login hasn't succeeded yet, so auth uid unavailable).
     // Schema-constrained to 4 known fields with size caps to prevent abuse.
-    // Only admins can read the audit log.
     match /auth_events/{eventId} {
       allow create: if request.resource.data.keys().hasOnly(['maskedEmail', 'ua', 'errorCode', 'ts'])
                     && request.resource.data.maskedEmail is string
@@ -109,20 +95,18 @@ service cloud.firestore {
                     && request.resource.data.ua.size() <= 200
                     && request.resource.data.errorCode is string
                     && request.resource.data.errorCode.size() <= 64;
-      allow read:   if isAdminOrEmail();
+      allow read:   if isAdmin();
       allow update, delete: if false;
     }
 
     // ===== BUILDINGS COLLECTION =====
     match /buildings/{buildingId} {
-      // Anyone signed in can read building config (PromptPay #, company name)
       allow read:  if isSignedIn();
-      allow write: if isAdminOrEmail();
+      allow write: if isAdmin();
 
-      // Per-room subcollection
       match /rooms/{roomId} {
         allow read:  if isSignedIn();
-        allow write: if isAdminOrEmail();
+        allow write: if isAdmin();
 
         match /maintenanceHistory/{docId} {
           allow read, write: if isSignedIn();
@@ -132,70 +116,55 @@ service cloud.firestore {
         }
         match /roomConditionReports/{docId} {
           allow read:  if isSignedIn();
-          allow write: if isAdminOrEmail();
+          allow write: if isAdmin();
         }
       }
     }
 
     // ===== TENANTS COLLECTION (NESTED: tenants/{building}/list/{roomId}) =====
-    // Schema verified 2026-04-18: nested by building, doc id = roomId.
     match /tenants/{building}/list/{roomId} {
-      // Any authenticated user can read tenant info
-      // (Stricter per-room access requires LIFF→Firebase Auth uid mapping; defer until launch+1)
       allow read: if isSignedIn();
-
-      // Tenant can update their own contact fields (phone/email/licensePlate)
-      // but cannot touch gamification subobject (CF-only) or lease-critical fields
       allow update: if isSignedIn() &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['gamification', 'rentAmount', 'building', 'roomId', 'tenantId']);
+      allow create, delete: if isAdmin();
+      allow write: if isAdmin();
 
-      // Admin full access
-      allow create, delete: if isAdminOrEmail();
-      allow write: if isAdminOrEmail();
-
-      // Sub: paymentHistory (CF writes via verifySlip) — admin-only read.
-      // Not accessed from tenant_app.html; admin dashboard bill view uses it.
       match /paymentHistory/{monthKey} {
-        allow read:  if isAdminOrEmail();
-        allow write: if isAdminOrEmail();
+        allow read:  if isAdmin();
+        allow write: if isAdmin();
       }
-      // Sub: redemptions (redeemReward CF writes) — admin-only read.
-      // Tenant sees their own via the gamification counters on the parent doc.
       match /redemptions/{redemptionId} {
-        allow read:  if isAdminOrEmail();
-        allow write: if isAdminOrEmail();
+        allow read:  if isAdmin();
+        allow write: if isAdmin();
       }
-      // Sub: pets (Sprint B: tenant manages own pet records)
       match /pets/{petId} {
         allow read:  if isSignedIn();
         allow write: if isSignedIn();
       }
-      // Sub: wellnessClaimed (tenant claims +pts for reading wellness articles)
-      // One doc per article id; create-only (idempotent), no update/delete
       match /wellnessClaimed/{articleId} {
         allow read:   if isSignedIn();
         allow create: if isSignedIn();
-        allow update, delete: if isAdminOrEmail();
+        allow update, delete: if isAdmin();
       }
     }
 
     // ===== METER DATA =====
     match /meter_data/{docId} {
       allow read:  if isSignedIn();
-      allow write: if isAdminOrEmail();
+      allow write: if isAdmin();
     }
 
     // ===== LEASES (ARCHIVE) =====
     match /leases/{building}/list/{leaseId} {
       allow read:  if isSignedIn();
-      allow write: if isAdminOrEmail();
+      allow write: if isAdmin();
     }
 
     // ===== LIFF USER LINKS (LINE → tenant link approval) =====
     match /liffUsers/{userId} {
       allow read:  if isSignedIn();
       allow create: if isSignedIn();
-      allow update, delete: if isAdminOrEmail();
+      allow update, delete: if isAdmin();
     }
 
     // ===== DEFAULT DENY (catch-all) =====
