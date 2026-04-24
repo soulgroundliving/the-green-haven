@@ -443,6 +443,11 @@ exports.verifySlip = functions
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    // ===== AUTH — require Firebase ID token from signed-in admin =====
+    const { requireAdmin } = require('./_auth');
+    const decoded = await requireAdmin(req, res);
+    if (!decoded) return;
+
     // ===== VALIDATION =====
     const validation = validateRequest(req.body);
     if (!validation.valid) {
@@ -451,6 +456,11 @@ exports.verifySlip = functions
 
     const { file, expectedAmount, building, room, userId } = req.body;
     const identifier = room || userId;
+
+    // ===== SIZE CAP — reject payloads larger than ~5MB base64 (~3.75MB binary) =====
+    if (typeof file !== 'string' || file.length > 5 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Payload too large (max 5MB base64)' });
+    }
 
     console.log(`🔍 Verification request: ${identifier} (${building}), ฿${expectedAmount}`);
 

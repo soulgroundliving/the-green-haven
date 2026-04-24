@@ -174,6 +174,10 @@ exports.backupFirestore = functions
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
+    const { requireAdmin } = require('./_auth');
+    const decoded = await requireAdmin(req, res);
+    if (!decoded) return;
+
     try {
       const result = await runBackup();
       return res.status(200).json({ success: true, ...result });

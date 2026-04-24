@@ -210,6 +210,10 @@ exports.cleanupOldDocs = functions
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
+    const { requireAdmin } = require('./_auth');
+    const decoded = await requireAdmin(req, res);
+    if (!decoded) return;
+
     try {
       const [rateLimits, maintenance, liffRejected] = await Promise.all([
         runRateLimitsCleanup(),

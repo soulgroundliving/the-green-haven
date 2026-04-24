@@ -59,33 +59,36 @@ service cloud.firestore {
 
     // ===== LEASE REQUESTS (tenant submits renew/moveout, admin approves) =====
     match /leaseRequests/{id} {
-      // Read OK for anyone signed in (admin queue + tenant own request)
-      // Tenant should ideally only see own request — defer to launch+1 with uid mapping
-      allow read:   if isSignedIn();
+      // Tenant writes only; admin reads the queue. Tenants don't need to browse
+      // others' requests — if "see own status" lands later, gate via uid mapping.
+      allow read:   if isAdminOrEmail();
       allow create: if isSignedIn();
       allow update: if isAdminOrEmail();
       allow delete: if isAdminOrEmail();
     }
 
     // ===== VERIFIED SLIPS (CF writes, admin reads) =====
+    // Tightened 2026-04-24 Phase 3: read admin-only. Contains bank-sender names,
+    // amounts, refs — no tenant read path exists in the client.
     match /verifiedSlips/{id} {
-      allow read:  if isSignedIn();
+      allow read:  if isAdminOrEmail();
       allow write: if isAdminOrEmail();
     }
 
     // ===== TAX SUMMARY (CF writes via admin SDK, admin dashboard reads) =====
-    // Sensitive financial data — locked to authenticated reads (admin only ideally,
-    // but custom claims not yet set up; tighten to isAdminOrEmail() once admin claim exists).
+    // Sensitive financial aggregate (annual revenue totals). Admin-only read.
+    // Admin session lapse → tax-filing.html shows re-login banner instead of
+    // falling through to anon reads.
     match /taxSummary/{yearDoc} {
-      allow read:  if isSignedIn();
+      allow read:  if isAdminOrEmail();
       allow write: if false; // CF-only via admin SDK
     }
 
     // ===== HISTORICAL REVENUE (Excel-imported pre-launch annual summaries) =====
-    // Phase 2c: persist HISTORICAL_DATA across devices. Admin (email auth) writes
-    // via Excel import or migration button; tenants read for charts.
+    // Admin-only: dashboard-extra.js subscribes from admin dashboard only.
+    // Tenant app does NOT read this.
     match /historicalRevenue/{yearDoc} {
-      allow read:  if isSignedIn();
+      allow read:  if isAdminOrEmail();
       allow write: if isAdminOrEmail();
     }
 
@@ -134,14 +137,16 @@ service cloud.firestore {
       allow create, delete: if isAdminOrEmail();
       allow write: if isAdminOrEmail();
 
-      // Sub: paymentHistory (CF writes via verifySlip)
+      // Sub: paymentHistory (CF writes via verifySlip) — admin-only read.
+      // Not accessed from tenant_app.html; admin dashboard bill view uses it.
       match /paymentHistory/{monthKey} {
-        allow read:  if isSignedIn();
+        allow read:  if isAdminOrEmail();
         allow write: if isAdminOrEmail();
       }
-      // Sub: redemptions (redeemReward CF writes; tenant can read own)
+      // Sub: redemptions (redeemReward CF writes) — admin-only read.
+      // Tenant sees their own via the gamification counters on the parent doc.
       match /redemptions/{redemptionId} {
-        allow read:  if isSignedIn();
+        allow read:  if isAdminOrEmail();
         allow write: if isAdminOrEmail();
       }
       // Sub: pets (Sprint B: tenant manages own pet records)

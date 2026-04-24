@@ -147,7 +147,7 @@ describe('tenants — sensitive field protection', () => {
   });
 });
 
-describe('taxSummary — financial data, CF-only writes', () => {
+describe('taxSummary — financial data, CF-only writes, admin-only reads', () => {
   it('email admin CANNOT write (CF-only via admin SDK)', async () => {
     const db = EMAIL_ADMIN().firestore();
     await assertFails(setDoc(doc(db, 'taxSummary/2569'), { totalRevenue: 0 }));
@@ -157,10 +157,45 @@ describe('taxSummary — financial data, CF-only writes', () => {
     await assertFails(setDoc(doc(ANON().firestore(), 'taxSummary/2569'), { totalRevenue: 999 }));
   });
 
-  it('signed-in users CAN read', async () => {
+  it('admin CAN read, anonymous tenant CANNOT (Phase 3 tightening)', async () => {
     await seedDoc('taxSummary/2569', { totalRevenue: 100000 });
-    await assertSucceeds(getDoc(doc(ANON().firestore(), 'taxSummary/2569')));
     await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'taxSummary/2569')));
+    await assertFails(getDoc(doc(ANON().firestore(), 'taxSummary/2569')));
+  });
+});
+
+describe('verifiedSlips / historicalRevenue / leaseRequests / paymentHistory / redemptions — admin-only reads (Phase 3)', () => {
+  it('anon tenant CANNOT read verifiedSlips', async () => {
+    await seedDoc('verifiedSlips/s1', { amount: 100 });
+    await assertFails(getDoc(doc(ANON().firestore(), 'verifiedSlips/s1')));
+  });
+  it('admin CAN read verifiedSlips', async () => {
+    await seedDoc('verifiedSlips/s1', { amount: 100 });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'verifiedSlips/s1')));
+  });
+
+  it('anon tenant CANNOT read historicalRevenue', async () => {
+    await seedDoc('historicalRevenue/2569', { totalRevenue: 1 });
+    await assertFails(getDoc(doc(ANON().firestore(), 'historicalRevenue/2569')));
+  });
+  it('admin CAN read historicalRevenue', async () => {
+    await seedDoc('historicalRevenue/2569', { totalRevenue: 1 });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'historicalRevenue/2569')));
+  });
+
+  it('anon tenant CANNOT read leaseRequests', async () => {
+    await seedDoc('leaseRequests/req-1', { status: 'pending' });
+    await assertFails(getDoc(doc(ANON().firestore(), 'leaseRequests/req-1')));
+  });
+
+  it('anon tenant CANNOT read paymentHistory', async () => {
+    await seedDoc('tenants/nest/list/101/paymentHistory/2026-04', { amount: 2828 });
+    await assertFails(getDoc(doc(ANON().firestore(), 'tenants/nest/list/101/paymentHistory/2026-04')));
+  });
+
+  it('anon tenant CANNOT read redemptions', async () => {
+    await seedDoc('tenants/nest/list/101/redemptions/r1', { rewardId: 'x' });
+    await assertFails(getDoc(doc(ANON().firestore(), 'tenants/nest/list/101/redemptions/r1')));
   });
 });
 

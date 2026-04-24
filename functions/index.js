@@ -1,16 +1,6 @@
 // Firebase Cloud Functions - Main Entry Point
 // Each function initializes Firebase Admin separately
 
-// Export all functions
-exports.initializeRooms = require('./initializeRooms').initializeRooms;
-exports.getRooms = require('./initializeRooms').getRooms;
-exports.analyzeRoomData = require('./cleanupRoomData').analyzeRoomData;
-exports.cleanupRoomData = require('./cleanupRoomData').cleanupRoomData;
-exports.migrateToFirestore = require('./migrateToFirestore').migrateToFirestore;
-exports.setupFirestoreIndexes = require('./migrateToFirestore').setupFirestoreIndexes;
-exports.verifyMigrationComplete = require('./cleanupRealtimeDB').verifyMigrationComplete;
-exports.deleteRealtimeDBData = require('./cleanupRealtimeDB').deleteRealtimeDBData;
-
 // Complaint & Gamification
 exports.onComplaintCreated = require('./complaintAndGamification').onComplaintCreated;
 exports.sendComplaintConfirmation = require('./complaintAndGamification').sendComplaintConfirmation;

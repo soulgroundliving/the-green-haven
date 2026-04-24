@@ -182,13 +182,12 @@ function saveSecureSession(user) {
   const sessionData = {
     ...user,
     timestamp: Date.now(),
-    expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+    expiresAt: Date.now() + (2 * 60 * 60 * 1000) // 2 hours
   };
 
   sessionStorage.setItem('user', JSON.stringify(sessionData));
 
-  // Session timeout disabled - allow continuous access
-  // setSessionTimeout();
+  setSessionTimeout();
 
   console.log('✅ Secure session saved');
 }

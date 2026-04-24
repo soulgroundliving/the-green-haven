@@ -532,10 +532,18 @@ async function verifySlip(file){
     const room = invoiceData?.room || 'unknown';
     // invoiceData.building is a display name — map to 'rooms' or 'nest' for Cloud Function
     const buildingRaw = (currentBuilding === 'nest') ? 'nest' : 'rooms';
+    // Get Firebase ID token so the CF can verify this is a signed-in admin
+    const idToken = await window.auth?.currentUser?.getIdToken?.();
+    if (!idToken) {
+      throw new Error('กรุณาเข้าสู่ระบบใหม่ก่อนตรวจสลิป (Session หมดอายุ)');
+    }
     // Call Firebase Cloud Function (API key secured server-side)
     const res = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + idToken
+      },
       body: JSON.stringify({ file: base64, expectedAmount: billTotal || 1, building: buildingRaw, room })
     });
     if (!res.ok && res.status !== 200) {
@@ -558,25 +566,28 @@ async function verifySlip(file){
       slipVerified = true;
       slipData = {amount, sender, receiver, ref, tDate, transferDate, amountOk};
 
+      const _escBill = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
       resultEl.innerHTML = `
         <div class="slip-result-ok">
           <div style="font-weight:700;font-size:.88rem;color:var(--green-dark);margin-bottom:6px;">✅ สลิปผ่านการตรวจสอบ!</div>
-          <div class="slip-result-row"><span>ผู้โอน</span><span><strong>${sender}</strong></span></div>
-          <div class="slip-result-row"><span>ผู้รับ</span><span>${receiver}</span></div>
+          <div class="slip-result-row"><span>ผู้โอน</span><span><strong>${_escBill(sender)}</strong></span></div>
+          <div class="slip-result-row"><span>ผู้รับ</span><span>${_escBill(receiver)}</span></div>
           <div class="slip-result-row"><span>จำนวนเงิน</span>
             <span class="${amountOk?'slip-amount-ok':'slip-amount-warn'}">฿${amount.toLocaleString()} ${amountOk?'✅':'⚠️ ยอดไม่ตรงกับบิล'}</span></div>
-          <div class="slip-result-row"><span>วันเวลา</span><span>${tDate}</span></div>
-          <div class="slip-result-row"><span>เลขอ้างอิง</span><span style="font-size:.75rem;word-break:break-all;">${ref}</span></div>
+          <div class="slip-result-row"><span>วันเวลา</span><span>${_escBill(tDate)}</span></div>
+          <div class="slip-result-row"><span>เลขอ้างอิง</span><span style="font-size:.75rem;word-break:break-all;">${_escBill(ref)}</span></div>
         </div>`;
       enableReceiptBtn();
     } else {
-      const msg = json.message || json.data?.message || 'ไม่ทราบสาเหตุ';
+      const _escBill = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+      const msg = _escBill(json.message || json.data?.message || 'ไม่ทราบสาเหตุ');
       resultEl.innerHTML = `<div class="slip-result-err">❌ <strong>สลิปไม่ผ่าน:</strong> ${msg}<br><small>ลองถ่ายรูปใหม่ให้คมชัดขึ้น หรือตรวจว่าสลิปถูกต้อง</small></div>`;
     }
   } catch(err){
     console.error('❌ verifySlip error:', err);
+    const _escBill = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
     resultEl.innerHTML = `<div class="slip-result-err">⚠️ เชื่อมต่อ Cloud Function ไม่ได้<br>
-      <small>${err.message || 'Network error'}</small><br>
+      <small>${_escBill(err.message || 'Network error')}</small><br>
       <button onclick="skipSlipVerify()" style="margin-top:6px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:.8rem;background:#fff;">ออกใบเสร็จโดยไม่ตรวจสลิป</button>
     </div>`;
   }

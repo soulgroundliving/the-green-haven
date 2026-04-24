@@ -27,6 +27,9 @@ function bkkDateString(d) {
 }
 
 exports.claimDailyLoginPoints = functions.region('asia-southeast1').https.onCall(async (data, context) => {
+  if (!context.auth || !context.auth.uid) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign-in required');
+  }
   const { building, roomId } = data || {};
 
   if (!building || !roomId) {

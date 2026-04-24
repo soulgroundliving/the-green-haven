@@ -871,14 +871,15 @@ function updateGamificationWidget() {
   }).filter(t => t.name && t.name !== t.id).sort((a,b) => b.pts - a.pts).slice(0,3);
 
   if (all.length === 0) { el.innerHTML = '<div style="color:var(--text-muted);font-size:.82rem;">ยังไม่มีผู้เช่า</div>'; return; }
+  const _escHL = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
   el.innerHTML = all.map((t, i) => `
     <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
       <span style="font-size:1.1rem;">${['🥇','🥈','🥉'][i]}</span>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.name}</div>
-        <div style="font-size:.7rem;color:var(--text-muted);">${t.months} เดือน</div>
+        <div style="font-weight:700;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_escHL(t.name)}</div>
+        <div style="font-size:.7rem;color:var(--text-muted);">${Number(t.months)||0} เดือน</div>
       </div>
-      <span style="font-size:.78rem;font-weight:800;color:var(--green-dark);">${t.pts} pts</span>
+      <span style="font-size:.78rem;font-weight:800;color:var(--green-dark);">${Number(t.pts)||0} pts</span>
     </div>`).join('');
 }
 

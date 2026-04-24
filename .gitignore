@@ -9,6 +9,19 @@ bill*.xlsx
 *-bills.xlsx
 *-temp.xlsx
 
+# Tax reports (real financial data — never commit)
+tax_report_*.pdf
+tax_export_*.pdf
+
+# Local planning / scratch docs (not for repo)
+CLEANUP_PLAN*.md
+FIXES_*.md
+SCRATCH*.md
+
+# Stray Windows temp-path files (from accidental path-as-filename bugs)
+UsersusEr*.html
+UsersusEr*.js
+
 # Node modules
 node_modules/
 
