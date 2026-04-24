@@ -122,8 +122,10 @@ service cloud.firestore {
     }
 
     // ===== TENANTS COLLECTION (NESTED: tenants/{building}/list/{roomId}) =====
+    // Phase 4C-2: read scoped to own room via linkedAuthUid custom field.
+    // Admin reads all rooms. Tenant reads only their own linked room.
     match /tenants/{building}/list/{roomId} {
-      allow read: if isSignedIn();
+      allow read: if isAdmin() || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid);
       allow update: if isSignedIn() &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['gamification', 'rentAmount', 'building', 'roomId', 'tenantId']);
       allow create, delete: if isAdmin();

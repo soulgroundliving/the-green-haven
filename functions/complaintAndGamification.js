@@ -374,31 +374,30 @@ exports.calculateTenantRank = functions.region('asia-southeast1').https.onCall(a
  */
 exports.getLeaderboard = functions.region('asia-southeast1').https.onCall(async (data, context) => {
   try {
-    console.log('📊 Generating leaderboard...');
+    const building = (data && data.building) || 'nest';
+    if (!['rooms', 'nest'].includes(building)) {
+      throw new functions.https.HttpsError('invalid-argument', 'building must be "rooms" or "nest"');
+    }
 
+    // Nested schema: tenants/{building}/list/{roomId}
     const snapshot = await firestore
-      .collection('tenants')
+      .collection('tenants').doc(building).collection('list')
       .orderBy('gamification.points', 'desc')
-      .limit(20)
+      .limit(10)
       .get();
 
-    const leaderboard = [];
-
-    snapshot.forEach((doc, index) => {
-      const tenantData = doc.data();
-      leaderboard.push({
+    const leaderboard = snapshot.docs.map((doc, index) => {
+      const d = doc.data();
+      return {
         rank: index + 1,
-        tenantId: doc.id,
-        tenantName: tenantData.identity?.tenantName || 'Unknown',
-        points: tenantData.gamification?.points || 0,
-        badges: (tenantData.gamification?.badges || []).length
-      });
+        roomId: doc.id,
+        name: d.name || d.firstName || '(ไม่มีชื่อ)',
+        points: (d.gamification && d.gamification.points) || 0,
+        avatar: d.avatar || '🏡',
+      };
     });
 
-    return {
-      success: true,
-      leaderboard
-    };
+    return { success: true, leaderboard };
   } catch (error) {
     console.error('❌ Error getting leaderboard:', error);
     throw error;

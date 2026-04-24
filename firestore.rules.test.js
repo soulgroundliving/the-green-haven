@@ -152,9 +152,37 @@ describe('tenants — sensitive field protection', () => {
     }));
   });
 
-  it('any signed-in user can read tenant doc', async () => {
-    await assertSucceeds(getDoc(doc(ANON().firestore(), 'tenants/rooms/list/101')));
+  it('admin can read any tenant doc', async () => {
     await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'tenants/rooms/list/101')));
+  });
+
+  it('linked tenant CAN read their own room doc (linkedAuthUid matches)', async () => {
+    // seed with linkedAuthUid = 'tenant-1' (matches ANON uid)
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'tenants/rooms/list/101'), {
+        name: 'Test', linkedAuthUid: 'tenant-1'
+      });
+    });
+    await assertSucceeds(getDoc(doc(ANON('tenant-1').firestore(), 'tenants/rooms/list/101')));
+  });
+
+  it('unlinked anon tenant CANNOT read any tenant doc (Phase 4C-2)', async () => {
+    // doc has linkedAuthUid of a different uid
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'tenants/rooms/list/101'), {
+        name: 'Other', linkedAuthUid: 'tenant-99'
+      });
+    });
+    await assertFails(getDoc(doc(ANON('tenant-1').firestore(), 'tenants/rooms/list/101')));
+  });
+
+  it('tenant CANNOT read a different room even if both are signed in', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'tenants/rooms/list/202'), {
+        name: 'Neighbour', linkedAuthUid: 'tenant-2'
+      });
+    });
+    await assertFails(getDoc(doc(ANON('tenant-1').firestore(), 'tenants/rooms/list/202')));
   });
 });
 

@@ -6404,25 +6404,11 @@
             if (window._gamificationDisabled) return; // Rooms tenants
             const cont = document.getElementById('eco-leaderboard');
             if (!cont) return;
-            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            if (!window.firebase?.functions) return;
             try {
-                const fs = window.firebase.firestoreFunctions;
-                const db = window.firebase.firestore();
-                const q = fs.query(
-                    fs.collection(db, 'tenants', 'nest', 'list'),
-                    fs.orderBy('gamification.points', 'desc'),
-                    fs.limit(10)
-                );
-                const snap = await fs.getDocs(q);
-                const rows = snap.docs.map(d => {
-                    const data = d.data() || {};
-                    return {
-                        roomId: d.id,
-                        name: data.name || data.firstName || '(ไม่มีชื่อ)',
-                        points: (data.gamification && data.gamification.points) || 0,
-                        avatar: data.avatar || '🏡'
-                    };
-                });
+                const getLeaderboard = window.firebase.functions.httpsCallable('getLeaderboard');
+                const result = await getLeaderboard({ building: 'nest' });
+                const rows = (result.data?.leaderboard || []);
                 _leaderboardLoaded = true;
                 cont.innerHTML = '';
                 if (!rows.length) {
@@ -7007,8 +6993,8 @@
                         window._tenantAppRoom = _taRoom;
                         window._tenantAppBuilding = _taBuilding;
                         // Bind anonymous UID → { room, building } custom claims (4C).
-                        // Non-blocking: RTDB rules enforce this after claim is set.
-                        _callLinkAuthUid(window._lineUserId).catch(() => {});
+                        // Awaited so token has room/building claims before app renders bills.
+                        await _callLinkAuthUid(window._lineUserId);
                         return { linked: true, data };
                     }
                     return { linked: false, status: data.status, data };
@@ -7030,24 +7016,18 @@
             const btn = document.getElementById('liff-link-submit-btn');
             if (btn) { btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
 
-            // Auto-match: if phone matches tenants/{building}/list/{room}.phone → auto-approve
+            // Auto-match: CF checks phone server-side (admin SDK) — client never sees raw phone
             let autoApprove = false;
             let matchedTenantName = '';
-            if (phone) {
+            if (phone && window.firebase?.functions) {
                 try {
-                    const db = window.firebase.firestore();
-                    const fs = window.firebase.firestoreFunctions;
-                    const tenantSnap = await fs.getDoc(fs.doc(fs.collection(db, 'tenants'), bld, 'list', String(room)));
-                    if (tenantSnap.exists()) {
-                        const t = tenantSnap.data();
-                        const tenantPhone = _normalizePhone(t.phone || t.tenantPhone || '');
-                        const givenPhone = _normalizePhone(phone);
-                        if (tenantPhone && givenPhone && tenantPhone === givenPhone) {
-                            autoApprove = true;
-                            matchedTenantName = t.name || t.firstName || '';
-                        }
+                    const checkPhone = window.firebase.functions.httpsCallable('checkTenantPhone');
+                    const res = await checkPhone({ building: bld, room: String(room), phone });
+                    if (res.data?.match) {
+                        autoApprove = true;
+                        matchedTenantName = res.data.tenantName || '';
                     }
-                } catch (e) { console.warn('tenant phone lookup failed:', e); }
+                } catch (e) { console.warn('checkTenantPhone failed:', e.message); }
             }
 
             try {

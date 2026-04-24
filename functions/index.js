@@ -7,6 +7,9 @@ exports.setAdminClaim = require('./setAdminClaim').setAdminClaim;
 // Tenant LIFF → Firebase Auth UID room binding (Phase 4C)
 exports.linkAuthUid = require('./linkAuthUid').linkAuthUid;
 
+// Phone match check for LIFF auto-approve — admin SDK, never exposes raw phone (Phase 4C-2)
+exports.checkTenantPhone = require('./checkTenantPhone').checkTenantPhone;
+
 // Complaint & Gamification
 exports.onComplaintCreated = require('./complaintAndGamification').onComplaintCreated;
 exports.sendComplaintConfirmation = require('./complaintAndGamification').sendComplaintConfirmation;
