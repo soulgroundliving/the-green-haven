@@ -1,7 +1,9 @@
 {
   "scripts": {
     "build": "node build.js",
-    "test:rules": "node --test firestore.rules.test.js"
+    "test:rules": "node --test firestore.rules.test.js",
+    "csp:hash": "node tools/compute-csp-hashes.js",
+    "csp:print": "node tools/generate-vercel-csp.js"
   },
   "dependencies": {
     "xlsx": "^0.18.5"

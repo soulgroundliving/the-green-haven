@@ -1,0 +1,75 @@
+{
+  "index.html": {
+    "scriptHashes": [
+      "LqCKKVZ3zwki5wLGcVgdb9cu36TrQH4QCn7jS7/Ubwk="
+    ],
+    "styleHashes": []
+  },
+  "login.html": {
+    "scriptHashes": [
+      "fhp6fThQwIC5EFuT1xxzB6zlT+VIgNAHvuFFxt4BKqk=",
+      "oGe3vKenBk8uRe2xe16TAgaDJ/eb/MGquvYi1b5rL8o="
+    ],
+    "styleHashes": [
+      "uX6Uj9ggtnycUo9W7FZnUBG5G9GZQnI/inL7UP4D7WM="
+    ]
+  },
+  "dashboard.html": {
+    "scriptHashes": [
+      "yfGMR3xvKC8i0dh7xhmGW94RyzXWfPhsCqkxpKGodd4=",
+      "T1zT3pMaJR67mx9Dk2SVkYEWFPxGrFVbx5zT3+Ho24s=",
+      "o9zoIBX8Q3tQls458InJeYhGh28J+h/xKE/Uzo2dNVM=",
+      "BMA7Pufoi7Fy9TV83hgiOFUMWCeXFNI5fzQTQ+wXibU=",
+      "bqrJ7kdyWaf8xqxDq84f90Ju+DsPI0fRafHt+VgF2Tk="
+    ],
+    "styleHashes": [
+      "t7mh3kH65sBu6mQrQm+Z0XwQhwvkrKTHjEf9fniNyic="
+    ]
+  },
+  "tenant_app.html": {
+    "scriptHashes": [
+      "l1bl+P7l30vyCnwK5vNs1zGYdTWAEbhBpSoJbWTHMBM=",
+      "Ic0bOeaKv88b2nOmtCwqO4v5NlJbOuUg9edQ8ZsXQpE=",
+      "D2p7ER56m3dpfiSrT0u6ykgfjp2CBG6EFFUwllNz6jE=",
+      "/go54pGRn1wp+M14XmIZwofNxk3xLygmhTDcjT1UvII="
+    ],
+    "styleHashes": [
+      "sFbUKpRsMU9tsLAx6JCnlCt85DYnb8fqm39s5OecELc=",
+      "3fk03lCBnSsRdem3+NjS/HiChFZwsKi+8TYYYEhnza4="
+    ]
+  },
+  "tax-filing.html": {
+    "scriptHashes": [
+      "i6If9aqpaoxHvadPZdCBzROcQLwwRxUV6kQImbuWw4M=",
+      "Syr7eqgKZ7u2vyRqMcDkU6e9DctQyjknJxc6dUGnWVw="
+    ],
+    "styleHashes": [
+      "NG0U7IFVRrff2MRJ+6SZFYPht7iQSgU0NwqkTD52aLQ="
+    ]
+  },
+  "meter_history.html": {
+    "scriptHashes": [
+      "T6qPWoGvtCqKzQN97RXdg6BVzGJgVw6xO3cUP/FLM3Y="
+    ],
+    "styleHashes": [
+      "dEYdV0sn+ExC/82SaMc1ZXVHjf0DkZooz8kKOphxjOA="
+    ]
+  },
+  "audit-log-viewer.html": {
+    "scriptHashes": [
+      "CEVBHSsctwe2pfCaEr9Fj251jvJsudTAedoRcetRNGE="
+    ],
+    "styleHashes": [
+      "DD90J/OEpfKCsWWUV8iVop+LPtYW4ssAgkyJXaox8vw=",
+      "f4LXbaow5hDiChHy0I7x+2+afIAZw6XGty4tZpNyV/g="
+    ]
+  },
+  "payment.html": {
+    "scriptHashes": [
+      "YQ8wKdjeYj53u9I1iSr6rvFcvf7kuMqrICBqHxV58E8="
+    ],
+    "styleHashes": [
+      "TZDh37WXtVV8hD/Fv27TX6sQBsuNX2rF4IyLaukCszU="
+    ]
+  }
+}
