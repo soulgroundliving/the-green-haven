@@ -57,6 +57,14 @@ exports.remindLeaseExpiry = require('./remindLeaseExpiry').remindLeaseExpiry;
 exports.backupFirestoreScheduled = require('./backupFirestore').backupFirestoreScheduled;
 exports.backupFirestore = require('./backupFirestore').backupFirestore;
 
+// Scheduled cleanup of three collections that would otherwise grow forever:
+//   rateLimits (daily 04:00), maintenance RTDB (daily 04:10), liffUsers
+//   rejected (Sunday 04:20). Single HTTP endpoint runs all three for testing.
+exports.cleanupRateLimitsScheduled = require('./cleanupOldDocs').cleanupRateLimitsScheduled;
+exports.cleanupMaintenanceRTDBScheduled = require('./cleanupOldDocs').cleanupMaintenanceRTDBScheduled;
+exports.cleanupLiffUsersRejectedScheduled = require('./cleanupOldDocs').cleanupLiffUsersRejectedScheduled;
+exports.cleanupOldDocs = require('./cleanupOldDocs').cleanupOldDocs;
+
 // Import existing functions if available
 try {
   const verifySlip = require('./verifySlip');
@@ -76,6 +84,10 @@ try {
   console.log('notifyLiffRequest not found, skipping...');
 }
 
+// Legacy: cleanupRateLimits.js never existed — its job is now done by
+// cleanupRateLimitsScheduled exported above from cleanupOldDocs.js.
+// Keep the stale require() one more revision; the try/catch logs a
+// harmless warning and the deploy still succeeds.
 try {
   const cleanupRateLimits = require('./cleanupRateLimits');
   if (cleanupRateLimits.cleanupRateLimits) {
