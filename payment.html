@@ -184,6 +184,37 @@
     .bill-box { page-break-inside: avoid; }
     .app-content { padding: 20px; }
   }
+
+  /* Phase 4E Step 2 utility + component classes (replace inline style="") */
+  .hidden { display: none; }
+  .flex-row-8 { display: flex; gap: 8px; }
+  .logout-pill { background: rgba(198,40,40,0.2); color: #c62828; }
+  .loading-center { text-align: center; color: var(--text-muted); padding: 2rem; }
+  .status-label-sm { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+  .section-spaced { margin-top: 1.5rem; }
+  .section-label-bold { font-weight: 700; margin-bottom: 1rem; color: var(--text); }
+  .muted-note-sm { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+  .section-divider { margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--border); }
+  .btn-full-accent { width: 100%; background: var(--accent); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; margin-bottom: 1rem; }
+  .btn-full-blue { width: 100%; background: var(--blue); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  .center-muted-sm { font-size: 0.85rem; color: var(--text-muted); text-align: center; }
+  .warning-note { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem; }
+  .mb-1rem { margin-bottom: 1rem; }
+  .slip-preview-img { width: 100%; max-height: 300px; border-radius: 8px; border: 2px solid var(--border); object-fit: contain; }
+  .btn-remove-slip { width: 100%; margin-top: 0.5rem; padding: 8px; background: #ffebee; color: var(--red); border: 1px solid var(--red); border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+  .upload-status-box { padding: 12px; margin-bottom: 1rem; border-radius: 8px; font-size: 0.9rem; }
+  .btn-upload-slip { width: 100%; background: var(--green); color: #fff; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  .uploaded-status { background: var(--green-pale); border-left: 4px solid var(--green); padding: 12px; border-radius: 6px; color: var(--green-dark); font-size: 0.9rem; }
+  .verification-detail { color: var(--text-muted); margin-top: 0.5rem; display: block; }
+  .confirm-disabled { opacity: 0.5; cursor: not-allowed; }
+  .payment-note-center { display: block; margin-top: 0.5rem; color: var(--text-muted); text-align: center; }
+  .error-card-body { background: #ffebee; color: #c62828; padding: 1rem; border-radius: 8px; }
+  .status-detail-sm { margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted); }
+  .pay-history-item { padding: 1rem; margin-bottom: 0.5rem; border-radius: 6px; border-left: 4px solid; }
+  .pay-history-item[data-status="pending"] { background: rgba(255,152,0,0.06); border-left-color: #ff9800; }
+  .pay-history-item[data-status="verified"] { background: rgba(76,175,80,0.06); border-left-color: #4caf50; }
+  .pay-history-amount { font-weight: 700; }
+  .pay-history-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem; }
 </style>
 </head>
 <body>
@@ -191,14 +222,14 @@
 <div class="app-container">
   <!-- App Header -->
   <div class="app-header">
-    <button class="app-header-back" onclick="goBack()" id="backBtn" style="display:none;">←</button>
+    <button class="app-header-back hidden" data-action="back" id="backBtn">←</button>
     <div class="app-header-title">
       <h1>💳 ชำระค่าเช่า</h1>
       <p>The Green Haven</p>
     </div>
-    <div style="display:flex;gap:8px;">
-      <button class="app-header-install" onclick="installApp()" id="installBtn" style="display:none;">📱 ติดตั้ง</button>
-      <button class="app-header-install" onclick="handleLogout()" style="background:rgba(198,40,40,0.2);color:#c62828;">🚪 Out</button>
+    <div class="flex-row-8">
+      <button class="app-header-install hidden" data-action="install-app" id="installBtn">📱 ติดตั้ง</button>
+      <button class="app-header-install logout-pill" data-action="logout">🚪 Out</button>
     </div>
   </div>
 
@@ -207,7 +238,7 @@
     <!-- Bill Info -->
     <div class="card">
       <div id="billContent">
-        <div style="text-align:center;color:var(--text-muted);padding:2rem;">
+        <div class="loading-center">
           🔄 กำลังโหลด...
         </div>
       </div>
@@ -215,12 +246,12 @@
 
     <!-- Payment Status -->
     <div class="card">
-      <div style="font-size:.9rem;color:var(--text-muted);margin-bottom:.5rem;">📊 สถานะการชำระ</div>
+      <div class="status-label-sm">📊 สถานะการชำระ</div>
       <div id="paymentStatus"></div>
     </div>
 
     <!-- Payment Methods -->
-    <div class="card" id="paymentSection" style="display:none;">
+    <div class="card hidden" id="paymentSection">
       <div class="card-title">💡 วิธีการชำระเงิน</div>
 
       <div class="instruction-box">
@@ -229,25 +260,25 @@
       </div>
 
       <!-- PromptPay Section -->
-      <div style="margin-top:1.5rem;">
-        <div style="font-weight:700;margin-bottom:1rem;color:var(--text);">📱 PromptPay QR Code</div>
+      <div class="section-spaced">
+        <div class="section-label-bold">📱 PromptPay QR Code</div>
         <div class="qr-section">
           <div class="qr-box" id="promptPayQR"></div>
-          <div style="font-size:.85rem;color:var(--text-muted);margin-top:.5rem;">
+          <div class="muted-note-sm">
             สแกนด้วย Mobile Banking
           </div>
         </div>
       </div>
 
       <!-- Banking Links -->
-      <div style="margin-top:1.5rem;">
-        <div style="font-weight:700;margin-bottom:1rem;color:var(--text);">🏦 บริการธนาคาร</div>
+      <div class="section-spaced">
+        <div class="section-label-bold">🏦 บริการธนาคาร</div>
         <div class="payment-methods">
-          <button class="method-btn" onclick="goToBank('promptpay')">
+          <button class="method-btn" data-action="bank" data-bank="promptpay">
             <div class="method-btn-icon">💳</div>
             <div class="method-btn-text">PromptPay</div>
           </button>
-          <button class="method-btn" onclick="goToBank('ebanking')">
+          <button class="method-btn" data-action="bank" data-bank="ebanking">
             <div class="method-btn-icon">📱</div>
             <div class="method-btn-text">e-Banking</div>
           </button>
@@ -255,73 +286,66 @@
       </div>
 
       <!-- Cash Bill Section -->
-      <div style="margin-top:2rem;padding-top:2rem;border-top:2px solid var(--border);">
-        <div style="font-weight:700;margin-bottom:1rem;color:var(--text);">📄 เอกสารบิล</div>
-        <button class="btn btn-secondary" onclick="generateCashBillFromTenant()"
-          style="width:100%;background:var(--accent);color:#fff;border:none;padding:12px;border-radius:8px;font-weight:700;cursor:pointer;margin-bottom:1rem;">
+      <div class="section-divider">
+        <div class="section-label-bold">📄 เอกสารบิล</div>
+        <button class="btn btn-secondary btn-full-accent" data-action="cash-bill">
           💰 ดูบิลเงินสด
         </button>
-        <p style="font-size:.85rem;color:var(--text-muted);text-align:center;">
+        <p class="center-muted-sm">
           ดาวน์โหลด บิลเงินสด สำหรับใช้อ้างอิง
         </p>
       </div>
 
       <!-- Slip Upload Section -->
-      <div style="margin-top:2rem;padding-top:2rem;border-top:2px solid var(--border);">
-        <div style="font-weight:700;margin-bottom:1rem;color:var(--text);">📸 ส่งสลิปการโอนเงิน</div>
-        <div style="font-size:.9rem;color:var(--text-muted);margin-bottom:1rem;">
+      <div class="section-divider">
+        <div class="section-label-bold">📸 ส่งสลิปการโอนเงิน</div>
+        <div class="warning-note">
           ⚠️ ถ่ายรูปสลิปจากแอป Mobile Banking หรือ ATM
         </div>
 
         <!-- File Input -->
-        <div style="margin-bottom:1rem;">
-          <input type="file" id="slipImageInput" accept="image/*"
-            style="display:none;" onchange="handleSlipImageSelect(event)">
-          <button class="btn btn-secondary" onclick="document.getElementById('slipImageInput').click()"
-            style="width:100%;background:var(--blue);color:#fff;border:none;padding:12px;border-radius:8px;font-weight:700;cursor:pointer;">
+        <div class="mb-1rem">
+          <input type="file" id="slipImageInput" accept="image/*" class="hidden" data-action="slip-image-select">
+          <button class="btn btn-secondary btn-full-blue" data-action="pick-slip">
             📱 เลือกรูปสลิป
           </button>
         </div>
 
         <!-- Image Preview -->
-        <div id="slipPreview" style="display:none;margin-bottom:1rem;">
-          <img id="previewImage" src="" alt="Slip Preview"
-            style="width:100%;max-height:300px;border-radius:8px;border:2px solid var(--border);object-fit:contain;">
-          <button style="width:100%;margin-top:0.5rem;padding:8px;background:#ffebee;color:var(--red);border:1px solid var(--red);border-radius:6px;cursor:pointer;font-size:.9rem;"
-            onclick="clearSlipImage()">❌ ลบรูปภาพ</button>
+        <div id="slipPreview" class="hidden mb-1rem">
+          <img id="previewImage" src="" alt="Slip Preview" class="slip-preview-img">
+          <button class="btn-remove-slip" data-action="clear-slip">❌ ลบรูปภาพ</button>
         </div>
 
         <!-- Upload Status -->
-        <div id="uploadStatus" style="display:none;padding:12px;margin-bottom:1rem;border-radius:8px;font-size:.9rem;">
-        </div>
+        <div id="uploadStatus" class="hidden upload-status-box"></div>
 
         <!-- Upload Button -->
-        <button id="uploadSlipBtn" class="btn btn-primary" onclick="uploadSlip()"
-          style="width:100%;display:none;background:var(--green);color:#fff;padding:12px;border:none;border-radius:8px;font-weight:700;cursor:pointer;">
+        <button id="uploadSlipBtn" class="btn btn-primary hidden btn-upload-slip" data-action="upload-slip">
           🚀 ส่งสลิป
         </button>
 
         <!-- Already Uploaded Status -->
-        <div id="alreadyUploadedStatus" style="display:none;background:var(--green-pale);border-left:4px solid var(--green);padding:12px;border-radius:6px;color:var(--green-dark);font-size:.9rem;">
+        <div id="alreadyUploadedStatus" class="hidden uploaded-status">
           ✅ ส่งสลิปแล้ว<br>
           <small id="uploadedTimeText"></small><br>
-          <small id="verificationStatusText" style="color:var(--text-muted);margin-top:0.5rem;display:block;"></small>
+          <small id="verificationStatusText" class="verification-detail"></small>
         </div>
       </div>
 
       <!-- Confirm Payment Button -->
-      <div style="margin-top:1.5rem;">
-        <button class="btn btn-primary" onclick="confirmPayment()" style="opacity:0.5;cursor:not-allowed;" disabled>
+      <div class="section-spaced">
+        <button class="btn btn-primary confirm-disabled" data-action="confirm-payment" disabled>
           ✅ โอนแล้ว - ส่งแจ้ง
         </button>
-        <small style="display:block;margin-top:0.5rem;color:var(--text-muted);text-align:center;">
+        <small class="payment-note-center">
           👇 โปรดส่งสลิปการโอนด้านบนแทน
         </small>
       </div>
     </div>
 
     <!-- Success Message -->
-    <div id="successMessage" style="display:none;">
+    <div id="successMessage" class="hidden">
       <div class="success-box">
         ✅ <strong>โอนเงินเรียบร้อย</strong><br><br>
         ระบบได้รับแจ้งแล้ว<br>
@@ -331,7 +355,7 @@
     </div>
 
     <!-- Payment History -->
-    <div class="card" id="historyCard" style="display:none;">
+    <div class="card hidden" id="historyCard">
       <div class="card-title">📋 ประวัติการชำระเงิน</div>
       <div id="paymentHistory"></div>
     </div>
@@ -339,8 +363,8 @@
 
   <!-- App Footer Navigation -->
   <div class="app-footer">
-    <button class="footer-btn" onclick="refreshPage()">🔄 รีเฟรช</button>
-    <button class="footer-btn" onclick="shareApp()">📤 แชร์</button>
+    <button class="footer-btn" data-action="refresh">🔄 รีเฟรช</button>
+    <button class="footer-btn" data-action="share">📤 แชร์</button>
   </div>
 
   <div class="footer">
@@ -425,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Validate room ID (alphanumeric only, max 10 chars)
   if (!rawRoomId || !/^[a-zA-Z0-9]{1,10}$/.test(rawRoomId)) {
     document.querySelector('.app-content').innerHTML =
-      '<div class="card"><div style="background:#ffebee;color:#c62828;padding:1rem;border-radius:8px;">❌ เลขห้องไม่ถูกต้อง</div></div>';
+      '<div class="card"><div class="error-card-body">❌ เลขห้องไม่ถูกต้อง</div></div>';
     return;
   }
 
@@ -472,7 +496,7 @@ function loadBillData() {
 
   if (!tenant) {
     document.querySelector('.app-content').innerHTML =
-      '<div class="card"><div style="background:#ffebee;color:#c62828;padding:1rem;border-radius:8px;">❌ ไม่พบข้อมูลห้อง<br><br><small>ห้องที่มี: 15, 16, 17</small></div></div>';
+      '<div class="card"><div class="error-card-body">❌ ไม่พบข้อมูลห้อง<br><br><small>ห้องที่มี: 15, 16, 17</small></div></div>';
     return;
   }
 
@@ -530,11 +554,11 @@ function updatePaymentStatus() {
     document.getElementById('paymentSection').style.display = 'block';
     document.getElementById('historyCard').style.display = 'none';
   } else if (payment.status === 'pending') {
-    html = `<span class="status-badge pending">⏳ รอการตรวจสอบ</span><p style="margin-top:.5rem;font-size:.85rem;color:var(--text-muted);">แจ้งเจ้าของเมื่อ ${payment.reportedAt}</p>`;
+    html = `<span class="status-badge pending">⏳ รอการตรวจสอบ</span><p class="status-detail-sm">แจ้งเจ้าของเมื่อ ${payment.reportedAt}</p>`;
     document.getElementById('paymentSection').style.display = 'none';
     document.getElementById('historyCard').style.display = 'block';
   } else if (payment.status === 'verified') {
-    html = `<span class="status-badge success">✅ ชำระแล้ว</span><p style="margin-top:.5rem;font-size:.85rem;color:var(--text-muted);">ยืนยันเมื่อ ${payment.verifiedAt}</p>`;
+    html = `<span class="status-badge success">✅ ชำระแล้ว</span><p class="status-detail-sm">ยืนยันเมื่อ ${payment.verifiedAt}</p>`;
     document.getElementById('paymentSection').style.display = 'none';
     document.getElementById('historyCard').style.display = 'block';
   }
@@ -651,12 +675,11 @@ function loadPaymentHistory() {
   }
 
   const html = roomPayments.map(p => {
-    const color = p.status === 'pending' ? '#ff9800' : '#4caf50';
     const text = p.status === 'pending' ? '⏳ รอตรวจสอบ' : '✅ ชำระแล้ว';
     return `
-      <div style="background:${color}10;border-left:4px solid ${color};padding:1rem;margin-bottom:.5rem;border-radius:6px;">
-        <div style="font-weight:700;">฿${p.amount.toLocaleString()} • ${p.month}</div>
-        <div style="font-size:.8rem;color:var(--text-muted);margin-top:.3rem;">
+      <div class="pay-history-item" data-status="${p.status}">
+        <div class="pay-history-amount">฿${p.amount.toLocaleString()} • ${p.month}</div>
+        <div class="pay-history-meta">
           แจ้ง: ${p.reportedAt} | ${text}
         </div>
       </div>
@@ -862,6 +885,35 @@ function generateCashBillFromTenant() {
     alert('❌ เกิดข้อผิดพลาด: ' + error.message);
   }
 }
+
+// Phase 4E Step 2: event-delegation dispatcher (replaces 13 inline onclick/onchange handlers).
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const action = el.getAttribute('data-action');
+  // Skip the file-input itself (handled on 'change' below). 'change' bubbles through
+  // closest('[data-action]') too, but click on the input only fires the OS file-picker.
+  if (el.tagName === 'INPUT' && el.type === 'file') return;
+  const map = {
+    'back': goBack,
+    'install-app': installApp,
+    'logout': handleLogout,
+    'bank': () => goToBank(el.getAttribute('data-bank')),
+    'cash-bill': generateCashBillFromTenant,
+    'pick-slip': () => document.getElementById('slipImageInput').click(),
+    'clear-slip': clearSlipImage,
+    'upload-slip': uploadSlip,
+    'confirm-payment': confirmPayment,
+    'refresh': refreshPage,
+    'share': shareApp,
+  };
+  if (typeof map[action] === 'function') map[action]();
+});
+document.addEventListener('change', (e) => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  if (el.getAttribute('data-action') === 'slip-image-select') handleSlipImageSelect(e);
+});
 </script>
 
 </body>
