@@ -1099,7 +1099,10 @@ class TenantFirebaseSync {
             });
           }
         } catch (e) {
-          console.warn(`⚠️ Firebase bill loading failed: ${e.message}`);
+          // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
+          if (!/permission/i.test(e?.message || '')) {
+            console.warn(`⚠️ Firebase bill loading failed: ${e.message}`);
+          }
         }
       }
 
@@ -1110,7 +1113,10 @@ class TenantFirebaseSync {
         return dateB - dateA;
       });
     } catch (error) {
-      console.error('❌ Error loading bills:', error);
+      // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
+      if (!/permission/i.test(error?.message || '')) {
+        console.error('❌ Error loading bills:', error);
+      }
       return [];
     }
   }
@@ -1135,10 +1141,17 @@ class TenantFirebaseSync {
         } else {
           callback([]);
         }
-      }, (err) => console.warn('⚠️ subscribeBills error:', err.message));
+      }, (err) => {
+        // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
+        if (!/permission/i.test(err?.message || '')) {
+          console.warn('⚠️ subscribeBills error:', err.message);
+        }
+      });
       return typeof unsub === 'function' ? unsub : () => {};
     } catch (e) {
-      console.warn('⚠️ subscribeBills failed:', e.message);
+      if (!/permission/i.test(e?.message || '')) {
+        console.warn('⚠️ subscribeBills failed:', e.message);
+      }
       return () => {};
     }
   }
@@ -1166,7 +1179,10 @@ class TenantFirebaseSync {
 
       return [];
     } catch (error) {
-      console.error('❌ Error loading payment history:', error);
+      // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
+      if (!/permission/i.test(error?.message || '')) {
+        console.error('❌ Error loading payment history:', error);
+      }
       return [];
     }
   }
@@ -1194,7 +1210,10 @@ class TenantFirebaseSync {
 
       return [];
     } catch (error) {
-      console.error('❌ Error loading maintenance tickets:', error);
+      // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
+      if (!/permission/i.test(error?.message || '')) {
+        console.error('❌ Error loading maintenance tickets:', error);
+      }
       return [];
     }
   }

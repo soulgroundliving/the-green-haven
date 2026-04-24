@@ -44,8 +44,12 @@
     },
 
     "housekeeping": {
-      ".read": "auth != null && auth.token.admin == true",
-      ".write": "auth != null && auth.token.admin == true"
+      "$building": {
+        "$room": {
+          ".read": "auth != null && (auth.token.admin == true || (auth.token.room == $room && auth.token.building == $building))",
+          ".write": "auth != null && auth.token.admin == true"
+        }
+      }
     },
 
     "meter_readings": {

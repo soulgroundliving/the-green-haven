@@ -4473,10 +4473,18 @@
         // RTDB realtime subscribe — admin writes cleaning ticket status to housekeeping/{bld}/{room},
         // tenant sees updates live (same pattern as maintenance)
         let _cleaningRtdbOff = null;
-        function _subscribeCleaningFromRTDB() {
+        async function _subscribeCleaningFromRTDB() {
             if (_cleaningRtdbOff) return;
             if (!window.firebaseReady || !window.firebaseDatabase || !window.firebaseRef || !window.firebaseOnValue) return;
             if (!_taBuilding || !_taRoom) return;
+            // Phase 4C: RTDB rule requires {room, building} claims on token (or admin).
+            // Defer quietly if claims not yet set — liffLinked event handler retries after linkAuthUid.
+            try {
+                const user = window.firebaseAuth?.currentUser;
+                if (!user) return;
+                const tr = await user.getIdTokenResult();
+                if (!tr.claims.admin && !(tr.claims.room && tr.claims.building)) return;
+            } catch (_) { return; }
             try {
                 const path = `housekeeping/${_taBuilding}/${_taRoom}`;
                 const ref = window.firebaseRef(window.firebaseDatabase, path);
@@ -4504,6 +4512,7 @@
             } catch (e) { console.warn('cleaning RTDB subscribe init failed:', e.message); }
         }
         window.addEventListener('authReady', _subscribeCleaningFromRTDB);
+        window.addEventListener('liffLinked', _subscribeCleaningFromRTDB);
         if (window.firebaseReady && window._authUid) _subscribeCleaningFromRTDB();
 
         // ---- Receipt/tax-invoice settings ----
@@ -5845,10 +5854,18 @@
         // RTDB realtime subscribe — admin writes status/workNotes/afterPhoto to RTDB,
         // tenant sees updates live without having to be on the same device
         let _maintenanceRtdbOff = null;
-        function _subscribeMaintenanceFromRTDB() {
+        async function _subscribeMaintenanceFromRTDB() {
             if (_maintenanceRtdbOff) return;
             if (!window.firebaseReady || !window.firebaseDatabase || !window.firebaseRef || !window.firebaseOnValue) return;
             if (!_taBuilding || !_taRoom) return;
+            // Phase 4C: RTDB rule requires {room, building} claims on token (or admin).
+            // Defer quietly if claims not yet set — liffLinked event handler retries after linkAuthUid.
+            try {
+                const user = window.firebaseAuth?.currentUser;
+                if (!user) return;
+                const tr = await user.getIdTokenResult();
+                if (!tr.claims.admin && !(tr.claims.room && tr.claims.building)) return;
+            } catch (_) { return; }
             try {
                 const path = `maintenance/${_taBuilding}/${_taRoom}`;
                 const ref = window.firebaseRef(window.firebaseDatabase, path);
@@ -5881,6 +5898,7 @@
             } catch (e) { console.warn('maintenance RTDB subscribe init failed:', e.message); }
         }
         window.addEventListener('authReady', _subscribeMaintenanceFromRTDB);
+        window.addEventListener('liffLinked', _subscribeMaintenanceFromRTDB);
         if (window.firebaseReady && window._authUid) _subscribeMaintenanceFromRTDB();
 
         function loadComplaints() {
@@ -6945,6 +6963,7 @@
                     await auth.currentUser.getIdToken(true); // force-refresh → picks up { room, building } claims
                     sessionStorage.setItem('liff_claim_uid', auth.currentUser.uid);
                     console.log('✅ LIFF auth UID linked — room claims set');
+                    window.dispatchEvent(new Event('liffLinked')); // Phase 4C: scoped RTDB subscribes wait for this.
                 } else {
                     const err = await resp.json().catch(() => ({}));
                     console.warn('linkAuthUid CF error:', err.error || resp.status);
