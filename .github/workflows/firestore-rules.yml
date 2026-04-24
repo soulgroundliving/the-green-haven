@@ -1,0 +1,64 @@
+# Firestore security rules unit tests.
+#
+# Why this exists: a single bad allow rule is a silent catastrophe — no
+# error in CI, no console warning, the rule just deploys and someone
+# exploits it. This workflow encodes the invariants we never want to
+# lose (anon tenant can't bump their gamification points, taxSummary is
+# CF-only, default deny works, etc.) and blocks PRs that violate them.
+#
+# Trigger:
+#   - PRs that touch firestore.rules or the test file → fail-fast review gate
+#   - Pushes to main that touch the same files → catch direct pushes
+#   - Manual via Actions UI (workflow_dispatch)
+#
+# Cost: free on every GitHub plan. Run is ~90 seconds (emulator boot ~30s,
+# tests ~20s, the rest is Node / Java setup).
+
+name: Firestore Rules
+
+on:
+  pull_request:
+    paths:
+      - 'firestore.rules'
+      - 'firestore.rules.test.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/firestore-rules.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'firestore.rules'
+      - 'firestore.rules.test.js'
+      - '.github/workflows/firestore-rules.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: rules-unit-testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # Firestore emulator JAR runs on the JVM. Ubuntu runners ship with
+      # OpenJDK already, but pin a known major version so a runner image
+      # bump can't surprise us.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install firebase-tools (emulator launcher)
+        run: npm install -g firebase-tools@latest
+
+      - name: Run Firestore rules tests
+        run: firebase emulators:exec --only firestore --project=demo-test 'npm run test:rules'

@@ -1,12 +1,15 @@
 {
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js",
+    "test:rules": "node --test firestore.rules.test.js"
   },
   "dependencies": {
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
     "esbuild": "^0.24.0",
+    "firebase": "^11.0.0",
     "glob": "^11.0.0"
   }
 }
