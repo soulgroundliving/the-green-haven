@@ -6897,17 +6897,6 @@
             if (typeof updateNavBadges === 'function') updateNavBadges();
         }
 
-        // SSoT delegation: dedup logic lives in BillStore.dedupSynthetic
-        // (shared/billing-system.js). Local wrapper just threads _taBills through it.
-        function _dedupBills() {
-            if (!window.BillStore?.dedupSynthetic) return;
-            const before = _taBills.length;
-            _taBills = window.BillStore.dedupSynthetic(_taBills);
-            if (_taBills.length !== before) {
-                window._tenantAppBills = _taBills;
-            }
-        }
-
         async function loadTenantAppData() {
             if (!_taRoom) return;
 
@@ -6937,7 +6926,6 @@
                             data.bills.forEach(b => byId.set(b.billId || b.id, b));
                             _taBills = Array.from(byId.values()).sort((a,b) =>
                                 ((b.year||0)-(a.year||0)) || ((b.month||0)-(a.month||0)));
-                            _dedupBills();
                         }
                         if (data.payments && data.payments.length) _taPayments = data.payments;
                         window._tenantAppLease = _taLease;
@@ -6980,7 +6968,6 @@
                     _taBills = Array.from(byId.values()).sort((a, b) =>
                         ((b.year || 0) - (a.year || 0)) || ((b.month || 0) - (a.month || 0))
                     );
-                    _dedupBills();
                     window._tenantAppBills = _taBills;
                     if (typeof renderBillsList === 'function') renderBillsList();
                     if (typeof updateNavBadges === 'function') updateNavBadges();
@@ -7513,8 +7500,8 @@
         // ===== FIRESTORE METER HISTORY LOADER =====
         // Firestore: meter_data/{building_year_month_roomId} — each doc has
         // {building, roomId, year(BE 2-digit), month, eOld, eNew, wOld, wNew, yearMonth}
-        // Cache populated by _loadMeterHistoryFromFirestore(); used by _getMeterHistory for render.
-        // Also drives synthesis of missing past bills (fills gap between admin-generated RTDB bills).
+        // Cache populated by _loadMeterHistoryFromFirestore(); used by _getMeterHistory for
+        // the 6-month usage chart (elec/water consumption visualization).
         let _meterHistoryCache = []; // sorted newest first, normalized rows
         let _meterHistoryLoading = false;
         async function _loadMeterHistoryFromFirestore() {
@@ -7546,9 +7533,6 @@
                 }).sort((a,b) => b.monthKey.localeCompare(a.monthKey));
                 // Mirror to localStorage so offline/early-render has data
                 try { localStorage.setItem(`meter_history_${_taBuilding}_${_taRoom}`, JSON.stringify(_meterHistoryCache)); } catch(e) {}
-                // Synthesize missing bills + re-render UI
-                _synthesizeBillsFromMeter();
-                if (typeof renderBillsList === 'function') renderBillsList();
                 if (typeof _renderUsageChart === 'function') _renderUsageChart();
                 console.log(`✅ Meter history loaded: ${_meterHistoryCache.length} months (${_taBuilding}/${_taRoom})`);
             } catch (e) {
@@ -7556,47 +7540,6 @@
             } finally {
                 _meterHistoryLoading = false;
             }
-        }
-
-        function _synthesizeBillsFromMeter() {
-            if (!_meterHistoryCache.length) return;
-            if (!window.BillStore?.synthesizeFromMeter) return;
-            // Resolve rates: prefer RoomConfigManager, fallback to lease rentAmount, then defaults
-            let rent = 0, eRate = 8, wRate = 20, trash = 40;
-            try {
-                if (typeof RoomConfigManager !== 'undefined') {
-                    const rc = RoomConfigManager.getRoom?.(_taBuilding, _taRoom);
-                    if (rc) {
-                        // Support both legacy field names (rent/elecRate/trashFee) and current (rentPrice/electricRate/trashRate)
-                        rent  = Number(rc.rentPrice    ?? rc.rent)     || 0;
-                        eRate = Number(rc.electricRate ?? rc.elecRate) || 8;
-                        wRate = Number(rc.waterRate)                   || 20;
-                        trash = Number(rc.trashRate    ?? rc.trashFee) || 40;
-                    }
-                }
-            } catch(e) {}
-            if (!rent && _taLease?.rentAmount) rent = Number(_taLease.rentAmount) || 0;
-
-            // SSoT: synthesis lives in BillStore.synthesizeFromMeter (shared/billing-system.js).
-            // Pure function — returns NEW synth entries; we merge + dedup + sort + cache here.
-            const synth = window.BillStore.synthesizeFromMeter({
-                meterHistory: _meterHistoryCache,
-                existingBills: _taBills,
-                rates: { rent, eRate, wRate, trash },
-                moveInDate: _taLease?.moveInDate,
-                building: _taBuilding,
-                room: _taRoom
-            });
-            if (synth.length) _taBills.push(...synth);
-            _taBills.sort((a,b) => {
-                const aCE = window.YearUtils.toCE(a.year) || 0;
-                const bCE = window.YearUtils.toCE(b.year) || 0;
-                return (bCE*100+Number(b.month)) - (aCE*100+Number(a.month));
-            });
-            // Belt-and-suspenders: if a real bill landed between BillStore's
-            // existingBills snapshot and now, drop the duplicate synth.
-            _dedupBills();
-            window._tenantAppBills = _taBills;
         }
 
         function _getMeterHistory(type) {
