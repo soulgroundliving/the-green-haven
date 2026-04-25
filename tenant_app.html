@@ -6951,6 +6951,19 @@
         async function _callLinkAuthUid(lineUserId) {
             const auth = window.firebaseAuth;
             if (!auth?.currentUser) return;
+            // Fast-path: if {room,building} claims are already on the token (set
+            // by a previous session and persisted via Firebase Auth state), skip
+            // the CF call entirely. This was the biggest LIFF load-time hog —
+            // a cold-start round-trip (3-8s) was paid on every page load even
+            // for returning users whose claims were already in place.
+            try {
+                const tr = await auth.currentUser.getIdTokenResult();
+                if (tr.claims.room && tr.claims.building) {
+                    // Wake subscribers gated on liffLinked (bills/maintenance/housekeeping)
+                    window.dispatchEvent(new Event('liffLinked'));
+                    return;
+                }
+            } catch (_) {}
             const cachedUid = sessionStorage.getItem('liff_claim_uid');
             if (cachedUid === auth.currentUser.uid) return; // already linked this session
             try {
