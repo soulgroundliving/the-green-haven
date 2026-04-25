@@ -117,6 +117,22 @@ const CONFIG = {
     return canonical === 'rooms' ? 'RentRoom' : 'nest';
   },
 
+  // SSoT for displaying building names in the UI.
+  // Thai: nest='ตึก Nest', rooms='ห้องเช่า'   English: 'Nest Building' / 'Rent Rooms'
+  // opts: { lang: 'th'|'en' (default 'th'), icon: bool (default true → prepends 🏢/🏠) }
+  getBuildingLabel(type, opts = {}) {
+    const c = this.getBuildingConfig(type);
+    const lang = opts.lang === 'en' ? 'en' : 'th';
+    const labels = {
+      th: { nest: 'ตึก Nest', rooms: 'ห้องเช่า' },
+      en: { nest: 'Nest Building', rooms: 'Rent Rooms' }
+    };
+    const label = labels[lang][c];
+    if (opts.icon === false) return label;
+    const icon = c === 'nest' ? '🏢' : '🏠';
+    return `${icon} ${label}`;
+  },
+
   // Get month name by index
   getMonthName(month, style = 'full') {
     return this.months[style][month] || `เดือน ${month}`;

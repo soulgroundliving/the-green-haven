@@ -264,36 +264,63 @@ function renderLiffRequestsList(docs){
   const order = { pending: 0, approved: 1, rejected: 2 };
   docs.sort((a,b) => (order[a.status]??9) - (order[b.status]??9) || (b.requestedAt||'').localeCompare(a.requestedAt||''));
 
+  // Escape user-controlled fields before innerHTML render
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[m]));
+  const phoneInfoHtml = d => {
+    if (!d.phone) return ' · <span style="color:#c62828;font-weight:600;">⚠️ ไม่ได้กรอกเบอร์</span>';
+    const p = esc(d.phone);
+    if (d.phoneMatch === true) {
+      return ` · <span style="color:#2d8653;font-weight:600;">📱 ${p} ✅ ตรงกับ "${esc(d.matchedTenantName||'ผู้เช่า')}"</span>`;
+    }
+    if (d.phoneMatch === false) {
+      return ` · <span style="color:#c62828;font-weight:600;">📱 ${p} ⚠️ ไม่ตรงกับผู้เช่าห้องนี้</span>`;
+    }
+    return ` · <span style="color:#f57c00;">📱 ${p} ⚠️ ตรวจสอบไม่ได้</span>`;
+  };
+
   list.innerHTML = docs.map(d => {
     const colors = { pending:'#f57c00', approved:'#2d8653', rejected:'#c62828' };
     const labels = { pending:'⏳ รออนุมัติ', approved:'✅ อนุมัติแล้ว', rejected:'❌ ปฏิเสธ' };
     const c = colors[d.status] || '#999';
     const when = d.requestedAt ? new Date(d.requestedAt).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
-    const pic = d.linePictureUrl ? `<img src="${d.linePictureUrl}" style="width:42px;height:42px;border-radius:50%;flex-shrink:0;">` : '<div style="width:42px;height:42px;border-radius:50%;background:#eee;flex-shrink:0;"></div>';
+    const pic = d.linePictureUrl ? `<img src="${esc(d.linePictureUrl)}" style="width:42px;height:42px;border-radius:50%;flex-shrink:0;">` : '<div style="width:42px;height:42px;border-radius:50%;background:#eee;flex-shrink:0;"></div>';
+    const buildingLabel = window.CONFIG?.getBuildingLabel?.(d.building) || (d.building === 'nest' ? '🏢 ตึก Nest' : '🏠 ห้องเช่า');
+    const rejectionReasonHtml = (d.status === 'rejected' && d.rejectionReason)
+      ? `<div style="font-size:.72rem;color:#c62828;margin-top:2px;">เหตุผล: ${esc(d.rejectionReason)}</div>` : '';
     const actions = d.status === 'pending' ? `
       <div style="display:flex;gap:6px;margin-top:8px;">
-        <button onclick="approveLiffLink('${d.id}')" style="padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">✅ อนุมัติ</button>
-        <button onclick="rejectLiffLink('${d.id}')" style="padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">❌ ปฏิเสธ</button>
+        <button onclick="approveLiffLink('${esc(d.id)}')" style="padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">✅ อนุมัติ</button>
+        <button onclick="rejectLiffLink('${esc(d.id)}')" style="padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">❌ ปฏิเสธ</button>
       </div>` : (d.status === 'approved'
-        ? `<div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">โดย ${d.approvedBy||'Admin'} · ${d.approvedAt?new Date(d.approvedAt).toLocaleDateString('th-TH'):''}</div>`
-        : `<button onclick="approveLiffLink('${d.id}')" style="padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.75rem;margin-top:4px;">↩️ อนุมัติย้อนหลัง</button>`);
+        ? `<div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">โดย ${esc(d.approvedBy||'Admin')} · ${d.approvedAt?new Date(d.approvedAt).toLocaleDateString('th-TH'):''}</div>`
+        : `<button onclick="approveLiffLink('${esc(d.id)}')" style="padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.75rem;margin-top:4px;">↩️ อนุมัติย้อนหลัง</button>`);
     return `<div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
       ${pic}
       <div style="flex:1;min-width:0;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-          <div style="font-weight:700;font-size:.92rem;">${d.lineDisplayName||'—'}</div>
-          <span style="color:${c};font-size:.78rem;font-weight:700;">${labels[d.status]||d.status}</span>
+          <div style="font-weight:700;font-size:.92rem;">${esc(d.lineDisplayName||'—')}</div>
+          <span style="color:${c};font-size:.78rem;font-weight:700;">${labels[d.status]||esc(d.status)}</span>
         </div>
         <div style="font-size:.82rem;color:var(--text);margin-top:2px;">
-          ตึก: <strong>${d.building==='nest'?'🏢 Nest':'🏠 ห้องแถว'}</strong> ·
-          ห้อง <strong>${d.room||'—'}</strong>
-          ${d.phone?` · 📱 ${d.phone}`:''}
+          ตึก: <strong>${esc(buildingLabel)}</strong> ·
+          ห้อง <strong>${esc(d.room||'—')}</strong>
+          ${phoneInfoHtml(d)}
         </div>
         <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;">ขอเมื่อ ${when}</div>
+        ${rejectionReasonHtml}
         ${actions}
       </div>
     </div>`;
   }).join('');
+}
+
+// Best-effort LINE push to tenant — never blocks the Firestore status update.
+function _pushLiffStatusToTenant(lineUserId, status, reason) {
+  fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/notifyLiffStatusChange', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(reason ? { lineUserId, status, reason } : { lineUserId, status })
+  }).catch(e => console.warn('notifyLiffStatusChange (' + status + ') failed:', e.message));
 }
 
 async function approveLiffLink(lineUserId){
@@ -305,19 +332,27 @@ async function approveLiffLink(lineUserId){
     await fs.setDoc(fs.doc(fs.collection(db, 'liffUsers'), lineUserId), {
       status: 'approved', approvedBy: adminName, approvedAt: new Date().toISOString()
     }, { merge: true });
+    _pushLiffStatusToTenant(lineUserId, 'approved');
   } catch(e) { alert('❌ ' + e.message); }
 }
 
 async function rejectLiffLink(lineUserId){
-  if(!confirm('ปฏิเสธคำขอนี้?')) return;
+  const defaultReason = 'ข้อมูลไม่ตรงกับสัญญาเช่า กรุณาติดต่อเจ้าของ';
+  const reason = prompt('เหตุผลในการปฏิเสธ (ส่งให้ลูกบ้านทาง LINE):', defaultReason);
+  if (reason === null) return; // admin cancelled
+  const finalReason = (reason && reason.trim()) || defaultReason;
   if(!window.firebase?.firestore) return;
   const db = window.firebase.firestore();
   const fs = window.firebase.firestoreFunctions;
   const adminName = window.SecurityUtils?.getSecureSession()?.name || 'Admin';
   try {
     await fs.setDoc(fs.doc(fs.collection(db, 'liffUsers'), lineUserId), {
-      status: 'rejected', rejectedBy: adminName, rejectedAt: new Date().toISOString()
+      status: 'rejected',
+      rejectedBy: adminName,
+      rejectedAt: new Date().toISOString(),
+      rejectionReason: finalReason
     }, { merge: true });
+    _pushLiffStatusToTenant(lineUserId, 'rejected', finalReason);
   } catch(e) { alert('❌ ' + e.message); }
 }
 

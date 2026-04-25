@@ -83,6 +83,15 @@ try {
   console.log('notifyLiffRequest not found, skipping...');
 }
 
+try {
+  const notifyLiffStatus = require('./notifyLiffStatusChange');
+  if (notifyLiffStatus.notifyLiffStatusChange) {
+    exports.notifyLiffStatusChange = notifyLiffStatus.notifyLiffStatusChange;
+  }
+} catch (e) {
+  console.log('notifyLiffStatusChange not found, skipping...');
+}
+
 // Legacy: cleanupRateLimits.js never existed — its job is now done by
 // cleanupRateLimitsScheduled exported above from cleanupOldDocs.js.
 // Keep the stale require() one more revision; the try/catch logs a

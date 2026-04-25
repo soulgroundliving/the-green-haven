@@ -53,7 +53,9 @@ exports.notifyLiffRequest = onRequest(
         return;
       }
 
-      const buildingLabel = data.building === 'nest' ? '🏢 Nest' : '🏠 ห้องแถว';
+      // Keep in sync with shared/config-unified.js getBuildingLabel() (browser SSoT).
+      // Duplicated here because functions/ runs in Node and can't import the browser module.
+      const buildingLabel = data.building === 'nest' ? '🏢 ตึก Nest' : '🏠 ห้องเช่า';
       const dashboardUrl = 'https://the-green-haven.vercel.app/dashboard.html?page=requests-approvals&tab=liff';
       const text = `🔗 คำขอเชื่อมบัญชีใหม่\n\n`
         + `👤 ${data.lineDisplayName || '—'}\n`

@@ -7044,15 +7044,22 @@
             // Auto-match: CF checks phone server-side (admin SDK) — client never sees raw phone
             let autoApprove = false;
             let matchedTenantName = '';
+            // phoneMatch: undefined = not checked, true/false = CF result, 'error' = CF failed.
+            // Persisted to liffUsers/{id} so admin sees the verification outcome on rejection page.
+            let phoneMatch;
             if (phone && window.firebase?.functions) {
                 try {
                     const checkPhone = window.firebase.functions.httpsCallable('checkTenantPhone');
                     const res = await checkPhone({ building: bld, room: String(room), phone });
+                    phoneMatch = !!res.data?.match;
                     if (res.data?.match) {
                         autoApprove = true;
                         matchedTenantName = res.data.tenantName || '';
                     }
-                } catch (e) { console.warn('checkTenantPhone failed:', e.message); }
+                } catch (e) {
+                    console.warn('checkTenantPhone failed:', e.message);
+                    phoneMatch = 'error';
+                }
             }
 
             try {
@@ -7068,6 +7075,7 @@
                     status: autoApprove ? 'approved' : 'pending',
                     requestedAt: new Date().toISOString()
                 };
+                if (phone && typeof phoneMatch !== 'undefined') payload.phoneMatch = phoneMatch;
                 if (autoApprove) {
                     payload.approvedBy = 'AUTO (phone match)';
                     payload.approvedAt = new Date().toISOString();
