@@ -6858,21 +6858,10 @@
             window._nestOnlyDisabled = true;
         }
 
-        async function loadTenantAppData() {
-            if (!_taRoom) return;
-            if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady) {
-                try {
-                    const userStr = sessionStorage.getItem('user');
-                    const user = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
-                    // TenantFirebaseSync is fully static — initialize() then call statics
-                    TenantFirebaseSync.initialize(user, _taBuilding, _taRoom);
-                    const data = await TenantFirebaseSync.loadAllData();
-                    if (data.lease) _taLease = data.lease;
-                    if (data.tenant) _taTenant = data.tenant;
-                    if (data.bills && data.bills.length) _taBills = data.bills;
-                    if (data.payments) _taPayments = data.payments;
-                } catch(e) { console.warn('TenantFirebaseSync failed, fallback to localStorage:', e); }
-            }
+        // SWR helpers — hydrate from localStorage synchronously, then re-render once
+        // background refresh from Firestore returns. Splits the old loadTenantAppData
+        // into a sync part (instant first paint) and an async part (eventual consistency).
+        function _hydrateTenantFromLocalStorage() {
             if (!_taLease && typeof LeaseAgreementManager !== 'undefined') {
                 try { _taLease = LeaseAgreementManager.getActiveLease(_taBuilding, _taRoom); } catch(e) {}
             }
@@ -6898,13 +6887,60 @@
             window._tenantAppTenant = _taTenant;
             window._tenantAppBills = _taBills;
             window._tenantAppPayments = _taPayments;
+        }
 
-            // Subscribe to real-time bill updates so admin-generated bills appear instantly
-            // (replaces the previous one-shot loadBills which only ran on app open)
+        function _rerenderTenantViews() {
+            if (typeof renderHomePage === 'function') renderHomePage();
+            if (typeof renderBillsList === 'function') renderBillsList();
+            if (typeof renderProfilePage === 'function') renderProfilePage();
+            if (typeof renderContractPage === 'function') renderContractPage();
+            if (typeof updateNavBadges === 'function') updateNavBadges();
+        }
+
+        async function loadTenantAppData() {
+            if (!_taRoom) return;
+
+            // 1. SYNC: hydrate from localStorage so the renders that follow have
+            //    cached data to display immediately (no Firestore round-trip on critical path).
+            _hydrateTenantFromLocalStorage();
+
+            // 2. SUBSCRIBE: idempotent, safe to call when Firebase isn't ready (no-ops + retries
+            //    via authReady/liffLinked listeners). Bills uses RTDB scoped by claims.
             _subscribeBillsRealtime();
-            // Load 6-month meter history from Firestore (used by elec/water usage pages
-            // AND to synthesize pending bills for months admin hasn't generated yet)
             _loadMeterHistoryFromFirestore();
+
+            // 3. BACKGROUND: refresh from Firestore + re-render specific sections when fresh
+            //    data arrives. If Firebase isn't ready yet, retry once it initializes.
+            if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady) {
+                try {
+                    const userStr = sessionStorage.getItem('user');
+                    const user = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
+                    TenantFirebaseSync.initialize(user, _taBuilding, _taRoom);
+                    TenantFirebaseSync.loadAllData().then(data => {
+                        if (data.lease) _taLease = data.lease;
+                        if (data.tenant) _taTenant = data.tenant;
+                        if (data.bills && data.bills.length) {
+                            // Merge: Firestore wins on billId collision, otherwise keep cached.
+                            const byId = new Map();
+                            _taBills.forEach(b => byId.set(b.billId || b.id, b));
+                            data.bills.forEach(b => byId.set(b.billId || b.id, b));
+                            _taBills = Array.from(byId.values()).sort((a,b) =>
+                                ((b.year||0)-(a.year||0)) || ((b.month||0)-(a.month||0)));
+                        }
+                        if (data.payments && data.payments.length) _taPayments = data.payments;
+                        window._tenantAppLease = _taLease;
+                        window._tenantAppTenant = _taTenant;
+                        window._tenantAppBills = _taBills;
+                        window._tenantAppPayments = _taPayments;
+                        _rerenderTenantViews();
+                        // Trigger any subscribes that depend on building (now claims may be present)
+                        if (typeof _subscribeBillsRealtime === 'function') _subscribeBillsRealtime();
+                    }).catch(e => console.warn('tenant data refresh failed:', e?.message));
+                } catch(e) { console.warn('tenant data init failed:', e?.message); }
+            } else {
+                // Firebase not ready yet — schedule one retry on init, then recurse
+                window.addEventListener('firebaseInitialized', () => loadTenantAppData(), { once: true });
+            }
         }
 
         let _billsUnsub = null;
@@ -7173,37 +7209,14 @@
                 return; // stop here; don't render tenant pages without room
             }
 
-            if (hasRoom && (!window.firebaseReady || !window._authUid)) {
-                // Wait for both Firebase init AND anonymous sign-in (so Firestore/RTDB rules pass)
-                await new Promise(resolve => {
-                    const t = setTimeout(resolve, 5000);
-                    const check = () => {
-                        if (window.firebaseReady && window._authUid) { clearTimeout(t); resolve(); }
-                    };
-                    window.addEventListener('firebaseInitialized', check);
-                    window.addEventListener('authReady', () => { clearTimeout(t); resolve(); }, { once: true });
-                    check();
-                });
-            }
             if (hasRoom) {
-                // Phase 4C: loadTenantAppData reads RTDB paths scoped to {room,building} claims
-                // set by linkAuthUid. On the fast-path we didn't await liffPromise, so claims
-                // might not be on the token yet — checks real claim state, waits on liffLinked
-                // only if needed, and caps the wait so we never block the UI indefinitely.
-                try {
-                    const user = window.firebaseAuth?.currentUser;
-                    if (user) {
-                        const tr = await user.getIdTokenResult();
-                        const hasClaim = tr.claims.admin || (tr.claims.room && tr.claims.building);
-                        if (!hasClaim && window._lineUserId) {
-                            await Promise.race([
-                                new Promise(r => window.addEventListener('liffLinked', r, { once: true })),
-                                new Promise(r => setTimeout(r, 5000)),
-                            ]);
-                        }
-                    }
-                } catch (_) {}
-                await loadTenantAppData();
+                // SWR (stale-while-revalidate) — loadTenantAppData hydrates from localStorage
+                // synchronously, then refreshes from Firestore in the background and re-renders.
+                // No awaits before first paint: total init time = JS load + Firebase init + sign-in,
+                // not JS + Firebase + 5s firebase-wait + 5s claims-wait + 1-2s Firestore round-trip.
+                // Subscribes (bills/maintenance/marketplace) handle missing Firebase/claims with
+                // retry listeners on authReady/liffLinked, so they self-heal as the app warms up.
+                loadTenantAppData();
             }
             renderHomePage();
             renderBillsList();
