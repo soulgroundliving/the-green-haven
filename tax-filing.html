@@ -892,7 +892,12 @@
 
   function initializeTaxFiling() {
     console.log('🚀 Tax Filing System Initialized');
-    loadTaxDashboard();
+    if (typeof loadTaxDashboard === 'function') {
+      loadTaxDashboard();
+    } else {
+      console.warn('loadTaxDashboard not loaded — accounting/tax-filing.js failed to fetch (likely page opened from non-http origin)');
+      return;
+    }
     // Subscribe taxSummary once Firebase is ready (via anonymous auth)
     if (window._authUid) subscribeTaxSummary();
     else window.addEventListener('authReady', subscribeTaxSummary, { once: true });
