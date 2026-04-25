@@ -621,7 +621,33 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'showAddMaintenanceModal') { typeof showAddMaintenanceModal === 'function' && showAddMaintenanceModal(); return; }
     if (a === 'showAddHousekeepingModal') { typeof showAddHousekeepingModal === 'function' && showAddHousekeepingModal(); return; }
     if (a === 'saveReward') { typeof saveReward === 'function' && saveReward(); return; }
+
+    // Phase 4E Step 2 — page-people-management policy saves + page-requests-approvals housekeeping campaign + wellness form
+    if (a === 'savePolicyDoc') { typeof savePolicyDoc === 'function' && savePolicyDoc(el.dataset.doc); return; }
+    if (a === 'startCleaningCampaign') { typeof startCleaningCampaign === 'function' && startCleaningCampaign(); return; }
+    if (a === 'stopCleaningCampaign') { typeof stopCleaningCampaign === 'function' && stopCleaningCampaign(); return; }
+    if (a === 'clearWellnessCover') { typeof clearWellnessCover === 'function' && clearWellnessCover(); return; }
   });
+
+  // ===== CHANGE / INPUT EVENT DELEGATION =====
+  // For form controls (selects, radios, text inputs) that fire on change or input.
+  // Same data-action attribute pattern as the click hub above.
+  function _handleFormAction(e) {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const a = el.dataset.action;
+    if (a === 'updateAdjustmentDisplay') { typeof updateAdjustmentDisplay === 'function' && updateAdjustmentDisplay(); return; }
+    if (a === 'renderMaintenancePage') { typeof renderMaintenancePage === 'function' && renderMaintenancePage(); return; }
+    if (a === 'renderHousekeepingList') { typeof renderHousekeepingList === 'function' && renderHousekeepingList(); return; }
+    if (a === 'filterPetsByStatus') { typeof filterPetsByStatus === 'function' && filterPetsByStatus(el.value); return; }
+    if (a === 'togglePetTypeRow') {
+      const row = document.getElementById('modalPetTypeRow');
+      if (row) row.style.display = el.checked ? 'block' : 'none';
+      return;
+    }
+  }
+  document.addEventListener('change', _handleFormAction);
+  document.addEventListener('input', _handleFormAction);
 });
 
 

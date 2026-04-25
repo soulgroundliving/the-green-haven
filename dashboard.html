@@ -2100,7 +2100,7 @@
           <span>สัตว์เลี้ยง</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;">
-          <input type="checkbox" id="modalHasPet" onchange="document.getElementById('modalPetTypeRow').style.display=this.checked?'block':'none'" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer;">
+          <input type="checkbox" id="modalHasPet" data-action="togglePetTypeRow" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer;">
           <label for="modalHasPet" style="font-size:.95rem;cursor:pointer;">มีสัตว์เลี้ยง</label>
         </div>
         <div id="modalPetTypeRow" style="display:none;">
@@ -2437,23 +2437,23 @@
       <div style="margin-bottom:20px;">
         <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">📊 วิธีการปรับค่าเช่า</h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" data-action="updateAdjustmentDisplay">
             <input type="radio" name="adjustType" value="fixed-increase" checked style="cursor:pointer;">
             <span class="font-09">เพิ่มเป็นจำนวนเงิน</span>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" data-action="updateAdjustmentDisplay">
             <input type="radio" name="adjustType" value="percentage-increase" style="cursor:pointer;">
             <span class="font-09">เพิ่มเป็นเปอร์เซ็นต์</span>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" data-action="updateAdjustmentDisplay">
             <input type="radio" name="adjustType" value="fixed-decrease" style="cursor:pointer;">
             <span class="font-09">ลดเป็นจำนวนเงิน</span>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" onchange="updateAdjustmentDisplay()">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" data-action="updateAdjustmentDisplay">
             <input type="radio" name="adjustType" value="percentage-decrease" style="cursor:pointer;">
             <span class="font-09">ลดเป็นเปอร์เซ็นต์</span>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;grid-column:1/-1;" onchange="updateAdjustmentDisplay()">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;grid-column:1/-1;" data-action="updateAdjustmentDisplay">
             <input type="radio" name="adjustType" value="set-fixed" style="cursor:pointer;">
             <span class="font-09">กำหนดเป็นค่าเช่าคงที่</span>
           </label>
@@ -3117,7 +3117,7 @@
         <input type="file" id="wellness-cover-input" accept="image/*" onchange="onWellnessCoverPicked(event)" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:'Sarabun';">
         <div id="wellness-cover-preview" style="margin-top:8px;display:none;">
           <img id="wellness-cover-img" src="" alt="ภาพปก" style="width:120px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
-          <button type="button" onclick="clearWellnessCover()" style="display:block;margin-top:4px;font-size:.72rem;background:none;border:none;color:var(--danger);cursor:pointer;font-family:'Sarabun';">✕ ลบภาพปก</button>
+          <button type="button" data-action="clearWellnessCover" style="display:block;margin-top:4px;font-size:.72rem;background:none;border:none;color:var(--danger);cursor:pointer;font-family:'Sarabun';">✕ ลบภาพปก</button>
         </div>
         <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">ภาพปกจะแสดงแทน icon ในรายการ Wellness Tips — รองรับ JPG/PNG/WEBP</div>
       </div>
@@ -3593,25 +3593,25 @@
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">🔒 นโยบายความเป็นส่วนตัว (Privacy Policy)</div>
           <textarea id="policy-admin-privacy" rows="12" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;line-height:1.6;" placeholder="เขียนเนื้อหานโยบายความเป็นส่วนตัว..."></textarea>
-          <button id="policy-save-privacy" onclick="savePolicyDoc('privacy')" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
+          <button id="policy-save-privacy" data-action="savePolicyDoc" data-doc="privacy" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
         </div>
         <!-- Terms / User Manual -->
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">📖 คู่มือการใช้งาน</div>
           <textarea id="policy-admin-terms" rows="12" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;line-height:1.6;" placeholder="เขียนคู่มือการใช้งาน..."></textarea>
-          <button id="policy-save-terms" onclick="savePolicyDoc('terms')" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
+          <button id="policy-save-terms" data-action="savePolicyDoc" data-doc="terms" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
         </div>
         <!-- Compliance -->
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">⚖️ Data & Compliance</div>
           <textarea id="policy-admin-compliance" rows="12" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;line-height:1.6;" placeholder="เขียนนโยบาย Data & Compliance..."></textarea>
-          <button id="policy-save-compliance" onclick="savePolicyDoc('compliance')" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
+          <button id="policy-save-compliance" data-action="savePolicyDoc" data-doc="compliance" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
         </div>
         <!-- IP -->
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">™️ ทรัพย์สินทางปัญญา (IP Infringement)</div>
           <textarea id="policy-admin-ip" rows="12" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;line-height:1.6;" placeholder="เขียนนโยบายทรัพย์สินทางปัญญา..."></textarea>
-          <button id="policy-save-ip" onclick="savePolicyDoc('ip')" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
+          <button id="policy-save-ip" data-action="savePolicyDoc" data-doc="ip" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
         </div>
       </div>
     </div>
@@ -3696,8 +3696,8 @@
       <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
     </div>
     <div style="display:flex;gap:12px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
-      <input type="text" id="mx-filter-room" oninput="renderMaintenancePage()" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
-      <select id="mx-filter-status" onchange="renderMaintenancePage()" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
+      <input type="text" id="mx-filter-room" data-action="renderMaintenancePage" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
+      <select id="mx-filter-status" data-action="renderMaintenancePage" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
         <option value="all">📋 ทั้งหมด</option>
         <option value="pending">⏳ รอดำเนินการ</option>
         <option value="inprogress">🔨 กำลังดำเนินการ</option>
@@ -3725,19 +3725,19 @@
           <div style="font-weight:700; color:var(--green-dark); margin-bottom:4px;">🧹 รอบเก็บคำขอ Standard Clean</div>
           <div id="hkCampaignStatus" style="font-size:.88rem; color:var(--text-muted);">กำลังตรวจสอบ...</div>
         </div>
-        <button onclick="startCleaningCampaign()" id="hkCampaignStartBtn"
+        <button data-action="startCleaningCampaign" id="hkCampaignStartBtn"
           style="padding:10px 16px; background:var(--green-dark); color:#fff; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer;">
           🚀 เริ่มรอบเดือนนี้
         </button>
-        <button onclick="stopCleaningCampaign()" id="hkCampaignStopBtn"
+        <button data-action="stopCleaningCampaign" id="hkCampaignStopBtn"
           style="display:none; padding:10px 16px; background:#c62828; color:#fff; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer;">
           ⏹ หยุดรอบ
         </button>
       </div>
     </div>
     <div style="display:flex;gap:12px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
-      <input type="text" id="hk-filter-room" oninput="renderHousekeepingList()" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
-      <select id="hk-filter-status" onchange="renderHousekeepingList()" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
+      <input type="text" id="hk-filter-room" data-action="renderHousekeepingList" placeholder="🔍 ค้นหาห้อง..." style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;">
+      <select id="hk-filter-status" data-action="renderHousekeepingList" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;font-size:.95rem;">
         <option value="all">📋 ทั้งหมด</option>
         <option value="pending">⏳ รอดำเนินการ</option>
         <option value="pending_payment">💳 รอชำระเงิน</option>
@@ -3790,7 +3790,7 @@
   <div id="requests-tab-pets" class="requests-mgmt-content" style="display:none;">
     <div class="card" class="mb-6">
       <div style="display:flex;gap:1rem;margin-bottom:1rem;">
-        <select id="petFilterStatus" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;" onchange="filterPetsByStatus(this.value)">
+        <select id="petFilterStatus" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;" data-action="filterPetsByStatus">
           <option value="">All Status</option>
           <option value="pending">⏳ Pending</option>
           <option value="approved">✅ Approved</option>
