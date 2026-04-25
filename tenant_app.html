@@ -6914,13 +6914,21 @@
         }
 
         let _billsUnsub = null;
-        function _subscribeBillsRealtime() {
+        async function _subscribeBillsRealtime() {
             if (_billsUnsub) return;
             if (typeof TenantFirebaseSync === 'undefined') return;
+            // Phase 4C: RTDB rule requires {room,building} claims (set by linkAuthUid after LIFF login).
+            // Return early without touching _billsUnsub — liffLinked listener retries once claims arrive.
+            try {
+                const user = window.firebaseAuth?.currentUser;
+                if (!user) return;
+                const tr = await user.getIdTokenResult();
+                if (!tr.claims.admin && !(tr.claims.room && tr.claims.building)) return;
+            } catch (_) { return; }
             try {
                 const userStr = sessionStorage.getItem('user');
-                const user = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
-                TenantFirebaseSync.initialize(user, _taBuilding, _taRoom);
+                const u = userStr ? JSON.parse(userStr) : { roomNumber: _taRoom };
+                TenantFirebaseSync.initialize(u, _taBuilding, _taRoom);
                 _billsUnsub = TenantFirebaseSync.subscribeBills((bills) => {
                     if (!Array.isArray(bills)) return;
                     // Merge with existing (Firestore wins on billId collision)
@@ -6936,6 +6944,7 @@
                 });
             } catch (e) { console.warn('subscribeBillsRealtime failed:', e.message); }
         }
+        window.addEventListener('liffLinked', _subscribeBillsRealtime);
 
         // ---- LIFF (LINE Front-end Framework) integration ----
         const LIFF_ID = '2009790149-Db7T76sd';
