@@ -2517,9 +2517,12 @@
                 </div>
             </div>
             <div class="action-buttons" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <button class="btn-receipt btn-outline" onclick="goBackFromPayment()">← กลับ</button>
                 <button class="btn-receipt btn-outline" onclick="printReceipt()"><i class="fas fa-print"></i> พิมพ์ / PDF</button>
-                <button class="btn-receipt btn-green" onclick="goToPaymentStep(2)"><i class="fas fa-camera"></i> อัปโหลดสลิป</button>
             </div>
+            <button class="btn-receipt btn-green" style="width:100%; margin-top:8px;" onclick="goToPaymentStep(2)">
+                <i class="fas fa-camera"></i> อัปโหลดสลิป
+            </button>
         </div>
 
         <!-- STEP 2: Slip Upload -->
