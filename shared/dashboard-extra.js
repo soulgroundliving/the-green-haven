@@ -4092,9 +4092,6 @@ function loadBadgesAdmin() {
 // Tenant app subscribes via _subscribePolicies() and renders sanitized HTML live.
 // Admin UI is a contenteditable rich-text editor (shared/rich-text-policy.js).
 async function loadPoliciesAdmin() {
-  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-  const fs = window.firebase.firestoreFunctions;
-  const db = window.firebase.firestore();
   const KEYS = ['privacy', 'terms', 'compliance', 'ip'];
   const ID_MAP = {
     privacy: 'policy-privacy-content',
@@ -4102,6 +4099,20 @@ async function loadPoliciesAdmin() {
     compliance: 'policy-compliance-content',
     ip:      'policy-ip-content'
   };
+
+  // Mount editors immediately so the UI is responsive even if Firestore is slow
+  // or the read fails. mountEditor is idempotent — content updates after fetch.
+  KEYS.forEach(key => {
+    const wrap = document.getElementById(`policy-admin-${key}`);
+    if (!wrap || !window.RichTextPolicy?.mountEditor) return;
+    if (wrap.dataset.rtMounted !== '1') {
+      wrap._rtEditor = window.RichTextPolicy.mountEditor(wrap, '');
+    }
+  });
+
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
   try {
     const snap = await fs.getDoc(fs.doc(db, 'system', 'policies'));
     const data = snap.exists() ? (snap.data() || {}) : {};
@@ -4130,17 +4141,15 @@ async function loadPoliciesAdmin() {
       } catch(e) { console.warn('policy seed failed:', e.message); }
     }
 
-    // Mount rich-text editor on each placeholder; cache the contenteditable node on
-    // the wrapper so savePolicyDoc can read it back without DOM re-discovery.
+    // Update editor content with fetched data (mount call is idempotent — re-mounting
+    // just updates the contenteditable's innerHTML through _setContent).
     KEYS.forEach(key => {
       const wrap = document.getElementById(`policy-admin-${key}`);
-      if (!wrap) return;
+      if (!wrap || !data[key]) return;
       if (window.RichTextPolicy?.mountEditor) {
-        const editor = window.RichTextPolicy.mountEditor(wrap, data[key] || '');
-        wrap._rtEditor = editor;
+        wrap._rtEditor = window.RichTextPolicy.mountEditor(wrap, data[key]);
       } else {
-        // Fallback: the legacy textarea path (shouldn't happen if rich-text-policy.js is loaded)
-        wrap.textContent = data[key] || '';
+        wrap.textContent = data[key];
       }
     });
   } catch(e) { console.warn('loadPoliciesAdmin:', e.message); }
