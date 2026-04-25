@@ -487,6 +487,36 @@
       .kpi-grid { grid-template-columns: 1fr; }
       .timeline { grid-template-columns: 1fr; }
     }
+
+    /* ===== 4E STEP 2 UTILITY CLASSES ===== */
+    .page-title { margin-bottom: 20px; color: var(--text); }
+    .mb-20 { margin-bottom: 20px; }
+    .grid-2fr-1fr-30 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px; }
+    .grid-2fr-1fr-20 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .grid-2col-12 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+    .grid-2col-15 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .grid-3col-8 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .grid-4col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+    .grid-annual-sel { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: flex-end; }
+    .grid-withholding-sel { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: flex-end; }
+    .note-muted { font-size: .85rem; color: var(--text-muted); margin: 0; }
+    .empty-placeholder { color: var(--text-muted); text-align: center; padding: 30px; }
+    .status-panel { padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center; }
+    .flex-gap-10 { display: flex; gap: 10px; }
+    .card-center-row { display: flex; gap: 10px; justify-content: center; padding: 15px; }
+    /* CSV Preview Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 10000; justify-content: center; align-items: center; padding: 20px; }
+    .csv-modal-box { background: #fff; border-radius: 12px; width: 100%; max-width: 1100px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+    .modal-header { padding: 14px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-weight: 700; font-size: 1.05rem; }
+    .modal-subtitle { font-size: .82rem; color: var(--text-muted); margin-top: 2px; }
+    .btn-close-circle { background: #eee; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1rem; }
+    .modal-body { flex: 1; overflow: auto; padding: 10px 20px; }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: .82rem; font-family: -apple-system, 'Segoe UI', Sarabun, sans-serif; }
+    .modal-footer { padding: 14px 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .modal-source { font-size: .78rem; color: var(--text-muted); }
+    .btn-cancel-sm { padding: 9px 18px; background: #eee; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: 'Sarabun', sans-serif; }
+    .btn-dl-csv { padding: 9px 18px; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-family: 'Sarabun', sans-serif; }
   </style>
 </head>
 <body>
@@ -502,36 +532,36 @@
   <nav class="sidebar-menu">
     <div class="sidebar-group">
       <div class="sidebar-group-title">Tax Filing</div>
-      <button class="sidebar-item active" onclick="showTaxPage('dashboard', this)">
+      <button class="sidebar-item active" data-action="show-tax-page" data-page="dashboard">
         <span class="sidebar-item-icon">📊</span>Tax Dashboard
       </button>
-      <button class="sidebar-item" onclick="showTaxPage('monthly', this)">
+      <button class="sidebar-item" data-action="show-tax-page" data-page="monthly">
         <span class="sidebar-item-icon">📅</span>รายงานเดือน
       </button>
-      <button class="sidebar-item" onclick="showTaxPage('quarterly', this)">
+      <button class="sidebar-item" data-action="show-tax-page" data-page="quarterly">
         <span class="sidebar-item-icon">📋</span>ประเมินไตรมาส
       </button>
-      <button class="sidebar-item" onclick="showTaxPage('annual', this)">
+      <button class="sidebar-item" data-action="show-tax-page" data-page="annual">
         <span class="sidebar-item-icon">📄</span>ประเมินประจำปี
       </button>
-      <button class="sidebar-item" onclick="showTaxPage('withholding', this)">
+      <button class="sidebar-item" data-action="show-tax-page" data-page="withholding">
         <span class="sidebar-item-icon">✅</span>ตรวจสอบหัก ณ ที่จ่าย
       </button>
-      <button class="sidebar-item" onclick="showTaxPage('checklist', this)">
+      <button class="sidebar-item" data-action="show-tax-page" data-page="checklist">
         <span class="sidebar-item-icon">☑️</span>เช็คลิสต์ส่งเอกสาร
       </button>
     </div>
 
     <div class="sidebar-group">
       <div class="sidebar-group-title">Navigation</div>
-      <button class="sidebar-item" onclick="window.location.href='/dashboard'">
+      <button class="sidebar-item" data-action="navigate" data-href="/dashboard">
         <span class="sidebar-item-icon">🏠</span>Dashboard หลัก
       </button>
     </div>
   </nav>
 
   <div class="sidebar-footer">
-    <button class="sidebar-logout" onclick="handleLogout()">
+    <button class="sidebar-logout" data-action="logout">
       <span class="sidebar-item-icon">🚪</span>Logout
     </button>
   </div>
@@ -551,7 +581,7 @@
 
   <!-- PAGE 1: TAX DASHBOARD -->
   <div class="page active" id="dashboard-page">
-    <h2 style="margin-bottom: 20px; color: var(--text);">📊 Tax Dashboard</h2>
+    <h2 class="page-title">📊 Tax Dashboard</h2>
 
     <!-- KPI Cards -->
     <div class="kpi-grid">
@@ -578,7 +608,7 @@
     </div>
 
     <!-- Charts Row -->
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px;">
+    <div class="grid-2fr-1fr-30">
       <div class="card">
         <div class="card-title">📈 เทรนด์รายได้ 12 เดือน</div>
         <div class="chart-wrap">
@@ -604,41 +634,41 @@
     <!-- Export for FlowAccount / ภ.ง.ด.90 -->
     <div class="card">
       <div class="card-title">💾 Export สำหรับบัญชี / ยื่นภาษี</div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom:10px;">
-        <button class="btn btn-primary" onclick="previewInvoicesCSV()">
+      <div class="grid-2col-12">
+        <button class="btn btn-primary" data-action="preview-invoices">
           <span>🧾</span>Preview + Export ใบเสร็จ
         </button>
-        <button class="btn btn-primary" onclick="previewMonthlySummaryCSV()">
+        <button class="btn btn-primary" data-action="preview-monthly-summary">
           <span>📊</span>Preview + Export สรุปรายเดือน
         </button>
       </div>
-      <p style="font-size:.85rem; color:var(--text-muted); margin:0;">
+      <p class="note-muted">
         กดปุ่มเพื่อ Preview ข้อมูลเป็นตารางก่อน — ตรวจแล้วค่อยกด Download CSV. รองรับ FlowAccount / Excel / Google Sheets (BOM UTF-8).<br>
         Default = ปีพุทธศักราชปัจจุบัน. เปลี่ยนผ่าน console: <code>previewInvoicesCSV(2568)</code>
       </p>
     </div>
 
     <!-- Preview Modal -->
-    <div id="csvPreviewModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10000; justify-content:center; align-items:center; padding:20px;">
-      <div style="background:#fff; border-radius:12px; width:100%; max-width:1100px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden;">
-        <div style="padding:14px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+    <div id="csvPreviewModal" class="modal-overlay">
+      <div class="csv-modal-box">
+        <div class="modal-header">
           <div>
-            <div id="csvPreviewTitle" style="font-weight:700; font-size:1.05rem;">Preview</div>
-            <div id="csvPreviewStats" style="font-size:.82rem; color:var(--text-muted); margin-top:2px;"></div>
+            <div id="csvPreviewTitle" class="modal-title">Preview</div>
+            <div id="csvPreviewStats" class="modal-subtitle"></div>
           </div>
-          <button onclick="closeCsvPreview()" style="background:#eee; border:none; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:1rem;">✕</button>
+          <button data-action="close-csv-preview" class="btn-close-circle">✕</button>
         </div>
-        <div style="flex:1; overflow:auto; padding:10px 20px;">
-          <table id="csvPreviewTable" style="width:100%; border-collapse:collapse; font-size:.82rem; font-family:-apple-system,Segoe UI,Sarabun,sans-serif;">
+        <div class="modal-body">
+          <table id="csvPreviewTable" class="preview-table">
             <thead id="csvPreviewHead"></thead>
             <tbody id="csvPreviewBody"></tbody>
           </table>
         </div>
-        <div style="padding:14px 20px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:10px;">
-          <div style="font-size:.78rem; color:var(--text-muted);">💡 ข้อมูลมาจาก <span id="csvPreviewSource"></span></div>
-          <div style="display:flex; gap:10px;">
-            <button onclick="closeCsvPreview()" style="padding:9px 18px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:600;">ยกเลิก</button>
-            <button onclick="confirmCsvDownload()" style="padding:9px 18px; background:var(--green, #2d8653); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">📥 Download CSV</button>
+        <div class="modal-footer">
+          <div class="modal-source">💡 ข้อมูลมาจาก <span id="csvPreviewSource"></span></div>
+          <div class="flex-gap-10">
+            <button data-action="close-csv-preview" class="btn-cancel-sm">ยกเลิก</button>
+            <button data-action="confirm-csv-download" class="btn-dl-csv">📥 Download CSV</button>
           </div>
         </div>
       </div>
@@ -647,17 +677,17 @@
     <!-- Quick Links -->
     <div class="card">
       <div class="card-title">⚡ Quick Actions</div>
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
-        <button class="btn btn-primary" onclick="showTaxPage('monthly', document.querySelector('[onclick=\"showTaxPage(\\\'monthly\\\', this)\"]'))">
+      <div class="grid-4col">
+        <button class="btn btn-primary" data-action="show-tax-page" data-page="monthly">
           <span>📅</span>สร้างรายงานเดือน
         </button>
-        <button class="btn btn-primary" onclick="showTaxPage('quarterly', document.querySelector('[onclick=\"showTaxPage(\\\'quarterly\\\', this)\"]'))">
+        <button class="btn btn-primary" data-action="show-tax-page" data-page="quarterly">
           <span>📋</span>สร้างประเมินไตรมาส
         </button>
-        <button class="btn btn-primary" onclick="showTaxPage('annual', document.querySelector('[onclick=\"showTaxPage(\\\'annual\\\', this)\"]'))">
+        <button class="btn btn-primary" data-action="show-tax-page" data-page="annual">
           <span>📄</span>สร้างประเมินประจำปี
         </button>
-        <button class="btn btn-primary" onclick="showTaxPage('checklist', document.querySelector('[onclick=\"showTaxPage(\\\'checklist\\\', this)\"]'))">
+        <button class="btn btn-primary" data-action="show-tax-page" data-page="checklist">
           <span>☑️</span>ดูเช็คลิสต์
         </button>
       </div>
@@ -666,15 +696,15 @@
 
   <!-- PAGE 2: MONTHLY TAX REPORT -->
   <div class="page" id="monthly-page">
-    <h2 style="margin-bottom: 20px;">📅 รายงานเดือน</h2>
+    <h2 class="mb-20">📅 รายงานเดือน</h2>
 
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px;">
+    <div class="grid-2fr-1fr-20">
       <div class="card">
         <div class="card-title">🗓️ เลือกเดือน</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div class="grid-2col-15">
           <div class="form-group">
             <label>เดือน</label>
-            <select id="monthly-month" onchange="updateMonthlyReport()">
+            <select id="monthly-month" data-action="update-monthly">
               <option value="1">มกราคม</option>
               <option value="2">กุมภาพันธ์</option>
               <option value="3">มีนาคม</option>
@@ -691,17 +721,17 @@
           </div>
           <div class="form-group">
             <label>ปี</label>
-            <select id="monthly-year" onchange="updateMonthlyReport()"></select>
+            <select id="monthly-year" data-action="update-monthly"></select>
           </div>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-          <button class="btn btn-primary" onclick="updateMonthlyReport()">
+        <div class="grid-3col-8">
+          <button class="btn btn-primary" data-action="update-monthly">
             <span>✨</span>สร้าง / Refresh
           </button>
-          <button class="btn btn-secondary" onclick="downloadCurrentReportAsPDF()">
+          <button class="btn btn-secondary" data-action="download-monthly-pdf">
             <span>📥</span>PDF
           </button>
-          <button class="btn btn-secondary" onclick="exportMonthlyReportExcel()">
+          <button class="btn btn-secondary" data-action="export-monthly-excel">
             <span>📊</span>Excel
           </button>
         </div>
@@ -709,7 +739,7 @@
 
       <div class="card">
         <div class="card-title">📊 Status</div>
-        <div id="monthly-status" style="padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+        <div id="monthly-status" class="status-panel">
           <span class="status-badge status-draft">Draft</span>
         </div>
       </div>
@@ -717,7 +747,7 @@
 
     <div id="monthly-report-content" class="card">
       <div class="card-title">📋 รายงานเดือน</div>
-      <p style="color: var(--text-muted); text-align: center; padding: 30px;">
+      <p class="empty-placeholder">
         เลือกเดือนและกดสร้างรายงาน
       </p>
     </div>
@@ -725,21 +755,21 @@
 
   <!-- PAGE 3: QUARTERLY TAX RETURN -->
   <div class="page" id="quarterly-page">
-    <h2 style="margin-bottom: 20px;">📋 ประเมินภาษีรายไตรมาส (ป.พ.6)</h2>
+    <h2 class="mb-20">📋 ประเมินภาษีรายไตรมาส (ป.พ.6)</h2>
 
     <div class="card">
       <div class="card-title">🗓️ เลือกไตรมาส</div>
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
-        <button class="btn btn-secondary" onclick="displayQuarterlyReturn(1)">
+      <div class="grid-4col">
+        <button class="btn btn-secondary" data-action="quarterly-return" data-quarter="1">
           <span>📊</span>Q1 (ม.ค.-มี.ค.)
         </button>
-        <button class="btn btn-secondary" onclick="displayQuarterlyReturn(2)">
+        <button class="btn btn-secondary" data-action="quarterly-return" data-quarter="2">
           <span>📊</span>Q2 (เม.ย.-มิ.ย.)
         </button>
-        <button class="btn btn-secondary" onclick="displayQuarterlyReturn(3)">
+        <button class="btn btn-secondary" data-action="quarterly-return" data-quarter="3">
           <span>📊</span>Q3 (ก.ค.-กย.)
         </button>
-        <button class="btn btn-secondary" onclick="displayQuarterlyReturn(4)">
+        <button class="btn btn-secondary" data-action="quarterly-return" data-quarter="4">
           <span>📊</span>Q4 (ต.ค.-ธ.ค.)
         </button>
       </div>
@@ -747,13 +777,13 @@
 
     <div id="quarterly-report-content" class="card">
       <div class="card-title">📄 รายงานไตรมาส</div>
-      <p style="color: var(--text-muted); text-align: center; padding: 30px;">
+      <p class="empty-placeholder">
         เลือกไตรมาสเพื่อสร้างรายงาน
       </p>
     </div>
 
-    <div class="card" style="display: flex; gap: 10px; justify-content: center; padding: 15px;">
-      <button class="btn btn-secondary" onclick="exportQuarterlyReturnPDF()">
+    <div class="card card-center-row">
+      <button class="btn btn-secondary" data-action="export-quarterly-pdf">
         <span>📥</span>ส่งออก PDF
       </button>
     </div>
@@ -761,23 +791,23 @@
 
   <!-- PAGE 4: ANNUAL TAX RETURN -->
   <div class="page" id="annual-page">
-    <h2 style="margin-bottom: 20px;">📄 ประเมินภาษีประจำปี (ภ.ป.ภ. 50)</h2>
+    <h2 class="mb-20">📄 ประเมินภาษีประจำปี (ภ.ป.ภ. 50)</h2>
 
     <div class="card">
       <div class="card-title">🗓️ เลือกปีงบประมาณ</div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: flex-end;">
+      <div class="grid-annual-sel">
         <div class="form-group">
           <label>ปี</label>
           <select id="annual-year"></select>
         </div>
-        <div style="display: flex; gap: 10px;">
-          <button class="btn btn-primary" onclick="displayAnnualReport()">
+        <div class="flex-gap-10">
+          <button class="btn btn-primary" data-action="display-annual">
             <span>✨</span>สร้างรายงาน
           </button>
-          <button class="btn btn-secondary" onclick="exportAnnualReportPDF()">
+          <button class="btn btn-secondary" data-action="export-annual-pdf">
             <span>📥</span>Export PDF
           </button>
-          <button class="btn btn-secondary" onclick="exportAnnualReportExcel()">
+          <button class="btn btn-secondary" data-action="export-annual-excel">
             <span>📊</span>Export Excel
           </button>
         </div>
@@ -786,7 +816,7 @@
 
     <div id="annual-report-content" class="card">
       <div class="card-title">📋 รายงานประจำปี</div>
-      <p style="color: var(--text-muted); text-align: center; padding: 30px;">
+      <p class="empty-placeholder">
         เลือกปีและกดสร้างรายงาน
       </p>
     </div>
@@ -794,11 +824,11 @@
 
   <!-- PAGE 5: WITHHOLDING RECONCILIATION -->
   <div class="page" id="withholding-page">
-    <h2 style="margin-bottom: 20px;">✅ ตรวจสอบหัก ณ ที่จ่าย</h2>
+    <h2 class="mb-20">✅ ตรวจสอบหัก ณ ที่จ่าย</h2>
 
     <div class="card">
       <div class="card-title">🔍 ตรวจสอบการหัก ณ ที่จ่าย</div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: flex-end;">
+      <div class="grid-withholding-sel">
         <div class="form-group">
           <label>ปี</label>
           <select id="withholding-year"></select>
@@ -806,7 +836,7 @@
         <div></div>
         <div></div>
         <div></div>
-        <button class="btn btn-primary" onclick="displayWithholdingReconciliation()">
+        <button class="btn btn-primary" data-action="withholding-check">
           <span>🔄</span>ตรวจสอบ
         </button>
       </div>
@@ -814,7 +844,7 @@
 
     <div id="withholding-report-content" class="card">
       <div class="card-title">📋 ผลการตรวจสอบ</div>
-      <p style="color: var(--text-muted); text-align: center; padding: 30px;">
+      <p class="empty-placeholder">
         เลือกปีและกดตรวจสอบ
       </p>
     </div>
@@ -822,7 +852,7 @@
 
   <!-- PAGE 6: TAX FILING CHECKLIST -->
   <div class="page" id="checklist-page">
-    <h2 style="margin-bottom: 20px;">☑️ เช็คลิสต์ยื่นแบบประเมิน</h2>
+    <h2 class="mb-20">☑️ เช็คลิสต์ยื่นแบบประเมิน</h2>
 
     <div class="card">
       <div class="card-title">📋 รายการเอกสารที่ต้องยื่น</div>
@@ -1718,6 +1748,59 @@
       window.location.href = '/login';
     }
   }
+
+  // ===== EVENT-DELEGATION DISPATCHER =====
+  (function() {
+    function _dispatch(action, el) {
+      if (action === 'show-tax-page') {
+        const page = el.dataset.page;
+        const sidebarBtn = document.querySelector(`.sidebar-item[data-page="${page}"]`);
+        showTaxPage(page, sidebarBtn);
+      } else if (action === 'preview-invoices') {
+        previewInvoicesCSV();
+      } else if (action === 'preview-monthly-summary') {
+        previewMonthlySummaryCSV();
+      } else if (action === 'close-csv-preview') {
+        closeCsvPreview();
+      } else if (action === 'confirm-csv-download') {
+        confirmCsvDownload();
+      } else if (action === 'update-monthly') {
+        if (typeof updateMonthlyReport === 'function') updateMonthlyReport();
+      } else if (action === 'download-monthly-pdf') {
+        downloadCurrentReportAsPDF();
+      } else if (action === 'export-monthly-excel') {
+        if (typeof exportMonthlyReportExcel === 'function') exportMonthlyReportExcel();
+      } else if (action === 'quarterly-return') {
+        if (typeof displayQuarterlyReturn === 'function') displayQuarterlyReturn(Number(el.dataset.quarter));
+      } else if (action === 'export-quarterly-pdf') {
+        if (typeof exportQuarterlyReturnPDF === 'function') exportQuarterlyReturnPDF();
+      } else if (action === 'display-annual') {
+        if (typeof displayAnnualReport === 'function') displayAnnualReport();
+      } else if (action === 'export-annual-pdf') {
+        if (typeof exportAnnualReportPDF === 'function') exportAnnualReportPDF();
+      } else if (action === 'export-annual-excel') {
+        if (typeof exportAnnualReportExcel === 'function') exportAnnualReportExcel();
+      } else if (action === 'withholding-check') {
+        if (typeof displayWithholdingReconciliation === 'function') displayWithholdingReconciliation();
+      } else if (action === 'navigate') {
+        window.location.href = el.dataset.href;
+      } else if (action === 'logout') {
+        handleLogout();
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      _dispatch(el.dataset.action, el);
+    });
+
+    document.addEventListener('change', function(e) {
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      _dispatch(el.dataset.action, el);
+    });
+  })();
 </script>
 
 </body>
