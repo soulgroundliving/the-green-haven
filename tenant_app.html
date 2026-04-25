@@ -6762,6 +6762,10 @@
             window._tenantAppRoom = _taRoom;
             window._tenantAppBuilding = _taBuilding;
             applyGamificationVisibility();
+            // Subscriptions that filter by building (and were no-ops at authReady time
+            // because _taBuilding wasn't derived yet) need a retry now that it's set.
+            // Each function is idempotent so a double-call is harmless.
+            try { if (typeof _subscribeMarketplace === 'function') _subscribeMarketplace(); } catch(_) {}
             return true;
         }
 
