@@ -905,6 +905,20 @@ class BillStore {
    */
   static SYNTH_PREFIX = 'SYNTH-';
 
+  /** Is this bill considered paid?
+   *  Primary signal: status field equals 'paid' (case-insensitive).
+   *  Secondary signal: paidAt is set (admin marked but status field missing).
+   *  Either is enough — guards against bills that admin/CF wrote without a
+   *  status field but did set paidAt.
+   */
+  static isPaid(bill) {
+    if (!bill) return false;
+    const s = String(bill.status || '').toLowerCase();
+    if (s === 'paid') return true;
+    if (bill.paidAt) return true;
+    return false;
+  }
+
   static isSynthetic(bill) {
     if (!bill) return false;
     if (bill.synthetic === true) return true;

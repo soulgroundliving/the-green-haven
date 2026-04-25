@@ -7323,7 +7323,10 @@
                 return;
             }
             if (section) section.style.display = '';
-            const unpaid = _taBills.find(b => b.status !== 'paid');
+            // SSoT paid-check via BillStore.isPaid — survives bills that have paidAt
+            // but no status field, and is case-insensitive on the status string.
+            const _isPaid = (b) => window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid');
+            const unpaid = _taBills.find(b => !_isPaid(b));
             const latest = unpaid || _taBills[0];
             _taCurrentBill = latest;
             const amtEl = document.getElementById('current-bill-amount');
@@ -7331,16 +7334,17 @@
                 const total = Number(latest.totalAmount || latest.total || latest.totalCharge || latest.rentAmount) || 0;
                 amtEl.textContent = `฿ ${Number(total).toLocaleString('th-TH',{minimumFractionDigits:2})}`;
             }
+            const latestPaid = _isPaid(latest);
             const labelEl = document.getElementById('bill-label');
             if (labelEl && latest) {
                 const mName = THAI_MONTHS_SHORT[latest.month] || '';
                 const yBE = latest.year ? ` ${window.YearUtils.toBE(latest.year) || latest.year}` : '';
                 const suffix = mName ? ` ประจำเดือน ${mName}${yBE}` : '';
-                labelEl.textContent = (latest.status === 'paid' ? 'ยอดที่ชำระ' : 'ยอดที่ต้องชำระ') + suffix;
+                labelEl.textContent = (latestPaid ? 'ยอดที่ชำระ' : 'ยอดที่ต้องชำระ') + suffix;
             }
             const dueBadge = document.getElementById('service-due-badge');
             if (dueBadge && latest) {
-                if (latest.status === 'paid') {
+                if (latestPaid) {
                     dueBadge.style.cssText = 'font-size:var(--fs-sm);background:#D1FAE5;color:#065F46;padding:4px 10px;border-radius:20px;';
                     dueBadge.innerHTML = '<i class="fas fa-check"></i> ชำระแล้ว';
                 } else if (latest.status === 'overdue') {
@@ -7355,7 +7359,7 @@
             const payBtn = document.getElementById('service-pay-btn');
             if (payBtn && latest) {
                 const bId = latest.id || latest.billId || '';
-                if (latest.status === 'paid') {
+                if (latestPaid) {
                     payBtn.textContent = 'ดูใบเสร็จ';
                     payBtn.onclick = () => openPaymentFlow(true, bId);
                 } else {
@@ -7379,7 +7383,7 @@
                 const m = THAI_MONTHS_SHORT[b.month] || b.month || '?';
                 const yr = window.YearUtils.toBE(b.year) || '?';
                 const total = Number(b.totalAmount || b.total || b.totalCharge || b.rentAmount) || 0;
-                const paid = b.status === 'paid';
+                const paid = window.BillStore?.isPaid?.(b) ?? (b.status === 'paid');
                 const isSynth = !!b.synthetic;
                 const bId = b.id || b.billId || '';
                 const isCashLegacy = paid && b.method === 'cash_legacy';
@@ -8396,7 +8400,8 @@
 
         // ---- NAV BADGES ----
         function updateNavBadges() {
-            const pendingBills = _taBills.filter(b => b.status !== 'paid').length;
+            const _isPaid = (b) => window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid');
+            const pendingBills = _taBills.filter(b => !_isPaid(b)).length;
             const billBadge = document.getElementById('nav-badge-bills');
             if (billBadge) {
                 billBadge.textContent = pendingBills > 9 ? '9+' : pendingBills;
@@ -8421,7 +8426,8 @@
                 const found = _taBills.find(b => (b.id||b.billId) === billId);
                 if (found) _taCurrentBill = found;
             } else if (!_taCurrentBill) {
-                _taCurrentBill = _taBills.find(b => b.status !== 'paid') || _taBills[0] || null;
+                const _isPaid = (b) => window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid');
+                _taCurrentBill = _taBills.find(b => !_isPaid(b)) || _taBills[0] || null;
             }
             // Auto-redirect to receipt if bill already paid
             if (!isReceipt && _taCurrentBill?.status === 'paid') {
