@@ -891,6 +891,121 @@ class BillStore {
   }
 
   static get isReady() { return this._ready; }
+
+  // ===== SYNTHETIC BILLS — SSoT for tenant-side gap-filling =====
+  // When admin hasn't pushed a real bill to RTDB yet for a given month, the
+  // tenant-side bill list synthesizes a "what your bill would look like"
+  // row from meter readings. Past months default to "paid (cash legacy)";
+  // current month defaults to "pending". Once admin actually issues a real
+  // bill for that month, dedupSynthetic() drops the synth twin.
+
+  /** Prefix used in billId of synthetic bills. Don't write bills with this
+   *  prefix to RTDB — synth lives only in tenant-side _taBills until real
+   *  bill arrives via subscribe.
+   */
+  static SYNTH_PREFIX = 'SYNTH-';
+
+  static isSynthetic(bill) {
+    if (!bill) return false;
+    if (bill.synthetic === true) return true;
+    const id = String(bill.billId || bill.id || '');
+    return id.indexOf(BillStore.SYNTH_PREFIX) === 0;
+  }
+
+  /** Drop synthetic bills when a real (non-synthetic) bill exists for the
+   *  same (CE-normalized year, month). Without this, a tenant briefly sees
+   *  two cards for the same month — one "จ่ายแล้ว" (real) and one
+   *  "รอออกบิล" (synth) — when synth was pushed before subscribe answered.
+   *  Returns a NEW array (no in-place mutation).
+   */
+  static dedupSynthetic(bills) {
+    if (!Array.isArray(bills) || !bills.length) return bills || [];
+    const realByYM = new Set();
+    const ce = (y) => (window.YearUtils?.toCE?.(y)) || Number(y) || 0;
+    bills.forEach(b => {
+      if (BillStore.isSynthetic(b)) return;
+      realByYM.add(`${ce(b.year)}-${Number(b.month)}`);
+    });
+    return bills.filter(b => {
+      if (!BillStore.isSynthetic(b)) return true;
+      return !realByYM.has(`${ce(b.year)}-${Number(b.month)}`);
+    });
+  }
+
+  /** Build synthetic bills for past 6 months of meter history that don't
+   *  have a real bill yet. Pure — no side effects, returns array of new bills.
+   *  Caller is responsible for merging into their bill list and re-rendering.
+   *
+   *  @param {Object} args
+   *  @param {Array}  args.meterHistory — sorted desc; entries: {year, month, eOld, eNew, wOld, wNew, createdAt}
+   *  @param {Array}  args.existingBills — current _taBills (real + already-synth)
+   *  @param {Object} args.rates — {rent, eRate, wRate, trash}; missing fields fall back to defaults
+   *  @param {string|number} [args.moveInDate] — ISO/Date; entries before move-in skipped
+   *  @param {string} args.building
+   *  @param {string} args.room
+   *  @returns {Array} new synthetic bills (NOT yet merged into existingBills)
+   */
+  static synthesizeFromMeter({ meterHistory, existingBills, rates, moveInDate, building, room }) {
+    if (!Array.isArray(meterHistory) || !meterHistory.length) return [];
+    const rent  = Number(rates?.rent)  || 0;
+    const eRate = Number(rates?.eRate) || 8;
+    const wRate = Number(rates?.wRate) || 20;
+    const trash = Number(rates?.trash) || 40;
+
+    const now = new Date();
+    const currentYM = now.getFullYear() * 100 + (now.getMonth() + 1);
+    let moveInYM = 0;
+    try {
+      if (moveInDate) {
+        const mi = new Date(moveInDate);
+        if (!isNaN(mi)) moveInYM = mi.getFullYear() * 100 + (mi.getMonth() + 1);
+      }
+    } catch (_) {}
+
+    const ce = (y) => (window.YearUtils?.toCE?.(y)) || Number(y) || 0;
+    const existingByYM = new Set();
+    (existingBills || []).forEach(b => existingByYM.add(`${ce(b.year)}-${Number(b.month)}`));
+
+    const out = [];
+    meterHistory.slice(0, 6).forEach(m => {
+      const billYM = m.year * 100 + m.month;
+      if (moveInYM && billYM < moveInYM) return;
+      if (existingByYM.has(`${m.year}-${m.month}`)) return;
+
+      const eUnits = Math.max(0, (m.eNew || 0) - (m.eOld || 0));
+      const wUnits = Math.max(0, (m.wNew || 0) - (m.wOld || 0));
+      const eCost = eUnits * eRate;
+      const wCost = wUnits * wRate;
+      const total = rent + eCost + wCost + trash;
+      const isPastMonth = billYM < currentYM;
+
+      out.push({
+        billId: `${BillStore.SYNTH_PREFIX}${building}-${room}-${m.year}${String(m.month).padStart(2,'0')}`,
+        synthetic: true,
+        building, room: String(room),
+        month: m.month, year: m.year,
+        status: isPastMonth ? 'paid' : 'pending',
+        method: isPastMonth ? 'cash_legacy' : null,
+        paidAt: isPastMonth ? new Date(m.year, m.month - 1, 5).toISOString() : null,
+        totalCharge: total, totalAmount: total,
+        meterReadings: {
+          electric: { old: m.eOld, new: m.eNew, units: eUnits },
+          water:    { old: m.wOld, new: m.wNew, units: wUnits }
+        },
+        charges: {
+          rent, rentLabel: 'ค่าเช่าห้อง',
+          electric: { cost: eCost, old: m.eOld, new: m.eNew, units: eUnits, rate: eRate },
+          water:    { cost: wCost, old: m.wOld, new: m.wNew, units: wUnits, rate: wRate },
+          trash, common: 0
+        },
+        createdAt: m.createdAt || new Date(m.year, m.month - 1, 5).toISOString(),
+        note: isPastMonth
+          ? 'บันทึกย้อนหลัง — ชำระด้วยเงินสดก่อนเริ่มระบบ SlipOK'
+          : '(คำนวณอัตโนมัติจากมิเตอร์ — แอดมินยังไม่ได้ออกบิลอย่างเป็นทางการ)'
+      });
+    });
+    return out;
+  }
 }
 
 // Auto-subscribe once globals are wired

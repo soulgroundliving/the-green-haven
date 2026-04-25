@@ -6897,24 +6897,12 @@
             if (typeof updateNavBadges === 'function') updateNavBadges();
         }
 
-        // Drop synthetic bills (billId starts with "SYNTH-") when an admin-issued bill
-        // already exists for the same (year, month). Synth was added before the real
-        // bill arrived from RTDB subscribe, so without this de-dup the user sees both
-        // entries side-by-side ("จ่ายแล้ว" + "รอออกบิล") for the same month.
+        // SSoT delegation: dedup logic lives in BillStore.dedupSynthetic
+        // (shared/billing-system.js). Local wrapper just threads _taBills through it.
         function _dedupBills() {
-            if (!Array.isArray(_taBills) || !_taBills.length) return;
-            const realByYM = new Set();
-            _taBills.forEach(b => {
-                if (b.synthetic) return;
-                const ce = (window.YearUtils?.toCE(b.year)) || Number(b.year) || 0;
-                realByYM.add(`${ce}-${Number(b.month)}`);
-            });
+            if (!window.BillStore?.dedupSynthetic) return;
             const before = _taBills.length;
-            _taBills = _taBills.filter(b => {
-                if (!b.synthetic) return true;
-                const ce = (window.YearUtils?.toCE(b.year)) || Number(b.year) || 0;
-                return !realByYM.has(`${ce}-${Number(b.month)}`);
-            });
+            _taBills = window.BillStore.dedupSynthetic(_taBills);
             if (_taBills.length !== before) {
                 window._tenantAppBills = _taBills;
             }
@@ -7572,88 +7560,42 @@
 
         function _synthesizeBillsFromMeter() {
             if (!_meterHistoryCache.length) return;
-            // Determine rates: prefer RoomConfigManager, fallback defaults
+            if (!window.BillStore?.synthesizeFromMeter) return;
+            // Resolve rates: prefer RoomConfigManager, fallback to lease rentAmount, then defaults
             let rent = 0, eRate = 8, wRate = 20, trash = 40;
             try {
                 if (typeof RoomConfigManager !== 'undefined') {
                     const rc = RoomConfigManager.getRoom?.(_taBuilding, _taRoom);
                     if (rc) {
                         // Support both legacy field names (rent/elecRate/trashFee) and current (rentPrice/electricRate/trashRate)
-                        rent = Number(rc.rentPrice ?? rc.rent) || 0;
+                        rent  = Number(rc.rentPrice    ?? rc.rent)     || 0;
                         eRate = Number(rc.electricRate ?? rc.elecRate) || 8;
-                        wRate = Number(rc.waterRate) || 20;
-                        trash = Number(rc.trashRate ?? rc.trashFee) || 40;
+                        wRate = Number(rc.waterRate)                   || 20;
+                        trash = Number(rc.trashRate    ?? rc.trashFee) || 40;
                     }
                 }
             } catch(e) {}
-            // Fallback rent from _taLease
-            if (!rent && _taLease && _taLease.rentAmount) rent = Number(_taLease.rentAmount)||0;
+            if (!rent && _taLease?.rentAmount) rent = Number(_taLease.rentAmount) || 0;
 
-            // Status policy:
-            //   - Past months (< current) → assume paid in cash (before SlipOK era, tenant was living
-            //     here so rent must have been collected). Mark as paid + method='cash_legacy'.
-            //   - Current month → pending (active unpaid bill, will go through SlipOK)
-            // Also skip months before lease moveInDate (tenant wasn't here yet)
-            const now = new Date();
-            const currentYM = now.getFullYear() * 100 + (now.getMonth() + 1);
-            let moveInYM = 0;
-            try {
-                if (_taLease?.moveInDate) {
-                    const mi = new Date(_taLease.moveInDate);
-                    if (!isNaN(mi)) moveInYM = mi.getFullYear() * 100 + (mi.getMonth() + 1);
-                }
-            } catch(e) {}
-
-            // Last 6 months of meter that don't have an RTDB bill already
-            _meterHistoryCache.slice(0, 6).forEach(m => {
-                const billYM = m.year * 100 + m.month;
-                // Skip if tenant hadn't moved in yet
-                if (moveInYM && billYM < moveInYM) return;
-                // _taBills.year might be BE ("2569") or CE (2026) or short (69) — YearUtils handles all 3
-                const hasExistingBill = _taBills.some(b => {
-                    return window.YearUtils.toCE(b.year) === m.year && Number(b.month) === m.month;
-                });
-                if (hasExistingBill) return;
-                const eUnits = Math.max(0, m.eNew - m.eOld);
-                const wUnits = Math.max(0, m.wNew - m.wOld);
-                const eCost = eUnits * eRate;
-                const wCost = wUnits * wRate;
-                const total = rent + eCost + wCost + trash;
-                const isPastMonth = billYM < currentYM;
-                const bill = {
-                    billId: `SYNTH-${_taBuilding}-${_taRoom}-${m.year}${String(m.month).padStart(2,'0')}`,
-                    synthetic: true,
-                    building: _taBuilding, room: String(_taRoom),
-                    month: m.month, year: m.year,
-                    status: isPastMonth ? 'paid' : 'pending',
-                    method: isPastMonth ? 'cash_legacy' : null,
-                    paidAt: isPastMonth ? new Date(m.year, m.month - 1, 5).toISOString() : null,
-                    totalCharge: total, totalAmount: total,
-                    meterReadings: {
-                        electric: { old: m.eOld, new: m.eNew, units: eUnits },
-                        water: { old: m.wOld, new: m.wNew, units: wUnits }
-                    },
-                    charges: {
-                        rent, rentLabel: 'ค่าเช่าห้อง',
-                        electric: { cost: eCost, old: m.eOld, new: m.eNew, units: eUnits, rate: eRate },
-                        water: { cost: wCost, old: m.wOld, new: m.wNew, units: wUnits, rate: wRate },
-                        trash, common: 0
-                    },
-                    createdAt: m.createdAt || new Date(m.year, m.month-1, 5).toISOString(),
-                    note: isPastMonth
-                        ? 'บันทึกย้อนหลัง — ชำระด้วยเงินสดก่อนเริ่มระบบ SlipOK'
-                        : '(คำนวณอัตโนมัติจากมิเตอร์ — แอดมินยังไม่ได้ออกบิลอย่างเป็นทางการ)'
-                };
-                _taBills.push(bill);
+            // SSoT: synthesis lives in BillStore.synthesizeFromMeter (shared/billing-system.js).
+            // Pure function — returns NEW synth entries; we merge + dedup + sort + cache here.
+            const synth = window.BillStore.synthesizeFromMeter({
+                meterHistory: _meterHistoryCache,
+                existingBills: _taBills,
+                rates: { rent, eRate, wRate, trash },
+                moveInDate: _taLease?.moveInDate,
+                building: _taBuilding,
+                room: _taRoom
             });
+            if (synth.length) _taBills.push(...synth);
             _taBills.sort((a,b) => {
                 const aCE = window.YearUtils.toCE(a.year) || 0;
                 const bCE = window.YearUtils.toCE(b.year) || 0;
                 return (bCE*100+Number(b.month)) - (aCE*100+Number(a.month));
             });
-            // Belt-and-suspenders: if a real bill landed between hasExistingBill check
-            // (write-time guard inside the loop) and now, drop the duplicate synth.
-            if (typeof _dedupBills === 'function') _dedupBills();
+            // Belt-and-suspenders: if a real bill landed between BillStore's
+            // existingBills snapshot and now, drop the duplicate synth.
+            _dedupBills();
             window._tenantAppBills = _taBills;
         }
 
