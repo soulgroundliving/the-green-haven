@@ -679,15 +679,30 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     const el = e.target.closest('[data-action]');
     if (!el) return;
     const a = el.dataset.action;
+    // Tenant page modal
     if (a === 'updateAdjustmentDisplay') { typeof updateAdjustmentDisplay === 'function' && updateAdjustmentDisplay(); return; }
-    if (a === 'renderMaintenancePage') { typeof renderMaintenancePage === 'function' && renderMaintenancePage(); return; }
-    if (a === 'renderHousekeepingList') { typeof renderHousekeepingList === 'function' && renderHousekeepingList(); return; }
-    if (a === 'filterPetsByStatus') { typeof filterPetsByStatus === 'function' && filterPetsByStatus(el.value); return; }
     if (a === 'togglePetTypeRow') {
       const row = document.getElementById('modalPetTypeRow');
       if (row) row.style.display = el.checked ? 'block' : 'none';
       return;
     }
+    // Requests page filters
+    if (a === 'renderMaintenancePage') { typeof renderMaintenancePage === 'function' && renderMaintenancePage(); return; }
+    if (a === 'renderHousekeepingList') { typeof renderHousekeepingList === 'function' && renderHousekeepingList(); return; }
+    if (a === 'filterPetsByStatus') { typeof filterPetsByStatus === 'function' && filterPetsByStatus(el.value); return; }
+    // Phase 4E Step 2 chunk 2: page-meter / page-expense / page-content / page-payment-verify
+    if (a === 'loadRoomConfigUI') { typeof loadRoomConfigUI === 'function' && loadRoomConfigUI(); return; }
+    if (a === 'toggleAddMode') { typeof toggleAddMode === 'function' && toggleAddMode(el.value); return; }
+    if (a === 'updateDepositDisplay') { typeof updateDepositDisplay === 'function' && updateDepositDisplay(); return; }
+    if (a === 'handleImportFile') { typeof handleImportFile === 'function' && handleImportFile(e); return; }
+    if (a === 'handleBillingImportFile') { typeof handleBillingImportFile === 'function' && handleBillingImportFile(e); return; }
+    if (a === 'renderExpensePage') { typeof renderExpensePage === 'function' && renderExpensePage(); return; }
+    if (a === 'loadAndRenderCommunityEvents') { typeof loadAndRenderCommunityEvents === 'function' && loadAndRenderCommunityEvents(); return; }
+    if (a === 'onWellnessCoverPicked') { typeof onWellnessCoverPicked === 'function' && onWellnessCoverPicked(e); return; }
+    if (a === 'onWellnessImagesPicked') { typeof onWellnessImagesPicked === 'function' && onWellnessImagesPicked(e); return; }
+    if (a === 'renderMeterTable') { typeof renderMeterTable === 'function' && renderMeterTable(); return; }
+    if (a === 'loadPVHistoryRooms') { typeof loadPVHistoryRooms === 'function' && loadPVHistoryRooms(); return; }
+    if (a === 'renderPVHistory') { typeof renderPVHistory === 'function' && renderPVHistory(); return; }
   }
   document.addEventListener('change', _handleFormAction);
   document.addEventListener('input', _handleFormAction);

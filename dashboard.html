@@ -2585,8 +2585,8 @@
     <!-- Building Selection -->
     <div class="mb-6">
       <label style="font-weight:600;display:block;margin-bottom:0.5rem;color:var(--text);">เลือกอาคาร</label>
-      <select id="roomConfigBuilding" onchange="loadRoomConfigUI()" style="padding:0.7rem;margin-top:0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;width:100%;max-width:300px;">
-        <option value="rooms" selected>ห้องแถว (Rooms Building)</option>
+      <select id="roomConfigBuilding" data-action="loadRoomConfigUI" style="padding:0.7rem;margin-top:0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;width:100%;max-width:300px;">
+        <option value="rooms" selected>ห้องเช่า (Rent Rooms)</option>
         <option value="nest">Nest Building</option>
       </select>
     </div>
@@ -2636,10 +2636,10 @@
       <!-- Entry Mode Toggle -->
       <div style="margin-bottom:1rem;display:flex;gap:1.5rem;">
         <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;color:var(--text);">
-          <input type="radio" name="addMode" value="manual" checked onchange="toggleAddMode('manual')"> ป้อนข้อมูลใหม่
+          <input type="radio" name="addMode" value="manual" checked data-action="toggleAddMode"> ป้อนข้อมูลใหม่
         </label>
         <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;color:var(--text);">
-          <input type="radio" name="addMode" value="copy" onchange="toggleAddMode('copy')"> Copy from template
+          <input type="radio" name="addMode" value="copy" data-action="toggleAddMode"> Copy from template
         </label>
       </div>
 
@@ -2647,7 +2647,7 @@
       <div id="manualEntryMode" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:1rem;margin-bottom:1rem;">
         <input type="text" id="newRoomId" placeholder="ห้อง ID (เช่น 34)" class="input-md">
         <input type="text" id="newRoomName" placeholder="ชื่อห้อง" class="input-md">
-        <input type="number" id="newRoomRent" placeholder="ราคาห้องพัก" value="1500" step="1" oninput="updateDepositDisplay()" class="input-md">
+        <input type="number" id="newRoomRent" placeholder="ราคาห้องพัก" value="1500" step="1" data-action="updateDepositDisplay" class="input-md">
         <input type="number" id="newRoomDeposit" placeholder="มัดจำ (อัตโนมัติ)" value="3000" readonly style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;background:#f5f5f5;color:#666;">
         <input type="number" id="newRoomWater" placeholder="อัตราน้ำ" value="20" step="0.01" class="input-md">
         <input type="number" id="newRoomElectric" placeholder="อัตราไฟ" value="8" step="0.01" class="input-md">
@@ -2686,7 +2686,7 @@
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์มาวางที่นี่ หรือคลิก</div>
           <div class="text-xs-muted">ไฟล์ Excel (.xlsx, .xls)</div>
         </div>
-        <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event);">
+        <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" data-action="handleImportFile">
       </div>
 
       <!-- Month Selector (Optional manual selection) -->
@@ -2817,7 +2817,7 @@
           <div style="color:var(--text);font-weight:600;margin-bottom:0.3rem;">ลากไฟล์บิล Excel มาวางที่นี่ หรือคลิก</div>
           <div class="text-xs-muted">ไฟล์ Excel (.xlsx, .xls) เช่น บิลปี68.xlsx</div>
         </div>
-        <input type="file" id="billingFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleBillingImportFile(event);">
+        <input type="file" id="billingFileInput" accept=".xlsx,.xls" style="display:none;" data-action="handleBillingImportFile">
       </div>
 
 
@@ -2918,13 +2918,13 @@
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           📊 สรุปประจำเดือน
           <div style="display:flex;gap:6px;">
-            <select id="exp-filter-month" onchange="renderExpensePage()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.8rem;">
+            <select id="exp-filter-month" data-action="renderExpensePage" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.8rem;">
               <option value="1">ม.ค.</option><option value="2">ก.พ.</option><option value="3">มี.ค.</option>
               <option value="4">เม.ย.</option><option value="5">พ.ค.</option><option value="6">มิ.ย.</option>
               <option value="7">ก.ค.</option><option value="8">ส.ค.</option><option value="9">ก.ย.</option>
               <option value="10">ต.ค.</option><option value="11">พ.ย.</option><option value="12">ธ.ค.</option>
             </select>
-            <input type="number" id="exp-filter-year" onchange="renderExpensePage()" value="2569" style="width:75px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.8rem;">
+            <input type="number" id="exp-filter-year" data-action="renderExpensePage" value="2569" style="width:75px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.8rem;">
           </div>
         </div>
         <div id="expSummary"></div>
@@ -3007,8 +3007,8 @@
   <div id="content-tab-events" class="content-mgmt-content" style="display: none;">
     <div class="card" style="margin-bottom: 1.5rem;">
       <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-        <input type="text" id="eventSearch" placeholder="Search events..." oninput="loadAndRenderCommunityEvents()" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
-        <select id="eventBuildingFilter" onchange="loadAndRenderCommunityEvents()" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);">
+        <input type="text" id="eventSearch" placeholder="Search events..." data-action="loadAndRenderCommunityEvents" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+        <select id="eventBuildingFilter" data-action="loadAndRenderCommunityEvents" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);">
           <option value="all">🌐 ทุกตึก</option>
           <option value="rooms">🏠 ห้องแถว</option>
           <option value="nest">🏢 Nest</option>
@@ -3114,7 +3114,7 @@
       <!-- Cover image upload (single, shown as thumbnail in tenant article list) -->
       <div class="mb-4">
         <label class="field-label">🖼️ ภาพปก (แสดงหน้าปกในแอพลูกบ้าน)</label>
-        <input type="file" id="wellness-cover-input" accept="image/*" onchange="onWellnessCoverPicked(event)" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:'Sarabun';">
+        <input type="file" id="wellness-cover-input" accept="image/*" data-action="onWellnessCoverPicked" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:'Sarabun';">
         <div id="wellness-cover-preview" style="margin-top:8px;display:none;">
           <img id="wellness-cover-img" src="" alt="ภาพปก" style="width:120px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
           <button type="button" data-action="clearWellnessCover" style="display:block;margin-top:4px;font-size:.72rem;background:none;border:none;color:var(--danger);cursor:pointer;font-family:'Sarabun';">✕ ลบภาพปก</button>
@@ -3125,7 +3125,7 @@
       <!-- Image upload (multiple, compressed inline base64) -->
       <div class="mb-4">
         <label class="field-label">📷 รูปประกอบ (เลือกหลายรูปได้)</label>
-        <input type="file" id="wellness-images-input" accept="image/*" multiple onchange="onWellnessImagesPicked(event)" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:'Sarabun';">
+        <input type="file" id="wellness-images-input" accept="image/*" multiple data-action="onWellnessImagesPicked" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:'Sarabun';">
         <div id="wellness-images-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
         <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">รูปจะถูกย่อเป็น 800px width + แทรกเข้าเนื้อหาให้อัตโนมัติ — รองรับ JPG/PNG/WEBP</div>
       </div>
@@ -3477,12 +3477,12 @@
 
     <!-- Room filter -->
     <div class="year-tabs" style="margin-bottom:1rem;align-items:center;">
-      <select id="pvh-building" onchange="loadPVHistoryRooms()" class="year-tab" style="cursor:pointer;">
+      <select id="pvh-building" data-action="loadPVHistoryRooms" class="year-tab" style="cursor:pointer;">
         <option value="">-- เลือกตึก --</option>
         <option value="rooms">🏠 ห้องแถว</option>
         <option value="nest">🏢 Nest</option>
       </select>
-      <select id="pvh-room" onchange="renderPVHistory()" class="year-tab" style="cursor:pointer;">
+      <select id="pvh-room" data-action="renderPVHistory" class="year-tab" style="cursor:pointer;">
         <option value="">-- เลือกห้อง --</option>
       </select>
     </div>
@@ -3530,7 +3530,7 @@
     <div class="card" class="mb-5">
       <div class="card-title" id="pvm-table-title">📋 ตารางมิเตอร์ &amp; สถานะชำระ — ห้องแถว</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.9rem;">
-        <select id="mt-month" onchange="renderMeterTable()" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.88rem;">
+        <select id="mt-month" data-action="renderMeterTable" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.88rem;">
           <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
           <option value="3">มีนาคม</option><option value="4">เมษายน</option>
           <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
@@ -3538,7 +3538,7 @@
           <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
           <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
         </select>
-        <input type="number" id="mt-year" value="2569" min="2560" max="2590" onchange="renderMeterTable()"
+        <input type="number" id="mt-year" value="2569" min="2560" max="2590" data-action="renderMeterTable"
           style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.88rem;">
         <span style="font-size:.78rem;color:var(--text-muted);">✅ = คลิกดูรายละเอียด · ⏳ = คลิก"ออกบิล"</span>
       </div>
@@ -3726,8 +3726,8 @@
           <div id="hkCampaignStatus" style="font-size:.88rem; color:var(--text-muted);">กำลังตรวจสอบ...</div>
         </div>
         <button data-action="toggleCleaningCampaign" id="hkCampaignToggleBtn" data-state="off"
-          style="padding:10px 16px; background:var(--green-dark); color:#fff; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer; min-width:170px;">
-          🚀 เปิดรอบเดือนนี้
+          style="padding:10px 16px; background:var(--green-dark); color:#fff; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer; min-width:200px;">
+          🚀 เปิดรอบทำความสะอาด
         </button>
       </div>
     </div>

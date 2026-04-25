@@ -873,7 +873,7 @@ function renderCampaignStatus(activeMonth){
     statusEl.style.color = '#b45309';
     if(toggleBtn){
       toggleBtn.dataset.state = 'off';
-      toggleBtn.textContent = `🚀 เปิดรอบ ${currentMonth}`;
+      toggleBtn.textContent = '🚀 เปิดรอบทำความสะอาด';
       toggleBtn.style.background = 'var(--green-dark)';
     }
   } else {
@@ -881,7 +881,7 @@ function renderCampaignStatus(activeMonth){
     statusEl.style.color = 'var(--text-muted)';
     if(toggleBtn){
       toggleBtn.dataset.state = 'off';
-      toggleBtn.textContent = `🚀 เปิดรอบ ${currentMonth}`;
+      toggleBtn.textContent = '🚀 เปิดรอบทำความสะอาด';
       toggleBtn.style.background = 'var(--green-dark)';
     }
   }
