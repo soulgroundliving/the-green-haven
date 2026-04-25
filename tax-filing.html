@@ -17,6 +17,7 @@
   <script src="./accounting/tax-filing.js"></script>
   <script src="./accounting/tax-export.js"></script>
   <script src="./shared/firebase-config-loader.js"></script>
+  <script src="./shared/year-utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -978,8 +979,7 @@
           for (const billId of Object.keys(billsObj)) {
             const b = billsObj[billId];
             if (!b) continue;
-            const by = Number(b.year);
-            const ceYear = by < 100 ? 2500 + by - 543 : (by > 2500 ? by - 543 : by);
+            const ceYear = window.YearUtils.toCE(b.year);
             if (ceYear !== year) continue;
             if (Number(b.month) !== Number(month)) continue;
             const total = Number(b.totalCharge || b.totalAmount) || 0;
@@ -1244,11 +1244,12 @@
         const bills = roomMap[room] || {};
         for (const billId of Object.keys(bills)) {
           const b = bills[billId] || {};
-          const yr = Number(b.year) < 100 ? 2500 + Number(b.year) : Number(b.year);
+          const yr = window.YearUtils.toBE(b.year);
           if (yr !== yearBE) continue;
           const total = Number(b.totalCharge||b.totalAmount) || 0;
           if (total <= 0 && !b.charges) continue;
-          const date = b.billDate || b.paidAt?.slice(0,10) || `${yr-543}-${String(b.month).padStart(2,'0')}-05`;
+          const ceYr = window.YearUtils.toCE(b.year);
+          const date = b.billDate || b.paidAt?.slice(0,10) || `${ceYr}-${String(b.month).padStart(2,'0')}-05`;
           const docType = b.status === 'paid' ? 'ใบเสร็จรับเงิน' : 'ใบวางบิล';
           const tenantName = b.tenantName || '';
           const c = b.charges || {};

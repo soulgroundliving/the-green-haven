@@ -776,12 +776,20 @@ class BillStore {
     if (b === 'new' || b === 'nest') return 'nest';
     return b;
   }
-  /** Normalize year to BE 4-digit (2569) */
+  /** Normalize year to BE 4-digit (2569). Delegates to YearUtils when loaded. */
   static _be(year) {
+    if (typeof window !== 'undefined' && window.YearUtils) {
+      const v = window.YearUtils.toBE(year);
+      if (v != null) return v;
+    }
+    // Fallback (YearUtils not loaded — shouldn't happen in normal page context):
+    // Bug fix: previous `n < 2400 → 2500 + (n%100)` gave wrong result for 4-digit CE
+    // (e.g. 2026 → 2526 instead of 2569). Correct: 4-digit CE + 543.
     const n = Number(year);
-    if (n < 100) return 2500 + n;
-    if (n < 2400) return 2500 + (n % 100);
-    return n;
+    if (!Number.isFinite(n) || n <= 0) return n;
+    if (n < 100)  return 2500 + n;        // 2-digit BE
+    if (n < 2400) return n + 543;          // 4-digit CE
+    return n;                              // 4-digit BE
   }
 
   /** Subscribe to RTDB bills (idempotent). Auto-fires on first BillStore use.

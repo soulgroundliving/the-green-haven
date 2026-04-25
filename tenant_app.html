@@ -47,6 +47,7 @@
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <!-- Shared logic scripts -->
     <script src="./shared/firebase-config-loader.js"></script>
+    <script src="./shared/year-utils.js"></script>
     <script src="./shared/gamification-rules.js"></script>
     <script src="./shared/room-config.js"></script>
     <script src="./shared/tenant-system.js"></script>
@@ -6319,7 +6320,7 @@
             try {
                 const fs = window.firebase.firestoreFunctions;
                 const db = window.firebase.firestore();
-                const fsBuilding = (window.CONFIG?.getFirestoreBuilding?.(_taBuilding)) || (_taBuilding === 'rooms' ? 'RentRoom' : 'nest');
+                const fsBuilding = window.CONFIG.getFirestoreBuilding(_taBuilding);
                 const ref = fs.doc(db, 'buildings', fsBuilding);
                 _paymentCfgUnsub = fs.onSnapshot(ref, snap => {
                     if (!snap.exists()) return;
@@ -7290,7 +7291,7 @@
             const labelEl = document.getElementById('bill-label');
             if (labelEl && latest) {
                 const mName = THAI_MONTHS_SHORT[latest.month] || '';
-                const yBE = latest.year ? ` ${(latest.year < 2500 ? latest.year + 543 : latest.year)}` : '';
+                const yBE = latest.year ? ` ${window.YearUtils.toBE(latest.year) || latest.year}` : '';
                 const suffix = mName ? ` ประจำเดือน ${mName}${yBE}` : '';
                 labelEl.textContent = (latest.status === 'paid' ? 'ยอดที่ชำระ' : 'ยอดที่ต้องชำระ') + suffix;
             }
@@ -7333,8 +7334,7 @@
             });
             el.innerHTML = validBills.slice(0,12).map(b => {
                 const m = THAI_MONTHS_SHORT[b.month] || b.month || '?';
-                const rawYr = Number(b.year) || 0;
-                const yr = rawYr === 0 ? '?' : rawYr < 100 ? rawYr + 2500 : rawYr < 2500 ? rawYr + 543 : rawYr;
+                const yr = window.YearUtils.toBE(b.year) || '?';
                 const total = Number(b.totalAmount || b.total || b.totalCharge || b.rentAmount) || 0;
                 const paid = b.status === 'paid';
                 const isSynth = !!b.synthetic;
@@ -7526,8 +7526,8 @@
                 const snap = await fs.getDocs(q);
                 _meterHistoryCache = snap.docs.map(d => {
                     const m = d.data() || {};
-                    // Convert BE 2-digit year to CE 4-digit
-                    const yrCE = Number(m.year) < 100 ? 2500 + Number(m.year) - 543 : Number(m.year);
+                    // SSoT year normalization (handles 2-digit BE / 4-digit BE / 4-digit CE)
+                    const yrCE = window.YearUtils.toCE(m.year) || 0;
                     const mo = Number(m.month) || 0;
                     return {
                         monthKey: `${yrCE}-${String(mo).padStart(2,'0')}`, // "2026-04"
@@ -7590,11 +7590,9 @@
                 const billYM = m.year * 100 + m.month;
                 // Skip if tenant hadn't moved in yet
                 if (moveInYM && billYM < moveInYM) return;
-                // _taBills.year might be BE ("2569") or CE (2026) or short (69) — normalize
+                // _taBills.year might be BE ("2569") or CE (2026) or short (69) — YearUtils handles all 3
                 const hasExistingBill = _taBills.some(b => {
-                    const by = Number(b.year);
-                    const byCE = by < 100 ? 2500 + by - 543 : (by > 2500 ? by - 543 : by);
-                    return byCE === m.year && Number(b.month) === m.month;
+                    return window.YearUtils.toCE(b.year) === m.year && Number(b.month) === m.month;
                 });
                 if (hasExistingBill) return;
                 const eUnits = Math.max(0, m.eNew - m.eOld);
@@ -7630,9 +7628,8 @@
                 _taBills.push(bill);
             });
             _taBills.sort((a,b) => {
-                const ay = Number(a.year); const by_ = Number(b.year);
-                const aCE = ay < 100 ? 2500+ay-543 : (ay > 2500 ? ay-543 : ay);
-                const bCE = by_ < 100 ? 2500+by_-543 : (by_ > 2500 ? by_-543 : by_);
+                const aCE = window.YearUtils.toCE(a.year) || 0;
+                const bCE = window.YearUtils.toCE(b.year) || 0;
                 return (bCE*100+Number(b.month)) - (aCE*100+Number(a.month));
             });
             window._tenantAppBills = _taBills;
@@ -7744,7 +7741,7 @@
                         : `<span style="color:#6b7280;">เท่ากับเดือนก่อน</span>`;
             }
 
-            const daysInMonth = new Date(parseInt(yr) < 2500 ? parseInt(yr) : parseInt(yr) - 543, parseInt(mo), 0).getDate() || 30;
+            const daysInMonth = new Date(window.YearUtils.toCE(yr) || parseInt(yr), parseInt(mo), 0).getDate() || 30;
             const avgPerDay = (row.units / daysInMonth).toFixed(1);
             const dailyNote = isElec
                 ? `เฉลี่ย ${avgPerDay} ${unit}/วัน <span style="color:#aaa;">(ประมาณ — รอ Smart Home)</span>`
@@ -8428,7 +8425,7 @@
             if (!bill) return;
             const THAI_MONTHS_FULL = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
             const mFull = THAI_MONTHS_FULL[bill.month] || bill.month || '?';
-            const yr = bill.year ? (Number(bill.year) + (bill.year < 100 ? 2500 : (bill.year < 2500 ? 543 : 0))) : '?';
+            const yr = bill.year ? (window.YearUtils.toBE(bill.year) || '?') : '?';
             const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
             set('inv-bill-no', bill.billId || bill.id || '—');
             set('inv-room', `ห้อง ${_taRoom || '—'}`);
@@ -8487,7 +8484,7 @@
             if (!bill) return;
             const THAI_MONTHS_FULL = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
             const mFull = THAI_MONTHS_FULL[bill.month] || bill.month || '?';
-            const yr = bill.year ? (Number(bill.year) + (bill.year < 100 ? 2500 : (bill.year < 2500 ? 543 : 0))) : '?';
+            const yr = bill.year ? (window.YearUtils.toBE(bill.year) || '?') : '?';
             const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
             set('rcpt-bill-no', bill.billId || bill.id || '—');
             set('rcpt-room', `ห้อง ${_taRoom || '—'}`);
@@ -8898,8 +8895,8 @@
             section.style.display = 'none';
             if (_buildingInternetUnsub) { _buildingInternetUnsub(); _buildingInternetUnsub = null; }
             if (!_taBuilding || !window.firebase?.firestore || !window.firebase.firestoreFunctions) return;
-            // Map canonical _taBuilding → Firestore display id (matches dashboard's saveBuildingPaymentConfig)
-            const fsId = _taBuilding === 'rooms' ? 'RentRoom' : 'nest';
+            // Map canonical _taBuilding → Firestore display id via SSoT helper
+            const fsId = window.CONFIG.getFirestoreBuilding(_taBuilding);
             try {
                 const db = window.firebase.firestore();
                 const fs = window.firebase.firestoreFunctions;
