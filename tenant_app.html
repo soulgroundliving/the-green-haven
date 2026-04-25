@@ -1869,23 +1869,38 @@
         <div id="announcements-list" style="display:none;"></div>
         <div id="events-list" style="display:none;"></div>
 
-        <div class="grid grid-cols-2">
-            <div class="card rounded-[2rem] p-5 shadow-sm flex items-center gap-4">
-                <div id="weather-emoji" class="text-3xl">🌤️</div>
-                <div>
-                    <p id="weather-date" class="text-[10px] text-gray-400 leading-tight">—</p>
-                    <p id="temp-display" class="text-lg font-bold">—</p>
+        <!-- IQAir-style combined card (AQI tier color + face + PM2.5 + weather row) -->
+        <div id="iqair-card" class="card rounded-[2rem]" style="padding:18px; background:#A8E6A0; transition:background .35s ease; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                    <div style="background:#fff; padding:7px 12px; border-radius:14px; text-align:center; line-height:1; min-width:62px; flex-shrink:0;">
+                        <div id="aqi-display" style="font-size:1.5rem; font-weight:800; color:#1F2937;">—</div>
+                        <div style="font-size:.6rem; font-weight:700; color:#6B7280; margin-top:2px;">US AQI<sup>*</sup></div>
+                    </div>
+                    <div id="aqi-label" style="font-size:1.1rem; font-weight:700; color:#1F2937;">—</div>
                 </div>
+                <div id="aqi-face" style="font-size:2.6rem; line-height:1; flex-shrink:0;">😊</div>
             </div>
-
-            <div class="card rounded-[2rem] p-5 shadow-sm flex items-center gap-4">
-                <div id="aqi-emoji" class="text-3xl">😶‍🌫️</div>
-                <div>
-                    <p class="text-[10px] text-gray-400 leading-tight">AQI มลพิษ</p>
-                    <p id="aqi-display" class="text-3xl font-bold">35</p>
-                </div>
-                <div class="w-2.5 h-2.5 bg-[#59E3A2] rounded-full shadow-[0_0_8px_rgba(89,227,162,0.6)]"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:.9rem; color:#1F2937;">
+                <span>สารมลพิษหลัก: <strong>PM2.5</strong></span>
+                <span><strong id="pm25-display">—</strong> μg/m³</span>
             </div>
+            <hr style="border:0; border-top:1px solid rgba(0,0,0,0.12); margin:12px 0 10px;">
+            <div style="display:flex; justify-content:space-around; align-items:center; font-size:.95rem; color:#1F2937; gap:10px;">
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <span id="weather-emoji" style="font-size:1.25rem;">🌤️</span>
+                    <strong id="temp-display">—°</strong>
+                </span>
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <i class="fas fa-wind" style="color:#374151;"></i>
+                    <strong id="wind-display">—</strong> km/h
+                </span>
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <i class="fas fa-tint" style="color:#3B82F6;"></i>
+                    <strong id="humidity-display">—</strong>%
+                </span>
+            </div>
+            <p id="weather-date" style="text-align:right; font-size:.65rem; color:#374151; opacity:.7; margin:6px 0 0;">—</p>
         </div>
 
         <div id="heat-alert" class=" card bg-[#FFF9F2] rounded-[2rem] p-5 border border-[#FFEDE0] flex gap-4 shadow-sm">
@@ -4117,61 +4132,62 @@
             return '🌤️';
         }
 
-        function pickAqiEmoji(aqi) {
-            if (aqi >= 150) return '😷';
-            if (aqi >= 100) return '😮‍💨';
-            if (aqi >= 50)  return '😶‍🌫️';
-            return '😊';
+        // US EPA AQI tier — labels (Thai), face emoji, and card background color.
+        // Mirrors IQAir's tier visualization (the user's reference) so green/yellow/
+        // orange/red/purple/maroon banding matches what tenants would see on iqair.com.
+        function aqiTier(aqi) {
+            if (aqi <= 50)  return { label: 'ดี',                    face: '😊', bg: '#A8E6A0' };
+            if (aqi <= 100) return { label: 'ปานกลาง',               face: '😐', bg: '#FCD34D' };
+            if (aqi <= 150) return { label: 'ไม่ดีต่อกลุ่มเสี่ยง',    face: '😷', bg: '#FB923C' };
+            if (aqi <= 200) return { label: 'ไม่ดีต่อสุขภาพ',         face: '😷', bg: '#EF4444' };
+            if (aqi <= 300) return { label: 'อันตราย',               face: '🤢', bg: '#A78BFA' };
+            return                  { label: 'อันตรายมาก',           face: '☠️', bg: '#7F1D1D' };
         }
 
         async function updateDashboard() {
             const LAT = 13.92, LON = 100.64;
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
 
-            // Weather via Open-Meteo (no API key needed)
-            try {
-                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weather_code&timezone=Asia%2FBangkok`);
-                const wData = await wRes.json();
-                const temp = Math.round(wData.current?.temperature_2m ?? 0);
-                const code = wData.current?.weather_code ?? 0;
-                const emoji = pickWeatherEmoji(temp, code);
+            // Run both fetches in parallel — neither blocks the other on a slow API.
+            const [wRes, pRes] = await Promise.allSettled([
+                fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=Asia%2FBangkok`),
+                fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=pm2_5,us_aqi&timezone=Asia%2FBangkok`)
+            ]);
 
-                // ✨ อัพเดตพื้นหลัง world-map ตามสภาพอากาศจริง + เวลาไทยจริง
-                updateWorldMapBg(code);
-
-                const emojiEl = document.getElementById('weather-emoji');
-                if (emojiEl) emojiEl.textContent = emoji;
-
-                const tempDisplay = document.getElementById('temp-display');
-                if (tempDisplay) tempDisplay.textContent = `${temp}°C`;
-
-                const dateEl = document.getElementById('weather-date');
-                if (dateEl) {
-                    const now = new Date();
-                    dateEl.textContent = now.toLocaleString('th-TH', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-                }
-
-                const heatAlert = document.getElementById('heat-alert');
-                if (heatAlert) heatAlert.classList.toggle('hidden', temp < 35);
-            } catch (e) {
-                console.error("Weather API Error:", e);
+            // Weather (temperature + wind + humidity + condition emoji + heat alert)
+            if (wRes.status === 'fulfilled') {
+                try {
+                    const wData = await wRes.value.json();
+                    const temp  = Math.round(wData.current?.temperature_2m ?? 0);
+                    const code  = wData.current?.weather_code ?? 0;
+                    const wind  = Math.round(wData.current?.wind_speed_10m ?? 0);
+                    const humid = Math.round(wData.current?.relative_humidity_2m ?? 0);
+                    updateWorldMapBg(code);
+                    set('weather-emoji',   pickWeatherEmoji(temp, code));
+                    set('temp-display',    `${temp}°`);
+                    set('wind-display',    wind);
+                    set('humidity-display', humid);
+                    const heatAlert = document.getElementById('heat-alert');
+                    if (heatAlert) heatAlert.classList.toggle('hidden', temp < 35);
+                    const dateEl = document.getElementById('weather-date');
+                    if (dateEl) dateEl.textContent = new Date().toLocaleString('th-TH', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+                } catch (e) { console.error('Weather API parse error:', e); }
             }
 
-            // Air quality via Open-Meteo (no API key needed)
-            try {
-                const pRes = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=pm2_5,us_aqi&timezone=Asia%2FBangkok`);
-                const pData = await pRes.json();
-                const aqi = Math.round(pData.current?.us_aqi ?? 0);
-
-                const aqiEmojiEl = document.getElementById('aqi-emoji');
-                if (aqiEmojiEl) aqiEmojiEl.textContent = pickAqiEmoji(aqi);
-
-                const pmDisplay = document.getElementById('pm-display');
-                if (pmDisplay) {
-                    const color = aqi >= 150 ? 'text-red-500' : aqi >= 100 ? 'text-orange-500' : aqi >= 50 ? 'text-yellow-600' : 'text-green-500';
-                    pmDisplay.innerHTML = `<strong class="text-3xl font-bold">${aqi}</strong><span class="text-[10px] ${color} font-bold ml-1">US AQI</span>`;
-                }
-            } catch (e) {
-                console.error("Air Quality API Error:", e);
+            // Air quality (AQI + PM2.5 + tier-driven card background + face emoji)
+            if (pRes.status === 'fulfilled') {
+                try {
+                    const pData = await pRes.value.json();
+                    const aqi  = Math.round(pData.current?.us_aqi ?? 0);
+                    const pm25 = Number(pData.current?.pm2_5 ?? 0).toFixed(1);
+                    const tier = aqiTier(aqi);
+                    const card = document.getElementById('iqair-card');
+                    if (card) card.style.background = tier.bg;
+                    set('aqi-display',  aqi);
+                    set('aqi-label',    tier.label);
+                    set('aqi-face',     tier.face);
+                    set('pm25-display', pm25);
+                } catch (e) { console.error('Air quality API parse error:', e); }
             }
         }
 
