@@ -266,17 +266,11 @@ function renderLiffRequestsList(docs){
 
   // Escape user-controlled fields before innerHTML render
   const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[m]));
-  const recheckBtn = d => `<button data-action="recheckTenantPhone" data-id="${esc(d.id)}" data-building="${esc(d.building||'')}" data-room="${esc(d.room||'')}" data-phone="${esc(d.phone||'')}" style="margin-left:6px;padding:2px 8px;font-size:.7rem;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:inherit;">🔄 ตรวจซ้ำ</button>`;
-  const phoneInfoHtml = d => {
-    if (!d.phone) return ' · <span style="color:#c62828;font-weight:600;">⚠️ ไม่ได้กรอกเบอร์</span>';
-    const p = esc(d.phone);
-    if (d.phoneMatch === true) {
-      return ` · <span style="color:#2d8653;font-weight:600;">📱 ${p} ✅ ตรงกับ "${esc(d.matchedTenantName||'ผู้เช่า')}"</span>`;
-    }
-    if (d.phoneMatch === false) {
-      return ` · <span style="color:#c62828;font-weight:600;">📱 ${p} ⚠️ ไม่ตรงกับผู้เช่าห้องนี้</span>${recheckBtn(d)}`;
-    }
-    return ` · <span style="color:#f57c00;">📱 ${p} ⚠️ ตรวจสอบไม่ได้</span>${recheckBtn(d)}`;
+  // Verification helper: opens existing tenant modal for {building, room} so admin
+  // can compare LINE display name + picture against the actual lease record.
+  const viewTenantBtn = d => {
+    if (!d.building || !d.room) return '';
+    return ` · <a href="#" data-action="viewLiffTenantInfo" data-building="${esc(d.building)}" data-room="${esc(d.room)}" style="color:var(--blue);font-weight:600;text-decoration:none;">🔍 ดูข้อมูลห้อง ${esc(d.room)}</a>`;
   };
 
   list.innerHTML = docs.map(d => {
@@ -305,7 +299,7 @@ function renderLiffRequestsList(docs){
         <div style="font-size:.82rem;color:var(--text);margin-top:2px;">
           ตึก: <strong>${esc(buildingLabel)}</strong> ·
           ห้อง <strong>${esc(d.room||'—')}</strong>
-          ${phoneInfoHtml(d)}
+          ${viewTenantBtn(d)}
         </div>
         <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;">ขอเมื่อ ${when}</div>
         ${rejectionReasonHtml}
@@ -324,32 +318,32 @@ function _pushLiffStatusToTenant(lineUserId, status, reason) {
   }).catch(e => console.warn('notifyLiffStatusChange (' + status + ') failed:', e.message));
 }
 
-// Admin-side retroactive phone verification. Called when phoneMatch was undefined
-// or 'error' at submit time (CF cold-start, network blip, etc.). Re-runs
-// checkTenantPhone CF and writes the result back to liffUsers/{id} so the
-// admin badge updates without needing the tenant to re-submit.
-async function recheckTenantPhone(lineUserId, building, room, phone, btnEl) {
-  if (!window.firebase?.functions) {
-    alert('Firebase functions ยังไม่พร้อม กรุณาลองใหม่อีกครั้ง');
+// Open the existing tenant modal for the room being requested, so the admin
+// can compare the LINE display name + picture against the actual lease record
+// (name, phone, lease dates) and decide approval manually.
+function viewLiffTenantInfo(building, roomId) {
+  if (typeof openTenantModal !== 'function') {
+    alert('Tenant modal not available — try opening from the Property/Tenant page');
     return;
   }
-  if (!phone) { alert('ลูกบ้านไม่ได้กรอกเบอร์ — ตรวจสอบไม่ได้'); return; }
-  const origText = btnEl?.textContent;
-  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ กำลังตรวจ...'; }
+  openTenantModal(building, roomId);
+}
+
+// Returns true if a tenant record exists at tenants/{building}/list/{roomId}.
+// Used by approveLiffLink to warn admin before linking a LIFF user to a room
+// with no DB record (likely admin forgot to enter the lease).
+async function _tenantRecordExists(building, roomId) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return null;
   try {
-    const checkPhone = window.firebase.functions.httpsCallable('checkTenantPhone');
-    const res = await checkPhone({ building, room: String(room), phone });
-    const phoneMatch = !!res.data?.match;
-    const update = { phoneMatch };
-    if (phoneMatch) update.matchedTenantName = res.data.tenantName || '';
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
-    await fs.setDoc(fs.doc(fs.collection(db, 'liffUsers'), lineUserId), update, { merge: true });
-    // onSnapshot in initLiffRequestsPage will re-render automatically.
+    const fsBuilding = window.CONFIG?.getFirestoreBuilding?.(building) || building;
+    const ref = fs.doc(db, 'tenants', fsBuilding, 'list', String(roomId));
+    const snap = await fs.getDoc(ref);
+    return snap.exists();
   } catch (e) {
-    console.error('recheckTenantPhone failed:', e);
-    alert('ตรวจสอบไม่สำเร็จ: ' + e.message);
-    if (btnEl) { btnEl.disabled = false; btnEl.textContent = origText || '🔄 ตรวจสอบเบอร์อีกครั้ง'; }
+    console.warn('_tenantRecordExists check failed:', e.message);
+    return null;
   }
 }
 
@@ -357,6 +351,22 @@ async function approveLiffLink(lineUserId){
   if(!window.firebase?.firestore) return;
   const db = window.firebase.firestore();
   const fs = window.firebase.firestoreFunctions;
+  // Look up the request to know which {building, room} we're approving
+  let building, room;
+  try {
+    const reqSnap = await fs.getDoc(fs.doc(fs.collection(db, 'liffUsers'), lineUserId));
+    const reqData = reqSnap.data() || {};
+    building = reqData.building;
+    room = reqData.room;
+  } catch (e) { console.warn('Could not load liffUsers doc for approve check:', e.message); }
+  // Warn (don't block) if no tenant record exists for this room
+  if (building && room) {
+    const exists = await _tenantRecordExists(building, room);
+    if (exists === false) {
+      const proceed = confirm(`⚠️ ยังไม่มีข้อมูลลูกบ้านในระบบสำหรับห้อง ${room} (ตึก ${building})\n\nควรเพิ่มข้อมูลลูกบ้านในแท็บ "ผู้เช่า" ก่อนอนุมัติ\n\nต้องการอนุมัติต่อหรือไม่?`);
+      if (!proceed) return;
+    }
+  }
   const adminName = window.SecurityUtils?.getSecureSession()?.name || 'Admin';
   try {
     await fs.setDoc(fs.doc(fs.collection(db, 'liffUsers'), lineUserId), {
@@ -656,8 +666,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'savePolicyDoc') { typeof savePolicyDoc === 'function' && savePolicyDoc(el.dataset.doc); return; }
     if (a === 'toggleCleaningCampaign') { typeof toggleCleaningCampaign === 'function' && toggleCleaningCampaign(); return; }
     if (a === 'clearWellnessCover') { typeof clearWellnessCover === 'function' && clearWellnessCover(); return; }
-    if (a === 'recheckTenantPhone') {
-      recheckTenantPhone(el.dataset.id, el.dataset.building, el.dataset.room, el.dataset.phone, el);
+    if (a === 'viewLiffTenantInfo') {
+      viewLiffTenantInfo(el.dataset.building, el.dataset.room);
       return;
     }
   });

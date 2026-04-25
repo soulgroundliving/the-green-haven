@@ -1621,13 +1621,11 @@
                 </div>
                 <label style="display:block;font-weight:700;font-size:var(--fs-sm);margin-bottom:5px;">ตึก</label>
                 <select id="liff-link-building" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:.9rem;">
-                    <option value="rooms">🏠 ห้องแถว</option>
+                    <option value="rooms">🏠 ห้องเช่า</option>
                     <option value="nest">🏢 Nest</option>
                 </select>
                 <label style="display:block;font-weight:700;font-size:var(--fs-sm);margin-bottom:5px;">หมายเลขห้อง</label>
-                <input type="text" id="liff-link-room" placeholder="เช่น 15, N101" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:.9rem;box-sizing:border-box;">
-                <label style="display:block;font-weight:700;font-size:var(--fs-sm);margin-bottom:5px;">เบอร์โทรศัพท์ (optional)</label>
-                <input type="tel" id="liff-link-phone" placeholder="0812345678" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:1.2rem;box-sizing:border-box;">
+                <input type="text" id="liff-link-room" placeholder="เช่น 15, N101" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:1.2rem;box-sizing:border-box;">
                 <button id="liff-link-submit-btn" onclick="submitLiffLinkRequest()" style="width:100%;padding:12px;background:var(--primary-green,#2d8653);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:var(--fs-md);cursor:pointer;">🔗 ส่งคำขอเชื่อมบัญชี</button>
             </div>
 
@@ -7035,57 +7033,15 @@
         async function submitLiffLinkRequest() {
             const bld = document.getElementById('liff-link-building').value;
             const room = document.getElementById('liff-link-room').value.trim();
-            const phone = document.getElementById('liff-link-phone').value.trim();
             if (!bld || !room) { toast('กรุณาเลือกตึกและใส่หมายเลขห้อง', 'error'); return; }
             if (!window._lineUserId) { toast('ไม่พบ LINE user — กรุณาเปิดผ่านแอป LINE', 'error'); return; }
             if (!window.firebase?.firestore) { toast('Firebase ยังไม่พร้อม', 'error'); return; }
             const btn = document.getElementById('liff-link-submit-btn');
             if (btn) { btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
 
-            // Auto-match: CF checks phone server-side (admin SDK) — client never sees raw phone.
-            // Resilient: wait briefly for firebase.functions to load, retry once on failure
-            // (cold-start frequently times out the first call). Persisted to liffUsers/{id}.
-            let autoApprove = false;
-            let matchedTenantName = '';
-            // phoneMatch: undefined = not checked, true/false = CF result, 'error' = CF failed after retry.
-            let phoneMatch;
-            if (phone) {
-                // Wait up to 3s for window.firebase.functions to be initialized.
-                if (!window.firebase?.functions) {
-                    await new Promise(resolve => {
-                        const t = setTimeout(resolve, 3000);
-                        const iv = setInterval(() => {
-                            if (window.firebase?.functions) { clearInterval(iv); clearTimeout(t); resolve(); }
-                        }, 150);
-                    });
-                }
-                if (window.firebase?.functions) {
-                    const tryCheck = async () => {
-                        const checkPhone = window.firebase.functions.httpsCallable('checkTenantPhone');
-                        const res = await checkPhone({ building: bld, room: String(room), phone });
-                        return res.data;
-                    };
-                    try {
-                        const data = await tryCheck();
-                        phoneMatch = !!data?.match;
-                        if (data?.match) { autoApprove = true; matchedTenantName = data.tenantName || ''; }
-                    } catch (e1) {
-                        console.warn('checkTenantPhone attempt 1 failed:', e1.message, '— retrying in 2s');
-                        await new Promise(r => setTimeout(r, 2000));
-                        try {
-                            const data = await tryCheck();
-                            phoneMatch = !!data?.match;
-                            if (data?.match) { autoApprove = true; matchedTenantName = data.tenantName || ''; }
-                        } catch (e2) {
-                            console.warn('checkTenantPhone attempt 2 failed:', e2.message);
-                            phoneMatch = 'error';
-                        }
-                    }
-                } else {
-                    console.warn('firebase.functions never loaded — phoneMatch left unchecked');
-                }
-            }
-
+            // No more checkTenantPhone auto-approve: at LIFF signup time the tenant DB
+            // doesn't yet have the phone (admin enters it after lease signing). Admin
+            // verifies manually using the "ดูข้อมูลห้องนี้" link on the request page.
             try {
                 const db = window.firebase.firestore();
                 const fs = window.firebase.firestoreFunctions;
@@ -7095,34 +7051,19 @@
                     linePictureUrl: window._lineProfile?.pictureUrl || '',
                     room: String(room),
                     building: bld,
-                    phone: phone || '',
-                    status: autoApprove ? 'approved' : 'pending',
+                    status: 'pending',
                     requestedAt: new Date().toISOString()
                 };
-                if (phone && typeof phoneMatch !== 'undefined') payload.phoneMatch = phoneMatch;
-                if (autoApprove) {
-                    payload.approvedBy = 'AUTO (phone match)';
-                    payload.approvedAt = new Date().toISOString();
-                    payload.matchedTenantName = matchedTenantName;
-                }
                 await fs.setDoc(fs.doc(fs.collection(db, 'liffUsers'), window._lineUserId), payload);
 
-                if (autoApprove) {
-                    toast('✅ เชื่อมบัญชีสำเร็จ กำลังเข้าสู่ระบบ...', 'success');
-                    _taRoom = String(room);
-                    _taBuilding = bld;
-                    localStorage.setItem('tenant_app_room', _taRoom);
-                    setTimeout(() => { document.getElementById('liff-link-overlay').style.display = 'none'; window.location.reload(); }, 1000);
-                } else {
-                    // Fire LINE push notification to admins (best-effort)
-                    fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/notifyLiffRequest', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ lineUserId: window._lineUserId })
-                    }).catch(e => console.warn('notifyLiffRequest failed (non-blocking):', e));
-                    showLiffLinkStatus('pending');
-                    toast('✅ ส่งคำขอเรียบร้อย รอ admin อนุมัติ', 'success');
-                }
+                // Fire LINE push notification to admins (best-effort)
+                fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/notifyLiffRequest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lineUserId: window._lineUserId })
+                }).catch(e => console.warn('notifyLiffRequest failed (non-blocking):', e));
+                showLiffLinkStatus('pending');
+                toast('✅ ส่งคำขอเรียบร้อย รอ admin อนุมัติ', 'success');
             } catch (e) {
                 toast('❌ บันทึกไม่สำเร็จ: ' + e.message, 'error');
                 if (btn) { btn.disabled = false; btn.textContent = '🔗 ส่งคำขอเชื่อมบัญชี'; }
