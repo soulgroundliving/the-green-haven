@@ -3148,10 +3148,18 @@
         <div class="section-title"><span>Avatar Default</span></div>
         <div class="card">
 
-            <div class="avatar-selector" style="display: flex; gap: 15px; margin-top: 12px; flex-wrap: wrap; align-items: center;">
+            <div class="avatar-selector" style="display: flex; gap: 15px; margin-top: 12px; flex-wrap: wrap; align-items: flex-start;">
+                <!-- Current avatar (display-only mirror — shows what tenant actually sees in nav/community) -->
+                <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <div id="avatar-current-tile" class="avatar-option" title="รูปปัจจุบันของคุณ"
+                         style="cursor:default; border:2px solid var(--primary-green); box-shadow:0 0 0 3px var(--soft-green);">🌿</div>
+                    <span style="font-size:var(--fs-xs); color:var(--text-muted);">ปัจจุบัน</span>
+                </div>
+                <!-- Preset emoji choices -->
                 <div id="avatar-preview" class="avatar-option active" onclick="setAvatar('🌿', this)">🌿</div>
                 <div class="avatar-option" onclick="setAvatar('🌊', this)">🌊</div>
                 <div class="avatar-option" onclick="setAvatar('⛰️', this)">⛰️</div>
+                <!-- Upload from device -->
                 <label class="avatar-option" for="avatar-upload-input" title="อัปโหลดรูปจากเครื่อง"
                     style="background: var(--soft-green); color: var(--primary-green); border: 2px dashed var(--primary-green); cursor: pointer;">
                     <span style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; line-height:1; font-size:1.8rem;">📸</span>
@@ -3249,15 +3257,13 @@
                 <label style="font-size:var(--fs-sm); color:#666;">เบอร์โทรศัพท์</label>
                 <input type="tel" id="profile-edit-phone" placeholder="0xxxxxxxxx" style="margin-bottom:10px;">
                 <label style="font-size:var(--fs-sm); color:#666;">อีเมล</label>
-                <input type="email" id="profile-edit-email" placeholder="example@gmail.com" style="margin-bottom:10px;">
-                <label style="font-size:var(--fs-sm); color:#666;">ป้ายทะเบียน</label>
-                <input type="text" id="profile-edit-license" placeholder="กข 1234 / —" style="margin-bottom:15px;">
+                <input type="email" id="profile-edit-email" placeholder="example@gmail.com" style="margin-bottom:15px;">
                 <div style="display:flex; gap:8px;">
                     <button class="btn-main" style="flex:1; background:#999;" onclick="toggleProfileEditMode(false)">ยกเลิก</button>
                     <button class="btn-main" style="flex:1;" onclick="saveProfileEdit()"><i class="fas fa-save"></i> บันทึก</button>
                 </div>
                 <p style="font-size:var(--fs-sm); color:#888; margin-top:10px;">
-                    <i class="fas fa-info-circle"></i> ชื่อ+นามสกุลกับสัญญาเช่า แก้ไม่ได้ — กรุณาติดต่อเจ้าของหากต้องการเปลี่ยน
+                    <i class="fas fa-info-circle"></i> ชื่อ+นามสกุล, สัญญาเช่า และป้ายทะเบียน แก้ไม่ได้ — กรุณาติดต่อเจ้าของหากต้องการเปลี่ยน
                 </p>
             </div>
         </div>
@@ -4733,18 +4739,17 @@
         }
 
         function setAvatar(emoji, el) {
-            ['current-avatar', 'current-avatar-map'].forEach(id => {
+            // Mirror to nav/community + the dedicated current-avatar tile in the
+            // preference page. avatar-preview (leaf preset) is no longer a sink —
+            // it stays as 🌿 so the user can re-select the leaf preset later.
+            ['current-avatar', 'current-avatar-map', 'avatar-current-tile'].forEach(id => {
                 const curr = document.getElementById(id);
                 if (curr) { curr.innerText = emoji; curr.style.backgroundImage = ''; }
             });
-            const preview = document.getElementById('avatar-preview');
-            if (preview) {
-                preview.innerHTML = emoji;
-                preview.style.backgroundImage = '';
-                preview.style.backgroundSize = '';
-            }
-            if (el && el.parentElement.classList.contains('avatar-selector')) {
-                el.parentElement.querySelectorAll('.avatar-option').forEach(opt => opt.classList.remove('active'));
+            if (el && el.classList.contains('avatar-option')) {
+                document.querySelectorAll('.avatar-selector .avatar-option').forEach(opt => {
+                    if (opt.id !== 'avatar-current-tile') opt.classList.remove('active');
+                });
                 el.classList.add('active');
             }
             saveAvatar({ type: 'emoji', value: emoji });
@@ -4780,12 +4785,13 @@
             } catch(_){}
         }
         function applyAvatarEmoji(emoji) {
-            ['current-avatar', 'current-avatar-map'].forEach(id => {
+            // 'avatar-current-tile' mirrors what the tenant actually sees in nav/community
+            // — distinct from 'avatar-preview' (the leaf preset slot). Splitting them lets
+            // tenant pick a preset without losing the visual reference of their current avatar.
+            ['current-avatar', 'current-avatar-map', 'avatar-current-tile'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) { el.innerText = emoji; el.style.backgroundImage = ''; }
             });
-            const preview = document.getElementById('avatar-preview');
-            if (preview) { preview.innerHTML = emoji; preview.style.backgroundImage = ''; }
         }
         function applyAvatarImage(dataUrl) {
             const set = el => {
@@ -4795,8 +4801,7 @@
                 el.style.backgroundSize = 'cover';
                 el.style.backgroundPosition = 'center';
             };
-            ['current-avatar', 'current-avatar-map'].forEach(id => set(document.getElementById(id)));
-            set(document.getElementById('avatar-preview'));
+            ['current-avatar', 'current-avatar-map', 'avatar-current-tile'].forEach(id => set(document.getElementById(id)));
         }
 
         async function handleAvatarUpload(event) {
@@ -4813,9 +4818,13 @@
                 const newKB  = Math.round((compressed.length * 0.75) / 1024);
                 applyAvatarImage(compressed);
                 saveAvatar({ type: 'image', value: compressed });
-                // mark camera option as active
-                document.querySelectorAll('.avatar-selector .avatar-option').forEach(o => o.classList.remove('active'));
-                document.getElementById('avatar-preview')?.classList.add('active');
+                // Mark the upload tile as active (leave current-tile alone — it's display-only).
+                // Find the upload <label> by its for-attr binding, more robust than id lookup.
+                const uploadLabel = document.querySelector('.avatar-selector label[for="avatar-upload-input"]');
+                document.querySelectorAll('.avatar-selector .avatar-option').forEach(o => {
+                    if (o.id !== 'avatar-current-tile') o.classList.remove('active');
+                });
+                uploadLabel?.classList.add('active');
                 show(`✓ อัปโหลดสำเร็จ (${origKB}KB → ${newKB}KB)`, 'var(--primary-green)');
             } catch(e) {
                 show('บีบอัดล้มเหลว กรุณาลองใหม่', 'var(--danger)');
@@ -5548,6 +5557,28 @@
             }
         }
 
+        // Restore the persisted theme on every page load — toggle was saving to
+        // localStorage but never reading it back, so refresh/reopen reset to light.
+        // Runs at script-parse time so the night-mode class lands before first paint.
+        (function _restorePersistedTheme() {
+            try {
+                const t = localStorage.getItem('theme');
+                if (t === 'night') {
+                    document.body.classList.add('night-mode');
+                    document.documentElement.style.background = '#1A1C1A';
+                } else if (t === 'eco') {
+                    document.body.classList.add('eco-mode');
+                }
+                // Reflect into the toggle switches once the DOM has them
+                window.addEventListener('DOMContentLoaded', () => {
+                    const ns = document.getElementById('night-switch');
+                    const es = document.getElementById('eco-switch');
+                    if (ns) ns.checked = (t === 'night');
+                    if (es) es.checked = (t === 'eco');
+                });
+            } catch (_) {}
+        })();
+
         function toggleEcoMode() {
             const nightSwitch = document.getElementById('night-switch');
             const ecoSwitch = document.getElementById('eco-switch');
@@ -5974,7 +6005,6 @@
                 // Pre-fill current values
                 document.getElementById('profile-edit-phone').value   = _taTenant?.phone   || '';
                 document.getElementById('profile-edit-email').value   = _taTenant?.email   || '';
-                document.getElementById('profile-edit-license').value = _taTenant?.licensePlate || _taTenant?.plateNumber || '';
                 view.style.display = 'none';
                 form.style.display = 'block';
                 if (tgl) tgl.textContent = '↩️ ยกเลิก';
@@ -5987,7 +6017,6 @@
         async function saveProfileEdit() {
             const phone   = document.getElementById('profile-edit-phone').value.trim();
             const email   = document.getElementById('profile-edit-email').value.trim();
-            const license = document.getElementById('profile-edit-license').value.trim();
             // Light validation
             if (phone && !/^\d{9,10}$/.test(phone.replace(/\D/g, ''))) {
                 toast('เบอร์โทรไม่ถูกต้อง', 'error'); return;
@@ -6001,7 +6030,9 @@
             }
             const fs = window.firebase.firestoreFunctions;
             const db = window.firebase.firestore();
-            const updates = { phone, email, licensePlate: license, updatedAt: new Date().toISOString() };
+            // licensePlate intentionally omitted — admin-only field (anti-fraud: tenants
+            // could swap plates between rooms or borrow another tenant's car identity).
+            const updates = { phone, email, updatedAt: new Date().toISOString() };
             try {
                 const ref = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
                 await fs.updateDoc(ref, updates);
@@ -8521,6 +8552,24 @@
             // Owner name from Firestore-cached config
             const ownerEl = document.getElementById('receipt-owner-name');
             if (ownerEl && typeof getOwnerName === 'function') ownerEl.textContent = getOwnerName();
+
+            // Tenant company info — show on receipt only when receiptType==='company'
+            // and at least one company field is filled. Reads tenant's saved data
+            // (Settings → "ใบเสร็จเป็นนามบริษัท") from _taTenant.companyInfo.
+            const sel = document.getElementById('receipt-type-select');
+            const receiptType = (sel?.value)
+                || localStorage.getItem(_receiptTypeKey?.() || '')
+                || (_taTenant && _taTenant.receiptType)
+                || 'personal';
+            const co = (_taTenant && (_taTenant.companyInfo || _taTenant.company)) || {};
+            const showCompany = receiptType === 'company' && (co.name || co.taxId || co.address);
+            const compBlock = document.getElementById('receipt-company-info-block');
+            if (compBlock) compBlock.style.display = showCompany ? 'block' : 'none';
+            if (showCompany) {
+                set('display-comp-name', co.name    || '-');
+                set('display-comp-tax',  co.taxId   || '-');
+                set('display-comp-addr', co.address || '-');
+            }
             // Status badge + method note: legacy-cash vs slip
             const badge = document.getElementById('rcpt-status-badge');
             const noteEl = document.getElementById('rcpt-method-note');
