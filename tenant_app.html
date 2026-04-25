@@ -1882,7 +1882,7 @@
                 <div id="aqi-face" style="font-size:2.6rem; line-height:1; flex-shrink:0;">😊</div>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:.9rem; color:#1F2937;">
-                <span>สารมลพิษหลัก: <strong>PM2.5</strong></span>
+                <span>สารมลพิษหลัก: <strong id="main-pollutant-display">PM2.5</strong></span>
                 <span><strong id="pm25-display">—</strong> μg/m³</span>
             </div>
             <hr style="border:0; border-top:1px solid rgba(0,0,0,0.12); margin:12px 0 10px;">
@@ -1901,6 +1901,7 @@
                 </span>
             </div>
             <p id="weather-date" style="text-align:right; font-size:.65rem; color:#374151; opacity:.7; margin:6px 0 0;">—</p>
+            <p style="text-align:right; font-size:.6rem; color:#374151; opacity:.55; margin:2px 0 0;">AQI by IQAir · Weather by Open-Meteo</p>
         </div>
 
         <div id="heat-alert" class=" card bg-[#FFF9F2] rounded-[2rem] p-5 border border-[#FFEDE0] flex gap-4 shadow-sm">
@@ -4148,11 +4149,21 @@
             const LAT = 13.92, LON = 100.64;
             const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
 
-            // Run both fetches in parallel — neither blocks the other on a slow API.
-            const [wRes, pRes] = await Promise.allSettled([
+            // Open-Meteo for weather (free, no key, exact lat/lon — IQAir's bundled
+            // weather is at nearest-city granularity). IQAir-via-CF for AQI + main
+            // pollutant — server-side cached 1h so we use ~720 of 10K monthly quota.
+            // Both run in parallel; neither blocks the other.
+            const [wPromise, aqPromise] = [
                 fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=Asia%2FBangkok`),
-                fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=pm2_5,us_aqi&timezone=Asia%2FBangkok`)
-            ]);
+                (async () => {
+                    if (!window.firebase?.functions?.httpsCallable) return null;
+                    const callable = window.firebase.functions.httpsCallable('getAirQuality');
+                    const r = await callable({ lat: LAT, lon: LON });
+                    return r?.data || null;
+                })()
+            ];
+
+            const [wRes, aqRes] = await Promise.allSettled([wPromise, aqPromise]);
 
             // Weather (temperature + wind + humidity + condition emoji + heat alert)
             if (wRes.status === 'fulfilled') {
@@ -4174,20 +4185,22 @@
                 } catch (e) { console.error('Weather API parse error:', e); }
             }
 
-            // Air quality (AQI + PM2.5 + tier-driven card background + face emoji)
-            if (pRes.status === 'fulfilled') {
+            // Air quality from IQAir CF — { aqi, mainPollutant, mainLabel, concentration, ... }
+            if (aqRes.status === 'fulfilled' && aqRes.value) {
                 try {
-                    const pData = await pRes.value.json();
-                    const aqi  = Math.round(pData.current?.us_aqi ?? 0);
-                    const pm25 = Number(pData.current?.pm2_5 ?? 0).toFixed(1);
+                    const d = aqRes.value;
+                    const aqi  = Math.round(Number(d.aqi) || 0);
                     const tier = aqiTier(aqi);
                     const card = document.getElementById('iqair-card');
                     if (card) card.style.background = tier.bg;
-                    set('aqi-display',  aqi);
-                    set('aqi-label',    tier.label);
-                    set('aqi-face',     tier.face);
-                    set('pm25-display', pm25);
-                } catch (e) { console.error('Air quality API parse error:', e); }
+                    set('aqi-display',           aqi);
+                    set('aqi-label',             tier.label);
+                    set('aqi-face',              tier.face);
+                    set('main-pollutant-display', d.mainLabel || d.mainPollutant || 'PM2.5');
+                    set('pm25-display',          d.concentration != null ? d.concentration : '—');
+                } catch (e) { console.error('AQI CF parse error:', e); }
+            } else if (aqRes.status === 'rejected') {
+                console.warn('getAirQuality CF unavailable:', aqRes.reason?.message || aqRes.reason);
             }
         }
 

@@ -36,6 +36,11 @@ exports.generateBillsOnMeterUpdate = require('./generateBillsOnMeterUpdate').gen
 // LINE Flex notification to tenant when new bill appears in RTDB
 exports.notifyBillOnCreate = require('./notifyBillOnCreate').notifyBillOnCreate;
 
+// IQAir AirVisual proxy with 1-hour Firestore cache (key stays server-side,
+// frontend never sees it). Hybrid: IQAir for AQI + main pollutant code,
+// Open-Meteo for μg/m³ concentration (Community tier doesn't provide it).
+exports.getAirQuality = require('./getAirQuality').getAirQuality;
+
 // Tax revenue aggregation (Phase 2 — scheduled monthly + on-demand HTTP)
 exports.aggregateMonthlyRevenueScheduled = require('./aggregateMonthlyRevenue').aggregateMonthlyRevenueScheduled;
 exports.aggregateMonthlyRevenue = require('./aggregateMonthlyRevenue').aggregateMonthlyRevenue;
