@@ -4089,7 +4089,8 @@ function loadBadgesAdmin() {
 }
 
 // ===== POLICY ADMIN CRUD (Firestore `system/policies`) =====
-// Tenant app subscribes via _subscribePolicies() and renders content live.
+// Tenant app subscribes via _subscribePolicies() and renders sanitized HTML live.
+// Admin UI is a contenteditable rich-text editor (shared/rich-text-policy.js).
 async function loadPoliciesAdmin() {
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
   const fs = window.firebase.firestoreFunctions;
@@ -4129,18 +4130,37 @@ async function loadPoliciesAdmin() {
       } catch(e) { console.warn('policy seed failed:', e.message); }
     }
 
+    // Mount rich-text editor on each placeholder; cache the contenteditable node on
+    // the wrapper so savePolicyDoc can read it back without DOM re-discovery.
     KEYS.forEach(key => {
-      const ta = document.getElementById(`policy-admin-${key}`);
-      if (ta && data[key]) ta.value = data[key];
+      const wrap = document.getElementById(`policy-admin-${key}`);
+      if (!wrap) return;
+      if (window.RichTextPolicy?.mountEditor) {
+        const editor = window.RichTextPolicy.mountEditor(wrap, data[key] || '');
+        wrap._rtEditor = editor;
+      } else {
+        // Fallback: the legacy textarea path (shouldn't happen if rich-text-policy.js is loaded)
+        wrap.textContent = data[key] || '';
+      }
     });
   } catch(e) { console.warn('loadPoliciesAdmin:', e.message); }
 }
 
 async function savePolicyDoc(key) {
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-  const ta = document.getElementById(`policy-admin-${key}`);
-  if (!ta) return;
-  const content = ta.value.trim();
+  const wrap = document.getElementById(`policy-admin-${key}`);
+  if (!wrap) return;
+  // Editor mounted by rich-text-policy.js stores the contenteditable on `_rtEditor`.
+  // Sanitize via the same helper tenant_app uses, so admin and tenant agree on output.
+  const editor = wrap._rtEditor || wrap.querySelector('.rt-content');
+  let content = '';
+  if (editor && window.RichTextPolicy?.getContent) {
+    content = window.RichTextPolicy.getContent(editor);
+  } else if (wrap.value !== undefined) {
+    content = String(wrap.value || '').trim();
+  } else {
+    content = (wrap.textContent || '').trim();
+  }
   const btn = document.getElementById(`policy-save-${key}`);
   const orig = btn?.textContent;
   if (btn) { btn.disabled = true; btn.textContent = 'กำลังบันทึก...'; }

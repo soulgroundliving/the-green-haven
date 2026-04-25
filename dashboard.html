@@ -16,6 +16,7 @@
 <script src="https://js.sentry-cdn.com/70de55e358255ab981939b708a743b1d.min.js" crossorigin="anonymous"></script>
 <script src="./shared/sentry-init.js"></script>
 <script src="./shared/security.js"></script>
+<script src="./shared/rich-text-policy.js"></script>
 <script src="./shared/firebase-config-loader.js"></script>
 <script src="./shared/year-utils.js"></script>
 <script src="./shared/gamification-rules.js"></script>
@@ -3587,30 +3588,30 @@
   <!-- TAB 3: Policies (SSoT → Firestore system/policies → tenant app reads live) -->
   <div id="people-tab-policies" class="people-mgmt-content" style="display: none;">
     <div class="card" style="margin-bottom:1.5rem;">
-      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.5rem;">เขียนเนื้อหาแบบปกติ — ขึ้นบรรทัดใหม่ได้ตามปกติ บันทึกแล้วจะแสดงในแอปลูกบ้านทันที</p>
+      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.5rem;">เขียนเนื้อหาพร้อมจัดรูปแบบ (ตัวหนา/เอียง/ขีดเส้นใต้/ขนาด/หัวข้อ/รายการ) — บันทึกแล้วลูกบ้านเห็นทันที</p>
       <div style="display:flex;flex-direction:column;gap:1.5rem;">
         <!-- Privacy -->
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">🔒 นโยบายความเป็นส่วนตัว (Privacy Policy)</div>
-          <textarea id="policy-admin-privacy" rows="12" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;line-height:1.6;" placeholder="เขียนเนื้อหานโยบายความเป็นส่วนตัว..."></textarea>
+          <div id="policy-admin-privacy" data-placeholder="เขียนเนื้อหานโยบายความเป็นส่วนตัว..."></div>
           <button id="policy-save-privacy" data-action="savePolicyDoc" data-doc="privacy" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
         </div>
         <!-- Terms / User Manual -->
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">📖 คู่มือการใช้งาน</div>
-          <textarea id="policy-admin-terms" rows="12" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;line-height:1.6;" placeholder="เขียนคู่มือการใช้งาน..."></textarea>
+          <div id="policy-admin-terms" data-placeholder="เขียนคู่มือการใช้งาน..."></div>
           <button id="policy-save-terms" data-action="savePolicyDoc" data-doc="terms" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
         </div>
         <!-- Compliance -->
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">⚖️ Data & Compliance</div>
-          <textarea id="policy-admin-compliance" rows="12" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;line-height:1.6;" placeholder="เขียนนโยบาย Data & Compliance..."></textarea>
+          <div id="policy-admin-compliance" data-placeholder="เขียนนโยบาย Data & Compliance..."></div>
           <button id="policy-save-compliance" data-action="savePolicyDoc" data-doc="compliance" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
         </div>
         <!-- IP -->
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">™️ ทรัพย์สินทางปัญญา (IP Infringement)</div>
-          <textarea id="policy-admin-ip" rows="12" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;resize:vertical;line-height:1.6;" placeholder="เขียนนโยบายทรัพย์สินทางปัญญา..."></textarea>
+          <div id="policy-admin-ip" data-placeholder="เขียนนโยบายทรัพย์สินทางปัญญา..."></div>
           <button id="policy-save-ip" data-action="savePolicyDoc" data-doc="ip" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
         </div>
       </div>

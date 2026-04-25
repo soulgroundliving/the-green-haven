@@ -47,6 +47,7 @@
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <!-- Shared logic scripts -->
     <script src="./shared/firebase-config-loader.js"></script>
+    <script src="./shared/rich-text-policy.js"></script>
     <script src="./shared/year-utils.js"></script>
     <script src="./shared/config-unified.js"></script>
     <script src="./shared/gamification-rules.js"></script>
@@ -9116,7 +9117,16 @@
                 Object.entries(map).forEach(([key, elId]) => {
                     if (!data[key]) return;
                     const el = document.getElementById(elId);
-                    if (el) { el.style.whiteSpace = 'pre-wrap'; el.textContent = data[key]; }
+                    if (!el) return;
+                    // Renderer auto-detects HTML vs plain text (backward-compat with old
+                    // text-only policies). HTML is sanitized through the same whitelist
+                    // admin uses on save, so a compromised admin can't inject script tags.
+                    if (window.RichTextPolicy?.renderTo) {
+                        window.RichTextPolicy.renderTo(el, data[key]);
+                    } else {
+                        el.style.whiteSpace = 'pre-wrap';
+                        el.textContent = data[key];
+                    }
                 });
             }, err => console.warn('policies subscribe:', err.message));
         }
