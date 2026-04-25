@@ -943,9 +943,12 @@ class BillStore {
    *  @param {string|number} [args.moveInDate] — ISO/Date; entries before move-in skipped
    *  @param {string} args.building
    *  @param {string} args.room
+   *  @param {boolean} [args.pastOnly=false] — when true, skip current+future months
+   *      (tenant-side: only "ชำระด้วยเงินสดก่อน SlipOK" rows; admin's forecast-revenue
+   *      tool owns the current-month projection use case).
    *  @returns {Array} new synthetic bills (NOT yet merged into existingBills)
    */
-  static synthesizeFromMeter({ meterHistory, existingBills, rates, moveInDate, building, room }) {
+  static synthesizeFromMeter({ meterHistory, existingBills, rates, moveInDate, building, room, pastOnly = false }) {
     if (!Array.isArray(meterHistory) || !meterHistory.length) return [];
     const rent  = Number(rates?.rent)  || 0;
     const eRate = Number(rates?.eRate) || 8;
@@ -971,13 +974,15 @@ class BillStore {
       const billYM = m.year * 100 + m.month;
       if (moveInYM && billYM < moveInYM) return;
       if (existingByYM.has(`${m.year}-${m.month}`)) return;
+      const isPastMonth = billYM < currentYM;
+      // Tenant view skips current+future months (admin's forecast tool owns those)
+      if (pastOnly && !isPastMonth) return;
 
       const eUnits = Math.max(0, (m.eNew || 0) - (m.eOld || 0));
       const wUnits = Math.max(0, (m.wNew || 0) - (m.wOld || 0));
       const eCost = eUnits * eRate;
       const wCost = wUnits * wRate;
       const total = rent + eCost + wCost + trash;
-      const isPastMonth = billYM < currentYM;
 
       out.push({
         billId: `${BillStore.SYNTH_PREFIX}${building}-${room}-${m.year}${String(m.month).padStart(2,'0')}`,

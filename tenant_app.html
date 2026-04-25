@@ -6895,6 +6895,21 @@
             if (typeof renderProfilePage === 'function') renderProfilePage();
             if (typeof renderContractPage === 'function') renderContractPage();
             if (typeof updateNavBadges === 'function') updateNavBadges();
+            // Chart sources from _taBills (SSoT) — re-render whenever bills change
+            if (typeof _renderUsageChart === 'function') _renderUsageChart();
+        }
+
+        // SSoT delegation: dedup logic lives in BillStore.dedupSynthetic
+        // (shared/billing-system.js). Local wrapper just threads _taBills through it.
+        // Needed because admin may issue a real bill for a past month after the
+        // cash-legacy synth row was already pushed — dedup keeps the real one.
+        function _dedupBills() {
+            if (!window.BillStore?.dedupSynthetic) return;
+            const before = _taBills.length;
+            _taBills = window.BillStore.dedupSynthetic(_taBills);
+            if (_taBills.length !== before) {
+                window._tenantAppBills = _taBills;
+            }
         }
 
         async function loadTenantAppData() {
@@ -6926,6 +6941,7 @@
                             data.bills.forEach(b => byId.set(b.billId || b.id, b));
                             _taBills = Array.from(byId.values()).sort((a,b) =>
                                 ((b.year||0)-(a.year||0)) || ((b.month||0)-(a.month||0)));
+                            _dedupBills();
                         }
                         if (data.payments && data.payments.length) _taPayments = data.payments;
                         window._tenantAppLease = _taLease;
@@ -6968,9 +6984,11 @@
                     _taBills = Array.from(byId.values()).sort((a, b) =>
                         ((b.year || 0) - (a.year || 0)) || ((b.month || 0) - (a.month || 0))
                     );
+                    _dedupBills();
                     window._tenantAppBills = _taBills;
                     if (typeof renderBillsList === 'function') renderBillsList();
                     if (typeof updateNavBadges === 'function') updateNavBadges();
+                    if (typeof _renderUsageChart === 'function') _renderUsageChart();
                 });
             } catch (e) { console.warn('subscribeBillsRealtime failed:', e.message); }
         }
@@ -7500,8 +7518,12 @@
         // ===== FIRESTORE METER HISTORY LOADER =====
         // Firestore: meter_data/{building_year_month_roomId} — each doc has
         // {building, roomId, year(BE 2-digit), month, eOld, eNew, wOld, wNew, yearMonth}
-        // Cache populated by _loadMeterHistoryFromFirestore(); used by _getMeterHistory for
-        // the 6-month usage chart (elec/water consumption visualization).
+        // Cache populated by _loadMeterHistoryFromFirestore(); used by:
+        //   1. _getMeterHistory for the 6-month usage chart (elec/water visualization)
+        //   2. _backfillCashLegacyBills to retroactively render past months when admin
+        //      hadn't yet pushed bills to RTDB (pre-SlipOK era — tenant paid in cash).
+        //      Current+future months are NOT synthesized — admin's forecast-revenue
+        //      tool owns that view; tenants only see bills admin has actually issued.
         let _meterHistoryCache = []; // sorted newest first, normalized rows
         let _meterHistoryLoading = false;
         async function _loadMeterHistoryFromFirestore() {
@@ -7533,6 +7555,8 @@
                 }).sort((a,b) => b.monthKey.localeCompare(a.monthKey));
                 // Mirror to localStorage so offline/early-render has data
                 try { localStorage.setItem(`meter_history_${_taBuilding}_${_taRoom}`, JSON.stringify(_meterHistoryCache)); } catch(e) {}
+                _backfillCashLegacyBills();
+                if (typeof renderBillsList === 'function') renderBillsList();
                 if (typeof _renderUsageChart === 'function') _renderUsageChart();
                 console.log(`✅ Meter history loaded: ${_meterHistoryCache.length} months (${_taBuilding}/${_taRoom})`);
             } catch (e) {
@@ -7542,20 +7566,88 @@
             }
         }
 
+        // Backfill past 6 months as "ชำระด้วยเงินสดก่อน SlipOK" (status=paid, method=cash_legacy)
+        // for months admin hadn't pushed real RTDB bills for. Skips current+future entirely
+        // (admin's forecast-revenue tool owns those).
+        function _backfillCashLegacyBills() {
+            if (!_meterHistoryCache.length) return;
+            if (!window.BillStore?.synthesizeFromMeter) return;
+            // Resolve rates: prefer RoomConfigManager, fallback to lease rentAmount, then defaults
+            let rent = 0, eRate = 8, wRate = 20, trash = 40;
+            try {
+                if (typeof RoomConfigManager !== 'undefined') {
+                    const rc = RoomConfigManager.getRoom?.(_taBuilding, _taRoom);
+                    if (rc) {
+                        rent  = Number(rc.rentPrice    ?? rc.rent)     || 0;
+                        eRate = Number(rc.electricRate ?? rc.elecRate) || 8;
+                        wRate = Number(rc.waterRate)                   || 20;
+                        trash = Number(rc.trashRate    ?? rc.trashFee) || 40;
+                    }
+                }
+            } catch(e) {}
+            if (!rent && _taLease?.rentAmount) rent = Number(_taLease.rentAmount) || 0;
+
+            const synth = window.BillStore.synthesizeFromMeter({
+                meterHistory: _meterHistoryCache,
+                existingBills: _taBills,
+                rates: { rent, eRate, wRate, trash },
+                moveInDate: _taLease?.moveInDate,
+                building: _taBuilding,
+                room: _taRoom,
+                pastOnly: true
+            });
+            if (synth.length) _taBills.push(...synth);
+            _taBills.sort((a,b) => {
+                const aCE = window.YearUtils.toCE(a.year) || 0;
+                const bCE = window.YearUtils.toCE(b.year) || 0;
+                return (bCE*100+Number(b.month)) - (aCE*100+Number(a.month));
+            });
+            _dedupBills();
+            window._tenantAppBills = _taBills;
+        }
+
         function _getMeterHistory(type) {
-            // Uses Firestore-loaded _meterHistoryCache (fresh) OR localStorage mirror (cold start)
+            // SSoT with past 6 months bills — chart reads from _taBills (real + cash_legacy
+            // synth) so each chart point matches the meter readings + cost that the user
+            // sees on the corresponding bill row. Falls back to raw meter cache (and its
+            // localStorage mirror) only if bills haven't loaded yet — uses default rates
+            // 8/20 in that cold-start fallback, matching the synth defaults.
+            const key = type === 'elec' ? 'electric' : 'water';
+            const ceOf = (y) => (window.YearUtils?.toCE?.(y)) || Number(y) || 0;
+            if (Array.isArray(_taBills) && _taBills.length) {
+                const out = [];
+                _taBills.slice(0, 6).forEach(b => {
+                    const mr = b.meterReadings?.[key];
+                    if (!mr) return;
+                    const ch = b.charges?.[key];
+                    const ce = ceOf(b.year);
+                    const units = Number(mr.units) || Math.max(0, (Number(mr.new) || 0) - (Number(mr.old) || 0));
+                    out.push({
+                        month: `${ce}-${String(b.month).padStart(2,'0')}`,
+                        old:   Number(mr.old) || 0,
+                        new:   Number(mr.new) || 0,
+                        units,
+                        cost:  Number(ch?.cost) || 0
+                    });
+                });
+                if (out.length) return out;
+            }
+            // Cold-start fallback: raw meter cache (or its localStorage mirror)
             let source = _meterHistoryCache;
             if (!source.length) {
                 try { source = JSON.parse(localStorage.getItem(`meter_history_${_taBuilding}_${_taRoom}`) || '[]'); } catch(e) {}
             }
             if (!source.length) return [];
-            return source.slice(0, 6).map(m => ({
-                month: m.monthKey, // "YYYY-MM"
-                old: type === 'elec' ? m.eOld : m.wOld,
-                new: type === 'elec' ? m.eNew : m.wNew,
-                units: Math.max(0, type === 'elec' ? (m.eNew - m.eOld) : (m.wNew - m.wOld)),
-                cost: Math.max(0, type === 'elec' ? (m.eNew - m.eOld) : (m.wNew - m.wOld)) * (type === 'elec' ? 8 : 20)
-            }));
+            return source.slice(0, 6).map(m => {
+                const units = Math.max(0, type === 'elec' ? (m.eNew - m.eOld) : (m.wNew - m.wOld));
+                return {
+                    month: m.monthKey,
+                    old:   type === 'elec' ? m.eOld : m.wOld,
+                    new:   type === 'elec' ? m.eNew : m.wNew,
+                    units,
+                    cost:  units * (type === 'elec' ? 8 : 20)
+                };
+            });
         }
 
         // ===== 6-month Usage Chart (combined elec+water, tab toggle, tap-for-detail) =====
