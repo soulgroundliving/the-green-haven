@@ -3725,13 +3725,9 @@
           <div style="font-weight:700; color:var(--green-dark); margin-bottom:4px;">🧹 รอบเก็บคำขอ Standard Clean</div>
           <div id="hkCampaignStatus" style="font-size:.88rem; color:var(--text-muted);">กำลังตรวจสอบ...</div>
         </div>
-        <button data-action="startCleaningCampaign" id="hkCampaignStartBtn"
-          style="padding:10px 16px; background:var(--green-dark); color:#fff; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer;">
-          🚀 เริ่มรอบเดือนนี้
-        </button>
-        <button data-action="stopCleaningCampaign" id="hkCampaignStopBtn"
-          style="display:none; padding:10px 16px; background:#c62828; color:#fff; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer;">
-          ⏹ หยุดรอบ
+        <button data-action="toggleCleaningCampaign" id="hkCampaignToggleBtn" data-state="off"
+          style="padding:10px 16px; background:var(--green-dark); color:#fff; border:none; border-radius:8px; font-family:inherit; font-weight:700; cursor:pointer; min-width:170px;">
+          🚀 เปิดรอบเดือนนี้
         </button>
       </div>
     </div>

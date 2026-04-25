@@ -7042,24 +7042,47 @@
             const btn = document.getElementById('liff-link-submit-btn');
             if (btn) { btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
 
-            // Auto-match: CF checks phone server-side (admin SDK) — client never sees raw phone
+            // Auto-match: CF checks phone server-side (admin SDK) — client never sees raw phone.
+            // Resilient: wait briefly for firebase.functions to load, retry once on failure
+            // (cold-start frequently times out the first call). Persisted to liffUsers/{id}.
             let autoApprove = false;
             let matchedTenantName = '';
-            // phoneMatch: undefined = not checked, true/false = CF result, 'error' = CF failed.
-            // Persisted to liffUsers/{id} so admin sees the verification outcome on rejection page.
+            // phoneMatch: undefined = not checked, true/false = CF result, 'error' = CF failed after retry.
             let phoneMatch;
-            if (phone && window.firebase?.functions) {
-                try {
-                    const checkPhone = window.firebase.functions.httpsCallable('checkTenantPhone');
-                    const res = await checkPhone({ building: bld, room: String(room), phone });
-                    phoneMatch = !!res.data?.match;
-                    if (res.data?.match) {
-                        autoApprove = true;
-                        matchedTenantName = res.data.tenantName || '';
+            if (phone) {
+                // Wait up to 3s for window.firebase.functions to be initialized.
+                if (!window.firebase?.functions) {
+                    await new Promise(resolve => {
+                        const t = setTimeout(resolve, 3000);
+                        const iv = setInterval(() => {
+                            if (window.firebase?.functions) { clearInterval(iv); clearTimeout(t); resolve(); }
+                        }, 150);
+                    });
+                }
+                if (window.firebase?.functions) {
+                    const tryCheck = async () => {
+                        const checkPhone = window.firebase.functions.httpsCallable('checkTenantPhone');
+                        const res = await checkPhone({ building: bld, room: String(room), phone });
+                        return res.data;
+                    };
+                    try {
+                        const data = await tryCheck();
+                        phoneMatch = !!data?.match;
+                        if (data?.match) { autoApprove = true; matchedTenantName = data.tenantName || ''; }
+                    } catch (e1) {
+                        console.warn('checkTenantPhone attempt 1 failed:', e1.message, '— retrying in 2s');
+                        await new Promise(r => setTimeout(r, 2000));
+                        try {
+                            const data = await tryCheck();
+                            phoneMatch = !!data?.match;
+                            if (data?.match) { autoApprove = true; matchedTenantName = data.tenantName || ''; }
+                        } catch (e2) {
+                            console.warn('checkTenantPhone attempt 2 failed:', e2.message);
+                            phoneMatch = 'error';
+                        }
                     }
-                } catch (e) {
-                    console.warn('checkTenantPhone failed:', e.message);
-                    phoneMatch = 'error';
+                } else {
+                    console.warn('firebase.functions never loaded — phoneMatch left unchecked');
                 }
             }
 

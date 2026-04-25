@@ -856,27 +856,40 @@ function subscribeCleaningCampaign(){
 }
 function renderCampaignStatus(activeMonth){
   const statusEl = document.getElementById('hkCampaignStatus');
-  const startBtn = document.getElementById('hkCampaignStartBtn');
-  const stopBtn = document.getElementById('hkCampaignStopBtn');
+  const toggleBtn = document.getElementById('hkCampaignToggleBtn');
   if(!statusEl) return;
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   if(activeMonth === currentMonth){
     statusEl.textContent = `✅ เปิดรอบอยู่ (${activeMonth}) — ทุกห้อง Nest เห็นป๊อปอัพให้จองภายใน ~1 นาที`;
     statusEl.style.color = 'var(--green-dark)';
-    if(startBtn) startBtn.style.display = 'none';
-    if(stopBtn) stopBtn.style.display = '';
+    if(toggleBtn){
+      toggleBtn.dataset.state = 'on';
+      toggleBtn.textContent = '⏹ ปิดรอบ';
+      toggleBtn.style.background = '#c62828';
+    }
   } else if(activeMonth){
-    statusEl.textContent = `⏸ รอบที่ตั้งไว้: ${activeMonth} (ไม่ใช่เดือนปัจจุบัน ${currentMonth})`;
+    statusEl.textContent = `⏸ รอบที่ตั้งไว้: ${activeMonth} (ไม่ใช่เดือนปัจจุบัน ${currentMonth}) — กด "เปิดรอบ" เพื่อรีเซ็ตเป็นเดือนนี้`;
     statusEl.style.color = '#b45309';
-    if(startBtn) { startBtn.style.display = ''; startBtn.textContent = `🚀 เริ่มรอบ ${currentMonth}`; }
-    if(stopBtn) stopBtn.style.display = '';
+    if(toggleBtn){
+      toggleBtn.dataset.state = 'off';
+      toggleBtn.textContent = `🚀 เปิดรอบ ${currentMonth}`;
+      toggleBtn.style.background = 'var(--green-dark)';
+    }
   } else {
     statusEl.textContent = `ยังไม่ได้เปิดรอบ — กดเพื่อส่งป๊อปอัพให้ทุกห้อง Nest`;
     statusEl.style.color = 'var(--text-muted)';
-    if(startBtn) { startBtn.style.display = ''; startBtn.textContent = `🚀 เริ่มรอบ ${currentMonth}`; }
-    if(stopBtn) stopBtn.style.display = 'none';
+    if(toggleBtn){
+      toggleBtn.dataset.state = 'off';
+      toggleBtn.textContent = `🚀 เปิดรอบ ${currentMonth}`;
+      toggleBtn.style.background = 'var(--green-dark)';
+    }
   }
+}
+async function toggleCleaningCampaign(){
+  const btn = document.getElementById('hkCampaignToggleBtn');
+  if(btn?.dataset.state === 'on') await stopCleaningCampaign();
+  else await startCleaningCampaign();
 }
 async function startCleaningCampaign(){
   if(!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
@@ -911,6 +924,7 @@ async function stopCleaningCampaign(){
 if (typeof window !== 'undefined') {
   window.startCleaningCampaign = startCleaningCampaign;
   window.stopCleaningCampaign = stopCleaningCampaign;
+  window.toggleCleaningCampaign = toggleCleaningCampaign;
 }
 
 let _hkRTDBUnsub = null;

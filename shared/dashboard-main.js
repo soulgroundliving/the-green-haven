@@ -266,6 +266,7 @@ function renderLiffRequestsList(docs){
 
   // Escape user-controlled fields before innerHTML render
   const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[m]));
+  const recheckBtn = d => `<button data-action="recheckTenantPhone" data-id="${esc(d.id)}" data-building="${esc(d.building||'')}" data-room="${esc(d.room||'')}" data-phone="${esc(d.phone||'')}" style="margin-left:6px;padding:2px 8px;font-size:.7rem;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:inherit;">🔄 ตรวจซ้ำ</button>`;
   const phoneInfoHtml = d => {
     if (!d.phone) return ' · <span style="color:#c62828;font-weight:600;">⚠️ ไม่ได้กรอกเบอร์</span>';
     const p = esc(d.phone);
@@ -273,9 +274,9 @@ function renderLiffRequestsList(docs){
       return ` · <span style="color:#2d8653;font-weight:600;">📱 ${p} ✅ ตรงกับ "${esc(d.matchedTenantName||'ผู้เช่า')}"</span>`;
     }
     if (d.phoneMatch === false) {
-      return ` · <span style="color:#c62828;font-weight:600;">📱 ${p} ⚠️ ไม่ตรงกับผู้เช่าห้องนี้</span>`;
+      return ` · <span style="color:#c62828;font-weight:600;">📱 ${p} ⚠️ ไม่ตรงกับผู้เช่าห้องนี้</span>${recheckBtn(d)}`;
     }
-    return ` · <span style="color:#f57c00;">📱 ${p} ⚠️ ตรวจสอบไม่ได้</span>`;
+    return ` · <span style="color:#f57c00;">📱 ${p} ⚠️ ตรวจสอบไม่ได้</span>${recheckBtn(d)}`;
   };
 
   list.innerHTML = docs.map(d => {
@@ -321,6 +322,35 @@ function _pushLiffStatusToTenant(lineUserId, status, reason) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(reason ? { lineUserId, status, reason } : { lineUserId, status })
   }).catch(e => console.warn('notifyLiffStatusChange (' + status + ') failed:', e.message));
+}
+
+// Admin-side retroactive phone verification. Called when phoneMatch was undefined
+// or 'error' at submit time (CF cold-start, network blip, etc.). Re-runs
+// checkTenantPhone CF and writes the result back to liffUsers/{id} so the
+// admin badge updates without needing the tenant to re-submit.
+async function recheckTenantPhone(lineUserId, building, room, phone, btnEl) {
+  if (!window.firebase?.functions) {
+    alert('Firebase functions ยังไม่พร้อม กรุณาลองใหม่อีกครั้ง');
+    return;
+  }
+  if (!phone) { alert('ลูกบ้านไม่ได้กรอกเบอร์ — ตรวจสอบไม่ได้'); return; }
+  const origText = btnEl?.textContent;
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ กำลังตรวจ...'; }
+  try {
+    const checkPhone = window.firebase.functions.httpsCallable('checkTenantPhone');
+    const res = await checkPhone({ building, room: String(room), phone });
+    const phoneMatch = !!res.data?.match;
+    const update = { phoneMatch };
+    if (phoneMatch) update.matchedTenantName = res.data.tenantName || '';
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    await fs.setDoc(fs.doc(fs.collection(db, 'liffUsers'), lineUserId), update, { merge: true });
+    // onSnapshot in initLiffRequestsPage will re-render automatically.
+  } catch (e) {
+    console.error('recheckTenantPhone failed:', e);
+    alert('ตรวจสอบไม่สำเร็จ: ' + e.message);
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = origText || '🔄 ตรวจสอบเบอร์อีกครั้ง'; }
+  }
 }
 
 async function approveLiffLink(lineUserId){
@@ -624,9 +654,12 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
     // Phase 4E Step 2 — page-people-management policy saves + page-requests-approvals housekeeping campaign + wellness form
     if (a === 'savePolicyDoc') { typeof savePolicyDoc === 'function' && savePolicyDoc(el.dataset.doc); return; }
-    if (a === 'startCleaningCampaign') { typeof startCleaningCampaign === 'function' && startCleaningCampaign(); return; }
-    if (a === 'stopCleaningCampaign') { typeof stopCleaningCampaign === 'function' && stopCleaningCampaign(); return; }
+    if (a === 'toggleCleaningCampaign') { typeof toggleCleaningCampaign === 'function' && toggleCleaningCampaign(); return; }
     if (a === 'clearWellnessCover') { typeof clearWellnessCover === 'function' && clearWellnessCover(); return; }
+    if (a === 'recheckTenantPhone') {
+      recheckTenantPhone(el.dataset.id, el.dataset.building, el.dataset.room, el.dataset.phone, el);
+      return;
+    }
   });
 
   // ===== CHANGE / INPUT EVENT DELEGATION =====
