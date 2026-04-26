@@ -100,8 +100,8 @@ function setTenantBuilding(bld,btn){
   // Show/hide building-specific sections
   const roomsSec = document.getElementById('tenant-rooms-section');
   const nestSec  = document.getElementById('tenant-nest-section');
-  if(roomsSec) roomsSec.style.display = bld==='old' ? '' : 'none';
-  if(nestSec)  nestSec.style.display  = bld==='new' ? '' : 'none';
+  if(roomsSec) roomsSec.classList.toggle('u-hidden', !(bld==='old'));
+  if(nestSec)  nestSec.classList.toggle('u-hidden', !(bld==='new'));
   // Init the building's room grid & info cards
   if(bld==='old'){ initRoomsPage(); } else { initNestPage(); }
   renderTenantPage();
@@ -111,8 +111,8 @@ function initTenantPage(){
   // Show/hide building sections based on current building tab
   const roomsSec = document.getElementById('tenant-rooms-section');
   const nestSec  = document.getElementById('tenant-nest-section');
-  if(roomsSec) roomsSec.style.display = tenantBuilding==='old' ? '' : 'none';
-  if(nestSec)  nestSec.style.display  = tenantBuilding==='new' ? '' : 'none';
+  if(roomsSec) roomsSec.classList.toggle('u-hidden', !(tenantBuilding==='old'));
+  if(nestSec)  nestSec.classList.toggle('u-hidden', !(tenantBuilding==='new'));
   // Initialize the active building room grid
   if(tenantBuilding==='old'){ initRoomsPage(); } else { initNestPage(); }
   renderTenantPage();
@@ -304,11 +304,11 @@ function toggleTenantView(view, btn){
   document.querySelectorAll('.view-toggle-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   if(view==='cards'){
-    cardsView.style.display='block';
-    tableView.style.display='none';
+    cardsView.classList.remove('u-hidden');
+    tableView.classList.add('u-hidden');
   }else{
-    cardsView.style.display='none';
-    tableView.style.display='block';
+    cardsView.classList.add('u-hidden');
+    tableView.classList.remove('u-hidden');
   }
 }
 
@@ -337,9 +337,9 @@ function updateTenantAlertBlock(){
   const alertList=document.getElementById('tenantAlertList');
   if(!alertBlock) return;
   if(expiring.length===0){
-    alertBlock.style.display='none';
+    alertBlock.classList.add('u-hidden');
   }else{
-    alertBlock.style.display='block';
+    alertBlock.classList.remove('u-hidden');
     if(alertList) alertList.innerHTML=expiring.map(r=>`<div style="background:#fff;padding:6px 12px;border-radius:6px;border-left:3px solid #f57c00;font-size:.85rem;">🚪 ห้อง ${r.id}</div>`).join('');
   }
 }

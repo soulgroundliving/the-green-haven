@@ -117,12 +117,10 @@ function openTenantModal(building, roomId) {
 
   if (isOccupied) {
     statusBadge.textContent = '🟢 มีผู้เช่า';
-    statusBadge.style.background = 'var(--green-pale)';
-    statusBadge.style.color = 'var(--green-dark)';
+    statusBadge.classList.add('u-badge-occupied'); statusBadge.classList.remove('u-badge-vacant');
   } else {
     statusBadge.textContent = '🔴 ว่าง';
-    statusBadge.style.background = '#ffebee';
-    statusBadge.style.color = '#c62828';
+    statusBadge.classList.add('u-badge-vacant'); statusBadge.classList.remove('u-badge-occupied');
   }
 
   // Fill form with tenant data
@@ -163,7 +161,7 @@ function openTenantModal(building, roomId) {
   const isPetAllowed = room?.type === 'pet-allowed';
   const petsSection = document.getElementById('modalPetsSection');
   if (petsSection) {
-    petsSection.style.display = isPetAllowed ? 'block' : 'none';
+    petsSection.classList.toggle('u-hidden', !(isPetAllowed));
     if (isPetAllowed) {
       const petsListEl = document.getElementById('modalPetsList');
       if (petsListEl) {
@@ -188,7 +186,7 @@ function openTenantModal(building, roomId) {
   const hasCo = !!(co.name || co.taxId || co.address);
   const dispEl = document.getElementById('modalTenantCompanyDisplay');
   if (dispEl) {
-    dispEl.style.display = hasCo ? 'block' : 'none';
+    dispEl.classList.toggle('u-hidden', !(hasCo));
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || '—'; };
     set('modalTenantCompanyDisplayName',    co.name);
     set('modalTenantCompanyDisplayTaxId',   co.taxId);
@@ -251,7 +249,7 @@ function openTenantModal(building, roomId) {
   }
 
   // Show modal
-  modal.style.display = 'flex';
+  modal.classList.remove('u-hidden'); /*flex*/;
 
   // Initialize phone validation for the modal
   setTimeout(function() {
@@ -260,11 +258,11 @@ function openTenantModal(building, roomId) {
 }
 
 function closeTenantModal() {
-  document.getElementById('tenantModal').style.display = 'none';
+  document.getElementById('tenantModal').classList.add('u-hidden');
   currentEditRoomId = null;
   // Hide lease history if open
   const hist = document.getElementById('tenantLeaseHistorySection');
-  if (hist) hist.style.display = 'none';
+  if (hist) hist.classList.add('u-hidden');
 }
 
 // ─── Lease History (ประวัติผู้เช่าเก่า) ───
@@ -275,7 +273,7 @@ async function showTenantLeaseHistory(building, roomId) {
   if (!section || !content) return;
 
   // Toggle: hide if already visible for same room
-  if (section.style.display !== 'none') { section.style.display = 'none'; return; }
+  if (section.style.display !== 'none') { section.classList.add('u-hidden'); return; }
 
   // Refresh from Firestore so superseded/deleted leases reflect immediately
   // and local-only orphans (failed-write artifacts) get dropped.
@@ -302,7 +300,7 @@ async function showTenantLeaseHistory(building, roomId) {
       </div>`;
     }).join('');
   }
-  section.style.display = 'block';
+  section.classList.remove('u-hidden');
 }
 
 // ─── Billing Modal (ชำระค่าเช่า) ───

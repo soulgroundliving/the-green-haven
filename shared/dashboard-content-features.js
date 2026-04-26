@@ -452,7 +452,7 @@ function renderAnalyticsPage(){
   }).sort((a,b)=>new Date(tenants[a.id].contractEnd)-new Date(tenants[b.id].contractEnd));
   if(contractCard&&contractList){
     if(expiring90.length){
-      contractCard.style.display='block';
+      contractCard.classList.remove('u-hidden');
       contractList.innerHTML=expiring90.map(r=>{
         const t=tenants[r.id];
         const exp=new Date(t.contractEnd);
@@ -465,7 +465,7 @@ function renderAnalyticsPage(){
         </div>`;
       }).join('');
     } else {
-      contractCard.style.display='none';
+      contractCard.classList.add('u-hidden');
     }
   }
 }

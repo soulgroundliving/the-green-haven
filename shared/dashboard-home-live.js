@@ -15,13 +15,13 @@ function syncDashboardYearUI(){
   const isOldYear = yr==='67'||yr==='68';
   // 3-year compare — all only
   const cardYears = document.getElementById('card-years-compare');
-  if(cardYears) cardYears.style.display = isAll ? '' : 'none';
+  if(cardYears) cardYears.classList.toggle('u-hidden', !(isAll));
   // Live-only cards + panels — all only
-  document.querySelectorAll('.kpi-live').forEach(el=>el.style.display=isAll?'block':'none');
+  document.querySelectorAll('.kpi-live').forEach(el=>el.classList.toggle('u-hidden', !(isAll)));
   const livePanels = document.getElementById('dash-live-panels');
-  if(livePanels) livePanels.style.display = isAll ? 'grid' : 'none';
+  if(livePanels) livePanels.classList.toggle('u-hidden', !(isAll));
   // Nest Building card — hide for 67/68 (not open yet)
-  document.querySelectorAll('.kpi-nest').forEach(el=>el.style.display=isOldYear?'none':'');
+  document.querySelectorAll('.kpi-nest').forEach(el=>el.classList.toggle('u-hidden', !!(isOldYear)));
 }
 
 function setYear(yr,btn){
@@ -79,8 +79,8 @@ function applyBuildingAvailability(yr){
   [btnAll, btnNest].forEach(b=>{
     if(!b) return;
     b.disabled = preNest;
-    b.style.opacity = preNest ? '.4' : '';
-    b.style.cursor = preNest ? 'not-allowed' : 'pointer';
+    b.classList.toggle('u-op40', !!(preNest));
+    b.classList.toggle('u-no-ptr', !!(preNest));
     b.title = preNest ? 'อาคาร Nest เปิดปี 2569 (2026)' : '';
   });
   if(preNest){
@@ -930,7 +930,7 @@ function updateNavBadge(){
   const activeNest = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
   const allActive = [...activeRooms, ...activeNest];
   const pending=allActive.length-Object.keys(paid).length;
-  if(pending>0){badge.textContent=pending;badge.style.display='inline-block';}
-  else{badge.style.display='none';}
+  if(pending>0){badge.textContent=pending;badge.classList.add('u-iblock'); /*iblock*/;}
+  else{badge.classList.add('u-hidden');}
 }
 

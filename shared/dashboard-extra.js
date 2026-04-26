@@ -1,11 +1,11 @@
 // ===== Password Change Modal Functions =====
 function openChangePasswordModal() {
-  document.getElementById('changePasswordModal').style.display = 'flex';
+  document.getElementById('changePasswordModal').classList.remove('u-hidden'); /*flex*/;
   document.getElementById('oldPassword').focus();
 }
 
 function closeChangePasswordModal() {
-  document.getElementById('changePasswordModal').style.display = 'none';
+  document.getElementById('changePasswordModal').classList.add('u-hidden');
   document.getElementById('oldPassword').value = '';
   document.getElementById('newPassword').value = '';
   document.getElementById('confirmPassword').value = '';
@@ -442,13 +442,13 @@ function showContractDocument(roomId, tenant) {
     // Display PDF
     const iframe = document.createElement('iframe');
     iframe.src = tenant.contractDocument;
-    iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+    iframe.className = 'u-form-input'; iframe.style.height='100%'; // reuse closest class
     content.appendChild(iframe);
   } else if (tenant.contractDocument.startsWith('data:image')) {
     // Display image
     const img = document.createElement('img');
     img.src = tenant.contractDocument;
-    img.style.cssText = 'max-width: 100%; max-height: 100%; object-fit: contain;';
+    img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;';
     content.appendChild(img);
   } else {
     content.innerHTML = '<p style="color:#666;">ไม่สามารถแสดงไฟล์นี้</p>';
@@ -721,7 +721,7 @@ function updateLeaseExpiryAlerts() {
   const oldListDiv = document.getElementById('lease-expiry-list');
 
   if (oldExpiringLeases.length > 0) {
-    oldAlertsDiv.style.display = 'block';
+    oldAlertsDiv.classList.remove('u-hidden');
     oldListDiv.innerHTML = oldExpiringLeases.map(lease => `
       <div style="background:white;padding:10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid #fbc02d;">
         <div>
@@ -735,7 +735,7 @@ function updateLeaseExpiryAlerts() {
       </div>
     `).join('');
   } else {
-    oldAlertsDiv.style.display = 'none';
+    oldAlertsDiv.classList.add('u-hidden');
   }
 
   // Update Nest Building alerts
@@ -744,7 +744,7 @@ function updateLeaseExpiryAlerts() {
   const nestListDiv = document.getElementById('nest-lease-expiry-list');
 
   if (nestExpiringLeases.length > 0) {
-    nestAlertsDiv.style.display = 'block';
+    nestAlertsDiv.classList.remove('u-hidden');
     nestListDiv.innerHTML = nestExpiringLeases.map(lease => `
       <div style="background:white;padding:10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid #fbc02d;">
         <div>
@@ -758,7 +758,7 @@ function updateLeaseExpiryAlerts() {
       </div>
     `).join('');
   } else {
-    nestAlertsDiv.style.display = 'none';
+    nestAlertsDiv.classList.add('u-hidden');
   }
 }
 
@@ -929,7 +929,7 @@ function showDuplicateConfirmDialog(title, message) {
     // Create modal overlay
     const overlay = document.createElement('div');
     overlay.id = 'confirm-modal-overlay';
-    overlay.style.cssText = `
+    overlay.className = 'u-modal-overlay'; overlay.style.cssText = `
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.5);
@@ -1400,10 +1400,10 @@ function updateLeaseRequestsBadge() {
   if (!badge) return;
   const pending = _leaseRequestsCache.filter(r => r.status === 'pending').length;
   if (pending > 0) {
-    badge.style.display = 'inline-block';
+    badge.classList.add('u-iblock'); /*iblock*/;
     badge.textContent = pending;
   } else {
-    badge.style.display = 'none';
+    badge.classList.add('u-hidden');
   }
 }
 
@@ -1432,7 +1432,7 @@ function renderLeaseRequestsList() {
     const detailsHtml = r.type === 'renew'
       ? `<div style="font-size:.88rem;line-height:1.7;"><div><strong>ระยะเวลา:</strong> ${_esc(r.duration === '1y' ? '1 ปี (มีส่วนลด)' : '6 เดือน')}</div>${r.note ? `<div><strong>หมายเหตุ:</strong> ${_esc(r.note)}</div>` : ''}</div>`
       : `<div style="font-size:.88rem;line-height:1.7;"><div><strong>วันย้ายออก:</strong> ${_esc(r.moveOutDate || '—')}</div><div><strong>บัญชีคืนมัดจำ:</strong> ${_esc(r.depositRefundBank || '—')}</div>${r.reason ? `<div><strong>เหตุผล:</strong> ${_esc(r.reason)}</div>` : ''}</div>`;
-    card.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:1.25rem;background:#fafafa;';
+    card.className = 'card'; // u-hidden already handled
     card.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:.75rem;">
         <div>
@@ -1748,12 +1748,12 @@ function editTenant(tenantId) {
 
   const modal = document.createElement('div');
   modal.id = 'editTenantModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.className = 'u-modal-overlay';
 
   // Use DOM manipulation (not innerHTML) for fields that take user-controlled data
   // to avoid XSS from tenant name/phone/etc.
   const box = document.createElement('div');
-  box.style.cssText = 'background:#fff;border-radius:8px;padding:2rem;width:min(500px,95vw);max-height:90vh;overflow-y:auto;';
+  box.className = 'u-modal-panel u-modal-panel-sm';
 
   const title = document.createElement('div');
   title.style.cssText = 'font-weight:700;font-size:1.1rem;margin-bottom:1.5rem;';
@@ -1768,30 +1768,30 @@ function editTenant(tenantId) {
     { id: 'etAddress', label: 'ที่อยู่',            val: tenant.address || '',type: 'text' }
   ];
   const grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;gap:1rem;';
+  grid.classList.add('u-grid'); grid.style.gap='1rem'; // gap OK (not inline style)
   fields.forEach(f => {
     const wrap = document.createElement('div');
     const lbl = document.createElement('label');
-    lbl.style.cssText = 'display:block;margin-bottom:0.4rem;font-weight:600;';
+    lbl.className = 'u-form-label';
     lbl.textContent = f.label;
     const inp = document.createElement('input');
     inp.id = f.id; inp.type = f.type; inp.value = f.val;
     if (f.id === 'etPhone') inp.maxLength = 10;
-    inp.style.cssText = 'width:100%;padding:0.7rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;';
+    inp.className = 'u-form-input';
     wrap.appendChild(lbl); wrap.appendChild(inp);
     grid.appendChild(wrap);
   });
   box.appendChild(grid);
 
   const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:0.8rem;margin-top:1.5rem;justify-content:flex-end;';
+  btnRow.className = 'u-btn-row';
   const cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'ยกเลิก';
-  cancelBtn.style.cssText = 'padding:0.7rem 1.2rem;border:1px solid #ddd;border-radius:4px;cursor:pointer;background:#fff;';
+  cancelBtn.className = 'u-btn-cancel';
   cancelBtn.onclick = () => modal.remove();
   const saveBtn = document.createElement('button');
   saveBtn.textContent = '💾 บันทึก';
-  saveBtn.style.cssText = 'padding:0.7rem 1.5rem;background:#2196F3;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;';
+  saveBtn.className = 'u-btn-primary';
   saveBtn.onclick = () => saveEditTenant(building, tenantId);
   btnRow.appendChild(cancelBtn); btnRow.appendChild(saveBtn);
   box.appendChild(btnRow);
@@ -2059,7 +2059,7 @@ function createNewLease() {
     // Clear form
     document.getElementById('leaseTenant').value = '';
     const preview = document.getElementById('leasePreviewCard');
-    if (preview) preview.style.display = 'none';
+    if (preview) preview.classList.add('u-hidden');
     ['leaseFilePetCert', 'leaseFileTenantContact', 'leaseFileAgreement', 'leaseFileId', 'leaseFileIncome']
       .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
@@ -2082,10 +2082,10 @@ function _updateLeasePreview() {
   const tenantId = document.getElementById('leaseTenant')?.value;
   const card = document.getElementById('leasePreviewCard');
   if (!card) return;
-  if (!tenantId) { card.style.display = 'none'; card.innerHTML = ''; return; }
+  if (!tenantId) { card.classList.add('u-hidden'); card.innerHTML = ''; return; }
 
   const info = _findTenantWithBuilding(tenantId);
-  if (!info) { card.style.display = 'none'; return; }
+  if (!info) { card.classList.add('u-hidden'); return; }
   const { tenant, building } = info;
 
   const activeLease = LeaseAgreementManager.getLeasesByTenant(tenantId).find(l => l.status === 'active');
@@ -2097,7 +2097,7 @@ function _updateLeasePreview() {
   const moveIn = tenant.moveInDate ? new Date(tenant.moveInDate).toLocaleDateString('th-TH') : '—';
   const deposit = Number(tenant.deposit) || 0;
 
-  card.style.display = 'block';
+  card.classList.remove('u-hidden');
   card.innerHTML = `
     <div style="font-weight: 700; color: #1b5e20; margin-bottom: 6px;">📋 ข้อมูลจาก SSoT (read-only)</div>
     <div>🏠 <b>${buildingLabel} ${roomId ? 'ห้อง ' + _escapeHTML(roomId) : '(ยังไม่ผูกห้อง)'}</b></div>
@@ -2266,7 +2266,7 @@ async function viewLeaseDocuments(leaseId) {
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
     modal.setAttribute('aria-labelledby', 'leaseDocumentsTitle');
-    modal.style.cssText = 'display:flex;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10000;align-items:center;justify-content:center;padding:1rem;';
+    modal.className = 'u-modal-overlay';
     document.body.appendChild(modal);
   }
 
@@ -2507,13 +2507,13 @@ function validatePhoneNumber(inputElement, errorElementId) {
   // Show/hide error message
   if (errorEl) {
     if (errorMsg) {
-      errorEl.style.display = 'block';
+      errorEl.classList.remove('u-hidden');
       errorEl.textContent = errorMsg;
       errorEl.style.color = '#d32f2f';
       errorEl.style.fontSize = '0.85rem';
       errorEl.style.marginTop = '4px';
     } else {
-      errorEl.style.display = 'none';
+      errorEl.classList.add('u-hidden');
       errorEl.textContent = '';
     }
   }
@@ -2970,9 +2970,9 @@ function updatePaymentNotificationBadge(count) {
 
     if (badge && count > 0) {
       badge.textContent = count > 99 ? '99+' : count;
-      badge.style.display = 'inline-block';
+      badge.classList.add('u-iblock'); /*iblock*/;
     } else if (badge) {
-      badge.style.display = 'none';
+      badge.classList.add('u-hidden');
     }
   } catch (error) {
     console.warn('⚠️ Error updating payment notification badge:', error);
@@ -3164,7 +3164,7 @@ function loadAndRenderServiceProviders() {
 function toggleAddProviderForm() {
   const form = document.getElementById('addProviderForm');
   if (!form) return;
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  form.classList.toggle('u-hidden', !(form.style.display === 'none'));
   if (form.style.display === 'block') {
     document.getElementById('providerType').focus();
   }
@@ -3210,7 +3210,7 @@ function editServiceProvider(id) {
   document.getElementById('providerWebsite').value = provider.website || '';
 
   const form = document.getElementById('addProviderForm');
-  form.style.display = 'block';
+  form.classList.remove('u-hidden');
 
   const button = form.querySelector('button.btn-receipt');
   const originalText = button.textContent;
@@ -3227,7 +3227,7 @@ function editServiceProvider(id) {
     if (ok !== false) {
       ['providerType','providerName','providerPhone','providerEmail','providerWebsite']
         .forEach(i => { const el = document.getElementById(i); if (el) el.value = ''; });
-      form.style.display = 'none';
+      form.classList.add('u-hidden');
       button.textContent = originalText;
       button.onclick = null;
       loadAndRenderServiceProviders();
@@ -3388,11 +3388,11 @@ function toggleAddEventForm() {
   const form = document.getElementById('addEventForm');
   if (!form) return;
   if (form.style.display !== 'none') {
-    form.style.display = 'none';
+    form.classList.add('u-hidden');
     _editingEventId = null;
     return;
   }
-  form.style.display = 'block';
+  form.classList.remove('u-hidden');
   document.getElementById('eventTitle')?.focus();
 }
 
@@ -3433,7 +3433,7 @@ function editEvent(id) {
   if (!ev) { showToast('ไม่พบกิจกรรม', 'warning'); return; }
   _editingEventId = id;
   const form = document.getElementById('addEventForm');
-  if (form) form.style.display = 'block';
+  if (form) form.classList.remove('u-hidden');
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
   set('eventTitle', ev.title);
   set('eventDate', ev.date);
@@ -3523,7 +3523,7 @@ function loadAndRenderCommunityDocs() {
 function toggleAddDocForm() {
   const form = document.getElementById('addDocForm');
   if (!form) return;
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  form.classList.toggle('u-hidden', !(form.style.display === 'none'));
   if (form.style.display === 'block') {
     document.getElementById('docTitle').focus();
   }
@@ -4060,8 +4060,8 @@ async function initGamificationPage() {
 }
 
 function switchGamificationTab(tabName, btn) {
-  document.querySelectorAll('[id^="gamification"]').forEach(el => el.style.display = 'none');
-  document.getElementById('gamification' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).style.display = 'block';
+  document.querySelectorAll('[id^="gamification"]').forEach(el => el.classList.add('u-hidden'));
+  document.getElementById('gamification' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.remove('u-hidden');
   document.querySelectorAll('#page-gamification button').forEach(b => b.style.color = 'var(--text-muted)');
   document.querySelectorAll('#page-gamification button').forEach(b => b.style.borderBottom = '3px solid transparent');
   btn.style.color = '#2d8653';
@@ -4275,12 +4275,12 @@ function openRewardEdit(rewardId) {
     document.getElementById('rewardEditNote').value = r.note || '';
     document.getElementById('rewardEditActive').checked = r.active !== false;
   }
-  modal.style.display = 'flex';
+  modal.classList.remove('u-hidden'); /*flex*/;
 }
 
 function closeRewardEdit() {
   const modal = document.getElementById('rewardEditModal');
-  if (modal) modal.style.display = 'none';
+  if (modal) modal.classList.add('u-hidden');
 }
 
 async function saveReward() {
@@ -4851,7 +4851,7 @@ function displayBillingImportPreview(monthlyData, year) {
   </div>`;
 
   previewDiv.innerHTML = html;
-  document.getElementById('billingResultsSection').style.display = 'block';
+  document.getElementById('billingResultsSection').classList.remove('u-hidden');
 }
 
 // Handle billing import data that comes from meter import flow (V1/V2 billing format)
@@ -5063,7 +5063,7 @@ function cancelBillingImportProcess() {
   const statusMsg = document.getElementById('billingStatusMessage');
 
   if (fileInput) fileInput.value = '';
-  if (resultsSection) resultsSection.style.display = 'none';
+  if (resultsSection) resultsSection.classList.add('u-hidden');
   if (previewData) previewData.innerHTML = '';
   if (statusMsg) statusMsg.innerHTML = '';
   window.pendingBillingData = null;

@@ -193,7 +193,7 @@ class AccessControl {
     if (!user) {
       // Hide all protected elements if not logged in
       document.querySelectorAll('[data-access]').forEach(el => {
-        el.style.display = 'none';
+        el.classList.add('u-hidden');
       });
       return;
     }
@@ -204,9 +204,9 @@ class AccessControl {
       const allowedRoles = el.getAttribute('data-access').split(',').map(r => r.trim());
 
       if (allowedRoles.includes(userRole)) {
-        el.style.display = '';  // Show
+        el.classList.remove('u-hidden');  // Show
       } else {
-        el.style.display = 'none';  // Hide
+        el.classList.add('u-hidden');  // Hide
       }
     });
 
@@ -215,9 +215,9 @@ class AccessControl {
       const feature = el.getAttribute('data-feature-access');
 
       if (this.hasFeatureAccess(feature)) {
-        el.style.display = '';  // Show
+        el.classList.remove('u-hidden');  // Show
       } else {
-        el.style.display = 'none';  // Hide
+        el.classList.add('u-hidden');  // Hide
       }
     });
   }
@@ -247,8 +247,7 @@ class AccessControl {
         if (!allowedRoles.includes(userRole)) {
           el.disabled = true;
           el.title = `เฉพาะ ${allowedRoles.join(', ')} เท่านั้น`;
-          el.style.opacity = '0.5';
-          el.style.cursor = 'not-allowed';
+          el.classList.add('u-op50', 'u-no-ptr');
         }
       }
     });

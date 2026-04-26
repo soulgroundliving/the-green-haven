@@ -3,7 +3,7 @@ const _escWC = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</
 function switchContentTab(tabName, btn) {
   // Hide all content tabs
   document.querySelectorAll('.content-mgmt-content').forEach(tab => {
-    tab.style.display = 'none';
+    tab.classList.add('u-hidden');
   });
 
   // Remove active style from all tab buttons
@@ -13,7 +13,7 @@ function switchContentTab(tabName, btn) {
   const tabElement = document.getElementById('content-tab-' + tabName);
   const resolvedBtn = btn || document.getElementById('tab-' + tabName + '-btn');
   if(tabElement) {
-    tabElement.style.display = 'block';
+    tabElement.classList.remove('u-hidden');
     if(resolvedBtn) resolvedBtn.classList.add('active');
     // Lazy-init tab content
     if(tabName === 'announcements') initAnnouncementsPage();
@@ -64,12 +64,10 @@ window.pickWellnessIcon = function(icon, btn) {
   // Highlight selected button
   document.querySelectorAll('#wellness-icon-picker button').forEach(b => {
     if (b.dataset.icon === icon) {
-      b.style.background = 'var(--green-pale)';
-      b.style.borderColor = 'var(--green)';
+      b.classList.add('u-icon-sel');
       b.dataset.selected = '1';
     } else {
-      b.style.background = '#fff';
-      b.style.borderColor = 'var(--border)';
+      b.classList.remove('u-icon-sel');
       b.dataset.selected = '0';
     }
   });
@@ -198,7 +196,7 @@ window.onWellnessCoverPicked = async function(ev) {
     window._wellnessCoverImage = dataUrl;
     const preview = document.getElementById('wellness-cover-preview');
     const img = document.getElementById('wellness-cover-img');
-    if (preview) preview.style.display = 'block';
+    if (preview) preview.classList.remove('u-hidden');
     if (img) img.src = dataUrl;
   } catch(e) { console.error('cover image upload failed:', e); }
   ev.target.value = '';
@@ -208,7 +206,7 @@ window.clearWellnessCover = function() {
   window._wellnessCoverImage = null;
   const preview = document.getElementById('wellness-cover-preview');
   const img = document.getElementById('wellness-cover-img');
-  if (preview) preview.style.display = 'none';
+  if (preview) preview.classList.add('u-hidden');
   if (img) img.src = '';
   const inp = document.getElementById('wellness-cover-input');
   if (inp) inp.value = '';
@@ -464,7 +462,7 @@ async function editWellnessArticle(id) {
       window._wellnessCoverImage = a.coverImage;
       const preview = document.getElementById('wellness-cover-preview');
       const img = document.getElementById('wellness-cover-img');
-      if (preview) preview.style.display = 'block';
+      if (preview) preview.classList.remove('u-hidden');
       if (img) img.src = a.coverImage;
     } else {
       if (typeof window.clearWellnessCover === 'function') window.clearWellnessCover();

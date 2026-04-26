@@ -94,8 +94,8 @@ function populateTemplateSelect(building) {
 function toggleAddMode(mode) {
   const manual = document.getElementById('manualEntryMode');
   const copy = document.getElementById('copyEntryMode');
-  if (manual) manual.style.display = mode === 'manual' ? 'grid' : 'none';
-  if (copy) copy.style.display = mode === 'copy' ? 'grid' : 'none';
+  if (manual) manual.classList.toggle('u-hidden', !(mode === 'manual'));
+  if (copy) copy.classList.toggle('u-hidden', !(mode === 'copy'));
 }
 
 // Shop room: id='ร้านใหญ่' (stable internal ID, same in RoomConfigManager & METER_DATA)

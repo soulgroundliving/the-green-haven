@@ -294,11 +294,11 @@ function toggleRoomView(view, btn){
   btn.style.border='1.5px solid var(--green)';
 
   if(view==='grid'){
-    compactView.style.display='block';
-    classicView.style.display='none';
+    compactView.classList.remove('u-hidden');
+    classicView.classList.add('u-hidden');
   }else{
-    compactView.style.display='none';
-    classicView.style.display='block';
+    compactView.classList.add('u-hidden');
+    classicView.classList.remove('u-hidden');
   }
 }
 
@@ -311,14 +311,14 @@ let batchSelectedRooms = new Set();
 function openBatchRentAdjustmentModal() {
   const modal = document.getElementById('batchRentModal');
   if (!modal) return;
-  modal.style.display = 'flex';
+  modal.classList.remove('u-hidden'); /*flex*/;
   renderRoomSelectionCheckboxes();
   updateAdjustmentDisplay();
 }
 
 function closeBatchRentAdjustmentModal() {
   const modal = document.getElementById('batchRentModal');
-  if (modal) modal.style.display = 'none';
+  if (modal) modal.classList.add('u-hidden');
   batchSelectedRooms.clear();
 }
 
@@ -703,11 +703,11 @@ function toggleNestRoomView(view, btn){
   btn.style.border = '1.5px solid #2196f3';
 
   if(view === 'grid'){
-    compactView.style.display = 'block';
-    classicView.style.display = 'none';
+    compactView.classList.remove('u-hidden');
+    classicView.classList.add('u-hidden');
   } else {
-    compactView.style.display = 'none';
-    classicView.style.display = 'block';
+    compactView.classList.add('u-hidden');
+    classicView.classList.remove('u-hidden');
   }
 }
 

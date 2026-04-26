@@ -148,7 +148,7 @@ function updatePVStats(slips) {
   set('pv-month-total', '฿' + monthTotal.toLocaleString());
   // Update notification badge
   const badge = document.getElementById('paymentBadge');
-  if (badge) { badge.style.display = 'none'; }
+  if (badge) { badge.classList.add('u-hidden'); }
 }
 
 function renderPVFeed(slips) {
@@ -311,9 +311,9 @@ window.switchPVTab = function(tab, btn){
   const live    = document.getElementById('pv-tab-live');
   const hist    = document.getElementById('pv-tab-history');
   const monthly = document.getElementById('pv-tab-monthly');
-  if(live)    live.style.display    = (tab==='live')    ? '' : 'none';
-  if(hist)    hist.style.display    = (tab==='history') ? '' : 'none';
-  if(monthly) monthly.style.display = (tab==='monthly') ? '' : 'none';
+  if(live)    live.classList.toggle('u-hidden', !((tab==='live')));
+  if(hist)    hist.classList.toggle('u-hidden', !((tab==='history')));
+  if(monthly) monthly.classList.toggle('u-hidden', !((tab==='monthly')));
   if(tab==='monthly'){
     const now = new Date();
     const mm = document.getElementById('mt-month');

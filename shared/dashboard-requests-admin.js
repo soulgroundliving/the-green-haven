@@ -147,8 +147,8 @@ function updateMxBadge(){
   const mxPending=mx.filter(x=>x.status==='pending'||x.status==='inprogress').length;
   const hkPending=hk.filter(x=>x.status==='pending'||x.status==='inprogress').length;
   const total=mxPending+hkPending;
-  if(total>0){badge.textContent=total;badge.style.display='inline-block';}
-  else{badge.style.display='none';}
+  if(total>0){badge.textContent=total;badge.classList.add('u-iblock'); /*iblock*/;}
+  else{badge.classList.add('u-hidden');}
 }
 
 function updateNotificationBell() {
@@ -179,7 +179,7 @@ function updateNotificationBell() {
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   badge.textContent = total > 99 ? '99+' : total;
-  badge.style.display = total > 0 ? 'inline-block' : 'none';
+  badge.classList.toggle('u-hidden', !(total > 0));
 
   // Build dropdown content
   const content = document.getElementById('notifContent');
@@ -236,9 +236,9 @@ function updateMaintenanceBadge(){
   const pendingTickets=mx.filter(x=>x.status==='pending').length;
   if(pendingTickets>0){
     pendingCount.textContent=pendingTickets;
-    banner.style.display='block';
+    banner.classList.remove('u-hidden');
   }else{
-    banner.style.display='none';
+    banner.classList.add('u-hidden');
   }
 }
 
@@ -315,7 +315,7 @@ function addMaintenanceRequest(){
   window.dispatchEvent(new CustomEvent('maintenance_ticket_submitted', {detail:{room:sanitizedRoom,category:cat}}));
   // toast
   const t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
+  t.className='u-toast';
   t.textContent='✅ บันทึกงานซ่อมแล้ว';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
   closeAddMaintenanceModal();
 }
@@ -323,7 +323,7 @@ function addMaintenanceRequest(){
 function showAddMaintenanceModal(){
   const modal=document.createElement('div');
   modal.id='mx-add-modal';
-  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+  modal.className='u-modal-overlay';
   modal.innerHTML=`<div style="background:#fff;border-radius:12px;padding:2rem;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
     <div style="font-size:1.3rem;font-weight:700;margin-bottom:1.5rem;color:var(--text);">➕ แจ้งซ่อมใหม่</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
@@ -481,7 +481,7 @@ function updateMaintenanceStatus(id,newStatus){
 
   // Show success toast
   const t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
+  t.className='u-toast';
   if(newStatus==='inprogress') t.textContent='✅ เริ่มทำงานแล้ว';
   else if(newStatus==='done') t.textContent='✅ บันทึกเสร็จสิ้นแล้ว';
   else t.textContent='✅ อัปเดตสถานะแล้ว';
@@ -502,10 +502,10 @@ function showAssignModal(id){
 
   const modal=document.createElement('div');
   modal.id='mx-assign-modal';
-  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  modal.className='u-modal-overlay';
 
   const content=document.createElement('div');
-  content.style.cssText='background:#fff;border-radius:12px;padding:24px;width:90%;max-width:450px;box-shadow:0 8px 24px rgba(0,0,0,.2);font-family:"Sarabun",sans-serif;';
+  content.className='u-modal-panel u-modal-panel-sm';
   content.innerHTML=`
     <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">👤 อัปเดตผู้รับผิดชอบ</h2>
     <div style="margin-bottom:20px;">
@@ -532,10 +532,10 @@ function showNotesModal(id){
 
   const modal=document.createElement('div');
   modal.id='mx-notes-modal';
-  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;overflow-y:auto;';
+  modal.className='u-modal-overlay';
 
   const content=document.createElement('div');
-  content.style.cssText='background:#fff;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 8px 24px rgba(0,0,0,.2);font-family:"Sarabun",sans-serif;margin:20px auto;';
+  content.className='u-modal-panel u-modal-panel-md';
   content.innerHTML=`
     <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">📝 หมายเหตุการทำงาน</h2>
     <div style="margin-bottom:20px;">
@@ -562,10 +562,10 @@ function showPhotosModal(id){
 
   const modal=document.createElement('div');
   modal.id='mx-photos-modal';
-  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;overflow-y:auto;';
+  modal.className='u-modal-overlay';
 
   const content=document.createElement('div');
-  content.style.cssText='background:#fff;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 8px 24px rgba(0,0,0,.2);font-family:"Sarabun",sans-serif;margin:20px auto;';
+  content.className='u-modal-panel u-modal-panel-md';
   content.innerHTML=`
     <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">📷 แนบรูปภาพ</h2>
     <div style="margin-bottom:16px;">
@@ -636,7 +636,7 @@ function assignMaintenanceWorker(id){
   closeAssignModal();
   renderMaintenancePage();
   const t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
+  t.className='u-toast';
   t.textContent='✅ บันทึกผู้รับผิดชอบแล้ว';
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),2500);
@@ -653,7 +653,7 @@ function saveWorkNotes(id){
   closeNotesModal();
   renderMaintenancePage();
   const t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
+  t.className='u-toast';
   t.textContent='✅ บันทึกหมายเหตุแล้ว';
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),2500);
@@ -1009,7 +1009,7 @@ const HK_STATUS_CLASS={
 function showAddHousekeepingModal(){
   const modal=document.createElement('div');
   modal.id='hk-add-modal';
-  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+  modal.className='u-modal-overlay';
   modal.innerHTML=`<div style="background:#fff;border-radius:12px;padding:2rem;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
     <div style="font-size:1.3rem;font-weight:700;margin-bottom:1.5rem;color:var(--text);">➕ ขอบริการทำความสะอาดใหม่</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
@@ -1122,7 +1122,7 @@ function addHousekeepingRequest(){
 
   // Toast notification
   const t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
+  t.className='u-toast';
   t.textContent='✅ บันทึกการขอบริการแล้ว';
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),2500);

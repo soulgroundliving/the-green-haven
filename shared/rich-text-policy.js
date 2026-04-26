@@ -117,10 +117,10 @@
     if (!targetEl) return;
     const raw = String(content || '');
     if (_looksLikeHtml(raw)) {
-      targetEl.style.whiteSpace = '';
+      targetEl.classList.remove('u-pre-wrap');
       targetEl.innerHTML = sanitize(raw);
     } else {
-      targetEl.style.whiteSpace = 'pre-wrap';
+      targetEl.classList.add('u-pre-wrap');
       targetEl.textContent = raw;
     }
   }

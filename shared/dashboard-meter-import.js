@@ -7,7 +7,7 @@ function initImportMeterTab() {
   // Reset import state when tab opens
   document.getElementById('importFileInput').value = '';
   document.getElementById('importStatusMessage').innerHTML = '';
-  document.getElementById('importResultsSection').style.display = 'none';
+  document.getElementById('importResultsSection').classList.add('u-hidden');
   document.getElementById('importMonthSelect').value = ''; // Reset month selector
   document.getElementById('importDropZone').onclick = () => document.getElementById('importFileInput').click();
 
@@ -534,12 +534,8 @@ function displayImportPreview(importData, matchResults) {
   const previewDataDiv = document.getElementById('importPreviewData');
   previewDataDiv.innerHTML = previewHtml;
   // Force remove scroll constraints
-  previewDataDiv.style.maxHeight = 'none';
-  previewDataDiv.style.height = 'auto';
-  previewDataDiv.style.overflow = 'visible';
-  previewDataDiv.style.overflowX = 'visible';
-  previewDataDiv.style.overflowY = 'visible';
-  document.getElementById('importResultsSection').style.display = 'block';
+  previewDataDiv.classList.add('u-overflow-vis');
+  document.getElementById('importResultsSection').classList.remove('u-hidden');
 
   // Display match summary
   displayMatchSummary(matchResults);
@@ -604,19 +600,19 @@ function displayMatchSummary(matchResults) {
     if (errorCount === 0) {
       html += '<div style="color:#4caf50;font-weight:600;padding:0.25rem;">✅ ข้อมูลสามารถบันทึกได้</div>';
       approveBtn.disabled = false;
-      approveBtn.style.opacity = '1';
-      approveBtn.style.cursor = 'pointer';
+      approveBtn.classList.remove('u-op50');
+      approveBtn.classList.remove('u-no-ptr');
     } else {
       html += '<div style="color:#ff9800;font-weight:600;padding:0.25rem;">⚠️ มีข้อมูลที่ต่างกัน ตรวจสอบอีกครั้ง</div>';
       approveBtn.disabled = true;
-      approveBtn.style.opacity = '0.5';
-      approveBtn.style.cursor = 'not-allowed';
+      approveBtn.classList.add('u-op50');
+      approveBtn.classList.add('u-no-ptr');
     }
   } else {
     html += '<div style="color:#f44336;font-weight:600;padding:0.25rem;">❌ มีข้อผิดพลาดในข้อมูล ไม่สามารถบันทึกได้</div>';
     approveBtn.disabled = true;
-    approveBtn.style.opacity = '0.5';
-    approveBtn.style.cursor = 'not-allowed';
+    approveBtn.classList.add('u-op50');
+    approveBtn.classList.add('u-no-ptr');
   }
 
   summaryDiv.innerHTML = html;
@@ -744,7 +740,7 @@ async function performDataReplacementWithData(importData, matchResults) {
 
     setTimeout(() => {
       document.getElementById('importFileInput').value = '';
-      document.getElementById('importResultsSection').style.display = 'none';
+      document.getElementById('importResultsSection').classList.add('u-hidden');
       document.getElementById('importPreviewData').innerHTML = '';
       currentImportData = null;
       currentImportMatchResults = null;
@@ -902,7 +898,7 @@ function displayRecordedMeterData(importData, matchResults) {
     comparisonDiv.innerHTML = comparisonHtml;
 
     // ===== SHOW SECTION =====
-    recordedSection.style.display = 'block';
+    recordedSection.classList.remove('u-hidden');
 
     // Scroll into view
     setTimeout(() => {
@@ -918,7 +914,7 @@ function displayRecordedMeterData(importData, matchResults) {
 
 function cancelImportProcess() {
   document.getElementById('importFileInput').value = '';
-  document.getElementById('importResultsSection').style.display = 'none';
+  document.getElementById('importResultsSection').classList.add('u-hidden');
   document.getElementById('importPreviewData').innerHTML = '';
   document.getElementById('importStatusMessage').innerHTML = '';
   document.getElementById('importMonthSelect').value = '';

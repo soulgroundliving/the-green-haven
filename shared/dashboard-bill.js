@@ -169,8 +169,8 @@ async function autoFillMeters(){
 
 function onRentTypeChange(){
   const isDaily=document.getElementById('f-rent-type').value==='daily';
-  document.getElementById('dailyNightsField').style.display=isDaily?'flex':'none';
-  document.getElementById('dailyRateField').style.display=isDaily?'flex':'none';
+  document.getElementById('dailyNightsField').classList.toggle('u-hidden', !(isDaily));
+  document.getElementById('dailyRateField').classList.toggle('u-hidden', !(isDaily));
   const opt=document.getElementById('f-room').selectedOptions[0];
   if(isDaily){
     const rate=parseFloat(opt?.dataset?.daily)||400;
@@ -216,10 +216,10 @@ function calcBill(){
   document.getElementById('c-water').textContent='฿'+wCost.toLocaleString();
   document.getElementById('c-trash').textContent='฿'+trash.toLocaleString();
   const ot=document.getElementById('c-other-row');
-  ot.style.display=other>0?'flex':'none';
+  ot.classList.toggle('u-hidden', !(other>0));
   document.getElementById('c-other').textContent='฿'+other.toLocaleString();
   const lfRow=document.getElementById('c-latefee-row');
-  if(lfRow) lfRow.style.display = lateFee>0 ? 'flex' : 'none';
+  if(lfRow) lfRow.classList.toggle('u-hidden', !(lateFee>0));
   const lfEl=document.getElementById('c-latefee');
   if(lfEl) lfEl.textContent='฿'+lateFee.toLocaleString();
   document.getElementById('c-total').textContent='฿'+total.toLocaleString();
@@ -598,7 +598,7 @@ function skipSlipVerify(){
 
 function enableReceiptBtn(){
   const btn = document.getElementById('btnReceipt');
-  btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
+  btn.disabled = false; btn.classList.remove('u-op50', 'u-no-ptr');
   document.getElementById('billHint').textContent = slipVerified
     ? `✅ ตรวจสลิปผ่าน ฿${slipData.amount.toLocaleString()} (${slipData.sender}) — กดออกใบเสร็จได้เลย`
     : '✅ พร้อมออกใบเสร็จ — กดปุ่มด้านบน';
@@ -812,16 +812,16 @@ function buildPromptPayPayload(phone,amount){
 function renderQR(elementId,amount){
   const el=document.getElementById(elementId);
   if(!el)return;
-  if(!PROMPTPAY_NUMBER){el.style.display='none';return;}
+  if(!PROMPTPAY_NUMBER){el.classList.add('u-hidden');return;}
   try{
     const payload=buildPromptPayPayload(PROMPTPAY_NUMBER,amount);
     const wrap=document.createElement('div');
     new QRCode(wrap,{text:payload,width:160,height:160,correctLevel:QRCode.CorrectLevel.M});
     setTimeout(()=>{
       const src=wrap.querySelector('canvas')?.toDataURL()||wrap.querySelector('img')?.src||'';
-      el.src=src; el.style.display=src?'block':'none';
+      el.src=src; el.classList.toggle('u-hidden', !(src));
     },120);
-  }catch(e){console.warn('QR generation failed:',e);el.style.display='none';}
+  }catch(e){console.warn('QR generation failed:',e);el.classList.add('u-hidden');}
 }
 
 let isGeneratingInvoice = false; // Prevent rapid clicks
@@ -848,8 +848,8 @@ function generateInvoice(){
   const dueStr=due.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
 
   // Hide receipt panel to show only invoice
-  document.getElementById('receiptPanel').style.display='none';
-  document.getElementById('invoicePanel').style.display='block';
+  document.getElementById('receiptPanel').classList.add('u-hidden');
+  document.getElementById('invoicePanel').classList.remove('u-hidden');
 
   document.getElementById('invoicePanel').innerHTML=buildDocHTML(d,'invoice',dueStr);
   renderQR('qr-payment', d.total); // generate PromptPay QR with bill amount
@@ -882,8 +882,8 @@ function generateReceipt(){
   const payDate=new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
 
   // Hide invoice panel to show only receipt
-  document.getElementById('invoicePanel').style.display='none';
-  document.getElementById('receiptPanel').style.display='block';
+  document.getElementById('invoicePanel').classList.add('u-hidden');
+  document.getElementById('receiptPanel').classList.remove('u-hidden');
 
   // ===== AUDIT LOGGING =====
   if (window.AuditLogger) {
@@ -967,8 +967,8 @@ function resetBillFlow(){
   document.getElementById('invoicePanel').innerHTML=`<div class="doc-placeholder"><div class="icon">📄</div><div style="font-size:.9rem;font-weight:600;">กรอกข้อมูลและกด "ส่งใบวางบิล"</div><div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 1 — แจ้งยอดก่อนชำระ</div></div>`;
   document.getElementById('receiptPanel').innerHTML=`<div class="doc-placeholder"><div class="icon">✅</div><div style="font-size:.9rem;font-weight:600;">กด "ออกใบเสร็จรับเงิน" หลังรับเงินแล้ว</div><div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 2 — ยืนยันการชำระเงิน</div></div>`;
   document.getElementById('btnReceipt').disabled=true;
-  document.getElementById('btnReceipt').style.opacity='.4';
-  document.getElementById('btnReceipt').style.cursor='not-allowed';
+  document.getElementById('btnReceipt').classList.add('u-op40');
+  document.getElementById('btnReceipt').classList.add('u-no-ptr');
   document.getElementById('billHint').textContent='ส่งใบวางบิลก่อน → อัปโหลดสลิป → ออกใบเสร็จรับเงิน';
   document.getElementById('step1').className='step active';
   document.getElementById('step2').className='step pending';
@@ -1432,7 +1432,7 @@ function savePayEdit(){
   // แสดง toast
   const t=document.createElement('div');
   t.textContent='✅ บันทึกมิเตอร์เรียบร้อย';
-  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a5c38;color:#fff;padding:10px 22px;border-radius:24px;font-family:Sarabun,sans-serif;font-weight:700;font-size:.88rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.25);';
+  t.className='u-toast-center';
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),2200);
 }

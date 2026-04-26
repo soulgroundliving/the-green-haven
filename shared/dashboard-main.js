@@ -53,7 +53,7 @@ window.showPage = window._showPageImpl;
 window.switchTenantMainTab = function(tab, btn) {
   ['tenants','leases','requests','alerts'].forEach(t => {
     const el = document.getElementById('tenant-main-tab-' + t);
-    if(el) el.style.display = (t === tab) ? '' : 'none';
+    if(el) el.classList.toggle('u-hidden', !((t === tab)));
   });
   document.querySelectorAll('#tenant-main-tab-btn-tenants,#tenant-main-tab-btn-leases,#tenant-main-tab-btn-requests,#tenant-main-tab-btn-alerts').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
@@ -65,7 +65,7 @@ window.switchTenantMainTab = function(tab, btn) {
 window.switchBillingMainTab = function(tab, btn) {
   ['billing','verify'].forEach(t => {
     const el = document.getElementById('bill-main-tab-' + t);
-    if(el) el.style.display = (t === tab) ? '' : 'none';
+    if(el) el.classList.toggle('u-hidden', !((t === tab)));
   });
   document.querySelectorAll('#bill-main-tab-btn-billing,#bill-main-tab-btn-verify').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
@@ -75,7 +75,7 @@ window.switchBillingMainTab = function(tab, btn) {
 // Meter Tab Switching Function
 window._switchMeterTabImpl = function(tabName, btnElement) {
   // Hide all tabs
-  document.querySelectorAll('.meter-tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.meter-tab-content').forEach(el => el.classList.add('u-hidden'));
 
   // Remove active state from all buttons
   document.querySelectorAll('.meter-tab').forEach(btn => btn.classList.remove('active'));
@@ -84,7 +84,7 @@ window._switchMeterTabImpl = function(tabName, btnElement) {
   const contentEl = document.getElementById('meter-' + tabName + '-content');
   const resolvedBtn = btnElement || document.getElementById('tab-' + tabName + '-btn');
   if (contentEl) {
-    contentEl.style.display = 'block';
+    contentEl.classList.remove('u-hidden');
     if (resolvedBtn) resolvedBtn.classList.add('active');
   }
 
@@ -113,31 +113,28 @@ window.switchPropertyTab = function(tab, el) {
   const roomsSection = document.getElementById('property-rooms-section');
   const nestSection = document.getElementById('property-nest-section');
 
-  if (roomsSection) roomsSection.style.display = 'none';
-  if (nestSection) nestSection.style.display = 'none';
+  if (roomsSection) roomsSection.classList.add('u-hidden');
+  if (nestSection) nestSection.classList.add('u-hidden');
 
   // Remove active state from all tabs
   document.querySelectorAll('.property-tab').forEach(btn => {
-    btn.style.color = '#999';
-    btn.style.borderBottom = '3px solid transparent';
+    // CSS .property-tab handles inactive state
   });
 
   // Show selected section and set active tab
   if (tab === 'rooms') {
-    if (roomsSection) roomsSection.style.display = 'block';
+    if (roomsSection) roomsSection.classList.remove('u-hidden');
     if (el) {
-      el.style.color = '#2d8653';
-      el.style.borderBottom = '3px solid #2d8653';
+      // CSS .property-tab.active handles active state
     }
     // Initialize rooms page if needed
     if (typeof initRoomsPage === 'function') {
       initRoomsPage();
     }
   } else if (tab === 'nest') {
-    if (nestSection) nestSection.style.display = 'block';
+    if (nestSection) nestSection.classList.remove('u-hidden');
     if (el) {
-      el.style.color = '#2d8653';
-      el.style.borderBottom = '3px solid #2d8653';
+      // CSS .property-tab.active handles active state
     }
     // Initialize nest page if needed
     if (typeof initNestPage === 'function') {
@@ -175,7 +172,7 @@ function switchDashboardTab(tabName, btn) {
   // Remove active class and inline styles from all buttons
   document.querySelectorAll('.dashboard-tab').forEach(button => {
     button.classList.remove('active');
-    button.style.color = '';
+    // CSS .people-mgmt-tab handles inactive state
   });
 
   // Show selected tab
@@ -187,7 +184,7 @@ function switchDashboardTab(tabName, btn) {
   // Add active class and styles to button
   if(btn) {
     btn.classList.add('active');
-    btn.style.color = 'var(--green)';
+    // CSS .people-mgmt-tab.active handles active state
   }
 
   // Initialize charts if analytics tab
@@ -204,19 +201,19 @@ function switchDashboardTab(tabName, btn) {
 function switchRequestsTab(tabName, btn) {
   // Hide all requests tabs
   document.querySelectorAll('.requests-mgmt-content').forEach(tab => {
-    tab.style.display = 'none';
+    tab.classList.add('u-hidden');
   });
 
   // Remove active style from all tab buttons
   document.querySelectorAll('.requests-mgmt-tab').forEach(button => button.classList.remove('active'));
 
   // Hide all tab content
-  document.querySelectorAll('.requests-mgmt-content').forEach(tab => tab.style.display = 'none');
+  document.querySelectorAll('.requests-mgmt-content').forEach(tab => tab.classList.add('u-hidden'));
 
   // Show selected tab
   const tabElement = document.getElementById('requests-tab-' + tabName);
   if(tabElement) {
-    tabElement.style.display = 'block';
+    tabElement.classList.remove('u-hidden');
     if(btn) btn.classList.add('active');
     // Initialize content for each tab
     if(tabName === 'maintenance') initMaintenancePage();
@@ -400,7 +397,7 @@ async function rejectLiffLink(lineUserId){
 function switchPeopleTab(tabName, btn) {
   // Hide all people tabs
   document.querySelectorAll('.people-mgmt-content').forEach(tab => {
-    tab.style.display = 'none';
+    tab.classList.add('u-hidden');
   });
 
   // Remove active style from all tab buttons
@@ -412,12 +409,12 @@ function switchPeopleTab(tabName, btn) {
   // Show selected tab
   const tabElement = document.getElementById('people-tab-' + tabName);
   if(tabElement) {
-    tabElement.style.display = 'block';
+    tabElement.classList.remove('u-hidden');
   }
 
   // Highlight active button
   if(btn) {
-    btn.style.color = 'var(--green)';
+    // CSS .people-mgmt-tab.active handles active state
     btn.style.borderBottomColor = 'var(--green)';
   }
 
@@ -683,7 +680,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'updateAdjustmentDisplay') { typeof updateAdjustmentDisplay === 'function' && updateAdjustmentDisplay(); return; }
     if (a === 'togglePetTypeRow') {
       const row = document.getElementById('modalPetTypeRow');
-      if (row) row.style.display = el.checked ? 'block' : 'none';
+      if (row) row.classList.toggle('u-hidden', !(el.checked));
       return;
     }
     // Requests page filters
