@@ -142,6 +142,8 @@ function openTenantModal(building, roomId) {
   document.getElementById('modalTenantPhone').value = tenant.phone || '';
   document.getElementById('modalTenantLineID').value = tenant.lineID || '';
   document.getElementById('modalTenantEmail').value = tenant.email || '';
+  const evEl = document.getElementById('modalTenantEmailVerified');
+  if (evEl) evEl.textContent = tenant.email ? (tenant.emailVerified ? '✅ ยืนยันแล้ว' : '(ยังไม่ยืนยัน)') : '';
   document.getElementById('modalTenantLicensePlate').value = tenant.licensePlate || '';
   document.getElementById('modalTenantMoveIn').value = tenant.moveInDate || '';
   document.getElementById('modalTenantContractEnd').value = tenant.contractEnd || '';

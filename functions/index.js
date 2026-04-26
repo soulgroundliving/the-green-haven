@@ -17,6 +17,10 @@ exports.requestPhoneOtp = require('./requestPhoneOtp').requestPhoneOtp;
 // (token-refresh 403s after linkWithCredential, broken anon-UID lineage, etc.)
 exports.setVerifiedPhone = require('./setVerifiedPhone').setVerifiedPhone;
 
+// Server-side email save: updates Firebase Auth email + Firestore tenant doc so
+// client can call sendEmailVerification() without needing a password credential.
+exports.setTenantEmail = require('./setTenantEmail').setTenantEmail;
+
 // One-off (idempotent) consolidation: merge tenant + lease data from 4 split paths
 // into single SSoT at tenants/{building}/list/{roomId}. Admin-only. Dry-run by default.
 exports.migrateTenantsToSSoT = require('./migrateTenantsToSSoT').migrateTenantsToSSoT;

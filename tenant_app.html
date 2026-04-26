@@ -76,7 +76,7 @@
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
       import { getDatabase, ref, get, set, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-      import { getAuth, signInAnonymously, onAuthStateChanged, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+      import { getAuth, signInAnonymously, onAuthStateChanged, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
       import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
       import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
       import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
@@ -124,6 +124,7 @@
           // Phone Auth surface for OTP-gated phone edit (saveProfileEdit no longer
           // accepts the phone field directly; user goes through 2-step OTP flow).
           window.firebasePhone = { RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink };
+          window.firebaseSendEmailVerification = sendEmailVerification;
           window.firebaseReady = true;
           window.dispatchEvent(new Event('firebaseInitialized'));
           // Anonymous sign-in so Firestore rules (require auth != null) don't block
@@ -3286,7 +3287,11 @@
                     <span>เบอร์โทรศัพท์:</span><strong id="profile-phone">—</strong>
                 </div>
                 <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span>อีเมล:</span><strong id="profile-email">—</strong>
+                    <span>อีเมล:</span>
+                    <span style="display:flex;align-items:center;gap:5px;text-align:right;">
+                        <strong id="profile-email">—</strong>
+                        <small id="profile-email-badge" style="color:var(--text-muted);font-size:0.75em;"></small>
+                    </span>
                 </div>
                 <div class="receipt-item" style="display:flex; justify-content:space-between; margin-bottom:10px;">
                     <span>ป้ายทะเบียน:</span><strong id="profile-license">—</strong>
@@ -3969,6 +3974,9 @@
         // 1. ฟังก์ชันเช็ก — Nest only (Rooms tenants don't earn points)
         function checkDailyLogin() {
             if (window._nestOnlyDisabled) return; // Rooms tenant — skip
+            // Bangkok date (UTC+7) — matches the CF's today calculation
+            const bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+            if (localStorage.getItem(`lastDailyClaim_${_taBuilding}_${_taRoom}`) === bkkToday) return;
             const modal = document.getElementById('daily-modal');
             if (!modal) return;
             const nav = document.getElementById('main-nav-bar');
@@ -4007,11 +4015,15 @@
                     ? `รับ +${r.reward} Pts! 🔥 ครบ ${r.streak} วัน โบนัสพิเศษ +${r.bonus}`
                     : `รับ +${r.reward} Pt แล้ว (สตรีค ${r.streak} วัน)`;
                 toast(streakMsg, 'success');
+                const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+                localStorage.setItem(`lastDailyClaim_${_taBuilding}_${_taRoom}`, _bkkToday);
                 closeModal();
             } catch (e) {
                 const code = e?.code || e?.details?.code || '';
                 if (code === 'functions/already-exists' || /already/i.test(String(e?.message))) {
                     toast('รับพ้อยท์ของวันนี้ไปแล้วครับ 🌿', 'warning');
+                    const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+                    localStorage.setItem(`lastDailyClaim_${_taBuilding}_${_taRoom}`, _bkkToday);
                     closeModal();
                 } else {
                     console.error('claimDailyPoints failed:', e);
@@ -6213,31 +6225,56 @@
             }
         }
         async function saveProfileEdit() {
-            // Phone is no longer saved here — OTP flow handles it directly. This save
-            // path only handles the email field now (fastest minimal change).
             const email = document.getElementById('profile-edit-email').value.trim();
             if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
                 toast('อีเมลไม่ถูกต้อง', 'error'); return;
             }
             if (!_taRoom || !_taBuilding) { toast('ข้อมูลห้องไม่พร้อม', 'error'); return; }
-            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-                toast('ระบบยังไม่พร้อม', 'error'); return;
-            }
-            const fs = window.firebase.firestoreFunctions;
-            const db = window.firebase.firestore();
-            const updates = { email, updatedAt: new Date().toISOString() };
+            if (!window.firebase?.functions) { toast('ระบบยังไม่พร้อม', 'error'); return; }
             try {
-                const ref = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
-                await fs.updateDoc(ref, updates);
-                _taTenant = { ..._taTenant, ...updates };
+                const callable = window.firebase.functions.httpsCallable('setTenantEmail');
+                await callable({ email, building: _taBuilding, room: String(_taRoom) });
+                // Reload auth user so it picks up the newly-set Firebase Auth email,
+                // then fire the verification email (uses Firebase's own mail delivery).
+                if (window.firebaseAuth?.currentUser) {
+                    await window.firebaseAuth.currentUser.reload();
+                }
+                if (email && window.firebaseSendEmailVerification && window.firebaseAuth?.currentUser) {
+                    try {
+                        await window.firebaseSendEmailVerification(window.firebaseAuth.currentUser, {
+                            url: 'https://the-green-haven.vercel.app/tenant_app.html',
+                        });
+                        toast('บันทึกแล้ว — ส่งลิงก์ยืนยันไปยัง ' + email + ' แล้ว', 'success');
+                    } catch (ve) {
+                        console.warn('sendEmailVerification failed:', ve?.code, ve?.message);
+                        toast('บันทึกอีเมลแล้ว (ส่งลิงก์ยืนยันไม่สำเร็จ — ลองใหม่ทีหลัง)', 'warning');
+                    }
+                } else {
+                    toast('บันทึกอีเมลแล้ว', 'success');
+                }
+                _taTenant = { ..._taTenant, email, emailVerified: false };
                 window._tenantAppTenant = _taTenant;
                 if (typeof renderProfilePage === 'function') renderProfilePage();
-                if (typeof loadProfilePage === 'function') loadProfilePage();
                 toggleProfileEditMode(false);
-                toast('บันทึกอีเมลแล้ว', 'success');
             } catch (e) {
                 console.error('saveProfileEdit failed:', e);
                 toast('บันทึกไม่สำเร็จ — กรุณาลองใหม่', 'error');
+            }
+        }
+
+        async function _syncEmailVerified() {
+            if (!_taBuilding || !_taRoom || !window.firebase?.firestoreFunctions) return;
+            try {
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                await fs.updateDoc(fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom)), {
+                    emailVerified: true,
+                    emailVerifiedAt: fs.serverTimestamp(),
+                });
+                _taTenant = { ..._taTenant, emailVerified: true };
+                window._tenantAppTenant = _taTenant;
+            } catch (e) {
+                console.warn('emailVerified sync failed:', e);
             }
         }
 
@@ -8324,7 +8361,17 @@
             const t = _taTenant || {};
             set('profile-fullname', t.name || t.tenantName || t.fullName);
             set('profile-phone',    t.phone || t.tel || t.mobile);
-            set('profile-email',    t.email);
+            // Email with verified badge (uses DOM not textContent to keep badge element)
+            const _emailEl = document.getElementById('profile-email');
+            const _badgeEl = document.getElementById('profile-email-badge');
+            if (_emailEl) _emailEl.textContent = t.email || '—';
+            if (_badgeEl) {
+                const _authVerified = window.firebaseAuth?.currentUser?.emailVerified;
+                const _isVerified = t.emailVerified || _authVerified;
+                _badgeEl.textContent = t.email ? (_isVerified ? '✅' : '⚠️ ยังไม่ยืนยัน') : '';
+                // Sync Firebase Auth emailVerified → Firestore if tenant just clicked the link
+                if (t.email && _authVerified && !t.emailVerified) _syncEmailVerified();
+            }
             set('profile-license',  t.licensePlate || t.license || t.carPlate);
 
             // Contract info — ดึงจาก _taLease (dashboard source)
