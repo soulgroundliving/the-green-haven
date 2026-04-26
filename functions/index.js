@@ -13,6 +13,10 @@ exports.checkTenantPhone = require('./checkTenantPhone').checkTenantPhone;
 // App-level rate-limit gate before client SDK signInWithPhoneNumber (3/hr per UID + per phone)
 exports.requestPhoneOtp = require('./requestPhoneOtp').requestPhoneOtp;
 
+// Server-side write of OTP-verified phone — bypasses client auth-state pitfalls
+// (token-refresh 403s after linkWithCredential, broken anon-UID lineage, etc.)
+exports.setVerifiedPhone = require('./setVerifiedPhone').setVerifiedPhone;
+
 // Complaint & Gamification
 exports.onComplaintCreated = require('./complaintAndGamification').onComplaintCreated;
 exports.sendComplaintConfirmation = require('./complaintAndGamification').sendComplaintConfirmation;

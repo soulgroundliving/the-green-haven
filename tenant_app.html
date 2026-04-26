@@ -6232,47 +6232,74 @@
                 // doc's linkedAuthUid still matches and Firestore rules let us write.
                 // If the user has a previously-linked phone, unlink first (link op fails
                 // when a provider is already linked).
+                // Build credential then sign IN with it (signInWithCredential, not link).
+                // We previously tried linkWithCredential to preserve the anon UID, but the
+                // SDK's auto token refresh on securetoken.googleapis.com 403s right after
+                // the link, leaving the next Firestore request with a stale token. Instead
+                // we sign in as the phone user (UID changes), then call setVerifiedPhone CF
+                // which uses admin SDK to write — server-side bypasses the entire client
+                // auth-state mess.
                 const credential = window.firebasePhone.PhoneAuthProvider.credential(_otpVerificationId, code);
-                const user = window.firebaseAuth.currentUser;
-                if (!user) {
-                    _setOtpStatus('⛔ Session หาย — รีเฟรชหน้าใหม่', 'error'); btn.disabled = false; return;
-                }
-                const uidBefore = user.uid;
-                console.log('[OTP] before link: uid=', uidBefore, 'providers=', user.providerData?.map(p => p.providerId));
-                if (user.providerData?.some(p => p.providerId === 'phone')) {
-                    try {
-                        await window.firebasePhone.unlink(user, 'phone');
-                        console.log('[OTP] unlinked old phone');
-                    } catch(ue) { console.warn('[OTP] unlink failed (continuing):', ue?.code, ue?.message); }
-                }
-                let linkRes;
+                const uidBefore = window.firebaseAuth.currentUser?.uid;
+                const lineUserId = (typeof window._taLineUserId === 'string' && window._taLineUserId) ||
+                                   sessionStorage.getItem('lineUserId') || null;
+                console.log('[OTP] before signIn: uid=', uidBefore, 'lineUserId=', lineUserId);
+                let signInRes;
                 try {
-                    linkRes = await window.firebasePhone.linkWithCredential(user, credential);
+                    const { signInWithCredential } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
+                    signInRes = await signInWithCredential(window.firebaseAuth, credential);
                 } catch (le) {
-                    console.error('[OTP] linkWithCredential failed:', le?.code, le?.message);
-                    if (le?.code === 'auth/credential-already-in-use') {
-                        _setOtpStatus('⛔ เบอร์นี้ถูกใช้แล้วในระบบ — เลือกเบอร์อื่น หรือ admin ลบ phone-auth user ออก', 'error');
+                    console.error('[OTP] signInWithCredential failed:', le?.code, le?.message);
+                    if (le?.code === 'auth/invalid-verification-code') {
+                        _setOtpStatus('⛔ รหัส OTP ไม่ถูกต้อง', 'error');
+                    } else if (le?.code === 'auth/code-expired') {
+                        _setOtpStatus('⛔ รหัสหมดอายุ — ขอใหม่', 'error');
                     } else {
-                        _setOtpStatus('⛔ เชื่อมเบอร์ไม่สำเร็จ: ' + (le?.code || le?.message), 'error');
+                        _setOtpStatus('⛔ ยืนยันไม่สำเร็จ: ' + (le?.code || le?.message), 'error');
                     }
                     btn.disabled = false; return;
                 }
-                const uidAfter = window.firebaseAuth.currentUser?.uid;
-                console.log('[OTP] after link: uid=', uidAfter, 'providers=', linkRes?.user?.providerData?.map(p => p.providerId));
-                if (uidBefore !== uidAfter) {
-                    console.warn('[OTP] UID CHANGED during link! before=', uidBefore, 'after=', uidAfter);
-                }
+                console.log('[OTP] signed in as phone uid=', signInRes?.user?.uid);
 
                 if (!_taRoom || !_taBuilding) {
                     _setOtpStatus('⛔ ข้อมูลห้องไม่พร้อม', 'error'); btn.disabled = false; return;
                 }
-                console.log('[OTP] writing to tenants/' + _taBuilding + '/list/' + _taRoom + ' as uid=' + window.firebaseAuth.currentUser?.uid);
-                const fs = window.firebase.firestoreFunctions;
-                const db = window.firebase.firestore();
-                const ref = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
-                // Force ID-token refresh so the next request carries claims/auth from the post-link state
-                try { await window.firebaseAuth.currentUser.getIdToken(true); } catch(_) {}
-                await fs.updateDoc(ref, { phone: _otpPendingPhone, phoneVerifiedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+
+                _setOtpStatus('⏳ กำลังบันทึก…');
+                try {
+                    const setVerified = window.firebase.functions.httpsCallable('setVerifiedPhone');
+                    const cfRes = await setVerified({
+                        oldAnonUid: uidBefore,
+                        lineUserId,
+                        building: _taBuilding,
+                        room: String(_taRoom),
+                        phone: _otpPendingPhone,
+                    });
+                    console.log('[OTP] setVerifiedPhone CF result:', cfRes?.data);
+                } catch (we) {
+                    console.error('[OTP] setVerifiedPhone CF failed:', we?.code, we?.message);
+                    _setOtpStatus('⛔ บันทึกไม่สำเร็จ: ' + (we?.message || we?.code || 'unknown'), 'error');
+                    // Restore anon session so the rest of the page still works
+                    try {
+                        const { signInAnonymously } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
+                        await signInAnonymously(window.firebaseAuth);
+                    } catch(_) {}
+                    btn.disabled = false; return;
+                }
+
+                _taTenant = { ..._taTenant, phone: _otpPendingPhone, phoneVerifiedAt: new Date().toISOString() };
+                window._tenantAppTenant = _taTenant;
+
+                // Restore anonymous session so non-phone code paths (email save, etc.)
+                // keep working with the original tenant rules.
+                try {
+                    const { signInAnonymously } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
+                    await signInAnonymously(window.firebaseAuth);
+                } catch (re) {
+                    console.warn('re-auth anon failed:', re);
+                }
+
+                if (typeof renderProfilePage === 'function') renderProfilePage();
                 _taTenant = { ..._taTenant, phone: _otpPendingPhone, phoneVerifiedAt: new Date().toISOString() };
                 window._tenantAppTenant = _taTenant;
 
