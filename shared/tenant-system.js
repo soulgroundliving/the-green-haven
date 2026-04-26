@@ -1310,17 +1310,18 @@ class TenantFirebaseSync {
           this.loadMeterDataFromFirebase().catch(e => { console.warn('Warning loading meter data:', e); return {}; })
         ]);
 
-      // Tenant info comes from the lease object
-      let tenant = lease; // Use lease data as tenant data since they're in same Firebase object
-      if (lease?.tenantId && typeof this.loadTenant === 'function') {
+      // Tenant info — when loadLease returned data from SSoT (tenants/{b}/list/{roomId}),
+      // it already includes ALL tenant identity fields (name, phone, email, lineID,
+      // idCardNumber, etc.) plus the lease subobject. Don't call loadTenant() in that
+      // case because localStorage has a different (legacy-flat) shape that would
+      // overwrite the rich SSoT data with stale partial fields.
+      let tenant = lease;
+      if (lease?.tenantId && lease._source !== 'tenants/list' && typeof this.loadTenant === 'function') {
         const explicitTenant = await this.loadTenant(lease.tenantId);
         if (explicitTenant) {
           tenant = explicitTenant;
         }
       }
-
-      // Phase 3 SSoT: loadLease() now reads tenants/{b}/list/{roomId} directly,
-      // so no overlay needed here — tenant edits already in `tenant` from lease.
 
       const allData = {
         lease,
