@@ -3590,6 +3590,8 @@ function deleteDocument(id) {
 }
 
 // ===== PET REGISTRATION APPROVALS =====
+// SSoT: tenants/{building}/list/{roomId}/pets/{petId} (matches tenant_app.html write path)
+// Admin reads via collectionGroup('pets') so any pet under any room is picked up.
 let _petsUnsub = null;
 let _petsFromFirestore = [];
 function initPetApprovalsPage() {
@@ -3599,9 +3601,22 @@ function initPetApprovalsPage() {
   try {
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
-    const col = fs.collection(db, 'petApprovals');
-    _petsUnsub = fs.onSnapshot(col, snap => {
-      _petsFromFirestore = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const cg = fs.collectionGroup(db, 'pets');
+    _petsUnsub = fs.onSnapshot(cg, snap => {
+      _petsFromFirestore = snap.docs.map(d => {
+        // Path: tenants/{building}/list/{roomId}/pets/{petId}
+        const parts = d.ref.path.split('/');
+        const pathBuilding = parts[1];
+        const pathRoom     = parts[3];
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          // Trust path over field for admin write-back, but keep field as default.
+          building: data.building || pathBuilding,
+          room:     data.room     || pathRoom,
+        };
+      });
       loadAndRenderPetApprovals();
     }, err => console.warn('pets onSnapshot failed:', err));
   } catch(e) { console.warn('pets subscribe failed:', e); }
@@ -3611,21 +3626,10 @@ function loadAndRenderPetApprovals() {
   const list = document.getElementById('petsList');
   if (!list) return;
 
-  // Load from Firestore first, then merge localStorage (fallback)
-  const byId = new Map();
-  (_petsFromFirestore || []).forEach(p => byId.set(p.id, { ...p, source: 'firestore' }));
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('tenant_pets_')) {
-      const pets = JSON.parse(localStorage.getItem(key) || '[]');
-      const parts = key.split('_');
-      const building = parts[2], room = parts[3];
-      pets.forEach(p => {
-        if (!byId.has(p.id)) byId.set(p.id, { ...p, room: p.room || room, building: p.building || building, storageKey: key });
-      });
-    }
-  }
-  let allPets = Array.from(byId.values());
+  // SSoT only — Firestore tenants/{b}/list/{r}/pets/{id}.
+  // (Removed admin-localStorage merge: admin's localStorage never contains
+  // another device's tenant data, so the merge was always a no-op.)
+  let allPets = (_petsFromFirestore || []).slice();
 
   const searchVal = document.getElementById('petSearch')?.value.toLowerCase() || '';
   const statusFilter = document.getElementById('petFilterStatus')?.value || '';
@@ -3669,11 +3673,11 @@ function loadAndRenderPetApprovals() {
         ${p.notes ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.8rem;">📝 ${p.notes}</div>` : ''}
         ${p.status === 'pending' ? `
           <div style="display: flex; gap: 0.5rem;">
-            <button onclick="approvePet('${p.id}', '${p.room}', '${p.storageKey}')" class="compact-btn compact-btn-view">✅ Approve</button>
-            <button onclick="rejectPet('${p.id}', '${p.room}', '${p.storageKey}')" class="compact-btn compact-btn-delete">❌ Reject</button>
+            <button onclick="approvePet('${p.building}','${p.room}','${p.id}')" class="compact-btn compact-btn-view">✅ Approve</button>
+            <button onclick="rejectPet('${p.building}','${p.room}','${p.id}')" class="compact-btn compact-btn-delete">❌ Reject</button>
           </div>
         ` : `
-          <button onclick="removePetApproval('${p.id}', '${p.room}', '${p.storageKey}')" class="compact-btn compact-btn-delete">🗑️ Remove</button>
+          <button onclick="removePetApproval('${p.building}','${p.room}','${p.id}')" class="compact-btn compact-btn-delete">🗑️ Remove</button>
         `}
       </div>
     `;
@@ -3684,57 +3688,41 @@ function filterPetsByStatus(status) {
   loadAndRenderPetApprovals();
 }
 
-async function _writePetToFirestore(id, patch){
+async function _writePetToFirestore(building, room, id, patch){
   if (!window.firebase?.firestore) return;
+  if (!building || !room || !id) { console.warn('pet write missing building/room/id', { building, room, id }); return; }
   try {
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
-    const docRef = fs.doc(fs.collection(db, 'petApprovals'), id);
+    const docRef = fs.doc(db, 'tenants', building, 'list', String(room), 'pets', id);
     await fs.setDoc(docRef, patch, { merge: true });
   } catch(e) { console.warn('Firestore pet update failed:', e); }
 }
-async function _deletePetFromFirestore(id){
+async function _deletePetFromFirestore(building, room, id){
   if (!window.firebase?.firestore) return;
+  if (!building || !room || !id) { console.warn('pet delete missing building/room/id', { building, room, id }); return; }
   try {
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
-    const docRef = fs.doc(fs.collection(db, 'petApprovals'), id);
+    const docRef = fs.doc(db, 'tenants', building, 'list', String(room), 'pets', id);
     await fs.deleteDoc(docRef);
   } catch(e) { console.warn('Firestore pet delete failed:', e); }
 }
 
-function approvePet(id, room, storageKey) {
-  if (storageKey) {
-    const pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const pet = pets.find(p => p.id === id);
-    if (pet) { pet.status = 'approved'; pet.approvalDate = new Date().toISOString(); localStorage.setItem(storageKey, JSON.stringify(pets)); }
-  }
-  _writePetToFirestore(id, { status: 'approved', approvalDate: new Date().toISOString() });
-  loadAndRenderPetApprovals();
+function approvePet(building, room, id) {
+  _writePetToFirestore(building, room, id, { status: 'approved', approvalDate: new Date().toISOString() });
   showToast('✅ Pet approved', 'success');
 }
 
-function rejectPet(id, room, storageKey) {
+function rejectPet(building, room, id) {
   if (!confirm('Are you sure you want to reject this pet registration?')) return;
-  if (storageKey) {
-    const pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const pet = pets.find(p => p.id === id);
-    if (pet) { pet.status = 'rejected'; pet.rejectionDate = new Date().toISOString(); localStorage.setItem(storageKey, JSON.stringify(pets)); }
-  }
-  _writePetToFirestore(id, { status: 'rejected', rejectionDate: new Date().toISOString() });
-  loadAndRenderPetApprovals();
+  _writePetToFirestore(building, room, id, { status: 'rejected', rejectionDate: new Date().toISOString() });
   showToast('✅ Pet rejected', 'success');
 }
 
-function removePetApproval(id, room, storageKey) {
+function removePetApproval(building, room, id) {
   if (!confirm('Are you sure you want to remove this pet registration?')) return;
-  if (storageKey) {
-    let pets = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    pets = pets.filter(p => p.id !== id);
-    localStorage.setItem(storageKey, JSON.stringify(pets));
-  }
-  _deletePetFromFirestore(id);
-  loadAndRenderPetApprovals();
+  _deletePetFromFirestore(building, room, id);
   showToast('✅ Pet registration removed', 'success');
 }
 

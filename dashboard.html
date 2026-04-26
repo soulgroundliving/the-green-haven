@@ -77,7 +77,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getDatabase, ref, set, get, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
   import { getAuth, signInAnonymously, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+  import { getFirestore, collection, collectionGroup, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
   // Phase 4D App Check disabled 2026-04-25 — see next_session_handoff.md
   // import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app-check.js";
 
@@ -127,6 +127,7 @@
         firestore: () => firestore,
         firestoreFunctions: {
           collection: collection,
+          collectionGroup: collectionGroup,
           doc: doc,
           setDoc: setDoc,
           getDoc: getDoc,

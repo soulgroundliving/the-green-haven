@@ -8450,23 +8450,15 @@
             return `quiz_contract_${_taBuilding||'x'}_${_taRoom||'x'}_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`;
         }
 
-        // อ่าน rewardPoints ที่ admin ตั้งค่าไว้ (fallback 20)
-        // Admin set ผ่าน: Firestore settings/{building}/quiz.contractRewardPoints
-        //   หรือ localStorage quiz_reward_contract (dev/manual override)
+        // Quiz contract reward — default 20 pts.
+        // Override via localStorage `quiz_reward_contract` (dev/manual).
+        // (Removed Firestore `settings/{building}.quiz.contractRewardPoints` read:
+        //  no admin UI ever wrote there and the `settings` collection doesn't exist.
+        //  If admin tunable is needed later, add to system/policies.quiz.* SSoT.)
         let _quizRewardContract = 20;
         async function loadQuizRewardConfig() {
-            // localStorage override (dev หรือ admin ส่งผ่าน window message)
             const local = parseInt(localStorage.getItem('quiz_reward_contract') || '0');
-            if (local > 0) { _quizRewardContract = local; return; }
-            try {
-                if (!window.firebaseReady || typeof firebase === 'undefined') return;
-                const db = firebase.firestore();
-                const building = _taBuilding || 'nest';
-                const snap = await db.collection('settings').doc(building).get();
-                const data = snap.exists ? snap.data() : null;
-                const pts = data?.quiz?.contractRewardPoints;
-                if (pts && pts > 0 && pts < 1000) _quizRewardContract = pts;
-            } catch(_){}
+            if (local > 0) _quizRewardContract = local;
         }
 
         function setupContractQuizGate() {

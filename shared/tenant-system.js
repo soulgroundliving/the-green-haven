@@ -946,48 +946,9 @@ class TenantFirebaseSync {
           }
         }
 
-        // === Legacy fallback: buildings/{alias}/rooms/{roomId} ===
-        // For rooms not yet migrated, or if SSoT read was permission-denied.
-        try {
-          const fsBuilding = TenantFirebaseSync._fsBuilding(building);
-          const fsRoomId   = TenantFirebaseSync._fsRoomId(roomId);
-          const docRef = fs.doc(db, 'buildings', fsBuilding, 'rooms', fsRoomId);
-          const docSnap = await fs.getDoc(docRef);
-
-          if (docSnap.exists()) {
-            const roomData = docSnap.data();
-            const lease = roomData.lease || {};
-            const ops = roomData.operations || {};
-            const t = roomData.tenant || roomData.personalInfo || {};
-            const leaseData = {
-              building,
-              roomId,
-              rentAmount: lease.rentAmount ?? 0,
-              deposit: lease.deposit ?? 0,
-              moveInDate: lease.moveInDate,
-              moveOutDate: lease.moveOutDate,
-              endDate: lease.moveOutDate,
-              startDate: lease.moveInDate,
-              status: lease.status || 'empty',
-              contractDocument: lease.contractDocument,
-              tenantId: ops.tenantId,
-              billingCycle: ops.billingCycle ?? 1,
-              emergencyContact: ops.emergencyContact,
-              name: t.name || t.fullName || ops.tenantName,
-              phone: t.phone || t.tel || ops.tenantPhone,
-              email: t.email || ops.tenantEmail,
-              licensePlate: t.licensePlate || ops.plateNumber,
-              companyInfo: t.companyInfo || roomData.companyInfo,
-              receiptType: t.receiptType || roomData.receiptType,
-              _raw: roomData,
-              _source: 'buildings/rooms (legacy)',
-            };
-            console.log(`✅ TenantFirebaseSync: Legacy fallback buildings/${fsBuilding}/rooms/${fsRoomId}:`, leaseData);
-            return leaseData;
-          }
-        } catch (e) {
-          console.debug(`  ❌ buildings/rooms fallback failed:`, e.message);
-        }
+        // Phase 6 SSoT cleanup removed .tenant/.lease/.operations/.personalInfo
+        // from buildings/{alias}/rooms/{r}, so the old fallback can never find
+        // data anymore. tenants/{b}/list/{roomId} is the only canonical source.
 
         console.log(`ℹ️ No lease data found in Firestore for ${building}/${roomId}, falling back to localStorage`);
       } else {
