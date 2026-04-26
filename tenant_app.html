@@ -7714,8 +7714,7 @@
             // SSoT paid-check via BillStore.isPaid — survives bills that have paidAt
             // but no status field, and is case-insensitive on the status string.
             const _isPaid = (b) => window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid');
-            const unpaid = _taBills.find(b => !_isPaid(b));
-            const latest = unpaid || _taBills[0];
+            const latest = _taBills[0];
             _taCurrentBill = latest;
             const amtEl = document.getElementById('current-bill-amount');
             if (amtEl && latest) {
@@ -7796,6 +7795,7 @@
                     ${actionBtn}
                 </div>`;
             }).join('');
+            if (typeof _renderUsageChart === 'function') _renderUsageChart();
         }
 
         // ---- COMMUNITY UNIFIED FEED ----
