@@ -1233,10 +1233,10 @@ async function autoGenerateAllBills() {
       const roomConfig = rooms.find(r => r.id === roomId);
       if (!roomConfig) continue;
 
-      const rent = roomConfig.rent || 0;
-      const eRate = roomConfig.elecRate || 8;
-      const wRate = 20; // Standard water rate
-      const trash = roomConfig.trashFee || 20;
+      const rent = roomConfig.rentPrice || roomConfig.rent || 0;
+      const eRate = roomConfig.electricRate || roomConfig.elecRate || 8;
+      const wRate = roomConfig.waterRate || 20;
+      const trash = roomConfig.trashRate || roomConfig.trashFee || 20;
 
       // Calculate costs from meter data
       const eUnits = Math.max(0, (meterReadings.eNew || 0) - (meterReadings.eOld || 0));

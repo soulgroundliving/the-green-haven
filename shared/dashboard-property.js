@@ -18,14 +18,15 @@ function getActiveRoomsWithMetadata(building, metadataArray) {
     return {
       id: r.id,
       name: r.name,
-      waterRate: r.waterRate,
-      electricRate: r.electricRate,
+      waterRate: r.waterRate || 20,
+      electricRate: r.electricRate || 8,
       deleted: r.deleted,
       rentPrice: rentPrice,
-      type: metadata?.type || 'room',
-      trashFee: metadata?.trashFee || 20,
-      elecRate: metadata?.elecRate || r.electricRate,
-      floor: metadata?.floor,
+      trashRate: r.trashRate || metadata?.trashFee || 20,
+      type: r.type || metadata?.type || 'room',
+      trashFee: r.trashRate || metadata?.trashFee || 20,
+      elecRate: r.electricRate || metadata?.elecRate || 8,
+      floor: r.floor || metadata?.floor,
       note: metadata?.note,
       dailyRate: metadata?.dailyRate
     };
