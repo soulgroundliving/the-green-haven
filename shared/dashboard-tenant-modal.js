@@ -507,7 +507,7 @@ function saveTenantInfo() {
     lineID: document.getElementById('modalTenantLineID').value,
     moveInDate: document.getElementById('modalTenantMoveIn').value,
     moveOutDate: document.getElementById('modalTenantContractEnd').value,
-    deposit: parseFloat(document.getElementById('modalTenantDeposit').value) || 0,
+    deposit: (RoomConfigManager.getRentPrice(building, roomId) || 0) * 2,
     // Meter fields removed - no longer used
     // elecMeterStart and waterMeterStart now managed by Firebase only
     notes: document.getElementById('modalTenantNotes').value,
@@ -581,24 +581,6 @@ function saveTenantInfo() {
       contractDocument: contractDocumentValue
     });
     currentEditTenantId = tenantId; // Update for future edits
-  }
-
-  // Handle rent price editing
-  const modalRentPrice = document.getElementById('modalRentPrice');
-  if (modalRentPrice && modalRentPrice.value) {
-    const newRent = parseFloat(modalRentPrice.value);
-    const currentRent = RoomConfigManager.getRentPrice(building, roomId);
-    if (newRent !== currentRent) {
-      RoomConfigManager.updateRentPrice(building, roomId, newRent);
-      if (currentLease) {
-        // Phase 4: Firebase-aware update to keep lease rent in sync across local+Firestore
-        if (typeof LeaseAgreementManager.updateLeaseWithFirebase === 'function') {
-          LeaseAgreementManager.updateLeaseWithFirebase(currentLease.id, building, {rentAmount: newRent});
-        } else {
-          LeaseAgreementManager.updateLease(currentLease.id, {rentAmount: newRent});
-        }
-      }
-    }
   }
 
   // Also save to legacy tenant_data for backward compatibility

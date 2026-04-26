@@ -2130,12 +2130,13 @@
         <div class="grid-2col-lg">
           <div>
             <label class="form-label-upper">💵 ค่าเช่า/เดือน (บาท)</label>
-            <input type="number" id="modalRentPrice" placeholder="0" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
-            <small style="color:var(--text-muted);font-size:.75rem;margin-top:4px;display:block;">แก้ได้ถ้าราคาต่อรองจาก config</small>
+            <input type="number" id="modalRentPrice" placeholder="0" class="input-lg" readonly style="background:#f5f5f5;cursor:default;color:var(--text-muted);">
+            <small style="color:var(--text-muted);font-size:.75rem;margin-top:4px;display:block;">📌 แก้จากหน้าจัดการห้องพักเท่านั้น</small>
           </div>
           <div>
             <label class="form-label-upper">💰 มัดจำ (บาท)</label>
-            <input type="number" id="modalTenantDeposit" placeholder="0" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="number" id="modalTenantDeposit" placeholder="0" class="input-lg" readonly style="background:#f5f5f5;cursor:default;color:var(--text-muted);">
+            <small style="color:var(--text-muted);font-size:.75rem;margin-top:4px;display:block;">📌 คำนวณอัตโนมัติ (ค่าเช่า × 2)</small>
           </div>
         </div>
 
