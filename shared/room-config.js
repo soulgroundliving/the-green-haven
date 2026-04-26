@@ -191,13 +191,16 @@ class RoomConfigManager {
             }));
           // Preserve any extra fields (floor/type/deposit) from local copy
           const local = JSON.parse(localStorage.getItem(`rooms_config_${building}`) || '{}');
-          if (local?.rooms) {
-            const localById = new Map(local.rooms.map(r => [r.id, r]));
-            rooms.forEach(r => {
-              const lr = localById.get(r.id);
-              if (lr) Object.assign(r, { floor: lr.floor, type: lr.type, deposit: r.deposit || lr.deposit });
-            });
-          }
+          const localById = local?.rooms ? new Map(local.rooms.map(r => [r.id, r])) : null;
+          rooms.forEach(r => {
+            const lr = localById?.get(r.id);
+            if (lr) Object.assign(r, { floor: lr.floor, type: lr.type, deposit: r.deposit || lr.deposit });
+            // RTDB may not have deposit yet — seed from DEFAULT so it's never 0
+            if (!r.deposit) {
+              const defRoom = (DEFAULT_ROOMS_CONFIG[building]?.rooms || []).find(d => d.id === r.id);
+              if (defRoom?.deposit) r.deposit = defRoom.deposit;
+            }
+          });
           const config = {
             name: building === 'nest' ? 'Nest Building' : 'ห้องแถว (Rooms Building)',
             building, rooms
