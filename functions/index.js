@@ -41,6 +41,11 @@ exports.notifyBillOnCreate = require('./notifyBillOnCreate').notifyBillOnCreate;
 // Open-Meteo for μg/m³ concentration (Community tier doesn't provide it).
 exports.getAirQuality = require('./getAirQuality').getAirQuality;
 
+// WAQI station-level alternative (free, registers Thai PCD government sensors).
+// Tracks the official iqair.com Sai Mai page closer than IQAir's city aggregate.
+// Same payload shape as getAirQuality so frontend can swap callable name only.
+exports.getAirQualityWAQI = require('./getAirQualityWAQI').getAirQualityWAQI;
+
 // Tax revenue aggregation (Phase 2 — scheduled monthly + on-demand HTTP)
 exports.aggregateMonthlyRevenueScheduled = require('./aggregateMonthlyRevenue').aggregateMonthlyRevenueScheduled;
 exports.aggregateMonthlyRevenue = require('./aggregateMonthlyRevenue').aggregateMonthlyRevenue;

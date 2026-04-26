@@ -1901,7 +1901,7 @@
                 </span>
             </div>
             <p id="weather-date" style="text-align:right; font-size:.65rem; color:#374151; opacity:.7; margin:6px 0 0;">—</p>
-            <p style="text-align:right; font-size:.6rem; color:#374151; opacity:.55; margin:2px 0 0;">AQI by IQAir · Weather by Open-Meteo</p>
+            <p style="text-align:right; font-size:.6rem; color:#374151; opacity:.55; margin:2px 0 0;">AQI by <a href="https://waqi.info/" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline;">World Air Quality Index</a> (Thai PCD) · Weather by Open-Meteo</p>
         </div>
 
         <div id="heat-alert" class=" card bg-[#FFF9F2] rounded-[2rem] p-5 border border-[#FFEDE0] flex gap-4 shadow-sm">
@@ -4157,7 +4157,9 @@
                 fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=Asia%2FBangkok`),
                 (async () => {
                     if (!window.firebase?.functions?.httpsCallable) return null;
-                    const callable = window.firebase.functions.httpsCallable('getAirQuality');
+                    // WAQI is station-level (Thai PCD sensors); IQAir Community tier
+                    // returns Sai Mai city aggregate which can lag the per-station value.
+                    const callable = window.firebase.functions.httpsCallable('getAirQualityWAQI');
                     const r = await callable({ lat: LAT, lon: LON });
                     return r?.data || null;
                 })()
