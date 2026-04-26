@@ -32,6 +32,8 @@ exports.sendComplaintConfirmation = require('./complaintAndGamification').sendCo
 exports.cleanupResolvedComplaints = require('./complaintAndGamification').cleanupResolvedComplaints;
 exports.awardRentPaymentPoints = require('./complaintAndGamification').awardRentPaymentPoints;
 exports.awardComplaintFreeMonth = require('./complaintAndGamification').awardComplaintFreeMonth;
+// Admin-only manual trigger / dry-run wrapper for the same logic.
+exports.awardComplaintFreeMonthManual = require('./complaintAndGamification').awardComplaintFreeMonthManual;
 exports.checkAndAwardBadges = require('./complaintAndGamification').checkAndAwardBadges;
 exports.calculateTenantRank = require('./complaintAndGamification').calculateTenantRank;
 exports.getLeaderboard = require('./complaintAndGamification').getLeaderboard;

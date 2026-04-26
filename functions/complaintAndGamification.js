@@ -236,6 +236,93 @@ exports.awardRentPaymentPoints = functions.region('asia-southeast1').https.onCal
   }
 });
 
+// Shared logic — extracted so both the scheduled trigger and the
+// admin-only HTTP trigger (manual / dry-run) can share it.
+async function _runAwardComplaintFreeMonth({ dryRun = false } = {}) {
+  const now = new Date();
+  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  const prevMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const monthKey = prevMonthStart.slice(0, 7);
+
+  const complaintsSnap = await firestore.collection('complaints')
+    .where('createdAt', '>=', prevMonthStart)
+    .where('createdAt', '<',  prevMonthEnd)
+    .get();
+
+  const complainedRooms = new Set();
+  complaintsSnap.forEach(d => {
+    const c = d.data();
+    if (c.building === 'nest' && c.room) complainedRooms.add(String(c.room));
+  });
+
+  const nestSnap = await firestore.collection('tenants').doc('nest').collection('list').get();
+  let awarded = 0, skippedAlreadyAwarded = 0, skippedHadComplaint = 0;
+  const wouldAward = [];  // names of tenants who'd get points (dry-run only)
+
+  for (const tenantDoc of nestSnap.docs) {
+    const roomId = tenantDoc.id;
+    if (complainedRooms.has(String(roomId))) { skippedHadComplaint++; continue; }
+
+    const markerRef = tenantDoc.ref.collection('complaintFreeMonthAwarded').doc(monthKey);
+    const markerSnap = await markerRef.get();
+    if (markerSnap.exists) { skippedAlreadyAwarded++; continue; }
+
+    if (dryRun) {
+      wouldAward.push(roomId);
+      continue;
+    }
+
+    const batch = firestore.batch();
+    batch.update(tenantDoc.ref, {
+      'gamification.points': admin.firestore.FieldValue.increment(40),
+      'metadata.updatedAt': new Date().toISOString()
+    });
+    batch.set(markerRef, { awardedAt: new Date().toISOString(), points: 40 });
+    await batch.commit();
+    awarded++;
+  }
+
+  return {
+    monthKey, awarded, skippedAlreadyAwarded, skippedHadComplaint,
+    total: nestSnap.size,
+    complaintsLastMonth: complaintsSnap.size,
+    complainedRooms: Array.from(complainedRooms),
+    ...(dryRun ? { dryRun: true, wouldAward } : {})
+  };
+}
+
+/**
+ * Admin-only HTTP wrapper for manual trigger and dry-run inspection.
+ * Useful for verifying behavior without waiting for the monthly cron.
+ *   curl -X POST -H "Authorization: Bearer <idToken>" \
+ *        "https://asia-southeast1-the-green-haven.cloudfunctions.net/awardComplaintFreeMonthManual?dryRun=1"
+ */
+exports.awardComplaintFreeMonthManual = functions
+  .region('asia-southeast1')
+  .runWith({ timeoutSeconds: 120 })
+  .https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    if (req.method === 'OPTIONS') {
+      res.set('Access-Control-Allow-Methods', 'POST');
+      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      return res.status(204).send('');
+    }
+    if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
+
+    const { requireAdmin } = require('./_auth');
+    const decoded = await requireAdmin(req, res);
+    if (!decoded) return;
+
+    const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true';
+    try {
+      const result = await _runAwardComplaintFreeMonth({ dryRun });
+      return res.status(200).json({ success: true, ...result });
+    } catch (e) {
+      console.error('awardComplaintFreeMonthManual failed:', e);
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
 /**
  * Auto-award 40 points to every Nest tenant who filed no complaints in the
  * previous calendar month. Runs at 00:01 BKK on the 1st of each month.
@@ -254,63 +341,7 @@ exports.awardComplaintFreeMonth = functions.region('asia-southeast1').pubsub
   .schedule('1 0 1 * *')
   .timeZone('Asia/Bangkok')
   .onRun(async () => {
-    const now = new Date();
-    // Previous calendar month bounds (inclusive start, exclusive end) in ISO.
-    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-    const prevMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const monthKey = prevMonthStart.slice(0, 7); // 'YYYY-MM'
-
-    // 1. Pull every complaint from the previous month in one query.
-    //    Single-field range filter — uses the auto-created createdAt index;
-    //    no composite index needed.
-    const complaintsSnap = await firestore.collection('complaints')
-      .where('createdAt', '>=', prevMonthStart)
-      .where('createdAt', '<',  prevMonthEnd)
-      .get();
-
-    // Index by `nest/${room}` for O(1) lookup below.
-    const complainedRooms = new Set();
-    complaintsSnap.forEach(d => {
-      const c = d.data();
-      if (c.building === 'nest' && c.room) {
-        complainedRooms.add(String(c.room));
-      }
-    });
-
-    // 2. Walk every Nest tenant and award if they didn't complain.
-    const nestSnap = await firestore.collection('tenants').doc('nest').collection('list').get();
-    let awarded = 0;
-    let skippedAlreadyAwarded = 0;
-    let skippedHadComplaint = 0;
-
-    for (const tenantDoc of nestSnap.docs) {
-      const roomId = tenantDoc.id;
-      if (complainedRooms.has(String(roomId))) {
-        skippedHadComplaint++;
-        continue;
-      }
-
-      // Idempotency guard — don't double-award if the function retries.
-      const markerRef = tenantDoc.ref.collection('complaintFreeMonthAwarded').doc(monthKey);
-      const markerSnap = await markerRef.get();
-      if (markerSnap.exists) {
-        skippedAlreadyAwarded++;
-        continue;
-      }
-
-      // Atomic award: increment + mark in a single batch so we never end up
-      // with one written and not the other.
-      const batch = firestore.batch();
-      batch.update(tenantDoc.ref, {
-        'gamification.points': admin.firestore.FieldValue.increment(40),
-        'metadata.updatedAt': new Date().toISOString()
-      });
-      batch.set(markerRef, { awardedAt: new Date().toISOString(), points: 40 });
-      await batch.commit();
-      awarded++;
-    }
-
-    const result = { monthKey, awarded, skippedAlreadyAwarded, skippedHadComplaint, total: nestSnap.size };
+    const result = await _runAwardComplaintFreeMonth({ dryRun: false });
     console.log('🎯 awardComplaintFreeMonth:', JSON.stringify(result));
     return result;
   });
