@@ -232,10 +232,12 @@ class LeaseAgreementManager {
         window.firebase.firestoreFunctions.collection(db, `leases/${building}/list`),
         leaseId
       );
-      await window.firebase.firestoreFunctions.updateDoc(docRef, {
+      // setDoc(merge:true) — dashboard.html doesn't expose updateDoc, and merge
+      // semantics are equivalent (write specified fields, don't touch others).
+      await window.firebase.firestoreFunctions.setDoc(docRef, {
         ...updates,
         updatedAt: new Date().toISOString()
-      });
+      }, { merge: true });
       console.log(`✅ Lease ${leaseId} updated at leases/${building}/list/${leaseId}`);
     } catch (error) {
       console.warn(`⚠️ Firebase update failed for lease ${leaseId}:`, error.message);
