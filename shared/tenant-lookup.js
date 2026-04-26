@@ -14,12 +14,27 @@ class TenantLookup {
   // Phase 4 SSoT: tenants/{building}/list/{roomId} is keyed by roomId, with
   // tenant identity merged with lease subobject. Try direct lookup first,
   // fall back to legacy lease→tenantId chain only if SSoT doc missing.
+  // Project lease subobject onto flat fields (contractEnd, deposit, etc.)
+  // so modal populate code that reads flat fields keeps working.
   static getTenantByRoom(building, roomId) {
     if (!building || !roomId) return null;
 
     // SSoT path — direct roomId lookup
     const ssotDoc = TenantConfigManager.getTenant(building, String(roomId));
-    if (ssotDoc && ssotDoc.name) return ssotDoc;
+    if (ssotDoc && ssotDoc.name) {
+      const lease = ssotDoc.lease || {};
+      return {
+        ...ssotDoc,
+        // Flat-field projection for legacy modal/card render code
+        contractEnd: ssotDoc.contractEnd || lease.endDate || lease.moveOutDate || ssotDoc.moveOutDate || null,
+        moveInDate:  ssotDoc.moveInDate  || lease.startDate || lease.moveInDate || null,
+        moveOutDate: ssotDoc.moveOutDate || lease.endDate || lease.moveOutDate || null,
+        deposit:     (ssotDoc.deposit !== undefined && ssotDoc.deposit !== null) ? ssotDoc.deposit : (lease.deposit ?? null),
+        rentAmount:  ssotDoc.rentAmount ?? lease.rentAmount ?? null,
+        // Field name aliases used by the modal populate code
+        vehiclePlate: ssotDoc.vehiclePlate || ssotDoc.licensePlate || null,
+      };
+    }
 
     // Legacy fallback
     const lease = LeaseAgreementManager.getActiveLease(building, roomId);
