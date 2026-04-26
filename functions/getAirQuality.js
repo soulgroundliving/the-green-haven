@@ -21,13 +21,14 @@ const admin     = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();
 
-// Sai Mai district coords — The Green Haven is here. Used by /v2/nearest_station
-// to pick the saimai-50 station (matches https://iqair.com/th/thailand/bangkok/bangkok/saimai-50).
+// Sai Mai district coords — The Green Haven is here. /v2/nearest_city at these
+// coords resolves to "Sai Mai" city (verified via curl 2026-04-26: data.city='Sai Mai').
+// /v2/nearest_station was tried but Community tier returns permission_denied
+// (station-level access requires Pro tier $295/mo). City aggregate is good enough
+// — it's already Sai Mai-specific, just a multi-station average rather than one sensor.
 const DEFAULT_LAT = 13.92;
 const DEFAULT_LON = 100.64;
-// Cache namespace bumped to _station_v1 when we switched from nearest_city to
-// nearest_station — prevents a 1h stuck-on-stale-city-aggregate after deploy.
-const CACHE_DOC   = 'system/airQualityCache_station_v1';
+const CACHE_DOC   = 'system/airQualityCache';
 const CACHE_TTL   = 60 * 60 * 1000;  // 1 hour
 // IQAir maps mainus to short codes — surface readable Thai labels client-side.
 const POLLUTANT_LABELS = {
@@ -57,9 +58,7 @@ function _normalize(iqairData, openMeteoData) {
     mainLabel:     pol.label,
     concentration: concentration != null && !isNaN(concentration) ? Number(concentration.toFixed(1)) : null,
     timestamp:     cur.ts || new Date().toISOString(),
-    // /v2/nearest_station returns data.name (e.g. "Saimai, Bangkok") instead of data.city.
-    // Keep the field name `city` for backward-compat with cached payloads + any future consumer.
-    city:          iqairData?.data?.name || iqairData?.data?.city || iqairData?.data?.local_name || null,
+    city:          iqairData?.data?.city   || null,
     // Weather payload (IQAir bundles it in the same response — saves an Open-Meteo call)
     temp:     Number(wx.tp)  || 0,
     humidity: Number(wx.hu)  || 0,
@@ -101,10 +100,11 @@ exports.getAirQuality = functions
       throw new functions.https.HttpsError('failed-precondition',
         'IQAIR_API_KEY not configured on server');
     }
-    // nearest_station returns the closest individual monitoring station's reading
-    // (e.g. saimai-50 for Sai Mai), not a city-wide aggregate. This matches what
-    // tenants see on the official IQAir page for our district.
-    const iqairUrl    = `https://api.airvisual.com/v2/nearest_station?lat=${lat}&lon=${lon}&key=${apiKey}`;
+    // nearest_city resolves coords→nearest IQAir city. At our default coords
+    // (13.92, 100.64) this returns data.city='Sai Mai' (the district we're in),
+    // so the AQI is already Sai Mai-specific — no need for nearest_station
+    // (which is Pro-tier only on Community key).
+    const iqairUrl    = `https://api.airvisual.com/v2/nearest_city?lat=${lat}&lon=${lon}&key=${apiKey}`;
     const openMeteoUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=pm2_5,pm10&timezone=Asia%2FBangkok`;
 
     let payload;
