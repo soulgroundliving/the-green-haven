@@ -3882,17 +3882,32 @@ async function initGamificationPage() {
   }
 
   const results = allTenants.map(t => {
-    const roomId = t.id || t.room;
+    // Local TenantConfigManager exposes tenants by `roomId`. The legacy
+    // `t.id`/`t.room` aliases were never populated, so the lookup always
+    // missed and points/badges defaulted to 0 across the board.
+    const roomId = t.roomId || t.id || t.room;
     const data = roomId ? (dataByKey.get(t.building + '/' + roomId) || {}) : {};
-    return { ...t, points: data.gamification?.points || 0, badges: data.gamification?.badges || [] };
+    return {
+      ...t,
+      roomId,
+      // The canonical SSoT doc holds the tenant's display name; the local
+      // config object only has room metadata. Prefer Firestore name fields.
+      name: data.name || (data.firstName && data.lastName ? `${data.firstName} ${data.lastName}` : null) || t.name,
+      points: data.gamification?.points || 0,
+      badges: data.gamification?.badges || []
+    };
   });
 
-  const scored = results.map(t => {
-    const tier = window.GamificationRules
-      ? window.GamificationRules.getLevelForPoints(t.points)
-      : { emoji: '🌱', name: 'Seedling' };
-    return { name: t.name || t.id || t.room, points: t.points, rank: `${tier.emoji} ${tier.name}`, badges: t.badges };
-  }).sort((a, b) => b.points - a.points);
+  // Drop vacant rooms — no tenant name means there's no one to rank.
+  const scored = results
+    .filter(t => t.name)
+    .map(t => {
+      const tier = window.GamificationRules
+        ? window.GamificationRules.getLevelForPoints(t.points)
+        : { emoji: '🌱', name: 'Seedling' };
+      return { name: t.name, points: t.points, rank: `${tier.emoji} ${tier.name}`, badges: t.badges };
+    })
+    .sort((a, b) => b.points - a.points);
 
   if (scored.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">ยังไม่มีข้อมูลผู้เช่า</td></tr>';
