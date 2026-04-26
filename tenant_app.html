@@ -6232,34 +6232,44 @@
                 // doc's linkedAuthUid still matches and Firestore rules let us write.
                 // If the user has a previously-linked phone, unlink first (link op fails
                 // when a provider is already linked).
-                // Build credential then sign IN with it (signInWithCredential, not link).
-                // We previously tried linkWithCredential to preserve the anon UID, but the
-                // SDK's auto token refresh on securetoken.googleapis.com 403s right after
-                // the link, leaving the next Firestore request with a stale token. Instead
-                // we sign in as the phone user (UID changes), then call setVerifiedPhone CF
-                // which uses admin SDK to write — server-side bypasses the entire client
-                // auth-state mess.
+                // Use linkWithCredential to UPGRADE the existing user (preserves UID,
+                // adds 'phone' provider). signInWithCredential created a brand-new
+                // phone-auth UID which broke the tenant doc's linkedAuthUid lineage and
+                // caused permanent data-read failures after refresh. Link keeps the
+                // original anon UID intact, so all Firestore reads continue to work.
                 const credential = window.firebasePhone.PhoneAuthProvider.credential(_otpVerificationId, code);
-                const uidBefore = window.firebaseAuth.currentUser?.uid;
+                const user = window.firebaseAuth.currentUser;
+                if (!user) {
+                    _setOtpStatus('⛔ Session หาย — รีเฟรชหน้าใหม่', 'error'); btn.disabled = false; return;
+                }
+                const uidBefore = user.uid;
                 const lineUserId = (typeof window._taLineUserId === 'string' && window._taLineUserId) ||
                                    sessionStorage.getItem('lineUserId') || null;
-                console.log('[OTP] before signIn: uid=', uidBefore, 'lineUserId=', lineUserId);
-                let signInRes;
+                console.log('[OTP] before link: uid=', uidBefore, 'providers=', user.providerData?.map(p => p.providerId), 'lineUserId=', lineUserId);
+
+                // Unlink any previously-linked phone first — link rejects when a provider
+                // is already linked. Swallow errors (no-op if no phone was linked).
+                if (user.providerData?.some(p => p.providerId === 'phone')) {
+                    try { await window.firebasePhone.unlink(user, 'phone'); } catch(_) {}
+                }
+
                 try {
-                    const { signInWithCredential } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
-                    signInRes = await signInWithCredential(window.firebaseAuth, credential);
+                    await window.firebasePhone.linkWithCredential(user, credential);
                 } catch (le) {
-                    console.error('[OTP] signInWithCredential failed:', le?.code, le?.message);
+                    console.error('[OTP] linkWithCredential failed:', le?.code, le?.message);
                     if (le?.code === 'auth/invalid-verification-code') {
                         _setOtpStatus('⛔ รหัส OTP ไม่ถูกต้อง', 'error');
                     } else if (le?.code === 'auth/code-expired') {
                         _setOtpStatus('⛔ รหัสหมดอายุ — ขอใหม่', 'error');
+                    } else if (le?.code === 'auth/credential-already-in-use') {
+                        _setOtpStatus('⛔ เบอร์นี้ถูกใช้แล้วในระบบ — ติดต่อ admin', 'error');
                     } else {
                         _setOtpStatus('⛔ ยืนยันไม่สำเร็จ: ' + (le?.code || le?.message), 'error');
                     }
                     btn.disabled = false; return;
                 }
-                console.log('[OTP] signed in as phone uid=', signInRes?.user?.uid);
+                const uidAfter = window.firebaseAuth.currentUser?.uid;
+                console.log('[OTP] after link: uid=', uidAfter, '(unchanged=', uidBefore === uidAfter, ')');
 
                 if (!_taRoom || !_taBuilding) {
                     _setOtpStatus('⛔ ข้อมูลห้องไม่พร้อม', 'error'); btn.disabled = false; return;
@@ -6267,6 +6277,7 @@
 
                 _setOtpStatus('⏳ กำลังบันทึก…');
                 try {
+                    // Server-side write via CF to bypass any token-refresh fragility post-link.
                     const setVerified = window.firebase.functions.httpsCallable('setVerifiedPhone');
                     const cfRes = await setVerified({
                         oldAnonUid: uidBefore,
@@ -6279,25 +6290,11 @@
                 } catch (we) {
                     console.error('[OTP] setVerifiedPhone CF failed:', we?.code, we?.message);
                     _setOtpStatus('⛔ บันทึกไม่สำเร็จ: ' + (we?.message || we?.code || 'unknown'), 'error');
-                    // Restore anon session so the rest of the page still works
-                    try {
-                        const { signInAnonymously } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
-                        await signInAnonymously(window.firebaseAuth);
-                    } catch(_) {}
                     btn.disabled = false; return;
                 }
 
                 _taTenant = { ..._taTenant, phone: _otpPendingPhone, phoneVerifiedAt: new Date().toISOString() };
                 window._tenantAppTenant = _taTenant;
-
-                // Restore anonymous session so non-phone code paths (email save, etc.)
-                // keep working with the original tenant rules.
-                try {
-                    const { signInAnonymously } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
-                    await signInAnonymously(window.firebaseAuth);
-                } catch (re) {
-                    console.warn('re-auth anon failed:', re);
-                }
 
                 if (typeof renderProfilePage === 'function') renderProfilePage();
                 _taTenant = { ..._taTenant, phone: _otpPendingPhone, phoneVerifiedAt: new Date().toISOString() };
