@@ -39,10 +39,26 @@
     <script src="./shared/sentry-init.js"></script>
     <!-- QR Code library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- html2canvas for receipt download (ported from tenant.html) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- jsPDF (optional PDF export) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- html2canvas: lazy-loaded on first receipt download (≈150KB).
+         jsPDF was previously loaded eagerly but is never invoked in this
+         page — receipts are PNG via canvas.toDataURL — so we drop it. -->
+    <script>
+      window.ensureHtml2Canvas = (function () {
+        let pending = null;
+        return function () {
+          if (typeof window.html2canvas === 'function') return Promise.resolve();
+          if (pending) return pending;
+          pending = new Promise((res, rej) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            s.onload = res;
+            s.onerror = () => { pending = null; rej(new Error('html2canvas failed to load')); };
+            document.head.appendChild(s);
+          });
+          return pending;
+        };
+      })();
+    </script>
     <!-- LINE LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <!-- Shared logic scripts -->
@@ -9919,7 +9935,7 @@
             try {
                 const src = document.getElementById('receiptContent') || document.querySelector('#payment-step-3 .receipt-card');
                 if (!src) { toast('ไม่พบข้อมูลใบเสร็จ', 'error'); return; }
-                if (typeof html2canvas !== 'function') { toast('กำลังโหลดไลบรารี โปรดลองใหม่', 'error'); return; }
+                try { await window.ensureHtml2Canvas(); } catch (e) { toast('โหลดไลบรารีไม่สำเร็จ', 'error'); return; }
                 const tmp = document.createElement('div');
                 tmp.style.cssText = 'position:fixed; left:-9999px; background:#fff; padding:2rem; width:600px;';
                 tmp.innerHTML = src.innerHTML;
@@ -9942,7 +9958,7 @@
 
         async function downloadReceiptForBill(billId, monthName, year) {
             try {
-                if (typeof html2canvas !== 'function') { toast('กำลังโหลดไลบรารี', 'error'); return; }
+                try { await window.ensureHtml2Canvas(); } catch (e) { toast('โหลดไลบรารีไม่สำเร็จ', 'error'); return; }
                 let bill = null;
                 for (const y of [2567, 2568, 2569, 2570]) {
                     const data = localStorage.getItem(`bills_${y}`);
@@ -9987,7 +10003,7 @@
             try {
                 const preview = document.getElementById('billTemplatePreview');
                 if (!preview) { toast('ไม่มีเทมเพลทบิล', 'error'); return; }
-                if (typeof html2canvas !== 'function') { toast('กำลังโหลดไลบรารี', 'error'); return; }
+                try { await window.ensureHtml2Canvas(); } catch (e) { toast('โหลดไลบรารีไม่สำเร็จ', 'error'); return; }
                 const tmp = document.createElement('div');
                 tmp.style.cssText = 'position:fixed; left:-9999px; background:#fff; padding:2rem; width:800px;';
                 tmp.innerHTML = `<div style="padding:1rem;">${preview.innerHTML}</div>`;
