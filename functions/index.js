@@ -21,6 +21,11 @@ exports.setVerifiedPhone = require('./setVerifiedPhone').setVerifiedPhone;
 // into single SSoT at tenants/{building}/list/{roomId}. Admin-only. Dry-run by default.
 exports.migrateTenantsToSSoT = require('./migrateTenantsToSSoT').migrateTenantsToSSoT;
 
+// Phase 6 cleanup: drop top-level dupes in tenants/{b}/list/{r}, delete legacy
+// tenants/{b}/list/TENANT_* docs, drop .tenant/.lease/.operations from
+// buildings/{alias}/rooms/{r}. Admin-only. Dry-run by default.
+exports.cleanupTenantsSSoT = require('./cleanupTenantsSSoT').cleanupTenantsSSoT;
+
 // Complaint & Gamification
 exports.onComplaintCreated = require('./complaintAndGamification').onComplaintCreated;
 exports.sendComplaintConfirmation = require('./complaintAndGamification').sendComplaintConfirmation;
