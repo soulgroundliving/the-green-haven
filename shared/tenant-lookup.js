@@ -10,19 +10,45 @@ class TenantLookup {
     return rooms[tenantId] || nest[tenantId] || null;
   }
 
-  // Get tenant occupying a specific room
+  // Get tenant occupying a specific room.
+  // Phase 4 SSoT: tenants/{building}/list/{roomId} is keyed by roomId, with
+  // tenant identity merged with lease subobject. Try direct lookup first,
+  // fall back to legacy lease→tenantId chain only if SSoT doc missing.
   static getTenantByRoom(building, roomId) {
     if (!building || !roomId) return null;
 
+    // SSoT path — direct roomId lookup
+    const ssotDoc = TenantConfigManager.getTenant(building, String(roomId));
+    if (ssotDoc && ssotDoc.name) return ssotDoc;
+
+    // Legacy fallback
     const lease = LeaseAgreementManager.getActiveLease(building, roomId);
     if (!lease || !lease.tenantId) return null;
-
     return TenantConfigManager.getTenant(building, lease.tenantId);
   }
 
-  // Get lease for a room
+  // Get lease for a room.
+  // Phase 4 SSoT: lease subobject lives under tenants/{building}/list/{roomId}.lease
   static getLeaseByRoom(building, roomId) {
     if (!building || !roomId) return null;
+
+    // SSoT path — derive lease from the merged tenant doc
+    const ssotDoc = TenantConfigManager.getTenant(building, String(roomId));
+    const ssotLease = ssotDoc?.lease;
+    if (ssotLease && (ssotLease.status === 'active' || ssotLease.rentAmount || ssotLease.deposit)) {
+      return {
+        ...ssotLease,
+        building,
+        roomId: String(roomId),
+        tenantId: ssotDoc.tenantId,
+        // Compatibility — flat fields for legacy consumers
+        moveInDate: ssotLease.startDate || ssotLease.moveInDate,
+        moveOutDate: ssotLease.endDate || ssotLease.moveOutDate,
+        tenantName: ssotDoc.name,
+      };
+    }
+
+    // Legacy fallback
     return LeaseAgreementManager.getActiveLease(building, roomId);
   }
 
