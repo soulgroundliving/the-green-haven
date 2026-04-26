@@ -3927,8 +3927,17 @@ async function initGamificationPage() {
 }
 
 function switchGamificationTab(tabName, btn) {
-  document.querySelectorAll('[id^="gamification"]').forEach(el => el.classList.add('u-hidden'));
-  document.getElementById('gamification' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.remove('u-hidden');
+  document.querySelectorAll('[id^="gamification"]').forEach(el => {
+    el.classList.add('u-hidden');
+    // Static HTML ships gamification tabs with inline display:none/block.
+    // Clear the inline rule so the class controls visibility from now on.
+    if (el.style.display) el.style.display = '';
+  });
+  const sel = document.getElementById('gamification' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+  if (sel) {
+    sel.classList.remove('u-hidden');
+    if (sel.style.display) sel.style.display = '';
+  }
   document.querySelectorAll('#page-gamification button').forEach(b => b.classList.remove('u-gamification-tab-active'));
   document.querySelectorAll('#page-gamification button').forEach(b => b.classList.add('u-gamification-tab'));
   btn.classList.add('u-gamification-tab-active');

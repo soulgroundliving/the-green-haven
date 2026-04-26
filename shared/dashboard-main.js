@@ -207,21 +207,20 @@ function switchDashboardTab(tabName, btn) {
 
 // ===== REQUESTS & APPROVALS TAB SWITCHING =====
 function switchRequestsTab(tabName, btn) {
-  // Hide all requests tabs
+  // Hide all requests tabs (clear inline display so the class wins on next show)
   document.querySelectorAll('.requests-mgmt-content').forEach(tab => {
     tab.classList.add('u-hidden');
+    if (tab.style.display) tab.style.display = '';
   });
 
   // Remove active style from all tab buttons
   document.querySelectorAll('.requests-mgmt-tab').forEach(button => button.classList.remove('active'));
 
-  // Hide all tab content
-  document.querySelectorAll('.requests-mgmt-content').forEach(tab => tab.classList.add('u-hidden'));
-
   // Show selected tab
   const tabElement = document.getElementById('requests-tab-' + tabName);
   if(tabElement) {
     tabElement.classList.remove('u-hidden');
+    if (tabElement.style.display) tabElement.style.display = '';
     if(btn) btn.classList.add('active');
     // Initialize content for each tab
     if(tabName === 'maintenance') initMaintenancePage();
@@ -403,9 +402,10 @@ async function rejectLiffLink(lineUserId){
 
 // ===== PEOPLE MANAGEMENT TAB SWITCHING =====
 function switchPeopleTab(tabName, btn) {
-  // Hide all people tabs
+  // Hide all people tabs (clear inline display so the class wins on next show)
   document.querySelectorAll('.people-mgmt-content').forEach(tab => {
     tab.classList.add('u-hidden');
+    if (tab.style.display) tab.style.display = '';
   });
 
   // Remove active style from all tab buttons
@@ -417,6 +417,7 @@ function switchPeopleTab(tabName, btn) {
   const tabElement = document.getElementById('people-tab-' + tabName);
   if(tabElement) {
     tabElement.classList.remove('u-hidden');
+    if (tabElement.style.display) tabElement.style.display = '';
   }
 
   // Highlight active button

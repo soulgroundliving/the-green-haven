@@ -1,9 +1,10 @@
 const _escWC = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 // ===== CONTENT MANAGEMENT TAB SWITCHING =====
 function switchContentTab(tabName, btn) {
-  // Hide all content tabs
+  // Hide all content tabs (clear inline display so the class wins on next show)
   document.querySelectorAll('.content-mgmt-content').forEach(tab => {
     tab.classList.add('u-hidden');
+    if (tab.style.display) tab.style.display = '';
   });
 
   // Remove active style from all tab buttons
@@ -14,6 +15,7 @@ function switchContentTab(tabName, btn) {
   const resolvedBtn = btn || document.getElementById('tab-' + tabName + '-btn');
   if(tabElement) {
     tabElement.classList.remove('u-hidden');
+    if (tabElement.style.display) tabElement.style.display = '';
     if(resolvedBtn) resolvedBtn.classList.add('active');
     // Lazy-init tab content
     if(tabName === 'announcements') initAnnouncementsPage();

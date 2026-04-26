@@ -311,6 +311,8 @@ window.switchPVTab = function(tab, btn){
   const live    = document.getElementById('pv-tab-live');
   const hist    = document.getElementById('pv-tab-history');
   const monthly = document.getElementById('pv-tab-monthly');
+  // Static HTML ships hist/monthly with inline display:none. Clear it so the class wins.
+  [live, hist, monthly].forEach(el => { if (el && el.style.display) el.style.display = ''; });
   if(live)    live.classList.toggle('u-hidden', !((tab==='live')));
   if(hist)    hist.classList.toggle('u-hidden', !((tab==='history')));
   if(monthly) monthly.classList.toggle('u-hidden', !((tab==='monthly')));
