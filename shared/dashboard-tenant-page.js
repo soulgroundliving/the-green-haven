@@ -1,13 +1,33 @@
 // ===== TENANT MANAGEMENT =====
+// Phase 4 SSoT projection: SSoT docs have lease info nested under .lease,
+// but card-render code throughout the dashboard still reads flat fields
+// (t.contractEnd, t.deposit, t.moveInDate). Project lease subobject onto
+// the expected flat names so existing render code keeps working.
+function _projectSSoTToFlat(t) {
+  if (!t || typeof t !== 'object') return t;
+  const lease = t.lease || {};
+  return {
+    ...t,
+    contractEnd: t.contractEnd || lease.endDate || lease.moveOutDate || t.moveOutDate || null,
+    moveInDate:  t.moveInDate  || lease.startDate || lease.moveInDate || null,
+    moveOutDate: t.moveOutDate || lease.endDate || lease.moveOutDate || null,
+    deposit:     (t.deposit !== undefined && t.deposit !== null) ? t.deposit : (lease.deposit ?? null),
+    rentAmount:  t.rentAmount ?? lease.rentAmount ?? null,
+  };
+}
 function loadTenants(){
   // TenantConfigManager stores to tenant_master_data: {rooms: {id: {...}}, nest: {id: {...}}}
   // Flatten to {id: {...}} for backward compatibility
   const master = localStorage.getItem('tenant_master_data');
   if (master) {
     const raw = JSON.parse(master);
-    return Object.values(raw).reduce((acc, bld) => Object.assign(acc, bld), {});
+    const flat = Object.values(raw).reduce((acc, bld) => Object.assign(acc, bld), {});
+    Object.keys(flat).forEach(k => { flat[k] = _projectSSoTToFlat(flat[k]); });
+    return flat;
   }
-  return JSON.parse(localStorage.getItem('tenant_data')||'{}');
+  const legacy = JSON.parse(localStorage.getItem('tenant_data')||'{}');
+  Object.keys(legacy).forEach(k => { legacy[k] = _projectSSoTToFlat(legacy[k]); });
+  return legacy;
 }
 
 function saveTenants(t){localStorage.setItem('tenant_data',JSON.stringify(t));}
