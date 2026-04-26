@@ -143,6 +143,11 @@ function _setupTenantRealtimeListener(){
         updateTenantAlertBlock();
         updateRoomTypeCards();
       }
+      if(document.getElementById('page-property')?.style.display!=='none'){
+        const nestVisible = document.getElementById('property-nest-section')?.style.display!=='none';
+        if(nestVisible && typeof initNestPage==='function') initNestPage();
+        else if(typeof initRoomsPage==='function') initRoomsPage();
+      }
     },err=>console.warn('tenant listener error:',err));
     _tenantListenerUnsubscribers.push(unsub);
   });
