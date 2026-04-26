@@ -75,7 +75,7 @@
   // Import Firebase SDKs
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getDatabase, ref, set, get, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-  import { getAuth, signInAnonymously, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+  import { getAuth, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
   import { getFirestore, collection, collectionGroup, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
   import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
   // Phase 4D App Check disabled 2026-04-25 — see next_session_handoff.md
@@ -335,39 +335,35 @@
       console.log('✅ Firebase using existing auth (Email:', currentUser.email || 'unknown', ')');
     }
 
-    // Auth fallback: admin uses email/password via login.html, but Firebase Auth
-    // session restoration (from IndexedDB persistence) is async and can take longer
-    // than a flat 2-second timer. Listen for the first onAuthStateChanged fire
-    // (which Firebase guarantees once persistence has been read), and only fall back
-    // to anonymous if that first event yields a null user. This prevents the timer
-    // from racing the restore and kicking a logged-in admin into anon, which had
-    // been silently invalidating admin claims and breaking every isAdmin() rule.
+    // Admin auth: dashboard requires a real email/password Firebase Auth user
+    // (with admin:true custom claim). Anonymous fallback was removed — it was
+    // silently downgrading admins into anonymous sessions that fail every
+    // isAdmin() rule. Wait for Firebase Auth to restore from IndexedDB
+    // persistence (asynchronous, can take several seconds), then redirect to
+    // /login if no user appears. The redirect preserves the intended
+    // destination so login can return here afterwards.
     import("https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js").then(({ onAuthStateChanged }) => {
       let settled = false;
       const settle = (handler) => { if (!settled) { settled = true; handler(); } };
       const unsub = onAuthStateChanged(auth, (user) => {
-        if (user) {
-          settle(() => console.log('✅ Firebase auth active:', user.email || '(anon)'));
+        if (user && user.email) {
+          settle(() => console.log('✅ Firebase auth active:', user.email));
           unsub();
         } else {
-          // First fire saw null — wait a bit more in case persistence is still loading
-          // before falling back to anonymous.
-          setTimeout(async () => {
+          // First fire saw null (or anon) — give persistence a moment, then
+          // redirect to /login. No more silent anonymous fallback.
+          setTimeout(() => {
             if (settled) return;
-            try {
-              if (!auth?.currentUser) {
-                settle(() => console.log('🔓 No Firebase auth after restore window — signing in anonymously as fallback'));
-                await signInAnonymously(auth);
-                const banner = document.createElement('div');
-                banner.id = 'fbAuthLapsedBanner';
-                banner.style.cssText = 'position:fixed;top:60px;right:12px;z-index:9999;background:#fff3cd;color:#856404;border:1px solid #ffeaa7;border-radius:8px;padding:10px 14px;font-size:.85rem;font-family:Sarabun,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:320px;';
-                banner.innerHTML = '⚠️ Firebase session หมดอายุ — read ได้แต่ write ใช้ไม่ได้ <br><a href="/login" style="color:#1565c0;font-weight:700;text-decoration:underline;">→ Login ใหม่</a> <span style="float:right;cursor:pointer;color:#856404;" data-action="removeParent">✕</span>';
-                document.body.appendChild(banner);
-                setTimeout(() => banner?.remove(), 30000);
-              } else {
-                settle(() => console.log('✅ Firebase auth active (delayed restore):', auth.currentUser.email || '(anon)'));
-              }
-            } catch (e) { console.warn('auth fallback:', e?.message); }
+            const cur = auth?.currentUser;
+            if (cur && cur.email) {
+              settle(() => console.log('✅ Firebase auth active (delayed restore):', cur.email));
+            } else {
+              settle(() => {
+                console.warn('🔒 No admin auth — redirecting to /login');
+                const next = encodeURIComponent(location.pathname + location.search);
+                location.replace(`/login?next=${next}`);
+              });
+            }
             unsub();
           }, 4000);
         }

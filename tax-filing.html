@@ -866,9 +866,11 @@
 </div>
 
 <script type="module">
-  // Firebase (ESM) for taxSummary subscription + anonymous auth
+  // Firebase (ESM) for taxSummary subscription. Accountant must be a real
+  // signed-in user (admin or accountant claim); anonymous fallback removed
+  // per the dashboard auth policy.
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
   import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
   (async () => {
     try {
@@ -879,10 +881,29 @@
       window.firebaseApp = app;
       window.firebaseAuth = auth;
       window.firebase = { firestore: () => firestore, firestoreFunctions: { doc, onSnapshot } };
-      onAuthStateChanged(auth, async (user) => {
-        if (!user) { try { await signInAnonymously(auth); } catch(e) { console.warn('anon sign-in failed:', e); } return; }
-        window._authUid = user.uid;
-        window.dispatchEvent(new Event('authReady'));
+      let settled = false;
+      const unsub = onAuthStateChanged(auth, (user) => {
+        if (user && user.email) {
+          settled = true;
+          window._authUid = user.uid;
+          window.dispatchEvent(new Event('authReady'));
+          unsub();
+        } else {
+          setTimeout(() => {
+            if (settled) return;
+            const cur = auth.currentUser;
+            if (cur && cur.email) {
+              settled = true;
+              window._authUid = cur.uid;
+              window.dispatchEvent(new Event('authReady'));
+            } else {
+              console.warn('🔒 No accountant auth — redirecting to /login');
+              const next = encodeURIComponent(location.pathname + location.search);
+              location.replace(`/login?next=${next}`);
+            }
+            unsub();
+          }, 4000);
+        }
       });
     } catch (e) { console.error('Firebase init failed in tax-filing:', e); }
   })();
