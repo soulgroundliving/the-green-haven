@@ -237,60 +237,82 @@ exports.awardRentPaymentPoints = functions.region('asia-southeast1').https.onCal
 });
 
 /**
- * Auto-award points for no complaints in a month
+ * Auto-award 40 points to every Nest tenant who filed no complaints in the
+ * previous calendar month. Runs at 00:01 BKK on the 1st of each month.
+ *
+ * REWRITTEN 2026-04-26: previous version was broken — read from dead
+ * collectionGroup('complaintHistory') (frontend writes 'complaints' top-level),
+ * iterated wrong tenant path (top-level 'tenants' instead of canonical
+ * tenants/{building}/list/{roomId}), and the inner where-clause wasn't
+ * tenant-scoped. Net effect: every tenant got 40 free points unconditionally.
+ *
+ * Point economy is Nest-only per memory/point_economy_rules.md, so we only
+ * iterate tenants/nest/list. Idempotent: writes a marker doc per (room, month)
+ * so a function retry from Cloud Scheduler doesn't double-award.
  */
 exports.awardComplaintFreeMonth = functions.region('asia-southeast1').pubsub
-  .schedule('0 0 1 * *') // Run on 1st of every month at midnight
-  .onRun(async (context) => {
-    try {
-      console.log('🎯 Checking for complaint-free tenants...');
+  .schedule('1 0 1 * *')
+  .timeZone('Asia/Bangkok')
+  .onRun(async () => {
+    const now = new Date();
+    // Previous calendar month bounds (inclusive start, exclusive end) in ISO.
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+    const prevMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const monthKey = prevMonthStart.slice(0, 7); // 'YYYY-MM'
 
-      const lastMonth = new Date();
-      lastMonth.setMonth(lastMonth.getMonth() - 1);
+    // 1. Pull every complaint from the previous month in one query.
+    //    Single-field range filter — uses the auto-created createdAt index;
+    //    no composite index needed.
+    const complaintsSnap = await firestore.collection('complaints')
+      .where('createdAt', '>=', prevMonthStart)
+      .where('createdAt', '<',  prevMonthEnd)
+      .get();
 
-      const tenantsSnap = await firestore.collection('tenants').get();
+    // Index by `nest/${room}` for O(1) lookup below.
+    const complainedRooms = new Set();
+    complaintsSnap.forEach(d => {
+      const c = d.data();
+      if (c.building === 'nest' && c.room) {
+        complainedRooms.add(String(c.room));
+      }
+    });
 
-      for (const tenantDoc of tenantsSnap.docs) {
-        const tenantId = tenantDoc.id;
-        const tenantData = tenantDoc.data();
+    // 2. Walk every Nest tenant and award if they didn't complain.
+    const nestSnap = await firestore.collection('tenants').doc('nest').collection('list').get();
+    let awarded = 0;
+    let skippedAlreadyAwarded = 0;
+    let skippedHadComplaint = 0;
 
-        // Check if tenant has any recent complaints
-        const complaintsSnap = await firestore
-          .collectionGroup('complaintHistory')
-          .where('createdAt', '>=', lastMonth.toISOString())
-          .get();
-
-        let hasComplaints = false;
-
-        for (const complaintDoc of complaintsSnap.docs) {
-          const complaintData = complaintDoc.data();
-          // Check if this complaint belongs to this tenant
-          // This would need to be determined by checking the path
-          if (complaintData.date >= lastMonth.toISOString()) {
-            hasComplaints = true;
-            break;
-          }
-        }
-
-        if (!hasComplaints) {
-          // Award points for complaint-free month
-          const currentPoints = tenantData.gamification?.points || 0;
-          const newPoints = currentPoints + 40;
-
-          await firestore.collection('tenants').doc(tenantId).update({
-            'gamification.points': newPoints,
-            'metadata.updatedAt': new Date().toISOString()
-          });
-
-          console.log(`✅ Awarded complaint-free month bonus to ${tenantId}`);
-        }
+    for (const tenantDoc of nestSnap.docs) {
+      const roomId = tenantDoc.id;
+      if (complainedRooms.has(String(roomId))) {
+        skippedHadComplaint++;
+        continue;
       }
 
-      return true;
-    } catch (error) {
-      console.error('❌ Error awarding complaint-free bonuses:', error);
-      return false;
+      // Idempotency guard — don't double-award if the function retries.
+      const markerRef = tenantDoc.ref.collection('complaintFreeMonthAwarded').doc(monthKey);
+      const markerSnap = await markerRef.get();
+      if (markerSnap.exists) {
+        skippedAlreadyAwarded++;
+        continue;
+      }
+
+      // Atomic award: increment + mark in a single batch so we never end up
+      // with one written and not the other.
+      const batch = firestore.batch();
+      batch.update(tenantDoc.ref, {
+        'gamification.points': admin.firestore.FieldValue.increment(40),
+        'metadata.updatedAt': new Date().toISOString()
+      });
+      batch.set(markerRef, { awardedAt: new Date().toISOString(), points: 40 });
+      await batch.commit();
+      awarded++;
     }
+
+    const result = { monthKey, awarded, skippedAlreadyAwarded, skippedHadComplaint, total: nestSnap.size };
+    console.log('🎯 awardComplaintFreeMonth:', JSON.stringify(result));
+    return result;
   });
 
 /**
