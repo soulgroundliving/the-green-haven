@@ -142,28 +142,45 @@ class TenantConfigManager {
     return rooms[tenantId] || nest[tenantId] || null;
   }
 
+  // Phase 4 SSoT: extract roomId from tenantId pattern TENANT_<ts>_<roomId>
+  // (or use tenantData.roomId if present). Used to write to canonical key.
+  static _resolveRoomId(tenantId, tenantData) {
+    if (tenantData && tenantData.roomId) return String(tenantData.roomId);
+    const m = String(tenantId || '').match(/^TENANT_\d+_(.+)$/);
+    return m ? m[1] : (tenantId ? String(tenantId) : null);
+  }
+
   static async saveTenantToFirebase(building, tenantId, tenantData) {
     // 1. Save to localStorage
     const success = this.addTenant(building, tenantId, tenantData);
 
-    // 2. Try Firebase in parallel
+    // 2. Phase 4 SSoT: write to tenants/{building}/list/{roomId} (canonical key)
+    //    instead of {tenantId}. Store tenantId as a field inside the doc.
     try {
       if (!window.firebase) {
         console.warn('⚠️ Firebase not loaded');
         return success;
       }
 
+      const roomId = TenantConfigManager._resolveRoomId(tenantId, tenantData);
+      if (!roomId) {
+        console.warn(`⚠️ Cannot resolve roomId from tenantId=${tenantId}, skipping Firestore sync`);
+        return success;
+      }
+
       const db = window.firebase.firestore();
       const docRef = window.firebase.firestoreFunctions.doc(
         window.firebase.firestoreFunctions.collection(db, `tenants/${building}/list`),
-        tenantId
+        roomId
       );
       await window.firebase.firestoreFunctions.setDoc(docRef, {
         ...tenantData,
+        tenantId,
         building,
+        roomId,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      console.log(`✅ Tenant ${tenantId} synced to Firebase`);
+      console.log(`✅ Tenant synced to tenants/${building}/list/${roomId} (tenantId=${tenantId})`);
     } catch (error) {
       console.warn(`⚠️ Firebase sync failed for tenant ${tenantId}:`, error.message);
     }
@@ -210,23 +227,35 @@ class TenantConfigManager {
     // 1. Update in localStorage
     const success = this.updateTenant(building, tenantId, updates);
 
-    // 2. Try Firebase in parallel
+    // 2. Phase 4 SSoT: write to canonical roomId-keyed doc. Pull current tenant
+    //    record from localStorage to resolve roomId (older callers don't pass it).
     try {
       if (!window.firebase) {
         console.warn('⚠️ Firebase not loaded');
         return success;
       }
 
+      const current = this.getTenant(building, tenantId) || {};
+      const roomId = TenantConfigManager._resolveRoomId(tenantId, { ...current, ...updates });
+      if (!roomId) {
+        console.warn(`⚠️ Cannot resolve roomId from tenantId=${tenantId}, skipping Firestore sync`);
+        return success;
+      }
+
       const db = window.firebase.firestore();
       const docRef = window.firebase.firestoreFunctions.doc(
         window.firebase.firestoreFunctions.collection(db, `tenants/${building}/list`),
-        tenantId
+        roomId
       );
-      await window.firebase.firestoreFunctions.updateDoc(docRef, {
+      // setDoc(merge:true) so first write also creates the canonical doc.
+      await window.firebase.firestoreFunctions.setDoc(docRef, {
         ...updates,
+        tenantId,
+        building,
+        roomId,
         updatedAt: new Date().toISOString()
-      });
-      console.log(`✅ Tenant ${tenantId} updated in Firebase`);
+      }, { merge: true });
+      console.log(`✅ Tenant updated at tenants/${building}/list/${roomId} (tenantId=${tenantId})`);
     } catch (error) {
       console.warn(`⚠️ Firebase update failed for tenant ${tenantId}:`, error.message);
     }
@@ -238,20 +267,47 @@ class TenantConfigManager {
     // 1. Delete from localStorage
     const success = this.deleteTenant(building, tenantId);
 
-    // 2. Try Firebase in parallel
+    // 2. Phase 4 SSoT: delete the canonical roomId-keyed doc.
+    //    Don't delete the doc itself — clear identity fields only, so linkedAuthUid
+    //    + lease history archive references survive. Admin can re-assign tenant later.
     try {
       if (!window.firebase) {
         console.warn('⚠️ Firebase not loaded');
         return success;
       }
 
+      const current = this.getTenant(building, tenantId) || {};
+      const roomId = TenantConfigManager._resolveRoomId(tenantId, current);
+      if (!roomId) return success;
+
       const db = window.firebase.firestore();
-      const docRef = window.firebase.firestoreFunctions.doc(
-        window.firebase.firestoreFunctions.collection(db, `tenants/${building}/list`),
-        tenantId
-      );
-      await window.firebase.firestoreFunctions.deleteDoc(docRef);
-      console.log(`✅ Tenant ${tenantId} deleted from Firebase`);
+      const fs = window.firebase.firestoreFunctions;
+      const docRef = fs.doc(fs.collection(db, `tenants/${building}/list`), roomId);
+      // Mark moved-out instead of deleting (preserves linkedAuthUid + history)
+      await fs.setDoc(docRef, {
+        tenantId: null,
+        name: null,
+        firstName: null,
+        lastName: null,
+        phone: null,
+        email: null,
+        licensePlate: null,
+        idCardNumber: null,
+        address: null,
+        notes: null,
+        lineID: null,
+        moveInDate: null,
+        moveOutDate: null,
+        deposit: null,
+        contractDocument: null,
+        contractFileName: null,
+        companyInfo: null,
+        receiptType: null,
+        lease: { status: 'empty' },
+        movedOutAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      console.log(`✅ Tenant cleared at tenants/${building}/list/${roomId} (was tenantId=${tenantId})`);
     } catch (error) {
       console.warn(`⚠️ Firebase delete failed for tenant ${tenantId}:`, error.message);
     }

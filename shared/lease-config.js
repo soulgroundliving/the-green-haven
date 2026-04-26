@@ -146,11 +146,46 @@ class LeaseAgreementManager {
     return this.getActiveLease(building, roomId) !== null;
   }
 
+  // Phase 4 SSoT: project lease fields onto tenants/{b}/list/{roomId}.lease
+  // (current active lease snapshot). leases/{b}/list/{leaseId} stays as the
+  // history archive — old leases keep their record for audit / lease history.
+  static async _syncLeaseToTenantSSoT(building, roomId, leaseId, leaseData) {
+    if (!window.firebase || !roomId) return;
+    try {
+      const db = window.firebase.firestore();
+      const fs = window.firebase.firestoreFunctions;
+      const ref = fs.doc(db, 'tenants', building, 'list', String(roomId));
+      const leaseSubobject = {
+        startDate:        leaseData.moveInDate || leaseData.startDate || null,
+        endDate:          leaseData.moveOutDate || leaseData.endDate || null,
+        moveInDate:       leaseData.moveInDate || leaseData.startDate || null,
+        moveOutDate:      leaseData.moveOutDate || leaseData.endDate || null,
+        rentAmount:       leaseData.rentAmount ?? null,
+        deposit:          leaseData.deposit ?? null,
+        status:           leaseData.status || 'active',
+        contractDocument: leaseData.contractDocument || null,
+        contractFileName: leaseData.contractFileName || null,
+        documents:        leaseData.documents || leaseData.documentURLs || null,
+        leaseId:          leaseId,
+      };
+      await fs.setDoc(ref, {
+        lease: leaseSubobject,
+        tenantId: leaseData.tenantId || null,
+        building,
+        roomId: String(roomId),
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+      console.log(`✅ Lease projected to tenants/${building}/list/${roomId}.lease`);
+    } catch (e) {
+      console.warn(`⚠️ Lease SSoT sync failed for ${roomId}:`, e.message);
+    }
+  }
+
   static async createLeaseWithFirebase(leaseData) {
     // 1. Save to localStorage
     const leaseId = this.createLease(leaseData);
 
-    // 2. Try Firebase in parallel
+    // 2. Write archive at leases/{b}/list/{leaseId}
     try {
       if (!window.firebase) {
         console.warn('⚠️ Firebase not loaded');
@@ -168,10 +203,15 @@ class LeaseAgreementManager {
         createdDate: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }, { merge: false });
-      console.log(`✅ Lease ${leaseId} synced to Firebase`);
+      console.log(`✅ Lease ${leaseId} archived at leases/${leaseData.building}/list/${leaseId}`);
     } catch (error) {
       console.warn(`⚠️ Firebase sync failed for lease:`, error.message);
     }
+
+    // 3. Phase 4 SSoT: project current lease onto tenants/{b}/list/{roomId}.lease
+    await LeaseAgreementManager._syncLeaseToTenantSSoT(
+      leaseData.building, leaseData.roomId, leaseId, leaseData
+    );
 
     return leaseId;
   }
@@ -180,7 +220,7 @@ class LeaseAgreementManager {
     // 1. Update in localStorage
     const success = this.updateLease(leaseId, updates);
 
-    // 2. Try Firebase in parallel
+    // 2. Update archive
     try {
       if (!window.firebase) {
         console.warn('⚠️ Firebase not loaded');
@@ -196,9 +236,18 @@ class LeaseAgreementManager {
         ...updates,
         updatedAt: new Date().toISOString()
       });
-      console.log(`✅ Lease ${leaseId} updated in Firebase`);
+      console.log(`✅ Lease ${leaseId} updated at leases/${building}/list/${leaseId}`);
     } catch (error) {
       console.warn(`⚠️ Firebase update failed for lease ${leaseId}:`, error.message);
+    }
+
+    // 3. Phase 4 SSoT: re-project current lease snapshot to tenants/{b}/list/{roomId}
+    //    Pull full record so we project the merged result, not just the updates delta.
+    const fullLease = this.getLease(leaseId) || updates;
+    if (fullLease.roomId) {
+      await LeaseAgreementManager._syncLeaseToTenantSSoT(
+        building, fullLease.roomId, leaseId, fullLease
+      );
     }
 
     return success;
