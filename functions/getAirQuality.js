@@ -21,10 +21,13 @@ const admin     = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();
 
-// Bangkok coords — same as the Open-Meteo defaults the tenant app already used
+// Sai Mai district coords — The Green Haven is here. Used by /v2/nearest_station
+// to pick the saimai-50 station (matches https://iqair.com/th/thailand/bangkok/bangkok/saimai-50).
 const DEFAULT_LAT = 13.92;
 const DEFAULT_LON = 100.64;
-const CACHE_DOC   = 'system/airQualityCache';
+// Cache namespace bumped to _station_v1 when we switched from nearest_city to
+// nearest_station — prevents a 1h stuck-on-stale-city-aggregate after deploy.
+const CACHE_DOC   = 'system/airQualityCache_station_v1';
 const CACHE_TTL   = 60 * 60 * 1000;  // 1 hour
 // IQAir maps mainus to short codes — surface readable Thai labels client-side.
 const POLLUTANT_LABELS = {
@@ -54,7 +57,9 @@ function _normalize(iqairData, openMeteoData) {
     mainLabel:     pol.label,
     concentration: concentration != null && !isNaN(concentration) ? Number(concentration.toFixed(1)) : null,
     timestamp:     cur.ts || new Date().toISOString(),
-    city:          iqairData?.data?.city   || null,
+    // /v2/nearest_station returns data.name (e.g. "Saimai, Bangkok") instead of data.city.
+    // Keep the field name `city` for backward-compat with cached payloads + any future consumer.
+    city:          iqairData?.data?.name || iqairData?.data?.city || iqairData?.data?.local_name || null,
     // Weather payload (IQAir bundles it in the same response — saves an Open-Meteo call)
     temp:     Number(wx.tp)  || 0,
     humidity: Number(wx.hu)  || 0,
@@ -96,7 +101,10 @@ exports.getAirQuality = functions
       throw new functions.https.HttpsError('failed-precondition',
         'IQAIR_API_KEY not configured on server');
     }
-    const iqairUrl    = `https://api.airvisual.com/v2/nearest_city?lat=${lat}&lon=${lon}&key=${apiKey}`;
+    // nearest_station returns the closest individual monitoring station's reading
+    // (e.g. saimai-50 for Sai Mai), not a city-wide aggregate. This matches what
+    // tenants see on the official IQAir page for our district.
+    const iqairUrl    = `https://api.airvisual.com/v2/nearest_station?lat=${lat}&lon=${lon}&key=${apiKey}`;
     const openMeteoUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=pm2_5,pm10&timezone=Asia%2FBangkok`;
 
     let payload;
