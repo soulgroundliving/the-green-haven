@@ -152,10 +152,28 @@ async function runBackup() {
 
 // Best-effort: writes never throw out of runBackup, since the backup
 // itself is more important than the status doc. Failures get logged.
+//
+// Path structure (canonical):
+//   system/backups/state/latest        ← single "current state" doc (4 segments)
+//   system/backups/history/{stamp}     ← per-run history (4 segments)
+//
+// Both nest under a logical /system/backups parent — the parent doc
+// itself is empty (it exists only as a grouping namespace for the two
+// subcollections). The deeper nesting puts these out of reach of the
+// `match /system/{docId}` Firestore rule (which exposes /system/* to
+// any signed-in user). Backup metadata stays admin-SDK-only via the
+// catch-all `match /{document=**}: allow if false` default-deny.
+//
+// IMPORTANT: Firestore doc paths require an even number of segments.
+// The previous version of this code used `system/backups/latest`
+// (3 segments) which the Admin SDK rejects with
+// "Your path does not contain an even number of components." Fixed
+// 2026-04-27 in commit at top of this hunk.
 async function writeBackupStatus(record) {
   try {
-    await admin.firestore().doc('system/backups/latest').set(record);
-    // Append to history collection for trend visibility.
+    await admin.firestore()
+      .collection('system').doc('backups').collection('state')
+      .doc('latest').set(record);
     await admin.firestore()
       .collection('system').doc('backups').collection('history')
       .doc(record.stamp).set(record);
