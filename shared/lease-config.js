@@ -79,8 +79,38 @@ class LeaseAgreementManager {
   static getLeaseHistory(building, roomId) {
     const leases = this.getAllLeases();
     return Object.values(leases)
-      .filter(lease => lease.building === building && lease.roomId === roomId)
+      .filter(lease =>
+        lease.building === building &&
+        lease.roomId === roomId &&
+        // Drop "superseded" — duplicate leases created before Phase-4 SSoT bug fix.
+        // Real history (active + ended/inactive) still shows.
+        lease.status !== 'superseded'
+      )
       .sort((a, b) => new Date(b.moveInDate) - new Date(a.moveInDate));
+  }
+
+  // Pull fresh leases from Firestore and rewrite localStorage cache.
+  // Drops local-only orphans that aren't in Firestore (e.g. stale records
+  // from failed Firestore writes during Phase-4 transition).
+  static async refreshLeasesFromFirestore(building) {
+    if (!window.firebase?.firestore) return;
+    try {
+      const db = window.firebase.firestore();
+      const fs = window.firebase.firestoreFunctions;
+      const snap = await fs.getDocs(fs.collection(db, 'leases', building, 'list'));
+      const fresh = {};
+      snap.forEach(d => { fresh[d.id] = d.data(); });
+      // Replace this building's leases — drop orphans
+      const all = this.getAllLeases();
+      Object.keys(all).forEach(id => {
+        if (all[id]?.building === building) delete all[id];
+      });
+      Object.assign(all, fresh);
+      this.saveLeases(all);
+      console.log(`✅ Refreshed ${Object.keys(fresh).length} leases for ${building} from Firestore`);
+    } catch (e) {
+      console.warn('Lease refresh failed:', e.message);
+    }
   }
 
   static getLease(leaseId) {

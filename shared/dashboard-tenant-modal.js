@@ -249,7 +249,7 @@ function closeTenantModal() {
 }
 
 // ─── Lease History (ประวัติผู้เช่าเก่า) ───
-function showTenantLeaseHistory(building, roomId) {
+async function showTenantLeaseHistory(building, roomId) {
   if (!building || !roomId) return;
   const section = document.getElementById('tenantLeaseHistorySection');
   const content = document.getElementById('tenantLeaseHistoryContent');
@@ -257,6 +257,12 @@ function showTenantLeaseHistory(building, roomId) {
 
   // Toggle: hide if already visible for same room
   if (section.style.display !== 'none') { section.style.display = 'none'; return; }
+
+  // Refresh from Firestore so superseded/deleted leases reflect immediately
+  // and local-only orphans (failed-write artifacts) get dropped.
+  if (typeof LeaseAgreementManager?.refreshLeasesFromFirestore === 'function') {
+    try { await LeaseAgreementManager.refreshLeasesFromFirestore(building); } catch (_) {}
+  }
 
   const leases = (typeof LeaseAgreementManager !== 'undefined')
     ? LeaseAgreementManager.getLeaseHistory(building, roomId)
