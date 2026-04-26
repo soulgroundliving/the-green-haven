@@ -851,7 +851,7 @@ class BillStore {
         const ls = JSON.parse(localStorage.getItem(`bills_${this._be(year)}`) || '[]');
         bills = ls.filter(b => String(b.roomId || b.room) === room &&
                               (this._bld(b.building) === bld || !b.building));
-      } catch(e) {}
+      } catch(e) { console.warn('BillStore: localStorage parse failed for room bills', e); }
     }
     return bills;
   }
@@ -880,7 +880,7 @@ class BillStore {
         ls.forEach(b => {
           if (!b.building || this._bld(b.building) === bld) out.push(b);
         });
-      } catch(e) {}
+      } catch(e) { console.warn('BillStore: localStorage parse failed for year bills', e); }
     }
     return out;
   }

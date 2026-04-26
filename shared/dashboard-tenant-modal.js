@@ -3,6 +3,8 @@ let currentEditRoomId = null;
 let currentEditBuilding = null;
 let currentEditTenantId = null;
 
+const MONTHS_TH_SHORT = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
 // Real-time sync event system
 const TenantDataEvents = {
   listeners: {},
@@ -336,7 +338,6 @@ function showBillingModal(roomId) {
   const modal = document.createElement('div');
   modal.id = 'billingPayModal';
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;justify-content:center;align-items:center;padding:1rem;';
-  const MONTHS_TH_SHORT = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   modal.innerHTML = `
     <div style="background:#fff;border-radius:var(--radius);max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
       <div style="background:linear-gradient(135deg,#388e3c,#1b5e20);color:#fff;padding:1.2rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
@@ -429,7 +430,6 @@ function showBillingHistoryModal(roomId) {
     bills = BillingSystem.getBillsByRoom(roomId);
   }
 
-  const MONTHS_TH_SHORT = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   const rows = months.map(({m, y}) => {
     const bill = bills.find(b => b.month === m && b.year === y);
     if (!bill) return `<tr><td><strong>${MONTHS_TH_SHORT[m]} ${y}</strong></td><td colspan="4" style="color:var(--text-muted);text-align:center;">ไม่มีบิล</td></tr>`;
@@ -482,9 +482,8 @@ function saveTenantInfo() {
   const building = currentEditBuilding;
   const roomId = currentEditRoomId;
 
-  // Read form data
-  const firstName = document.getElementById('modalTenantFirstName').value.trim();
-  const lastName = document.getElementById('modalTenantLastName').value.trim();
+  const firstName = (document.getElementById('modalTenantFirstName')?.value || '').trim();
+  const lastName = (document.getElementById('modalTenantLastName')?.value || '').trim();
   const fullName = firstName && lastName ? `${firstName} ${lastName}` : (firstName || lastName || '');
 
   // Validate data

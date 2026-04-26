@@ -92,8 +92,10 @@ function populateTemplateSelect(building) {
 }
 
 function toggleAddMode(mode) {
-  document.getElementById('manualEntryMode').style.display = mode === 'manual' ? 'grid' : 'none';
-  document.getElementById('copyEntryMode').style.display = mode === 'copy' ? 'grid' : 'none';
+  const manual = document.getElementById('manualEntryMode');
+  const copy = document.getElementById('copyEntryMode');
+  if (manual) manual.style.display = mode === 'manual' ? 'grid' : 'none';
+  if (copy) copy.style.display = mode === 'copy' ? 'grid' : 'none';
 }
 
 // Shop room: id='ร้านใหญ่' (stable internal ID, same in RoomConfigManager & METER_DATA)
@@ -173,11 +175,11 @@ function addNewRoom() {
   let roomId, roomName, rent, waterRate, electricRate;
 
   if (mode === 'manual') {
-    roomId = document.getElementById('newRoomId').value.trim();
-    roomName = document.getElementById('newRoomName').value.trim();
-    rent = parseInt(document.getElementById('newRoomRent').value) || 1500;
-    waterRate = parseFloat(document.getElementById('newRoomWater').value);
-    electricRate = parseFloat(document.getElementById('newRoomElectric').value);
+    roomId = (document.getElementById('newRoomId')?.value || '').trim();
+    roomName = (document.getElementById('newRoomName')?.value || '').trim();
+    rent = parseInt(document.getElementById('newRoomRent')?.value) || 1500;
+    waterRate = parseFloat(document.getElementById('newRoomWater')?.value) || 20;
+    electricRate = parseFloat(document.getElementById('newRoomElectric')?.value) || 8;
 
     if (!roomId || !roomName) {
       showToast('กรุณากรอก ID และชื่อห้อง', 'warning');

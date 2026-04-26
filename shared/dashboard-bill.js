@@ -42,12 +42,10 @@ function onRoomChange(){
   document.getElementById('f-elec-rate').value=opt.dataset.elec||8;
   document.getElementById('f-trash').value=opt.dataset.trash||20;
 
-  // Show daily section for daily-type rooms
   const isDaily=opt.dataset.type==='daily';
   const ds=document.getElementById('dailySection');
   ds.classList.toggle('show',isDaily);
   if(isDaily){document.getElementById('f-rent-type').value='monthly';onRentTypeChange();}
-  // Show tenant name
   const roomId2 = document.getElementById('f-room').value;
   const tn = document.getElementById('f-tenant-name');
   if(tn){
@@ -111,11 +109,7 @@ async function autoFillMeters(){
   const month=parseInt(document.getElementById('f-month').value);
   const year=parseInt(document.getElementById('f-year').value);
 
-  // If no room selected, just return
-  if(!roomId){
-    console.log('⏳ Waiting for room selection...');
-    return;
-  }
+  if(!roomId) return;
   const yy=year%100;
   const key=`${yy}_${month}`;
   const psKey=`${year}_${month}`;

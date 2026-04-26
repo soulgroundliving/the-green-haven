@@ -117,16 +117,3 @@ try {
 } catch (e) {
   console.log('notifyLiffStatusChange not found, skipping...');
 }
-
-// Legacy: cleanupRateLimits.js never existed — its job is now done by
-// cleanupRateLimitsScheduled exported above from cleanupOldDocs.js.
-// Keep the stale require() one more revision; the try/catch logs a
-// harmless warning and the deploy still succeeds.
-try {
-  const cleanupRateLimits = require('./cleanupRateLimits');
-  if (cleanupRateLimits.cleanupRateLimits) {
-    exports.cleanupRateLimits = cleanupRateLimits.cleanupRateLimits;
-  }
-} catch (e) {
-  console.log('cleanupRateLimits not found, skipping...');
-}

@@ -764,21 +764,6 @@ function displayRecordedMeterData(importData, matchResults) {
   if (!recordedSection) return;
 
   try {
-    // DEBUG: Check what importData contains
-    console.log(`🔍 displayRecordedMeterData called with:`);
-    console.log(`   importData keys:`, Object.keys(importData || {}));
-    console.log(`   importData.isV3:`, importData?.isV3);
-    console.log(`   importData.building:`, importData?.building);
-    console.log(`   importData.rooms keys count:`, Object.keys(importData?.rooms || {}).length);
-    console.log(`   importData.nest keys count:`, Object.keys(importData?.nest || {}).length);
-    console.log(`   importData.amazon keys count:`, Object.keys(importData?.amazon || {}).length);
-
-    if (importData?.nest && Object.keys(importData.nest).length > 0) {
-      console.log(`✅ Nest data FOUND:`, Object.keys(importData.nest).slice(0, 3), '...');
-    } else {
-      console.warn(`❌ Nest data MISSING or EMPTY!`);
-    }
-
     // ===== POPULATE PERIOD INFO =====
     const monthNames = {
       1: 'มกราคม', 2: 'กุมภาพันธ์', 3: 'มีนาคม', 4: 'เมษายน',

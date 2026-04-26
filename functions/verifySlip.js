@@ -147,8 +147,8 @@ async function isDuplicateSlip(transactionId) {
 
     return !snapshot.empty;
   } catch (error) {
-    console.error('❌ Duplicate check failed:', error);
-    return false; // On error, allow (fail open)
+    console.error('❌ Duplicate check failed — rejecting to prevent double-payment:', error);
+    throw error;
   }
 }
 
