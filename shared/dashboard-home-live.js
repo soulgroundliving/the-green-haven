@@ -611,11 +611,48 @@ function renderMeterTable(){
   const yy=year%100;
   const mdKey=`${yy}_${month}`;
   const psKey=`${year}_${month}`;
-  const ps=loadPS();
-  const paid=ps[psKey]||{};
-  let totalPaid=0, totalPending=0, totalAmt=0;
-
   const bld = window._pvmBuilding || 'rooms';
+
+  // Build paid-by-room map from BillStore SSoT (canonical) + localStorage
+  // payment_status (legacy fallback). Earlier this read localStorage only,
+  // which is empty after the SSoT migration — so every room appeared "⏳ รอ"
+  // even when bills had been issued and marked paid.
+  const paid = (function buildPaidMap() {
+    const out = {};
+    try {
+      const cache = window.BillStore?._cache?.[bld];
+      if (cache && typeof cache === 'object') {
+        for (const [roomId, billsByid] of Object.entries(cache)) {
+          if (!billsByid || typeof billsByid !== 'object') continue;
+          for (const [billId, b] of Object.entries(billsByid)) {
+            if (!b || typeof b !== 'object') continue;
+            // Skip synthetic bills (prefix SYNTH-) — those are chart fillers, not real
+            if (typeof b.billId === 'string' && b.billId.startsWith(window.BillStore?.SYNTH_PREFIX || 'SYNTH-')) continue;
+            if (parseInt(b.year) !== year || parseInt(b.month) !== month) continue;
+            const status = String(b.status || '').toLowerCase();
+            if (status === 'paid' || b.paidAt) {
+              out[roomId] = {
+                status: 'paid',
+                amount: b.totalCharge || b.amount || 0,
+                date: b.paidAt || b.createdAt,
+                eNew: b.meterReadings?.electric?.new ?? b.eNew,
+                eOld: b.meterReadings?.electric?.old ?? b.eOld,
+                wNew: b.meterReadings?.water?.new ?? b.wNew,
+                wOld: b.meterReadings?.water?.old ?? b.wOld
+              };
+            }
+          }
+        }
+      }
+    } catch(e) { /* fall through to localStorage */ }
+    // Merge legacy localStorage entries (older bills before SSoT migration)
+    const ls = (loadPS()[psKey] || {});
+    for (const roomId of Object.keys(ls)) {
+      if (!out[roomId]) out[roomId] = ls[roomId];
+    }
+    return out;
+  })();
+  let totalPaid=0, totalPending=0, totalAmt=0;
   const roomList = bld==='nest' ? (window.NEST_ROOMS||[]) : (window.ROOMS_OLD||[]);
   const rooms = getActiveRoomsWithMetadata(bld, roomList);
   const rows=rooms.map(r=>{
