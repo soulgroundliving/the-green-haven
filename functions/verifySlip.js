@@ -179,9 +179,12 @@ async function callSlipOKAPI(fileBuffer) {
     });
 
     const responseText = await response.text();
-    console.log(`📡 SlipOK response ${response.status}:`, responseText.slice(0, 500));
+    // Note: success bodies omitted from logs to keep Cloud Logging volume
+    // low. Failures still include up to 300 chars in the thrown error
+    // (see line below + caller's catch).
 
     if (!response.ok) {
+      console.warn(`📡 SlipOK ${response.status}:`, responseText.slice(0, 300));
       throw new Error(`SlipOK API returned ${response.status}: ${responseText.slice(0, 300)}`);
     }
 
@@ -228,8 +231,8 @@ async function logVerificationAttempt(params, result, status) {
       ipAddress: params.ipAddress,
       userAgent: params.userAgent
     });
-
-    console.log(`✅ Logged verification (${status}): ${params.room || params.userId}`);
+    // Verification log success is silent — main success log at end of
+    // verifySlip handler is the single operational record.
   } catch (error) {
     console.error('⚠️ Failed to log verification:', error);
     // Don't throw - logging failure shouldn't break the main function
@@ -259,8 +262,6 @@ async function saveVerifiedSlip(slipData, params) {
       verifiedAt: new Date(),
       verified: true
     });
-
-    console.log(`📋 Saved verified slip: ${slipData.transactionId}`);
   } catch (error) {
     console.error('⚠️ Failed to save verified slip:', error);
     // Don't throw - storage failure shouldn't break verification
@@ -326,8 +327,7 @@ async function recordPaymentAndAwardPoints(slipData, params) {
   const tenantDoc = await tenantRef.get();
 
   if (!tenantDoc.exists) {
-    console.log(`🎮 No Nest tenant doc at tenants/nest/list/${roomId}, skipping award`);
-    return null;
+    return null;  // No tenant doc → no points to award (rooms-building tenants don't get points)
   }
 
   const tenantData = tenantDoc.data();
@@ -361,7 +361,7 @@ async function recordPaymentAndAwardPoints(slipData, params) {
   const historyRef = tenantRef.collection('paymentHistory').doc(monthKey);
   const existing = await historyRef.get();
   if (existing.exists) {
-    console.log(`⏭ Payment ${monthKey} already recorded for nest/${roomId}, skip`);
+    // Idempotent: already awarded for this month, no-op silently
     return { skipped: true, monthKey };
   }
 
@@ -461,8 +461,6 @@ exports.verifySlip = functions
     if (typeof file !== 'string' || file.length > 5 * 1024 * 1024) {
       return res.status(413).json({ error: 'Payload too large (max 5MB base64)' });
     }
-
-    console.log(`🔍 Verification request: ${identifier} (${building}), ฿${expectedAmount}`);
 
     // ===== RATE LIMITING =====
     const rateLimited = !(
