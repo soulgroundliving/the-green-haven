@@ -241,13 +241,29 @@ class LeaseAgreementManager {
       console.warn(`⚠️ Firebase update failed for lease ${leaseId}:`, error.message);
     }
 
-    // 3. Phase 4 SSoT: re-project current lease snapshot to tenants/{b}/list/{roomId}
-    //    Pull full record so we project the merged result, not just the updates delta.
-    const fullLease = this.getLease(leaseId) || updates;
-    if (fullLease.roomId) {
-      await LeaseAgreementManager._syncLeaseToTenantSSoT(
-        building, fullLease.roomId, leaseId, fullLease
-      );
+    // 3. Phase 4 SSoT: re-project current lease snapshot to tenants/{b}/list/{roomId}.
+    //    Read from Firestore archive (which we just updated) so we have the merged
+    //    record including roomId, even when localStorage cache is empty.
+    try {
+      let fullLease = this.getLease(leaseId);
+      if ((!fullLease || !fullLease.roomId) && window.firebase?.firestore) {
+        const db = window.firebase.firestore();
+        const fs = window.firebase.firestoreFunctions;
+        const archiveRef = fs.doc(db, 'leases', building, 'list', leaseId);
+        const archiveSnap = await fs.getDoc(archiveRef);
+        if (archiveSnap.exists()) {
+          fullLease = archiveSnap.data();
+        }
+      }
+      if (fullLease && fullLease.roomId) {
+        await LeaseAgreementManager._syncLeaseToTenantSSoT(
+          building, fullLease.roomId, leaseId, fullLease
+        );
+      } else {
+        console.warn(`⚠️ Cannot SSoT-project lease ${leaseId} — no roomId resolved`);
+      }
+    } catch (e) {
+      console.warn(`⚠️ Lease SSoT projection failed for ${leaseId}:`, e.message);
     }
 
     return success;
