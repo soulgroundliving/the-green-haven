@@ -78,6 +78,7 @@
   import { getDatabase, ref, set, get, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
   import { getAuth, signInAnonymously, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
   import { getFirestore, collection, collectionGroup, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
   // Phase 4D App Check disabled 2026-04-25 — see next_session_handoff.md
   // import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app-check.js";
 
@@ -88,6 +89,7 @@
   let database;
   let auth;
   let firestore;
+  let storage;
 
   // Initialize Firebase once config is loaded
   async function initializeFirebase() {
@@ -106,6 +108,7 @@
       database = getDatabase(app);
       auth = getAuth(app);
       firestore = getFirestore(app);
+      storage = getStorage(app);
 
       // Make them globally available for other scripts
       window.firebaseApp = app;
@@ -140,7 +143,9 @@
           onSnapshot: onSnapshot,
           addDoc: addDoc,
           serverTimestamp: serverTimestamp
-        }
+        },
+        storage: () => storage,
+        storageFunctions: { ref: storageRef, uploadBytes, getDownloadURL, deleteObject, listAll }
       };
 
       // Mark Firebase as ready

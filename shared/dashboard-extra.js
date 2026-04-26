@@ -2165,6 +2165,7 @@ if (typeof window !== 'undefined') {
 async function uploadLeaseDocuments(leaseId, building, roomId, documents) {
   try {
     const storage = window.firebase.storage();
+    const { ref: sRef, uploadBytes: sUploadBytes, getDownloadURL: sGetDownloadURL } = window.firebase.storageFunctions;
     const fileTypeMap = {
       petCert: 'pet-vaccine-certificate',
       tenantContact: 'tenant-contact',
@@ -2198,13 +2199,13 @@ async function uploadLeaseDocuments(leaseId, building, roomId, documents) {
       const ext = file.name.split('.').pop();
       const fileName = `${fileTypeMap[docType]}-${Date.now()}.${ext}`;
       const storagePath = `leases/${building}/${roomId}/${leaseId}/${fileName}`;
-      const storageRef = storage.ref(storagePath);
+      const fileRef = sRef(storage, storagePath);
 
-      storageRef.put(file)
+      sUploadBytes(fileRef, file)
         .then((snapshot) => {
           uploadCount++;
           console.log(`✅ Document uploaded: ${docType} (${uploadCount}/${totalFiles})`);
-          return snapshot.ref.getDownloadURL();
+          return sGetDownloadURL(snapshot.ref);
         })
         .then((downloadURL) => {
           console.log(`📄 Download URL: ${downloadURL}`);
@@ -2385,14 +2386,15 @@ async function _renderLeaseStorageDocs(lease) {
       return '<div style="color:#999;font-size:.85rem;">Firebase Storage ไม่พร้อมใช้งาน</div>';
     }
     const storage = window.firebase.storage();
-    const folderRef = storage.ref(`leases/${building}/${roomId}/${leaseId}`);
-    const result = await folderRef.listAll();
+    const { ref: sRef, listAll: sListAll, getDownloadURL: sGetDownloadURL } = window.firebase.storageFunctions;
+    const folderRef = sRef(storage, `leases/${building}/${roomId}/${leaseId}`);
+    const result = await sListAll(folderRef);
     if (!result.items.length) {
       return '<div style="color:#999;font-size:.85rem;padding:8px;">ยังไม่มีไฟล์เอกสาร (admin ยังไม่ได้อัพโหลด)</div>';
     }
-    const urls = await Promise.all(result.items.map(async (ref) => ({
-      name: ref.name,
-      url: await ref.getDownloadURL()
+    const urls = await Promise.all(result.items.map(async (item) => ({
+      name: item.name,
+      url: await sGetDownloadURL(item)
     })));
     return urls.map(({ name, url }) => {
       // Guess doc type from filename prefix
