@@ -4013,18 +4013,27 @@ async function initGamificationPage() {
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
 
-  // Read actual gamification.points from Firestore for each tenant
-  const results = await Promise.all(allTenants.map(async t => {
+  // Fetch the full per-building list collection in parallel rather than firing
+  // one getDoc per tenant. Same Firestore document-read count, but two
+  // network round-trips instead of N. With ~30 tenants the latency win is
+  // small; main benefit is the cleaner pattern when the building grows.
+  let dataByKey = new Map();
+  try {
+    const [roomsSnap, nestSnap] = await Promise.all([
+      fs.getDocs(fs.collection(db, 'tenants/rooms/list')),
+      fs.getDocs(fs.collection(db, 'tenants/nest/list'))
+    ]);
+    roomsSnap.forEach(d => dataByKey.set('rooms/' + d.id, d.data()));
+    nestSnap.forEach(d => dataByKey.set('nest/' + d.id, d.data()));
+  } catch (e) {
+    console.warn('leaderboard: bulk tenant fetch failed, points will show 0:', e?.message || e);
+  }
+
+  const results = allTenants.map(t => {
     const roomId = t.id || t.room;
-    if (!roomId) return { ...t, points: 0, badges: [] };
-    try {
-      const snap = await fs.getDoc(fs.doc(db, `tenants/${t.building}/list/${roomId}`));
-      const data = snap.exists() ? snap.data() : {};
-      return { ...t, points: data.gamification?.points || 0, badges: data.gamification?.badges || [] };
-    } catch(e) {
-      return { ...t, points: 0, badges: [] };
-    }
-  }));
+    const data = roomId ? (dataByKey.get(t.building + '/' + roomId) || {}) : {};
+    return { ...t, points: data.gamification?.points || 0, badges: data.gamification?.badges || [] };
+  });
 
   const scored = results.map(t => {
     const tier = window.GamificationRules
