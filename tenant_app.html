@@ -7383,7 +7383,7 @@
             if (_billsUnsub) return;
             if (typeof TenantFirebaseSync === 'undefined') return;
             // Phase 4C: RTDB rule requires {room,building} claims (set by linkAuthUid after LIFF login).
-            // Return early without touching _billsUnsub — liffLinked listener retries once claims arrive.
+            // Return early without touching _billsUnsub — authReady/liffLinked listeners retry.
             try {
                 const user = window.firebaseAuth?.currentUser;
                 if (!user) return;
@@ -7408,9 +7408,30 @@
                     if (typeof renderBillsList === 'function') renderBillsList();
                     if (typeof updateNavBadges === 'function') updateNavBadges();
                     if (typeof _renderUsageChart === 'function') _renderUsageChart();
+                    // Persist RTDB bills to localStorage (normalized building) so they
+                    // survive page reloads and are available before subscription fires.
+                    try {
+                        const byYr = {};
+                        bills.forEach(b => {
+                            const yr = Number(b.year) || 0; if (!yr) return;
+                            (byYr[yr] = byYr[yr] || []).push({...b, building: _taBuilding});
+                        });
+                        Object.entries(byYr).forEach(([yr, bs]) => {
+                            const key = `bills_${yr}`;
+                            const existing = JSON.parse(localStorage.getItem(key) || '[]');
+                            const cache = new Map();
+                            existing.forEach(b => cache.set(b.billId || b.id, b));
+                            bs.forEach(b => cache.set(b.billId || b.id, b));
+                            localStorage.setItem(key, JSON.stringify(Array.from(cache.values())));
+                        });
+                    } catch(_) {}
+                }, () => {
+                    // permission_denied → reset so authReady/liffLinked can retry with fresh claims
+                    _billsUnsub = null;
                 });
             } catch (e) { console.warn('subscribeBillsRealtime failed:', e.message); }
         }
+        window.addEventListener('authReady', _subscribeBillsRealtime);
         window.addEventListener('liffLinked', _subscribeBillsRealtime);
 
         // ---- LIFF (LINE Front-end Framework) integration ----

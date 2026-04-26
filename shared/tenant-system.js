@@ -1189,7 +1189,7 @@ class TenantFirebaseSync {
    * Returns unsubscribe function. Use one-shot loadBills() for initial render,
    * then subscribeBills() to receive updates while the user has the app open.
    */
-  static subscribeBills(callback) {
+  static subscribeBills(callback, onPermissionDenied) {
     if (!this.database || !window.firebaseRef || !window.firebaseOnValue) {
       console.warn('⚠️ Firebase not available for bill subscription');
       return () => {};
@@ -1205,7 +1205,9 @@ class TenantFirebaseSync {
         }
       }, (err) => {
         // Phase 4C: permission_denied expected until linkAuthUid sets {room,building} claims.
-        if (!/permission/i.test(err?.message || '')) {
+        if (/permission/i.test(err?.message || '')) {
+          if (typeof onPermissionDenied === 'function') onPermissionDenied();
+        } else {
           console.warn('⚠️ subscribeBills error:', err.message);
         }
       });
