@@ -857,6 +857,14 @@ class TenantFirebaseSync {
         return false;
       }
 
+      // Idempotent: skip log + state-write when called again with the same identity.
+      // Auth state listeners + page handlers re-call this on the same session.
+      const same = this.database === window.firebaseDatabase
+                && this.currentUser === user
+                && this.currentBuilding === building
+                && this.currentRoom === room;
+      if (same) return true;
+
       this.database = window.firebaseDatabase;
       this.currentUser = user;
       this.currentBuilding = building;

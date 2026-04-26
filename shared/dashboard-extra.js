@@ -616,7 +616,6 @@ function calculateOccupancy(buildingType = null) {
     rate: rate
   };
 
-  console.log(`Occupancy for ${buildingType || 'old'}: ${result.total} total, ${result.occupied} occupied, ${result.vacant} vacant`);
   return result;
 }
 
