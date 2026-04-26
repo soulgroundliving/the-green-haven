@@ -703,9 +703,25 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'renderMeterTable') { typeof renderMeterTable === 'function' && renderMeterTable(); return; }
     if (a === 'loadPVHistoryRooms') { typeof loadPVHistoryRooms === 'function' && loadPVHistoryRooms(); return; }
     if (a === 'renderPVHistory') { typeof renderPVHistory === 'function' && renderPVHistory(); return; }
+    // Phase 4E Step 2 chunk 3 — page-bill form (oninput on rent/elec/water/trash/other/latefee/nights/daily-rate, onchange on building/room/month/year/rent-type)
+    if (a === 'calcBill') { typeof calcBill === 'function' && calcBill(); return; }
+    if (a === 'onBuildingChange') { typeof onBuildingChange === 'function' && onBuildingChange(); return; }
+    if (a === 'onRoomChange') { typeof onRoomChange === 'function' && onRoomChange(); return; }
+    if (a === 'autoFillMeters') { typeof autoFillMeters === 'function' && autoFillMeters(); return; }
+    if (a === 'onRentTypeChange') { typeof onRentTypeChange === 'function' && onRentTypeChange(); return; }
+    if (a === 'verifySlipFromInput') { typeof verifySlip === 'function' && verifySlip(el.files && el.files[0]); return; }
   }
   document.addEventListener('change', _handleFormAction);
   document.addEventListener('input', _handleFormAction);
+
+  // ===== SUBMIT EVENT DELEGATION =====
+  // For <form> elements that previously used onsubmit="event.preventDefault();fn();".
+  document.addEventListener('submit', function(e) {
+    const el = e.target.closest('form[data-action]');
+    if (!el) return;
+    const a = el.dataset.action;
+    if (a === 'changePassword') { e.preventDefault(); typeof changePassword === 'function' && changePassword(); return; }
+  });
 });
 
 
