@@ -828,29 +828,84 @@ class TenantFirebaseSync {
 
   static async loadLease() {
     try {
-      // Firestore: buildings/{RentRoom|nest}/rooms/{roomId}
-      // Document has nested `.lease` + `.operations` + `.metadata`
       if (window.firebase?.firestore) {
-        try {
-          const fsBuilding = TenantFirebaseSync._fsBuilding(this.currentBuilding);
-          const fsRoomId   = TenantFirebaseSync._fsRoomId(this.currentRoom);
-          console.log(`🔍 TenantFirebaseSync: Checking buildings/${fsBuilding}/rooms/${fsRoomId}`);
-          const db = window.firebase.firestore();
-          const fs = window.firebase.firestoreFunctions;
+        const db = window.firebase.firestore();
+        const fs = window.firebase.firestoreFunctions;
+        const building = this.currentBuilding;
+        const roomId = String(this.currentRoom);
 
-          // 3-segment path: collection('buildings') → doc(fsBuilding) → collection('rooms') → doc(fsRoomId)
+        // === SSoT: tenants/{building}/list/{roomId} (post-migration) ===
+        // Single doc holds tenant identity + lease subobject + linkedAuthUid.
+        // saveProfileEdit / setVerifiedPhone CF / linkAuthUid CF write here.
+        try {
+          const ssotRef = fs.doc(db, 'tenants', building, 'list', roomId);
+          const ssotSnap = await fs.getDoc(ssotRef);
+          if (ssotSnap.exists()) {
+            const d = ssotSnap.data();
+            const lease = d.lease || {};
+            const leaseData = {
+              building,
+              roomId,
+              // Lease — read from .lease subobject; fall back to top-level
+              // for unmigrated docs (Phase 6 will remove top-level dupes).
+              rentAmount: lease.rentAmount ?? d.rentAmount ?? 0,
+              deposit: lease.deposit ?? d.deposit ?? 0,
+              startDate: lease.startDate || lease.moveInDate || d.moveInDate,
+              endDate: lease.endDate || lease.moveOutDate || d.moveOutDate,
+              moveInDate: lease.startDate || lease.moveInDate || d.moveInDate,
+              moveOutDate: lease.endDate || lease.moveOutDate || d.moveOutDate,
+              status: lease.status || 'empty',
+              contractDocument: lease.contractDocument || d.contractDocument,
+              contractFileName: lease.contractFileName || d.contractFileName,
+              billingCycle: d.billingCycle ?? 1,
+              emergencyContact: d.emergencyContact,
+              // Identity
+              tenantId: d.tenantId,
+              name: d.name || `${d.firstName || ''} ${d.lastName || ''}`.trim() || null,
+              firstName: d.firstName,
+              lastName: d.lastName,
+              phone: d.phone,
+              email: d.email,
+              licensePlate: d.licensePlate,
+              idCardNumber: d.idCardNumber,
+              address: d.address,
+              lineID: d.lineID,
+              notes: d.notes,
+              // Tenant-managed
+              companyInfo: d.companyInfo,
+              receiptType: d.receiptType,
+              // Auth links
+              linkedAuthUid: d.linkedAuthUid,
+              phoneVerifiedAt: d.phoneVerifiedAt,
+              _raw: d,
+              _source: 'tenants/list',
+            };
+            console.log(`✅ TenantFirebaseSync: Loaded from tenants/${building}/list/${roomId}:`, leaseData);
+            return leaseData;
+          }
+        } catch (e) {
+          // permission_denied expected pre-LIFF-link (linkedAuthUid not set yet)
+          if (!/permission/i.test(e?.message || '')) {
+            console.debug(`  ❌ tenants/list lookup failed:`, e.message);
+          }
+        }
+
+        // === Legacy fallback: buildings/{alias}/rooms/{roomId} ===
+        // For rooms not yet migrated, or if SSoT read was permission-denied.
+        try {
+          const fsBuilding = TenantFirebaseSync._fsBuilding(building);
+          const fsRoomId   = TenantFirebaseSync._fsRoomId(roomId);
           const docRef = fs.doc(db, 'buildings', fsBuilding, 'rooms', fsRoomId);
           const docSnap = await fs.getDoc(docRef);
 
           if (docSnap.exists()) {
             const roomData = docSnap.data();
-            // ดึง lease subsection + map fields เข้ากับที่ tenant_app ใช้
             const lease = roomData.lease || {};
             const ops = roomData.operations || {};
             const t = roomData.tenant || roomData.personalInfo || {};
             const leaseData = {
-              building: this.currentBuilding,
-              roomId: this.currentRoom,
+              building,
+              roomId,
               rentAmount: lease.rentAmount ?? 0,
               deposit: lease.deposit ?? 0,
               moveInDate: lease.moveInDate,
@@ -862,7 +917,6 @@ class TenantFirebaseSync {
               tenantId: ops.tenantId,
               billingCycle: ops.billingCycle ?? 1,
               emergencyContact: ops.emergencyContact,
-              // Tenant personal info (user confirm stored in same room doc)
               name: t.name || t.fullName || ops.tenantName,
               phone: t.phone || t.tel || ops.tenantPhone,
               email: t.email || ops.tenantEmail,
@@ -870,30 +924,21 @@ class TenantFirebaseSync {
               companyInfo: t.companyInfo || roomData.companyInfo,
               receiptType: t.receiptType || roomData.receiptType,
               _raw: roomData,
+              _source: 'buildings/rooms (legacy)',
             };
-            console.log(`✅ TenantFirebaseSync: Loaded from buildings/${fsBuilding}/rooms/${fsRoomId}:`, leaseData);
+            console.log(`✅ TenantFirebaseSync: Legacy fallback buildings/${fsBuilding}/rooms/${fsRoomId}:`, leaseData);
             return leaseData;
-          } else {
-            console.log(`   ℹ️ No data at buildings/${fsBuilding}/rooms/${fsRoomId}`);
-          }
-
-          // Backward-compat: try old meta_data path (เผื่อบาง room ยังอยู่ที่เดิม)
-          const legacyRef = fs.doc(fs.collection(db, 'meta_data'), this.currentRoom);
-          const legacySnap = await fs.getDoc(legacyRef);
-          if (legacySnap.exists()) {
-            console.log(`✅ Fallback: loaded from legacy meta_data/${this.currentRoom}`);
-            return legacySnap.data();
           }
         } catch (e) {
-          console.debug(`  ❌ Firestore query failed:`, e.message);
+          console.debug(`  ❌ buildings/rooms fallback failed:`, e.message);
         }
 
-        console.log(`ℹ️ No lease data found in Firestore, falling back to localStorage`);
+        console.log(`ℹ️ No lease data found in Firestore for ${building}/${roomId}, falling back to localStorage`);
       } else {
         console.warn('⚠️ Firestore not available, using localStorage fallback');
       }
 
-      // Fallback: Try to get from LeaseAgreementManager (localStorage)
+      // Final fallback: localStorage
       if (typeof LeaseAgreementManager !== 'undefined') {
         const lease = LeaseAgreementManager.getActiveLease(this.currentBuilding, this.currentRoom);
         if (lease) {
@@ -1274,28 +1319,8 @@ class TenantFirebaseSync {
         }
       }
 
-      // Overlay tenant-written contact fields from tenants/{building}/list/{roomId}.
-      // saveProfileEdit (email) and setVerifiedPhone CF (phone) write to this path,
-      // but loadLease reads from buildings/{...} (admin doc) — different paths.
-      // This merge ensures tenant edits survive page reloads.
-      try {
-        if (window.firebase?.firestore && this.currentBuilding && this.currentRoom) {
-          const db = window.firebase.firestore();
-          const fs = window.firebase.firestoreFunctions;
-          const tRef = fs.doc(db, 'tenants', this.currentBuilding, 'list', String(this.currentRoom));
-          const tSnap = await fs.getDoc(tRef);
-          if (tSnap.exists()) {
-            const td = tSnap.data();
-            const overrides = {};
-            if (td.email)        overrides.email = td.email;
-            if (td.phone)        overrides.phone = td.phone;
-            if (td.licensePlate) overrides.licensePlate = td.licensePlate;
-            if (Object.keys(overrides).length) {
-              tenant = { ...(tenant || {}), ...overrides };
-            }
-          }
-        }
-      } catch (_) { /* permission_denied expected before linkAuthUid sets linkedAuthUid */ }
+      // Phase 3 SSoT: loadLease() now reads tenants/{b}/list/{roomId} directly,
+      // so no overlay needed here — tenant edits already in `tenant` from lease.
 
       const allData = {
         lease,

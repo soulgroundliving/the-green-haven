@@ -17,6 +17,10 @@ exports.requestPhoneOtp = require('./requestPhoneOtp').requestPhoneOtp;
 // (token-refresh 403s after linkWithCredential, broken anon-UID lineage, etc.)
 exports.setVerifiedPhone = require('./setVerifiedPhone').setVerifiedPhone;
 
+// One-off (idempotent) consolidation: merge tenant + lease data from 4 split paths
+// into single SSoT at tenants/{building}/list/{roomId}. Admin-only. Dry-run by default.
+exports.migrateTenantsToSSoT = require('./migrateTenantsToSSoT').migrateTenantsToSSoT;
+
 // Complaint & Gamification
 exports.onComplaintCreated = require('./complaintAndGamification').onComplaintCreated;
 exports.sendComplaintConfirmation = require('./complaintAndGamification').sendComplaintConfirmation;
