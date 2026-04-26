@@ -7126,6 +7126,10 @@
         let _taRoom = '', _taBuilding = '', _taLease = null, _taTenant = null;
         let _taBills = [], _taPayments = [], _taCurrentBill = null;
         let _slipBase64 = null;
+        // Default true so checkDailyLogin() is always suppressed until applyBuildingVisibility()
+        // confirms a Nest tenant. Prevents race where detectRoomBuilding() returns false but
+        // checkDailyLogin() is still reached (liffResult=null path in initTenantApp).
+        window._nestOnlyDisabled = true;
 
         // SSoT: Nest rooms are N101-N405 (N prefix OR legacy numeric 101-405).
         // Everything else (13-33, 15ก, ร้านใหญ่) is the rooms/ห้องแถว building.

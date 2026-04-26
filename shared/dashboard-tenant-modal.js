@@ -597,6 +597,15 @@ function saveTenantInfo() {
   if (typeof TenantConfigManager.saveTenantToFirebase === 'function') {
     TenantConfigManager.saveTenantToFirebase(building, tenantId, tenantData);
   }
+  // updateTenant/addTenant key tenant_master_data by tenantId, but getTenantByRoom()
+  // reads by roomId. Write the roomId key now so the modal re-opens with fresh data
+  // without waiting for the next Firestore → localStorage sync.
+  try {
+    const _m = JSON.parse(localStorage.getItem('tenant_master_data') || '{}');
+    if (!_m[building]) _m[building] = {};
+    _m[building][roomId] = { ...tenantData, tenantId, building, roomId };
+    localStorage.setItem('tenant_master_data', JSON.stringify(_m));
+  } catch(_) {}
   if (typeof LeaseAgreementManager.createLeaseWithFirebase === 'function' && !currentLease) {
     LeaseAgreementManager.createLeaseWithFirebase(LeaseAgreementManager.getLease(leaseId));
   }
