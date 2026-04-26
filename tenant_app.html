@@ -7027,8 +7027,16 @@
                     _lastKnownBadges = badges;
                     _renderBadgeGrid(badges);
                     _renderProfileBadge(badges);
-                }, err => console.warn('eco points subscribe failed:', err.message));
-            } catch (e) { console.warn('eco points subscribe init failed:', e.message); }
+                }, err => {
+                    // permission-denied is expected when tenant hasn't linked LIFF auth yet —
+                    // fall back to localStorage silently. Other errors are surfaced.
+                    if (err && (err.code === 'permission-denied' || /insufficient permissions/i.test(err.message || ''))) return;
+                    console.warn('eco points subscribe failed:', err.message);
+                });
+            } catch (e) {
+                if (e && (e.code === 'permission-denied' || /insufficient permissions/i.test(e.message || ''))) return;
+                console.warn('eco points subscribe init failed:', e.message);
+            }
         }
 
         function loadGamificationData() {
