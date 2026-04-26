@@ -3274,10 +3274,8 @@
             <!-- Edit form (hidden by default — toggled by toggleProfileEditMode) -->
             <div id="profile-edit-form" style="display:none;">
                 <label style="font-size:var(--fs-sm); color:#666;">เบอร์โทรศัพท์ <span style="color:var(--accent);">🔒 ต้องยืนยัน OTP</span></label>
-                <div style="display:flex; gap:8px; margin-bottom:10px;">
-                    <input type="tel" id="profile-edit-phone-display" placeholder="0xxxxxxxxx" readonly style="flex:1; background:#f4f6f8;">
-                    <button class="btn-main" style="background:var(--accent); padding:0 14px; font-size:var(--fs-sm); white-space:nowrap;" onclick="openPhoneOtpModal()"><i class="fas fa-mobile-alt"></i> เปลี่ยนเบอร์</button>
-                </div>
+                <input type="tel" id="profile-edit-phone-display" placeholder="ยังไม่ได้ตั้งเบอร์" readonly style="margin-bottom:8px; background:#f4f6f8; width:100%;">
+                <button class="btn-main" style="background:var(--accent); width:100%; margin-bottom:14px; font-size:var(--fs-sm);" onclick="openPhoneOtpModal()"><i class="fas fa-mobile-alt"></i> เปลี่ยน / ตั้งเบอร์ใหม่ (ผ่าน OTP)</button>
                 <label style="font-size:var(--fs-sm); color:#666;">อีเมล</label>
                 <input type="email" id="profile-edit-email" placeholder="example@gmail.com" style="margin-bottom:15px;">
                 <div style="display:flex; gap:8px;">
