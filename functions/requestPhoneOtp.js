@@ -31,28 +31,18 @@ if (!admin.apps.length) {
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_PER_WINDOW = 3;
 
-function bumpCounter(tx, ref, now) {
-  return tx.get(ref).then((snap) => {
-    let count = 1;
-    let windowStart = now;
-    if (snap.exists) {
-      const d = snap.data();
-      const startedAt = (d.windowStart && d.windowStart.toMillis) ? d.windowStart.toMillis() : 0;
-      if (now - startedAt < WINDOW_MS) {
-        count = (d.count || 0) + 1;
-        windowStart = startedAt;
-      }
+function _decideNext(snap, now) {
+  let count = 1;
+  let windowStart = now;
+  if (snap.exists) {
+    const d = snap.data();
+    const startedAt = (d.windowStart && d.windowStart.toMillis) ? d.windowStart.toMillis() : 0;
+    if (now - startedAt < WINDOW_MS) {
+      count = (d.count || 0) + 1;
+      windowStart = startedAt;
     }
-    if (count > MAX_PER_WINDOW) {
-      return { exceeded: true, count };
-    }
-    tx.set(ref, {
-      count,
-      windowStart: admin.firestore.Timestamp.fromMillis(windowStart),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    return { exceeded: false, count };
-  });
+  }
+  return { count, windowStart, exceeded: count > MAX_PER_WINDOW };
 }
 
 exports.requestPhoneOtp = functions.region('asia-southeast1').https.onCall(async (data, context) => {
@@ -74,8 +64,23 @@ exports.requestPhoneOtp = functions.region('asia-southeast1').https.onCall(async
 
   try {
     const result = await fs.runTransaction(async (tx) => {
-      const uidRes = await bumpCounter(tx, uidRef, now);
-      const phoneRes = await bumpCounter(tx, phoneRef, now);
+      // Firestore transactions require ALL reads before ANY writes.
+      const [uidSnap, phoneSnap] = await Promise.all([tx.get(uidRef), tx.get(phoneRef)]);
+      const uidRes = _decideNext(uidSnap, now);
+      const phoneRes = _decideNext(phoneSnap, now);
+
+      // If either limit is exceeded we still want the counter persisted so the
+      // window keeps rolling, but we report the exceedance to the caller.
+      tx.set(uidRef, {
+        count: uidRes.count,
+        windowStart: admin.firestore.Timestamp.fromMillis(uidRes.windowStart),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      tx.set(phoneRef, {
+        count: phoneRes.count,
+        windowStart: admin.firestore.Timestamp.fromMillis(phoneRes.windowStart),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
       return { uidRes, phoneRes };
     });
 
@@ -90,7 +95,7 @@ exports.requestPhoneOtp = functions.region('asia-southeast1').https.onCall(async
     return { ok: true, uidCount: result.uidRes.count, phoneCount: result.phoneRes.count };
   } catch (e) {
     if (e instanceof functions.https.HttpsError) throw e;
-    console.error('requestPhoneOtp error:', e.message);
-    throw new functions.https.HttpsError('internal', 'Rate-limit check failed');
+    console.error('requestPhoneOtp error:', e.message, e.stack);
+    throw new functions.https.HttpsError('internal', 'Rate-limit check failed: ' + e.message);
   }
 });
