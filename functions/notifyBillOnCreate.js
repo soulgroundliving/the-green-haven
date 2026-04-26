@@ -143,6 +143,7 @@ exports.notifyBillOnCreate = functions.region('asia-southeast1')
     }
 
     const flexMsg = buildBillFlex(bill);
+    const { enqueueLineRetry } = require('./_lineRetry');
     const results = await Promise.allSettled(usersSnap.docs.map(doc => {
       const lineUserId = doc.id;
       return fetch('https://api.line.me/v2/bot/message/push', {
@@ -154,13 +155,27 @@ exports.notifyBillOnCreate = functions.region('asia-southeast1')
         body: JSON.stringify({ to: lineUserId, messages: [flexMsg] })
       }).then(r => r.ok
         ? Promise.resolve(lineUserId)
-        : r.text().then(t => Promise.reject(new Error(`LINE ${r.status}: ${t}`)))
+        : r.text().then(t => Promise.reject({ lineUserId, error: new Error(`LINE ${r.status}: ${t}`) }))
       );
     }));
 
     const pushed = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.filter(r => r.status === 'rejected').map(r => r.reason.message);
-    if (failed.length) console.warn(`⚠️ notify failures for ${building}/${roomId}:`, failed);
+    const failures = results.filter(r => r.status === 'rejected').map(r => r.reason);
+    // Enqueue every failure for the retry queue so transient LINE outages
+    // don't permanently lose the notification. Idempotency key includes
+    // billId so the same bill+user only ever queues once.
+    for (const f of failures) {
+      const userId = f?.lineUserId || 'unknown';
+      const errMsg = f?.error?.message || String(f);
+      await enqueueLineRetry({
+        lineUserId: userId,
+        message: flexMsg,
+        context: { source: 'notifyBillOnCreate', building, roomId, billId },
+        idempotencyKey: `bill-${building}-${roomId}-${billId}-${userId}`,
+        error: errMsg
+      });
+    }
+    if (failures.length) console.warn(`⚠️ notify failures for ${building}/${roomId} (queued for retry):`, failures.length);
 
     if (pushed > 0) {
       await rtdb.ref(`bills/${building}/${roomId}/${billId}/billNotifiedAt`).set(new Date().toISOString());

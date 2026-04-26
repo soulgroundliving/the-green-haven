@@ -90,6 +90,11 @@ exports.cleanupMaintenanceRTDBScheduled = require('./cleanupOldDocs').cleanupMai
 exports.cleanupLiffUsersRejectedScheduled = require('./cleanupOldDocs').cleanupLiffUsersRejectedScheduled;
 exports.cleanupOldDocs = require('./cleanupOldDocs').cleanupOldDocs;
 
+// Drains lineRetryQueue every 15 min — surfaces transient LINE push
+// failures (5xx, network blips, rate limits) into Firestore so they don't
+// silently disappear like before.
+exports.processLineRetryQueue = require('./lineRetryQueue').processLineRetryQueue;
+
 // Import existing functions if available
 try {
   const verifySlip = require('./verifySlip');
