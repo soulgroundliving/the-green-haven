@@ -98,8 +98,10 @@ exports.onComplaintCreated = functions.region('asia-southeast1').https.onCall(as
 exports.sendComplaintConfirmation = functions.region('asia-southeast1').https.onCall(async (data, context) => {
   try {
     const token = data.token;
-    const COMPLAINT_TOKEN = process.env.COMPLAINT_TOKEN || 'the-green-haven-complaint-token';
-
+    const COMPLAINT_TOKEN = process.env.COMPLAINT_TOKEN;
+    if (!COMPLAINT_TOKEN) {
+      throw new functions.https.HttpsError('failed-precondition', 'Server misconfigured: COMPLAINT_TOKEN not set');
+    }
     if (token !== COMPLAINT_TOKEN) {
       throw new functions.https.HttpsError('permission-denied', 'Unauthorized');
     }
