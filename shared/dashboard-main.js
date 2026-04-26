@@ -82,8 +82,12 @@ window.switchBillingMainTab = function(tab, btn) {
 
 // Meter Tab Switching Function
 window._switchMeterTabImpl = function(tabName, btnElement) {
-  // Hide all tabs
-  document.querySelectorAll('.meter-tab-content').forEach(el => el.classList.add('u-hidden'));
+  // Hide all tabs (clear inline display so the class wins on next show — static
+  // HTML ships several .meter-tab-content panels with inline display:none/block)
+  document.querySelectorAll('.meter-tab-content').forEach(el => {
+    el.classList.add('u-hidden');
+    if (el.style.display) el.style.display = '';
+  });
 
   // Remove active state from all buttons
   document.querySelectorAll('.meter-tab').forEach(btn => btn.classList.remove('active'));
@@ -93,25 +97,24 @@ window._switchMeterTabImpl = function(tabName, btnElement) {
   const resolvedBtn = btnElement || document.getElementById('tab-' + tabName + '-btn');
   if (contentEl) {
     contentEl.classList.remove('u-hidden');
+    if (contentEl.style.display) contentEl.style.display = '';
     if (resolvedBtn) resolvedBtn.classList.add('active');
   }
 
   // Initialize meter page content if needed
-  if (tabName === 'nest') {
-    initMeterNestTab();
-  } else if (tabName === 'rooms') {
-    initMeterRoomsTab();
-  } else if (tabName === 'room-config') {
-    // Initialize room config tab
+  if (tabName === 'room-config') {
     const dropdown = document.getElementById('roomConfigBuilding');
-    if (dropdown && !dropdown.value) {
-      dropdown.value = 'rooms'; // Set default
-    }
-    // Small delay to ensure DOM is ready
+    if (dropdown && !dropdown.value) dropdown.value = 'rooms';
     setTimeout(() => loadRoomConfigUI(), 50);
   } else if (tabName === 'import-meter') {
-    initImportMeterTab();
+    if (typeof initImportMeterTab === 'function') initImportMeterTab();
+  } else if (tabName === 'import-billing') {
+    if (typeof initImportBillingTab === 'function') initImportBillingTab();
   }
+  // Note: 'nest' and 'rooms' branches removed — those tabs no longer exist
+  // since the Property page consolidation. The dead initMeterNestTab/
+  // initMeterRoomsTab calls were silently throwing ReferenceError on every
+  // page-meter visit if anything dispatched those tab names.
 };
 // Assign to global scope
 window.switchMeterTab = window._switchMeterTabImpl;
