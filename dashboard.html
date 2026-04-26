@@ -180,10 +180,26 @@
       return;
     }
 
-    // Skip if not authenticated — Firestore rules require auth, and Firebase
-    // restores sessions async so currentUser may be null even for logged-in admins
+    // Wait for Firebase Auth to restore from IndexedDB persistence. Previous
+    // version returned silently when currentUser was still null, leaving
+    // METER_DATA empty for the entire session — sub-tabs that depend on it
+    // (สถานะชำระรายเดือน) showed "—" for every column despite docs existing.
+    // Same race we hit with signInAnonymously; fix is the same pattern.
     if (!window.firebaseAuth?.currentUser) {
-      return;
+      await new Promise((resolve) => {
+        let settled = false;
+        const settle = () => { if (!settled) { settled = true; resolve(); } };
+        const unsub = window.firebaseAuth.onAuthStateChanged?.((user) => {
+          if (user) { settle(); unsub && unsub(); }
+        }) || (() => {});
+        // Hard cap so a missing user can't hang the loader forever — pages
+        // without auth will redirect to /login via the dashboard auth guard.
+        setTimeout(() => { settle(); try { unsub(); } catch(_) {} }, 6000);
+      });
+      if (!window.firebaseAuth?.currentUser) {
+        console.warn('⚠️ No auth after restore window — skipping meter data load');
+        return;
+      }
     }
 
     try {
