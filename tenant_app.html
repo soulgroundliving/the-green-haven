@@ -60,7 +60,7 @@
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
       import { getDatabase, ref, get, set, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-      import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+      import { getAuth, signInAnonymously, onAuthStateChanged, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
       import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
       import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
       // Phase 4D App Check disabled 2026-04-25 — Firebase backend returns 403 on token
@@ -101,6 +101,9 @@
             firestoreFunctions: { collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp },
             functions: { httpsCallable: (name) => httpsCallable(fns, name) }
           };
+          // Phone Auth surface for OTP-gated phone edit (saveProfileEdit no longer
+          // accepts the phone field directly; user goes through 2-step OTP flow).
+          window.firebasePhone = { RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink };
           window.firebaseReady = true;
           window.dispatchEvent(new Event('firebaseInitialized'));
           // Anonymous sign-in so Firestore rules (require auth != null) don't block
@@ -3270,17 +3273,47 @@
             </div>
             <!-- Edit form (hidden by default — toggled by toggleProfileEditMode) -->
             <div id="profile-edit-form" style="display:none;">
-                <label style="font-size:var(--fs-sm); color:#666;">เบอร์โทรศัพท์</label>
-                <input type="tel" id="profile-edit-phone" placeholder="0xxxxxxxxx" style="margin-bottom:10px;">
+                <label style="font-size:var(--fs-sm); color:#666;">เบอร์โทรศัพท์ <span style="color:var(--accent);">🔒 ต้องยืนยัน OTP</span></label>
+                <div style="display:flex; gap:8px; margin-bottom:10px;">
+                    <input type="tel" id="profile-edit-phone-display" placeholder="0xxxxxxxxx" readonly style="flex:1; background:#f4f6f8;">
+                    <button class="btn-main" style="background:var(--accent); padding:0 14px; font-size:var(--fs-sm); white-space:nowrap;" onclick="openPhoneOtpModal()"><i class="fas fa-mobile-alt"></i> เปลี่ยนเบอร์</button>
+                </div>
                 <label style="font-size:var(--fs-sm); color:#666;">อีเมล</label>
                 <input type="email" id="profile-edit-email" placeholder="example@gmail.com" style="margin-bottom:15px;">
                 <div style="display:flex; gap:8px;">
                     <button class="btn-main" style="flex:1; background:#999;" onclick="toggleProfileEditMode(false)">ยกเลิก</button>
-                    <button class="btn-main" style="flex:1;" onclick="saveProfileEdit()"><i class="fas fa-save"></i> บันทึก</button>
+                    <button class="btn-main" style="flex:1;" onclick="saveProfileEdit()"><i class="fas fa-save"></i> บันทึกอีเมล</button>
                 </div>
                 <p style="font-size:var(--fs-sm); color:#888; margin-top:10px;">
                     <i class="fas fa-info-circle"></i> ชื่อ+นามสกุล, สัญญาเช่า และป้ายทะเบียน แก้ไม่ได้ — กรุณาติดต่อเจ้าของหากต้องการเปลี่ยน
                 </p>
+            </div>
+            <!-- Phone OTP modal (Firebase Phone Auth — verifies tenant owns the phone before saving) -->
+            <div id="phone-otp-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+                <div style="background:#fff; border-radius:var(--radius-card); padding:24px; max-width:380px; width:100%; box-shadow:var(--shadow);">
+                    <h3 style="margin:0 0 16px; font-size:var(--text-lg); color:var(--primary-dark);"><i class="fas fa-mobile-alt"></i> ยืนยันเบอร์โทรใหม่</h3>
+                    <!-- Step 1: enter phone -->
+                    <div id="otp-step-1">
+                        <label style="font-size:var(--fs-sm); color:#666;">เบอร์โทรศัพท์ใหม่ (ต้องเป็นเบอร์ที่ใช้งานได้)</label>
+                        <input type="tel" id="otp-new-phone" placeholder="0812345678" maxlength="10" style="margin-bottom:12px; width:100%;">
+                        <div id="otp-recaptcha-container" style="margin-bottom:12px;"></div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn-main" style="flex:1; background:#999;" onclick="closePhoneOtpModal()">ยกเลิก</button>
+                            <button class="btn-main" id="otp-send-btn" style="flex:2;" onclick="sendPhoneOtp()"><i class="fas fa-paper-plane"></i> ส่งรหัส OTP</button>
+                        </div>
+                    </div>
+                    <!-- Step 2: enter code -->
+                    <div id="otp-step-2" style="display:none;">
+                        <p style="font-size:var(--fs-sm); color:#666; margin:0 0 12px;">ส่งรหัส 6 หลักไปยัง <strong id="otp-sent-to">—</strong> แล้ว</p>
+                        <label style="font-size:var(--fs-sm); color:#666;">รหัส OTP</label>
+                        <input type="text" id="otp-code" placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="margin-bottom:12px; width:100%; font-size:var(--text-lg); letter-spacing:8px; text-align:center;">
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn-main" style="flex:1; background:#999;" onclick="resetPhoneOtpFlow()"><i class="fas fa-arrow-left"></i> ย้อนกลับ</button>
+                            <button class="btn-main" id="otp-confirm-btn" style="flex:2;" onclick="confirmPhoneOtp()"><i class="fas fa-check"></i> ยืนยัน</button>
+                        </div>
+                    </div>
+                    <p id="otp-status" style="font-size:var(--fs-sm); margin-top:12px; min-height:20px; color:var(--text-muted);"></p>
+                </div>
             </div>
         </div>
 
@@ -6033,9 +6066,9 @@
             if (!view || !form) return;
             const showForm = (show === undefined) ? form.style.display === 'none' : !!show;
             if (showForm) {
-                // Pre-fill current values
-                document.getElementById('profile-edit-phone').value   = _taTenant?.phone   || '';
-                document.getElementById('profile-edit-email').value   = _taTenant?.email   || '';
+                // Pre-fill current values. Phone is read-only here — must go through OTP modal.
+                document.getElementById('profile-edit-phone-display').value = _taTenant?.phone || '';
+                document.getElementById('profile-edit-email').value         = _taTenant?.email || '';
                 view.style.display = 'none';
                 form.style.display = 'block';
                 if (tgl) tgl.textContent = '↩️ ยกเลิก';
@@ -6046,12 +6079,9 @@
             }
         }
         async function saveProfileEdit() {
-            const phone   = document.getElementById('profile-edit-phone').value.trim();
-            const email   = document.getElementById('profile-edit-email').value.trim();
-            // Light validation
-            if (phone && !/^\d{9,10}$/.test(phone.replace(/\D/g, ''))) {
-                toast('เบอร์โทรไม่ถูกต้อง', 'error'); return;
-            }
+            // Phone is no longer saved here — OTP flow handles it directly. This save
+            // path only handles the email field now (fastest minimal change).
+            const email = document.getElementById('profile-edit-email').value.trim();
             if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
                 toast('อีเมลไม่ถูกต้อง', 'error'); return;
             }
@@ -6061,27 +6091,191 @@
             }
             const fs = window.firebase.firestoreFunctions;
             const db = window.firebase.firestore();
-            // licensePlate intentionally omitted — admin-only field (anti-fraud: tenants
-            // could swap plates between rooms or borrow another tenant's car identity).
-            const updates = { phone, email, updatedAt: new Date().toISOString() };
+            const updates = { email, updatedAt: new Date().toISOString() };
             try {
                 const ref = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
                 await fs.updateDoc(ref, updates);
-                // Mirror locally so UI updates immediately without waiting for next loadAllData
                 _taTenant = { ..._taTenant, ...updates };
                 window._tenantAppTenant = _taTenant;
                 if (typeof renderProfilePage === 'function') renderProfilePage();
                 if (typeof loadProfilePage === 'function') loadProfilePage();
                 toggleProfileEditMode(false);
-                toast('บันทึกข้อมูลส่วนตัวแล้ว', 'success');
+                toast('บันทึกอีเมลแล้ว', 'success');
             } catch (e) {
                 console.error('saveProfileEdit failed:', e);
                 toast('บันทึกไม่สำเร็จ — กรุณาลองใหม่', 'error');
             }
         }
+
+        // ===== PHONE OTP FLOW =====
+        // 2-step modal: enter new phone → reCAPTCHA + signInWithPhoneNumber → enter
+        // 6-digit code → confirmationResult.confirm() → save phone to Firestore.
+        // Backend `requestPhoneOtp` callable enforces 3/hr per UID + per phone before
+        // the actual SMS goes out (Firebase Phone Auth has its own per-IP limiter).
+        let _otpRecaptchaVerifier = null;
+        let _otpConfirmationResult = null;
+        let _otpPendingPhone = null;
+        function _setOtpStatus(msg, kind) {
+            const el = document.getElementById('otp-status');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.style.color = kind === 'error' ? 'var(--danger)' :
+                             kind === 'success' ? 'var(--primary-green)' :
+                             'var(--text-muted)';
+        }
+        function openPhoneOtpModal() {
+            const m = document.getElementById('phone-otp-modal');
+            if (!m) return;
+            m.style.display = 'flex';
+            resetPhoneOtpFlow();
+            // Pre-fill with current phone (user can edit)
+            const cur = (_taTenant?.phone || '').replace(/\D/g, '');
+            document.getElementById('otp-new-phone').value = cur;
+        }
+        function closePhoneOtpModal() {
+            const m = document.getElementById('phone-otp-modal');
+            if (m) m.style.display = 'none';
+            // Clear reCAPTCHA so a fresh widget mounts next open (stale widget triggers
+            // "RecaptchaVerifier already rendered" errors)
+            if (_otpRecaptchaVerifier) {
+                try { _otpRecaptchaVerifier.clear(); } catch(_) {}
+                _otpRecaptchaVerifier = null;
+            }
+            const c = document.getElementById('otp-recaptcha-container');
+            if (c) c.innerHTML = '';
+        }
+        function resetPhoneOtpFlow() {
+            document.getElementById('otp-step-1').style.display = 'block';
+            document.getElementById('otp-step-2').style.display = 'none';
+            document.getElementById('otp-code').value = '';
+            _otpConfirmationResult = null;
+            _otpPendingPhone = null;
+            _setOtpStatus('');
+        }
+        async function sendPhoneOtp() {
+            const raw = document.getElementById('otp-new-phone').value.trim().replace(/\D/g, '');
+            if (!/^0\d{9}$/.test(raw)) {
+                _setOtpStatus('กรุณาใส่เบอร์ 10 หลัก ขึ้นต้นด้วย 0', 'error'); return;
+            }
+            if (!window.firebasePhone || !window.firebaseAuth) {
+                _setOtpStatus('ระบบ Phone Auth ยังไม่พร้อม', 'error'); return;
+            }
+            const e164 = '+66' + raw.slice(1); // Thai E.164
+            const btn = document.getElementById('otp-send-btn');
+            btn.disabled = true;
+            _setOtpStatus('⏳ กำลังตรวจสอบ rate limit…');
+            try {
+                // Server-side gate first (3/hr per UID + per phone)
+                const callable = window.firebase.functions.httpsCallable('requestPhoneOtp');
+                await callable({ phone: e164 });
+
+                _setOtpStatus('⏳ กำลังโหลด reCAPTCHA…');
+                if (!_otpRecaptchaVerifier) {
+                    _otpRecaptchaVerifier = new window.firebasePhone.RecaptchaVerifier(
+                        window.firebaseAuth, 'otp-recaptcha-container', { size: 'normal' }
+                    );
+                    await _otpRecaptchaVerifier.render();
+                }
+                _setOtpStatus('⏳ กำลังส่ง SMS…');
+                _otpConfirmationResult = await window.firebasePhone.signInWithPhoneNumber(
+                    window.firebaseAuth, e164, _otpRecaptchaVerifier
+                );
+                _otpPendingPhone = raw;
+                document.getElementById('otp-sent-to').textContent = raw;
+                document.getElementById('otp-step-1').style.display = 'none';
+                document.getElementById('otp-step-2').style.display = 'block';
+                _setOtpStatus('✅ ส่ง OTP แล้ว — รออ่าน SMS', 'success');
+                setTimeout(() => document.getElementById('otp-code')?.focus(), 100);
+            } catch (e) {
+                console.error('sendPhoneOtp failed:', e);
+                const code = e?.code || '';
+                if (code === 'functions/resource-exhausted') {
+                    _setOtpStatus('⛔ ขอ OTP ครบโควต้า (3 ครั้ง/ชั่วโมง) แล้ว', 'error');
+                } else if (code === 'auth/invalid-phone-number') {
+                    _setOtpStatus('⛔ รูปแบบเบอร์ไม่ถูกต้อง', 'error');
+                } else if (code === 'auth/too-many-requests') {
+                    _setOtpStatus('⛔ Firebase block ชั่วคราว — ลองอีก ~1 ชม.', 'error');
+                } else {
+                    _setOtpStatus('⛔ ส่งไม่สำเร็จ: ' + (e?.message || 'unknown'), 'error');
+                }
+                // Reset reCAPTCHA so user can retry without page reload
+                if (_otpRecaptchaVerifier) {
+                    try { _otpRecaptchaVerifier.clear(); } catch(_) {}
+                    _otpRecaptchaVerifier = null;
+                    const c = document.getElementById('otp-recaptcha-container');
+                    if (c) c.innerHTML = '';
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        async function confirmPhoneOtp() {
+            const code = document.getElementById('otp-code').value.trim();
+            if (!/^\d{6}$/.test(code)) {
+                _setOtpStatus('รหัส OTP ต้องเป็นตัวเลข 6 หลัก', 'error'); return;
+            }
+            if (!_otpConfirmationResult || !_otpPendingPhone) {
+                _setOtpStatus('Session OTP หมดอายุ — เริ่มใหม่', 'error'); return;
+            }
+            const btn = document.getElementById('otp-confirm-btn');
+            btn.disabled = true;
+            _setOtpStatus('⏳ กำลังยืนยัน…');
+            try {
+                // confirm() signs the user in as the phone-auth identity. We do NOT
+                // want to keep that session — we just needed proof of phone ownership.
+                // Save the phone, then sign back into anonymous so original tenant
+                // permissions stay intact.
+                await _otpConfirmationResult.confirm(code);
+
+                if (!_taRoom || !_taBuilding) {
+                    _setOtpStatus('⛔ ข้อมูลห้องไม่พร้อม', 'error'); btn.disabled = false; return;
+                }
+                const fs = window.firebase.firestoreFunctions;
+                const db = window.firebase.firestore();
+                const ref = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
+                await fs.updateDoc(ref, { phone: _otpPendingPhone, phoneVerifiedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+                _taTenant = { ..._taTenant, phone: _otpPendingPhone, phoneVerifiedAt: new Date().toISOString() };
+                window._tenantAppTenant = _taTenant;
+
+                // Restore anonymous session (phone sign-in replaced the anon UID).
+                // saveProfileEdit's email path also needs Firestore auth; without this
+                // the next email save would be blocked by rules.
+                try {
+                    const { signInAnonymously } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
+                    await signInAnonymously(window.firebaseAuth);
+                } catch (re) {
+                    console.warn('re-auth anon failed:', re);
+                }
+
+                if (typeof renderProfilePage === 'function') renderProfilePage();
+                if (typeof loadProfilePage === 'function') loadProfilePage();
+                _setOtpStatus('✅ บันทึกเบอร์ใหม่แล้ว', 'success');
+                document.getElementById('profile-edit-phone-display').value = _otpPendingPhone;
+                toast('ยืนยันและบันทึกเบอร์ใหม่แล้ว', 'success');
+                setTimeout(closePhoneOtpModal, 1200);
+            } catch (e) {
+                console.error('confirmPhoneOtp failed:', e);
+                const code = e?.code || '';
+                if (code === 'auth/invalid-verification-code') {
+                    _setOtpStatus('⛔ รหัส OTP ไม่ถูกต้อง', 'error');
+                } else if (code === 'auth/code-expired') {
+                    _setOtpStatus('⛔ รหัสหมดอายุ — ขอใหม่', 'error');
+                } else {
+                    _setOtpStatus('⛔ ยืนยันไม่สำเร็จ: ' + (e?.message || 'unknown'), 'error');
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         if (typeof window !== 'undefined') {
             window.toggleProfileEditMode = toggleProfileEditMode;
             window.saveProfileEdit = saveProfileEdit;
+            window.openPhoneOtpModal = openPhoneOtpModal;
+            window.closePhoneOtpModal = closePhoneOtpModal;
+            window.resetPhoneOtpFlow = resetPhoneOtpFlow;
+            window.sendPhoneOtp = sendPhoneOtp;
+            window.confirmPhoneOtp = confirmPhoneOtp;
         }
 
         // ===== MAINTENANCE + COMPLAINT CATEGORIES SUBSCRIBE =====

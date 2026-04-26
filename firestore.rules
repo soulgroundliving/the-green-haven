@@ -83,6 +83,9 @@ service cloud.firestore {
     match /rateLimits/{key} {
       allow read, write: if false;
     }
+    match /phoneOtpRateLimit/{key} {
+      allow read, write: if false;
+    }
 
     // ===== AUTH EVENTS (failed-login audit log — 4B) =====
     // Anyone can create (login hasn't succeeded yet, so auth uid unavailable).

@@ -59,15 +59,8 @@ const BATCH_SIZE = 500;
 // ============================================================
 // 1) rateLimits — daily delete > 1 day
 // ============================================================
-async function runRateLimitsCleanup() {
-  const cutoffMs = Date.now() - RATE_LIMITS_TTL_MS;
-  const cutoff = admin.firestore.Timestamp.fromMillis(cutoffMs);
-  let deleted = 0;
-
-  // verifySlip writes updatedAt as a Firestore Timestamp (server side) OR
-  // as a Date string fallback. Query both shapes by paginating without a
-  // where clause — collection is small so a full scan is cheap.
-  const snapshot = await firestore.collection('rateLimits').limit(BATCH_SIZE).get();
+async function _purgeStaleRateLimitDocs(collectionName, cutoffMs) {
+  const snapshot = await firestore.collection(collectionName).limit(BATCH_SIZE).get();
   const batch = firestore.batch();
   let queued = 0;
 
@@ -76,8 +69,9 @@ async function runRateLimitsCleanup() {
     let updatedAtMs;
     if (data.updatedAt?.toMillis) updatedAtMs = data.updatedAt.toMillis();
     else if (typeof data.updatedAt === 'string') updatedAtMs = new Date(data.updatedAt).getTime();
+    else if (data.windowStart?.toMillis) updatedAtMs = data.windowStart.toMillis();
     else if (typeof data.windowStart === 'number') updatedAtMs = data.windowStart;
-    else return;  // unknown shape — skip rather than delete blindly
+    else return;
 
     if (updatedAtMs < cutoffMs) {
       batch.delete(doc.ref);
@@ -85,12 +79,21 @@ async function runRateLimitsCleanup() {
     }
   });
 
-  if (queued > 0) {
-    await batch.commit();
-    deleted = queued;
-  }
-  console.log(`🧹 rateLimits cleanup: scanned=${snapshot.size} deleted=${deleted}`);
-  return { scanned: snapshot.size, deleted };
+  if (queued > 0) await batch.commit();
+  console.log(`🧹 ${collectionName} cleanup: scanned=${snapshot.size} deleted=${queued}`);
+  return { scanned: snapshot.size, deleted: queued };
+}
+
+async function runRateLimitsCleanup() {
+  const cutoffMs = Date.now() - RATE_LIMITS_TTL_MS;
+  const r1 = await _purgeStaleRateLimitDocs('rateLimits', cutoffMs);
+  const r2 = await _purgeStaleRateLimitDocs('phoneOtpRateLimit', cutoffMs);
+  return {
+    scanned: r1.scanned + r2.scanned,
+    deleted: r1.deleted + r2.deleted,
+    rateLimits: r1,
+    phoneOtpRateLimit: r2,
+  };
 }
 
 exports.cleanupRateLimitsScheduled = functions

@@ -10,6 +10,9 @@ exports.linkAuthUid = require('./linkAuthUid').linkAuthUid;
 // Phone match check for LIFF auto-approve — admin SDK, never exposes raw phone (Phase 4C-2)
 exports.checkTenantPhone = require('./checkTenantPhone').checkTenantPhone;
 
+// App-level rate-limit gate before client SDK signInWithPhoneNumber (3/hr per UID + per phone)
+exports.requestPhoneOtp = require('./requestPhoneOtp').requestPhoneOtp;
+
 // Complaint & Gamification
 exports.onComplaintCreated = require('./complaintAndGamification').onComplaintCreated;
 exports.sendComplaintConfirmation = require('./complaintAndGamification').sendComplaintConfirmation;
