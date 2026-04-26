@@ -3274,8 +3274,11 @@
             <!-- Edit form (hidden by default — toggled by toggleProfileEditMode) -->
             <div id="profile-edit-form" style="display:none;">
                 <label style="font-size:var(--fs-sm); color:#666;">เบอร์โทรศัพท์ <span style="color:var(--accent);">🔒 ต้องยืนยัน OTP</span></label>
-                <input type="tel" id="profile-edit-phone-display" placeholder="ยังไม่ได้ตั้งเบอร์" readonly style="margin-bottom:8px; background:#f4f6f8; width:100%;">
-                <button class="btn-main" style="background:var(--accent); width:100%; margin-bottom:14px; font-size:var(--fs-sm);" onclick="openPhoneOtpModal()"><i class="fas fa-mobile-alt"></i> เปลี่ยน / ตั้งเบอร์ใหม่ (ผ่าน OTP)</button>
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#f4f6f8; border-radius:var(--radius-sm); margin-bottom:8px; font-size:var(--fs-base);">
+                    <span style="color:#666;">ปัจจุบัน:</span>
+                    <strong id="profile-edit-phone-display" style="color:var(--text-dark);">—</strong>
+                </div>
+                <button class="btn-main" style="background:var(--accent); width:100%; margin-bottom:14px;" onclick="openPhoneOtpModal()"><i class="fas fa-mobile-alt"></i> เปลี่ยน / ตั้งเบอร์ใหม่ (ผ่าน OTP)</button>
                 <label style="font-size:var(--fs-sm); color:#666;">อีเมล</label>
                 <input type="email" id="profile-edit-email" placeholder="example@gmail.com" style="margin-bottom:15px;">
                 <div style="display:flex; gap:8px;">
@@ -6065,7 +6068,7 @@
             const showForm = (show === undefined) ? form.style.display === 'none' : !!show;
             if (showForm) {
                 // Pre-fill current values. Phone is read-only here — must go through OTP modal.
-                document.getElementById('profile-edit-phone-display').value = _taTenant?.phone || '';
+                document.getElementById('profile-edit-phone-display').textContent = _taTenant?.phone || '— ยังไม่ได้ตั้ง';
                 document.getElementById('profile-edit-email').value         = _taTenant?.email || '';
                 view.style.display = 'none';
                 form.style.display = 'block';
@@ -6248,7 +6251,7 @@
                 if (typeof renderProfilePage === 'function') renderProfilePage();
                 if (typeof loadProfilePage === 'function') loadProfilePage();
                 _setOtpStatus('✅ บันทึกเบอร์ใหม่แล้ว', 'success');
-                document.getElementById('profile-edit-phone-display').value = _otpPendingPhone;
+                document.getElementById('profile-edit-phone-display').textContent = _otpPendingPhone;
                 toast('ยืนยันและบันทึกเบอร์ใหม่แล้ว', 'success');
                 setTimeout(closePhoneOtpModal, 1200);
             } catch (e) {
