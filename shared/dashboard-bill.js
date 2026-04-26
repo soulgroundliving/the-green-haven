@@ -411,7 +411,7 @@ function getBillData(){
   const month=parseInt(document.getElementById('f-month').value);
   const year=document.getElementById('f-year').value;
   const note=document.getElementById('f-note').value;
-  const building=getBuildingInfo(currentBuilding).displayName;
+  const building=getBuildingInfo(currentBuilding).firebaseBuilding;
   const now=new Date();
   const no=`TGH-${year}${String(month).padStart(2,'0')}-${room.replace(/[^0-9ก-๙A-Za-z]/g,'')}-${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
   const dateStr=now.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
@@ -1250,7 +1250,7 @@ async function autoGenerateAllBills() {
       const billObject = {
         billId: `TGH-${year}${String(month).padStart(2,'0')}-${roomId.replace(/[^0-9ก-๙A-Za-z]/g,'')}-${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`,
         room: roomId,
-        building: bldgInfo.displayName,
+        building: fbBuildingId,
         month: month,
         year: year,
         status: 'pending',
