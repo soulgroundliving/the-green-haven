@@ -54,7 +54,6 @@ function initRoomsPage(){
   grid.innerHTML=rooms.map(r=>{
     const tenant = allTenants[r.id];
     const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
-    const hasPet = !!(tenant && tenant.pets && tenant.pets.hasPet);
     const statusInfo = getRoomColorStatus(r.id, r);
     const bgColor = r.type==='commercial'?'rgba(66,133,244,0.15)':statusInfo.color+'40';
     const borderColor = r.type==='commercial'?'#4285f4':statusInfo.color;
@@ -64,7 +63,6 @@ function initRoomsPage(){
       <div class="room-num">${displayId}</div>
       <div class="room-rent">฿${r.rentPrice.toLocaleString()}/เดือน</div>
       <div class="room-status">${r.type==='commercial'?'🏪 พาณิชย์':occupancyIcon + (tenant && tenant.name ? ' ' + _escProp(tenant.name) : ' ว่าง')}</div>
-      ${hasPet ? '<div style="font-size:0.7rem;text-align:center;margin-top:2px;">🐾 มีสัตว์เลี้ยง</div>' : ''}
       <div style="font-size:0.8rem;margin-top:4px;text-align:center;color:${borderColor};font-weight:600;">${statusInfo.icon} ${statusInfo.label}</div>
     </div>`;
   }).join('');
@@ -219,7 +217,6 @@ function renderCompactRoomGrid(){
         <span style="font-weight:600;color:var(--text);">ชื่อ</span>
         <span class="compact-card-value">${_escProp(tenant.name)}</span>
       </div>
-      ${tenant.pets && tenant.pets.hasPet ? `<div class="compact-card-info"><span style="color:#6a1b9a;font-size:.8rem;">สัตว์เลี้ยง</span><span style="font-size:.8rem;color:#6a1b9a;">🐾 ${_escProp(tenant.pets.type || 'มีสัตว์เลี้ยง')}</span></div>` : ''}
       <div class="compact-card-info">
         <span>โทร</span>
         <span style="font-size:.8rem;">${tenant.phone || '—'}</span>
@@ -736,6 +733,7 @@ function initNestPage(){
     const tenant = allTenants[r.id];
     const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
     const typeIcon = r.type === 'pet-allowed' ? '🐾' : '🏠';
+    const hasPet = r.type === 'pet-allowed' && !!(tenant && tenant.pets && tenant.pets.hasPet);
     const statusInfo = getRoomColorStatus(r.id, r);
     const bgColor = statusInfo.color+'40';
     const borderColor = statusInfo.color;
@@ -744,6 +742,7 @@ function initNestPage(){
       <div class="room-num">${(r.name || r.id).replace(/^ห้อง |^Nest /, '')}</div>
       <div class="room-rent">฿${r.rentPrice.toLocaleString()}/เดือน</div>
       <div class="room-status">${typeIcon} ${tenant && tenant.name ? tenant.name : 'ว่าง'}</div>
+      ${hasPet ? `<div style="font-size:0.7rem;text-align:center;margin-top:2px;">🐾 ${_escProp(tenant.pets.type || 'มีสัตว์เลี้ยง')}</div>` : ''}
       <div style="font-size:0.8rem;margin-top:4px;text-align:center;color:${borderColor};font-weight:600;">${statusInfo.icon} ${statusInfo.label}</div>
     </div>`;
   }).join('');
