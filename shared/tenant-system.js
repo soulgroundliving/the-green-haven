@@ -1274,6 +1274,29 @@ class TenantFirebaseSync {
         }
       }
 
+      // Overlay tenant-written contact fields from tenants/{building}/list/{roomId}.
+      // saveProfileEdit (email) and setVerifiedPhone CF (phone) write to this path,
+      // but loadLease reads from buildings/{...} (admin doc) — different paths.
+      // This merge ensures tenant edits survive page reloads.
+      try {
+        if (window.firebase?.firestore && this.currentBuilding && this.currentRoom) {
+          const db = window.firebase.firestore();
+          const fs = window.firebase.firestoreFunctions;
+          const tRef = fs.doc(db, 'tenants', this.currentBuilding, 'list', String(this.currentRoom));
+          const tSnap = await fs.getDoc(tRef);
+          if (tSnap.exists()) {
+            const td = tSnap.data();
+            const overrides = {};
+            if (td.email)        overrides.email = td.email;
+            if (td.phone)        overrides.phone = td.phone;
+            if (td.licensePlate) overrides.licensePlate = td.licensePlate;
+            if (Object.keys(overrides).length) {
+              tenant = { ...(tenant || {}), ...overrides };
+            }
+          }
+        }
+      } catch (_) { /* permission_denied expected before linkAuthUid sets linkedAuthUid */ }
+
       const allData = {
         lease,
         tenant,

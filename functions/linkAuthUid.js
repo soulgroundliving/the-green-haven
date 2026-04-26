@@ -99,9 +99,9 @@ exports.linkAuthUid = functions.region('asia-southeast1').https.onRequest(async 
     await firestore
       .collection('tenants').doc(building)
       .collection('list').doc(room)
-      .update({ linkedAuthUid: anonUid, linkedAt: admin.firestore.FieldValue.serverTimestamp() });
+      .set({ linkedAuthUid: anonUid, linkedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
   } catch (e) {
-    // Non-fatal: tenant doc may not exist yet (room not created). Log and continue.
+    // Non-fatal: log and continue, but this should rarely fail with set+merge via admin SDK.
     console.warn(`linkAuthUid: could not write linkedAuthUid to tenants/${building}/list/${room}:`, e.message);
   }
 
