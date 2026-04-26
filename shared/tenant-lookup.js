@@ -31,8 +31,11 @@ class TenantLookup {
         moveOutDate: ssotDoc.moveOutDate || lease.endDate || lease.moveOutDate || null,
         deposit:     (ssotDoc.deposit !== undefined && ssotDoc.deposit !== null) ? ssotDoc.deposit : (lease.deposit ?? null),
         rentAmount:  ssotDoc.rentAmount ?? lease.rentAmount ?? null,
-        // Field name aliases used by the modal populate code
-        vehiclePlate: ssotDoc.vehiclePlate || ssotDoc.licensePlate || null,
+        // Canonical field is licensePlate; fall back to legacy vehiclePlate
+        // for any pre-2026-04-26 doc that was written by the buggy admin modal
+        // before the field name was unified. Once admin re-saves once, the
+        // legacy key naturally drops out.
+        licensePlate: ssotDoc.licensePlate || ssotDoc.vehiclePlate || null,
       };
     }
 
