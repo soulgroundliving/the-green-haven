@@ -128,7 +128,6 @@ class RoomConfigManager {
           id: String(r.id),
           name: r.name || '',
           rentPrice: Number(r.rentPrice) || 0,
-          deposit: Number(r.deposit) || 0,
           electricRate: Number(r.electricRate) || 8,
           waterRate: Number(r.waterRate) || 20,
           trashRate: Number(r.trashRate) || 20,
@@ -183,7 +182,6 @@ class RoomConfigManager {
               id: String(r.id),
               name: r.name || r.id,
               rentPrice: Number(r.rentPrice) || 0,
-              deposit: Number(r.deposit) || 0,
               electricRate: Number(r.electricRate) || 8,
               waterRate: Number(r.waterRate) || 20,
               trashRate: Number(r.trashRate) || (building === 'nest' ? 40 : 20),
@@ -219,13 +217,7 @@ class RoomConfigManager {
 
   static getRoom(building, roomId) {
     const config = this.getRoomsConfig(building);
-    const room = config.rooms.find(r => r.id === roomId);
-    if (!room) return null;
-    if (!room.deposit) {
-      const defDeposit = (DEFAULT_ROOMS_CONFIG[building]?.rooms || []).find(d => d.id === roomId)?.deposit;
-      if (defDeposit) return { ...room, deposit: defDeposit };
-    }
-    return room;
+    return config.rooms.find(r => r.id === roomId) || null;
   }
 
   static getRoomRate(building, roomId, rateType) {
