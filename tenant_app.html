@@ -6114,7 +6114,7 @@
         // Backend `requestPhoneOtp` callable enforces 3/hr per UID + per phone before
         // the actual SMS goes out (Firebase Phone Auth has its own per-IP limiter).
         let _otpRecaptchaVerifier = null;
-        let _otpConfirmationResult = null;
+        let _otpVerificationId = null;
         let _otpPendingPhone = null;
         function _setOtpStatus(msg, kind) {
             const el = document.getElementById('otp-status');
@@ -6149,7 +6149,7 @@
             document.getElementById('otp-step-1').style.display = 'block';
             document.getElementById('otp-step-2').style.display = 'none';
             document.getElementById('otp-code').value = '';
-            _otpConfirmationResult = null;
+            _otpVerificationId = null;
             _otpPendingPhone = null;
             _setOtpStatus('');
         }
@@ -6178,9 +6178,14 @@
                     await _otpRecaptchaVerifier.render();
                 }
                 _setOtpStatus('⏳ กำลังส่ง SMS…');
-                _otpConfirmationResult = await window.firebasePhone.signInWithPhoneNumber(
-                    window.firebaseAuth, e164, _otpRecaptchaVerifier
-                );
+                // Use PhoneAuthProvider.verifyPhoneNumber instead of signInWithPhoneNumber:
+                // the latter signs the user in as a brand-new phone-auth UID, which
+                // breaks the Firestore tenant-doc linkedAuthUid relationship. Verify-only
+                // returns a verificationId we later combine with the SMS code into a
+                // PhoneAuthCredential, then linkWithCredential preserves the original
+                // anonymous UID so writes still pass per-room rules.
+                const provider = new window.firebasePhone.PhoneAuthProvider(window.firebaseAuth);
+                _otpVerificationId = await provider.verifyPhoneNumber(e164, _otpRecaptchaVerifier);
                 _otpPendingPhone = raw;
                 document.getElementById('otp-sent-to').textContent = raw;
                 document.getElementById('otp-step-1').style.display = 'none';
@@ -6215,18 +6220,27 @@
             if (!/^\d{6}$/.test(code)) {
                 _setOtpStatus('รหัส OTP ต้องเป็นตัวเลข 6 หลัก', 'error'); return;
             }
-            if (!_otpConfirmationResult || !_otpPendingPhone) {
+            if (!_otpVerificationId || !_otpPendingPhone) {
                 _setOtpStatus('Session OTP หมดอายุ — เริ่มใหม่', 'error'); return;
             }
             const btn = document.getElementById('otp-confirm-btn');
             btn.disabled = true;
             _setOtpStatus('⏳ กำลังยืนยัน…');
             try {
-                // confirm() signs the user in as the phone-auth identity. We do NOT
-                // want to keep that session — we just needed proof of phone ownership.
-                // Save the phone, then sign back into anonymous so original tenant
-                // permissions stay intact.
-                await _otpConfirmationResult.confirm(code);
+                // Build credential from verificationId + user-typed code, then LINK to
+                // the existing (anonymous) user. This preserves the UID, so the tenant
+                // doc's linkedAuthUid still matches and Firestore rules let us write.
+                // If the user has a previously-linked phone, unlink first (link op fails
+                // when a provider is already linked).
+                const credential = window.firebasePhone.PhoneAuthProvider.credential(_otpVerificationId, code);
+                const user = window.firebaseAuth.currentUser;
+                if (!user) {
+                    _setOtpStatus('⛔ Session หาย — รีเฟรชหน้าใหม่', 'error'); btn.disabled = false; return;
+                }
+                if (user.providerData?.some(p => p.providerId === 'phone')) {
+                    try { await window.firebasePhone.unlink(user, 'phone'); } catch(_) {}
+                }
+                await window.firebasePhone.linkWithCredential(user, credential);
 
                 if (!_taRoom || !_taBuilding) {
                     _setOtpStatus('⛔ ข้อมูลห้องไม่พร้อม', 'error'); btn.disabled = false; return;
@@ -6237,16 +6251,6 @@
                 await fs.updateDoc(ref, { phone: _otpPendingPhone, phoneVerifiedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
                 _taTenant = { ..._taTenant, phone: _otpPendingPhone, phoneVerifiedAt: new Date().toISOString() };
                 window._tenantAppTenant = _taTenant;
-
-                // Restore anonymous session (phone sign-in replaced the anon UID).
-                // saveProfileEdit's email path also needs Firestore auth; without this
-                // the next email save would be blocked by rules.
-                try {
-                    const { signInAnonymously } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
-                    await signInAnonymously(window.firebaseAuth);
-                } catch (re) {
-                    console.warn('re-auth anon failed:', re);
-                }
 
                 if (typeof renderProfilePage === 'function') renderProfilePage();
                 if (typeof loadProfilePage === 'function') loadProfilePage();
