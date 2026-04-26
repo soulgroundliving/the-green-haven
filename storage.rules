@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ===== HELPERS =====
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+    // Files capped at 10 MB regardless of role.
+    function fitsSizeLimit() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    // Allow common image + PDF mime types only.
+    function isImageOrPdf() {
+      return request.resource.contentType.matches('image/.*') ||
+             request.resource.contentType == 'application/pdf';
+    }
+
+    // ===== PETS — photo + vaccine book =====
+    // Path: pets/{building}/{room}/{petId}/{file=**}
+    // Tenants and admin can read (so admin's pet-approval UI can render).
+    // Any signed-in user can write to their own room's pet folder.
+    // (Stronger per-room/per-tenant scoping would need linkedAuthUid lookup,
+    //  which Storage rules can't do — Firestore-side rules already gate the
+    //  pet doc write, so the file upload mirrors that trust boundary.)
+    match /pets/{building}/{room}/{petId}/{file=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && fitsSizeLimit() && isImageOrPdf();
+      allow delete: if isAdmin();
+    }
+
+    // ===== LEASES — admin uploads tenant docs =====
+    // Path: leases/{building}/{roomId}/{leaseId}/{fileName}
+    match /leases/{building}/{roomId}/{leaseId}/{fileName} {
+      allow read:   if isSignedIn();
+      allow write:  if isAdmin() && fitsSizeLimit() && isImageOrPdf();
+      allow delete: if isAdmin();
+    }
+
+    // Default deny.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

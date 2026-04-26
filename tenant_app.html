@@ -63,6 +63,7 @@
       import { getAuth, signInAnonymously, onAuthStateChanged, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
       import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
       import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
+      import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
       // Phase 4D App Check disabled 2026-04-25 — Firebase backend returns 403 on token
       // validation (secret-key/config mismatch); triggers 24hr client throttle on every
       // page load. Re-enable after dedicated debug session (see next_session_handoff.md).
@@ -81,6 +82,7 @@
           const database = getDatabase(app);
           const auth = getAuth(app);
           const firestore = getFirestore(app);
+          const storage = getStorage(app);
           // Region must match CF deployment (asia-southeast1)
           const fns = getFunctions(app, 'asia-southeast1');
 
@@ -99,7 +101,9 @@
           window.firebase = {
             firestore: () => firestore,
             firestoreFunctions: { collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp },
-            functions: { httpsCallable: (name) => httpsCallable(fns, name) }
+            functions: { httpsCallable: (name) => httpsCallable(fns, name) },
+            storage: () => storage,
+            storageFunctions: { ref: storageRef, uploadBytes, getDownloadURL, deleteObject }
           };
           // Phone Auth surface for OTP-gated phone edit (saveProfileEdit no longer
           // accepts the phone field directly; user goes through 2-step OTP flow).
@@ -2959,11 +2963,12 @@
             <input type="hidden" id="edit-pet-id" value="">
 
             <div style="text-align: center; margin-bottom: 20px;">
-                <div id="new-pet-avatar"
-                    style="width:90px; height:90px; background:var(--soft-green); border-radius:30%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); cursor:pointer; overflow: hidden; border: 2px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                <div id="new-pet-avatar" onclick="document.getElementById('pet-photo-input').click()"
+                    style="width:90px; height:90px; background:var(--soft-green); border-radius:30%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); cursor:pointer; overflow: hidden; border: 2px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); background-size: cover; background-position: center;">
                     📸
                 </div>
-                <small
+                <input type="file" id="pet-photo-input" accept="image/*" hidden onchange="updatePetPhotoPreview(this)">
+                <small onclick="document.getElementById('pet-photo-input').click()"
                     style="color: var(--primary-green); font-weight: 600; cursor: pointer;">อัปโหลดรูปภาพโปรไฟล์</small>
             </div>
 
@@ -5352,9 +5357,13 @@
                     : '<p style="margin:4px 0; font-size:var(--fs-sm); color:#f59e0b; font-weight: 600;">⚠️ รออัปเดตวัคซีน</p>';
 
                 const safeId = _esc(pet.id);
+                const avatarStyle = pet.photoURL
+                    ? `background-image:url('${_esc(pet.photoURL)}'); background-size:cover; background-position:center;`
+                    : 'background: var(--soft-green);';
+                const avatarInner = pet.photoURL ? '' : _esc(pet.typeEmoji);
                 const html = `
         <div class="pet-item" style="animation: slideUp 0.5s ease; background: white; padding: 15px; border-radius: 20px; display: flex; align-items: center; gap: 15px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #f9f9f9;">
-            <div class="pet-avatar" style="font-size: var(--fs-lg); background: var(--soft-green); width:60px; height:60px; display:flex; align-items:center; justify-content:center; border-radius:15px;">${_esc(pet.typeEmoji)}</div>
+            <div class="pet-avatar" style="font-size: var(--fs-lg); ${avatarStyle} width:60px; height:60px; display:flex; align-items:center; justify-content:center; border-radius:15px; overflow:hidden;">${avatarInner}</div>
             <div style="flex:1;">
                 <strong style="font-size: var(--fs-md); color: #334435;">น้อง${_esc(pet.name)} (${_esc(pet.breed)})</strong>
                 ${vaxStatusHTML}
@@ -5373,8 +5382,37 @@
             });
         }
 
+        // Selected files (in-memory until saveNewPet uploads them).
+        let _pendingPetPhoto = null;          // File | null
+        let _pendingVaccineBook = null;       // File | null
+
+        function updatePetPhotoPreview(input) {
+            const f = input.files && input.files[0];
+            if (!f) return;
+            _pendingPetPhoto = f;
+            const url = URL.createObjectURL(f);
+            const el = document.getElementById('new-pet-avatar');
+            if (el) {
+                el.style.backgroundImage = `url('${url}')`;
+                el.textContent = '';
+            }
+        }
+
+        async function _uploadPetFile(file, building, room, petId, kind) {
+            // kind ∈ 'photo' | 'vaccineBook'
+            const stg = window.firebase?.storage?.();
+            const stgFs = window.firebase?.storageFunctions;
+            if (!stg || !stgFs) throw new Error('Firebase Storage not initialized');
+            const ext = (file.name.split('.').pop() || 'bin').toLowerCase().slice(0, 6);
+            const path = `pets/${building}/${room}/${petId}/${kind}_${Date.now()}.${ext}`;
+            const ref = stgFs.ref(stg, path);
+            await stgFs.uploadBytes(ref, file, { contentType: file.type });
+            const url = await stgFs.getDownloadURL(ref);
+            return { url, path, fileName: file.name };
+        }
+
         // 2. ฟังก์ชันบันทึกข้อมูล
-        function saveNewPet() {
+        async function saveNewPet() {
             const editId = document.getElementById('edit-pet-id').value;
             const name = document.getElementById('pet-name')?.value.trim();
 
@@ -5391,6 +5429,14 @@
             const isVaccinated = document.getElementById('pet-vaccine')?.checked;
             const vaxDate = document.getElementById('vaccine-date').value;
             const vaxExpiry = document.getElementById('vaccine-expiry').value;
+            const vaccineFile = document.getElementById('file-upload-input')?.files?.[0] || _pendingVaccineBook;
+
+            // Vaccine book is mandatory on first registration when isVaccinated is true.
+            const existing = editId ? petDataList.find(p=>p.id===editId) : null;
+            if (isVaccinated && !editId && !vaccineFile) {
+                toast('กรุณาแนบสมุดวัคซีนเพื่อตรวจสอบนะครับ', 'error');
+                return;
+            }
 
             let alertStatusHTML = "";
             if (isVaccinated && vaxExpiry) {
@@ -5405,15 +5451,43 @@
                 }
             }
 
+            const petId = editId || Date.now().toString();
+            const building = _taBuilding || 'nest';
+            const room = String(_taRoom || '');
+
             const petObject = {
-                id: editId || Date.now().toString(),
+                id: petId,
                 name, typeEmoji, breed, gender, age, isVaccinated, vaxDate, vaxExpiry, alertStatusHTML,
                 type: typeEmoji,
-                room: String(_taRoom || ''),
-                building: _taBuilding || 'nest',
-                status: editId ? (petDataList.find(p=>p.id===editId)?.status || 'pending') : 'pending',
-                createdAt: editId ? undefined : new Date().toISOString()
+                room, building,
+                status: editId ? (existing?.status || 'pending') : 'pending',
+                createdAt: editId ? (existing?.createdAt || undefined) : new Date().toISOString(),
+                // Preserve URLs from previous edit; will be overwritten if user uploaded new files.
+                photoURL: existing?.photoURL || null,
+                photoPath: existing?.photoPath || null,
+                vaccineBookURL: existing?.vaccineBookURL || null,
+                vaccineBookPath: existing?.vaccineBookPath || null,
+                vaccineBookFileName: existing?.vaccineBookFileName || null,
             };
+
+            // Upload files (best-effort — pet doc still saves if upload fails).
+            if (window.firebaseReady && _taBuilding && _taRoom) {
+                if (_pendingPetPhoto) {
+                    try {
+                        const r = await _uploadPetFile(_pendingPetPhoto, building, room, petId, 'photo');
+                        petObject.photoURL = r.url;
+                        petObject.photoPath = r.path;
+                    } catch(e) { console.warn('photo upload failed:', e); toast('อัปโหลดรูปไม่สำเร็จ — ข้อมูลที่เหลือจะบันทึกต่อ', 'warning'); }
+                }
+                if (vaccineFile) {
+                    try {
+                        const r = await _uploadPetFile(vaccineFile, building, room, petId, 'vaccineBook');
+                        petObject.vaccineBookURL = r.url;
+                        petObject.vaccineBookPath = r.path;
+                        petObject.vaccineBookFileName = r.fileName;
+                    } catch(e) { console.warn('vaccine book upload failed:', e); toast('อัปโหลดสมุดวัคซีนไม่สำเร็จ — ข้อมูลที่เหลือจะบันทึกต่อ', 'warning'); }
+                }
+            }
 
             if (editId) {
                 const index = petDataList.findIndex(p => p.id === editId);
@@ -5432,10 +5506,14 @@
                     const db = window.firebase.firestore();
                     const fs = window.firebase.firestoreFunctions;
                     // Canonical: tenants/{building}/list/{roomId}/pets/{petId} — matches schema rule
-                    const petRef = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom), 'pets', petObject.id);
-                    fs.setDoc(petRef, petObject, { merge: true });
+                    const petRef = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom), 'pets', petId);
+                    await fs.setDoc(petRef, petObject, { merge: true });
                 }
             } catch(e) { console.warn('Firestore pet save failed:', e); }
+
+            // Reset in-memory file picks
+            _pendingPetPhoto = null;
+            _pendingVaccineBook = null;
 
             renderPetListToProfile();
             toast(`บันทึกข้อมูลน้อง${_esc(name)} เรียบร้อยแล้วครับ!`);
@@ -5458,7 +5536,23 @@
             document.getElementById('vaccine-date').value = pet.vaxDate;
             document.getElementById('vaccine-expiry').value = pet.vaxExpiry;
 
-            // เรียกใช้ฟังก์ชันสลับหน้าเดิมของคุณ
+            // Show existing photo + vaccine book file name (saveNewPet preserves
+            // URLs unless the tenant picks a new file).
+            _pendingPetPhoto = null;
+            _pendingVaccineBook = null;
+            const avatar = document.getElementById('new-pet-avatar');
+            if (avatar) {
+                if (pet.photoURL) {
+                    avatar.style.backgroundImage = `url('${pet.photoURL}')`;
+                    avatar.textContent = '';
+                } else {
+                    avatar.style.backgroundImage = '';
+                    avatar.textContent = '📸';
+                }
+            }
+            const fileNamePrev = document.getElementById('file-name-preview');
+            if (fileNamePrev) fileNamePrev.innerText = pet.vaccineBookFileName ? `📄 ${pet.vaccineBookFileName} (แนบไว้แล้ว)` : '';
+
             showSubPage('add-pet-page');
         }
 
@@ -5486,11 +5580,27 @@
             document.getElementById('vaccine-date').value = '';
             document.getElementById('vaccine-expiry').value = '';
             document.getElementById('pet-vaccine').checked = true;
+            // Clear file picks + previews
+            _pendingPetPhoto = null;
+            _pendingVaccineBook = null;
+            const photoInput = document.getElementById('pet-photo-input');
+            if (photoInput) photoInput.value = '';
+            const fileInput = document.getElementById('file-upload-input');
+            if (fileInput) fileInput.value = '';
+            const avatar = document.getElementById('new-pet-avatar');
+            if (avatar) { avatar.style.backgroundImage = ''; avatar.textContent = '📸'; }
+            const fileNamePrev = document.getElementById('file-name-preview');
+            if (fileNamePrev) fileNamePrev.innerText = '';
         }
 
         function viewVaccineBook(id) {
             const pet = petDataList.find(p => p.id === id);
-            alert(`📖 ข้อมูลวัคซีนของน้อง${pet.name}\nฉีดล่าสุด: ${pet.vaxDate || '-'}\nหมดอายุ: ${pet.vaxExpiry || '-'}`);
+            if (!pet) return;
+            if (pet.vaccineBookURL) {
+                window.open(pet.vaccineBookURL, '_blank', 'noopener');
+                return;
+            }
+            alert(`📖 ข้อมูลวัคซีนของน้อง${pet.name}\nฉีดล่าสุด: ${pet.vaxDate || '-'}\nหมดอายุ: ${pet.vaxExpiry || '-'}\n\n(ยังไม่ได้แนบสมุดวัคซีน — แก้ไขข้อมูลน้องเพื่อแนบไฟล์)`);
         }
 
         // สั่งรันครั้งแรกเพื่อให้โชว์กล่อง "เพิ่มสัตว์เลี้ยง"

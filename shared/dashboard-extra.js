@@ -3649,12 +3649,21 @@ function loadAndRenderPetApprovals() {
     const statusBadge = p.status === 'approved' ? '✅ Approved' : p.status === 'rejected' ? '❌ Rejected' : '⏳ Pending';
     const statusColor = p.status === 'approved' ? '#4caf50' : p.status === 'rejected' ? '#f44336' : '#ff9800';
 
+    const photoBlock = p.photoURL
+      ? `<img src="${p.photoURL}" alt="${p.name}" style="width:64px; height:64px; border-radius:14px; object-fit:cover; border:1px solid #eee;">`
+      : `<div style="width:64px; height:64px; border-radius:14px; background:#f5f5f5; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">${p.type || '🐾'}</div>`;
+    const vaccineBookBtn = p.vaccineBookURL
+      ? `<a href="${p.vaccineBookURL}" target="_blank" rel="noopener" class="compact-btn compact-btn-view" style="text-decoration:none; display:inline-block;">📖 ดูสมุดวัคซีน${p.vaccineBookFileName ? ` (${p.vaccineBookFileName})` : ''}</a>`
+      : '';
     return `
       <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${statusColor};">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
-          <div>
-            <div style="font-weight: 700; font-size: 1rem;">🐾 ${p.name} (${p.type})</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Room: <strong>${p.room}</strong></div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem; gap:0.8rem;">
+          <div style="display:flex; gap:0.8rem; align-items:center;">
+            ${photoBlock}
+            <div>
+              <div style="font-weight: 700; font-size: 1rem;">🐾 ${p.name} (${p.type})</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Room: <strong>${p.room}</strong> · ${p.building === 'nest' ? 'Nest' : 'ห้องแถว'}</div>
+            </div>
           </div>
           <span style="padding: 0.4rem 0.8rem; border-radius: 20px; background: ${statusColor}; color: white; font-size: 0.85rem; font-weight: 600;">${statusBadge}</span>
         </div>
@@ -3662,15 +3671,13 @@ function loadAndRenderPetApprovals() {
           <div>🐕 สายพันธุ์: <strong>${p.breed || '-'}</strong></div>
           <div>⚧️ เพศ: <strong>${p.gender || '-'}</strong></div>
           <div>🎂 อายุ: <strong>${p.age || '-'}</strong></div>
-          ${p.weight ? `<div>⚖️ น้ำหนัก: <strong>${p.weight}</strong></div>` : ''}
-          ${p.color ? `<div>🎨 สี: <strong>${p.color}</strong></div>` : ''}
         </div>
         <div style="font-size:0.85rem; margin-bottom:0.8rem; padding:6px 10px; border-radius:8px; background:${p.isVaccinated ? '#f0fdf4' : '#fef2f2'}; color:${p.isVaccinated ? '#166534' : '#991b1b'};">
           💉 วัคซีน: <strong>${p.isVaccinated ? '✅ ฉีดแล้ว' : '❌ ยังไม่ฉีด'}</strong>
           ${p.vaxDate ? ` · วันฉีด: ${p.vaxDate}` : ''}
           ${p.vaxExpiry ? ` · หมดอายุ: ${p.vaxExpiry}` : ''}
         </div>
-        ${p.notes ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.8rem;">📝 ${p.notes}</div>` : ''}
+        ${vaccineBookBtn ? `<div style="margin-bottom:0.8rem;">${vaccineBookBtn}</div>` : ''}
         ${p.status === 'pending' ? `
           <div style="display: flex; gap: 0.5rem;">
             <button onclick="approvePet('${p.building}','${p.room}','${p.id}')" class="compact-btn compact-btn-view">✅ Approve</button>
