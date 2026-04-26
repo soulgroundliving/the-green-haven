@@ -733,7 +733,9 @@ function initNestPage(){
     const tenant = allTenants[r.id];
     const occupancyIcon = tenant && tenant.name ? '✅' : '🚪';
     const typeIcon = r.type === 'pet-allowed' ? '🐾' : '🏠';
-    const hasPet = r.type === 'pet-allowed' && !!(tenant && tenant.pets && tenant.pets.hasPet);
+    const roomPets = r.type === 'pet-allowed'
+      ? JSON.parse(localStorage.getItem(`tenant_pets_nest_${r.id}`) || '[]').filter(p => p.status === 'approved')
+      : [];
     const statusInfo = getRoomColorStatus(r.id, r);
     const bgColor = statusInfo.color+'40';
     const borderColor = statusInfo.color;
@@ -742,7 +744,7 @@ function initNestPage(){
       <div class="room-num">${(r.name || r.id).replace(/^ห้อง |^Nest /, '')}</div>
       <div class="room-rent">฿${r.rentPrice.toLocaleString()}/เดือน</div>
       <div class="room-status">${typeIcon} ${tenant && tenant.name ? tenant.name : 'ว่าง'}</div>
-      ${hasPet ? `<div style="font-size:0.7rem;text-align:center;margin-top:2px;">🐾 ${_escProp(tenant.pets.type || 'มีสัตว์เลี้ยง')}</div>` : ''}
+      ${roomPets.length > 0 ? `<div style="font-size:0.7rem;text-align:center;margin-top:2px;">🐾 ${roomPets.map(p=>_escProp(p.name||p.type||'สัตว์เลี้ยง')).join(', ')}</div>` : ''}
       <div style="font-size:0.8rem;margin-top:4px;text-align:center;color:${borderColor};font-weight:600;">${statusInfo.icon} ${statusInfo.label}</div>
     </div>`;
   }).join('');

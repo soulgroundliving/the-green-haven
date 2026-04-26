@@ -2100,20 +2100,13 @@
         </div>
       </div>
 
-      <!-- Pets Section -->
-      <div style="margin-bottom:2rem;">
+      <!-- Pets Section — shown only for pet-allowed rooms (N301-N405), read-only from approval system -->
+      <div id="modalPetsSection" style="margin-bottom:2rem;display:none;">
         <div style="font-weight:700;font-size:1rem;color:var(--text);margin-bottom:1.3rem;display:flex;align-items:center;gap:10px;padding-bottom:1rem;border-bottom:3px solid #fff9c4;">
           <span style="font-size:1.3rem;">🐾</span>
-          <span>สัตว์เลี้ยง</span>
+          <span>สัตว์เลี้ยง (N301–N405)</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;">
-          <input type="checkbox" id="modalHasPet" data-action="togglePetTypeRow" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer;">
-          <label for="modalHasPet" style="font-size:.95rem;cursor:pointer;">มีสัตว์เลี้ยง</label>
-        </div>
-        <div id="modalPetTypeRow" style="display:none;">
-          <label class="form-label-upper">ชนิดสัตว์เลี้ยง</label>
-          <input type="text" id="modalPetType" placeholder="เช่น สุนัข แมว กระต่าย" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
-        </div>
+        <div id="modalPetsList" style="font-size:.9rem;color:var(--text-muted);">ยังไม่มีสัตว์เลี้ยงที่อนุมัติแล้ว</div>
       </div>
 
       <!-- Contract Information Section -->

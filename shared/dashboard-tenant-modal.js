@@ -156,13 +156,29 @@ function openTenantModal(building, roomId) {
   if (emNameEl) emNameEl.value = (tenant.emergencyContact && tenant.emergencyContact.name) || '';
   const emPhoneEl = document.getElementById('modalEmergencyPhone');
   if (emPhoneEl) emPhoneEl.value = (tenant.emergencyContact && tenant.emergencyContact.phone) || '';
-  const hasPet = !!(tenant.pets && tenant.pets.hasPet);
-  const hasPetEl = document.getElementById('modalHasPet');
-  if (hasPetEl) hasPetEl.checked = hasPet;
-  const petTypeRow = document.getElementById('modalPetTypeRow');
-  if (petTypeRow) petTypeRow.style.display = hasPet ? 'block' : 'none';
-  const petTypeEl = document.getElementById('modalPetType');
-  if (petTypeEl) petTypeEl.value = (tenant.pets && tenant.pets.type) || '';
+  // Pets section — show only for pet-allowed rooms (N301-N405), read-only from approval system
+  const isPetAllowed = room?.type === 'pet-allowed';
+  const petsSection = document.getElementById('modalPetsSection');
+  if (petsSection) {
+    petsSection.style.display = isPetAllowed ? 'block' : 'none';
+    if (isPetAllowed) {
+      const petsListEl = document.getElementById('modalPetsList');
+      if (petsListEl) {
+        const petKey = `tenant_pets_nest_${roomId}`;
+        const roomPets = JSON.parse(localStorage.getItem(petKey) || '[]').filter(p => p.status === 'approved');
+        const emojis = {dog:'🐕', cat:'🐈', rabbit:'🐇', bird:'🐦', fish:'🐠', hamster:'🐹'};
+        petsListEl.innerHTML = roomPets.length > 0
+          ? roomPets.map(p => {
+              const icon = emojis[(p.type||'').toLowerCase()] || '🐾';
+              return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px;border:1px solid #f3e5f5;">
+                <span style="font-size:1.3rem;">${icon}</span>
+                <div><div style="font-weight:600;font-size:.9rem;">${p.name || '—'}</div><div style="font-size:.78rem;color:var(--text-muted);">${p.type || ''}</div></div>
+              </div>`;
+            }).join('')
+          : '<span style="color:var(--text-muted);font-size:.85rem;">ยังไม่มีสัตว์เลี้ยงที่อนุมัติแล้ว — ลูกบ้านขอผ่าน app</span>';
+      }
+    }
+  }
 
   // Receipt/company info display (read-only — tenants self-serve via tenant_app)
   const co = tenant.companyInfo || {};
@@ -497,10 +513,6 @@ function saveTenantInfo() {
     emergencyContact: {
       name: document.getElementById('modalEmergencyName')?.value?.trim() || '',
       phone: document.getElementById('modalEmergencyPhone')?.value?.trim() || ''
-    },
-    pets: {
-      hasPet: document.getElementById('modalHasPet')?.checked || false,
-      type: document.getElementById('modalPetType')?.value?.trim() || ''
     },
     // Phase 3: contractDocument moved to lease record (SSoT). Tenant record no
     // longer stores the base64 — contract uploads now happen in Tab สัญญา and
