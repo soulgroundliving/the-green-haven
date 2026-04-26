@@ -335,27 +335,44 @@
       console.log('✅ Firebase using existing auth (Email:', currentUser.email || 'unknown', ')');
     }
 
-    // Auth fallback (2026-04-19): admin uses email/password via login.html,
-    // but Firebase Auth session can lapse independently of SecurityUtils session.
-    // After 2s, if no Firebase user → sign in anonymously so reads work,
-    // and warn admin that email re-login is needed for write operations.
-    setTimeout(async () => {
-      try {
-        if (!auth?.currentUser) {
-          console.log('🔓 No Firebase auth after 2s — signing in anonymously as fallback');
-          await signInAnonymously(auth);
-          // Show banner so admin knows writes will fail until re-login
-          const banner = document.createElement('div');
-          banner.id = 'fbAuthLapsedBanner';
-          banner.style.cssText = 'position:fixed;top:60px;right:12px;z-index:9999;background:#fff3cd;color:#856404;border:1px solid #ffeaa7;border-radius:8px;padding:10px 14px;font-size:.85rem;font-family:Sarabun,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:320px;';
-          banner.innerHTML = '⚠️ Firebase session หมดอายุ — read ได้แต่ write ใช้ไม่ได้ <br><a href="/login" style="color:#1565c0;font-weight:700;text-decoration:underline;">→ Login ใหม่</a> <span style="float:right;cursor:pointer;color:#856404;" data-action="removeParent">✕</span>';
-          document.body.appendChild(banner);
-          setTimeout(() => banner?.remove(), 30000);
+    // Auth fallback: admin uses email/password via login.html, but Firebase Auth
+    // session restoration (from IndexedDB persistence) is async and can take longer
+    // than a flat 2-second timer. Listen for the first onAuthStateChanged fire
+    // (which Firebase guarantees once persistence has been read), and only fall back
+    // to anonymous if that first event yields a null user. This prevents the timer
+    // from racing the restore and kicking a logged-in admin into anon, which had
+    // been silently invalidating admin claims and breaking every isAdmin() rule.
+    import("https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js").then(({ onAuthStateChanged }) => {
+      let settled = false;
+      const settle = (handler) => { if (!settled) { settled = true; handler(); } };
+      const unsub = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          settle(() => console.log('✅ Firebase auth active:', user.email || '(anon)'));
+          unsub();
         } else {
-          console.log('✅ Firebase auth active:', auth.currentUser.email || '(anon)');
+          // First fire saw null — wait a bit more in case persistence is still loading
+          // before falling back to anonymous.
+          setTimeout(async () => {
+            if (settled) return;
+            try {
+              if (!auth?.currentUser) {
+                settle(() => console.log('🔓 No Firebase auth after restore window — signing in anonymously as fallback'));
+                await signInAnonymously(auth);
+                const banner = document.createElement('div');
+                banner.id = 'fbAuthLapsedBanner';
+                banner.style.cssText = 'position:fixed;top:60px;right:12px;z-index:9999;background:#fff3cd;color:#856404;border:1px solid #ffeaa7;border-radius:8px;padding:10px 14px;font-size:.85rem;font-family:Sarabun,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:320px;';
+                banner.innerHTML = '⚠️ Firebase session หมดอายุ — read ได้แต่ write ใช้ไม่ได้ <br><a href="/login" style="color:#1565c0;font-weight:700;text-decoration:underline;">→ Login ใหม่</a> <span style="float:right;cursor:pointer;color:#856404;" data-action="removeParent">✕</span>';
+                document.body.appendChild(banner);
+                setTimeout(() => banner?.remove(), 30000);
+              } else {
+                settle(() => console.log('✅ Firebase auth active (delayed restore):', auth.currentUser.email || '(anon)'));
+              }
+            } catch (e) { console.warn('auth fallback:', e?.message); }
+            unsub();
+          }, 4000);
         }
-      } catch (e) { console.warn('auth fallback:', e?.message); }
-    }, 2000);
+      });
+    });
 
     // Test Firebase connection — only if Firebase is already ready
     // (database is set inside initializeFirebase() which is async)
