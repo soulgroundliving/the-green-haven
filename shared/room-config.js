@@ -191,16 +191,13 @@ class RoomConfigManager {
             }));
           // Preserve any extra fields (floor/type/deposit) from local copy
           const local = JSON.parse(localStorage.getItem(`rooms_config_${building}`) || '{}');
-          const localById = local?.rooms ? new Map(local.rooms.map(r => [r.id, r])) : null;
-          rooms.forEach(r => {
-            const lr = localById?.get(r.id);
-            if (lr) Object.assign(r, { floor: lr.floor, type: lr.type, deposit: r.deposit || lr.deposit });
-            // RTDB may not have deposit yet — seed from DEFAULT so it's never 0
-            if (!r.deposit) {
-              const defRoom = (DEFAULT_ROOMS_CONFIG[building]?.rooms || []).find(d => d.id === r.id);
-              if (defRoom?.deposit) r.deposit = defRoom.deposit;
-            }
-          });
+          if (local?.rooms) {
+            const localById = new Map(local.rooms.map(r => [r.id, r]));
+            rooms.forEach(r => {
+              const lr = localById.get(r.id);
+              if (lr) Object.assign(r, { floor: lr.floor, type: lr.type, deposit: r.deposit || lr.deposit });
+            });
+          }
           const config = {
             name: building === 'nest' ? 'Nest Building' : 'ห้องแถว (Rooms Building)',
             building, rooms
@@ -222,7 +219,13 @@ class RoomConfigManager {
 
   static getRoom(building, roomId) {
     const config = this.getRoomsConfig(building);
-    return config.rooms.find(r => r.id === roomId);
+    const room = config.rooms.find(r => r.id === roomId);
+    if (!room) return null;
+    if (!room.deposit) {
+      const defDeposit = (DEFAULT_ROOMS_CONFIG[building]?.rooms || []).find(d => d.id === roomId)?.deposit;
+      if (defDeposit) return { ...room, deposit: defDeposit };
+    }
+    return room;
   }
 
   static getRoomRate(building, roomId, rateType) {
