@@ -7298,7 +7298,8 @@
                 [2567,2568,2569,2570].forEach(y => {
                     try {
                         const raw = JSON.parse(localStorage.getItem(`bills_${y}`) || '[]');
-                        _taBills.push(...raw.filter(b => b.building === _taBuilding && String(b.room) === String(_taRoom)));
+                        const _normBld = b => { const s = String(b||'').toLowerCase(); return (s==='nest'||s.includes('nest')) ? 'nest' : 'rooms'; };
+                        _taBills.push(...raw.filter(b => _normBld(b.building) === _taBuilding && String(b.room) === String(_taRoom)));
                     } catch(e) {}
                 });
             }
