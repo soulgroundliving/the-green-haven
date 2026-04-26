@@ -1,4 +1,12 @@
 // ===== TENANT MANAGEMENT =====
+// HTML-entity escape for any tenant-supplied string injected into innerHTML
+// or attribute values. Tenants who edit their own profile + complaints/
+// maintenance descriptions could inject script tags; admin renders the same
+// data without sanitization. Defensive even though admin XSSes themselves.
+const _escTP = (s) => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
 // Phase 4 SSoT projection: SSoT docs have lease info nested under .lease,
 // but card-render code throughout the dashboard still reads flat fields
 // (t.contractEnd, t.deposit, t.moveInDate). Project lease subobject onto
@@ -225,8 +233,8 @@ function renderTenantPage(){
         <span class="compact-card-value">฿${Number(r.rentPrice||r.rent||0).toLocaleString()}</span>
       </div>
       ${isOcc?`
-      <div class="compact-card-info"><span style="font-weight:600;color:var(--text);">ชื่อ</span><span class="compact-card-value">${t.name}</span></div>
-      <div class="compact-card-info"><span>โทร</span><span style="font-size:.8rem;">${t.phone||'—'}</span></div>
+      <div class="compact-card-info"><span style="font-weight:600;color:var(--text);">ชื่อ</span><span class="compact-card-value">${_escTP(t.name)}</span></div>
+      <div class="compact-card-info"><span>โทร</span><span style="font-size:.8rem;">${_escTP(t.phone)||'—'}</span></div>
       <div class="compact-card-info"><span>เข้าพัก</span><span style="font-size:.8rem;">${mi}</span></div>
       <div class="compact-card-info"><span>สัญญาสิ้นสุด</span><span style="font-size:.8rem;color:${expiryColor};font-weight:600;">${ce}</span></div>
       <div class="compact-card-info" style="border-top:1px solid var(--border);padding-top:8px;margin-top:6px;">
@@ -275,8 +283,8 @@ function renderTenantTable(){
     const status=isCom?'💼 พาณิชย์':!isOcc?'🚪 ว่าง':diff===null?'—':diff<0?'❌ หมด':diff<=30?`⚠️ ${diff}วัน`:'✅ ปกติ';
     return`<tr style="border-bottom:1px solid var(--border);">
       <td style="padding:10px;font-weight:700;color:var(--green-dark);">${r.id}</td>
-      <td style="padding:10px;">${isOcc?t.name:'<span style="color:var(--text-muted);">—</span>'}</td>
-      <td style="padding:10px;text-align:center;font-size:.85rem;">${t.phone||'—'}</td>
+      <td style="padding:10px;">${isOcc?_escTP(t.name):'<span style="color:var(--text-muted);">—</span>'}</td>
+      <td style="padding:10px;text-align:center;font-size:.85rem;">${_escTP(t.phone)||'—'}</td>
       <td style="padding:10px;text-align:center;font-size:.85rem;">${mi}</td>
       <td style="padding:10px;text-align:center;font-size:.85rem;">${ce}</td>
       <td style="padding:10px;text-align:center;font-weight:700;color:var(--green-dark);">${t.deposit?'฿'+Number(t.deposit).toLocaleString():'—'}</td>
@@ -389,12 +397,12 @@ function showTenantModal(roomId){
   const body=document.getElementById('payModalBody');
   const footer=document.getElementById('payModalFooter');
   body.innerHTML=`
-    <div class="pm-row"><span class="pm-label">ชื่อ-นามสกุล</span><input class="pm-input" id="tm-name" style="width:185px" type="text" value="${t.name||''}" placeholder="สมชาย ใจดี"></div>
+    <div class="pm-row"><span class="pm-label">ชื่อ-นามสกุล</span><input class="pm-input" id="tm-name" style="width:185px" type="text" value="${_escTP(t.name)}" placeholder="สมชาย ใจดี"></div>
     <div class="pm-row"><span class="pm-label">Line ID</span><input class="pm-input" id="tm-line" style="width:145px" type="text" value="${t.lineId||''}" placeholder="@username"></div>
     <div class="pm-row"><span class="pm-label">วันที่เข้าอยู่</span><input class="pm-input" id="tm-moveIn" style="width:145px" type="date" value="${t.moveInDate||''}"></div>
     <div class="pm-row"><span class="pm-label">วันหมดสัญญา</span><input class="pm-input" id="tm-contractEnd" style="width:145px" type="date" value="${t.contractEnd||''}"></div>
     <div class="pm-row"><span class="pm-label">เงินมัดจำ (บาท)</span><input class="pm-input" id="tm-deposit" type="number" value="${t.deposit||0}"></div>
-    <div class="pm-row"><span class="pm-label">หมายเหตุ</span><input class="pm-input" id="tm-note" style="width:185px" type="text" value="${t.note||''}" placeholder="เช่น มีสัตว์เลี้ยง..."></div>`;
+    <div class="pm-row"><span class="pm-label">หมายเหตุ</span><input class="pm-input" id="tm-note" style="width:185px" type="text" value="${_escTP(t.note)}" placeholder="เช่น มีสัตว์เลี้ยง..."></div>`;
   footer.innerHTML=`
     <button class="pm-btn green" onclick="saveTenant()">💾 บันทึก</button>
     ${t.name?`<button class="pm-btn red" onclick="deleteTenant('${roomId}')">🗑️ ลบผู้เช่า</button>`:''}
@@ -638,7 +646,7 @@ function renderTenantMaintenanceList(){
         </span>
       </div>
       <div style="font-size:.85rem;color:var(--text);line-height:1.5;margin-bottom:8px;">
-        ${item.description}
+        ${_escTP(item.description)}
       </div>
       <div style="font-size:.75rem;color:var(--text-muted);">
         ส่งเมื่อ: ${item.submittedAt}
@@ -670,7 +678,7 @@ function loadTenantProfile(){
       <div>
         <div style="margin-bottom:1.5rem;">
           <div style="font-size:.9rem;color:var(--text-muted);margin-bottom:.5rem;">👤 ชื่อ-สกุล</div>
-          <div style="font-size:1.1rem;font-weight:700;color:var(--text);">${tenant.name || '—'}</div>
+          <div style="font-size:1.1rem;font-weight:700;color:var(--text);">${_escTP(tenant.name) || '—'}</div>
         </div>
       </div>
 

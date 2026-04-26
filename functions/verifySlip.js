@@ -588,33 +588,3 @@ exports.verifySlip = functions
   }
 });
 
-// ==================== CLEANUP FUNCTION ====================
-/**
- * Daily cleanup: Remove old rate limit records
- * Deploy: firebase deploy --only functions:cleanupRateLimits
- */
-exports.cleanupRateLimits = functions.pubsub.schedule('0 2 * * *').onRun(async (context) => {
-  try {
-    const now = Date.now();
-    const cutoffDate = new Date(now - 24 * 60 * 60 * 1000); // 24 hours ago
-
-    const snapshot = await db.collection('rateLimits')
-      .where('updatedAt', '<', cutoffDate)
-      .get();
-
-    let deleted = 0;
-    const batch = db.batch();
-
-    snapshot.forEach(doc => {
-      batch.delete(doc.ref);
-      deleted++;
-    });
-
-    await batch.commit();
-    console.log(`🧹 Cleaned up ${deleted} old rate limit records`);
-    return null;
-  } catch (error) {
-    console.error('❌ Cleanup failed:', error);
-    return null;
-  }
-});
