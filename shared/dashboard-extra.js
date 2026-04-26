@@ -387,42 +387,14 @@ function showContractDocument(roomId, tenant) {
 
   // Create a modal to display the document
   const modal = document.createElement('div');
-  modal.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.7);
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  `;
+  modal.className = 'u-modal-doc';
 
   const container = document.createElement('div');
-  container.style.cssText = `
-    background: white;
-    border-radius: 12px;
-    max-width: 95%;
-    max-height: 90%;
-    width: 800px;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-  `;
+  container.className = 'u-modal-doc-box';
 
   // Header
   const header = document.createElement('div');
-  header.style.cssText = `
-    padding: 20px;
-    border-bottom: 2px solid #f0f0f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  `;
+  header.className = 'u-modal-doc-head';
   header.innerHTML = `
     <h2 style="margin:0;color:#333;">📄 สัญญาเช่า - ห้อง ${_esc(roomId)} (${_esc(tenant.name)})</h2>
     <button onclick="this.closest('[data-modal]').remove()" style="background:#f0f0f0;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:600;">✕ ปิด</button>
@@ -430,25 +402,20 @@ function showContractDocument(roomId, tenant) {
 
   // Content
   const content = document.createElement('div');
-  content.style.cssText = `
-    flex: 1;
-    overflow: auto;
-    padding: 20px;
-    background: #f9f9f9;
-  `;
+  content.className = 'u-modal-doc-body';
 
   // Check if it's a PDF or image
   if (tenant.contractDocument.startsWith('data:application/pdf')) {
     // Display PDF
     const iframe = document.createElement('iframe');
     iframe.src = tenant.contractDocument;
-    iframe.className = 'u-form-input'; iframe.style.height='100%'; // reuse closest class
+    iframe.className = 'u-form-input u-iframe-full';
     content.appendChild(iframe);
   } else if (tenant.contractDocument.startsWith('data:image')) {
     // Display image
     const img = document.createElement('img');
     img.src = tenant.contractDocument;
-    img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;';
+    img.className = 'u-img-contain';
     content.appendChild(img);
   } else {
     content.innerHTML = '<p style="color:#666;">ไม่สามารถแสดงไฟล์นี้</p>';
@@ -456,20 +423,14 @@ function showContractDocument(roomId, tenant) {
 
   // Footer
   const footer = document.createElement('div');
-  footer.style.cssText = `
-    padding: 15px 20px;
-    background: white;
-    border-top: 1px solid #f0f0f0;
-    display: flex;
-    gap: 10px;
-  `;
+  footer.className = 'u-modal-doc-foot';
   const dlBtn = document.createElement('button');
   dlBtn.textContent = '⬇️ ดาวน์โหลด';
-  dlBtn.style.cssText = 'flex:1;padding:12px;background:#1976d2;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;';
+  dlBtn.className = 'u-btn-download';
   dlBtn.addEventListener('click', () => downloadContractAsFile(roomId, tenant.name));
   const closeBtn2 = document.createElement('button');
   closeBtn2.textContent = 'ปิด';
-  closeBtn2.style.cssText = 'flex:1;padding:12px;background:#f0f0f0;border:none;border-radius:6px;cursor:pointer;font-weight:600;';
+  closeBtn2.className = 'u-btn-close';
   closeBtn2.addEventListener('click', () => modal.remove());
   footer.appendChild(dlBtn);
   footer.appendChild(closeBtn2);
@@ -814,10 +775,10 @@ function updateRealtimeStatus(connected) {
   if (!dot || !text) return; // Element may not exist on all pages
 
   if (connected) {
-    dot.style.background = '#00cc00';
+    dot.classList.remove('u-dot-offline'); dot.classList.add('u-dot-online');
     text.textContent = '🟢 Real-time (Live)';
   } else {
-    dot.style.background = '#cc0000';
+    dot.classList.remove('u-dot-online'); dot.classList.add('u-dot-offline');
     text.textContent = '🔴 Disconnected';
   }
 }
@@ -929,39 +890,15 @@ function showDuplicateConfirmDialog(title, message) {
     // Create modal overlay
     const overlay = document.createElement('div');
     overlay.id = 'confirm-modal-overlay';
-    overlay.className = 'u-modal-overlay'; overlay.style.cssText = `
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 10000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    `;
+    overlay.className = 'u-modal-overlay';
 
     // Create modal container
     const modal = document.createElement('div');
-    modal.style.cssText = `
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      width: 100%;
-      max-width: 420px;
-      overflow: hidden;
-      animation: modalIn 0.18s ease;
-    `;
+    modal.className = 'u-confirm-box';
 
     // Modal header
     const header = document.createElement('div');
-    header.style.cssText = `
-      padding: 1rem 1.3rem 0.85rem;
-      background: #fff3e0;
-      border-bottom: 1px solid #ffe0b2;
-      display: flex;
-      align-items: center;
-      gap: 0.8rem;
-    `;
+    header.className = 'u-confirm-head';
     header.innerHTML = `
       <span style="font-size: 1.5rem;">⚠️</span>
       <div style="font-size: 0.95rem; font-weight: 700; color: #e65100;">${title}</div>
@@ -969,43 +906,17 @@ function showDuplicateConfirmDialog(title, message) {
 
     // Modal body
     const body = document.createElement('div');
-    body.style.cssText = `
-      padding: 1.1rem 1.3rem;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      font-size: 0.95rem;
-      color: #333;
-      line-height: 1.5;
-    `;
+    body.className = 'u-confirm-body';
     body.textContent = message;
 
     // Modal footer
     const footer = document.createElement('div');
-    footer.style.cssText = `
-      padding: 0.85rem 1.3rem;
-      background: #fafafa;
-      border-top: 1px solid #e0e0e0;
-      display: flex;
-      gap: 0.8rem;
-      justify-content: flex-end;
-    `;
+    footer.className = 'u-confirm-foot';
 
     // Cancel button
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = '❌ ยกเลิก';
-    cancelBtn.style.cssText = `
-      padding: 0.6rem 1.2rem;
-      background: #e0e0e0;
-      color: #333;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9rem;
-      transition: background 0.2s;
-    `;
-    cancelBtn.onmouseover = () => cancelBtn.style.background = '#d0d0d0';
-    cancelBtn.onmouseout = () => cancelBtn.style.background = '#e0e0e0';
+    cancelBtn.className = 'u-btn-confirm-cancel';
     cancelBtn.onclick = () => {
       overlay.remove();
       resolve(false);
@@ -1014,19 +925,7 @@ function showDuplicateConfirmDialog(title, message) {
     // Confirm button
     const confirmBtn = document.createElement('button');
     confirmBtn.textContent = '✅ ตกลง แทนที่ข้อมูล';
-    confirmBtn.style.cssText = `
-      padding: 0.6rem 1.2rem;
-      background: #4caf50;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9rem;
-      transition: background 0.2s;
-    `;
-    confirmBtn.onmouseover = () => confirmBtn.style.background = '#45a049';
-    confirmBtn.onmouseout = () => confirmBtn.style.background = '#4caf50';
+    confirmBtn.className = 'u-btn-confirm-ok';
     confirmBtn.onclick = () => {
       overlay.remove();
       resolve(true);
@@ -1389,9 +1288,9 @@ function initLeaseRequestsPage() {
 function setLeaseRequestFilter(filter, btn) {
   _leaseRequestsFilter = filter;
   document.querySelectorAll('.lease-req-filter-btn').forEach(b => {
-    b.style.background = '#eee'; b.style.color = '#333';
+    b.classList.remove('active');
   });
-  if (btn) { btn.style.background = 'var(--green-dark)'; btn.style.color = 'white'; }
+  if (btn) { btn.classList.add('active'); }
   renderLeaseRequestsList();
 }
 
@@ -1756,7 +1655,7 @@ function editTenant(tenantId) {
   box.className = 'u-modal-panel u-modal-panel-sm';
 
   const title = document.createElement('div');
-  title.style.cssText = 'font-weight:700;font-size:1.1rem;margin-bottom:1.5rem;';
+  title.className = 'u-modal-title';
   title.textContent = `✏️ แก้ไขข้อมูลผู้เช่า — ${tenant.id}`;
   box.appendChild(title);
 
@@ -1768,7 +1667,7 @@ function editTenant(tenantId) {
     { id: 'etAddress', label: 'ที่อยู่',            val: tenant.address || '',type: 'text' }
   ];
   const grid = document.createElement('div');
-  grid.classList.add('u-grid'); grid.style.gap='1rem'; // gap OK (not inline style)
+  grid.className = 'u-grid-1';
   fields.forEach(f => {
     const wrap = document.createElement('div');
     const lbl = document.createElement('label');
@@ -2508,10 +2407,8 @@ function validatePhoneNumber(inputElement, errorElementId) {
   if (errorEl) {
     if (errorMsg) {
       errorEl.classList.remove('u-hidden');
+      errorEl.classList.add('u-error-text');
       errorEl.textContent = errorMsg;
-      errorEl.style.color = '#d32f2f';
-      errorEl.style.fontSize = '0.85rem';
-      errorEl.style.marginTop = '4px';
     } else {
       errorEl.classList.add('u-hidden');
       errorEl.textContent = '';
@@ -2520,14 +2417,11 @@ function validatePhoneNumber(inputElement, errorElementId) {
 
   // Update input styling based on validation
   if (cleanedInput.length === 10 && isValid) {
-    inputElement.style.borderColor = '#4caf50'; // Green for valid
-    inputElement.style.boxShadow = '0 0 10px rgba(76,175,80,0.2)';
+    inputElement.classList.remove('u-input-invalid'); inputElement.classList.add('u-input-valid');
   } else if (cleanedInput.length > 0 && !isValid) {
-    inputElement.style.borderColor = '#d32f2f'; // Red for invalid
-    inputElement.style.boxShadow = '0 0 10px rgba(211,47,47,0.2)';
+    inputElement.classList.remove('u-input-valid'); inputElement.classList.add('u-input-invalid');
   } else {
-    inputElement.style.borderColor = 'var(--border)';
-    inputElement.style.boxShadow = 'none';
+    inputElement.classList.remove('u-input-valid', 'u-input-invalid');
   }
 
   return isValid && cleanedInput.length === 10;
@@ -2681,20 +2575,7 @@ function listenForInvoiceNotifications() {
  */
 function showNotification(message, type = 'info') {
   const notification = document.createElement('div');
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: ${type === 'success' ? '#4caf50' : '#2196f3'};
-    color: white;
-    padding: 15px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    font-size: 14px;
-    font-weight: 600;
-    z-index: 10000;
-    animation: slideIn 0.3s ease-out;
-  `;
+  notification.className = `u-notif u-notif-${type === 'success' ? 'success' : 'info'}`;
 
   notification.textContent = message;
   document.body.appendChild(notification);
@@ -2853,14 +2734,6 @@ function updatePaymentVerificationUI(notification) {
     // Add notification item to payment list
     const notifItem = document.createElement('div');
     notifItem.className = 'payment-notification-item';
-    notifItem.style.cssText = `
-      background: #e8f5e9;
-      border-left: 4px solid #4caf50;
-      padding: 12px;
-      margin: 8px 0;
-      border-radius: 4px;
-      font-size: 14px;
-    `;
 
     const timeStr = new Date(notification.timestamp).toLocaleTimeString('th-TH');
     notifItem.innerHTML = `
@@ -2902,14 +2775,6 @@ function updateReceiptGenerationUI(notification) {
     // Add receipt item
     const receiptItem = document.createElement('div');
     receiptItem.className = 'receipt-notification-item';
-    receiptItem.style.cssText = `
-      background: #e3f2fd;
-      border-left: 4px solid #1976d2;
-      padding: 12px;
-      margin: 8px 0;
-      border-radius: 4px;
-      font-size: 14px;
-    `;
 
     const timeStr = new Date(notification.timestamp).toLocaleTimeString('th-TH');
     receiptItem.innerHTML = `
@@ -2949,19 +2814,7 @@ function updatePaymentNotificationBadge(count) {
       // Create badge if doesn't exist
       badge = document.createElement('span');
       badge.setAttribute('data-badge', 'payment-count');
-      badge.style.cssText = `
-        display: inline-block;
-        background: #f44336;
-        color: white;
-        border-radius: 50%;
-        width: 24px;
-        height: 24px;
-        text-align: center;
-        line-height: 24px;
-        font-size: 12px;
-        font-weight: bold;
-        margin-left: 4px;
-      `;
+      badge.className = 'u-payment-badge';
       const paymentTab = document.querySelector('[data-nav="💳"]') || document.querySelector('button:contains("💳")');
       if (paymentTab) {
         paymentTab.appendChild(badge);
@@ -3164,8 +3017,8 @@ function loadAndRenderServiceProviders() {
 function toggleAddProviderForm() {
   const form = document.getElementById('addProviderForm');
   if (!form) return;
-  form.classList.toggle('u-hidden', !(form.style.display === 'none'));
-  if (form.style.display === 'block') {
+  form.classList.toggle('u-hidden');
+  if (!form.classList.contains('u-hidden')) {
     document.getElementById('providerType').focus();
   }
 }
@@ -3387,7 +3240,7 @@ let _editingEventId = null;
 function toggleAddEventForm() {
   const form = document.getElementById('addEventForm');
   if (!form) return;
-  if (form.style.display !== 'none') {
+  if (!form.classList.contains('u-hidden')) {
     form.classList.add('u-hidden');
     _editingEventId = null;
     return;
@@ -3523,8 +3376,8 @@ function loadAndRenderCommunityDocs() {
 function toggleAddDocForm() {
   const form = document.getElementById('addDocForm');
   if (!form) return;
-  form.classList.toggle('u-hidden', !(form.style.display === 'none'));
-  if (form.style.display === 'block') {
+  form.classList.toggle('u-hidden');
+  if (!form.classList.contains('u-hidden')) {
     document.getElementById('docTitle').focus();
   }
 }
@@ -4062,10 +3915,9 @@ async function initGamificationPage() {
 function switchGamificationTab(tabName, btn) {
   document.querySelectorAll('[id^="gamification"]').forEach(el => el.classList.add('u-hidden'));
   document.getElementById('gamification' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.remove('u-hidden');
-  document.querySelectorAll('#page-gamification button').forEach(b => b.style.color = 'var(--text-muted)');
-  document.querySelectorAll('#page-gamification button').forEach(b => b.style.borderBottom = '3px solid transparent');
-  btn.style.color = '#2d8653';
-  btn.style.borderBottom = '3px solid #2d8653';
+  document.querySelectorAll('#page-gamification button').forEach(b => b.classList.remove('u-gamification-tab-active'));
+  document.querySelectorAll('#page-gamification button').forEach(b => b.classList.add('u-gamification-tab'));
+  btn.classList.add('u-gamification-tab-active');
   if (tabName === 'rewards' && typeof loadRewardsAdmin === 'function') loadRewardsAdmin();
   if (tabName === 'badges') loadBadgesAdmin();
 }
@@ -4238,13 +4090,13 @@ function renderRewardsAdminTable() {
       ? '<span style="color:#c62828;font-weight:600;">No</span>'
       : '<span style="color:var(--green-dark);font-weight:600;">Yes</span>';
     tr.appendChild(tdActive);
-    const tdNote = document.createElement('td'); tdNote.style.fontSize = '.8rem'; tdNote.style.color = 'var(--text-muted)'; tdNote.textContent = esc(r.note); tr.appendChild(tdNote);
+    const tdNote = document.createElement('td'); tdNote.className = 'u-text-sm u-color-muted'; tdNote.textContent = esc(r.note); tr.appendChild(tdNote);
     const tdActions = document.createElement('td');
     const editBtn = document.createElement('button');
-    editBtn.textContent = 'Edit'; editBtn.style.cssText = 'padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:4px;cursor:pointer;margin-right:4px;font-family:Sarabun,sans-serif;font-size:.8rem;';
+    editBtn.textContent = 'Edit'; editBtn.className = 'u-btn-tbl-edit';
     editBtn.addEventListener('click', () => openRewardEdit(r.id));
     const delBtn = document.createElement('button');
-    delBtn.textContent = 'Delete'; delBtn.style.cssText = 'padding:4px 10px;background:#ffebee;color:#c62828;border:1px solid #c62828;border-radius:4px;cursor:pointer;font-family:Sarabun,sans-serif;font-size:.8rem;';
+    delBtn.textContent = 'Delete'; delBtn.className = 'u-btn-tbl-del';
     delBtn.addEventListener('click', () => deleteReward(r.id, r.name));
     tdActions.appendChild(editBtn); tdActions.appendChild(delBtn);
     tr.appendChild(tdActions);
@@ -5208,7 +5060,7 @@ async function _renderHistoricalCloudMigrateButton(historicalData) {
   if (!btn) {
     btn = document.createElement('button');
     btn.id = 'historicalDataMigrateBtn';
-    btn.style.cssText = 'background:#1565c0;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:.78rem;font-weight:700;cursor:pointer;margin-left:8px;font-family:inherit;';
+    btn.className = 'u-btn-upload';
     btn.onclick = async () => {
       btn.disabled = true; btn.textContent = '☁️ กำลังอัพโหลด...';
       try {
@@ -5465,7 +5317,7 @@ function displayHistoricalDataForYear(year) {
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize when page loads if on billing import tab
   const billingContent = document.getElementById('meter-import-billing-content');
-  if (billingContent && billingContent.style.display !== 'none') {
+  if (billingContent && !billingContent.classList.contains('u-hidden')) {
     setTimeout(initHistoricalDataDisplay, 100);
   }
 });

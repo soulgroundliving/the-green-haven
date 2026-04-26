@@ -106,15 +106,13 @@ function setRoomFilter(filter) {
   const buttons = document.querySelectorAll('.filter-btn');
   buttons.forEach(btn => {
     btn.classList.remove('active');
-    btn.style.background = 'white';
-    btn.style.color = btn.style.borderColor;
+    // CSS .filter-btn handles inactive state
   });
 
   // Find and style the active button
   const activeBtn = event.target;
   activeBtn.classList.add('active');
-  activeBtn.style.background = activeBtn.style.borderColor || 'var(--green-dark)';
-  activeBtn.style.color = 'white';
+  // CSS .filter-btn.active handles active state
 
   renderCompactRoomGrid();
 }
@@ -284,14 +282,8 @@ function toggleRoomView(view, btn){
   const buttons=document.querySelectorAll('.view-btn');
 
   buttons.forEach(b=>b.classList.remove('active'));
-  buttons.forEach(b=>b.style.background='none');
-  buttons.forEach(b=>b.style.color='var(--text)');
-  buttons.forEach(b=>b.style.border='1.5px solid var(--border)');
 
   btn.classList.add('active');
-  btn.style.background='var(--green-pale)';
-  btn.style.color='var(--green-dark)';
-  btn.style.border='1.5px solid var(--green)';
 
   if(view==='grid'){
     compactView.classList.remove('u-hidden');
@@ -505,15 +497,13 @@ function setNestFilter(filter) {
   const buttons = document.querySelectorAll('.filter-btn-nest');
   buttons.forEach(btn => {
     btn.classList.remove('active');
-    btn.style.background = 'white';
-    btn.style.color = btn.style.borderColor;
+    // CSS .filter-btn handles inactive state
   });
 
   // Find and style the active button
   const activeBtn = event.target;
   activeBtn.classList.add('active');
-  activeBtn.style.background = activeBtn.style.borderColor || 'var(--green-dark)';
-  activeBtn.style.color = 'white';
+  // CSS .filter-btn.active handles active state
 
   renderNestCompactGrid();
 }
@@ -692,15 +682,9 @@ function toggleNestRoomView(view, btn){
 
   buttons.forEach(b => {
     b.classList.remove('active');
-    b.style.background = 'none';
-    b.style.color = 'var(--text)';
-    b.style.border = '1.5px solid var(--border)';
   });
 
   btn.classList.add('active');
-  btn.style.background = '#e3f2fd';
-  btn.style.color = '#1565c0';
-  btn.style.border = '1.5px solid #2196f3';
 
   if(view === 'grid'){
     compactView.classList.remove('u-hidden');

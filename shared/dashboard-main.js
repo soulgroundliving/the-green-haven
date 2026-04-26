@@ -402,8 +402,7 @@ function switchPeopleTab(tabName, btn) {
 
   // Remove active style from all tab buttons
   document.querySelectorAll('.people-mgmt-tab').forEach(button => {
-    button.style.color = '#999';
-    button.style.borderBottomColor = 'transparent';
+    button.classList.remove('active');
   });
 
   // Show selected tab
@@ -414,8 +413,7 @@ function switchPeopleTab(tabName, btn) {
 
   // Highlight active button
   if(btn) {
-    // CSS .people-mgmt-tab.active handles active state
-    btn.style.borderBottomColor = 'var(--green)';
+    btn.classList.add('active');
   }
 
   // Lazy-load policies from Firestore when tab first opens
@@ -452,7 +450,7 @@ document.addEventListener('click',function(e){
 
   // Close batch rent modal if clicking outside
   const batchModal = document.getElementById('batchRentModal');
-  if (batchModal && batchModal.style.display === 'flex') {
+  if (batchModal && !batchModal.classList.contains('u-hidden')) {
     const modalContent = batchModal.querySelector('div[style*="background:white"]');
     if (modalContent && !modalContent.contains(e.target)) {
       closeBatchRentAdjustmentModal();

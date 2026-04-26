@@ -94,8 +94,7 @@ function setTenantBuilding(bld,btn){
   // Reset filter buttons to "ทั้งหมด"
   document.querySelectorAll('.filter-btn-tenant').forEach((b,i)=>{
     b.classList.toggle('active',i===0);
-    b.style.background=i===0?'var(--green-dark)':'white';
-    b.style.color=i===0?'white':b.style.borderColor||'#666';
+    // CSS .filter-btn-tenant.active handles active state
   });
   // Show/hide building-specific sections
   const roomsSec = document.getElementById('tenant-rooms-section');
@@ -145,14 +144,14 @@ function _setupTenantRealtimeListener(){
       if(!all[bld])all[bld]={};
       snap.forEach(doc=>{all[bld][doc.id]=doc.data();});
       localStorage.setItem('tenant_master_data',JSON.stringify(all));
-      if(document.getElementById('page-tenant')?.style.display!=='none'){
+      if(!document.getElementById('page-tenant')?.classList.contains('u-hidden')){
         renderTenantPage();
         renderTenantTable();
         updateTenantAlertBlock();
         updateRoomTypeCards();
       }
-      if(document.getElementById('page-property')?.style.display!=='none'){
-        const nestVisible = document.getElementById('property-nest-section')?.style.display!=='none';
+      if(!document.getElementById('page-property')?.classList.contains('u-hidden')){
+        const nestVisible = !document.getElementById('property-nest-section')?.classList.contains('u-hidden');
         if(nestVisible && typeof initNestPage==='function') initNestPage();
         else if(typeof initRoomsPage==='function') initRoomsPage();
       }
@@ -436,7 +435,7 @@ function saveTenant(){
   updateDashboardLive();
   const toast=document.createElement('div');
   toast.textContent=name?`✅ บันทึกผู้เช่าห้อง ${editingTenantRoom} เรียบร้อย`:`🗑️ ลบข้อมูลผู้เช่าห้อง ${editingTenantRoom} แล้ว`;
-  toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a5c38;color:#fff;padding:10px 22px;border-radius:24px;font-family:Sarabun,sans-serif;font-weight:700;font-size:.88rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.25);';
+  toast.className='u-toast-center';
   document.body.appendChild(toast);setTimeout(()=>toast.remove(),2200);
 }
 
@@ -544,7 +543,7 @@ function addExpense(){
   renderExpensePage();
   const toast=document.createElement('div');
   toast.textContent=`✅ บันทึกรายจ่าย ฿${amount.toLocaleString()} เรียบร้อย`;
-  toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a5c38;color:#fff;padding:10px 22px;border-radius:24px;font-family:Sarabun,sans-serif;font-weight:700;font-size:.88rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.25);';
+  toast.className='u-toast-center';
   document.body.appendChild(toast);setTimeout(()=>toast.remove(),2000);
 }
 

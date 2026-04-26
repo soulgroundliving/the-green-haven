@@ -862,27 +862,27 @@ function renderCampaignStatus(activeMonth){
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   if(activeMonth === currentMonth){
     statusEl.textContent = `✅ เปิดรอบอยู่ (${activeMonth}) — ทุกห้อง Nest เห็นป๊อปอัพให้จองภายใน ~1 นาที`;
-    statusEl.style.color = 'var(--green-dark)';
+    statusEl.classList.remove('u-color-amber','u-color-muted'); statusEl.classList.add('u-color-green-dk');
     if(toggleBtn){
       toggleBtn.dataset.state = 'on';
       toggleBtn.textContent = '⏹ ปิดรอบ';
-      toggleBtn.style.background = '#c62828';
+      toggleBtn.classList.remove('u-btn-green'); toggleBtn.classList.add('u-btn-red');
     }
   } else if(activeMonth){
     statusEl.textContent = `⏸ รอบที่ตั้งไว้: ${activeMonth} (ไม่ใช่เดือนปัจจุบัน ${currentMonth}) — กด "เปิดรอบ" เพื่อรีเซ็ตเป็นเดือนนี้`;
-    statusEl.style.color = '#b45309';
+    statusEl.classList.remove('u-color-green-dk','u-color-muted'); statusEl.classList.add('u-color-amber');
     if(toggleBtn){
       toggleBtn.dataset.state = 'off';
       toggleBtn.textContent = '🚀 เปิดรอบทำความสะอาด';
-      toggleBtn.style.background = 'var(--green-dark)';
+      toggleBtn.classList.remove('u-btn-red'); toggleBtn.classList.add('u-btn-green');
     }
   } else {
     statusEl.textContent = `ยังไม่ได้เปิดรอบ — กดเพื่อส่งป๊อปอัพให้ทุกห้อง Nest`;
-    statusEl.style.color = 'var(--text-muted)';
+    statusEl.classList.remove('u-color-green-dk','u-color-amber'); statusEl.classList.add('u-color-muted');
     if(toggleBtn){
       toggleBtn.dataset.state = 'off';
       toggleBtn.textContent = '🚀 เปิดรอบทำความสะอาด';
-      toggleBtn.style.background = 'var(--green-dark)';
+      toggleBtn.classList.remove('u-btn-red'); toggleBtn.classList.add('u-btn-green');
     }
   }
 }
@@ -1243,11 +1243,11 @@ function viewHousekeepingSlip(id){
   const item = hk.find(x => x.id === id);
   if(!item || !item.paymentSlip) { if(typeof showToast==='function') showToast('ไม่พบสลิป','warning'); return; }
   const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.className = 'u-modal-overlay u-photo-overlay';
   modal.onclick = e => { if(e.target === modal) modal.remove(); };
   const img = document.createElement('img');
   img.src = item.paymentSlip;
-  img.style.cssText = 'max-width:100%;max-height:90vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+  img.className = 'u-photo-img';
   modal.appendChild(img);
   document.body.appendChild(modal);
 }

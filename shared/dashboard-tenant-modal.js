@@ -48,7 +48,7 @@ TenantDataEvents.on('TENANT_UPDATED', (data) => {
 
   // Reload modal if currently open with same room
   const tenantModal = document.getElementById('tenantModal');
-  if (tenantModal && tenantModal.style.display !== 'none' && currentEditRoomId === roomId) {
+  if (tenantModal && !tenantModal.classList.contains('u-hidden') && currentEditRoomId === roomId) {
     setTimeout(() => {
       openTenantModal(building, roomId);
     }, 500);
@@ -235,7 +235,7 @@ function openTenantModal(building, roomId) {
     const previewBtn = document.createElement('button');
     previewBtn.type = 'button';
     previewBtn.textContent = '👁️ ดูตัวอย่าง';
-    previewBtn.style.cssText = 'margin-left:8px;padding:6px 12px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:0.8rem;font-family:\'Sarabun\',sans-serif;';
+    previewBtn.className = 'u-btn-preview';
     previewBtn.addEventListener('click', () => {
       if (contractStorageURL) {
         window.open(contractStorageURL, '_blank', 'noopener,noreferrer');
@@ -273,7 +273,7 @@ async function showTenantLeaseHistory(building, roomId) {
   if (!section || !content) return;
 
   // Toggle: hide if already visible for same room
-  if (section.style.display !== 'none') { section.classList.add('u-hidden'); return; }
+  if (!section.classList.contains('u-hidden')) { section.classList.add('u-hidden'); return; }
 
   // Refresh from Firestore so superseded/deleted leases reflect immediately
   // and local-only orphans (failed-write artifacts) get dropped.
@@ -337,7 +337,7 @@ function showBillingModal(roomId) {
 
   const modal = document.createElement('div');
   modal.id = 'billingPayModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;justify-content:center;align-items:center;padding:1rem;';
+  modal.className = 'u-modal-overlay';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:var(--radius);max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
       <div style="background:linear-gradient(135deg,#388e3c,#1b5e20);color:#fff;padding:1.2rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
@@ -446,7 +446,7 @@ function showBillingHistoryModal(roomId) {
 
   const modal = document.createElement('div');
   modal.id = 'billingHistoryModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;justify-content:center;align-items:center;padding:1rem;';
+  modal.className = 'u-modal-overlay';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:var(--radius);max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
       <div style="background:linear-gradient(135deg,#f57c00,#e65100);color:#fff;padding:1.2rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">

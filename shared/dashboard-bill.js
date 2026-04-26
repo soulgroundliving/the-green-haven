@@ -1341,9 +1341,9 @@ function renderPaymentStatus(){
   ${rooms.map(r=>{
     const p=paid[r.id];
     if(p){
-      return`<span onclick="showPayDetail('${r.id}')" title="คลิกดูรายละเอียด / แก้ไข" style="padding:3px 10px;border-radius:20px;font-size:.76rem;font-weight:700;background:#e8f5e9;color:var(--green-dark);border:1px solid #a5d6a7;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='#c8e6c9'" onmouseout="this.style.background='#e8f5e9'">✅ ${r.id}</span>`;
+      return`<span onclick="showPayDetail('${r.id}')" title="คลิกดูรายละเอียด / แก้ไข" class="u-bill-paid-badge">✅ ${r.id}</span>`;
     } else {
-      return`<span onclick="selectRoomForBill('${r.id}')" title="คลิกเพื่อออกบิล" style="padding:3px 10px;border-radius:20px;font-size:.76rem;font-weight:600;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;cursor:pointer;">⏳ ${r.id}</span>`;
+      return`<span onclick="selectRoomForBill('${r.id}')" title="คลิกเพื่อออกบิล" class="u-bill-pending-badge">⏳ ${r.id}</span>`;
     }
   }).join('')}
   </div>`;

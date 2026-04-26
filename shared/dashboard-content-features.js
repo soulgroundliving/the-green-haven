@@ -86,7 +86,7 @@ function saveAnnouncement() {
 
   // Show toast
   const toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;bottom:28px;right:28px;background:var(--green);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;font-size:.92rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);';
+  toast.className = 'u-toast';
   toast.textContent = '✅ สร้างประกาศแล้ว';
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 2500);
@@ -252,7 +252,7 @@ function renewContract(roomId){
     const msg=document.getElementById('payModalBody');
     if(msg){
       const note=document.createElement('div');
-      note.style.cssText='background:#e3f2fd;border-radius:8px;padding:10px 12px;font-size:.82rem;color:#1565c0;margin-bottom:12px;';
+      note.className = 'u-note-blue';
       note.textContent='🔄 ต่อสัญญา — กรุณาอัปเดตวันหมดสัญญาใหม่';
       msg.insertBefore(note,msg.firstChild);
     }

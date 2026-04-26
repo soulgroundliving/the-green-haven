@@ -46,9 +46,7 @@ function ensureWellnessIconPicker() {
   if (!wrap || wrap.dataset.built === '1') return;
   wrap.dataset.built = '1';
   wrap.innerHTML = WELLNESS_ICONS.map(o => `
-    <button type="button" data-icon="${o.icon}" onclick="window.pickWellnessIcon('${o.icon}',this)"
-      style="padding:8px 12px;background:#fff;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:'Sarabun';font-size:.8rem;transition:all .15s;"
-      onmouseover="this.style.background='#f0f9f3'" onmouseout="if(this.dataset.selected!=='1')this.style.background='#fff'">
+    <button type="button" class="u-wellness-icon-btn" data-icon="${o.icon}" onclick="window.pickWellnessIcon('${o.icon}',this)">
       <i class="fas ${o.icon}" style="color:var(--green);width:14px;text-align:center;"></i>${o.label}
     </button>`).join('');
   // Restore selection from hidden input
@@ -253,13 +251,13 @@ function _renderWellnessImageThumb(idx) {
   if (!dataUrl) return;
   const thumb = document.createElement('div');
   thumb.id = `_wellness-thumb-${idx}`;
-  thumb.style.cssText = 'position:relative;width:100px;height:100px;border:1px solid var(--border);border-radius:6px;overflow:hidden;';
+  thumb.className = 'u-img-thumb-wrap';
   const img = document.createElement('img');
   img.src = dataUrl;
-  img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+  img.className = 'u-img-thumb';
   const label = document.createElement('div');
   label.textContent = `[img:${idx}]`;
-  label.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.7);color:#fff;font-size:.65rem;text-align:center;padding:2px;font-family:monospace;';
+  label.className = 'u-img-thumb-label';
   thumb.appendChild(img);
   thumb.appendChild(label);
   previewEl.appendChild(thumb);

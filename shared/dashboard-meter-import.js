@@ -930,25 +930,10 @@ function cancelImportProcess() {
 
 function showImportStatus(message, type) {
   const statusDiv = document.getElementById('importStatusMessage');
-  let bgColor = 'var(--accent-light)';
-  let borderColor = 'var(--accent)';
-
-  if (type === 'success') {
-    bgColor = '#e8f5e9';
-    borderColor = '#2e7d32';
-  } else if (type === 'error') {
-    bgColor = '#ffebee';
-    borderColor = '#c62828';
-  } else if (type === 'warning') {
-    bgColor = '#fff3e0';
-    borderColor = '#e65100';
-  } else if (type === 'info') {
-    bgColor = '#e3f2fd';
-    borderColor = '#1565c0';
-  }
+  const _cssMap = { success: 'u-msg-ok', error: 'u-msg-err', warning: 'u-msg-warn', info: 'u-msg-info' };
 
   const msgDiv = document.createElement('div');
-  msgDiv.style.cssText = `background:${bgColor};border-left:4px solid ${borderColor};padding:1rem;border-radius:4px;color:var(--text);`;
+  msgDiv.className = _cssMap[type] || 'u-msg-default';
   msgDiv.textContent = message;
   statusDiv.innerHTML = '';
   statusDiv.appendChild(msgDiv);

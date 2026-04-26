@@ -183,7 +183,7 @@ window.openManualVerifyModal = function(){
   if(document.getElementById('mv-modal')) return;
   const modal = document.createElement('div');
   modal.id = 'mv-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+  modal.className = 'u-modal-overlay';
   const today = new Date().toISOString().split('T')[0];
   modal.innerHTML = `<div style="background:#fff;border-radius:12px;padding:1.8rem;width:92%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
     <div style="font-size:1.15rem;font-weight:800;margin-bottom:1rem;color:var(--text);">✍️ บันทึกการชำระด้วยตัวเอง</div>
