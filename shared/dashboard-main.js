@@ -53,7 +53,12 @@ window.showPage = window._showPageImpl;
 window.switchTenantMainTab = function(tab, btn) {
   ['tenants','leases','requests','alerts'].forEach(t => {
     const el = document.getElementById('tenant-main-tab-' + t);
-    if(el) el.classList.toggle('u-hidden', !((t === tab)));
+    if(el) {
+      el.classList.toggle('u-hidden', !((t === tab)));
+      // Static HTML ships non-default tabs with inline display:none, which
+      // overrides the class toggle. Clear it so u-hidden controls visibility.
+      if (el.style.display) el.style.display = '';
+    }
   });
   document.querySelectorAll('#tenant-main-tab-btn-tenants,#tenant-main-tab-btn-leases,#tenant-main-tab-btn-requests,#tenant-main-tab-btn-alerts').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
@@ -65,7 +70,10 @@ window.switchTenantMainTab = function(tab, btn) {
 window.switchBillingMainTab = function(tab, btn) {
   ['billing','verify'].forEach(t => {
     const el = document.getElementById('bill-main-tab-' + t);
-    if(el) el.classList.toggle('u-hidden', !((t === tab)));
+    if(el) {
+      el.classList.toggle('u-hidden', !((t === tab)));
+      if (el.style.display) el.style.display = '';
+    }
   });
   document.querySelectorAll('#bill-main-tab-btn-billing,#bill-main-tab-btn-verify').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
