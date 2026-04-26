@@ -8867,6 +8867,13 @@
             }
 
             updateDashboard();
+            // Open-Meteo (weather) works on the first call, but the AQI branch needs
+            // window.firebase.functions.httpsCallable + an authenticated user — both
+            // arrive AFTER DOMContentLoaded. Re-run when Firebase + anon auth ready
+            // so the IQAir card actually populates on first paint.
+            ['firebaseInitialized', 'authReady'].forEach(evt => {
+                window.addEventListener(evt, () => updateDashboard(), { once: true });
+            });
             setInterval(updateDashboard, 900000);
             loadGamificationData();
             renderTicketsList();
