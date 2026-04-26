@@ -143,8 +143,6 @@ function openTenantModal(building, roomId) {
   document.getElementById('modalTenantLicensePlate').value = tenant.licensePlate || '';
   document.getElementById('modalTenantMoveIn').value = tenant.moveInDate || '';
   document.getElementById('modalTenantContractEnd').value = tenant.contractEnd || '';
-  const depositDefault = room?.rentPrice ? room.rentPrice * 2 : 0;
-  document.getElementById('modalTenantDeposit').value = tenant.deposit || depositDefault || '';
   // Meter fields removed - no longer used
   document.getElementById('modalTenantNotes').value = tenant.notes || '';
 
