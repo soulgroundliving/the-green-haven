@@ -46,6 +46,27 @@ class LeaseAgreementManager {
   }
 
   static getActiveLease(building, roomId) {
+    // Phase 4 SSoT: prefer lease referenced by tenants/{b}/list/{roomId}.lease.leaseId.
+    // Without this, save flows on the dashboard see localStorage-empty leases and
+    // create duplicate active leases on every save instead of updating the existing one.
+    if (typeof TenantConfigManager !== 'undefined') {
+      const ssotDoc = TenantConfigManager.getTenant(building, String(roomId));
+      const ssotLease = ssotDoc?.lease;
+      if (ssotLease && (ssotLease.leaseId || ssotLease.status === 'active')) {
+        return {
+          ...ssotLease,
+          id: ssotLease.leaseId,
+          building,
+          roomId: String(roomId),
+          tenantId: ssotDoc.tenantId,
+          tenantName: ssotDoc.name,
+          // Compatibility — flat field aliases for legacy consumers
+          moveInDate:  ssotLease.moveInDate || ssotLease.startDate,
+          moveOutDate: ssotLease.moveOutDate || ssotLease.endDate,
+        };
+      }
+    }
+    // Legacy fallback: localStorage scan
     const leases = this.getAllLeases();
     const active = Object.values(leases).find(lease =>
       lease.building === building &&
