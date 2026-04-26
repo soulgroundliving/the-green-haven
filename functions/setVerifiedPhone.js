@@ -63,12 +63,34 @@ exports.setVerifiedPhone = functions.region('asia-southeast1').https.onCall(asyn
   }
 
   const fs = admin.firestore();
-  const ref = fs.collection('tenants').doc(building).collection('list').doc(String(room));
-  const snap = await ref.get();
-  if (!snap.exists) {
-    throw new functions.https.HttpsError('not-found', 'Tenant doc not found');
+  // Try canonical building key first, then legacy display key as fallback.
+  // Some older docs were created at tenants/RentRoom/* before the canonical
+  // rooms/nest scheme was settled — accept either to avoid orphaning them.
+  const buildingCandidates = building === 'rooms' ? ['rooms', 'RentRoom'] :
+                             building === 'nest'  ? ['nest', 'Nest'] : [building];
+  let ref = null;
+  let tenantData = null;
+  let resolvedBuilding = null;
+  for (const b of buildingCandidates) {
+    const tryRef = fs.collection('tenants').doc(b).collection('list').doc(String(room));
+    const trySnap = await tryRef.get();
+    if (trySnap.exists) {
+      ref = tryRef;
+      tenantData = trySnap.data();
+      resolvedBuilding = b;
+      break;
+    }
   }
-  const tenantData = snap.data();
+  if (!ref) {
+    // List sibling rooms to help debug which keys exist
+    const sibling = await fs.collection('tenants').doc(buildingCandidates[0])
+      .collection('list').limit(20).get();
+    const ids = sibling.docs.map(d => d.id).join(',') || '(none)';
+    throw new functions.https.HttpsError('not-found',
+      'Tenant doc not found at tenants/{' + buildingCandidates.join('|') + '}/list/' + room +
+      ' — sibling rooms in ' + buildingCandidates[0] + ': [' + ids + ']');
+  }
+  console.log('setVerifiedPhone resolved doc at tenants/' + resolvedBuilding + '/list/' + room);
 
   // Ownership check — accept ANY of these proofs (need at least one):
   //   (a) oldAnonUid matches doc.linkedAuthUid (set by linkAuthUid via LIFF)
