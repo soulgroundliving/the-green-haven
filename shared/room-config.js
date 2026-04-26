@@ -193,7 +193,7 @@ class RoomConfigManager {
             const localById = new Map(local.rooms.map(r => [r.id, r]));
             rooms.forEach(r => {
               const lr = localById.get(r.id);
-              if (lr) Object.assign(r, { floor: lr.floor, type: lr.type, deposit: r.deposit || lr.deposit });
+              if (lr) Object.assign(r, { floor: lr.floor, type: lr.type });
             });
           }
           const config = {
