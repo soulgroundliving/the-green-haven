@@ -4304,7 +4304,7 @@
         let _pendingCleaningRecord = null;
         let _cleaningSlipBase64 = null;
 
-        function submitCleaning() {
+        async function submitCleaning() {
             const date = document.getElementById('clean-date')?.value;
             const time = document.getElementById('clean-time')?.value;
             const note = document.getElementById('clean-note')?.value.trim() || '';
@@ -4332,18 +4332,28 @@
             }
 
             // Standard Clean (ฟรี) — save directly
-            _saveCleaningBooking(record);
-            toast('จองบริการทำความสะอาดเรียบร้อยแล้วครับ 🧹', 'success');
-            _renderCleaningHistory();
-            setTimeout(() => goBackToService(), 1200);
+            try {
+                await _saveCleaningBooking(record);
+                toast('จองบริการทำความสะอาดเรียบร้อยแล้วครับ 🧹', 'success');
+                _renderCleaningHistory();
+                setTimeout(() => goBackToService(), 1200);
+            } catch (err) {
+                console.error('cleaning booking sync failed:', err);
+                _renderCleaningHistory(); // local entry still visible
+                toast('⚠️ บันทึกแล้วในเครื่อง แต่ส่งให้แม่บ้านไม่สำเร็จ — กรุณาตรวจอินเทอร์เน็ตและลองใหม่', 'error');
+            }
         }
 
-        function _saveCleaningBooking(record) {
+        // Returns a promise that resolves when RTDB sync succeeds.
+        // Rejects on RTDB failure so callers can surface the error to the user
+        // — local cache still updates for offline-first display, but admin won't
+        // see the booking until network recovers.
+        async function _saveCleaningBooking(record) {
             try {
                 const existing = JSON.parse(localStorage.getItem('tenant_cleaning_tickets') || '[]');
                 existing.unshift(record);
                 localStorage.setItem('tenant_cleaning_tickets', JSON.stringify(existing));
-            } catch(e) {}
+            } catch(e) { console.warn('localStorage cleaning_tickets save failed:', e); }
             const hkPayload = {
                 id: record.id,
                 room: String(_taRoom),
@@ -4361,29 +4371,16 @@
                 paymentTransRef: record.paymentTransRef || null,
                 paymentAmount: record.service === 'deep-clean' ? 500 : 0
             };
-            if (window.firebaseReady && window.firebaseRef && window.firebaseSet && window.firebaseDatabase) {
-                const path = `housekeeping/${hkPayload.building}/${hkPayload.room}/${hkPayload.id}`;
-                try {
-                    const writePromise = window.firebaseSet(window.firebaseRef(window.firebaseDatabase, path), hkPayload);
-                    if (writePromise && typeof writePromise.then === 'function') {
-                        writePromise
-                            .then(() => console.log('✅ RTDB housekeeping write OK:', path))
-                            .catch(err => console.error('❌ RTDB housekeeping write failed:', path, err?.message || err));
-                    }
-                } catch(e) { console.error('❌ RTDB housekeeping save threw:', e); }
-            } else {
-                console.warn('⚠️ RTDB not ready — housekeeping save skipped', {
-                    firebaseReady: !!window.firebaseReady,
-                    hasRef: !!window.firebaseRef,
-                    hasSet: !!window.firebaseSet,
-                    hasDB: !!window.firebaseDatabase
-                });
-            }
             try {
                 const hk = JSON.parse(localStorage.getItem('housekeeping_data') || '[]');
                 hk.unshift(hkPayload);
                 localStorage.setItem('housekeeping_data', JSON.stringify(hk));
-            } catch(e) {}
+            } catch(e) { console.warn('localStorage housekeeping_data save failed:', e); }
+            if (!window.firebaseReady || !window.firebaseRef || !window.firebaseSet || !window.firebaseDatabase) {
+                throw new Error('firebase_not_ready');
+            }
+            const path = `housekeeping/${hkPayload.building}/${hkPayload.room}/${hkPayload.id}`;
+            await window.firebaseSet(window.firebaseRef(window.firebaseDatabase, path), hkPayload);
         }
 
         function _openCleaningPaymentModal(record) {
@@ -4494,11 +4491,21 @@
                 record.paymentVerified = true;
                 record.paymentTransRef = result.transRef || result.transactionId || null;
                 record.status = 'รอดำเนินการ';
-                _saveCleaningBooking(record);
-                _renderCleaningHistory();
-                _setCpmStatus('success', '✅ ชำระเงินยืนยันแล้ว — จองสำเร็จ');
-                toast('จองสำเร็จ ✅ ชำระเงินยืนยันแล้ว', 'success');
-                setTimeout(() => { closeCleaningPaymentModal(); goBackToService(); }, 1500);
+                try {
+                    await _saveCleaningBooking(record);
+                    _renderCleaningHistory();
+                    _setCpmStatus('success', '✅ ชำระเงินยืนยันแล้ว — จองสำเร็จ');
+                    toast('จองสำเร็จ ✅ ชำระเงินยืนยันแล้ว', 'success');
+                    setTimeout(() => { closeCleaningPaymentModal(); goBackToService(); }, 1500);
+                } catch (err) {
+                    // Payment verified but RTDB sync failed — admin won't see booking yet.
+                    // Don't lose the slip: show a recoverable error so user can retry.
+                    console.error('deep-clean booking sync failed AFTER payment verified:', err);
+                    _renderCleaningHistory();
+                    _setCpmStatus('error', '⚠️ ชำระแล้ว แต่ส่งคำขอไม่สำเร็จ กรุณาแจ้งแอดมิน (transRef: ' + (record.paymentTransRef || '—') + ')');
+                    toast('⚠️ ชำระแล้ว แต่ส่งคำขอไม่สำเร็จ — แจ้งแอดมินด้วยเลขอ้างอิง', 'error');
+                    btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'ลองส่งใหม่';
+                }
                 return;
             }
 
@@ -6624,7 +6631,7 @@
             }
         }
 
-        function bookStandardCleanFromModal() {
+        async function bookStandardCleanFromModal() {
             const date = document.getElementById('scm-date')?.value;
             const time = document.getElementById('scm-time')?.value;
             const note = document.getElementById('scm-note')?.value.trim() || '';
@@ -6638,10 +6645,16 @@
                 createdAt: new Date().toISOString(),
                 campaign: String(_cleaningCfgCache?.activeMonth || '')
             };
-            _saveCleaningBooking(record);
-            _renderCleaningHistory();
-            dismissStandardCleanModal(); // also sets seen flag
-            toast('จองสำเร็จ 🧹 ทีมงานจะติดต่อยืนยันเวลา', 'success');
+            try {
+                await _saveCleaningBooking(record);
+                _renderCleaningHistory();
+                dismissStandardCleanModal();
+                toast('จองสำเร็จ 🧹 ทีมงานจะติดต่อยืนยันเวลา', 'success');
+            } catch (err) {
+                console.error('standard-clean modal booking sync failed:', err);
+                _renderCleaningHistory();
+                toast('⚠️ บันทึกแล้วในเครื่อง แต่ส่งให้แม่บ้านไม่สำเร็จ — กรุณาตรวจอินเทอร์เน็ตและลองใหม่', 'error');
+            }
         }
 
         // ===== LEASE REQUEST (renew / moveout) =====
