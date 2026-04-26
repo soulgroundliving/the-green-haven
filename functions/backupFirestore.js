@@ -89,12 +89,11 @@ async function runBackup() {
   const stamp = tsStamp();
   const outputUriPrefix = `gs://${bucketName}/${PREFIX}/${stamp}`;
   const databaseName = firestoreClient.databasePath(PROJECT_ID, '(default)');
+  const startedAt = new Date().toISOString();
 
   console.log(`📦 Starting Firestore export → ${outputUriPrefix}`);
 
-  // exportDocuments is async — kicks off a long-running operation and
-  // returns immediately. The operation finishes server-side in a few
-  // minutes; we don't block the CF waiting.
+  // Kick off the long-running export operation.
   const [operation] = await firestoreClient.exportDocuments({
     name: databaseName,
     outputUriPrefix,
@@ -102,15 +101,67 @@ async function runBackup() {
   });
   console.log(`✅ Export operation queued: ${operation.name}`);
 
+  // Persist 'queued' status immediately so admin can verify the cron
+  // actually fired. Without this, a silent cron failure (mis-scheduled,
+  // permission revoked, region drift) leaves admin with no signal short
+  // of digging through Cloud Logs.
+  await writeBackupStatus({
+    stamp, outputUriPrefix, operationName: operation.name,
+    status: 'queued', startedAt
+  });
+
+  // Wait for the long-running operation to actually finish. Without this,
+  // every previous "successful" run was theater — exportDocuments returns
+  // before any data is written, so a malformed permission or a quota
+  // exhaustion would silently produce empty backups. CF runWith timeout
+  // is 540s; typical 30-tenant export completes in <60s.
+  let completionStatus = 'success';
+  let completionError = null;
+  try {
+    await operation.promise();
+  } catch (e) {
+    completionStatus = 'failed';
+    completionError = e.message || String(e);
+    console.error('export operation failed during completion:', e);
+  }
+  const completedAt = new Date().toISOString();
+
+  await writeBackupStatus({
+    stamp, outputUriPrefix, operationName: operation.name,
+    status: completionStatus, startedAt, completedAt, error: completionError
+  });
+
   // Prune old snapshots past retention window. Cheap: listFiles + delete.
   const pruned = await pruneOldBackups(bucketName);
+
+  // If the export itself failed, surface that to the caller so the cron
+  // logs an error and Cloud Functions retry kicks in.
+  if (completionStatus === 'failed') {
+    throw new Error(`Firestore export failed: ${completionError}`);
+  }
 
   return {
     stamp,
     outputUriPrefix,
     operationName: operation.name,
+    status: completionStatus,
+    durationMs: new Date(completedAt).getTime() - new Date(startedAt).getTime(),
     pruned
   };
+}
+
+// Best-effort: writes never throw out of runBackup, since the backup
+// itself is more important than the status doc. Failures get logged.
+async function writeBackupStatus(record) {
+  try {
+    await admin.firestore().doc('system/backups/latest').set(record);
+    // Append to history collection for trend visibility.
+    await admin.firestore()
+      .collection('system').doc('backups').collection('history')
+      .doc(record.stamp).set(record);
+  } catch (e) {
+    console.warn(`failed to write backup status (${record.status}):`, e.message);
+  }
 }
 
 async function pruneOldBackups(bucketName) {
