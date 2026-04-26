@@ -128,6 +128,7 @@ class RoomConfigManager {
           id: String(r.id),
           name: r.name || '',
           rentPrice: Number(r.rentPrice) || 0,
+          deposit: Number(r.deposit) || 0,
           electricRate: Number(r.electricRate) || 8,
           waterRate: Number(r.waterRate) || 20,
           trashRate: Number(r.trashRate) || 20,
@@ -182,6 +183,7 @@ class RoomConfigManager {
               id: String(r.id),
               name: r.name || r.id,
               rentPrice: Number(r.rentPrice) || 0,
+              deposit: Number(r.deposit) || 0,
               electricRate: Number(r.electricRate) || 8,
               waterRate: Number(r.waterRate) || 20,
               trashRate: Number(r.trashRate) || (building === 'nest' ? 40 : 20),
@@ -193,7 +195,7 @@ class RoomConfigManager {
             const localById = new Map(local.rooms.map(r => [r.id, r]));
             rooms.forEach(r => {
               const lr = localById.get(r.id);
-              if (lr) Object.assign(r, { floor: lr.floor, type: lr.type, deposit: lr.deposit });
+              if (lr) Object.assign(r, { floor: lr.floor, type: lr.type, deposit: r.deposit || lr.deposit });
             });
           }
           const config = {
