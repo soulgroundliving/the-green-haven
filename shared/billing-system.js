@@ -451,7 +451,12 @@ class BillingSystem {
 
       console.log(`👁️ Watching meter_data collection for ${building}...`);
 
+      // Skip the very first snapshot — Firestore replays existing docs as 'added'
+      // when a listener attaches, which would trigger a redundant second regen
+      // immediately after the page-load regen we just did.
+      let isFirstSnapshot = true;
       const unsubscribe = onSnapshot(q, async (snapshot) => {
+        if (isFirstSnapshot) { isFirstSnapshot = false; return; }
         const changes = snapshot.docChanges();
         const hasChanges = changes.some(change => change.type === 'added' || change.type === 'modified');
         if (hasChanges) {
