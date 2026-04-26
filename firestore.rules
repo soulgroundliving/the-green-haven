@@ -153,6 +153,16 @@ service cloud.firestore {
       }
     }
 
+    // ===== PETS — collectionGroup query support (admin only) =====
+    // Admin's pet-approval page calls collectionGroup('pets') to aggregate
+    // pets across every tenant doc. The nested rule above only matches the
+    // specific path tenants/{b}/list/{r}/pets/{petId}, not collectionGroup
+    // queries — without this wildcard rule the query fails with
+    // "Missing or insufficient permissions". Tenants never run this query.
+    match /{path=**}/pets/{petId} {
+      allow read: if isAdmin();
+    }
+
     // ===== METER DATA =====
     match /meter_data/{docId} {
       allow read:  if isSignedIn();
