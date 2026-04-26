@@ -6237,17 +6237,41 @@
                 if (!user) {
                     _setOtpStatus('⛔ Session หาย — รีเฟรชหน้าใหม่', 'error'); btn.disabled = false; return;
                 }
+                const uidBefore = user.uid;
+                console.log('[OTP] before link: uid=', uidBefore, 'providers=', user.providerData?.map(p => p.providerId));
                 if (user.providerData?.some(p => p.providerId === 'phone')) {
-                    try { await window.firebasePhone.unlink(user, 'phone'); } catch(_) {}
+                    try {
+                        await window.firebasePhone.unlink(user, 'phone');
+                        console.log('[OTP] unlinked old phone');
+                    } catch(ue) { console.warn('[OTP] unlink failed (continuing):', ue?.code, ue?.message); }
                 }
-                await window.firebasePhone.linkWithCredential(user, credential);
+                let linkRes;
+                try {
+                    linkRes = await window.firebasePhone.linkWithCredential(user, credential);
+                } catch (le) {
+                    console.error('[OTP] linkWithCredential failed:', le?.code, le?.message);
+                    if (le?.code === 'auth/credential-already-in-use') {
+                        _setOtpStatus('⛔ เบอร์นี้ถูกใช้แล้วในระบบ — เลือกเบอร์อื่น หรือ admin ลบ phone-auth user ออก', 'error');
+                    } else {
+                        _setOtpStatus('⛔ เชื่อมเบอร์ไม่สำเร็จ: ' + (le?.code || le?.message), 'error');
+                    }
+                    btn.disabled = false; return;
+                }
+                const uidAfter = window.firebaseAuth.currentUser?.uid;
+                console.log('[OTP] after link: uid=', uidAfter, 'providers=', linkRes?.user?.providerData?.map(p => p.providerId));
+                if (uidBefore !== uidAfter) {
+                    console.warn('[OTP] UID CHANGED during link! before=', uidBefore, 'after=', uidAfter);
+                }
 
                 if (!_taRoom || !_taBuilding) {
                     _setOtpStatus('⛔ ข้อมูลห้องไม่พร้อม', 'error'); btn.disabled = false; return;
                 }
+                console.log('[OTP] writing to tenants/' + _taBuilding + '/list/' + _taRoom + ' as uid=' + window.firebaseAuth.currentUser?.uid);
                 const fs = window.firebase.firestoreFunctions;
                 const db = window.firebase.firestore();
                 const ref = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
+                // Force ID-token refresh so the next request carries claims/auth from the post-link state
+                try { await window.firebaseAuth.currentUser.getIdToken(true); } catch(_) {}
                 await fs.updateDoc(ref, { phone: _otpPendingPhone, phoneVerifiedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
                 _taTenant = { ..._taTenant, phone: _otpPendingPhone, phoneVerifiedAt: new Date().toISOString() };
                 window._tenantAppTenant = _taTenant;
