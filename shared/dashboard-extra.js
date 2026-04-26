@@ -3838,6 +3838,7 @@ function saveLeaseAlertSettings() {
 // ===== RequestsStore — single facade for complaints/maintenance/housekeeping =====
 // Phase 3 (2026-04-19): Source of truth = Firestore complaints/{id} for complaints,
 // RTDB for maintenance + housekeeping. localStorage retained as offline cache only.
+let _RequestsStoreComplaintsUnsub = null;
 window.RequestsStore = window.RequestsStore || (function(){
   const cache = { complaints: [], maintenance: [], housekeeping: [] };
   const listeners = { complaints: new Set(), maintenance: new Set(), housekeeping: new Set() };
@@ -3891,7 +3892,10 @@ window.RequestsStore = window.RequestsStore || (function(){
     try {
       const db = window.firebase.firestore();
       const fs = window.firebase.firestoreFunctions;
-      fs.onSnapshot(fs.collection(db, 'complaints'), snap => {
+      // Store unsub so cleanupAdminListeners() can detach. Without this the
+      // listener would persist for the whole session even after admin closes
+      // the dashboard tab — burning callback CPU on every complaints write.
+      _RequestsStoreComplaintsUnsub = fs.onSnapshot(fs.collection(db, 'complaints'), snap => {
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         // Merge with any local-only entries (Firestore wins on collision)
         const local = _legacy('complaints_data');
@@ -5467,4 +5471,26 @@ if (window.switchMeterTab) {
     }
   };
 }
+
+// ===== Listener cleanup =====
+// Detaches every long-lived Firestore onSnapshot subscription this file
+// owns. Called on `beforeunload` so the listeners don't keep firing on
+// the server side after the admin closes the dashboard. Safe to call
+// multiple times — each unsub becomes a no-op once invoked.
+function cleanupAdminListeners() {
+  const unsubs = [
+    ['_leaseRequestsUnsub', _leaseRequestsUnsub],
+    ['_docsUnsub', _docsUnsub],
+    ['_petsUnsub', _petsUnsub],
+    ['_rewardsAdminUnsub', _rewardsAdminUnsub],
+    ['_RequestsStoreComplaintsUnsub', _RequestsStoreComplaintsUnsub]
+  ];
+  for (const [name, fn] of unsubs) {
+    if (typeof fn === 'function') {
+      try { fn(); } catch (e) { console.warn('cleanup', name, 'threw:', e?.message || e); }
+    }
+  }
+}
+window.cleanupAdminListeners = cleanupAdminListeners;
+window.addEventListener('beforeunload', cleanupAdminListeners);
 
