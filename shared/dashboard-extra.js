@@ -5722,6 +5722,8 @@ function cleanupAdminListeners() {
       try { fn(); } catch (e) { console.warn('cleanup', name, 'threw:', e?.message || e); }
     }
   }
+  _insightsUnsubs.forEach(fn => { try { fn(); } catch(e) {} });
+  _insightsUnsubs = [];
 }
 window.cleanupAdminListeners = cleanupAdminListeners;
 window.addEventListener('beforeunload', cleanupAdminListeners);
