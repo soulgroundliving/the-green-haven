@@ -1,12 +1,13 @@
 /**
- * cleanupAnonymousUsers — bulk-delete legacy Firebase Auth users that have
- * no provider data (i.e. they signed in via signInAnonymously()). Anonymous
- * sign-in must already be disabled at the Firebase Console — otherwise
- * tenant_app would just create new anon users to replace the deleted ones.
+ * cleanupAnonymousUsers — bulk-delete orphan Firebase Auth users that have
+ * no provider data AND no custom claims (i.e. they opened LIFF but never
+ * completed the link flow). Safe to run with Anonymous auth still ENABLED —
+ * do NOT disable Anonymous auth first; the LIFF architecture requires it.
  *
  * Tenants who have linked their LINE account (LIFF flow → linkAuthUid CF
- * gives them a custom-token-based auth UID with provider data) are NOT
- * affected. Only orphaned anon records get deleted.
+ * sets { room, building } custom claims on the anonymous UID) are NOT
+ * affected: the hasClaims guard skips any UID that has claims, regardless
+ * of providerData. Only truly-orphan anon records (no claims) get deleted.
  *
  * Auth: caller must have admin custom claim (verified via _auth.requireAdmin).
  *

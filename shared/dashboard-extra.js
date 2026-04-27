@@ -5441,7 +5441,7 @@ async function initInsightsPage() {
       </div>
       <div style="border:1px solid var(--border);border-radius:6px;padding:1rem;">
         <div style="font-weight:600;font-size:.85rem;margin-bottom:.5rem;">🧹 Cleanup Anonymous Users</div>
-        <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.6rem;">ปิด Anonymous auth ใน Firebase Console บล็อค anon ใหม่ — ปุ่มนี้ลบ user records anon เก่าออกจากระบบ (ไม่กระทบลูกบ้านที่ link LINE แล้ว)</div>
+        <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.6rem;">ลบ anonymous user records ที่ไม่มี custom claims (guest ที่ยังไม่ link LINE) — ลูกบ้านที่ link LIFF แล้วมี claims {room,building} ไม่กระทบ ⚠️ ห้ามปิด Anonymous auth ใน Firebase Console เพราะ LIFF ยังต้องใช้</div>
         <button data-action="cleanupAnonUsers" style="padding:6px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">🗑️ Delete Anonymous Users</button>
         <div id="ins-anon-output" style="margin-top:.6rem;font-size:.78rem;"></div>
       </div>
