@@ -30,7 +30,7 @@
  * bytes changed.
  */
 
-const CACHE_VERSION = 'v3-2026-04-27b';
+const CACHE_VERSION = 'v3-2026-04-27c';
 const STATIC_CACHE = `nh-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `nh-dynamic-${CACHE_VERSION}`;
 

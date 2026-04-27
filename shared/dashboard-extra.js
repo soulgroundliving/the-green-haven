@@ -5359,15 +5359,24 @@ if (window.switchMeterTab) {
 // ===== Listener cleanup =====
 // ===== OWNER INSIGHTS PAGE =====
 let _insightsCharts = {};
+let _insightsUnsubs = [];
+let _insightsTenantsCache = null;
+let _insightsRenderTimer = null;
 
 async function initInsightsPage() {
   const container = document.getElementById('insightsContainer');
   if (!container) return;
 
+  // Tear down prior session: charts + listeners
+  Object.values(_insightsCharts).forEach(c => { try { c.destroy(); } catch(e){} });
+  _insightsCharts = {};
+  _insightsUnsubs.forEach(fn => { try { fn(); } catch(e){} });
+  _insightsUnsubs = [];
+
   container.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.5rem;">
       <span style="font-size:1.2rem;font-weight:700;">📊 Owner Insights</span>
-      <span style="font-size:.78rem;color:var(--text-muted);padding:2px 8px;background:var(--green-pale);border-radius:20px;">Live from SSoT</span>
+      <span style="font-size:.78rem;color:var(--text-muted);padding:2px 8px;background:var(--green-pale);border-radius:20px;" id="ins-status">กำลังโหลด...</span>
     </div>
     <div class="card" style="margin-bottom:1.5rem;">
       <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">💰 อัตราการชำระเงิน (Collection Rate)</div>
@@ -5387,22 +5396,51 @@ async function initInsightsPage() {
       <div id="ins-hotspot-table" style="margin-top:1rem;"></div>
     </div>`;
 
-  Object.values(_insightsCharts).forEach(c => { try { c.destroy(); } catch(e){} });
-  _insightsCharts = {};
+  // Initial render with whatever cache we have
+  _insightsTenantsCache = await _insightsLoadTenants();
+  _insightsRenderAll();
+  _insightsSetStatus(_insightsHasData() ? 'Live from SSoT' : 'รอข้อมูลจาก Firebase...');
 
-  const [allTenants, allComplaints] = await Promise.all([
-    _insightsLoadTenants(),
-    Promise.resolve(window.RequestsStore?.getComplaints() || [])
-  ]);
+  // Re-render when bills land/change (BillStore subscribes RTDB once)
+  if (typeof BillStore !== 'undefined' && BillStore.onChange) {
+    _insightsUnsubs.push(BillStore.onChange(() => _insightsScheduleRender()));
+  }
+  // Re-render when complaints land/change
+  if (window.RequestsStore?.onChange) {
+    _insightsUnsubs.push(window.RequestsStore.onChange('complaints', () => _insightsScheduleRender()));
+  }
+}
 
+function _insightsHasData() {
+  const beNow = new Date().getFullYear() + 543;
+  const bills = BillStore.listAllForYear(String(beNow).slice(-2));
+  return (bills && bills.length > 0) || (_insightsTenantsCache && _insightsTenantsCache.length > 0);
+}
+
+function _insightsSetStatus(msg) {
+  const el = document.getElementById('ins-status');
+  if (el) el.textContent = msg;
+}
+
+function _insightsScheduleRender() {
+  // Debounce — RTDB onValue can fire twice in quick succession (rooms then nest)
+  clearTimeout(_insightsRenderTimer);
+  _insightsRenderTimer = setTimeout(() => {
+    _insightsRenderAll();
+    if (_insightsHasData()) _insightsSetStatus('Live from SSoT');
+  }, 150);
+}
+
+function _insightsRenderAll() {
   const beNow = new Date().getFullYear() + 543;
   const allBills = [
     ...BillStore.listAllForYear(String(beNow).slice(-2)),
     ...BillStore.listAllForYear(String(beNow - 1).slice(-2))
   ];
+  const allComplaints = window.RequestsStore?.getComplaints() || [];
 
   _insightsRenderCollection(allBills);
-  _insightsRenderCashFlow(allTenants);
+  _insightsRenderCashFlow(_insightsTenantsCache || []);
   _insightsRenderMTTR(allComplaints);
 }
 
@@ -5481,6 +5519,7 @@ function _insightsRenderCollection(bills) {
 
   const ctx = document.getElementById('ins-chart-collection');
   if (!ctx) return;
+  if (_insightsCharts.collection) { try { _insightsCharts.collection.destroy(); } catch(e){} }
   _insightsCharts.collection = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -5532,6 +5571,7 @@ function _insightsRenderCashFlow(tenants) {
 
   const ctx = document.getElementById('ins-chart-cashflow');
   if (ctx) {
+    if (_insightsCharts.cashflow) { try { _insightsCharts.cashflow.destroy(); } catch(e){} }
     _insightsCharts.cashflow = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -5618,6 +5658,7 @@ function _insightsRenderMTTR(complaints) {
 
   const ctx = document.getElementById('ins-chart-mttr');
   if (ctx) {
+    if (_insightsCharts.mttr) { try { _insightsCharts.mttr.destroy(); } catch(e){} }
     _insightsCharts.mttr = new Chart(ctx, {
       type: 'bar',
       data: {
