@@ -1,0 +1,69 @@
+#!/bin/bash
+# Committed pre-commit hook (canonical source).
+# This file is copied into .git/hooks/pre-commit by `tools/install-git-hooks.js`,
+# which runs automatically via `npm install` (see package.json `postinstall`).
+#
+# DO NOT EDIT .git/hooks/pre-commit directly — it will be overwritten on next
+# `npm install`. Edit THIS file instead, then re-run `npm install` (or `node tools/install-git-hooks.js`).
+#
+# The hook does two checks:
+#   1. Credential leak detection (API keys, secrets in staged files)
+#   2. Memory doc drift detection (lifecycle_*.md verifier — see verify-via-grep doctrine)
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# ===== 1. Credential leak detection =====
+PATTERNS=(
+  'AIzaSy[a-zA-Z0-9_-]{32,}'
+  'SLIPOK[a-zA-Z0-9_]{10,}'
+  'api[_-]?key\s*[:=]\s*["\047].*["\047]'
+  'secret\s*[:=]\s*["\047].*["\047]'
+  'password\s*[:=]\s*["\047].*["\047]'
+  'private[_-]?key'
+  'firebaseConfig\s*[:=]\s*{[^}]*apiKey'
+)
+
+echo -e "${YELLOW}🔍 Running pre-commit security checks...${NC}"
+FOUND_ISSUE=0
+
+for pattern in "${PATTERNS[@]}"; do
+  if git diff --cached --name-only | xargs grep -l "$pattern" 2>/dev/null; then
+    FILE=$(git diff --cached --name-only | xargs grep -l "$pattern" 2>/dev/null | head -1)
+    echo -e "${RED}❌ BLOCKED: Potential credentials detected in $FILE${NC}"
+    echo -e "${RED}   Pattern: $pattern${NC}"
+    FOUND_ISSUE=1
+  fi
+done
+
+SECRET_FILES=('.env' '.env.local' 'credentials.json' 'firebase-admin-key.json' 'service-account.json')
+for secret_file in "${SECRET_FILES[@]}"; do
+  if git diff --cached --name-only | grep -E "^$secret_file$|/$secret_file$"; then
+    echo -e "${RED}❌ BLOCKED: Secret file '$secret_file' is being committed${NC}"
+    FOUND_ISSUE=1
+  fi
+done
+
+if [ $FOUND_ISSUE -eq 1 ]; then
+  echo ""
+  echo -e "${RED}❌ Commit blocked: Remove sensitive data and try again${NC}"
+  echo ""
+  echo -e "${YELLOW}To bypass (NOT RECOMMENDED): git commit --no-verify${NC}"
+  exit 1
+fi
+echo -e "${GREEN}✅ Security checks passed${NC}"
+
+# ===== 2. Memory doc drift detection (verify-via-grep doctrine) =====
+echo -e "${YELLOW}🧪 Verifying memory docs vs code...${NC}"
+if ! node tools/verify-memory.js > /tmp/verify-memory.out 2>&1; then
+  echo -e "${RED}❌ Memory verifier reported drift:${NC}"
+  cat /tmp/verify-memory.out
+  echo ""
+  echo -e "${YELLOW}Fix the doc OR the code, then re-commit. To bypass (NOT RECOMMENDED): git commit --no-verify${NC}"
+  exit 1
+fi
+echo -e "${GREEN}✅ Memory verifier: all green${NC}"
+
+exit 0

@@ -4,7 +4,11 @@
     "test:rules": "node --test firestore.rules.test.js",
     "csp:hash": "node tools/compute-csp-hashes.js",
     "csp:print": "node tools/generate-vercel-csp.js",
-    "tailwind:build": "tailwindcss -i shared/tailwind.input.css -o shared/tailwind.css --minify"
+    "tailwind:build": "tailwindcss -i shared/tailwind.input.css -o shared/tailwind.css --minify",
+    "verify:memory": "node tools/verify-memory.js",
+    "verify:memory:coverage": "node tools/verify-memory.js --coverage",
+    "install:hooks": "node tools/install-git-hooks.js",
+    "postinstall": "node tools/install-git-hooks.js"
   },
   "dependencies": {
     "xlsx": "^0.18.5"
