@@ -8,6 +8,11 @@ exports.setAdminClaim = require('./setAdminClaim').setAdminClaim;
 // sign-in at Firebase Console — otherwise tenants regenerate them).
 exports.cleanupAnonymousUsers = require('./cleanupAnonymousUsers').cleanupAnonymousUsers;
 
+// One-shot migration: rewrite legacy bills whose `building` field is the
+// display name back to canonical 'rooms'/'nest'. Dry-run by default; pass
+// ?apply=1 to commit. Admin-only.
+exports.fixLegacyBillBuilding = require('./fixLegacyBillBuilding').fixLegacyBillBuilding;
+
 // Tenant LIFF → Firebase Auth UID room binding (Phase 4C)
 exports.linkAuthUid = require('./linkAuthUid').linkAuthUid;
 

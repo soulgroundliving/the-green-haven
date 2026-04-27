@@ -7486,16 +7486,39 @@
         }
 
         let _billsUnsub = null;
+        let _billsRetryCount = 0;
         async function _subscribeBillsRealtime() {
             if (_billsUnsub) return;
             if (typeof TenantFirebaseSync === 'undefined') return;
             // Phase 4C: RTDB rule requires {room,building} claims (set by linkAuthUid after LIFF login).
-            // Return early without touching _billsUnsub — authReady/liffLinked listeners retry.
+            // If claims aren't ready yet, schedule a backoff retry — relying solely on
+            // authReady/liffLinked events misses the case where both fired before the
+            // server-side custom claims propagated to the local token cache. Cap at 5
+            // retries (covers ~30s of LIFF + linkAuthUid + token refresh) so we don't
+            // burn forever on a permanently broken auth.
             try {
                 const user = window.firebaseAuth?.currentUser;
-                if (!user) return;
+                if (!user) {
+                    if (_billsRetryCount < 5) {
+                        _billsRetryCount++;
+                        setTimeout(_subscribeBillsRealtime, 2000 * _billsRetryCount);
+                    } else {
+                        console.warn('⛔ Bills subscription gave up — no Firebase user after 5 retries');
+                    }
+                    return;
+                }
                 const tr = await user.getIdTokenResult();
-                if (!tr.claims.admin && !(tr.claims.room && tr.claims.building)) return;
+                if (!tr.claims.admin && !(tr.claims.room && tr.claims.building)) {
+                    if (_billsRetryCount < 5) {
+                        _billsRetryCount++;
+                        console.log(`⏳ Bills subscription waiting for room/building claims (retry ${_billsRetryCount}/5)`);
+                        setTimeout(_subscribeBillsRealtime, 2000 * _billsRetryCount);
+                    } else {
+                        console.warn('⛔ Bills subscription gave up — claims not set after 5 retries. Check linkAuthUid CF.');
+                    }
+                    return;
+                }
+                _billsRetryCount = 0;
             } catch (_) { return; }
             try {
                 const userStr = sessionStorage.getItem('user');
@@ -7584,11 +7607,26 @@
                     window.dispatchEvent(new Event('liffLinked')); // Phase 4C: scoped RTDB subscribes wait for this.
                 } else {
                     const err = await resp.json().catch(() => ({}));
-                    console.warn('linkAuthUid CF error:', err.error || resp.status);
+                    const msg = err.error || `HTTP ${resp.status}`;
+                    console.error('⛔ linkAuthUid CF rejected:', msg);
+                    // Surface to user — silent fail here = bills/maintenance/etc. all
+                    // silently broken because RTDB rules need the claims this CF sets.
+                    _showAuthErrorBanner(`เชื่อมห้องไม่สำเร็จ: ${msg} — ลองเปิด LINE LIFF ใหม่`);
                 }
             } catch (e) {
-                console.warn('linkAuthUid failed (non-blocking):', e.message);
+                console.error('⛔ linkAuthUid call failed:', e.message);
+                _showAuthErrorBanner(`เชื่อมห้องไม่สำเร็จ (network): ${e.message}`);
             }
+        }
+        function _showAuthErrorBanner(msg) {
+            try {
+                if (document.getElementById('auth-error-banner')) return; // dedupe
+                const b = document.createElement('div');
+                b.id = 'auth-error-banner';
+                b.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c62828;color:#fff;padding:.6rem 1rem;font-size:.82rem;z-index:9999;text-align:center;';
+                b.textContent = '⛔ ' + msg;
+                document.body.appendChild(b);
+            } catch(_) {}
         }
 
         async function initLiffAndLink() {
