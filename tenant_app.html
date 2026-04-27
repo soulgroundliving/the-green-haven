@@ -128,9 +128,14 @@
           window.firebaseSendEmailVerification = sendEmailVerification;
           window.firebaseReady = true;
           window.dispatchEvent(new Event('firebaseInitialized'));
-          // Anonymous sign-in so Firestore rules (require auth != null) don't block
-          // the public-ish reads (rewards, emergency contacts, building info, bills, etc.).
-          // LIFF flow can still link a real user later — anonymous UID is just a temp slot.
+          // Anonymous sign-in is the foundation of the LIFF flow:
+          //   1. signInAnonymously → anon UID
+          //   2. linkAuthUid CF sets {room, building} custom claims ON that UID
+          //   3. Token refresh → RTDB rules see the claims → bills load
+          // If Anonymous is disabled at Firebase Console, step 1 fails → there's
+          // no UID to attach claims to → bills + maintenance + every per-room
+          // RTDB read returns permission_denied. Until linkAuthUid is refactored
+          // to issue custom tokens server-side, Anonymous MUST stay enabled.
           onAuthStateChanged(auth, async (user) => {
             if (user) {
               window._authUid = user.uid;
@@ -141,8 +146,21 @@
               await signInAnonymously(auth);
               // authStateChanged fires again with the new anon user → dispatches authReady there
             } catch (err) {
-              console.warn('⚠️ Anonymous sign-in failed:', err.message);
-              // Dispatch anyway so subscribers don't hang forever
+              // auth/admin-restricted-operation = Anonymous disabled at console.
+              const isAnonBlocked = err && (err.code === 'auth/admin-restricted-operation' || /admin-restricted/i.test(err.message || ''));
+              if (isAnonBlocked) {
+                console.error('⛔ Anonymous sign-in is DISABLED at Firebase Console — bills + tenant features are blocked. Re-enable Anonymous in Firebase Auth providers until linkAuthUid is refactored.');
+                // Surface a visible banner so the tenant doesn't see silent broken UI
+                try {
+                  const banner = document.createElement('div');
+                  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c62828;color:#fff;padding:.6rem 1rem;font-size:.85rem;z-index:9999;text-align:center;';
+                  banner.textContent = '⛔ ระบบยังไม่พร้อมใช้งาน (auth) — กรุณาแจ้งแอดมิน';
+                  document.body.appendChild(banner);
+                } catch(_) {}
+              } else {
+                console.warn('⚠️ Anonymous sign-in failed:', err.message);
+              }
+              // Dispatch anyway so subscribers don't hang forever (they'll find currentUser=null and skip)
               window.dispatchEvent(new Event('authReady'));
             }
           });

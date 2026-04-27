@@ -4,6 +4,10 @@
 // Admin custom-claims management (Phase 4A)
 exports.setAdminClaim = require('./setAdminClaim').setAdminClaim;
 
+// Bulk-delete legacy anonymous user records (run after disabling Anonymous
+// sign-in at Firebase Console — otherwise tenants regenerate them).
+exports.cleanupAnonymousUsers = require('./cleanupAnonymousUsers').cleanupAnonymousUsers;
+
 // Tenant LIFF → Firebase Auth UID room binding (Phase 4C)
 exports.linkAuthUid = require('./linkAuthUid').linkAuthUid;
 

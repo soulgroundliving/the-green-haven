@@ -624,6 +624,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'switchPVTab') { typeof switchPVTab === 'function' && switchPVTab(tab, el); return; }
     if (a === 'switchPeopleTab') { typeof switchPeopleTab === 'function' && switchPeopleTab(tab, el); return; }
     if (a === 'runAwardDryRun') { typeof runAwardComplaintFreeMonthDryRun === 'function' && runAwardComplaintFreeMonthDryRun(); return; }
+    if (a === 'grantAdminRole') { typeof grantAdminRole === 'function' && grantAdminRole(); return; }
+    if (a === 'cleanupAnonUsers') { typeof cleanupAnonUsers === 'function' && cleanupAnonUsers(); return; }
     if (a === 'switchRequestsTab') { typeof switchRequestsTab === 'function' && switchRequestsTab(tab, el); return; }
     if (a === 'switchGamificationTab') { typeof switchGamificationTab === 'function' && switchGamificationTab(tab, el); return; }
     if (a === 'setAnnouncementBuilding') { typeof setAnnouncementBuilding === 'function' && setAnnouncementBuilding(building, el); return; }

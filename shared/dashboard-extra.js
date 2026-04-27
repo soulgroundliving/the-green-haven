@@ -5422,6 +5422,29 @@ async function initInsightsPage() {
         <button data-action="runAwardDryRun" style="padding:6px 14px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">🧪 Run Dry Run</button>
         <pre id="ins-award-dryrun-output" style="margin-top:.7rem;padding:.7rem;background:#f5f5f5;border-radius:6px;font-size:.75rem;max-height:240px;overflow:auto;display:none;white-space:pre-wrap;"></pre>
       </div>
+    </div>
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">🔐 Admin Operations</div>
+      <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:1rem;">เครื่องมือสำหรับจัดการสิทธิ์ admin/accountant — เรียก setAdminClaim CF ด้วย ID token ของคุณ</div>
+      <div style="border:1px solid var(--border);border-radius:6px;padding:1rem;margin-bottom:1rem;">
+        <div style="font-weight:600;font-size:.85rem;margin-bottom:.5rem;">➕ Grant Admin / Accountant Role</div>
+        <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.6rem;">ตั้งค่า custom claim ให้ user ที่สมัครแล้ว (Firebase Auth บันทึกแล้ว แต่ระบบยังไม่ count เป็น admin จนกว่าจะ grant claim) — user ต้อง logout/login ใหม่หลัง grant เพื่อรับ token ใหม่</div>
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+          <input type="email" id="ins-grant-email" placeholder="user@example.com" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.85rem;">
+          <select id="ins-grant-role" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.85rem;">
+            <option value="admin">admin</option>
+            <option value="accountant">accountant</option>
+          </select>
+          <button data-action="grantAdminRole" style="padding:8px 14px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">Grant</button>
+        </div>
+        <div id="ins-grant-output" style="margin-top:.6rem;font-size:.78rem;"></div>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:6px;padding:1rem;">
+        <div style="font-weight:600;font-size:.85rem;margin-bottom:.5rem;">🧹 Cleanup Anonymous Users</div>
+        <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.6rem;">ปิด Anonymous auth ใน Firebase Console บล็อค anon ใหม่ — ปุ่มนี้ลบ user records anon เก่าออกจากระบบ (ไม่กระทบลูกบ้านที่ link LINE แล้ว)</div>
+        <button data-action="cleanupAnonUsers" style="padding:6px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">🗑️ Delete Anonymous Users</button>
+        <div id="ins-anon-output" style="margin-top:.6rem;font-size:.78rem;"></div>
+      </div>
     </div>`;
 
   // Initial render with whatever cache we have
@@ -6066,6 +6089,76 @@ async function _insightsRenderCFHealth() {
   if (!lines.length) lines.push('✅ ไม่มี pending ค้าง — CF retry queue ทำงานปกติ');
   dEl.innerHTML = lines.join('<br>');
 }
+
+// Grant admin/accountant custom claim to a user. Calls the deployed
+// setAdminClaim CF with the current admin's ID token. Target user must
+// already exist in Firebase Auth (signed up at least once). They need to
+// log out + log back in for the new claim to appear in their token.
+async function grantAdminRole() {
+  const out = document.getElementById('ins-grant-output');
+  const emailEl = document.getElementById('ins-grant-email');
+  const roleEl = document.getElementById('ins-grant-role');
+  if (!out || !emailEl || !roleEl) return;
+  const email = (emailEl.value || '').trim();
+  const role = roleEl.value || 'admin';
+  if (!email || !email.includes('@')) {
+    out.innerHTML = '<span style="color:#c62828;">❌ ใส่ email ที่ถูกต้อง</span>';
+    return;
+  }
+  out.innerHTML = '⏳ กำลัง grant...';
+  try {
+    const authInstance = window.firebaseAuth || window.auth;
+    const idToken = await authInstance?.currentUser?.getIdToken?.();
+    if (!idToken) throw new Error('Session หมดอายุ — login ใหม่');
+    const res = await fetch(
+      'https://asia-southeast1-the-green-haven.cloudfunctions.net/setAdminClaim',
+      {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role })
+      }
+    );
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      out.innerHTML = `<span style="color:#c62828;">❌ ${json.error || res.statusText}</span>`;
+      return;
+    }
+    out.innerHTML = `<span style="color:var(--green-dark);">✅ Granted <strong>${role}</strong> to <strong>${json.email}</strong> (uid: ${json.uid.slice(0, 12)}...)</span><br><span style="color:var(--text-muted);">⚠️ User ต้อง logout/login ใหม่ เพื่อรับ token ที่มี claim ใหม่</span>`;
+    emailEl.value = '';
+  } catch (e) {
+    out.innerHTML = `<span style="color:#c62828;">❌ ${e.message}</span>`;
+  }
+}
+window.grantAdminRole = grantAdminRole;
+
+// Bulk-delete legacy anonymous user records (Firebase Auth users with
+// providerData.length === 0). Anonymous provider must be disabled at the
+// Firebase Console first — otherwise tenant_app would just create new
+// anon users to replace the deleted ones. Calls cleanupAnonymousUsers CF.
+async function cleanupAnonUsers() {
+  const out = document.getElementById('ins-anon-output');
+  if (!out) return;
+  if (!confirm('ลบ user records anon ทั้งหมด? (ผู้ที่ link LINE แล้วไม่กระทบ — ลบเฉพาะ guest ที่ไม่เคย link)')) return;
+  out.innerHTML = '⏳ กำลังลบ...';
+  try {
+    const authInstance = window.firebaseAuth || window.auth;
+    const idToken = await authInstance?.currentUser?.getIdToken?.();
+    if (!idToken) throw new Error('Session หมดอายุ — login ใหม่');
+    const res = await fetch(
+      'https://asia-southeast1-the-green-haven.cloudfunctions.net/cleanupAnonymousUsers',
+      { method: 'POST', headers: { 'Authorization': 'Bearer ' + idToken } }
+    );
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      out.innerHTML = `<span style="color:#c62828;">❌ ${json.error || res.statusText}</span>`;
+      return;
+    }
+    out.innerHTML = `<span style="color:var(--green-dark);">✅ ลบ ${json.deleted} anonymous user records (สแกน ${json.scanned} users)</span>`;
+  } catch (e) {
+    out.innerHTML = `<span style="color:#c62828;">❌ ${e.message}</span>`;
+  }
+}
+window.cleanupAnonUsers = cleanupAnonUsers;
 
 // Trigger manual dry-run of awardComplaintFreeMonth CF. Shows what would be
 // awarded without writing to DB. Use before the 1st-of-month schedule to verify.
