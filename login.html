@@ -948,8 +948,25 @@
           return;
         }
 
+        // ===== SESSION HYGIENE BEFORE SIGN-IN =====
+        // 1. Sign out any stale Firebase Auth session (e.g. cached adminavatar99
+        //    from earlier testing). Without this, a wrong password retry leaves
+        //    the OLD session active — dashboard then loads the wrong user.
+        // 2. Wipe sessionStorage so no stale {userType, roomNumber, expiresAt}
+        //    survives if signIn fails later in this function.
+        try { await window.firebaseAuthFunctions.signOut(); } catch(_) {}
+        sessionStorage.removeItem('user');
+        sessionStorage.removeItem('_adminPreview');
+
         const userCredential = await window.firebaseAuthFunctions.signInWithEmailAndPassword(email, password);
         const user = userCredential.user;
+        if (!user || user.email?.toLowerCase() !== email.toLowerCase()) {
+          // Defensive: signIn returned a user object that doesn't match the
+          // requested email. Should never happen, but if it does we'd otherwise
+          // silently log them in as somebody else.
+          await safeSignOut();
+          throw new Error('Sign-in returned mismatched user — please try again');
+        }
 
         // Get user data from database with timeout
         let userData = null;
