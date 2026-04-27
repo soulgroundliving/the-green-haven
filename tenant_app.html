@@ -1644,6 +1644,7 @@
           <option value="rooms">rooms</option>
         </select>
         <button id="apb-switch-btn" style="padding:3px 10px;border-radius:4px;border:none;background:#4ade80;color:#14532d;font-weight:700;cursor:pointer;font-size:12px;">สวิตช์</button>
+        <button id="apb-logout-btn" style="padding:3px 10px;border-radius:4px;border:none;background:#fff;color:#1a5c38;font-weight:700;cursor:pointer;font-size:12px;">⏏ ออก</button>
       </span>
     </div>
     <!-- APP INIT SPLASH: covers screen while LIFF auth resolves so world-map never flashes -->
@@ -7878,6 +7879,20 @@
                 url.searchParams.set('room', r);
                 url.searchParams.set('building', b);
                 window.location.href = url.toString();
+            });
+            // Logout — clears admin-preview flags + signs out Firebase, then back to /login.
+            // Without the explicit signOut, the next /login visit auto-restores the cached
+            // admin session from IndexedDB and skips the form.
+            document.getElementById('apb-logout-btn')?.addEventListener('click', async () => {
+                try {
+                    sessionStorage.removeItem('_adminPreview');
+                    sessionStorage.removeItem('user');
+                    localStorage.removeItem('tenant_app_room');
+                    if (window.firebaseAuth?.signOut) {
+                        await window.firebaseAuth.signOut().catch(() => {});
+                    }
+                } catch(_) {}
+                window.location.href = '/login';
             });
         }
 
