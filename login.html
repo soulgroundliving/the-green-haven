@@ -1033,15 +1033,14 @@
             console.log('➡️ Redirecting to: /dashboard');
             window.location.href = '/dashboard';
           } else if (userData.userType === 'tenant') {
-            // Derive building from room: N-prefix or membership in NEST_ROOMS = nest
-            const rawRoom = String(userData.roomNumber || '');
-            const inNestList = Array.isArray(window.NEST_ROOMS)
-              && window.NEST_ROOMS.some(r => r.id === rawRoom || r.id === 'N' + rawRoom);
-            const building = (/^N/i.test(rawRoom) || inNestList) ? 'nest' : 'rooms';
-            const normalizedRoom = (building === 'nest' && !/^N/i.test(rawRoom)) ? 'N' + rawRoom : rawRoom;
-            const tenantUrl = `/tenant_app?room=${encodeURIComponent(normalizedRoom)}&building=${building}`;
-            console.log('➡️ Redirecting to:', tenantUrl);
-            window.location.href = tenantUrl;
+            // Redirect to /tenant_app WITHOUT ?room= URL params. The room/building
+            // already sit in sessionStorage.user (set above as {roomNumber, ...})
+            // and tenant_app's detectRoomBuilding() reads from there. Including
+            // the params in the URL would trigger the admin-preview path which
+            // sets _adminPreview=1 — only admins should hit that codepath, not
+            // real tenant logins.
+            console.log('➡️ Redirecting to: /tenant_app (room from sessionStorage)');
+            window.location.href = '/tenant_app';
           } else {
             console.warn('⚠️ Unknown userType, defaulting to dashboard:', userData.userType);
             window.location.href = '/dashboard';
