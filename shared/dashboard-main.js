@@ -430,6 +430,7 @@ function switchPeopleTab(tabName, btn) {
 
   // Lazy-load policies from Firestore when tab first opens
   if (tabName === 'policies' && typeof loadPoliciesAdmin === 'function') loadPoliciesAdmin();
+  if (tabName === 'insights' && typeof initInsightsPage === 'function') initInsightsPage();
 }
 
 // ===== LEASE MANAGEMENT TAB SWITCHING =====

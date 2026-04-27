@@ -3584,11 +3584,17 @@
     <button id="tab-owner-btn" class="year-tab active" data-action="switchPeopleTab" data-tab="owner">🏢 Owner</button>
     <button id="tab-providers-btn" class="year-tab" data-action="switchPeopleTab" data-tab="providers">📞 Service Providers</button>
     <button id="tab-policies-btn" class="year-tab" data-action="switchPeopleTab" data-tab="policies">📋 Policies</button>
+    <button id="tab-insights-btn" class="year-tab" data-action="switchPeopleTab" data-tab="insights">📊 Insights</button>
   </div>
 
   <!-- TAB 1: Owner Info -->
   <div id="people-tab-owner" class="people-mgmt-content active">
     <div id="ownerInfoContainer"></div>
+  </div>
+
+  <!-- TAB 4: Insights -->
+  <div id="people-tab-insights" class="people-mgmt-content" style="display:none;">
+    <div id="insightsContainer"></div>
   </div>
 
   <!-- TAB 3: Policies (SSoT → Firestore system/policies → tenant app reads live) -->

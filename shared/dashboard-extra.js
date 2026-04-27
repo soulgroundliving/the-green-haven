@@ -5357,6 +5357,313 @@ if (window.switchMeterTab) {
 }
 
 // ===== Listener cleanup =====
+// ===== OWNER INSIGHTS PAGE =====
+let _insightsCharts = {};
+
+async function initInsightsPage() {
+  const container = document.getElementById('insightsContainer');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.5rem;">
+      <span style="font-size:1.2rem;font-weight:700;">📊 Owner Insights</span>
+      <span style="font-size:.78rem;color:var(--text-muted);padding:2px 8px;background:var(--green-pale);border-radius:20px;">Live from SSoT</span>
+    </div>
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">💰 อัตราการชำระเงิน (Collection Rate)</div>
+      <div id="ins-collection-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
+      <div style="height:220px;position:relative;"><canvas id="ins-chart-collection"></canvas></div>
+    </div>
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">📈 Cash Flow Forecast (6 เดือนข้างหน้า)</div>
+      <div id="ins-cashflow-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
+      <div style="height:220px;position:relative;"><canvas id="ins-chart-cashflow"></canvas></div>
+      <div id="ins-lease-expiry-table" style="margin-top:1rem;"></div>
+    </div>
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">🔧 Complaint Resolution (MTTR)</div>
+      <div id="ins-mttr-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
+      <div style="height:220px;position:relative;"><canvas id="ins-chart-mttr"></canvas></div>
+      <div id="ins-hotspot-table" style="margin-top:1rem;"></div>
+    </div>`;
+
+  Object.values(_insightsCharts).forEach(c => { try { c.destroy(); } catch(e){} });
+  _insightsCharts = {};
+
+  const [allTenants, allComplaints] = await Promise.all([
+    _insightsLoadTenants(),
+    Promise.resolve(window.RequestsStore?.getComplaints() || [])
+  ]);
+
+  const beNow = new Date().getFullYear() + 543;
+  const allBills = [
+    ...BillStore.listAllForYear(String(beNow).slice(-2)),
+    ...BillStore.listAllForYear(String(beNow - 1).slice(-2))
+  ];
+
+  _insightsRenderCollection(allBills);
+  _insightsRenderCashFlow(allTenants);
+  _insightsRenderMTTR(allComplaints);
+}
+
+async function _insightsLoadTenants() {
+  try {
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return [];
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    const [snapR, snapN] = await Promise.all([
+      fs.getDocs(fs.collection(db, 'tenants/rooms/list')),
+      fs.getDocs(fs.collection(db, 'tenants/nest/list'))
+    ]);
+    const out = [];
+    snapR.docs.forEach(d => { const t = d.data(); if (t.name) out.push({ ...t, _building: 'rooms', _roomId: d.id }); });
+    snapN.docs.forEach(d => { const t = d.data(); if (t.name) out.push({ ...t, _building: 'nest', _roomId: d.id }); });
+    return out;
+  } catch(e) {
+    console.warn('insightsLoadTenants:', e);
+    return [];
+  }
+}
+
+function _insightsKpiCard(label, value, sub, color) {
+  const c = color || 'var(--green-dark)';
+  return `<div style="background:var(--green-pale);border-radius:var(--radius-sm);padding:.9rem 1rem;">
+    <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:3px;">${label}</div>
+    <div style="font-size:1.45rem;font-weight:700;color:${c};">${value}</div>
+    ${sub ? `<div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;">${sub}</div>` : ''}
+  </div>`;
+}
+
+function _insightsMonthLabels(count, fromNow) {
+  const now = new Date();
+  const months = [];
+  for (let i = fromNow ? 0 : -(count - 1); i <= (fromNow ? count - 1 : 0); i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    months.push({
+      label: d.toLocaleDateString('th-TH', { month: 'short', year: '2-digit' }),
+      year: d.getFullYear(), month: d.getMonth() + 1,
+      beY: String(d.getFullYear() + 543).slice(-2),
+      monthEnd: new Date(d.getFullYear(), d.getMonth() + 1, 0)
+    });
+  }
+  return months;
+}
+
+function _insightsRenderCollection(bills) {
+  const months = _insightsMonthLabels(6, false);
+  const real = bills.filter(b => !BillStore.isSynthetic(b));
+
+  const rates = months.map(({ beY, month }) => {
+    const mb = real.filter(b => String(b.year).slice(-2) === beY && Number(b.month) === month);
+    if (!mb.length) return null;
+    return Math.round(mb.filter(b => BillStore.isPaid(b)).length / mb.length * 100);
+  });
+
+  const curr = months[months.length - 1];
+  const currBills = real.filter(b => String(b.year).slice(-2) === curr.beY && Number(b.month) === curr.month);
+  const currPaid = currBills.filter(b => BillStore.isPaid(b)).length;
+  const currRate = currBills.length ? Math.round(currPaid / currBills.length * 100) : null;
+  const overdue = currBills.filter(b => !BillStore.isPaid(b));
+  const overdueAmt = overdue.reduce((s, b) => s + Number(b.totalAmount || b.total || 0), 0);
+
+  const allLast6 = real.filter(b => months.some(({ beY, month }) =>
+    String(b.year).slice(-2) === beY && Number(b.month) === month
+  ));
+  const overallPaid = allLast6.filter(b => BillStore.isPaid(b)).length;
+  const overallRate = allLast6.length ? Math.round(overallPaid / allLast6.length * 100) : null;
+
+  document.getElementById('ins-collection-kpis').innerHTML =
+    _insightsKpiCard('อัตรารวม 6 เดือน', overallRate !== null ? overallRate + '%' : '—', `${overallPaid}/${allLast6.length} บิล`) +
+    _insightsKpiCard('เดือนนี้', currRate !== null ? currRate + '%' : '—',
+      `${currPaid}/${currBills.length} ห้อง`,
+      currRate === null ? undefined : currRate >= 90 ? 'var(--green-dark)' : currRate >= 70 ? '#e65100' : '#c62828') +
+    _insightsKpiCard('ค้างชำระ (เดือนนี้)', '฿' + overdueAmt.toLocaleString(), `${overdue.length} ห้อง`, overdue.length > 0 ? '#c62828' : 'var(--green-dark)');
+
+  const ctx = document.getElementById('ins-chart-collection');
+  if (!ctx) return;
+  _insightsCharts.collection = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months.map(m => m.label),
+      datasets: [{
+        label: 'อัตราชำระ (%)',
+        data: rates,
+        backgroundColor: rates.map(r => r === null ? '#e0e0e0' : r >= 90 ? 'rgba(45,136,45,0.75)' : r >= 70 ? 'rgba(230,81,0,0.7)' : 'rgba(198,40,40,0.7)'),
+        borderRadius: 5
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: '#f0f0f0' } } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => c.raw !== null ? c.raw + '%' : 'ไม่มีข้อมูล' } }
+      }
+    }
+  });
+}
+
+function _insightsRenderCashFlow(tenants) {
+  const months = _insightsMonthLabels(6, true);
+  const now = new Date();
+
+  const projected = months.map(({ year, month, monthEnd }) =>
+    tenants.reduce((s, t) => {
+      if (!t.contractEnd || new Date(t.contractEnd) < new Date(year, month - 1, 1)) return s;
+      return s + Number(t.rentPrice || 0);
+    }, 0)
+  );
+  const atRisk = months.map(({ year, month, monthEnd }) =>
+    tenants.reduce((s, t) => {
+      if (!t.contractEnd) return s;
+      const end = new Date(t.contractEnd);
+      if (end >= new Date(year, month - 1, 1) && end <= monthEnd) return s + Number(t.rentPrice || 0);
+      return s;
+    }, 0)
+  );
+
+  const exp30 = tenants.filter(t => { if (!t.contractEnd) return false; const d = (new Date(t.contractEnd) - now) / 86400000; return d >= 0 && d <= 30; });
+  const exp90 = tenants.filter(t => { if (!t.contractEnd) return false; const d = (new Date(t.contractEnd) - now) / 86400000; return d > 30 && d <= 90; });
+
+  document.getElementById('ins-cashflow-kpis').innerHTML =
+    _insightsKpiCard('รายรับที่คาด (เดือนนี้)', '฿' + projected[0].toLocaleString(), `${tenants.length} ห้องที่มีผู้เช่า`) +
+    _insightsKpiCard('หมดสัญญา ≤30 วัน', exp30.length + ' ห้อง', exp30.map(t => (t._building === 'nest' ? 'N' : '') + t._roomId).join(', ') || '—', exp30.length > 0 ? '#c62828' : 'var(--green-dark)') +
+    _insightsKpiCard('หมดสัญญา 31–90 วัน', exp90.length + ' ห้อง', exp90.map(t => (t._building === 'nest' ? 'N' : '') + t._roomId).join(', ') || '—', exp90.length > 0 ? '#e65100' : 'var(--green-dark)');
+
+  const ctx = document.getElementById('ins-chart-cashflow');
+  if (ctx) {
+    _insightsCharts.cashflow = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: months.map(m => m.label),
+        datasets: [
+          { label: 'รายรับที่คาด (฿)', data: projected.map((p, i) => p - atRisk[i]), backgroundColor: 'rgba(45,136,45,0.75)', borderRadius: 5, stack: 'a' },
+          { label: 'ความเสี่ยง — สัญญาหมด (฿)', data: atRisk, backgroundColor: 'rgba(198,40,40,0.55)', borderRadius: 5, stack: 'a' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true, ticks: { callback: v => '฿' + v.toLocaleString() }, grid: { color: '#f0f0f0' } }
+        },
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 } } },
+          tooltip: { callbacks: { label: c => c.dataset.label + ': ฿' + Number(c.raw || 0).toLocaleString() } }
+        }
+      }
+    });
+  }
+
+  const expiring = tenants
+    .filter(t => t.contractEnd && (new Date(t.contractEnd) - now) / 86400000 <= 90 && (new Date(t.contractEnd) - now) / 86400000 >= -7)
+    .sort((a, b) => new Date(a.contractEnd) - new Date(b.contractEnd));
+
+  if (expiring.length) {
+    const rows = expiring.map(t => {
+      const diff = Math.ceil((new Date(t.contractEnd) - now) / 86400000);
+      const color = diff <= 0 ? '#c62828' : diff <= 30 ? '#e65100' : '#1976d2';
+      const badge = diff <= 0 ? '⚠️ หมดแล้ว' : diff + ' วัน';
+      return `<tr>
+        <td style="padding:5px 10px;font-weight:600;">${t._building === 'nest' ? 'N' : ''}${t._roomId}</td>
+        <td style="padding:5px 10px;">${t.name || '—'}</td>
+        <td style="padding:5px 10px;">${new Date(t.contractEnd).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</td>
+        <td style="padding:5px 10px;color:${color};font-weight:600;">${badge}</td>
+        <td style="padding:5px 10px;">฿${Number(t.rentPrice || 0).toLocaleString()}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('ins-lease-expiry-table').innerHTML = `
+      <div style="font-weight:600;font-size:.82rem;margin-bottom:.5rem;color:var(--text-muted);">สัญญาหมดใน 90 วัน</div>
+      <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.83rem;">
+        <thead><tr style="background:var(--green-pale);">
+          <th style="padding:5px 10px;text-align:left;">ห้อง</th>
+          <th style="padding:5px 10px;text-align:left;">ผู้เช่า</th>
+          <th style="padding:5px 10px;text-align:left;">สิ้นสุด</th>
+          <th style="padding:5px 10px;text-align:left;">เหลือ</th>
+          <th style="padding:5px 10px;text-align:left;">ค่าเช่า</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+  }
+}
+
+function _insightsRenderMTTR(complaints) {
+  const resolved = complaints.filter(c => c.status === 'resolved' && c.createdAt && c.updatedAt);
+  const mttrs = resolved.map(c => (new Date(c.updatedAt) - new Date(c.createdAt)) / 86400000);
+  const avgMttr = mttrs.length ? parseFloat((mttrs.reduce((s, v) => s + v, 0) / mttrs.length).toFixed(1)) : null;
+  const open = complaints.filter(c => c.status === 'open' || c.status === 'in-progress');
+
+  const byRoom = {};
+  complaints.forEach(c => { const k = String(c.room || 'unknown'); byRoom[k] = (byRoom[k] || 0) + 1; });
+  const hotspots = Object.entries(byRoom).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]);
+
+  document.getElementById('ins-mttr-kpis').innerHTML =
+    _insightsKpiCard('MTTR เฉลี่ย', avgMttr !== null ? avgMttr + ' วัน' : '—',
+      `จาก ${resolved.length} เคสที่แก้แล้ว`,
+      avgMttr === null ? undefined : avgMttr <= 3 ? 'var(--green-dark)' : avgMttr <= 7 ? '#e65100' : '#c62828') +
+    _insightsKpiCard('เปิดอยู่', open.length + ' เคส', 'open + in-progress', open.length > 0 ? '#e65100' : 'var(--green-dark)') +
+    _insightsKpiCard('ห้องที่มีปัญหาซ้ำ', hotspots.length + ' ห้อง',
+      hotspots.slice(0, 3).map(([r, n]) => `${r}(${n})`).join(' · ') || '—',
+      hotspots.length > 0 ? '#e65100' : 'var(--green-dark)');
+
+  const months = _insightsMonthLabels(6, false);
+  const monthlyMttr = months.map(({ year, month }) => {
+    const mc = resolved.filter(c => {
+      const d = new Date(c.updatedAt);
+      return d.getFullYear() === year && d.getMonth() + 1 === month;
+    });
+    if (!mc.length) return null;
+    return parseFloat((mc.reduce((s, c) => s + (new Date(c.updatedAt) - new Date(c.createdAt)) / 86400000, 0) / mc.length).toFixed(1));
+  });
+
+  const ctx = document.getElementById('ins-chart-mttr');
+  if (ctx) {
+    _insightsCharts.mttr = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: months.map(m => m.label),
+        datasets: [{
+          label: 'MTTR (วัน)',
+          data: monthlyMttr,
+          backgroundColor: monthlyMttr.map(v => v === null ? '#e0e0e0' : v <= 3 ? 'rgba(45,136,45,0.75)' : v <= 7 ? 'rgba(230,81,0,0.7)' : 'rgba(198,40,40,0.7)'),
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { min: 0, ticks: { callback: v => v + 'd' }, grid: { color: '#f0f0f0' } } },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => c.raw !== null ? c.raw + ' วัน' : 'ไม่มีข้อมูล' } }
+        }
+      }
+    });
+  }
+
+  if (hotspots.length) {
+    const rows = hotspots.slice(0, 10).map(([room, count]) => {
+      const latest = complaints.filter(c => String(c.room) === room).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0];
+      const s = latest?.status || '—';
+      const color = s === 'resolved' ? 'var(--green-dark)' : s === 'in-progress' ? '#1976d2' : '#e65100';
+      return `<tr>
+        <td style="padding:5px 10px;font-weight:600;">ห้อง ${room}</td>
+        <td style="padding:5px 10px;">${count} เคส</td>
+        <td style="padding:5px 10px;color:${color};">${s}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('ins-hotspot-table').innerHTML = `
+      <div style="font-weight:600;font-size:.82rem;margin-bottom:.5rem;color:var(--text-muted);">ห้องที่มีการร้องเรียนซ้ำ (≥2 ครั้ง)</div>
+      <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.83rem;">
+        <thead><tr style="background:var(--green-pale);">
+          <th style="padding:5px 10px;text-align:left;">ห้อง</th>
+          <th style="padding:5px 10px;text-align:left;">จำนวน</th>
+          <th style="padding:5px 10px;text-align:left;">สถานะล่าสุด</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+  }
+}
+
 // Detaches every long-lived Firestore onSnapshot subscription this file
 // owns. Called on `beforeunload` so the listeners don't keep firing on
 // the server side after the admin closes the dashboard. Safe to call
