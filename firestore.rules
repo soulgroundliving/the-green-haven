@@ -50,11 +50,17 @@ service cloud.firestore {
     }
 
     // ===== COMPLAINTS =====
-    // Tenant scoped by linkedAuthUid (written at create time by tenant_app).
-    // Admin reads all (admin claim bypasses scope). Legacy complaints without
-    // linkedAuthUid are denied to tenants but still visible to admin. Audit 2026-04-27.
+    // Tenant reads = admin OR linkedAuthUid match OR (legacy docs without
+    // linkedAuthUid) room+building match the tenant's custom claims set by
+    // linkAuthUid CF. This keeps history visible after the schema change.
+    // Create requires linkedAuthUid stamped to caller — closes the original
+    // cross-tenant create leak. Audit 2026-04-27.
     match /complaints/{id} {
-      allow read:   if isAdmin() || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid);
+      allow read:   if isAdmin()
+        || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid)
+        || (isSignedIn()
+            && resource.data.room == request.auth.token.room
+            && resource.data.building == request.auth.token.building);
       allow create: if isSignedIn() && request.resource.data.linkedAuthUid == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if isAdmin();
@@ -213,13 +219,16 @@ service cloud.firestore {
     }
 
     // ===== LIFF USER LINKS (LINE → tenant link approval) =====
-    // Tenants don't read this directly — linkAuthUid CF (admin SDK) handles the
-    // LINE→Firebase mapping. Admin dashboard listens on the entire collection.
-    // Tightening read to admin closes cross-tenant LIFF metadata leak.
-    // Tenant create still allowed (tenant submits the link request).
-    // Audit 2026-04-27.
+    // Tenant_app.html:7626 reads liffUsers/{lineUserId} directly to check
+    // status === 'approved' BEFORE custom claims are set (this is the lookup
+    // that *triggers* setting claims). Tightening read here would break the
+    // entire LIFF onboarding loop — verified during 2026-04-27 incident:
+    // tenants cleared cache, hit LIFF, got the wrong room because liffUsers
+    // read failed → linkAuthUid CF never called → claims never set.
+    // The cleaner long-term fix is a CF that returns status + room+building
+    // from a verified LIFF idToken; until then keep this read at isSignedIn().
     match /liffUsers/{userId} {
-      allow read:   if isAdmin();
+      allow read:   if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
