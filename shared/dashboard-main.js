@@ -623,6 +623,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'switchBillingMainTab') { typeof switchBillingMainTab === 'function' && switchBillingMainTab(tab, el); return; }
     if (a === 'switchPVTab') { typeof switchPVTab === 'function' && switchPVTab(tab, el); return; }
     if (a === 'switchPeopleTab') { typeof switchPeopleTab === 'function' && switchPeopleTab(tab, el); return; }
+    if (a === 'runAwardDryRun') { typeof runAwardComplaintFreeMonthDryRun === 'function' && runAwardComplaintFreeMonthDryRun(); return; }
     if (a === 'switchRequestsTab') { typeof switchRequestsTab === 'function' && switchRequestsTab(tab, el); return; }
     if (a === 'switchGamificationTab') { typeof switchGamificationTab === 'function' && switchGamificationTab(tab, el); return; }
     if (a === 'setAnnouncementBuilding') { typeof setAnnouncementBuilding === 'function' && setAnnouncementBuilding(building, el); return; }

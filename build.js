@@ -36,6 +36,34 @@ if (!process.env.VERCEL && !process.env.FORCE_BUILD) {
 }
 
 (async () => {
+  // Auto-version the service worker cache from the git commit SHA. Vercel
+  // exposes the SHA via VERCEL_GIT_COMMIT_SHA at build time; fall back to
+  // `git rev-parse --short HEAD` for FORCE_BUILD local runs. Without this,
+  // every shared/*.js change required a manual bump of CACHE_VERSION in
+  // service-worker.js — easy to forget, leaving users on stale cache.
+  try {
+    const sha = (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7)
+      || execSync('git rev-parse --short HEAD').toString().trim();
+    if (sha) {
+      const swPath = 'service-worker.js';
+      const today = new Date().toISOString().slice(0, 10);
+      const newVersion = `v3-${today}-${sha}`;
+      const sw = fs.readFileSync(swPath, 'utf8');
+      const replaced = sw.replace(
+        /const CACHE_VERSION = '[^']+';/,
+        `const CACHE_VERSION = '${newVersion}';`
+      );
+      if (replaced !== sw) {
+        fs.writeFileSync(swPath, replaced);
+        console.log(`🔖 SW cache version → ${newVersion}\n`);
+      } else {
+        console.warn('⚠️  CACHE_VERSION line not matched in service-worker.js — skipped\n');
+      }
+    }
+  } catch (e) {
+    console.warn(`⚠️  SW auto-version skipped: ${e.message}\n`);
+  }
+
   // Phase 4E Tailwind migration: compile shared/tailwind.input.css → shared/tailwind.css
   // so tenant_app.html can link a tiny pre-built stylesheet instead of pulling the
   // ~200KB Tailwind JIT runtime from cdn.tailwindcss.com on every page load.

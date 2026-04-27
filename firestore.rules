@@ -93,6 +93,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ===== LINE RETRY QUEUE (CF writes via admin SDK; admin reads for health board) =====
+    match /lineRetryQueue/{key} {
+      allow read:  if isAdmin();
+      allow write: if false; // CF-only
+    }
+
     // ===== AUTH EVENTS (failed-login audit log — 4B) =====
     // Anyone can create (login hasn't succeeded yet, so auth uid unavailable).
     // Schema-constrained to 4 known fields with size caps to prevent abuse.
@@ -117,14 +123,20 @@ service cloud.firestore {
         allow read:  if isSignedIn();
         allow write: if isAdmin();
 
+        // CF-only writes (admin SDK bypasses rules); admin reads for dashboard.
+        // Frontend (tenant_app + dashboard) does not read or write these directly,
+        // so tightening to admin-only here closes a cross-room leak without
+        // breaking any caller. Audit 2026-04-27.
         match /maintenanceHistory/{docId} {
-          allow read, write: if isSignedIn();
+          allow read:  if isAdmin();
+          allow write: if isAdmin();
         }
         match /complaintHistory/{docId} {
-          allow read, write: if isSignedIn();
+          allow read:  if isAdmin();
+          allow write: if isAdmin();
         }
         match /roomConditionReports/{docId} {
-          allow read:  if isSignedIn();
+          allow read:  if isAdmin();
           allow write: if isAdmin();
         }
       }
@@ -148,9 +160,15 @@ service cloud.firestore {
         allow read:  if isAdmin();
         allow write: if isAdmin();
       }
+      // Pets — tenant writes only their own room (linkedAuthUid match enforced
+      // via parent doc lookup). Without this check, any signed-in user could
+      // create/edit pets under any room. The get() costs +1 doc read per write,
+      // acceptable for security. Audit 2026-04-27.
       match /pets/{petId} {
         allow read:  if isSignedIn();
-        allow write: if isSignedIn();
+        allow write: if isAdmin() ||
+          (isSignedIn() &&
+           get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
       }
       match /wellnessClaimed/{articleId} {
         allow read:   if isSignedIn();

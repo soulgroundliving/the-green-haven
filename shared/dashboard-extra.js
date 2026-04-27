@@ -5394,6 +5394,34 @@ async function initInsightsPage() {
       <div id="ins-mttr-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
       <div style="height:220px;position:relative;"><canvas id="ins-chart-mttr"></canvas></div>
       <div id="ins-hotspot-table" style="margin-top:1rem;"></div>
+    </div>
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">💵 Profit per Room (เดือนปัจจุบัน)</div>
+      <div id="ins-profit-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
+      <div style="height:240px;position:relative;"><canvas id="ins-chart-profit"></canvas></div>
+      <div id="ins-profit-table" style="margin-top:1rem;"></div>
+    </div>
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">🔄 Tenant Cohort Retention</div>
+      <div id="ins-cohort-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
+      <div style="height:220px;position:relative;"><canvas id="ins-chart-cohort"></canvas></div>
+    </div>
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">⚠️ Meter Anomaly Detection (z-score &gt; 2σ)</div>
+      <div id="ins-meter-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
+      <div id="ins-meter-table" style="margin-top:.5rem;"></div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem;">วิเคราะห์การใช้น้ำ/ไฟจากบิล 6 เดือนล่าสุด — ห้องที่ใช้สูงผิดปกติอาจมีน้ำรั่ว/มิเตอร์เสีย/ใช้จริงเพิ่ม</div>
+    </div>
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">⚙️ CF Health (LINE retry queue)</div>
+      <div id="ins-cf-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
+      <div id="ins-cf-detail" style="font-size:.83rem;color:var(--text-muted);margin-bottom:1rem;"></div>
+      <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem;">
+        <div style="font-weight:600;font-size:.85rem;margin-bottom:.5rem;">🎯 awardComplaintFreeMonth — Manual Dry Run</div>
+        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.6rem;">รัน dry-run ก่อน schedule 1 พ.ค. เพื่อตรวจสอบว่าจะ award ใครบ้างโดยไม่เขียน DB จริง</div>
+        <button data-action="runAwardDryRun" style="padding:6px 14px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">🧪 Run Dry Run</button>
+        <pre id="ins-award-dryrun-output" style="margin-top:.7rem;padding:.7rem;background:#f5f5f5;border-radius:6px;font-size:.75rem;max-height:240px;overflow:auto;display:none;white-space:pre-wrap;"></pre>
+      </div>
     </div>`;
 
   // Initial render with whatever cache we have
@@ -5438,10 +5466,16 @@ function _insightsRenderAll() {
     ...BillStore.listAllForYear(String(beNow - 1).slice(-2))
   ];
   const allComplaints = window.RequestsStore?.getComplaints() || [];
+  const tenants = _insightsTenantsCache || [];
 
   _insightsRenderCollection(allBills);
-  _insightsRenderCashFlow(_insightsTenantsCache || []);
+  _insightsRenderCashFlow(tenants);
   _insightsRenderMTTR(allComplaints);
+  _insightsRenderProfit(allBills, tenants);
+  _insightsRenderCohort(tenants);
+  _insightsRenderMeterAnomaly(allBills, tenants);
+  // CF health is async (Firestore query) — fire and forget
+  _insightsRenderCFHealth().catch(e => console.warn('CF health:', e));
 }
 
 async function _insightsLoadTenants() {
@@ -5704,6 +5738,357 @@ function _insightsRenderMTTR(complaints) {
       </table></div>`;
   }
 }
+
+// ===== Insight #7: Profit per Room =====
+// revenue (paid bills, current month) − expenses (current month, room-attributed)
+// Note: maintenance/housekeeping costs are not stored per-room, so we attribute
+// expense_data entries by `room` field. Cross-building rooms with same number
+// (e.g. "13") will fold together — building scope is a TODO when expenses gain a
+// building field.
+function _insightsRenderProfit(bills, tenants) {
+  const now = new Date();
+  const beY = String(now.getFullYear() + 543).slice(-2);
+  const m = now.getMonth() + 1;
+  const real = bills.filter(b => !BillStore.isSynthetic(b));
+  const monthBills = real.filter(b => String(b.year).slice(-2) === beY && Number(b.month) === m);
+
+  let expenses = [];
+  try { expenses = JSON.parse(localStorage.getItem('expense_data') || '[]'); } catch(e) {}
+  const monthExp = expenses.filter(e => {
+    if (!e.date) return false;
+    const d = new Date(e.date);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() + 1 === m;
+  });
+
+  const expByRoom = {};
+  let unattributed = 0;
+  monthExp.forEach(e => {
+    const room = String(e.room || '').trim();
+    const amt = Number(e.amount) || 0;
+    if (!room || room === '-' || room.toLowerCase() === 'all') unattributed += amt;
+    else expByRoom[room] = (expByRoom[room] || 0) + amt;
+  });
+
+  const revByRoom = {};
+  monthBills.forEach(b => {
+    if (!BillStore.isPaid(b)) return;
+    const k = String(b.room);
+    revByRoom[k] = (revByRoom[k] || 0) + Number(b.totalAmount || b.total || 0);
+  });
+
+  const allRooms = new Set([...Object.keys(revByRoom), ...Object.keys(expByRoom), ...tenants.map(t => String(t._roomId))]);
+  const rows = Array.from(allRooms).map(r => {
+    const rev = revByRoom[r] || 0;
+    const cost = expByRoom[r] || 0;
+    return { room: r, rev, cost, profit: rev - cost };
+  }).filter(x => x.rev > 0 || x.cost > 0).sort((a, b) => b.profit - a.profit);
+
+  const totalRev = rows.reduce((s, x) => s + x.rev, 0);
+  const totalCost = rows.reduce((s, x) => s + x.cost, 0) + unattributed;
+  const netProfit = totalRev - totalCost;
+  const margin = totalRev > 0 ? Math.round(netProfit / totalRev * 100) : null;
+
+  document.getElementById('ins-profit-kpis').innerHTML =
+    _insightsKpiCard('รายรับ (เดือนนี้)', '฿' + totalRev.toLocaleString(), `${rows.filter(x => x.rev > 0).length} ห้องชำระแล้ว`) +
+    _insightsKpiCard('ค่าใช้จ่าย', '฿' + totalCost.toLocaleString(), unattributed > 0 ? `รวมไม่ระบุห้อง ฿${unattributed.toLocaleString()}` : 'แยกตามห้อง', '#e65100') +
+    _insightsKpiCard('กำไรสุทธิ', '฿' + netProfit.toLocaleString(), margin !== null ? `Margin ${margin}%` : '—',
+      netProfit < 0 ? '#c62828' : netProfit < totalRev * 0.3 ? '#e65100' : 'var(--green-dark)');
+
+  const ctx = document.getElementById('ins-chart-profit');
+  if (ctx) {
+    if (_insightsCharts.profit) { try { _insightsCharts.profit.destroy(); } catch(e){} }
+    const top = rows.slice(0, 12);
+    _insightsCharts.profit = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: top.map(x => x.room),
+        datasets: [
+          { label: 'รายรับ (฿)', data: top.map(x => x.rev), backgroundColor: 'rgba(45,136,45,0.75)', borderRadius: 4 },
+          { label: 'ค่าใช้จ่าย (฿)', data: top.map(x => x.cost), backgroundColor: 'rgba(198,40,40,0.55)', borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { ticks: { callback: v => '฿' + v.toLocaleString() }, grid: { color: '#f0f0f0' } } },
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 } } },
+          tooltip: { callbacks: { label: c => c.dataset.label + ': ฿' + Number(c.raw || 0).toLocaleString() } }
+        }
+      }
+    });
+  }
+
+  // Underperformers: profit margin < 50%
+  const underPerf = rows.filter(x => x.rev > 0 && (x.rev - x.cost) / x.rev < 0.5).slice(0, 8);
+  if (underPerf.length) {
+    const trs = underPerf.map(x => {
+      const mgn = x.rev > 0 ? Math.round((x.rev - x.cost) / x.rev * 100) : 0;
+      return `<tr>
+        <td style="padding:5px 10px;font-weight:600;">ห้อง ${x.room}</td>
+        <td style="padding:5px 10px;">฿${x.rev.toLocaleString()}</td>
+        <td style="padding:5px 10px;color:#c62828;">฿${x.cost.toLocaleString()}</td>
+        <td style="padding:5px 10px;font-weight:600;color:${mgn < 0 ? '#c62828' : '#e65100'};">${mgn}%</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('ins-profit-table').innerHTML = `
+      <div style="font-weight:600;font-size:.82rem;margin-bottom:.5rem;color:var(--text-muted);">ห้องที่ Margin ต่ำ (&lt;50%)</div>
+      <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.83rem;">
+        <thead><tr style="background:var(--green-pale);">
+          <th style="padding:5px 10px;text-align:left;">ห้อง</th>
+          <th style="padding:5px 10px;text-align:left;">รายรับ</th>
+          <th style="padding:5px 10px;text-align:left;">ค่าใช้จ่าย</th>
+          <th style="padding:5px 10px;text-align:left;">Margin</th>
+        </tr></thead><tbody>${trs}</tbody>
+      </table></div>`;
+  } else {
+    document.getElementById('ins-profit-table').innerHTML = '';
+  }
+}
+
+// ===== Insight #3: Tenant Cohort Retention =====
+// Bucketed by move-in year. Currently we only have active leases via
+// tenants/{b}/list/, so this is a snapshot view: which years' move-ins are
+// still here, average tenancy length to date. Move-out tracking would need
+// historical leases — not yet wired.
+function _insightsRenderCohort(tenants) {
+  const now = new Date();
+  const active = tenants.filter(t => t.moveInDate);
+
+  // Group by move-in year (Buddhist year for display, CE for math)
+  const byYear = {};
+  active.forEach(t => {
+    const d = new Date(t.moveInDate);
+    if (isNaN(d)) return;
+    const ce = d.getFullYear();
+    const beLabel = (ce + 543).toString().slice(-2);
+    if (!byYear[ce]) byYear[ce] = { ce, beLabel, count: 0, totalDays: 0 };
+    byYear[ce].count++;
+    byYear[ce].totalDays += (now - d) / 86400000;
+  });
+  const years = Object.values(byYear).sort((a, b) => a.ce - b.ce);
+
+  const totalDays = active.reduce((s, t) => s + (now - new Date(t.moveInDate)) / 86400000, 0);
+  const avgMonths = active.length ? (totalDays / active.length / 30).toFixed(1) : '—';
+  const stillHere = active.length;
+  const longTenure = active.filter(t => (now - new Date(t.moveInDate)) / 86400000 > 365).length;
+
+  document.getElementById('ins-cohort-kpis').innerHTML =
+    _insightsKpiCard('ผู้เช่าปัจจุบัน', stillHere + ' ห้อง', 'มีข้อมูล move-in') +
+    _insightsKpiCard('Tenancy เฉลี่ย', avgMonths + ' เดือน', 'นับถึงวันนี้') +
+    _insightsKpiCard('อยู่นานกว่า 1 ปี', longTenure + ' ห้อง',
+      stillHere ? `${Math.round(longTenure / stillHere * 100)}% ของผู้เช่าปัจจุบัน` : '—');
+
+  const ctx = document.getElementById('ins-chart-cohort');
+  if (ctx) {
+    if (_insightsCharts.cohort) { try { _insightsCharts.cohort.destroy(); } catch(e){} }
+    _insightsCharts.cohort = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: years.map(y => 'ปี ' + y.beLabel),
+        datasets: [{
+          label: 'ผู้เช่าที่ยังอยู่ (ห้อง)',
+          data: years.map(y => y.count),
+          backgroundColor: 'rgba(45,136,45,0.75)',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true, grid: { color: '#f0f0f0' } } },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: {
+            afterLabel: c => {
+              const y = years[c.dataIndex];
+              const avgM = (y.totalDays / y.count / 30).toFixed(1);
+              return `Tenancy เฉลี่ย ${avgM} เดือน`;
+            }
+          }}
+        }
+      }
+    });
+  }
+}
+
+// ===== Insight #2: Meter Anomaly Detection =====
+// z-score on per-room consumption from bills (bills already include
+// electricityUsage + waterUsage, no need to query meter_data separately).
+// Flags rooms with z > 2 in the most recent month. 6-month rolling baseline.
+function _insightsRenderMeterAnomaly(bills, tenants) {
+  const real = bills.filter(b => !BillStore.isSynthetic(b));
+  const now = new Date();
+  // Bucket bills per room over last 6 months
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ beY: String(d.getFullYear() + 543).slice(-2), m: d.getMonth() + 1 });
+  }
+
+  const byRoom = {}; // room → [{m, elec, water}, ...]
+  real.forEach(b => {
+    const inWin = months.some(({ beY, m }) => String(b.year).slice(-2) === beY && Number(b.month) === m);
+    if (!inWin) return;
+    const room = String(b.room);
+    if (!byRoom[room]) byRoom[room] = [];
+    byRoom[room].push({
+      ym: String(b.year).slice(-2) + '-' + String(b.month).padStart(2, '0'),
+      elec: Number(b.electricityUsage || 0),
+      water: Number(b.waterUsage || 0),
+      building: b.building
+    });
+  });
+
+  const latest = months[months.length - 1];
+  const latestKey = latest.beY + '-' + String(latest.m).padStart(2, '0');
+
+  const anomalies = [];
+  Object.entries(byRoom).forEach(([room, hist]) => {
+    if (hist.length < 3) return; // need at least 3 for meaningful z-score
+    const cur = hist.find(h => h.ym === latestKey);
+    if (!cur) return;
+    const past = hist.filter(h => h.ym !== latestKey);
+    if (past.length < 2) return;
+
+    ['elec', 'water'].forEach(metric => {
+      const past_vals = past.map(h => h[metric]);
+      const mean = past_vals.reduce((s, v) => s + v, 0) / past_vals.length;
+      const variance = past_vals.reduce((s, v) => s + (v - mean) ** 2, 0) / past_vals.length;
+      const sd = Math.sqrt(variance);
+      if (sd < 1) return; // too flat, σ ~0 makes z explode
+      const z = (cur[metric] - mean) / sd;
+      if (Math.abs(z) > 2) {
+        anomalies.push({
+          room, metric, z, current: cur[metric], baseline: Math.round(mean),
+          building: cur.building,
+          direction: z > 0 ? 'spike' : 'drop'
+        });
+      }
+    });
+  });
+
+  anomalies.sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
+
+  const elecHigh = anomalies.filter(a => a.metric === 'elec' && a.z > 0).length;
+  const waterHigh = anomalies.filter(a => a.metric === 'water' && a.z > 0).length;
+  const totalRoomsAnalyzed = Object.keys(byRoom).filter(r => byRoom[r].length >= 3).length;
+
+  document.getElementById('ins-meter-kpis').innerHTML =
+    _insightsKpiCard('ห้องที่วิเคราะห์ได้', totalRoomsAnalyzed + ' ห้อง', '≥3 เดือนใน 6 เดือนล่าสุด') +
+    _insightsKpiCard('ไฟใช้สูงผิดปกติ', elecHigh + ' ห้อง', 'z > 2 (เดือนนี้)', elecHigh > 0 ? '#e65100' : 'var(--green-dark)') +
+    _insightsKpiCard('น้ำใช้สูงผิดปกติ', waterHigh + ' ห้อง', 'z > 2 (เดือนนี้) — เช็คน้ำรั่ว', waterHigh > 0 ? '#c62828' : 'var(--green-dark)');
+
+  const tEl = document.getElementById('ins-meter-table');
+  if (anomalies.length) {
+    const trs = anomalies.slice(0, 10).map(a => {
+      const icon = a.metric === 'elec' ? '⚡' : '💧';
+      const dirIcon = a.direction === 'spike' ? '📈' : '📉';
+      const color = a.direction === 'spike' ? '#c62828' : '#1976d2';
+      const tn = tenants.find(t => String(t._roomId) === a.room && t._building === a.building);
+      const roomLabel = (a.building === 'nest' ? 'N' : '') + a.room;
+      return `<tr>
+        <td style="padding:5px 10px;font-weight:600;">${icon} ${roomLabel}</td>
+        <td style="padding:5px 10px;">${tn?.name || '—'}</td>
+        <td style="padding:5px 10px;">${a.current} <span style="color:#999;">(ปกติ ~${a.baseline})</span></td>
+        <td style="padding:5px 10px;color:${color};font-weight:600;">${dirIcon} z=${a.z.toFixed(1)}</td>
+      </tr>`;
+    }).join('');
+    tEl.innerHTML = `
+      <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.83rem;">
+        <thead><tr style="background:var(--green-pale);">
+          <th style="padding:5px 10px;text-align:left;">ห้อง</th>
+          <th style="padding:5px 10px;text-align:left;">ผู้เช่า</th>
+          <th style="padding:5px 10px;text-align:left;">การใช้ (เดือนนี้)</th>
+          <th style="padding:5px 10px;text-align:left;">z-score</th>
+        </tr></thead><tbody>${trs}</tbody>
+      </table></div>`;
+  } else {
+    tEl.innerHTML = `<div style="padding:1rem;text-align:center;color:var(--green-dark);font-size:.85rem;">✅ ไม่พบความผิดปกติ — ทุกห้องใช้ในช่วงปกติ</div>`;
+  }
+}
+
+// ===== Insight #8: CF Health Board (LINE retry queue) =====
+async function _insightsRenderCFHealth() {
+  const kEl = document.getElementById('ins-cf-kpis');
+  const dEl = document.getElementById('ins-cf-detail');
+  if (!kEl || !dEl) return;
+
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    kEl.innerHTML = _insightsKpiCard('—', '—', 'Firebase ยังไม่พร้อม');
+    return;
+  }
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+
+  let snap;
+  try {
+    snap = await fs.getDocs(fs.collection(db, 'lineRetryQueue'));
+  } catch(e) {
+    kEl.innerHTML = _insightsKpiCard('CF Health', '—', 'อ่านไม่ได้: ' + (e.code || e.message), '#c62828');
+    return;
+  }
+
+  const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const cutoff7d = Date.now() - 7 * 86400000;
+  const recent = items.filter(i => {
+    const ts = new Date(i.createdAt || 0).getTime();
+    return ts >= cutoff7d;
+  });
+
+  const pending = items.filter(i => i.status === 'pending').length;
+  const sent = recent.filter(i => i.status === 'sent').length;
+  const abandoned = recent.filter(i => i.status === 'abandoned').length;
+  const settled = sent + abandoned;
+  const successRate = settled > 0 ? Math.round(sent / settled * 100) : null;
+
+  const sentItems = recent.filter(i => i.status === 'sent' && i.attempts != null);
+  const avgAttempts = sentItems.length ? (sentItems.reduce((s, i) => s + (i.attempts || 0), 0) / sentItems.length).toFixed(1) : '—';
+
+  kEl.innerHTML =
+    _insightsKpiCard('Success rate (7 วัน)', successRate !== null ? successRate + '%' : '—',
+      `${sent} sent / ${abandoned} abandoned`,
+      successRate === null ? undefined : successRate >= 95 ? 'var(--green-dark)' : successRate >= 80 ? '#e65100' : '#c62828') +
+    _insightsKpiCard('Queue depth', pending + ' items', 'pending ตอนนี้', pending > 50 ? '#c62828' : pending > 10 ? '#e65100' : 'var(--green-dark)') +
+    _insightsKpiCard('Attempts ก่อน success', avgAttempts, sentItems.length ? `จาก ${sentItems.length} รายการ` : '—');
+
+  // Detail: oldest pending + recent abandoned
+  const oldestPending = items.filter(i => i.status === 'pending')
+    .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))[0];
+  const lines = [];
+  if (oldestPending) {
+    const age = Math.round((Date.now() - new Date(oldestPending.createdAt).getTime()) / 60000);
+    lines.push(`⏳ <strong>Oldest pending:</strong> ${age} นาที (attempts ${oldestPending.attempts || 0}/5)`);
+  }
+  if (abandoned > 0) {
+    const recentAbandoned = recent.filter(i => i.status === 'abandoned')
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 3);
+    lines.push(`🚫 <strong>Abandoned (7d):</strong> ${abandoned} รายการ — ตัวอย่าง user: ${recentAbandoned.map(i => (i.lineUserId || '?').slice(-6)).join(', ')}`);
+  }
+  if (!lines.length) lines.push('✅ ไม่มี pending ค้าง — CF retry queue ทำงานปกติ');
+  dEl.innerHTML = lines.join('<br>');
+}
+
+// Trigger manual dry-run of awardComplaintFreeMonth CF. Shows what would be
+// awarded without writing to DB. Use before the 1st-of-month schedule to verify.
+async function runAwardComplaintFreeMonthDryRun() {
+  const out = document.getElementById('ins-award-dryrun-output');
+  if (!out) return;
+  out.style.display = 'block';
+  out.textContent = '⏳ กำลังรัน...';
+  try {
+    const authInstance = window.firebaseAuth || window.auth;
+    const idToken = await authInstance?.currentUser?.getIdToken?.();
+    if (!idToken) throw new Error('Session หมดอายุ — login ใหม่');
+    const res = await fetch(
+      'https://asia-southeast1-the-green-haven.cloudfunctions.net/awardComplaintFreeMonthManual?dryRun=1',
+      { method: 'POST', headers: { 'Authorization': 'Bearer ' + idToken } }
+    );
+    const json = await res.json();
+    out.textContent = '✅ Dry run สำเร็จ:\n\n' + JSON.stringify(json, null, 2);
+  } catch (e) {
+    out.textContent = '❌ Error: ' + e.message;
+  }
+}
+window.runAwardComplaintFreeMonthDryRun = runAwardComplaintFreeMonthDryRun;
 
 // Detaches every long-lived Firestore onSnapshot subscription this file
 // owns. Called on `beforeunload` so the listeners don't keep firing on
