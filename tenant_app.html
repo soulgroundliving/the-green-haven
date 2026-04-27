@@ -7629,58 +7629,146 @@
             } catch(_) {}
         }
 
+        // Visible overlay so the user knows the LIFF link is running. Old code
+        // returned null silently on every failure path, leaving tenants on the
+        // generic Nest landing with no idea why they weren't seeing their room.
+        function _showLiffConnectingOverlay(msg) {
+            try {
+                let ov = document.getElementById('liff-connecting-overlay');
+                if (!ov) {
+                    ov = document.createElement('div');
+                    ov.id = 'liff-connecting-overlay';
+                    ov.style.cssText = 'position:fixed;inset:0;background:rgba(244,246,248,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;z-index:9998;font-family:Sarabun,sans-serif;text-align:center;';
+                    document.body.appendChild(ov);
+                }
+                ov.innerHTML = `
+                    <div style="font-size:3rem;margin-bottom:1rem;">🌿</div>
+                    <div style="font-size:1.05rem;color:#1a5c38;font-weight:700;margin-bottom:.5rem;">${msg || 'กำลังเชื่อมต่อ...'}</div>
+                    <div style="font-size:.8rem;color:#888;">Nature Haven · LINE LIFF</div>`;
+                ov.style.display = 'flex';
+            } catch(_) {}
+        }
+        function _hideLiffConnectingOverlay() {
+            try { document.getElementById('liff-connecting-overlay')?.remove(); } catch(_) {}
+        }
+        function _showLiffErrorOverlay(reason) {
+            try {
+                let ov = document.getElementById('liff-connecting-overlay');
+                if (!ov) {
+                    ov = document.createElement('div');
+                    ov.id = 'liff-connecting-overlay';
+                    ov.style.cssText = 'position:fixed;inset:0;background:rgba(244,246,248,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;z-index:9998;font-family:Sarabun,sans-serif;text-align:center;';
+                    document.body.appendChild(ov);
+                }
+                ov.innerHTML = `
+                    <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+                    <div style="font-size:1.1rem;color:#c62828;font-weight:700;margin-bottom:.5rem;">เชื่อมต่อไม่สำเร็จ</div>
+                    <div style="font-size:.85rem;color:#444;max-width:320px;line-height:1.6;margin-bottom:1.5rem;">${reason || 'ลองอีกครั้งหรือเปิด LINE LIFF ใหม่'}</div>
+                    <button onclick="location.reload()" style="padding:.7rem 2rem;background:#2d8653;color:#fff;border:none;border-radius:8px;font-family:Sarabun,sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;">🔄 ลองใหม่</button>`;
+                ov.style.display = 'flex';
+            } catch(_) {}
+        }
+
         async function initLiffAndLink() {
-            if (typeof liff === 'undefined') { console.warn('LIFF SDK not loaded'); return null; }
+            console.log('[LIFF] start initLiffAndLink');
+            const inLine = /Line\//i.test(navigator.userAgent);
+            if (inLine) _showLiffConnectingOverlay('🔄 กำลังเชื่อมต่อ LINE...');
+
+            if (typeof liff === 'undefined') {
+                console.warn('[LIFF] SDK not loaded');
+                if (inLine) _showLiffErrorOverlay('LIFF SDK โหลดไม่สำเร็จ');
+                return null;
+            }
             try {
                 await liff.init({ liffId: LIFF_ID });
-            } catch (e) { console.warn('LIFF init failed:', e); return null; }
+                console.log('[LIFF] init ok');
+            } catch (e) {
+                console.warn('[LIFF] init failed:', e);
+                if (inLine) _showLiffErrorOverlay('LIFF init failed: ' + (e.message || e));
+                return null;
+            }
             if (!liff.isLoggedIn()) {
-                // Only force login when running inside LINE app; outside LINE, skip (allow normal web session)
+                console.log('[LIFF] not logged in, isInClient=', liff.isInClient && liff.isInClient());
                 if (liff.isInClient && liff.isInClient()) {
                     liff.login();
-                    return null; // page will redirect
+                    return null;
                 }
+                if (inLine) _hideLiffConnectingOverlay();
                 return null;
             }
             try {
                 const profile = await liff.getProfile();
                 window._lineProfile = profile;
                 window._lineUserId = profile.userId;
-                console.log('✅ LIFF profile:', profile.displayName);
-            } catch (e) { console.warn('LIFF getProfile failed:', e); return null; }
+                console.log('[LIFF] profile ok:', profile.displayName, 'uid=', profile.userId);
+            } catch (e) {
+                console.warn('[LIFF] getProfile failed:', e);
+                if (inLine) _showLiffErrorOverlay('ดึงข้อมูล LINE ไม่สำเร็จ: ' + (e.message || e));
+                return null;
+            }
 
-            // Wait for Firebase before querying
+            if (inLine) _showLiffConnectingOverlay('🔍 กำลังตรวจสอบสิทธิ์...');
+
+            // Wait for Firebase before querying — bumped from 3s to 6s, with
+            // explicit log so we know if firebaseInitialized never fires.
             if (!window.firebaseReady) {
+                console.log('[LIFF] waiting for firebase...');
                 await new Promise(resolve => {
-                    const t = setTimeout(resolve, 3000);
+                    const t = setTimeout(() => { console.warn('[LIFF] firebase wait timed out'); resolve(); }, 6000);
                     window.addEventListener('firebaseInitialized', () => { clearTimeout(t); resolve(); }, { once: true });
                 });
             }
-            if (!window.firebase?.firestore) return null;
+            if (!window.firebase?.firestore) {
+                console.warn('[LIFF] firestore not available after wait');
+                if (inLine) _showLiffErrorOverlay('Firebase ยังไม่พร้อม — รีเฟรชหน้าใหม่');
+                return null;
+            }
 
-            try {
-                const db = window.firebase.firestore();
-                const fs = window.firebase.firestoreFunctions;
-                const docRef = fs.doc(fs.collection(db, 'liffUsers'), window._lineUserId);
-                const snap = await fs.getDoc(docRef);
-                if (snap.exists()) {
-                    const data = snap.data();
-                    window._lineLinkStatus = data.status || 'pending';
-                    if (data.status === 'approved' && data.room) {
-                        _taRoom = String(data.room);
-                        _taBuilding = data.building || 'rooms';
-                        localStorage.setItem('tenant_app_room', _taRoom);
-                        window._tenantAppRoom = _taRoom;
-                        window._tenantAppBuilding = _taBuilding;
-                        // Bind anonymous UID → { room, building } custom claims (4C).
-                        // Awaited so token has room/building claims before app renders bills.
-                        await _callLinkAuthUid(window._lineUserId);
-                        return { linked: true, data };
-                    }
-                    return { linked: false, status: data.status, data };
+            // Retry liffUsers read up to 3 times — transient network glitches in
+            // LIFF in-app browser are common and the old single-attempt path
+            // dropped us into the no-room state with no signal.
+            let snap = null;
+            let lastErr = null;
+            for (let i = 1; i <= 3; i++) {
+                try {
+                    const db = window.firebase.firestore();
+                    const fs = window.firebase.firestoreFunctions;
+                    const docRef = fs.doc(fs.collection(db, 'liffUsers'), window._lineUserId);
+                    snap = await fs.getDoc(docRef);
+                    console.log(`[LIFF] liffUsers read attempt ${i} ok exists=`, snap.exists());
+                    break;
+                } catch (e) {
+                    lastErr = e;
+                    console.warn(`[LIFF] liffUsers read attempt ${i} failed:`, e.message || e);
+                    if (i < 3) await new Promise(r => setTimeout(r, 1000 * i));
                 }
+            }
+            if (!snap) {
+                if (inLine) _showLiffErrorOverlay('อ่านข้อมูล approval ไม่สำเร็จ: ' + (lastErr?.message || 'unknown'));
+                return null;
+            }
+            if (!snap.exists()) {
+                console.log('[LIFF] no liffUsers doc — first-time user, will show link form');
+                if (inLine) _hideLiffConnectingOverlay();
                 return { linked: false, status: null };
-            } catch (e) { console.warn('liffUsers query failed:', e); return null; }
+            }
+
+            const data = snap.data();
+            window._lineLinkStatus = data.status || 'pending';
+            console.log('[LIFF] liffUsers status=', data.status, 'room=', data.room, 'building=', data.building);
+            if (data.status === 'approved' && data.room) {
+                _taRoom = String(data.room);
+                _taBuilding = data.building || 'rooms';
+                localStorage.setItem('tenant_app_room', _taRoom);
+                window._tenantAppRoom = _taRoom;
+                window._tenantAppBuilding = _taBuilding;
+                if (inLine) _showLiffConnectingOverlay('🔐 กำลังตั้งค่าสิทธิ์ห้อง ' + _taRoom + '...');
+                await _callLinkAuthUid(window._lineUserId);
+                if (inLine) _hideLiffConnectingOverlay();
+                return { linked: true, data };
+            }
+            if (inLine) _hideLiffConnectingOverlay();
+            return { linked: false, status: data.status, data };
         }
 
         // Normalize phone: keep only digits
@@ -9381,7 +9469,69 @@
             } else { ov.style.display = 'flex'; }
         }
 
-        window.addEventListener('load', () => {
+        // Hard access gate — runs before any tenant init. Two paths allowed:
+        //   1. LINE LIFF (User-Agent contains "Line/") — full LIFF flow handles approval check
+        //   2. Admin preview (sessionStorage._adminPreview=1 + auth.token.admin=true)
+        // Anything else gets a hard block screen. This stops the "anyone with the URL
+        // can browse the app" leak — even though Firebase rules already deny per-room
+        // data to anon users, the page UI itself was rendering and that felt unsafe.
+        async function _enforceAccessGate() {
+            const uaIsLine = /Line\//i.test(navigator.userAgent);
+            const isAdminPreview = sessionStorage.getItem('_adminPreview') === '1';
+
+            if (uaIsLine) return true;
+
+            if (isAdminPreview) {
+                // Wait up to 5s for auth state to confirm admin claim. Without this we'd
+                // false-block the admin's own preview page during the auth-restore race.
+                const adminConfirmed = await new Promise(resolve => {
+                    let done = false;
+                    const finish = (ok) => { if (!done) { done = true; resolve(!!ok); } };
+                    const timer = setTimeout(() => finish(false), 5000);
+                    const check = async (user) => {
+                        if (done || !user) return;
+                        try {
+                            const tr = await user.getIdTokenResult();
+                            if (tr.claims.admin === true) { clearTimeout(timer); finish(true); }
+                        } catch(_) {}
+                    };
+                    try {
+                        if (window.firebaseAuth?.currentUser) check(window.firebaseAuth.currentUser);
+                        if (window.firebaseAuth?.onAuthStateChanged) {
+                            window.firebaseAuth.onAuthStateChanged(check);
+                        } else {
+                            window.addEventListener('authReady', () => check(window.firebaseAuth?.currentUser), { once: true });
+                        }
+                    } catch(_) { clearTimeout(timer); finish(false); }
+                });
+                if (adminConfirmed) return true;
+                sessionStorage.removeItem('_adminPreview');
+                sessionStorage.removeItem('user');
+            }
+
+            // Block — render-replace body. Throwing isn't enough because the load
+            // handler keeps running; we replace the DOM so any later mutations land
+            // on the locked-out page instead of the real app.
+            document.body.innerHTML = `
+                <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:linear-gradient(135deg,#e8f5e9,#f4f6f8);text-align:center;font-family:Sarabun,sans-serif;">
+                    <div style="font-size:5rem;margin-bottom:1rem;">🔒</div>
+                    <h1 style="font-size:1.4rem;margin-bottom:.6rem;color:#1a5c38;font-weight:700;">เข้าถึงไม่ได้</h1>
+                    <p style="color:#444;font-size:1rem;line-height:1.6;max-width:340px;margin-bottom:1rem;">
+                        ระบบนี้ใช้งานผ่าน LINE เท่านั้น<br>
+                        เฉพาะลูกบ้านที่ได้รับอนุมัติจากแอดมิน
+                    </p>
+                    <p style="color:#888;font-size:.85rem;max-width:320px;line-height:1.6;">
+                        กรุณาเปิด LINE app → คลิก rich menu หรือ link ที่แอดมินส่งให้
+                    </p>
+                    <p style="color:#aaa;font-size:.7rem;margin-top:3rem;">Nature Haven · Tenant System</p>
+                </div>`;
+            // Stop further script paths that ignore the boolean return — defensive
+            try { document.documentElement.dataset.accessBlocked = '1'; } catch(_) {}
+            return false;
+        }
+
+        window.addEventListener('load', async () => {
+            if (!(await _enforceAccessGate())) return;
             // 1. สั่งเปิดหน้าแผนที่เป็นหน้าแรก (แก้จาก 'home' เป็น 'world-map-page')
             showPage('world-map-page');
             // อัปเดต bg ตามเวลาไทยทันที (ไม่รอ weather API) — updateDashboard จะเติม weather code ตามมา
