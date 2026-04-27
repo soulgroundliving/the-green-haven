@@ -699,6 +699,15 @@
         window.auth = auth;
         window.database = database;
         window.firebaseDB = { ref, set, get };
+        // Expose Firestore + helpers so the classic-script handleLogin block
+        // (which writes audit_events on failure) can reach them. Without this,
+        // `db` / `addDoc` / `collection` / `serverTimestamp` are module-scoped
+        // and the catch block crashes with ReferenceError instead of logging
+        // the failed attempt — observed 2026-04-28.
+        window.db = db;
+        window.addDoc = addDoc;
+        window.collection = collection;
+        window.serverTimestamp = serverTimestamp;
 
         // Mark Firebase as ready
         window.firebaseReady = true;
@@ -990,9 +999,15 @@
           console.warn('⚠️ Using fallback userData due to database unavailability', { roomNumber: userData.roomNumber, userType: currentUserType });
         }
 
-        // ✅ SECURITY: Verify user type matches what they selected
-        // For fallback userData, trust the currentUserType since we can't access database
-        if (!userData.isFromFallback && userData.userType !== currentUserType) {
+        // ✅ SECURITY: Verify user type matches what they selected.
+        //   - Admin bypass: an admin account can sign in via ANY tab and act
+        //     as that role (e.g. log in via Tenant tab to drive tenant_app for
+        //     QA). The actual capability is still gated by Firebase rules +
+        //     custom claims, so admin posing as tenant gets full access via
+        //     admin claim regardless of which tab they used.
+        //   - Fallback userData: trust the selection since we can't read DB.
+        const _adminActingAsOther = userData.userType === 'admin' && userData.userType !== currentUserType;
+        if (!userData.isFromFallback && userData.userType !== currentUserType && !_adminActingAsOther) {
           await safeSignOut();
           const typeLabel = currentUserType === 'admin' ? 'Admin' : currentUserType === 'accountant' ? 'Accountant (บัญชี)' : 'Tenant';
           throw new Error(`❌ บัญชีนี้ไม่ใช่ ${typeLabel} (สมัครไว้เป็น ${userData.userType})`);
@@ -1026,13 +1041,24 @@
             email: userData.email
           });
 
-          if (userData.userType === 'accountant') {
+          // When admin signs in via a non-admin tab, redirect based on the
+          // tab they picked (currentUserType) so they land on the role they
+          // wanted to QA. Admin claim still rides along, so Firebase rules
+          // remain happy on the destination page.
+          const effectiveRole = _adminActingAsOther ? currentUserType : userData.userType;
+          if (effectiveRole === 'accountant') {
             console.log('➡️ Redirecting to: /tax-filing#dashboard');
             window.location.href = '/tax-filing#dashboard';
-          } else if (userData.userType === 'admin') {
+          } else if (effectiveRole === 'admin') {
             console.log('➡️ Redirecting to: /dashboard');
             window.location.href = '/dashboard';
-          } else if (userData.userType === 'tenant') {
+          } else if (effectiveRole === 'tenant' && _adminActingAsOther) {
+            // Admin acting as tenant → default admin-preview view of room 15
+            // (the canonical test room). They can switch room via the admin
+            // preview bar inside tenant_app.
+            console.log('➡️ Redirecting to: /tenant_app?room=15&building=rooms (admin preview)');
+            window.location.href = '/tenant_app?room=15&building=rooms';
+          } else if (effectiveRole === 'tenant') {
             // Redirect to /tenant_app WITHOUT ?room= URL params. The room/building
             // already sit in sessionStorage.user (set above as {roomNumber, ...})
             // and tenant_app's detectRoomBuilding() reads from there. Including

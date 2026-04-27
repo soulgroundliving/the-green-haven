@@ -9471,54 +9471,49 @@
 
         // Hard access gate — runs before any tenant init. Three paths allowed:
         //   1. LINE LIFF (User-Agent contains "Line/") — full LIFF flow handles approval
-        //   2. Admin preview (sessionStorage._adminPreview=1 + auth.token.admin=true)
-        //   3. Tenant login via /login (sessionStorage.user.userType='tenant' + Firebase
-        //      Auth user signed in non-anonymously). Gate only confirms identity here —
-        //      per-room data access still requires Firebase rules to pass, so a malicious
-        //      user setting userType='tenant' in sessionStorage gains nothing beyond the
-        //      page chrome.
-        // Anything else gets a hard block screen.
+        //   2. Admin claim — auth.token.admin === true unlocks every URL pattern
+        //      (admin preview ?room=X&building=Y, plain /tenant_app, anywhere). Admin
+        //      acting as tenant via /login also flows through this path.
+        //   3. Tenant login via /login — sessionStorage.user.userType === 'tenant'
+        //      AND a non-anonymous Firebase user. Per-room data access still gated
+        //      by Firebase rules, so spoofing sessionStorage gets you the page
+        //      chrome but no actual tenant data.
         async function _enforceAccessGate() {
             const uaIsLine = /Line\//i.test(navigator.userAgent);
-            const isAdminPreview = sessionStorage.getItem('_adminPreview') === '1';
-            let sessUser = null;
-            try { sessUser = JSON.parse(sessionStorage.getItem('user') || 'null'); } catch(_) {}
-            const isTenantLogin = !!(sessUser && sessUser.userType === 'tenant');
-
             if (uaIsLine) return true;
 
-            if (isAdminPreview || isTenantLogin) {
-                // Wait up to 5s for auth state. Different verification per path:
-                //  - admin preview must show auth.token.admin === true
-                //  - tenant login just needs a non-null, non-anonymous Firebase user
-                const confirmed = await new Promise(resolve => {
-                    let done = false;
-                    const finish = (ok) => { if (!done) { done = true; resolve(!!ok); } };
-                    const timer = setTimeout(() => finish(false), 5000);
-                    const check = async (user) => {
-                        if (done || !user) return;
-                        try {
-                            if (isAdminPreview) {
-                                const tr = await user.getIdTokenResult();
-                                if (tr.claims.admin === true) { clearTimeout(timer); finish(true); }
-                            } else if (isTenantLogin) {
-                                if (!user.isAnonymous) { clearTimeout(timer); finish(true); }
-                            }
-                        } catch(_) {}
-                    };
+            // Wait up to 5s for auth state, capturing both admin claim + sign-in status.
+            const authState = await new Promise(resolve => {
+                let done = false;
+                const finish = (s) => { if (!done) { done = true; resolve(s); } };
+                const timer = setTimeout(() => finish({ admin: false, signedIn: false }), 5000);
+                const check = async (user) => {
+                    if (done || !user) return;
                     try {
-                        if (window.firebaseAuth?.currentUser) check(window.firebaseAuth.currentUser);
-                        if (window.firebaseAuth?.onAuthStateChanged) {
-                            window.firebaseAuth.onAuthStateChanged(check);
-                        } else {
-                            window.addEventListener('authReady', () => check(window.firebaseAuth?.currentUser), { once: true });
-                        }
-                    } catch(_) { clearTimeout(timer); finish(false); }
-                });
-                if (confirmed) return true;
-                sessionStorage.removeItem('_adminPreview');
-                sessionStorage.removeItem('user');
-            }
+                        const tr = await user.getIdTokenResult();
+                        clearTimeout(timer);
+                        finish({ admin: tr.claims.admin === true, signedIn: !user.isAnonymous });
+                    } catch(_) {}
+                };
+                try {
+                    if (window.firebaseAuth?.currentUser) check(window.firebaseAuth.currentUser);
+                    if (window.firebaseAuth?.onAuthStateChanged) {
+                        window.firebaseAuth.onAuthStateChanged(check);
+                    } else {
+                        window.addEventListener('authReady', () => check(window.firebaseAuth?.currentUser), { once: true });
+                    }
+                } catch(_) { clearTimeout(timer); finish({ admin: false, signedIn: false }); }
+            });
+
+            if (authState.admin) return true; // admin → all URL patterns allowed
+
+            let sessUser = null;
+            try { sessUser = JSON.parse(sessionStorage.getItem('user') || 'null'); } catch(_) {}
+            if (authState.signedIn && sessUser && sessUser.userType === 'tenant') return true;
+
+            // Block — clear stale flags so we don't carry corrupt session state forward.
+            sessionStorage.removeItem('_adminPreview');
+            sessionStorage.removeItem('user');
 
             // Block — render-replace body. Throwing isn't enough because the load
             // handler keeps running; we replace the DOM so any later mutations land
