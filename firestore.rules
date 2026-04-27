@@ -12,21 +12,21 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.accountant == true;
     }
 
-    // ===== REWARDS COLLECTION (admin-managed catalog, all auth users can read) =====
+    // ===== REWARDS / SYSTEM / OWNER INFO — public read (catalog/config/landlord profile) =====
+    // Read opened to public so disabling Anonymous auth at Firebase Console doesn't
+    // break tenant_app pre-LIFF reads. Content is non-sensitive: rewards is a catalog,
+    // system holds emergency contacts + PromptPay (already on the receipt), owner_info
+    // is the landlord's contact card that appears in tenant_app anyway. Audit 2026-04-27.
     match /rewards/{rewardId} {
-      allow read:  if isSignedIn();
+      allow read:  if true;
       allow write: if isAdmin();
     }
-
-    // ===== SYSTEM CONFIG (emergency contacts, app-wide settings) =====
     match /system/{docId} {
-      allow read:  if isSignedIn();
+      allow read:  if true;
       allow write: if isAdmin();
     }
-
-    // ===== OWNER INFO (landlord/property-owner profile, admin-only) =====
     match /owner_info/{docId} {
-      allow read:  if isSignedIn();
+      allow read:  if true;
       allow write: if isAdmin();
     }
 
@@ -50,9 +50,12 @@ service cloud.firestore {
     }
 
     // ===== COMPLAINTS =====
+    // Tenant scoped by linkedAuthUid (written at create time by tenant_app).
+    // Admin reads all (admin claim bypasses scope). Legacy complaints without
+    // linkedAuthUid are denied to tenants but still visible to admin. Audit 2026-04-27.
     match /complaints/{id} {
-      allow read:   if isSignedIn();
-      allow create: if isSignedIn();
+      allow read:   if isAdmin() || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.linkedAuthUid == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
@@ -170,9 +173,15 @@ service cloud.firestore {
           (isSignedIn() &&
            get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
       }
+      // wellnessClaimed — tenant writes only their own room (linkedAuthUid match
+      // via parent doc lookup). Same pattern as pets above. Audit 2026-04-27.
       match /wellnessClaimed/{articleId} {
-        allow read:   if isSignedIn();
-        allow create: if isSignedIn();
+        allow read:   if isAdmin() ||
+          (isSignedIn() &&
+           get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
+        allow create: if isAdmin() ||
+          (isSignedIn() &&
+           get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
         allow update, delete: if isAdmin();
       }
     }
@@ -194,14 +203,23 @@ service cloud.firestore {
     }
 
     // ===== LEASES (ARCHIVE) =====
+    // Tenant_app reads leases via embedded `tenants/{b}/list/{r}.lease` subobject
+    // (Phase 4 SSoT). The historical leases/ collection is admin-only by design —
+    // tightening the read closes a cross-room rent/deposit visibility leak.
+    // Audit 2026-04-27.
     match /leases/{building}/list/{leaseId} {
-      allow read:  if isSignedIn();
+      allow read:  if isAdmin();
       allow write: if isAdmin();
     }
 
     // ===== LIFF USER LINKS (LINE → tenant link approval) =====
+    // Tenants don't read this directly — linkAuthUid CF (admin SDK) handles the
+    // LINE→Firebase mapping. Admin dashboard listens on the entire collection.
+    // Tightening read to admin closes cross-tenant LIFF metadata leak.
+    // Tenant create still allowed (tenant submits the link request).
+    // Audit 2026-04-27.
     match /liffUsers/{userId} {
-      allow read:  if isSignedIn();
+      allow read:   if isAdmin();
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }

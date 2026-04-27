@@ -6022,6 +6022,14 @@
             const startDate = document.getElementById('complaintStartDate')?.value || '';
             if (!category || !description) return;
 
+            // linkedAuthUid scopes the doc to this tenant — required by the
+            // Firestore rule (read: admin OR linkedAuthUid match). Without it
+            // the create write is denied. Falls back to anon UID if Firebase
+            // hasn't restored auth yet, but that path can't pass the rule —
+            // we let Firestore reject and report.
+            const _linkedAuthUid = window.firebaseAuth?.currentUser?.uid
+              || window._authUid
+              || null;
             const complaint = {
                 id: Date.now().toString(),
                 category, severity, description, location, startDate,
@@ -6031,6 +6039,7 @@
                 room: _taRoom,
                 building: _taBuilding,
                 status: 'open',
+                linkedAuthUid: _linkedAuthUid,
                 createdAt: new Date().toISOString()
             };
 
