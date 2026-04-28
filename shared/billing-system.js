@@ -951,6 +951,38 @@ class BillStore {
     });
   }
 
+  /** SSoT for "what counts as the current tenant's data".
+   *  Returns YYYYMM integer of the tenant's move-in month, or 0 if no usable date
+   *  on the lease. Callers treat 0 as "no boundary — show everything" so missing
+   *  lease data never accidentally hides bills/meter readings.
+   *  Accepts either { moveInDate } or { startDate }; canonical lease docs use
+   *  startDate (per migrateTenantsToSSoT.js), legacy paths use moveInDate.
+   */
+  static tenantBoundaryYM(lease) {
+    const start = lease?.moveInDate || lease?.startDate;
+    if (!start) return 0;
+    const d = new Date(start);
+    if (isNaN(d)) return 0;
+    return d.getFullYear() * 100 + (d.getMonth() + 1);
+  }
+
+  /** Filter an array down to items at-or-after the tenant's move-in month.
+   *  Items whose getYM(item) returns 0 (unknown month) are kept — never hide
+   *  data we can't categorize. No-op when the lease has no usable date.
+   *  @param {Array} items
+   *  @param {Function} getYM — (item) => YYYYMM integer (0 if unknown)
+   *  @param {Object} lease
+   */
+  static filterByTenantBoundary(items, getYM, lease) {
+    if (!Array.isArray(items) || !items.length) return items || [];
+    const boundary = BillStore.tenantBoundaryYM(lease);
+    if (!boundary) return items;
+    return items.filter(it => {
+      const ym = getYM(it);
+      return !ym || ym >= boundary;
+    });
+  }
+
   /** Build synthetic bills for past 6 months of meter history that don't
    *  have a real bill yet. Pure — no side effects, returns array of new bills.
    *  Caller is responsible for merging into their bill list and re-rendering.
@@ -976,13 +1008,7 @@ class BillStore {
 
     const now = new Date();
     const currentYM = now.getFullYear() * 100 + (now.getMonth() + 1);
-    let moveInYM = 0;
-    try {
-      if (moveInDate) {
-        const mi = new Date(moveInDate);
-        if (!isNaN(mi)) moveInYM = mi.getFullYear() * 100 + (mi.getMonth() + 1);
-      }
-    } catch (_) {}
+    const moveInYM = BillStore.tenantBoundaryYM({ moveInDate });
 
     const ce = (y) => (window.YearUtils?.toCE?.(y)) || Number(y) || 0;
     const existingByYM = new Set();

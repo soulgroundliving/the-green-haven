@@ -7395,6 +7395,9 @@
             if (!_taTenant && typeof TenantConfigManager !== 'undefined') {
                 try { _taTenant = TenantConfigManager.getTenant(_taBuilding, _taRoom); } catch(e) {}
             }
+            // Lease just loaded — filter any bills/meter rows already cached from a
+            // prior subscribe firing before _taLease was known.
+            if (_taLease) _applyTenantBoundary();
             if (!_taTenant) {
                 try { _taTenant = JSON.parse(localStorage.getItem('tenant_data') || 'null'); } catch(e) {}
             }
@@ -7440,6 +7443,20 @@
             }
         }
 
+        // SSoT delegation: tenant-boundary filter lives in BillStore.filterByTenantBoundary.
+        // Hides previous tenant's bills and meter readings (room may have had multiple
+        // tenants over time; new tenant must only see data from their move-in onwards).
+        // Re-runs whenever bills/meter cache OR _taLease changes — order of arrival isn't
+        // guaranteed, so every assignment site re-applies + every lease load re-applies.
+        function _applyTenantBoundary() {
+            if (!window.BillStore?.filterByTenantBoundary) return;
+            const billYM   = b => (Number(b.year)  || 0) * 100 + (Number(b.month)  || 0);
+            const meterYM  = m => (Number(m.year)  || 0) * 100 + (Number(m.month)  || 0);
+            _taBills            = window.BillStore.filterByTenantBoundary(_taBills,            billYM,  _taLease);
+            _meterHistoryCache  = window.BillStore.filterByTenantBoundary(_meterHistoryCache,  meterYM, _taLease);
+            window._tenantAppBills = _taBills;
+        }
+
         async function loadTenantAppData() {
             if (!_taRoom) return;
 
@@ -7472,6 +7489,8 @@
                             _dedupBills();
                         }
                         if (data.payments && data.payments.length) _taPayments = data.payments;
+                        // Apply tenant-boundary AFTER lease is set (and bills merged)
+                        _applyTenantBoundary();
                         window._tenantAppLease = _taLease;
                         window._tenantAppTenant = _taTenant;
                         window._tenantAppBills = _taBills;
@@ -7528,6 +7547,12 @@
                 TenantFirebaseSync.initialize(u, _taBuilding, _taRoom);
                 _billsUnsub = TenantFirebaseSync.subscribeBills((bills) => {
                     if (!Array.isArray(bills)) return;
+                    // Hide previous tenant's bills BEFORE merge + localStorage cache —
+                    // RTDB returns every bill ever stored at bills/{building}/{room}.
+                    if (window.BillStore?.filterByTenantBoundary) {
+                        bills = window.BillStore.filterByTenantBoundary(
+                            bills, b => (Number(b.year)||0)*100 + (Number(b.month)||0), _taLease);
+                    }
                     // Merge with existing (Firestore wins on billId collision)
                     const byId = new Map();
                     _taBills.forEach(b => byId.set(b.billId || b.id, b));
@@ -7536,6 +7561,7 @@
                         ((b.year || 0) - (a.year || 0)) || ((b.month || 0) - (a.month || 0))
                     );
                     _dedupBills();
+                    _applyTenantBoundary(); // catches stale entries from prior _taBills state
                     window._tenantAppBills = _taBills;
                     if (typeof renderBillsList === 'function') renderBillsList();
                     if (typeof updateNavBadges === 'function') updateNavBadges();
@@ -8249,6 +8275,13 @@
                         createdAt: m.createdAt || m.updatedAt || null
                     };
                 }).sort((a,b) => b.monthKey.localeCompare(a.monthKey));
+                // Hide previous tenant's meter rows — synthesizeFromMeter already filters
+                // synthetic bills, but the raw cache also drives _renderUsageChart and
+                // any future direct meter views. SSoT helper handles the no-lease case.
+                if (window.BillStore?.filterByTenantBoundary) {
+                    _meterHistoryCache = window.BillStore.filterByTenantBoundary(
+                        _meterHistoryCache, m => (Number(m.year)||0)*100 + (Number(m.month)||0), _taLease);
+                }
                 // Mirror to localStorage so offline/early-render has data
                 try { localStorage.setItem(`meter_history_${_taBuilding}_${_taRoom}`, JSON.stringify(_meterHistoryCache)); } catch(e) {}
                 _backfillCashLegacyBills();
