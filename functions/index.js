@@ -90,6 +90,12 @@ exports.aggregateMonthlyRevenue = require('./aggregateMonthlyRevenue').aggregate
 exports.archiveSlipLogsScheduled = require('./archiveSlipLogs').archiveSlipLogsScheduled;
 exports.archiveSlipLogs = require('./archiveSlipLogs').archiveSlipLogs;
 
+// auth_events archive to BigQuery — daily 02:30 BKK; tamper-resistant audit
+// log copy (restricted-write IAM on dataset means even admin SDK can't
+// rewrite history once archived).
+exports.archiveAuthEventsScheduled = require('./archiveAuthEvents').archiveAuthEventsScheduled;
+exports.archiveAuthEvents = require('./archiveAuthEvents').archiveAuthEvents;
+
 // Late-payment LINE reminders — daily 09:00 BKK; HTTP endpoint for manual trigger
 exports.remindLatePaymentsScheduled = require('./remindLatePayments').remindLatePaymentsScheduled;
 exports.remindLatePayments = require('./remindLatePayments').remindLatePayments;
