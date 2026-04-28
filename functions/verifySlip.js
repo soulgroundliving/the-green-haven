@@ -131,25 +131,14 @@ function validateRequest(params) {
   return { valid: true };
 }
 
-// ==================== DUPLICATE DETECTION ====================
+// ==================== TRANSACTION ID SAFETY ====================
 /**
- * Check if slip has already been verified (prevent duplicate payments)
- * @param {string} transactionId - SlipOK transaction ID
- * @returns {Promise<boolean>} - true if duplicate found
+ * Validate transactionId is safe to use as a Firestore doc ID.
+ * Firestore disallows '/', leading '.', and reserved prefixes; we additionally
+ * cap length and restrict charset to defend against malformed SlipOK responses.
  */
-async function isDuplicateSlip(transactionId) {
-  try {
-    const snapshot = await db.collection('verifiedSlips')
-      .where('transactionId', '==', transactionId)
-      .where('timestamp', '>=', new Date(Date.now() - 24 * 60 * 60 * 1000)) // Last 24 hours
-      .limit(1)
-      .get();
-
-    return !snapshot.empty;
-  } catch (error) {
-    console.error('❌ Duplicate check failed — rejecting to prevent double-payment:', error);
-    throw error;
-  }
+function isSafeTransactionId(txid) {
+  return typeof txid === 'string' && /^[A-Za-z0-9_-]{4,200}$/.test(txid);
 }
 
 // ==================== SLIPOK API CALL ====================
@@ -246,26 +235,26 @@ async function logVerificationAttempt(params, result, status) {
  * @param {object} params - Original request parameters
  */
 async function saveVerifiedSlip(slipData, params) {
-  try {
-    await db.collection('verifiedSlips').add({
-      transactionId: slipData.transactionId,
-      building: params.building,
-      room: params.room,
-      userId: params.userId,
-      amount: slipData.amount,
-      expectedAmount: params.expectedAmount,
-      sender: slipData.sender?.displayName || slipData.sender?.name,
-      receiver: slipData.receiver?.displayName || slipData.receiver?.name,
-      date: slipData.date,
-      bankCode: slipData.sendingBankCode,
-      timestamp: new Date(),
-      verifiedAt: new Date(),
-      verified: true
-    });
-  } catch (error) {
-    console.error('⚠️ Failed to save verified slip:', error);
-    // Don't throw - storage failure shouldn't break verification
-  }
+  // Use transactionId as doc ID + .create() so concurrent submissions of the
+  // same slip can't both succeed — Firestore enforces doc-ID uniqueness
+  // atomically. ALREADY_EXISTS (gRPC code 6) is propagated to the caller so
+  // the user gets a duplicate response. Any other error is swallowed (storage
+  // failure shouldn't break verification — slip is already proven valid).
+  await db.collection('verifiedSlips').doc(slipData.transactionId).create({
+    transactionId: slipData.transactionId,
+    building: params.building,
+    room: params.room,
+    userId: params.userId,
+    amount: slipData.amount,
+    expectedAmount: params.expectedAmount,
+    sender: slipData.sender?.displayName || slipData.sender?.name,
+    receiver: slipData.receiver?.displayName || slipData.receiver?.name,
+    date: slipData.date,
+    bankCode: slipData.sendingBankCode,
+    timestamp: new Date(),
+    verifiedAt: new Date(),
+    verified: true
+  });
 }
 
 /**
@@ -520,31 +509,53 @@ exports.verifySlip = functions
     }
 
     // ===== VALIDATE AMOUNT =====
+    // Reject (do not "warn and continue") — frontend doesn't read amountValid,
+    // so the old "warn but return success" path was data poisoning: a ฿1 slip
+    // against a ฿10,000 bill returned success and was saved as paid.
     const amountDiff = Math.abs(slipData.amount - expectedAmount);
-    const amountValid = amountDiff <= 1; // ±1 baht tolerance
-
-    if (!amountValid) {
+    if (amountDiff > 1) {
       console.warn(`⚠️ Amount mismatch: expected ฿${expectedAmount}, got ฿${slipData.amount}`);
-      // Still return success but mark amount as mismatched
-    }
-
-    // ===== DUPLICATE CHECK =====
-    const isDuplicate = await isDuplicateSlip(slipData.transactionId);
-    if (isDuplicate) {
-      console.warn(`🚨 Duplicate slip detected: ${slipData.transactionId}`);
       await logVerificationAttempt(
         { ...req.body, ipAddress: req.ip, userAgent: req.get('user-agent') },
         slipData,
-        'duplicate'
+        'amount_mismatch'
       );
       return res.status(400).json({
-        error: 'Duplicate slip detected. This slip has already been verified within 24 hours.',
-        isDuplicate: true
+        error: `จำนวนเงินไม่ตรงกับยอดบิล (สลิป ฿${slipData.amount} / ต้องการ ฿${expectedAmount})`,
+        code: 'amount_mismatch',
+        slipAmount: slipData.amount,
+        expectedAmount
       });
     }
 
-    // ===== SAVE VERIFIED SLIP =====
-    await saveVerifiedSlip(slipData, req.body);
+    // ===== VALIDATE TRANSACTION ID + SAVE (atomic duplicate detection) =====
+    // doc ID = transactionId + .create() — two concurrent submissions can't
+    // both succeed; replaces the old where()+add() pattern that had a race
+    // window between check and write.
+    if (!isSafeTransactionId(slipData.transactionId)) {
+      console.warn(`⚠️ Unsafe transactionId from SlipOK: ${slipData.transactionId}`);
+      return res.status(400).json({ error: 'Invalid slip transaction id' });
+    }
+
+    try {
+      await saveVerifiedSlip(slipData, req.body);
+    } catch (e) {
+      // gRPC code 6 = ALREADY_EXISTS → atomic duplicate detection
+      if (e && (e.code === 6 || e.code === 'already-exists')) {
+        console.warn(`🚨 Duplicate slip detected (atomic): ${slipData.transactionId}`);
+        await logVerificationAttempt(
+          { ...req.body, ipAddress: req.ip, userAgent: req.get('user-agent') },
+          slipData,
+          'duplicate'
+        );
+        return res.status(400).json({
+          error: 'Duplicate slip — this transaction has already been verified.',
+          isDuplicate: true
+        });
+      }
+      // Other errors: log but don't break (slip was proven valid by SlipOK).
+      console.error('⚠️ Failed to save verified slip (non-blocking):', e);
+    }
 
     // ===== MARK RTDB BILL AS PAID (non-blocking) =====
     try {
@@ -568,12 +579,14 @@ exports.verifySlip = functions
     );
 
     // ===== RETURN SUCCESS =====
-    console.log(`✅ Slip verified: ${identifier}, Amount: ฿${slipData.amount}, Valid: ${amountValid}`);
+    // amountDiff is guaranteed ≤1 by the validation above; amountValid kept
+    // in response for backward compat with any caller that reads it.
+    console.log(`✅ Slip verified: ${identifier}, Amount: ฿${slipData.amount}`);
 
     return res.status(200).json({
       success: true,
       data: slipData,
-      amountValid,
+      amountValid: true,
       amountDiff
     });
 
