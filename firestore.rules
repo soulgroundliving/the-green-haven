@@ -67,9 +67,14 @@ service cloud.firestore {
     }
 
     // ===== LEASE REQUESTS (tenant submits renew/moveout, admin approves) =====
+    // If tenant has room/building custom claims (LIFF-linked), payload must match.
+    // Anonymous tenants (no claims) are still allowed — backward compat.
     match /leaseRequests/{id} {
       allow read:   if isAdmin();
-      allow create: if isSignedIn();
+      allow create: if isSignedIn()
+        && (request.auth.token.room == null
+            || (request.resource.data.room == request.auth.token.room
+                && request.resource.data.building == request.auth.token.building));
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }

@@ -2992,25 +2992,31 @@ function loadAndRenderServiceProviders() {
     return;
   }
 
-  list.innerHTML = providers.map(p => `
+  list.innerHTML = providers.map(p => {
+    const safeWebsite = /^https?:\/\//i.test(p.website || '') ? p.website : '';
+    const websiteHtml = safeWebsite
+      ? `<a href="${safeWebsite}" target="_blank" rel="noopener noreferrer" style="color: var(--blue);">${_esc(safeWebsite)}</a>`
+      : (_esc(p.website) || '-');
+    return `
     <div class="card" style="margin-bottom: 1rem; border-left: 4px solid var(--green);">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
         <div>
-          <div style="font-weight: 700; font-size: 1rem;">📞 ${p.name}</div>
-          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Type: <strong>${p.type}</strong></div>
+          <div style="font-weight: 700; font-size: 1rem;">📞 ${_esc(p.name)}</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">Type: <strong>${_esc(p.type)}</strong></div>
         </div>
         <div style="display: flex; gap: 0.5rem;">
-          <button onclick="editServiceProvider('${p.id}')" class="compact-btn compact-btn-edit">✏️ Edit</button>
-          <button onclick="deleteServiceProvider('${p.id}')" class="compact-btn compact-btn-delete">🗑️ Delete</button>
+          <button onclick="editServiceProvider('${_esc(p.id)}')" class="compact-btn compact-btn-edit">✏️ Edit</button>
+          <button onclick="deleteServiceProvider('${_esc(p.id)}')" class="compact-btn compact-btn-delete">🗑️ Delete</button>
         </div>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
-        <div>📱 Phone: <strong>${p.phone}</strong></div>
-        <div>📧 Email: <strong>${p.email || '-'}</strong></div>
-        <div style="grid-column: 1/-1;">🌐 Website: <strong><a href="${p.website}" target="_blank" style="color: var(--blue);">${p.website || '-'}</a></strong></div>
+        <div>📱 Phone: <strong>${_esc(p.phone)}</strong></div>
+        <div>📧 Email: <strong>${_esc(p.email || '-')}</strong></div>
+        <div style="grid-column: 1/-1;">🌐 Website: <strong>${websiteHtml}</strong></div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function toggleAddProviderForm() {
