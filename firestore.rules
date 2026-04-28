@@ -67,14 +67,18 @@ service cloud.firestore {
     }
 
     // ===== LEASE REQUESTS (tenant submits renew/moveout, admin approves) =====
-    // If tenant has room/building custom claims (LIFF-linked), payload must match.
-    // Anonymous tenants (no claims) are still allowed — backward compat.
+    // Tenant must be LIFF-linked (has room/building custom claims via liffSignIn)
+    // AND payload must match those claims. Admin can always create (ops/migration).
+    // Anonymous fallback removed 2026-04-28: liffSignIn is the canonical sign-in,
+    // so any "anonymous create" path was an attacker submitting fake requests
+    // for arbitrary rooms (the legitimate frontend gates submitLeaseRequest on
+    // _taRoom/_taBuilding which are only set after liffSignIn completes).
     match /leaseRequests/{id} {
       allow read:   if isAdmin();
-      allow create: if isSignedIn()
-        && (request.auth.token.room == null
-            || (request.resource.data.room == request.auth.token.room
-                && request.resource.data.building == request.auth.token.building));
+      allow create: if isAdmin()
+        || (isSignedIn()
+            && request.resource.data.room == request.auth.token.room
+            && request.resource.data.building == request.auth.token.building);
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }

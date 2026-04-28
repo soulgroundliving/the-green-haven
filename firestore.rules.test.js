@@ -15,7 +15,7 @@
  *   4. taxSummary is NEVER client-writable (CF-only via admin SDK)
  *   5. rateLimits is fully sealed (CF-only)
  *   6. verifiedSlips: admin write only
- *   7. leaseRequests: any auth creates, only admin updates
+ *   7. leaseRequests: LIFF tenant creates own room only, only admin updates
  *   8. complaints: any auth creates, only admin modifies/deletes
  *   9. rewards / system / announcements / wellness_articles: admin write only
  *  10. communityEvents / communityDocuments: admin write only, public read
@@ -54,6 +54,12 @@ const ACCOUNTANT = (uid = 'accountant-1') => testEnv.authenticatedContext(uid, {
 const EMAIL_NO_CLAIM = (uid = 'noclaim-1') => testEnv.authenticatedContext(uid, {
   firebase: { sign_in_provider: 'password' }
 });
+// LIFF-linked tenant (post-liffSignIn): custom-token UID + room/building claims
+const LIFF_TENANT = (uid = 'line:U00000000000000000000000000000001', room = '101', building = 'rooms') =>
+  testEnv.authenticatedContext(uid, {
+    room, building,
+    firebase: { sign_in_provider: 'custom' }
+  });
 const UNAUTH = () => testEnv.unauthenticatedContext();
 
 // Seed helpers ---------------------------------------------------------
@@ -262,9 +268,30 @@ describe('verifiedSlips — admin write only', () => {
   });
 });
 
-describe('leaseRequests — any auth creates, admin updates', () => {
-  it('anon tenant can create', async () => {
-    await assertSucceeds(addDoc(collection(ANON().firestore(), 'leaseRequests'), { type: 'renew' }));
+describe('leaseRequests — LIFF tenant creates own room only, admin updates', () => {
+  it('anon tenant CANNOT create — no room claims (anonymous bypass closed 2026-04-28)', async () => {
+    await assertFails(addDoc(collection(ANON().firestore(), 'leaseRequests'),
+      { type: 'renew', room: '101', building: 'rooms' }));
+  });
+
+  it('LIFF tenant CAN create for their own room (claims match payload)', async () => {
+    await assertSucceeds(addDoc(collection(LIFF_TENANT().firestore(), 'leaseRequests'),
+      { type: 'renew', room: '101', building: 'rooms', tenantId: 'TENANT_1' }));
+  });
+
+  it('LIFF tenant CANNOT create for a different room (cross-tenant forgery)', async () => {
+    await assertFails(addDoc(collection(LIFF_TENANT().firestore(), 'leaseRequests'),
+      { type: 'moveout', room: '999', building: 'rooms', moveOutDate: '2026-05-01' }));
+  });
+
+  it('LIFF tenant CANNOT create for a different building', async () => {
+    await assertFails(addDoc(collection(LIFF_TENANT().firestore(), 'leaseRequests'),
+      { type: 'renew', room: '101', building: 'nest' }));
+  });
+
+  it('admin CAN create regardless of claims (ops/migration)', async () => {
+    await assertSucceeds(addDoc(collection(EMAIL_ADMIN().firestore(), 'leaseRequests'),
+      { type: 'renew', room: '101', building: 'rooms' }));
   });
 
   it('anon tenant CANNOT update', async () => {
