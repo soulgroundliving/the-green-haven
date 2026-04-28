@@ -677,8 +677,6 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'savePolicyDoc') { typeof savePolicyDoc === 'function' && savePolicyDoc(el.dataset.doc); return; }
     if (a === 'toggleCleaningCampaign') { typeof toggleCleaningCampaign === 'function' && toggleCleaningCampaign(); return; }
     if (a === 'toggleGamification') { typeof toggleGamification === 'function' && toggleGamification(); return; }
-    if (a === 'fixLegacyBillDryRun') { typeof runFixLegacyBillBuilding === 'function' && runFixLegacyBillBuilding(false); return; }
-    if (a === 'fixLegacyBillApply') { typeof runFixLegacyBillBuilding === 'function' && runFixLegacyBillBuilding(true); return; }
     if (a === 'clearWellnessCover') { typeof clearWellnessCover === 'function' && clearWellnessCover(); return; }
     if (a === 'viewLiffTenantInfo') {
       viewLiffTenantInfo(el.dataset.building, el.dataset.room);

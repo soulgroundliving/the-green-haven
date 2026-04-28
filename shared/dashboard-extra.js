@@ -5501,15 +5501,6 @@ async function initInsightsPage() {
         <button data-action="cleanupAnonUsers" style="padding:6px 14px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">🗑️ Delete Anonymous Users</button>
         <div id="ins-anon-output" style="margin-top:.6rem;font-size:.78rem;"></div>
       </div>
-      <div style="border:1px solid var(--border);border-radius:6px;padding:1rem;margin-top:1rem;">
-        <div style="font-weight:600;font-size:.85rem;margin-bottom:.5rem;">🔧 fixLegacyBillBuilding — แก้ building field ในบิลเก่า</div>
-        <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.6rem;">บิลก่อน commit ad7dfc6 (26 เม.ย. 2569) มี building: "เดอะ กรีน เฮฟเว่น" แทน id จริง ('rooms'/'nest') — กด Dry Run เพื่อดูก่อน แล้วกด Apply ถ้าผลถูกต้อง</div>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-          <button data-action="fixLegacyBillDryRun" style="padding:6px 14px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">🧪 Dry Run</button>
-          <button data-action="fixLegacyBillApply" style="padding:6px 14px;background:#c62828;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.83rem;">✅ Apply (เขียนจริง)</button>
-        </div>
-        <pre id="ins-fix-bill-output" style="margin-top:.7rem;padding:.7rem;background:#f5f5f5;border-radius:6px;font-size:.75rem;max-height:240px;overflow:auto;display:none;white-space:pre-wrap;"></pre>
-      </div>
     </div>`;
 
   // Initial render with whatever cache we have
@@ -6248,28 +6239,6 @@ async function runAwardComplaintFreeMonthDryRun() {
 }
 window.runAwardComplaintFreeMonthDryRun = runAwardComplaintFreeMonthDryRun;
 
-async function runFixLegacyBillBuilding(apply) {
-  const out = document.getElementById('ins-fix-bill-output');
-  if (!out) return;
-  out.style.display = 'block';
-  out.textContent = apply ? '⏳ กำลัง apply...' : '⏳ กำลัง dry run...';
-  if (apply && !confirm('เขียนจริง — แก้ building field ในบิลเก่าทั้งหมด?\nกด OK เพื่อดำเนินการ')) {
-    out.style.display = 'none';
-    return;
-  }
-  try {
-    const authInstance = window.firebaseAuth || window.auth;
-    const idToken = await authInstance?.currentUser?.getIdToken?.();
-    if (!idToken) throw new Error('Session หมดอายุ — login ใหม่');
-    const url = 'https://asia-southeast1-the-green-haven.cloudfunctions.net/fixLegacyBillBuilding' + (apply ? '?apply=1' : '');
-    const res = await fetch(url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + idToken } });
-    const json = await res.json();
-    out.textContent = (apply ? '✅ Apply สำเร็จ' : '🧪 Dry run') + ':\n\n' + JSON.stringify(json, null, 2);
-  } catch(e) {
-    out.textContent = '❌ Error: ' + e.message;
-  }
-}
-window.runFixLegacyBillBuilding = runFixLegacyBillBuilding;
 
 // Detaches every long-lived Firestore onSnapshot subscription this file
 // owns. Called on `beforeunload` so the listeners don't keep firing on
