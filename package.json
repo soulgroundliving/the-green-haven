@@ -7,6 +7,7 @@
     "tailwind:build": "tailwindcss -i shared/tailwind.input.css -o shared/tailwind.css --minify",
     "verify:memory": "node tools/verify-memory.js",
     "verify:memory:coverage": "node tools/verify-memory.js --coverage",
+    "verify:memory:all": "node tools/verify-memory.js --all-memory",
     "install:hooks": "node tools/install-git-hooks.js",
     "postinstall": "node tools/install-git-hooks.js"
   },

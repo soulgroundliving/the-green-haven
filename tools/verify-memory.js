@@ -343,12 +343,112 @@ function formatReport(report) {
   return lines.join('\n');
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Non-lifecycle scan: catch wrong template paths in handoff/journal/feedback.
+//
+// Why: lifecycle docs are mechanically verified, but handoffs/journals/feedback
+// docs aren't. Two wrong template paths slipped through in 24h (2026-04-28),
+// both the same shape: paraphrased a path from short-term memory into a
+// non-verifier-covered file. The handoff said `wellnessClaimed/{roomId}_2026-04`
+// when the real path was `tenants/nest/list/{roomId}/complaintFreeMonthAwarded/{YYYY-MM}`.
+//
+// What this catches: any backticked string that contains BOTH `/` AND `{...}`
+// (i.e. a path template) AND whose literal-segment shape doesn't appear in the
+// union of lifecycle doc content. Targeted check — paths-with-placeholders are
+// always architecture claims, never illustrative prose, so a non-match is a
+// strong signal of fabrication.
+//
+// What this does NOT catch: prose statements ("X is a single doc with all rooms"),
+// non-templated code identifiers (collection names alone, function names),
+// commit hashes, or any claim that doesn't take the path template shape. Those
+// remain a discipline gate per the verify-via-grep doctrine.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function listNonLifecycleMemoryDocs() {
+  if (!fs.existsSync(MEMORY_DIR)) return [];
+  const all = fs.readdirSync(MEMORY_DIR);
+  return all
+    .filter(f => f.endsWith('.md'))
+    .filter(f => !f.startsWith('lifecycle_'))
+    .filter(f => !f.startsWith('archive_'))   // archives are intentionally frozen
+    .filter(f => f !== 'MEMORY.md')           // index file, not a content doc
+    .map(f => path.join(MEMORY_DIR, f));
+}
+
+function unionLifecycleContent(lifecycleDocs) {
+  // Canonical "what paths exist" blob: lifecycle docs + the actual rule files.
+  // Rule files are the SSoT for path shape (Firestore rules use `{}`, RTDB
+  // rules use `$`); lifecycle docs document them. A path is valid if it appears
+  // in either source.
+  let blob = '';
+  for (const d of lifecycleDocs) {
+    blob += '\n' + fs.readFileSync(d, 'utf8');
+  }
+  for (const ruleFile of ['firestore.rules', 'config/database.rules.json', 'storage.rules']) {
+    const p = path.join(REPO_ROOT, ruleFile);
+    if (fs.existsSync(p)) blob += '\n' + fs.readFileSync(p, 'utf8');
+  }
+  return blob;
+}
+
+function stripTemplatePlaceholders(s) {
+  // Collapse both Firestore-rule `{building}` and RTDB-rule `$building` styles
+  // to empty so the same path written in either notation matches:
+  //   `tenants/{building}/list/{roomId}` → `tenants//list/`
+  //   `payments/$building/$room`         → `payments//`
+  // The empty positions preserve segment count — a 3-segment path can't match
+  // a 4-segment shape by accident.
+  return s
+    .replace(/\{[^}]+\}/g, '')
+    .replace(/\$[A-Za-z_][A-Za-z0-9_]*/g, '')
+    .toLowerCase();
+}
+
+function templatePathReport(docPath, lifecycleBlobStripped) {
+  const content = fs.readFileSync(docPath, 'utf8');
+  const ids = extractBacktickIdentifiers(content);
+  const fabricated = [];
+
+  // Filter for backticked strings that look like path templates: contain `/`
+  // (path separator) AND `{...}` (template placeholder). Examples that match:
+  //   `tenants/{building}/list/{roomId}/complaintFreeMonthAwarded/{YYYY-MM}` ✓
+  //   `bills/{building}/{room}/{billId}` ✓
+  // Examples that don't:
+  //   `BuildingConfig.getNestRoomIds()` (no `/`) ✗
+  //   `b258af7` (no `/`, no `{`) ✗
+  //   `https://example.com` (no `{...}`) ✗
+
+  for (const id of ids) {
+    if (!id.includes('/') || !id.includes('{')) continue;
+    if (COVERAGE_IGNORE.has(id)) continue;
+    // Skip Firestore rule-match patterns — they're rule syntax, not paths.
+    if (/^match\s+\//.test(id)) continue;
+
+    let literalShape = stripTemplatePlaceholders(id);
+    // Trailing `...` is shorthand for "more segments here" — common in prose
+    // when referencing a known path family. Strip it; check the prefix only.
+    literalShape = literalShape.replace(/\.\.\.$/, '');
+    // Skip if shape collapses to nothing meaningful (e.g. `{a}/{b}` → `/`).
+    if (literalShape.replace(/\//g, '').trim().length < 4) continue;
+
+    // The shape must appear as a contiguous substring in the (also stripped)
+    // lifecycle blob. Stripping both sides means `tenants/{b}/list/{r}` and
+    // `tenants/{rooms|nest}/list/{roomId}` collapse to the same shape and match.
+    if (!lifecycleBlobStripped.includes(literalShape)) {
+      fabricated.push({ id, literalShape });
+    }
+  }
+
+  return fabricated;
+}
+
 function main() {
   const args = process.argv.slice(2);
   const flags = new Set(args.filter(a => a.startsWith('--')));
   const positional = args.filter(a => !a.startsWith('--'));
   const coverageMode = flags.has('--coverage');
   const strict = flags.has('--strict');
+  const allMemoryMode = flags.has('--all-memory'); // also scan handoff/journal/feedback for wrong template paths
 
   const docs = positional.length > 0 ? positional : listLifecycleDocs();
   if (docs.length === 0) {
@@ -358,6 +458,12 @@ function main() {
 
   // For coverage mode: pre-compute the union of every lifecycle doc's Verification block.
   const unionBlob = coverageMode ? unionVerificationBlocks(docs) : '';
+  // For all-memory mode: pre-compute the stripped-placeholder shape blob
+  // of every lifecycle doc, so the same `tenants/{a}/list/{b}` path written
+  // with different placeholder names still matches.
+  const lifecycleBlobStripped = allMemoryMode
+    ? stripTemplatePlaceholders(unionLifecycleContent(docs))
+    : '';
 
   let allGreen = true;
   let totalRows = 0;
@@ -385,18 +491,40 @@ function main() {
     }
   }
 
-  console.log(`\n=== SUMMARY: ${docs.length} doc(s), ${totalRows} verifier row(s), ${totalRed} fail(s)${coverageMode ? `, ${totalUncovered} uncovered prose claim(s)` : ''} ===`);
+  // All-memory mode: scan handoff/journal/feedback for fabricated template paths.
+  let totalFabricated = 0;
+  if (allMemoryMode) {
+    const nonLifecycleDocs = listNonLifecycleMemoryDocs();
+    console.log(`\n=== Scanning ${nonLifecycleDocs.length} non-lifecycle memory doc(s) for fabricated template paths ===`);
+    for (const d of nonLifecycleDocs) {
+      const fabricated = templatePathReport(d, lifecycleBlobStripped);
+      if (fabricated.length === 0) continue;
+      console.log(`\n  ⚠️  ${path.basename(d)}: ${fabricated.length} suspect template path(s)`);
+      for (const f of fabricated) {
+        console.log(`     · \`${f.id}\` — literal shape \`${f.literalShape}\` not found in any lifecycle doc`);
+      }
+      totalFabricated += fabricated.length;
+    }
+    if (totalFabricated === 0) {
+      console.log('  ✅ all template paths in non-lifecycle docs match a lifecycle doc');
+    }
+  }
+
+  console.log(`\n=== SUMMARY: ${docs.length} doc(s), ${totalRows} verifier row(s), ${totalRed} fail(s)${coverageMode ? `, ${totalUncovered} uncovered prose claim(s)` : ''}${allMemoryMode ? `, ${totalFabricated} suspect template path(s)` : ''} ===`);
   if (!allGreen) console.log('❌ SOME RED');
   if (coverageMode && totalUncovered > 0) console.log(`⚠️  COVERAGE GAPS — ${totalUncovered} prose claim(s) not in Verification`);
-  if (allGreen && (!coverageMode || totalUncovered === 0)) console.log('✅ ALL GREEN');
+  if (allMemoryMode && totalFabricated > 0) console.log(`⚠️  FABRICATED PATHS — ${totalFabricated} template path(s) in handoff/journal/feedback don't match any lifecycle doc`);
+  if (allGreen && (!coverageMode || totalUncovered === 0) && (!allMemoryMode || totalFabricated === 0)) console.log('✅ ALL GREEN');
 
   // Exit logic:
   //  - default: exit 1 if any RED row
   //  - --coverage --strict: also exit 1 if any uncovered claim
-  //  - --coverage (no strict): warn but don't fail (lets us iterate without blocking commits)
+  //  - --all-memory --strict: also exit 1 if any fabricated path
+  //  - non-strict warnings don't block commits (lets us iterate without churn)
   let exitCode = 0;
   if (!allGreen) exitCode = 1;
   if (coverageMode && strict && totalUncovered > 0) exitCode = 1;
+  if (allMemoryMode && strict && totalFabricated > 0) exitCode = 1;
   process.exit(exitCode);
 }
 
