@@ -204,7 +204,7 @@ service cloud.firestore {
 
     // ===== METER DATA =====
     match /meter_data/{docId} {
-      allow read:  if isSignedIn();
+      allow read:  if isAdmin() || (isSignedIn() && resource.data.roomId == request.auth.token.room && resource.data.building == request.auth.token.building);
       allow write: if isAdmin();
     }
 

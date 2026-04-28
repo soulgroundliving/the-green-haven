@@ -1077,6 +1077,7 @@ class TenantFirebaseSync {
           const q = fs.query(
             fs.collection(db, 'meter_data'),
             fs.where('building', '==', this.currentBuilding),
+            fs.where('roomId', '==', String(this.currentRoom)),
             fs.where('year', '==', year)
           );
 

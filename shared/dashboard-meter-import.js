@@ -340,10 +340,7 @@ function parseImportExcelData(workbook, building) {
 
     const roomsRoomList = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25',
                            '26', '27', '28', '29', '30', '31', '32', '33'];
-    const nestRoomList = ['N101', 'N102', 'N103', 'N104', 'N105',
-                          'N201', 'N202', 'N203', 'N204', 'N205',
-                          'N301', 'N302', 'N303', 'N304', 'N305',
-                          'N401', 'N402', 'N403', 'N404', 'N405'];
+    const nestRoomList = BuildingConfig.getNestRoomIds();
 
     // Pre-populate
     console.log('📋 Pre-populating all expected rooms with 0 values...');
@@ -391,10 +388,7 @@ function parseImportExcelData(workbook, building) {
 
   const roomsRoomList = ['13', '14', '15', '15ก', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25',
                          '26', '27', '28', '29', '30', '31', '32', '33'];
-  const nestRoomList = ['N101', 'N102', 'N103', 'N104', 'N105',
-                        'N201', 'N202', 'N203', 'N204', 'N205',
-                        'N301', 'N302', 'N303', 'N304', 'N305',
-                        'N401', 'N402', 'N403', 'N404', 'N405'];
+  const nestRoomList = BuildingConfig.getNestRoomIds();
 
   const roomsData = {};
   const nestData = {};
@@ -781,10 +775,7 @@ function displayRecordedMeterData(importData, matchResults) {
     // If Nest data is missing, re-populate it with pre-defined list
     if (!importData.nest || Object.keys(importData.nest).length === 0) {
       console.warn(`⚠️ Nest data missing in display! Re-populating...`);
-      const nestRoomList = ['N101', 'N102', 'N103', 'N104', 'N105',
-                            'N201', 'N202', 'N203', 'N204', 'N205',
-                            'N301', 'N302', 'N303', 'N304', 'N305',
-                            'N401', 'N402', 'N403', 'N404', 'N405'];
+      const nestRoomList = BuildingConfig.getNestRoomIds();
       importData.nest = {};
       nestRoomList.forEach(roomNum => {
         importData.nest[roomNum] = { eNew: 0, eOld: 0, wNew: 0, wOld: 0 };
@@ -1064,8 +1055,7 @@ function renderNestMeterGrid() {
   const gridEl = document.getElementById('nestMeterGrid');
   if (!gridEl) return;
 
-  // Hardcoded Nest Building rooms (20 rooms: N101-N105, N201-N205, N301-N305, N401-N405)
-  const nestRooms = ['N101', 'N102', 'N103', 'N104', 'N105', 'N201', 'N202', 'N203', 'N204', 'N205', 'N301', 'N302', 'N303', 'N304', 'N305', 'N401', 'N402', 'N403', 'N404', 'N405'];
+  const nestRooms = BuildingConfig.getNestRoomIds();
 
   gridEl.innerHTML = nestRooms.map(room => `
     <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:1rem;">
