@@ -7,8 +7,8 @@
   },
   "login.html": {
     "scriptHashes": [
-      "YhdhC7qG/BaWod/XPosIhkofZnpkN8279H7wsMWMiXU=",
-      "iQ04pChmBuV+S2+WFsbZx2D8GdC1vMzYoti4sV0v5j0="
+      "ngWS1N/ERePLNFetFMDw62EvWtpTaVrdqUFtX5dFrno=",
+      "+e+jQ8U87ZkLavn2/I6420B3k+7FYISX/IBMYn5I4SQ="
     ],
     "styleHashes": [
       "vxJMy4DuQ6zvED9mV+LcNdBr4o+grZxGNnqDrIrIWvc="
@@ -19,7 +19,7 @@
       "yfGMR3xvKC8i0dh7xhmGW94RyzXWfPhsCqkxpKGodd4=",
       "dFSAp9Kgfr6gvfhNihDrNKRxSCfOskGRMbDyMhcXqCg=",
       "VHYshmD6q2VGh+KjLfnrnidAh94OjfyfXJyBveCGYWI=",
-      "tqergNOwI8l3I+fYdN9Cs63fd133lqs4PHF5kxCiC14=",
+      "509UI4rs0hMEOe3jl2/8wkbvaS/2pqiJIdOzZ8g+Z3o=",
       "lIQc6Jvd7aZn3+QvbxOQwTDMsMCo4sAN6d1MpJf5F3Y="
     ],
     "styleHashes": [
@@ -30,8 +30,9 @@
     "scriptHashes": [
       "+dMEhGTpvRQm1W301xvKKDpHZebohbTGCRnNdCQETWs=",
       "Ic0bOeaKv88b2nOmtCwqO4v5NlJbOuUg9edQ8ZsXQpE=",
-      "YBfL54PDCMBrIj2dAgp4Fwnn58hMj3kG12u7Qo6vYm8=",
-      "wtEuqpEOM8h99QZH2+vYS7OXfqPO5x4oZz51s+Z7pOE="
+      "ZzDQ2MJBB7tdyl5NRne0ZHgxcp41ia3UUcU+BJ2a7kU=",
+      "1OFriJ3w/S1qtQLL3AHTI8EJeUzdAt0W4gfq5uoUvIU=",
+      "HYu8G8BPVUbhLsJZ552tG6iFJ1Sb+RpMC6dYOBpNwRE="
     ],
     "styleHashes": [
       "vf+7+KFVKuEO1pTkKRPZNvMOoaT2ufOF6kbeiCQAOy0=",
@@ -41,7 +42,7 @@
   "tax-filing.html": {
     "scriptHashes": [
       "S5bCwHtHWNmGmw6eLoD01ix9g8+QKgLtkiq+BViOUts=",
-      "i6If9aqpaoxHvadPZdCBzROcQLwwRxUV6kQImbuWw4M=",
+      "R3QaMohIhLuWjKaRUBbjcnziZXsSN3+qz4cRWXuI45c=",
       "Y1HNA8ymdvkpxjfanctTCmoleaCJm3ay7asCxGpKq4E="
     ],
     "styleHashes": [
@@ -59,6 +60,7 @@
   },
   "payment.html": {
     "scriptHashes": [
+      "YwBU+UB+mkdJWTrI9bz3aq/2sG7mnSVgn50z/vhQ0cA=",
       "efIaszbwZtxST0hIIlJDkaD1wUE5adud9Z1c1H8ycLY="
     ],
     "styleHashes": [

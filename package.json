@@ -11,10 +11,9 @@
     "install:hooks": "node tools/install-git-hooks.js",
     "postinstall": "node tools/install-git-hooks.js"
   },
-  "dependencies": {},
   "devDependencies": {
     "@firebase/rules-unit-testing": "^4.0.1",
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.28.0",
     "firebase": "^11.0.0",
     "glob": "^11.0.0",
     "tailwindcss": "^3.4.19"
