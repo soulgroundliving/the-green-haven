@@ -27,10 +27,15 @@ const SLIPOK_API_KEY = defineSecret('SLIPOK_API_KEY');
 const SLIPOK_API_URL = defineString('SLIPOK_API_URL');
 
 // Rate limiting configuration
+// Per-room/userId caps (not global — admin can still verify all rooms in a
+// peak-billing month). Daily cap dropped from 1000→50 on 2026-04-28: a
+// legitimate tenant pays once a month, so 50/day per room is still 50× the
+// expected volume but bounds SlipOK quota drain from any single compromised
+// LIFF account at ~$0.50/day per room (1500/mo) instead of 30,000/mo.
 const RATE_LIMIT_CONFIG = {
-  maxRequestsPerMinute: 10,  // More generous on backend
-  maxRequestsPerHour: 100,
-  maxRequestsPerDay: 1000
+  maxRequestsPerMinute: 10,  // Burst tolerance for retries
+  maxRequestsPerHour: 30,    // ~1 payment per 2 min sustained — still way over real need
+  maxRequestsPerDay: 50      // 50 SlipOK calls/room/day (was 1000)
 };
 
 // ==================== RATE LIMITING ====================
