@@ -9,15 +9,17 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
-## 2026-04-28 (evening) — Wrong schema claim in session journal led me to defer real work
+## 2026-04-28 (evening) — Two wrong claims in 24h, both in non-verifier-covered memory files
 
-**Mistake:** `session_2026_04_27_evening_insights_ops_incident.md` claimed `meter_data/{docId}` was a "single doc holding all rooms in `data` map keyed by roomId" and that per-room scoping needed a "storage refactor". Today's handoff inherited the claim. When the user asked me to assess the meter_data rule (tentative — "ลองดู"), my first instinct was to confirm "needs schema refactor, defer". I almost did.
+**Mistake #1 (session journal → almost deferred real work):** `session_2026_04_27_evening_insights_ops_incident.md` claimed `meter_data/{docId}` was a "single doc holding all rooms in `data` map keyed by roomId" and that per-room scoping needed a "storage refactor". Today's handoff inherited the claim. When the user asked me to assess the meter_data rule (tentative — "ลองดู"), my first instinct was to confirm "needs schema refactor, defer". Real schema (per `firestore_schema_canonical.md`): `meter_data/{building_yy_m_roomId}` — already per-room flat docs. Fix took 2 lines.
 
-While exploring the actual code I found the truth: `meter_data/{building_yy_m_roomId}` — flat collection, **already per-room**, each doc has a `roomId` field. The fix took 2 lines of code (1-line query filter + rule change). [firestore_schema_canonical.md](firestore_schema_canonical.md) had the correct schema all along — I just hadn't checked it against the journal claim.
+**Mistake #2 (re-occurred while writing the lesson about #1):** While updating the handoff to mark the May 1 dry-run as done, I wrote "look for `wellnessClaimed/{roomId}_2026-04` docs" as the post-cron marker check. **The real path is `tenants/nest/list/{roomId}/complaintFreeMonthAwarded/{YYYY-MM}`** — I conflated wellness-articles with complaint-free-month-award (two unrelated features) and paraphrased the path from short-term memory. Caught only because the user asked me to re-audit. Both `firestore_schema_canonical.md:69` and `lifecycle_complaints_award.md` had the correct path; I just didn't open either.
 
-**Why:** Session journal was written from memory mid-incident, parroted into the next handoff, and load-bearing for a "deferred" decision. Verify-via-grep doctrine was supposed to prevent this — but the doctrine targeted lifecycle docs, not session journals. Journals are dated snapshots so I treated them as immutable history rather than load-bearing claims worth re-verifying.
+**Why:** Both errors lived in memory files NOT covered by `verify:memory` (which only scans `lifecycle_*.md` Verification blocks). Handoffs and session journals get edited freely without a gate. The verify-via-grep doctrine *as I had written it* targeted lifecycle docs explicitly, leaving handoffs/journals as a coverage hole. So I confidently wrote "fixed" while creating fresh drift in the same session.
 
-**Rule:** Session journals are *not* exempt from grep-verification when they contain architecture claims. Before deferring real work because "the journal says it's hard", grep the actual schema. If the journal contradicts the canonical schema doc, the canonical doc wins — fix the journal.
+The deeper failure mode: when editing memory, I treat code identifiers (paths, CF names, doc IDs, fields) as English text I can paraphrase. They aren't — they're verbatim contracts with code, and a single wrong path can mean "you'll never find the doc" (mistake #2) or "we'll defer real work indefinitely" (mistake #1).
+
+**Rule (generalized + applied to doctrine):** When editing **any** memory file — handoff, session journal, feedback doc, reference doc — every backtick-quoted code identifier must be **grep-verified BEFORE typing it**, not after. Don't paraphrase paths from memory. Don't trust "I remember it as ..." Open the source file or the canonical schema doc, copy the literal value. Promoted into [feedback_verify_via_grep_doctrine.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_verify_via_grep_doctrine.md) under new "Files outside verifier coverage" section — extends the original rule from "lifecycle docs only" to "all memory files with code identifiers".
 
 ---
 
