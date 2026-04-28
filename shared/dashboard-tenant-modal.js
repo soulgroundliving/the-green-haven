@@ -248,8 +248,12 @@ function openTenantModal(building, roomId) {
     if (statusEl) statusEl.textContent = '📋 ยังไม่มีสัญญา — อัพโหลดได้ที่ Tab สัญญา';
   }
 
-  // Show modal
-  modal.classList.remove('u-hidden'); /*flex*/;
+  // Show modal — must set inline display:flex too because dashboard.html ships
+  // the modal with style="display:none;" inline, which !important on .u-hidden
+  // can't override (inline style wins over external CSS regardless of !important).
+  // Per feedback_inline_style_class_toggle.md.
+  modal.style.display = 'flex';
+  modal.classList.remove('u-hidden');
 
   // Initialize phone validation for the modal
   setTimeout(function() {
@@ -258,7 +262,9 @@ function openTenantModal(building, roomId) {
 }
 
 function closeTenantModal() {
-  document.getElementById('tenantModal').classList.add('u-hidden');
+  const modal = document.getElementById('tenantModal');
+  modal.style.display = ''; // clear inline display:flex set in openTenantModal
+  modal.classList.add('u-hidden');
   currentEditRoomId = null;
   // Hide lease history if open
   const hist = document.getElementById('tenantLeaseHistorySection');
