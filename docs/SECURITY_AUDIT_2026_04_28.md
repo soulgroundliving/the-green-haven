@@ -32,10 +32,15 @@
 | 1 | Surface — rules, XSS, stale files | 6 | CRITICAL → LOW |
 | 2 | Privilege chains — CF auth, ownership | 6 | CRITICAL → MEDIUM |
 | 3 | Insider/spy — unauth CFs, Storage scoping | 5 | CRITICAL → LOW |
-| **Total** | — | **17 fixes / 13 commits** | — |
+| 4 | Supply chain + transport — npm CVE, headers, SRI | 3 | CRITICAL → MEDIUM |
+| **Total** | — | **20 fixes / 16 commits** | — |
 
 **Time-to-pwn before audit:** ~30 min if attacker knew endpoints (Round-1 + Round-2 chain)
-**Time-to-pwn after audit:** Requires breaking a trust root (LINE LIFF infra, Firebase service account, or GitHub repo) — orders of magnitude harder
+**Time-to-pwn after audit:** Requires breaking a trust root (LINE LIFF infra, Firebase service account, GitHub repo, Vercel deploy chain) — orders of magnitude harder, and the trust roots themselves have their own enterprise-grade security teams.
+
+**Caveat — defense reality check:**
+- This audit closed every code path we found. We did NOT audit operational layers (account 2FA status, GCP IAM minimum-permission state, branch protection rules, secret rotation cadence). Those need separate verification — see "Recommended Next Steps → Operational" below.
+- The 4 rounds are a snapshot of the codebase at this commit. Any new feature, library, or rule change can re-introduce risk.
 
 ---
 
@@ -88,6 +93,15 @@
 | 3.4 | Storage `pets/{building}/{room}/{petId}/...` write open to any signed-in user → cross-tenant photo overwrite + quota fill | HIGH | Require `auth.token.{room,building}` match (admin bypass) |
 | 3.5 | Storage `leases/{building}/{roomId}/...` read open to any signed-in user → cross-tenant privacy leak (rent, deposit, signatures) | HIGH | Require `(admin)` OR `(token.{room,building}` match `path)` |
 | 3.6 | `verifySlip` rate limit 1000/day per room — single compromised LIFF account could drain SlipOK quota at 30,000/mo | MED | Lower to 50/day per room (50× expected real volume) |
+
+### Round 4 — Supply Chain + Transport
+**Commits:** `84524f4`, `c453970`
+
+| # | Vulnerability | Severity | Fix |
+|---|--------------|----------|-----|
+| 4.1 | `protobufjs` transitive dep — Arbitrary code execution CVE (GHSA-xq3m-2v4x-88gg) in `functions/` | **CRITICAL** | `npm audit fix` (non-breaking; critical=0, high=0 after) |
+| 4.2 | No `Permissions-Policy` HTTP header — browser APIs (camera, mic, geolocation, payment, USB, BT, etc.) all default-allowed even though app uses none | MED | Add deny-all `Permissions-Policy` to vercel.json (verified app doesn't use any of these APIs) |
+| 4.3 | 7 third-party CDN scripts (qrcode, chart.js, jspdf, jspdf-autotable, html2canvas, exceljs, xlsx) loaded without SRI hashes — CDN compromise = silent JS injection | MED | sha384 SRI hashes + `crossorigin=anonymous` on all 7. Skipped intentionally: LIFF SDK (rolling), Firebase SDK (Google = trust anchor), dynamic loads (same CDN as static) |
 
 ---
 
@@ -151,19 +165,53 @@ These are real attack surfaces that this code-level audit could not assess. Each
 
 ## Recommended Next Steps
 
-### Operational (NOT code)
-1. **Enable 2FA** on all GitHub + Firebase + Vercel accounts. Audit who has access.
-2. **Rotate `SLIPOK_API_KEY`, `IQAIR_API_KEY`, `WAQI_API_TOKEN`** every 6 months or on suspicion.
-3. **Verify INIT_TOKEN is removed from `.env`** (done in this audit) AND any backup .env files.
-4. **GitHub branch protection** on `main`: require PR reviews, signed commits, status checks (the pre-commit `verify:memory` hook runs locally — also wire it into CI).
-5. **GCP IAM review** — list every service account, ensure least-privilege roles. Especially `{PROJECT_ID}@appspot.gserviceaccount.com` should NOT have BigQuery Admin (downgrade to Data Editor per `archiveSlipLogs.js` doc).
-6. **Quarterly `npm audit`** in `functions/` and root. Fix HIGH/CRITICAL findings.
+### Operational (REQUIRED — not addressable in code, do these manually)
 
-### Code (incremental hardening, when time permits)
-1. **Address R-1** (complaints/liffUsers rate limit) if spam observed
-2. **Add SRI hashes** to LIFF SDK + xlsx CDN script tags (`<script integrity="sha384-...">`)
-3. **Audit log immutability** — move `auth_events` to BigQuery (write-only IAM) so even compromised admins can't tamper
-4. **Re-run this 3-round audit** after every major architectural change (new CF, new collection, new rule)
+These are the "trust-chain" items — without them, everything else can be bypassed by an attacker who compromises the operational layer:
+
+**P1 — do this week:**
+1. **Enable 2FA** on EVERY account with access:
+   - GitHub (`soulgroundliving` + any collaborators)
+   - Firebase Console (every email with project access)
+   - Vercel (deploy permissions)
+   - Google account (Firebase + GCP IAM origin)
+   - LINE Developers (LIFF channel owner)
+2. **GCP API key restrictions** — in [Firebase Console → API keys](https://console.cloud.google.com/apis/credentials):
+   - Set HTTP referrer restriction on `FIREBASE_API_KEY` to `https://the-green-haven.vercel.app/*` (and staging URL if used). Blocks the public API key from being used to spam Firebase Auth from any other domain.
+   - Verify the staging key (if used) is restricted to staging URLs.
+3. **GitHub branch protection on `main`**:
+   - Require pull request before merging
+   - Require status checks (wire `npm run test:rules` + `verify:memory` into GitHub Actions if not already)
+   - Require signed commits (commit signing, not just author)
+   - Block force-pushes
+   - No bypass for admins (or at least require a reason)
+4. **Rotate operational secrets**: `SLIPOK_API_KEY`, `IQAIR_API_KEY`, `WAQI_API_TOKEN`, `LINE_CHANNEL_ACCESS_TOKEN`. Keep a calendar reminder to rotate every 6 months or on any suspicion.
+5. **Confirm `INIT_TOKEN` is removed from ALL `.env` backups, deploy artifacts, screenshots** (Round-2 commit `8a62577` removed it from `functions/.env`; check anywhere else it might be cached).
+
+**P2 — do this month:**
+6. **GCP IAM least-privilege review** — list every service account in [GCP Console → IAM](https://console.cloud.google.com/iam-admin/iam):
+   - `{PROJECT_ID}@appspot.gserviceaccount.com` — currently has BigQuery Admin (per `archiveSlipLogs.js` doc). Downgrade to BigQuery Data Editor after initial setup.
+   - Cloud Functions service account — should be Cloud Functions Invoker only for Scheduler, no broader.
+   - Remove any service accounts not actively used.
+7. **Audit Firebase Auth user list** — `npx firebase auth:export users.json` and review:
+   - Any unexpected users with admin claim?
+   - Any anonymous UIDs still around (cleanupAnonymousUsers should have purged them)?
+8. **Set up monitoring alerts**:
+   - Firebase Auth: alert on >50 failed logins/day (audit log via `auth_events` collection)
+   - Cloud Functions error rate: alert on >1% 401/403 spike (someone probing endpoints)
+   - SlipOK API quota: alert if daily quota >50% consumed
+   - Firebase usage budget: hard cap at 2× expected to detect runaway billing
+9. **Set up `npm audit` in CI** — quarterly is too infrequent; have it run on every PR. Fail builds on CRITICAL findings.
+
+**P3 — strategic (next quarter):**
+10. **Audit log immutability** — move `auth_events` to BigQuery with write-only IAM, so even a compromised admin can't tamper with login records.
+11. **CSP enforce mode** — pick up Phase 4E (`tools/compute-csp-hashes.js` + `generate-vercel-csp.js`). Run in Report-Only first to catch violations, then flip to enforce.
+12. **App Check** (`firebase-app-check.js` import is commented out in HTMLs) — Enable Firebase App Check with reCAPTCHA v3 on dashboard/login/tenant_app, blocks calls from unauthorized clients.
+
+### Code (incremental hardening when capacity allows)
+1. **Complaints / liffUsers rate limit** — route through callable CFs to add per-tenant cap (tracked in `tasks/lessons.md`, currently mitigated by admin queue monitoring).
+2. **SRI on dynamic CDN loads** — refactor `dashboard.html load()` helper to support integrity (currently same-CDN as already-SRI'd static scripts, so marginal gain).
+3. **Re-run this 4-round audit** after every major architectural change (new CF, new collection, new rule, new third-party SDK), or 6 months from this date — whichever comes first.
 
 ### Monitoring
 1. **Firebase Auth anomaly alerts** — set up email alerts on >50 failed logins/day, >10 admin grants/month, etc.
@@ -179,6 +227,7 @@ These are real attack surfaces that this code-level audit could not assess. Each
 | 2026-04-28 | 1 | 1 (`474514d`) | `firestore.rules`, `database.rules.json`, `dashboard-extra.js`, removed `config/firestore.rules` |
 | 2026-04-28 | 2 | 5 (`992b1a5`–`c2c266f`) | `linkAuthUid.js` (deleted), `redeemReward.js`, `claimDailyLoginPoints.js`, `complaintAndGamification.js`, `verifySlip.js`, `setAdminClaim.js`, `firestore.rules`, `firestore.rules.test.js`, `LAUNCH_CHECKLIST.md`, memory docs |
 | 2026-04-28 | 3 | 6 (`959936d`–`3cc29c5`) | `aggregateMonthlyRevenue.js`, `seedRewards.js` (deleted), `seedAppConfig.js` (deleted), `migrateToFirestore.js` (deleted), `storage.rules`, `verifySlip.js`, `tasks/lessons.md` |
+| 2026-04-28 | 4 | 2 (`84524f4`, `c453970`) | `functions/package-lock.json`, `vercel.json`, `dashboard.html`, `payment.html`, `tax-filing.html`, `tenant_app.html` |
 
 All commits signed `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`. Pre-commit hooks ran `verify:memory` (zero RED) and security checks (clean) on every commit.
 
