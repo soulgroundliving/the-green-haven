@@ -53,14 +53,18 @@ exports.calculateTenantRank = require('./complaintAndGamification').calculateTen
 exports.getLeaderboard = require('./complaintAndGamification').getLeaderboard;
 
 // Rewards (Phase A.2 — Firestore-managed reward catalog)
-exports.seedRewards = require('./seedRewards').seedRewards;
+// seedRewards removed 2026-04-28: one-shot setup that completed at launch;
+// admin has CRUD UI (dashboard-extra.js saveReward/deleteReward). Was an
+// unauthenticated HTTP endpoint that could reset the live reward catalog.
 exports.redeemReward = require('./redeemReward').redeemReward;
 
 // Daily login check-in (1 pt/day + streak bonus every 7 days)
 exports.claimDailyLoginPoints = require('./claimDailyLoginPoints').claimDailyLoginPoints;
 
-// App config seed (Sprint B + C — populate system/* + buildings/{X}.info defaults)
-exports.seedAppConfig = require('./seedAppConfig').seedAppConfig;
+// seedAppConfig removed 2026-04-28: one-shot setup completed; admin manages
+// system/* + buildings/{X}.info via dashboard CRUD or Firestore Console.
+// Was an unauthenticated HTTP endpoint that could merge-overwrite customized
+// config back to defaults.
 
 // Auto-bill generation (Phase 1 automation — fires on meter_data Firestore write)
 exports.generateBillsOnMeterUpdate = require('./generateBillsOnMeterUpdate').generateBillsOnMeterUpdate;

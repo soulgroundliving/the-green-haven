@@ -68,11 +68,10 @@ Live URL: <https://the-green-haven.vercel.app>
 - [ ] `firebase deploy --only functions` สำเร็จ ครบ:
   - [ ] `verifySlip` (asia-southeast1)
   - [ ] `redeemReward` (asia-southeast1) — **NEW**
-  - [ ] `seedRewards` (asia-southeast1) — **NEW** one-shot
   - [ ] `checkAndAwardBadges`, `getLeaderboard`, `calculateTenantRank`
   - [ ] `cleanupResolvedComplaints` (pubsub), `awardComplaintFreeMonth` (pubsub)
-- [ ] รัน seedRewards ครั้งเดียว: `curl -X POST https://asia-southeast1-the-green-haven.cloudfunctions.net/seedRewards`
-- [ ] ตรวจ Firestore `rewards/` มี 7 docs
+- [x] ~~รัน seedRewards ครั้งเดียว~~ — done at launch; CF removed 2026-04-28 (admin CRUD via dashboard)
+- [x] ~~ตรวจ Firestore `rewards/` มี 7 docs~~ — verified at launch
 
 ## 8. Cross-device + cache
 
