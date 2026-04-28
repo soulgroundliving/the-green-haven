@@ -77,7 +77,7 @@
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
       import { getDatabase, ref, get, set, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-      import { getAuth, signInAnonymously, onAuthStateChanged, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+      import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
       import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
       import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
       import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
@@ -7571,53 +7571,77 @@
         window._lineProfile = null;
         window._lineLinkStatus = null; // null | 'pending' | 'approved' | 'rejected'
 
-        // Call linkAuthUid CF to bind anonymous UID → room custom claims.
-        // Skipped if the same UID was already linked this session (sessionStorage guard).
-        async function _callLinkAuthUid(lineUserId) {
+        // Call liffSignIn CF: verify LIFF ID token server-side → Firebase custom token.
+        // Returns: { linked: true, room, building } | { linked: false, status } | null (error)
+        async function _callLiffSignIn() {
             const auth = window.firebaseAuth;
-            if (!auth?.currentUser) return;
-            // Fast-path: if {room,building} claims are already on the token (set
-            // by a previous session and persisted via Firebase Auth state), skip
-            // the CF call entirely. This was the biggest LIFF load-time hog —
-            // a cold-start round-trip (3-8s) was paid on every page load even
-            // for returning users whose claims were already in place.
-            try {
-                const tr = await auth.currentUser.getIdTokenResult();
-                if (tr.claims.room && tr.claims.building) {
-                    // Wake subscribers gated on liffLinked (bills/maintenance/housekeeping)
-                    window.dispatchEvent(new Event('liffLinked'));
-                    return;
-                }
-            } catch (_) {}
-            const cachedUid = sessionStorage.getItem('liff_claim_uid');
-            if (cachedUid === auth.currentUser.uid) return; // already linked this session
-            try {
-                const idToken = await auth.currentUser.getIdToken();
-                const resp = await fetch(
-                    'https://asia-southeast1-the-green-haven.cloudfunctions.net/linkAuthUid',
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                        body: JSON.stringify({ lineUserId })
+            // Fast-path: already signed in with custom token (non-anonymous) + claims present.
+            // Covers returning users whose session persisted in IndexedDB.
+            if (auth?.currentUser && !auth.currentUser.isAnonymous) {
+                try {
+                    const tr = await auth.currentUser.getIdTokenResult();
+                    if (tr.claims.room && tr.claims.building) {
+                        window.dispatchEvent(new Event('liffLinked'));
+                        return { linked: true, room: tr.claims.room, building: tr.claims.building };
                     }
-                );
-                if (resp.ok) {
-                    await auth.currentUser.getIdToken(true); // force-refresh → picks up { room, building } claims
-                    sessionStorage.setItem('liff_claim_uid', auth.currentUser.uid);
-                    console.log('✅ LIFF auth UID linked — room claims set');
-                    window.dispatchEvent(new Event('liffLinked')); // Phase 4C: scoped RTDB subscribes wait for this.
-                } else {
-                    const err = await resp.json().catch(() => ({}));
-                    const msg = err.error || `HTTP ${resp.status}`;
-                    console.error('⛔ linkAuthUid CF rejected:', msg);
-                    // Surface to user — silent fail here = bills/maintenance/etc. all
-                    // silently broken because RTDB rules need the claims this CF sets.
-                    _showAuthErrorBanner(`เชื่อมห้องไม่สำเร็จ: ${msg} — ลองเปิด LINE LIFF ใหม่`);
-                }
-            } catch (e) {
-                console.error('⛔ linkAuthUid call failed:', e.message);
-                _showAuthErrorBanner(`เชื่อมห้องไม่สำเร็จ (network): ${e.message}`);
+                } catch (_) {}
             }
+
+            // Get LIFF ID token — the sole credential sent to the CF.
+            let idToken;
+            try {
+                idToken = liff.getIDToken();
+                if (!idToken) throw new Error('getIDToken returned null');
+            } catch (e) {
+                console.error('⛔ liffSignIn: getIDToken failed:', e.message);
+                _showAuthErrorBanner(`ดึง LIFF token ไม่สำเร็จ: ${e.message}`);
+                return null;
+            }
+
+            let resp, data;
+            try {
+                resp = await fetch(
+                    'https://asia-southeast1-the-green-haven.cloudfunctions.net/liffSignIn',
+                    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) }
+                );
+                data = await resp.json().catch(() => ({}));
+            } catch (e) {
+                console.error('⛔ liffSignIn call failed:', e.message);
+                _showAuthErrorBanner(`เชื่อมห้องไม่สำเร็จ (network): ${e.message}`);
+                return null;
+            }
+
+            if (resp.status === 404) return { linked: false, status: null }; // first-time user
+            if (resp.status === 403) return { linked: false, status: data.status || 'pending' };
+            if (!resp.ok) {
+                const msg = data.error || `HTTP ${resp.status}`;
+                console.error('⛔ liffSignIn CF rejected:', msg);
+                _showAuthErrorBanner(`เชื่อมห้องไม่สำเร็จ: ${msg} — ลองเปิด LINE LIFF ใหม่`);
+                return null;
+            }
+
+            // 200 — sign in with custom token (replaces anonymous/previous session user).
+            const { customToken, room, building } = data;
+            if (!auth) { _showAuthErrorBanner('Firebase ยังไม่พร้อม'); return null; }
+            try {
+                await signInWithCustomToken(auth, customToken);
+                await auth.currentUser.getIdToken(true); // force-refresh so SDK has fresh claims
+            } catch (e) {
+                console.error('⛔ signInWithCustomToken failed:', e.message);
+                _showAuthErrorBanner(`sign-in ไม่สำเร็จ: ${e.message}`);
+                return null;
+            }
+
+            // Set room globals BEFORE dispatching liffLinked so subscribers can read them.
+            _taRoom = String(room);
+            _taBuilding = String(building || 'rooms');
+            localStorage.setItem('tenant_app_room', _taRoom);
+            window._tenantAppRoom = _taRoom;
+            window._tenantAppBuilding = _taBuilding;
+
+            console.log('✅ LIFF custom token sign-in — room claims set');
+            window.dispatchEvent(new Event('liffLinked'));
+            return { linked: true, room: _taRoom, building: _taBuilding };
         }
         function _showAuthErrorBanner(msg) {
             try {
@@ -7710,66 +7734,33 @@
 
             if (inLine) _showLiffConnectingOverlay('🔍 กำลังตรวจสอบสิทธิ์...');
 
-            // Wait for Firebase before querying — bumped from 3s to 6s, with
-            // explicit log so we know if firebaseInitialized never fires.
-            if (!window.firebaseReady) {
+            // Wait for Firebase Auth to be ready (needed for signInWithCustomToken).
+            if (!window.firebaseAuth) {
                 console.log('[LIFF] waiting for firebase...');
                 await new Promise(resolve => {
                     const t = setTimeout(() => { console.warn('[LIFF] firebase wait timed out'); resolve(); }, 6000);
                     window.addEventListener('firebaseInitialized', () => { clearTimeout(t); resolve(); }, { once: true });
                 });
             }
-            if (!window.firebase?.firestore) {
-                console.warn('[LIFF] firestore not available after wait');
+            if (!window.firebaseAuth) {
+                console.warn('[LIFF] firebaseAuth not available after wait');
                 if (inLine) _showLiffErrorOverlay('Firebase ยังไม่พร้อม — รีเฟรชหน้าใหม่');
                 return null;
             }
 
-            // Retry liffUsers read up to 3 times — transient network glitches in
-            // LIFF in-app browser are common and the old single-attempt path
-            // dropped us into the no-room state with no signal.
-            let snap = null;
-            let lastErr = null;
-            for (let i = 1; i <= 3; i++) {
-                try {
-                    const db = window.firebase.firestore();
-                    const fs = window.firebase.firestoreFunctions;
-                    const docRef = fs.doc(fs.collection(db, 'liffUsers'), window._lineUserId);
-                    snap = await fs.getDoc(docRef);
-                    console.log(`[LIFF] liffUsers read attempt ${i} ok exists=`, snap.exists());
-                    break;
-                } catch (e) {
-                    lastErr = e;
-                    console.warn(`[LIFF] liffUsers read attempt ${i} failed:`, e.message || e);
-                    if (i < 3) await new Promise(r => setTimeout(r, 1000 * i));
-                }
-            }
-            if (!snap) {
-                if (inLine) _showLiffErrorOverlay('อ่านข้อมูล approval ไม่สำเร็จ: ' + (lastErr?.message || 'unknown'));
-                return null;
-            }
-            if (!snap.exists()) {
-                console.log('[LIFF] no liffUsers doc — first-time user, will show link form');
-                if (inLine) _hideLiffConnectingOverlay();
-                return { linked: false, status: null };
-            }
+            // Verify LIFF token server-side and get custom token (no client Firestore read).
+            if (inLine) _showLiffConnectingOverlay('🔐 กำลังตั้งค่าสิทธิ์...');
+            const result = await _callLiffSignIn();
 
-            const data = snap.data();
-            window._lineLinkStatus = data.status || 'pending';
-            console.log('[LIFF] liffUsers status=', data.status, 'room=', data.room, 'building=', data.building);
-            if (data.status === 'approved' && data.room) {
-                _taRoom = String(data.room);
-                _taBuilding = data.building || 'rooms';
-                localStorage.setItem('tenant_app_room', _taRoom);
-                window._tenantAppRoom = _taRoom;
-                window._tenantAppBuilding = _taBuilding;
-                if (inLine) _showLiffConnectingOverlay('🔐 กำลังตั้งค่าสิทธิ์ห้อง ' + _taRoom + '...');
-                await _callLinkAuthUid(window._lineUserId);
+            if (result?.linked) {
+                window._lineLinkStatus = 'approved';
                 if (inLine) _hideLiffConnectingOverlay();
-                return { linked: true, data };
+                return { linked: true };
             }
+            // linked: false → pending/rejected/first-time, or null → error (banner already shown)
+            if (result) window._lineLinkStatus = result.status || null;
             if (inLine) _hideLiffConnectingOverlay();
-            return { linked: false, status: data.status, data };
+            return result;
         }
 
         // Normalize phone: keep only digits

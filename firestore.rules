@@ -219,16 +219,11 @@ service cloud.firestore {
     }
 
     // ===== LIFF USER LINKS (LINE → tenant link approval) =====
-    // Tenant_app.html:7626 reads liffUsers/{lineUserId} directly to check
-    // status === 'approved' BEFORE custom claims are set (this is the lookup
-    // that *triggers* setting claims). Tightening read here would break the
-    // entire LIFF onboarding loop — verified during 2026-04-27 incident:
-    // tenants cleared cache, hit LIFF, got the wrong room because liffUsers
-    // read failed → linkAuthUid CF never called → claims never set.
-    // The cleaner long-term fix is a CF that returns status + room+building
-    // from a verified LIFF idToken; until then keep this read at isSignedIn().
+    // Read tightened to isAdmin() — liffSignIn CF reads liffUsers server-side via
+    // admin SDK (bypasses rules). Clients no longer need direct read access.
+    // create stays isSignedIn() so tenants can still submit link requests from client.
     match /liffUsers/{userId} {
-      allow read:   if isSignedIn();
+      allow read:   if isAdmin();
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
