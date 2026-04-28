@@ -266,9 +266,9 @@ function closeTenantModal() {
   modal.style.display = ''; // clear inline display:flex set in openTenantModal
   modal.classList.add('u-hidden');
   currentEditRoomId = null;
-  // Hide lease history if open
+  // Hide lease history if open — clear inline display too for symmetry
   const hist = document.getElementById('tenantLeaseHistorySection');
-  if (hist) hist.classList.add('u-hidden');
+  if (hist) { hist.style.display = ''; hist.classList.add('u-hidden'); }
 }
 
 // ─── Lease History (ประวัติผู้เช่าเก่า) ───
@@ -278,8 +278,16 @@ async function showTenantLeaseHistory(building, roomId) {
   const content = document.getElementById('tenantLeaseHistoryContent');
   if (!section || !content) return;
 
-  // Toggle: hide if already visible for same room
-  if (!section.classList.contains('u-hidden')) { section.classList.add('u-hidden'); return; }
+  // Toggle: hide if currently visible. Check computedStyle — relying on
+  // !classList.contains('u-hidden') alone misfires because dashboard.html:2181
+  // ships the section with inline style="display:none;" (no u-hidden class), so
+  // first click went into the "hide" branch and never showed. Per
+  // feedback_inline_style_class_toggle.md.
+  if (getComputedStyle(section).display !== 'none') {
+    section.style.display = 'none';
+    section.classList.add('u-hidden');
+    return;
+  }
 
   // Refresh from Firestore so superseded/deleted leases reflect immediately
   // and local-only orphans (failed-write artifacts) get dropped.
@@ -306,6 +314,7 @@ async function showTenantLeaseHistory(building, roomId) {
       </div>`;
     }).join('');
   }
+  section.style.display = 'block'; // override inline display:none from dashboard.html:2181
   section.classList.remove('u-hidden');
 }
 
