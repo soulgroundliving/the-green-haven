@@ -9,6 +9,18 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-04-28 (evening) — Wrong schema claim in session journal led me to defer real work
+
+**Mistake:** `session_2026_04_27_evening_insights_ops_incident.md` claimed `meter_data/{docId}` was a "single doc holding all rooms in `data` map keyed by roomId" and that per-room scoping needed a "storage refactor". Today's handoff inherited the claim. When the user asked me to assess the meter_data rule (tentative — "ลองดู"), my first instinct was to confirm "needs schema refactor, defer". I almost did.
+
+While exploring the actual code I found the truth: `meter_data/{building_yy_m_roomId}` — flat collection, **already per-room**, each doc has a `roomId` field. The fix took 2 lines of code (1-line query filter + rule change). [firestore_schema_canonical.md](firestore_schema_canonical.md) had the correct schema all along — I just hadn't checked it against the journal claim.
+
+**Why:** Session journal was written from memory mid-incident, parroted into the next handoff, and load-bearing for a "deferred" decision. Verify-via-grep doctrine was supposed to prevent this — but the doctrine targeted lifecycle docs, not session journals. Journals are dated snapshots so I treated them as immutable history rather than load-bearing claims worth re-verifying.
+
+**Rule:** Session journals are *not* exempt from grep-verification when they contain architecture claims. Before deferring real work because "the journal says it's hard", grep the actual schema. If the journal contradicts the canonical schema doc, the canonical doc wins — fix the journal.
+
+---
+
 ## 2026-04-28 — 19 doc errors across 6 audit rounds → "Verify-via-grep doctrine" promoted to memory rule
 
 **Mistake:** Across the day's structural session, my lifecycle docs accumulated **19 factual errors** that took 6 audit rounds to surface. Each round caught what the previous one missed. After Round 3, more errors still might exist — I can't prove the docs are clean, only that my audits caught these.
