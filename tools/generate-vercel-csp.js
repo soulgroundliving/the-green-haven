@@ -81,12 +81,21 @@ const FRAME_SRC = [
   'https://www.recaptcha.net',
 ].join(' ');
 
+// Inline style="..." attribute count audited 2026-04-29: dashboard 604,
+// tenant_app 990, tax-filing 84 → 1681 total. Hashing each via 'unsafe-hashes'
+// would push the CSP header past 30 KB (practical HTTP limit). Solution:
+// scope CSP3's per-target directives — style-src-elem stays strict with
+// hashes, style-src-attr opens to 'unsafe-inline'. This keeps the high-value
+// defense (no injected <style> blocks) without churning every inline style.
+// Style attribute injection is far less impactful than script injection
+// (no JS execution, only CSS-selector data exfil under sophisticated attack).
 const directives = [
   `default-src 'self' https: wss:`,
   `script-src 'self' ${scriptHashTokens} ${SCRIPT_SRC_EXTERNAL}`,
   `script-src-elem 'self' ${scriptHashTokens} ${SCRIPT_SRC_EXTERNAL}`,
-  `style-src 'self' ${styleHashTokens} ${STYLE_SRC_EXTERNAL}`,
+  `style-src 'self' ${styleHashTokens} 'unsafe-inline' ${STYLE_SRC_EXTERNAL}`,
   `style-src-elem 'self' ${styleHashTokens} ${STYLE_SRC_EXTERNAL}`,
+  `style-src-attr 'unsafe-inline'`,
   `img-src ${IMG_SRC}`,
   `font-src ${FONT_SRC}`,
   `connect-src ${CONNECT_SRC}`,
