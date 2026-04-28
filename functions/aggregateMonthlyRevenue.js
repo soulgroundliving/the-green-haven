@@ -192,12 +192,26 @@ exports.aggregateMonthlyRevenueScheduled = functions
   });
 
 // ============================================================
-// HTTP — POST { year: 2569 } to re-aggregate any year on demand
+// HTTP — POST { year: 2569 } to re-aggregate any year on demand.
+// Admin-only (writes financial data to taxSummary via admin SDK, which
+// bypasses Firestore rules — un-gated HTTP would let any caller force
+// overwrites + drain RTDB read quota).
 // ============================================================
 exports.aggregateMonthlyRevenue = functions
   .region('asia-southeast1')
   .https.onRequest(async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    if (req.method === 'OPTIONS') {
+      res.set('Access-Control-Allow-Methods', 'POST');
+      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      return res.status(204).send('');
+    }
     if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
+
+    const { requireAdmin } = require('./_auth');
+    const decoded = await requireAdmin(req, res);
+    if (!decoded) return;
+
     try {
       let years = [];
       const body = req.body || {};
