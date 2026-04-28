@@ -126,6 +126,7 @@
           // accepts the phone field directly; user goes through 2-step OTP flow).
           window.firebasePhone = { RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink };
           window.firebaseSendEmailVerification = sendEmailVerification;
+          window.firebaseSignInWithCustomToken = signInWithCustomToken;
           window.firebaseReady = true;
           window.dispatchEvent(new Event('firebaseInitialized'));
           // Anonymous sign-in is the foundation of the LIFF flow:
@@ -7623,8 +7624,10 @@
             // 200 — sign in with custom token (replaces anonymous/previous session user).
             const { customToken, room, building } = data;
             if (!auth) { _showAuthErrorBanner('Firebase ยังไม่พร้อม'); return null; }
+            const signInFn = window.firebaseSignInWithCustomToken;
+            if (!signInFn) { _showAuthErrorBanner('signInWithCustomToken ไม่พร้อม'); return null; }
             try {
-                await signInWithCustomToken(auth, customToken);
+                await signInFn(auth, customToken);
                 await auth.currentUser.getIdToken(true); // force-refresh so SDK has fresh claims
             } catch (e) {
                 console.error('⛔ signInWithCustomToken failed:', e.message);
