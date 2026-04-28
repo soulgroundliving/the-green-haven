@@ -204,7 +204,7 @@ These are the "trust-chain" items — without them, everything else can be bypas
 9. **Set up `npm audit` in CI** — quarterly is too infrequent; have it run on every PR. Fail builds on CRITICAL findings.
 
 **P3 — strategic (next quarter):**
-10. **Audit log immutability** — move `auth_events` to BigQuery with write-only IAM, so even a compromised admin can't tamper with login records.
+10. ~~**Audit log immutability** — move `auth_events` to BigQuery with write-only IAM~~ — **CODE SHIPPED** as `archiveAuthEvents` CF (commit `8212ec5`). Daily 02:30 BKK scheduler + admin-gated HTTP trigger, mirrors `archiveSlipLogs` pattern. **Operational follow-up still required:** after first successful run, downgrade `appspot` service account on dataset `audit_archive` from BigQuery Admin → BigQuery Data Editor (that's what makes the cold copy tamper-resistant — until then, the same service account can still DELETE rows).
 11. **CSP enforce mode** — pick up Phase 4E (`tools/compute-csp-hashes.js` + `generate-vercel-csp.js`). Run in Report-Only first to catch violations, then flip to enforce.
 12. **App Check** (`firebase-app-check.js` import is commented out in HTMLs) — Enable Firebase App Check with reCAPTCHA v3 on dashboard/login/tenant_app, blocks calls from unauthorized clients.
 
