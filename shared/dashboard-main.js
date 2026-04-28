@@ -676,6 +676,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     // Phase 4E Step 2 — page-people-management policy saves + page-requests-approvals housekeeping campaign + wellness form
     if (a === 'savePolicyDoc') { typeof savePolicyDoc === 'function' && savePolicyDoc(el.dataset.doc); return; }
     if (a === 'toggleCleaningCampaign') { typeof toggleCleaningCampaign === 'function' && toggleCleaningCampaign(); return; }
+    if (a === 'toggleGamification') { typeof toggleGamification === 'function' && toggleGamification(); return; }
     if (a === 'clearWellnessCover') { typeof clearWellnessCover === 'function' && clearWellnessCover(); return; }
     if (a === 'viewLiffTenantInfo') {
       viewLiffTenantInfo(el.dataset.building, el.dataset.room);

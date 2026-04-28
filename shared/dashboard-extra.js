@@ -3845,6 +3845,7 @@ async function updateComplaintStatus(id, newStatus) {
 // ===== GAMIFICATION PAGE =====
 async function initGamificationPage() {
   console.log('✅ Gamification page initialized');
+  subscribeGamificationConfig();
 
   const tbody = document.getElementById('leaderboardTable');
   if (!tbody) return;
@@ -3943,6 +3944,61 @@ function switchGamificationTab(tabName, btn) {
   btn.classList.add('u-gamification-tab-active');
   if (tabName === 'rewards' && typeof loadRewardsAdmin === 'function') loadRewardsAdmin();
   if (tabName === 'badges') loadBadgesAdmin();
+}
+
+// ===== GAMIFICATION LIVE TOGGLE =====
+let _gamificationConfigUnsub = null;
+function subscribeGamificationConfig() {
+  if (_gamificationConfigUnsub) return;
+  if (!window.firebase?.firestoreFunctions) return;
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    _gamificationConfigUnsub = fs.onSnapshot(fs.doc(db, 'system', 'config'), snap => {
+      const live = snap.exists() ? snap.data().gamificationLive === true : false;
+      renderGamificationToggle(live);
+    }, err => console.warn('gamificationConfig dashboard subscribe failed:', err.message));
+  } catch(e) { console.warn('gamificationConfig subscribe init failed:', e.message); }
+}
+function renderGamificationToggle(live) {
+  const btn = document.getElementById('gamificationToggleBtn');
+  const status = document.getElementById('gamificationLiveStatus');
+  if (!btn || !status) return;
+  btn.dataset.state = live ? 'on' : 'off';
+  btn.textContent = live ? '⏸ ปิด Gamification' : '🚀 เปิด Gamification';
+  btn.style.background = live ? '#c62828' : 'var(--green-dark)';
+  status.textContent = live
+    ? '🟢 Live — ลูกบ้าน Nest เห็น gamification แล้ว'
+    : '🔴 ปิดอยู่ (Pre-launch) — Coming Soon badges แสดงอยู่';
+}
+async function toggleGamification() {
+  const btn = document.getElementById('gamificationToggleBtn');
+  const goingLive = btn?.dataset.state !== 'on';
+  const msg = goingLive
+    ? 'เปิด Gamification ให้ลูกบ้าน Nest เห็น daily modal, badges, rewards?\nการเปลี่ยนแปลงมีผลทันที'
+    : 'ปิด Gamification? ลูกบ้านจะเห็น Coming Soon badges อีกครั้ง';
+  if (!confirm(msg)) return;
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    if (typeof showToast === 'function') showToast('Firestore ไม่พร้อม', 'error');
+    return;
+  }
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    await fs.setDoc(fs.doc(db, 'system', 'config'),
+      { gamificationLive: goingLive, gamificationUpdatedAt: new Date().toISOString() },
+      { merge: true }
+    );
+    if (typeof showToast === 'function')
+      showToast(goingLive ? '🚀 Gamification เปิดแล้ว' : '⏸ ปิด Gamification แล้ว', 'success');
+  } catch(e) {
+    console.error('toggleGamification failed:', e);
+    if (typeof showToast === 'function') showToast('เปลี่ยนสถานะไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+if (typeof window !== 'undefined') {
+  window.toggleGamification = toggleGamification;
+  window.subscribeGamificationConfig = subscribeGamificationConfig;
 }
 
 function loadBadgesAdmin() {
@@ -6193,7 +6249,8 @@ function cleanupAdminListeners() {
     ['_docsUnsub', _docsUnsub],
     ['_petsUnsub', _petsUnsub],
     ['_rewardsAdminUnsub', _rewardsAdminUnsub],
-    ['_RequestsStoreComplaintsUnsub', _RequestsStoreComplaintsUnsub]
+    ['_RequestsStoreComplaintsUnsub', _RequestsStoreComplaintsUnsub],
+    ['_gamificationConfigUnsub', _gamificationConfigUnsub]
   ];
   for (const [name, fn] of unsubs) {
     if (typeof fn === 'function') {

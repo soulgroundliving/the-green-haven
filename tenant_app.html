@@ -7312,10 +7312,24 @@
         ];
 
         // ===== PRE-LAUNCH FEATURE FLAG =====
-        // Flip to true when building opens (Jul-Aug 2026) to enable gamification fully.
-        // While false: daily modal hidden, Nest cards show Coming Soon badge, points/rewards
-        // remain visible but locked. Rooms tenants see nothing gamification-related either way.
+        // Controlled via Firestore system/config.gamificationLive (admin dashboard toggle).
+        // Safe default false: pre-launch behaviour until the snapshot resolves.
         window.GAMIFICATION_LIVE = false;
+        function _subscribeGamificationConfig() {
+            if (!window.firebase?.firestoreFunctions) return;
+            const fs = window.firebase.firestoreFunctions;
+            const db = window.firebase.firestore();
+            fs.onSnapshot(fs.doc(db, 'system', 'config'), snap => {
+                const live = snap.exists() ? snap.data().gamificationLive === true : false;
+                if (live === window.GAMIFICATION_LIVE) return;
+                window.GAMIFICATION_LIVE = live;
+                // Re-apply only once building is known; otherwise applyBuildingVisibility()
+                // will pick up the updated flag when it runs after detectRoomBuilding().
+                if (_taBuilding) applyBuildingVisibility();
+            }, err => console.warn('gamificationConfig subscribe failed:', err.message));
+        }
+        window.addEventListener('authReady', _subscribeGamificationConfig);
+        if (window.firebaseReady && window._authUid) _subscribeGamificationConfig();
 
         // Nest-only elements that stay visible with a Coming Soon badge during pre-launch
         const COMING_SOON_IDS = [
