@@ -13,11 +13,9 @@ exports.cleanupAnonymousUsers = require('./cleanupAnonymousUsers').cleanupAnonym
 // ?apply=1 to commit. Admin-only.
 exports.fixLegacyBillBuilding = require('./fixLegacyBillBuilding').fixLegacyBillBuilding;
 
-// Tenant LIFF → Firebase Auth UID room binding (Phase 4C, legacy — kept for sessions
-// that still have anonymous UIDs in flight; superseded by liffSignIn below)
-exports.linkAuthUid = require('./linkAuthUid').linkAuthUid;
-
 // LIFF ID token → Firebase custom token (replaces anonymous-auth dependency)
+// Replaced legacy linkAuthUid (removed 2026-04-28: had cross-tenant hijack —
+// caller could pass any approved lineUserId and get that room's claims).
 exports.liffSignIn = require('./liffSignIn').liffSignIn;
 
 // Phone match check for LIFF auto-approve — admin SDK, never exposes raw phone (Phase 4C-2)
