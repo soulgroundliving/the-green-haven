@@ -9,6 +9,20 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-04-28 — 3-round security audit campaign — accepted residuals
+
+**Context:** User asked "if a hacker were hired to attack us, what could they do?" Three audit rounds shipped 14 fixes (commits 474514d → b29d6bc). Two remaining items were evaluated and **deliberately not fixed** — capturing the reasoning here so a future session doesn't re-open them as "TODO".
+
+**Residual #1 — `complaints` / `liffUsers` Firestore-create has no rate limit.**
+Adding rule-based per-tenant counts requires a counter doc + Firestore trigger or routing the write through a callable CF (like `redeemReward`). Both involve frontend changes (the tenant_app currently writes Firestore directly). The actual exploit cost is low: complaints spam fills admin queue but doesn't leak data; liffUsers spam requires LIFF tokens (rate-limited upstream by LINE). **Accepted as residual — admin queue monitoring is the safeguard**. Promote to a fix only if anomalous activity is observed.
+
+**Residual #2 — 14 CFs use `Access-Control-Allow-Origin: *`.**
+CORS allowlist would block in-browser cross-origin POST from a malicious site, but does **not** block server-to-server token replay (the harder-to-trace path). The real defense is the Bearer token check in `_auth.js requireAdmin`. Vercel preview URL pattern (`*-the-green-haven.vercel.app`) makes a strict allowlist brittle. **Net assessment: marginal layer-3 defense, high churn cost (14 files), possible breakage of preview deploys. Accepted as residual** — Bearer + setAdminClaim INIT_TOKEN-lockdown + per-CF requireAdmin gates carry the security weight.
+
+**Rule for future audits:** When a finding's mitigation has limited security gain *AND* the existing layers already block the same threat class, document the reasoning here rather than shipping defense-in-depth-for-its-own-sake. Each new layer is only worth its operational cost if it closes a path the existing layers leave open.
+
+---
+
 ## 2026-04-28 (evening) — Two wrong claims in 24h, both in non-verifier-covered memory files
 
 **Mistake #1 (session journal → almost deferred real work):** `session_2026_04_27_evening_insights_ops_incident.md` claimed `meter_data/{docId}` was a "single doc holding all rooms in `data` map keyed by roomId" and that per-room scoping needed a "storage refactor". Today's handoff inherited the claim. When the user asked me to assess the meter_data rule (tentative — "ลองดู"), my first instinct was to confirm "needs schema refactor, defer". Real schema (per `firestore_schema_canonical.md`): `meter_data/{building_yy_m_roomId}` — already per-room flat docs. Fix took 2 lines.
