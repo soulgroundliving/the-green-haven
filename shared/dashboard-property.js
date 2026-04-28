@@ -294,8 +294,12 @@ function toggleRoomView(view, btn){
   }
 }
 
-function editRoom(roomId){openTenantModal(roomId);}
-function viewRoomDetails(roomId){openTenantModal(roomId);}
+// openTenantModal needs (building, roomId) — derive building from BuildingConfig SSoT
+// (room IDs like "N301" → nest, "15" → rooms). Without this, the modal opened with
+// building="15" / roomId=undefined and the contract form never populated.
+function _bldFromRoom(roomId){ return window.BuildingConfig?.isNestRoom?.(roomId) ? 'nest' : 'rooms'; }
+function editRoom(roomId){openTenantModal(_bldFromRoom(roomId), roomId);}
+function viewRoomDetails(roomId){openTenantModal(_bldFromRoom(roomId), roomId);}
 
 // ===== BATCH RENT ADJUSTMENT FUNCTIONS =====
 let batchSelectedRooms = new Set();
