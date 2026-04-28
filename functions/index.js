@@ -45,7 +45,6 @@ exports.cleanupTenantsSSoT = require('./cleanupTenantsSSoT').cleanupTenantsSSoT;
 exports.onComplaintCreated = require('./complaintAndGamification').onComplaintCreated;
 exports.sendComplaintConfirmation = require('./complaintAndGamification').sendComplaintConfirmation;
 exports.cleanupResolvedComplaints = require('./complaintAndGamification').cleanupResolvedComplaints;
-exports.awardRentPaymentPoints = require('./complaintAndGamification').awardRentPaymentPoints;
 exports.awardComplaintFreeMonth = require('./complaintAndGamification').awardComplaintFreeMonth;
 // Admin-only manual trigger / dry-run wrapper for the same logic.
 exports.awardComplaintFreeMonthManual = require('./complaintAndGamification').awardComplaintFreeMonthManual;

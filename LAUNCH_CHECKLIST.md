@@ -69,7 +69,7 @@ Live URL: <https://the-green-haven.vercel.app>
   - [ ] `verifySlip` (asia-southeast1)
   - [ ] `redeemReward` (asia-southeast1) — **NEW**
   - [ ] `seedRewards` (asia-southeast1) — **NEW** one-shot
-  - [ ] `awardRentPaymentPoints`, `checkAndAwardBadges`, `getLeaderboard`, `calculateTenantRank`
+  - [ ] `checkAndAwardBadges`, `getLeaderboard`, `calculateTenantRank`
   - [ ] `cleanupResolvedComplaints` (pubsub), `awardComplaintFreeMonth` (pubsub)
 - [ ] รัน seedRewards ครั้งเดียว: `curl -X POST https://asia-southeast1-the-green-haven.cloudfunctions.net/seedRewards`
 - [ ] ตรวจ Firestore `rewards/` มี 7 docs
@@ -104,7 +104,7 @@ Live URL: <https://the-green-haven.vercel.app>
 
 ## Known TODOs (post-launch ทำได้)
 
-1. Tighten Firestore rules + Auth — tenant CF redeem ยังไม่บังคับ Firebase Auth (ใช้ building+roomId เป็น lookup key)
-2. CF migration: `awardRentPaymentPoints` ใช้ flat schema `tenants/{tenantId}` — ปัจจุบันไม่มี caller, แก้ให้ใช้ nested `tenants/{building}/list/{roomId}` ถ้าจะใช้
+1. ~~Tighten Firestore rules + Auth — tenant CF redeem~~ — done 2026-04-28: redeemReward + claimDailyLoginPoints now check `context.auth.token.{room,building}` against requested room
+2. ~~CF migration: `awardRentPaymentPoints`~~ — removed 2026-04-28 (no caller; verifySlip already awards rent payment points)
 3. Image optimization — contract documents เป็น base64 JPG ใน Firestore = bloat. ย้ายไป Cloud Storage
 4. PDF export ใบเสร็จ — มี jsPDF โหลดแล้ว แต่ยังใช้ html2canvas → PNG, ทำ PDF version

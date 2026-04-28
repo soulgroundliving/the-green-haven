@@ -12,8 +12,8 @@
  * optimistic UI is the only thing keeping points from going negative.
  *
  * Region: asia-southeast1 (matches verifySlip / complaintAndGamification)
- * Auth: relaxed for now — tenant app has no Firebase auth signin (room = lookup
- *       key), so we trust caller's building+roomId. Tighten when LIFF auth lands.
+ * Auth: caller's custom claims (room/building, set by liffSignIn) must match
+ *       the requested building+roomId. Admin claim bypasses for ops/testing.
  */
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
@@ -37,6 +37,17 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
     throw new functions.https.HttpsError('invalid-argument', `unknown building: ${building}`);
   }
   const canonicalBuilding = String(building).toLowerCase();
+
+  // Ownership check — caller's claims must match requested room/building.
+  // Admin bypasses (ops/testing). Without this, any signed-in user could
+  // drain another tenant's points by passing their building+roomId.
+  const tok = context.auth.token || {};
+  if (tok.admin !== true) {
+    if (tok.room !== String(roomId) || tok.building !== canonicalBuilding) {
+      throw new functions.https.HttpsError('permission-denied',
+        'You can only redeem rewards for your own room');
+    }
+  }
 
   const rewardRef = firestore.collection('rewards').doc(rewardId);
   const tenantRef = firestore.collection('tenants').doc(canonicalBuilding).collection('list').doc(String(roomId));

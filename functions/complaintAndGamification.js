@@ -201,40 +201,11 @@ exports.cleanupResolvedComplaints = functions.region('asia-southeast1').pubsub
 
 // ===== GAMIFICATION FUNCTIONS =====
 
-/**
- * Award points for on-time rent payment
- */
-exports.awardRentPaymentPoints = functions.region('asia-southeast1').https.onCall(async (data, context) => {
-  try {
-    const { tenantId, points } = data;
-    const pointsToAward = points || 50;
-
-    const tenantRef = firestore.collection('tenants').doc(tenantId);
-    const tenantDoc = await tenantRef.get();
-
-    if (!tenantDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Tenant not found');
-    }
-
-    const tenantData = tenantDoc.data();
-    const currentPoints = tenantData.gamification?.points || 0;
-
-    await tenantRef.update({
-      'gamification.points': currentPoints + pointsToAward,
-      'metadata.updatedAt': new Date().toISOString()
-    });
-
-    console.log(`💰 Awarded ${pointsToAward} points to ${tenantId}`);
-
-    return {
-      success: true,
-      newPoints: currentPoints + pointsToAward
-    };
-  } catch (error) {
-    console.error('❌ Error awarding points:', error);
-    throw error;
-  }
-});
+// awardRentPaymentPoints removed 2026-04-28: no caller, used dead flat path
+// `tenants/{tenantId}`, and accepted points value from client without auth
+// check (any signed-in user could inflate any tenant's points).
+// On-time rent points are now awarded server-side by verifySlip via
+// gamification-rules.js EARNING_SOURCES.rent_paid.
 
 // Shared logic — extracted so both the scheduled trigger and the
 // admin-only HTTP trigger (manual / dry-run) can share it.

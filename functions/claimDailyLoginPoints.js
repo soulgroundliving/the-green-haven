@@ -39,6 +39,18 @@ exports.claimDailyLoginPoints = functions.region('asia-southeast1').https.onCall
     throw new functions.https.HttpsError('invalid-argument', `unknown building: ${building}`);
   }
   const canonicalBuilding = String(building).toLowerCase();
+
+  // Ownership check — see redeemReward.js for rationale. Without this,
+  // an attacker can spam-claim daily points for any room and lock the
+  // legitimate tenant out of their own claim that day.
+  const tok = context.auth.token || {};
+  if (tok.admin !== true) {
+    if (tok.room !== String(roomId) || tok.building !== canonicalBuilding) {
+      throw new functions.https.HttpsError('permission-denied',
+        'You can only claim daily points for your own room');
+    }
+  }
+
   const tenantRef = firestore.collection('tenants').doc(canonicalBuilding).collection('list').doc(String(roomId));
 
   const now = new Date();
