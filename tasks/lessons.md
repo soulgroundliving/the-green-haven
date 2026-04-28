@@ -107,3 +107,13 @@ The first audit (Explore agent #1) only caught Storage path mismatches. The seco
 **Why:** I rewarded hypothesis over observation. When a symptom recurs, the next fix has lower expected value than asking for one piece of state.
 
 **Rule:** When a symptom recurs across turns or sessions, change tactics: stop proposing fixes, ask for ONE concrete observation (currentUser email, claims, RTDB doc screenshot, network 4xx). One real observation kills the entire hypothesis tree. (Codified as `feedback_stop_guessing_demand_state.md` in user memory; bills playbook in `bills_not_showing_diagnostic.md`.)
+
+---
+
+## 2026-04-28 (late) — Chased function-arg theory for tenantModal; real bug was inline display:none vs class toggle (already documented)
+
+**Mistake:** User reported "ปุ่ม สัญญา ไม่ขึ้นให้แก้ข้อมูล" on dashboard's room-management cards. I grepped, saw `editRoom(roomId){openTenantModal(roomId)}` calling with one arg while another caller (`dashboard-tenant-page.js:246`) used two args, declared "missing building arg" the bug, fixed with `_bldFromRoom` helper, pushed `f9722b4`. User tested → still broken. Real cause: `dashboard.html:2034` ships `<div id="tenantModal" style="display:none;">`. `openTenantModal` removed `.u-hidden` but inline `display:none` always wins over external CSS — modal stayed invisible while the form populated correctly behind it. Fixed in `9133acd` by setting `modal.style.display = 'flex'` on open.
+
+**Why:** I skipped the DOM-state check. `openTenantModal:74` already had a 1-arg fallback (`detectBuildingFromRoomId`) so my "fix" was a no-op semantically. The exact pattern was already documented in `feedback_inline_style_class_toggle.md` (loaded at session start, ignored).
+
+**Rule:** When a button "doesn't open a modal," inspect the modal element's state before patching the click path. One-liner: `({inline: m.getAttribute('style'), classes: [...m.classList], computed: getComputedStyle(m).display})`. If `inline === "display:none;"` and `computed === "none"` → it's the inline-vs-class bug (this codebase's pet bug). Patch JS to set inline `display='flex'` on open + clear on close, not the click path. (Memory updated with this debug heuristic + a "wrong-cause trap" note tying back to commit `f9722b4` → `9133acd`.)
