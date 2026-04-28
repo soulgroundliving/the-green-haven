@@ -105,6 +105,26 @@ exports.liffSignIn = functions.region('asia-southeast1').https.onRequest(async (
   // ── Mint Firebase custom token ────────────────────────────────────────────
   // UID is deterministic per LINE user — stable across sessions.
   const uid = 'line:' + lineUserId;
+
+  // Set displayName on the Auth user record so admins see "rooms/15 — John"
+  // in Firebase Auth Console instead of "(-)". Non-fatal: if it fails the
+  // sign-in still works, just the admin Console UX is poorer. Idempotent.
+  const lineDisplayName = String(liffData.lineDisplayName || '').slice(0, 60);
+  const displayName = `${building}/${room}${lineDisplayName ? ' — ' + lineDisplayName : ''}`;
+  try {
+    await admin.auth().updateUser(uid, { displayName });
+  } catch (e) {
+    if (e.code === 'auth/user-not-found') {
+      try {
+        await admin.auth().createUser({ uid, displayName });
+      } catch (createErr) {
+        console.warn('liffSignIn: createUser displayName failed (non-fatal):', createErr.message);
+      }
+    } else {
+      console.warn('liffSignIn: updateUser displayName failed (non-fatal):', e.message);
+    }
+  }
+
   let customToken;
   try {
     customToken = await admin.auth().createCustomToken(uid, { room, building });
