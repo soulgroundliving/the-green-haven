@@ -7395,9 +7395,6 @@
             if (!_taTenant && typeof TenantConfigManager !== 'undefined') {
                 try { _taTenant = TenantConfigManager.getTenant(_taBuilding, _taRoom); } catch(e) {}
             }
-            // Lease just loaded — filter any bills/meter rows already cached from a
-            // prior subscribe firing before _taLease was known.
-            if (_taLease) _applyTenantBoundary();
             if (!_taTenant) {
                 try { _taTenant = JSON.parse(localStorage.getItem('tenant_data') || 'null'); } catch(e) {}
             }
@@ -7414,6 +7411,10 @@
             if (!_taPayments.length) {
                 try { _taPayments = JSON.parse(localStorage.getItem(`payment_${_taBuilding}_${_taRoom}`) || '[]'); } catch(e) {}
             }
+            // Filter AFTER bills/payments are hydrated from localStorage — the cache
+            // may contain previous tenant's bills written before the boundary filter
+            // shipped (or by an earlier subscribe firing before _taLease was known).
+            if (_taLease) _applyTenantBoundary();
             window._tenantAppLease = _taLease;
             window._tenantAppTenant = _taTenant;
             window._tenantAppBills = _taBills;
@@ -8365,6 +8366,11 @@
             let source = _meterHistoryCache;
             if (!source.length) {
                 try { source = JSON.parse(localStorage.getItem(`meter_history_${_taBuilding}_${_taRoom}`) || '[]'); } catch(e) {}
+                // localStorage may hold rows from before the boundary filter shipped
+                if (window.BillStore?.filterByTenantBoundary) {
+                    source = window.BillStore.filterByTenantBoundary(
+                        source, m => (Number(m.year)||0)*100 + (Number(m.month)||0), _taLease);
+                }
             }
             if (!source.length) return [];
             return source.slice(0, 6).map(m => {
