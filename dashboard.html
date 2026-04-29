@@ -779,6 +779,11 @@
   .dashboard-tab-content{display:none !important;}
   .dashboard-tab-content.active{display:block !important;}
 
+  /* Dashboard Category Tab Styles */
+  .dash-cat-content.u-hidden{display:none !important;}
+  .dash-prop-tab.active{opacity:1;cursor:pointer;}
+  .dash-prop-tab:not([disabled]):hover{opacity:.85;}
+
   /* ===== BILL FLOW ===== */
   .bill-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.8rem;}
   .bill-layout > div:last-child{position:sticky;top:1.5rem;align-self:start;}
@@ -2226,109 +2231,149 @@
 <div class="page active" id="page-dashboard">
   <div class="section-title">📊 Overall</div>
 
-  <!-- OVERVIEW TAB -->
+  <!-- Property Context Row -->
+  <div class="year-tabs" style="margin-bottom:.5rem;">
+    <span class="year-tab-label">ประเภทอสังหาฯ:</span>
+    <button id="dash-prop-btn-apartment" class="year-tab active dash-prop-tab" data-action="switchDashboardProperty" data-property="apartment">🏠 Apartment</button>
+    <button id="dash-prop-btn-mall" class="year-tab dash-prop-tab" disabled title="เร็วๆ นี้" style="opacity:.4;cursor:not-allowed;">🏪 Community Mall <span style="font-size:.7rem;">(เร็วๆ นี้)</span></button>
+  </div>
+
+  <!-- Category Tab Nav -->
+  <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
+    <button id="dash-cat-btn-overview"   class="year-tab active" data-action="switchDashboardTab" data-tab="overview">🏠 ภาพรวม</button>
+    <button id="dash-cat-btn-financial"  class="year-tab"        data-action="switchDashboardTab" data-tab="financial">💰 การเงิน</button>
+    <button id="dash-cat-btn-tenants"    class="year-tab"        data-action="switchDashboardTab" data-tab="tenants">👥 ผู้เช่า</button>
+    <button id="dash-cat-btn-operations" class="year-tab"        data-action="switchDashboardTab" data-tab="operations">🔧 ปฏิบัติการ</button>
+    <button id="dash-cat-btn-community"  class="year-tab"        data-action="switchDashboardTab" data-tab="community">🌿 ชุมชน</button>
+  </div>
+
+  <!-- OVERVIEW TAB wrapper (keeps dashboard-tab-content contract intact) -->
   <div id="dashboard-overview-tab" class="dashboard-tab-content active">
-  <div class="year-tabs" style="margin-bottom:.4rem;">
-    <span class="year-tab-label">ปีงบประมาณ:</span>
-    <button class="year-tab" data-action="setYear" data-year="all">ทั้งหมด</button>
-    <button class="year-tab" data-action="setYear" data-year="67">2567 (2024)</button>
-    <button class="year-tab" data-action="setYear" data-year="68">2568 (2025)</button>
-    <button class="year-tab active" data-action="setYear" data-year="69">2569 (2026)</button>
-  </div>
-  <div class="year-tabs" style="margin-bottom:.8rem;">
-    <span class="year-tab-label">อาคาร:</span>
-    <button id="dash-bld-all" class="year-tab active" data-action="setBuilding" data-building="all">ทั้งหมด</button>
-    <button id="dash-bld-rooms" class="year-tab" data-action="setBuilding" data-building="rooms">🏠 ห้องแถว</button>
-    <button id="dash-bld-nest" class="year-tab" data-action="setBuilding" data-building="nest">🏢 Nest</button>
-  </div>
-  <div class="kpi-grid">
-    <!-- Combined Total (Both Buildings) -->
-    <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-label">รายได้รวมทั้งปี (รวมทั้ง 2 อาคาร)</div><div class="kpi-value green" id="kpi-total">฿0</div><div class="kpi-sub" id="kpi-total-sub"></div></div>
-    <!-- Building Breakdown -->
-    <div class="kpi-card" style="background:linear-gradient(135deg, #e3f2fd, #f3e5f5); border-left: 4px solid var(--green);"><div class="kpi-icon">🏠</div><div class="kpi-label">รายได้ rooms (ห้องแถว)</div><div class="kpi-value" id="kpi-rooms-total" style="color:var(--green);">฿0</div><div class="kpi-sub" id="kpi-rooms-sub">แบ่งตามระบบตัวใจ</div></div>
-    <div class="kpi-card kpi-nest" style="background:linear-gradient(135deg, #fce4ec, var(--green-pale)); border-left: 4px solid #7b1fa2;"><div class="kpi-icon">🏢</div><div class="kpi-label">รายได้ Nest Building</div><div class="kpi-value" id="kpi-nest-total" style="color:#7b1fa2;">฿0</div><div class="kpi-sub" id="kpi-nest-sub">ยูนิตที่เปิดให้เช่า</div></div>
-    <!-- Average Monthly -->
-    <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
-    <!-- Occupancy Combined — live only -->
-    <div class="kpi-card kpi-live blue clickable" data-action="showPage" data-page="tenant"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (รวม 2 อาคาร)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
-    <!-- Payment Status — live only -->
-    <div class="kpi-card kpi-live purple clickable" data-action="showPage" data-page="bill"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
-    <!-- Expected Revenue — live only -->
-    <div class="kpi-card kpi-live" style="background:linear-gradient(135deg, var(--green-pale), #f1f8e9); border-left: 4px solid var(--green-light);"><div class="kpi-icon">📊</div><div class="kpi-label">รายได้คาดหวัง (เดือนนี้)</div><div class="kpi-value" id="kpi-expected" style="color:var(--green);">฿0</div><div class="kpi-sub" id="kpi-expected-sub">จากห้องที่มีผู้เช่า</div></div>
-    <!-- Overdue — live only -->
-    <div class="kpi-card kpi-live" style="background:linear-gradient(135deg, #ffebee, #fce4ec); border-left: 4px solid #d32f2f;"><div class="kpi-icon">⚠️</div><div class="kpi-label">ค้างชำระทั้งสิ้น</div><div class="kpi-value" id="kpi-overdue" style="color:#d32f2f;">฿0</div><div class="kpi-sub" id="kpi-overdue-sub">รอชำระเงินค้าง</div></div>
-  </div>
-  <div class="charts-grid">
-    <div class="card"><div class="card-title">📈 รายได้รายเดือน (บาท)</div><div class="chart-wrap"><canvas id="chartRevenue"></canvas></div></div>
-    <div class="card"><div class="card-title">🥧 สัดส่วนรายได้</div><div class="chart-wrap"><canvas id="chartPie"></canvas></div></div>
-  </div>
-  <div class="insights-grid">
-    <div class="insight-card green"><div class="insight-title">💵 รายได้ค่าเช่าห้อง</div><div class="insight-value" id="ins-rent">—</div><div class="insight-detail" id="ins-rent-d">รวมห้องพักทั้งหมด</div></div>
-    <div class="insight-card amber"><div class="insight-title">⚡ รายได้ค่าไฟ</div><div class="insight-value" id="ins-elec">—</div><div class="insight-detail" id="ins-elec-d">อัตราตาม config ห้องพัก</div></div>
-    <div class="insight-card blue"><div class="insight-title">💧 รายได้ค่าน้ำ</div><div class="insight-value" id="ins-water">—</div><div class="insight-detail" id="ins-water-d">อัตราตาม config ห้องพัก</div></div>
-  </div>
 
-  <!-- ย้อนหลัง 6 เดือน -->
-  <div class="card" style="margin-bottom:1rem;">
-    <div class="card-title" id="dash-last6-title">📅 รายได้ย้อนหลัง 12 เดือน (ล่าสุด)</div>
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
-        <thead>
-          <tr style="background:var(--green-pale);color:var(--green-dark);">
-            <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">เดือน</th>
-            <th style="padding:.55rem .7rem;text-align:right;">💵 ค่าเช่า</th>
-            <th style="padding:.55rem .7rem;text-align:right;">⚡ ค่าไฟ</th>
-            <th style="padding:.55rem .7rem;text-align:right;">💧 ค่าน้ำ</th>
-            <th style="padding:.55rem .7rem;text-align:right;">แยกอาคาร</th>
-            <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">💰 รวม</th>
-          </tr>
-        </thead>
-        <tbody id="dash-last6-body">
-          <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">กำลังโหลด...</td></tr>
-        </tbody>
-      </table>
+  <!-- ===== TAB 1: ภาพรวม ===== -->
+  <div id="dash-cat-overview" class="dash-cat-content">
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-live blue clickable" data-action="showPage" data-page="tenant"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (รวม 2 อาคาร)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
+      <div class="kpi-card kpi-live purple clickable" data-action="showPage" data-page="bill"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
+      <div class="kpi-card kpi-live" style="background:linear-gradient(135deg, var(--green-pale), #f1f8e9); border-left: 4px solid var(--green-light);"><div class="kpi-icon">📊</div><div class="kpi-label">รายได้คาดหวัง (เดือนนี้)</div><div class="kpi-value" id="kpi-expected" style="color:var(--green);">฿0</div><div class="kpi-sub" id="kpi-expected-sub">จากห้องที่มีผู้เช่า</div></div>
+      <div class="kpi-card kpi-live" style="background:linear-gradient(135deg, #ffebee, #fce4ec); border-left: 4px solid #d32f2f;"><div class="kpi-icon">⚠️</div><div class="kpi-label">ค้างชำระทั้งสิ้น</div><div class="kpi-value" id="kpi-overdue" style="color:#d32f2f;">฿0</div><div class="kpi-sub" id="kpi-overdue-sub">รอชำระเงินค้าง</div></div>
     </div>
-  </div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <button class="year-tab" data-action="switchDashboardTab" data-tab="financial">💰 ดูการเงิน</button>
+      <button class="year-tab" data-action="switchDashboardTab" data-tab="tenants">👥 ดูผู้เช่า</button>
+      <button class="year-tab" data-action="switchDashboardTab" data-tab="operations">🔧 ดูปฏิบัติการ</button>
+      <button class="year-tab" data-action="switchDashboardTab" data-tab="community">🌿 ดูชุมชน</button>
+    </div>
+  </div><!-- END ภาพรวม -->
 
-  <div class="charts-grid-3">
-    <div class="card" id="card-years-compare" style="display:none;"><div class="card-title">📊 เปรียบเทียบ 3 ปี</div><div class="chart-wrap-sm"><canvas id="chartYears"></canvas></div></div>
-    <div class="card"><div class="card-title">⚡ ค่าไฟรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartElec"></canvas></div></div>
-    <div class="card"><div class="card-title">💧 ค่าน้ำรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartWater"></canvas></div></div>
-  </div>
-  <!-- Quick status panels — live only -->
-  <div id="dash-live-panels" style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
-    <div class="card">
+  <!-- ===== TAB 2: การเงิน ===== -->
+  <div id="dash-cat-financial" class="dash-cat-content u-hidden">
+    <div class="year-tabs" style="margin-bottom:.4rem;">
+      <span class="year-tab-label">ปีงบประมาณ:</span>
+      <button class="year-tab" data-action="setYear" data-year="all">ทั้งหมด</button>
+      <button class="year-tab" data-action="setYear" data-year="67">2567 (2024)</button>
+      <button class="year-tab" data-action="setYear" data-year="68">2568 (2025)</button>
+      <button class="year-tab active" data-action="setYear" data-year="69">2569 (2026)</button>
+    </div>
+    <div class="year-tabs" style="margin-bottom:.8rem;">
+      <span class="year-tab-label">อาคาร:</span>
+      <button id="dash-bld-all" class="year-tab active" data-action="setBuilding" data-building="all">ทั้งหมด</button>
+      <button id="dash-bld-rooms" class="year-tab" data-action="setBuilding" data-building="rooms">🏠 ห้องแถว</button>
+      <button id="dash-bld-nest" class="year-tab" data-action="setBuilding" data-building="nest">🏢 Nest</button>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-label">รายได้รวมทั้งปี (รวมทั้ง 2 อาคาร)</div><div class="kpi-value green" id="kpi-total">฿0</div><div class="kpi-sub" id="kpi-total-sub"></div></div>
+      <div class="kpi-card" style="background:linear-gradient(135deg, #e3f2fd, #f3e5f5); border-left: 4px solid var(--green);"><div class="kpi-icon">🏠</div><div class="kpi-label">รายได้ rooms (ห้องแถว)</div><div class="kpi-value" id="kpi-rooms-total" style="color:var(--green);">฿0</div><div class="kpi-sub" id="kpi-rooms-sub">แบ่งตามระบบตัวใจ</div></div>
+      <div class="kpi-card kpi-nest" style="background:linear-gradient(135deg, #fce4ec, var(--green-pale)); border-left: 4px solid #7b1fa2;"><div class="kpi-icon">🏢</div><div class="kpi-label">รายได้ Nest Building</div><div class="kpi-value" id="kpi-nest-total" style="color:#7b1fa2;">฿0</div><div class="kpi-sub" id="kpi-nest-sub">ยูนิตที่เปิดให้เช่า</div></div>
+      <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="card"><div class="card-title">📈 รายได้รายเดือน (บาท)</div><div class="chart-wrap"><canvas id="chartRevenue"></canvas></div></div>
+      <div class="card"><div class="card-title">🥧 สัดส่วนรายได้</div><div class="chart-wrap"><canvas id="chartPie"></canvas></div></div>
+    </div>
+    <div class="insights-grid">
+      <div class="insight-card green"><div class="insight-title">💵 รายได้ค่าเช่าห้อง</div><div class="insight-value" id="ins-rent">—</div><div class="insight-detail" id="ins-rent-d">รวมห้องพักทั้งหมด</div></div>
+      <div class="insight-card amber"><div class="insight-title">⚡ รายได้ค่าไฟ</div><div class="insight-value" id="ins-elec">—</div><div class="insight-detail" id="ins-elec-d">อัตราตาม config ห้องพัก</div></div>
+      <div class="insight-card blue"><div class="insight-title">💧 รายได้ค่าน้ำ</div><div class="insight-value" id="ins-water">—</div><div class="insight-detail" id="ins-water-d">อัตราตาม config ห้องพัก</div></div>
+    </div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-title" id="dash-last6-title">📅 รายได้ย้อนหลัง 12 เดือน (ล่าสุด)</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+          <thead>
+            <tr style="background:var(--green-pale);color:var(--green-dark);">
+              <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">เดือน</th>
+              <th style="padding:.55rem .7rem;text-align:right;">💵 ค่าเช่า</th>
+              <th style="padding:.55rem .7rem;text-align:right;">⚡ ค่าไฟ</th>
+              <th style="padding:.55rem .7rem;text-align:right;">💧 ค่าน้ำ</th>
+              <th style="padding:.55rem .7rem;text-align:right;">แยกอาคาร</th>
+              <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">💰 รวม</th>
+            </tr>
+          </thead>
+          <tbody id="dash-last6-body">
+            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">กำลังโหลด...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="charts-grid-3">
+      <div class="card" id="card-years-compare" style="display:none;"><div class="card-title">📊 เปรียบเทียบ 3 ปี</div><div class="chart-wrap-sm"><canvas id="chartYears"></canvas></div></div>
+      <div class="card"><div class="card-title">⚡ ค่าไฟรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartElec"></canvas></div></div>
+      <div class="card"><div class="card-title">💧 ค่าน้ำรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartWater"></canvas></div></div>
+    </div>
+    <div class="card" style="margin-bottom:1rem;">
       <div class="card-title">💳 สถานะการชำระเงินเดือนนี้</div>
       <div id="dashPaymentStatus" style="min-height:70px;"></div>
     </div>
-    <div class="card">
+  </div><!-- END การเงิน -->
+
+  <!-- ===== TAB 3: ผู้เช่า ===== -->
+  <div id="dash-cat-tenants" class="dash-cat-content u-hidden">
+    <div class="card" style="margin-bottom:1rem;">
       <div class="card-title">👥 ผู้เช่า &amp; ห้องว่าง</div>
       <div id="dashTenantStatus" style="min-height:70px;"></div>
     </div>
-  </div>
+    <div style="text-align:right;margin-bottom:1rem;">
+      <button class="year-tab" data-action="showPage" data-page="tenant">👥 ดูรายละเอียดผู้เช่าทั้งหมด →</button>
+    </div>
+  </div><!-- END ผู้เช่า -->
 
-  <!-- Complaints & Maintenance + Gamification + Pet Analytics -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
-    <div class="card">
-      <div class="card-title">⚠️ Complaints</div>
-      <div id="dashComplaintsStatus" style="min-height:60px;"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">🔧 Maintenance</div>
-      <div id="dashMaintenanceStatus" style="min-height:60px;"></div>
-    </div>
-    <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>🏆 Top Tenants</span>
-        <button data-action="showPage" data-page="gamification" style="font-size:.72rem;padding:2px 8px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">ดูทั้งหมด →</button>
+  <!-- ===== TAB 4: ปฏิบัติการ ===== -->
+  <div id="dash-cat-operations" class="dash-cat-content u-hidden">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
+      <div class="card">
+        <div class="card-title">⚠️ Complaints</div>
+        <div id="dashComplaintsStatus" style="min-height:60px;"></div>
       </div>
-      <div id="dashTopTenants" style="min-height:60px;"></div>
+      <div class="card">
+        <div class="card-title">🔧 Maintenance</div>
+        <div id="dashMaintenanceStatus" style="min-height:60px;"></div>
+      </div>
     </div>
-    <div class="card" id="dashPetAnalyticsCard">
-      <div class="card-title">🐾 Pet Analytics (Nest)</div>
-      <div id="dashPetAnalytics" style="min-height:60px;"></div>
+    <div style="text-align:right;margin-bottom:1rem;">
+      <button class="year-tab" data-action="showPage" data-page="requests-approvals">🔧 ดูคำขอทั้งหมด →</button>
     </div>
-  </div>
+  </div><!-- END ปฏิบัติการ -->
+
+  <!-- ===== TAB 5: ชุมชน ===== -->
+  <div id="dash-cat-community" class="dash-cat-content u-hidden">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>🏆 Top Tenants</span>
+          <button data-action="showPage" data-page="gamification" style="font-size:.72rem;padding:2px 8px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">ดูทั้งหมด →</button>
+        </div>
+        <div id="dashTopTenants" style="min-height:60px;"></div>
+      </div>
+      <div class="card" id="dashPetAnalyticsCard">
+        <div class="card-title">🐾 Pet Analytics (Nest)</div>
+        <div id="dashPetAnalytics" style="min-height:60px;"></div>
+      </div>
+    </div>
+    <div style="text-align:right;margin-bottom:1rem;">
+      <button class="year-tab" data-action="showPage" data-page="gamification">🌿 ดูคะแนนทั้งหมด →</button>
+    </div>
+  </div><!-- END ชุมชน -->
 
   </div><!-- END OVERVIEW TAB -->
 </div>

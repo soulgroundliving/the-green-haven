@@ -25,14 +25,11 @@ function syncDashboardYearUI(){
 }
 
 function setYear(yr,btn){
-  // Only clear active state on the year row (first .year-tabs), not the building row
-  const rows = document.querySelectorAll('#page-dashboard .year-tabs');
-  if(rows[0]) rows[0].querySelectorAll('.year-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('[data-action="setYear"]').forEach(b=>b.classList.remove('active'));
   if(btn) {
     btn.classList.add('active');
-  } else if (rows[0]) {
-    // Programmatic call without btn — buttons use data-action/data-year (not onclick=)
-    const target = rows[0].querySelector(`[data-action="setYear"][data-year="${yr}"]`);
+  } else {
+    const target = document.querySelector(`[data-action="setYear"][data-year="${yr}"]`);
     if (target) target.classList.add('active');
   }
   currentYear=yr;
@@ -87,8 +84,9 @@ function applyBuildingAvailability(yr){
     // If current filter is 'all' or 'nest', force to 'rooms'
     if(window.dashBuildingFilter==='all' || window.dashBuildingFilter==='nest'){
       window.dashBuildingFilter = 'rooms';
-      document.querySelectorAll('#page-dashboard .year-tabs').forEach((r,i)=>{
-        if(i===1) r.querySelectorAll('.year-tab').forEach(b=>b.classList.remove('active'));
+      ['dash-bld-all','dash-bld-rooms','dash-bld-nest'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b) b.classList.remove('active');
       });
       if(btnRooms) btnRooms.classList.add('active');
     }
@@ -97,9 +95,10 @@ function applyBuildingAvailability(yr){
 
 function setBuilding(filter, btn) {
   window.dashBuildingFilter = filter;
-  // Update active state on building filter row only (second year-tabs row)
-  const rows = document.querySelectorAll('#page-dashboard .year-tabs');
-  if (rows[1]) rows[1].querySelectorAll('.year-tab').forEach(b => b.classList.remove('active'));
+  ['dash-bld-all','dash-bld-rooms','dash-bld-nest'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.classList.remove('active');
+  });
   if (btn) btn.classList.add('active');
   initDashboardCharts();
 }

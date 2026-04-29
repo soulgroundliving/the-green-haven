@@ -50,6 +50,24 @@ window._showPageImpl = function(page,btn){
 // Assign to global scope after definition
 window.showPage = window._showPageImpl;
 
+window.switchDashboardTab = function(tabName, btn) {
+  ['overview','financial','tenants','operations','community'].forEach(t => {
+    const el = document.getElementById('dash-cat-' + t);
+    if (el) {
+      el.classList.toggle('u-hidden', t !== tabName);
+      if (el.style.display) el.style.display = '';
+    }
+  });
+  document.querySelectorAll('[id^="dash-cat-btn-"]').forEach(b => b.classList.remove('active'));
+  const canonical = document.getElementById('dash-cat-btn-' + tabName);
+  if (canonical) canonical.classList.add('active');
+  if (btn && btn !== canonical) btn.classList.add('active');
+};
+
+window.switchDashboardProperty = function(property) {
+  window.dashPropertyFilter = property || 'apartment';
+};
+
 window.switchTenantMainTab = function(tab, btn) {
   ['tenants','leases','requests','alerts'].forEach(t => {
     const el = document.getElementById('tenant-main-tab-' + t);
@@ -614,6 +632,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'showTenantLease') { typeof showTenantLeaseHistory === 'function' && showTenantLeaseHistory(currentEditBuilding, currentEditRoomId); return; }
 
     // Dashboard tabs
+    if (a === 'switchDashboardTab') { typeof switchDashboardTab === 'function' && switchDashboardTab(el.dataset.tab, el); return; }
+    if (a === 'switchDashboardProperty') { typeof switchDashboardProperty === 'function' && switchDashboardProperty(el.dataset.property); return; }
     if (a === 'setYear') { setYear(year, el); return; }
     if (a === 'setBuilding') { setBuilding(building, el); return; }
     if (a === 'setTenantBuilding') { setTenantBuilding(building, el); return; }
