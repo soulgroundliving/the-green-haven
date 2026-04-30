@@ -734,102 +734,23 @@
   }
 
   // ============================================================
-  // FEATURE 4: Tenant Health Score (ผู้เช่า tab)
+  // FEATURE 4+5: Tenant Health Score + Churn Risk (combined card)
   // ============================================================
   let _hsState = { tierFilter: 'all', sortBy: 'score_asc' };
 
-  async function renderTenantHealth() {
-    const container = document.getElementById('dashTenantHealth');
+  async function renderTenantInsights() {
+    const container = document.getElementById('dashTenantInsights');
     if (!container) return;
     container.innerHTML = loadingHTML();
     try {
       const records = await buildHealthRecords();
-      // Apply filter
-      let rows = records;
-      if (_hsState.tierFilter !== 'all') {
-        rows = records.filter(r => r.tier.key === _hsState.tierFilter);
-      }
-      // Sort: ascending by score by default (worst first → admin attention)
-      rows.sort((a, b) => {
-        if (_hsState.sortBy === 'score_asc') return a.score.total - b.score.total;
-        if (_hsState.sortBy === 'score_desc') return b.score.total - a.score.total;
-        return 0;
-      });
 
-      // Distribution counts
-      const dist = { healthy: 0, steady: 0, 'at-risk': 0, critical: 0 };
-      records.forEach(r => { dist[r.tier.key]++; });
-
-      // Render summary chips (clickable filter)
-      const chipStyle = (active, color, bg) => `display:inline-block;padding:4px 12px;margin-right:6px;background:${active?bg:'#fff'};border:1.5px solid ${color};color:${active?'#fff':color};border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;`;
-      const f = _hsState.tierFilter;
-      const chips = `
-        <button data-action="setHSFilter" data-tier="all" style="${chipStyle(f==='all','var(--text-muted)','var(--text-muted)')}">ทั้งหมด (${records.length})</button>
-        <button data-action="setHSFilter" data-tier="healthy" style="${chipStyle(f==='healthy','var(--green)','var(--green)')}">🟢 ${dist.healthy}</button>
-        <button data-action="setHSFilter" data-tier="steady" style="${chipStyle(f==='steady','var(--blue)','var(--blue)')}">🟡 ${dist.steady}</button>
-        <button data-action="setHSFilter" data-tier="at-risk" style="${chipStyle(f==='at-risk','var(--accent,#ff9800)','var(--accent,#ff9800)')}">🟠 ${dist['at-risk']}</button>
-        <button data-action="setHSFilter" data-tier="critical" style="${chipStyle(f==='critical','var(--alert,#c06458)','var(--alert,#c06458)')}">🔴 ${dist.critical}</button>
-      `;
-
-      let tilesHTML = '';
-      if (rows.length === 0) {
-        tilesHTML = `<div style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:.85rem;grid-column:1/-1;">ไม่มีห้องในกลุ่มนี้</div>`;
-      } else {
-        tilesHTML = rows.map(r => `
-          <div data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}"
-               style="cursor:pointer;background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;"
-               onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 2px 8px rgba(31,31,28,.08)';"
-               onmouseout="this.style.transform='';this.style.boxShadow='';">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.2rem;">
-              <span style="font-weight:700;font-size:.92rem;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.7rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
-              <span style="font-variant-numeric:tabular-nums;color:${r.tier.color};font-weight:700;font-size:1.1rem;">${r.score.total}<span style="font-size:.7rem;color:var(--text-muted);font-weight:400;">/100</span></span>
-            </div>
-            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;min-height:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.tenantName || '—')}</div>
-            <div style="height:6px;background:var(--mist,#f2f1ec);border-radius:3px;overflow:hidden;margin-bottom:.3rem;">
-              <div style="width:${r.score.total}%;height:100%;background:${r.tier.color};"></div>
-            </div>
-            <div style="font-size:.72rem;color:${r.tier.color};font-weight:600;">${r.tier.emoji} ${r.tier.label}</div>
-          </div>
-        `).join('');
-      }
-
-      // Stash records for drill-down
+      // Stash for drill-down modal
       window._insightsCache = window._insightsCache || {};
       window._insightsCache.healthRecords = {};
       records.forEach(r => { window._insightsCache.healthRecords[`${r.building}:${r.roomId}`] = r; });
 
-      container.innerHTML = `
-        <div class="card" style="border-left:4px solid var(--moss,#5a7a5a);">
-          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-            <span>🩺 Tenant Health Score</span>
-            <button data-action="refreshInsight" data-target="health" aria-label="รีเฟรช Health"
-                    style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
-          </div>
-          <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.7rem;">
-            คะแนนรวม 0–100 จาก: ชำระเงิน · กิจกรรม · เรื่องร้องเรียน · ระยะเวลาเช่า · คลิกการ์ดเพื่อดูรายละเอียด
-          </div>
-          <div style="margin-bottom:.9rem;">${chips}</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.5rem;">${tilesHTML}</div>
-          <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.7rem;">${fmtCacheAge(Date.now())}</div>
-        </div>
-      `;
-    } catch (e) {
-      console.error('[insights] tenant health failed:', e);
-      container.innerHTML = errorHTML('health', e.message);
-    }
-  }
-
-  // ============================================================
-  // FEATURE 5: Churn Risk Alert (ผู้เช่า tab)
-  // ============================================================
-  async function renderChurnRisk() {
-    const container = document.getElementById('dashChurnRisk');
-    if (!container) return;
-    container.innerHTML = loadingHTML();
-    try {
-      const records = await buildHealthRecords();
-
-      // Risk classification (any flag triggers inclusion)
+      // --- Churn Risk: flag any tenant that meets at least one trigger ---
       const risks = records.map(r => {
         const flags = [];
         let recommend = null;
@@ -837,9 +758,7 @@
           flags.push(`สัญญาเหลือ ${r.daysToEnd} วัน`);
           recommend = 'ติดต่อต่อสัญญา';
         }
-        if (r.score.total < 60) {
-          flags.push(`Health ${r.score.total}/100`);
-        }
+        if (r.score.total < 60) flags.push(`Health ${r.score.total}/100`);
         if (r.paymentLateCount >= 3) {
           flags.push(`ค้างชำระ ${r.paymentLateCount} ครั้ง`);
           if (!recommend) recommend = 'ติดตามค่าเช่า';
@@ -859,52 +778,102 @@
         return { ...r, flags, recommend, inactiveDays };
       }).filter(r => r.flags.length > 0);
 
-      // Sort: critical → at-risk → others, then by score asc
       risks.sort((a, b) => {
         const order = { critical: 0, 'at-risk': 1, steady: 2, healthy: 3 };
-        const oA = order[a.tier.key] ?? 99;
-        const oB = order[b.tier.key] ?? 99;
-        if (oA !== oB) return oA - oB;
+        if ((order[a.tier.key] ?? 99) !== (order[b.tier.key] ?? 99))
+          return (order[a.tier.key] ?? 99) - (order[b.tier.key] ?? 99);
         return a.score.total - b.score.total;
       });
 
-      let bodyHTML;
-      if (risks.length === 0) {
-        bodyHTML = `<div style="text-align:center;color:var(--green-dark);padding:1.5rem;font-size:.9rem;">
-          ✅ ทุกห้องอยู่ในเกณฑ์ปกติ ไม่มีสัญญาณ churn risk
-        </div>`;
-      } else {
-        bodyHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.5rem;">' +
-          risks.map(r => `<div data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}"
-               style="cursor:pointer;background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.65rem .75rem;transition:transform .1s,box-shadow .1s;"
+      const churnBodyHTML = risks.length === 0
+        ? `<div style="color:var(--green-dark);font-size:.88rem;padding:.4rem 0 .2rem;">✅ ทุกห้องอยู่ในเกณฑ์ปกติ ไม่มีสัญญาณ churn risk</div>`
+        : '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.5rem;margin-top:.5rem;">' +
+          risks.map(r => `
+            <div data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}"
+                 style="cursor:pointer;background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.65rem .75rem;transition:transform .1s,box-shadow .1s;"
+                 onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 2px 8px rgba(31,31,28,.08)';"
+                 onmouseout="this.style.transform='';this.style.boxShadow='';">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.2rem;">
+                <span style="font-weight:700;font-size:.9rem;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.68rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
+                <span style="color:${r.tier.color};font-weight:700;font-size:.92rem;font-variant-numeric:tabular-nums;">${r.tier.emoji} ${r.score.total}</span>
+              </div>
+              <div style="font-size:.74rem;color:var(--text-muted);margin-bottom:.35rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.tenantName || '—')}</div>
+              <div style="font-size:.7rem;color:var(--text-muted);line-height:1.4;margin-bottom:.3rem;" title="${esc(r.flags.join(' · '))}">${esc(r.flags[0] || '')}${r.flags.length > 1 ? ` <span style="color:var(--alert,#c06458);">+${r.flags.length - 1}</span>` : ''}</div>
+              ${r.recommend ? `<div style="font-size:.7rem;color:var(--green-dark);font-weight:600;border-top:1px dashed var(--border-subtle,#ebe9e2);padding-top:.3rem;">💡 ${esc(r.recommend)}</div>` : ''}
+            </div>`).join('') + '</div>';
+
+      // --- Health Score: filter + sort + chips ---
+      let rows = records;
+      if (_hsState.tierFilter !== 'all') rows = records.filter(r => r.tier.key === _hsState.tierFilter);
+      rows.sort((a, b) => {
+        if (_hsState.sortBy === 'score_asc') return a.score.total - b.score.total;
+        if (_hsState.sortBy === 'score_desc') return b.score.total - a.score.total;
+        return 0;
+      });
+
+      const dist = { healthy: 0, steady: 0, 'at-risk': 0, critical: 0 };
+      records.forEach(r => { dist[r.tier.key]++; });
+
+      const chipStyle = (active, color) =>
+        `display:inline-block;padding:4px 12px;margin-right:6px;background:${active ? color : '#fff'};border:1.5px solid ${color};color:${active ? '#fff' : color};border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;`;
+      const f = _hsState.tierFilter;
+      const chips = `
+        <button data-action="setHSFilter" data-tier="all" style="${chipStyle(f === 'all', 'var(--text-muted)')}">ทั้งหมด (${records.length})</button>
+        <button data-action="setHSFilter" data-tier="healthy" style="${chipStyle(f === 'healthy', 'var(--green)')}">🟢 ${dist.healthy}</button>
+        <button data-action="setHSFilter" data-tier="steady" style="${chipStyle(f === 'steady', 'var(--blue)')}">🟡 ${dist.steady}</button>
+        <button data-action="setHSFilter" data-tier="at-risk" style="${chipStyle(f === 'at-risk', 'var(--accent,#ff9800)')}">🟠 ${dist['at-risk']}</button>
+        <button data-action="setHSFilter" data-tier="critical" style="${chipStyle(f === 'critical', 'var(--alert,#c06458)')}">🔴 ${dist.critical}</button>
+      `;
+
+      const tilesHTML = rows.length === 0
+        ? `<div style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:.85rem;grid-column:1/-1;">ไม่มีห้องในกลุ่มนี้</div>`
+        : rows.map(r => `
+          <div data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}"
+               style="cursor:pointer;background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;"
                onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 2px 8px rgba(31,31,28,.08)';"
                onmouseout="this.style.transform='';this.style.boxShadow='';">
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.2rem;">
-              <span style="font-weight:700;font-size:.9rem;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.68rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
-              <span style="color:${r.tier.color};font-weight:700;font-size:.92rem;font-variant-numeric:tabular-nums;">${r.tier.emoji} ${r.score.total}</span>
+              <span style="font-weight:700;font-size:.92rem;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.7rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
+              <span style="font-variant-numeric:tabular-nums;color:${r.tier.color};font-weight:700;font-size:1.1rem;">${r.score.total}<span style="font-size:.7rem;color:var(--text-muted);font-weight:400;">/100</span></span>
             </div>
-            <div style="font-size:.74rem;color:var(--text-muted);margin-bottom:.35rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.tenantName || '—')}</div>
-            <div style="font-size:.7rem;color:var(--text-muted);line-height:1.4;margin-bottom:.3rem;" title="${esc(r.flags.join(' · '))}">${esc(r.flags[0] || '')}${r.flags.length>1?` <span style="color:var(--alert,#c06458);">+${r.flags.length-1}</span>`:''}</div>
-            ${r.recommend ? `<div style="font-size:.7rem;color:var(--green-dark);font-weight:600;border-top:1px dashed var(--border-subtle,#ebe9e2);padding-top:.3rem;">💡 ${esc(r.recommend)}</div>` : ''}
-          </div>`).join('') + '</div>';
-      }
+            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;min-height:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.tenantName || '—')}</div>
+            <div style="height:6px;background:var(--mist,#f2f1ec);border-radius:3px;overflow:hidden;margin-bottom:.3rem;">
+              <div style="width:${r.score.total}%;height:100%;background:${r.tier.color};"></div>
+            </div>
+            <div style="font-size:.72rem;color:${r.tier.color};font-weight:600;">${r.tier.emoji} ${r.tier.label}</div>
+          </div>`).join('');
 
       container.innerHTML = `
-        <div class="card" style="border-left:4px solid var(--alert,#c06458);">
+        <div class="card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-            <span>⚠️ Churn Risk Alert</span>
-            <button data-action="refreshInsight" data-target="churn" aria-label="รีเฟรช Churn"
+            <span>👥 Tenant Health &amp; Churn Risk</span>
+            <button data-action="refreshInsight" data-target="tenant" aria-label="รีเฟรช"
                     style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
           </div>
-          <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.7rem;">
-            ห้องที่ต้องการความสนใจ: สัญญาใกล้หมด · Health ต่ำ · ค้างชำระ · ไม่ active · ร้องเรียนซ้ำ
+
+          <div style="margin-bottom:1rem;">
+            <div style="font-size:.8rem;font-weight:700;color:var(--alert,#c06458);margin-bottom:.35rem;">
+              ⚠️ Churn Risk Alert · <span style="font-weight:400;">${risks.length} ห้องต้องการความสนใจ</span>
+            </div>
+            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.3rem;">สัญญาใกล้หมด · Health ต่ำ · ค้างชำระ · ไม่ active · ร้องเรียนซ้ำ</div>
+            ${churnBodyHTML}
           </div>
-          ${bodyHTML}
+
+          <div style="border-top:1px solid var(--border-subtle,#ebe9e2);padding-top:.9rem;">
+            <div style="font-size:.8rem;font-weight:700;color:var(--moss,#5a7a5a);margin-bottom:.35rem;">
+              🩺 Tenant Health Score · <span style="font-weight:400;">ทั้งหมด ${records.length} ห้อง</span>
+            </div>
+            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.6rem;">คะแนนรวม 0–100 จาก: ชำระเงิน · กิจกรรม · เรื่องร้องเรียน · ระยะเวลาเช่า · คลิกการ์ดเพื่อดูรายละเอียด</div>
+            <div style="margin-bottom:.8rem;">${chips}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.5rem;">${tilesHTML}</div>
+          </div>
+
+          <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.7rem;">${fmtCacheAge(Date.now())}</div>
         </div>
       `;
     } catch (e) {
-      console.error('[insights] churn risk failed:', e);
-      container.innerHTML = errorHTML('churn', e.message);
+      console.error('[insights] tenant insights failed:', e);
+      container.innerHTML = errorHTML('tenant', e.message);
     }
   }
 
@@ -926,16 +895,15 @@
   function initTenantInsights() {
     if (_tenInited) return;
     _tenInited = true;
-    renderChurnRisk();
-    renderTenantHealth();
+    renderTenantInsights();
   }
   function refreshInsight(target) {
     if (target === 'wellness') { cacheClear('tenants_all'); renderWellnessMatrix(); }
     else if (target === 'streak') { cacheClear('tenants_all'); renderStreakLeaderboard(); }
     else if (target === 'payment') { cacheClear('payment_behavior'); renderPaymentBehavior(); }
-    else if (target === 'health' || target === 'churn') {
+    else if (target === 'tenant' || target === 'health' || target === 'churn') {
       cacheClear('tenants_all'); cacheClear('payment_deltas'); cacheClear('complaints_90d');
-      renderChurnRisk(); renderTenantHealth();
+      renderTenantInsights();
     }
   }
 
@@ -953,7 +921,7 @@
     if (a === 'showWellnessRooms') { showWellnessRoomsModal(el.dataset.article); return; }
     if (a === 'showInactiveRooms') { showInactiveRoomsModal(); return; }
     if (a === 'showHealthDetail') { showHealthDetailModal(el.dataset.key); return; }
-    if (a === 'setHSFilter') { _hsState.tierFilter = el.dataset.tier; renderTenantHealth(); return; }
+    if (a === 'setHSFilter') { _hsState.tierFilter = el.dataset.tier; renderTenantInsights(); return; }
     if (a === 'closeInsightsModal') { closeModal(); return; }
   });
   // Select dropdowns: react on 'change' only
