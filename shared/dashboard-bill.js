@@ -704,6 +704,7 @@ window.PaymentStore = window.PaymentStore || (function(){
 // Runs once on load; when tenant pays via tenant_app, the slip arrives here and
 // flips the bill-page pill to ✅ in real-time (ครอบคลุมทั้ง Rooms + Nest)
 window._globalSlipsUnsub = null;
+let _slipSnapshotInitDone = false; // true once initial replay is done; guards RTDB fallback
 function _subscribeGlobalVerifiedSlips(){
   if (window._globalSlipsUnsub) return;
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
@@ -747,12 +748,32 @@ function _subscribeGlobalVerifiedSlips(){
         };
         // Always feed PaymentStore in-memory cache (idempotent)
         try { window.PaymentStore._ingest(yearBE, month, room, entry); } catch(e){}
+        // RTDB fallback: mark bill paid — resilience if CF markBillPaidInRTDB was slow/failed.
+        // Guarded by _slipSnapshotInitDone so initial replay doesn't spam RTDB writes.
+        if (_slipSnapshotInitDone && ch.type === 'added' &&
+            window.BillStore && window.firebaseUpdate && window.firebaseRef && window.firebaseDatabase) {
+          try {
+            const bld = s.building || (/^[Nn]\d/.test(room) ? 'nest' : 'rooms');
+            const roomBills = window.BillStore._cache[bld]?.[room] || {};
+            const billEntry = Object.entries(roomBills).find(([, b]) =>
+              Number(b.month) === month && Number(b.year) === yearBE && b.status !== 'paid'
+            );
+            if (billEntry) {
+              const [billId] = billEntry;
+              window.firebaseUpdate(
+                window.firebaseRef(window.firebaseDatabase, `bills/${bld}/${room}/${billId}`),
+                { status: 'paid', paidAt: ts.toISOString() }
+              ).catch(e => console.warn('[billing] RTDB bill mark-paid fallback:', e));
+            }
+          } catch(e) { console.warn('[billing] RTDB bill mark-paid fallback:', e); }
+        }
         // Mirror to legacy payment_status (skip if already paid there)
         if (ps[key]?.[room]?.status === 'paid') return;
         if (!ps[key]) ps[key] = {};
         ps[key][room] = entry;
         changed = true;
       });
+      _slipSnapshotInitDone = true; // initial replay done; next 'added' events are genuine new slips
       if (changed) {
         savePS(ps);
         try { window.PaymentStore._notify(); } catch(e){}

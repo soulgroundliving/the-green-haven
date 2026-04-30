@@ -808,35 +808,41 @@ function updateDashboardLive(){
   updateMxBadge();
 }
 
+let _payWidgetBillsUnsub = null;
 function updatePaymentStatusWidget() {
   const el = document.getElementById('dashPaymentStatus');
   if (!el) return;
-  if (!window.ROOMS_OLD || window.ROOMS_OLD.length === 0) return;
+  // Subscribe once — auto-rerenders whenever RTDB bills change
+  if (!_payWidgetBillsUnsub && typeof window.BillStore !== 'undefined') {
+    _payWidgetBillsUnsub = window.BillStore.onChange(() => updatePaymentStatusWidget());
+  }
   const now = new Date();
   const beYear = now.getFullYear() + 543;
   const month = now.getMonth() + 1;
-  const mm = String(month).padStart(2, '0');
-  const key = `${beYear}_${month}`;
-  const ps = loadPS();
-  const paid = ps[key] || {};
-  const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
-  const paidCountAll = Object.keys(paid).length;
-  const paidCountRooms = Object.keys(paid).filter(k => activeRooms.map(r => r.id).includes(k)).length;
-  const pendingCount = activeRooms.length - paidCountAll;
-  const totalCollected = Object.values(paid).reduce((a, p) => a + (p.amount || 0), 0);
-  const allPending = activeRooms.filter(r => !paid[r.id]).map(r => r.id);
+  // SSoT: read from BillStore (RTDB bills/) — not payment_status localStorage
+  const allBills = typeof window.BillStore !== 'undefined'
+    ? window.BillStore.listForYear('rooms', beYear).filter(b => Number(b.month) === month)
+    : [];
+  if (allBills.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem;">ยังไม่มีบิลเดือนนี้ — กรุณา upload ข้อมูลมิเตอร์</div>';
+    return;
+  }
+  const paidBills    = allBills.filter(b => b.status === 'paid');
+  const pendingBills = allBills.filter(b => b.status !== 'paid');
+  const paidCount    = paidBills.length;
+  const pendingCount = pendingBills.length;
+  const totalCollected = paidBills.reduce((a, b) => a + (Number(b.totalCharge) || 0), 0);
   el.innerHTML = `
     <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
-      <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${paidCountAll}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ จ่ายแล้ว</div></div>
+      <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${paidCount}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ จ่ายแล้ว</div></div>
       <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${pendingCount}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">⏳ รอชำระ</div></div>
-      ${pendingCount ? `<div><div style="font-size:1.5rem;font-weight:800;color:#dc2626">${pendingCount}</div><div style="font-size:.72rem;color:#dc2626;font-weight:600;">🔴 ค้างชำระ</div></div>` : ''}
       <div><div style="font-size:1.15rem;font-weight:800;color:var(--green-dark)">฿${totalCollected.toLocaleString()}</div><div style="font-size:.72rem;color:var(--text-muted)">เก็บได้แล้ว</div></div>
     </div>
-    <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${paidCountRooms}/${activeRooms.length}</div>
-    ${allPending.length
+    <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${paidCount}/${allBills.length}</div>
+    ${pendingBills.length
       ? `<div style="font-size:.75rem;color:var(--text-muted);margin-bottom:5px;">ยังไม่จ่าย:</div>
-         <div style="display:flex;flex-wrap:wrap;gap:4px;">${allPending.map(r => {
-           const sr = String(r).replace(/[^0-9A-Za-zก-๙]/g, '');
+         <div style="display:flex;flex-wrap:wrap;gap:4px;">${pendingBills.map(b => {
+           const sr = String(b.room || b.roomId || '').replace(/[^0-9A-Za-zก-๙]/g, '');
            return `<span onclick="goBillFromTable('${sr}',${beYear},${month})" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;cursor:pointer;">⏳${sr}</span>`;
          }).join('')}</div>`
       : '<div style="color:var(--green);font-weight:700;font-size:.86rem;">🎉 เก็บค่าเช่าครบทุกห้องแล้ว!</div>'}`;
