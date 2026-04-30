@@ -771,23 +771,26 @@
         <button data-action="setHSFilter" data-tier="critical" style="${chipStyle(f==='critical','var(--alert,#c06458)','var(--alert,#c06458)')}">🔴 ${dist.critical}</button>
       `;
 
-      let tableRows = '';
+      let tilesHTML = '';
       if (rows.length === 0) {
-        tableRows = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.2rem;">ไม่มีห้องในกลุ่มนี้</td></tr>`;
+        tilesHTML = `<div style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:.85rem;grid-column:1/-1;">ไม่มีห้องในกลุ่มนี้</div>`;
       } else {
-        rows.forEach(r => {
-          const bar = `<div style="display:inline-flex;height:8px;width:80px;background:var(--mist,#f2f1ec);border-radius:4px;overflow:hidden;vertical-align:middle;">
-            <div style="width:${r.score.total}%;background:${r.tier.color};"></div>
-          </div>`;
-          tableRows += `<tr data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}" style="cursor:pointer;border-left:3px solid ${r.tier.color};">
-            <td style="padding:.5rem .7rem;font-weight:600;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.72rem;font-weight:400;">(${buildingLabel(r.building)})</span></td>
-            <td style="padding:.5rem .7rem;">${esc(r.tenantName || '—')}</td>
-            <td style="padding:.5rem .7rem;text-align:center;font-variant-numeric:tabular-nums;color:${r.tier.color};font-weight:700;">${r.score.total}</td>
-            <td style="padding:.5rem .7rem;">${bar}</td>
-            <td style="padding:.5rem .7rem;color:${r.tier.color};font-size:.78rem;font-weight:600;">${r.tier.emoji} ${r.tier.label}</td>
-            <td style="padding:.5rem .7rem;text-align:center;color:var(--text-muted);">→</td>
-          </tr>`;
-        });
+        tilesHTML = rows.map(r => `
+          <div data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}"
+               style="cursor:pointer;background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;"
+               onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 2px 8px rgba(31,31,28,.08)';"
+               onmouseout="this.style.transform='';this.style.boxShadow='';">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.2rem;">
+              <span style="font-weight:700;font-size:.92rem;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.7rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
+              <span style="font-variant-numeric:tabular-nums;color:${r.tier.color};font-weight:700;font-size:1.1rem;">${r.score.total}<span style="font-size:.7rem;color:var(--text-muted);font-weight:400;">/100</span></span>
+            </div>
+            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;min-height:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.tenantName || '—')}</div>
+            <div style="height:6px;background:var(--mist,#f2f1ec);border-radius:3px;overflow:hidden;margin-bottom:.3rem;">
+              <div style="width:${r.score.total}%;height:100%;background:${r.tier.color};"></div>
+            </div>
+            <div style="font-size:.72rem;color:${r.tier.color};font-weight:600;">${r.tier.emoji} ${r.tier.label}</div>
+          </div>
+        `).join('');
       }
 
       // Stash records for drill-down
@@ -803,25 +806,11 @@
                     style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
           </div>
           <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.7rem;">
-            คะแนนรวม 0–100 จาก: ชำระเงิน · กิจกรรม · เรื่องร้องเรียน · ระยะเวลาเช่า
+            คะแนนรวม 0–100 จาก: ชำระเงิน · กิจกรรม · เรื่องร้องเรียน · ระยะเวลาเช่า · คลิกการ์ดเพื่อดูรายละเอียด
           </div>
-          <div style="margin-bottom:.7rem;">${chips}</div>
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
-              <thead>
-                <tr style="background:var(--green-pale);color:var(--green-dark);">
-                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">ห้อง</th>
-                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">ผู้เช่า</th>
-                  <th style="padding:.55rem .7rem;text-align:center;font-weight:700;">คะแนน</th>
-                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">Bar</th>
-                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">สถานะ</th>
-                  <th style="padding:.55rem .7rem;"></th>
-                </tr>
-              </thead>
-              <tbody>${tableRows}</tbody>
-            </table>
-          </div>
-          <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${fmtCacheAge(Date.now())}</div>
+          <div style="margin-bottom:.9rem;">${chips}</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.6rem;">${tilesHTML}</div>
+          <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.7rem;">${fmtCacheAge(Date.now())}</div>
         </div>
       `;
     } catch (e) {
@@ -885,25 +874,19 @@
           ✅ ทุกห้องอยู่ในเกณฑ์ปกติ ไม่มีสัญญาณ churn risk
         </div>`;
       } else {
-        bodyHTML = '<ul style="list-style:none;padding:0;margin:0;">' +
-          risks.map(r => `<li style="padding:.7rem .25rem;border-bottom:1px solid var(--border-subtle,#ebe9e2);border-left:3px solid ${r.tier.color};padding-left:.7rem;display:grid;grid-template-columns:90px 1fr auto;gap:.5rem;align-items:center;">
-            <div>
-              <div style="font-weight:700;">${esc(r.roomId)}</div>
-              <div style="font-size:.7rem;color:var(--text-muted);">${buildingLabel(r.building)}</div>
+        bodyHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.6rem;">' +
+          risks.map(r => `<div data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}"
+               style="cursor:pointer;background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;"
+               onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 2px 8px rgba(31,31,28,.08)';"
+               onmouseout="this.style.transform='';this.style.boxShadow='';">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.25rem;">
+              <span style="font-weight:700;font-size:.92rem;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.7rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
+              <span style="color:${r.tier.color};font-weight:700;font-size:.86rem;font-variant-numeric:tabular-nums;">${r.tier.emoji} ${r.score.total}/100</span>
             </div>
-            <div>
-              <div style="font-size:.85rem;margin-bottom:.2rem;">
-                ${esc(r.tenantName || '—')}
-                <span style="color:${r.tier.color};font-weight:600;font-size:.78rem;margin-left:.4rem;">${r.tier.emoji} ${r.score.total}/100</span>
-              </div>
-              <div style="font-size:.74rem;color:var(--text-muted);">${r.flags.map(f=>esc(f)).join(' · ')}</div>
-              ${r.recommend ? `<div style="font-size:.74rem;color:var(--green-dark);margin-top:.2rem;">💡 ${esc(r.recommend)}</div>` : ''}
-            </div>
-            <div>
-              <button data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}"
-                      style="font-size:.72rem;padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:inherit;">รายละเอียด →</button>
-            </div>
-          </li>`).join('') + '</ul>';
+            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.tenantName || '—')}</div>
+            <div style="font-size:.72rem;color:var(--text-muted);line-height:1.5;margin-bottom:.3rem;">${r.flags.map(f=>esc(f)).join(' · ')}</div>
+            ${r.recommend ? `<div style="font-size:.74rem;color:var(--green-dark);font-weight:600;border-top:1px dashed var(--border-subtle,#ebe9e2);padding-top:.3rem;margin-top:.3rem;">💡 ${esc(r.recommend)}</div>` : ''}
+          </div>`).join('') + '</div>';
       }
 
       container.innerHTML = `
