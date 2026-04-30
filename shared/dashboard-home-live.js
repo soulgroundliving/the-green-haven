@@ -751,29 +751,27 @@ function updateDashboardLive(){
 
   const month=currentMonth;
   const year=currentDate;
-  const ps=loadPS();
-  const key=`${year}_${month}`;
-  const paid=ps[key]||{};
-  const paidCount=Object.keys(paid).length;
 
   // Rooms building only — Nest ยังไม่เปิด (มิถุนายน 2569)
   const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
   const activeNest = []; // exclude Nest until it opens
-  const allActiveRooms = [...activeRooms];
-  const totalRooms = allActiveRooms.length;
+  const totalRooms = activeRooms.length;
 
-  // Calculate paid for both buildings
-  const paidCountAll = Object.keys(paid).length;
-  // For now, use combined total
-  const paidCountRooms = Object.keys(paid).filter(k => activeRooms.map(r => r.id).includes(k)).length;
-  const paidCountNest = Object.keys(paid).filter(k => activeNest.map(r => r.id).includes(k)).length;
-  const pendingCount=totalRooms-paidCountAll;
-  const totalCollected=Object.values(paid).reduce((a,p)=>a+(p.amount||0),0);
+  // KPI: payment counts from BillStore (RTDB) as SSoT
+  const allBillsThisMonth = typeof window.BillStore !== 'undefined'
+    ? window.BillStore.listForYear('rooms', year).filter(b => Number(b.month) === month)
+    : [];
+  const paidCountAll    = allBillsThisMonth.filter(b => b.status === 'paid').length;
+  const pendingCount    = allBillsThisMonth.filter(b => b.status !== 'paid').length;
+  const totalCollected  = allBillsThisMonth
+    .filter(b => b.status === 'paid')
+    .reduce((a, b) => a + (Number(b.totalCharge) || 0), 0);
+  const displayTotal    = allBillsThisMonth.length || totalRooms;
 
   // KPI: paid this month (COMBINED - both buildings)
   const kpiPN=document.getElementById('kpi-paid-now');
   const kpiPNS=document.getElementById('kpi-paid-now-sub');
-  if(kpiPN)kpiPN.textContent=`${paidCountAll}/${totalRooms}`;
+  if(kpiPN)kpiPN.textContent=`${paidCountAll}/${displayTotal}`;
   if(kpiPNS)kpiPNS.textContent=`฿${totalCollected.toLocaleString()} · รอ ${pendingCount} ห้อง`;
 
   // KPI: occupancy from tenant data (COMBINED - both buildings)
@@ -983,15 +981,34 @@ function updatePetAnalyticsWidget() {
 function updateNavBadge(){
   const badge=document.getElementById('billBadge');if(!badge)return;
   const now=new Date();
-  const ps=loadPS();
-  const key=`${now.getFullYear()+543}_${now.getMonth()+1}`;
-  const paid=ps[key]||{};
-  // Count both buildings
-  const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
-  const activeNest = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
-  const allActive = [...activeRooms, ...activeNest];
-  const pending=allActive.length-Object.keys(paid).length;
-  if(pending>0){badge.textContent=pending;badge.classList.add('u-iblock'); /*iblock*/;}
+  const year=now.getFullYear()+543;
+  const month=now.getMonth()+1;
+  let pending=0;
+  if(typeof window.BillStore !== 'undefined'){
+    pending=window.BillStore.listAllForYear(year)
+      .filter(b=>Number(b.month)===month && b.status!=='paid').length;
+  } else {
+    // Fallback: legacy localStorage
+    const ps=loadPS();
+    const paid=ps[`${year}_${month}`]||{};
+    const activeRooms=getActiveRoomsWithMetadata('rooms',window.ROOMS_OLD);
+    const activeNest=getActiveRoomsWithMetadata('nest',window.NEST_ROOMS);
+    pending=[...activeRooms,...activeNest].length-Object.keys(paid).length;
+  }
+  if(pending>0){badge.textContent=pending;badge.classList.add('u-iblock');}
   else{badge.classList.add('u-hidden');}
 }
+
+// Re-run KPI cards + nav badge when BillStore (RTDB) data arrives or changes
+let _dashLiveBillsUnsub = null;
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    if (typeof window.BillStore !== 'undefined' && !_dashLiveBillsUnsub) {
+      _dashLiveBillsUnsub = window.BillStore.onChange(() => {
+        if (typeof updateDashboardLive === 'function') try { updateDashboardLive(); } catch(e){}
+        if (typeof updateNavBadge === 'function') try { updateNavBadge(); } catch(e){}
+      });
+    }
+  }, 1200);
+});
 

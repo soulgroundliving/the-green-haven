@@ -782,11 +782,6 @@ function _subscribeGlobalVerifiedSlips(){
             document.getElementById('page-bill')?.classList.contains('active')) {
           try { renderPaymentStatus(); } catch(e){}
         }
-        // Re-render monthly report if open
-        if (typeof renderMonthlyReport === 'function' &&
-            document.getElementById('page-monthly')?.classList.contains('active')) {
-          try { renderMonthlyReport(); } catch(e){}
-        }
         console.log('💸 Synced tenant-app payment → PaymentStore + payment_status');
       } else {
         // Even when no new slips, fire ingestion of the snapshot's full state
@@ -1389,29 +1384,54 @@ function showPayDetail(roomId, year, month){
   const year2  = year  ?? (document.getElementById('f-year')?.value||String(new Date().getFullYear()+543));
   payModalRoomId=roomId; payModalYear=String(year2); payModalMonth=month2;
 
-  const ps=loadPS();
-  const key=`${year2}_${month2}`;
-  const p=ps[key]?.[roomId];
+  // Primary sources: BillStore (RTDB) + PaymentStore (verifiedSlips)
+  const bld = /^[Nn]\d/.test(roomId) ? 'nest' : 'rooms';
+  const bill = typeof window.BillStore !== 'undefined'
+    ? window.BillStore.getByMonth(bld, roomId, String(year2), month2)
+    : null;
+  const payEntry = typeof window.PaymentStore !== 'undefined'
+    ? window.PaymentStore.listForMonth(year2, month2)?.[roomId]
+    : null;
+  // Fallback: legacy localStorage (for older records not yet in RTDB/Firestore)
+  const legacyEntry = (!bill && !payEntry)
+    ? (loadPS()[`${year2}_${month2}`]?.[roomId] ?? null)
+    : null;
+
+  const isPaid = bill ? bill.status === 'paid' : !!(payEntry || legacyEntry);
+  const p = payEntry || legacyEntry;
   const monthName=MONTHS_FULL[month2]||month2;
 
   document.getElementById('payModalTitle').textContent=`📋 ห้อง ${roomId} — ${monthName} ${year2}`;
   const body=document.getElementById('payModalBody');
   const footer=document.getElementById('payModalFooter');
 
-  if(p){
-    const paidDate=new Date(p.date).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});
-    const editedBadge=p.editedAt?`<span style="font-size:.73rem;color:var(--accent)"> · แก้ไขล่าสุด ${new Date(p.editedAt).toLocaleDateString('th-TH')}</span>`:'';
+  if(isPaid){
+    const paidDateStr = bill?.paidAt || p?.date;
+    const paidDate = paidDateStr
+      ? new Date(paidDateStr).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'})
+      : '—';
+    const receiptNo = p?.receiptNo || '—';
+    const editedBadge = p?.editedAt
+      ? `<span style="font-size:.73rem;color:var(--accent)"> · แก้ไขล่าสุด ${new Date(p.editedAt).toLocaleDateString('th-TH')}</span>`
+      : '';
+    const slip = p?.slip;
+    // BillStore has meterReadings.electric/water; legacy has eNew/eOld/wNew/wOld flat
+    const eNew = bill?.meterReadings?.electric?.new ?? p?.eNew ?? 0;
+    const eOld = bill?.meterReadings?.electric?.old ?? p?.eOld ?? 0;
+    const wNew = bill?.meterReadings?.water?.new    ?? p?.wNew ?? 0;
+    const wOld = bill?.meterReadings?.water?.old    ?? p?.wOld ?? 0;
+    const amount = bill?.totalCharge ?? p?.amount ?? 0;
     body.innerHTML=`
       <div style="background:var(--green-pale);border-radius:8px;padding:.65rem .85rem;font-size:.82rem;line-height:1.7;">
-        ✅ ชำระแล้ว · <strong>${p.receiptNo}</strong> · ${paidDate}${editedBadge}
-        ${p.slip?`<br>💳 SlipOK: ${p.slip.sender||'—'} · ฿${(p.slip.amount||0).toLocaleString()}`:''}
+        ✅ ชำระแล้ว · <strong>${receiptNo}</strong> · ${paidDate}${editedBadge}
+        ${slip?`<br>💳 SlipOK: ${slip.sender||'—'} · ฿${(slip.amount||0).toLocaleString()}`:''}
       </div>
       <div style="font-size:.78rem;font-weight:700;color:var(--text-muted);margin:.4rem 0 2px;">✏️ แก้ไขมิเตอร์ (ถ้ากรอกผิด)</div>
-      <div class="pm-row"><span class="pm-label">⚡ มิเตอร์ไฟ ล่าสุด (eNew)</span><input class="pm-input" id="pm-eNew" type="number" value="${p.eNew??0}"></div>
-      <div class="pm-row"><span class="pm-label">⚡ มิเตอร์ไฟ เดิม (eOld)</span><input class="pm-input" id="pm-eOld" type="number" value="${p.eOld??0}"></div>
-      <div class="pm-row"><span class="pm-label">💧 มิเตอร์น้ำ ล่าสุด (wNew)</span><input class="pm-input" id="pm-wNew" type="number" value="${p.wNew??0}"></div>
-      <div class="pm-row"><span class="pm-label">💧 มิเตอร์น้ำ เดิม (wOld)</span><input class="pm-input" id="pm-wOld" type="number" value="${p.wOld??0}"></div>
-      <div class="pm-row"><span class="pm-label">💰 ยอดรวม</span><strong style="color:var(--green-dark);font-size:.95rem;">฿${(p.amount||0).toLocaleString()}</strong></div>`;
+      <div class="pm-row"><span class="pm-label">⚡ มิเตอร์ไฟ ล่าสุด (eNew)</span><input class="pm-input" id="pm-eNew" type="number" value="${eNew}"></div>
+      <div class="pm-row"><span class="pm-label">⚡ มิเตอร์ไฟ เดิม (eOld)</span><input class="pm-input" id="pm-eOld" type="number" value="${eOld}"></div>
+      <div class="pm-row"><span class="pm-label">💧 มิเตอร์น้ำ ล่าสุด (wNew)</span><input class="pm-input" id="pm-wNew" type="number" value="${wNew}"></div>
+      <div class="pm-row"><span class="pm-label">💧 มิเตอร์น้ำ เดิม (wOld)</span><input class="pm-input" id="pm-wOld" type="number" value="${wOld}"></div>
+      <div class="pm-row"><span class="pm-label">💰 ยอดรวม</span><strong style="color:var(--green-dark);font-size:.95rem;">฿${amount.toLocaleString()}</strong></div>`;
     footer.innerHTML=`
       <button class="pm-btn green" onclick="savePayEdit()">💾 บันทึกมิเตอร์</button>
       <button class="pm-btn red" onclick="resetRoomPayment()">🔄 รีเซ็ตกลับ "ยังไม่จ่าย"</button>
@@ -1438,19 +1458,43 @@ function closePayModal(){
 
 function savePayEdit(){
   if(!payModalRoomId)return;
+  const eNew=parseFloat(document.getElementById('pm-eNew').value)||0;
+  const eOld=parseFloat(document.getElementById('pm-eOld').value)||0;
+  const wNew=parseFloat(document.getElementById('pm-wNew').value)||0;
+  const wOld=parseFloat(document.getElementById('pm-wOld').value)||0;
+  const editedAt=new Date().toISOString();
+
+  // Primary: write meter corrections to RTDB bill
+  if(window.BillStore && window.firebaseUpdate && window.firebaseRef && window.firebaseDatabase){
+    try {
+      const bld = /^[Nn]\d/.test(payModalRoomId) ? 'nest' : 'rooms';
+      const roomBills = window.BillStore._cache[bld]?.[payModalRoomId] || {};
+      const billEntry = Object.entries(roomBills).find(([, b]) =>
+        Number(b.month) === Number(payModalMonth) && String(b.year) === String(payModalYear)
+      );
+      if(billEntry){
+        const [billId] = billEntry;
+        window.firebaseUpdate(
+          window.firebaseRef(window.firebaseDatabase, `bills/${bld}/${payModalRoomId}/${billId}`),
+          { 'meterReadings/electric/new': eNew, 'meterReadings/electric/old': eOld,
+            'meterReadings/water/new': wNew, 'meterReadings/water/old': wOld,
+            editedAt }
+        ).catch(e => console.warn('[savePayEdit] RTDB update failed:', e));
+      }
+    } catch(e){ console.warn('[savePayEdit] RTDB update failed:', e); }
+  }
+
+  // Mirror to legacy localStorage
   const ps=loadPS();
   const key=`${payModalYear}_${payModalMonth}`;
-  if(!ps[key]?.[payModalRoomId]){closePayModal();return;}
-  ps[key][payModalRoomId].eNew=parseFloat(document.getElementById('pm-eNew').value)||0;
-  ps[key][payModalRoomId].eOld=parseFloat(document.getElementById('pm-eOld').value)||0;
-  ps[key][payModalRoomId].wNew=parseFloat(document.getElementById('pm-wNew').value)||0;
-  ps[key][payModalRoomId].wOld=parseFloat(document.getElementById('pm-wOld').value)||0;
-  ps[key][payModalRoomId].editedAt=new Date().toISOString();
-  savePS(ps);
+  if(ps[key]?.[payModalRoomId]){
+    Object.assign(ps[key][payModalRoomId], { eNew, eOld, wNew, wOld, editedAt });
+    savePS(ps);
+  }
+
   closePayModal();
   renderPaymentStatus();
   renderMeterTable();
-  // แสดง toast
   const t=document.createElement('div');
   t.textContent='✅ บันทึกมิเตอร์เรียบร้อย';
   t.className='u-toast-center';
@@ -1461,6 +1505,26 @@ function savePayEdit(){
 function resetRoomPayment(){
   if(!payModalRoomId)return;
   if(!confirm(`ยืนยันรีเซ็ตห้อง ${payModalRoomId} กลับเป็น "ยังไม่ชำระ"?\n(ข้อมูลใบเสร็จจะถูกลบออก)`))return;
+
+  // Primary: flip RTDB bill back to pending
+  if(window.BillStore && window.firebaseUpdate && window.firebaseRef && window.firebaseDatabase){
+    try {
+      const bld = /^[Nn]\d/.test(payModalRoomId) ? 'nest' : 'rooms';
+      const roomBills = window.BillStore._cache[bld]?.[payModalRoomId] || {};
+      const billEntry = Object.entries(roomBills).find(([, b]) =>
+        Number(b.month) === Number(payModalMonth) && String(b.year) === String(payModalYear)
+      );
+      if(billEntry){
+        const [billId] = billEntry;
+        window.firebaseUpdate(
+          window.firebaseRef(window.firebaseDatabase, `bills/${bld}/${payModalRoomId}/${billId}`),
+          { status: 'pending', paidAt: null }
+        ).catch(e => console.warn('[resetRoomPayment] RTDB update failed:', e));
+      }
+    } catch(e){ console.warn('[resetRoomPayment] RTDB update failed:', e); }
+  }
+
+  // Remove from legacy localStorage
   const ps=loadPS();
   const key=`${payModalYear}_${payModalMonth}`;
   if(ps[key]){
