@@ -2240,8 +2240,7 @@
 
   <!-- Category Tab Nav -->
   <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
-    <button id="dash-cat-btn-overview"   class="year-tab active" data-action="switchDashboardTab" data-tab="overview">🏠 ภาพรวม</button>
-    <button id="dash-cat-btn-financial"  class="year-tab"        data-action="switchDashboardTab" data-tab="financial">💰 การเงิน</button>
+    <button id="dash-cat-btn-financial"  class="year-tab active" data-action="switchDashboardTab" data-tab="financial">💰 การเงิน</button>
     <button id="dash-cat-btn-tenants"    class="year-tab"        data-action="switchDashboardTab" data-tab="tenants">👥 ผู้เช่า</button>
     <button id="dash-cat-btn-operations" class="year-tab"        data-action="switchDashboardTab" data-tab="operations">🔧 ปฏิบัติการ</button>
     <button id="dash-cat-btn-community"  class="year-tab"        data-action="switchDashboardTab" data-tab="community">🌿 ชุมชน</button>
@@ -2250,24 +2249,8 @@
   <!-- OVERVIEW TAB wrapper (keeps dashboard-tab-content contract intact) -->
   <div id="dashboard-overview-tab" class="dashboard-tab-content active">
 
-  <!-- ===== TAB 1: ภาพรวม ===== -->
-  <div id="dash-cat-overview" class="dash-cat-content">
-    <div class="kpi-grid">
-      <div class="kpi-card kpi-live blue clickable" data-action="showPage" data-page="tenant"><div class="kpi-icon">🏘️</div><div class="kpi-label">อัตราการเช่า (รวม 2 อาคาร)</div><div class="kpi-value blue" id="kpi-occupancy">—</div><div class="kpi-sub" id="kpi-occupancy-sub">คลิกดูรายละเอียด</div></div>
-      <div class="kpi-card kpi-live purple clickable" data-action="showPage" data-page="bill"><div class="kpi-icon">💳</div><div class="kpi-label">ชำระแล้วเดือนนี้</div><div class="kpi-value purple" id="kpi-paid-now">—</div><div class="kpi-sub" id="kpi-paid-now-sub">คลิกดูรายละเอียด</div></div>
-      <div class="kpi-card kpi-live" style="background:linear-gradient(135deg, var(--green-pale), #f1f8e9); border-left: 4px solid var(--green-light);"><div class="kpi-icon">📊</div><div class="kpi-label">รายได้คาดหวัง (เดือนนี้)</div><div class="kpi-value" id="kpi-expected" style="color:var(--green);">฿0</div><div class="kpi-sub" id="kpi-expected-sub">จากห้องที่มีผู้เช่า</div></div>
-      <div class="kpi-card kpi-live" style="background:linear-gradient(135deg, #ffebee, #fce4ec); border-left: 4px solid #d32f2f;"><div class="kpi-icon">⚠️</div><div class="kpi-label">ค้างชำระทั้งสิ้น</div><div class="kpi-value" id="kpi-overdue" style="color:#d32f2f;">฿0</div><div class="kpi-sub" id="kpi-overdue-sub">รอชำระเงินค้าง</div></div>
-    </div>
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-      <button class="year-tab" data-action="switchDashboardTab" data-tab="financial">💰 ดูการเงิน</button>
-      <button class="year-tab" data-action="switchDashboardTab" data-tab="tenants">👥 ดูผู้เช่า</button>
-      <button class="year-tab" data-action="switchDashboardTab" data-tab="operations">🔧 ดูปฏิบัติการ</button>
-      <button class="year-tab" data-action="switchDashboardTab" data-tab="community">🌿 ดูชุมชน</button>
-    </div>
-  </div><!-- END ภาพรวม -->
-
-  <!-- ===== TAB 2: การเงิน ===== -->
-  <div id="dash-cat-financial" class="dash-cat-content u-hidden">
+  <!-- ===== TAB 1: การเงิน ===== -->
+  <div id="dash-cat-financial" class="dash-cat-content">
     <div class="year-tabs" style="margin-bottom:.4rem;">
       <span class="year-tab-label">ปีงบประมาณ:</span>
       <button class="year-tab" data-action="setYear" data-year="all">ทั้งหมด</button>

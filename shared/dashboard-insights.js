@@ -979,9 +979,11 @@
       const db = window.firebase.firestore();
       const { collection, getDocs } = window.firebase.firestoreFunctions;
 
-      const [complaintsSnap, maintSnap] = await Promise.all([
+      const [complaintsSnap, maintSnap, houseSnap] = await Promise.all([
         getDocs(collection(db, 'complaints')),
         window.firebaseGet(window.firebaseRef(window.firebaseDatabase, 'maintenance'))
+          .catch(() => ({ val: () => ({}) })),
+        window.firebaseGet(window.firebaseRef(window.firebaseDatabase, 'housekeeping'))
           .catch(() => ({ val: () => ({}) }))
       ]);
 
@@ -1034,6 +1036,22 @@
 
       const totalMaint = mStatus.pending + mStatus.inprogress + mStatus.done;
 
+      // Housekeeping (RTDB)
+      const houseAll = houseSnap.val() || {};
+      const hStatus = { pending: 0, inprogress: 0, done: 0 };
+      Object.entries(houseAll).forEach(([building, rooms]) => {
+        Object.entries(rooms || {}).forEach(([room, items]) => {
+          Object.values(items || {}).forEach(item => {
+            if (!item) return;
+            const s = (item.status || 'pending').toLowerCase();
+            if (s === 'pending' || s === 'requested') hStatus.pending++;
+            else if (s === 'inprogress' || s === 'in-progress' || s === 'accepted') hStatus.inprogress++;
+            else hStatus.done++;
+          });
+        });
+      });
+      const totalHouse = hStatus.pending + hStatus.inprogress + hStatus.done;
+
       // Build UI pieces
       const pill = (label, count, color) => count === 0 ? '' :
         `<span style="display:inline-block;padding:3px 10px;margin:2px 4px 2px 0;background:${color}22;border:1.5px solid ${color};color:${color};border-radius:999px;font-size:.75rem;font-weight:600;">${label} ${count}</span>`;
@@ -1084,6 +1102,18 @@
             <div style="font-size:.73rem;color:var(--text-muted);margin-bottom:.3rem;">ค้างเกิน 7 วัน:</div>
             <div>${mOverdueHTML}</div>
           </div>
+
+          ${totalHouse > 0 ? `
+          <div style="border-top:1px solid var(--border-subtle,#ebe9e2);padding-top:.8rem;">
+            <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
+              🧹 Housekeeping · <span style="font-weight:400;">${totalHouse} รายการ</span>
+            </div>
+            <div>${[
+              pill('pending', hStatus.pending, 'var(--alert,#c06458)'),
+              pill('กำลังดำเนินการ', hStatus.inprogress, 'var(--accent,#ff9800)'),
+              pill('เสร็จแล้ว', hStatus.done, 'var(--green)'),
+            ].join('') || `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีข้อมูล</span>`}</div>
+          </div>` : ''}
 
           <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.7rem;">${fmtCacheAge(Date.now())}</div>
         </div>`;

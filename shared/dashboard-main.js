@@ -51,7 +51,7 @@ window._showPageImpl = function(page,btn){
 window.showPage = window._showPageImpl;
 
 window.switchDashboardTab = function(tabName, btn) {
-  ['overview','financial','tenants','operations','community'].forEach(t => {
+  ['financial','tenants','operations','community'].forEach(t => {
     const el = document.getElementById('dash-cat-' + t);
     if (el) {
       el.classList.toggle('u-hidden', t !== tabName);
@@ -67,6 +67,7 @@ window.switchDashboardTab = function(tabName, btn) {
   if (tabName === 'financial'   && typeof initFinancialInsights   === 'function') initFinancialInsights();
   if (tabName === 'tenants'     && typeof initTenantInsights      === 'function') initTenantInsights();
   if (tabName === 'operations'  && typeof initOperationsInsights  === 'function') initOperationsInsights();
+  if (tabName === 'financial'  && typeof updatePaymentStatusWidget === 'function') updatePaymentStatusWidget();
   if (tabName === 'tenants'    && typeof updateTenantStatusWidget  === 'function') updateTenantStatusWidget();
   if (tabName === 'community'  && typeof updateGamificationWidget  === 'function') updateGamificationWidget();
   if (tabName === 'community'  && typeof updatePetAnalyticsWidget  === 'function') updatePetAnalyticsWidget();
