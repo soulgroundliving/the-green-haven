@@ -548,15 +548,16 @@
   document.addEventListener('click', e => {
     const el = e.target.closest('[data-action]');
     if (!el) return;
+    // Skip SELECT — handled by 'change' event below; intercepting 'click'
+    // re-renders the card while the dropdown is opening, collapsing it.
+    if (el.tagName === 'SELECT') return;
     const a = el.dataset.action;
     if (a === 'refreshInsight') { refreshInsight(el.dataset.target); return; }
     if (a === 'showWellnessRooms') { showWellnessRoomsModal(el.dataset.article); return; }
     if (a === 'showInactiveRooms') { showInactiveRoomsModal(); return; }
     if (a === 'closeInsightsModal') { closeModal(); return; }
-    if (a === 'setPBSort') { _pbState.sortBy = el.value; renderPaymentBehavior(); return; }
-    if (a === 'setPBBuilding') { _pbState.buildingFilter = el.value; renderPaymentBehavior(); return; }
   });
-  // Also listen on change for select dropdowns (click doesn't fire for select)
+  // Select dropdowns: react on 'change' only
   document.addEventListener('change', e => {
     const el = e.target.closest('[data-action]');
     if (!el || el.tagName !== 'SELECT') return;
