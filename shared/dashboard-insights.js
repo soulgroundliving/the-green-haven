@@ -355,10 +355,11 @@
             perRoom[key] = perRoom[key] || { building, room, deltas: [], paidCount: 0 };
             Object.values(bills || {}).forEach(b => {
               if (!b || b.status !== 'paid' || !b.paidAt || !b.dueDate) return;
-              if (b.paidAt < cutoff) return;
+              const paidTs = new Date(b.paidAt).getTime();
+              if (!isFinite(paidTs) || paidTs < cutoff) return;
               const due = new Date(b.dueDate).getTime();
               if (!isFinite(due)) return;
-              const delta = (b.paidAt - due) / 86400000;
+              const delta = (paidTs - due) / 86400000;
               perRoom[key].deltas.push(delta);
               perRoom[key].paidCount++;
             });
@@ -674,10 +675,11 @@
         let lateCount = 0;
         Object.values(bills || {}).forEach(b => {
           if (!b || b.status !== 'paid' || !b.paidAt || !b.dueDate) return;
-          if (b.paidAt < cutoff) return;
+          const paidTs = new Date(b.paidAt).getTime();
+          if (!isFinite(paidTs) || paidTs < cutoff) return;
           const due = new Date(b.dueDate).getTime();
           if (!isFinite(due)) return;
-          const delta = (b.paidAt - due) / 86400000;
+          const delta = (paidTs - due) / 86400000;
           deltas.push(delta);
           if (delta > 2) lateCount++;
         });
@@ -880,11 +882,13 @@
       Object.entries(all).forEach(([building, rooms]) => {
         Object.entries(rooms || {}).forEach(([room, bills]) => {
           Object.values(bills || {}).forEach(b => {
-            if (!b || b.status === 'paid' || !b.dueDate || !b.total) return;
+            if (!b || b.status === 'paid' || b.paidAt || !b.dueDate) return;
+            const amount = b.totalCharge || b.totalAmount || b.total || 0;
+            if (!amount) return;
             if (b.dueDate >= todayStr) return;
             const key = `${building}:${room}`;
             if (!byRoom[key]) byRoom[key] = { building, room, totalOwed: 0, oldestDue: b.dueDate, count: 0 };
-            byRoom[key].totalOwed += (Number(b.total) || 0);
+            byRoom[key].totalOwed += Number(amount);
             byRoom[key].count++;
             if (b.dueDate < byRoom[key].oldestDue) byRoom[key].oldestDue = b.dueDate;
           });
