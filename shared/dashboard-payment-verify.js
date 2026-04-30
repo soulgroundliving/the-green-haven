@@ -390,11 +390,95 @@ window.loadPVHistoryRooms = function(){
   });
 };
 
+// ─── Bill History Table (BillStore / RTDB) ───────────────────────────────────
+const _MONTHS_TH = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+let _pvhBillStoreUnsub = null;
+
+function _renderPVHBillTable(building, room) {
+  const tbl = document.getElementById('pvhBillTable');
+  if (!tbl) return;
+
+  if (!building || !room) {
+    tbl.innerHTML = '<div style="text-align:center;padding:.5rem;color:var(--text-muted);">กรุณาเลือกห้อง</div>';
+    return;
+  }
+
+  // Subscribe BillStore once so RTDB data arrives and re-renders
+  if (typeof window.BillStore !== 'undefined' && !_pvhBillStoreUnsub) {
+    _pvhBillStoreUnsub = window.BillStore.onChange(() => _renderPVHBillTable(
+      document.getElementById('pvh-building')?.value,
+      document.getElementById('pvh-room')?.value
+    ));
+  }
+
+  // Build last-12-months list
+  const now = new Date();
+  const months = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ m: d.getMonth() + 1, y: d.getFullYear() + 543 });
+  }
+
+  // Collect bills from BillStore (current + previous year)
+  const beYear = now.getFullYear() + 543;
+  let allBills = [];
+  if (typeof window.BillStore !== 'undefined') {
+    [beYear, beYear - 1].forEach(y => {
+      allBills.push(...(window.BillStore.listForYear(building, y) || [])
+        .filter(b => String(b.room || b.roomId) === String(room)));
+    });
+  }
+
+  if (allBills.length === 0 && typeof window.BillStore === 'undefined') {
+    tbl.innerHTML = '<div style="text-align:center;padding:.5rem;color:var(--text-muted);">⚠️ BillStore ยังไม่พร้อม</div>';
+    return;
+  }
+
+  const rows = months.map(({m, y}) => {
+    const bill = allBills.find(b => Number(b.month) === m && Number(b.year) === y);
+    if (!bill) {
+      return `<tr>
+        <td style="padding:6px 8px;font-weight:600;">${_MONTHS_TH[m]} ${String(y).slice(-2)}</td>
+        <td colspan="4" style="padding:6px 8px;color:var(--text-muted);text-align:center;font-size:.8rem;">ไม่มีบิล</td>
+      </tr>`;
+    }
+    const isPaid = bill.status === 'paid';
+    const rent = Number(bill.charges?.rent || 0);
+    const utils = Number((bill.charges?.electric?.cost || 0) + (bill.charges?.water?.cost || 0));
+    const total = Number(bill.totalCharge || rent + utils);
+    const statusHtml = isPaid
+      ? '<span style="color:#388e3c;font-weight:700;">✅ ชำระแล้ว</span>'
+      : '<span style="color:#f57c00;font-weight:700;">⏳ ค้างชำระ</span>';
+    return `<tr style="background:${isPaid ? 'var(--green-pale)' : '#fff8e1'};">
+      <td style="padding:6px 8px;font-weight:600;">${_MONTHS_TH[m]} ${String(y).slice(-2)}</td>
+      <td style="padding:6px 8px;text-align:right;">฿${rent.toLocaleString()}</td>
+      <td style="padding:6px 8px;text-align:right;">฿${utils.toLocaleString()}</td>
+      <td style="padding:6px 8px;text-align:right;font-weight:700;color:var(--green-dark);">฿${total.toLocaleString()}</td>
+      <td style="padding:6px 8px;">${statusHtml}</td>
+    </tr>`;
+  }).join('');
+
+  tbl.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+    <thead><tr style="background:var(--green-pale);font-size:.78rem;color:var(--text-muted);">
+      <th style="padding:6px 8px;text-align:left;">เดือน</th>
+      <th style="padding:6px 8px;text-align:right;">ค่าเช่า</th>
+      <th style="padding:6px 8px;text-align:right;">ค่าน้ำ/ไฟ</th>
+      <th style="padding:6px 8px;text-align:right;">รวม</th>
+      <th style="padding:6px 8px;">สถานะ</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
 window.renderPVHistory = function(){
   const building = document.getElementById('pvh-building').value;
   const room = document.getElementById('pvh-room').value;
   const list = document.getElementById('pvhList');
   const setTxt = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+
+  // Always render bill table (subscribes to BillStore.onChange for live reload)
+  _renderPVHBillTable(building, room);
+
   if(!building || !room){
     list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">📋 กรุณาเลือกตึกและห้อง</div>';
     setTxt('pvh-total-count','—'); setTxt('pvh-total-amount','฿—'); setTxt('pvh-last-paid','—');
