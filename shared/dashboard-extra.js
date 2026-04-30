@@ -3310,6 +3310,8 @@ async function deleteEvent(id) {
 
 // ===== COMMUNITY DOCUMENTS MANAGEMENT =====
 let _docsUnsub = null;
+let _docsCache = null; // null = not yet hydrated from Firestore; falls back to localStorage
+
 function initCommunityDocsPage() {
   loadAndRenderCommunityDocs();
   if (_docsUnsub) return;
@@ -3319,12 +3321,13 @@ function initCommunityDocsPage() {
     const fs = window.firebase.firestoreFunctions;
     const col = fs.collection(db, 'communityDocuments');
     _docsUnsub = fs.onSnapshot(col, snap => {
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const local = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
+      const remote = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const local = _docsCache || JSON.parse(localStorage.getItem('community_documents_data') || '[]');
       const byId = new Map();
       local.forEach(d => byId.set(d.id, d));
-      docs.forEach(d => byId.set(d.id, d));
-      localStorage.setItem('community_documents_data', JSON.stringify(Array.from(byId.values())));
+      remote.forEach(d => byId.set(d.id, d)); // Firestore wins on id collision
+      _docsCache = Array.from(byId.values());
+      localStorage.setItem('community_documents_data', JSON.stringify(_docsCache));
       loadAndRenderCommunityDocs();
     }, err => console.warn('docs onSnapshot failed:', err));
   } catch(e) { console.warn('docs subscribe failed:', e); }
@@ -3334,7 +3337,7 @@ function loadAndRenderCommunityDocs() {
   const list = document.getElementById('docsList');
   if (!list) return;
 
-  let docs = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
+  let docs = (_docsCache ?? JSON.parse(localStorage.getItem('community_documents_data') || '[]')).slice();
   const searchVal = document.getElementById('docSearch')?.value.toLowerCase() || '';
 
   if (searchVal) {
@@ -3399,7 +3402,6 @@ function saveCommunityDocument() {
     return;
   }
 
-  let docs = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
   const newDoc = {
     id: 'doc_' + Date.now(),
     title: title,
@@ -3411,8 +3413,8 @@ function saveCommunityDocument() {
     uploadedDate: new Date().toISOString()
   };
 
-  docs.push(newDoc);
-  localStorage.setItem('community_documents_data', JSON.stringify(docs));
+  // Optimistic update via in-memory cache; onSnapshot writes localStorage + confirms
+  _docsCache = (_docsCache || JSON.parse(localStorage.getItem('community_documents_data') || '[]')).concat(newDoc);
   if (window.firebase?.firestore) {
     try {
       const db = window.firebase.firestore();
@@ -3435,9 +3437,8 @@ function saveCommunityDocument() {
 function deleteDocument(id) {
   if (!confirm('Are you sure you want to delete this document?')) return;
 
-  let docs = JSON.parse(localStorage.getItem('community_documents_data') || '[]');
-  docs = docs.filter(d => d.id !== id);
-  localStorage.setItem('community_documents_data', JSON.stringify(docs));
+  // Optimistic update via in-memory cache; onSnapshot confirms
+  _docsCache = (_docsCache || JSON.parse(localStorage.getItem('community_documents_data') || '[]')).filter(d => d.id !== id);
   if (window.firebase?.firestore) {
     try {
       const db = window.firebase.firestore();
@@ -3829,23 +3830,21 @@ function renderComplaints(complaints){
 }
 
 async function updateComplaintStatus(id, newStatus) {
-  const complaints = JSON.parse(localStorage.getItem('complaints_data') || '[]');
-  const idx = complaints.findIndex(c => c.id === id);
-  if (idx >= 0) {
-    complaints[idx].status = newStatus;
-    complaints[idx].updatedAt = new Date().toISOString();
-    localStorage.setItem('complaints_data', JSON.stringify(complaints));
-  }
-  // Update Firestore
+  const now = new Date().toISOString();
+  // Optimistic update through store facade — updates in-memory cache + localStorage + notifies listeners (re-renders)
+  const updated = window.RequestsStore.getComplaints().map(c =>
+    c.id === id ? { ...c, status: newStatus, updatedAt: now } : c
+  );
+  window.RequestsStore._ingest('complaints', updated);
+  // Firestore is canonical — onSnapshot confirms
   if (window.firebase?.firestore) {
     try {
       const db = window.firebase.firestore();
       const fs = window.firebase.firestoreFunctions;
-      const docRef = fs.doc(fs.collection(db, 'complaints'), id);
-      await fs.setDoc(docRef, { status: newStatus, updatedAt: new Date().toISOString() }, { merge: true });
+      await fs.setDoc(fs.doc(fs.collection(db, 'complaints'), id),
+        { status: newStatus, updatedAt: now }, { merge: true });
     } catch(e) { console.warn('Firestore complaint update failed:', e); }
   }
-  if (idx >= 0) renderComplaints(complaints);
 }
 
 // ===== GAMIFICATION PAGE =====
