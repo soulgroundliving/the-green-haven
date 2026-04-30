@@ -400,83 +400,103 @@ window.renderPVHistory = function(){
     setTxt('pvh-total-count','—'); setTxt('pvh-total-amount','฿—'); setTxt('pvh-last-paid','—');
     return;
   }
-  if(!window.firebase?.firestore){
+
+  const _ts = s => s.timestamp?.toDate ? s.timestamp.toDate()
+    : (s.timestamp instanceof Date ? s.timestamp : new Date(s.timestamp || s.verifiedAt || 0));
+  const bankName = code => ({'004':'กสิกรไทย','014':'ไทยพาณิชย์','025':'กรุงไทย','002':'กรุงเทพ',
+    '006':'กรุงศรี','011':'TMB','065':'ทิสโก้','069':'เกียรตินาคิน','022':'CIMB','067':'ทีทีบี'})[code]||'';
+
+  // Build final merged+deduped list from slip sources and render
+  const renderSlips = (slipsSource) => {
+    // Filter by room — accept docs where building matches OR building field is absent/null
+    const roomVals = new Set([String(room), String(Number(room))].filter(v=>v!=='NaN'));
+    const fromSource = slipsSource.filter(s => {
+      if (!roomVals.has(String(s.room))) return false;
+      if (s.building && s.building !== building) return false;
+      return true;
+    });
+
+    // Manual admin payments (localStorage mirror)
+    const manual = _pvLoadManualPayments().filter(s => s.building === building && s.room === String(room));
+
+    // BillStore RTDB paid bills — covers admin-manual-approved bills not in verifiedSlips
+    const billEntries = [];
+    if (typeof window.BillStore !== 'undefined') {
+      const beYear = new Date().getFullYear() + 543;
+      [beYear, beYear - 1].forEach(y => {
+        (window.BillStore.listForYear(building, y) || [])
+          .filter(b => String(b.room || b.roomId) === String(room) && b.status === 'paid' && b.paidAt)
+          .forEach(b => billEntries.push({
+            id: b.billId || `bill_${b.month}_${b.year}`,
+            amount: Number(b.totalCharge) || 0,
+            timestamp: new Date(b.paidAt),
+            building, room: String(room),
+            sender: 'แอดมินบันทึก', bankCode: '',
+            transactionId: b.billId || '',
+            _isBill: true
+          }));
+      });
+    }
+
+    const byKey = new Map();
+    fromSource.forEach(s => byKey.set(s.transactionId || s.id || `s_${_ts(s).getTime()}`, s));
+    manual.forEach(s => { const k = s.transactionId || s.id || `m_${_ts(s).getTime()}`; if(!byKey.has(k)) byKey.set(k, s); });
+    billEntries.forEach(b => { if(!byKey.has(b.id)) byKey.set(b.id, b); });
+
+    const slips = Array.from(byKey.values()).sort((a,b) => _ts(b) - _ts(a));
+    const total = slips.reduce((s,x) => s + (Number(x.amount)||0), 0);
+    setTxt('pvh-total-count', slips.length);
+    setTxt('pvh-total-amount', '฿' + total.toLocaleString());
+    if (slips.length > 0) {
+      setTxt('pvh-last-paid', _ts(slips[0]).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}));
+    } else {
+      setTxt('pvh-last-paid','—');
+    }
+    if (slips.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--text-muted);">📭 ยังไม่มีประวัติการจ่ายของห้องนี้</div>';
+      return;
+    }
+    list.innerHTML = slips.map(s => {
+      const timeStr = _ts(s).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+      const isManual = s._isBill || s.verifiedBy === 'admin_manual';
+      const bankLabel = isManual ? '' : (bankName(s.bankCode) ? `· ${_pvEscape(bankName(s.bankCode))}` : '');
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+        <div style="background:var(--green-pale);color:var(--green-dark);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">${isManual?'📋':'✅'}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:.88rem;">฿${(Number(s.amount)||0).toLocaleString()} <span style="color:var(--text-muted);font-weight:400;font-size:.78rem;">${bankLabel}</span></div>
+          <div style="font-size:.75rem;color:var(--text-muted);">โดย ${_pvEscape(s.sender||'—')} · ${_pvEscape(s.transactionId||s.transRef||'')}</div>
+        </div>
+        <div style="text-align:right;font-size:.75rem;color:var(--text-muted);flex-shrink:0;">${timeStr}</div>
+      </div>`;
+    }).join('');
+  };
+
+  // Fast path: use global in-memory cache (already loaded by _subscribeGlobalVerifiedSlips)
+  // The cache has limit(300) of recent slips — sufficient for normal room history view
+  if (Array.isArray(window._verifiedSlipsRawCache) && window._verifiedSlipsRawCache.length > 0) {
+    renderSlips(window._verifiedSlipsRawCache);
+    return;
+  }
+
+  // Fallback: Firestore getDocs filtered by room only (NOT building, to avoid null-field exclusion)
+  if (!window.firebase?.firestore) {
     list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ Firebase ยังไม่พร้อม</div>';
     return;
   }
   list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">🔄 กำลังโหลด...</div>';
   const db = window.firebase.firestore();
-  const fs = window.firebase.firestoreFunctions;
-  // Query for both string and number room values to avoid type-mismatch miss
-  const q = fs.query(
-    fs.collection(db, 'verifiedSlips'),
-    fs.where('building','==',building),
-    fs.where('room','in',[String(room), Number(room)].filter(v => !Number.isNaN(v))),
-    fs.limit(500)
+  const fsLib = window.firebase.firestoreFunctions;
+  const roomVals = [String(room), Number(room)].filter(v => !Number.isNaN(Number(v)));
+  const q = fsLib.query(
+    fsLib.collection(db, 'verifiedSlips'),
+    fsLib.where('room','in', roomVals),
+    fsLib.limit(500)
   );
-  fs.getDocs(q)
-    .then(snap=>{
-      const firestoreSlips = snap.docs.map(d=>({id:d.id,...d.data()}));
-      // Also include manual payments (from payment_status) for this room
-      const manual = _pvLoadManualPayments().filter(s => s.building === building && s.room === String(room));
-      const byKey = new Map();
-      firestoreSlips.forEach(s => byKey.set(`${s.transactionId||s.id}|${s.amount}`, s));
-      manual.forEach(s => { const k = `${s.transactionId||s.id}|${s.amount}`; if(!byKey.has(k)) byKey.set(k, s); });
-      const slips = Array.from(byKey.values());
-      slips.sort((a,b)=>{
-        const ta = a.timestamp?.toDate?a.timestamp.toDate():new Date(a.timestamp||a.verifiedAt||0);
-        const tb = b.timestamp?.toDate?b.timestamp.toDate():new Date(b.timestamp||b.verifiedAt||0);
-        return tb - ta;
-      });
-      const total = slips.reduce((s,x)=>s+(x.amount||0),0);
-      setTxt('pvh-total-count', slips.length);
-      setTxt('pvh-total-amount', '฿'+total.toLocaleString());
-      if(slips.length>0){
-        const ts = slips[0].timestamp?.toDate?slips[0].timestamp.toDate():new Date(slips[0].timestamp||slips[0].verifiedAt||0);
-        setTxt('pvh-last-paid', ts.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}));
-      } else setTxt('pvh-last-paid','—');
-      if(slips.length===0){
-        list.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--text-muted);">📭 ยังไม่มีประวัติการจ่ายของห้องนี้</div>';
-        return;
-      }
-      const bankName = code => ({'004':'กสิกรไทย','014':'ไทยพาณิชย์','025':'กรุงไทย','002':'กรุงเทพ','006':'กรุงศรี','011':'TMB','065':'ทิสโก้','069':'เกียรตินาคิน','022':'CIMB','067':'ทีทีบี'})[code] || (code||'—');
-      list.innerHTML = slips.map(s=>{
-        const ts = s.timestamp?.toDate?s.timestamp.toDate():new Date(s.timestamp||s.verifiedAt||0);
-        const timeStr = ts.toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});
-        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
-          <div style="background:var(--green-pale);color:var(--green-dark);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">✅</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:.88rem;">฿${(s.amount||0).toLocaleString()} <span style="color:var(--text-muted);font-weight:400;font-size:.78rem;">· ${_pvEscape(bankName(s.bankCode))}</span></div>
-            <div style="font-size:.75rem;color:var(--text-muted);">โดย ${_pvEscape(s.sender||'—')} · ${_pvEscape(s.transactionId||s.transRef||'')}</div>
-          </div>
-          <div style="text-align:right;font-size:.75rem;color:var(--text-muted);flex-shrink:0;">${timeStr}</div>
-        </div>`;
-      }).join('');
-    })
-    .catch(err=>{
+  fsLib.getDocs(q)
+    .then(snap => renderSlips(snap.docs.map(d => ({id:d.id,...d.data()}))))
+    .catch(err => {
       console.error('pv history query failed:', err);
-      // Fallback to manual payments only
-      const manual = _pvLoadManualPayments().filter(s => s.building === building && s.room === String(room));
-      if(!manual.length){
-        list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
-        return;
-      }
-      manual.sort((a,b) => b.timestamp - a.timestamp);
-      const total = manual.reduce((s,x)=>s+(x.amount||0),0);
-      setTxt('pvh-total-count', manual.length);
-      setTxt('pvh-total-amount', '฿'+total.toLocaleString());
-      setTxt('pvh-last-paid', manual[0].timestamp.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}));
-      list.innerHTML = manual.map(s=>{
-        const timeStr = s.timestamp.toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});
-        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
-          <div style="background:var(--green-pale);color:var(--green-dark);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">✅</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:.88rem;">฿${(s.amount||0).toLocaleString()} <span style="color:var(--text-muted);font-weight:400;font-size:.78rem;">· (manual)</span></div>
-            <div style="font-size:.75rem;color:var(--text-muted);">โดย ${_pvEscape(s.sender||'—')} · ${_pvEscape(s.transactionId||'')}</div>
-          </div>
-          <div style="text-align:right;font-size:.75rem;color:var(--text-muted);flex-shrink:0;">${timeStr}</div>
-        </div>`;
-      }).join('');
+      renderSlips([]);
     });
 };
 
