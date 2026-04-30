@@ -524,54 +524,17 @@ function recordPayment(roomId) {
 }
 
 function viewBills(roomId) {
-  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
-  const invoices = (tenantData.invoices || []).filter(inv => inv.roomId === roomId);
-
-  if (invoices.length === 0) {
-    showToast(`ไม่มีบิลสำหรับห้อง ${roomId}`, 'warning');
-    return;
+  // Navigate to bill page and pre-filter by room
+  if (typeof goBillFromTable === 'function') {
+    goBillFromTable(roomId);
+  } else {
+    window.showPage('bill');
   }
-
-  let billInfo = `📋 บิล — ห้อง ${roomId}\n\n`;
-  invoices.forEach(inv => {
-    const dueDate = new Date(inv.dueDate).toLocaleDateString('th-TH');
-    const paidDate = inv.paidDate ? new Date(inv.paidDate).toLocaleDateString('th-TH') : '—';
-    const status = inv.status === 'paid' ? '✅ จ่ายแล้ว' : '⏳ รอจ่าย';
-    billInfo += `${dueDate} | ฿${inv.amount.toLocaleString()} | ${status} | ${paidDate}\n`;
-  });
-
-  showToast(billInfo, 'warning');
 }
 
 function reportMaintenance(roomId) {
-  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
-  const tenant = tenantData.tenants?.[roomId];
-
-  if (!tenant || !tenant.name) {
-    showToast('ไม่มีข้อมูลผู้เช่า', 'error');
-    return;
-  }
-
-  const issue = prompt(`🔧 แจ้งซ่อม — ห้อง ${roomId}\n\nชื่อผู้เช่า: ${tenant.name}\n\nกรุณาอธิบายปัญหา:`);
-
-  if (issue === null || !issue.trim()) return;
-
-  // Record maintenance request
-  const maintenanceReports = tenantData.maintenanceReports || [];
-  maintenanceReports.push({
-    id: Date.now().toString(),
-    roomId: roomId,
-    tenantName: tenant.name,
-    issue: issue,
-    date: new Date().toISOString().split('T')[0],
-    status: 'pending',
-    phone: tenant.phone || '—'
-  });
-
-  tenantData.maintenanceReports = maintenanceReports;
-  localStorage.setItem('tenant_data', JSON.stringify(tenantData));
-
-  showToast(`บันทึกการแจ้งซ่อมสำเร็จ เรื่อง: ${issue} วันที่แจ้ง: ${new Date().toLocaleDateString('th-TH')}`, 'success');
+  // Navigate to maintenance/requests page
+  window.showPage('requests-approvals');
 }
 
 function updateRoomStatuses() {
@@ -595,47 +558,46 @@ window.updateRoomStatuses = updateRoomStatuses;
 
 // ===== Occupancy Dashboard =====
 function calculateOccupancy(buildingType = null) {
-  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
-  const tenants = tenantData.tenants || {};
-
-  // Use RoomConfigManager to get dynamic room list
   const building = buildingType === 'nest' ? 'nest' : 'rooms';
   const config = RoomConfigManager.getRoomsConfig(building);
-  const rooms = config.rooms
-    .filter(r => !r.deleted)
-    .map(r => r.id);
+  const rooms = config.rooms.filter(r => !r.deleted).map(r => r.id);
 
-  const occupied = rooms.filter(r => tenants[r] && tenants[r].name).length;
+  // SSoT: TenantConfigManager reads from tenant_master_data (Firestore-backed)
+  const tenantList = typeof TenantConfigManager !== 'undefined'
+    ? (TenantConfigManager.getTenantList(building) || [])
+    : [];
+  const occupiedSet = new Set(tenantList.filter(t => t.name).map(t => String(t.id)));
+
+  const occupied = rooms.filter(r => occupiedSet.has(String(r))).length;
   const vacant = rooms.length - occupied;
   const rate = rooms.length > 0 ? Math.round((occupied / rooms.length) * 100) : 0;
 
-  const result = {
-    total: rooms.length,
-    occupied: occupied,
-    vacant: vacant,
-    rate: rate
-  };
-
-  return result;
+  return { total: rooms.length, occupied, vacant, rate };
 }
 
 // Export to window for global access
 window.calculateOccupancy = calculateOccupancy;
 
 function updateOccupancyDashboard() {
-  // Update Old Building (page-property - rooms section)
+  // Update rooms building
   const oldMetrics = calculateOccupancy('old');
   document.getElementById('occupancy-total').textContent = oldMetrics.total;
   document.getElementById('occupancy-occupied').textContent = oldMetrics.occupied;
   document.getElementById('occupancy-vacant').textContent = oldMetrics.vacant;
   document.getElementById('occupancy-rate').textContent = oldMetrics.rate + '%';
+  const soonRooms = typeof getExpiringLeases === 'function' ? getExpiringLeases('old').length : 0;
+  const soonEl = document.getElementById('occupancy-soon');
+  if (soonEl) soonEl.textContent = soonRooms;
 
-  // Update Nest Building (page-property - nest section)
+  // Update Nest building
   const nestMetrics = calculateOccupancy('nest');
   document.getElementById('nest-occupancy-total').textContent = nestMetrics.total;
   document.getElementById('nest-occupancy-occupied').textContent = nestMetrics.occupied;
   document.getElementById('nest-occupancy-vacant').textContent = nestMetrics.vacant;
   document.getElementById('nest-occupancy-rate').textContent = nestMetrics.rate + '%';
+  const soonNest = typeof getExpiringLeases === 'function' ? getExpiringLeases('nest').length : 0;
+  const soonNestEl = document.getElementById('nest-occupancy-soon');
+  if (soonNestEl) soonNestEl.textContent = soonNest;
 }
 
 // ===== Lease Expiry Alerts =====

@@ -247,11 +247,10 @@ function renderCompactRoomGrid(){
         <span style="font-size:.9rem;">🚪 ไม่มีผู้เช่า</span>
       </div>
       `}
-      <div class="compact-card-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
+      <div class="compact-card-actions" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
         <button class="compact-btn" onclick="editRoom('${r.id}')" title="แก้ไขสัญญาเช่า" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
         <button class="compact-btn" onclick="recordPayment('${r.id}')" title="บันทึกค่าเช่า" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">💰 ชำระ</button>
-        <button class="compact-btn" onclick="viewBills('${r.id}')" title="ดูบิล" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
-        <button class="compact-btn" onclick="reportMaintenance('${r.id}')" title="แจ้งซ่อม" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #7b1fa2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🔧 ซ่อม</button>
+        <button class="compact-btn" onclick="goBillFromTable('${r.id}')" title="ดูบิล" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
       </div>
     </div>`;
   }).join('');
@@ -649,11 +648,10 @@ function renderNestCompactGrid(){
         <span style="font-size:.9rem;">🚪 ไม่มีผู้เช่า</span>
       </div>
       `}
-      <div class="compact-card-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
+      <div class="compact-card-actions" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
         <button class="compact-btn" onclick="editRoom('${r.id}')" title="แก้ไขสัญญาเช่า" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">📄 สัญญา</button>
         <button class="compact-btn" onclick="recordPayment('${r.id}')" title="บันทึกค่าเช่า" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">💰 ชำระ</button>
-        <button class="compact-btn" onclick="viewBills('${r.id}')" title="ดูบิล" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
-        <button class="compact-btn" onclick="reportMaintenance('${r.id}')" title="แจ้งซ่อม" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #7b1fa2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🔧 ซ่อม</button>
+        <button class="compact-btn" onclick="goBillFromTable('${r.id}')" title="ดูบิล" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;">🧾 บิล</button>
       </div>
     </div>`;
   }).join('');

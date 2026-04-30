@@ -425,70 +425,24 @@ async function markBillPaid(roomId, month, year, billId) {
   document.getElementById('billingPayModal')?.remove();
 }
 
-// ─── Billing History Modal (ประวัติบิล 6 เดือน) ───
+// Navigate to bill page filtered by the currently-open room
+window.openTenantBillPage = function() {
+  const roomId = currentEditRoomId;
+  closeTenantModal();
+  if (roomId && typeof goBillFromTable === 'function') {
+    goBillFromTable(roomId);
+  } else {
+    window.showPage('bill');
+  }
+};
+
+// ─── Billing History: navigate to bill page with room pre-filtered ───
 function showBillingHistoryModal(roomId) {
-  const rooms = _getTenantRooms();
-  const room = rooms.find(r => r.id === roomId);
-  const tenants = loadTenants();
-  const tenantName = tenants[roomId]?.name || '(ว่าง)';
-
-  // Collect last 6 months of bills
-  const now = new Date();
-  const months = [];
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({ m: d.getMonth() + 1, y: d.getFullYear() + 543 });
+  if (typeof goBillFromTable === 'function') {
+    goBillFromTable(roomId);
+  } else {
+    window.showPage('bill');
   }
-
-  let bills = [];
-  if (typeof BillingSystem !== 'undefined') {
-    bills = BillingSystem.getBillsByRoom(roomId);
-  }
-
-  const rows = months.map(({m, y}) => {
-    const bill = bills.find(b => b.month === m && b.year === y);
-    if (!bill) return `<tr><td><strong>${MONTHS_TH_SHORT[m]} ${y}</strong></td><td colspan="4" style="color:var(--text-muted);text-align:center;">ไม่มีบิล</td></tr>`;
-    const statusColor = bill.status === 'paid' ? '#388e3c' : '#f57c00';
-    const statusLabel = bill.status === 'paid' ? '✅ ชำระแล้ว' : '⏳ ค้างชำระ';
-    return `<tr>
-      <td><strong>${MONTHS_TH_SHORT[m]} ${y}</strong></td>
-      <td style="text-align:right;">฿${Number(bill.charges?.rent||0).toLocaleString()}</td>
-      <td style="text-align:right;">฿${Number((bill.charges?.electric?.cost||0)+(bill.charges?.water?.cost||0)).toLocaleString()}</td>
-      <td style="text-align:right;font-weight:700;color:var(--green-dark);">฿${Number(bill.totalCharge||0).toLocaleString()}</td>
-      <td style="color:${statusColor};font-weight:700;">${statusLabel}</td>
-    </tr>`;
-  }).join('');
-
-  const modal = document.createElement('div');
-  modal.id = 'billingHistoryModal';
-  modal.className = 'u-modal-overlay';
-  modal.innerHTML = `
-    <div style="background:#fff;border-radius:var(--radius);max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#f57c00,#e65100);color:#fff;padding:1.2rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div style="font-weight:700;font-size:1.05rem;">🧾 ประวัติบิล — ห้อง ${roomId}</div>
-          <div style="font-size:.8rem;opacity:.85;">${tenantName} · 6 เดือนย้อนหลัง</div>
-        </div>
-        <button onclick="document.getElementById('billingHistoryModal').remove()" style="background:rgba(255,255,255,.2);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;color:#fff;font-size:1.1rem;">✕</button>
-      </div>
-      <div style="padding:1rem;overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:.88rem;">
-          <thead><tr style="background:var(--green-pale);text-align:left;">
-            <th style="padding:8px;">เดือน</th>
-            <th style="padding:8px;text-align:right;">ค่าเช่า</th>
-            <th style="padding:8px;text-align:right;">ค่าน้ำ/ไฟ</th>
-            <th style="padding:8px;text-align:right;">รวม</th>
-            <th style="padding:8px;">สถานะ</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-      <div style="padding:1rem;text-align:right;border-top:1px solid var(--border);">
-        <button onclick="document.getElementById('billingHistoryModal').remove()" style="padding:8px 20px;background:var(--border);border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:700;">ปิด</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 }
 
 function saveTenantInfo() {
