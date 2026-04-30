@@ -1,6 +1,10 @@
 // ===== MAINTENANCE SYSTEM =====
 const _escReq = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 
+// Temporary store for provider/cost from the add-modal before they're written to newTicket
+let _pendingProviderId = null;
+let _pendingCostThb = null;
+
 // Auto-cleanup old completed tickets (delete after 30 days of completion)
 function autoCleanupOldCompletedTickets(tickets) {
   const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -285,12 +289,16 @@ function addMaintenanceRequest(){
     reportedAt:date,
     updatedAt:date,
     assignedTo:null,
+    assignedProviderId: _pendingProviderId || null,
+    costThb: _pendingCostThb ? Number(_pendingCostThb) : null,
     startedAt:null,
     workNotes:null,
     completedAt:null,
     beforePhoto:null,
     afterPhoto:null
   };
+  _pendingProviderId = null;
+  _pendingCostThb = null;
   mx.unshift(newTicket);
   saveMaintenance(mx);
 
@@ -348,6 +356,19 @@ function showAddMaintenanceModal(){
         </select>
       </div>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ผู้รับเหมา <span style="font-weight:400;color:var(--text-muted);font-size:.85em;">(ไม่บังคับ)</span></label>
+        <select id="mx-provider-modal" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;background:#fff;">
+          <option value="">— ไม่ระบุ —</option>
+          ${(typeof window.ServiceProvidersStore !== 'undefined' && window.ServiceProvidersStore.getAll
+            ? window.ServiceProvidersStore.getAll()
+            : JSON.parse(localStorage.getItem('service_providers_data') || '[]')
+          ).map(p => `<option value="${_escReq(p.id)}">${_escReq(p.name)}${p.type ? ' ('+_escReq(p.type)+')' : ''}</option>`).join('')}
+        </select>
+      </div>
+      <div><label style="font-weight:600;display:block;margin-bottom:6px;">ค่าใช้จ่าย (฿) <span style="font-weight:400;color:var(--text-muted);font-size:.85em;">(ไม่บังคับ)</span></label>
+        <input type="number" id="mx-cost-modal" placeholder="เช่น 500" min="0" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"></div>
+    </div>
     <div style="display:flex;gap:10px;">
       <button onclick="addMaintenanceRequestFromModal()" style="flex:1;background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;">📝 บันทึกงานซ่อม</button>
       <button onclick="closeAddMaintenanceModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:10px;padding:12px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">ยกเลิก</button>
@@ -375,6 +396,12 @@ function addMaintenanceRequestFromModal(){
     showToast('กรุณากรอกข้อมูลให้ครบ', 'warning');
     return;
   }
+
+  // Capture provider/cost before delegating to addMaintenanceRequest
+  const providerEl = document.getElementById('mx-provider-modal');
+  const costEl = document.getElementById('mx-cost-modal');
+  _pendingProviderId = (providerEl && providerEl.value) ? providerEl.value : null;
+  _pendingCostThb = (costEl && costEl.value) ? costEl.value : null;
 
   // Temporarily set form inputs for addMaintenanceRequest
   document.getElementById('mx-room').value=room;

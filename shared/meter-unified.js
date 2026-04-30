@@ -87,22 +87,26 @@ class FirebaseMeterHelper {
       }
 
       const db = window.firebase.firestore();
-      const monthCollection = window.firebase.firestoreFunctions.collection(
-        window.firebase.firestoreFunctions.collection(db, `meter_data/${building}`),
-        yearMonth
-      );
+      const fs = window.firebase.firestoreFunctions;
 
-      const docRef = window.firebase.firestoreFunctions.doc(monthCollection, 'data');
+      // Write flat doc matching the canonical schema:
+      // meter_data/{building}_{yearMonth}_{roomId}
+      // Fields mirror what getMeterDataForMonth queries (building, roomId, year, month, yearMonth).
+      const [ymYear, ymMonth] = yearMonth.split('_');
+      const docId = `${building}_${yearMonth}_${roomId}`;
+      const docRef = fs.doc(fs.collection(db, 'meter_data'), docId);
 
-      // Merge new room data with existing
-      await window.firebase.firestoreFunctions.setDoc(docRef, {
-        [roomId]: {
-          eNew: data.eNew,
-          eOld: data.eOld,
-          wNew: data.wNew,
-          wOld: data.wOld,
-          updatedAt: new Date().toISOString()
-        }
+      await fs.setDoc(docRef, {
+        building,
+        roomId: String(roomId),
+        yearMonth,
+        year: Number(ymYear),
+        month: Number(ymMonth),
+        eNew: data.eNew,
+        eOld: data.eOld,
+        wNew: data.wNew,
+        wOld: data.wOld,
+        updatedAt: new Date().toISOString()
       }, { merge: true });
 
       console.log(`✅ Meter reading saved for ${building}/${yearMonth}/${roomId}`);

@@ -1170,6 +1170,280 @@
   }
 
   // ============================================================
+  // FEATURE 8: Slip Amount Mismatch (ปฏิบัติการ tab)
+  // ============================================================
+  async function renderSlipMismatch() {
+    const container = document.getElementById('dashSlipMismatch');
+    if (!container) return;
+    container.innerHTML = loadingHTML();
+    try {
+      // Reuse global cache from dashboard-bill.js global listener when available
+      let slips = window._verifiedSlipsRawCache;
+      if (!Array.isArray(slips)) {
+        if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions)
+          throw new Error('Firestore ยังไม่พร้อม');
+        const db = window.firebase.firestore();
+        const { collection, getDocs, query, orderBy, limit } = window.firebase.firestoreFunctions;
+        const snap = await getDocs(query(collection(db, 'verifiedSlips'), orderBy('timestamp', 'desc'), limit(200)));
+        slips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+
+      const THRESHOLD = 0.05;
+      const mismatches = slips
+        .filter(s => s.amount != null && s.expectedAmount != null && s.expectedAmount > 0 &&
+                     Math.abs(s.amount - s.expectedAmount) / s.expectedAmount > THRESHOLD)
+        .map(s => {
+          const diff = Number(s.amount) - Number(s.expectedAmount);
+          const pct = Math.round(Math.abs(diff) / Number(s.expectedAmount) * 100);
+          const ts = s.timestamp?.toDate ? s.timestamp.toDate()
+                   : s.timestamp ? new Date(s.timestamp) : null;
+          return { ...s, diff, pct, ts };
+        })
+        .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+        .slice(0, 20);
+
+      let bodyHTML;
+      if (mismatches.length === 0) {
+        bodyHTML = `<div style="color:var(--green-dark);font-size:.88rem;padding:.4rem 0;">✅ ไม่พบสลิปที่ยอดไม่ตรง (threshold 5%)</div>`;
+      } else {
+        const rows = mismatches.map(s => {
+          const color = Math.abs(s.diff) / Number(s.expectedAmount) > 0.1
+            ? 'var(--alert,#c06458)' : 'var(--accent,#ff9800)';
+          const fmtDate = s.ts
+            ? s.ts.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
+            : '—';
+          return `<tr style="border-bottom:1px solid var(--border-subtle,#ebe9e2);border-left:3px solid ${color};">
+            <td style="padding:.5rem .7rem;font-weight:600;">${esc(s.room)} <span style="color:var(--text-muted);font-size:.72rem;">${buildingLabel(s.building)}</span></td>
+            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">฿${Number(s.amount).toLocaleString()}</td>
+            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">฿${Number(s.expectedAmount).toLocaleString()}</td>
+            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${color};font-weight:600;">${s.diff > 0 ? '+' : ''}฿${Math.abs(Number(s.diff)).toLocaleString()} (${s.pct}%)</td>
+            <td style="padding:.5rem .7rem;font-size:.75rem;color:var(--text-muted);">${esc(fmtDate)}</td>
+          </tr>`;
+        }).join('');
+        bodyHTML = `<div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+            <thead><tr style="background:var(--mist,#f2f1ec);">
+              <th style="padding:.5rem .7rem;text-align:left;">ห้อง</th>
+              <th style="padding:.5rem .7rem;text-align:right;">ยอดสลิป</th>
+              <th style="padding:.5rem .7rem;text-align:right;">ยอดที่คาด</th>
+              <th style="padding:.5rem .7rem;text-align:right;">ผลต่าง</th>
+              <th style="padding:.5rem .7rem;text-align:left;">วันที่</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem;">แสดง ${mismatches.length} รายการที่ยอดต่างเกิน 5%</div>`;
+      }
+
+      container.innerHTML = `<div class="card" style="border-left:4px solid var(--accent,#ff9800);">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>🔍 Slip Amount Mismatch</span>
+          <button data-action="refreshInsight" data-target="slipMismatch" aria-label="รีเฟรช Slip Mismatch"
+                  style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+        </div>
+        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.7rem;">ยอดสลิปที่ผู้เช่าโอนมาต่างจากยอดที่คาดหวัง &gt;5% (ตรวจ ${slips.length} สลิปล่าสุด)</div>
+        ${bodyHTML}
+        <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${fmtCacheAge(Date.now())}</div>
+      </div>`;
+    } catch (e) {
+      console.error('[insights] slip mismatch failed:', e);
+      container.innerHTML = errorHTML('slipMismatch', e.message);
+    }
+  }
+
+  // ============================================================
+  // FEATURE 9: Meter Usage Spike (ปฏิบัติการ tab)
+  // ============================================================
+  async function renderMeterSpike() {
+    const container = document.getElementById('dashMeterSpike');
+    if (!container) return;
+    container.innerHTML = loadingHTML();
+    try {
+      const cached = cacheGet('meter_spike');
+      let spikes;
+      if (cached) {
+        spikes = cached;
+      } else {
+        if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions)
+          throw new Error('Firestore ยังไม่พร้อม');
+        const db = window.firebase.firestore();
+        const { collection, getDocs } = window.firebase.firestoreFunctions;
+        const snap = await getDocs(collection(db, 'meter_data'));
+
+        const byRoom = {};
+        snap.forEach(d => {
+          const data = d.data() || {};
+          const { building, roomId, year, month, eNew, eOld } = data;
+          if (!building || !roomId || year == null || month == null) return;
+          const eUsage = Number(eNew || 0) - Number(eOld || 0);
+          if (eUsage < 0) return;
+          const key = `${building}:${roomId}`;
+          if (!byRoom[key]) byRoom[key] = { building, roomId, readings: [] };
+          byRoom[key].readings.push({ year: Number(year), month: Number(month), eUsage });
+        });
+
+        const SPIKE_RATIO = 1.5;
+        spikes = [];
+        Object.values(byRoom).forEach(({ building, roomId, readings }) => {
+          if (readings.length < 4) return;
+          readings.sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
+          const latest = readings[readings.length - 1];
+          const prior3 = readings.slice(-4, -1).map(r => r.eUsage).sort((a, b) => a - b);
+          const median = prior3[1];
+          if (median < 5) return;
+          if (latest.eUsage > SPIKE_RATIO * median) {
+            spikes.push({
+              building, roomId,
+              latestE: latest.eUsage,
+              medianE: median,
+              ratio: Math.round(latest.eUsage / median * 10) / 10,
+              month: latest.month, year: latest.year
+            });
+          }
+        });
+        spikes.sort((a, b) => b.ratio - a.ratio);
+        cacheSet('meter_spike', spikes);
+      }
+
+      let bodyHTML;
+      if (spikes.length === 0) {
+        bodyHTML = `<div style="color:var(--green-dark);font-size:.88rem;padding:.4rem 0;">✅ ไม่พบการใช้ไฟฟ้าผิดปกติ</div>`;
+      } else {
+        const rows = spikes.map(s => {
+          const color = s.ratio >= 2 ? 'var(--alert,#c06458)' : 'var(--accent,#ff9800)';
+          return `<tr style="border-bottom:1px solid var(--border-subtle,#ebe9e2);border-left:3px solid ${color};">
+            <td style="padding:.5rem .7rem;font-weight:600;">${esc(s.roomId)} <span style="color:var(--text-muted);font-size:.72rem;">${buildingLabel(s.building)}</span></td>
+            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${s.latestE} <span style="color:var(--text-muted);font-size:.72rem;">หน่วย</span></td>
+            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${s.medianE} <span style="color:var(--text-muted);font-size:.72rem;">หน่วย</span></td>
+            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${color};font-weight:600;">${s.ratio}×</td>
+          </tr>`;
+        }).join('');
+        bodyHTML = `<div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+            <thead><tr style="background:var(--mist,#f2f1ec);">
+              <th style="padding:.55rem .7rem;text-align:left;">ห้อง</th>
+              <th style="padding:.55rem .7rem;text-align:right;">เดือนล่าสุด</th>
+              <th style="padding:.55rem .7rem;text-align:right;">median 3 เดือน</th>
+              <th style="padding:.55rem .7rem;text-align:right;">สัดส่วน</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem;">Spike = ใช้เกิน 1.5× ค่า median 3 เดือนก่อน · ต้องการข้อมูลอย่างน้อย 4 เดือน</div>`;
+      }
+
+      container.innerHTML = `<div class="card" style="border-left:4px solid var(--alert,#c06458);">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>⚡ Meter Usage Spike</span>
+          <button data-action="refreshInsight" data-target="meterSpike" aria-label="รีเฟรช Meter Spike"
+                  style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+        </div>
+        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.7rem;">ห้องที่ใช้ไฟฟ้าเดือนล่าสุดสูงผิดปกติ เทียบกับ median 3 เดือนก่อน</div>
+        ${bodyHTML}
+        <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${fmtCacheAge(Date.now())}</div>
+      </div>`;
+    } catch (e) {
+      console.error('[insights] meter spike failed:', e);
+      container.innerHTML = errorHTML('meterSpike', e.message);
+    }
+  }
+
+  // ============================================================
+  // FEATURE 10: Provider Scorecard (ปฏิบัติการ tab)
+  // ============================================================
+  function renderProviderScore() {
+    const container = document.getElementById('dashProviderScore');
+    if (!container) return;
+    try {
+      let tickets = [];
+      try { tickets = JSON.parse(localStorage.getItem('maintenance_data') || '[]'); } catch (e) {}
+
+      const providers = (typeof window.ServiceProvidersStore !== 'undefined' && window.ServiceProvidersStore.getAll)
+        ? window.ServiceProvidersStore.getAll()
+        : (JSON.parse(localStorage.getItem('service_providers_data') || '[]'));
+      const provMap = {};
+      providers.forEach(p => { provMap[p.id] = p; });
+
+      const byProvider = {};
+      tickets.forEach(t => {
+        if (!t.assignedProviderId) return;
+        const pid = t.assignedProviderId;
+        if (!byProvider[pid]) byProvider[pid] = { tickets: [], totalCost: 0, costCount: 0, resolveTimes: [] };
+        byProvider[pid].tickets.push(t);
+        if (t.costThb && Number(t.costThb) > 0) {
+          byProvider[pid].totalCost += Number(t.costThb);
+          byProvider[pid].costCount++;
+        }
+        if (t.status === 'done' && t.reportedAt && t.completedAt) {
+          const days = (new Date(t.completedAt) - new Date(t.reportedAt)) / 86400000;
+          if (days >= 0 && days < 365) byProvider[pid].resolveTimes.push(days);
+        }
+      });
+
+      let bodyHTML;
+      if (Object.keys(byProvider).length === 0) {
+        bodyHTML = `<div style="text-align:center;color:var(--text-muted);padding:1.5rem;">
+          <div style="font-size:2rem;opacity:.35;margin-bottom:.5rem;">🔧</div>
+          <div style="font-size:.85rem;">ยังไม่มีงานซ่อมที่กำหนดผู้รับเหมา</div>
+          <div style="font-size:.75rem;margin-top:.3rem;">เพิ่ม "ผู้รับเหมา" เมื่อสร้างงานซ่อมแซม</div>
+        </div>`;
+      } else {
+        const rows = Object.entries(byProvider).map(([pid, d]) => {
+          const prov = provMap[pid] || { name: pid, type: '' };
+          const total = d.tickets.length;
+          const done = d.tickets.filter(t => t.status === 'done').length;
+          const completionRate = total ? Math.round(done / total * 100) : 0;
+          const avgCost = d.costCount > 0 ? Math.round(d.totalCost / d.costCount) : null;
+          const avgDays = d.resolveTimes.length > 0
+            ? (d.resolveTimes.reduce((s, v) => s + v, 0) / d.resolveTimes.length).toFixed(1)
+            : null;
+          return { prov, total, done, completionRate, avgCost, avgDays };
+        }).sort((a, b) => b.total - a.total);
+
+        const tableRows = rows.map(r => {
+          const rateColor = r.completionRate >= 80 ? 'var(--green)' : r.completionRate >= 50 ? 'var(--blue)' : 'var(--accent,#ff9800)';
+          return `<tr style="border-bottom:1px solid var(--border-subtle,#ebe9e2);">
+            <td style="padding:.5rem .7rem;">
+              <div style="font-weight:600;">${esc(r.prov.name)}</div>
+              ${r.prov.type ? `<div style="font-size:.7rem;color:var(--text-muted);">${esc(r.prov.type)}</div>` : ''}
+            </td>
+            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.total}</td>
+            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${rateColor};font-weight:600;">${r.completionRate}%</td>
+            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.avgCost != null ? '฿' + r.avgCost.toLocaleString() : '—'}</td>
+            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.avgDays != null ? r.avgDays + ' วัน' : '—'}</td>
+          </tr>`;
+        }).join('');
+        bodyHTML = `<div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+            <thead><tr style="background:var(--mist,#f2f1ec);">
+              <th style="padding:.55rem .7rem;text-align:left;">ผู้รับเหมา</th>
+              <th style="padding:.55rem .7rem;text-align:right;">งานทั้งหมด</th>
+              <th style="padding:.55rem .7rem;text-align:right;">เสร็จ %</th>
+              <th style="padding:.55rem .7rem;text-align:right;">ค่าใช้จ่ายเฉลี่ย</th>
+              <th style="padding:.55rem .7rem;text-align:right;">เวลาเฉลี่ย</th>
+            </tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>`;
+      }
+
+      container.innerHTML = `<div class="card" style="border-left:4px solid var(--blue);">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>🏗️ Provider Scorecard</span>
+          <button data-action="refreshInsight" data-target="providerScore" aria-label="รีเฟรช Provider Scorecard"
+                  style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+        </div>
+        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.7rem;">สถิติผู้รับเหมาจากงานซ่อมแซมที่มีการกำหนดผู้รับเหมา · ข้อมูล forward-tracking เท่านั้น</div>
+        ${bodyHTML}
+        <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${new Date().toLocaleDateString('th-TH')}</div>
+      </div>`;
+    } catch (e) {
+      console.error('[insights] provider scorecard failed:', e);
+      container.innerHTML = errorHTML('providerScore', e.message);
+    }
+  }
+
+  // ============================================================
   // Lazy-init wrappers (called by switchDashboardTab)
   // ============================================================
   let _commInited = false, _finInited = false, _tenInited = false, _opsInited = false;
@@ -1194,6 +1468,9 @@
     if (_opsInited) return;
     _opsInited = true;
     renderOperationsInsights();
+    renderSlipMismatch();
+    renderMeterSpike();
+    renderProviderScore();
   }
   function refreshInsight(target) {
     if (target === 'wellness') { cacheClear('tenants_all'); renderWellnessMatrix(); }
@@ -1205,6 +1482,9 @@
     }
     else if (target === 'overdue') { cacheClear('bills_raw'); renderOverdueBills(); }
     else if (target === 'operations') { cacheClear('ops_insights'); renderOperationsInsights(); }
+    else if (target === 'slipMismatch') { renderSlipMismatch(); }
+    else if (target === 'meterSpike') { cacheClear('meter_spike'); renderMeterSpike(); }
+    else if (target === 'providerScore') { renderProviderScore(); }
   }
 
   // ============================================================
