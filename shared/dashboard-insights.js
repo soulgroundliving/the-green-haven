@@ -809,7 +809,7 @@
             คะแนนรวม 0–100 จาก: ชำระเงิน · กิจกรรม · เรื่องร้องเรียน · ระยะเวลาเช่า · คลิกการ์ดเพื่อดูรายละเอียด
           </div>
           <div style="margin-bottom:.9rem;">${chips}</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.6rem;">${tilesHTML}</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.5rem;">${tilesHTML}</div>
           <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.7rem;">${fmtCacheAge(Date.now())}</div>
         </div>
       `;
@@ -874,7 +874,7 @@
           ✅ ทุกห้องอยู่ในเกณฑ์ปกติ ไม่มีสัญญาณ churn risk
         </div>`;
       } else {
-        bodyHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.6rem;">' +
+        bodyHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.5rem;">' +
           risks.map(r => `<div data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}"
                style="cursor:pointer;background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;"
                onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 2px 8px rgba(31,31,28,.08)';"
