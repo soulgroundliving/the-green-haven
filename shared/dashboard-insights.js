@@ -79,6 +79,21 @@
     return '🔥🔥🔥';
   }
 
+  // ===== Bill helpers =====
+  // Derive due date from month+year when the dueDate field is absent (slip-paid bills).
+  // b.year is BE (e.g. 2569); month is 1-12.
+  function deriveDueDate(b) {
+    if (b.dueDate) return b.dueDate;
+    if (!b.month || !b.year) return null;
+    const ceYear = b.year > 2500 ? b.year - 543 : b.year;
+    const m = Number(b.month);
+    const dueM = m === 12 ? 1 : m + 1;
+    const dueY = m === 12 ? ceYear + 1 : ceYear;
+    return `${dueY}-${String(dueM).padStart(2, '0')}-05`;
+  }
+  // A bill counts as paid if status==='paid' OR paidAt is set (mirrors billing-system isPaid).
+  function billIsPaid(b) { return b.status === 'paid' || !!b.paidAt; }
+
   // ===== Firestore tenant doc loader (shared) =====
   async function loadAllTenantDocs() {
     const cached = cacheGet('tenants_all');
@@ -354,12 +369,17 @@
             const key = `${building}:${room}`;
             perRoom[key] = perRoom[key] || { building, room, deltas: [], paidCount: 0 };
             Object.values(bills || {}).forEach(b => {
-              if (!b || b.status !== 'paid' || !b.paidAt || !b.dueDate) return;
-              const paidTs = new Date(b.paidAt).getTime();
-              if (!isFinite(paidTs) || paidTs < cutoff) return;
-              const due = new Date(b.dueDate).getTime();
+              if (!b || !billIsPaid(b)) return;
+              const dueDate = deriveDueDate(b);
+              if (!dueDate) return;
+              const due = new Date(dueDate).getTime();
               if (!isFinite(due)) return;
-              const delta = (paidTs - due) / 86400000;
+              const paidTs = b.paidAt ? new Date(b.paidAt).getTime() : null;
+              // Cutoff: use paidAt if known, else due date as proxy
+              const refTs = paidTs !== null && isFinite(paidTs) ? paidTs : due;
+              if (refTs < cutoff) return;
+              // Delta: 0 = assumed on-time when paidAt missing (slip-paid bills)
+              const delta = (paidTs !== null && isFinite(paidTs)) ? (paidTs - due) / 86400000 : 0;
               perRoom[key].deltas.push(delta);
               perRoom[key].paidCount++;
             });
@@ -674,12 +694,15 @@
         let lastLate = false;
         let lateCount = 0;
         Object.values(bills || {}).forEach(b => {
-          if (!b || b.status !== 'paid' || !b.paidAt || !b.dueDate) return;
-          const paidTs = new Date(b.paidAt).getTime();
-          if (!isFinite(paidTs) || paidTs < cutoff) return;
-          const due = new Date(b.dueDate).getTime();
+          if (!b || !billIsPaid(b)) return;
+          const dueDate = deriveDueDate(b);
+          if (!dueDate) return;
+          const due = new Date(dueDate).getTime();
           if (!isFinite(due)) return;
-          const delta = (paidTs - due) / 86400000;
+          const paidTs = b.paidAt ? new Date(b.paidAt).getTime() : null;
+          const refTs = paidTs !== null && isFinite(paidTs) ? paidTs : due;
+          if (refTs < cutoff) return;
+          const delta = (paidTs !== null && isFinite(paidTs)) ? (paidTs - due) / 86400000 : 0;
           deltas.push(delta);
           if (delta > 2) lateCount++;
         });
@@ -882,15 +905,16 @@
       Object.entries(all).forEach(([building, rooms]) => {
         Object.entries(rooms || {}).forEach(([room, bills]) => {
           Object.values(bills || {}).forEach(b => {
-            if (!b || b.status === 'paid' || b.paidAt || !b.dueDate) return;
+            if (!b || billIsPaid(b)) return;
+            const dueDate = deriveDueDate(b);
+            if (!dueDate || dueDate >= todayStr) return;
             const amount = b.totalCharge || b.totalAmount || b.total || 0;
             if (!amount) return;
-            if (b.dueDate >= todayStr) return;
             const key = `${building}:${room}`;
-            if (!byRoom[key]) byRoom[key] = { building, room, totalOwed: 0, oldestDue: b.dueDate, count: 0 };
+            if (!byRoom[key]) byRoom[key] = { building, room, totalOwed: 0, oldestDue: dueDate, count: 0 };
             byRoom[key].totalOwed += Number(amount);
             byRoom[key].count++;
-            if (b.dueDate < byRoom[key].oldestDue) byRoom[key].oldestDue = b.dueDate;
+            if (dueDate < byRoom[key].oldestDue) byRoom[key].oldestDue = dueDate;
           });
         });
       });
