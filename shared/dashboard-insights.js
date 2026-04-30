@@ -979,12 +979,15 @@
       const db = window.firebase.firestore();
       const { collection, getDocs } = window.firebase.firestoreFunctions;
 
-      const [complaintsSnap, maintSnap, houseSnap] = await Promise.all([
+      const { collectionGroup } = window.firebase.firestoreFunctions;
+      const [complaintsSnap, maintSnap, houseSnap, petsSnap, liffSnap] = await Promise.all([
         getDocs(collection(db, 'complaints')),
         window.firebaseGet(window.firebaseRef(window.firebaseDatabase, 'maintenance'))
           .catch(() => ({ val: () => ({}) })),
         window.firebaseGet(window.firebaseRef(window.firebaseDatabase, 'housekeeping'))
-          .catch(() => ({ val: () => ({}) }))
+          .catch(() => ({ val: () => ({}) })),
+        getDocs(collectionGroup(db, 'pets')).catch(() => ({ forEach: () => {} })),
+        getDocs(collection(db, 'liffUsers')).catch(() => ({ forEach: () => {} }))
       ]);
 
       // Complaints — last 90 days
@@ -1052,6 +1055,22 @@
       });
       const totalHouse = hStatus.pending + hStatus.inprogress + hStatus.done;
 
+      // Pet Approvals (Firestore collectionGroup 'pets')
+      const pStatus = { pending: 0, approved: 0, rejected: 0 };
+      petsSnap.forEach(d => {
+        const s = (d.data().status || 'pending').toLowerCase();
+        if (s in pStatus) pStatus[s]++; else pStatus.pending++;
+      });
+      const totalPets = pStatus.pending + pStatus.approved + pStatus.rejected;
+
+      // LINE Link Requests (Firestore 'liffUsers')
+      const lStatus = { pending: 0, approved: 0, rejected: 0 };
+      liffSnap.forEach(d => {
+        const s = (d.data().status || 'pending').toLowerCase();
+        if (s in lStatus) lStatus[s]++; else lStatus.pending++;
+      });
+      const totalLiff = lStatus.pending + lStatus.approved + lStatus.rejected;
+
       // Build UI pieces
       const pill = (label, count, color) => count === 0 ? '' :
         `<span style="display:inline-block;padding:3px 10px;margin:2px 4px 2px 0;background:${color}22;border:1.5px solid ${color};color:${color};border-radius:999px;font-size:.75rem;font-weight:600;">${label} ${count}</span>`;
@@ -1114,6 +1133,34 @@
               pill('เสร็จแล้ว', hStatus.done, 'var(--green)'),
             ].join('') || `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีข้อมูล</span>`}</div>
           </div>` : ''}
+
+          <div style="border-top:1px solid var(--border-subtle,#ebe9e2);padding-top:.8rem;">
+            <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
+              🐾 Pet Approvals · <span style="font-weight:400;">${totalPets} รายการ</span>
+            </div>
+            <div>${totalPets === 0
+              ? `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีคำขอ</span>`
+              : [
+                  pill('รออนุมัติ', pStatus.pending, 'var(--accent,#ff9800)'),
+                  pill('อนุมัติแล้ว', pStatus.approved, 'var(--green)'),
+                  pill('ปฏิเสธ', pStatus.rejected, 'var(--alert,#c06458)'),
+                ].join('')
+            }</div>
+          </div>
+
+          <div style="border-top:1px solid var(--border-subtle,#ebe9e2);padding-top:.8rem;">
+            <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
+              🔗 LINE Link Requests · <span style="font-weight:400;">${totalLiff} รายการ</span>
+            </div>
+            <div>${totalLiff === 0
+              ? `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีคำขอ</span>`
+              : [
+                  pill('รออนุมัติ', lStatus.pending, 'var(--accent,#ff9800)'),
+                  pill('อนุมัติแล้ว', lStatus.approved, 'var(--green)'),
+                  pill('ปฏิเสธ', lStatus.rejected, 'var(--alert,#c06458)'),
+                ].join('')
+            }</div>
+          </div>
 
           <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.7rem;">${fmtCacheAge(Date.now())}</div>
         </div>`;
