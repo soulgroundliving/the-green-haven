@@ -30,7 +30,7 @@
  */
 
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
-const { setDoc, doc, getDoc, updateDoc, deleteDoc, addDoc, collection } = require('firebase/firestore');
+const { setDoc, doc, getDoc, updateDoc, deleteDoc, addDoc, collection, collectionGroup, getDocs, query } = require('firebase/firestore');
 const { readFileSync } = require('node:fs');
 const { describe, before, after, beforeEach, it } = require('node:test');
 
@@ -467,6 +467,21 @@ describe('wellnessClaimed — tenant create-only (idempotent)', () => {
     ));
     await assertFails(deleteDoc(
       doc(ANON().firestore(), 'tenants/rooms/list/101/wellnessClaimed/article-1')
+    ));
+  });
+
+  it('admin can run collectionGroup("wellnessClaimed") to aggregate all claims', async () => {
+    // Seed claims in multiple rooms to verify cross-room aggregation
+    await seedDoc('tenants/rooms/list/101/wellnessClaimed/a1', { claimedAt: 't1', reward: 20 });
+    await seedDoc('tenants/nest/list/N201/wellnessClaimed/a1', { claimedAt: 't2', reward: 20 });
+    await assertSucceeds(getDocs(
+      query(collectionGroup(EMAIL_ADMIN().firestore(), 'wellnessClaimed'))
+    ));
+  });
+
+  it('anon tenant CANNOT run collectionGroup("wellnessClaimed") — would leak cross-room data', async () => {
+    await assertFails(getDocs(
+      query(collectionGroup(ANON().firestore(), 'wellnessClaimed'))
     ));
   });
 });

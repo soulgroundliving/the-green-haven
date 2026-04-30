@@ -211,6 +211,16 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
+    // ===== WELLNESS CLAIMED — collectionGroup query support (admin only) =====
+    // Dashboard insights (Wellness Engagement Matrix) calls
+    // collectionGroup('wellnessClaimed') to aggregate read counts per article
+    // across every tenant doc. Same pattern as pets above — the nested rule
+    // (lines 193-201) only matches the specific path, not collectionGroup
+    // queries. Tenants never run this query (admin dashboard only).
+    match /{path=**}/wellnessClaimed/{articleId} {
+      allow read: if isAdmin();
+    }
+
     // ===== METER DATA =====
     match /meter_data/{docId} {
       allow read:  if isAdmin() || (isSignedIn() && resource.data.roomId == request.auth.token.room && resource.data.building == request.auth.token.building);
