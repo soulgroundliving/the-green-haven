@@ -9,6 +9,39 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-04-30 — Firebase v11 modular SDK, NOT compat (`firebase.database()` is undefined)
+
+**Mistake:** In Phase 1 deep analytics (`shared/dashboard-insights.js` commit `21316b8`), I wrote `await window.firebase.database().ref('bills').once('value')` for the Per-Tenant Payment Behavior card. On live the card showed **"⚠️ โหลดข้อมูลไม่สำเร็จ — RTDB ยังไม่พร้อม"** because `window.firebase.database` is `undefined`. Fix shipped in commit `68890f5`.
+
+**Why:** The project initializes Firebase using v11 **modular** SDK (`initializeApp`, `getDatabase`, `getFirestore`, etc.) and exposes pre-resolved instances + named functions on `window`. The compat namespace (`firebase.database()`, `firebase.firestore()`, `.ref().once()`) does not exist here. I autopiloted to compat-style chained calls because that's the snippet pattern in most Firebase docs/blogs, without checking how `dashboard.html` actually wires Firebase.
+
+**The actual API surface in this project** (verified `dashboard.html:106-180`):
+- RTDB instance: `window.firebaseDatabase` (already a `Database` ref)
+- Auth instance: `window.firebaseAuth`
+- Firestore: `window.firebase.firestore()` exists in some modules via `window.firebase.firestoreFunctions` (modular fns are stashed under that key) — read access pattern: `getDocs(collection(db, ...))` from `firestoreFunctions`
+- Storage: `window.firebaseStorage`
+- RTDB modular fns exposed: `window.firebaseRef`, `firebaseGet`, `firebaseSet`, `firebaseUpdate`, `firebaseRemove`, `firebaseOnValue`, `firebasePush`, `firebaseChild`
+
+**Correct RTDB read pattern:**
+```javascript
+const billsRef = window.firebaseRef(window.firebaseDatabase, 'bills');
+const snap = await window.firebaseGet(billsRef);
+const all = snap.val() || {};
+```
+Not `firebase.database().ref('bills').once('value')` — that throws TypeError "Cannot read properties of undefined".
+
+**Correct Firestore read pattern (already used in dashboard-extra.js, dashboard-wellness-content.js, etc):**
+```javascript
+const db = window.firebase.firestore();   // this DOES work — see line 749 dashboard-extra.js
+const { collection, getDocs, collectionGroup, query } = window.firebase.firestoreFunctions;
+const snap = await getDocs(collection(db, 'wellness_articles'));
+```
+Note: `window.firebase.firestore()` returns the modular instance — confusingly named the same as compat. The methods on that instance are NOT chainable compat methods; you must use the modular fns via `firestoreFunctions`.
+
+**Rule:** Before writing any new file that touches Firebase in this project, **grep `dashboard.html` for `window.firebase` and `firebaseRef`** to copy the exact globals exposed. Never assume compat API from generic Firebase docs. Same applies to any other shared/*.js file — confirm the modular pattern by reading 1-2 existing modules first (`dashboard-extra.js`, `dashboard-wellness-content.js` are good references). When in doubt, the canonical fact is `dashboard.html:95-180` initialization block.
+
+---
+
 ## 2026-04-28 — 3-round security audit campaign — accepted residuals
 
 **Context:** User asked "if a hacker were hired to attack us, what could they do?" Three audit rounds shipped 14 fixes (commits 474514d → b29d6bc). Two remaining items were evaluated and **deliberately not fixed** — capturing the reasoning here so a future session doesn't re-open them as "TODO".
