@@ -341,8 +341,11 @@
       if (cached) {
         perRoom = cached;
       } else {
-        if (!window.firebase?.database) throw new Error('RTDB ยังไม่พร้อม');
-        const snap = await window.firebase.database().ref('bills').once('value');
+        if (!window.firebaseDatabase || !window.firebaseRef || !window.firebaseGet) {
+          throw new Error('RTDB ยังไม่พร้อม');
+        }
+        const billsRef = window.firebaseRef(window.firebaseDatabase, 'bills');
+        const snap = await window.firebaseGet(billsRef);
         const all = snap.val() || {};
         const cutoff = Date.now() - 180 * 86400000; // 6 months back
         perRoom = {};
