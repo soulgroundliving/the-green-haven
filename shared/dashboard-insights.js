@@ -506,6 +506,44 @@
       `<ul style="list-style:none;padding:0;margin:0;">${rows}</ul>`);
   }
 
+  function showHealthDetailModal(key) {
+    const r = window._insightsCache?.healthRecords?.[key];
+    if (!r) { openModal('Health Detail', emptyHTML('ไม่พบข้อมูลห้องนี้')); return; }
+    const sub = (label, value, max, color) => {
+      const pct = max ? Math.round(value / max * 100) : 0;
+      return `<div style="margin-bottom:.6rem;">
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.2rem;">
+          <span>${label}</span>
+          <span style="font-variant-numeric:tabular-nums;color:${color};font-weight:600;">${value}/${max}</span>
+        </div>
+        <div style="height:8px;background:var(--mist,#f2f1ec);border-radius:4px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${color};"></div>
+        </div>
+      </div>`;
+    };
+    const fmtDate = d => d ? new Date(d).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' }) : '—';
+    const body = `
+      <div style="margin-bottom:1rem;padding:.7rem 1rem;background:var(--green-pale);border-radius:12px;text-align:center;">
+        <div style="font-size:2rem;font-weight:700;color:${r.tier.color};font-variant-numeric:tabular-nums;">${r.score.total}<span style="font-size:1rem;color:var(--text-muted);font-weight:400;">/100</span></div>
+        <div style="color:${r.tier.color};font-weight:600;">${r.tier.emoji} ${r.tier.label}</div>
+      </div>
+      <div style="margin-bottom:1rem;">
+        ${sub('💳 ชำระเงิน',  r.score.payment,    25, 'var(--green)')}
+        ${sub('🔥 กิจกรรม',   r.score.engagement, 25, 'var(--accent-gold,#D4AF37)')}
+        ${sub('⚠️ ปัญหา/ร้องเรียน', r.score.issues, 25, 'var(--blue)')}
+        ${sub('📅 ระยะเวลาเช่า', r.score.tenure,   25, 'var(--moss,#5a7a5a)')}
+      </div>
+      <div style="font-size:.82rem;color:var(--text-muted);border-top:1px dashed var(--border-subtle,#ebe9e2);padding-top:.7rem;">
+        <div style="margin-bottom:.3rem;">📅 เริ่มเช่า: <strong style="color:var(--ink,#1f1f1c);">${esc(fmtDate(r.startDate))}</strong>${r.monthsTenure!=null?` <span style="color:var(--text-muted);">(${r.monthsTenure} เดือน)</span>`:''}</div>
+        ${r.endDate ? `<div style="margin-bottom:.3rem;">📅 หมดสัญญา: <strong style="color:var(--ink);">${esc(fmtDate(r.endDate))}</strong>${r.daysToEnd!=null?` <span style="color:${r.daysToEnd<=90?'var(--alert,#c06458)':'var(--text-muted)'};">(${r.daysToEnd>=0?`อีก ${r.daysToEnd} วัน`:`เลย ${-r.daysToEnd} วัน`})</span>`:''}</div>` : ''}
+        <div style="margin-bottom:.3rem;">💳 เฉลี่ยจ่าย: <strong style="color:var(--ink);">${r.paymentDelta!=null?(r.paymentDelta>=0?'+':'')+r.paymentDelta.toFixed(1)+' วัน':'—'}</strong> (ค้าง ${r.paymentLateCount} ครั้ง)</div>
+        <div style="margin-bottom:.3rem;">🔥 Streak: <strong style="color:var(--ink);">${r.streak} วัน</strong>${r.lastClaim?` <span style="color:var(--text-muted);">(last: ${esc(r.lastClaim)})</span>`:''}</div>
+        <div>⚠️ Complaints (90d): <strong style="color:var(--ink);">${r.complaintCount} ครั้ง</strong></div>
+      </div>
+    `;
+    openModal(`🩺 ${esc(r.roomId)} (${buildingLabel(r.building)}) ${r.tenantName?'· '+esc(r.tenantName):''}`, body);
+  }
+
   function showInactiveRoomsModal() {
     const inactive = window._insightsCache?.inactiveRooms || [];
     if (inactive.length === 0) {
@@ -522,9 +560,375 @@
   }
 
   // ============================================================
+  // PHASE 2: Tenant Health Score + Churn Risk shared compute
+  // ============================================================
+
+  // Compute composite 0-100 health score for a single tenant
+  // Inputs: paymentDelta (avg days from due, null if no history), gamification, complaintCount90d, monthsTenure
+  function computeHealthScore({ paymentDelta, streak, complaintCount90d, monthsTenure }) {
+    // Payment sub-score (25 pts max)
+    let payment;
+    if (paymentDelta == null) payment = 15;       // neutral when no data
+    else if (paymentDelta < -2) payment = 25;
+    else if (paymentDelta <= 2) payment = 20;
+    else if (paymentDelta <= 7) payment = 12;
+    else payment = 5;
+
+    // Engagement sub-score (25 pts max)
+    let engagement;
+    if (!streak || streak <= 0) engagement = 0;
+    else if (streak < 7) engagement = 5;
+    else if (streak < 14) engagement = 10;
+    else if (streak < 30) engagement = 18;
+    else engagement = 25;
+
+    // Issues sub-score (25 pts max — inverse of complaint count last 90d)
+    let issues;
+    if (complaintCount90d === 0) issues = 25;
+    else if (complaintCount90d === 1) issues = 18;
+    else if (complaintCount90d === 2) issues = 12;
+    else issues = 5;
+
+    // Tenure sub-score (25 pts max)
+    let tenure;
+    if (monthsTenure == null) tenure = 12;       // neutral when unknown
+    else if (monthsTenure <= 3) tenure = 8;
+    else if (monthsTenure <= 6) tenure = 14;
+    else if (monthsTenure <= 12) tenure = 20;
+    else tenure = 25;
+
+    const total = payment + engagement + issues + tenure;
+    return { total, payment, engagement, issues, tenure };
+  }
+
+  function healthTier(total) {
+    if (total >= 80) return { key: 'healthy',  emoji: '🟢', label: 'Healthy', color: 'var(--green)' };
+    if (total >= 60) return { key: 'steady',   emoji: '🟡', label: 'Steady',  color: 'var(--blue)' };
+    if (total >= 40) return { key: 'at-risk',  emoji: '🟠', label: 'At Risk', color: 'var(--accent,#ff9800)' };
+    return                  { key: 'critical', emoji: '🔴', label: 'Critical',color: 'var(--alert,#c06458)' };
+  }
+
+  // Months between a date string/Date and now
+  function monthsSince(dateInput) {
+    if (!dateInput) return null;
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return null;
+    const ms = Date.now() - d.getTime();
+    return Math.floor(ms / (30 * 86400000));
+  }
+
+  // Days until a date string/Date (negative if past)
+  function daysUntil(dateInput) {
+    if (!dateInput) return null;
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return null;
+    return Math.floor((d.getTime() - Date.now()) / 86400000);
+  }
+
+  // Aggregate complaints per room from flat 'complaints' collection
+  async function loadComplaintCounts() {
+    const cached = cacheGet('complaints_90d');
+    if (cached) return cached;
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+      throw new Error('Firestore ยังไม่พร้อม');
+    }
+    const db = window.firebase.firestore();
+    const { collection, getDocs } = window.firebase.firestoreFunctions;
+    const snap = await getDocs(collection(db, 'complaints'));
+    const cutoff = Date.now() - 90 * 86400000;
+    const byRoom = {};
+    snap.forEach(d => {
+      const data = d.data() || {};
+      const ts = data.createdAt?.toMillis ? data.createdAt.toMillis()
+               : data.createdAt ? new Date(data.createdAt).getTime()
+               : data.timestamp ? new Date(data.timestamp).getTime()
+               : null;
+      if (ts == null || ts < cutoff) return;
+      const building = data.building;
+      const room = data.room;
+      if (!building || !room) return;
+      const key = `${building}:${room}`;
+      byRoom[key] = (byRoom[key] || 0) + 1;
+    });
+    cacheSet('complaints_90d', byRoom);
+    return byRoom;
+  }
+
+  // Load + cache payment-delta (reuses RTDB bills query from F3)
+  async function loadPaymentDeltas() {
+    const cached = cacheGet('payment_deltas');
+    if (cached) return cached;
+    if (!window.firebaseDatabase || !window.firebaseRef || !window.firebaseGet) {
+      throw new Error('RTDB ยังไม่พร้อม');
+    }
+    const billsRef = window.firebaseRef(window.firebaseDatabase, 'bills');
+    const snap = await window.firebaseGet(billsRef);
+    const all = snap.val() || {};
+    const cutoff = Date.now() - 180 * 86400000;
+    const byRoom = {};
+    Object.entries(all).forEach(([building, rooms]) => {
+      Object.entries(rooms || {}).forEach(([room, bills]) => {
+        const key = `${building}:${room}`;
+        const deltas = [];
+        let lastLate = false;
+        let lateCount = 0;
+        Object.values(bills || {}).forEach(b => {
+          if (!b || b.status !== 'paid' || !b.paidAt || !b.dueDate) return;
+          if (b.paidAt < cutoff) return;
+          const due = new Date(b.dueDate).getTime();
+          if (!isFinite(due)) return;
+          const delta = (b.paidAt - due) / 86400000;
+          deltas.push(delta);
+          if (delta > 2) lateCount++;
+        });
+        if (deltas.length > 0) {
+          const avg = deltas.reduce((s, d) => s + d, 0) / deltas.length;
+          byRoom[key] = { avg, count: deltas.length, lateCount };
+        }
+      });
+    });
+    cacheSet('payment_deltas', byRoom);
+    return byRoom;
+  }
+
+  // Build per-room health record list (used by both Health Score table + Churn Risk)
+  async function buildHealthRecords() {
+    const [tenants, paymentDeltas, complaints] = await Promise.all([
+      loadAllTenantDocs(),
+      loadPaymentDeltas().catch(e => { console.warn('[insights] payment deltas load failed:', e); return {}; }),
+      loadComplaintCounts().catch(e => { console.warn('[insights] complaints load failed:', e); return {}; })
+    ]);
+
+    return tenants.map(t => {
+      const key = `${t.building}:${t.roomId}`;
+      const g = t.gamification || {};
+      const lease = t.lease || {};
+      const startDate = lease.startDate || lease.moveInDate || t.moveInDate || null;
+      const endDate = lease.endDate || lease.moveOutDate || null;
+      const monthsTenure = monthsSince(startDate);
+      const daysToEnd = daysUntil(endDate);
+      const pd = paymentDeltas[key] || null;
+
+      const inputs = {
+        paymentDelta: pd ? pd.avg : null,
+        streak: Number(g.dailyStreak) || 0,
+        complaintCount90d: complaints[key] || 0,
+        monthsTenure
+      };
+      const score = computeHealthScore(inputs);
+      const tier = healthTier(score.total);
+
+      return {
+        building: t.building,
+        roomId: t.roomId,
+        tenantName: t.name || lease.tenantName || '',
+        startDate, endDate, monthsTenure, daysToEnd,
+        streak: inputs.streak,
+        lastClaim: g.lastDailyClaim || null,
+        paymentDelta: inputs.paymentDelta,
+        paymentLateCount: pd ? pd.lateCount : 0,
+        complaintCount: inputs.complaintCount90d,
+        score, tier
+      };
+    });
+  }
+
+  // ============================================================
+  // FEATURE 4: Tenant Health Score (ผู้เช่า tab)
+  // ============================================================
+  let _hsState = { tierFilter: 'all', sortBy: 'score_asc' };
+
+  async function renderTenantHealth() {
+    const container = document.getElementById('dashTenantHealth');
+    if (!container) return;
+    container.innerHTML = loadingHTML();
+    try {
+      const records = await buildHealthRecords();
+      // Apply filter
+      let rows = records;
+      if (_hsState.tierFilter !== 'all') {
+        rows = records.filter(r => r.tier.key === _hsState.tierFilter);
+      }
+      // Sort: ascending by score by default (worst first → admin attention)
+      rows.sort((a, b) => {
+        if (_hsState.sortBy === 'score_asc') return a.score.total - b.score.total;
+        if (_hsState.sortBy === 'score_desc') return b.score.total - a.score.total;
+        return 0;
+      });
+
+      // Distribution counts
+      const dist = { healthy: 0, steady: 0, 'at-risk': 0, critical: 0 };
+      records.forEach(r => { dist[r.tier.key]++; });
+
+      // Render summary chips (clickable filter)
+      const chipStyle = (active, color, bg) => `display:inline-block;padding:4px 12px;margin-right:6px;background:${active?bg:'#fff'};border:1.5px solid ${color};color:${active?'#fff':color};border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;`;
+      const f = _hsState.tierFilter;
+      const chips = `
+        <button data-action="setHSFilter" data-tier="all" style="${chipStyle(f==='all','var(--text-muted)','var(--text-muted)')}">ทั้งหมด (${records.length})</button>
+        <button data-action="setHSFilter" data-tier="healthy" style="${chipStyle(f==='healthy','var(--green)','var(--green)')}">🟢 ${dist.healthy}</button>
+        <button data-action="setHSFilter" data-tier="steady" style="${chipStyle(f==='steady','var(--blue)','var(--blue)')}">🟡 ${dist.steady}</button>
+        <button data-action="setHSFilter" data-tier="at-risk" style="${chipStyle(f==='at-risk','var(--accent,#ff9800)','var(--accent,#ff9800)')}">🟠 ${dist['at-risk']}</button>
+        <button data-action="setHSFilter" data-tier="critical" style="${chipStyle(f==='critical','var(--alert,#c06458)','var(--alert,#c06458)')}">🔴 ${dist.critical}</button>
+      `;
+
+      let tableRows = '';
+      if (rows.length === 0) {
+        tableRows = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.2rem;">ไม่มีห้องในกลุ่มนี้</td></tr>`;
+      } else {
+        rows.forEach(r => {
+          const bar = `<div style="display:inline-flex;height:8px;width:80px;background:var(--mist,#f2f1ec);border-radius:4px;overflow:hidden;vertical-align:middle;">
+            <div style="width:${r.score.total}%;background:${r.tier.color};"></div>
+          </div>`;
+          tableRows += `<tr data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}" style="cursor:pointer;border-left:3px solid ${r.tier.color};">
+            <td style="padding:.5rem .7rem;font-weight:600;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.72rem;font-weight:400;">(${buildingLabel(r.building)})</span></td>
+            <td style="padding:.5rem .7rem;">${esc(r.tenantName || '—')}</td>
+            <td style="padding:.5rem .7rem;text-align:center;font-variant-numeric:tabular-nums;color:${r.tier.color};font-weight:700;">${r.score.total}</td>
+            <td style="padding:.5rem .7rem;">${bar}</td>
+            <td style="padding:.5rem .7rem;color:${r.tier.color};font-size:.78rem;font-weight:600;">${r.tier.emoji} ${r.tier.label}</td>
+            <td style="padding:.5rem .7rem;text-align:center;color:var(--text-muted);">→</td>
+          </tr>`;
+        });
+      }
+
+      // Stash records for drill-down
+      window._insightsCache = window._insightsCache || {};
+      window._insightsCache.healthRecords = {};
+      records.forEach(r => { window._insightsCache.healthRecords[`${r.building}:${r.roomId}`] = r; });
+
+      container.innerHTML = `
+        <div class="card" style="border-left:4px solid var(--moss,#5a7a5a);">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>🩺 Tenant Health Score</span>
+            <button data-action="refreshInsight" data-target="health" aria-label="รีเฟรช Health"
+                    style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+          </div>
+          <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.7rem;">
+            คะแนนรวม 0–100 จาก: ชำระเงิน · กิจกรรม · เรื่องร้องเรียน · ระยะเวลาเช่า
+          </div>
+          <div style="margin-bottom:.7rem;">${chips}</div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+              <thead>
+                <tr style="background:var(--green-pale);color:var(--green-dark);">
+                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">ห้อง</th>
+                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">ผู้เช่า</th>
+                  <th style="padding:.55rem .7rem;text-align:center;font-weight:700;">คะแนน</th>
+                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">Bar</th>
+                  <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">สถานะ</th>
+                  <th style="padding:.55rem .7rem;"></th>
+                </tr>
+              </thead>
+              <tbody>${tableRows}</tbody>
+            </table>
+          </div>
+          <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${fmtCacheAge(Date.now())}</div>
+        </div>
+      `;
+    } catch (e) {
+      console.error('[insights] tenant health failed:', e);
+      container.innerHTML = errorHTML('health', e.message);
+    }
+  }
+
+  // ============================================================
+  // FEATURE 5: Churn Risk Alert (ผู้เช่า tab)
+  // ============================================================
+  async function renderChurnRisk() {
+    const container = document.getElementById('dashChurnRisk');
+    if (!container) return;
+    container.innerHTML = loadingHTML();
+    try {
+      const records = await buildHealthRecords();
+
+      // Risk classification (any flag triggers inclusion)
+      const risks = records.map(r => {
+        const flags = [];
+        let recommend = null;
+        if (r.daysToEnd != null && r.daysToEnd >= 0 && r.daysToEnd <= 90) {
+          flags.push(`สัญญาเหลือ ${r.daysToEnd} วัน`);
+          recommend = 'ติดต่อต่อสัญญา';
+        }
+        if (r.score.total < 60) {
+          flags.push(`Health ${r.score.total}/100`);
+        }
+        if (r.paymentLateCount >= 3) {
+          flags.push(`ค้างชำระ ${r.paymentLateCount} ครั้ง`);
+          if (!recommend) recommend = 'ติดตามค่าเช่า';
+        }
+        if (r.complaintCount >= 2) {
+          flags.push(`Complaints ${r.complaintCount} ครั้ง (90d)`);
+          if (!recommend) recommend = 'ติดต่อสอบถาม';
+        }
+        const todayBKK = new Date(Date.now() + 7*3600000).toISOString().slice(0,10);
+        const inactiveDays = r.lastClaim
+          ? Math.floor((new Date(todayBKK) - new Date(r.lastClaim)) / 86400000)
+          : null;
+        if (inactiveDays != null && inactiveDays >= 14) {
+          flags.push(`ไม่ active ${inactiveDays} วัน`);
+          if (!recommend) recommend = 'ส่งข้อความ check-in';
+        }
+        return { ...r, flags, recommend, inactiveDays };
+      }).filter(r => r.flags.length > 0);
+
+      // Sort: critical → at-risk → others, then by score asc
+      risks.sort((a, b) => {
+        const order = { critical: 0, 'at-risk': 1, steady: 2, healthy: 3 };
+        const oA = order[a.tier.key] ?? 99;
+        const oB = order[b.tier.key] ?? 99;
+        if (oA !== oB) return oA - oB;
+        return a.score.total - b.score.total;
+      });
+
+      let bodyHTML;
+      if (risks.length === 0) {
+        bodyHTML = `<div style="text-align:center;color:var(--green-dark);padding:1.5rem;font-size:.9rem;">
+          ✅ ทุกห้องอยู่ในเกณฑ์ปกติ ไม่มีสัญญาณ churn risk
+        </div>`;
+      } else {
+        bodyHTML = '<ul style="list-style:none;padding:0;margin:0;">' +
+          risks.map(r => `<li style="padding:.7rem .25rem;border-bottom:1px solid var(--border-subtle,#ebe9e2);border-left:3px solid ${r.tier.color};padding-left:.7rem;display:grid;grid-template-columns:90px 1fr auto;gap:.5rem;align-items:center;">
+            <div>
+              <div style="font-weight:700;">${esc(r.roomId)}</div>
+              <div style="font-size:.7rem;color:var(--text-muted);">${buildingLabel(r.building)}</div>
+            </div>
+            <div>
+              <div style="font-size:.85rem;margin-bottom:.2rem;">
+                ${esc(r.tenantName || '—')}
+                <span style="color:${r.tier.color};font-weight:600;font-size:.78rem;margin-left:.4rem;">${r.tier.emoji} ${r.score.total}/100</span>
+              </div>
+              <div style="font-size:.74rem;color:var(--text-muted);">${r.flags.map(f=>esc(f)).join(' · ')}</div>
+              ${r.recommend ? `<div style="font-size:.74rem;color:var(--green-dark);margin-top:.2rem;">💡 ${esc(r.recommend)}</div>` : ''}
+            </div>
+            <div>
+              <button data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}"
+                      style="font-size:.72rem;padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:inherit;">รายละเอียด →</button>
+            </div>
+          </li>`).join('') + '</ul>';
+      }
+
+      container.innerHTML = `
+        <div class="card" style="border-left:4px solid var(--alert,#c06458);">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>⚠️ Churn Risk Alert</span>
+            <button data-action="refreshInsight" data-target="churn" aria-label="รีเฟรช Churn"
+                    style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+          </div>
+          <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.7rem;">
+            ห้องที่ต้องการความสนใจ: สัญญาใกล้หมด · Health ต่ำ · ค้างชำระ · ไม่ active · ร้องเรียนซ้ำ
+          </div>
+          ${bodyHTML}
+        </div>
+      `;
+    } catch (e) {
+      console.error('[insights] churn risk failed:', e);
+      container.innerHTML = errorHTML('churn', e.message);
+    }
+  }
+
+  // ============================================================
   // Lazy-init wrappers (called by switchDashboardTab)
   // ============================================================
-  let _commInited = false, _finInited = false;
+  let _commInited = false, _finInited = false, _tenInited = false;
   function initCommunityInsights() {
     if (_commInited) return;
     _commInited = true;
@@ -536,10 +940,20 @@
     _finInited = true;
     renderPaymentBehavior();
   }
+  function initTenantInsights() {
+    if (_tenInited) return;
+    _tenInited = true;
+    renderChurnRisk();
+    renderTenantHealth();
+  }
   function refreshInsight(target) {
     if (target === 'wellness') { cacheClear('tenants_all'); renderWellnessMatrix(); }
     else if (target === 'streak') { cacheClear('tenants_all'); renderStreakLeaderboard(); }
     else if (target === 'payment') { cacheClear('payment_behavior'); renderPaymentBehavior(); }
+    else if (target === 'health' || target === 'churn') {
+      cacheClear('tenants_all'); cacheClear('payment_deltas'); cacheClear('complaints_90d');
+      renderChurnRisk(); renderTenantHealth();
+    }
   }
 
   // ============================================================
@@ -555,6 +969,8 @@
     if (a === 'refreshInsight') { refreshInsight(el.dataset.target); return; }
     if (a === 'showWellnessRooms') { showWellnessRoomsModal(el.dataset.article); return; }
     if (a === 'showInactiveRooms') { showInactiveRoomsModal(); return; }
+    if (a === 'showHealthDetail') { showHealthDetailModal(el.dataset.key); return; }
+    if (a === 'setHSFilter') { _hsState.tierFilter = el.dataset.tier; renderTenantHealth(); return; }
     if (a === 'closeInsightsModal') { closeModal(); return; }
   });
   // Select dropdowns: react on 'change' only
@@ -571,5 +987,6 @@
   // ============================================================
   window.initCommunityInsights = initCommunityInsights;
   window.initFinancialInsights = initFinancialInsights;
+  window.initTenantInsights = initTenantInsights;
   window.refreshInsight = refreshInsight;
 })();
