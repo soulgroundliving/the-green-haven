@@ -386,6 +386,9 @@ function showBillingModal(roomId) {
         ` : `
         <div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:.85rem;">ยังไม่มีบิลสำหรับเดือนนี้<br>กรุณาสร้างบิลจากหน้า "บิล" ก่อน</div>
         `}
+        <div style="border-top:1px solid var(--border);margin-top:.8rem;padding-top:.8rem;text-align:center;">
+          <button onclick="document.getElementById('billingPayModal')?.remove();goToRoomPayHistory('${roomId}');" style="background:none;border:none;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.82rem;color:var(--green-dark);font-weight:700;text-decoration:underline;padding:4px 0;">📜 ดูประวัติการชำระทั้งหมด →</button>
+        </div>
       </div>
     </div>`;
   document.body.appendChild(modal);

@@ -1,4 +1,25 @@
 // ===== PAYMENT VERIFICATION =====
+
+// Navigate to bill page → ตรวจสลิป → ประวัติตามห้อง, pre-filtered to roomId
+window.goToRoomPayHistory = function(roomId) {
+  const bld = /^[Nn]\d/.test(String(roomId)) ? 'nest' : 'rooms';
+  window.showPage('bill');
+  const verifyBtn = document.getElementById('bill-main-tab-btn-verify');
+  if (typeof switchBillingMainTab === 'function') switchBillingMainTab('verify', verifyBtn);
+  const histBtn = document.getElementById('pv-tab-history-btn');
+  if (typeof switchPVTab === 'function') switchPVTab('history', histBtn);
+  setTimeout(() => {
+    const bldSel = document.getElementById('pvh-building');
+    if (bldSel) { bldSel.value = bld; }
+    if (typeof window.loadPVHistoryRooms === 'function') window.loadPVHistoryRooms();
+    setTimeout(() => {
+      const roomSel = document.getElementById('pvh-room');
+      if (roomSel) roomSel.value = String(roomId);
+      if (typeof window.renderPVHistory === 'function') window.renderPVHistory();
+    }, 60);
+  }, 80);
+};
+
 function loadTenantPayments(){
   return JSON.parse(localStorage.getItem('tenant_payments')||'[]');
 }
