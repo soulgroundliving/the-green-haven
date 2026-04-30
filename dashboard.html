@@ -2319,6 +2319,8 @@
       <div class="card-title">💳 สถานะการชำระเงินเดือนนี้</div>
       <div id="dashPaymentStatus" style="min-height:70px;"></div>
     </div>
+    <!-- Phase 1 Deep Analytic: Per-Tenant Payment Behavior -->
+    <div id="dashPaymentBehavior" style="margin-bottom:1rem;"></div>
   </div><!-- END การเงิน -->
 
   <!-- ===== TAB 3: ผู้เช่า ===== -->
@@ -2363,6 +2365,11 @@
         <div class="card-title">🐾 Pet Analytics (Nest)</div>
         <div id="dashPetAnalytics" style="min-height:60px;"></div>
       </div>
+    </div>
+    <!-- Phase 1 Deep Analytics: Wellness Engagement + Streak Leaderboard -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
+      <div id="dashWellnessMatrix"></div>
+      <div id="dashStreakLeaderboard"></div>
     </div>
     <div style="text-align:right;margin-bottom:1rem;">
       <button class="year-tab" data-action="showPage" data-page="gamification">🌿 ดูคะแนนทั้งหมด →</button>
@@ -4115,6 +4122,7 @@
 </div>
 
 <script src="./shared/dashboard-extra.js"></script>
+<script src="./shared/dashboard-insights.js"></script>
 
 <!-- ===== NOTIFICATION BELL ===== -->
 <div id="notifBellWrapper">
