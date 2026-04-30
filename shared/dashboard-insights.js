@@ -1122,7 +1122,6 @@
             <div>${mOverdueHTML}</div>
           </div>
 
-          ${totalHouse > 0 ? `
           <div style="border-top:1px solid var(--border-subtle,#ebe9e2);padding-top:.8rem;">
             <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
               🧹 Housekeeping · <span style="font-weight:400;">${totalHouse} รายการ</span>
@@ -1132,7 +1131,7 @@
               pill('กำลังดำเนินการ', hStatus.inprogress, 'var(--accent,#ff9800)'),
               pill('เสร็จแล้ว', hStatus.done, 'var(--green)'),
             ].join('') || `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีข้อมูล</span>`}</div>
-          </div>` : ''}
+          </div>
 
           <div style="border-top:1px solid var(--border-subtle,#ebe9e2);padding-top:.8rem;">
             <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
