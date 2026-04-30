@@ -67,9 +67,11 @@ window.switchDashboardTab = function(tabName, btn) {
   if (tabName === 'financial'   && typeof initFinancialInsights   === 'function') initFinancialInsights();
   if (tabName === 'tenants'     && typeof initTenantInsights      === 'function') initTenantInsights();
   if (tabName === 'operations'  && typeof initOperationsInsights  === 'function') initOperationsInsights();
-  if (tabName === 'tenants'   && typeof updateTenantStatusWidget  === 'function') updateTenantStatusWidget();
-  if (tabName === 'community' && typeof updateGamificationWidget  === 'function') updateGamificationWidget();
-  if (tabName === 'community' && typeof updatePetAnalyticsWidget  === 'function') updatePetAnalyticsWidget();
+  if (tabName === 'tenants'    && typeof updateTenantStatusWidget  === 'function') updateTenantStatusWidget();
+  if (tabName === 'community'  && typeof updateGamificationWidget  === 'function') updateGamificationWidget();
+  if (tabName === 'community'  && typeof updatePetAnalyticsWidget  === 'function') updatePetAnalyticsWidget();
+  if (tabName === 'operations' && typeof updateComplaintsWidget    === 'function') updateComplaintsWidget();
+  if (tabName === 'operations' && typeof updateMaintenanceWidget   === 'function') updateMaintenanceWidget();
 };
 
 window.switchDashboardProperty = function(property) {

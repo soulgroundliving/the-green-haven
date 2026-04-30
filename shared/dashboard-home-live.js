@@ -742,6 +742,8 @@ function updateDashboardLive(){
   updateTenantStatusWidget();
   updateGamificationWidget();
   updatePetAnalyticsWidget();
+  updateComplaintsWidget();
+  updateMaintenanceWidget();
 
   // Specific year selected — live cards are hidden by setYear(), nothing to render
   if(currentYear !== 'all') return;
@@ -820,43 +822,43 @@ function updateDashboardLive(){
       :'<div style="color:var(--green);font-weight:700;font-size:.86rem;">🎉 เก็บค่าเช่าครบทุกห้องแล้ว!</div>'}`;
   }
 
-  // Complaints mini-stats
-  const dashComp = document.getElementById('dashComplaintsStatus');
-  if(dashComp) {
-    const comp = JSON.parse(localStorage.getItem('complaints_data') || '[]');
-    const cOpen = comp.filter(c => c.status === 'open').length;
-    const cInProg = comp.filter(c => c.status === 'in-progress').length;
-    const cDone = comp.filter(c => c.status === 'resolved').length;
-    dashComp.innerHTML = comp.length === 0
-      ? '<div style="color:var(--text-muted);font-size:.85rem;">ไม่มีข้อร้องเรียน</div>'
-      : `<div style="display:flex;gap:1.4rem;flex-wrap:wrap;">
-          <div><div style="font-size:1.5rem;font-weight:800;color:#dc2626">${cOpen}</div><div style="font-size:.72rem;color:#dc2626;font-weight:600;">🔴 Open</div></div>
-          <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${cInProg}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">🟡 In Progress</div></div>
-          <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${cDone}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ Resolved</div></div>
-          <div><div style="font-size:1.5rem;font-weight:800;color:var(--text-muted)">${comp.length}</div><div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Total</div></div>
-        </div>`;
-  }
-
-  // Maintenance mini-stats
-  const dashMx = document.getElementById('dashMaintenanceStatus');
-  if(dashMx) {
-    const mx = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
-    const mxPending = mx.filter(r => r.status === 'pending' || r.status === 'open').length;
-    const mxDone = mx.filter(r => r.status === 'completed' || r.status === 'done').length;
-    const mxInProg = mx.filter(r => r.status === 'in-progress').length;
-    dashMx.innerHTML = mx.length === 0
-      ? '<div style="color:var(--text-muted);font-size:.85rem;">ไม่มีคำขอซ่อม</div>'
-      : `<div style="display:flex;gap:1.4rem;flex-wrap:wrap;">
-          <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${mxPending}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">⏳ Pending</div></div>
-          <div><div style="font-size:1.5rem;font-weight:800;color:#1976d2">${mxInProg}</div><div style="font-size:.72rem;color:#1976d2;font-weight:600;">🔨 In Progress</div></div>
-          <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${mxDone}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ Done</div></div>
-          <div><div style="font-size:1.5rem;font-weight:800;color:var(--text-muted)">${mx.length}</div><div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Total</div></div>
-        </div>`;
-  }
-
   updateNotificationBell();
   updateNavBadge();
   updateMxBadge();
+}
+
+function updateComplaintsWidget() {
+  const el = document.getElementById('dashComplaintsStatus');
+  if (!el) return;
+  const comp = JSON.parse(localStorage.getItem('complaints_data') || '[]');
+  const cOpen = comp.filter(c => c.status === 'open').length;
+  const cInProg = comp.filter(c => c.status === 'in-progress').length;
+  const cDone = comp.filter(c => c.status === 'resolved').length;
+  el.innerHTML = comp.length === 0
+    ? '<div style="color:var(--text-muted);font-size:.85rem;">ไม่มีข้อร้องเรียน</div>'
+    : `<div style="display:flex;gap:1.4rem;flex-wrap:wrap;">
+        <div><div style="font-size:1.5rem;font-weight:800;color:#dc2626">${cOpen}</div><div style="font-size:.72rem;color:#dc2626;font-weight:600;">🔴 Open</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${cInProg}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">🟡 In Progress</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${cDone}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ Resolved</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:var(--text-muted)">${comp.length}</div><div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Total</div></div>
+      </div>`;
+}
+
+function updateMaintenanceWidget() {
+  const el = document.getElementById('dashMaintenanceStatus');
+  if (!el) return;
+  const mx = JSON.parse(localStorage.getItem('maintenance_data') || '[]');
+  const mxPending = mx.filter(r => r.status === 'pending' || r.status === 'open').length;
+  const mxDone = mx.filter(r => r.status === 'completed' || r.status === 'done').length;
+  const mxInProg = mx.filter(r => r.status === 'in-progress').length;
+  el.innerHTML = mx.length === 0
+    ? '<div style="color:var(--text-muted);font-size:.85rem;">ไม่มีคำขอซ่อม</div>'
+    : `<div style="display:flex;gap:1.4rem;flex-wrap:wrap;">
+        <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${mxPending}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">⏳ Pending</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:#1976d2">${mxInProg}</div><div style="font-size:.72rem;color:#1976d2;font-weight:600;">🔨 In Progress</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${mxDone}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ Done</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:var(--text-muted)">${mx.length}</div><div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Total</div></div>
+      </div>`;
 }
 
 function updateTenantStatusWidget() {
