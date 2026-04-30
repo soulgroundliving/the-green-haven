@@ -62,10 +62,11 @@ window.switchDashboardTab = function(tabName, btn) {
   const canonical = document.getElementById('dash-cat-btn-' + tabName);
   if (canonical) canonical.classList.add('active');
   if (btn && btn !== canonical) btn.classList.add('active');
-  // Lazy-init Phase 1+2 deep analytics on first tab show
-  if (tabName === 'community' && typeof initCommunityInsights === 'function') initCommunityInsights();
-  if (tabName === 'financial' && typeof initFinancialInsights === 'function') initFinancialInsights();
-  if (tabName === 'tenants'   && typeof initTenantInsights    === 'function') initTenantInsights();
+  // Lazy-init deep analytics on first tab show
+  if (tabName === 'community'   && typeof initCommunityInsights   === 'function') initCommunityInsights();
+  if (tabName === 'financial'   && typeof initFinancialInsights   === 'function') initFinancialInsights();
+  if (tabName === 'tenants'     && typeof initTenantInsights      === 'function') initTenantInsights();
+  if (tabName === 'operations'  && typeof initOperationsInsights  === 'function') initOperationsInsights();
 };
 
 window.switchDashboardProperty = function(property) {

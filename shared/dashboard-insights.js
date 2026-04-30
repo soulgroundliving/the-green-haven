@@ -854,9 +854,221 @@
   }
 
   // ============================================================
+  // FEATURE 6: Overdue Bills (การเงิน tab)
+  // ============================================================
+  async function loadAllBillsRaw() {
+    const cached = cacheGet('bills_raw');
+    if (cached) return cached;
+    if (!window.firebaseDatabase || !window.firebaseRef || !window.firebaseGet)
+      throw new Error('RTDB ยังไม่พร้อม');
+    const snap = await window.firebaseGet(window.firebaseRef(window.firebaseDatabase, 'bills'));
+    const data = snap.val() || {};
+    cacheSet('bills_raw', data);
+    return data;
+  }
+
+  async function renderOverdueBills() {
+    const container = document.getElementById('dashOverdueBills');
+    if (!container) return;
+    container.innerHTML = loadingHTML();
+    try {
+      const all = await loadAllBillsRaw();
+      const todayStr = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+
+      // Aggregate overdue bills by room (sum all unpaid overdue bills per room)
+      const byRoom = {};
+      Object.entries(all).forEach(([building, rooms]) => {
+        Object.entries(rooms || {}).forEach(([room, bills]) => {
+          Object.values(bills || {}).forEach(b => {
+            if (!b || b.status === 'paid' || !b.dueDate || !b.total) return;
+            if (b.dueDate >= todayStr) return;
+            const key = `${building}:${room}`;
+            if (!byRoom[key]) byRoom[key] = { building, room, totalOwed: 0, oldestDue: b.dueDate, count: 0 };
+            byRoom[key].totalOwed += (Number(b.total) || 0);
+            byRoom[key].count++;
+            if (b.dueDate < byRoom[key].oldestDue) byRoom[key].oldestDue = b.dueDate;
+          });
+        });
+      });
+
+      const rows = Object.values(byRoom)
+        .map(r => ({ ...r, daysOverdue: Math.floor((Date.now() - new Date(r.oldestDue).getTime()) / 86400000) }))
+        .filter(r => r.daysOverdue > 0)
+        .sort((a, b) => b.daysOverdue - a.daysOverdue);
+
+      const totalOwed = rows.reduce((s, r) => s + r.totalOwed, 0);
+
+      let bodyHTML;
+      if (rows.length === 0) {
+        bodyHTML = `<div style="color:var(--green-dark);font-size:.9rem;padding:.4rem 0;">✅ ไม่มีบิลค้างชำระ</div>`;
+      } else {
+        const tileColor = r => r.daysOverdue > 14 ? 'var(--alert,#c06458)' : r.daysOverdue > 7 ? 'var(--accent,#ff9800)' : 'var(--blue)';
+        bodyHTML = `
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.5rem;margin-bottom:.7rem;">
+            ${rows.map(r => `
+              <div style="background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${tileColor(r)};border-radius:10px;padding:.65rem .75rem;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.15rem;">
+                  <span style="font-weight:700;font-size:.9rem;">${esc(r.room)} <span style="color:var(--text-muted);font-size:.68rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
+                  <span style="color:${tileColor(r)};font-weight:700;font-size:.88rem;font-variant-numeric:tabular-nums;">฿${r.totalOwed.toLocaleString()}</span>
+                </div>
+                <div style="font-size:.7rem;color:${tileColor(r)};font-weight:600;">เกิน ${r.daysOverdue} วัน${r.count > 1 ? ` · ${r.count} บิล` : ''}</div>
+                <div style="font-size:.68rem;color:var(--text-muted);">due: ${r.oldestDue}</div>
+              </div>`).join('')}
+          </div>
+          <div style="font-size:.8rem;color:var(--text-muted);">
+            รวม <strong style="color:var(--alert,#c06458);">${rows.length} ห้อง</strong> ·
+            ยอดค้างรวม <strong style="color:var(--alert,#c06458);">฿${totalOwed.toLocaleString()}</strong>
+          </div>`;
+      }
+
+      container.innerHTML = `
+        <div class="card" style="border-left:4px solid var(--alert,#c06458);">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>📌 ค่าเช่าค้างชำระ</span>
+            <button data-action="refreshInsight" data-target="overdue" aria-label="รีเฟรช"
+                    style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+          </div>
+          <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:.7rem;">บิลที่เลยกำหนดชำระและยังไม่ได้ชำระ · คำนวณจากวันนี้ (BKK)</div>
+          ${bodyHTML}
+          <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${fmtCacheAge(Date.now())}</div>
+        </div>`;
+    } catch (e) {
+      console.error('[insights] overdue bills failed:', e);
+      container.innerHTML = errorHTML('overdue', e.message);
+    }
+  }
+
+  // ============================================================
+  // FEATURE 7: Operations Summary (ปฏิบัติการ tab)
+  // ============================================================
+  async function renderOperationsInsights() {
+    const container = document.getElementById('dashOperationsInsights');
+    if (!container) return;
+    container.innerHTML = loadingHTML();
+    try {
+      if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions)
+        throw new Error('Firestore ยังไม่พร้อม');
+      const db = window.firebase.firestore();
+      const { collection, getDocs } = window.firebase.firestoreFunctions;
+
+      const [complaintsSnap, maintSnap] = await Promise.all([
+        getDocs(collection(db, 'complaints')),
+        window.firebaseGet(window.firebaseRef(window.firebaseDatabase, 'maintenance'))
+          .catch(() => ({ val: () => ({}) }))
+      ]);
+
+      // Complaints — last 90 days
+      const cutoff90 = Date.now() - 90 * 86400000;
+      const cStatus = { open: 0, 'in-progress': 0, resolved: 0 };
+      const cByCategory = {};
+      const resolveTimes = [];
+
+      complaintsSnap.forEach(d => {
+        const data = d.data() || {};
+        const ts = data.createdAt ? new Date(data.createdAt).getTime() : null;
+        if (ts && ts < cutoff90) return;
+        const s = data.status || 'open';
+        cStatus[s] = (cStatus[s] !== undefined ? cStatus[s] : 0) + 1;
+        cByCategory[data.category || 'other'] = (cByCategory[data.category || 'other'] || 0) + 1;
+        if (s === 'resolved' && data.createdAt && data.updatedAt) {
+          const days = (new Date(data.updatedAt) - new Date(data.createdAt)) / 86400000;
+          if (days >= 0 && days < 365) resolveTimes.push(days);
+        }
+      });
+
+      const totalComplaints = Object.values(cStatus).reduce((s, v) => s + v, 0);
+      const avgResolve = resolveTimes.length
+        ? (resolveTimes.reduce((s, v) => s + v, 0) / resolveTimes.length).toFixed(1)
+        : null;
+      const topCats = Object.entries(cByCategory).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+      // Maintenance (RTDB)
+      const maintAll = maintSnap.val() || {};
+      const overdueThreshold = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+      const mStatus = { pending: 0, inprogress: 0, done: 0 };
+      const mOverdue = [];
+
+      Object.entries(maintAll).forEach(([building, rooms]) => {
+        Object.entries(rooms || {}).forEach(([room, items]) => {
+          Object.values(items || {}).forEach(item => {
+            if (!item) return;
+            const s = item.status || 'pending';
+            if (s === 'pending') mStatus.pending++;
+            else if (s === 'inprogress') mStatus.inprogress++;
+            else if (s === 'done') mStatus.done++;
+            else mStatus.pending++;
+            if ((s === 'pending' || s === 'inprogress') && item.reportedAt && item.reportedAt < overdueThreshold) {
+              mOverdue.push({ building, room, reportedAt: item.reportedAt });
+            }
+          });
+        });
+      });
+
+      const totalMaint = mStatus.pending + mStatus.inprogress + mStatus.done;
+
+      // Build UI pieces
+      const pill = (label, count, color) => count === 0 ? '' :
+        `<span style="display:inline-block;padding:3px 10px;margin:2px 4px 2px 0;background:${color}22;border:1.5px solid ${color};color:${color};border-radius:999px;font-size:.75rem;font-weight:600;">${label} ${count}</span>`;
+
+      const cStatusHTML = [
+        pill('open', cStatus.open, 'var(--alert,#c06458)'),
+        pill('กำลังดำเนินการ', cStatus['in-progress'], 'var(--accent,#ff9800)'),
+        pill('resolved', cStatus.resolved, 'var(--green)'),
+      ].join('') || `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีข้อมูล (90 วัน)</span>`;
+
+      const mStatusHTML = [
+        pill('pending', mStatus.pending, 'var(--alert,#c06458)'),
+        pill('กำลังดำเนินการ', mStatus.inprogress, 'var(--accent,#ff9800)'),
+        pill('เสร็จแล้ว', mStatus.done, 'var(--green)'),
+      ].join('') || `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีข้อมูล</span>`;
+
+      const catChipsHTML = topCats.map(([cat, count]) =>
+        `<span style="display:inline-block;padding:2px 9px;margin:2px;background:var(--mist,#f2f1ec);border-radius:999px;font-size:.73rem;color:var(--ink);">${esc(cat)} <strong>${count}</strong></span>`
+      ).join('');
+
+      const mOverdueHTML = mOverdue.length === 0
+        ? `<span style="color:var(--green-dark);font-size:.78rem;">✅ ไม่มีงานค้าง</span>`
+        : mOverdue.slice(0, 8).map(m =>
+            `<span style="display:inline-block;padding:2px 8px;margin:2px;background:#fce4ec;border-radius:999px;font-size:.7rem;color:var(--alert,#c06458);">ห้อง ${esc(m.room)} ${buildingLabel(m.building)}</span>`
+          ).join('') + (mOverdue.length > 8 ? ` <span style="font-size:.7rem;color:var(--alert,#c06458);">+${mOverdue.length - 8}</span>` : '');
+
+      container.innerHTML = `
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>📋 Operations Summary</span>
+            <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
+                    style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+          </div>
+
+          <div style="margin-bottom:1rem;">
+            <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
+              ⚠️ Complaints (90 วัน) · <span style="font-weight:400;">${totalComplaints} เรื่อง${avgResolve ? ` · เฉลี่ยแก้ไข ${avgResolve} วัน` : ''}</span>
+            </div>
+            <div style="margin-bottom:.5rem;">${cStatusHTML}</div>
+            ${topCats.length ? `<div style="font-size:.73rem;color:var(--text-muted);margin-bottom:.25rem;">หมวดหมู่:</div><div>${catChipsHTML}</div>` : ''}
+          </div>
+
+          <div style="border-top:1px solid var(--border-subtle,#ebe9e2);padding-top:.8rem;">
+            <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
+              🔧 Maintenance · <span style="font-weight:400;">${totalMaint} รายการ${mOverdue.length ? ` · <span style="color:var(--alert,#c06458);">⏰ ค้าง ${mOverdue.length} รายการ</span>` : ''}</span>
+            </div>
+            <div style="margin-bottom:.5rem;">${mStatusHTML}</div>
+            <div style="font-size:.73rem;color:var(--text-muted);margin-bottom:.3rem;">ค้างเกิน 7 วัน:</div>
+            <div>${mOverdueHTML}</div>
+          </div>
+
+          <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.7rem;">${fmtCacheAge(Date.now())}</div>
+        </div>`;
+    } catch (e) {
+      console.error('[insights] operations failed:', e);
+      container.innerHTML = errorHTML('operations', e.message);
+    }
+  }
+
+  // ============================================================
   // Lazy-init wrappers (called by switchDashboardTab)
   // ============================================================
-  let _commInited = false, _finInited = false, _tenInited = false;
+  let _commInited = false, _finInited = false, _tenInited = false, _opsInited = false;
   function initCommunityInsights() {
     if (_commInited) return;
     _commInited = true;
@@ -867,11 +1079,17 @@
     if (_finInited) return;
     _finInited = true;
     renderPaymentBehavior();
+    renderOverdueBills();
   }
   function initTenantInsights() {
     if (_tenInited) return;
     _tenInited = true;
     renderTenantInsights();
+  }
+  function initOperationsInsights() {
+    if (_opsInited) return;
+    _opsInited = true;
+    renderOperationsInsights();
   }
   function refreshInsight(target) {
     if (target === 'wellness') { cacheClear('tenants_all'); renderWellnessMatrix(); }
@@ -881,6 +1099,8 @@
       cacheClear('tenants_all'); cacheClear('payment_deltas'); cacheClear('complaints_90d');
       renderTenantInsights();
     }
+    else if (target === 'overdue') { cacheClear('bills_raw'); renderOverdueBills(); }
+    else if (target === 'operations') { cacheClear('ops_insights'); renderOperationsInsights(); }
   }
 
   // ============================================================
@@ -912,8 +1132,9 @@
   // ============================================================
   // Exports
   // ============================================================
-  window.initCommunityInsights = initCommunityInsights;
-  window.initFinancialInsights = initFinancialInsights;
-  window.initTenantInsights = initTenantInsights;
-  window.refreshInsight = refreshInsight;
+  window.initCommunityInsights  = initCommunityInsights;
+  window.initFinancialInsights  = initFinancialInsights;
+  window.initTenantInsights     = initTenantInsights;
+  window.initOperationsInsights = initOperationsInsights;
+  window.refreshInsight         = refreshInsight;
 })();
