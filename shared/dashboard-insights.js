@@ -874,18 +874,18 @@
           ✅ ทุกห้องอยู่ในเกณฑ์ปกติ ไม่มีสัญญาณ churn risk
         </div>`;
       } else {
-        bodyHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.5rem;">' +
+        bodyHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.5rem;">' +
           risks.map(r => `<div data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}"
-               style="cursor:pointer;background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;"
+               style="cursor:pointer;background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.65rem .75rem;transition:transform .1s,box-shadow .1s;"
                onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 2px 8px rgba(31,31,28,.08)';"
                onmouseout="this.style.transform='';this.style.boxShadow='';">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.25rem;">
-              <span style="font-weight:700;font-size:.92rem;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.7rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
-              <span style="color:${r.tier.color};font-weight:700;font-size:.86rem;font-variant-numeric:tabular-nums;">${r.tier.emoji} ${r.score.total}/100</span>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.2rem;">
+              <span style="font-weight:700;font-size:.9rem;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.68rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
+              <span style="color:${r.tier.color};font-weight:700;font-size:.92rem;font-variant-numeric:tabular-nums;">${r.tier.emoji} ${r.score.total}</span>
             </div>
-            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.tenantName || '—')}</div>
-            <div style="font-size:.72rem;color:var(--text-muted);line-height:1.5;margin-bottom:.3rem;">${r.flags.map(f=>esc(f)).join(' · ')}</div>
-            ${r.recommend ? `<div style="font-size:.74rem;color:var(--green-dark);font-weight:600;border-top:1px dashed var(--border-subtle,#ebe9e2);padding-top:.3rem;margin-top:.3rem;">💡 ${esc(r.recommend)}</div>` : ''}
+            <div style="font-size:.74rem;color:var(--text-muted);margin-bottom:.35rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.tenantName || '—')}</div>
+            <div style="font-size:.7rem;color:var(--text-muted);line-height:1.4;margin-bottom:.3rem;" title="${esc(r.flags.join(' · '))}">${esc(r.flags[0] || '')}${r.flags.length>1?` <span style="color:var(--alert,#c06458);">+${r.flags.length-1}</span>`:''}</div>
+            ${r.recommend ? `<div style="font-size:.7rem;color:var(--green-dark);font-weight:600;border-top:1px dashed var(--border-subtle,#ebe9e2);padding-top:.3rem;">💡 ${esc(r.recommend)}</div>` : ''}
           </div>`).join('') + '</div>';
       }
 
