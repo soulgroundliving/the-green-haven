@@ -738,6 +738,11 @@ function updateDashboardLive(){
   const currentDate=now.getFullYear()+543;
   const currentMonth=now.getMonth()+1;
 
+  // These widgets are year-independent — always render current live state
+  updateTenantStatusWidget();
+  updateGamificationWidget();
+  updatePetAnalyticsWidget();
+
   // Specific year selected — live cards are hidden by setYear(), nothing to render
   if(currentYear !== 'all') return;
 
@@ -815,40 +820,6 @@ function updateDashboardLive(){
       :'<div style="color:var(--green);font-weight:700;font-size:.86rem;">🎉 เก็บค่าเช่าครบทุกห้องแล้ว!</div>'}`;
   }
 
-  // Quick tenant panel (COMBINED from both buildings)
-  const dashTen=document.getElementById('dashTenantStatus');
-  if(dashTen){
-    const today=new Date();
-    const vacantRoomsRooms=activeRooms.filter(r=>!tenants[r.id]?.name).map(r=>r.id);
-    const vacantRoomsNest=activeNest.filter(r=>!tenants[r.id]?.name).map(r=>r.id);
-    const allVacant=[...vacantRoomsRooms, ...vacantRoomsNest];
-    const soonRooms=activeRooms.filter(r=>{
-      const t=tenants[r.id];
-      if(!t?.contractEnd)return false;
-      const diff=(new Date(t.contractEnd)-today)/(1000*60*60*24);
-      return diff>=0&&diff<=30;
-    });
-    const soonNest=activeNest.filter(r=>{
-      const t=tenants[r.id];
-      if(!t?.contractEnd)return false;
-      const diff=(new Date(t.contractEnd)-today)/(1000*60*60*24);
-      return diff>=0&&diff<=30;
-    });
-    const allSoon=[...soonRooms, ...soonNest];
-    const occRate = totalRooms>0 ? Math.round(occCount/totalRooms*100) : 0;
-    dashTen.innerHTML=`
-      <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
-        <div><div style="font-size:1.5rem;font-weight:800;color:var(--blue)">${occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">มีผู้เช่า</div></div>
-        <div><div style="font-size:1.5rem;font-weight:800;color:var(--accent)">${totalRooms-occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">ห้องว่าง</div></div>
-        <div><div style="font-size:1.5rem;font-weight:800;color:${occRate>=80?'#2d8653':occRate>=60?'#f59e0b':'#dc2626'}">${occRate}%</div><div style="font-size:.72rem;color:var(--text-muted)">Occupancy Rate</div></div>
-        ${allSoon.length?`<div><div style="font-size:1.5rem;font-weight:800;color:var(--red)">${allSoon.length}</div><div style="font-size:.72rem;color:var(--text-muted)">สัญญาใกล้หมด</div></div>`:''}
-      </div>
-      <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${occCountRooms}/${activeRooms.length} | 🏢 Nest: ${occCountNest}/${activeNest.length}</div>
-      ${allVacant.length?`<div style="font-size:.74rem;color:var(--text-muted);">ว่าง: ${allVacant.slice(0,8).join(', ')}${allVacant.length>8?'...':''}</div>`
-      :'<div style="color:var(--green);font-weight:700;font-size:.85rem;">✅ ไม่มีห้องว่าง</div>'}
-      ${allSoon.length?`<div style="font-size:.74rem;color:var(--red);margin-top:4px;">⚠️ สัญญาใกล้หมด: ${allSoon.map(r=>r.id).join(', ')}</div>`:''}`;
-  }
-
   // Complaints mini-stats
   const dashComp = document.getElementById('dashComplaintsStatus');
   if(dashComp) {
@@ -884,10 +855,41 @@ function updateDashboardLive(){
   }
 
   updateNotificationBell();
-  updateGamificationWidget();
-  updatePetAnalyticsWidget();
   updateNavBadge();
   updateMxBadge();
+}
+
+function updateTenantStatusWidget() {
+  const dashTen = document.getElementById('dashTenantStatus');
+  if (!dashTen) return;
+  if (!window.ROOMS_OLD || window.ROOMS_OLD.length === 0) return;
+  const today = new Date();
+  const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
+  const activeNest = [];
+  const totalRooms = activeRooms.length;
+  const tenants = loadTenants();
+  const occCountRooms = activeRooms.filter(r => tenants[r.id]?.name).length;
+  const occCountNest = 0;
+  const occCount = occCountRooms + occCountNest;
+  const vacantRoomsArr = activeRooms.filter(r => !tenants[r.id]?.name).map(r => r.id);
+  const soonRooms = activeRooms.filter(r => {
+    const t = tenants[r.id];
+    if (!t?.contractEnd) return false;
+    const diff = (new Date(t.contractEnd) - today) / (1000 * 60 * 60 * 24);
+    return diff >= 0 && diff <= 30;
+  });
+  const occRate = totalRooms > 0 ? Math.round(occCount / totalRooms * 100) : 0;
+  dashTen.innerHTML = `
+    <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
+      <div><div style="font-size:1.5rem;font-weight:800;color:var(--blue)">${occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">มีผู้เช่า</div></div>
+      <div><div style="font-size:1.5rem;font-weight:800;color:var(--accent)">${totalRooms - occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">ห้องว่าง</div></div>
+      <div><div style="font-size:1.5rem;font-weight:800;color:${occRate>=80?'#2d8653':occRate>=60?'#f59e0b':'#dc2626'}">${occRate}%</div><div style="font-size:.72rem;color:var(--text-muted)">Occupancy Rate</div></div>
+      ${soonRooms.length ? `<div><div style="font-size:1.5rem;font-weight:800;color:var(--red)">${soonRooms.length}</div><div style="font-size:.72rem;color:var(--text-muted)">สัญญาใกล้หมด</div></div>` : ''}
+    </div>
+    <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${occCountRooms}/${activeRooms.length}</div>
+    ${vacantRoomsArr.length ? `<div style="font-size:.74rem;color:var(--text-muted);">ว่าง: ${vacantRoomsArr.slice(0,8).join(', ')}${vacantRoomsArr.length>8?'...':''}</div>`
+    : '<div style="color:var(--green);font-weight:700;font-size:.85rem;">✅ ไม่มีห้องว่าง</div>'}
+    ${soonRooms.length ? `<div style="font-size:.74rem;color:var(--red);margin-top:4px;">⚠️ สัญญาใกล้หมด: ${soonRooms.map(r=>r.id).join(', ')}</div>` : ''}`;
 }
 
 function updateGamificationWidget() {
