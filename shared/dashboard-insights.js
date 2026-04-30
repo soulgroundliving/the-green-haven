@@ -1170,88 +1170,6 @@
   }
 
   // ============================================================
-  // FEATURE 8: Slip Amount Mismatch (ปฏิบัติการ tab)
-  // ============================================================
-  async function renderSlipMismatch() {
-    const container = document.getElementById('dashSlipMismatch');
-    if (!container) return;
-    container.innerHTML = loadingHTML();
-    try {
-      // Reuse global cache from dashboard-bill.js global listener when available
-      let slips = window._verifiedSlipsRawCache;
-      if (!Array.isArray(slips)) {
-        if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions)
-          throw new Error('Firestore ยังไม่พร้อม');
-        const db = window.firebase.firestore();
-        const { collection, getDocs, query, orderBy, limit } = window.firebase.firestoreFunctions;
-        const snap = await getDocs(query(collection(db, 'verifiedSlips'), orderBy('timestamp', 'desc'), limit(200)));
-        slips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
-
-      const THRESHOLD = 0.05;
-      const mismatches = slips
-        .filter(s => s.amount != null && s.expectedAmount != null && s.expectedAmount > 0 &&
-                     Math.abs(s.amount - s.expectedAmount) / s.expectedAmount > THRESHOLD)
-        .map(s => {
-          const diff = Number(s.amount) - Number(s.expectedAmount);
-          const pct = Math.round(Math.abs(diff) / Number(s.expectedAmount) * 100);
-          const ts = s.timestamp?.toDate ? s.timestamp.toDate()
-                   : s.timestamp ? new Date(s.timestamp) : null;
-          return { ...s, diff, pct, ts };
-        })
-        .sort((a, b) => (b.ts || 0) - (a.ts || 0))
-        .slice(0, 20);
-
-      let bodyHTML;
-      if (mismatches.length === 0) {
-        bodyHTML = `<div style="color:var(--green-dark);font-size:.88rem;padding:.4rem 0;">✅ ไม่พบสลิปที่ยอดไม่ตรง (threshold 5%)</div>`;
-      } else {
-        const rows = mismatches.map(s => {
-          const color = Math.abs(s.diff) / Number(s.expectedAmount) > 0.1
-            ? 'var(--alert,#c06458)' : 'var(--accent,#ff9800)';
-          const fmtDate = s.ts
-            ? s.ts.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
-            : '—';
-          return `<tr style="border-bottom:1px solid var(--border-subtle,#ebe9e2);border-left:3px solid ${color};">
-            <td style="padding:.5rem .7rem;font-weight:600;">${esc(s.room)} <span style="color:var(--text-muted);font-size:.72rem;">${buildingLabel(s.building)}</span></td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">฿${Number(s.amount).toLocaleString()}</td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">฿${Number(s.expectedAmount).toLocaleString()}</td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${color};font-weight:600;">${s.diff > 0 ? '+' : ''}฿${Math.abs(Number(s.diff)).toLocaleString()} (${s.pct}%)</td>
-            <td style="padding:.5rem .7rem;font-size:.75rem;color:var(--text-muted);">${esc(fmtDate)}</td>
-          </tr>`;
-        }).join('');
-        bodyHTML = `<div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
-            <thead><tr style="background:var(--mist,#f2f1ec);">
-              <th style="padding:.5rem .7rem;text-align:left;">ห้อง</th>
-              <th style="padding:.5rem .7rem;text-align:right;">ยอดสลิป</th>
-              <th style="padding:.5rem .7rem;text-align:right;">ยอดที่คาด</th>
-              <th style="padding:.5rem .7rem;text-align:right;">ผลต่าง</th>
-              <th style="padding:.5rem .7rem;text-align:left;">วันที่</th>
-            </tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
-        <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem;">แสดง ${mismatches.length} รายการที่ยอดต่างเกิน 5%</div>`;
-      }
-
-      container.innerHTML = `<div class="card" style="border-left:4px solid var(--accent,#ff9800);">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-          <span>🔍 Slip Amount Mismatch</span>
-          <button data-action="refreshInsight" data-target="slipMismatch" aria-label="รีเฟรช Slip Mismatch"
-                  style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
-        </div>
-        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.7rem;">ยอดสลิปที่ผู้เช่าโอนมาต่างจากยอดที่คาดหวัง &gt;5% (ตรวจ ${slips.length} สลิปล่าสุด)</div>
-        ${bodyHTML}
-        <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${fmtCacheAge(Date.now())}</div>
-      </div>`;
-    } catch (e) {
-      console.error('[insights] slip mismatch failed:', e);
-      container.innerHTML = errorHTML('slipMismatch', e.message);
-    }
-  }
-
-  // ============================================================
   // FEATURE 9: Meter Usage Spike (ปฏิบัติการ tab)
   // ============================================================
   async function renderMeterSpike() {
@@ -1468,7 +1386,6 @@
     if (_opsInited) return;
     _opsInited = true;
     renderOperationsInsights();
-    renderSlipMismatch();
     renderMeterSpike();
     renderProviderScore();
   }
@@ -1482,7 +1399,6 @@
     }
     else if (target === 'overdue') { cacheClear('bills_raw'); renderOverdueBills(); }
     else if (target === 'operations') { cacheClear('ops_insights'); renderOperationsInsights(); }
-    else if (target === 'slipMismatch') { renderSlipMismatch(); }
     else if (target === 'meterSpike') { cacheClear('meter_spike'); renderMeterSpike(); }
     else if (target === 'providerScore') { renderProviderScore(); }
   }
