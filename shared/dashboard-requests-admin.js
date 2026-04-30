@@ -123,6 +123,8 @@ function subscribeMaintenanceRTDB(){
               beforePhoto: t.beforePhoto || null,
               afterPhoto: t.afterPhoto || null,
               workNotes: t.workNotes || null,
+              assignedProviderId: t.assignedProviderId || null,
+              costThb: t.costThb != null ? t.costThb : null,
               photoFileName: t.photoFileName || null
             });
           });
@@ -301,6 +303,22 @@ function addMaintenanceRequest(){
   _pendingCostThb = null;
   mx.unshift(newTicket);
   saveMaintenance(mx);
+
+  // RTDB write for cross-device sync (includes provider/cost)
+  if(window.firebaseRef && window.firebaseSet && window.firebaseDatabase){
+    try {
+      const bld = /^[Nn]\d/.test(sanitizedRoom) ? 'nest' : 'rooms';
+      window.firebaseSet(
+        window.firebaseRef(window.firebaseDatabase, `maintenance/${bld}/${sanitizedRoom}/${ticketId}`),
+        { id: ticketId, room: sanitizedRoom, building: bld,
+          desc: sanitizedDesc, category: cat, priority: pri,
+          status: 'pending', reportedAt: date, updatedAt: date,
+          assignedTo: null,
+          assignedProviderId: newTicket.assignedProviderId || null,
+          costThb: newTicket.costThb || null }
+      ).catch(e => console.warn('[mx] RTDB create failed:', e));
+    } catch(e){ console.warn('[mx] RTDB create failed:', e); }
+  }
 
   // Also save to tenant_maintenance_tickets for realtime sync
   const tenantTickets=JSON.parse(localStorage.getItem('tenant_maintenance_tickets')||'[]');
@@ -693,11 +711,84 @@ function editMaintenance(id, field){
     showNotesModal(id);
   } else if(field==='photos'){
     showPhotosModal(id);
+  } else if(field==='provider'){
+    showProviderModal(id);
   }
 }
 
 function closeAssignModal(){
   const modal=document.getElementById('mx-assign-modal');
+  if(modal)modal.remove();
+}
+
+function showProviderModal(id){
+  const mx=loadMaintenance();
+  const item=mx.find(x=>x.id===id);
+  if(!item)return;
+  const providers=(window.ServiceProvidersStore&&window.ServiceProvidersStore.getAll())||[];
+  const modal=document.createElement('div');
+  modal.id='mx-provider-modal';
+  modal.className='u-modal-overlay';
+  const content=document.createElement('div');
+  content.className='u-modal-panel u-modal-panel-sm';
+  const opts=providers.map(p=>`<option value="${_escReq(p.id)}"${item.assignedProviderId===p.id?' selected':''}>${_escReq(p.name)}</option>`).join('');
+  content.innerHTML=`
+    <h2 style="margin:0 0 20px 0;font-size:1.2rem;color:var(--text);">🏗️ ระบุผู้รับเหมา</h2>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">ผู้รับเหมา</label>
+      <select id="pv-provider" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
+        <option value="">— ไม่ระบุ —</option>
+        ${opts}
+      </select>
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="display:block;margin-bottom:8px;font-weight:600;font-size:.95rem;">ค่าใช้จ่าย (บาท)</label>
+      <input type="number" id="pv-cost" placeholder="เช่น 500" min="0" value="${item.costThb||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box;font-family:'Sarabun',sans-serif;">
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="saveProviderAssignment('${id}')" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✅ บันทึก</button>
+      <button onclick="closeProviderModal()" style="flex:1;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">❌ ยกเลิก</button>
+    </div>
+  `;
+  modal.appendChild(content);
+  modal.onclick=function(e){ if(e.target===modal)closeProviderModal(); };
+  document.body.appendChild(modal);
+}
+
+function saveProviderAssignment(id){
+  const provEl=document.getElementById('pv-provider');
+  const costEl=document.getElementById('pv-cost');
+  if(!provEl)return;
+  const mx=loadMaintenance();
+  const item=mx.find(x=>x.id===id);
+  if(!item)return;
+  item.assignedProviderId=provEl.value||null;
+  item.costThb=costEl&&costEl.value?Number(costEl.value):null;
+  item.updatedAt=new Date().toISOString().split('T')[0];
+  saveMaintenance(mx);
+  if(window.firebaseRef&&window.firebaseUpdate&&window.firebaseDatabase){
+    try {
+      const bld=item.building||'rooms';
+      window.firebaseUpdate(
+        window.firebaseRef(window.firebaseDatabase, `maintenance/${bld}/${item.room}/${id}`),
+        { assignedProviderId: item.assignedProviderId||null,
+          costThb: item.costThb||null,
+          updatedAt: item.updatedAt }
+      ).catch(e=>console.warn('[mx] RTDB provider update failed:',e));
+    } catch(e){ console.warn('[mx] RTDB provider update failed:',e); }
+  }
+  closeProviderModal();
+  renderMaintenancePage();
+  if(typeof renderProviderScore==='function') renderProviderScore();
+  const t=document.createElement('div');
+  t.className='u-toast';
+  t.textContent='✅ บันทึกผู้รับเหมาแล้ว';
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2500);
+}
+
+function closeProviderModal(){
+  const modal=document.getElementById('mx-provider-modal');
   if(modal)modal.remove();
 }
 
@@ -813,6 +904,8 @@ function renderMaintenancePage(){
   if(!el)return;
   if(!filtered.length){el.innerHTML='<div style="text-align:center;padding:40px 32px;color:var(--text-muted);font-size:.95rem;">ไม่มีรายการ</div>';return;}
   const fmt=d=>{if(!d)return'—';const p=d.split('-');return`${parseInt(p[2])} ${['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][parseInt(p[1])]}`;};
+  const _provMap={};
+  try{(window.ServiceProvidersStore&&window.ServiceProvidersStore.getAll()||[]).forEach(p=>{_provMap[p.id]=p.name;});}catch(_){}
   el.innerHTML=filtered.map(x=>`
     <div class="mx-row" style="${x.status==='done'?'opacity:.7;':''}">
       <div>
@@ -827,6 +920,8 @@ function renderMaintenancePage(){
             <span class="mx-status-pill ${MX_STATUS_CLASS[x.status]||'mx-pending'}">${MX_STATUS_LABEL[x.status]||x.status}</span>
             ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?'<span style="font-size:.75rem;color:var(--blue);background:#e3f2fd;padding:4px 10px;border-radius:20px;">📸 มีรูปภาพ</span>':''}
             ${x.assignedTo?'<span style="font-size:.75rem;color:#5e35b1;background:#e8e4f3;padding:4px 10px;border-radius:20px;">👤 '+_escReq(x.assignedTo)+'</span>':''}
+            ${x.assignedProviderId?'<span style="font-size:.75rem;color:#e65100;background:#fff3e0;padding:4px 10px;border-radius:20px;">🏗️ '+_escReq(_provMap[x.assignedProviderId]||x.assignedProviderId)+'</span>':''}
+            ${x.costThb?'<span style="font-size:.75rem;color:#1565c0;background:#e3f2fd;padding:4px 10px;border-radius:20px;">💰 ฿'+x.costThb.toLocaleString()+'</span>':''}
           </div>
           ${x.photoUrl||x.photo||x.beforePhoto||x.afterPhoto?`<div style="margin-top:8px;"><button class="photo-viewer-btn" onclick="openPhotoModal('${x.beforePhoto||x.photoUrl||x.photo||''}', '${x.afterPhoto||''}')">📸 รูปภาพ</button></div>`:''}
 
@@ -840,8 +935,8 @@ function renderMaintenancePage(){
             })()}</div>
           </div>
           <div class="mx-row-actions">
-            ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus('${x.id}','inprogress')">🔨 รับงาน</button>`:''}
-            ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateMaintenanceStatus('${x.id}','done')">✅ เสร็จ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','assign')">📝 ผู้รับผิดชอบ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','notes')">📋 หมายเหตุ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','photos')">📷 รูปภาพ</button>`:''}
+            ${x.status==='pending'?`<button class="mx-btn mx-btn-next" onclick="updateMaintenanceStatus('${x.id}','inprogress')">🔨 รับงาน</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','provider')">🏗️ ผู้รับเหมา</button>`:''}
+            ${x.status==='inprogress'?`<button class="mx-btn mx-btn-done" onclick="updateMaintenanceStatus('${x.id}','done')">✅ เสร็จ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','assign')">📝 ผู้รับผิดชอบ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','notes')">📋 หมายเหตุ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','photos')">📷 รูปภาพ</button><button class="mx-btn mx-btn-next" onclick="editMaintenance('${x.id}','provider')">🏗️ ผู้รับเหมา</button>`:''}
             ${x.status==='done'?`<button class="mx-btn mx-btn-reopen" onclick="updateMaintenanceStatus('${x.id}','pending')">↩ เปิดใหม่</button>`:''}
             <button class="mx-btn mx-btn-del" onclick="deleteMaintenanceRequest('${x.id}')">🗑️ ลบ</button>
           </div>
