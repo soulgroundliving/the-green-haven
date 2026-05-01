@@ -97,16 +97,20 @@ window.switchTenantMainTab = function(tab, btn) {
 };
 
 window.switchBillingMainTab = function(tab, btn) {
-  ['billing','verify'].forEach(t => {
-    const el = document.getElementById('bill-main-tab-' + t);
-    if(el) {
-      el.classList.toggle('u-hidden', !((t === tab)));
-      if (el.style.display) el.style.display = '';
-    }
+  // 4 tabs: billing | live | history | monthly. The 3 verify panels (live/history/monthly)
+  // were previously nested under a 'verify' wrapper; flattened 2026-05-02.
+  const PANEL_ID = { billing: 'bill-main-tab-billing', live: 'pv-tab-live', history: 'pv-tab-history', monthly: 'pv-tab-monthly' };
+  Object.entries(PANEL_ID).forEach(([t, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('u-hidden', t !== tab);
+    if (el.style.display) el.style.display = '';
   });
-  document.querySelectorAll('#bill-main-tab-btn-billing,#bill-main-tab-btn-verify').forEach(b => b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  if(tab === 'verify' && typeof initPaymentVerify === 'function') initPaymentVerify();
+  document.querySelectorAll('#bill-main-tab-btn-billing,#bill-main-tab-btn-live,#bill-main-tab-btn-history,#bill-main-tab-btn-monthly').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  // initPaymentVerify is idempotent (unsubscribes prior listener) — safe to call on every verify-side switch
+  if (tab !== 'billing' && typeof initPaymentVerify === 'function') initPaymentVerify();
+  if (tab === 'monthly' && typeof window._pvPrefillMonthly === 'function') window._pvPrefillMonthly();
 };
 
 // Meter Tab Switching Function
@@ -653,7 +657,6 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'switchMeterTab') { window.switchMeterTab(tab, el); return; }
     if (a === 'switchContentTab') { typeof switchContentTab === 'function' && switchContentTab(tab, el); return; }
     if (a === 'switchBillingMainTab') { typeof switchBillingMainTab === 'function' && switchBillingMainTab(tab, el); return; }
-    if (a === 'switchPVTab') { typeof switchPVTab === 'function' && switchPVTab(tab, el); return; }
     if (a === 'switchPeopleTab') { typeof switchPeopleTab === 'function' && switchPeopleTab(tab, el); return; }
     if (a === 'runAwardDryRun') { typeof runAwardComplaintFreeMonthDryRun === 'function' && runAwardComplaintFreeMonthDryRun(); return; }
     if (a === 'grantAdminRole') { typeof grantAdminRole === 'function' && grantAdminRole(); return; }

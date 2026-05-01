@@ -1,13 +1,12 @@
 // ===== PAYMENT VERIFICATION =====
 
-// Navigate to bill page → ตรวจสลิป → ประวัติตามห้อง, pre-filtered to roomId
+// Navigate to bill page → ประวัติตามห้อง, pre-filtered to roomId.
+// Tabs flattened 2026-05-02: 'history' is now a top-level tab (was a sub-tab under 'verify').
 window.goToRoomPayHistory = function(roomId) {
   const bld = /^[Nn]\d/.test(String(roomId)) ? 'nest' : 'rooms';
   window.showPage('bill');
-  const verifyBtn = document.getElementById('bill-main-tab-btn-verify');
-  if (typeof switchBillingMainTab === 'function') switchBillingMainTab('verify', verifyBtn);
-  const histBtn = document.getElementById('pv-tab-history-btn');
-  if (typeof switchPVTab === 'function') switchPVTab('history', histBtn);
+  const histBtn = document.getElementById('bill-main-tab-btn-history');
+  if (typeof switchBillingMainTab === 'function') switchBillingMainTab('history', histBtn);
   setTimeout(() => {
     const bldSel = document.getElementById('pvh-building');
     if (bldSel) { bldSel.value = bld; }
@@ -325,19 +324,11 @@ window.submitManualVerify = async function(){
   }
 };
 
-// ===== Payment Verify — ประวัติตามห้อง =====
-window.switchPVTab = function(tab, btn){
-  document.querySelectorAll('#bill-main-tab-verify .year-tab').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  const live    = document.getElementById('pv-tab-live');
-  const hist    = document.getElementById('pv-tab-history');
-  const monthly = document.getElementById('pv-tab-monthly');
-  // Static HTML ships hist/monthly with inline display:none. Clear it so the class wins.
-  [live, hist, monthly].forEach(el => { if (el && el.style.display) el.style.display = ''; });
-  if(live)    live.classList.toggle('u-hidden', !((tab==='live')));
-  if(hist)    hist.classList.toggle('u-hidden', !((tab==='history')));
-  if(monthly) monthly.classList.toggle('u-hidden', !((tab==='monthly')));
-  if(tab==='monthly'){
+// ===== Payment Verify — monthly tab prefill helper =====
+// Called by switchBillingMainTab when 'monthly' tab is activated. Extracted from
+// the old switchPVTab in 2026-05-02 tab-flattening refactor.
+window._pvPrefillMonthly = function(){
+  {
     const now = new Date();
     const mm = document.getElementById('mt-month');
     const my = document.getElementById('mt-year');

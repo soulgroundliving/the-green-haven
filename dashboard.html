@@ -2001,7 +2001,7 @@
         <span class="sidebar-item-icon">📊</span>Meter Upload
       </button>
       <button class="sidebar-item" data-action="showPage" data-page="bill">
-        <span class="sidebar-item-icon">💳</span>บิล & ชำระ<span class="sidebar-badge" id="billBadge" style="display:none"></span><span class="sidebar-badge" id="paymentBadge" style="display:none"></span>
+        <span class="sidebar-item-icon">💳</span>Billing & Payment<span class="sidebar-badge" id="billBadge" style="display:none"></span><span class="sidebar-badge" id="paymentBadge" style="display:none"></span>
       </button>
       <button class="sidebar-item" data-action="showPage" data-page="expense">
         <span class="sidebar-item-icon">💸</span>ค่าใช้จ่าย
@@ -3262,12 +3262,14 @@
 
 <!-- ===== BILL GENERATOR ===== -->
 <div class="page" id="page-bill">
-  <div class="section-title">💳 บิล & ชำระ</div>
+  <div class="section-title">💳 Billing & Payment</div>
 
   <!-- Main Tab Nav -->
   <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
     <button id="bill-main-tab-btn-billing" class="year-tab active" data-action="switchBillingMainTab" data-tab="billing">🧾 ออกบิล</button>
-    <button id="bill-main-tab-btn-verify" class="year-tab" data-action="switchBillingMainTab" data-tab="verify">✅ ตรวจสลิป <span id="paymentBadge2" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
+    <button id="bill-main-tab-btn-live" class="year-tab" data-action="switchBillingMainTab" data-tab="live">🔔 Live Feed <span id="paymentBadge2" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
+    <button id="bill-main-tab-btn-history" class="year-tab" data-action="switchBillingMainTab" data-tab="history">📜 ประวัติตามห้อง</button>
+    <button id="bill-main-tab-btn-monthly" class="year-tab" data-action="switchBillingMainTab" data-tab="monthly">📋 สถานะชำระรายเดือน</button>
   </div>
   <div id="bill-main-tab-billing">
 
@@ -3471,18 +3473,8 @@
   </div>
   </div><!-- /bill-main-tab-billing -->
 
-  <!-- TAB 2: ตรวจสลิป (payment verify) -->
-  <div id="bill-main-tab-verify" style="display:none;">
-
-  <!-- Tabs -->
-  <div class="year-tabs" class="mb-5">
-    <button id="pv-tab-live-btn" class="year-tab active" data-action="switchPVTab" data-tab="live">🔔 Live Feed</button>
-    <button id="pv-tab-history-btn" class="year-tab" data-action="switchPVTab" data-tab="history">📜 ประวัติตามห้อง</button>
-    <button id="pv-tab-monthly-btn" class="year-tab" data-action="switchPVTab" data-tab="monthly">📋 สถานะชำระรายเดือน</button>
-  </div>
-
-  <!-- TAB 1: Live Feed -->
-  <div id="pv-tab-live">
+  <!-- Live Feed -->
+  <div id="pv-tab-live" style="display:none;">
 
   <!-- Stats row -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
@@ -3629,7 +3621,6 @@
       <div id="vc-result"></div>
     </div>
   </div>
-  </div><!-- /bill-main-tab-verify -->
 </div><!-- /page-bill -->
 
 <!-- Owner Info Page -->
