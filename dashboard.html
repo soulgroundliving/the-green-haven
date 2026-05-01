@@ -2847,23 +2847,24 @@
             <div style="color:#2e7d32;font-weight:600;">บันทึกข้อมูลมิเตอร์สำเร็จ</div>
             <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.3rem;">ข้อมูลถูกบันทึกใน Firebase database</div>
           </div>
-
-          <!-- Test LINE notify (force re-send to verify Flex button → LIFF flow) -->
-          <div style="margin-top:1rem;padding:1rem;background:#fff8e1;border:1px solid #ffe082;border-radius:var(--radius-sm);">
-            <div style="font-weight:600;color:#f57f17;margin-bottom:0.5rem;font-size:0.9rem;">🧪 ทดสอบส่ง LINE notify (force)</div>
-            <div style="color:var(--text-muted);font-size:0.8rem;margin-bottom:0.6rem;">บังคับส่ง LINE Flex อีกครั้งให้ห้องที่ระบุ — ใช้ทดสอบว่าปุ่ม "กดจ่ายเลย" เปิดใน LIFF browser ไม่ใช่ Safari</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-              <select id="testNotifyBuilding" style="padding:0.5rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.88rem;">
-                <option value="rooms">ห้องเช่า (rooms)</option>
-                <option value="nest">Nest</option>
-              </select>
-              <input id="testNotifyRoom" type="text" placeholder="ห้อง (เช่น 15)" value="15" style="padding:0.5rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.88rem;width:120px;">
-              <input id="testNotifyYM" type="text" placeholder="ปี_เดือน (69_5)" value="69_5" style="padding:0.5rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.88rem;width:130px;">
-              <button data-action="testNotifyMeter" style="padding:0.5rem 1rem;background:#f57f17;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;font-size:0.88rem;">📨 ส่ง LINE</button>
-            </div>
-            <div id="testNotifyResult" style="margin-top:0.6rem;font-size:0.85rem;"></div>
-          </div>
         </div>
+      </div>
+
+      <!-- Test LINE notify (always visible — outside meterDataRecordedSection so it shows
+           without needing a successful import first. Verifies Flex 'กดจ่ายเลย' opens in LIFF.) -->
+      <div style="margin-top:1rem;padding:1rem;background:#fff8e1;border:1px solid #ffe082;border-radius:var(--radius-sm);">
+        <div style="font-weight:600;color:#f57f17;margin-bottom:0.5rem;font-size:0.9rem;">🧪 ทดสอบส่ง LINE notify (force)</div>
+        <div style="color:var(--text-muted);font-size:0.8rem;margin-bottom:0.6rem;">บังคับส่ง LINE Flex อีกครั้งให้ห้องที่ระบุ — ใช้ทดสอบว่าปุ่ม "กดจ่ายเลย" เปิดใน LIFF browser ไม่ใช่ Safari</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <select id="testNotifyBuilding" style="padding:0.5rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.88rem;">
+            <option value="rooms">ห้องเช่า (rooms)</option>
+            <option value="nest">Nest</option>
+          </select>
+          <input id="testNotifyRoom" type="text" placeholder="ห้อง (เช่น 15)" value="15" style="padding:0.5rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.88rem;width:120px;">
+          <input id="testNotifyYM" type="text" placeholder="ปี_เดือน (69_5)" value="69_5" style="padding:0.5rem;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:0.88rem;width:130px;">
+          <button data-action="testNotifyMeter" style="padding:0.5rem 1rem;background:#f57f17;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;font-size:0.88rem;">📨 ส่ง LINE</button>
+        </div>
+        <div id="testNotifyResult" style="margin-top:0.6rem;font-size:0.85rem;"></div>
       </div>
 
       <!-- Instructions -->
