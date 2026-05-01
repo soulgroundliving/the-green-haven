@@ -390,11 +390,16 @@ window.loadPVHistoryRooms = function(){
   });
 };
 
-// ─── Bill History Table (BillStore / RTDB) ───────────────────────────────────
+// ─── Unified Bill + Slip History Table (BillStore / RTDB + verifiedSlips) ────
 const _MONTHS_TH = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 let _pvhBillStoreUnsub = null;
+let _pvhLastSlips = [];  // cache so BillStore.onChange re-renders with same slips
 
-function _renderPVHBillTable(building, room) {
+function _renderPVHBillTable(building, room, slips) {
+  // Cache slips so BillStore.onChange re-renders reuse the last known set
+  if (slips !== undefined) _pvhLastSlips = slips;
+  const effectiveSlips = _pvhLastSlips;
+
   const tbl = document.getElementById('pvhBillTable');
   if (!tbl) return;
 
@@ -403,7 +408,7 @@ function _renderPVHBillTable(building, room) {
     return;
   }
 
-  // Subscribe BillStore once so RTDB data arrives and re-renders
+  // Subscribe BillStore once so RTDB data triggers a re-render
   if (typeof window.BillStore !== 'undefined' && !_pvhBillStoreUnsub) {
     _pvhBillStoreUnsub = window.BillStore.onChange(() => _renderPVHBillTable(
       document.getElementById('pvh-building')?.value,
@@ -411,7 +416,6 @@ function _renderPVHBillTable(building, room) {
     ));
   }
 
-  // Build last-12-months list
   const now = new Date();
   const months = [];
   for (let i = 0; i < 12; i++) {
@@ -419,7 +423,6 @@ function _renderPVHBillTable(building, room) {
     months.push({ m: d.getMonth() + 1, y: d.getFullYear() + 543 });
   }
 
-  // Collect bills from BillStore (current + previous year)
   const beYear = now.getFullYear() + 543;
   let allBills = [];
   if (typeof window.BillStore !== 'undefined') {
@@ -434,30 +437,56 @@ function _renderPVHBillTable(building, room) {
     return;
   }
 
+  // Index slips by BE month-year so each row can show its payment evidence
+  const slipsByMonth = {};
+  effectiveSlips.forEach(s => {
+    const ts = s.timestamp?.toDate ? s.timestamp.toDate()
+      : (s.timestamp instanceof Date ? s.timestamp : new Date(s.timestamp || s.verifiedAt || 0));
+    const sm = ts.getMonth() + 1;
+    const sy = ts.getFullYear() + 543;
+    const key = `${sy}_${sm}`;
+    if (!slipsByMonth[key]) slipsByMonth[key] = [];
+    slipsByMonth[key].push({ ...s, _ts: ts });
+  });
+
+  const curM = now.getMonth() + 1;
+  const _fmtDate = d => d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+
   const rows = months.map(({m, y}) => {
     const bill = allBills.find(b => Number(b.month) === m && Number(b.year) === y);
-    if (!bill) {
+    const monthSlips = (slipsByMonth[`${y}_${m}`] || []).sort((a, b) => b._ts - a._ts);
+    const slip = monthSlips[0] || null;
+
+    if (!bill && !slip) {
       return `<tr>
         <td style="padding:6px 8px;font-weight:600;">${_MONTHS_TH[m]} ${String(y).slice(-2)}</td>
-        <td colspan="4" style="padding:6px 8px;color:var(--text-muted);text-align:center;font-size:.8rem;">ไม่มีบิล</td>
+        <td colspan="5" style="padding:6px 8px;color:var(--text-muted);text-align:center;font-size:.8rem;">ไม่มีบิล</td>
       </tr>`;
     }
-    // Past months (before current month) are treated as paid — meter data confirms charges were recorded
-    const curM = now.getMonth() + 1;
+
+    // Past months default to paid — meter data exists means billing was processed
     const isPast = (y < beYear) || (y === beYear && m < curM);
-    const isPaid = bill.status === 'paid' || isPast;
-    const rent = Number(bill.charges?.rent || 0);
-    const utils = Number((bill.charges?.electric?.cost || 0) + (bill.charges?.water?.cost || 0));
-    const total = Number(bill.totalCharge || rent + utils);
+    const isPaid = (bill?.status === 'paid') || !!slip || isPast;
+    const rent  = Number(bill?.charges?.rent || 0);
+    const utils = Number((bill?.charges?.electric?.cost || 0) + (bill?.charges?.water?.cost || 0));
+    const total = Number(bill?.totalCharge || (rent + utils) || slip?.amount || 0);
+
     const statusHtml = isPaid
       ? '<span style="color:#388e3c;font-weight:700;">✅ ชำระแล้ว</span>'
       : '<span style="color:#f57c00;font-weight:700;">⏳ ค้างชำระ</span>';
+
+    const evidenceHtml = slip
+      ? `<div style="font-size:.76rem;color:#388e3c;font-weight:600;">${_pvEscape(slip.sender || '—')}</div>
+         <div style="font-size:.7rem;color:var(--text-muted);">${_fmtDate(slip._ts)}</div>`
+      : '';
+
     return `<tr style="background:${isPaid ? 'var(--green-pale)' : '#fff8e1'};">
       <td style="padding:6px 8px;font-weight:600;">${_MONTHS_TH[m]} ${String(y).slice(-2)}</td>
       <td style="padding:6px 8px;text-align:right;">฿${rent.toLocaleString()}</td>
       <td style="padding:6px 8px;text-align:right;">฿${utils.toLocaleString()}</td>
       <td style="padding:6px 8px;text-align:right;font-weight:700;color:var(--green-dark);">฿${total.toLocaleString()}</td>
       <td style="padding:6px 8px;">${statusHtml}</td>
+      <td style="padding:6px 8px;line-height:1.4;">${evidenceHtml}</td>
     </tr>`;
   }).join('');
 
@@ -465,9 +494,10 @@ function _renderPVHBillTable(building, room) {
     <thead><tr style="background:var(--green-pale);font-size:.78rem;color:var(--text-muted);">
       <th style="padding:6px 8px;text-align:left;">เดือน</th>
       <th style="padding:6px 8px;text-align:right;">ค่าเช่า</th>
-      <th style="padding:6px 8px;text-align:right;">ค่าน้ำ/ไฟ</th>
+      <th style="padding:6px 8px;text-align:right;">น้ำ/ไฟ</th>
       <th style="padding:6px 8px;text-align:right;">รวม</th>
       <th style="padding:6px 8px;">สถานะ</th>
+      <th style="padding:6px 8px;">หลักฐาน</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
@@ -475,121 +505,66 @@ function _renderPVHBillTable(building, room) {
 
 window.renderPVHistory = function(){
   const building = document.getElementById('pvh-building').value;
-  const room = document.getElementById('pvh-room').value;
-  const list = document.getElementById('pvhList');
-  const setTxt = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  const room     = document.getElementById('pvh-room').value;
+  const setTxt   = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
 
-  // Always render bill table (subscribes to BillStore.onChange for live reload)
+  // Render bill table immediately (BillStore is sync after initial RTDB load)
   _renderPVHBillTable(building, room);
 
-  if(!building || !room){
-    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">📋 กรุณาเลือกตึกและห้อง</div>';
+  if (!building || !room) {
     setTxt('pvh-total-count','—'); setTxt('pvh-total-amount','฿—'); setTxt('pvh-last-paid','—');
-    const slipCardEarly = document.getElementById('pvhSlipCard');
-    if (slipCardEarly) slipCardEarly.style.display = 'none';
     return;
   }
 
   const _ts = s => s.timestamp?.toDate ? s.timestamp.toDate()
     : (s.timestamp instanceof Date ? s.timestamp : new Date(s.timestamp || s.verifiedAt || 0));
-  const bankName = code => ({'004':'กสิกรไทย','014':'ไทยพาณิชย์','025':'กรุงไทย','002':'กรุงเทพ',
-    '006':'กรุงศรี','011':'TMB','065':'ทิสโก้','069':'เกียรตินาคิน','022':'CIMB','067':'ทีทีบี'})[code]||'';
 
-  // Build final merged+deduped list from slip sources and render
-  const renderSlips = (slipsSource) => {
-    // Filter by room — accept docs where building matches OR building field is absent/null
-    const roomVals = new Set([String(room), String(Number(room))].filter(v=>v!=='NaN'));
+  // Collect, filter, dedupe slips then merge into the bill table
+  const processSlips = (slipsSource) => {
+    const roomVals = new Set([String(room), String(Number(room))].filter(v => v !== 'NaN'));
     const fromSource = slipsSource.filter(s => {
       if (!roomVals.has(String(s.room))) return false;
       if (s.building && s.building !== building) return false;
       return true;
     });
-
-    // Manual admin payments (localStorage mirror)
     const manual = _pvLoadManualPayments().filter(s => s.building === building && s.room === String(room));
-
-    // BillStore RTDB paid bills — covers admin-manual-approved bills not in verifiedSlips
-    const billEntries = [];
-    if (typeof window.BillStore !== 'undefined') {
-      const beYear = new Date().getFullYear() + 543;
-      [beYear, beYear - 1].forEach(y => {
-        (window.BillStore.listForYear(building, y) || [])
-          .filter(b => String(b.room || b.roomId) === String(room) && b.status === 'paid' && b.paidAt)
-          .forEach(b => billEntries.push({
-            id: b.billId || `bill_${b.month}_${b.year}`,
-            amount: Number(b.totalCharge) || 0,
-            timestamp: new Date(b.paidAt),
-            building, room: String(room),
-            sender: 'แอดมินบันทึก', bankCode: '',
-            transactionId: b.billId || '',
-            _isBill: true
-          }));
-      });
-    }
 
     const byKey = new Map();
     fromSource.forEach(s => byKey.set(s.transactionId || s.id || `s_${_ts(s).getTime()}`, s));
-    manual.forEach(s => { const k = s.transactionId || s.id || `m_${_ts(s).getTime()}`; if(!byKey.has(k)) byKey.set(k, s); });
-    billEntries.forEach(b => { if(!byKey.has(b.id)) byKey.set(b.id, b); });
+    manual.forEach(s => { const k = s.transactionId || s.id || `m_${_ts(s).getTime()}`; if (!byKey.has(k)) byKey.set(k, s); });
+    const slips = Array.from(byKey.values()).sort((a, b) => _ts(b) - _ts(a));
 
-    const slips = Array.from(byKey.values()).sort((a,b) => _ts(b) - _ts(a));
-    const total = slips.reduce((s,x) => s + (Number(x.amount)||0), 0);
-    setTxt('pvh-total-count', slips.length);
-    setTxt('pvh-total-amount', '฿' + total.toLocaleString());
-    if (slips.length > 0) {
-      setTxt('pvh-last-paid', _ts(slips[0]).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}));
-    } else {
-      setTxt('pvh-last-paid','—');
-    }
-    const slipCard = document.getElementById('pvhSlipCard');
-    if (slips.length === 0) {
-      if (slipCard) slipCard.style.display = 'none';
-      list.innerHTML = '';
-      return;
-    }
-    if (slipCard) slipCard.style.display = '';
-    list.innerHTML = slips.map(s => {
-      const timeStr = _ts(s).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});
-      const isManual = s._isBill || s.verifiedBy === 'admin_manual';
-      const bankLabel = isManual ? '' : (bankName(s.bankCode) ? `· ${_pvEscape(bankName(s.bankCode))}` : '');
-      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
-        <div style="background:var(--green-pale);color:var(--green-dark);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">${isManual?'📋':'✅'}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:.88rem;">฿${(Number(s.amount)||0).toLocaleString()} <span style="color:var(--text-muted);font-weight:400;font-size:.78rem;">${bankLabel}</span></div>
-          <div style="font-size:.75rem;color:var(--text-muted);">โดย ${_pvEscape(s.sender||'—')} · ${_pvEscape(s.transactionId||s.transRef||'')}</div>
-        </div>
-        <div style="text-align:right;font-size:.75rem;color:var(--text-muted);flex-shrink:0;">${timeStr}</div>
-      </div>`;
-    }).join('');
+    // Update summary stats from slip records
+    const total = slips.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+    setTxt('pvh-total-count', slips.length || 0);
+    setTxt('pvh-total-amount', slips.length ? '฿' + total.toLocaleString() : '฿—');
+    setTxt('pvh-last-paid', slips.length
+      ? _ts(slips[0]).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+      : '—');
+
+    // Re-render table with slip evidence per month
+    _renderPVHBillTable(building, room, slips);
   };
 
-  // Fast path: use global in-memory cache (already loaded by _subscribeGlobalVerifiedSlips)
-  // The cache has limit(300) of recent slips — sufficient for normal room history view
+  // Fast path: global in-memory cache from _subscribeGlobalVerifiedSlips
   if (Array.isArray(window._verifiedSlipsRawCache) && window._verifiedSlipsRawCache.length > 0) {
-    renderSlips(window._verifiedSlipsRawCache);
+    processSlips(window._verifiedSlipsRawCache);
     return;
   }
 
-  // Fallback: Firestore getDocs filtered by room only (NOT building, to avoid null-field exclusion)
-  if (!window.firebase?.firestore) {
-    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ Firebase ยังไม่พร้อม</div>';
-    return;
-  }
-  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">🔄 กำลังโหลด...</div>';
-  const db = window.firebase.firestore();
+  // Fallback: Firestore — filter by room only (not building — null field causes exclusion)
+  if (!window.firebase?.firestore) { return; }
+  const db    = window.firebase.firestore();
   const fsLib = window.firebase.firestoreFunctions;
   const roomVals = [String(room), Number(room)].filter(v => !Number.isNaN(Number(v)));
   const q = fsLib.query(
     fsLib.collection(db, 'verifiedSlips'),
-    fsLib.where('room','in', roomVals),
+    fsLib.where('room', 'in', roomVals),
     fsLib.limit(500)
   );
   fsLib.getDocs(q)
-    .then(snap => renderSlips(snap.docs.map(d => ({id:d.id,...d.data()}))))
-    .catch(err => {
-      console.error('pv history query failed:', err);
-      renderSlips([]);
-    });
+    .then(snap => processSlips(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+    .catch(() => processSlips([]));
 };
 
 function updateLinkPreview(){
