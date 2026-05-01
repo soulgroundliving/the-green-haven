@@ -100,18 +100,40 @@ class OwnerConfigManager {
     return success;
   }
 
+  static applyFavicon(dataUrl) {
+    let link = document.getElementById('dynamic-favicon');
+    if (!link) {
+      link = document.createElement('link');
+      link.id = 'dynamic-favicon';
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    if (dataUrl) {
+      link.type = 'image/png';
+      link.href = dataUrl;
+    } else {
+      link.removeAttribute('type');
+      link.href = '/shared/pwa-icon.svg';
+    }
+  }
+
   static async loadOwnerInfoFromFirebase() {
+    // Apply favicon immediately from localStorage so the browser tab gets
+    // an icon on the first paint, before Firestore responds.
+    const cached = this.getOwnerInfo();
+    this.applyFavicon(cached.faviconDataUrl);
+
     try {
       if (!window.firebase) {
         console.warn('⚠️ Firebase not loaded');
-        return this.getOwnerInfo();
+        return cached;
       }
 
       // Skip if no authenticated user — Firestore rules require auth.
       // Firebase restores sessions asynchronously, so currentUser may be null
       // on initial page load even for authenticated admins. Use localStorage instead.
       if (!window.firebaseAuth?.currentUser) {
-        return this.getOwnerInfo();
+        return cached;
       }
 
       const db = window.firebase.firestore();
@@ -125,6 +147,8 @@ class OwnerConfigManager {
         const data = docSnap.data();
         // Save to localStorage as backup
         this.saveOwnerInfo(data);
+        // Re-apply in case Firestore has a newer favicon than the cache.
+        this.applyFavicon(data.faviconDataUrl);
         console.log('✅ Owner info loaded from Firebase');
         return data;
       }
@@ -133,6 +157,6 @@ class OwnerConfigManager {
     }
 
     // Fallback to localStorage
-    return this.getOwnerInfo();
+    return cached;
   }
 }

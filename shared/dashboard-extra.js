@@ -935,6 +935,19 @@ function renderOwnerInfoPage() {
         </div>
       </div>
 
+      <!-- Favicon upload -->
+      <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed #c8e6c9; border-radius:6px;">
+        <div id="faviconPreviewBox" style="width:48px; height:48px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden; flex-shrink:0;">
+          ${owner.faviconDataUrl ? `<img src="${owner.faviconDataUrl}" style="width:32px; height:32px; object-fit:contain;" alt="favicon">` : `<span style="font-size:1.4rem; color:#ccc;">🌐</span>`}
+        </div>
+        <div style="flex:1;">
+          <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">ไอคอนแท็บเบราว์เซอร์ (Favicon)</label>
+          <input type="file" id="ownerFaviconInput" accept="image/png,image/jpeg,image/svg+xml,image/x-icon" onchange="uploadOwnerFavicon(event)" style="font-size:.85rem;">
+          <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: PNG สี่เหลี่ยมจัตุรัส — จะย่อเป็น 64×64 อัตโนมัติ</div>
+          ${owner.faviconDataUrl ? `<button type="button" onclick="removeOwnerFavicon()" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบ favicon</button>` : ''}
+        </div>
+      </div>
+
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
         <div>
           <label style="display:block; margin-bottom:.4rem; font-weight:600; font-size:.9rem;">ชื่อนิติบุคคล (ภาษาไทย)</label>
@@ -1400,6 +1413,62 @@ window.removeOwnerLogo = function() {
   renderOwnerInfoPage();
 };
 
+function _writeOwnerFavicon(dataUrl) {
+  const current = OwnerConfigManager.getOwnerInfo();
+  const updated = { ...current, faviconDataUrl: dataUrl };
+  localStorage.setItem('owner_info', JSON.stringify(updated));
+  try {
+    if (window.firebase && window.firebaseAuth?.currentUser) {
+      const db = window.firebase.firestore();
+      const fn = window.firebase.firestoreFunctions;
+      const ref = fn.doc(fn.collection(db, 'owner_info'), 'main');
+      fn.setDoc(ref, { ...updated, updatedAt: new Date().toISOString() }, { merge: true })
+        .catch(e => console.warn('favicon Firestore sync:', e?.message));
+    }
+  } catch(e) { console.warn('favicon sync:', e?.message); }
+}
+
+window.uploadOwnerFavicon = function(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (file.size > 1 * 1024 * 1024) {
+    showToast('ไฟล์ใหญ่เกิน 1MB', 'warning');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const SIZE = 64;
+      const canvas = document.createElement('canvas');
+      canvas.width = SIZE; canvas.height = SIZE;
+      const ctx = canvas.getContext('2d');
+      // Crop centre-square before scaling so non-square images don't stretch.
+      const minSide = Math.min(img.width, img.height);
+      const sx = (img.width - minSide) / 2;
+      const sy = (img.height - minSide) / 2;
+      ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, SIZE, SIZE);
+      const dataUrl = canvas.toDataURL('image/png');
+      _writeOwnerFavicon(dataUrl);
+      OwnerConfigManager.applyFavicon(dataUrl);
+      showToast('✅ อัปโหลด favicon เรียบร้อย', 'success');
+      renderOwnerInfoPage();
+    };
+    img.onerror = () => showToast('อ่านรูปไม่ได้ — ลองไฟล์อื่น', 'warning');
+    img.src = e.target.result;
+  };
+  reader.onerror = () => showToast('อ่านไฟล์ไม่สำเร็จ', 'warning');
+  reader.readAsDataURL(file);
+};
+
+window.removeOwnerFavicon = function() {
+  if (!confirm('ยืนยันการลบ favicon?')) return;
+  _writeOwnerFavicon('');
+  OwnerConfigManager.applyFavicon('');
+  showToast('ลบ favicon แล้ว', 'success');
+  renderOwnerInfoPage();
+};
+
 function saveOwnerInfo() {
   const name = document.getElementById('ownerName').value.trim();
   if (!name) {
@@ -1410,8 +1479,9 @@ function saveOwnerInfo() {
   const existing = OwnerConfigManager.getOwnerInfo();
 
   const ownerData = {
-    // Preserve existing logo (uploaded separately via uploadOwnerLogo)
+    // Preserve existing logo + favicon (uploaded separately)
     logoDataUrl: existing.logoDataUrl || '',
+    faviconDataUrl: existing.faviconDataUrl || '',
     // ===== COMPANY IDENTITY (used in tax report letterhead + tenant receipts) =====
     companyLegalNameTH: document.getElementById('companyLegalNameTH')?.value?.trim() || '',
     companyLegalNameEN: document.getElementById('companyLegalNameEN')?.value?.trim() || '',
