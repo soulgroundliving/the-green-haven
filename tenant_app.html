@@ -2555,14 +2555,15 @@
                     <!-- Line items (populated by renderPaymentInvoice) -->
                     <div id="inv-items" style="font-size:var(--fs-md);"></div>
                     <hr style="border:none; border-top:1px dashed #ddd; margin:12px 0;">
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.15rem; color:var(--primary-green); padding:6px 0;">
-                        <span>รวมทั้งสิ้น</span><span id="inv-total">฿—</span>
+                    <div style="text-align:center; padding:8px 0;">
+                        <div style="color:#666; font-size:var(--fs-md); margin-bottom:4px;">รวมทั้งสิ้น</div>
+                        <div id="inv-total" style="font-weight:bold; color:var(--primary-green); font-size:1.7rem; line-height:1.2;">฿—</div>
                     </div>
                     <!-- QR PromptPay -->
                     <div id="pay-qr-box" style="background:linear-gradient(135deg,var(--soft-green),#f0faf1); border-radius:12px; padding:16px; margin-top:18px; text-align:center;">
                         <p style="margin:0 0 10px; font-weight:600; color:var(--primary-green);">📱 สแกน QR เพื่อชำระเงิน</p>
-                        <div id="pay-qr-canvas" style="display:inline-block;"></div>
-                        <div id="inv-qr-amount" style="background:var(--primary-green); color:#fff; border-radius:20px; padding:5px 18px; font-weight:bold; margin:10px auto 6px; display:inline-block;">฿—</div>
+                        <div id="pay-qr-canvas" style="display:flex; justify-content:center; margin:0 auto;"></div>
+                        <div id="inv-qr-amount" style="background:var(--primary-green); color:#fff; border-radius:20px; padding:6px 22px; font-weight:bold; margin:12px auto 6px; display:inline-block;">฿—</div>
                         <p style="margin:4px 0 0; font-size:var(--fs-sm);">พร้อมเพย์: <strong id="inv-promptpay">—</strong></p>
                         <p style="margin:0; font-size:var(--fs-sm); color:#888;">สแกนแล้วยอดจะขึ้นอัตโนมัติ ไม่ต้องพิมพ์ตัวเลข</p>
                     </div>
@@ -2577,13 +2578,15 @@
                     <p style="text-align:center; font-size:var(--fs-sm); color:#888; margin:10px 0 0;">ขอบคุณที่ใช้บริการ The Green Haven</p>
                 </div>
             </div>
-            <div class="action-buttons" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                <button class="btn-receipt btn-outline" onclick="goBackFromPayment()">← กลับ</button>
-                <button class="btn-receipt btn-outline" onclick="printReceipt()"><i class="fas fa-print"></i> พิมพ์ / PDF</button>
-            </div>
-            <button class="btn-receipt btn-green" style="width:100%; margin-top:8px;" onclick="goToPaymentStep(2)">
+            <!-- Primary CTA — biggest, top of action area, generous padding so it can't be missed -->
+            <button class="btn-receipt btn-green" style="width:100%; margin-top:18px; padding:16px; font-size:1.05rem; font-weight:700; box-shadow:0 4px 14px rgba(45,134,83,0.28);" onclick="goToPaymentStep(2)">
                 <i class="fas fa-camera"></i> อัปโหลดสลิป
             </button>
+            <!-- Secondary actions — back + save bill image (excludes nav/buttons, only the receipt-card) -->
+            <div class="action-buttons" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+                <button class="btn-receipt btn-outline" onclick="goBackFromPayment()">← กลับ</button>
+                <button class="btn-receipt btn-outline" onclick="saveInvoiceImage()"><i class="fas fa-download"></i> บันทึก</button>
+            </div>
         </div>
 
         <!-- STEP 2: Slip Upload -->
@@ -10279,6 +10282,33 @@
         // ---- PRINT / DOWNLOAD RECEIPT ----
         function printReceipt() { window.print(); }
 
+        // Save ONLY the invoice card (not the page nav / action buttons / chrome)
+        // as a PNG image — same html2canvas pattern as downloadReceipt(step 3).
+        async function saveInvoiceImage() {
+            try {
+                const src = document.querySelector('#payment-step-1 .receipt-card');
+                if (!src) { toast('ไม่พบใบวางบิล', 'error'); return; }
+                try { await window.ensureHtml2Canvas(); } catch (e) { toast('โหลดไลบรารีไม่สำเร็จ', 'error'); return; }
+                const tmp = document.createElement('div');
+                tmp.style.cssText = 'position:fixed; left:-9999px; top:0; background:#fff; padding:2rem; width:600px;';
+                tmp.innerHTML = src.innerHTML;
+                document.body.appendChild(tmp);
+                const canvas = await html2canvas(tmp, { backgroundColor:'#ffffff', scale:2, logging:false });
+                const link = document.createElement('a');
+                const now = new Date();
+                const ds = now.toISOString().split('T')[0];
+                const ts = now.toTimeString().split(' ')[0].replace(/:/g, '');
+                link.href = canvas.toDataURL('image/png');
+                link.download = `invoice-${_legacyRoom()}-${ds}-${ts}.png`;
+                document.body.appendChild(link); link.click();
+                document.body.removeChild(link); document.body.removeChild(tmp);
+                toast('บันทึกใบวางบิลสำเร็จ', 'success');
+            } catch (error) {
+                console.error('saveInvoiceImage:', error);
+                toast('เกิดข้อผิดพลาดในการบันทึก', 'error');
+            }
+        }
+
         async function downloadReceipt() {
             try {
                 const src = document.getElementById('receiptContent') || document.querySelector('#payment-step-3 .receipt-card');
@@ -10473,6 +10503,7 @@
         window.downloadReceipt = downloadReceipt;
         window.downloadReceiptForBill = downloadReceiptForBill;
         window.printReceipt = printReceipt;
+        window.saveInvoiceImage = saveInvoiceImage;
         window.viewLeaseAgreement = viewLeaseAgreement;
         window.downloadLeaseAgreement = downloadLeaseAgreement;
         window.downloadBillTemplate = downloadBillTemplate;
