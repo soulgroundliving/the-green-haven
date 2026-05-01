@@ -695,13 +695,15 @@ async function approvePendingImportWithFirebase(importData, matchResults, skipCo
 
   for (const building of buildings) {
     const buildingData = importData[building] || {};
+    // ร้านใหญ่ is stored under 'rooms' building to match historical data pattern (rooms_69_4_ร้านใหญ่)
+    const storageBuildingName = building === 'amazon' ? 'rooms' : building;
     for (const [roomId, meterData] of Object.entries(buildingData)) {
-      const saved = await FirebaseMeterHelper.saveMeterReading(building, yearMonth, roomId, meterData);
+      const saved = await FirebaseMeterHelper.saveMeterReading(storageBuildingName, yearMonth, roomId, meterData);
       if (saved) {
         totalSaved++;
       } else {
         totalFailed++;
-        console.warn(`⚠️ Failed to save ${building}/${yearMonth}/${roomId}`);
+        console.warn(`⚠️ Failed to save ${storageBuildingName}/${yearMonth}/${roomId}`);
       }
     }
   }
