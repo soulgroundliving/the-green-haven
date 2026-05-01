@@ -19,7 +19,14 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const rtdb = admin.database();
 
-const TENANT_APP_URL = 'https://the-green-haven.vercel.app/tenant_app.html?page=bill';
+// LIFF URL — opens in LINE in-app browser so the LIFF SDK is available,
+// the tenant gets auto-signed-in via liffSignIn CF (LINE ID token →
+// Firebase custom token), and claims/bills load. Using vercel.app
+// directly here would open Safari/Chrome where LIFF SDK is unavailable
+// → "Failed to create custom token" → tenant lands on default page
+// without auth and never sees their bill.
+const LIFF_ID = '2009790149-Db7T76sd';
+const TENANT_APP_URL = `https://liff.line.me/${LIFF_ID}?page=bill`;
 const THAI_MONTHS_SHORT = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
                            'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
