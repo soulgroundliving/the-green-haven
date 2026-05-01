@@ -21,10 +21,14 @@ class InvoicePDFGenerator {
       const pageHeight = doc.internal.pageSize.getHeight();
       let yPosition = 20;
 
+      const _owner = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
+      const _companyName = _owner.companyLegalNameTH || 'Nature Haven';
+      const _promptpay = _owner.promptpayNumber || '089-1234567';
+
       // Header
       doc.setFontSize(20);
       doc.setTextColor(45, 134, 83);
-      doc.text('🌿 The Green Haven', pageWidth / 2, yPosition, { align: 'center' });
+      doc.text(`🌿 ${_companyName}`, pageWidth / 2, yPosition, { align: 'center' });
 
       yPosition += 10;
       doc.setFontSize(11);
@@ -153,8 +157,8 @@ class InvoicePDFGenerator {
       doc.setFontSize(9);
       doc.setTextColor(150);
       doc.setFont(undefined, 'normal');
-      doc.text('ชื่อ: The Green Haven', pageWidth / 2, yPosition + 10, { align: 'center' });
-      doc.text('เบอร์PromptPay: 089-1234567', pageWidth / 2, yPosition + 16, { align: 'center' });
+      doc.text(`ชื่อ: ${_companyName}`, pageWidth / 2, yPosition + 10, { align: 'center' });
+      doc.text(`เบอร์PromptPay: ${_promptpay}`, pageWidth / 2, yPosition + 16, { align: 'center' });
       doc.text('หรือโอนผ่าน e-Banking ของธนาคารท่านของ', pageWidth / 2, yPosition + 22, { align: 'center' });
       doc.text('โปรดชำระภายใน 5 วันนับจากวันที่ออกบิล', pageWidth / 2, yPosition + 28, { align: 'center' });
 
@@ -162,7 +166,7 @@ class InvoicePDFGenerator {
       yPosition = pageHeight - 20;
       doc.setFontSize(8);
       doc.setTextColor(180);
-      doc.text('The Green Haven Management System', pageWidth / 2, yPosition, { align: 'center' });
+      doc.text(`${_companyName} Management System`, pageWidth / 2, yPosition, { align: 'center' });
       doc.text(`ระบบจัดการอพาร์ทเมนต์ | Generated: ${new Date().toLocaleString('th-TH')}`, pageWidth / 2, yPosition + 6, {
         align: 'center'
       });
@@ -188,10 +192,13 @@ class InvoicePDFGenerator {
       const pageWidth = doc.internal.pageSize.getWidth();
       let yPosition = 20;
 
+      const _owner = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
+      const _companyName = _owner.companyLegalNameTH || 'Nature Haven';
+
       // Header
       doc.setFontSize(20);
       doc.setTextColor(45, 134, 83);
-      doc.text('🌿 The Green Haven', pageWidth / 2, yPosition, { align: 'center' });
+      doc.text(`🌿 ${_companyName}`, pageWidth / 2, yPosition, { align: 'center' });
 
       yPosition += 10;
       doc.setFontSize(11);

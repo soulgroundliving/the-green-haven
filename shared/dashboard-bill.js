@@ -938,7 +938,7 @@ function buildDocHTML(d,type,dueDate,payDate){
 
   const docId = isInvoice ? 'doc-invoice' : 'doc-receipt';
   const _ownerForDoc = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
-  const logoName = _ownerForDoc.companyLegalNameTH || 'The Green Haven';
+  const logoName = _ownerForDoc.companyLegalNameTH || 'Nature Haven';
   const logoHTML = _ownerForDoc.logoDataUrl
     ? `<img src="${_ownerForDoc.logoDataUrl}" alt="logo" style="max-height:56px;max-width:180px;object-fit:contain;vertical-align:middle;"><div style="font-size:.85rem;color:var(--text-muted);margin-top:4px;">${logoName}</div>`
     : `🌿 ${logoName}`;
@@ -969,7 +969,7 @@ function buildDocHTML(d,type,dueDate,payDate){
     ${isInvoice ? qrSection : ''}
     <div class="doc-footer">
       ${due}${stamp}
-      <div>ขอบคุณที่ใช้บริการ The Green Haven</div>
+      <div>ขอบคุณที่ใช้บริการ ${logoName}</div>
       ${!isInvoice?'<div>กรุณาเก็บใบเสร็จไว้เป็นหลักฐาน</div>':''}
     </div>
   </div>
