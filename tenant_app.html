@@ -8310,9 +8310,9 @@
             }
         }
 
-        // Backfill past 6 months as "ชำระด้วยเงินสดก่อน SlipOK" (status=paid, method=cash_legacy)
-        // for months admin hadn't pushed real RTDB bills for. Skips current+future entirely
-        // (admin's forecast-revenue tool owns those).
+        // Synthesize bills from meter_data — meter_data is the SoT for bills.
+        // Past months → status='paid' method='cash_legacy' (pre-SlipOK).
+        // Current month → status='pending' (newly uploaded meter, awaiting payment).
         function _backfillCashLegacyBills() {
             if (!_meterHistoryCache.length) return;
             if (!window.BillStore?.synthesizeFromMeter) return;
@@ -8338,7 +8338,7 @@
                 moveInDate: _taLease?.moveInDate,
                 building: _taBuilding,
                 room: _taRoom,
-                pastOnly: true
+                pastOnly: false
             });
             if (synth.length) _taBills.push(...synth);
             _taBills.sort((a,b) => {

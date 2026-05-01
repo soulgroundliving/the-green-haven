@@ -70,7 +70,15 @@ exports.claimDailyLoginPoints = require('./claimDailyLoginPoints').claimDailyLog
 exports.generateBillsOnMeterUpdate = require('./generateBillsOnMeterUpdate').generateBillsOnMeterUpdate;
 
 // LINE Flex notification to tenant when new bill appears in RTDB
+// (secondary path — manual admin bill creation)
 exports.notifyBillOnCreate = require('./notifyBillOnCreate').notifyBillOnCreate;
+
+// LINE Flex notification on meter upload — primary path. Fires direct from
+// meter_data Firestore writes so tenants are notified even if the legacy
+// bills/ chain (generateBillsOnMeterUpdate → notifyBillOnCreate) is broken
+// or eventually retired. Coordinates with notifyBillOnCreate via
+// meter_data.notifiedAt to avoid double pushes.
+exports.notifyTenantOnMeterUpload = require('./notifyTenantOnMeterUpload').notifyTenantOnMeterUpload;
 
 // IQAir AirVisual proxy with 1-hour Firestore cache (key stays server-side,
 // frontend never sees it). Hybrid: IQAir for AQI + main pollutant code,
