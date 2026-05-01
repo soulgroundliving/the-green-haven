@@ -508,14 +508,42 @@ function _pvhFillMeterGaps(building, room, realBills, slips, tbl, now, beYear) {
       trash: Number(refBill.charges?.trash          || 40)
     };
 
-    const synthBills = window.BillStore.synthesizeFromMeter({
-      meterHistory, existingBills: realBills, rates,
-      building, room: String(room)
+    // Build synthetic bills inline — synthesizeFromMeter has a tenant-side slice(0,6)
+    // limit that would cut off months 7-12. We need all 12 months for the admin view.
+    const currentYM = now.getFullYear() * 100 + (now.getMonth() + 1);
+    const existingByYM = new Set();
+    realBills.forEach(b => {
+      const beY = window.BillStore._be(b.year);
+      existingByYM.add(`${beY - 543}-${Number(b.month)}`); // store as CE-year key
     });
+
+    const synthBills = meterHistory
+      .filter(m => !existingByYM.has(`${m.year}-${m.month}`))
+      .map(m => {
+        const isPast = (m.year * 100 + m.month) < currentYM;
+        const eUnits = Math.max(0, m.eNew - m.eOld);
+        const wUnits = Math.max(0, m.wNew - m.wOld);
+        const eCost  = eUnits * rates.eRate;
+        const wCost  = wUnits * rates.wRate;
+        const total  = rates.rent + eCost + wCost + rates.trash;
+        return {
+          billId: `SYNTH-${building}-${room}-${m.year}${String(m.month).padStart(2,'0')}`,
+          synthetic: true, building, room: String(room),
+          month: m.month, year: m.year + 543,  // store as BE 4-digit so _toBE matches correctly
+          status: isPast ? 'paid' : 'pending',
+          totalCharge: total,
+          charges: {
+            rent: rates.rent,
+            electric: { cost: eCost, rate: rates.eRate, old: m.eOld, new: m.eNew, units: eUnits },
+            water:    { cost: wCost, rate: rates.wRate, old: m.wOld, new: m.wNew, units: wUnits },
+            trash: rates.trash
+          }
+        };
+      });
     if (!synthBills.length) return;
 
     // Merge: real bills win; synthetic fills months with no real bill
-    const allBills = window.BillStore.dedupSynthetic([...realBills, ...synthBills]);
+    const allBills = [...realBills, ...synthBills];
 
     // Guard: user may have switched room while Firestore was fetching
     if (document.getElementById('pvh-building')?.value !== building ||
