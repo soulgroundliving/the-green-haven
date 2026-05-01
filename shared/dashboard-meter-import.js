@@ -216,16 +216,17 @@ function parseImportExcelData(workbook, building) {
       selectedSheet = workbook.SheetNames.find(name => name.includes(thaiMonthAbbr));
     }
   } else {
-    // Auto-detect from sheet names
+    // Auto-detect from sheet names — pick the latest (highest) month
+    let maxMonth = 0;
     for (let sheetName of workbook.SheetNames) {
       for (let key in monthMap) {
-        if (sheetName.includes(key)) {
+        if (sheetName.includes(key) && monthMap[key] > maxMonth) {
           selectedSheet = sheetName;
           selectedMonth = monthMap[key];
+          maxMonth = monthMap[key];
           break;
         }
       }
-      if (selectedSheet) break;
     }
   }
 
