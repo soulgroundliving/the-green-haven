@@ -684,6 +684,40 @@ async function approveImportData() {
   }
 }
 
+async function approvePendingImportWithFirebase(importData, matchResults, skipConfirm = false) {
+  const year = importData.year;
+  const month = importData.month;
+  const yearMonth = `${year}_${month}`;
+  const buildings = ['rooms', 'nest', 'amazon'];
+
+  let totalSaved = 0;
+  let totalFailed = 0;
+
+  for (const building of buildings) {
+    const buildingData = importData[building] || {};
+    for (const [roomId, meterData] of Object.entries(buildingData)) {
+      const saved = await FirebaseMeterHelper.saveMeterReading(building, yearMonth, roomId, meterData);
+      if (saved) {
+        totalSaved++;
+      } else {
+        totalFailed++;
+        console.warn(`⚠️ Failed to save ${building}/${yearMonth}/${roomId}`);
+      }
+    }
+  }
+
+  // Update in-memory cache
+  if (!window.METER_DATA) window.METER_DATA = { rooms: {}, nest: {}, amazon: {} };
+  for (const building of buildings) {
+    window.METER_DATA[building] = window.METER_DATA[building] || {};
+    window.METER_DATA[building][yearMonth] = window.METER_DATA[building][yearMonth] || {};
+    Object.assign(window.METER_DATA[building][yearMonth], importData[building] || {});
+  }
+
+  console.log(`✅ Meter import complete: ${totalSaved} saved, ${totalFailed} failed`);
+  return { success: totalSaved > 0 || totalFailed === 0, totalSaved, totalFailed };
+}
+
 async function performDataReplacementWithData(importData, matchResults) {
   try {
     localStorage.setItem('pendingMeterImport', JSON.stringify({
