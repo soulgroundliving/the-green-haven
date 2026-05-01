@@ -693,6 +693,7 @@ async function approvePendingImportWithFirebase(importData, matchResults, skipCo
 
   let totalSaved = 0;
   let totalFailed = 0;
+  const savedDocIds = []; // for the LINE-notify callable below
 
   for (const building of buildings) {
     const buildingData = importData[building] || {};
@@ -702,6 +703,7 @@ async function approvePendingImportWithFirebase(importData, matchResults, skipCo
       const saved = await FirebaseMeterHelper.saveMeterReading(storageBuildingName, yearMonth, roomId, meterData);
       if (saved) {
         totalSaved++;
+        savedDocIds.push(`${storageBuildingName}_${yearMonth}_${roomId}`);
       } else {
         totalFailed++;
         console.warn(`⚠️ Failed to save ${storageBuildingName}/${yearMonth}/${roomId}`);
@@ -718,6 +720,22 @@ async function approvePendingImportWithFirebase(importData, matchResults, skipCo
   }
 
   console.log(`✅ Meter import complete: ${totalSaved} saved, ${totalFailed} failed`);
+
+  // Trigger LINE notification for every approved tenant whose meter just changed.
+  // Eventarc doesn't support asia-southeast3 (where Firestore lives), so we cannot
+  // listen to meter_data writes server-side — call the HTTPS callable directly.
+  // The callable is idempotent (meter_data.lastNotifiedSignature dedup).
+  if (savedDocIds.length && window.firebase?.functions?.httpsCallable) {
+    try {
+      const callable = window.firebase.functions.httpsCallable('notifyTenantOnMeterUpload');
+      const r = await callable({ docIds: savedDocIds });
+      const { pushed = 0, failed = 0, skipped = 0 } = r?.data || {};
+      console.log(`📨 LINE notify: ${pushed} pushed, ${failed} failed, ${skipped} skipped`);
+    } catch (e) {
+      console.warn('⚠️ notifyTenantOnMeterUpload callable failed (meter saved OK):', e.message);
+    }
+  }
+
   return { success: totalSaved > 0 || totalFailed === 0, totalSaved, totalFailed };
 }
 

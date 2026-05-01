@@ -79,6 +79,7 @@
   import { getAuth, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
   import { getFirestore, collection, collectionGroup, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
   import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
+  import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
   // Phase 4D App Check disabled 2026-04-25 — see next_session_handoff.md
   // import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app-check.js";
 
@@ -109,6 +110,8 @@
       auth = getAuth(app);
       firestore = getFirestore(app);
       storage = getStorage(app);
+      // Region must match CF deployment (asia-southeast1)
+      const fns = getFunctions(app, 'asia-southeast1');
 
       // Make them globally available for other scripts
       window.firebaseApp = app;
@@ -145,7 +148,8 @@
           serverTimestamp: serverTimestamp
         },
         storage: () => storage,
-        storageFunctions: { ref: storageRef, uploadBytes, getDownloadURL, deleteObject, listAll }
+        storageFunctions: { ref: storageRef, uploadBytes, getDownloadURL, deleteObject, listAll },
+        functions: { httpsCallable: (name) => httpsCallable(fns, name) }
       };
 
       // Mark Firebase as ready
