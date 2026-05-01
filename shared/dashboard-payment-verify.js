@@ -395,66 +395,32 @@ const _MONTHS_TH = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.�
 let _pvhBillStoreUnsub = null;
 let _pvhLastSlips = [];  // cache so BillStore.onChange re-renders with same slips
 
-function _renderPVHBillTable(building, room, slips) {
-  // Cache slips so BillStore.onChange re-renders reuse the last known set
-  if (slips !== undefined) _pvhLastSlips = slips;
-  const effectiveSlips = _pvhLastSlips;
-
-  const tbl = document.getElementById('pvhBillTable');
-  if (!tbl) return;
-
-  if (!building || !room) {
-    tbl.innerHTML = '<div style="text-align:center;padding:.5rem;color:var(--text-muted);">กรุณาเลือกห้อง</div>';
-    return;
-  }
-
-  // Subscribe BillStore once so RTDB data triggers a re-render
-  if (typeof window.BillStore !== 'undefined' && !_pvhBillStoreUnsub) {
-    _pvhBillStoreUnsub = window.BillStore.onChange(() => _renderPVHBillTable(
-      document.getElementById('pvh-building')?.value,
-      document.getElementById('pvh-room')?.value
-    ));
-  }
-
-  const now = new Date();
+// ── inner renderer: builds the 12-month table from a merged bills+slips set ──
+function _drawPVHTable(tbl, allBills, effectiveSlips, now, beYear) {
   const months = [];
   for (let i = 0; i < 12; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push({ m: d.getMonth() + 1, y: d.getFullYear() + 543 });
   }
 
-  const beYear = now.getFullYear() + 543;
-  let allBills = [];
-  if (typeof window.BillStore !== 'undefined') {
-    // getByRoom uses _cache[bld][room] directly — bill docs in RTDB have no 'room' field
-    // so listForYear + filter would always return [] (filter on undefined)
-    [beYear, beYear - 1].forEach(y => {
-      allBills.push(...(window.BillStore.getByRoom(building, room, String(y)) || []));
-    });
-  }
-
-  if (allBills.length === 0 && typeof window.BillStore === 'undefined') {
-    tbl.innerHTML = '<div style="text-align:center;padding:.5rem;color:var(--text-muted);">⚠️ BillStore ยังไม่พร้อม</div>';
-    return;
-  }
-
-  // Index slips by BE month-year so each row can show its payment evidence
+  // Index slips by BE month-year key for O(1) lookup per row
   const slipsByMonth = {};
   effectiveSlips.forEach(s => {
     const ts = s.timestamp?.toDate ? s.timestamp.toDate()
       : (s.timestamp instanceof Date ? s.timestamp : new Date(s.timestamp || s.verifiedAt || 0));
-    const sm = ts.getMonth() + 1;
-    const sy = ts.getFullYear() + 543;
-    const key = `${sy}_${sm}`;
+    const key = `${ts.getFullYear() + 543}_${ts.getMonth() + 1}`;
     if (!slipsByMonth[key]) slipsByMonth[key] = [];
     slipsByMonth[key].push({ ...s, _ts: ts });
   });
 
   const curM = now.getMonth() + 1;
-  const _fmtDate = d => d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+  const _fmt = d => d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+  // Normalize year to BE — real RTDB bills use BE string "2569", synthetic use CE int 2026
+  const _toBE = y => typeof window.BillStore !== 'undefined'
+    ? window.BillStore._be(y) : (Number(y) < 2400 ? Number(y) + 543 : Number(y));
 
   const rows = months.map(({m, y}) => {
-    const bill = allBills.find(b => Number(b.month) === m && Number(b.year) === y);
+    const bill = allBills.find(b => Number(b.month) === m && _toBE(b.year) === y);
     const monthSlips = (slipsByMonth[`${y}_${m}`] || []).sort((a, b) => b._ts - a._ts);
     const slip = monthSlips[0] || null;
 
@@ -465,7 +431,6 @@ function _renderPVHBillTable(building, room, slips) {
       </tr>`;
     }
 
-    // Past months default to paid — meter data exists means billing was processed
     const isPast = (y < beYear) || (y === beYear && m < curM);
     const isPaid = (bill?.status === 'paid') || !!slip || isPast;
     const rent  = Number(bill?.charges?.rent || 0);
@@ -475,10 +440,9 @@ function _renderPVHBillTable(building, room, slips) {
     const statusHtml = isPaid
       ? '<span style="color:#388e3c;font-weight:700;">✅ ชำระแล้ว</span>'
       : '<span style="color:#f57c00;font-weight:700;">⏳ ค้างชำระ</span>';
-
     const evidenceHtml = slip
       ? `<div style="font-size:.76rem;color:#388e3c;font-weight:600;">${_pvEscape(slip.sender || '—')}</div>
-         <div style="font-size:.7rem;color:var(--text-muted);">${_fmtDate(slip._ts)}</div>`
+         <div style="font-size:.7rem;color:var(--text-muted);">${_fmt(slip._ts)}</div>`
       : '';
 
     return `<tr style="background:${isPaid ? 'var(--green-pale)' : '#fff8e1'};">
@@ -502,6 +466,105 @@ function _renderPVHBillTable(building, room, slips) {
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
+}
+
+// ── async: fetch meter_data → synthesize bills for months that have no real bill ──
+function _pvhFillMeterGaps(building, room, realBills, slips, tbl, now, beYear) {
+  if (!window.firebase?.firestore || typeof window.BillStore?.synthesizeFromMeter !== 'function') return;
+  const db    = window.firebase.firestore();
+  const fsLib = window.firebase.firestoreFunctions;
+
+  // meter_data stores 2-digit BE years (69 = 2569 BE = 2026 CE)
+  // CE year = 1957 + shortYear  (e.g. 1957+69=2026, 1957+68=2025)
+  const shortYears = [beYear % 100, (beYear - 1) % 100];
+
+  Promise.all(shortYears.map(shortY =>
+    fsLib.getDocs(fsLib.query(
+      fsLib.collection(db, 'meter_data'),
+      fsLib.where('building', '==', building),
+      fsLib.where('roomId',   '==', String(room)),
+      fsLib.where('year',     '==', shortY)
+    )).then(snap => snap.docs.map(d => d.data()))
+  ))
+  .then(results => {
+    const meterDocs = results.flat();
+    if (!meterDocs.length) return;
+
+    // Convert 2-digit BE → CE year for synthesizeFromMeter (expects CE)
+    const meterHistory = meterDocs.map(m => ({
+      year: 1957 + Number(m.year),
+      month: Number(m.month),
+      eOld: m.eOld || 0, eNew: m.eNew || 0,
+      wOld: m.wOld || 0, wNew: m.wNew || 0,
+      createdAt: m.updatedAt || m.createdAt
+    })).sort((a, b) => (b.year * 100 + b.month) - (a.year * 100 + a.month));
+
+    // Extract rates from the most recent real bill; fall back to common defaults
+    const refBill = realBills[0] || {};
+    const rates = {
+      rent:  Number(refBill.charges?.rent  || 0),
+      eRate: Number(refBill.charges?.electric?.rate || 8),
+      wRate: Number(refBill.charges?.water?.rate    || 20),
+      trash: Number(refBill.charges?.trash          || 40)
+    };
+
+    const synthBills = window.BillStore.synthesizeFromMeter({
+      meterHistory, existingBills: realBills, rates,
+      building, room: String(room)
+    });
+    if (!synthBills.length) return;
+
+    // Merge: real bills win; synthetic fills months with no real bill
+    const allBills = window.BillStore.dedupSynthetic([...realBills, ...synthBills]);
+
+    // Guard: user may have switched room while Firestore was fetching
+    if (document.getElementById('pvh-building')?.value !== building ||
+        document.getElementById('pvh-room')?.value      !== String(room)) return;
+
+    _drawPVHTable(tbl, allBills, slips, now, beYear);
+  })
+  .catch(e => console.warn('pvh meter gaps:', e));
+}
+
+function _renderPVHBillTable(building, room, slips) {
+  if (slips !== undefined) _pvhLastSlips = slips;
+  const effectiveSlips = _pvhLastSlips;
+
+  const tbl = document.getElementById('pvhBillTable');
+  if (!tbl) return;
+
+  if (!building || !room) {
+    tbl.innerHTML = '<div style="text-align:center;padding:.5rem;color:var(--text-muted);">กรุณาเลือกห้อง</div>';
+    return;
+  }
+
+  // Subscribe BillStore once so RTDB changes trigger a re-render
+  if (typeof window.BillStore !== 'undefined' && !_pvhBillStoreUnsub) {
+    _pvhBillStoreUnsub = window.BillStore.onChange(() => _renderPVHBillTable(
+      document.getElementById('pvh-building')?.value,
+      document.getElementById('pvh-room')?.value
+    ));
+  }
+
+  const now    = new Date();
+  const beYear = now.getFullYear() + 543;
+
+  // 1. Get real RTDB bills (synchronous — BillStore._cache is already populated)
+  let realBills = [];
+  if (typeof window.BillStore !== 'undefined') {
+    [beYear, beYear - 1].forEach(y => {
+      realBills.push(...(window.BillStore.getByRoom(building, room, String(y)) || []));
+    });
+  } else {
+    tbl.innerHTML = '<div style="text-align:center;padding:.5rem;color:var(--text-muted);">⚠️ BillStore ยังไม่พร้อม</div>';
+    return;
+  }
+
+  // 2. Render immediately with real bills (no flicker)
+  _drawPVHTable(tbl, realBills, effectiveSlips, now, beYear);
+
+  // 3. Async: fill months without real bills using meter_data → synthetic bills
+  _pvhFillMeterGaps(building, room, realBills, effectiveSlips, tbl, now, beYear);
 }
 
 window.renderPVHistory = function(){
