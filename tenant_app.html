@@ -7499,8 +7499,13 @@
                             const byId = new Map();
                             _taBills.forEach(b => byId.set(b.billId || b.id, b));
                             data.bills.forEach(b => byId.set(b.billId || b.id, b));
+                            // Use toCE for sort — bills can have year as 2569 (BE 4-digit),
+                            // 69 (BE 2-digit, raw from Excel), or 2026 (CE from synth).
+                            // Raw subtraction (2569 - 2026) sorts April > May. toCE
+                            // normalizes all three to CE so the comparison is monotonic.
+                            const _ce = (y) => window.YearUtils?.toCE?.(y) || Number(y) || 0;
                             _taBills = Array.from(byId.values()).sort((a,b) =>
-                                ((b.year||0)-(a.year||0)) || ((b.month||0)-(a.month||0)));
+                                (_ce(b.year)*100+Number(b.month||0)) - (_ce(a.year)*100+Number(a.month||0)));
                             _dedupBills();
                         }
                         if (data.payments && data.payments.length) _taPayments = data.payments;
@@ -7572,8 +7577,11 @@
                     const byId = new Map();
                     _taBills.forEach(b => byId.set(b.billId || b.id, b));
                     bills.forEach(b => byId.set(b.billId || b.id, b));
+                    // Same toCE-aware sort as loadTenantAppData — bills mix BE 4-digit
+                    // (RTDB CF), BE 2-digit (raw Excel), and CE (synthesized) year values.
+                    const _ce = (y) => window.YearUtils?.toCE?.(y) || Number(y) || 0;
                     _taBills = Array.from(byId.values()).sort((a, b) =>
-                        ((b.year || 0) - (a.year || 0)) || ((b.month || 0) - (a.month || 0))
+                        (_ce(b.year)*100+Number(b.month||0)) - (_ce(a.year)*100+Number(a.month||0))
                     );
                     _dedupBills();
                     _applyTenantBoundary(); // catches stale entries from prior _taBills state
@@ -8088,18 +8096,19 @@
                 const isSynth = !!b.synthetic;
                 const bId = b.id || b.billId || '';
                 const isCashLegacy = paid && b.method === 'cash_legacy';
+                // meter_data = SoT for bill content. Synth bills generated from
+                // admin-uploaded meter readings ARE real pending bills — treat synth
+                // pending the same as a real pending bill (รอชำระ + จ่ายเลย button).
+                // Cash-legacy (paid synth, pre-SlipOK) keeps its distinct label.
+                const pillBase = 'margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;white-space:nowrap;display:inline-block;';
                 const statusPill = isCashLegacy
-                    ? '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#F3F4F6;color:#4B5563">✓ จ่ายแล้ว (เงินสด)</span>'
+                    ? `<span style="${pillBase}background:#F3F4F6;color:#4B5563">✓ จ่ายแล้ว (เงินสด)</span>`
                     : paid
-                        ? '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#D1FAE5;color:#065F46">✓ จ่ายแล้ว</span>'
-                        : isSynth
-                            ? '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#E0F2FE;color:#075985">⏳ รอออกบิล</span>'
-                            : '<span style="margin-left:8px;font-size:var(--fs-sm);padding:2px 8px;border-radius:10px;background:#FFF4E5;color:#D97706">รอชำระ</span>';
+                        ? `<span style="${pillBase}background:#D1FAE5;color:#065F46">✓ จ่ายแล้ว</span>`
+                        : `<span style="${pillBase}background:#FFF4E5;color:#D97706">รอชำระ</span>`;
                 const actionBtn = paid
                     ? `<button onclick="openPaymentFlow(true,'${bId}')" style="background:none;border:1px solid var(--primary-green);color:var(--primary-green);padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">ใบเสร็จ</button>`
-                    : isSynth
-                        ? '<span style="color:#888;font-size:var(--fs-sm);padding:5px 10px;">แอดมินยังไม่ออกบิล</span>'
-                        : `<button onclick="openPaymentFlow(false,'${bId}')" style="background:var(--primary-green);color:white;border:none;padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">จ่ายเลย</button>`;
+                    : `<button onclick="openPaymentFlow(false,'${bId}')" style="background:var(--primary-green);color:white;border:none;padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">จ่ายเลย</button>`;
                 return `<div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f3f3;">
                     <div>
                         <span style="font-size:var(--fs-md);font-weight:600;">${m} ${yr}</span>
