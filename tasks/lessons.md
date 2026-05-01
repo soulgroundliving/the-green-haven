@@ -9,6 +9,64 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-05-01 — Auto-click approve ในระบบการเงิน ทำให้ข้อมูลผิดเข้า production
+
+**Mistake:** auto-click "อนุมัติและบันทึก" ผ่าน JavaScript โดยไม่ให้ user ตรวจ preview table ก่อน — ส่งผลให้ข้อมูลผิด (ร้านใหญ่ บันทึกผิด building) เข้า Firestore production ทันที
+
+**Why:** ต้องการ verify ว่า fix ทำงาน แต่ลืมว่า preview table มีไว้เพื่อให้ user ตรวจก่อนเสมอ
+
+**Rule:** ห้าม auto-click ปุ่ม approve/confirm ที่มีผลต่อข้อมูลการเงินหรือ Firestore production ไม่ว่ากรณีใดทั้งสิ้น user ต้องเป็นคนกดเอง ถ้าต้องการ verify ให้ตรวจ console/Firestore หลัง user approve แทน
+
+---
+
+## 2026-05-01 — สร้าง wrapper function ใหม่แทนที่จะ inline call function ที่มีอยู่
+
+**Mistake:** เห็น `approvePendingImportWithFirebase` ถูก call แต่ไม่มี definition → สร้าง wrapper function ใหม่ 35 บรรทัด แทนที่จะ inline call `FirebaseMeterHelper.saveMeterReading` (มีอยู่แล้ว) ที่ call site โดยตรง
+
+**Why:** ไม่ได้ค้นหาก่อนว่ามี function ที่ทำงานเดิมอยู่แล้วหรือเปล่า — รีบสร้างโค้ดใหม่โดยไม่อ่าน codebase รอบข้างให้ครบ
+
+**Rule:** เห็น undefined function call → หา existing function ใน codebase ที่ทำสิ่งเดียวกันก่อน → inline หรือ refactor call site ให้ใช้ของเดิม อย่าสร้าง wrapper ใหม่โดยไม่จำเป็น
+
+---
+
+## 2026-05-01 — BillStore.listForYear ไม่ inject room field → filter เจ๊งเงียบ
+
+**Mistake:** `_renderPVHBillTable` ใช้ `BillStore.listForYear(building, y).filter(b => String(b.room||b.roomId) === room)` เพื่อกรองบิลตามห้อง ผลลัพธ์: ทุก row แสดง "ไม่มีบิล" ยกเว้นเดือนที่มีบิลจริง 1 เดือน
+
+**Why:** RTDB เก็บบิลที่ path `bills/rooms/14/{billId}` — ตัว document body ไม่มี field `room` หรือ `roomId` เลย `listForYear` push `b` แบบ raw จาก RTDB ดังนั้น `b.room || b.roomId` = `undefined` → filter คืน `[]` ทุกตัวเงียบๆ ไม่มี error
+
+**Rule:** ต้องการบิลของห้องใดห้องหนึ่งให้ใช้ `BillStore.getByRoom(building, roomId, year)` เสมอ — มันเข้าถึง `_cache[bld][room]` โดยตรงจาก path key ไม่ต้องพึ่ง field ใน document body. `listForYear` ใช้สำหรับ aggregate ทุกห้องเท่านั้น ห้าม filter by room หลังจากนั้น
+
+---
+
+## 2026-05-01 — BillStore.synthesizeFromMeter มี slice(0,6) สำหรับ tenant view เท่านั้น
+
+**Mistake:** `_pvhFillMeterGaps` เรียก `BillStore.synthesizeFromMeter({ meterHistory, ... })` เพื่อสร้าง synthetic bills สำหรับตาราง 12 เดือน ผลลัพธ์: แสดงแค่ 6 เดือนล่าสุด ที่เหลือยัง "ไม่มีบิล"
+
+**Why:** `synthesizeFromMeter` มี `meterHistory.slice(0, 6)` hardcoded — ออกแบบสำหรับ tenant app ที่แสดงแค่ 6 เดือนล่าสุด admin history table ต้องการ 12 เดือน
+
+**Rule:** อย่าเรียก `synthesizeFromMeter` จาก admin views ที่ต้องการ > 6 เดือน ให้ generate synthetic bills แบบ inline เองจาก meterHistory array ทั้งหมด (ดู `_pvhFillMeterGaps` ใน `dashboard-payment-verify.js` commit `6611662` เป็น reference)
+
+---
+
+## 2026-05-01 — meter_data ใช้ 2-digit BE year, real bills ใช้ 4-digit BE year, synthesizeFromMeter ใช้ CE year
+
+**Mistake:** เขียน year conversion ผิดหลายรอบ ทำให้ synth bills ไม่ match กับ row ในตาราง 12 เดือน
+
+**Why:** ระบบมี 3 year format พร้อมกัน:
+- `meter_data` Firestore docs: `year` = 2-digit BE (`69` = 2569 BE = 2026 CE)
+- Real RTDB bills (`BillStore._cache`): `year` = 4-digit BE string (`"2569"`)
+- `synthesizeFromMeter` output + meterHistory input: CE int (`2026`)
+- 12-month grid ใน `_drawPVHTable`: `y` = 4-digit BE int (`2569`)
+
+**Rule:**
+- Convert 2-digit BE → CE: `1957 + shortYear` (e.g. 1957+69=2026 ✓, 1957+68=2025 ✓)
+- Store synth bills year as 4-digit BE (`ceYear + 543`) ไม่ใช่ CE เพื่อให้ match กับ real bills
+- ใช้ `BillStore._be(b.year)` เสมอตอน compare กับ grid row's `y` (BE) เพราะ `_be()` handle 2-digit / 4-digit BE / CE ครบ
+- ห้าม hardcode assume year format — ตรวจจาก source (meter_data doc vs bill doc vs grid row)
+
+---
+
 ## 2026-04-30 — Firebase v11 modular SDK, NOT compat (`firebase.database()` is undefined)
 
 **Mistake:** In Phase 1 deep analytics (`shared/dashboard-insights.js` commit `21316b8`), I wrote `await window.firebase.database().ref('bills').once('value')` for the Per-Tenant Payment Behavior card. On live the card showed **"⚠️ โหลดข้อมูลไม่สำเร็จ — RTDB ยังไม่พร้อม"** because `window.firebase.database` is `undefined`. Fix shipped in commit `68890f5`.

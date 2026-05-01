@@ -18,6 +18,9 @@ CLEANUP_PLAN*.md
 FIXES_*.md
 SCRATCH*.md
 
+# Local smoke test files (dev-only, not for repo)
+smoke_*.html
+
 # Stray Windows temp-path files (from accidental path-as-filename bugs)
 UsersusEr*.html
 UsersusEr*.js
