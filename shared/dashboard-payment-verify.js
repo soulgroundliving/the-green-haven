@@ -426,9 +426,10 @@ function _renderPVHBillTable(building, room, slips) {
   const beYear = now.getFullYear() + 543;
   let allBills = [];
   if (typeof window.BillStore !== 'undefined') {
+    // getByRoom uses _cache[bld][room] directly — bill docs in RTDB have no 'room' field
+    // so listForYear + filter would always return [] (filter on undefined)
     [beYear, beYear - 1].forEach(y => {
-      allBills.push(...(window.BillStore.listForYear(building, y) || [])
-        .filter(b => String(b.room || b.roomId) === String(room)));
+      allBills.push(...(window.BillStore.getByRoom(building, room, String(y)) || []));
     });
   }
 
