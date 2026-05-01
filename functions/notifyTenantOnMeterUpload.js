@@ -1,6 +1,13 @@
 /**
- * notifyTenantOnMeterUpload — Firestore trigger: pushes LINE Flex bill
- * notification the moment a meter_data doc is written.
+ * notifyTenantOnMeterUpload — Firestore (Gen2) trigger: pushes LINE Flex
+ * bill notification the moment a meter_data doc is written.
+ *
+ * Why Gen2:
+ *   Firestore lives in asia-southeast3 (Jakarta). Gen1 Firestore triggers
+ *   only support asia-southeast1, so a Gen1 trigger on this collection
+ *   fails at deploy with "region asia-southeast3 not supported". Gen2
+ *   triggers are region-aware and can listen to asia-southeast3 from a
+ *   function deployed in asia-southeast1.
  *
  * Why this exists (architectural):
  *   meter_data (Firestore) is the single source of truth for bill content.
@@ -15,8 +22,7 @@
  *
  * Idempotency:
  *   meter_data/{docId}.notifiedAt is written after a successful push. The
- *   trigger early-exits if (a) it's already set and (b) the meter values
- *   haven't changed — re-runs of an unchanged doc don't re-notify.
+ *   trigger early-exits if the meter values haven't changed.
  *
  *   Coordinates with notifyBillOnCreate via meter_data.notifiedAt: that CF
  *   reads this field and skips when set, preventing double pushes from the
@@ -28,12 +34,15 @@
  *   firebase deploy --only functions:notifyTenantOnMeterUpload
  */
 
-const functions = require('firebase-functions');
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
 const { loadRoomConfig, computeBill, buildBillFlex } = require('./_billFlex');
+
+const LINE_TOKEN = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
 
 function parseDocId(id) {
   const parts = String(id).split('_');
@@ -54,16 +63,20 @@ function meterValuesEqual(a, b) {
          Number(a.wNew) === Number(b.wNew);
 }
 
-exports.notifyTenantOnMeterUpload = functions.region('asia-southeast1')
-  .runWith({ secrets: ['LINE_CHANNEL_ACCESS_TOKEN'] })
-  .firestore.document('meter_data/{docId}')
-  .onWrite(async (change, context) => {
-    const docId = context.params.docId;
-    if (!change.after.exists) {
+exports.notifyTenantOnMeterUpload = onDocumentWritten(
+  {
+    document: 'meter_data/{docId}',
+    region: 'asia-southeast1',
+    secrets: [LINE_TOKEN]
+  },
+  async (event) => {
+    const docId = event.params.docId;
+    const after  = event.data?.after?.data() || null;
+    const before = event.data?.before?.data() || null;
+
+    if (!after) {
       return null; // deleted — ignore
     }
-    const after  = change.after.data() || {};
-    const before = change.before.exists ? change.before.data() : null;
 
     // Idempotency #1: already notified for these meter values → skip
     if (after.notifiedAt && meterValuesEqual(after, before)) {
@@ -104,7 +117,7 @@ exports.notifyTenantOnMeterUpload = functions.region('asia-southeast1')
       return null;
     }
 
-    const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    const token = LINE_TOKEN.value();
     if (!token) {
       console.warn('⚠️ LINE_CHANNEL_ACCESS_TOKEN not set — skip notify');
       return null;
@@ -126,10 +139,12 @@ exports.notifyTenantOnMeterUpload = functions.region('asia-southeast1')
       console.log(`ℹ️ No approved LINE-linked tenant for ${building}/${roomId} — skip`);
       // Still mark notifiedAt so we don't keep retrying when a tenant gets approved later;
       // approval flow will re-fetch bills via tenant_app's meter_data subscription.
-      await change.after.ref.update({
-        notifiedAt: admin.firestore.FieldValue.serverTimestamp(),
-        notifiedSkipReason: 'no_approved_tenant'
-      });
+      if (event.data?.after?.ref) {
+        await event.data.after.ref.update({
+          notifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+          notifiedSkipReason: 'no_approved_tenant'
+        });
+      }
       return null;
     }
 
@@ -165,8 +180,8 @@ exports.notifyTenantOnMeterUpload = functions.region('asia-southeast1')
       console.warn(`⚠️ notify failures for ${building}/${roomId} (queued for retry):`, failures.length);
     }
 
-    if (pushed > 0) {
-      await change.after.ref.update({
+    if (pushed > 0 && event.data?.after?.ref) {
+      await event.data.after.ref.update({
         notifiedAt: admin.firestore.FieldValue.serverTimestamp(),
         notifiedCount: pushed
       });
@@ -174,4 +189,5 @@ exports.notifyTenantOnMeterUpload = functions.region('asia-southeast1')
     }
 
     return { pushed, failed: failures.length };
-  });
+  }
+);
