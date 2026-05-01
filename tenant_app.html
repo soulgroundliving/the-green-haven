@@ -7678,12 +7678,44 @@
             if (!auth) { _showAuthErrorBanner('Firebase ยังไม่พร้อม'); return null; }
             const signInFn = window.firebaseSignInWithCustomToken;
             if (!signInFn) { _showAuthErrorBanner('signInWithCustomToken ไม่พร้อม'); return null; }
-            try {
-                await signInFn(auth, customToken);
-                await auth.currentUser.getIdToken(true); // force-refresh so SDK has fresh claims
-            } catch (e) {
-                console.error('⛔ signInWithCustomToken failed:', e.message);
-                _showAuthErrorBanner(`sign-in ไม่สำเร็จ: ${e.message}`);
+
+            // Sign-in is fragile inside the LINE in-app browser:
+            //   • A stale auth session from a previous LIFF open can collide with the new
+            //     custom-token sign-in (Firebase tries to atomically swap users; if the old
+            //     IndexedDB persistence is half-restored the swap can race).
+            //   • LINE keeps TLS connections to googleapis.com cached aggressively — a
+            //     stale connection produces auth/network-request-failed even though the
+            //     network is fine. Retrying with a small delay forces a new connection.
+            // See memory/auth_liff_sot.md §4 for the full failure-mode table.
+            const TRANSIENT = new Set(['auth/network-request-failed', 'auth/internal-error', 'auth/timeout']);
+            const MAX_ATTEMPTS = 3;
+            let signInErr;
+            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+                try {
+                    if (attempt === 1 && auth.currentUser) {
+                        // Wipe any stale session before swapping to the new custom-token
+                        // identity — prevents LIFF reopen → race between restore and signIn.
+                        try { await auth.signOut(); } catch (_) { /* best-effort */ }
+                    }
+                    await signInFn(auth, customToken);
+                    await auth.currentUser.getIdToken(true); // force-refresh so SDK has fresh claims
+                    signInErr = null;
+                    break;
+                } catch (e) {
+                    signInErr = e;
+                    const code = e?.code || '';
+                    const transient = TRANSIENT.has(code) || /network-request-failed/i.test(e?.message || '');
+                    console.warn(`⛔ signInWithCustomToken attempt ${attempt}/${MAX_ATTEMPTS} failed (${code || 'no-code'}):`, e?.message);
+                    if (!transient || attempt === MAX_ATTEMPTS) break;
+                    await new Promise(r => setTimeout(r, 400 * attempt)); // 400ms, 800ms
+                }
+            }
+            if (signInErr) {
+                console.error('⛔ signInWithCustomToken exhausted retries:', signInErr.message);
+                const isTLS = /network-request-failed/i.test(signInErr?.message || '');
+                _showAuthErrorBanner(isTLS
+                    ? 'LINE in-app browser ค้าง — กรุณาปิด LINE จาก app switcher แล้วเปิดใหม่ (1 ครั้ง) แล้วลองอีกที'
+                    : `sign-in ไม่สำเร็จ: ${signInErr.message}`);
                 return null;
             }
 
