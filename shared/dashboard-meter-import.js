@@ -522,7 +522,7 @@ function displayImportPreview(importData, matchResults) {
       </table>
     </div>
     <div style="margin-top:1rem;padding:0.8rem;background:var(--bg-secondary);border-radius:var(--radius-sm);font-size:0.85rem;color:var(--text-muted);text-align:center;">
-      <strong style="color:var(--text);">ปี ${escapeHtml(importData.year)}</strong> | เดือน <strong style="color:var(--text);">${escapeHtml(importData.month)}</strong> | ห้องทั้งหมด: <strong style="color:var(--text);">${escapeHtml(totalCount)}</strong> (Rooms: ${roomsCount}, Nest: ${nestCount}, Amazon: ${amazonCount})
+      <strong style="color:var(--text);">ปี ${escapeHtml(importData.year)}</strong> | เดือน <strong style="color:var(--text);">${escapeHtml(importData.month)}</strong> | ห้องทั้งหมด: <strong style="color:var(--text);">${escapeHtml(totalCount)}</strong> (Rooms: ${roomsCount}, Nest: ${nestCount}, ร้านใหญ่: ${amazonCount})
     </div>
   `;
 
@@ -875,7 +875,7 @@ function displayRecordedMeterData(importData, matchResults) {
     allAmazonData.forEach(([roomNum, data]) => {
       const usage = Math.abs((data.eNew || 0) - (data.eOld || 0));
       tableHtml += `<tr style="border-bottom:1px solid #e8f5e9;background:#fafafa;">
-        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;"><strong>📦 Amazon</strong></td>
+        <td style="padding:0.5rem;border-right:1px solid #c8e6c9;"><strong>📦 ร้านใหญ่</strong></td>
         <td style="padding:0.5rem;border-right:1px solid #c8e6c9;">${roomNum}</td>
         <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;">${(data.eOld || 0).toLocaleString()}</td>
         <td style="padding:0.5rem;text-align:right;border-right:1px solid #c8e6c9;"><strong>${(data.eNew || 0).toLocaleString()}</strong></td>
@@ -887,7 +887,7 @@ function displayRecordedMeterData(importData, matchResults) {
 
     // Display all rooms count summary
     const totalRooms = roomsCount + nestCount + amazonCount;
-    tableHtml += `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">📌 รวม ${totalRooms} ห้อง: Rooms ${roomsCount} + Nest ${nestCount} + Amazon ${amazonCount}</div>`;
+    tableHtml += `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">📌 รวม ${totalRooms} ห้อง: Rooms ${roomsCount} + Nest ${nestCount} + ร้านใหญ่ ${amazonCount}</div>`;
 
     tableDiv.innerHTML = tableHtml;
 
