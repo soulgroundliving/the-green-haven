@@ -425,7 +425,7 @@ function parseImportExcelData(workbook, building) {
     amazon: amazonData,
     building: 'all',  // V1/V2 can have mixed buildings
     isV3: false,
-    importType: 'billing'   // Store as billing_data in localStorage
+    importType: 'meter'
   };
 }
 
