@@ -29,6 +29,49 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-05-02 — ลบ memory doc โดยไม่ grep cross-refs ก่อน
+
+**Mistake (almost made):** เกือบลบ `gamification_live_flag.md` + `point_economy_rules.md` ทันที แต่ grep ก่อนพบว่า 9 active lifecycle docs อ้างถึงไฟล์เหล่านั้น (`brand_living_os`, `lifecycle_complaints_award`, `lifecycle_daily_login`, `lifecycle_marketplace`, `lifecycle_thin_surfaces_catalog`, `lifecycle_tenant_ssot`, `lifecycle_wellness_claim`, `lifecycle_reward_redemption`, `tenant_app_architecture`)
+
+**Why:** memory tree มี cross-link มากกว่าที่คิด — ลบโดยไม่ตรวจ = สร้าง broken link เงียบๆ ใน 9 docs
+
+**Rule:** ลบ memory file ทุกครั้ง:
+1. `Grep` filename across memory dir ก่อน
+2. แยก hits เป็น 2 กลุ่ม: **active** (`lifecycle_*.md`, `*_*.md` reference, `MEMORY.md`) → ต้อง update ก่อนลบ; **historical** (`session_*.md`, `archive_*.md`, handoffs) → leave frozen (intentional snapshots)
+3. Update active refs → point to merged location
+4. ลบไฟล์
+5. Run `npm run verify:memory` to confirm no breakage
+
+---
+
+## 2026-05-02 — Flatten nested tabs: ลืม `display:none` panel แรกหลังแกะ wrapper
+
+**Mistake:** ตอน flatten 3 sub-tabs (Live Feed | ประวัติตามห้อง | สถานะชำระรายเดือน) ออกจาก `bill-main-tab-verify` wrapper → `pv-tab-history` กับ `pv-tab-monthly` มี inline `style="display:none"` อยู่แล้ว แต่ `pv-tab-live` ไม่มี (เป็น "active" panel ของกลุ่มเดิม) เลยโผล่มาเลยเมื่อ user เปิดหน้า bill ครั้งแรก (default tab = ออกบิล แต่ Live Feed โผล่ค้างใต้ form)
+
+**Why:** wrapper เดิมมี `display:none` ครอบทั้งสามตัว — sub-panel ที่ "active" จึง implicit hidden. พอแกะ wrapper ออก visibility เปลี่ยน
+
+**Rule:** หลัง unwrap nested tabs:
+- ตรวจทุก promoted panel ว่ามี `style="display:none"` หรือ `class="u-hidden"` initial state
+- เพิ่มให้ทุก panel ที่ไม่ใช่ default-active หลังการ flatten
+- Default-active panel = อันแรกของ tab order ใหม่ (ในเคสนี้คือ `bill-main-tab-billing` — ไม่ใช่ pv-tab-live)
+- Verify ด้วย: เปิดหน้า → ต้องเห็นแค่ default panel เท่านั้น
+
+---
+
+## 2026-05-02 — "Actively maintained" ≠ "in production flow"
+
+**Discovery:** payment.html (923 lines) อยู่ใน CSP hash list, Sentry monitoring, SRI scripts — ดูเหมือน production page เต็มตัว. แต่อ่าน code จริง: ใช้ `SecurityUtils.getSecureSession()` (NOT Firebase Auth), localStorage-only slip flow (NOT verifySlip CF), no LIFF SDK เลย → คือ standalone legacy portal ไม่ใช่ production tenant flow
+
+**Why:** ระบบ build/security pipelines (CSP, SRI, Sentry) ไม่แยกระหว่าง "live in production" กับ "still loadable in browser" — ทุก HTML ในรากของ repo ผ่านมาตรฐานเดียวกันหมด
+
+**Rule:** ก่อนสรุปว่า file X integrate กับ flow Y:
+- อ่าน auth model จริง (Firebase Auth? SecurityUtils session? LIFF?)
+- ตรวจ CF call จริง (`fetch /verifySlip`? callable httpsCallable? นั่งเขียน localStorage?)
+- ดู data source จริง (Firestore? RTDB? localStorage? base64-in-doc?)
+- การอยู่ใน build pipeline ไม่ได้แปลว่าใช้งาน production — ต้องเช็ค runtime behavior
+
+---
+
 ## 2026-05-01 — BillStore.listForYear ไม่ inject room field → filter เจ๊งเงียบ
 
 **Mistake:** `_renderPVHBillTable` ใช้ `BillStore.listForYear(building, y).filter(b => String(b.room||b.roomId) === room)` เพื่อกรองบิลตามห้อง ผลลัพธ์: ทุก row แสดง "ไม่มีบิล" ยกเว้นเดือนที่มีบิลจริง 1 เดือน
