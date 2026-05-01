@@ -618,6 +618,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       return;
     }
     if (a === 'testFirebaseConnection') { typeof window.testFirebaseConnection === 'function' && window.testFirebaseConnection(); return; }
+    if (a === 'testNotifyMeter') { typeof window.testNotifyMeter === 'function' && window.testNotifyMeter(); return; }
     if (a === 'syncDataToFirebase') { typeof window.syncDataToFirebase === 'function' && window.syncDataToFirebase(); return; }
     if (a === 'removeParent') { el.parentElement && el.parentElement.remove(); return; }
 

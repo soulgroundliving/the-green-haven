@@ -64,6 +64,7 @@ function handleImportFile(event) {
 // 🚨 CRITICAL: Expose to global scope for HTML event handlers
 window.handleImportFile = handleImportFile;
 window.handleImportDrop = handleImportDrop;
+window.testNotifyMeter = function() { return testNotifyMeter(); };
 
 /**
  * METER IMPORT: Main file processor
@@ -737,6 +738,46 @@ async function approvePendingImportWithFirebase(importData, matchResults, skipCo
   }
 
   return { success: totalSaved > 0 || totalFailed === 0, totalSaved, totalFailed };
+}
+
+// Force-resend the LINE Flex bill notification for one room/month.
+// Used by the 🧪 admin button in the meter-import recorded section to verify
+// that 'กดจ่ายเลย' opens in the LIFF in-app browser (not Safari).
+async function testNotifyMeter() {
+  const resultEl = document.getElementById('testNotifyResult');
+  const setMsg = (html, color) => {
+    if (resultEl) resultEl.innerHTML = `<span style="color:${color};">${html}</span>`;
+  };
+  try {
+    const building = document.getElementById('testNotifyBuilding').value;
+    const room     = String(document.getElementById('testNotifyRoom').value || '').trim();
+    const ym       = String(document.getElementById('testNotifyYM').value || '').trim();
+    if (!building || !room || !ym || !/^\d{1,4}_\d{1,2}$/.test(ym)) {
+      setMsg('⚠️ กรอก ห้อง และ ปี_เดือน (เช่น 69_5)', '#c62828');
+      return;
+    }
+    const docId = `${building}_${ym}_${room}`;
+    setMsg(`⏳ กำลังส่ง... (docId: ${docId})`, '#666');
+
+    if (!window.firebase?.functions?.httpsCallable) {
+      setMsg('❌ Firebase functions SDK ยังไม่พร้อม — refresh หน้าก่อน', '#c62828');
+      return;
+    }
+    const fn = window.firebase.functions.httpsCallable('notifyTenantOnMeterUpload');
+    const r = await fn({ docIds: [docId], force: true });
+    const d = r?.data || {};
+    if (d.pushed > 0) {
+      setMsg(`✅ ส่งสำเร็จ — pushed: ${d.pushed} | failed: ${d.failed} | skipped: ${d.skipped} — ตรวจ LINE ของ tenant`, '#2e7d32');
+    } else if (d.skipped > 0) {
+      const reason = d.results?.[0]?.skipped || 'unknown';
+      setMsg(`⏭ skipped (${reason}) — ห้องนี้อาจยังไม่ approved ใน liffUsers หรือ rent=0`, '#f57f17');
+    } else {
+      setMsg(`⚠️ ไม่มี push และไม่ skip — ดู results: <code>${JSON.stringify(d.results || [])}</code>`, '#c62828');
+    }
+  } catch (e) {
+    console.error('testNotifyMeter:', e);
+    setMsg(`❌ ${e?.message || e}`, '#c62828');
+  }
 }
 
 async function performDataReplacementWithData(importData, matchResults) {
