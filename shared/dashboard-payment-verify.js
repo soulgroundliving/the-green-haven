@@ -427,15 +427,17 @@ function _drawPVHTable(tbl, allBills, effectiveSlips, now, beYear) {
     if (!bill && !slip) {
       return `<tr>
         <td style="padding:6px 8px;font-weight:600;">${_MONTHS_TH[m]} ${String(y).slice(-2)}</td>
-        <td colspan="5" style="padding:6px 8px;color:var(--text-muted);text-align:center;font-size:.8rem;">ไม่มีบิล</td>
+        <td colspan="7" style="padding:6px 8px;color:var(--text-muted);text-align:center;font-size:.8rem;">ไม่มีบิล</td>
       </tr>`;
     }
 
     const isPast = (y < beYear) || (y === beYear && m < curM);
     const isPaid = (bill?.status === 'paid') || !!slip || isPast;
-    const rent  = Number(bill?.charges?.rent || 0);
-    const utils = Number((bill?.charges?.electric?.cost || 0) + (bill?.charges?.water?.cost || 0));
-    const total = Number(bill?.totalCharge || (rent + utils) || slip?.amount || 0);
+    const rent    = Number(bill?.charges?.rent              || 0);
+    const water   = Number(bill?.charges?.water?.cost       || 0);
+    const electric= Number(bill?.charges?.electric?.cost    || 0);
+    const trash   = Number(bill?.charges?.trash             || 0);
+    const total   = Number(bill?.totalCharge || (rent + water + electric + trash) || slip?.amount || 0);
 
     const statusHtml = isPaid
       ? '<span style="color:#388e3c;font-weight:700;">✅ ชำระแล้ว</span>'
@@ -448,7 +450,9 @@ function _drawPVHTable(tbl, allBills, effectiveSlips, now, beYear) {
     return `<tr style="background:${isPaid ? 'var(--green-pale)' : '#fff8e1'};">
       <td style="padding:6px 8px;font-weight:600;">${_MONTHS_TH[m]} ${String(y).slice(-2)}</td>
       <td style="padding:6px 8px;text-align:right;">฿${rent.toLocaleString()}</td>
-      <td style="padding:6px 8px;text-align:right;">฿${utils.toLocaleString()}</td>
+      <td style="padding:6px 8px;text-align:right;">฿${water.toLocaleString()}</td>
+      <td style="padding:6px 8px;text-align:right;">฿${electric.toLocaleString()}</td>
+      <td style="padding:6px 8px;text-align:right;">฿${trash.toLocaleString()}</td>
       <td style="padding:6px 8px;text-align:right;font-weight:700;color:var(--green-dark);">฿${total.toLocaleString()}</td>
       <td style="padding:6px 8px;">${statusHtml}</td>
       <td style="padding:6px 8px;line-height:1.4;">${evidenceHtml}</td>
@@ -459,7 +463,9 @@ function _drawPVHTable(tbl, allBills, effectiveSlips, now, beYear) {
     <thead><tr style="background:var(--green-pale);font-size:.78rem;color:var(--text-muted);">
       <th style="padding:6px 8px;text-align:left;">เดือน</th>
       <th style="padding:6px 8px;text-align:right;">ค่าเช่า</th>
-      <th style="padding:6px 8px;text-align:right;">น้ำ/ไฟ</th>
+      <th style="padding:6px 8px;text-align:right;">ค่าน้ำ</th>
+      <th style="padding:6px 8px;text-align:right;">ค่าไฟ</th>
+      <th style="padding:6px 8px;text-align:right;">ค่าขยะ</th>
       <th style="padding:6px 8px;text-align:right;">รวม</th>
       <th style="padding:6px 8px;">สถานะ</th>
       <th style="padding:6px 8px;">หลักฐาน</th>
