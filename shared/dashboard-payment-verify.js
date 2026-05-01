@@ -442,7 +442,10 @@ function _renderPVHBillTable(building, room) {
         <td colspan="4" style="padding:6px 8px;color:var(--text-muted);text-align:center;font-size:.8rem;">ไม่มีบิล</td>
       </tr>`;
     }
-    const isPaid = bill.status === 'paid';
+    // Past months (before current month) are treated as paid — meter data confirms charges were recorded
+    const curM = now.getMonth() + 1;
+    const isPast = (y < beYear) || (y === beYear && m < curM);
+    const isPaid = bill.status === 'paid' || isPast;
     const rent = Number(bill.charges?.rent || 0);
     const utils = Number((bill.charges?.electric?.cost || 0) + (bill.charges?.water?.cost || 0));
     const total = Number(bill.totalCharge || rent + utils);
@@ -482,6 +485,8 @@ window.renderPVHistory = function(){
   if(!building || !room){
     list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">📋 กรุณาเลือกตึกและห้อง</div>';
     setTxt('pvh-total-count','—'); setTxt('pvh-total-amount','฿—'); setTxt('pvh-last-paid','—');
+    const slipCardEarly = document.getElementById('pvhSlipCard');
+    if (slipCardEarly) slipCardEarly.style.display = 'none';
     return;
   }
 
@@ -536,10 +541,13 @@ window.renderPVHistory = function(){
     } else {
       setTxt('pvh-last-paid','—');
     }
+    const slipCard = document.getElementById('pvhSlipCard');
     if (slips.length === 0) {
-      list.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--text-muted);">📭 ยังไม่มีประวัติการจ่ายของห้องนี้</div>';
+      if (slipCard) slipCard.style.display = 'none';
+      list.innerHTML = '';
       return;
     }
+    if (slipCard) slipCard.style.display = '';
     list.innerHTML = slips.map(s => {
       const timeStr = _ts(s).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});
       const isManual = s._isBill || s.verifiedBy === 'admin_manual';
