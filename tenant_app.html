@@ -7475,6 +7475,8 @@
             window._tenantAppBills = _taBills;
         }
 
+        const _ce = (y) => window.YearUtils?.toCE?.(y) || Number(y) || 0;
+
         async function loadTenantAppData() {
             if (!_taRoom) return;
 
@@ -7506,7 +7508,6 @@
                             // 69 (BE 2-digit, raw from Excel), or 2026 (CE from synth).
                             // Raw subtraction (2569 - 2026) sorts April > May. toCE
                             // normalizes all three to CE so the comparison is monotonic.
-                            const _ce = (y) => window.YearUtils?.toCE?.(y) || Number(y) || 0;
                             _taBills = Array.from(byId.values()).sort((a,b) =>
                                 (_ce(b.year)*100+Number(b.month||0)) - (_ce(a.year)*100+Number(a.month||0)));
                             _dedupBills();
@@ -7580,9 +7581,6 @@
                     const byId = new Map();
                     _taBills.forEach(b => byId.set(b.billId || b.id, b));
                     bills.forEach(b => byId.set(b.billId || b.id, b));
-                    // Same toCE-aware sort as loadTenantAppData — bills mix BE 4-digit
-                    // (RTDB CF), BE 2-digit (raw Excel), and CE (synthesized) year values.
-                    const _ce = (y) => window.YearUtils?.toCE?.(y) || Number(y) || 0;
                     _taBills = Array.from(byId.values()).sort((a, b) =>
                         (_ce(b.year)*100+Number(b.month||0)) - (_ce(a.year)*100+Number(a.month||0))
                     );
@@ -10317,11 +10315,12 @@
         // Save ONLY the invoice card (not the page nav / action buttons / chrome)
         // as a PNG image — same html2canvas pattern as downloadReceipt(step 3).
         async function saveInvoiceImage() {
+            let tmp;
             try {
                 const src = document.querySelector('#payment-step-1 .receipt-card');
                 if (!src) { toast('ไม่พบใบวางบิล', 'error'); return; }
                 try { await window.ensureHtml2Canvas(); } catch (e) { toast('โหลดไลบรารีไม่สำเร็จ', 'error'); return; }
-                const tmp = document.createElement('div');
+                tmp = document.createElement('div');
                 tmp.style.cssText = 'position:fixed; left:-9999px; top:0; background:#fff; padding:2rem; width:600px;';
                 tmp.innerHTML = src.innerHTML;
                 document.body.appendChild(tmp);
@@ -10333,11 +10332,13 @@
                 link.href = canvas.toDataURL('image/png');
                 link.download = `invoice-${_legacyRoom()}-${ds}-${ts}.png`;
                 document.body.appendChild(link); link.click();
-                document.body.removeChild(link); document.body.removeChild(tmp);
+                document.body.removeChild(link);
                 toast('บันทึกใบวางบิลสำเร็จ', 'success');
             } catch (error) {
                 console.error('saveInvoiceImage:', error);
                 toast('เกิดข้อผิดพลาดในการบันทึก', 'error');
+            } finally {
+                if (tmp && tmp.parentNode) document.body.removeChild(tmp);
             }
         }
 

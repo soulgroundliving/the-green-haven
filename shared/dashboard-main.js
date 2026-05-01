@@ -97,8 +97,6 @@ window.switchTenantMainTab = function(tab, btn) {
 };
 
 window.switchBillingMainTab = function(tab, btn) {
-  // 4 tabs: billing | live | history | monthly. The 3 verify panels (live/history/monthly)
-  // were previously nested under a 'verify' wrapper; flattened 2026-05-02.
   const PANEL_ID = { billing: 'bill-main-tab-billing', live: 'pv-tab-live', history: 'pv-tab-history', monthly: 'pv-tab-monthly' };
   Object.entries(PANEL_ID).forEach(([t, id]) => {
     const el = document.getElementById(id);

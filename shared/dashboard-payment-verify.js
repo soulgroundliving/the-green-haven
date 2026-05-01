@@ -1,7 +1,6 @@
 // ===== PAYMENT VERIFICATION =====
 
 // Navigate to bill page → ประวัติตามห้อง, pre-filtered to roomId.
-// Tabs flattened 2026-05-02: 'history' is now a top-level tab (was a sub-tab under 'verify').
 window.goToRoomPayHistory = function(roomId) {
   const bld = /^[Nn]\d/.test(String(roomId)) ? 'nest' : 'rooms';
   window.showPage('bill');
@@ -325,37 +324,33 @@ window.submitManualVerify = async function(){
 };
 
 // ===== Payment Verify — monthly tab prefill helper =====
-// Called by switchBillingMainTab when 'monthly' tab is activated. Extracted from
-// the old switchPVTab in 2026-05-02 tab-flattening refactor.
 window._pvPrefillMonthly = function(){
-  {
-    const now = new Date();
-    const mm = document.getElementById('mt-month');
-    const my = document.getElementById('mt-year');
-    const vm = document.getElementById('vc-month');
-    const vy = document.getElementById('vc-year');
-    if (mm && !mm.value) mm.value = now.getMonth() + 1;
-    if (my && !my.value) my.value = now.getFullYear() + 543;
-    if (vm && !vm.value) vm.value = now.getMonth() + 1;
-    if (vy && !vy.value) vy.value = now.getFullYear() + 543;
-    // Prefill tracking-start UI
-    const t = window.loadTrackingStart?.();
-    const tm = document.getElementById('tracking-start-month');
-    const ty = document.getElementById('tracking-start-year');
-    const info = document.getElementById('tracking-start-info');
-    if (tm && ty) {
-      if (t) {
-        tm.value = t.month;
-        ty.value = t.year;
-        if (info) info.textContent = `บันทึกล่าสุด: ${t.month}/${t.year}`;
-      } else {
-        tm.value = now.getMonth() + 1;
-        ty.value = now.getFullYear() + 543;
-        if (info) info.textContent = 'ยังไม่ได้ตั้งค่า';
-      }
+  const now = new Date();
+  const mm = document.getElementById('mt-month');
+  const my = document.getElementById('mt-year');
+  const vm = document.getElementById('vc-month');
+  const vy = document.getElementById('vc-year');
+  if (mm && !mm.value) mm.value = now.getMonth() + 1;
+  if (my && !my.value) my.value = now.getFullYear() + 543;
+  if (vm && !vm.value) vm.value = now.getMonth() + 1;
+  if (vy && !vy.value) vy.value = now.getFullYear() + 543;
+  // Prefill tracking-start UI
+  const t = window.loadTrackingStart?.();
+  const tm = document.getElementById('tracking-start-month');
+  const ty = document.getElementById('tracking-start-year');
+  const info = document.getElementById('tracking-start-info');
+  if (tm && ty) {
+    if (t) {
+      tm.value = t.month;
+      ty.value = t.year;
+      if (info) info.textContent = `บันทึกล่าสุด: ${t.month}/${t.year}`;
+    } else {
+      tm.value = now.getMonth() + 1;
+      ty.value = now.getFullYear() + 543;
+      if (info) info.textContent = 'ยังไม่ได้ตั้งค่า';
     }
-    if (typeof renderMeterTable === 'function') setTimeout(renderMeterTable, 50);
   }
+  if (typeof renderMeterTable === 'function') setTimeout(renderMeterTable, 50);
 };
 
 window.loadPVHistoryRooms = function(){
