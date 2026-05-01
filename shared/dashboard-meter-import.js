@@ -64,7 +64,7 @@ function handleImportFile(event) {
 // 🚨 CRITICAL: Expose to global scope for HTML event handlers
 window.handleImportFile = handleImportFile;
 window.handleImportDrop = handleImportDrop;
-window.testNotifyMeter = function() { return testNotifyMeter(); };
+window.testNotifyMeter = testNotifyMeter;
 
 /**
  * METER IMPORT: Main file processor
