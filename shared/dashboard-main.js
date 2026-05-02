@@ -443,7 +443,7 @@ function switchPeopleTab(tabName, btn) {
   });
 
   // Remove active style from all tab buttons
-  document.querySelectorAll('.people-mgmt-tab').forEach(button => {
+  document.querySelectorAll('[data-action="switchPeopleTab"]').forEach(button => {
     button.classList.remove('active');
   });
 

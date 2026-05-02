@@ -5,7 +5,7 @@ const _escCF = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</
 let announcementBuilding = 'all';
 
 function setAnnouncementBuilding(bld, btn) {
-  document.querySelectorAll('#page-announcements .year-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('[data-action="setAnnouncementBuilding"]').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   announcementBuilding = bld;
   renderAnnouncementsList();

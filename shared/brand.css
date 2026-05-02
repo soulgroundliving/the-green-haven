@@ -296,6 +296,16 @@ button, input, select, textarea {
 .u-msg-err     { background: #ffebee; border-left: 4px solid #c62828; padding: 1rem; border-radius: 4px; color: var(--text, #333); }
 .u-msg-warn    { background: #fff3e0; border-left: 4px solid #e65100; padding: 1rem; border-radius: 4px; color: var(--text, #333); }
 .u-msg-info    { background: #e3f2fd; border-left: 4px solid #1565c0; padding: 1rem; border-radius: 4px; color: var(--text, #333); }
+/* Year-tab / filter pill — shared tab row used across all admin pages */
+.year-tabs { display: flex; gap: 7px; margin-bottom: 1.2rem; flex-wrap: wrap; align-items: center; }
+.year-tab {
+  padding: 6px 16px; border-radius: 20px; border: 2px solid var(--border, #d1d5db);
+  background: #fff; cursor: pointer; font-family: 'Sarabun', sans-serif;
+  font-size: .87rem; font-weight: 600; color: var(--text-muted, #666); transition: all .2s;
+}
+.year-tab:hover, .year-tab.active { background: var(--green, #2d8653); border-color: var(--green, #2d8653); color: #fff; }
+.year-tab-label { font-size: .78rem; color: var(--text-muted, #666); margin-right: 3px; }
+
 /* Tab active states */
 .filter-btn.active      { background: var(--green-dark, #1a5c38) !important; color: white !important; }
 .filter-btn-nest.active { background: var(--green-dark, #1a5c38) !important; color: white !important; }
