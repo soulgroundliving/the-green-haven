@@ -167,8 +167,8 @@
     }
   }
 
-  // Initialize Firebase immediately
-  initializeFirebase();
+  // Initialize Firebase immediately; save promise so the load handler can await it.
+  const _fbInitPromise = initializeFirebase();
 
   // Load METER_DATA from Firebase on initialization
   async function initializeMeterDataFromFirebase() {
@@ -348,6 +348,7 @@
   // Initialize Firebase on page load
   window.addEventListener('load', async () => {
     console.log('🚀 Initializing Firebase integration...');
+    await _fbInitPromise; // ensure auth is set before onAuthStateChanged
 
     // Check if user is already authenticated
     // Note: auth?.currentUser may be null here even if logged in — Firebase restores
