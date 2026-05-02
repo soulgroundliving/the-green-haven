@@ -916,6 +916,8 @@ function renderOwnerInfoPage() {
   if (!container) return;
 
   const owner = OwnerConfigManager.getOwnerInfo();
+  const safeLogoUrl = _safeDataUrl(owner.logoDataUrl || '');
+  const safeFaviconUrl = _safeDataUrl(owner.faviconDataUrl || '');
 
   container.innerHTML = `
     <!-- Company identity (used in tax report letterhead) -->
@@ -925,26 +927,26 @@ function renderOwnerInfoPage() {
       <!-- Logo upload -->
       <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed #c8e6c9; border-radius:6px;">
         <div id="logoPreviewBox" style="width:80px; height:80px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden; flex-shrink:0;">
-          ${owner.logoDataUrl ? `<img src="${owner.logoDataUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" alt="logo">` : `<span style="font-size:2rem; color:#ccc;">🏢</span>`}
+          ${safeLogoUrl ? `<img src="${safeLogoUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" alt="logo">` : `<span style="font-size:2rem; color:#ccc;">🏢</span>`}
         </div>
         <div style="flex:1;">
           <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">โลโก้บริษัท (แสดงบนบิล + รายงานภาษี)</label>
-          <input type="file" id="ownerLogoInput" accept="image/png,image/jpeg,image/svg+xml" onchange="uploadOwnerLogo(event)" style="font-size:.85rem;">
+          <input type="file" id="ownerLogoInput" accept="image/png,image/jpeg" onchange="uploadOwnerLogo(event)" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: PNG โปร่งแสง, สี่เหลี่ยมจัตุรัส, ≤ 512px</div>
-          ${owner.logoDataUrl ? `<button type="button" onclick="removeOwnerLogo()" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้</button>` : ''}
+          ${safeLogoUrl ? `<button type="button" onclick="removeOwnerLogo()" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้</button>` : ''}
         </div>
       </div>
 
       <!-- Favicon upload -->
       <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed #c8e6c9; border-radius:6px;">
         <div id="faviconPreviewBox" style="width:48px; height:48px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden; flex-shrink:0;">
-          ${owner.faviconDataUrl ? `<img src="${owner.faviconDataUrl}" style="width:32px; height:32px; object-fit:contain;" alt="favicon">` : `<span style="font-size:1.4rem; color:#ccc;">🌐</span>`}
+          ${safeFaviconUrl ? `<img src="${safeFaviconUrl}" style="width:32px; height:32px; object-fit:contain;" alt="favicon">` : `<span style="font-size:1.4rem; color:#ccc;">🌐</span>`}
         </div>
         <div style="flex:1;">
           <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">ไอคอนแท็บเบราว์เซอร์ (Favicon)</label>
-          <input type="file" id="ownerFaviconInput" accept="image/png,image/jpeg,image/svg+xml,image/x-icon" onchange="uploadOwnerFavicon(event)" style="font-size:.85rem;">
+          <input type="file" id="ownerFaviconInput" accept="image/png,image/jpeg,image/x-icon" onchange="uploadOwnerFavicon(event)" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: PNG สี่เหลี่ยมจัตุรัส — จะย่อเป็น 64×64 อัตโนมัติ</div>
-          ${owner.faviconDataUrl ? `<button type="button" onclick="removeOwnerFavicon()" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบ favicon</button>` : ''}
+          ${safeFaviconUrl ? `<button type="button" onclick="removeOwnerFavicon()" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบ favicon</button>` : ''}
         </div>
       </div>
 
@@ -1355,11 +1357,18 @@ if (typeof window !== 'undefined') {
   window.actLeaseRequest = actLeaseRequest;
 }
 
+// Accepts only data:image/* base64 URLs so arbitrary strings can never reach the DOM or storage.
+function _safeDataUrl(v) {
+  if (typeof v !== 'string' || v === '') return '';
+  return /^data:image\/(png|jpeg|webp|x-icon);base64,[A-Za-z0-9+/=\r\n]+$/.test(v) ? v : '';
+}
+
 // Low-level logo write that bypasses name-required validation in OwnerConfigManager.saveOwnerInfo.
 // Needed because users may upload a logo before filling in the owner name.
 function _writeOwnerLogo(dataUrl) {
+  const safe = _safeDataUrl(dataUrl);
   const current = OwnerConfigManager.getOwnerInfo();
-  const updated = { ...current, logoDataUrl: dataUrl };
+  const updated = { ...current, logoDataUrl: safe };
   // Direct localStorage write (no name check)
   localStorage.setItem('owner_info', JSON.stringify(updated));
   // Best-effort Firestore sync (if signed in)
@@ -1392,7 +1401,7 @@ window.uploadOwnerLogo = function(event) {
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const dataUrl = file.type === 'image/png' || file.type === 'image/svg+xml'
+      const dataUrl = file.type !== 'image/jpeg'
         ? canvas.toDataURL('image/png')
         : canvas.toDataURL('image/jpeg', 0.85);
       _writeOwnerLogo(dataUrl);
@@ -1414,8 +1423,9 @@ window.removeOwnerLogo = function() {
 };
 
 function _writeOwnerFavicon(dataUrl) {
+  const safe = _safeDataUrl(dataUrl);
   const current = OwnerConfigManager.getOwnerInfo();
-  const updated = { ...current, faviconDataUrl: dataUrl };
+  const updated = { ...current, faviconDataUrl: safe };
   localStorage.setItem('owner_info', JSON.stringify(updated));
   try {
     if (window.firebase && window.firebaseAuth?.currentUser) {

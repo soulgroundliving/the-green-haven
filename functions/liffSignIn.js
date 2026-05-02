@@ -98,6 +98,9 @@ exports.liffSignIn = functions.region('asia-southeast1').https.onRequest(async (
   if (!room) {
     return res.status(500).json({ error: 'Approved liffUsers doc is missing room field' });
   }
+  if (!/^[A-Za-z0-9_-]{1,30}$/.test(room)) {
+    return res.status(400).json({ error: 'Invalid room format in liffUsers doc' });
+  }
   if (!['rooms', 'nest'].includes(building)) {
     return res.status(400).json({ error: `Unknown building: ${building}` });
   }

@@ -545,8 +545,9 @@ exports.verifySlip = functions
     try {
       await saveVerifiedSlip(slipData, req.body);
     } catch (e) {
-      // gRPC code 6 = ALREADY_EXISTS → atomic duplicate detection
-      if (e && (e.code === 6 || e.code === 'already-exists')) {
+      // gRPC code 6 = ALREADY_EXISTS → atomic duplicate detection (string form varies by SDK version)
+      if (e && (e.code === 6 || e.code === 'already-exists' || e.code === 'ALREADY_EXISTS' ||
+                e?.message?.toLowerCase().includes('already exists'))) {
         console.warn(`🚨 Duplicate slip detected (atomic): ${slipData.transactionId}`);
         await logVerificationAttempt(
           { ...req.body, ipAddress: req.ip, userAgent: req.get('user-agent') },

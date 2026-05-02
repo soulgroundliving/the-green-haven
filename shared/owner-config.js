@@ -101,6 +101,9 @@ class OwnerConfigManager {
   }
 
   static applyFavicon(dataUrl) {
+    const safe = (typeof dataUrl === 'string' &&
+      /^data:image\/(png|jpeg|webp|x-icon);base64,/.test(dataUrl))
+      ? dataUrl : '';
     let link = document.getElementById('dynamic-favicon');
     if (!link) {
       link = document.createElement('link');
@@ -108,9 +111,9 @@ class OwnerConfigManager {
       link.rel = 'icon';
       document.head.appendChild(link);
     }
-    if (dataUrl) {
+    if (safe) {
       link.type = 'image/png';
-      link.href = dataUrl;
+      link.href = safe;
     } else {
       link.removeAttribute('type');
       link.href = '/shared/pwa-icon.svg';

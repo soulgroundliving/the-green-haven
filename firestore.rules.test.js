@@ -306,12 +306,45 @@ describe('leaseRequests — LIFF tenant creates own room only, admin updates', (
 });
 
 describe('complaints — any auth creates, only admin modifies/deletes', () => {
-  it('anon tenant can create complaint', async () => {
-    await assertSucceeds(addDoc(collection(ANON().firestore(), 'complaints'), { text: 'noise' }));
+  const validComplaint = (uid = 'tenant-1') => ({
+    linkedAuthUid: uid,
+    description: 'noise from upstairs',
+    room: '101',
+    building: 'rooms',
+    category: 'noise',
+    createdAt: new Date().toISOString(),
+  });
+
+  it('anon tenant CAN create complaint with valid shape', async () => {
+    await assertSucceeds(addDoc(collection(ANON().firestore(), 'complaints'), validComplaint()));
+  });
+
+  it('anon tenant CANNOT create with wrong linkedAuthUid', async () => {
+    await assertFails(addDoc(collection(ANON().firestore(), 'complaints'), {
+      ...validComplaint(), linkedAuthUid: 'other-uid',
+    }));
+  });
+
+  it('CANNOT create with extra forbidden fields', async () => {
+    await assertFails(addDoc(collection(ANON().firestore(), 'complaints'), {
+      ...validComplaint(), admin: true,
+    }));
+  });
+
+  it('CANNOT create with description over 2000 chars', async () => {
+    await assertFails(addDoc(collection(ANON().firestore(), 'complaints'), {
+      ...validComplaint(), description: 'x'.repeat(2001),
+    }));
+  });
+
+  it('CANNOT create without required fields', async () => {
+    await assertFails(addDoc(collection(ANON().firestore(), 'complaints'), {
+      linkedAuthUid: 'tenant-1', description: 'noise',  // missing room + building
+    }));
   });
 
   it('anon tenant CANNOT update or delete', async () => {
-    await seedDoc('complaints/c-1', { text: 'old' });
+    await seedDoc('complaints/c-1', { description: 'old', linkedAuthUid: 'tenant-1', room: '101', building: 'rooms' });
     await assertFails(updateDoc(doc(ANON().firestore(), 'complaints/c-1'), { resolved: true }));
     await assertFails(deleteDoc(doc(ANON().firestore(), 'complaints/c-1')));
   });

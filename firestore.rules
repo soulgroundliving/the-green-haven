@@ -61,7 +61,18 @@ service cloud.firestore {
         || (isSignedIn()
             && resource.data.room == request.auth.token.room
             && resource.data.building == request.auth.token.building);
-      allow create: if isSignedIn() && request.resource.data.linkedAuthUid == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.linkedAuthUid == request.auth.uid
+        && request.resource.data.keys().hasAll(['linkedAuthUid', 'description', 'room', 'building'])
+        && request.resource.data.keys().hasOnly([
+             'linkedAuthUid', 'description', 'room', 'building',
+             'category', 'severity', 'location', 'startDate',
+             'title', 'desc', 'id', 'status', 'createdAt'
+           ])
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 2000
+        && request.resource.data.room is string
+        && request.resource.data.building is string;
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
