@@ -42,11 +42,9 @@
                  : 'preview',
       release: window.SENTRY_RELEASE || undefined,  // optional: git SHA injected at build
 
-      // Quota guards
+      // Quota guards (replay omitted — base bundle.min.js does not include replay)
       sampleRate: 1.0,
       tracesSampleRate: 0,
-      replaysSessionSampleRate: 0,
-      replaysOnErrorSampleRate: 0.1,
 
       // Don't auto-send IP / cookies — Thai PDPA prefers explicit opt-in
       sendDefaultPii: false,
