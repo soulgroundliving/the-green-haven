@@ -31,6 +31,30 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const MEMORY_DIR = process.env.MEMORY_DIR
   || 'C:/Users/usEr/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory';
 
+// Resolve which `bash` to use. On Windows, the bare name `bash` is dangerous —
+// when this script is launched from cmd.exe, `bash` resolves to the WSL launcher
+// (`C:\Windows\System32\bash.exe`), and WSL's filesystem mapping makes the
+// Windows-style cwd we hand to execSync produce empty matches across the board
+// (every grep returns "no match"). From Git Bash the same bare name resolves to
+// `/usr/bin/bash` so it works — which is why the failure only shows up when
+// users run `npm run verify:memory` from cmd.exe / PowerShell.
+//
+// Pin to the Git-for-Windows bash explicitly when present; otherwise fall back
+// to the PATH lookup (which is correct on macOS / Linux).
+function resolveBash() {
+  if (process.platform === 'win32') {
+    const candidates = [
+      'C:\\Program Files\\Git\\bin\\bash.exe',
+      'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) return c;
+    }
+  }
+  return 'bash';
+}
+const BASH_PATH = resolveBash();
+
 function listLifecycleDocs() {
   // Graceful exit if memory dir doesn't exist (user-scoped infra; may be absent on fresh clones).
   if (!fs.existsSync(MEMORY_DIR)) {
@@ -275,7 +299,7 @@ function runCommand(cmd) {
   try {
     const out = execSync(cmd, {
       cwd: REPO_ROOT,
-      shell: 'bash',
+      shell: BASH_PATH,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 10000,
