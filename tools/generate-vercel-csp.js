@@ -40,6 +40,7 @@ const SCRIPT_SRC_EXTERNAL = [
   'https://cdnjs.cloudflare.com',
   'https://cdn.jsdelivr.net',
   'https://js.sentry-cdn.com',
+  'https://browser.sentry-cdn.com', // lazy-loaded full SDK by the loader stub
   'https://unpkg.com',
   'https://static.line-scdn.net',
   'https://www.gstatic.com',
