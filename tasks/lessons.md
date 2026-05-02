@@ -65,6 +65,24 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-05-02 — Node `shell: 'bash'` บน Windows resolve ไป WSL ไม่ใช่ Git Bash
+
+**Mistake:** `tools/verify-memory.js` ใช้ `execSync(cmd, { shell: 'bash' })` — เมื่อ user run `npm run verify:memory` จาก cmd.exe / PowerShell มันแสดง 173/173 RED (ทุก grep "not in code") ทั้งที่ doc ตรงโค้ดทุก claim. แต่ถ้า run จาก Git Bash → 173/173 GREEN
+
+**Why:** บน Windows ที่มี WSL ติดตั้ง, bare `bash` ใน PATH resolve ไป `C:\Windows\System32\bash.exe` (WSL launcher) ก่อน Git Bash. WSL มี filesystem mapping ของตัวเอง — Windows-style cwd ที่ Node ส่งไป (`C:\Users\...`) ทำให้ grep หาไฟล์ไม่เจอเลย แต่ไม่ throw error (exit 1 + empty stdout = ตรงกับ grep-no-match path) → verifier รายงาน "claim not in code" หมดทุกข้อ. จาก Git Bash, PATH order ทำให้ `/usr/bin/bash` เจอก่อน → ทำงานปกติ
+
+**Rule:**
+- เมื่อ Node spawn shell บน Windows อย่าใช้ `shell: 'bash'` เปล่าๆ — pin ไปที่ Git Bash ตรงๆ:
+  ```js
+  const BASH = process.platform === 'win32' && fs.existsSync('C:\\Program Files\\Git\\bin\\bash.exe')
+    ? 'C:\\Program Files\\Git\\bin\\bash.exe'
+    : 'bash';
+  ```
+- ถ้า tool ทำงานข้าม shell ได้ (ไม่ผูกกับ bash syntax) → ทำ native-Node implementation แทน, อย่าพึ่ง shell
+- เวลา debug "ทำไม run จาก terminal X ผ่าน, จาก terminal Y RED ทั้งหมด" → ตรวจ `where bash` (cmd.exe) vs `which bash` (bash) ทันที
+
+---
+
 ## 2026-05-02 — ลบ memory doc โดยไม่ grep cross-refs ก่อน
 
 **Mistake (almost made):** เกือบลบ `gamification_live_flag.md` + `point_economy_rules.md` ทันที แต่ grep ก่อนพบว่า 9 active lifecycle docs อ้างถึงไฟล์เหล่านั้น (`brand_living_os`, `lifecycle_complaints_award`, `lifecycle_daily_login`, `lifecycle_marketplace`, `lifecycle_thin_surfaces_catalog`, `lifecycle_tenant_ssot`, `lifecycle_wellness_claim`, `lifecycle_reward_redemption`, `tenant_app_architecture`)
