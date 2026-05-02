@@ -773,7 +773,12 @@
   .badge-amber{background:var(--accent-light);color:#e65100;}
   .badge-red{background:var(--red-pale);color:var(--red);}
 
-
+  /* year-tab — duplicated here while brand.css CDN cache expires */
+  .year-tabs{display:flex;gap:7px;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center;}
+  .year-tab{padding:6px 16px;border-radius:20px;border:2px solid var(--border);background:#fff;cursor:pointer;
+    font-family:'Sarabun',sans-serif;font-size:.87rem;font-weight:600;color:var(--text-muted);transition:all .2s;}
+  .year-tab:hover,.year-tab.active{background:var(--green);border-color:var(--green);color:#fff;}
+  .year-tab-label{font-size:.78rem;color:var(--text-muted);margin-right:3px;}
 
   /* Dashboard Tab Styles */
   .dashboard-tab{color:var(--text-muted);}
