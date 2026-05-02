@@ -29,6 +29,42 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-05-02 — Firebase init async race: auth undefined in load handler
+
+**Mistake:** `initializeFirebase()` ถูก call โดยไม่ save promise → `window.addEventListener('load', ...)` callback ทำงาน → dynamic import resolves → `onAuthStateChanged(auth, ...)` โดน call ขณะ `auth` ยัง `undefined` → `TypeError: Cannot read properties of undefined (reading 'onAuthStateChanged')` เพราะ `/api/config` fetch ยังไม่ return
+
+**Why:** `initializeFirebase()` เป็น async function ที่ `await window.loadFirebaseConfig()` (network fetch) ก่อน set `auth = getAuth(app)`. `window.load` event + dynamic import (`firebase-auth.js` ซึ่ง cached) resolve เร็วกว่า network fetch ในบางสถานการณ์ ทำให้ `auth` ยังเป็น `undefined`
+
+**Rule:**
+- บันทึก promise ไว้เสมอ: `const _fbInitPromise = initializeFirebase();`
+- ใน `window.load` handler: `await _fbInitPromise;` ก่อนใช้ `auth`, `database`, `firestore` ทุกตัว
+- Pattern นี้ใช้กับทุก async init function — ถ้า call ไม่ await, ต้อง save promise แล้ว await ที่จุดใช้งาน
+
+---
+
+## 2026-05-02 — แก้ inline script → hash เปลี่ยน → CSP violation ใหม่
+
+**Mistake:** แก้ `dashboard.html` `<script type="module">` (เพิ่ม `await _fbInitPromise`) → เนื้อหา script เปลี่ยน → hash SHA-256 เก่า (`gaRx0y1u…`) ไม่ match อีกต่อไป → CSP Report-Only ขึ้น violation สำหรับ script block นั้น
+
+**Why:** CSP hash ถูก compute จากเนื้อหา verbatim ของ `<script>` block — เปลี่ยนแม้แต่ 1 ตัวอักษร hash เปลี่ยนทั้งหมด
+
+**Rule:** หลัง edit **ใดๆ** ใน `<script>` หรือ `<style>` block ของ HTML file:
+1. `npm run csp:hash` → regenerate `tools/csp-hashes.json`
+2. Inject ผ่าน Node script (ไม่ใช่ edit vercel.json มือ): `node -e "...generate-vercel-csp.js..."`
+3. Verify: `grep '3zTK9Sf3\|<new-hash>' vercel.json` ก่อน commit
+
+---
+
+## 2026-05-02 — แก้ vercel.json มือ → ถูก csp:print เขียนทับ
+
+**Mistake:** เพิ่ม `https://browser.sentry-cdn.com` โดยตรงใน `vercel.json` → session ถัดไป run `npm run csp:print` → script regenerate ทั้ง CSP string จาก `generate-vercel-csp.js` → domain หายไป
+
+**Why:** `generate-vercel-csp.js` คือ source of truth ของ CSP domain allowlist — มัน generate string ใหม่ทั้งหมดทุกครั้ง vercel.json เป็น output, ไม่ใช่ source
+
+**Rule:** เพิ่ม CDN domain ใหม่ใน `tools/generate-vercel-csp.js` `SCRIPT_SRC_EXTERNAL` array (หรือ `STYLE_SRC_EXTERNAL`) เท่านั้น อย่าแตะ vercel.json โดยตรง. Sentry ต้องการ 2 domains: `https://js.sentry-cdn.com` (loader stub) + `https://browser.sentry-cdn.com` (full SDK lazy-loaded)
+
+---
+
 ## 2026-05-02 — ลบ memory doc โดยไม่ grep cross-refs ก่อน
 
 **Mistake (almost made):** เกือบลบ `gamification_live_flag.md` + `point_economy_rules.md` ทันที แต่ grep ก่อนพบว่า 9 active lifecycle docs อ้างถึงไฟล์เหล่านั้น (`brand_living_os`, `lifecycle_complaints_award`, `lifecycle_daily_login`, `lifecycle_marketplace`, `lifecycle_thin_surfaces_catalog`, `lifecycle_tenant_ssot`, `lifecycle_wellness_claim`, `lifecycle_reward_redemption`, `tenant_app_architecture`)
