@@ -69,6 +69,15 @@
       ]
     },
     {
+      "source": "/shared/(.*)\\.css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
       "source": "/(service-worker\\.js|manifest\\.json)",
       "headers": [
         {
