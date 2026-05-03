@@ -598,9 +598,22 @@ function skipSlipVerify(){
 
 function enableReceiptBtn(){
   const btn = document.getElementById('btnReceipt');
-  btn.disabled = false; btn.classList.remove('u-op50', 'u-no-ptr');
-  document.getElementById('billHint').textContent = slipVerified
-    ? `✅ ตรวจสลิปผ่าน ฿${slipData.amount.toLocaleString()} (${slipData.sender}) — กดออกใบเสร็จได้เลย`
+  btn.disabled = false;
+  btn.style.opacity = '';
+  btn.style.cursor = '';
+  btn.classList.remove('u-op40', 'u-op50', 'u-no-ptr');
+  const hint = document.getElementById('billHint');
+
+  // Auto-issue: when QR-locked amount + SlipOK both pass, the receipt is
+  // safe to issue without manual click. amountOk=false (partial/wrong)
+  // falls through to manual mode so admin reviews edge cases.
+  if (slipVerified && slipData && slipData.amountOk) {
+    hint.textContent = `✅ ตรวจสลิปผ่าน ฿${slipData.amount.toLocaleString()} (${slipData.sender}) — กำลังออกใบเสร็จอัตโนมัติ...`;
+    setTimeout(() => { if (typeof generateReceipt === 'function') generateReceipt(); }, 800);
+    return;
+  }
+  hint.textContent = slipVerified
+    ? `⚠️ ตรวจสลิปผ่าน แต่ยอด ฿${slipData.amount.toLocaleString()} ไม่ตรงกับบิล — กดออกใบเสร็จเองหากยอมรับ`
     : '✅ พร้อมออกใบเสร็จ — กดปุ่มด้านบน';
 }
 
