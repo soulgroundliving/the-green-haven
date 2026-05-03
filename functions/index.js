@@ -18,6 +18,38 @@ exports.fixLegacyBillBuilding = require('./fixLegacyBillBuilding').fixLegacyBill
 // caller could pass any approved lineUserId and get that room's claims).
 exports.liffSignIn = require('./liffSignIn').liffSignIn;
 
+// ═══════════════════════════════════════════════════════════════════════════
+// BOOKING FLOW (LIFF prospect → deposit-paid booking → admin convert to tenant)
+// Separate auth namespace from liffSignIn (uid prefix "book:" vs "line:") so
+// a tenant can sign into both tenant_app.html and booking.html on the same
+// device without clobbering each other's claims.
+// ═══════════════════════════════════════════════════════════════════════════
+// Mints custom token with role:'prospect' claim — gates createBookingLock.
+exports.liffBookingSignIn = require('./liffBookingSignIn').liffBookingSignIn;
+// Atomic Firestore transaction that prevents two prospects from locking the
+// same room simultaneously. Generates server-side PromptPay deposit QR.
+exports.createBookingLock = require('./createBookingLock').createBookingLock;
+// Aggregates occupied rooms + active bookings without leaking tenant PII —
+// prospects can't read tenants/* directly (rules block cross-room reads).
+exports.getRoomAvailability = require('./getRoomAvailability').getRoomAvailability;
+// Scheduled every 5 min: flips abandoned status='locked' bookings to
+// status='expired' so other prospects can grab the room.
+exports.expireBookingLocks = require('./expireBookingLocks').expireBookingLocks;
+// SlipOK-backed deposit verification — sibling of verifySlip. Writes to
+// bookings/* (not bills/), drops Nest gamification + RTDB bill mark. Atomic
+// dedup via verifiedSlips/{txid}.create() shared with rent flow.
+exports.verifyBookingSlip = require('./verifyBookingSlip').verifyBookingSlip;
+// Admin-only conversion of paid booking → real tenant doc + liffUsers approval.
+// One Firestore transaction so create-tenant + approve-liff + mark-converted
+// can't end up in a partial state. Reuses tenantId across rooms for returning
+// LINE users (linkedAuthUid match in tenants/{rooms,nest}/list/*).
+exports.convertBookingToTenant = require('./convertBookingToTenant').convertBookingToTenant;
+// Server-verified KYC submission — prospects upload to Storage directly (rules
+// gate writes), then call this CF to flip booking status='paid' → 'kyc_pending'
+// after server lists Storage to confirm idCardFront + idCardBack actually exist
+// (don't trust client-provided file list).
+exports.submitBookingKyc = require('./submitBookingKyc').submitBookingKyc;
+
 // Phone match check for LIFF auto-approve — admin SDK, never exposes raw phone (Phase 4C-2)
 exports.checkTenantPhone = require('./checkTenantPhone').checkTenantPhone;
 

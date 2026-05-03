@@ -38,6 +38,7 @@ const DYNAMIC_CACHE = `nh-dynamic-${CACHE_VERSION}`;
 // without needing the tenant to navigate every page.
 const PRECACHE_URLS = [
   '/tenant_app.html',
+  '/booking.html',
   '/manifest.json',
   '/shared/pwa-icon.svg',
   '/shared/brand.css'

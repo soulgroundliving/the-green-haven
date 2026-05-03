@@ -48,6 +48,42 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    // ===== BOOKING SLIPS — CF-only writes, admin/owner reads =====
+    // Path: bookings/{bookingId}/slips/{fileName}
+    // Slip image saved by verifyBookingSlip CF (admin SDK bypasses rules).
+    // Direct client write blocked: the CF re-validates against SlipOK + atomic
+    // verifiedSlips dedup; client write would skip both.
+    // Read scoped to admin OR the booking owner (firestore.get cross-check).
+    match /bookings/{bookingId}/slips/{fileName} {
+      allow read: if isAdmin()
+        || (isSignedIn() &&
+            firestore.get(/databases/(default)/documents/bookings/$(bookingId)).data.prospectUid == request.auth.uid);
+      allow write, delete: if false; // CF-only via admin SDK
+    }
+
+    // ===== BOOKING KYC DOCS — owner uploads (Phase 5), admin/owner reads =====
+    // Path: bookings/{bookingId}/kyc/{fileName}
+    // Owner can upload AFTER status=='paid' (gates on the booking doc state
+    // via firestore.get — prevents pre-payment KYC scrape attempts).
+    // Files capped at 5MB (KYC scans don't need full 10MB allowance).
+    match /bookings/{bookingId}/kyc/{fileName} {
+      allow read: if isAdmin()
+        || (isSignedIn() &&
+            firestore.get(/databases/(default)/documents/bookings/$(bookingId)).data.prospectUid == request.auth.uid);
+      // Status guard uses explicit `||` instead of `status in [...]` for maximum
+      // CEL-version compatibility on Storage Rules. The 3 firestore.get() calls
+      // each cost ~$0.06/100k and Firestore caches reads within a single rule
+      // evaluation, so practical cost is ~1 read per upload.
+      allow write: if isAdmin()
+        || (isSignedIn()
+            && request.resource.size < 5 * 1024 * 1024
+            && isImageOrPdf()
+            && firestore.get(/databases/(default)/documents/bookings/$(bookingId)).data.prospectUid == request.auth.uid
+            && (firestore.get(/databases/(default)/documents/bookings/$(bookingId)).data.status == 'paid'
+                || firestore.get(/databases/(default)/documents/bookings/$(bookingId)).data.status == 'kyc_pending'));
+      allow delete: if isAdmin();
+    }
+
     // Default deny.
     match /{allPaths=**} {
       allow read, write: if false;

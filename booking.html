@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>จองห้อง — Nature Haven</title>
+
+  <!-- ===== PWA: install + offline support ===== -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#2d8653">
+  <meta name="application-name" content="Nature Haven Booking">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Nature Haven Booking">
+  <link rel="apple-touch-icon" href="/shared/pwa-icon.svg">
+  <link rel="icon" id="dynamic-favicon" type="image/svg+xml" href="/shared/pwa-icon.svg">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(reg => console.log('🛡️ SW registered (scope:', reg.scope, ')'))
+          .catch(err => console.warn('SW registration failed:', err.message));
+      });
+    }
+  </script>
+
+  <!-- Brand fonts + tokens (load BEFORE Tailwind so brand vars take precedence) -->
+  <link rel="stylesheet" href="/shared/brand.css">
+  <link rel="stylesheet" href="/shared/tailwind.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+
+  <!-- Sentry (lazy) — distinct app name keeps booking errors separate from tenant_app -->
+  <script>window.SENTRY_APP_NAME = 'booking';</script>
+  <script src="https://js.sentry-cdn.com/70de55e358255ab981939b708a743b1d.min.js" crossorigin="anonymous"></script>
+  <script src="/shared/sentry-init.js"></script>
+
+  <!-- LINE LIFF SDK -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <!-- QR Code library — used at payment step only, but small + cached so ship eagerly -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
+
+  <!-- Project shared modules — only what booking.html actually uses -->
+  <script src="/shared/firebase-config-loader.js"></script>
+  <script src="/shared/room-config.js"></script>
+
+  <style>
+    :root {
+      /* Page-specific surface gradient — soft Muji wash */
+      --booking-page: linear-gradient(180deg, var(--cloud) 0%, var(--brand-primary-wash) 100%);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-brand);
+      color: var(--ink);
+      background: var(--booking-page);
+      min-height: 100vh;
+    }
+
+    /* iOS auto-zoom prevention */
+    input, select, textarea { font-size: 16px; }
+
+    /* ── App shell ─────────────────────────────────────────── */
+    .app-shell {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 var(--space-4) var(--space-7);
+      min-height: 100vh;
+    }
+
+    .app-header {
+      padding: var(--space-5) 0 var(--space-4);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-4);
+    }
+    .app-header h1 {
+      margin: 0 0 var(--space-1);
+      font-size: var(--text-xl);
+      letter-spacing: -0.01em;
+    }
+    .app-header .sub {
+      color: var(--pebble);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-light);
+    }
+
+    /* ── Loading overlay ─────────────────────────────────────── */
+    .boot-overlay {
+      position: fixed; inset: 0;
+      background: var(--surface-page);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: var(--space-4);
+      z-index: 9999;
+      transition: opacity var(--dur-settle) var(--ease-quiet);
+    }
+    .boot-overlay .leaf { font-size: 3rem; }
+    .boot-overlay .msg { color: var(--shadow); font-size: var(--text-sm); }
+    .boot-overlay.fade { opacity: 0; pointer-events: none; }
+
+    /* ── Building tabs ───────────────────────────────────────── */
+    .building-tabs {
+      display: flex; gap: var(--space-2);
+      margin-bottom: var(--space-4);
+    }
+    .building-tab {
+      flex: 1; padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-sm);
+      background: var(--surface-card);
+      color: var(--shadow);
+      font-family: var(--font-brand);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
+      cursor: pointer;
+      transition: all var(--dur-quick) var(--ease-quiet);
+    }
+    .building-tab.active {
+      background: var(--brand-primary);
+      border-color: var(--brand-primary);
+      color: #fff;
+    }
+    .building-tab .room-count {
+      display: block;
+      font-size: var(--text-xs);
+      font-weight: var(--weight-light);
+      opacity: 0.7;
+      margin-top: 2px;
+    }
+
+    /* ── Filter row ──────────────────────────────────────────── */
+    .filter-row {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-3);
+    }
+    .filter-grid .full { grid-column: 1 / -1; }
+    .filter-label {
+      display: block;
+      font-size: var(--text-xs);
+      color: var(--shadow);
+      margin-bottom: var(--space-1);
+      font-weight: var(--weight-medium);
+    }
+    .filter-input {
+      width: 100%;
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-xs);
+      background: var(--surface-card);
+      font-family: var(--font-brand);
+    }
+
+    /* ── Date strip ──────────────────────────────────────────── */
+    .date-strip {
+      display: flex;
+      gap: var(--space-2);
+      overflow-x: auto;
+      padding: var(--space-2) 0 var(--space-3);
+      scrollbar-width: none;
+    }
+    .date-strip::-webkit-scrollbar { display: none; }
+    .date-chip {
+      flex: 0 0 auto;
+      min-width: 64px;
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-sm);
+      background: var(--surface-card);
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--dur-quick) var(--ease-quiet);
+    }
+    .date-chip.active {
+      background: var(--brand-primary);
+      border-color: var(--brand-primary);
+      color: #fff;
+    }
+    .date-chip .dow { font-size: var(--text-xs); opacity: 0.7; }
+    .date-chip .day { font-size: var(--text-md); font-weight: var(--weight-semibold); }
+    .date-chip .mo { font-size: var(--text-xs); opacity: 0.7; }
+
+    /* ── Rooms grid ──────────────────────────────────────────── */
+    .rooms-list {
+      display: grid;
+      gap: var(--space-3);
+    }
+    .room-card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: var(--space-3);
+      align-items: center;
+      padding: var(--space-4);
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xs);
+      transition: all var(--dur-quick) var(--ease-quiet);
+    }
+    .room-card.available { cursor: pointer; }
+    .room-card.available:hover {
+      border-color: var(--brand-primary);
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-1px);
+    }
+    .room-card.unavailable {
+      opacity: 0.55;
+      filter: grayscale(0.4);
+      cursor: not-allowed;
+    }
+    .room-icon {
+      width: 44px; height: 44px;
+      border-radius: var(--radius-sm);
+      background: var(--brand-primary-soft);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem;
+    }
+    .room-info .name {
+      font-size: var(--text-base);
+      font-weight: var(--weight-semibold);
+      margin-bottom: 2px;
+    }
+    .room-info .meta {
+      font-size: var(--text-xs);
+      color: var(--shadow);
+      font-weight: var(--weight-light);
+    }
+    .room-price .rent {
+      font-size: var(--text-md);
+      font-weight: var(--weight-semibold);
+      font-variant-numeric: tabular-nums;
+    }
+    .room-price .rent-suffix {
+      font-size: var(--text-xs);
+      color: var(--pebble);
+      font-weight: var(--weight-light);
+    }
+    .room-status-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      font-size: var(--text-xs);
+      margin-top: var(--space-1);
+    }
+    .room-status-pill.s-available { background: rgba(74,157,110,0.12); color: var(--ok); }
+    .room-status-pill.s-locked    { background: rgba(200,157,74,0.12); color: var(--warn); }
+    .room-status-pill.s-occupied  { background: rgba(168,167,160,0.18); color: var(--shadow); }
+    .room-status-pill.s-paid      { background: rgba(192,100,88,0.12); color: var(--alert); }
+
+    /* ── Modal ───────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(31, 31, 28, 0.55);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 100;
+      animation: fadeIn 0.2s ease;
+    }
+    @media (min-width: 600px) {
+      .modal-overlay { align-items: center; }
+    }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+    .modal-panel {
+      width: 100%;
+      max-width: 480px;
+      background: var(--surface-card);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: var(--space-5) var(--space-4) var(--space-5);
+      box-shadow: var(--shadow-lg);
+      animation: slideUp 0.25s var(--ease-quiet);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    @media (min-width: 600px) {
+      .modal-panel { border-radius: var(--radius-lg); }
+    }
+    @keyframes slideUp { from { transform: translateY(40px) } to { transform: translateY(0) } }
+    .modal-title {
+      margin: 0 0 var(--space-3);
+      font-size: var(--text-lg);
+    }
+    .modal-row {
+      display: flex; justify-content: space-between;
+      padding: var(--space-2) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .modal-row:last-of-type { border-bottom: none; }
+    .modal-row .label { color: var(--shadow); font-size: var(--text-sm); }
+    .modal-row .value { font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; }
+    .modal-form-row {
+      margin-bottom: var(--space-3);
+    }
+    .modal-form-row label {
+      display: block;
+      font-size: var(--text-xs);
+      color: var(--shadow);
+      margin-bottom: var(--space-1);
+    }
+    .modal-form-row input,
+    .modal-form-row select {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-xs);
+      font-family: var(--font-brand);
+    }
+    .modal-form-row .err {
+      display: block;
+      font-size: var(--text-xs);
+      color: var(--alert);
+      margin-top: var(--space-1);
+      min-height: 1em;
+    }
+    .modal-cta {
+      display: flex;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+    .btn {
+      padding: var(--space-3) var(--space-4);
+      border: none; border-radius: var(--radius-sm);
+      font-family: var(--font-brand);
+      font-size: var(--text-base);
+      font-weight: var(--weight-semibold);
+      cursor: pointer;
+      transition: all var(--dur-quick) var(--ease-quiet);
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary {
+      flex: 1;
+      background: var(--brand-primary);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--brand-primary-dark); }
+    .btn-secondary {
+      background: var(--mist);
+      color: var(--shadow);
+      flex: 0 0 auto;
+    }
+
+    /* ── Payment step ────────────────────────────────────────── */
+    .payment-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--space-4);
+    }
+    .qr-wrap {
+      display: flex; flex-direction: column;
+      align-items: center;
+      padding: var(--space-4);
+      background: #fff;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      margin: var(--space-3) auto;
+      max-width: 260px;
+    }
+    .qr-wrap canvas, .qr-wrap img { display: block; }
+    .qr-amount {
+      font-size: var(--text-2xl);
+      font-weight: var(--weight-bold);
+      font-variant-numeric: tabular-nums;
+      color: var(--brand-primary-dark);
+      margin: var(--space-3) 0 var(--space-1);
+    }
+    .qr-amount-suffix {
+      font-size: var(--text-md);
+      color: var(--shadow);
+      font-weight: var(--weight-light);
+    }
+    .countdown-strip {
+      display: flex; justify-content: center; gap: var(--space-2);
+      padding: var(--space-2);
+      background: var(--mist);
+      border-radius: var(--radius-sm);
+      font-variant-numeric: tabular-nums;
+      font-size: var(--text-sm);
+      color: var(--shadow);
+    }
+    .countdown-strip.warning { background: rgba(200,157,74,0.12); color: var(--warn); }
+    .countdown-strip.danger  { background: rgba(192,100,88,0.12); color: var(--alert); }
+
+    .slip-drop {
+      border: 2px dashed var(--border-base);
+      border-radius: var(--radius-md);
+      padding: var(--space-5);
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--dur-quick);
+    }
+    .slip-drop:hover {
+      border-color: var(--brand-primary);
+      background: var(--brand-primary-wash);
+    }
+    .slip-drop input[type="file"] { display: none; }
+    .slip-preview {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: var(--radius-sm);
+      object-fit: contain;
+    }
+
+    .status-line {
+      padding: var(--space-3);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-sm);
+      margin: var(--space-3) 0;
+    }
+    .status-line.loading { background: var(--mist); color: var(--shadow); }
+    .status-line.success { background: rgba(74,157,110,0.10); color: var(--ok); }
+    .status-line.warn    { background: rgba(200,157,74,0.10); color: var(--warn); }
+    .status-line.error   { background: rgba(192,100,88,0.10); color: var(--alert); }
+
+    /* ── KYC tiles (Phase 5) ─────────────────────────────────── */
+    .kyc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-2);
+    }
+    @media (min-width: 480px) {
+      .kyc-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .kyc-tile {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: var(--space-3) var(--space-2);
+      background: var(--surface-card);
+      border: 1.5px dashed var(--border-base);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--dur-quick) var(--ease-quiet);
+      gap: var(--space-1);
+    }
+    .kyc-tile:hover {
+      border-color: var(--brand-primary);
+      background: var(--brand-primary-wash);
+    }
+    .kyc-tile input[type="file"] { display: none; }
+    .kyc-tile .kyc-icon { font-size: 1.5rem; }
+    .kyc-tile .kyc-label {
+      font-size: var(--text-xs);
+      font-weight: var(--weight-medium);
+      line-height: 1.3;
+    }
+    .kyc-tile .kyc-status {
+      font-size: var(--text-xs);
+      color: var(--pebble);
+    }
+    .kyc-tile.uploaded {
+      border-style: solid;
+      border-color: var(--ok);
+      background: rgba(74, 157, 110, 0.06);
+    }
+    .kyc-tile.uploaded .kyc-status { color: var(--ok); font-weight: var(--weight-medium); }
+    .kyc-tile.uploading {
+      border-color: var(--warn);
+      background: rgba(200, 157, 74, 0.06);
+    }
+    .kyc-tile.error {
+      border-color: var(--alert);
+      background: rgba(192, 100, 88, 0.06);
+    }
+    .kyc-tile.error .kyc-status { color: var(--alert); }
+
+    /* ── Confirmation step ───────────────────────────────────── */
+    .receipt-card {
+      background: var(--surface-card);
+      border: 1px solid var(--brand-primary-soft);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-sm);
+    }
+    .receipt-tick {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: var(--brand-primary);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
+      margin: 0 auto var(--space-4);
+    }
+
+    /* ── Hidden state utility ────────────────────────────────── */
+    .hide { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LIFF + Firebase boot overlay — held visible until both finish, then fades.
+     ═════════════════════════════════════════════════════════════════════════ -->
+<div id="bootOverlay" class="boot-overlay" role="status" aria-live="polite">
+  <div class="leaf">🌿</div>
+  <div id="bootMsg" class="msg">กำลังเชื่อมต่อ LINE…</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Main app shell (4 stepwise sections; only one visible at a time)
+     ═════════════════════════════════════════════════════════════════════════ -->
+<div class="app-shell">
+
+  <header class="app-header">
+    <h1>จองห้องพัก Nature Haven</h1>
+    <div class="sub">เลือกห้อง · จ่ายมัดจำ · ยืนยัน — ทำผ่าน LINE LIFF</div>
+  </header>
+
+  <!-- ──────────── Step 1: Calendar / Room picker ──────────── -->
+  <section id="stepPicker" class="step">
+
+    <div class="building-tabs">
+      <button id="bldRoomsBtn" class="building-tab active" data-bld="rooms">
+        ห้องแถว <span class="room-count" id="bldRoomsCount">— ห้องว่าง</span>
+      </button>
+      <button id="bldNestBtn" class="building-tab" data-bld="nest">
+        Nest <span class="room-count" id="bldNestCount">— ห้องว่าง</span>
+      </button>
+    </div>
+
+    <div class="filter-row">
+      <div class="filter-grid">
+        <div>
+          <label class="filter-label" for="filterFloor">ชั้น (Nest)</label>
+          <select id="filterFloor" class="filter-input">
+            <option value="">ทั้งหมด</option>
+            <option value="1">ชั้น 1</option>
+            <option value="2">ชั้น 2</option>
+            <option value="3">ชั้น 3</option>
+            <option value="4">ชั้น 4</option>
+          </select>
+        </div>
+        <div>
+          <label class="filter-label" for="filterType">ประเภท (Nest)</label>
+          <select id="filterType" class="filter-input">
+            <option value="">ทั้งหมด</option>
+            <option value="studio">Studio</option>
+            <option value="pet-allowed">Pet-friendly</option>
+          </select>
+        </div>
+        <div class="full">
+          <label class="filter-label" for="filterMaxRent">ราคาสูงสุด (บาท/เดือน)</label>
+          <select id="filterMaxRent" class="filter-input">
+            <option value="">ไม่จำกัด</option>
+            <option value="2000">≤ ฿2,000</option>
+            <option value="3000">≤ ฿3,000</option>
+            <option value="5000">≤ ฿5,000</option>
+            <option value="6500">≤ ฿6,500</option>
+            <option value="10000">≤ ฿10,000</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <label class="filter-label">เลือกวันที่ย้ายเข้า</label>
+      <div id="dateStrip" class="date-strip" aria-label="เลือกวันที่ย้ายเข้า"></div>
+    </div>
+
+    <div id="roomsList" class="rooms-list"></div>
+    <div id="roomsEmpty" class="hide" style="text-align:center; padding: var(--space-6); color: var(--pebble);">
+      ไม่พบห้องที่ตรงกับตัวกรอง
+    </div>
+
+  </section>
+
+  <!-- ──────────── Step 2: Booking detail modal ──────────── -->
+  <div id="bookingModal" class="modal-overlay hide" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-panel">
+      <h2 id="modalTitle" class="modal-title">ยืนยันการจอง</h2>
+      <div id="modalSummary"></div>
+
+      <div class="modal-form-row">
+        <label for="modalDuration">ระยะสัญญา</label>
+        <select id="modalDuration">
+          <option value="6">6 เดือน</option>
+          <option value="12" selected>12 เดือน</option>
+          <option value="24">24 เดือน</option>
+          <option value="3">3 เดือน (ทดลอง)</option>
+        </select>
+      </div>
+
+      <div class="modal-form-row">
+        <label for="modalName">ชื่อ-นามสกุล <span style="color: var(--alert)">*</span></label>
+        <input id="modalName" type="text" maxlength="80" autocomplete="name" placeholder="เช่น สมชาย ใจดี">
+        <span id="modalNameErr" class="err"></span>
+      </div>
+
+      <div class="modal-form-row">
+        <label for="modalPhone">เบอร์โทร <span style="color: var(--alert)">*</span></label>
+        <input id="modalPhone" type="tel" inputmode="numeric" maxlength="10" autocomplete="tel" placeholder="0XXXXXXXXX">
+        <span id="modalPhoneErr" class="err"></span>
+      </div>
+
+      <div id="modalEarlyBird" class="hide" style="background: var(--brand-primary-wash); border-radius: var(--radius-sm); padding: var(--space-3); margin-bottom: var(--space-3); font-size: var(--text-sm); color: var(--brand-primary-dark);">
+        🎁 จองล่วงหน้า ≥ 30 วัน — รับ 500 แต้ม Early Bird (มอบหลังทำสัญญา)
+      </div>
+
+      <div class="modal-cta">
+        <button id="modalCancelBtn" class="btn btn-secondary">ยกเลิก</button>
+        <button id="modalLockBtn" class="btn btn-primary">ล็อคห้องและจ่ายมัดจำ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────── Step 3: Payment ──────────── -->
+  <section id="stepPayment" class="step hide">
+    <div class="payment-card">
+      <h2 style="margin-top:0;">มัดจำห้อง <span id="payRoomLabel"></span></h2>
+      <div class="modal-row">
+        <span class="label">ห้อง</span>
+        <span class="value" id="payRoom">—</span>
+      </div>
+      <div class="modal-row">
+        <span class="label">วันย้ายเข้า</span>
+        <span class="value" id="payStartDate">—</span>
+      </div>
+      <div class="modal-row">
+        <span class="label">ค่าเช่า/เดือน</span>
+        <span class="value" id="payMonthly">—</span>
+      </div>
+      <div class="modal-row">
+        <span class="label">ระยะสัญญา</span>
+        <span class="value" id="payDuration">—</span>
+      </div>
+
+      <div style="text-align:center;">
+        <div class="qr-amount" id="payAmountText">— <span class="qr-amount-suffix">บาท</span></div>
+        <div style="font-size: var(--text-sm); color: var(--shadow);">สแกน PromptPay เพื่อโอนมัดจำ</div>
+        <div class="qr-wrap" id="qrWrap"></div>
+        <div id="countdown" class="countdown-strip">⏰ ห้องถูกล็อคไว้ <span id="countdownText">20:00</span> นาที</div>
+      </div>
+
+      <hr style="border:none; border-top: 1px solid var(--border-subtle); margin: var(--space-4) 0;">
+
+      <h3 style="margin: 0 0 var(--space-3);">อัปโหลดสลิปการโอน</h3>
+      <label class="slip-drop" id="slipDrop">
+        <input type="file" id="slipFileInput" accept="image/*">
+        <div id="slipDropContent">
+          <div style="font-size: 2rem; margin-bottom: var(--space-2);">📤</div>
+          <div style="font-size: var(--text-sm); color: var(--shadow);">แตะเพื่อเลือกรูปสลิป</div>
+        </div>
+      </label>
+      <img id="slipPreview" class="slip-preview hide" alt="สลิปธนาคาร" style="margin-top: var(--space-3);">
+      <div id="slipStatus" class="status-line hide"></div>
+      <button id="slipVerifyBtn" class="btn btn-primary hide" style="width:100%; margin-top: var(--space-3);">ยืนยันสลิปและตรวจสอบอัตโนมัติ</button>
+    </div>
+
+    <button id="cancelBookingBtn" class="btn btn-secondary" style="width:100%; margin-bottom: var(--space-4);">ยกเลิกการจอง</button>
+  </section>
+
+  <!-- ──────────── Step 4: Confirmation ──────────── -->
+  <section id="stepConfirm" class="step hide">
+    <div class="receipt-card">
+      <div class="receipt-tick">✓</div>
+      <h2 style="text-align:center; margin: 0 0 var(--space-2);">จองสำเร็จ</h2>
+      <p style="text-align:center; color: var(--shadow); margin: 0 0 var(--space-5);">
+        ใบรับเงินชั่วคราวถูกส่งไปยัง LINE ของคุณ
+      </p>
+
+      <div class="modal-row">
+        <span class="label">หมายเลขจอง</span>
+        <span class="value" id="confBookingId">—</span>
+      </div>
+      <div class="modal-row">
+        <span class="label">ห้อง</span>
+        <span class="value" id="confRoom">—</span>
+      </div>
+      <div class="modal-row">
+        <span class="label">ยอดมัดจำ</span>
+        <span class="value" id="confAmount">—</span>
+      </div>
+      <div class="modal-row">
+        <span class="label">เลขรายการ</span>
+        <span class="value" id="confTxRef" style="font-size: var(--text-xs);">—</span>
+      </div>
+      <div id="confEarlyBird" class="hide" style="background: var(--brand-primary-wash); border-radius: var(--radius-sm); padding: var(--space-3); margin-top: var(--space-4); font-size: var(--text-sm); color: var(--brand-primary-dark);">
+        🎁 คุณได้รับสิทธิ์ Early Bird +500 แต้ม จะอัปเดตหลังทำสัญญา
+      </div>
+
+      <p style="font-size: var(--text-sm); color: var(--shadow); margin-top: var(--space-5); line-height: var(--leading-relaxed);">
+        ขั้นตอนต่อไป — ทีมงานจะติดต่อคุณเพื่อนัดเซ็นสัญญาและรับกุญแจ
+      </p>
+    </div>
+
+    <!-- ──── KYC pre-check-in (Phase 5, optional) ──── -->
+    <div id="kycSection" class="payment-card" style="margin-top: var(--space-4);">
+      <h3 style="margin: 0 0 var(--space-2);">📋 ส่งเอกสาร KYC ล่วงหน้า <span style="font-weight: var(--weight-light); color: var(--shadow); font-size: var(--text-sm);">(ไม่บังคับ)</span></h3>
+      <p style="font-size: var(--text-sm); color: var(--shadow); margin-bottom: var(--space-4); line-height: var(--leading-relaxed);">
+        ส่งเอกสารตอนนี้เพื่อย่นเวลาเข้าอยู่ — แอดมินจะตรวจสอบล่วงหน้า ในวันเข้าอยู่จริงเพียงรับกุญแจเสร็จใน 1 นาที
+      </p>
+
+      <div class="kyc-grid">
+        <label class="kyc-tile" data-kyc-type="idCardFront">
+          <input type="file" accept="image/*,application/pdf">
+          <div class="kyc-icon">🆔</div>
+          <div class="kyc-label">บัตรประชาชน (หน้า) <span style="color: var(--alert);">*</span></div>
+          <div class="kyc-status" data-kyc-status>ยังไม่ได้อัปโหลด</div>
+        </label>
+        <label class="kyc-tile" data-kyc-type="idCardBack">
+          <input type="file" accept="image/*,application/pdf">
+          <div class="kyc-icon">🆔</div>
+          <div class="kyc-label">บัตรประชาชน (หลัง) <span style="color: var(--alert);">*</span></div>
+          <div class="kyc-status" data-kyc-status>ยังไม่ได้อัปโหลด</div>
+        </label>
+        <label class="kyc-tile" data-kyc-type="houseReg">
+          <input type="file" accept="image/*,application/pdf">
+          <div class="kyc-icon">📜</div>
+          <div class="kyc-label">สำเนาทะเบียนบ้าน</div>
+          <div class="kyc-status" data-kyc-status>ยังไม่ได้อัปโหลด</div>
+        </label>
+        <label class="kyc-tile" data-kyc-type="employmentLetter">
+          <input type="file" accept="image/*,application/pdf">
+          <div class="kyc-icon">💼</div>
+          <div class="kyc-label">หนังสือรับรองเงินเดือน</div>
+          <div class="kyc-status" data-kyc-status>ยังไม่ได้อัปโหลด</div>
+        </label>
+      </div>
+
+      <div id="kycStatus" class="status-line hide" style="margin-top: var(--space-3);"></div>
+      <button id="kycSubmitBtn" class="btn btn-primary" disabled style="width:100%; margin-top: var(--space-3);">📋 ส่งเอกสารให้แอดมิน</button>
+      <p style="font-size: var(--text-xs); color: var(--pebble); margin-top: var(--space-2); text-align: center;">
+        ไฟล์ต้องเป็น JPG / PNG / PDF, ขนาดไม่เกิน 5MB ต่อไฟล์
+      </p>
+    </div>
+
+    <!-- KYC submission success state -->
+    <div id="kycDone" class="receipt-card hide" style="margin-top: var(--space-4); border-color: var(--info);">
+      <div class="receipt-tick" style="background: var(--info);">📋</div>
+      <h3 style="text-align:center; margin: 0 0 var(--space-2);">ส่งเอกสารเรียบร้อย</h3>
+      <p style="text-align:center; color: var(--shadow); margin: 0 0 var(--space-3); font-size: var(--text-sm);">
+        แอดมินจะตรวจสอบและติดต่อกลับภายใน 1-2 วัน
+      </p>
+      <p id="kycDoneSummary" style="text-align:center; color: var(--pebble); font-size: var(--text-xs);"></p>
+    </div>
+  </section>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Firebase init module
+     ═════════════════════════════════════════════════════════════════════════ -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+  import { getDatabase } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+  import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+  import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
+  import { getStorage, ref as storageRef, uploadBytes } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
+
+  async function initializeFirebase() {
+    try {
+      const cfg = await window.loadFirebaseConfig();
+      cfg.authDomain = "the-green-haven.firebaseapp.com";
+      cfg.storageBucket = "the-green-haven.firebasestorage.app";
+      cfg.messagingSenderId = "523697750767";
+      cfg.appId = "1:523697750767:web:89b253f92d8d5cfe8a111a";
+
+      const app = initializeApp(cfg);
+      const auth = getAuth(app);
+      const fns = getFunctions(app, 'asia-southeast1');
+      const fs = getFirestore(app);
+      const db = getDatabase(app);
+      const stg = getStorage(app);
+
+      window.firebaseApp = app;
+      window.firebaseAuth = auth;
+      window.firebaseDatabase = db;
+      window.firebaseSignInWithCustomToken = signInWithCustomToken;
+      window.bookingFirebase = {
+        firestore: fs,
+        functions: fns,
+        callable: (name) => httpsCallable(fns, name),
+        doc: (path) => doc(fs, ...path.split('/')),
+        getDoc: (ref) => getDoc(ref),
+        onSnapshot: (ref, cb) => onSnapshot(ref, cb),
+        // Storage SDK for client-side KYC upload (Phase 5). Direct uploads to
+        // bookings/{id}/kyc/{type}.{ext} — Storage rules gate writes on
+        // status ∈ {paid, kyc_pending} + 5MB cap + image|pdf.
+        uploadKyc: async (path, blob, contentType) => {
+          const r = storageRef(stg, path);
+          await uploadBytes(r, blob, { contentType });
+        },
+      };
+      window.firebaseReady = true;
+      window.dispatchEvent(new Event('firebaseInitialized'));
+
+      onAuthStateChanged(auth, (user) => {
+        window._authUid = user?.uid || null;
+        window.dispatchEvent(new Event('authStateChanged'));
+      });
+    } catch (e) {
+      console.error('Firebase init failed:', e);
+      window.firebaseReady = false;
+      window.dispatchEvent(new Event('firebaseInitialized'));
+    }
+  }
+  initializeFirebase();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     App logic — LIFF auth + state + UI rendering
+     ═════════════════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  // ── Constants ─────────────────────────────────────────────
+  // LIFF channel ID 2009790149 is shared with tenant_app.html, but booking.html
+  // uses a SEPARATE LIFF entry (-TKkSxVoo) so its endpoint URL points at
+  // /booking.html — that lets Rich Menu links open booking flow directly via
+  // https://liff.line.me/2009790149-TKkSxVoo without colliding with tenant_app.
+  const LIFF_ID = '2009790149-TKkSxVoo';
+  const CF_HOST = 'https://asia-southeast1-the-green-haven.cloudfunctions.net';
+  const LOCK_DURATION_MIN = 20;
+  const EARLY_BIRD_DAYS = 30;
+  const VALID_DURATIONS = [3, 6, 12, 24];
+
+  // ── State ─────────────────────────────────────────────────
+  const state = {
+    booted: false,
+    authReady: false,
+    lineUserId: null,
+    lineDisplayName: '',
+    building: 'rooms',
+    roomsByBuilding: { rooms: [], nest: [] },
+    occupied: { rooms: new Set(), nest: new Set() },
+    activeBookings: { rooms: [], nest: [] },
+    selectedDate: null,         // YYYY-MM-DD
+    selectedRoom: null,         // roomId
+    bookingId: null,
+    qrPayload: null,
+    qrAmount: 0,
+    monthlyRent: 0,
+    earlyBirdEligible: false,
+    earlyBirdPoints: 0,
+    lockedUntilMs: 0,
+    bookingUnsubscribe: null,
+    countdownTimer: null,
+    slipBase64: null,
+    confirmed: false,
+    // Phase 5: KYC upload tracking
+    kycUploaded: { idCardFront: false, idCardBack: false, houseReg: false, employmentLetter: false },
+    kycSubmitting: false,
+    kycSubmitted: false,
+  };
+
+  const KYC_REQUIRED = ['idCardFront', 'idCardBack'];
+
+  // ── Boot overlay ──────────────────────────────────────────
+  function setBootMsg(msg) {
+    const el = document.getElementById('bootMsg');
+    if (el) el.textContent = msg || '';
+  }
+  function hideBoot() {
+    const el = document.getElementById('bootOverlay');
+    if (!el) return;
+    el.classList.add('fade');
+    setTimeout(() => el.classList.add('hide'), 400);
+  }
+  function fatalBoot(reason) {
+    const el = document.getElementById('bootOverlay');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="leaf">⚠️</div>
+      <div style="color: var(--alert); font-weight: var(--weight-semibold);">เชื่อมต่อไม่สำเร็จ</div>
+      <div class="msg" style="max-width: 320px; text-align: center; line-height: var(--leading-relaxed);">${reason || 'กรุณาลองใหม่อีกครั้ง'}</div>
+      <button class="btn btn-primary" id="bootRetryBtn" style="flex: 0 0 auto; padding: var(--space-3) var(--space-6);">ลองอีกครั้ง</button>
+    `;
+    document.getElementById('bootRetryBtn').addEventListener('click', () => location.reload());
+  }
+
+  // ── LIFF + auth ───────────────────────────────────────────
+  async function bootLiff() {
+    if (typeof liff === 'undefined') {
+      fatalBoot('LIFF SDK โหลดไม่สำเร็จ');
+      return false;
+    }
+    try {
+      await liff.init({ liffId: LIFF_ID });
+    } catch (e) {
+      fatalBoot('LIFF init: ' + (e.message || e));
+      return false;
+    }
+    if (!liff.isLoggedIn()) {
+      if (liff.isInClient && liff.isInClient()) {
+        liff.login();
+        return false;
+      }
+      fatalBoot('กรุณาเปิดหน้านี้ผ่านลิงก์ LIFF ใน LINE');
+      return false;
+    }
+    try {
+      const profile = await liff.getProfile();
+      state.lineUserId = profile.userId;
+      state.lineDisplayName = profile.displayName || '';
+    } catch (e) {
+      fatalBoot('ดึงข้อมูล LINE ไม่สำเร็จ: ' + (e.message || e));
+      return false;
+    }
+
+    // Wait for Firebase init (signInWithCustomToken needs auth instance)
+    if (!window.firebaseAuth) {
+      setBootMsg('กำลังเริ่ม Firebase…');
+      await new Promise(resolve => {
+        const t = setTimeout(resolve, 6000);
+        window.addEventListener('firebaseInitialized', () => { clearTimeout(t); resolve(); }, { once: true });
+      });
+    }
+    if (!window.firebaseAuth || !window.firebaseSignInWithCustomToken) {
+      fatalBoot('Firebase ยังไม่พร้อม กรุณารีเฟรช');
+      return false;
+    }
+
+    // Exchange LIFF ID token for Firebase custom token via liffBookingSignIn CF
+    setBootMsg('🔐 กำลังตั้งค่าสิทธิ์…');
+    let idToken;
+    try {
+      idToken = liff.getIDToken();
+    } catch (e) {
+      fatalBoot('LIFF ID token: ' + (e.message || e));
+      return false;
+    }
+    if (!idToken) {
+      fatalBoot('LIFF ID token ว่างเปล่า — กรุณาเปิด LINE ใหม่อีกครั้ง');
+      return false;
+    }
+
+    let customToken;
+    try {
+      const res = await fetch(`${CF_HOST}/liffBookingSignIn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
+      const json = await res.json();
+      if (!res.ok || !json.customToken) {
+        throw new Error(json.error || `liffBookingSignIn failed (${res.status})`);
+      }
+      customToken = json.customToken;
+    } catch (e) {
+      fatalBoot('Sign-in: ' + (e.message || e));
+      return false;
+    }
+
+    // signInWithCustomToken with retry for transient network errors (LIFF webview quirk)
+    const TRANSIENT = new Set(['auth/network-request-failed', 'auth/internal-error']);
+    let signInErr = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await window.firebaseSignInWithCustomToken(window.firebaseAuth, customToken);
+        signInErr = null;
+        break;
+      } catch (e) {
+        signInErr = e;
+        const transient = TRANSIENT.has(e?.code) || /network-request-failed/i.test(e?.message || '');
+        if (!transient || attempt === 3) break;
+        await new Promise(r => setTimeout(r, 400 * attempt));
+      }
+    }
+    if (signInErr) {
+      fatalBoot('Sign-in failed: ' + signInErr.message);
+      return false;
+    }
+
+    // Auth ready — get rooms config + initial availability, then render
+    setBootMsg('🌿 กำลังโหลดห้องว่าง…');
+    state.authReady = true;
+    state.booted = true;
+    return true;
+  }
+
+  // ── Data loading ──────────────────────────────────────────
+  async function loadRoomsConfig() {
+    // RoomConfigManager pulls from RTDB/localStorage; default config seeds if both empty
+    state.roomsByBuilding.rooms = (window.RoomConfigManager.getRoomsConfig('rooms').rooms || [])
+      .filter(r => !r.deleted);
+    state.roomsByBuilding.nest = (window.RoomConfigManager.getRoomsConfig('nest').rooms || [])
+      .filter(r => !r.deleted);
+  }
+
+  async function refreshAvailability(building) {
+    if (!window.bookingFirebase) return;
+    try {
+      const callable = window.bookingFirebase.callable('getRoomAvailability');
+      const res = await callable({ building });
+      const data = res.data || {};
+      state.occupied[building] = new Set(data.occupied || []);
+      state.activeBookings[building] = data.activeBookings || [];
+    } catch (e) {
+      console.warn('getRoomAvailability failed:', e?.message || e);
+      // Non-fatal — calendar still renders, just without status overlay
+    }
+  }
+
+  // ── Render: building tabs ─────────────────────────────────
+  function renderBuildingTabs() {
+    ['rooms', 'nest'].forEach(b => {
+      const all = state.roomsByBuilding[b].length;
+      const occ = state.occupied[b].size;
+      const lockedRoomIds = new Set(state.activeBookings[b].map(x => x.roomId));
+      const free = all - occ - lockedRoomIds.size;
+      const el = document.getElementById(b === 'rooms' ? 'bldRoomsCount' : 'bldNestCount');
+      if (el) el.textContent = (free >= 0 ? free : 0) + ' ห้องว่าง';
+    });
+    document.querySelectorAll('.building-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.bld === state.building);
+    });
+  }
+
+  // ── Render: date strip ────────────────────────────────────
+  function renderDateStrip() {
+    const strip = document.getElementById('dateStrip');
+    if (!strip) return;
+    strip.innerHTML = '';
+    const dows = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const DAY_COUNT = 60;  // 2 months ahead
+    if (!state.selectedDate) {
+      // Default: 30 days out (qualifies for Early Bird)
+      const def = new Date(today);
+      def.setDate(def.getDate() + 30);
+      state.selectedDate = isoDate(def);
+    }
+    for (let i = 0; i < DAY_COUNT; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+      const iso = isoDate(d);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'date-chip';
+      if (iso === state.selectedDate) chip.classList.add('active');
+      chip.innerHTML = `
+        <div class="dow">${dows[d.getDay()]}</div>
+        <div class="day">${d.getDate()}</div>
+        <div class="mo">${months[d.getMonth()]}</div>
+      `;
+      chip.addEventListener('click', () => {
+        state.selectedDate = iso;
+        renderDateStrip();
+        renderRoomsList();
+      });
+      strip.appendChild(chip);
+    }
+  }
+
+  // ── Render: rooms list ────────────────────────────────────
+  function renderRoomsList() {
+    const list = document.getElementById('roomsList');
+    const empty = document.getElementById('roomsEmpty');
+    if (!list || !empty) return;
+    list.innerHTML = '';
+
+    const rooms = state.roomsByBuilding[state.building] || [];
+    const filtered = applyFilters(rooms);
+    if (filtered.length === 0) {
+      empty.classList.remove('hide');
+      return;
+    }
+    empty.classList.add('hide');
+
+    const occupiedSet = state.occupied[state.building];
+    const lockedMap = new Map();   // roomId → status
+    state.activeBookings[state.building].forEach(b => {
+      lockedMap.set(b.roomId, b.status);
+    });
+
+    filtered.forEach(r => {
+      const isOccupied = occupiedSet.has(r.id);
+      const lockStatus = lockedMap.get(r.id);
+      const card = document.createElement('div');
+      card.className = 'room-card';
+      let pillHtml = '<span class="room-status-pill s-available">ว่าง</span>';
+      if (isOccupied) {
+        card.classList.add('unavailable');
+        pillHtml = '<span class="room-status-pill s-occupied">มีคนอยู่</span>';
+      } else if (lockStatus === 'locked') {
+        card.classList.add('unavailable');
+        pillHtml = '<span class="room-status-pill s-locked">ล็อคไว้</span>';
+      } else if (lockStatus === 'paid' || lockStatus === 'kyc_pending' || lockStatus === 'kyc_approved') {
+        card.classList.add('unavailable');
+        pillHtml = '<span class="room-status-pill s-paid">จองแล้ว</span>';
+      } else {
+        card.classList.add('available');
+      }
+      const meta = [];
+      if (r.floor != null) meta.push(`ชั้น ${r.floor}`);
+      if (r.type === 'pet-allowed') meta.push('สัตว์เลี้ยงได้');
+      else if (r.type) meta.push(r.type);
+      const dep = r.deposit > 0 ? r.deposit : Number(r.rentPrice || 0);
+      meta.push(`มัดจำ ฿${formatNum(dep)}`);
+      card.innerHTML = `
+        <div class="room-icon">🏠</div>
+        <div class="room-info">
+          <div class="name">${escapeHtml(r.name || r.id)}</div>
+          <div class="meta">${meta.join(' · ')}</div>
+          ${pillHtml}
+        </div>
+        <div class="room-price">
+          <div class="rent">฿${formatNum(r.rentPrice)}<span class="rent-suffix"> /เดือน</span></div>
+        </div>
+      `;
+      // Click listener attached AFTER innerHTML so it's the only one (single source of truth)
+      if (card.classList.contains('available')) {
+        card.addEventListener('click', () => openBookingModal(r));
+      }
+      list.appendChild(card);
+    });
+  }
+
+  function applyFilters(rooms) {
+    const floor = document.getElementById('filterFloor').value;
+    const type = document.getElementById('filterType').value;
+    const maxRent = Number(document.getElementById('filterMaxRent').value || 0);
+    return rooms.filter(r => {
+      if (state.building === 'nest') {
+        if (floor && Number(r.floor) !== Number(floor)) return false;
+        if (type && r.type !== type) return false;
+      }
+      if (maxRent > 0 && Number(r.rentPrice) > maxRent) return false;
+      return true;
+    });
+  }
+
+  // ── Booking modal ─────────────────────────────────────────
+  function openBookingModal(room) {
+    if (!state.selectedDate) return;
+    state.selectedRoom = room;
+
+    const summary = document.getElementById('modalSummary');
+    const dep = room.deposit > 0 ? room.deposit : Number(room.rentPrice || 0);
+    const meta = [];
+    if (room.floor != null) meta.push(`ชั้น ${room.floor}`);
+    if (room.type === 'pet-allowed') meta.push('สัตว์เลี้ยงได้');
+    else if (room.type === 'studio') meta.push('Studio');
+    summary.innerHTML = `
+      <div class="modal-row"><span class="label">ห้อง</span><span class="value">${escapeHtml(room.name || room.id)}</span></div>
+      ${meta.length ? `<div class="modal-row"><span class="label">ประเภท</span><span class="value">${meta.join(' · ')}</span></div>` : ''}
+      <div class="modal-row"><span class="label">วันย้ายเข้า</span><span class="value">${formatDateThai(state.selectedDate)}</span></div>
+      <div class="modal-row"><span class="label">ค่าเช่า/เดือน</span><span class="value">฿${formatNum(room.rentPrice)}</span></div>
+      <div class="modal-row"><span class="label">ค่ามัดจำ</span><span class="value" style="color: var(--brand-primary-dark); font-weight: var(--weight-bold);">฿${formatNum(dep)}</span></div>
+    `;
+
+    // Pre-fill name with LINE display name
+    const nameInput = document.getElementById('modalName');
+    if (nameInput && !nameInput.value && state.lineDisplayName) nameInput.value = state.lineDisplayName;
+
+    // Early Bird hint — Nest only (gamification scope; matches createBookingLock gate)
+    const eb = document.getElementById('modalEarlyBird');
+    const days = daysBetween(new Date(), new Date(state.selectedDate));
+    const eligible = days >= EARLY_BIRD_DAYS && state.building === 'nest';
+    eb.classList.toggle('hide', !eligible);
+
+    document.getElementById('bookingModal').classList.remove('hide');
+    setTimeout(() => nameInput?.focus(), 100);
+  }
+  function closeBookingModal() {
+    document.getElementById('bookingModal').classList.add('hide');
+    document.getElementById('modalNameErr').textContent = '';
+    document.getElementById('modalPhoneErr').textContent = '';
+  }
+
+  async function handleLockClick() {
+    const name = document.getElementById('modalName').value.trim();
+    const phone = document.getElementById('modalPhone').value.replace(/\D/g, '');
+    const duration = Number(document.getElementById('modalDuration').value);
+    const nameErr = document.getElementById('modalNameErr');
+    const phoneErr = document.getElementById('modalPhoneErr');
+    nameErr.textContent = '';
+    phoneErr.textContent = '';
+
+    if (name.length < 2) { nameErr.textContent = 'กรุณากรอกชื่อ-นามสกุล'; return; }
+    if (phone.length !== 10 || !phone.startsWith('0')) {
+      phoneErr.textContent = 'เบอร์โทรต้อง 10 หลัก ขึ้นต้นด้วย 0';
+      return;
+    }
+    if (!VALID_DURATIONS.includes(duration)) { return; }
+    if (!state.selectedRoom || !state.selectedDate) { return; }
+
+    const lockBtn = document.getElementById('modalLockBtn');
+    lockBtn.disabled = true;
+    lockBtn.textContent = 'กำลังล็อคห้อง…';
+
+    try {
+      const callable = window.bookingFirebase.callable('createBookingLock');
+      const res = await callable({
+        building: state.building,
+        roomId: state.selectedRoom.id,
+        startDate: state.selectedDate,
+        durationMonths: duration,
+        prospectName: name,
+        prospectPhone: phone,
+      });
+      const data = res.data || {};
+      if (!data.bookingId) {
+        throw new Error('ไม่ได้รับ bookingId');
+      }
+      state.bookingId = data.bookingId;
+      state.qrPayload = data.qrPayload;
+      state.qrAmount = data.qrAmount;
+      state.monthlyRent = data.monthlyRent;
+      state.earlyBirdEligible = !!data.earlyBirdEligible;
+      state.earlyBirdPoints = Number(data.earlyBirdPoints || 0);
+      state.lockedUntilMs = data.lockedUntil;
+
+      closeBookingModal();
+      enterPaymentStep(duration);
+      subscribeToBooking(data.bookingId);
+    } catch (e) {
+      const msg = e?.message || String(e);
+      // HttpsError surfaces here as `internal: <message>`; pull friendlier text
+      const friendly = msg.includes('room-already-locked') || msg.includes('currently held')
+        ? 'ห้องนี้เพิ่งถูกล็อคโดยคนอื่น กรุณาเลือกห้องอื่น'
+        : msg.includes('currently occupied')
+        ? 'ห้องนี้มีคนอยู่แล้ว กรุณาเลือกห้องอื่น'
+        : msg;
+      document.getElementById('modalPhoneErr').textContent = friendly;
+      lockBtn.disabled = false;
+      lockBtn.textContent = 'ล็อคห้องและจ่ายมัดจำ';
+    }
+  }
+
+  // ── Payment step ──────────────────────────────────────────
+  function enterPaymentStep(duration) {
+    document.getElementById('stepPicker').classList.add('hide');
+    document.getElementById('stepPayment').classList.remove('hide');
+
+    const r = state.selectedRoom;
+    document.getElementById('payRoom').textContent = r.name || r.id;
+    document.getElementById('payRoomLabel').textContent = r.name || r.id;
+    document.getElementById('payStartDate').textContent = formatDateThai(state.selectedDate);
+    document.getElementById('payMonthly').textContent = '฿' + formatNum(state.monthlyRent);
+    document.getElementById('payDuration').textContent = duration + ' เดือน';
+    document.getElementById('payAmountText').innerHTML = '฿' + formatNum(state.qrAmount) + ' <span class="qr-amount-suffix">บาท</span>';
+
+    // QR render via qrcodejs (CDN, already loaded)
+    const qrWrap = document.getElementById('qrWrap');
+    qrWrap.innerHTML = '';
+    if (typeof QRCode === 'function' && state.qrPayload) {
+      // eslint-disable-next-line no-new
+      new QRCode(qrWrap, { text: state.qrPayload, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+    } else {
+      qrWrap.textContent = 'QR สร้างไม่สำเร็จ';
+    }
+
+    startCountdown();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function startCountdown() {
+    if (state.countdownTimer) clearInterval(state.countdownTimer);
+    const tickEl = document.getElementById('countdown');
+    const txtEl = document.getElementById('countdownText');
+    function tick() {
+      const remainMs = state.lockedUntilMs - Date.now();
+      if (remainMs <= 0) {
+        clearInterval(state.countdownTimer);
+        state.countdownTimer = null;
+        tickEl.classList.add('danger');
+        txtEl.textContent = 'หมดเวลา';
+        // Disable upload
+        document.getElementById('slipFileInput').disabled = true;
+        document.getElementById('slipVerifyBtn').disabled = true;
+        const status = document.getElementById('slipStatus');
+        status.classList.remove('hide');
+        status.className = 'status-line error';
+        status.textContent = '⏰ หมดเวลาล็อคห้อง — กรุณาเริ่มการจองใหม่';
+        return;
+      }
+      const totalSec = Math.floor(remainMs / 1000);
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      txtEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      if (totalSec <= 60) tickEl.classList.add('danger');
+      else if (totalSec <= 300) tickEl.classList.add('warning');
+    }
+    tick();
+    state.countdownTimer = setInterval(tick, 1000);
+  }
+
+  // ── Slip upload + verify ──────────────────────────────────
+  async function handleSlipFile(file) {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { showSlipStatus('error', 'ไฟล์ใหญ่เกิน 10MB'); return; }
+    if (!file.type.startsWith('image/')) { showSlipStatus('error', 'กรุณาเลือกไฟล์รูปภาพ'); return; }
+
+    const isJpegPngWebp = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+    try {
+      if (isJpegPngWebp) {
+        state.slipBase64 = await readFileAsDataUrl(file);
+      } else {
+        // AVIF/HEIC/BMP → JPEG via canvas
+        state.slipBase64 = await convertToJpegDataUrl(file);
+      }
+    } catch (e) {
+      showSlipStatus('error', e.message || 'อ่านไฟล์ไม่สำเร็จ');
+      return;
+    }
+
+    document.getElementById('slipPreview').src = state.slipBase64;
+    document.getElementById('slipPreview').classList.remove('hide');
+    document.getElementById('slipDropContent').classList.add('hide');
+    document.getElementById('slipVerifyBtn').classList.remove('hide');
+    document.getElementById('slipVerifyBtn').disabled = false;
+    showSlipStatus('loading', 'พร้อมตรวจสอบสลิป — กดปุ่มยืนยันด้านล่าง');
+    document.getElementById('slipStatus').className = 'status-line';
+  }
+
+  async function verifySlip() {
+    if (!state.slipBase64 || !state.bookingId) return;
+    const btn = document.getElementById('slipVerifyBtn');
+    btn.disabled = true;
+    btn.textContent = 'กำลังตรวจสอบ…';
+    showSlipStatus('loading', '🔍 กำลังตรวจสอบสลิป…');
+
+    // Strip data URL prefix → raw base64
+    const base64 = state.slipBase64.replace(/^data:image\/[a-zA-Z+]+;base64,/, '');
+
+    try {
+      const callable = window.bookingFirebase.callable('verifyBookingSlip');
+      const res = await callable({ bookingId: state.bookingId, file: base64 });
+      const data = res.data || {};
+
+      if (data.success && data.status === 'paid') {
+        showSlipStatus('success', '✓ ตรวจสอบสำเร็จ — กำลังเปิดใบรับเงิน');
+        // The onSnapshot subscription will fire and trigger enterConfirmStep
+        return;
+      }
+
+      if (data.retryable && data.code === 'scb_delay') {
+        const wait = data.retryAfterSec || 120;
+        showSlipStatus('warn', data.message || 'สลิป SCB ใช้เวลาตรวจสอบ ~2 นาที กรุณารอ');
+        let remain = wait;
+        btn.textContent = `⏳ รออีก ${remain} วินาที`;
+        const tk = setInterval(() => {
+          remain--;
+          btn.textContent = `⏳ รออีก ${remain} วินาที`;
+          if (remain <= 0) {
+            clearInterval(tk);
+            btn.textContent = '🔄 ตรวจสอบสลิปอีกครั้ง';
+            btn.disabled = false;
+          }
+        }, 1000);
+        return;
+      }
+
+      // Generic failure
+      showSlipStatus('error', data.message || 'ตรวจสอบไม่ผ่าน กรุณาลองใหม่');
+      btn.disabled = false;
+      btn.textContent = 'ยืนยันสลิปและตรวจสอบอัตโนมัติ';
+    } catch (e) {
+      const msg = e?.message || String(e);
+      // Friendly mapping for common HttpsError messages
+      let friendly = msg;
+      if (msg.includes('amount-mismatch') || /ยอด|จำนวน/.test(msg)) friendly = 'จำนวนเงินบนสลิปไม่ตรงกับยอดมัดจำ';
+      else if (msg.includes('already-exists') || /Duplicate/i.test(msg)) friendly = 'สลิปนี้ถูกใช้ไปแล้ว — กรุณาใช้สลิปใหม่';
+      else if (msg.includes('lock has expired')) friendly = '⏰ ห้องหมดเวลาล็อค — กรุณาเริ่มการจองใหม่';
+      else if (msg.includes('Too many')) friendly = 'ส่งคำขอบ่อยเกินไป กรุณารอสักครู่';
+      showSlipStatus('error', friendly);
+      btn.disabled = false;
+      btn.textContent = 'ยืนยันสลิปและตรวจสอบอัตโนมัติ';
+    }
+  }
+
+  function showSlipStatus(kind, msg) {
+    const el = document.getElementById('slipStatus');
+    if (!el) return;
+    el.classList.remove('hide');
+    el.className = 'status-line ' + kind;
+    el.textContent = msg;
+  }
+
+  // ── Live booking subscription (onSnapshot) ────────────────
+  function subscribeToBooking(bookingId) {
+    if (state.bookingUnsubscribe) {
+      try { state.bookingUnsubscribe(); } catch (_) {}
+      state.bookingUnsubscribe = null;
+    }
+    if (!window.bookingFirebase) return;
+    const ref = window.bookingFirebase.doc('bookings/' + bookingId);
+    state.bookingUnsubscribe = window.bookingFirebase.onSnapshot(ref, snap => {
+      if (!snap.exists()) return;
+      const b = snap.data();
+      if (b.status === 'paid' && !state.confirmed) {
+        state.confirmed = true;
+        enterConfirmStep(b);
+      } else if (b.status === 'expired') {
+        showSlipStatus('error', '⏰ ห้องหมดเวลาล็อค — กรุณาเริ่มการจองใหม่');
+      }
+    });
+  }
+
+  // ── Confirmation step ─────────────────────────────────────
+  function enterConfirmStep(booking) {
+    if (state.countdownTimer) { clearInterval(state.countdownTimer); state.countdownTimer = null; }
+    document.getElementById('stepPayment').classList.add('hide');
+    document.getElementById('stepConfirm').classList.remove('hide');
+    document.getElementById('confBookingId').textContent = state.bookingId;
+    document.getElementById('confRoom').textContent = state.selectedRoom?.name || booking.roomId || '—';
+    document.getElementById('confAmount').textContent = '฿' + formatNum(booking.qrAmount || state.qrAmount);
+    document.getElementById('confTxRef').textContent = booking.slipTransactionRef || '—';
+    if (state.earlyBirdEligible) {
+      document.getElementById('confEarlyBird').classList.remove('hide');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── KYC upload (Phase 5) ──────────────────────────────────
+  async function handleKycFile(type, file) {
+    if (!file || !state.bookingId) return;
+    if (file.size > 5 * 1024 * 1024) { setKycTileStatus(type, 'error', 'ไฟล์ใหญ่เกิน 5MB'); return; }
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    if (!isImage && !isPdf) { setKycTileStatus(type, 'error', 'ต้องเป็นรูปภาพหรือ PDF'); return; }
+
+    setKycTileStatus(type, 'uploading', 'กำลังอัปโหลด…');
+
+    let uploadBlob = file;
+    let contentType = file.type;
+    let ext = isPdf ? 'pdf' : 'jpg';
+    // Convert AVIF/HEIC/BMP → JPEG via canvas (same pattern as slip upload)
+    if (isImage && !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      try {
+        const dataUrl = await convertToJpegDataUrl(file);
+        const base64 = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
+        const bin = atob(base64);
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        uploadBlob = new Blob([arr], { type: 'image/jpeg' });
+        contentType = 'image/jpeg';
+        ext = 'jpg';
+      } catch (e) {
+        setKycTileStatus(type, 'error', 'แปลงรูปไม่สำเร็จ');
+        return;
+      }
+    }
+
+    if (!window.bookingFirebase?.uploadKyc) {
+      setKycTileStatus(type, 'error', 'Storage ยังไม่พร้อม');
+      return;
+    }
+    try {
+      const path = `bookings/${state.bookingId}/kyc/${type}.${ext}`;
+      await window.bookingFirebase.uploadKyc(path, uploadBlob, contentType);
+      state.kycUploaded[type] = true;
+      setKycTileStatus(type, 'uploaded', '✓ อัปโหลดเรียบร้อย');
+      updateKycSubmitButton();
+    } catch (e) {
+      console.error('KYC upload failed:', e);
+      const msg = e?.message || String(e);
+      setKycTileStatus(type, 'error', /permission/i.test(msg) ? 'ไม่มีสิทธิ์อัปโหลด' : ('อัปโหลดไม่สำเร็จ: ' + msg.slice(0, 80)));
+    }
+  }
+
+  function setKycTileStatus(type, kind, msg) {
+    const tile = document.querySelector(`[data-kyc-type="${type}"]`);
+    if (!tile) return;
+    tile.classList.remove('uploaded', 'uploading', 'error');
+    if (kind) tile.classList.add(kind);
+    const statusEl = tile.querySelector('[data-kyc-status]');
+    if (statusEl) statusEl.textContent = msg || '';
+  }
+
+  function updateKycSubmitButton() {
+    const btn = document.getElementById('kycSubmitBtn');
+    if (!btn) return;
+    const hasRequired = KYC_REQUIRED.every(t => state.kycUploaded[t]);
+    btn.disabled = !hasRequired || state.kycSubmitting || state.kycSubmitted;
+    if (state.kycSubmitted) btn.textContent = '✓ ส่งเรียบร้อยแล้ว';
+    else if (state.kycSubmitting) btn.textContent = 'กำลังส่ง…';
+    else btn.textContent = hasRequired ? '📋 ส่งเอกสารให้แอดมิน' : `📋 ต้องอัปโหลดบัตรประชาชน (หน้า+หลัง) ก่อน`;
+  }
+
+  async function submitKycToAdmin() {
+    if (state.kycSubmitting || state.kycSubmitted) return;
+    if (!state.bookingId) return;
+    const hasRequired = KYC_REQUIRED.every(t => state.kycUploaded[t]);
+    if (!hasRequired) return;
+    state.kycSubmitting = true;
+    updateKycSubmitButton();
+    const statusEl = document.getElementById('kycStatus');
+
+    try {
+      const callable = window.bookingFirebase.callable('submitBookingKyc');
+      const res = await callable({ bookingId: state.bookingId });
+      const data = res?.data || {};
+      if (data.success) {
+        state.kycSubmitted = true;
+        // Hide upload section, show success state
+        document.getElementById('kycSection').classList.add('hide');
+        const done = document.getElementById('kycDone');
+        done.classList.remove('hide');
+        const summary = document.getElementById('kycDoneSummary');
+        if (summary) summary.textContent = `เอกสารที่ส่ง: ${(data.uploadedTypes || []).join(', ')}`;
+      } else {
+        showKycError(statusEl, 'ส่งไม่สำเร็จ — กรุณาลองอีกครั้ง');
+      }
+    } catch (e) {
+      const msg = e?.message || String(e);
+      let friendly = msg;
+      if (/Missing required/i.test(msg)) friendly = 'ขาดเอกสารบังคับ — อัปโหลดบัตรประชาชนทั้งหน้าและหลังก่อน';
+      else if (/permission/i.test(msg)) friendly = 'ไม่มีสิทธิ์ส่ง — ลองรีเฟรชหน้าและล็อกอินใหม่';
+      else if (/status is/i.test(msg)) friendly = 'สถานะการจองไม่อนุญาตให้ส่ง KYC ตอนนี้';
+      showKycError(statusEl, friendly);
+    } finally {
+      state.kycSubmitting = false;
+      updateKycSubmitButton();
+    }
+  }
+
+  function showKycError(el, msg) {
+    if (!el) return;
+    el.classList.remove('hide');
+    el.className = 'status-line error';
+    el.textContent = msg;
+  }
+
+  // ── Cancel booking (during payment step) ──────────────────
+  function cancelBooking() {
+    if (!confirm('ยกเลิกการจองและกลับไปเลือกห้องใหม่?')) return;
+    if (state.bookingUnsubscribe) {
+      try { state.bookingUnsubscribe(); } catch (_) {}
+      state.bookingUnsubscribe = null;
+    }
+    if (state.countdownTimer) { clearInterval(state.countdownTimer); state.countdownTimer = null; }
+    // Don't actually flip status server-side — expireBookingLocks will pick it up.
+    // Not deleting on cancel keeps audit trail of abandoned bookings.
+    state.bookingId = null;
+    state.qrPayload = null;
+    state.qrAmount = 0;
+    state.slipBase64 = null;
+    state.confirmed = false;
+    document.getElementById('stepPayment').classList.add('hide');
+    document.getElementById('stepPicker').classList.remove('hide');
+    refreshAvailability(state.building).then(() => {
+      renderBuildingTabs();
+      renderRoomsList();
+    });
+  }
+
+  // ── Helpers ───────────────────────────────────────────────
+  function isoDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  function formatDateThai(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+  }
+  function formatNum(n) {
+    return Number(n || 0).toLocaleString('th-TH');
+  }
+  function daysBetween(a, b) {
+    const ms = b.setHours(0, 0, 0, 0) - a.setHours(0, 0, 0, 0);
+    return Math.floor(ms / 86400000);
+  }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
+      r.readAsDataURL(file);
+    });
+  }
+  async function convertToJpegDataUrl(file) {
+    const objUrl = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      img.src = objUrl;
+      await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('โหลดรูปไม่สำเร็จ')); });
+      const MAX = 1600;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        const r = Math.min(MAX / w, MAX / h);
+        w = Math.round(w * r); h = Math.round(h * r);
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      return c.toDataURL('image/jpeg', 0.85);
+    } finally {
+      URL.revokeObjectURL(objUrl);
+    }
+  }
+
+  // ── Wire up event listeners ───────────────────────────────
+  function attach() {
+    document.getElementById('bldRoomsBtn').addEventListener('click', () => {
+      if (state.building === 'rooms') return;
+      state.building = 'rooms';
+      renderBuildingTabs();
+      renderRoomsList();
+    });
+    document.getElementById('bldNestBtn').addEventListener('click', () => {
+      if (state.building === 'nest') return;
+      state.building = 'nest';
+      renderBuildingTabs();
+      renderRoomsList();
+    });
+    document.getElementById('filterFloor').addEventListener('change', renderRoomsList);
+    document.getElementById('filterType').addEventListener('change', renderRoomsList);
+    document.getElementById('filterMaxRent').addEventListener('change', renderRoomsList);
+
+    document.getElementById('modalCancelBtn').addEventListener('click', closeBookingModal);
+    document.getElementById('modalLockBtn').addEventListener('click', handleLockClick);
+    document.getElementById('bookingModal').addEventListener('click', (e) => {
+      if (e.target.id === 'bookingModal') closeBookingModal();
+    });
+
+    const slipDrop = document.getElementById('slipDrop');
+    const slipInput = document.getElementById('slipFileInput');
+    slipDrop.addEventListener('click', () => slipInput.click());
+    slipInput.addEventListener('change', (e) => handleSlipFile(e.target.files?.[0]));
+    document.getElementById('slipVerifyBtn').addEventListener('click', verifySlip);
+
+    // ── KYC tile inputs (Phase 5) ──
+    document.querySelectorAll('.kyc-tile input[type="file"]').forEach(input => {
+      const tile = input.closest('.kyc-tile');
+      const type = tile?.dataset.kycType;
+      if (!type) return;
+      input.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (file) handleKycFile(type, file);
+      });
+    });
+    document.getElementById('kycSubmitBtn')?.addEventListener('click', submitKycToAdmin);
+
+    document.getElementById('cancelBookingBtn').addEventListener('click', cancelBooking);
+
+    // Refresh availability when window regains focus (someone might've taken a room while we were away)
+    window.addEventListener('focus', () => {
+      if (state.booted && !state.bookingId) {
+        refreshAvailability(state.building).then(() => {
+          renderBuildingTabs();
+          renderRoomsList();
+        });
+      }
+    });
+  }
+
+  // ── Boot sequence ─────────────────────────────────────────
+  async function boot() {
+    attach();
+    setBootMsg('กำลังเชื่อมต่อ LINE…');
+    const ok = await bootLiff();
+    if (!ok) return;
+    await loadRoomsConfig();
+    await Promise.all([
+      refreshAvailability('rooms'),
+      refreshAvailability('nest'),
+    ]);
+    renderBuildingTabs();
+    renderDateStrip();
+    renderRoomsList();
+    hideBoot();
+  }
+
+  // Wait for DOM + Firebase before booting LIFF
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+
+</body>
+</html>

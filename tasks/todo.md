@@ -4,496 +4,720 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
-# Phase 1 — Dashboard Deep Analytics
+# LIFF Booking Site — Real-time Availability + Auto-Verified Deposit + Bookings SoT
 
-## Context
-Category tabs ship แล้ว (commit `e454e25`). ขั้นต่อไปคือเพิ่ม "Deep Analytics" ระดับ 2 (Cohort/Time-Series) เข้าไปในแต่ละ tab — เริ่มจาก Phase 1 ที่มีข้อมูลพร้อม:
-1. **Wellness Engagement Matrix** → ชุมชน tab
-2. **Daily Login Streak Leaderboard** → ชุมชน tab
-3. **Per-Tenant Payment Behavior** → การเงิน tab
+## Goal
 
-ทั้งสามตอบคำถามที่ผู้ใช้ถามตรงๆ ("ใครอ่าน wellness, ใครรับคะแนน, ใครจ่ายช้า/เร็ว") + ใช้ข้อมูลที่ Firestore/RTDB มีอยู่แล้ว ไม่ต้อง schema migration
+ระบบจองห้องผ่าน LINE LIFF ที่ end-to-end เริ่มจากเลือกห้องบนปฏิทิน → ล็อคห้อง → จ่ายมัดจำผ่าน PromptPay QR → auto-verify slip → ออกใบรับเงินชั่วคราว → (ภายหลัง) แปลงเป็นสัญญา/Tenant จริง
+
+3 เสาหลักจาก brief:
+1. **Real-time Availability (Calendar View)** — สถานะสีเทาอัตโนมัติ + filter ประเภท/ชั้น + lock 15-30 นาที กัน race condition
+2. **Payment Integration** — Instant invoice + PromptPay QR + auto-verify slip → "Booked" state ไม่ต้องรอแอดมิน
+3. **Database Structure** — Bookings collection แยกจาก Contracts; flow โอนข้อมูลเมื่อทำสัญญาจริง
+
+ของเสริม (Phase 5+, ทำหลัง MVP เสร็จ): Pre-Check-in KYC, Gamification Early Bird
 
 ---
 
-## ⚠️ Pre-Step (Blocker) — Firestore Rule
+## ⚠️ Design decisions — ขอ confirm ก่อนลงโค้ด
 
-`firestore.rules:193-201` มี per-doc rule สำหรับ `wellnessClaimed/{articleId}` แต่ **ไม่มี wildcard** สำหรับ `collectionGroup('wellnessClaimed')` query (เทียบกับ `pets` ที่มีที่ line 210-212 → ทำงานได้)
+ทุกข้อมี **default ที่แนะนำ** + **เหตุผล**. ตอบ "OK" / "เปลี่ยนเป็น X" ก่อนเริ่ม Phase 1
 
-→ **ต้องเพิ่ม:**
+| # | Decision | Recommended default | Why |
+|---|----------|---------------------|-----|
+| 1 | LIFF channel ID | **ใช้ตัวเดิม `2009790149-Db7T76sd` + route-based start URL** (`https://the-green-haven.vercel.app/booking.html`) | ประหยัดต้นทุน LINE channel, ไม่ต้องตั้งค่า LIFF ใหม่; การแยก endpoint URL พอแล้ว |
+| 2 | New page or section in tenant_app.html | **Standalone `booking.html`** (วาง `/booking.html`) | tenant_app.html ใหญ่มาก (25 pages), prospects ไม่ควรเห็น tenant flows; แยกชัด, bundle เบา |
+| 3 | Auth strategy สำหรับ prospect | **New CF `liffBookingSignIn`** mint custom token with `claims: { role: 'prospect', lineUserId }` (ไม่มี room/building) | กันใช้ anonymous (เพิ่ม security risk + memory rule §⛔ NEVER tighten rules); ใช้ pattern เดียวกับ liffSignIn.js |
+| 4 | Source of "available" rooms | **`shared/room-config.js` ลบด้วย active rooms ใน `tenants/{b}/list/*` ลบด้วย active bookings** | ไม่ต้อง schema migration, room-config มีอยู่แล้ว, ทุก source ตรงกับโค้ดเดิม |
+| 5 | Lock duration | **20 นาที** (กึ่งกลาง 15-30) | นานพอเปิด LINE Pay app, สั้นพอไม่ block ห้องนาน |
+| 6 | Deposit amount source | **`room-config.deposit` ถ้ามี (Nest); Rooms ใช้ค่า default 1 เดือนเช่า**; admin override ได้ใน booking doc | room-config.js มีอยู่แล้ว, ลด UX ตั้งค่าซ้ำ |
+| 7 | PromptPay receiver | **`OwnerConfigManager.getOwnerInfo().phone`** (เจ้าของบัญชีคนเดิมกับบิลรายเดือน) | source of truth เดียว, ไม่มี config เพิ่ม |
+| 8 | verifySlip reuse | **New CF `verifyBookingSlip`** (clone โครง verifySlip.js) | verifySlip ปัจจุบัน hard-code path bills/* + Nest gamification; clone สะอาดกว่าใส่ branch |
+| 9 | Pre-Check-in KYC | **หลังจ่ายเงินยืนยันแล้ว, optional** (ลูกบ้านอัปได้, แต่ admin อนุมัติ KYC แยก) | กันการล้มเลิกระหว่างกรอกฟอร์ม, prospect ใส่เอกสารที ผ่อนคลายกว่า |
+| 10 | Early Bird threshold | **จองล่วงหน้า ≥ 30 วันก่อน move-in → 500 pts**, เก็บใน booking doc, transfer ไปยัง gamification เมื่อ contract สร้าง | brief เสนอ 500, สอดคล้องกับ gamification economy (10pts=1฿) → 50บ ส่วนลด, ไม่ over |
+| 11 | Admin UI location | **เพิ่ม Booking sub-tab ใน dashboard.html → Tenant section** | dashboard เป็น admin SPA หลัก, เปิดแล้ว, อยู่ใกล้ Contract management |
+| 12 | Booking → Contract conversion | **Manual: admin กดปุ่ม "Convert to Tenant"** ใน Booking sub-tab → mint `tenants/{b}/list/{roomId}` doc + ลิงก์ tenantId | ปลอดภัยกว่า auto, admin ต้องดู KYC ก่อน |
+| 13 | Existing vs new tenant | **เก็บ `lineUserId` บน booking; เมื่อ admin convert, ค้นใน tenants/* ว่าเคยมี linkedAuthUid ตรงกับ `line:{userId}` ไหม** → ถ้ามีใช้ tenantId เดิม, ไม่งั้นสร้างใหม่ | ใช้ pattern linkedAuthUid ที่มีอยู่ |
+| 14 | Cancellation policy | **ก่อนชำระ → ยกเลิกฟรี (auto-expire 20 นาที); หลังชำระ → admin manual refund** | กันโค้ดยุ่งกับ refund automation; brief ไม่ระบุ |
+
+---
+
+## Phase 0 — Pre-flight grep verification (do this myself before coding)
+
+ก่อนตอบ Decision questions ข้างบน user อยากให้เช็คก่อน — เลยไม่ใช่ user task
+
+- [ ] Verify `OwnerConfigManager.getOwnerInfo()` schema (มี `.phone` ไหม) — `shared/owner-config.js`
+- [ ] Verify `tenants/{building}/list/{roomId}.linkedAuthUid` field มีจริง + format `line:{lineUserId}` — `lifecycle_auth_liff_sot.md` กับ `firestore_schema_canonical.md`
+- [ ] Confirm `room-config.js` ครบทุกห้อง + มี deposit เฉพาะ Nest (ตามที่ inventory บอก)
+- [ ] เช็คว่า dashboard.html "Tenant section" มี sub-tab structure ไหม → หา insertion point
+- [ ] Confirm gamification rules engine รับ event `booking_early_bird` ได้ (หรือต้องเพิ่ม rule)
+
+**Why:** memory rule "Verify-via-grep doctrine" — ทุก claim ต้องมี grep proof ก่อนใช้ในโค้ด
+
+---
+
+## Phase 1 — Bookings Schema + Firestore Rules + CF skeleton
+
+### Files
+- `firestore.rules` — เพิ่ม `bookings/{bookingId}` rule block
+- `firestore.rules.test.js` — เพิ่ม test cases
+- `functions/index.js` — export new CFs
+- `functions/liffBookingSignIn.js` — NEW (clone liffSignIn pattern, no room claim)
+- `functions/createBookingLock.js` — NEW (HTTPS callable; transaction-based lock)
+- `functions/expireBookingLocks.js` — NEW (scheduled CF, every 5 min, mark expired)
+
+### Bookings collection schema (top-level, NOT under tenants/)
+
+```
+bookings/{bookingId}
+  prospectUid: string         // line:lineUserId (from custom claim)
+  prospectLineId: string      // for admin reference
+  prospectName: string        // from liff.getProfile()
+  prospectPhone: string       // user-entered
+  building: 'rooms' | 'nest'
+  roomId: string              // matches room-config.js id
+  startDate: timestamp        // move-in date
+  durationMonths: number      // 6 | 12 | etc.
+  monthlyRent: number         // copied from room-config at lock time
+  depositAmount: number       // copied from room-config OR 1 month rent
+  earlyBirdEligible: boolean  // computed: (startDate - createdAt) >= 30 days
+  earlyBirdPoints: number     // 0 or 500
+  status: 'locked' | 'paid' | 'kyc_pending' | 'kyc_approved' | 'converted' | 'cancelled' | 'expired'
+  lockedUntil: timestamp      // status=locked → +20min from createdAt
+  promptPayPayload: string    // generated server-side
+  qrAmount: number            // = depositAmount
+  slipVerifiedAt: timestamp?
+  slipTransactionRef: string?
+  slipImagePath: string?      // Storage path
+  kycDocsPath: string?        // Storage path prefix
+  contractId: string?         // filled on convert
+  tenantId: string?           // filled on convert (linked or new)
+  createdAt: serverTimestamp
+  updatedAt: serverTimestamp
+```
+
+### Rules
+
 ```javascript
-// ===== WELLNESS CLAIMED — collectionGroup query support (admin only) =====
-match /{path=**}/wellnessClaimed/{articleId} {
-  allow read: if isAdmin();
+// bookings/{bookingId}
+match /bookings/{bookingId} {
+  // Prospect can read own; admin can read all
+  allow read: if isAdmin() ||
+              (isSignedIn() && resource.data.prospectUid == request.auth.uid);
+  // CF-only writes (createBookingLock + verifyBookingSlip + scheduled expire + admin convert)
+  allow write: if isAdmin();
 }
 ```
-วางต่อจาก pets wildcard rule (~line 213). Deploy ผ่าน `firebase deploy --only firestore:rules` หลัง `npm run test:rules` ผ่าน
 
-- [ ] เพิ่ม rule ใน `firestore.rules`
-- [ ] เพิ่ม test ใน `firestore.rules.test.js` — admin collectionGroup read pass + tenant fail
-- [ ] รัน `npm run test:rules` ผ่าน
-- [ ] Deploy rules
+**Why CF-only write:** สำคัญสำหรับ race-condition prevention (lock ต้องเป็น atomic Firestore transaction). ถ้าเปิด client write จะมีคนสร้าง lock ซ้อน
 
----
+### `liffBookingSignIn` CF — pattern
 
-## Feature 1: Wellness Engagement Matrix
+- Region SE1, `https.onRequest`
+- Body: `{ idToken }` (LIFF ID token จาก `liff.getAccessToken()` หรือ `liff.getIDToken()`)
+- Verify ผ่าน LINE `/verify` endpoint (เหมือน liffSignIn.js:32+)
+- Mint custom token: `admin.auth().createCustomToken('line:'+lineUserId, { role: 'prospect', lineUserId })`
+- Return `{ customToken }` → client ใช้ `signInWithCustomToken`
 
-### Question answered
-"แต่ละบทความ wellness มีกี่ห้องอ่าน/รับคะแนน ห้องไหนมีส่วนร่วมมากที่สุด"
+### `createBookingLock` CF — atomic lock
 
-### Data sources (verified)
-| Field | Path | Verifier |
-|-------|------|----------|
-| Article master | `wellness_articles/{id}` Firestore — มี `title`, `reward` | `dashboard-wellness-content.js:315` |
-| Per-room claim | `tenants/{building}/list/{roomId}/wellnessClaimed/{articleId}` — `{articleId, title, reward, claimedAt: ISO}` | `tenant_app.html:8859-8864` |
+- `https.onCall`, must have `auth.token.role === 'prospect'`
+- Body: `{ building, roomId, startDate, durationMonths, prospectName, prospectPhone }`
+- **Transaction:**
+  1. Read all bookings WHERE `building == X AND roomId == Y AND status IN ('locked','paid','kyc_pending','kyc_approved') AND lockedUntil > now`
+  2. ถ้าเจอ → throw `failed-precondition: room-already-locked`
+  3. Read `tenants/{building}/list/{roomId}` — ถ้ามี active tenant + endDate > startDate → throw `failed-precondition: room-occupied`
+  4. Compute `depositAmount` (room-config.deposit OR monthlyRent * 1)
+  5. Generate PromptPay payload server-side (port `buildPromptPayPayload` จาก tenant_app.html:9533 → `functions/promptpay.js`)
+  6. `transaction.create(bookings/{auto})` with status='locked', lockedUntil=now+20min
+- Return `{ bookingId, qrPayload, qrAmount, lockedUntil }`
 
-### Query
-```javascript
-const articles = await getDocs(collection(db, 'wellness_articles'));
-const claims   = await getDocs(collectionGroup(db, 'wellnessClaimed'));
-// Aggregate by article + by room
-claims.forEach(c => {
-  const room = c.ref.parent.parent.id;       // tenants/{b}/list/{room}/wellnessClaimed/{articleId}
-  const building = c.ref.parent.parent.parent.parent.id;
-  byArticle[c.data().articleId].rooms.add(`${building}:${room}`);
-  byRoom[room].count++;
-});
-```
+### `expireBookingLocks` CF — scheduled
 
-### Layout (in `dash-cat-community`)
-```
-┌──────────────────────────────────────────────────────────┐
-│ 📚 Wellness Engagement                          [↻ refresh] │
-│ ─────────────────────────────────────────────────────── │
-│ รวม 87 claims · 23/43 ห้อง active (53%)                 │
-│                                                          │
-│ บทความ                       ห้องอ่าน   อัตรา   รวมแต้ม │
-│ ─────────────────────────────────────────────────────── │
-│ ดูแลปอด PM2.5                  18 / 43   42%     180    │
-│ ออมเงินผู้เช่า                  14 / 43   33%     280    │
-│ ทำอาหาร 5 นาที                 11 / 43   26%     110    │
-│ ─────────────────────────────────────────────────────── │
-│ 🏆 ผู้เช่ากระตือรือร้น (Top 3):                          │
-│   N301 (12 บทความ) · 25 (9) · N105 (8)                  │
-└──────────────────────────────────────────────────────────┘
-```
-Click row → modal แสดงรายชื่อห้องที่อ่านบทความนั้น (with claimedAt date)
+- `pubsub.schedule('every 5 minutes')`, region SE1, BKK timezone
+- Query `bookings WHERE status='locked' AND lockedUntil < now`
+- Batch update status='expired' (max 500/run)
 
-- [ ] เพิ่ม `<div id="dashWellnessMatrix">` ใน `dash-cat-community`
-- [ ] `renderWellnessMatrix()` ใน `shared/dashboard-insights.js`
-- [ ] Modal: row click → list of rooms+date
+### Tasks
+- [ ] Phase 0 grep checks complete
+- [ ] Add `bookings/*` rule block + test
+- [ ] Implement `liffBookingSignIn` CF + unit smoke test
+- [ ] Implement `createBookingLock` CF (transaction-based)
+- [ ] Implement `expireBookingLocks` CF
+- [ ] Extract `buildPromptPayPayload` to `functions/promptpay.js` (server-side mirror)
+- [ ] Wire all into `functions/index.js`
+- [ ] `npm run test:rules` ผ่าน
+- [ ] Deploy: `firebase deploy --only functions:liffBookingSignIn,functions:createBookingLock,functions:expireBookingLocks,firestore:rules`
+- [ ] Manual test: lock → wait 20min → confirm auto-expire
+
+**Verification (memory doctrine):** end of phase, write `lifecycle_booking_flow.md` with `## Verification` section grep-backing every claim (collection path, rule line, CF region, lock duration, etc.)
 
 ---
 
-## Feature 2: Daily Login Streak Leaderboard
+## Phase 2 — Slip Verify CF + KYC Storage rules
 
-### Question answered
-"ห้องไหน active สม่ำเสมอ ห้องไหนหายไป"
+### Files
+- `functions/verifyBookingSlip.js` — NEW (clone verifySlip.js, write to bookings/*)
+- `storage.rules` — add `/bookings/{bookingId}/slips/*` + `/bookings/{bookingId}/kyc/*` paths
 
-### Data sources (verified)
-| Field | Path | Verifier |
-|-------|------|----------|
-| `gamification.dailyStreak` | tenant doc field, Number | `claimDailyLoginPoints.js:83` |
-| `gamification.lastDailyClaim` | tenant doc field, "YYYY-MM-DD" Bangkok TZ | `claimDailyLoginPoints.js:82` |
-| `gamification.lastDailyClaimAt` | tenant doc field, server timestamp | `claimDailyLoginPoints.js:84` |
-| `gamification.points` | tenant doc field | `claimDailyLoginPoints.js:81` |
+### `verifyBookingSlip` CF
+- Clone `functions/verifySlip.js` minus tenant-specific gamification + bills RTDB write
+- Input: `{ bookingId, file (base64), expectedAmount }` + auth.uid must match booking.prospectUid
+- Validates: file size, dimension, SlipOK API call, amount match (hard reject if mismatch), atomic dedup via `verifiedSlips/{transRef}.create()` (gRPC-6 pattern from existing CF)
+- On success:
+  - Upload slip image to Storage `bookings/{bookingId}/slips/{transRef}.jpg`
+  - Update `bookings/{bookingId}` → status='paid', slipVerifiedAt, slipTransactionRef, slipImagePath
+- Return `{ success, status: 'paid' }` หรือ `{ retryable: true, code: 'scb_delay' }` (เหมือน verifySlip)
+- Rate limit: 50/day per `prospectUid` (port logic จาก verifySlip)
 
-### Query
-```javascript
-for (const building of ['rooms','nest']) {
-  const snap = await getDocs(collection(db, `tenants/${building}/list`));
-  snap.forEach(d => allRooms.push({ id: d.id, building, ...(d.data().gamification||{}) }));
+### Storage rules
+```
+match /bookings/{bookingId}/slips/{file} {
+  allow read: if isAdmin() ||
+              (isSignedIn() && firestore.exists(/databases/(default)/documents/bookings/$(bookingId)) &&
+               firestore.get(/databases/(default)/documents/bookings/$(bookingId)).data.prospectUid == request.auth.uid);
+  allow write: if false;  // CF-only
 }
-allRooms.sort((a,b) => (b.dailyStreak||0) - (a.dailyStreak||0));
+match /bookings/{bookingId}/kyc/{file} {
+  allow read: if isAdmin() || /* same prospectUid check */ ;
+  allow write: if isSignedIn() && /* same check */ &&
+               request.resource.size < 5 * 1024 * 1024 &&
+               request.resource.contentType.matches('image/.*');
+}
 ```
 
-### Layout (in `dash-cat-community`, ข้างๆ Wellness Matrix — 2-col grid)
-```
-┌──────────────────────────────────────────┐
-│ 🔥 Streak Leaderboard         [↻ refresh] │
-│ ─────────────────────────────────────── │
-│ 🥇 N201   47 days   🔥🔥🔥              │
-│ 🥈 18     31 days   🔥🔥                │
-│ 🥉 N105   28 days   🔥🔥                │
-│    25     14 days   🔥                  │
-│    N304    9 days                        │
-│ ─────────────────────────────────────── │
-│ Today's logins:  18 / 43 ห้อง           │
-│ 💤 Inactive >7d: 14 ห้อง [ดูรายชื่อ]   │
-└──────────────────────────────────────────┘
-```
-Click "ดูรายชื่อ" → modal of inactive rooms with last seen
-
-- [ ] เพิ่ม `<div id="dashStreakLeaderboard">` ใน `dash-cat-community`
-- [ ] `renderStreakLeaderboard()`
-- [ ] Modal: inactive rooms list
+### Tasks
+- [ ] Implement `verifyBookingSlip` CF
+- [ ] Add storage rules + test (smoke)
+- [ ] Deploy: `firebase deploy --only functions:verifyBookingSlip,storage`
+- [ ] Manual test: lock → upload real slip → status flips to paid
 
 ---
 
-## Feature 3: Per-Tenant Payment Behavior
+## Phase 3 — `booking.html` LIFF page (MVP UI)
 
-### Question answered
-"ห้องไหนจ่ายเร็ว/ตรงเวลา/ช้า เฉลี่ยกี่วันจาก due date"
+### File: `booking.html` (new, ~600 lines target)
 
-### Data sources (verified)
-| Field | Path | Verifier |
-|-------|------|----------|
-| Bill due date | RTDB `bills/{building}/{room}/{billId}.dueDate` (Date) | `verifySlip.js:370` |
-| Bill paid date | RTDB `bills/{building}/{room}/{billId}.paidAt` (epoch ms) | `verifySlip.js:294` |
-| Bill status | `.status === 'paid'` | `verifySlip.js:293` |
-| RTDB read | admin/accountant token | `config/database.rules.json:14` |
+Sections (single-page, stepwise reveal):
 
-### Computation
-```javascript
-const ref = firebase.database().ref('bills');
-const snap = await ref.once('value');
-const all = snap.val() || {};
-// per-room aggregate
-Object.entries(all).forEach(([building, rooms]) => {
-  Object.entries(rooms || {}).forEach(([room, bills]) => {
-    Object.values(bills || {}).forEach(b => {
-      if (b.status !== 'paid' || !b.paidAt || !b.dueDate) return;
-      const due = new Date(b.dueDate).getTime();
-      const delta = (b.paidAt - due) / 86400000;  // days, neg=early
-      perRoom[`${building}:${room}`].deltas.push(delta);
-    });
-  });
-});
-```
-Categorize: early (< -2), on-time (-2..2), late (3..7), very-late (>7)
-Filter: bills paid in last 6 months only (`paidAt > now - 180d`)
+1. **Loading / LIFF init** — `liff.init` → `liff.isLoggedIn()` → `liffBookingSignIn` CF → `signInWithCustomToken`
+2. **Calendar / Room Picker** (main view)
+   - Building tabs: Rooms / Nest (uses room-config.js)
+   - Filter row: Floor (Nest only), Type (studio/pet-allowed for Nest), Max Rent slider
+   - Month navigation (←/→ + month label)
+   - Grid: รายชื่อห้องในแถวซ้าย, วันในเดือนเป็นคอลัมน์ → ช่องสีเขียว=ว่าง, เทา=มีคนอยู่/จองแล้ว, เหลือง=ของฉันที่ล็อคไว้
+   - Click ช่อง → modal step 3
+3. **Booking detail modal**
+   - Show: ห้อง, วัน move-in, ระยะสัญญา (dropdown: 6/12/24 เดือน), monthly rent, deposit
+   - Form: ชื่อ-นามสกุล, เบอร์โทร (10 หลัก validation)
+   - "Lock & Pay" button → call `createBookingLock` CF → show step 4
+4. **Payment step**
+   - QR code render (qrcodejs จาก CDN — เหมือน tenant_app.html:9269)
+   - Amount + countdown timer (20 min)
+   - Slip upload (file input → base64) → `verifyBookingSlip` CF
+   - Polling/listener: `onSnapshot(bookings/{id})` → status='paid' → step 5
+5. **Confirmation step** — ใบรับเงินชั่วคราว, "อัปโหลด KYC ตอนนี้" button (Phase 5)
 
-### Layout (in `dash-cat-financial`, หลัง 12-month table)
-```
-┌────────────────────────────────────────────────────────┐
-│ 💳 Per-Tenant Payment Behavior (last 6 months)         │
-│ Sort: [จ่ายช้าสุด ▼] [ตึก: ทั้งหมด ▼]   [↻ refresh]   │
-│ ────────────────────────────────────────────────────── │
-│ ห้อง   เฉลี่ย       ประวัติ                Tier        │
-│ ────────────────────────────────────────────────────── │
-│ N301   −2.4 วัน   ████████ 6/6 early      ⭐⭐⭐⭐      │
-│ N201   +0.5 วัน   ████░░░░ 4/6 on-time    ⭐⭐⭐        │
-│ 25     +6.2 วัน   ██░░░░░░ 2/6 late       ⭐⭐         │
-│ 17     +14.0 วัน  █░░░░░░░ 1/6 chronic    ⭐           │
-└────────────────────────────────────────────────────────┘
-```
+### Data fetching strategy
 
-- [ ] เพิ่ม `<div id="dashPaymentBehavior">` ใน `dash-cat-financial`
-- [ ] `renderPaymentBehavior()` ดึง RTDB `bills/`
-- [ ] Sort + building filter dropdown
+- Cache room-config.js (already client-bundled)
+- onSnapshot ของ `bookings WHERE building == X AND status IN ('locked','paid','kyc_pending','kyc_approved') AND lockedUntil > now` → ใช้คำนวณช่องเทา
+- onSnapshot ของ `tenants/{b}/list/*` ดูช่อง active tenant
+- Avoid loading 1000s of docs — limit query to current month +/- 3 months
+
+### Tailwind classes
+- ใช้ tailwind v3 ตามเดิม (per CLAUDE.md), build ผ่าน `npm run tailwind:build`
+- ใช้ `shared/brand.css` tokens (Muji minimal — `var(--color-text)`, etc.)
+
+### Service Worker
+- Add `booking.html` to SW cache list (auto via `VERCEL_GIT_COMMIT_SHA`)
+
+### Tasks
+- [ ] Build `booking.html` skeleton + LIFF init + auth wiring
+- [ ] Build calendar grid component (vanilla)
+- [ ] Build filter row
+- [ ] Build booking modal + form validation
+- [ ] Build payment step + QR render + slip upload
+- [ ] Build confirmation step
+- [ ] Add to SW cache
+- [ ] Run `npm run tailwind:build`
+- [ ] Push → verify on Vercel (NOT localhost — per ⛔ rule)
+- [ ] Test E2E with real LINE account: book → pay → confirm
 
 ---
 
-## Implementation Order
+## Phase 4 — Admin Booking sub-tab in dashboard.html
 
-1. **PRE — Firestore rule** — Add wellnessClaimed wildcard + test + deploy
-2. **Skeleton** — Create `shared/dashboard-insights.js` (empty render fns + 5-min cache)
-3. **HTML** — Add 3 placeholder divs in tabs
-4. **Wire lazy init** — `switchDashboardTab` calls `initCommunityInsights()` / `initFinancialInsights()` on tab show
-5. **F1: Wellness** — implement + verify live
-6. **F2: Streak** — implement + verify live
-7. **F3: Payment** — implement + verify live
+### Files
+- `dashboard.html` — add "Booking" sub-tab inside Tenant section
+- `shared/dashboard-bookings.js` — NEW (~300 lines, follow dashboard-extra.js pattern)
+- `functions/convertBookingToTenant.js` — NEW (HTTPS callable, admin only)
 
-Each feature = its own commit (atomic rollback)
+### `convertBookingToTenant` CF
+- `auth.token.role === 'admin'` (custom claim)
+- Body: `{ bookingId }`
+- Transaction:
+  1. Read booking → must status='kyc_approved' (or status='paid' if KYC skipped)
+  2. Lookup existing tenant by `linkedAuthUid == 'line:'+booking.prospectLineId` in `tenants/{building}/list/*` → tenantId เดิม OR mint new
+  3. Create `tenants/{building}/list/{roomId}` doc with: tenantId, contractStart=startDate, contractMonths, monthlyRent, deposit (paid), linkedAuthUid
+  4. Update booking → status='converted', contractId, tenantId
+  5. Award `earlyBirdPoints` to gamification (+500 if eligible)
 
----
+### Admin UI
+- Table: pending bookings (status IN ['paid','kyc_pending','kyc_approved'])
+- Per-row: view details, view slip image, view KYC docs, Approve KYC button, Convert button
+- Filter by status, date range
+- Search by phone/name
 
-## Files Summary
-
-| File | Change | Approx LOC |
-|------|--------|-----------|
-| `firestore.rules` | Add wildcard rule for wellnessClaimed | +4 |
-| `firestore.rules.test.js` | Add test for collectionGroup admin pass | +10 |
-| `dashboard.html` | 3 placeholder divs + 1 script tag | +9 |
-| `shared/dashboard-insights.js` | NEW: 3 render fns + 5-min cache helper | ~250 |
-| `shared/dashboard-main.js` | Lazy-init hooks in `switchDashboardTab` | +2 |
-
-**ไม่แตะ:** existing tab logic, ทุก page อื่น, build config
-
----
-
-## Verification (per feature, on live)
-
-### Wellness Matrix
-1. After rules deploy: admin Console:
-   ```javascript
-   const s = await firebase.firestore().collectionGroup('wellnessClaimed').get();
-   console.log(s.size);  // not throw
-   ```
-2. ชุมชน tab → matrix renders
-3. Manually count claims for 1 article → match displayed count
-
-### Streak Leaderboard
-1. ชุมชน tab → top streaks display
-2. "Today's logins" count = manual filter rooms where `lastDailyClaim === todayBKK`
-3. "Inactive >7d" list correct
-
-### Payment Behavior
-1. การเงิน tab → table renders rooms with paid bills (6 mo)
-2. Pick 1 room → manually compute `paidAt - dueDate` from RTDB → match avg
-3. Sort + building filter work
-4. No-history rooms show "—"
+### Tasks
+- [ ] Implement `convertBookingToTenant` CF
+- [ ] Build dashboard sub-tab UI
+- [ ] Build `dashboard-bookings.js` module
+- [ ] Add to dashboard.html script load order
+- [ ] Manual test: admin → approve KYC → convert → verify tenant doc created + gamification points awarded
 
 ---
 
-## Rollback strategy
-Each feature = own commit → `git revert <sha>` ปลด feature เดียวได้ Category-tab layer คงอยู่
+## Phase 5 — Pre-Check-in KYC (after MVP)
+
+- KYC upload UI inside booking.html confirmation step
+- Doc types: ID card (front+back), house registration (optional), employment letter (optional)
+- Storage path: `bookings/{bookingId}/kyc/{type}_{timestamp}.jpg`
+- After upload: status='kyc_pending' → admin reviews → status='kyc_approved'
 
 ---
 
-## Review — 2026-04-30 session
+## Phase 6 — Gamification Early Bird (after MVP)
 
-### Shipped (10 commits)
-| sha | what |
-|-----|------|
-| `dd0da40` | Category tabs (5 categories) + multi-property nav (Apartment / Mall coming-soon) — replaces year-only filter |
-| `e454e25` | Remove redundant building (rooms/Nest) filter row inside การเงิน — building breakdown already in KPI cards |
-| `ba23ace` | Firestore rule: `match /{path=**}/wellnessClaimed/{articleId}` admin collectionGroup wildcard (mirrors pets pattern) — deployed live |
-| `21316b8` | Phase 1 — 3 deep-analytics cards (Wellness Engagement Matrix, Streak Leaderboard, Per-Tenant Payment Behavior) — `shared/dashboard-insights.js` ~582 LOC, 5-min cache, lazy-init via `switchDashboardTab` hooks |
-| `68890f5` | Fix: Firebase v11 modular SDK for RTDB (`firebase.database()` does NOT exist; project uses `window.firebaseRef` + `firebaseGet`) — see `tasks/lessons.md` 2026-04-30 entry |
-| `b7fd3da` | Fix: dropdown collapsing on click — `click` handler was matching SELECT and re-rendering the card, removed SELECT branch from click router (change handler covers it) |
-| `d8a4923` | Phase 2 — Tenant Health Score (composite 0-100, 4 sub-scores 25 each: payment / engagement / issues / tenure) + Churn Risk Alert (any of 5 trigger flags). Both inside ผู้เช่า tab |
-| `9eb0fe0` | Convert Health + Churn rows from table → grid tiles |
-| `d357e88` | ผู้เช่า tab layout: Churn Risk (L) ‖ Health Score (R), responsive auto-stack <760px |
-| `a51fdd4` | Churn Risk: 3-per-row compact tiles to match Health Score density (minmax 170px) |
-
-### Architecture additions
-- New module `shared/dashboard-insights.js` — single hub for all deep-analytic cards (Phase 1 + 2). Lazy-init pattern: render fns called on first tab show, cached 5 min, refresh chip per panel. All scoring graceful when data missing (e.g. paymentDelta=null → 15/25 neutral, not 0).
-- New reference memory `firebase_client_sdk_v11_modular.md` — captures the API surface of this project (modular, NOT compat) so future sessions don't repeat the `firebase.database().ref().once()` mistake.
-- New lesson in `tasks/lessons.md` 2026-04-30 — Firebase v11 modular SDK contract.
-
-### Deferred (next session candidates)
-- **Phase 2.5 — Anomaly Detection** (slip amount mismatch + meter usage spike). Blocked partly by `meter_data` schema having mixed conventions (`meter_data/{building_yy_m_roomId}` flat vs nested `meter_data/{building}/{yearMonth}/data` map). Need to consolidate to one before z-score / threshold logic is reliable.
-- **Phase 3 — Predictive Cash Flow + Provider Scorecard.** Cash Flow needs scheduled CF for forecast model. Provider Scorecard BLOCKED — no `service-providers` Firestore collection (currently localStorage-only), no `assignedProviderId` field on maintenance/complaint records, no `costThb` tracked. Schema migration required first.
-- **Visual verification of Phase 1+2 cards** by user — Browser MCP tabId encoding bug in this session prevented automated verification. HTTP-level deploy artifacts confirmed (HTML markers, JS exports, file sizes). User to confirm rendering on live.
-
-### Constraints discovered
-- meter history depth limited to 6 months in `billing-system.js:1018` (`.slice(0, 6)`) — affects any z-score-style anomaly detection that needs more lookback.
-- Contract Quiz attempts stored localStorage-only (per-tenant device); admin can only see aggregate points awarded (`source: 'contract_quiz'`), not which questions were correct/wrong without new CF.
-- Wellness articles have NO quiz — only "read → claim points". User asked "ใครตอบคำถามถูก" referring to wellness; clarified no quiz exists for wellness, separate Contract Quiz feature exists.
+- เก็บ `earlyBirdPoints` ใน booking doc แล้ว (Phase 1)
+- Award trigger: ใน `convertBookingToTenant` CF — ถ้า earlyBirdEligible → award via gamification rules engine (`shared/gamification-rules.js`) event `booking_early_bird`
+- ต้องเพิ่ม rule ใน rules engine: 500 pts, max 1/booking
+- Verify หลัง launch ใน `gamification_ssot.md`
 
 ---
 
-# 🎨 Design Guidelines (Phase 1)
+## Out of scope (explicit — do NOT do)
 
-## Brand foundation (ทางสายกลาง · muji minimal)
-- **Font:** `IBM Plex Sans Thai Looped` (fallback Sarabun) — ใช้ตัวเลขด้วย (รองรับ tabular-nums)
-- **Hierarchy:**
-  - Section title: `.card-title` (uppercase, 0.82rem, weight 700, color `var(--text-muted)`, letter-spacing .5px)
-  - Body: 0.85rem, weight 400-500, color `var(--ink)` หรือ `#1f1f1c`
-  - Numeric/metric: weight 600, **NO uppercase**
-- **Spacing:** padding card 1.4rem (existing `.card`), gap-grid 0.7rem (existing pattern)
-- **Radius:** `var(--radius-md, 16px)` standard; pills/chips ใช้ `var(--radius-pill)`
-- **No shadows ใหม่** ใช้ `var(--shadow-sm)` หรือ `var(--shadow-md)` (existing tokens)
-
-## Color palette mapping (semantic — ใช้ token เท่านั้น)
-
-### Status tiers (ใช้ทุก feature)
-| Tier | Background | Border-left | Text | Token usage |
-|------|-----------|-------------|------|-------------|
-| 🟢 **Excellent** | `var(--green-pale)` | `var(--green)` | `var(--green-dark)` | early payment, high streak, top reader |
-| 🟡 **Good / Steady** | `var(--blue-pale)` | `var(--blue)` | `#1a5c8a` | on-time, mid streak |
-| 🟠 **Warning** | `var(--accent-light, #fff3e0)` | `var(--accent, #ff9800)` หรือ `var(--warn)` | `#bf360c` | late payment, dropping streak, low engagement |
-| 🔴 **Alert** | `#fce4ec` | `var(--alert, #c06458)` | `#c62828` | chronic late, churn risk, inactive |
-| ⚪ **Neutral / Empty** | `var(--mist)` | `var(--stone)` | `var(--text-muted)` | no data, "—" |
-
-### Background treatments
-- **Card body:** `var(--card)` = white (existing)
-- **Subtle band (table alternating):** `var(--green-pale)` 30% opacity หรือ `var(--mist)`
-- **Page bg:** ใช้ของเดิม (`var(--cloud)`)
-- **Avoid:** linear gradients ที่หนัก ✗ (เก็บไว้ที่ KPI live cards เท่านั้น), pure black ✗ (ใช้ `var(--ink)`), saturated colors ✗
-
-### Accent colors (use sparingly)
-- Streak fire 🔥 — text-only emoji, ไม่เปลี่ยน background
-- Tier stars ⭐ — `color: var(--accent-gold, #D4AF37)` (มีใน contract-quiz section แล้ว)
-- Top-3 medals 🥇🥈🥉 — emoji เดียว, ไม่เพิ่ม visual chrome
+- ❌ Auto-cancellation refund flow (manual admin process, brief ไม่ระบุ)
+- ❌ Multi-room booking ในครั้งเดียว (1 booking = 1 room)
+- ❌ Walk-in booking (LIFF only, dashboard admin manual createBookingLock เป็น escape hatch)
+- ❌ External payment gateway (PromptPay only, ตรงกับสิ่งที่มีอยู่)
+- ❌ Internationalization (Thai only)
+- ❌ React/Vue/TS — stays vanilla JS per CLAUDE.md tech-stack guardrail
 
 ---
 
-## Component patterns (สอดคล้อง dashboard เดิม)
+## Risks + mitigations
 
-### Wrapper card (ทุก feature)
-```html
-<div class="card">
-  <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-    <span>📚 Wellness Engagement</span>
-    <button data-action="refreshInsight" data-target="wellness"
-            style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);
-                   color:var(--green-dark);border:1px solid var(--green);
-                   border-radius:var(--radius-pill);cursor:pointer;">
-      ↻ refresh
-    </button>
-  </div>
-  <div class="insight-summary" style="font-size:.78rem;color:var(--text-muted);margin-bottom:.7rem;">
-    รวม 87 claims · 23/43 ห้อง active (53%)
-  </div>
-  <div class="insight-body"><!-- table/list --></div>
-</div>
+| Risk | Mitigation |
+|------|------------|
+| Race condition: 2 prospects lock พร้อมกัน | Firestore transaction in `createBookingLock` CF (atomic check-then-create) |
+| LIFF ID token expiry mid-booking | Refresh token before each CF call; show retry UI |
+| Slip auto-verify false positive (mismatch amount) | verifyBookingSlip hard-rejects mismatch (port from verifySlip pattern) |
+| Lock blocks ห้องนาน + lock CF crash | `expireBookingLocks` scheduled every 5 min as safety net + Firestore TTL ทบ |
+| New CF region ผิด (SE3 ผิด, ต้อง SE1) | All booking CFs `region('asia-southeast1')` เหมือนของเดิม |
+| `booking.html` bundle ใหญ่เกิน 150kb | Lazy-load qrcodejs (CDN, current pattern); no extra libs |
+| Existing tenant double-booked เป็น prospect | `convertBookingToTenant` CF tries lookup linkedAuthUid first → reuses tenantId |
+
+---
+
+## Memory updates after ship
+
+- New lifecycle doc: `lifecycle_booking_flow.md` with full `## Verification` section
+- Update `MEMORY.md` index — add to "🏛️ System Lifecycles → Tenant-facing"
+- Update `tasks/lessons.md` after every correction during dev
+- Update `firestore_schema_canonical.md` — new `bookings/*` collection
+- Update CSP if booking.html needs new domains (LINE Pay maybe — check during Phase 3)
+
+---
+
+## Phasing recommendation
+
+**Sprint 1 (MVP, ~3-5 sessions):** Phases 0-3 → standalone booking site live, no admin UI yet (admin uses Firestore console temporarily)
+
+**Sprint 2 (~1-2 sessions):** Phase 4 → admin UI, conversion flow
+
+**Sprint 3 (optional):** Phases 5+6 → KYC + gamification
+
+**Recommend ship Sprint 1 first**, validate with 1-2 real prospects, then Sprint 2.
+
+---
+
+## Review — Phase 1 shipped 2026-05-04
+
+### Files added (5 new CFs)
+- [functions/promptpay.js](functions/promptpay.js) — server-side mirror of `tenant_app.html:9533` `buildPromptPayPayload`. Same EMV tags + CRC16-CCITT polynomial as client. With input validation.
+- [functions/liffBookingSignIn.js](functions/liffBookingSignIn.js) — exchanges LIFF ID token for Firebase custom token. UID prefix `book:` + claim `role:'prospect'`. **Why separate from `liffSignIn`:** prospects don't have a `liffUsers/{lineUserId}` doc; tenants do. Different namespace prevents claim collision when same LINE account uses both apps.
+- [functions/createBookingLock.js](functions/createBookingLock.js) — HTTPS callable, atomic Firestore transaction. Reads room rate from `rooms_config/{building}/{roomId}` (RTDB), receiver phone from `owner_info/main` (Firestore). Locks for 20 minutes. Computes Early Bird eligibility (≥30 days = 500 pts).
+- [functions/getRoomAvailability.js](functions/getRoomAvailability.js) — HTTPS callable, returns `{occupied: [roomIds], activeBookings: [{roomId,status,lockedUntil}]}` for the calendar UI. **Why this CF exists:** prospects can't read `tenants/{b}/list/*` directly (rules block cross-room PII reads). Admin SDK aggregates server-side, returning only non-PII fields.
+- [functions/expireBookingLocks.js](functions/expireBookingLocks.js) — scheduled every 5 minutes, BKK timezone. Flips abandoned `status='locked'` rows to `status='expired'`. Worst-case lock duration ~25min (20 lock + 5 sweep gap).
+
+### Files modified (3)
+- [firestore.rules](firestore.rules) — added `bookings/{bookingId}` block. CF-only writes (admin SDK bypasses); read = own + admin.
+- [firestore.rules.test.js](firestore.rules.test.js) — added `PROSPECT()` auth helper + 12-test booking suite. **All 12 pass.**
+- [functions/index.js](functions/index.js) — wired 4 new CFs (one is a pure helper).
+
+### Test results
+- `firebase emulators:exec --only firestore --project=demo-test 'npm run test:rules'`
+- **97/98 pass** — the 1 failure (`anon tenant can create claim doc` in wellnessClaimed suite) is **pre-existing** (rule requires parent tenant doc with `linkedAuthUid` to exist, test seeds the claim without seeding the parent). NOT touched by this work. Flagged for follow-up.
+- All 5 CF files pass `node --check`.
+
+### Deferred (to next sessions, by design)
+- **Deploy** — held until user OK. Command:
+  ```
+  firebase deploy --only functions:liffBookingSignIn,functions:createBookingLock,functions:getRoomAvailability,functions:expireBookingLocks,firestore:rules
+  ```
+- **Memory doc** — `lifecycle_booking_flow.md` with `## Verification` section (per CLAUDE.md verify-via-grep doctrine). Will write at end of Sprint 1 (or after Phase 2 ships) so it can describe the full lock → pay → verify flow at once.
+- **Phase 2** — `verifyBookingSlip` CF + Storage rules for slip/KYC paths.
+- **Phase 3** — `booking.html` LIFF page (the part that's actually browser-observable).
+
+### Verification commands for next session
+```bash
+# Rules tests still green:
+export JAVA_HOME="/c/Users/usEr/jdk21/jdk-21.0.5+11-jre" && export PATH="$JAVA_HOME/bin:$PATH"
+firebase emulators:exec --only firestore --project=demo-test 'npm run test:rules'
+
+# All booking CFs syntax-clean:
+for f in functions/promptpay.js functions/liffBookingSignIn.js functions/createBookingLock.js functions/getRoomAvailability.js functions/expireBookingLocks.js; do node --check "$f" && echo "✓ $f"; done
 ```
 
-### Data table pattern (Wellness, Payment Behavior)
-```css
-table { width:100%; border-collapse:collapse; font-size:.82rem; }
-thead tr { background: var(--green-pale); color: var(--green-dark); }
-thead th { padding: .55rem .7rem; text-align:left; font-weight:700; }
-tbody tr { border-bottom: 1px solid var(--border-subtle, #ebe9e2); }
-tbody tr:hover { background: var(--mist); }
-tbody td { padding: .5rem .7rem; }
-tbody td.numeric { text-align:right; font-variant-numeric: tabular-nums; }
-```
-- Sortable headers: ใช้ `▼` after sorted col (ไม่ใช้ icon library)
-- Empty rows: 1 row spanning all cols, text-center, color `var(--text-muted)`, "ยังไม่มีข้อมูล"
+### Lessons for `tasks/lessons.md` (none yet)
+No corrections from user, no production bugs hit. Phase 1 went per plan.
 
-### Bar visualization (history strip)
-ใช้ Unicode block chars ❌ (อ่านยาก) → ใช้ `<div>` styled bar:
-```html
-<div style="display:inline-flex;gap:2px;vertical-align:middle;">
-  <div style="width:10px;height:14px;background:var(--green);border-radius:2px;"></div>
-  <div style="width:10px;height:14px;background:var(--green);border-radius:2px;"></div>
-  <div style="width:10px;height:14px;background:var(--mist);border-radius:2px;"></div>
-  ...
-</div>
-```
-- Filled = `var(--green)` หรือ tier color
-- Empty = `var(--mist)`
-- 6 bars (6 months) max ใน Payment Behavior
-
-### Leaderboard list (Streak)
-```html
-<ol style="list-style:none;padding:0;margin:0;">
-  <li style="display:grid;grid-template-columns:30px 1fr 70px 60px;
-             padding:.45rem .25rem;border-bottom:1px solid var(--border-subtle);
-             align-items:center;font-size:.86rem;">
-    <span>🥇</span>
-    <span style="font-weight:600;">N201</span>
-    <span style="text-align:right;font-variant-numeric:tabular-nums;color:var(--green-dark);font-weight:600;">47 days</span>
-    <span style="text-align:right;">🔥🔥🔥</span>
-  </li>
-</ol>
-```
-
-### Sub-text + chip
-```html
-<div style="font-size:.78rem;color:var(--text-muted);margin-top:.6rem;
-            padding-top:.6rem;border-top:1px dashed var(--border-subtle);">
-  💤 Inactive >7d: <strong style="color:var(--alert);">14 ห้อง</strong>
-  <button data-action="showInactiveRooms"
-          style="margin-left:.4rem;font-size:.72rem;padding:1px 8px;
-                 background:transparent;border:none;color:var(--blue);
-                 cursor:pointer;text-decoration:underline;">ดูรายชื่อ →</button>
-</div>
-```
+### Notes / drift from original plan
+- Added a 5th CF (`getRoomAvailability`) that wasn't in the original plan — discovered during rule design that prospects can't read `tenants/*` directly (PII gate). This CF is the privacy-safe aggregator. Documented in plan above.
+- Lock duration confirmed at 20 minutes (decision #5 from "Design decisions" table).
+- UID prefix `book:` (not `line:`) confirmed prevents claim collision with tenant flow.
 
 ---
 
-## State design
+## Review — Phase 2 shipped 2026-05-04
 
-### Loading
-ก่อนข้อมูลโหลดเสร็จ — แทนที่ body ด้วย:
-```html
-<div style="text-align:center;color:var(--text-muted);padding:2rem;font-size:.85rem;">
-  <span style="display:inline-block;animation:spin 1s linear infinite;">⏳</span>
-  กำลังโหลด...
-</div>
+### Files added (1 new CF)
+- [functions/verifyBookingSlip.js](functions/verifyBookingSlip.js) — SlipOK-backed deposit verification. **Clones** the SlipOK API call + atomic dedup pattern from `verifySlip.js` but:
+  - Uses `https.onCall` (auth via `context.auth`) instead of `onRequest+requireAdmin` — matches `createBookingLock` pattern
+  - Drops bill-marking RTDB write (booking is not a bill)
+  - Drops Nest gamification + `paymentHistory` writes (those are tenant-flow concerns)
+  - Adds Storage upload at `bookings/{bookingId}/slips/{txid}.jpg` (verifySlip skips this; bookings need image trail for admin disputes)
+  - Reuses `verifiedSlips/{txid}.create()` atomic dedup (gRPC code 6) — same SlipOK quota, same race fence
+  - Per-prospect rate limit (10/day) via separate `rateLimits/booking_{uid}_{window}` keyspace — no collision with tenant rate limits
+
+### Files modified (2)
+- [storage.rules](storage.rules) — added `bookings/{bookingId}/slips/*` (read-only for admin/owner; CF-only writes) and `bookings/{bookingId}/kyc/*` (admin OR owner with status=='paid'|'kyc_pending', 5MB cap, image+PDF only). 31 lines added.
+- [functions/index.js](functions/index.js) — wired `verifyBookingSlip` export.
+
+### Verification
+- `node --check functions/verifyBookingSlip.js` ✓
+- `git diff --stat` confirms scope: 53 lines across 2 modified files + 1 new CF (no unintended changes)
+- Rule tests still green from Phase 1 (no firestore.rules changes in Phase 2)
+- **Storage rule tests skipped** — project has no Storage emulator test infra; existing storage rules also untested. Real validation will happen at deploy + browser flow in Phase 3.
+
+### Behavioral choices to flag
+- **Hard reject on amount mismatch** — same as `verifySlip` (data poisoning prevention). A ฿1 slip against ฿3000 deposit fails fast.
+- **SCB delay returns retryable shape** — `{ success: false, retryable: true, code: 'scb_delay', retryAfterSec: 120 }`. Client should wait 2 min and retry, not show error. Same shape as `verifySlip`.
+- **Atomic `verifiedSlips/{txid}.create()` shared with rent flow** — a slip already used to pay rent CANNOT be re-submitted as a booking deposit, and vice versa. Cross-flow replay is blocked by Firestore doc-id uniqueness.
+- **Storage upload is non-fatal** — if Storage upload fails, the booking still flips to `paid` (slip is verified by SlipOK + recorded in `verifiedSlips`). Logged for admin to recover. Phase 4 admin UI can re-fetch image from `verifiedSlips` collection if needed.
+- **Bookings status update post-slip is logged loudly on failure** — slip is verified but booking didn't flip. Admin must intervene. Acceptable: this is rare (Firestore single-doc update is reliable).
+
+### Sprint 1 backend complete
+
+Phase 1 + Phase 2 ship together:
+- 6 new CFs total: `liffBookingSignIn`, `createBookingLock`, `getRoomAvailability`, `expireBookingLocks`, `verifyBookingSlip`, plus `promptpay.js` helper
+- 1 new Firestore rule block (`bookings/*`)
+- 2 new Storage rule blocks (`bookings/{}/slips/*`, `bookings/{}/kyc/*`)
+- 12 rule tests pass (97/98 total — 1 pre-existing wellnessClaimed failure unrelated)
+
+**Deploy command** (when user OKs):
+```bash
+firebase deploy --only \
+  functions:liffBookingSignIn,\
+functions:createBookingLock,\
+functions:getRoomAvailability,\
+functions:expireBookingLocks,\
+functions:verifyBookingSlip,\
+firestore:rules,\
+storage
 ```
-**ห้ามใส่ skeleton screen** — ขัดกับ muji (น่ารำคาญสายตา) ใช้แค่ message สั้น
 
-### Empty (ไม่มีข้อมูลเลย)
-```html
-<div style="text-align:center;color:var(--text-muted);padding:2rem;">
-  <div style="font-size:2rem;opacity:.4;margin-bottom:.5rem;">📭</div>
-  <div style="font-size:.85rem;">ยังไม่มี [wellness claim/streak/payment] ในช่วงนี้</div>
-</div>
+Pre-deploy checklist:
+- [ ] `SLIPOK_API_KEY` secret set (already exists from rent flow — no action)
+- [ ] `SLIPOK_API_URL` defineString set in `functions/.env` (already exists — no action)
+- [ ] `owner_info/main.phone` populated in Firestore (admin must set via dashboard before first booking)
+- [ ] `rooms_config/{building}/{roomId}` populated in RTDB (already auto-synced from `room-config.js`)
+
+**Phase 3 next** — `booking.html` LIFF page (preview-verifiable) + admin will be able to test end-to-end.
+
+---
+
+## Review — Phase 3 shipped 2026-05-04
+
+### Files added (1)
+- [booking.html](booking.html) — standalone LIFF page (~1,400 lines). Single-file SPA, 4 stepwise sections (calendar/picker, booking modal, payment, confirmation). Vanilla JS + Tailwind v3 + brand.css tokens. Muji minimal aesthetic, IBM Plex Sans Thai Looped, mobile-first. No React/Vue/TS per CLAUDE.md tech-stack guardrail.
+
+### Files modified (4)
+- [service-worker.js](service-worker.js) — added `/booking.html` to PRECACHE_URLS so the LIFF page works offline (LINE webview offline state).
+- [vercel.json](vercel.json) — added `booking` to the no-cache HTML route regex (deploys publish without 1-hour CDN delay).
+- [tools/compute-csp-hashes.js](tools/compute-csp-hashes.js) — added `booking.html` to the FILES list. **Hashes regenerated:** `npm run csp:hash` ran clean (booking.html: 4 scripts + 1 style hashed). Total now 25 script + 9 style hashes (was 21+8).
+- [shared/tailwind.css](shared/tailwind.css) — `npm run tailwind:build` ran clean, output committed.
+
+### What's in booking.html
+- **Boot overlay** — LIFF init + Firebase init + `liffBookingSignIn` CF + `signInWithCustomToken` with 3-attempt retry on network errors (LIFF webview quirk pattern from `tenant_app.html`).
+- **Building tabs** — Rooms / Nest with live "X ห้องว่าง" counts.
+- **Filters** — floor (Nest only), type (studio / pet-allowed), max rent (5 brackets).
+- **Date strip** — 60-day horizontal scroll, defaults to "Early Bird threshold" (today + 30) so prospects naturally hit the bonus.
+- **Rooms list** — cards with status pills (ว่าง / มีคนอยู่ / ล็อคไว้ / จองแล้ว). Available cards click → modal.
+- **Booking modal** — duration (3/6/12/24), name, phone (10-digit Thai validation), early-bird hint (≥30 days). "Lock & Pay" calls `createBookingLock` CF → returns `qrPayload`.
+- **Payment step** — PromptPay QR via qrcodejs (CDN), 20-minute countdown timer with warning/danger color shifts at 5min/1min, slip upload (drag-drop / tap to pick), AVIF/HEIC → JPEG canvas conversion, `verifyBookingSlip` CF call with friendly error mapping (amount mismatch, duplicate slip, lock expired, rate-limited).
+- **Confirmation step** — auto-revealed via Firestore `onSnapshot` on the booking doc (status=='paid'). Shows booking ID, room, deposit amount, transaction ref, optional Early Bird +500 hint.
+- **Cancel button** — closes the booking flow without server-side write; `expireBookingLocks` scheduled CF cleans up after lock TTL.
+
+### Browser preview verification
+- Server: `python -m http.server 8000` via `.claude/launch.json` config "green-haven-test"
+- LIFF init **legitimately fails on localhost** (LINE security — endpoint URL must be `https://the-green-haven.vercel.app/...`) → user lands on the boot-overlay error state with "ลองอีกครั้ง" button. Verified: button now properly sized (was stretched to fill flex column before fix).
+- `/api/config` 404s on python server (Vercel serverless function only) — logged as expected error in console; doesn't block static layout.
+- Manually seeded sample DOM via `preview_eval` to verify: building tabs render with "X ห้องว่าง" counts, filter dropdowns work, date strip horizontal-scrolls with active state on selected day, rooms list renders 4 sample cards (available/occupied/locked/paid) with correct status pills + grayscale on unavailable. Layout is clean Muji minimal.
+- 2 bugs fixed during preview verification: (a) retry button stretch in boot overlay (added `flex: 0 0 auto` inline override), (b) duplicate click listener on available cards (was adding listener both before and after `card.innerHTML = ...`).
+
+### What can NOT be verified outside of LINE LIFF
+- Full LIFF init success (requires LINE webview)
+- `liffBookingSignIn` CF call (requires real LIFF ID token)
+- `createBookingLock` / `verifyBookingSlip` CF calls (require Firebase auth from LIFF sign-in)
+- onSnapshot booking subscription (requires Firestore + auth)
+- Real PromptPay QR scan + slip upload + auto-verify
+
+End-to-end testing requires deploy to Vercel + open the LIFF URL in LINE app on a real device.
+
+### Sprint 1 fully complete
+
+**6 new Cloud Functions + 1 new HTML page + 5 config edits:**
+
+| File | Status |
+|---|---|
+| `functions/promptpay.js` | ✅ NEW |
+| `functions/liffBookingSignIn.js` | ✅ NEW |
+| `functions/createBookingLock.js` | ✅ NEW |
+| `functions/getRoomAvailability.js` | ✅ NEW |
+| `functions/expireBookingLocks.js` | ✅ NEW |
+| `functions/verifyBookingSlip.js` | ✅ NEW |
+| `functions/index.js` | ✅ wired |
+| `firestore.rules` | ✅ booking block |
+| `firestore.rules.test.js` | ✅ 12 new tests pass |
+| `storage.rules` | ✅ booking paths |
+| `booking.html` | ✅ NEW |
+| `service-worker.js` | ✅ precache |
+| `vercel.json` | ✅ no-cache |
+| `tools/compute-csp-hashes.js` | ✅ listed |
+| `tools/csp-hashes.json` | ✅ regenerated |
+| `shared/tailwind.css` | ✅ rebuilt |
+
+**Pre-deploy checklist** (must complete before deploy):
+- [x] All `node --check` syntax checks pass
+- [x] `npm run test:rules` 97/98 pass (1 pre-existing failure in wellnessClaimed unrelated to this work)
+- [x] `npm run csp:hash` clean
+- [x] `npm run tailwind:build` clean
+- [x] booking.html static layout verified in browser preview
+- [ ] **`owner_info/main.phone` populated in Firestore** (admin must set via dashboard before first booking — required for QR generation)
+
+**Deploy command:**
+```bash
+firebase deploy --only \
+  functions:liffBookingSignIn,\
+functions:createBookingLock,\
+functions:getRoomAvailability,\
+functions:expireBookingLocks,\
+functions:verifyBookingSlip,\
+firestore:rules,\
+storage
 ```
 
-### Error (Firestore permission/network)
-```html
-<div style="text-align:center;padding:1.5rem;">
-  <div style="color:var(--alert);font-size:.88rem;margin-bottom:.4rem;">
-    ⚠️ โหลดข้อมูลไม่สำเร็จ
-  </div>
-  <button data-action="refreshInsight" data-target="wellness"
-          style="font-size:.78rem;padding:4px 12px;background:var(--green-pale);
-                 color:var(--green-dark);border:1px solid var(--green);
-                 border-radius:var(--radius-pill);cursor:pointer;">
-    ลองใหม่
-  </button>
-</div>
+After deploy, the booking site is live at: `https://the-green-haven.vercel.app/booking.html`
+
+To register the URL with LINE: LINE Developers Console → LIFF tab → optionally add a new LIFF entry that points at `/booking.html` (or reuse existing channel since same `LIFF_ID`). For prospects to access, share the LIFF URL e.g. via QR code or LINE Official Account.
+
+### Phase 4 next (admin Booking sub-tab)
+
+Sprint 2 work:
+- `functions/convertBookingToTenant.js` — admin-triggered conversion CF
+- `dashboard.html` — new "Booking" sub-tab in Tenant section
+- `shared/dashboard-bookings.js` — admin UI module (table, slip viewer, KYC view, approve/convert buttons)
+
+Sprint 3 (optional):
+- Phase 5: Pre-Check-in KYC upload UI (storage rules already in place)
+- Phase 6: Gamification Early Bird award on contract creation
+
+### Memory doc lifecycle
+
+To be written at end of Sprint 1 (per CLAUDE.md verify-via-grep doctrine):
+- `lifecycle_booking_flow.md` with `## Verification` section grep-backing every claim (collection paths, rule lines, CF region, lock duration, Early Bird threshold, etc.)
+- Add to `MEMORY.md` index under "🏛️ System Lifecycles → Tenant-facing"
+- Update `firestore_schema_canonical.md` with new `bookings/*` collection
+
+---
+
+## Review — Phase 4 shipped 2026-05-04
+
+### Files added (2)
+- [functions/convertBookingToTenant.js](functions/convertBookingToTenant.js) — admin-only HTTPS callable, ~180 lines. Atomic Firestore transaction creates tenant doc + approves liffUsers + flips booking status='converted'. Pre-tx queries both buildings for `linkedAuthUid` match → reuses `tenantId` for returning LINE users (cross-room continuity), mints fresh `TENANT_${ts}_${roomId}` otherwise (matches existing pattern in `dashboard-tenant-modal.js:499`).
+- [shared/dashboard-bookings.js](shared/dashboard-bookings.js) — admin module, ~330 lines. IIFE with `window.initBookingsAdmin` + `window.dashboardBookings` exports (UMD pattern). Idempotent onSnapshot subscription to `bookings/* orderBy createdAt desc limit 200`. Filterable table with status pills, search across name/phone/room/lineId/bookingId, per-row actions: 📄 details modal · 🧾 slip viewer (Storage `getDownloadURL` → new tab) · ✓ approve KYC (admin direct write) · 🏠 convert (calls CF) · ✕ cancel locked (admin direct write).
+
+### Files modified (3)
+- [dashboard.html](dashboard.html) — added 5th sub-tab button `🗓️ จอง` in Tenant section + new tab content card (`tenant-main-tab-bookings`) with filter row + mount point + footer hint, + `<script src="./shared/dashboard-bookings.js">` in script load order (after `dashboard-tenant-modal.js`).
+- [shared/dashboard-main.js](shared/dashboard-main.js) — `switchTenantMainTab` array updated `['tenants','leases','requests','alerts'] → ['tenants','leases','requests','alerts','bookings']`; button selector updated; `initBookingsAdmin()` call added when tab='bookings'.
+- [functions/index.js](functions/index.js) — wired `convertBookingToTenant` export.
+
+### Behavioral choices
+
+**Why admin-only convert (not auto):** the original plan bullet (#12 in Design decisions) specified manual convert so admin can review KYC + slip before promoting prospect to tenant. Skipping auto-convert prevents "I paid → I'm a tenant" race in case of fraud / failed KYC. Admin sees full booking detail, slip image, KYC docs (when Phase 5 ships) before clicking the button.
+
+**Why pre-transaction tenant lookup (not inside the tx):** the cross-building `linkedAuthUid` query needs to scan two collections (no Firestore index spans collection paths). Doing this inside the transaction would conflict on every tenants/* read, ballooning retry rate. `linkedAuthUid` is set-once per LINE account by `liffSignIn` — it doesn't drift mid-conversion, so the read-then-tx pattern is safe.
+
+**Why atomic tx for tenant + liffUsers + booking update:** if any of the three writes fails partway, admins would need manual cleanup (e.g., booking marked converted but no tenant doc). Single transaction = all three commit together or none do.
+
+**Why direct setDoc (not CF) for approve KYC + cancel locked:** these are simple status flips with no race-condition concerns and no cross-doc writes. Admin already has full write access to `bookings/*` per rules. Adding a CF for a 1-field flip would be over-engineering. Convert is the only action that needs a CF (atomic multi-doc write).
+
+**`liffUsers/{lineUserId}` auto-approval after convert:** this means the new tenant can open `tenant_app.html` immediately after admin clicks Convert and the existing `liffSignIn` CF will mint their tenant token without a second admin approval step. Keeps the flow: lock → pay → admin convert → tenant signs into app.
+
+### Verification
+- `node --check functions/convertBookingToTenant.js` ✓
+- `node --check shared/dashboard-bookings.js` ✓
+- `npm run csp:hash` clean (dashboard.html script count unchanged — no new inline `<script>` blocks, just markup changes)
+- `npm run verify:memory` — **31/31 booking verifier rows GREEN** (added 7 Phase 4 verifiers; still 22 docs / 0 fails total)
+- Browser preview DOM verification: all 5 tenant tab buttons load, `dashboard-bookings.js` script tag present, `initBookingsAdmin` function exposed, switchTenantMainTab updated. Visual UI verification deferred to Vercel deploy (localhost dashboard auth + Firebase init both fail without /api/config + admin custom claim).
+
+### What can NOT be verified outside production
+- End-to-end convert flow (requires admin custom claim + real bookings docs)
+- Slip image viewer (requires real Storage upload from `verifyBookingSlip` CF run)
+- Returning-tenant detection (requires existing tenant with matching `linkedAuthUid`)
+- Auto-approval of liffUsers leading to successful tenant_app sign-in
+
+### Sprint 2 (Phase 4) complete
+
+**8 booking files modified/added across Sprint 1 + Sprint 2:**
+
+| File | Sprint | Status |
+|---|---|---|
+| `functions/promptpay.js` | 1 | ✅ |
+| `functions/liffBookingSignIn.js` | 1 | ✅ |
+| `functions/createBookingLock.js` | 1 | ✅ |
+| `functions/getRoomAvailability.js` | 1 | ✅ |
+| `functions/expireBookingLocks.js` | 1 | ✅ |
+| `functions/verifyBookingSlip.js` | 1 | ✅ |
+| **`functions/convertBookingToTenant.js`** | **2** | ✅ NEW |
+| `booking.html` | 1 | ✅ |
+| **`shared/dashboard-bookings.js`** | **2** | ✅ NEW |
+| `dashboard.html` | 2 | ✅ +5th tab |
+| `shared/dashboard-main.js` | 2 | ✅ +bookings handler |
+
+**Updated deploy command:**
+```bash
+firebase deploy --only \
+  functions:liffBookingSignIn,functions:createBookingLock,\
+functions:getRoomAvailability,functions:expireBookingLocks,\
+functions:verifyBookingSlip,functions:convertBookingToTenant,\
+firestore:rules,storage
 ```
 
----
+### Phase 5 + 6 (Sprint 3, optional)
 
-## Interaction patterns
-
-| Action | Affordance |
-|--------|-----------|
-| Row click → drill-down modal | `cursor:pointer; tbody tr:hover { background: var(--mist); }` + small `→` arrow ตอน hover |
-| Sort by column | header เป็น `<button>` styling เหมือน `<th>` + `▼`/`▲` after active col |
-| Refresh single panel | `↻ refresh` chip บนขวา card-title |
-| Filter dropdown | reuse `.year-tab` look (rounded pill) |
-| Loading from cache (5min) | small subtitle: `อัปเดตล่าสุด: 2 นาทีที่แล้ว` (color text-muted, .72rem) |
-
-**ห้ามใช้:** modal stacking >1 ลึก, popup notification, animated reveal, hover tooltip ที่ต้องรอ delay (cognitive load สูง)
+- **Phase 5**: Pre-Check-in KYC upload UI in `booking.html` confirmation step (storage rules already in place from Sprint 1).
+- **Phase 6**: Gamification Early Bird award trigger inside `convertBookingToTenant` — port from `gamification-rules.js` rules engine, gated on `GAMIFICATION_LIVE` flag, +500 pts when `booking.earlyBirdEligible == true`. Currently `convertBookingToTenant` already preserves `gamification` subobject from any returning tenant; the new-room write would need to seed `gamification.points = earlyBirdPoints`.
 
 ---
 
-## Per-feature design summary
+## Review — Phase 5 + 6 shipped 2026-05-04
 
-### F1: Wellness Engagement Matrix
-- **Card accent:** `var(--green)` (สื่อถึง health/wellness)
-- **Header summary:** ตัวเลขสีเขียวเข้มเด่น
-- **Table tier colors:**
-  - อัตรา ≥40% → green (var(--green-dark) text)
-  - 20-39% → moss (var(--moss) text)
-  - <20% → muted (var(--text-muted) text)
-- **Top 3 chip:** inline pill "🏆 N301 (12) · 25 (9) · N105 (8)" — สี `var(--green-pale)` bg
-- **Click row:** เปิด modal — list of rooms + claimedAt date (Thai date format "12 เม.ย. 2569")
+### Phase 5: Pre-Check-in KYC
 
-### F2: Daily Login Streak Leaderboard
-- **Card accent:** `var(--accent-gold, #D4AF37)` (สื่อถึง achievement) — ใช้ border-left 4px
-- **Top 3:** medals emoji (🥇🥈🥉) — ไม่เปลี่ยนสีพื้น row
-- **Streak fire emoji rules:**
-  - 1-6 days → no flame
-  - 7-13 days → 🔥
-  - 14-29 days → 🔥🔥
-  - 30+ days → 🔥🔥🔥
-- **Today's logins:** progress bar — 18/43 with `var(--blue)` fill
-- **Inactive >7d:** alert pill, click → modal with red `var(--alert)` color rows
+#### Files added (1)
+- [functions/submitBookingKyc.js](functions/submitBookingKyc.js) — HTTPS callable, ~110 lines. Server-verified KYC submission. Lists `bookings/{id}/kyc/*` via admin SDK to confirm required uploads exist (don't trust client-provided file list), validates required types (`idCardFront` + `idCardBack`), updates booking → status='paid' → 'kyc_pending' + records `kycDocsTypes`, `kycDocsPath`, `kycSubmittedAt`. Status guard allows re-submission while `kyc_pending` so admin can ask for re-upload.
 
-### F3: Per-Tenant Payment Behavior
-- **Card accent:** `var(--green)` (financial = green ใน brand)
-- **Tier colors per row:** (border-left 3px)
-  - Excellent (avg < -2d) → `var(--green)`
-  - Good (-2..2d) → `var(--blue)`
-  - Late (3-7d) → `var(--accent, #ff9800)`
-  - Chronic (>7d) → `var(--alert)`
-- **Bar viz:** 6 boxes filled = paid on history; color = same tier
-- **Stars:** ⭐ count = 4-tier mapping (4★ excellent → 1★ chronic)
-- **Empty room:** "—" with `var(--text-muted)` (rooms ที่ไม่มี paid bill ใน 6 เดือน)
+#### Files modified (1)
+- [booking.html](booking.html) — added Storage SDK import to Firebase init module + `window.bookingFirebase.uploadKyc()` helper; replaced "เปิดใช้งานเร็วๆ นี้" placeholder in `#stepConfirm` with full KYC upload UI:
+  - 4 file picker tiles (`idCardFront`, `idCardBack`, `houseReg`, `employmentLetter`) with deterministic filenames so re-uploads overwrite
+  - Per-tile state classes: `.uploaded` / `.uploading` / `.error` for visual feedback (green/amber/red)
+  - 5MB cap + image|PDF MIME check + AVIF/HEIC→JPEG canvas conversion (matches slip flow)
+  - Submit button gated on required-types-uploaded; calls `submitBookingKyc` CF on click
+  - Success state (`#kycDone`) replaces upload section after server confirms
 
----
+#### Why server-verified (not client-trusted)
+A client could call `submitBookingKyc({bookingId})` claiming uploads exist when they don't. CF lists Storage server-side via `bucket.getFiles({prefix})` and matches filename stems against the type whitelist before flipping booking status. Required types missing → throws `failed-precondition` with friendly Thai error message.
 
-## Responsive (mobile, tablet)
+#### Why deterministic filenames (not timestamp-based like slips)
+Re-uploading the same KYC type overwrites — admin sees only the latest version per type, prospects can re-upload bad photos without admin intervention. Slip uploads use timestamp-based filenames because slip provenance matters for audit + dedup; KYC docs are admin-reviewed live, latest-wins is fine.
 
-- **Stack 2-col grid → 1-col** ที่ width <768px (existing CSS pattern via grid-template-columns)
-- **Table:** horizontal scroll wrapped (existing pattern — `<div style="overflow-x:auto;">`)
-- **Bar viz:** ลดขนาด box จาก 10px → 8px ที่ <480px
-- **Modal:** full-screen ที่ <600px (ใช้ `.modal` existing class)
+### Phase 6: Early Bird gamification
 
----
+#### Files modified (3)
+- [functions/createBookingLock.js](functions/createBookingLock.js) — `earlyBirdEligible` now requires `building === 'nest'` AND `daysUntilStart >= 30`. Rooms prospects don't see misleading "+500 pts" hints in `booking.html` that would never materialize.
+- [functions/convertBookingToTenant.js](functions/convertBookingToTenant.js) — when converting an `earlyBirdEligible` booking, mergedGamification adds `+500 pts` to existing `gamification.points` (or seeds 500 from 0 for new tenants), records `earlyBirdAwardedAt` + `earlyBirdPoints` audit fields, writes a `paymentHistory/booking_early_bird_{YYYY-MM}` ledger marker (mirrors verifySlip's payment-history pattern), and stamps `earlyBirdAwarded: true` + `earlyBirdAwardedPoints: 500` on the booking doc for admin dashboard visibility. All inside the same atomic transaction.
+- [booking.html](booking.html) — modal Early Bird hint now also gates on `state.building === 'nest'` (was time-only). Server-side gate matches: hint is only shown when actually awardable.
 
-## Accessibility / a11y notes
+#### Why Nest-only
 
-- ทุก button มี `aria-label` (เช่น `aria-label="รีเฟรชข้อมูล wellness"`)
-- Modal ใช้ `role="dialog" aria-modal="true" aria-labelledby="..."` เหมือนใน tenant_app.html
-- Color is supplemented with text/icon (อย่าใช้สีอย่างเดียวบอกสถานะ — มี emoji + ตัวเลขด้วย)
-- Tabular numbers: `font-variant-numeric: tabular-nums` ทุกที่มีตัวเลข
+Per `gamification_ssot.md`: the gamification system (points, badges, leaderboard, redemption) is Nest-building-only. Awarding points to a Rooms tenant doc would be dead data — the tenant_app.html points display + leaderboard + redemption UI all gate on `building === 'nest'`. Keeping the gate in `createBookingLock` is the **single source of truth**: `earlyBirdEligible` and `earlyBirdPoints` fields on the booking doc are reliable; downstream code (UI, convert CF) can trust them without re-checking building.
 
----
+#### Idempotency
 
-## Build/Deploy notes (per CLAUDE.md)
+`convertBookingToTenant` runs once per booking — the status guard rejects subsequent calls (`booking.status === 'converted'` is not in `CONVERT_ELIGIBLE_STATUSES`). Within the transaction, gamification points + paymentHistory ledger marker + booking flip all commit together or none do. No "re-award" path exists, so double-award is structurally impossible.
 
-- **ห้ามใส่ `?v=...`** ใน script URL — vercel.json no-cache สำหรับ shared/*.js แล้ว
-- **Tailwind:** ไม่ต้อง rebuild — ทั้งหมดใช้ inline style + brand.css tokens
-- **Test locally:** ❌ — push → Vercel → verify on live (per CLAUDE.md § 2.1)
-- **Pre-commit hook** จะรัน `verify:memory` อัตโนมัติ — ถ้ามี doc claim ใหม่ต้องเพิ่ม verifier
+#### Returning-tenant case
+
+If the prospect was already a Nest tenant before (linkedAuthUid match), their existing `gamification` subobject is preserved AND has earlyBirdPoints added. A Nest tenant moving from N101 to N301 with eligible booking → +500 on top of their existing balance, in the new room's tenant doc. (The original room's tenant doc is untouched — admin chooses whether to mark it moved-out separately.)
+
+### Verification
+- `node --check` all 3 modified/new CF files ✓
+- `npm run csp:hash` — clean. booking.html still 4 scripts + 1 style (no new inline blocks; existing module script body changed → new hash, recorded).
+- `npm run verify:memory` — **39/39 booking verifier rows GREEN** (was 31, added 8 Phase 5+6 verifiers). 22 docs / 197+ rows / 0 fails total.
+- Browser preview DOM: KYC section present in `#stepConfirm`, 4 tiles with correct `data-kyc-type` values, submit button starts disabled, kycDone (success state) ready to replace upload section. (Screenshot tool stuck on localhost — visual verification deferred to Vercel deploy.)
+
+### What can NOT be verified outside production
+- End-to-end KYC upload flow (requires LIFF auth + booking doc in `paid` state)
+- Storage rule guard on KYC writes (requires real prospect token)
+- `submitBookingKyc` server-side file verification (requires actual Storage uploads)
+- Early Bird points landing in tenant_app.html UI (requires `GAMIFICATION_LIVE` flag flip + Nest tenant signed in)
+
+### Sprint 3 complete
+
+**3 booking phases shipped today (2026-05-04):** Phase 4 admin UI + Phase 5 KYC + Phase 6 Early Bird.
+
+**Final Sprint 1+2+3 file inventory:**
+
+| File | Status |
+|---|---|
+| `functions/promptpay.js` (Phase 1) | ✅ |
+| `functions/liffBookingSignIn.js` (Phase 1) | ✅ |
+| `functions/createBookingLock.js` (Phase 1, modified Phase 6) | ✅ |
+| `functions/getRoomAvailability.js` (Phase 1) | ✅ |
+| `functions/expireBookingLocks.js` (Phase 1) | ✅ |
+| `functions/verifyBookingSlip.js` (Phase 2) | ✅ |
+| `functions/convertBookingToTenant.js` (Phase 4, modified Phase 6) | ✅ |
+| `functions/submitBookingKyc.js` (Phase 5) | ✅ |
+| `booking.html` (Phase 3, modified Phase 5+6) | ✅ |
+| `shared/dashboard-bookings.js` (Phase 4) | ✅ |
+| `dashboard.html` (Phase 4) | ✅ |
+| `shared/dashboard-main.js` (Phase 4) | ✅ |
+| `firestore.rules` + `firestore.rules.test.js` (Phase 1) | ✅ |
+| `storage.rules` (Phase 2) | ✅ |
+| `service-worker.js` + `vercel.json` + `tools/compute-csp-hashes.js` + `tools/csp-hashes.json` + `shared/tailwind.css` (Phase 3) | ✅ |
+| `lifecycle_booking_flow.md` + `MEMORY.md` + `firestore_schema_canonical.md` (Phase 3-6) | ✅ |
+
+**Final deploy command:**
+```bash
+firebase deploy --only \
+  functions:liffBookingSignIn,functions:createBookingLock,\
+functions:getRoomAvailability,functions:expireBookingLocks,\
+functions:verifyBookingSlip,functions:convertBookingToTenant,\
+functions:submitBookingKyc,\
+firestore:rules,storage
+```
+
+Pre-deploy gate: `owner_info/main.phone` must be set in Firestore (admin sets via dashboard before first booking).
+
+### What's NOT in scope (intentional, per Sprint 1 design decisions)
+
+- ❌ Auto-cancellation refund flow (manual admin process)
+- ❌ Multi-room booking in one transaction (1 booking = 1 room)
+- ❌ Walk-in booking (LIFF only; admin can manually create via Firestore Console as escape hatch)
+- ❌ External payment gateway (PromptPay only)
+- ❌ Booking-flow English/multi-lang (Thai only)
+- ❌ Booking site hosted on a separate LIFF channel (reuses tenant LIFF channel; route-based separation via URL)

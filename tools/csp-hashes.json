@@ -24,7 +24,7 @@
       "lIQc6Jvd7aZn3+QvbxOQwTDMsMCo4sAN6d1MpJf5F3Y="
     ],
     "styleHashes": [
-      "S/LGRIYoLgnz8E1CC2rJHC4nrIazEFDeWjoO4aUMaPk="
+      "2wzx9Xngr7+OCES2+AvhsRpurp0kSqgRAQe+YS3tRB0="
     ]
   },
   "tenant_app.html": {
@@ -36,7 +36,7 @@
       "koyn7uromcsMcRSTuRv/Ru4q267+5sxijYyxF6hIYKk="
     ],
     "styleHashes": [
-      "vf+7+KFVKuEO1pTkKRPZNvMOoaT2ufOF6kbeiCQAOy0=",
+      "j77iDVPV9e1e6b6BZk16YIC81q1ZToPzLw5aG25RY4c=",
       "3fk03lCBnSsRdem3+NjS/HiChFZwsKi+8TYYYEhnza4="
     ]
   },
@@ -67,6 +67,17 @@
     ],
     "styleHashes": [
       "PbW+T2Wyh9oV85Y7JlBZ+EK9J4woREtHuYbvN7ao9W8="
+    ]
+  },
+  "booking.html": {
+    "scriptHashes": [
+      "LYtrQv2ppy4cBBjkyZPyYNXZ9UFl/M/5LlQi2iJBXOY=",
+      "v5fMESJm/Z61H+O5pXmnjOvDYf6yf+s5YuL3Ut/IoLA=",
+      "dBZqy8RE3bc7fQf8pP5gtvlRh25gfoD74RN+ngSnqQU=",
+      "DC3YYZgYy2c1dbIjGY6o8UtTtL+OlcuZdTvPuMwulUM="
+    ],
+    "styleHashes": [
+      "2iwcVphM46fe5z33se6OI0wfuNrXT3xjSd8qvzSQcd0="
     ]
   }
 }

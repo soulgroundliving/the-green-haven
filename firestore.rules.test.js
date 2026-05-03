@@ -60,6 +60,13 @@ const LIFF_TENANT = (uid = 'line:U00000000000000000000000000000001', room = '101
     room, building,
     firebase: { sign_in_provider: 'custom' }
   });
+// LIFF-linked prospect (post-liffBookingSignIn): custom-token UID prefix
+// "book:" + role:'prospect' claim. No room/building — they don't have one yet.
+const PROSPECT = (uid = 'book:U00000000000000000000000000000001') =>
+  testEnv.authenticatedContext(uid, {
+    role: 'prospect',
+    firebase: { sign_in_provider: 'custom' }
+  });
 const UNAUTH = () => testEnv.unauthenticatedContext();
 
 // Seed helpers ---------------------------------------------------------
@@ -515,6 +522,99 @@ describe('wellnessClaimed — tenant create-only (idempotent)', () => {
   it('anon tenant CANNOT run collectionGroup("wellnessClaimed") — would leak cross-room data', async () => {
     await assertFails(getDocs(
       query(collectionGroup(ANON().firestore(), 'wellnessClaimed'))
+    ));
+  });
+});
+
+describe('bookings — CF-only writes, prospect reads own only', () => {
+  const sampleBooking = (prospectUid) => ({
+    prospectUid,
+    prospectLineId: 'U' + prospectUid.replace('book:', ''),
+    prospectName: 'Test Prospect',
+    prospectPhone: '0801234567',
+    building: 'nest',
+    roomId: 'N101',
+    durationMonths: 12,
+    monthlyRent: 5800,
+    depositAmount: 3000,
+    status: 'locked',
+    qrAmount: 3000,
+    promptPayPayload: '00020101...',
+    earlyBirdEligible: false,
+    earlyBirdPoints: 0,
+  });
+
+  it('prospect CAN read own booking (prospectUid matches auth.uid)', async () => {
+    await seedDoc('bookings/b1', sampleBooking('book:U001'));
+    await assertSucceeds(getDoc(doc(PROSPECT('book:U001').firestore(), 'bookings/b1')));
+  });
+
+  it('prospect CANNOT read another prospect\'s booking (cross-prospect leak)', async () => {
+    await seedDoc('bookings/b1', sampleBooking('book:U001'));
+    await assertFails(getDoc(doc(PROSPECT('book:U002').firestore(), 'bookings/b1')));
+  });
+
+  it('admin CAN read any booking', async () => {
+    await seedDoc('bookings/b1', sampleBooking('book:U001'));
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'bookings/b1')));
+  });
+
+  it('anon tenant CANNOT read someone else\'s booking', async () => {
+    await seedDoc('bookings/b1', sampleBooking('book:U001'));
+    // Anon has uid 'tenant-1' which does NOT match prospectUid 'book:U001'
+    // → uid check fails, admin check fails → read denied.
+    await assertFails(getDoc(doc(ANON('tenant-1').firestore(), 'bookings/b1')));
+  });
+
+  it('LIFF tenant CANNOT read someone else\'s booking', async () => {
+    await seedDoc('bookings/b1', sampleBooking('book:U001'));
+    // LIFF tenant uid is 'line:U0000...' — different namespace from 'book:U001'.
+    await assertFails(getDoc(doc(LIFF_TENANT().firestore(), 'bookings/b1')));
+  });
+
+  it('unauthenticated user CANNOT read bookings', async () => {
+    await seedDoc('bookings/b1', sampleBooking('book:U001'));
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'bookings/b1')));
+  });
+
+  it('prospect CANNOT create booking directly (must go through CF)', async () => {
+    await assertFails(addDoc(
+      collection(PROSPECT('book:U001').firestore(), 'bookings'),
+      sampleBooking('book:U001')
+    ));
+  });
+
+  it('LIFF tenant CANNOT create booking directly', async () => {
+    await assertFails(addDoc(
+      collection(LIFF_TENANT().firestore(), 'bookings'),
+      sampleBooking('book:U001')
+    ));
+  });
+
+  it('anon CANNOT create booking directly', async () => {
+    await assertFails(addDoc(
+      collection(ANON().firestore(), 'bookings'),
+      sampleBooking('book:U001')
+    ));
+  });
+
+  it('prospect CANNOT update own booking (e.g. flip status=locked → paid bypassing slip verify)', async () => {
+    await seedDoc('bookings/b1', sampleBooking('book:U001'));
+    await assertFails(updateDoc(
+      doc(PROSPECT('book:U001').firestore(), 'bookings/b1'),
+      { status: 'paid' }
+    ));
+  });
+
+  it('prospect CANNOT delete own booking', async () => {
+    await seedDoc('bookings/b1', sampleBooking('book:U001'));
+    await assertFails(deleteDoc(doc(PROSPECT('book:U001').firestore(), 'bookings/b1')));
+  });
+
+  it('admin CAN write booking (manual ops/dashboard)', async () => {
+    await assertSucceeds(setDoc(
+      doc(EMAIL_ADMIN().firestore(), 'bookings/b1'),
+      sampleBooking('book:U001')
     ));
   });
 });

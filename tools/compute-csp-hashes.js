@@ -23,6 +23,7 @@ const FILES = [
   'tax-filing.html',
   'audit-log-viewer.html',
   'payment.html',
+  'booking.html',
 ];
 
 // Normalize to LF. Git is configured with core.autocrlf=true on Windows, so the

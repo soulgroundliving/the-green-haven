@@ -648,15 +648,15 @@
 
 <style>
   :root {
-    --green-dark:#1a5c38;--green:#2d8653;--green-light:#4caf50;--green-pale:#e8f5e9;
-    --accent:#ff8f00;--accent-light:#fff8e1;--blue:#1976d2;--blue-pale:#e3f2fd;
-    --purple:#7b1fa2;--purple-pale:#f3e5f5;--red:#c62828;--red-pale:#ffebee;
-    --bg:#f4f6f8;--card:#fff;--text:#1a2332;--text-muted:#6b7a8d;
-    --border:#e0e6ed;--shadow:0 2px 12px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.14);
-    --radius:14px;--radius-sm:8px;
+    --green-dark:#0d5c4e;--green:#0f766e;--green-light:#14b8a6;--green-pale:#ecfdf5;
+    --accent:#d97706;--accent-light:#fffbeb;--blue:#0369a1;--blue-pale:#e0f2fe;
+    --purple:#7c3aed;--purple-pale:#f5f3ff;--red:#dc2626;--red-pale:#fef2f2;
+    --bg:#f2f7f5;--card:#fff;--text:#1c3a36;--text-muted:#64748b;
+    --border:#d9e8e3;--shadow:0 1px 8px rgba(13,92,78,.07);--shadow-hover:0 6px 20px rgba(13,92,78,.12);
+    --radius:12px;--radius-sm:8px;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);}
+  body{font-family:var(--font-brand,'IBM Plex Sans Thai Looped','Sarabun',sans-serif);background:var(--bg);color:var(--text);}
 
   .header{background:linear-gradient(135deg,var(--green-dark) 0%,var(--green) 60%,#3aa86a 100%);
     color:#fff;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;
@@ -927,10 +927,13 @@
     box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
   }
   .new-room-pill.occupied::before {
-    content: "🟢";
+    content: "";
     display: block;
-    font-size: 0.8rem;
-    margin-bottom: 2px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #16a34a;
+    margin: 0 auto 4px;
   }
 
   .new-room-pill.vacant {
@@ -939,10 +942,13 @@
     opacity: 0.7;
   }
   .new-room-pill.vacant::before {
-    content: "⚪";
+    content: "";
     display: block;
-    font-size: 0.8rem;
-    margin-bottom: 2px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #9ca3af;
+    margin: 0 auto 4px;
   }
 
   .new-room-pill.overdue {
@@ -952,10 +958,13 @@
     animation: pulse 2s infinite;
   }
   .new-room-pill.overdue::before {
-    content: "🔴";
+    content: "";
     display: block;
-    font-size: 0.8rem;
-    margin-bottom: 2px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #dc2626;
+    margin: 0 auto 4px;
   }
 
   .new-room-pill.expiring {
@@ -964,10 +973,13 @@
     box-shadow: 0 0 0 3px rgba(251, 192, 45, 0.2);
   }
   .new-room-pill.expiring::before {
-    content: "🟡";
+    content: "";
     display: block;
-    font-size: 0.8rem;
-    margin-bottom: 2px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #d97706;
+    margin: 0 auto 4px;
   }
 
   @keyframes pulse {
@@ -990,21 +1002,42 @@
     color: #2e7d32;
   }
   .payment-status.paid::before {
-    content: "🟢";
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #16a34a;
+    vertical-align: middle;
+    margin-right: 2px;
   }
   .payment-status.pending {
     background: #fff9c4;
     color: #f57f17;
   }
   .payment-status.pending::before {
-    content: "🟡";
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #d97706;
+    vertical-align: middle;
+    margin-right: 2px;
   }
   .payment-status.overdue {
     background: #ffcdd2;
     color: #c62828;
   }
   .payment-status.overdue::before {
-    content: "🔴";
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #dc2626;
+    vertical-align: middle;
+    margin-right: 2px;
   }
 
   .proj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;margin-bottom:1.3rem;}
@@ -1283,12 +1316,12 @@
     top: 0;
     width: 280px;
     height: 100vh;
-    background: linear-gradient(135deg, #2d8653 0%, #1e5c3a 100%);
+    background: linear-gradient(180deg, #0f766e 0%, #083d35 100%);
     color: white;
     display: flex;
     flex-direction: column;
     z-index: 1000;
-    box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+    box-shadow: 2px 0 16px rgba(13,92,78,.18);
     overflow-y: auto;
     overflow-x: hidden;
   }
@@ -1384,7 +1417,7 @@
     top: 0;
     height: 100%;
     width: 3px;
-    background: #4db8a8;
+    background: var(--green-light);
     transform: scaleY(0);
     transition: transform 0.2s ease;
   }
@@ -1501,7 +1534,7 @@
     margin-left: 280px;
     padding: 2rem 2.5rem;
     min-height: 100vh;
-    background: #f4f6f8;
+    background: var(--bg);
   }
 
   /* Tablet: 900px and below */
@@ -2396,6 +2429,7 @@
     <button id="tenant-main-tab-btn-leases" class="year-tab" data-action="switchTenantMainTab" data-tab="leases">📋 สัญญา</button>
     <button id="tenant-main-tab-btn-requests" class="year-tab" data-action="switchTenantMainTab" data-tab="requests">📨 คำขอ <span id="leaseRequestsBadge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
     <button id="tenant-main-tab-btn-alerts" class="year-tab" data-action="switchTenantMainTab" data-tab="alerts">🔔 แจ้งเตือน</button>
+    <button id="tenant-main-tab-btn-bookings" class="year-tab" data-action="switchTenantMainTab" data-tab="bookings">🗓️ จอง <span id="bookingsBadge" style="display:none;background:#1565c0;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
   </div>
   <div id="tenant-main-tab-tenants">
 
@@ -2638,6 +2672,33 @@
       <div style="margin-top:2rem;">
         <div style="font-weight:700;margin-bottom:1rem;font-size:1.05rem;">📋 Upcoming Lease Expirations</div>
         <div id="leaseExpiryList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: จอง (LIFF Booking flow — Phase 4 admin sub-tab) -->
+  <div id="tenant-main-tab-bookings" style="display:none;">
+    <div class="card" style="padding:1.2rem;">
+      <div style="display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;margin-bottom:1rem;">
+        <div style="font-weight:700;font-size:1.05rem;">🗓️ การจองห้องผ่าน LIFF</div>
+        <span id="bookings-count" style="color:var(--text-muted);font-size:.85rem;">— รายการ</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:.6rem;margin-bottom:1rem;">
+        <select id="bookings-filter-status" style="padding:.5rem .8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.88rem;">
+          <option value="pending" selected>รอดำเนินการ (locked / paid / KYC)</option>
+          <option value="all">ทั้งหมด</option>
+          <option value="locked">🔒 ล็อคไว้</option>
+          <option value="paid">✅ จ่ายแล้ว</option>
+          <option value="kyc">📋 KYC</option>
+          <option value="converted">✓ แปลงเป็นผู้เช่าแล้ว</option>
+          <option value="cancelled">✕ ยกเลิก</option>
+          <option value="expired">⏰ หมดเวลา</option>
+        </select>
+        <input id="bookings-filter-search" type="search" placeholder="ค้นหา ชื่อ / เบอร์ / ห้อง / LINE ID" style="flex:1;min-width:200px;padding:.5rem .8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.88rem;">
+      </div>
+      <div id="bookings-list-mount"></div>
+      <div style="margin-top:1.5rem;padding:1rem;background:var(--green-pale, #e8f5e9);border-radius:8px;font-size:.82rem;color:var(--text-muted);">
+        💡 ลำดับ: ลูกบ้านเปิด LIFF → จอง + ล็อคห้อง 20 นาที → จ่ายมัดจำ + อัปสลิป → SlipOK ตรวจอัตโนมัติ → status=paid → admin ตรวจ KYC (ถ้ามี) → กดปุ่ม "แปลงเป็นผู้เช่า" — ระบบจะสร้างเอกสารผู้เช่า + อนุมัติ LIFF อัตโนมัติ
       </div>
     </div>
   </div>
@@ -4040,6 +4101,7 @@
 <script src="./shared/dashboard-property.js"></script>
 <script src="./shared/dashboard-tenant-page.js"></script>
 <script src="./shared/dashboard-tenant-modal.js"></script>
+<script src="./shared/dashboard-bookings.js"></script>
 <script src="./shared/dashboard-requests-admin.js"></script>
 <script src="./shared/dashboard-content-features.js"></script>
 <script src="./shared/dashboard-payment-verify.js"></script>

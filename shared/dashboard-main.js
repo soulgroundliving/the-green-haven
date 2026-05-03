@@ -80,7 +80,7 @@ window.switchDashboardProperty = function(property) {
 };
 
 window.switchTenantMainTab = function(tab, btn) {
-  ['tenants','leases','requests','alerts'].forEach(t => {
+  ['tenants','leases','requests','alerts','bookings'].forEach(t => {
     const el = document.getElementById('tenant-main-tab-' + t);
     if(el) {
       el.classList.toggle('u-hidden', !((t === tab)));
@@ -89,11 +89,12 @@ window.switchTenantMainTab = function(tab, btn) {
       if (el.style.display) el.style.display = '';
     }
   });
-  document.querySelectorAll('#tenant-main-tab-btn-tenants,#tenant-main-tab-btn-leases,#tenant-main-tab-btn-requests,#tenant-main-tab-btn-alerts').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#tenant-main-tab-btn-tenants,#tenant-main-tab-btn-leases,#tenant-main-tab-btn-requests,#tenant-main-tab-btn-alerts,#tenant-main-tab-btn-bookings').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   if(tab === 'leases' && typeof initLeaseAgreementsPage === 'function') initLeaseAgreementsPage();
   if(tab === 'requests' && typeof initLeaseRequestsPage === 'function') initLeaseRequestsPage();
   if(tab === 'alerts' && typeof initLeaseSettingsPage === 'function') initLeaseSettingsPage();
+  if(tab === 'bookings' && typeof initBookingsAdmin === 'function') initBookingsAdmin();
 };
 
 window.switchBillingMainTab = function(tab, btn) {

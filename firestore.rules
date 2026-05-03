@@ -258,6 +258,24 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // ===== BOOKINGS (LIFF prospect booking flow) =====
+    // CF-only writes — createBookingLock / verifyBookingSlip / expireBookingLocks
+    // / convertBookingToTenant all use admin SDK which bypasses rules. Direct
+    // client write is denied because lock creation must be atomic (Firestore
+    // transaction inside the CF) — without that, two prospects could each create
+    // their own lock for the same room.
+    //
+    // Reads: prospect reads OWN booking only (so the LIFF page can onSnapshot
+    // the doc and watch status flip locked → paid → kyc_*). Admin reads all
+    // for the dashboard "Booking" sub-tab. Cross-prospect read is blocked —
+    // the calendar gets aggregated availability via getRoomAvailability CF
+    // (admin SDK aggregates without leaking other prospects' PII).
+    match /bookings/{bookingId} {
+      allow read:  if isAdmin()
+        || (isSignedIn() && resource.data.prospectUid == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
     // ===== DEFAULT DENY (catch-all) =====
     match /{document=**} {
       allow read, write: if false;
