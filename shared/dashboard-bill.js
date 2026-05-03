@@ -1197,11 +1197,28 @@ async function saveBillToFirebase(d){
     // currentBuilding is 'old' or 'new', need to convert to 'rooms' or 'nest'
     const fbBuildingId = window.CONFIG.getBuildingConfig(currentBuilding);
 
+    // Idempotent path: reuse existing bill's RTDB key for same room/month/year
+    // so re-issue (auto then manual click, or admin re-generates) overwrites
+    // in-place. Falls back to d.no when no bill exists (first issue, or
+    // admin deleted a bill that needs regenerating).
+    let targetBillId = d.no;
+    const cached = window.BillStore?._cache?.[fbBuildingId]?.[d.room];
+    if (cached) {
+      const match = Object.entries(cached).find(([, b]) =>
+        Number(b.month) === Number(d.month) && String(b.year) === String(d.year)
+      );
+      if (match) {
+        targetBillId = match[0];
+        billObject.billId = targetBillId;  // keep field aligned with path
+        console.log(`🔁 Reusing existing billId ${targetBillId} for ${fbBuildingId}/${d.room} ${d.month}/${d.year}`);
+      }
+    }
+
     // Save bill at bills/{building}/{room}/{billId}
-    const billsRef = firebaseRef(window.firebaseDatabase, `bills/${fbBuildingId}/${d.room}/${d.no}`);
+    const billsRef = firebaseRef(window.firebaseDatabase, `bills/${fbBuildingId}/${d.room}/${targetBillId}`);
     await window.firebaseSet(billsRef, billObject);
 
-    console.log(`✅ Bill saved to Firebase: bills/${fbBuildingId}/${d.room}/${d.no}`);
+    console.log(`✅ Bill saved to Firebase: bills/${fbBuildingId}/${d.room}/${targetBillId}`);
   } catch (error) {
     console.error('❌ Error saving bill to Firebase:', error);
   }
