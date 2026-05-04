@@ -951,13 +951,43 @@ function buildDocHTML(d,type,dueDate,payDate){
 
   const docId = isInvoice ? 'doc-invoice' : 'doc-receipt';
   const _ownerForDoc = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
-  const _baseLogoName = _ownerForDoc.companyLegalNameTH || 'Nature Haven';
-  const logoName = _ownerForDoc.registrationStatus === 'pending'
-    ? `${_baseLogoName} (อยู่ระหว่างจดทะเบียน)`
-    : _baseLogoName;
-  const logoHTML = _ownerForDoc.logoDataUrl
-    ? `<img src="${_ownerForDoc.logoDataUrl}" alt="logo" style="max-height:56px;max-width:180px;object-fit:contain;vertical-align:middle;"><div style="font-size:.85rem;color:var(--text-muted);margin-top:4px;">${logoName}</div>`
+
+  // Resolve tenant's receipt format choice (default: personal). When tenant chose
+  // 'company' AND filled in company info, the bill switches to:
+  //   • company logo (B2B authoritative branding)
+  //   • recipient block with their company name + Tax ID + address (for เบิกบริษัท)
+  // Personal default keeps the apartment/Nature Haven brand vibe for tenant-facing bills.
+  let _tenantForBill = null;
+  try {
+    if (typeof TenantConfigManager !== 'undefined' && d.building && d.room) {
+      _tenantForBill = TenantConfigManager.getTenant(d.building, d.room) || null;
+    }
+  } catch(_) {}
+  const _recipientType = _tenantForBill?.receiptType || 'personal';
+  const _recipientCo = _tenantForBill?.companyInfo || _tenantForBill?.company || {};
+  const _useCompanyLogo = _recipientType === 'company' && (_recipientCo.name || _recipientCo.taxId);
+
+  const _baseCompanyName = _ownerForDoc.companyLegalNameTH || 'Nature Haven';
+  const _companyLogoName = _ownerForDoc.registrationStatus === 'pending'
+    ? `${_baseCompanyName} (อยู่ระหว่างจดทะเบียน)`
+    : _baseCompanyName;
+  const _apartmentLogoName = 'Nature Haven';
+
+  const logoSrc = _useCompanyLogo ? _ownerForDoc.logoDataUrl : _ownerForDoc.apartmentLogoDataUrl;
+  const logoName = _useCompanyLogo ? _companyLogoName : _apartmentLogoName;
+  const logoHTML = logoSrc
+    ? `<img src="${logoSrc}" alt="logo" style="max-height:56px;max-width:180px;object-fit:contain;vertical-align:middle;"><div style="font-size:.85rem;color:var(--text-muted);margin-top:4px;">${logoName}</div>`
     : `🌿 ${logoName}`;
+
+  // Recipient block — only shown when tenant opted for company format with filled info
+  const recipientBlockHTML = _useCompanyLogo
+    ? `<div style="margin:10px 0;padding:10px;background:#f8faf9;border:1px dashed #c8e6c9;border-radius:6px;font-size:.85rem;">
+         <div style="font-weight:600;color:var(--green-dark);margin-bottom:6px;">📄 ออกในนาม (นิติบุคคล)</div>
+         <div class="d-row"><span>ชื่อบริษัท:</span><strong>${_recipientCo.name || '-'}</strong></div>
+         <div class="d-row"><span>เลขผู้เสียภาษี:</span><strong>${_recipientCo.taxId || '-'}</strong></div>
+         ${_recipientCo.address ? `<div class="d-row"><span>ที่อยู่:</span><span style="text-align:right;">${_recipientCo.address}</span></div>` : ''}
+       </div>`
+    : '';
   return`
   <div id="${docId}" class="doc-body">
     <div class="doc-header">
@@ -967,6 +997,7 @@ function buildDocHTML(d,type,dueDate,payDate){
       <div class="doc-no">เลขที่: ${d.no}</div>
     </div>
     <div class="doc-content">
+      ${recipientBlockHTML}
       <div class="d-row"><span>ห้องเลขที่:</span><strong>ห้อง ${d.room}</strong></div>
       <div class="d-row"><span>ประจำเดือน:</span><strong>${MONTHS_FULL[d.month]} ${d.year}</strong></div>
       <div class="d-row"><span>${isInvoice?'วันที่ออกบิล':'วันที่ชำระ'}:</span><span>${isInvoice?d.dateStr:payDate}</span></div>

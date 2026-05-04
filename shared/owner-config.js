@@ -2,6 +2,12 @@
 // Centralized storage for property owner details
 
 const DEFAULT_OWNER_CONFIG = {
+  // ===== BRANDING =====
+  // logoDataUrl       — โลโก้บริษัท (ใช้บนบิลที่ลูกบ้านเลือก "นิติบุคคล" + letterhead รายงานภาษี)
+  // apartmentLogoDataUrl — โลโก้อพาร์ทเม้น (ใช้บนบิลที่ลูกบ้านเลือก "บุคคลธรรมดา" — default)
+  // faviconDataUrl    — ไอคอนแท็บเบราว์เซอร์
+  apartmentLogoDataUrl: '',
+
   // ===== BASIC INFO =====
   id: '',
   name: '',

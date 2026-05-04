@@ -917,6 +917,7 @@ function renderOwnerInfoPage() {
 
   const owner = OwnerConfigManager.getOwnerInfo();
   const safeLogoUrl = _safeDataUrl(owner.logoDataUrl || '');
+  const safeApartmentLogoUrl = _safeDataUrl(owner.apartmentLogoDataUrl || '');
   const safeFaviconUrl = _safeDataUrl(owner.faviconDataUrl || '');
 
   container.innerHTML = `
@@ -924,16 +925,29 @@ function renderOwnerInfoPage() {
     <div style="background:#f8faf9; padding:1.2rem; border-left:4px solid var(--green); border-radius:6px; margin-bottom:1.5rem;">
       <div style="font-weight:700; color:var(--green-dark); margin-bottom:.6rem;">🏢 ข้อมูลบริษัท / นิติบุคคล (สำหรับใบเสร็จ + รายงานภาษี)</div>
 
-      <!-- Logo upload -->
+      <!-- Company logo (B2B — used when tenant chooses "นิติบุคคล") -->
       <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed #c8e6c9; border-radius:6px;">
         <div id="logoPreviewBox" style="width:80px; height:80px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden; flex-shrink:0;">
-          ${safeLogoUrl ? `<img src="${safeLogoUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" alt="logo">` : `<span style="font-size:2rem; color:#ccc;">🏢</span>`}
+          ${safeLogoUrl ? `<img src="${safeLogoUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" alt="company logo">` : `<span style="font-size:2rem; color:#ccc;">🏢</span>`}
         </div>
         <div style="flex:1;">
-          <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">โลโก้บริษัท (แสดงบนบิล + รายงานภาษี)</label>
+          <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">โลโก้บริษัท (ใช้บนบิลที่ลูกบ้านเลือก "นิติบุคคล" + รายงานภาษี)</label>
           <input type="file" id="ownerLogoInput" accept="image/png,image/jpeg" onchange="uploadOwnerLogo(event)" style="font-size:.85rem;">
           <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: PNG โปร่งแสง, สี่เหลี่ยมจัตุรัส, ≤ 512px</div>
           ${safeLogoUrl ? `<button type="button" onclick="removeOwnerLogo()" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้</button>` : ''}
+        </div>
+      </div>
+
+      <!-- Apartment logo (B2C / default — used when tenant chooses "บุคคลธรรมดา") -->
+      <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; padding:.8rem; background:white; border:1px dashed #c8e6c9; border-radius:6px;">
+        <div id="apartmentLogoPreviewBox" style="width:80px; height:80px; border:1px solid #e0e0e0; border-radius:6px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden; flex-shrink:0;">
+          ${safeApartmentLogoUrl ? `<img src="${safeApartmentLogoUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" alt="apartment logo">` : `<span style="font-size:2rem; color:#ccc;">🌿</span>`}
+        </div>
+        <div style="flex:1;">
+          <label style="display:block; margin-bottom:.3rem; font-weight:600; font-size:.9rem;">โลโก้อพาร์ทเม้น (ใช้บนบิลที่ลูกบ้านเลือก "บุคคลธรรมดา" — default)</label>
+          <input type="file" id="ownerApartmentLogoInput" accept="image/png,image/jpeg" onchange="uploadApartmentLogo(event)" style="font-size:.85rem;">
+          <div style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;">แนะนำ: โลโก้แบรนด์ Nature Haven — PNG โปร่งแสง, สี่เหลี่ยมจัตุรัส, ≤ 512px. ถ้าไม่อัพ → fallback เป็น "🌿 Nature Haven"</div>
+          ${safeApartmentLogoUrl ? `<button type="button" onclick="removeApartmentLogo()" style="margin-top:.4rem; padding:.3rem .7rem; background:#ffebee; color:#c62828; border:1px solid #ef9a9a; border-radius:4px; cursor:pointer; font-size:.78rem;">🗑️ ลบโลโก้อพาร์ทเม้น</button>` : ''}
         </div>
       </div>
 
@@ -1419,6 +1433,62 @@ window.removeOwnerLogo = function() {
   if (!confirm('ยืนยันการลบโลโก้?')) return;
   _writeOwnerLogo('');
   showToast('ลบโลโก้แล้ว', 'success');
+  renderOwnerInfoPage();
+};
+
+// ===== APARTMENT LOGO (used on personal-recipient bills, default brand-friendly) =====
+function _writeApartmentLogo(dataUrl) {
+  const safe = _safeDataUrl(dataUrl);
+  const current = OwnerConfigManager.getOwnerInfo();
+  const updated = { ...current, apartmentLogoDataUrl: safe };
+  localStorage.setItem('owner_info', JSON.stringify(updated));
+  try {
+    if (window.firebase && window.firebaseAuth?.currentUser) {
+      const db = window.firebase.firestore();
+      const fn = window.firebase.firestoreFunctions;
+      const ref = fn.doc(fn.collection(db, 'owner_info'), 'main');
+      fn.setDoc(ref, { ...updated, updatedAt: new Date().toISOString() }, { merge: true })
+        .catch(e => console.warn('apartment logo Firestore sync:', e?.message));
+    }
+  } catch(e) { console.warn('apartment logo sync:', e?.message); }
+}
+
+window.uploadApartmentLogo = function(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('ไฟล์ใหญ่เกิน 2MB', 'warning');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 512;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = file.type !== 'image/jpeg'
+        ? canvas.toDataURL('image/png')
+        : canvas.toDataURL('image/jpeg', 0.85);
+      _writeApartmentLogo(dataUrl);
+      showToast('✅ อัปโหลดโลโก้อพาร์ทเม้นเรียบร้อย', 'success');
+      renderOwnerInfoPage();
+    };
+    img.onerror = () => showToast('อ่านรูปไม่ได้ — ลองไฟล์อื่น', 'warning');
+    img.src = e.target.result;
+  };
+  reader.onerror = () => showToast('อ่านไฟล์ไม่สำเร็จ', 'warning');
+  reader.readAsDataURL(file);
+};
+
+window.removeApartmentLogo = function() {
+  if (!confirm('ยืนยันการลบโลโก้อพาร์ทเม้น?')) return;
+  _writeApartmentLogo('');
+  showToast('ลบโลโก้อพาร์ทเม้นแล้ว', 'success');
   renderOwnerInfoPage();
 };
 
@@ -2581,7 +2651,10 @@ function downloadInvoicesPDF() {
     .then(() => {
       allInvoices.forEach((invoice, idx) => {
         setTimeout(() => {
-          const pdf = InvoicePDFGenerator.generateInvoicePDF(invoice);
+          // Enrich invoice with tenant's chosen recipient format (state-driven render).
+          // Bill switches logo + adds recipient block when tenant opted for "นิติบุคคล".
+          const _enriched = { ...invoice, recipient: _resolveBillRecipient(invoice.building, invoice.roomId) };
+          const pdf = InvoicePDFGenerator.generateInvoicePDF(_enriched);
           if (pdf) {
             InvoicePDFGenerator.downloadPDF(pdf, `INV-${invoice.id}.pdf`);
           }
@@ -2590,6 +2663,23 @@ function downloadInvoicesPDF() {
     })
     .catch(err => showToast('โหลด PDF library ล้มเหลว: ' + err.message, 'error'));
 }
+
+// Resolve a bill's recipient block from tenant's saved choice (Profile → "ตั้งค่าการออกใบเสร็จ").
+// Returns { type, companyName?, taxId?, address? } — empty object if no choice or lookup fails.
+function _resolveBillRecipient(building, roomId) {
+  try {
+    if (typeof TenantConfigManager === 'undefined' || !building || !roomId) return {};
+    const tenant = TenantConfigManager.getTenant(building, roomId);
+    if (!tenant) return {};
+    const type = tenant.receiptType || 'personal';
+    const co = tenant.companyInfo || tenant.company || {};
+    if (type === 'company') {
+      return { type, companyName: co.name || '', taxId: co.taxId || '', address: co.address || '' };
+    }
+    return { type: 'personal' };
+  } catch(_) { return {}; }
+}
+window._resolveBillRecipient = _resolveBillRecipient;
 
 /**
  * Listen for new invoice notifications

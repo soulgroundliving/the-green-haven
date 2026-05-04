@@ -4,6 +4,56 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
+# Bill Format Customization — Tenant chooses recipient entity (personal/company)
+
+## Goal (user approved 2026-05-04)
+ลูกบ้านเลือก format บิลของตัวเอง: บุคคลธรรมดา (default, brand-friendly) หรือ นิติบุคคล (สำหรับเบิกบริษัท). Bill rendering swaps **logo + recipient block** ตาม `tenant.billRecipient.entityType` — single trigger, no separate switch.
+
+## Architecture
+- **Issuer** (Owner Info): admin อัพ 2 logos — `logoDataUrl` (โลโก้บริษัท, B2B) + `apartmentLogoDataUrl` (โลโก้อพาร์ทเม้น, B2C default)
+- **Recipient** (per tenant): Firestore `tenants/{building}/list/{roomId}.billRecipient = { entityType, companyName?, taxId?, address? }`
+- **Render**: state-driven, no explicit trigger. Bill code อ่าน billRecipient → switch logo + recipient block
+- **Snapshot**: skip ใน MVP — render live จาก tenant.billRecipient. v2 ค่อยเพิ่ม snapshot เวลา verifySlip
+- **Tax ID**: validate 13-digit + checksum, warning only (ไม่บล็อก save)
+- **Header**: "ใบเสร็จรับเงิน / Receipt" ทั้งสอง entityType (issuer ยังไม่ VAT — ออกใบกำกับภาษีไม่ได้)
+
+## Phase 1 — Owner Info (admin uploads dual logo) ✅
+- [x] `shared/owner-config.js`: เพิ่ม `apartmentLogoDataUrl: ''` ใน DEFAULT_OWNER_CONFIG
+- [x] `shared/dashboard-extra.js`: update label โลโก้บริษัท → "โลโก้บริษัท (ใช้บนบิลนิติบุคคล + รายงานภาษี)"
+- [x] `shared/dashboard-extra.js`: เพิ่ม UI block ใหม่ "โลโก้อพาร์ทเม้น (ใช้บนบิลบุคคลธรรมดา — default)" ใต้โลโก้บริษัท
+- [x] เพิ่ม `_writeApartmentLogo`, `uploadApartmentLogo`, `removeApartmentLogo` (mirror existing pattern)
+
+## Phase 2 — Tenant Profile (recipient form) ✅ ALREADY EXISTS
+**Discovery 2026-05-04:** Feature นี้ถูกสร้างไว้แล้วใน tenant_app.html ตั้งแต่ก่อน — ไม่ต้องสร้างใหม่:
+- [x] HTML section "ตั้งค่าการออกใบเสร็จ" — line 3261-3287 (dropdown + company info form + save button + confirm message)
+- [x] JS `loadReceiptSettings()` — line 4666 (read from `_taTenant.receiptType` + `_taTenant.companyInfo`)
+- [x] JS `saveCompanyInfo()` — line 4689 (Tax ID validate 13 digit, write Firestore via TenantFirebaseSync)
+- [x] JS `onReceiptTypeChange()` — line 4743 (handle dropdown switch, persist localStorage + Firestore)
+- [x] JS `applyReceiptUI(type, co)` — line 4761 (show/hide company info block)
+- [x] JS `window.getReceiptMetaForBill()` — line 4776 (public API for bill rendering — was orphaned!)
+- [x] Bill detail block — line 2659 `receipt-company-info-block` shows recipient on tenant_app receipt
+
+**Schema in use:** `tenants/{building}/list/{roomId}.receiptType` ('personal'|'company') + `.companyInfo = { name, taxId, address }`. Firestore rule already allows tenant update (rule line 179 excludes only protected fields, receiptType+companyInfo fine ✓)
+
+## Phase 3 — Bill rendering switch ✅
+- [x] `shared/dashboard-bill.js` `buildDocHTML`: lookup `TenantConfigManager.getTenant(d.building, d.room).receiptType` + `companyInfo` → choose logo (apartmentLogo for personal, companyLogo for company) + recipient block at top of doc-content
+- [x] `shared/invoice-pdf-generator.js` `generateInvoicePDF`: read `invoiceData.recipient`, switch header emoji+name + add recipient block (จุดอยู่หลัง "Room & Invoice Details")
+- [x] `shared/invoice-pdf-generator.js` `generateReceiptPDF`: เหมือนกัน (header swap + recipient block หลัง verification info)
+- [x] `shared/dashboard-extra.js` caller: เพิ่ม helper `_resolveBillRecipient(building, roomId)` + enrich invoice ก่อน pass เข้า PDF generator
+
+## Phase 4 — Firestore rules + verification ✅
+- [x] Firestore rules: ตรวจแล้ว ไม่ต้องแก้ — `receiptType` + `companyInfo` ไม่ได้อยู่ใน excluded keys
+- [x] `npm run verify:memory` → ALL GREEN (212 rows, 0 fails)
+- [x] Syntax check 4 modified files (`node -c`) → ALL OK
+- [ ] Live test: tenant_app → Profile/Settings → ตั้งนิติบุคคล → save → admin doc preview → ดู logo+recipient ตรงกัน
+- [ ] Update lessons.md ถ้ามี gotcha (จะเพิ่มหลัง live test)
+
+## Scope deferred to v2
+- **Tenant_app brand header logo swap** — line 2533-2538 (STEP 1) + 2624-2628 (STEP 3) ยังเป็น hardcoded "🌿 The Green Haven". รอดู v1 จริงก่อนค่อยตัดสินใจว่าควร swap ตาม receiptType หรือไม่. recipient-info-block (line 2659) แสดงข้อมูลถูกอยู่แล้ว
+- **Snapshot recipient on paid bill** — ตอนนี้ render live จาก tenant.companyInfo. ถ้าลูกบ้านแก้ทีหลัง บิลเก่าโชว์ของใหม่. v2 ค่อย snapshot ใน verifySlip CF
+
+---
+
 # Owner Info — Save bug + Bills respect "อยู่ระหว่างจดทะเบียน" status
 
 ## Symptom (user report 2026-05-04)

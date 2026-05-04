@@ -29,6 +29,16 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-05-04 — Pre-built feature ค้นไม่เจอตั้งแต่แรก → เกือบ duplicate งาน 4 ชม.
+
+**Mistake:** User ขอ feature "ลูกบ้านเลือก format บิล (บุคคล/นิติ)". วาง plan 4 phase (~3-4 ชม.) รวม UI form + Firestore schema + save logic + bill render switch. กำลังจะลงโค้ด Phase 2 (สร้างฟอร์ม tenant Profile) ตอนแรก พบว่า **มี receipt-type-select + company-info-display + saveCompanyInfo + getReceiptMetaForBill อยู่แล้วใน tenant_app.html line 3261+ และ 4666+** — feature ถูกสร้างไว้แล้วก่อนหน้านี้ + Firestore schema (`tenant.receiptType` + `tenant.companyInfo`) ก็มีอยู่. ต้องทำแค่ Phase 3 (wire bill render) เท่านั้น
+
+**Why:** ตอน scan codebase ใช้ pattern `billRecipient|recipientType|invoiceFormat` (จากชื่อที่จะตั้ง) — ไม่ตรงกับ field name ที่มีอยู่ (`receiptType`, `companyInfo`). ต้องค้น "นิติบุคคล" (Thai keyword จาก mockup) ถึงจะเจอ + grep `getReceiptMetaForBill` พบว่าเป็น **orphaned public API** (defined แต่ไม่มีใครเรียกใช้ — เป็นสัญญาณว่า scope ถูก plan ไว้แล้วแต่ wiring ค้าง)
+
+**Rule:** ก่อนวาง plan สร้าง feature ใหม่ → grep keyword **ภาษาไทย** จาก mockup/screenshot (ลูกบ้านบอกว่า "นิติบุคคล" → grep "นิติบุคคล" ก่อน grep `recipientType`) + grep public API names ที่ register บน window (`window.X = ...`) แล้วเช็คว่ามีใครเรียกใช้ — orphaned API = unfinished feature waiting to be wired. ลด scope จาก "สร้างใหม่" → "wire ของเดิม" ทันทีถ้าเจอ
+
+---
+
 ## 2026-05-04 — Save function อ่าน DOM elements ที่ไม่ได้ render → save พังเงียบ
 
 **Mistake:** `saveOwnerInfo()` ใน `shared/dashboard-extra.js:1517-1519` อ่าน `document.getElementById('ownerOperationStartDate').value.trim()` (และอีก 2 ตัว) แต่ `renderOwnerInfoPage()` ไม่ได้ render ฟิลด์เหล่านั้น → `getElementById` คืน `null` → `.value` โยน TypeError → save อบอร์ตก่อนถึง `OwnerConfigManager.saveOwnerInfoWithFirebase()` → ไม่มี toast, ไม่บันทึก, registrationStatus ที่ user ตั้งเป็น 'pending' ไม่ติด → ผลคือบิลออกชื่อบริษัทเสมอ user หาเหตุไม่เจอ

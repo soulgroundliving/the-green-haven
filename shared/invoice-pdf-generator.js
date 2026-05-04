@@ -22,16 +22,22 @@ class InvoicePDFGenerator {
       let yPosition = 20;
 
       const _owner = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
+      // Tenant's chosen receipt format. Caller passes invoiceData.recipient = { type, companyName, taxId, address }
+      // so the bill switches logo + adds recipient block when tenant opted for "นิติบุคคล" (B2B).
+      const _rcpt = invoiceData.recipient || {};
+      const _isCompanyRcpt = _rcpt.type === 'company' && (_rcpt.companyName || _rcpt.taxId);
       const _baseCompanyName = _owner.companyLegalNameTH || 'Nature Haven';
-      const _companyName = _owner.registrationStatus === 'pending'
+      const _companyHeaderName = _owner.registrationStatus === 'pending'
         ? `${_baseCompanyName} (อยู่ระหว่างจดทะเบียน)`
         : _baseCompanyName;
+      const _headerName = _isCompanyRcpt ? _companyHeaderName : 'Nature Haven';
       const _promptpay = _owner.promptpayNumber || '089-1234567';
 
-      // Header
+      // Header — use 🏢 emoji for company-recipient bills (formal vibe), 🌿 for personal default
       doc.setFontSize(20);
       doc.setTextColor(45, 134, 83);
-      doc.text(`🌿 ${_companyName}`, pageWidth / 2, yPosition, { align: 'center' });
+      const _headerEmoji = _isCompanyRcpt ? '🏢' : '🌿';
+      doc.text(`${_headerEmoji} ${_headerName}`, pageWidth / 2, yPosition, { align: 'center' });
 
       yPosition += 10;
       doc.setFontSize(11);
@@ -81,8 +87,29 @@ class InvoicePDFGenerator {
       });
       doc.text(`วันที่ออกบิล: ${today}`, pageWidth - 60, yPosition + 8);
 
+      // Recipient block — only when tenant chose "นิติบุคคล" + filled company info
+      yPosition += 30;
+      if (_isCompanyRcpt) {
+        doc.setFillColor(248, 250, 249);
+        doc.setDrawColor(200, 230, 201);
+        const _rcptBoxHeight = _rcpt.address ? 28 : 20;
+        doc.rect(15, yPosition - 5, pageWidth - 30, _rcptBoxHeight, 'FD');
+        doc.setFontSize(10);
+        doc.setTextColor(45, 134, 83);
+        doc.setFont(undefined, 'bold');
+        doc.text('ออกในนาม (นิติบุคคล)', 20, yPosition);
+        doc.setFontSize(9);
+        doc.setTextColor(80);
+        doc.setFont(undefined, 'normal');
+        doc.text(`ชื่อบริษัท: ${_rcpt.companyName || '-'}`, 20, yPosition + 6);
+        doc.text(`เลขผู้เสียภาษี: ${_rcpt.taxId || '-'}`, 20, yPosition + 12);
+        if (_rcpt.address) doc.text(`ที่อยู่: ${_rcpt.address}`, 20, yPosition + 18);
+        yPosition += _rcptBoxHeight + 5;
+      } else {
+        yPosition += 10;
+      }
+
       // Breakdown Table
-      yPosition += 40;
       doc.setFontSize(11);
       doc.setTextColor(25, 118, 210);
       doc.setFont(undefined, 'bold');
@@ -196,15 +223,19 @@ class InvoicePDFGenerator {
       let yPosition = 20;
 
       const _owner = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
+      const _rcpt = receiptData.recipient || {};
+      const _isCompanyRcpt = _rcpt.type === 'company' && (_rcpt.companyName || _rcpt.taxId);
       const _baseCompanyName = _owner.companyLegalNameTH || 'Nature Haven';
-      const _companyName = _owner.registrationStatus === 'pending'
+      const _companyHeaderName = _owner.registrationStatus === 'pending'
         ? `${_baseCompanyName} (อยู่ระหว่างจดทะเบียน)`
         : _baseCompanyName;
+      const _headerName = _isCompanyRcpt ? _companyHeaderName : 'Nature Haven';
 
-      // Header
+      // Header — switch emoji + name based on recipient type
       doc.setFontSize(20);
       doc.setTextColor(45, 134, 83);
-      doc.text(`🌿 ${_companyName}`, pageWidth / 2, yPosition, { align: 'center' });
+      const _headerEmoji = _isCompanyRcpt ? '🏢' : '🌿';
+      doc.text(`${_headerEmoji} ${_headerName}`, pageWidth / 2, yPosition, { align: 'center' });
 
       yPosition += 10;
       doc.setFontSize(11);
@@ -239,8 +270,29 @@ class InvoicePDFGenerator {
         doc.text('✅ ตรวจสอบโดย SlipOK', 20, yPosition + 24);
       }
 
+      // Recipient block — only when tenant chose "นิติบุคคล" + filled company info
+      yPosition += 35;
+      if (_isCompanyRcpt) {
+        doc.setFillColor(248, 250, 249);
+        doc.setDrawColor(200, 230, 201);
+        const _rcptBoxHeight = _rcpt.address ? 28 : 20;
+        doc.rect(15, yPosition - 5, pageWidth - 30, _rcptBoxHeight, 'FD');
+        doc.setFontSize(10);
+        doc.setTextColor(45, 134, 83);
+        doc.setFont(undefined, 'bold');
+        doc.text('ออกในนาม (นิติบุคคล)', 20, yPosition);
+        doc.setFontSize(9);
+        doc.setTextColor(80);
+        doc.setFont(undefined, 'normal');
+        doc.text(`ชื่อบริษัท: ${_rcpt.companyName || '-'}`, 20, yPosition + 6);
+        doc.text(`เลขผู้เสียภาษี: ${_rcpt.taxId || '-'}`, 20, yPosition + 12);
+        if (_rcpt.address) doc.text(`ที่อยู่: ${_rcpt.address}`, 20, yPosition + 18);
+        yPosition += _rcptBoxHeight + 5;
+      } else {
+        yPosition += 10;
+      }
+
       // Verification Info
-      yPosition += 45;
       doc.setFontSize(9);
       doc.setTextColor(100);
       doc.text(`วันที่ชำระ: ${new Date(receiptData.createdAt).toLocaleDateString('th-TH')}`, 20, yPosition);
