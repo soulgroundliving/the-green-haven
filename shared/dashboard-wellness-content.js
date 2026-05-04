@@ -474,7 +474,8 @@ async function editWellnessArticle(id) {
 // Seed: 7 starter Wellness articles (mirrors hardcoded fallback in tenant_app.html
 // const WELLNESS_ARTICLES). Pushed to Firestore once so admin can edit them.
 async function seedWellnessStarters() {
-  if (!confirm('นำเข้าบทความตัวอย่าง 7 บทความเข้า Firestore?\n(ถ้ามีอยู่แล้วจะไม่ทับ — id เดียวกันจะข้าม)')) return;
+  const ok = await window.ghConfirm('นำเข้าบทความตัวอย่าง 7 บทความเข้า Firestore? ถ้ามีอยู่แล้วจะไม่ทับ — id เดียวกันจะข้าม', { title: 'นำเข้าบทความ', confirmLabel: 'นำเข้า' });
+  if (!ok) return;
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
     showToast('Firebase ยังไม่พร้อม', 'error');
     return;
@@ -516,7 +517,8 @@ async function seedWellnessStarters() {
 }
 
 async function deleteWellnessArticle(id, title) {
-  if (!confirm(`ลบบทความ "${title}" ใช่ไหม?`)) return;
+  const ok = await window.ghConfirm(`ลบบทความ "${title}"?`, { danger: true });
+  if (!ok) return;
   if (!window.firebase?.firestore) return;
   const db = window.firebase.firestore();
   const { doc, deleteDoc } = window.firebase.firestoreFunctions || {};

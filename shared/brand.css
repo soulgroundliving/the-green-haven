@@ -37,30 +37,32 @@
   --leading-normal:  1.55;
   --leading-relaxed: 1.75;
 
-  /* Color palette — natural, earth-toned, quiet ─────────────── */
-  /* Brand primary — verdant green, the "green haven" anchor */
-  --brand-primary:       #2d8653;
-  --brand-primary-dark:  #1f6b3f;
-  --brand-primary-soft:  #d4e8dc;  /* soft-green */
-  --brand-primary-wash:  #f0f7f2;  /* lightest tint, card backgrounds */
+  /* Color palette — teal-anchored, quiet, spa-like ─────────────── */
+  /* Brand primary — teal "green haven" (matched to tenant_app SoT 2026-05-04) */
+  --brand-primary:       #0f766e;  /* teal-700 — main brand */
+  --brand-primary-dark:  #0d5c4e;  /* darker teal — emphasis */
+  --brand-primary-light: #14b8a6;  /* teal-400 — success/highlight */
+  --brand-primary-soft:  #ecfdf5;  /* mint-cream — soft surface tint */
+  --brand-primary-wash:  #f2f7f5;  /* page background, lightest tint */
 
-  /* Neutrals — warm, not cold grays (muji warmth) */
-  --cloud:   #fafaf7;  /* page background — barely off-white */
-  --mist:    #f2f1ec;
-  --stone:   #dcdbd4;
-  --pebble:  #a8a7a0;
-  --shadow:  #4a4a45;
-  --ink:     #1f1f1c;  /* primary text, not pure black */
+  /* Neutrals — cool teal-leaning, cohesive with brand */
+  --cloud:   #f2f7f5;  /* page background — cool off-white */
+  --mist:    #eaf1ed;  /* sunken surface */
+  --stone:   #d9e8e3;  /* borders */
+  --pebble:  #a8b5b0;  /* muted text edge */
+  --shadow:  #2a3d39;  /* shadow base */
+  --ink:     #1c3a36;  /* primary text — deep teal-black */
+  --muted:   #64748b;  /* secondary text */
 
   /* Accents — used sparingly */
-  --sand:    #e8dfce;  /* warm beige, dividers */
+  --sand:    #e8dfce;  /* warm beige, dividers (kept from old palette) */
   --moss:    #5a7a5a;  /* muted deep green, secondary */
   --clay:    #c08468;  /* warm terracotta for warnings */
 
   /* Semantic — intentionally muted, quiet not loud */
-  --ok:      #4a9d6e;
-  --warn:    #c89d4a;
-  --alert:   #c06458;
+  --ok:      #14b8a6;  /* teal-aligned success */
+  --warn:    #d97706;  /* amber */
+  --alert:   #dc2626;  /* danger red */
   --info:    #6b8a9d;
 
   /* Surfaces ──────────────────────────────────────────────── */
@@ -149,12 +151,97 @@ button, input, select, textarea {
   font-family: inherit;
 }
 
+/* ─── Dark mode (prefers-color-scheme + data-theme="dark" opt-in) ───────── *
+ * Token overrides only — semantic structure stays the same. Anything that
+ * uses var(--cloud), var(--ink), etc. flips automatically.
+ *
+ * Brand primary (teal) is intentionally NOT flipped — it reads well on both
+ * light and dark surfaces.
+ */
+:root[data-theme="dark"],
+:root.theme-dark {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --cloud:   #0c1614;  /* page bg — deep teal-black */
+  --mist:    #142421;  /* sunken */
+  --stone:   #28433d;  /* border base */
+  --pebble:  #5d756e;  /* edge muted */
+  --shadow:  #050b09;  /* shadow base */
+  --ink:     #e5ede9;  /* primary text */
+  --muted:   #8da39c;  /* secondary text */
+
+  /* Brand surface tints — tinted dark instead of mint cream */
+  --brand-primary-soft: #0f2725;  /* card highlight tint */
+  --brand-primary-wash: #0c1614;  /* same as page bg */
+
+  /* Surface aliases */
+  --surface-page:   var(--cloud);
+  --surface-card:   #162825;
+  --surface-raised: #1d3431;
+  --surface-sunken: var(--mist);
+
+  --border-subtle: #1f3330;
+  --border-base:   var(--stone);
+  --divider:       #1f3330;
+
+  /* Shadows — boost alpha for visibility on dark */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.20);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.36);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.44);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not(.theme-light) {
+    color-scheme: dark;
+    --cloud:   #0c1614;
+    --mist:    #142421;
+    --stone:   #28433d;
+    --pebble:  #5d756e;
+    --shadow:  #050b09;
+    --ink:     #e5ede9;
+    --muted:   #8da39c;
+    --brand-primary-soft: #0f2725;
+    --brand-primary-wash: #0c1614;
+    --surface-page:   #0c1614;
+    --surface-card:   #162825;
+    --surface-raised: #1d3431;
+    --surface-sunken: #142421;
+    --border-subtle: #1f3330;
+    --border-base:   #28433d;
+    --divider:       #1f3330;
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.20);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.28);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.36);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.44);
+  }
+}
+
 /* ─── Reduced motion honoring (quiet living) ────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ─── Keyboard focus ring (a11y baseline) ───────────────────────────────── *
+ * Applied to all interactive elements when reached via keyboard. Mouse
+ * clicks don't trigger :focus-visible — so the ring stays out of the way
+ * for pointer users but appears for tab navigation.
+ */
+:where(button, a, input, select, textarea, summary,
+       [tabindex]:not([tabindex="-1"]), [role="button"], [role="tab"],
+       [role="link"], [role="menuitem"]):focus {
+  outline: none;  /* drop browser default */
+}
+:where(button, a, input, select, textarea, summary,
+       [tabindex]:not([tabindex="-1"]), [role="button"], [role="tab"],
+       [role="link"], [role="menuitem"]):focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
 /* ── CSP-safe display / state utilities ──────────────────────────────────── *

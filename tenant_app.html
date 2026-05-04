@@ -39,7 +39,12 @@
     <script src="./shared/sentry-init.js"></script>
     <!-- Component library + modal helper (Phase 1 design system) -->
     <link rel="stylesheet" href="./shared/components.css">
+    <!-- Theme toggle: applied BEFORE first paint to avoid flash -->
+    <script src="./shared/theme-toggle.js"></script>
     <script src="./shared/modal.js"></script>
+    <script src="./shared/empty-states.js"></script>
+    <script src="./shared/haptics.js"></script>
+    <script src="./shared/onboarding-tour.js"></script>
     <!-- Modal a11y bridge: ESC + backdrop close + focus restore for legacy modals -->
     <script src="./shared/modal-a11y-bridge.js"></script>
     <!-- QR Code library -->
@@ -181,16 +186,16 @@
 
     <style>
         :root {
-            /* === Unified with dashboard brand === */
-            --primary-green: #0f766e;    /* Main brand teal (dashboard --green) */
-            --primary-dark: #0d5c4e;     /* Darker teal for emphasis (dashboard --green-dark) */
-            --primary-light: #14b8a6;    /* Lighter teal for success (dashboard --green-light) */
-            --soft-green: #ecfdf5;       /* Pale teal bg (dashboard --green-pale) */
-            --text-dark: #1c3a36;        /* Main text (dashboard --text) */
-            --text-muted: #64748b;       /* Muted text (dashboard --text-muted) */
-            --bg-color: #f2f7f5;         /* Page bg (dashboard --bg) */
-            --white: #FFFFFF;
-            --border: #d9e8e3;           /* Borders (dashboard --border) */
+            /* === Aliased to brand tokens (shared/brand.css) — auto-flips for dark mode === */
+            --primary-green: var(--brand-primary);
+            --primary-dark:  var(--brand-primary-dark);
+            --primary-light: var(--brand-primary-light);
+            --soft-green:    var(--brand-primary-soft);
+            --text-dark:     var(--ink);
+            --text-muted:    var(--muted);
+            --bg-color:      var(--brand-primary-wash);
+            --white:         var(--surface-card);
+            --border:        var(--stone);
             --accent: #d97706;           /* Accent amber (dashboard --accent) */
             --accent-gold: #D4AF37;
             --danger: #dc2626;           /* Danger red (dashboard --red) */
@@ -1952,10 +1957,17 @@
             <button class="cf-pill" data-cat="event" onclick="setCommunityFilter('event', this)">📅 กิจกรรม</button>
         </div>
         <div id="community-feed">
-            <div class="card" style="margin-top:0; text-align:center; color:#999; padding:28px 16px;">
-                <div style="font-size:2rem; margin-bottom:6px;">📭</div>
-                <div style="font-weight:600; color:#666;">ยังไม่มีประกาศหรือกิจกรรม</div>
-                <div style="font-size:var(--fs-sm); margin-top:4px;">เมื่อมีข่าวสารจากแอดมินจะขึ้นที่นี่ครับ</div>
+            <div class="gh-empty-state">
+                <div class="gh-empty-state__illust">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                        <path d="M28 38 a8 8 0 0 1 8-8 h48 a8 8 0 0 1 8 8 v34 a8 8 0 0 1-8 8 h-32 l-12 12 v-12 h-4 a8 8 0 0 1-8-8 z"/>
+                        <circle cx="50" cy="55" r="2"/>
+                        <circle cx="60" cy="55" r="2"/>
+                        <circle cx="70" cy="55" r="2"/>
+                    </svg>
+                </div>
+                <p class="gh-empty-state__title">ยังไม่มีประกาศหรือกิจกรรม</p>
+                <p class="gh-empty-state__text">เมื่อมีข่าวสารจากแอดมินจะขึ้นที่นี่</p>
             </div>
         </div>
         <!-- Hidden legacy containers for backward-compat with existing render funcs -->
@@ -2484,14 +2496,21 @@
         </div>
 
         <div id="market-list-container" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 8px;">
-            <div id="market-empty-state" style="grid-column:1/-1; text-align:center; padding:30px 16px; color:#666;">
-                <div style="font-size:2.2rem; margin-bottom:8px;">🛒</div>
-                <div style="font-weight:700; color:#444; font-size:var(--fs-md);">ยังไม่มีใครลงประกาศ</div>
-                <div id="market-empty-sub" style="font-size:var(--fs-sm); color:#888; margin:6px 0 14px;">เป็นคนแรกของตึกสิครับ — ของที่ไม่ใช้ ขายต่อให้เพื่อนบ้านได้นะ!</div>
-                <button id="market-empty-cta" onclick="showSubPage('add-market-page')"
-                    style="background:var(--primary-green); color:#fff; border:none; padding:10px 20px; border-radius:12px; font-weight:700; cursor:pointer; font-family:inherit;">
-                    ✨ ลงประกาศแรกของฉัน
-                </button>
+            <div id="market-empty-state" class="gh-empty-state" style="grid-column:1/-1;">
+                <div class="gh-empty-state__illust">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                        <path d="M30 42 l4-12 h52 l4 12 v50 a4 4 0 0 1-4 4 h-52 a4 4 0 0 1-4-4 z"/>
+                        <path d="M48 42 v-8 a12 12 0 0 1 24 0 v8"/>
+                        <path d="M58 64 l-4 4 M62 60 l4 4 M60 56 v8"/>
+                    </svg>
+                </div>
+                <p class="gh-empty-state__title">ยังไม่มีใครลงประกาศ</p>
+                <p id="market-empty-sub" class="gh-empty-state__text">เป็นคนแรกของตึกสิครับ — ของที่ไม่ใช้ ขายต่อให้เพื่อนบ้านได้นะ</p>
+                <div class="gh-empty-state__action">
+                    <button id="market-empty-cta" type="button" class="gh-btn gh-btn--primary gh-btn--small" onclick="showSubPage('add-market-page')">
+                        ✨ ลงประกาศแรกของฉัน
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -2886,7 +2905,17 @@
             <div class="overflow-y-auto pr-2 space-y-4 custom-scrollbar" id="rewards-list">
                 <!-- Rewards rendered dynamically by _subscribeRewards() from Firestore `rewards` collection.
                      Admin manages via dashboard.html → Settings → Rewards. -->
-                <div class="text-center text-xs text-gray-400 py-8" id="rewards-list-empty">ยังไม่มีของรางวัลในขณะนี้ — แอดมินจะเพิ่มเร็วๆ นี้</div>
+                <div id="rewards-list-empty" class="gh-empty-state">
+                    <div class="gh-empty-state__illust">
+                        <svg viewBox="0 0 120 120" aria-hidden="true">
+                            <path d="M30 28 h60 a4 4 0 0 1 4 4 v56 a4 4 0 0 1-4 4 h-60 a4 4 0 0 1-4-4 v-56 a4 4 0 0 1 4-4 z"/>
+                            <path d="M40 46 l4 4 8-8 M40 64 l4 4 8-8 M40 82 l4 4 8-8"/>
+                            <path d="M60 48 h26 M60 66 h26 M60 84 h18"/>
+                        </svg>
+                    </div>
+                    <p class="gh-empty-state__title">ยังไม่มีของรางวัลในขณะนี้</p>
+                    <p class="gh-empty-state__text">แอดมินจะเพิ่มเร็วๆ นี้</p>
+                </div>
             </div>
             <p class="text-center text-[10px] text-gray-400 mt-6 mb-20 shrink-0 italic">
                 แต้มของคุณจะถูกหักทันทีหลังกดยืนยัน
@@ -2988,6 +3017,13 @@
 
         <div class="section-title" style="padding-top: 5px;"><span>ตั้งค่าระบบ (System Preferences)</span></div>
         <div class="card" style="margin-top: 0;">
+            <div class="setting-row">
+                <span><i class="fas fa-adjust" style="width:25px; color:var(--primary-green);"></i> ธีม (Theme)</span>
+                <button type="button" class="gh-theme-toggle" data-action="toggle-theme" aria-label="สลับธีม">
+                    <span data-theme-icon>🌓</span>
+                    <span data-theme-label>อัตโนมัติ</span>
+                </button>
+            </div>
             <div class="setting-row">
                 <span><i class="fas fa-moon" style="width:25px; color:#888;"></i> โหมดกลางคืน (Night Mode)</span>
                 <label class="switch"><input type="checkbox" id="night-switch" onchange="toggleNightMode()"><span
@@ -3981,7 +4017,11 @@
             // 6. อัปเดตข้อมูล API (ถ้ามี)
             if (id === 'payment' || id === 'usage') {
                 if (typeof updateDashboard === 'function') updateDashboard();
-                if (id === 'usage' && typeof renderBillsList === 'function') renderBillsList();
+                if (id === 'usage') {
+                    // Show skeleton first; renderBillsList replaces it when data arrives
+                    if (typeof showBillsSkeleton === 'function') showBillsSkeleton();
+                    if (typeof renderBillsList === 'function') renderBillsList();
+                }
             }
         }
 
@@ -4091,6 +4131,7 @@
                     ? `รับ +${r.reward} Pts! 🔥 ครบ ${r.streak} วัน โบนัสพิเศษ +${r.bonus}`
                     : `รับ +${r.reward} Pt แล้ว (สตรีค ${r.streak} วัน)`;
                 toast(streakMsg, 'success');
+                window.GhHaptic?.success();
                 const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
                 localStorage.setItem(`lastDailyClaim_${_taBuilding}_${_taRoom}`, _bkkToday);
                 closeModal();
@@ -4098,12 +4139,14 @@
                 const code = e?.code || e?.details?.code || '';
                 if (code === 'functions/already-exists' || /already/i.test(String(e?.message))) {
                     toast('รับพ้อยท์ของวันนี้ไปแล้วครับ 🌿', 'warning');
+                    window.GhHaptic?.warning();
                     const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
                     localStorage.setItem(`lastDailyClaim_${_taBuilding}_${_taRoom}`, _bkkToday);
                     closeModal();
                 } else {
                     console.error('claimDailyPoints failed:', e);
                     toast('บันทึกไม่สำเร็จ — ลองใหม่ครับ', 'error');
+                    window.GhHaptic?.error();
                     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
                 }
             }
@@ -4600,6 +4643,7 @@
                     _renderCleaningHistory();
                     _setCpmStatus('success', '✅ ชำระเงินยืนยันแล้ว — จองสำเร็จ');
                     toast('จองสำเร็จ ✅ ชำระเงินยืนยันแล้ว', 'success');
+                    window.GhHaptic?.success();
                     setTimeout(() => { closeCleaningPaymentModal(); goBackToService(); }, 1500);
                 } catch (err) {
                     // Payment verified but RTDB sync failed — admin won't see booking yet.
@@ -4608,6 +4652,7 @@
                     _renderCleaningHistory();
                     _setCpmStatus('error', '⚠️ ชำระแล้ว แต่ส่งคำขอไม่สำเร็จ กรุณาแจ้งแอดมิน (transRef: ' + (record.paymentTransRef || '—') + ')');
                     toast('⚠️ ชำระแล้ว แต่ส่งคำขอไม่สำเร็จ — แจ้งแอดมินด้วยเลขอ้างอิง', 'error');
+                    window.GhHaptic?.error();
                     btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'ลองส่งใหม่';
                 }
                 return;
@@ -5722,6 +5767,16 @@
             modal.classList.add('flex');
             // ล็อกหน้าจอหลักไม่ให้เลื่อนตาม (ในคอมจะไม่เวียนหัว)
             document.body.style.overflow = 'hidden';
+            // Show skeleton until first snapshot lands (or until cache renders if already populated)
+            if (!_rewardsCache.length) {
+                const list = document.getElementById('rewards-list');
+                if (list) {
+                    list.innerHTML =
+                        '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>' +
+                        '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>' +
+                        '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>';
+                }
+            }
         }
 
         // ฟังก์ชันปิด Modal
@@ -5751,9 +5806,15 @@
             if (window._gamificationDisabled) return;
             if (userPoints < cost) {
                 toast(`คะแนนไม่พอ — คุณมี ${userPoints} Pts ต้องใช้ ${cost} Pts`, 'error');
+                window.GhHaptic?.warning();
                 return;
             }
-            if (!confirm(`ยืนยันการแลก: ${rewardName}\nแต้มจะถูกหัก ${cost} Pts`)) return;
+            const ok = await window.ghConfirm(
+                `แลก "${rewardName}"? แต้มจะถูกหัก ${cost} Pts`,
+                { title: 'ยืนยันการแลก', confirmLabel: 'แลก' }
+            );
+            if (!ok) return;
+            window.GhHaptic?.tap();
 
             // Optimistic UI
             const prevPoints = userPoints;
@@ -5788,6 +5849,7 @@
                 btnElement.classList.remove('bg-[#2d8653]', 'active:scale-90');
                 btnElement.classList.add('bg-gray-300', 'cursor-not-allowed');
                 toast(`แลกสำเร็จ! คงเหลือ ${userPoints} Pts — ทีมงานจะดำเนินการให้`, 'success');
+                window.GhHaptic?.success();
             } catch (e) {
                 // Rollback optimistic update on failure
                 userPoints = prevPoints;
@@ -5796,6 +5858,7 @@
                 btnElement.innerText = "แลกใหม่";
                 console.error('redeemReward failed:', e);
                 toast('แลกไม่สำเร็จ — กรุณาลองใหม่', 'error');
+                window.GhHaptic?.error();
             }
         }
 
@@ -8107,7 +8170,45 @@
                 }
             } catch(e) {}
             document.getElementById('app-loading-splash')?.remove();
+
+            // First-run onboarding tour for new tenants. Runs once per device
+            // (gated by localStorage) and only when a real tenant is loaded.
+            if (hasRoom && window.GhTour && !window.GhTour.hasSeen('tenant_v1')) {
+                setTimeout(_startTenantTour, 800);
+            }
         }
+
+        function _startTenantTour() {
+            if (!window.GhTour) return;
+            window.GhTour.start({
+                key: 'tenant_v1',
+                steps: [
+                    {
+                        title: 'ยินดีต้อนรับสู่ Nature Haven 🌿',
+                        body: 'แอปสำหรับลูกบ้านที่รวมบิล รางวัล สิทธิประโยชน์ และข่าวสารชุมชนไว้ในที่เดียว',
+                        placement: 'center',
+                    },
+                    {
+                        target: '#main-nav-bar',
+                        title: 'เมนูหลัก 5 ส่วน',
+                        body: 'หน้าหลัก · บริการ · ชุมชน · บิล · โปรไฟล์ — ใช้แตะสลับได้ตลอด',
+                        placement: 'top',
+                    },
+                    {
+                        target: '#main-nav-bar > .nav-item:nth-child(4)',
+                        title: 'ดูบิลรายเดือน',
+                        body: 'แตะ "บิล" เพื่อดูยอดที่ต้องชำระ ประวัติการจ่าย และอัพโหลดสลิปได้ที่นี่',
+                        placement: 'top',
+                    },
+                    {
+                        title: 'พร้อมใช้งานแล้ว 🌱',
+                        body: 'ถ้ามีคำถามหรือพบปัญหา แจ้งได้ในเมนู "บริการ" — เริ่มต้นได้เลย',
+                        placement: 'center',
+                    },
+                ],
+            });
+        }
+        window._startTenantTour = _startTenantTour;  // exposed for debug / reset
 
         // ---- HOME ----
         function renderHomePage() {
@@ -8121,6 +8222,26 @@
         // ---- BILLS ----
         const THAI_MONTHS_SHORT = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
+        /** Show loading skeleton for bills page. Replaced by renderBillsList() when data lands.
+         *  Idempotent: safe to call multiple times. Skips if data is already rendered. */
+        function showBillsSkeleton() {
+            if (_taBills && _taBills.length > 0) return;  // already have data, skip
+            const section = document.getElementById('bills-history-section');
+            const list = document.getElementById('bills-history-list');
+            const amt = document.getElementById('current-bill-amount');
+            const label = document.getElementById('bill-label');
+            if (section) section.style.display = '';
+            if (list) {
+                list.innerHTML =
+                    '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>' +
+                    '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>' +
+                    '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>';
+            }
+            if (amt)   amt.textContent = '฿ —';
+            if (label) label.innerHTML = '<span class="gh-skeleton gh-skeleton--text gh-skeleton--text-half" style="display:inline-block;height:1em;"></span>';
+        }
+        window.showBillsSkeleton = showBillsSkeleton;
+
         function renderBillsList() {
             const el = document.getElementById('bills-history-list');
             const section = document.getElementById('bills-history-section');
@@ -8131,11 +8252,20 @@
             }
             if (!el) return;
             if (!_taBills.length) {
-                // No bills yet — hide the section entirely (no spinner, no empty card)
-                if (section) section.style.display = 'none';
-                el.innerHTML = '';
+                // No bills yet — show empty state (replaces older hide-section behavior)
+                if (section) section.style.display = '';
+                if (window.GhEmptyState) {
+                    el.innerHTML = window.GhEmptyState.html('bills', {
+                        title: 'ยังไม่มีบิล',
+                        text: 'เมื่อมีบิลใหม่จะแสดงที่นี่ — รออดมินส่งให้',
+                    });
+                } else {
+                    el.innerHTML = '';
+                }
                 const amtEl = document.getElementById('current-bill-amount');
                 if (amtEl) amtEl.textContent = '฿ —';
+                const labelEl = document.getElementById('bill-label');
+                if (labelEl) labelEl.textContent = 'ยังไม่มีบิล';
                 return;
             }
             if (section) section.style.display = '';
@@ -8996,11 +9126,13 @@
                 btn.style.opacity = '.5';
                 if (status) status.textContent = '🌿 ขอบคุณที่อ่านจนจบ';
                 if (typeof showToast === 'function') showToast(`🎁 ได้รับ +${a.reward} pts!`, 'success');
+                window.GhHaptic?.success();
             } catch(e) {
                 console.error('claim wellness:', e);
                 if (status) status.textContent = '❌ บันทึกไม่สำเร็จ — ลองใหม่อีกครั้ง';
                 btn.disabled = false;
                 btn.innerHTML = `🎁 อ่านจบ — รับ ${a.reward} pts`;
+                window.GhHaptic?.error();
             }
         }
         if (typeof window !== 'undefined') {

@@ -362,7 +362,7 @@ function _pushLiffStatusToTenant(lineUserId, status, reason) {
 // (name, phone, lease dates) and decide approval manually.
 function viewLiffTenantInfo(building, roomId) {
   if (typeof openTenantModal !== 'function') {
-    alert('Tenant modal not available — try opening from the Property/Tenant page');
+    window.ghAlert('ไม่พบ Tenant modal — ลองเปิดจากหน้า Property หรือ Tenant', { title: 'ใช้งานไม่ได้' });
     return;
   }
   openTenantModal(building, roomId);
@@ -402,7 +402,10 @@ async function approveLiffLink(lineUserId){
   if (building && room) {
     const exists = await _tenantRecordExists(building, room);
     if (exists === false) {
-      const proceed = confirm(`⚠️ ยังไม่มีข้อมูลลูกบ้านในระบบสำหรับห้อง ${room} (ตึก ${building})\n\nควรเพิ่มข้อมูลลูกบ้านในแท็บ "ผู้เช่า" ก่อนอนุมัติ\n\nต้องการอนุมัติต่อหรือไม่?`);
+      const proceed = await window.ghConfirm(
+        `ยังไม่มีข้อมูลลูกบ้านในระบบสำหรับห้อง ${room} (ตึก ${building}) — ควรเพิ่มข้อมูลในแท็บ "ผู้เช่า" ก่อนอนุมัติ. ต้องการอนุมัติต่อหรือไม่?`,
+        { title: '⚠️ ยังไม่มีข้อมูลลูกบ้าน', confirmLabel: 'อนุมัติต่อ' }
+      );
       if (!proceed) return;
     }
   }
@@ -412,7 +415,7 @@ async function approveLiffLink(lineUserId){
       status: 'approved', approvedBy: adminName, approvedAt: new Date().toISOString()
     }, { merge: true });
     _pushLiffStatusToTenant(lineUserId, 'approved');
-  } catch(e) { alert('❌ ' + e.message); }
+  } catch(e) { window.ghAlert(e.message, { title: 'ขัดข้อง' }); }
 }
 
 async function rejectLiffLink(lineUserId){
@@ -432,7 +435,7 @@ async function rejectLiffLink(lineUserId){
       rejectionReason: finalReason
     }, { merge: true });
     _pushLiffStatusToTenant(lineUserId, 'rejected', finalReason);
-  } catch(e) { alert('❌ ' + e.message); }
+  } catch(e) { window.ghAlert(e.message, { title: 'ขัดข้อง' }); }
 }
 
 // ===== PEOPLE MANAGEMENT TAB SWITCHING =====

@@ -1618,8 +1618,13 @@ function savePayEdit(){
 
 function resetRoomPayment(){
   if(!payModalRoomId)return;
-  if(!confirm(`ยืนยันรีเซ็ตห้อง ${payModalRoomId} กลับเป็น "ยังไม่ชำระ"?\n(ข้อมูลใบเสร็จจะถูกลบออก)`))return;
+  window.ghConfirm(`รีเซ็ตห้อง ${payModalRoomId} กลับเป็น "ยังไม่ชำระ"? ข้อมูลใบเสร็จจะถูกลบออก`, { danger: true }).then(ok => {
+    if (!ok) return;
+    _doResetRoomPayment();
+  });
+}
 
+function _doResetRoomPayment() {
   // Primary: flip RTDB bill back to pending
   if(window.BillStore && window.firebaseUpdate && window.firebaseRef && window.firebaseDatabase){
     try {

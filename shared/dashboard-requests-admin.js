@@ -803,7 +803,13 @@ function closePhotosModal(){
 }
 
 function deleteMaintenanceRequest(id){
-  if(!confirm('ลบรายการนี้?'))return;
+  window.ghConfirm('ลบรายการแจ้งซ่อมนี้?', { danger: true }).then(ok => {
+    if (!ok) return;
+    _doDeleteMaintenance(id);
+  });
+}
+
+function _doDeleteMaintenance(id) {
   const mx=loadMaintenance();
   const item=mx.find(x=>x.id===id);
   saveMaintenance(mx.filter(x=>x.id!==id));
@@ -1020,7 +1026,8 @@ async function startCleaningCampaign(){
   }
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  if(!confirm(`เริ่มรอบเก็บคำขอ Standard Clean สำหรับ ${currentMonth}?\nทุกห้อง Nest จะเห็นป๊อปอัพให้จอง`)) return;
+  const ok = await window.ghConfirm(`เริ่มรอบเก็บคำขอ Standard Clean สำหรับ ${currentMonth}? ทุกห้อง Nest จะเห็นป๊อปอัพให้จอง`, { title: 'เริ่มรอบ', confirmLabel: 'เริ่มรอบ' });
+  if (!ok) return;
   try {
     const fs = window.firebase.firestoreFunctions;
     const db = window.firebase.firestore();
@@ -1032,7 +1039,8 @@ async function startCleaningCampaign(){
   }
 }
 async function stopCleaningCampaign(){
-  if(!confirm('หยุดรอบเก็บคำขอ? ลูกบ้านจะไม่เห็นป๊อปอัพอีก')) return;
+  const ok = await window.ghConfirm('หยุดรอบเก็บคำขอ? ลูกบ้านจะไม่เห็นป๊อปอัพอีก', { danger: true });
+  if (!ok) return;
   try {
     const fs = window.firebase.firestoreFunctions;
     const db = window.firebase.firestore();
@@ -1279,7 +1287,13 @@ function updateHousekeepingStatus(id,newStatus){
 }
 
 function deleteHousekeepingRequest(id){
-  if(!confirm('ลบรายการนี้?'))return;
+  window.ghConfirm('ลบรายการทำความสะอาดนี้?', { danger: true }).then(ok => {
+    if (!ok) return;
+    _doDeleteHousekeeping(id);
+  });
+}
+
+function _doDeleteHousekeeping(id) {
   const hk=loadHousekeeping();
   const item=hk.find(x=>x.id===id);
   saveHousekeeping(hk.filter(x=>x.id!==id));

@@ -270,11 +270,11 @@ window.submitManualVerify = async function(){
   const reason = document.getElementById('mv-reason').value.trim();
   const bankConfirmed = document.getElementById('mv-bank-confirmed')?.checked;
   if(!bankConfirmed){
-    alert('⚠️ ต้องเช็ค bank statement จริงก่อน แล้วกด ✅ ยืนยัน\nสลิปอาจปลอมได้ — อย่าเชื่อแค่ภาพสลิป');
+    window.ghAlert('ต้องเช็ค bank statement จริงก่อน แล้วกด ✅ ยืนยัน — สลิปอาจปลอมได้ อย่าเชื่อแค่ภาพสลิป', { title: '⚠️ ตรวจ bank statement ก่อน' });
     return;
   }
   if(!building || !room || !amount || amount <= 0 || !reason){
-    alert('กรุณากรอก: ตึก, ห้อง, จำนวนเงิน, เหตุผล');
+    window.ghAlert('กรุณากรอก: ตึก, ห้อง, จำนวนเงิน, เหตุผล', { title: 'ข้อมูลไม่ครบ' });
     return;
   }
   const adminName = window.SecurityUtils?.getSecureSession()?.name || 'Admin';
@@ -296,7 +296,7 @@ window.submitManualVerify = async function(){
     overrideReason: reason
   };
   if(!window.firebase?.firestore){
-    alert('Firebase ยังไม่พร้อม — ไม่สามารถบันทึกได้');
+    window.ghAlert('Firebase ยังไม่พร้อม — ไม่สามารถบันทึกได้', { title: 'ขัดข้อง' });
     return;
   }
   try {
@@ -317,9 +317,9 @@ window.submitManualVerify = async function(){
     };
     savePS(ps);
     document.getElementById('mv-modal').remove();
-    alert('✅ บันทึกการชำระเรียบร้อย');
+    window.ghAlert('บันทึกการชำระเรียบร้อย', { title: '✅ สำเร็จ' });
   } catch(e) {
-    alert('❌ บันทึกไม่สำเร็จ: ' + e.message);
+    window.ghAlert('บันทึกไม่สำเร็จ: ' + e.message, { title: 'ขัดข้อง' });
   }
 };
 

@@ -440,13 +440,15 @@ function saveTenant(){
 }
 
 function deleteTenant(roomId){
-  if(!confirm(`ยืนยันการลบผู้เช่าห้อง ${roomId}?`))return;
-  const tenants=loadTenants();
-  delete tenants[roomId];
-  saveTenants(tenants);
-  closePayModal();
-  renderTenantPage();
-  updateDashboardLive();
+  window.ghConfirm(`ลบผู้เช่าห้อง ${roomId}?`, { danger: true }).then(ok => {
+    if (!ok) return;
+    const tenants=loadTenants();
+    delete tenants[roomId];
+    saveTenants(tenants);
+    closePayModal();
+    renderTenantPage();
+    updateDashboardLive();
+  });
 }
 
 // ===== EXPENSE MANAGEMENT =====
@@ -548,9 +550,11 @@ function addExpense(){
 }
 
 function deleteExpense(id){
-  if(!confirm('ยืนยันการลบรายการนี้?'))return;
-  saveExpenses(loadExpenses().filter(e=>e.id!==id));
-  renderExpensePage();
+  window.ghConfirm('ลบรายการรายจ่ายนี้?', { danger: true }).then(ok => {
+    if (!ok) return;
+    saveExpenses(loadExpenses().filter(e=>e.id!==id));
+    renderExpensePage();
+  });
 }
 
 // ===== TENANT PORTAL MAINTENANCE =====

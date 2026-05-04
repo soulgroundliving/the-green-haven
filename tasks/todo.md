@@ -4,6 +4,281 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
+# UI/UX Foundation Migration — Phase 1 (audit 2026-05-04)
+
+## Context
+Senior UI/UX audit พบว่า design system มี (`shared/brand.css`) แต่ใช้จริงแค่ `booking.html` (19 token). 4 surface ใหญ่ (`dashboard.html`, `tenant_app.html`, `login.html`, `tax-filing.html`) ยัง bypass token + hardcode hex 1083 จุดรวม. User เลือก "เอา palette ของ tenant_app เป็น brand ใหม่" (teal-based แทน emerald/shamrock).
+
+## Approach
+Phase 1 = foundation only (ไม่ใช่ visual overhaul). Migrate token + เพิ่ม a11y พื้นฐาน + สร้าง component library กลางที่ทุก surface เรียกได้. Visual ไม่ควรเปลี่ยน drastically — แค่ cleanup + standardize.
+
+## Step 1 — Migrate brand.css palette (teal) ⏳
+- [ ] เก็บ token จาก [tenant_app.html:178-200](tenant_app.html:178) เป็น brand SoT
+- [ ] [shared/brand.css:42-65](shared/brand.css:42): swap emerald `#2d8653` → teal `#0f766e` family
+  - `--brand-primary: #0f766e` (was #2d8653)
+  - `--brand-primary-dark: #0d5c4e` (was #1f6b3f)
+  - `--brand-primary-soft: #ecfdf5` (was #d4e8dc)
+  - `--brand-primary-wash: #f2f7f5` (was #f0f7f2)
+  - เพิ่ม `--brand-primary-light: #14b8a6` (ใหม่ — สำหรับ success/highlight)
+- [ ] อัพเดท `--ok` ให้ตรงกับ teal family
+- [ ] **Why:** ลด parallel system. tenant_app comment เขียนว่า "Unified with dashboard brand" อยู่แล้ว → token แท้จริงตรงกัน
+- [ ] Verification: ดู booking.html บน vercel — สีน่าจะเปลี่ยน (booking ใช้ token จริง)
+
+## Step 2 — Add `:focus-visible` global ring
+- [ ] [shared/brand.css](shared/brand.css): เพิ่ม rule ครอบ `button, a, input, select, textarea, [tabindex], [role="button"]`
+- [ ] ใช้ 2px outline + offset 2px + token color `--brand-primary`
+- [ ] **Why:** Keyboard user มองไม่เห็นว่ากำลังอยู่ตรงไหน — quick win 1 rule แต่แก้ทุก surface
+- [ ] Verification: tab ผ่านปุ่มใน booking.html / tenant_app บน vercel — มีกรอบเขียวขึ้น
+
+## Step 3 — Component library กลาง (`shared/components.css`)
+- [ ] สร้างไฟล์ใหม่ `shared/components.css` — load หลัง brand.css
+- [ ] `.gh-btn` family: `--primary`, `--ghost`, `--danger`, `--icon`, `--small/--large` size
+- [ ] `.gh-card` + `.gh-card--raised` + `.gh-card--inset`
+- [ ] `.gh-input` + `.gh-input--invalid` + `.gh-label` + `.gh-helper-text` + `.gh-required-mark`
+- [ ] `.gh-badge` family: `--success`, `--warning`, `--danger`, `--info`, `--neutral`
+- [ ] `.gh-skeleton` + animation (สำหรับ loading state)
+- [ ] **Why:** ทุก surface ใหม่ใช้ class นี้ — surface เก่า migrate ทีละหน้า
+- [ ] **Constraint:** token-only, ZERO hex inside
+
+## Step 4 — Modal helper (`shared/modal.js`)
+- [ ] สร้าง module เดียว — wrapper รอบ `<dialog>` element หรือ overlay div
+- [ ] รับผิดชอบ: ESC-to-close, focus trap, backdrop click, aria-modal, aria-labelledby, scroll lock
+- [ ] API: `Modal.open({ title, body, actions, onClose })` + `.close()`
+- [ ] **Why:** 5+ modal pattern ทุกวันนี้ ไม่มีตัวไหนมี ESC/focus trap. Helper เดียวแก้ทั้งโปรเจ็ค
+- [ ] **Migration path:** ไม่ rewrite modal เก่าใน step นี้ — แค่สร้าง helper. Modal เก่า migrate ใน Phase 2
+
+## Step 5 — Migrate dashboard.html (token-ize)
+- [ ] เป้า: ลด hardcoded hex จาก 342 → < 50 (เหลือไว้แค่ chart color, status indicator เฉพาะ)
+- [ ] swap `#2d8653` → `var(--brand-primary)` (ทั้งไฟล์ — ถูกอยู่แล้วเพราะ teal เป็น primary ใหม่ ไม่ต้องลำบาก)
+- [ ] swap `#1a5c38` → `var(--brand-primary-dark)`
+- [ ] swap `#e8f5e9` → `var(--brand-primary-soft)`
+- [ ] อ่านตาราง breakpoint [1661-1718](dashboard.html:1661): font 11-12px ที่ <900px → ขยายเป็น 13px ขั้นต่ำ
+- [ ] **Why:** ZERO token + 342 hex = visual debt สูงสุดในโปรเจ็ค
+- [ ] Verification: เปิด dashboard บน vercel ดูทั้ง 10 หน้า — visual diff ควรน้อย (สี close enough)
+
+## Step 6 — Migrate login.html
+- [ ] [login.html:23,41](login.html:23): hardcoded gradient → token
+- [ ] เอา `font-family: 'Sarabun'` inline 30+ ออก — inherit จาก html
+- [ ] เพิ่ม `aria-label` บน 3 role button + password toggle (`aria-pressed`)
+- [ ] เพิ่ม `aria-describedby` link error message ↔ input
+- [ ] Spinner: `role="status" aria-live="polite"`
+- [ ] **Why:** ZERO aria + bypass brand. Auth gate ของ admin ต้อง accessible
+
+## Step 7 — Migrate tax-filing.html
+- [ ] [tax-filing.html:36-59](tax-filing.html:36): ลบ duplicate `:root` ทั้ง block — brand.css cover แล้ว
+- [ ] เพิ่ม `@media (max-width: 768px)`: sidebar collapse, body margin-left: 0, KPI grid 2-col
+- [ ] เพิ่ม `aria-label` บน sidebar button + `<canvas>` `aria-label` หรือ `<figcaption>`
+- [ ] **Why:** mobile broken + zero a11y สำหรับบัญชีที่ใช้ tablet
+
+## Step 8 — Spot fixes tenant_app.html
+- [ ] [3786-3801](tenant_app.html:3786): bottom nav `<div onclick>` → `<nav role="navigation">` + `<button aria-label>`
+- [ ] [1192](tenant_app.html:1192): `.btn-receipt` padding 13px → 16px (44px target)
+- [ ] เพิ่ม global ESC handler ผูกกับ Modal.close() ของ shared/modal.js (จาก Step 4)
+- [ ] เพิ่ม `@media print` สำหรับ receipt section — ตัด nav, ตัด button
+- [ ] **Why:** spot fix red flags. ไม่ rewrite tenant_app ทั้งหมด — ของใหญ่เกินไป (10k LOC) เก็บไว้ Phase 2
+
+## Phase 2 (deferred — confirm later)
+- Loading skeleton ในหน้า bills/rewards/insights
+- Empty state illustrations (muji-style)
+- Confirmation dialog แทน native `confirm()` ใน dashboard
+- Migrate modal เก่าใน tenant_app + dashboard เข้า Modal helper
+- Dark mode
+
+## Verification protocol (ทุกขั้น)
+1. `npm run tailwind:build` (ถ้าแตะ Tailwind input)
+2. `git push origin main` → vercel auto-deploy
+3. เปิด https://the-green-haven.vercel.app บน Chrome + iOS Safari mobile
+4. Smoke test surface ที่แก้ + 1 surface ที่ไม่ได้แก้ (regression check)
+5. `npm run verify:memory` ก่อน commit
+
+## Out of scope
+- ไม่ rewrite tenant_app.html ทั้งไฟล์ (10k LOC)
+- ไม่เปลี่ยน visual identity (สียังเป็น green family)
+- ไม่ใส่ illustration ใหม่ (รอ Phase 2)
+- ไม่แตะ payment.html (legacy, มี SecurityUtils session แยก)
+
+## Review (shipped 2026-05-04)
+
+### Steps completed (8/8)
+- [x] Step 1 — brand.css palette swap to teal (`#0f766e` family) + new `--brand-primary-light: #14b8a6`
+- [x] Step 2 — `:focus-visible` global ring (2px outline, brand color, kbd-only)
+- [x] Step 3 — `shared/components.css` ใหม่ — `.gh-btn`, `.gh-card`, `.gh-input`, `.gh-badge`, `.gh-skeleton`, `.gh-modal-*` (token-only, ZERO hex)
+- [x] Step 4 — `shared/modal.js` UMD-ish helper — ESC-to-close, focus trap, backdrop click, aria-modal, scroll lock, restore-focus, `GhModal.open/.confirm/.alert`
+- [x] Step 5 — dashboard.html — `:root` aliased to brand tokens, 10 high-frequency hex → token, 101 `font-family: 'Sarabun'` → `var(--font-brand)`
+- [x] Step 6 — login.html — gradient + 35 hex → token, 8 instances Sarabun → brand font, 18 ARIA additions (radiogroup, alert/status live regions, label-for, password toggle aria-pressed, inputmode)
+- [x] Step 7 — tax-filing.html — `:root` aliased, hamburger toggle + backdrop + JS handlers (`toggle-sidebar`, `close-sidebar`), canvas `aria-label`
+- [x] Step 8 — tenant_app.html — bottom nav `<div onclick>` → `<nav role="navigation"><button>`, `aria-current="page"` flip in showPage(), `.btn-receipt` 13px→14px+min-height 44px, `@media print` for receipts
+
+### Stats (final grep counts)
+
+| Surface       | brand tokens | hardcoded hex |   ARIA |
+|---------------|-------------:|--------------:|-------:|
+| tenant_app    |  2 → 2       |  601 → 605¹   |  9 → **25** |
+| dashboard     |  **0 → 5**   |  **342 → 258** |  9 → 9 |
+| booking (gold)|  19 → 19     |    6 → 6      |  3 → 3 |
+| login         |  **0 → 14**  |   **35 → 15** |  **0 → 18** |
+| tax-filing    |  **0 → 5**   |  **105 → 93** |  **0 → 7** |
+| **total**     | **21 → 45**  | **1089 → 977** | **21 → 62** |
+
+¹ tenant_app uptick: print stylesheet adds `#fff #999 #ccc` (intentionally hardcoded for print neutrals)
+
+### Verification
+- [x] `node -c shared/modal.js` → OK
+- [x] `npm run verify:memory` → 22 docs, 212 rows, 0 fails (ALL GREEN)
+- [ ] `git push origin main` → vercel deploy → smoke test 5 surfaces
+- [ ] iOS Safari mobile test for tax-filing hamburger
+- [ ] Test print preview ของ receipt บน tenant_app
+
+### Phase 2 — shipped 2026-05-04 (same session)
+
+- [x] **Step 1** — `shared/modal-a11y-bridge.js` (UMD, ~150 LOC). ESC-to-close + backdrop click + focus restore + auto-focus first focusable. Loaded into 5 surfaces (tenant_app, dashboard, login, tax-filing, booking) — applies to ALL existing `[role="dialog"][aria-modal="true"]` modals without rewrites
+- [x] **Step 2** — `window.ghConfirm()` helper added to `shared/modal.js`. Migrated 6 critical destructive confirms: dashboard logout (dashboard.html:527), delete contract file, clear owner info, end lease, delete lease, clear payment notifications. Pattern: `ghConfirm('msg', { danger: true }).then(ok => { if (!ok) return; ... })`. ~14 lower-priority confirms left in place for follow-up
+- [x] **Step 3** — `showBillsSkeleton()` in tenant_app.html (~20 LOC). Wired into `showPage('usage')` so users see 3 skeleton cards while bills load instead of blank section
+- [x] **Step 4** — `shared/empty-states.js` (UMD) + `.gh-empty-state*` classes. 5 stock SVG illustrations (bills, marketplace, messages, tasks, generic — single-stroke muji line art). 3 spots upgraded in tenant_app: community feed, marketplace, rewards modal. Replaces emoji + plain text with proper illustration + title + helper text + optional CTA
+- [x] **Step 5** — Dark mode tokens in `shared/brand.css`. Auto via `prefers-color-scheme: dark` + manual opt-in via `<html data-theme="dark">`. tenant_app.html `:root` aliased to brand tokens so dark mode propagates without rewriting individual styles. ZERO visual change in light mode (intentional)
+
+### Files created in Phase 2
+- `shared/modal-a11y-bridge.js` (legacy modal upgrade, no rewrites needed)
+- `shared/empty-states.js` (5 muji SVG illustrations + JS API)
+
+### Files modified in Phase 2
+- `shared/modal.js` (+ `window.ghConfirm` helper)
+- `shared/components.css` (+ `.gh-empty-state*` family)
+- `shared/brand.css` (+ dark mode token block)
+- `shared/dashboard-extra.js` (5 confirm migrations)
+- `dashboard.html` (logout confirm + script loads)
+- `tenant_app.html` (script loads + skeleton + 3 empty states + brand alias for dark mode)
+- `login.html`, `tax-filing.html`, `booking.html` (script loads)
+
+### Phase 2 Verification
+- [x] `node -c` on 4 modified JS files → ALL OK
+- [x] `npm run verify:memory` → 22 docs, 212 rows, 0 fails (ALL GREEN)
+- [ ] `git push origin main` → vercel deploy → verify on https://the-green-haven.vercel.app
+- [ ] Test dark mode by setting `prefers-color-scheme: dark` in DevTools
+- [ ] Test ESC-to-close on quiz-modal, daily-modal, rewards-modal in tenant_app
+- [ ] Test `ghConfirm` flow on dashboard logout
+
+### Phase 3 — shipped 2026-05-04 (same session)
+
+- [x] **Step 1** — Dark mode toggle UI. New `shared/theme-toggle.js` (UMD) — auto/light/dark cycling, persists in `localStorage.gh_theme`, applies before first paint to avoid FOUC. Loaded into 5 surfaces. Theme toggle button added to: tenant_app Settings page (between Theme + Night Mode rows) and dashboard sidebar footer (icon-only variant). New `.gh-theme-toggle` + `.gh-theme-toggle--icon` classes in components.css. Icons: 🌓 auto / ☀️ light / 🌙 dark
+- [x] **Step 2** — Migrated 12 destructive `confirm()` → `ghConfirm()`:
+  - `dashboard-content-features.js` × 1 (deleteAnnouncement)
+  - `dashboard-extra.js` × 8 (removeOwnerLogo, removeApartmentLogo, removeOwnerFavicon, deleteServiceProvider, deleteEvent, deleteDocument, rejectPet, removePetApproval, deleteReward, cleanupAnonUsers, gamification toggle)
+  - `dashboard-bookings.js` × 1 (doCancelLock)
+  - `dashboard-bill.js` × 1 (resetRoomPayment)
+  - `dashboard-requests-admin.js` × 3 (deleteMaintenanceRequest, stopCleaningCampaign, deleteHousekeepingRequest)
+  - `dashboard-room-config.js` × 1 (deleteRoom)
+  - `dashboard-tenant-page.js` × 2 (deleteTenant, deleteExpense)
+  - `dashboard-wellness-content.js` × 1 (deleteWellnessArticle)
+  - **3 informational confirms left** (KYC approval, start cleaning campaign, import sample articles) — positive flows, lower priority
+- [x] **Step 3** — Bills empty state in tenant_app. Replaced "hide section when no bills" behavior with `GhEmptyState.html('bills', ...)` — shows muji line-art illustration + "ยังไม่มีบิล" title + helper text instead of blank screen
+
+### Files created in Phase 3
+- `shared/theme-toggle.js` — auto/light/dark cycling with persistence (UMD)
+
+### Files modified in Phase 3
+- `shared/components.css` (+ `.gh-theme-toggle` + `.gh-theme-toggle--icon`)
+- `tenant_app.html` (theme-toggle script load + Theme row in Settings + bills empty state)
+- `dashboard.html` (theme-toggle script load + icon button in sidebar footer)
+- `login.html`, `tax-filing.html`, `booking.html` (theme-toggle script load)
+- 8 dashboard-*.js files (12 confirm migrations)
+
+### Phase 3 Verification
+- [x] `node -c` × 12 JS files → ALL OK
+- [x] `npm run verify:memory` → 22 docs, 212 rows, 0 fails (ALL GREEN)
+- [ ] `git push origin main` → vercel deploy → verify live
+- [ ] Test theme toggle: cycle auto → light → dark → auto on tenant_app Settings + dashboard sidebar
+- [ ] Test 12 destructive flows on dashboard — confirm modal appears with red ลบ button
+- [ ] Test bills empty state for new tenant (no bills yet)
+
+### Total stats across Phase 1+2+3 (this session)
+
+| File | Created | Description |
+|------|---|---|
+| `shared/components.css` | Phase 1 | `.gh-btn` `.gh-card` `.gh-input` `.gh-badge` `.gh-skeleton` `.gh-modal-*` `.gh-empty-state*` `.gh-theme-toggle*` |
+| `shared/modal.js` | Phase 1 | `GhModal.open/.confirm/.alert` + `window.ghConfirm` |
+| `shared/modal-a11y-bridge.js` | Phase 2 | ESC + backdrop + focus restore for legacy modals (no rewrite needed) |
+| `shared/empty-states.js` | Phase 2 | 5 muji line-art SVGs + `GhEmptyState.render/html` |
+| `shared/theme-toggle.js` | Phase 3 | Auto/light/dark cycling with persistence |
+
+| Stat | Before | After |
+|---|---:|---:|
+| Brand tokens used (5 surfaces) | 21 | 45+ |
+| Hardcoded hex (5 surfaces) | 1089 | 977 |
+| ARIA attributes (5 surfaces) | 21 | 62+ |
+| `:focus-visible` ring | none | global, all interactive |
+| Modal ESC + backdrop close | 0 modals | ALL legacy + new modals |
+| `confirm()` migrations | 0 | **18** destructive calls |
+| Dark mode | none | auto + manual toggle |
+| Empty state illustrations | 0 | 4 spots |
+| Loading skeleton | none | bills page |
+| Print stylesheet | none | tenant_app receipts |
+
+### Phase 4 — shipped 2026-05-04 (same session)
+
+- [x] **Step 1** — `shared/haptics.js` (UMD, ~80 LOC). LIFF-first → Web Vibration fallback → silent on desktop. 5 patterns (tap/select/success/warning/error). Respects `prefers-reduced-motion`. Wired to 4 LIFF actions in tenant_app: claimDailyPoints (success/warning/error), redeemReward (tap+success+error), claimWellnessReward (success/error), cleaning slip verify (success/error)
+- [x] **Step 2** — Migrated 3 remaining informational `confirm()`: doApproveKyc, startCleaningCampaign, seedWellnessStarters
+- [x] **Step 3** — `window.ghAlert()` helper added to modal.js. Migrated 13 alert() across 4 files: dashboard-extra.js (4), dashboard-payment-verify.js (5), dashboard-main.js (3 + 1 inline confirm bonus), dashboard-home-live.js (1)
+- [x] **Step 4** — Rewards modal skeleton in tenant_app. `openRewardsShop()` pre-fills 3 skeleton cards before first onSnapshot lands
+- [x] **Step 5** — `shared/onboarding-tour.js` (UMD, ~200 LOC) + CSS. Spotlight + tooltip + smart placement. 4-step tour for first-time tenant: welcome → bottom nav → bills tab → ready. Gated by `localStorage.gh_tour_done_tenant_v1`. Auto-fires 800ms after splash removal when `hasRoom`. ESC dismisses + responds to viewport resize
+
+### Files created in Phase 4
+- `shared/haptics.js` — `GhHaptic.{tap,success,warning,error,select}`
+- `shared/onboarding-tour.js` — `GhTour.{start,reset,hasSeen}`
+
+### Files modified in Phase 4
+- `shared/modal.js` (+ `window.ghAlert` helper)
+- `shared/components.css` (+ `.gh-tour-*` family)
+- `tenant_app.html` (haptics + tour scripts loaded + 4 haptic call sites + redeemReward → ghConfirm + tour trigger after splash + rewards skeleton in openRewardsShop)
+- 7 `dashboard-*.js` files (13 alert→ghAlert + 4 confirm→ghConfirm)
+
+### Phase 4 Verification
+- [x] `node -c` × 10 JS files → ALL OK
+- [x] `npm run verify:memory` → 22 docs, 212 rows, 0 fails (ALL GREEN)
+- [ ] `git push origin main` → vercel deploy → verify live
+- [ ] Test haptic on actual LIFF device (feel vibration on claim/redeem)
+- [ ] Test onboarding tour: `localStorage.removeItem('gh_tour_done_tenant_v1')` then reload → 4-step tour appears
+- [ ] Test 13 alert dialogs surface as GhModal (not native)
+
+### Cumulative stats — Phase 1+2+3+4 (this session)
+
+| File | Phase | Description |
+|------|---|---|
+| `shared/components.css` | 1 | `.gh-btn` `.gh-card` `.gh-input` `.gh-badge` `.gh-skeleton` `.gh-modal-*` `.gh-empty-state*` `.gh-theme-toggle*` `.gh-tour-*` |
+| `shared/modal.js` | 1 | `GhModal.{open,confirm,alert}` + `window.ghConfirm` + `window.ghAlert` |
+| `shared/modal-a11y-bridge.js` | 2 | ESC + backdrop + focus restore for legacy modals |
+| `shared/empty-states.js` | 2 | 5 muji line-art SVGs + `GhEmptyState.{render,html}` |
+| `shared/theme-toggle.js` | 3 | Auto/light/dark cycling with persistence |
+| `shared/haptics.js` | 4 | `GhHaptic.{tap,success,warning,error,select}` |
+| `shared/onboarding-tour.js` | 4 | `GhTour.{start,reset,hasSeen}` |
+
+| Stat | Before (start of session) | After Phase 4 |
+|---|---:|---:|
+| Brand tokens (5 surfaces) | 21 | 45+ |
+| Hardcoded hex | 1089 | 977 |
+| ARIA attributes | 21 | 62+ |
+| `:focus-visible` ring | none | global |
+| Modal ESC + backdrop | 0 modals | ALL |
+| `confirm()` migrations | 0 | **21** |
+| `alert()` migrations | 0 | **13** |
+| Dark mode | none | auto + toggle UI |
+| Empty state illustrations | 0 | 4 spots |
+| Loading skeleton | 0 | bills + rewards |
+| Print stylesheet | none | tenant_app receipts |
+| Haptic feedback | none | 4 LIFF action sites |
+| Onboarding tour | none | 4-step first-run guide |
+
+### Known follow-ups (Phase 5+)
+- Migrate dashboard's 5+ modal patterns (`.ui-modal`, `.pay-modal-overlay`, `.photo-modal`) to GhModal directly
+- Loading skeleton for insights cards on dashboard (already has loading state but could be unified to `.gh-skeleton`)
+- Thai date picker (พ.ศ./ค.ศ.) for tax forms + lease forms — biggest remaining feature gap
+- Migrate `--primary-green` to direct `--brand-primary` references (cleanup; currently aliased one level deep — no functional issue)
+- Add "quiet hours" feature for haptic (auto-suppress 22:00-07:00)
+- Onboarding tours for dashboard admin + tax-filing (separate keys, separate content)
+- Replace remaining 1 alert() in dashboard-extra.js:5295 (deeper nesting — left intentionally)
+
+---
+
 # Bill Format Customization — Tenant chooses recipient entity (personal/company)
 
 ## Goal (user approved 2026-05-04)
@@ -818,3 +1093,177 @@ Pre-deploy gate: `owner_info/main.phone` must be set in Firestore (admin sets vi
 - ❌ External payment gateway (PromptPay only)
 - ❌ Booking-flow English/multi-lang (Thai only)
 - ❌ Booking site hosted on a separate LIFF channel (reuses tenant LIFF channel; route-based separation via URL)
+
+---
+
+# Person-Centric Identity (tenantId / contractId / people SoT) — plan 2026-05-04
+
+## Vision (จาก user)
+- `tenantId` = identity ถาวรของคน — ลูกบ้านออกแล้วกลับมาเช่าใหม่ ต้องเจอข้อมูลเดิม
+- `contractId` = unique per lease — แต่ละสัญญาเช่ามี id ตัวเอง (ของถาวรไหลตามคน, ของเฉพาะกาลไหลตามสัญญา)
+- Community member ที่ไม่ใช่ลูกบ้านปัจจุบัน → ต้องมีข้อมูล + ร่วมกิจกรรมได้
+
+## Current state (verified 2026-05-04)
+- ✅ `convertBookingToTenant.js:84-98` ค้นหา prior tenancy โดย `linkedAuthUid == 'line:'+prospectLineId` — match แล้ว reuse `tenantId` (Returning tenant flag กลับมาใน response)
+- ✅ `contractId = CONTRACT_${Date.now()}_${roomId}` generate ใหม่ทุกครั้ง — pattern ถูกต้องแล้ว
+- ❌ **ไม่มี move-out archive flow** — `cleanupRoomData.js` แค่ cleanup RTDB fields ไม่ได้เก็บ identity. ถ้า admin assign ห้องให้คนใหม่ → ข้อมูลคนเก่าทับทันที
+- ❌ Schema เป็น **room-centric** — `tenants/{building}/list/{roomId}` คีย์ด้วยห้อง. คนออกจากห้อง = ข้อมูลหาย
+- ❌ Gamification points / redemptions / badges อยู่ใน `tenants.../{roomId}.gamification` → ผูกกับห้อง ไม่ใช่คน
+- ❌ Returning lookup match แค่ LINE UID — ผู้เช่าที่ admin สร้างเอง (ไม่ผ่าน LIFF) หรือมาด้วยบัญชี LINE ใหม่ ไม่เจอ
+
+## Approach: 3 phase incremental
+ไม่ refactor ทีเดียว — แต่ละ phase ตอบโจทย์ vision ทีละชั้น และใช้งานได้จริงทันที
+
+---
+
+## Phase 1 — Move-out archive (preserve identity on move-out) ⏳
+
+**Goal:** ผู้เช่าออกแล้วกลับมา → เจอข้อมูลเดิม. **Scope:** เฉพาะการ preserve. ยังไม่แตะ schema ใหญ่.
+
+### Step 1.1 — สร้าง `tenants/{building}/archive/{contractId}` subcollection
+- [ ] **Why:** preserve old tenant doc ก่อน admin assign ห้องให้คนใหม่. คีย์ด้วย `contractId` เพราะคนหนึ่งคนอาจเคยเช่าหลายสัญญา → ดูประวัติได้ครบ
+- [ ] Schema: copy fields จาก tenant doc + เพิ่ม `archivedAt`, `archivedReason` (`'moved_out'|'reassigned'|'admin_action'`), `archivedBy`
+- [ ] Rule: admin-only read/write (ไม่เปิด tenant อ่านเองในเฟสนี้)
+- [ ] Verification: grep `firestore.rules` มี match `/databases/{database}/documents/tenants/{b}/archive/{c}`
+
+### Step 1.2 — เพิ่ม CF `archiveTenantOnMoveOut` (HTTPS callable)
+- [ ] **Why:** atomic transaction — copy → archive → reset list doc ในก้อนเดียว. ห้าม do-it-from-frontend เพราะมีจังหวะที่ admin click → archive partial → bug
+- [ ] Region SE1 (Singapore — match Firestore SE3 latency tolerance + same region as other CFs)
+- [ ] Input: `{building, roomId, reason}` from authenticated admin
+- [ ] Logic:
+  - read `tenants/{b}/list/{r}` → ถ้า `tenantId` ว่างหรือไม่มี → throw `failed-precondition`
+  - คำนวณ `contractId` (ใช้ field `contractId` ใน doc ถ้ามี — ถ้าไม่มี → fallback `LEGACY_${tenantId}_${ts}`)
+  - tx: `set archive/{contractId}` + `update list/{roomId}` ให้ blank identity (`name='', tenantId='', contractId='', linkedAuthUid='', phone='', gamification=null...`) + คง `building, roomId, status='vacant'`
+  - audit log → `system/audit_logs` (admin-only)
+- [ ] **Why blank vs delete list doc:** ห้องยังต้องอยู่ใน list (admin assign ใหม่ได้) — delete แล้วต้องมา recreate
+
+### Step 1.3 — UI button ใน dashboard tenant modal
+- [ ] [shared/dashboard-tenant-modal.js](shared/dashboard-tenant-modal.js): เพิ่มปุ่ม "ย้ายออก / Archive" ใน tenant detail modal
+- [ ] confirm dialog: "ข้อมูลของ {name} จะถูกย้ายไป archive — กลับมาแก้ได้ภายหลัง" + reason dropdown
+- [ ] On confirm → call `archiveTenantOnMoveOut` → reload tenant list
+- [ ] **Why button + confirm:** admin อาจ click ผิด — confirm step block accidental archive
+
+### Step 1.4 — extend Returning lookup ใน `convertBookingToTenant.js`
+- [ ] [functions/convertBookingToTenant.js:84-98](functions/convertBookingToTenant.js#L84): ขยาย scan ให้รวม `archive` subcollection
+- [ ] Match priority: (1) live tenant doc by linkedAuthUid (เดิม) → (2) archive by linkedAuthUid → (3) archive by phone → (4) archive by lineUserId
+- [ ] **Why phone fallback:** ผู้เช่ากลับมาด้วย LINE บัญชีใหม่ (เปลี่ยนเบอร์ → re-add LINE) — phone ยังตรง
+- [ ] ถ้าเจอใน archive → กลับ tenant ออกมา + ใส่ flag `restoredFrom: 'archive'` ใน return value + log
+- [ ] เก็บ `gamification` จาก archive มาใช้ต่อ (รวมกับ Early Bird)
+
+### Step 1.5 — Verification + tests
+- [ ] เพิ่ม firestore rules test: admin can read archive, tenant cannot
+- [ ] Manual E2E ใน vercel:
+  1. Archive tenant ห้อง 13 → ตรวจ `tenants/rooms/archive/{contractId}` มีข้อมูล + `tenants/rooms/list/13` blank
+  2. Convert booking ของคนเดิม (LINE UID เดิม) → return `restoredFrom: 'archive'`, gamification carry over
+  3. Admin assign ห้องใหม่ให้คนอื่น → ของเก่าไม่หายจาก archive
+- [ ] `npm run test:rules`
+- [ ] อัพเดท `memory/firestore_schema_canonical.md` — เพิ่ม archive collection + verify section
+- [ ] อัพเดท `memory/lifecycle_tenant_ssot.md` — บันทึก move-out flow
+
+**Phase 1 deliverable:** ผู้เช่าออก → กลับมา → เจอข้อมูลเดิม. ครอบคลุม vision ส่วน "ลูกบ้านออกแล้วกลับมา"
+
+---
+
+## Phase 2 — `people/{tenantId}` as person SoT (decouple identity from room) ⏳
+
+**Goal:** ข้อมูล "คน" แยกออกจากข้อมูล "ห้อง". ตอบโจทย์ "ของถาวรไหลตามคน". **Scope ใหญ่** — กระทบ tenant_app, dashboard, gamification, rules.
+
+### Step 2.1 — Schema design
+- [ ] สร้าง `people/{tenantId}` top-level collection
+- [ ] Fields:
+  - identity: `tenantId, name, firstName, lastName, phone, email, lineUserId, lineDisplayName, idCardNumber`
+  - link: `linkedAuthUid` (LINE UID ปัจจุบัน — change ได้ถ้าเปลี่ยน LINE), `linkedAuthUidHistory[]` (audit)
+  - gamification: `gamification: {points, paymentPoints, onTimeCount, lateCount, currentStreak, longestStreak, badges, lastDailyClaim, dailyStreak, lastDailyClaimAt}` ← ย้ายจาก tenant doc
+  - status: `currentLease: {building, roomId, contractId} | null` (null = community member ที่ไม่ได้เช่าอยู่)
+  - history: `contractHistory: [{contractId, building, roomId, startDate, endDate, status}]`
+  - meta: `createdAt, updatedAt, joinedCommunityAt`
+- [ ] subcollection `redemptions/{auto}` — ย้ายจาก `tenants/.../{roomId}/redemptions`
+- [ ] subcollection `paymentHistory/{YYYY-MM}` — ย้ายจาก tenant
+- [ ] subcollection `wellnessClaimed/{articleId}` — ย้ายจาก tenant
+- [ ] **Why top-level (ไม่ใช่ subcollection):** ตอบ vision "ไม่ใช่ลูกบ้าน" — คนที่ออกจากห้องแล้วยังเป็น community member ได้ → ไม่ควรอยู่ใน `tenants/...` path
+
+### Step 2.2 — Migration script (one-shot CF)
+- [ ] `functions/migrateTenantsToPeople.js` — admin-only HTTPS, runs once
+- [ ] อ่านทุก tenant doc จาก `tenants/{rooms,nest}/list/*`
+- [ ] สำหรับแต่ละคน:
+  - ถ้ามี `tenantId` → ใช้เป็น people doc id
+  - ถ้าไม่มี → generate `LEGACY_TENANT_${roomId}_${ts}` + write กลับใส่ list doc
+  - copy gamification + identity fields → `people/{tenantId}`
+  - set `currentLease: {building, roomId, contractId}` ใน people doc
+- [ ] dry-run flag (`?dryRun=1`) — log เฉยๆ ไม่ commit
+- [ ] idempotency: ถ้า `people/{tenantId}` มีอยู่แล้ว → skip
+- [ ] **Why one-shot CF (ไม่ใช่ trigger):** migration เกิดครั้งเดียวต่อ environment — trigger จะกินค่าใช้จ่ายตลอดไป
+- [ ] เก็บ tombstone marker `system/migrations/people_v1` ที่ run แล้ว
+
+### Step 2.3 — Update read sites
+- [ ] [tenant_app.html](tenant_app.html): `_subscribeEcoPoints` + redemption read → อ่านจาก `people/{tenantId}` แทน `tenants/.../{roomId}.gamification`
+- [ ] [shared/dashboard-extra.js](shared/dashboard-extra.js): leaderboard, points display → อ่านจาก `people/*`
+- [ ] [shared/lease-config.js](shared/lease-config.js) + tenant-system.js: เมื่อ load tenant → join people doc ผ่าน tenantId
+- [ ] **Why join (ไม่ duplicate ลง tenant doc):** ป้องกัน drift. SSoT ต้องเดียว — gamification อยู่ที่ people เท่านั้น
+
+### Step 2.4 — Update write sites
+- [ ] `verifySlip.js` (rent gamification award) → write `people/{tenantId}.gamification.points` แทน tenant doc
+- [ ] `claimDailyLoginPoints.js`, `redeemReward.js`, `awardComplaintFreeMonth.js`, wellness claim → ทุกที่ที่เขียน gamification → ชี้ที่ people
+- [ ] `convertBookingToTenant.js` → สร้าง / update people doc ด้วย (ไม่ใช่แค่ tenant doc)
+- [ ] `archiveTenantOnMoveOut` (จาก Phase 1) → set `people/{tenantId}.currentLease = null` + push `contractHistory[]`
+
+### Step 2.5 — Rules
+- [ ] `firestore.rules`: เพิ่ม
+  ```
+  match /people/{tenantId} {
+    allow read: if isAdmin() ||
+      (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid);
+    allow write: if isAdmin();  // เขียนผ่าน CF only (admin SDK bypass)
+  }
+  ```
+- [ ] เพิ่ม rule tests
+
+### Step 2.6 — Verification
+- [ ] Migration dry-run → ดู log ครบทุก tenant
+- [ ] Migration live → spot-check 3 tenant
+- [ ] Tenant_app เปิดได้, points display ตรง, redemption ใช้ได้
+- [ ] Dashboard leaderboard ทำงาน
+- [ ] อัพเดท `memory/firestore_schema_canonical.md` + `lifecycle_tenant_ssot.md` + `gamification_ssot.md`
+- [ ] อัพเดท `memory/MEMORY.md` index
+
+**Phase 2 deliverable:** Identity แยกจากห้อง. คนเปลี่ยนห้องได้, ออกจากห้องได้ — ข้อมูลตามไป
+
+---
+
+## Phase 3 — Community participation for non-tenants ⏳
+
+**Goal:** คนที่ไม่ได้เช่า (เคยเป็นลูกบ้าน หรือ external community) → ร่วมกิจกรรม / ดู feed / ใช้ wellness ได้
+
+### Step 3.1 — Decide scope (ต้อง user input ก่อนทำ)
+- [ ] Q1: external community member สมัครยังไง? (LINE Add Friend → admin approve? หรือ public sign-up?)
+- [ ] Q2: feature ไหนเปิด non-tenant? (เสนอ: wellness ✅, daily-bonus ✅, marketplace ✅, community feed ✅ / bills ❌, complaints ❌, maintenance ❌, housekeeping ❌)
+- [ ] Q3: redemption rewards — non-tenant แลกได้ไหม? (เสนอ: ได้ — เก็บ point ผ่าน wellness/daily ก็ใช้ได้)
+
+### Step 3.2 — Implement (รอ Phase 3.1)
+- [ ] tenant_app.html init flow → ถ้า people doc มี `currentLease == null` → load community-only views
+- [ ] Hide tabs ที่ไม่ available (bills, complaints) สำหรับ community member
+- [ ] แต่ tab community / wellness / marketplace / rewards ยังเปิด
+
+### Step 3.3 — Optional admin UI สำหรับ approve community member
+- [ ] Dashboard tab "Community Members" — list `people/*` ที่ `currentLease == null`
+- [ ] Approve / promote เป็น tenant ภายหลังได้
+
+**Phase 3 deliverable:** Vision เต็ม — community participation ไม่ผูกกับสัญญาเช่า
+
+---
+
+## Suggested execution order
+1. **Phase 1 ก่อน** (low-risk, ไม่ refactor schema) — ส่ง value เร็ว: returning tenant ใช้งานได้ทันที. Estimate: 1 session
+2. **Phase 2** (กลาง — ต้องระวัง migration) — รอ user OK Phase 1 แล้วค่อยขยับ. Estimate: 2-3 session
+3. **Phase 3** (ต้องการ product decision ก่อน) — รอ Phase 2 settle + ตอบคำถาม Step 3.1
+
+## Out of scope (เฟสนี้)
+- ❌ Multi-room single tenant (1 คนเช่า 2 ห้องพร้อมกัน) — schema รองรับไม่ได้ตอนนี้, ต้อง refactor `currentLease` เป็น array
+- ❌ Family / household grouping (พ่อแม่ลูกร่วมห้อง) — แต่ละคนคน people doc ของตัวเอง
+- ❌ Cross-property: ถ้ามี Nature Haven 2 ในอนาคต — schema นี้ใช้ได้ แต่ต้องเพิ่ม property field
+- ❌ GDPR / data deletion request — ตอนนี้ archive ไม่มี TTL. ค่อยเพิ่มถ้ากฎหมายไทยกำหนด
+
+## Open questions (ขอ user ตอบก่อนเริ่ม)
+1. **เริ่ม Phase 1 อย่างเดียวก่อน หรือไป Phase 2 เลย?** (Phase 1 = solid foundation, Phase 2 = full vision but riskier)
+2. **`contractId` ของ legacy tenant (pre-2026-05-04) จะ generate ตอน archive หรือ ตอน migration?** เสนอ: ตอน archive (lazy — ไม่กระทบ live tenant ตอนนี้)
+3. **Community member ในอนาคตจะ sign up ทางไหน?** (ผูก Phase 3 design)

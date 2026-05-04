@@ -339,10 +339,13 @@ function deleteContractDocument(building, roomId) {
     building = currentEditBuilding || detectBuildingFromRoomId(roomId);
   }
 
-  if (!confirm('❓ คุณแน่ใจหรือว่าต้องการลบไฟล์สัญญา?\n\nการดำเนินการนี้ไม่สามารถยกเลิกได้')) {
-    return;
-  }
+  window.ghConfirm('ลบไฟล์สัญญา? การดำเนินการนี้ไม่สามารถยกเลิกได้', { danger: true }).then(ok => {
+    if (!ok) return;
+    _doDeleteContractFile(building, roomId);
+  });
+}
 
+function _doDeleteContractFile(building, roomId) {
   // Delete from TenantConfigManager
   if (currentEditTenantId && typeof TenantConfigManager !== 'undefined') {
     const tenant = TenantConfigManager.getTenant(building, currentEditTenantId);
@@ -1430,10 +1433,12 @@ window.uploadOwnerLogo = function(event) {
 };
 
 window.removeOwnerLogo = function() {
-  if (!confirm('ยืนยันการลบโลโก้?')) return;
-  _writeOwnerLogo('');
-  showToast('ลบโลโก้แล้ว', 'success');
-  renderOwnerInfoPage();
+  window.ghConfirm('ลบโลโก้บริษัท?', { danger: true }).then(ok => {
+    if (!ok) return;
+    _writeOwnerLogo('');
+    showToast('ลบโลโก้แล้ว', 'success');
+    renderOwnerInfoPage();
+  });
 };
 
 // ===== APARTMENT LOGO (used on personal-recipient bills, default brand-friendly) =====
@@ -1486,10 +1491,12 @@ window.uploadApartmentLogo = function(event) {
 };
 
 window.removeApartmentLogo = function() {
-  if (!confirm('ยืนยันการลบโลโก้อพาร์ทเม้น?')) return;
-  _writeApartmentLogo('');
-  showToast('ลบโลโก้อพาร์ทเม้นแล้ว', 'success');
-  renderOwnerInfoPage();
+  window.ghConfirm('ลบโลโก้อพาร์ทเม้น?', { danger: true }).then(ok => {
+    if (!ok) return;
+    _writeApartmentLogo('');
+    showToast('ลบโลโก้อพาร์ทเม้นแล้ว', 'success');
+    renderOwnerInfoPage();
+  });
 };
 
 function _writeOwnerFavicon(dataUrl) {
@@ -1542,11 +1549,13 @@ window.uploadOwnerFavicon = function(event) {
 };
 
 window.removeOwnerFavicon = function() {
-  if (!confirm('ยืนยันการลบ favicon?')) return;
-  _writeOwnerFavicon('');
-  OwnerConfigManager.applyFavicon('');
-  showToast('ลบ favicon แล้ว', 'success');
-  renderOwnerInfoPage();
+  window.ghConfirm('ลบ favicon?', { danger: true }).then(ok => {
+    if (!ok) return;
+    _writeOwnerFavicon('');
+    OwnerConfigManager.applyFavicon('');
+    showToast('ลบ favicon แล้ว', 'success');
+    renderOwnerInfoPage();
+  });
 };
 
 function saveOwnerInfo() {
@@ -1600,11 +1609,12 @@ function saveOwnerInfo() {
 }
 
 function clearOwnerInfo() {
-  if (confirm('คุณแน่ใจหรือว่าต้องการลบข้อมูลเจ้าของทั้งหมด?')) {
+  window.ghConfirm('ลบข้อมูลเจ้าของทั้งหมด? การดำเนินการนี้กู้คืนไม่ได้', { danger: true }).then(ok => {
+    if (!ok) return;
     OwnerConfigManager.clearOwnerInfo();
     showToast('ลบข้อมูลเรียบร้อย', 'success');
     renderOwnerInfoPage();
-  }
+  });
 }
 
 // ===== TENANT MASTER PAGE =====
@@ -2440,7 +2450,8 @@ if (typeof window !== 'undefined') {
 }
 
 function endLease(leaseId) {
-  if (confirm('คุณแน่ใจหรือว่าต้องการสิ้นสุดสัญญาเช่า?')) {
+  window.ghConfirm('สิ้นสุดสัญญาเช่านี้?', { title: 'สิ้นสุดสัญญา', confirmLabel: 'สิ้นสุดสัญญา', danger: true }).then(ok => {
+    if (!ok) return;
     const lease = LeaseAgreementManager.getLease(leaseId);
     const moveOutDate = new Date().toISOString();
 
@@ -2456,16 +2467,17 @@ function endLease(leaseId) {
       showToast('สิ้นสุดสัญญาเช่าเรียบร้อย', 'success');
       renderLeaseAgreementsPage();
     }
-  }
+  });
 }
 
 function deleteLease(leaseId) {
-  if (confirm('คุณแน่ใจหรือว่าต้องการลบสัญญาเช่า?')) {
+  window.ghConfirm('ลบสัญญาเช่านี้? ประวัติจะหายไป', { danger: true }).then(ok => {
+    if (!ok) return;
     if (LeaseAgreementManager.deleteLease(leaseId)) {
       showToast('ลบสัญญาเช่าเรียบร้อย', 'success');
       renderLeaseAgreementsPage();
     }
-  }
+  });
 }
 
 // ===== UPLOAD REAL BILLS PAGE (ADMIN ONLY) =====
@@ -2957,11 +2969,12 @@ function updatePaymentNotificationBadge(count) {
  * Clear payment notifications (admin function)
  */
 function clearPaymentNotifications() {
-  if (confirm('คุณแน่ใจที่จะล้างประวัติการชำระเงินทั้งหมด?')) {
+  window.ghConfirm('ล้างประวัติการชำระเงินทั้งหมด?', { danger: true }).then(ok => {
+    if (!ok) return;
     localStorage.setItem('payment_notifications', '[]');
     showNotification('✅ ล้างประวัติเรียบร้อย', 'success');
     loadPaymentNotifications();
-  }
+  });
 }
 
 // ===== DEBUG CONSOLE HELPERS =====
@@ -3214,7 +3227,8 @@ function editServiceProvider(id) {
 }
 
 async function deleteServiceProvider(id) {
-  if (!confirm('Are you sure you want to delete this provider?')) return;
+  const ok = await window.ghConfirm('ลบผู้ให้บริการนี้?', { danger: true });
+  if (!ok) return;
   await ServiceProvidersStore.remove(id);
   loadAndRenderServiceProviders();
   showToast('✅ Service provider deleted', 'success');
@@ -3422,7 +3436,8 @@ function editEvent(id) {
 }
 
 async function deleteEvent(id) {
-  if (!confirm('Are you sure you want to delete this event?')) return;
+  const ok = await window.ghConfirm('ลบกิจกรรมนี้?', { danger: true });
+  if (!ok) return;
   await CommunityEventsStore.remove(id);
   showToast('✅ Event deleted', 'success');
 }
@@ -3554,19 +3569,20 @@ function saveCommunityDocument() {
 }
 
 function deleteDocument(id) {
-  if (!confirm('Are you sure you want to delete this document?')) return;
-
-  // Optimistic update via in-memory cache; onSnapshot confirms
-  _docsCache = (_docsCache || JSON.parse(localStorage.getItem('community_documents_data') || '[]')).filter(d => d.id !== id);
-  if (window.firebase?.firestore) {
-    try {
-      const db = window.firebase.firestore();
-      const fs = window.firebase.firestoreFunctions;
-      fs.deleteDoc(fs.doc(fs.collection(db, 'communityDocuments'), id));
-    } catch(e) { console.warn('Firestore doc delete failed:', e); }
-  }
-  loadAndRenderCommunityDocs();
-  showToast('✅ Document deleted', 'success');
+  window.ghConfirm('ลบเอกสารนี้?', { danger: true }).then(ok => {
+    if (!ok) return;
+    // Optimistic update via in-memory cache; onSnapshot confirms
+    _docsCache = (_docsCache || JSON.parse(localStorage.getItem('community_documents_data') || '[]')).filter(d => d.id !== id);
+    if (window.firebase?.firestore) {
+      try {
+        const db = window.firebase.firestore();
+        const fs = window.firebase.firestoreFunctions;
+        fs.deleteDoc(fs.doc(fs.collection(db, 'communityDocuments'), id));
+      } catch(e) { console.warn('Firestore doc delete failed:', e); }
+    }
+    loadAndRenderCommunityDocs();
+    showToast('✅ Document deleted', 'success');
+  });
 }
 
 // ===== PET REGISTRATION APPROVALS =====
@@ -3702,15 +3718,19 @@ function approvePet(building, room, id) {
 }
 
 function rejectPet(building, room, id) {
-  if (!confirm('Are you sure you want to reject this pet registration?')) return;
-  _writePetToFirestore(building, room, id, { status: 'rejected', rejectionDate: new Date().toISOString() });
-  showToast('✅ Pet rejected', 'success');
+  window.ghConfirm('ปฏิเสธการขึ้นทะเบียนสัตว์เลี้ยงนี้?', { danger: true }).then(ok => {
+    if (!ok) return;
+    _writePetToFirestore(building, room, id, { status: 'rejected', rejectionDate: new Date().toISOString() });
+    showToast('✅ Pet rejected', 'success');
+  });
 }
 
 function removePetApproval(building, room, id) {
-  if (!confirm('Are you sure you want to remove this pet registration?')) return;
-  _deletePetFromFirestore(building, room, id);
-  showToast('✅ Pet registration removed', 'success');
+  window.ghConfirm('ลบการขึ้นทะเบียนสัตว์เลี้ยงนี้?', { danger: true }).then(ok => {
+    if (!ok) return;
+    _deletePetFromFirestore(building, room, id);
+    showToast('✅ Pet registration removed', 'success');
+  });
 }
 
 // ===== LEASE RENEWAL ALERTS SETTINGS =====
@@ -4101,7 +4121,8 @@ async function toggleGamification() {
   const msg = goingLive
     ? 'เปิด Gamification ให้ลูกบ้าน Nest เห็น daily modal, badges, rewards?\nการเปลี่ยนแปลงมีผลทันที'
     : 'ปิด Gamification? ลูกบ้านจะเห็น Coming Soon badges อีกครั้ง';
-  if (!confirm(msg)) return;
+  const ok = await window.ghConfirm(msg, { danger: !goingLive });
+  if (!ok) return;
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
     if (typeof showToast === 'function') showToast('Firestore ไม่พร้อม', 'error');
     return;
@@ -4347,11 +4368,11 @@ async function saveReward() {
   const note = document.getElementById('rewardEditNote').value.trim();
   const active = document.getElementById('rewardEditActive').checked;
   if (!name || !cost || cost < 1) {
-    alert('Name and cost (>0) are required');
+    window.ghAlert('กรุณากรอกชื่อและคะแนน (>0)', { title: 'ข้อมูลไม่ครบ' });
     return;
   }
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-    alert('Firestore unavailable');
+    window.ghAlert('Firestore ไม่พร้อมใช้งาน', { title: 'ขัดข้อง' });
     return;
   }
   const fs = window.firebase.firestoreFunctions;
@@ -4369,19 +4390,20 @@ async function saveReward() {
     }
     closeRewardEdit();
   } catch (e) {
-    alert('Save failed: ' + e.message);
+    window.ghAlert('บันทึกไม่สำเร็จ: ' + e.message, { title: 'ขัดข้อง' });
   }
 }
 
 async function deleteReward(rewardId, rewardName) {
-  if (!confirm(`Delete reward "${rewardName}"? This is permanent.`)) return;
+  const ok = await window.ghConfirm(`ลบของรางวัล "${rewardName}"? การดำเนินการนี้กู้คืนไม่ได้`, { danger: true });
+  if (!ok) return;
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
   try {
     await fs.deleteDoc(fs.doc(db, 'rewards', rewardId));
   } catch (e) {
-    alert('Delete failed: ' + e.message);
+    window.ghAlert('ลบไม่สำเร็จ: ' + e.message, { title: 'ขัดข้อง' });
   }
 }
 
@@ -6318,7 +6340,8 @@ window.grantAdminRole = grantAdminRole;
 async function cleanupAnonUsers() {
   const out = document.getElementById('ins-anon-output');
   if (!out) return;
-  if (!confirm('ลบ user records anon ทั้งหมด? (ผู้ที่ link LINE แล้วไม่กระทบ — ลบเฉพาะ guest ที่ไม่เคย link)')) return;
+  const ok = await window.ghConfirm('ลบ user records anon ทั้งหมด? ผู้ที่ link LINE แล้วไม่กระทบ — ลบเฉพาะ guest ที่ไม่เคย link', { danger: true });
+  if (!ok) return;
   out.innerHTML = '⏳ กำลังลบ...';
   try {
     const authInstance = window.firebaseAuth || window.auth;

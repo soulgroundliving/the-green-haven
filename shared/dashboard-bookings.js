@@ -274,7 +274,8 @@
 
   // ── Action: approve KYC ───────────────────────────────────────────────────
   async function doApproveKyc(b) {
-    if (!confirm(`อนุมัติ KYC สำหรับ ${b.prospectName} (${b.building}/${b.roomId})?`)) return;
+    const ok = await window.ghConfirm(`อนุมัติ KYC สำหรับ ${b.prospectName} (${b.building}/${b.roomId})?`, { title: 'ยืนยันการอนุมัติ', confirmLabel: 'อนุมัติ' });
+    if (!ok) return;
     const fs = window.firebase.firestoreFunctions;
     const db = window.firebase.firestore();
     try {
@@ -319,7 +320,8 @@
 
   // ── Action: cancel locked booking ─────────────────────────────────────────
   async function doCancelLock(b) {
-    if (!confirm(`ยกเลิกล็อคห้องของ ${b.prospectName}? (ห้องจะกลับมาว่าง)`)) return;
+    const ok = await window.ghConfirm(`ยกเลิกล็อคห้องของ ${b.prospectName}? ห้องจะกลับมาว่าง`, { danger: true });
+    if (!ok) return;
     const fs = window.firebase.firestoreFunctions;
     const db = window.firebase.firestore();
     try {

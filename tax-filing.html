@@ -9,6 +9,10 @@
   <link rel="icon" id="dynamic-favicon" href="/shared/pwa-icon.svg">
   <script>try{const _oi=JSON.parse(localStorage.getItem('owner_info')||'{}');if(_oi.faviconDataUrl)document.getElementById('dynamic-favicon').href=_oi.faviconDataUrl;}catch(_){}</script>
   <link rel="stylesheet" href="./shared/brand.css">
+  <link rel="stylesheet" href="./shared/components.css">
+  <script src="./shared/theme-toggle.js"></script>
+  <script src="./shared/modal.js"></script>
+  <script src="./shared/modal-a11y-bridge.js"></script>
   <script src="./shared/security.js"></script>
   <!-- Sentry error monitoring (must appear BEFORE sentry-init.js) -->
   <script>window.SENTRY_APP_NAME = 'tax_filing';</script>
@@ -34,32 +38,35 @@
     }
 
     :root {
-      --green-dark: #1a5c38;
-      --green: #2d8653;
-      --green-light: #4caf50;
-      --green-pale: #e8f5e9;
-      --accent: #ff8f00;
-      --accent-light: #fff8e1;
-      --blue: #1976d2;
-      --blue-pale: #e3f2fd;
-      --purple: #7b1fa2;
-      --purple-pale: #f3e5f5;
-      --red: #c62828;
-      --red-pale: #ffebee;
-      --orange: #f57c00;
-      --bg: #f4f6f8;
-      --card: #fff;
-      --text: #1a2332;
-      --text-muted: #6b7a8d;
-      --border: #e0e6ed;
-      --shadow: 0 2px 12px rgba(0,0,0,.08);
-      --shadow-hover: 0 8px 24px rgba(0,0,0,.14);
+      /* Brand aliases — single source of truth in shared/brand.css */
+      --green-dark: var(--brand-primary-dark);
+      --green:      var(--brand-primary);
+      --green-light:var(--brand-primary-light);
+      --green-pale: var(--brand-primary-soft);
+      --bg:         var(--brand-primary-wash);
+      --card:       var(--surface-card);
+      --text:       var(--ink);
+      --text-muted: var(--muted);
+      --border:     var(--stone);
+      --accent:     var(--warn);
+      --red:        var(--alert);
+
+      /* Secondary palette — tax-filing-specific (not brand) */
+      --accent-light:#fff8e1;
+      --blue:#1976d2; --blue-pale:#e3f2fd;
+      --purple:#7b1fa2; --purple-pale:#f3e5f5;
+      --red-pale:#ffebee;
+      --orange:#f57c00;
+
+      /* Layout tokens */
+      --shadow: 0 2px 12px rgba(13,92,78,.08);
+      --shadow-hover: 0 8px 24px rgba(13,92,78,.14);
       --radius: 14px;
       --radius-sm: 8px;
     }
 
     body {
-      font-family: 'Sarabun', sans-serif;
+      font-family: var(--font-brand);
       background: var(--bg);
       color: var(--text);
       margin-left: 250px;
@@ -132,7 +139,7 @@
       cursor: pointer;
       text-align: left;
       font-size: .95rem;
-      font-family: 'Sarabun', sans-serif;
+      font-family: var(--font-brand);
       transition: all .2s;
       display: flex;
       align-items: center;
@@ -167,7 +174,7 @@
       border-radius: 8px;
       cursor: pointer;
       font-size: .9rem;
-      font-family: 'Sarabun', sans-serif;
+      font-family: var(--font-brand);
       transition: all .2s;
       display: flex;
       align-items: center;
@@ -361,7 +368,7 @@
       padding: 10px 12px;
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      font-family: 'Sarabun', sans-serif;
+      font-family: var(--font-brand);
       font-size: .95rem;
       transition: all .2s;
     }
@@ -379,7 +386,7 @@
       padding: 10px 20px;
       border: none;
       border-radius: var(--radius-sm);
-      font-family: 'Sarabun', sans-serif;
+      font-family: var(--font-brand);
       font-size: .95rem;
       font-weight: 600;
       cursor: pointer;
@@ -484,12 +491,30 @@
 
     @media (max-width: 768px) {
       body { margin-left: 0; }
-      .sidebar { position: fixed; left: -250px; width: 250px; transition: left .3s; }
-      .sidebar.active { left: 0; }
+      .sidebar { position: fixed; left: -250px; width: 250px; transition: left .3s var(--ease-quiet); }
+      .sidebar.active { left: 0; box-shadow: 4px 0 20px rgba(13,92,78,.18); }
       .main { padding: 15px 20px; }
       .kpi-grid { grid-template-columns: 1fr; }
       .timeline { grid-template-columns: 1fr; }
+      .sidebar-toggle { display: inline-flex; }
+      .sidebar-backdrop {
+        position: fixed; inset: 0;
+        background: rgba(28,58,54,.4);
+        z-index: 999;
+        display: none;
+      }
+      .sidebar-backdrop.active { display: block; }
     }
+    .sidebar-toggle {
+      display: none;
+      width: 44px; height: 44px;
+      align-items: center; justify-content: center;
+      background: transparent; border: none;
+      color: #fff; font-size: 24px;
+      cursor: pointer; border-radius: var(--radius-pill);
+      margin-right: 8px;
+    }
+    .sidebar-toggle:hover { background: rgba(255,255,255,.12); }
 
     /* ===== 4E STEP 2 UTILITY CLASSES ===== */
     .page-title { margin-bottom: 20px; color: var(--text); }
@@ -518,8 +543,8 @@
     .preview-table { width: 100%; border-collapse: collapse; font-size: .82rem; font-family: -apple-system, 'Segoe UI', Sarabun, sans-serif; }
     .modal-footer { padding: 14px 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
     .modal-source { font-size: .78rem; color: var(--text-muted); }
-    .btn-cancel-sm { padding: 9px 18px; background: #eee; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: 'Sarabun', sans-serif; }
-    .btn-dl-csv { padding: 9px 18px; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-family: 'Sarabun', sans-serif; }
+    .btn-cancel-sm { padding: 9px 18px; background: #eee; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: var(--font-brand); }
+    .btn-dl-csv { padding: 9px 18px; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-family: var(--font-brand); }
   </style>
 </head>
 <body>
@@ -570,9 +595,12 @@
   </div>
 </aside>
 
+<div class="sidebar-backdrop" id="sidebarBackdrop" data-action="close-sidebar" aria-hidden="true"></div>
+
 <!-- Header -->
 <div class="header">
-  <div class="header-logo">📋</div>
+  <button class="sidebar-toggle" id="sidebarToggle" type="button" data-action="toggle-sidebar" aria-label="เปิด/ปิดเมนู" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <div class="header-logo" aria-hidden="true">📋</div>
   <div class="header-content">
     <h1>ระบบยื่นแบบประเมิน</h1>
     <small>Tax Filing System - The Green Haven</small>
@@ -615,13 +643,13 @@
       <div class="card">
         <div class="card-title">📈 เทรนด์รายได้ 12 เดือน</div>
         <div class="chart-wrap">
-          <canvas id="revenueChart"></canvas>
+          <canvas id="revenueChart" role="img" aria-label="กราฟแสดงรายได้รายเดือนของปีปัจจุบัน"></canvas>
         </div>
       </div>
       <div class="card">
         <div class="card-title">📊 Breakdown ค่าใช้จ่าย</div>
         <div class="chart-wrap">
-          <canvas id="expenseChart"></canvas>
+          <canvas id="expenseChart" role="img" aria-label="กราฟแสดงค่าใช้จ่ายรายหมวดของปีปัจจุบัน"></canvas>
         </div>
       </div>
     </div>
@@ -1815,6 +1843,18 @@
         window.location.href = el.dataset.href;
       } else if (action === 'logout') {
         handleLogout();
+      } else if (action === 'toggle-sidebar') {
+        const sb = document.getElementById('sidebar');
+        const bd = document.getElementById('sidebarBackdrop');
+        const isOpen = sb.classList.toggle('active');
+        if (bd) bd.classList.toggle('active', isOpen);
+        el.setAttribute('aria-expanded', String(isOpen));
+      } else if (action === 'close-sidebar') {
+        document.getElementById('sidebar').classList.remove('active');
+        const bd = document.getElementById('sidebarBackdrop');
+        if (bd) bd.classList.remove('active');
+        const tg = document.getElementById('sidebarToggle');
+        if (tg) tg.setAttribute('aria-expanded', 'false');
       }
     }
 

@@ -1,0 +1,573 @@
+/*
+ * Green Haven — Component library
+ * Load order: brand.css → components.css → page-local styles
+ * Constraint: token-only. ZERO hardcoded hex inside this file.
+ *
+ * Naming: .gh-{component}[--{variant}][--{size}]
+ * Example: .gh-btn, .gh-btn--ghost, .gh-btn--small
+ */
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+.gh-btn {
+  /* Reset */
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+  user-select: none;
+
+  /* Layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;            /* WCAG tap target */
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+
+  /* Type */
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: 0.01em;
+
+  /* Motion */
+  transition:
+    background var(--dur-quick) var(--ease-quiet),
+    color var(--dur-quick) var(--ease-quiet),
+    border-color var(--dur-quick) var(--ease-quiet),
+    transform var(--dur-instant) var(--ease-quiet),
+    box-shadow var(--dur-quick) var(--ease-quiet);
+}
+.gh-btn:disabled,
+.gh-btn[aria-disabled="true"] {
+  opacity: .5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.gh-btn:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: scale(0.98);
+}
+
+/* Primary — filled brand */
+.gh-btn--primary {
+  background: var(--brand-primary);
+  color: var(--surface-card);
+  box-shadow: var(--shadow-xs);
+}
+.gh-btn--primary:hover:not(:disabled) {
+  background: var(--brand-primary-dark);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Ghost — outlined */
+.gh-btn--ghost {
+  background: transparent;
+  color: var(--brand-primary);
+  border-color: var(--border-base);
+}
+.gh-btn--ghost:hover:not(:disabled) {
+  background: var(--brand-primary-soft);
+  border-color: var(--brand-primary);
+}
+
+/* Subtle — minimal, for tertiary actions */
+.gh-btn--subtle {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+.gh-btn--subtle:hover:not(:disabled) {
+  background: var(--mist);
+}
+
+/* Danger — destructive actions */
+.gh-btn--danger {
+  background: var(--alert);
+  color: var(--surface-card);
+}
+.gh-btn--danger:hover:not(:disabled) {
+  background: var(--shadow);
+}
+
+/* Icon-only (square 44×44) */
+.gh-btn--icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  min-height: 44px;
+}
+
+/* Sizes */
+.gh-btn--small {
+  min-height: 36px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-sm);
+}
+.gh-btn--large {
+  min-height: 52px;
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--text-md);
+  border-radius: var(--radius-lg);
+}
+
+/* Block / full-width */
+.gh-btn--block {
+  width: 100%;
+}
+
+/* ─── Cards ──────────────────────────────────────────────────────────────── */
+.gh-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-xs);
+}
+.gh-card--raised {
+  box-shadow: var(--shadow-md);
+  border-color: transparent;
+}
+.gh-card--inset {
+  background: var(--surface-sunken);
+  box-shadow: none;
+  border-color: transparent;
+}
+.gh-card--interactive {
+  cursor: pointer;
+  transition:
+    transform var(--dur-instant) var(--ease-quiet),
+    box-shadow var(--dur-quick) var(--ease-quiet),
+    border-color var(--dur-quick) var(--ease-quiet);
+}
+.gh-card--interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--stone);
+}
+.gh-card--interactive:active {
+  transform: scale(0.99);
+}
+
+/* ─── Inputs ─────────────────────────────────────────────────────────────── */
+.gh-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.gh-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+.gh-required-mark {
+  color: var(--alert);
+  margin-left: var(--space-1);
+}
+.gh-input,
+.gh-textarea,
+.gh-select {
+  appearance: none;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 16px;            /* iOS no-zoom */
+  color: var(--ink);
+  transition:
+    border-color var(--dur-quick) var(--ease-quiet),
+    box-shadow var(--dur-quick) var(--ease-quiet);
+}
+.gh-input::placeholder,
+.gh-textarea::placeholder {
+  color: var(--pebble);
+}
+.gh-input:hover:not(:disabled),
+.gh-textarea:hover:not(:disabled),
+.gh-select:hover:not(:disabled) {
+  border-color: var(--pebble);
+}
+.gh-input:focus,
+.gh-textarea:focus,
+.gh-select:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px var(--brand-primary-soft);
+}
+.gh-input--invalid,
+.gh-input[aria-invalid="true"],
+.gh-textarea[aria-invalid="true"],
+.gh-select[aria-invalid="true"] {
+  border-color: var(--alert);
+}
+.gh-input[aria-invalid="true"]:focus,
+.gh-textarea[aria-invalid="true"]:focus,
+.gh-select[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);  /* alert tint — only rgba allowed for transparency */
+}
+.gh-input:disabled,
+.gh-textarea:disabled,
+.gh-select:disabled {
+  background: var(--surface-sunken);
+  color: var(--pebble);
+  cursor: not-allowed;
+}
+.gh-textarea {
+  min-height: 96px;
+  padding: var(--space-3) var(--space-4);
+  resize: vertical;
+  line-height: var(--leading-normal);
+}
+.gh-helper-text {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  line-height: var(--leading-normal);
+}
+.gh-helper-text--error {
+  color: var(--alert);
+}
+
+/* ─── Badges ─────────────────────────────────────────────────────────────── */
+.gh-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.gh-badge--success {
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-dark);
+}
+.gh-badge--warning {
+  background: rgba(217, 119, 6, 0.12);
+  color: var(--warn);
+}
+.gh-badge--danger {
+  background: rgba(220, 38, 38, 0.10);
+  color: var(--alert);
+}
+.gh-badge--info {
+  background: rgba(107, 138, 157, 0.14);
+  color: var(--info);
+}
+.gh-badge--neutral {
+  background: var(--mist);
+  color: var(--shadow);
+}
+
+/* ─── Skeleton (loading placeholders) ────────────────────────────────────── */
+@keyframes gh-skeleton-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.gh-skeleton {
+  display: block;
+  background:
+    linear-gradient(
+      90deg,
+      var(--surface-sunken) 0%,
+      var(--mist) 50%,
+      var(--surface-sunken) 100%
+    );
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: gh-skeleton-shimmer 1.4s ease-in-out infinite;
+  color: transparent;
+  user-select: none;
+  pointer-events: none;
+}
+.gh-skeleton--text {
+  height: 1em;
+  width: 100%;
+  border-radius: var(--radius-xs);
+  margin: var(--space-1) 0;
+}
+.gh-skeleton--text-short { width: 40%; }
+.gh-skeleton--text-half  { width: 60%; }
+.gh-skeleton--circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+.gh-skeleton--card {
+  height: 96px;
+  border-radius: var(--radius-md);
+}
+
+/* Reduce shimmer for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .gh-skeleton { animation: none; opacity: 0.6; }
+}
+
+/* ─── Modal scaffolding (paired with shared/modal.js) ───────────────────── */
+.gh-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 58, 54, 0.55);  /* ink-tinted scrim */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: var(--space-4);
+  overflow-y: auto;
+  animation: gh-modal-fade-in var(--dur-quick) var(--ease-quiet);
+}
+@keyframes gh-modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.gh-modal-panel {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - var(--space-6));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: gh-modal-pop-in var(--dur-settle) var(--ease-quiet);
+}
+@keyframes gh-modal-pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.gh-modal-panel--small  { max-width: 360px; }
+.gh-modal-panel--large  { max-width: 720px; }
+.gh-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.gh-modal-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  margin: 0;
+}
+.gh-modal-close {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--dur-quick) var(--ease-quiet);
+}
+.gh-modal-close:hover {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+.gh-modal-body {
+  padding: var(--space-5);
+  overflow-y: auto;
+  flex: 1;
+  color: var(--ink);
+  line-height: var(--leading-normal);
+}
+.gh-modal-footer {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
+}
+.gh-modal-footer .gh-btn { min-width: 96px; }
+
+/* Lock body scroll while modal is open (added by JS) */
+body.gh-modal-open {
+  overflow: hidden;
+}
+
+/* ─── Empty state ───────────────────────────────────────────────────────── *
+ * Muji-minimal placeholder for empty lists. Pairs with shared/empty-states.js
+ * which provides 3 stock illustrations (bills, marketplace, messages).
+ */
+.gh-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-7) var(--space-5);
+  gap: var(--space-3);
+  color: var(--muted);
+}
+.gh-empty-state__illust {
+  width: 120px;
+  height: 120px;
+  color: var(--brand-primary-light);
+  opacity: 0.65;
+  margin-bottom: var(--space-2);
+}
+.gh-empty-state__illust svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.gh-empty-state__title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  margin: 0;
+}
+.gh-empty-state__text {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  max-width: 260px;
+  line-height: var(--leading-normal);
+  margin: 0;
+}
+.gh-empty-state__action {
+  margin-top: var(--space-3);
+}
+
+/* ─── Theme toggle button (pairs with shared/theme-toggle.js) ───────────── */
+.gh-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    background var(--dur-quick) var(--ease-quiet),
+    border-color var(--dur-quick) var(--ease-quiet);
+}
+.gh-theme-toggle:hover {
+  background: var(--surface-sunken);
+  border-color: var(--brand-primary);
+}
+.gh-theme-toggle [data-theme-icon] {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+/* Compact icon-only variant */
+.gh-theme-toggle--icon {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+}
+.gh-theme-toggle--icon [data-theme-label] { display: none; }
+
+/* ─── Onboarding tour (pairs with shared/onboarding-tour.js) ──────────── *
+ * Spotlight + tooltip overlay for first-run guides. Body scroll locked
+ * via .gh-tour-open class on <body>.
+ */
+.gh-tour-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 58, 54, 0.55);
+  z-index: 11000;
+  pointer-events: auto;
+  animation: gh-modal-fade-in var(--dur-quick) var(--ease-quiet);
+}
+.gh-tour-spotlight {
+  position: fixed;
+  background: transparent;
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 0 0 9999px rgba(28, 58, 54, 0.55),
+    0 0 0 3px var(--brand-primary-light) inset,
+    0 8px 24px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  transition:
+    top var(--dur-settle) var(--ease-quiet),
+    left var(--dur-settle) var(--ease-quiet),
+    width var(--dur-settle) var(--ease-quiet),
+    height var(--dur-settle) var(--ease-quiet);
+}
+.gh-tour-tooltip {
+  position: fixed;
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-5);
+  width: min(320px, calc(100vw - var(--space-6)));
+  z-index: 11001;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  animation: gh-modal-pop-in var(--dur-settle) var(--ease-quiet);
+}
+.gh-tour-step {
+  font-size: var(--text-xs);
+  color: var(--brand-primary);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+}
+.gh-tour-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  margin: 0;
+  line-height: var(--leading-tight);
+}
+.gh-tour-body {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  line-height: var(--leading-normal);
+  margin: 0;
+}
+.gh-tour-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+body.gh-tour-open {
+  overflow: hidden;
+}
+
+/* ─── Section divider ───────────────────────────────────────────────────── */
+.gh-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  border: none;
+  margin: var(--space-5) 0;
+}
+
+/* ─── Visually hidden (a11y) ────────────────────────────────────────────── */
+.gh-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

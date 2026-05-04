@@ -227,7 +227,8 @@ function addNewRoom() {
 }
 
 function deleteRoom(building, roomId) {
-  if (confirm(`คุณแน่ใจหรือว่าต้องการลบห้อง ${roomId}? (เก็บข้อมูลมิเตอร์ไว้)`)) {
+  window.ghConfirm(`ลบห้อง ${roomId}? เก็บข้อมูลมิเตอร์ไว้`, { danger: true }).then(ok => {
+    if (!ok) return;
     const config = RoomConfigManager.getRoomsConfig(building);
     const room = config.rooms.find(r => r.id === roomId);
     if (room) {
@@ -237,5 +238,5 @@ function deleteRoom(building, roomId) {
       loadRoomConfigUI();
       initMeterRoomsTab();
     }
-  }
+  });
 }

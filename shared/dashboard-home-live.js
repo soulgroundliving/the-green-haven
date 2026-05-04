@@ -558,7 +558,7 @@ window.loadTrackingStart = function(){
 window.saveTrackingStart = function(){
   const m = parseInt(document.getElementById('tracking-start-month').value);
   const y = parseInt(document.getElementById('tracking-start-year').value);
-  if(!m || !y){ alert('กรุณาเลือกเดือน/ปี'); return; }
+  if(!m || !y){ window.ghAlert('กรุณาเลือกเดือน/ปี', { title: 'ข้อมูลไม่ครบ' }); return; }
   localStorage.setItem('system_tracking_start', `${y}-${String(m).padStart(2,'0')}`);
   const info = document.getElementById('tracking-start-info');
   if(info) info.textContent = `✅ บันทึกแล้ว: ${m}/${y}`;

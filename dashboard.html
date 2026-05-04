@@ -16,6 +16,11 @@
 <script>window.SENTRY_APP_NAME = 'dashboard';</script>
 <script src="https://js.sentry-cdn.com/70de55e358255ab981939b708a743b1d.min.js" crossorigin="anonymous"></script>
 <script src="./shared/sentry-init.js"></script>
+<!-- Modal a11y bridge + base modal helper (ESC + backdrop + focus trap) -->
+<link rel="stylesheet" href="./shared/components.css">
+<script src="./shared/theme-toggle.js"></script>
+<script src="./shared/modal.js"></script>
+<script src="./shared/modal-a11y-bridge.js"></script>
 <script src="./shared/security.js"></script>
 <script src="./shared/rich-text-policy.js"></script>
 <script src="./shared/firebase-config-loader.js"></script>
@@ -520,10 +525,11 @@
   }
 
   window.handleLogout = function() {
-    if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
-      // Use secure logout which clears all sensitive data
-      window.SecurityUtils.secureLogout();
-    }
+    window.ghConfirm('ออกจากระบบเลยใช่ไหม?', { title: 'ออกจากระบบ', confirmLabel: 'ออกจากระบบ' })
+      .then(ok => {
+        if (!ok) return;
+        window.SecurityUtils.secureLogout();
+      });
   };
 
 
@@ -581,7 +587,7 @@
     // (write test only runs once after init via the explicit call below)
     if (testEl && !testEl.dataset.tested) {
       testEl.innerHTML = '🟢 Ready';
-      testEl.style.color = '#2d8653';
+      testEl.style.color = 'var(--green)';
     }
 
     // Update timestamp
@@ -648,12 +654,31 @@
 
 <style>
   :root {
-    --green-dark:#0d5c4e;--green:#0f766e;--green-light:#14b8a6;--green-pale:#ecfdf5;
-    --accent:#d97706;--accent-light:#fffbeb;--blue:#0369a1;--blue-pale:#e0f2fe;
-    --purple:#7c3aed;--purple-pale:#f5f3ff;--red:#dc2626;--red-pale:#fef2f2;
-    --bg:#f2f7f5;--card:#fff;--text:#1c3a36;--text-muted:#64748b;
-    --border:#d9e8e3;--shadow:0 1px 8px rgba(13,92,78,.07);--shadow-hover:0 6px 20px rgba(13,92,78,.12);
-    --radius:12px;--radius-sm:8px;
+    /* Brand aliases — single source of truth in shared/brand.css */
+    --green-dark: var(--brand-primary-dark);
+    --green:      var(--brand-primary);
+    --green-light:var(--brand-primary-light);
+    --green-pale: var(--brand-primary-soft);
+    --bg:         var(--brand-primary-wash);
+    --card:       var(--surface-card);
+    --text:       var(--ink);
+    --text-muted: var(--muted);
+    --border:     var(--stone);
+    --accent:     var(--warn);
+    --red:        var(--alert);
+
+    /* Secondary palette — dashboard-specific (not brand) */
+    --accent-light:#fffbeb; --accent-pale:var(--accent-pale); --accent-dark:var(--accent-dark);
+    --blue:#0369a1; --blue-pale:#e0f2fe; --blue-dark:var(--blue-dark); --blue-bright:var(--blue-bright);
+    --purple:#7c3aed; --purple-pale:#f5f3ff;
+    --red-pale:#fef2f2; --red-dark:var(--red-dark);
+    --ok-pale:var(--ok-pale); --ok-bright:var(--ok-bright); --ok-dark:var(--ok-dark);
+
+    /* Layout tokens */
+    --shadow:0 1px 8px rgba(13,92,78,.07);
+    --shadow-hover:0 6px 20px rgba(13,92,78,.12);
+    --radius:12px;
+    --radius-sm:8px;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:var(--font-brand,'IBM Plex Sans Thai Looped','Sarabun',sans-serif);background:var(--bg);color:var(--text);}
@@ -666,7 +691,7 @@
   .header h1{font-size:1.2rem;font-weight:700;line-height:1.2;}
   .header h1 span{display:block;font-size:.75rem;font-weight:400;opacity:.85;}
   .header-nav{display:flex;gap:3px;flex-wrap:wrap;}
-  .nav-btn{padding:7px 13px;border:none;background:rgba(255,255,255,.1);color:#fff;border-radius:7px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.85rem;transition:all .2s;font-weight:500;}
+  .nav-btn{padding:7px 13px;border:none;background:rgba(255,255,255,.1);color:#fff;border-radius:7px;cursor:pointer;font-family:var(--font-brand);font-size:.85rem;transition:all .2s;font-weight:500;}
   .nav-btn:hover,.nav-btn.active{background:rgba(255,255,255,.25);}
 
   .main{max-width:1440px;margin:0 auto;padding:1.5rem;}
@@ -708,12 +733,12 @@
   .room-pill.commercial{background:var(--blue-pale);border-color:var(--blue);}
   .room-pill.studio{background:var(--blue-pale);border-color:var(--blue);}
   .room-pill.pet{background:var(--purple-pale);border-color:var(--purple);}
-  .room-pill.daily{background:#fff3e0;border-color:#f57c00;}
+  .room-pill.daily{background:var(--accent-pale);border-color:#f57c00;}
   .room-pill .room-num{font-size:1.05rem;font-weight:700;color:var(--green-dark);}
   .room-pill.commercial .room-num{color:var(--blue);}
   .room-pill.studio .room-num{color:var(--blue);}
   .room-pill.pet .room-num{color:var(--purple);}
-  .room-pill.daily .room-num{color:#e65100;}
+  .room-pill.daily .room-num{color:var(--accent-dark);}
   .room-pill .room-rent{font-size:.72rem;color:var(--text-muted);margin-top:2px;}
   .room-pill .room-status{font-size:.67rem;font-weight:600;margin-top:3px;padding:2px 5px;border-radius:20px;display:inline-block;}
   .room-pill.occupied .room-status{background:var(--green-light);color:#fff;}
@@ -731,27 +756,27 @@
   .compact-card.vacant .compact-card-id{color:#ff9800;}
   .compact-card.expired .compact-card-id{color:#e53935;}
   .compact-card-type{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--green-pale);color:var(--green-dark);}
-  .compact-card.vacant .compact-card-type{background:#fff3e0;color:#e65100;}
-  .compact-card.expired .compact-card-type{background:#fce4ec;color:#c62828;}
+  .compact-card.vacant .compact-card-type{background:var(--accent-pale);color:var(--accent-dark);}
+  .compact-card.expired .compact-card-type{background:#fce4ec;color:var(--red-dark);}
   .compact-card-info{font-size:.85rem;color:var(--text-muted);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
   .compact-card-label{font-weight:600;color:var(--text);}
   .compact-card-value{color:var(--green-dark);font-weight:700;}
   .compact-card.vacant .compact-card-value{color:#ff9800;}
   .compact-card-actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
-  .compact-btn{padding:5px 10px;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:.15s;}
+  .compact-btn{padding:5px 10px;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:var(--font-brand);transition:.15s;}
   .compact-btn-view{background:var(--green-pale);color:var(--green-dark);}
   .compact-btn-view:hover{background:var(--green);color:white;}
-  .compact-btn-edit{background:#e3f2fd;color:#1565c0;}
-  .compact-btn-edit:hover{background:#1976d2;color:white;}
-  .compact-btn-delete{background:#fce4ec;color:#c62828;}
+  .compact-btn-edit{background:var(--blue-pale);color:var(--blue-dark);}
+  .compact-btn-edit:hover{background:var(--blue-bright);color:white;}
+  .compact-btn-delete{background:#fce4ec;color:var(--red-dark);}
   .compact-btn-delete:hover{background:#e91e63;color:white;}
 
   /* ===== COMPACT LIST FILTERS ===== */
   .list-controls{display:flex;gap:10px;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center;}
   .list-search{flex:1;min-width:200px;}
-  .list-search input{width:100%;padding:9px 14px;border-radius:8px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;}
+  .list-search input{width:100%;padding:9px 14px;border-radius:8px;border:1.5px solid var(--border);font-family:var(--font-brand);font-size:.9rem;}
   .list-search input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(45,134,83,.08);}
-  .list-sort{padding:9px 12px;border-radius:8px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;background:#fff;cursor:pointer;}
+  .list-sort{padding:9px 12px;border-radius:8px;border:1.5px solid var(--border);font-family:var(--font-brand);font-size:.9rem;background:#fff;cursor:pointer;}
   .list-sort:focus{outline:none;border-color:var(--green);}
 
   /* ===== RESPONSIVE COMPACT LISTS ===== */
@@ -769,14 +794,14 @@
   .badge-green{background:var(--green-pale);color:var(--green-dark);}
   .badge-blue{background:var(--blue-pale);color:#0d47a1;}
   .badge-purple{background:var(--purple-pale);color:var(--purple);}
-  .badge-orange{background:#fff3e0;color:#e65100;}
-  .badge-amber{background:var(--accent-light);color:#e65100;}
+  .badge-orange{background:var(--accent-pale);color:var(--accent-dark);}
+  .badge-amber{background:var(--accent-light);color:var(--accent-dark);}
   .badge-red{background:var(--red-pale);color:var(--red);}
 
   /* year-tab — duplicated here while brand.css CDN cache expires */
   .year-tabs{display:flex;gap:7px;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center;}
   .year-tab{padding:6px 16px;border-radius:20px;border:2px solid var(--border);background:#fff;cursor:pointer;
-    font-family:'Sarabun',sans-serif;font-size:.87rem;font-weight:600;color:var(--text-muted);transition:all .2s;}
+    font-family:var(--font-brand);font-size:.87rem;font-weight:600;color:var(--text-muted);transition:all .2s;}
   .year-tab:hover,.year-tab.active{background:var(--green);border-color:var(--green);color:#fff;}
   .year-tab-label{font-size:.78rem;color:var(--text-muted);margin-right:3px;}
 
@@ -804,7 +829,7 @@
   .form-field.full{grid-column:1/-1;}
   .form-field label{font-size:.78rem;font-weight:600;color:var(--text-muted);}
   .form-field input,.form-field select{border:1.5px solid var(--border);border-radius:var(--radius-sm);
-    padding:8px 11px;font-family:'Sarabun',sans-serif;font-size:.88rem;background:#fff;transition:border .2s;color:var(--text);}
+    padding:8px 11px;font-family:var(--font-brand);font-size:.88rem;background:#fff;transition:border .2s;color:var(--text);}
   .form-field input:focus,.form-field select:focus{outline:none;border-color:var(--green);}
   .form-field input[readonly]{background:#f5f5f5;color:var(--text-muted);}
 
@@ -814,12 +839,12 @@
 
   /* Bill flow buttons */
   .bill-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .btn-invoice{background:#1976d2;color:#fff;border:none;border-radius:var(--radius-sm);
-    padding:12px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s;
+  .btn-invoice{background:var(--blue-bright);color:#fff;border:none;border-radius:var(--radius-sm);
+    padding:12px;font-family:var(--font-brand);font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s;
     display:flex;align-items:center;justify-content:center;gap:7px;}
   .btn-invoice:hover{background:#0d47a1;transform:translateY(-1px);}
   .btn-receipt{background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);
-    padding:12px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s;
+    padding:12px;font-family:var(--font-brand);font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s;
     display:flex;align-items:center;justify-content:center;gap:7px;}
   .btn-receipt:hover{background:var(--green-dark);transform:translateY(-1px);}
 
@@ -840,7 +865,7 @@
   .slip-verify-section.show{display:block;}
   .slip-drop-area{border:2px dashed #ffb74d;border-radius:var(--radius-sm);padding:1rem;text-align:center;cursor:pointer;transition:all .2s;background:#fff;position:relative;}
   .slip-drop-area:hover{background:#fff8e1;border-color:#ff8f00;}
-  .slip-drop-area.dragging{background:#fff3cd;border-color:#e65100;transform:scale(1.01);}
+  .slip-drop-area.dragging{background:#fff3cd;border-color:var(--accent-dark);transform:scale(1.01);}
   .slip-result-ok{background:var(--green-pale);border:1.5px solid var(--green-light);border-radius:var(--radius-sm);padding:.8rem;margin-top:.6rem;}
   .slip-result-err{background:var(--red-pale);border:1.5px solid #ef9a9a;border-radius:var(--radius-sm);padding:.8rem;margin-top:.6rem;}
   .slip-result-row{display:flex;justify-content:space-between;padding:3px 0;font-size:.83rem;border-bottom:1px solid rgba(0,0,0,.05);}
@@ -850,14 +875,14 @@
 
   /* Document panels */
   .doc-panel{border:2px dashed var(--border);border-radius:var(--radius);padding:1.3rem;min-height:200px;}
-  .doc-panel.invoice-panel{border-color:#1976d2;}
+  .doc-panel.invoice-panel{border-color:var(--blue-bright);}
   .doc-panel.receipt-panel{border-color:var(--green);}
   .doc-placeholder{text-align:center;padding:2.5rem 1rem;color:var(--text-muted);}
   .doc-placeholder .icon{font-size:2.5rem;margin-bottom:.8rem;}
 
   /* ===== DOCUMENT STYLES ===== */
   /* Print is handled by printDoc() popup — no @media print needed here */
-  .doc-body{font-family:'Sarabun',sans-serif;background:#fff;max-width:360px;margin:0 auto;padding:0 4px;}
+  .doc-body{font-family:var(--font-brand);background:#fff;max-width:360px;margin:0 auto;padding:0 4px;}
   @media print{
     .doc-body{max-width:100%!important;margin:0;padding:6mm;width:100%;box-sizing:border-box;}
   }
@@ -887,7 +912,7 @@
   .qr-amount-badge{display:inline-block;background:var(--green-dark);color:#fff;font-weight:800;font-size:clamp(0.7rem, 2vw, 0.8rem);padding:3px 12px;border-radius:18px;margin:4px 0 2px;}
   .qr-footer-text{font-size:clamp(0.58rem, 1.8vw, 0.68rem);color:var(--text-muted);line-height:1.4;}
   .btn-doc-action{background:#fff;border:2px solid;border-radius:var(--radius-sm);padding:8px 16px;
-    font-family:'Sarabun',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;
+    font-family:var(--font-brand);font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;
     display:inline-flex;align-items:center;gap:5px;margin-top:10px;}
   .btn-doc-action.blue{color:var(--blue);border-color:var(--blue);}
   .btn-doc-action.blue:hover{background:var(--blue-pale);}
@@ -899,21 +924,21 @@
   /* ===== NEW BUILDING ===== */
   .floor-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1.1rem;overflow:hidden;}
   .floor-header{padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;}
-  .floor-header.f12{background:linear-gradient(90deg,#e3f2fd,#bbdefb);}
+  .floor-header.f12{background:linear-gradient(90deg,var(--blue-pale),#bbdefb);}
   .floor-header.f34{background:linear-gradient(90deg,var(--purple-pale),#e1bee7);}
-  .floor-header.f1d{background:linear-gradient(90deg,#fff3e0,#ffe0b2);}
+  .floor-header.f1d{background:linear-gradient(90deg,var(--accent-pale),#ffe0b2);}
   .floor-title{font-size:1rem;font-weight:800;color:var(--text);}
   .floor-badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
   .floor-rooms{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:1rem 1.4rem;}
   .new-room-pill{border-radius:10px;padding:10px 6px;text-align:center;border:2px solid;cursor:pointer;transition:all .2s;}
   .new-room-pill:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);}
-  .new-room-pill.studio{background:#e3f2fd;border-color:#2196f3;}
+  .new-room-pill.studio{background:var(--blue-pale);border-color:#2196f3;}
   .new-room-pill.pet{background:var(--purple-pale);border-color:var(--purple);}
-  .new-room-pill.daily{background:#fff3e0;border-color:#f57c00;}
+  .new-room-pill.daily{background:var(--accent-pale);border-color:#f57c00;}
   .new-room-pill .nr-num{font-size:1rem;font-weight:700;}
   .new-room-pill.studio .nr-num{color:var(--blue);}
   .new-room-pill.pet .nr-num{color:var(--purple);}
-  .new-room-pill.daily .nr-num{color:#e65100;}
+  .new-room-pill.daily .nr-num{color:var(--accent-dark);}
   .new-room-pill .nr-price{font-size:.7rem;color:var(--text-muted);margin-top:2px;}
   .new-room-pill .nr-tag{font-size:.65rem;font-weight:700;padding:2px 5px;border-radius:20px;margin-top:3px;display:inline-block;}
   .studio .nr-tag{background:#2196f3;color:#fff;}
@@ -922,8 +947,8 @@
 
   /* Room Status Colors */
   .new-room-pill.occupied {
-    background: #c8e6c9;
-    border-color: #4caf50;
+    background: var(--ok-pale);
+    border-color: var(--ok-bright);
     box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
   }
   .new-room-pill.occupied::before {
@@ -998,8 +1023,8 @@
     font-weight: 600;
   }
   .payment-status.paid {
-    background: #c8e6c9;
-    color: #2e7d32;
+    background: var(--ok-pale);
+    color: var(--ok-dark);
   }
   .payment-status.paid::before {
     content: "";
@@ -1027,7 +1052,7 @@
   }
   .payment-status.overdue {
     background: #ffcdd2;
-    color: #c62828;
+    color: var(--red-dark);
   }
   .payment-status.overdue::before {
     content: "";
@@ -1061,11 +1086,11 @@
   .scroll-x{overflow-x:auto;}
 
   /* Daily rate section */
-  .daily-section{border:2px solid #f57c00;border-radius:var(--radius-sm);padding:.9rem;background:#fff3e0;display:none;}
+  .daily-section{border:2px solid #f57c00;border-radius:var(--radius-sm);padding:.9rem;background:var(--accent-pale);display:none;}
   .daily-section.show{display:block;}
   /* View toggle segmented control */
   .view-toggle-group{display:inline-flex;background:#e0e0e0;border-radius:8px;padding:3px;gap:2px;}
-  .view-toggle-btn{padding:6px 16px;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.85rem;font-weight:600;color:var(--text-muted);background:transparent;transition:all .15s;}
+  .view-toggle-btn{padding:6px 16px;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-size:.85rem;font-weight:600;color:var(--text-muted);background:transparent;transition:all .15s;}
   .view-toggle-btn.active{background:#fff;color:var(--green-dark);box-shadow:0 1px 4px rgba(0,0,0,.15);}
   .view-toggle-btn:not(.active):hover{background:rgba(255,255,255,.5);color:var(--text);}
 
@@ -1083,7 +1108,7 @@
   .bill-actions-col{display:flex;flex-direction:column;gap:.5rem;}
   .bill-actions-row{display:flex;gap:.5rem;}
   .bill-actions-row .btn-invoice,.bill-actions-row .btn-receipt{flex:1;}
-  .btn-auto-bill{background:linear-gradient(135deg,#9c27b0,#673ab7);color:white;border:none;border-radius:6px;padding:.7rem 1rem;cursor:pointer;font-weight:600;font-size:.9rem;font-family:'Sarabun',sans-serif;transition:all .2s;width:100%;}
+  .btn-auto-bill{background:linear-gradient(135deg,#9c27b0,#673ab7);color:white;border:none;border-radius:6px;padding:.7rem 1rem;cursor:pointer;font-weight:600;font-size:.9rem;font-family:var(--font-brand);transition:all .2s;width:100%;}
   .btn-auto-bill:hover{background:linear-gradient(135deg,#7b1fa2,#512da8);transform:translateY(-1px);}
 
   @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.charts-grid{grid-template-columns:1fr}.bill-layout{grid-template-columns:1fr}.insights-grid{grid-template-columns:1fr 1fr}.proj-grid{grid-template-columns:1fr 1fr}}
@@ -1102,24 +1127,24 @@
   .pm-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);}
   .pm-row:last-child{border:none;}
   .pm-label{font-size:.78rem;font-weight:600;color:var(--text-muted);}
-  .pm-input{width:100px;border:1.5px solid var(--border);border-radius:6px;padding:5px 9px;font-family:'Sarabun',sans-serif;font-size:.85rem;text-align:right;}
+  .pm-input{width:100px;border:1.5px solid var(--border);border-radius:6px;padding:5px 9px;font-family:var(--font-brand);font-size:.85rem;text-align:right;}
   .pm-input:focus{outline:none;border-color:var(--green);}
   .pay-modal-footer{padding:.85rem 1.3rem;background:#fafafa;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
-  .pm-btn{border:none;border-radius:8px;padding:8px 16px;font-family:'Sarabun',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .18s;}
+  .pm-btn{border:none;border-radius:8px;padding:8px 16px;font-family:var(--font-brand);font-size:.85rem;font-weight:700;cursor:pointer;transition:all .18s;}
   .pm-btn.green{background:var(--green);color:#fff;}.pm-btn.green:hover{background:var(--green-dark);}
   .pm-btn.red{background:var(--red);color:#fff;}.pm-btn.red:hover{background:#b71c1c;}
   .pm-btn.gray{background:#f0f0f0;border:1.5px solid var(--border);color:var(--text-muted);}.pm-btn.gray:hover{background:var(--border);}
-  .pm-btn.blue{background:#1976d2;color:#fff;}.pm-btn.blue:hover{background:#0d47a1;}
+  .pm-btn.blue{background:var(--blue-bright);color:#fff;}.pm-btn.blue:hover{background:#0d47a1;}
 
   /* ===== METER TABLE (Monthly tab) ===== */
   .mt-summary{font-size:.82rem;color:var(--text-muted);margin-bottom:.75rem;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
   .mt-pill{padding:3px 11px;border-radius:20px;font-weight:700;font-size:.77rem;}
   .mt-pill.green{background:#e8f5e9;color:var(--green-dark);}
-  .mt-pill.amber{background:#fff3e0;color:#e65100;}
-  .mt-paid-badge{background:#e8f5e9;color:var(--green-dark);padding:3px 9px;border-radius:20px;font-size:.73rem;font-weight:700;cursor:pointer;border:none;font-family:'Sarabun',sans-serif;}
-  .mt-paid-badge:hover{background:#c8e6c9;}
-  .mt-pending-badge{background:#fff3e0;color:#e65100;padding:3px 9px;border-radius:20px;font-size:.73rem;font-weight:700;}
-  .mt-go-btn{padding:3px 10px;font-size:.73rem;background:#1976d2;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;transition:all .15s;}
+  .mt-pill.amber{background:var(--accent-pale);color:var(--accent-dark);}
+  .mt-paid-badge{background:#e8f5e9;color:var(--green-dark);padding:3px 9px;border-radius:20px;font-size:.73rem;font-weight:700;cursor:pointer;border:none;font-family:var(--font-brand);}
+  .mt-paid-badge:hover{background:var(--ok-pale);}
+  .mt-pending-badge{background:var(--accent-pale);color:var(--accent-dark);padding:3px 9px;border-radius:20px;font-size:.73rem;font-weight:700;}
+  .mt-go-btn{padding:3px 10px;font-size:.73rem;background:var(--blue-bright);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-weight:600;transition:all .15s;}
   .mt-go-btn:hover{background:#0d47a1;}
 
   /* ===== NOTIFICATION BADGE ===== */
@@ -1134,23 +1159,23 @@
   .tenant-card.com{border-color:var(--blue);background:var(--blue-pale);}
   .t-room{font-size:1.05rem;font-weight:800;margin-bottom:5px;}
   .tenant-card.occ .t-room{color:var(--green-dark);}
-  .tenant-card.vac .t-room{color:#e65100;}
+  .tenant-card.vac .t-room{color:var(--accent-dark);}
   .tenant-card.com .t-room{color:var(--blue);}
   .t-name{font-size:.88rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .t-vacant{font-size:.83rem;color:#e65100;font-style:italic;}
+  .t-vacant{font-size:.83rem;color:var(--accent-dark);font-style:italic;}
   .t-phone{font-size:.74rem;color:var(--text-muted);margin-top:2px;}
   .t-info{font-size:.72rem;color:var(--text-muted);margin-top:5px;padding-top:5px;border-top:1px dashed var(--border);line-height:1.7;}
   .t-deposit{background:#e8f5e9;color:var(--green-dark);padding:2px 7px;border-radius:20px;font-size:.7rem;font-weight:700;display:inline-block;margin-top:2px;}
-  .t-warn{background:#fff3e0;color:#e65100;padding:2px 7px;border-radius:20px;font-size:.7rem;font-weight:700;display:inline-block;margin-top:2px;}
+  .t-warn{background:var(--accent-pale);color:var(--accent-dark);padding:2px 7px;border-radius:20px;font-size:.7rem;font-weight:700;display:inline-block;margin-top:2px;}
 
   /* ===== EXPENSE PAGE ===== */
   .expense-layout{display:grid;grid-template-columns:1fr 360px;gap:1.2rem;margin-bottom:1.2rem;}
   .exp-form label{font-size:.78rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;}
-  .exp-form input,.exp-form select,.exp-form textarea{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 11px;font-family:'Sarabun',sans-serif;font-size:.88rem;width:100%;background:#fff;}
+  .exp-form input,.exp-form select,.exp-form textarea{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 11px;font-family:var(--font-brand);font-size:.88rem;width:100%;background:#fff;}
   .exp-form input:focus,.exp-form select:focus{outline:none;border-color:var(--green);}
   .exp-form .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
   .exp-cat-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.73rem;font-weight:700;}
-  .cat-repair{background:#fff3e0;color:#e65100;}
+  .cat-repair{background:var(--accent-pale);color:var(--accent-dark);}
   .cat-utility{background:var(--blue-pale);color:var(--blue);}
   .cat-supply{background:var(--green-pale);color:var(--green-dark);}
   .cat-wages{background:var(--purple-pale);color:var(--purple);}
@@ -1161,8 +1186,8 @@
   .mx-layout{display:grid;grid-template-columns:1fr 340px;gap:1.5rem;margin-bottom:1.5rem;}
 
   /* Form Styling */
-  .mx-form label{font-size:.8rem;font-weight:700;color:#2d8653;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;}
-  .mx-form input,.mx-form select,.mx-form textarea{border:1.5px solid #e0e0e0;border-radius:10px;padding:12px 14px;font-family:'Sarabun',sans-serif;font-size:.9rem;width:100%;background:#fff;transition:all 0.3s ease;}
+  .mx-form label{font-size:.8rem;font-weight:700;color:var(--green);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;}
+  .mx-form input,.mx-form select,.mx-form textarea{border:1.5px solid #e0e0e0;border-radius:10px;padding:12px 14px;font-family:var(--font-brand);font-size:.9rem;width:100%;background:#fff;transition:all 0.3s ease;}
   .mx-form input:focus,.mx-form select:focus,.mx-form textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(76, 175, 80, 0.1);background:#fafafa;}
   .mx-form textarea{min-height:120px;resize:vertical;}
   .mx-form .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
@@ -1177,10 +1202,10 @@
   /* KPI Color Schemes */
   .mx-kpi:has(#mx-kpi-pending),.mx-kpi:has(#hk-kpi-pending){background:linear-gradient(135deg, #fff8e1 0%, #ffe082 100%);border-color:#ffd54f;}
   .mx-kpi:has(#mx-kpi-pending) .mx-kpi-val,.mx-kpi:has(#hk-kpi-pending) .mx-kpi-val{color:#f57c00;}
-  .mx-kpi:has(#mx-kpi-inprogress),.mx-kpi:has(#hk-kpi-inprogress){background:linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);border-color:#64b5f6;}
-  .mx-kpi:has(#mx-kpi-inprogress) .mx-kpi-val,.mx-kpi:has(#hk-kpi-inprogress) .mx-kpi-val{color:#1565c0;}
-  .mx-kpi:has(#mx-kpi-done),.mx-kpi:has(#hk-kpi-done){background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);border-color:#81c784;}
-  .mx-kpi:has(#mx-kpi-done) .mx-kpi-val,.mx-kpi:has(#hk-kpi-done) .mx-kpi-val{color:#2e7d32;}
+  .mx-kpi:has(#mx-kpi-inprogress),.mx-kpi:has(#hk-kpi-inprogress){background:linear-gradient(135deg, var(--blue-pale) 0%, #bbdefb 100%);border-color:#64b5f6;}
+  .mx-kpi:has(#mx-kpi-inprogress) .mx-kpi-val,.mx-kpi:has(#hk-kpi-inprogress) .mx-kpi-val{color:var(--blue-dark);}
+  .mx-kpi:has(#mx-kpi-done),.mx-kpi:has(#hk-kpi-done){background:linear-gradient(135deg, #e8f5e9 0%, var(--ok-pale) 100%);border-color:#81c784;}
+  .mx-kpi:has(#mx-kpi-done) .mx-kpi-val,.mx-kpi:has(#hk-kpi-done) .mx-kpi-val{color:var(--ok-dark);}
 
   /* Tenant filter pills (used in page-tenant filter bar) */
   .filter-btn-tenant {
@@ -1192,10 +1217,10 @@
     font-size: .85rem;
     font-weight: 600;
     cursor: pointer;
-    font-family: 'Sarabun', sans-serif;
+    font-family: var(--font-brand);
     transition: all 0.2s;
   }
-  .filter-btn-tenant.occupied { border-color: #4caf50; color: #4caf50; }
+  .filter-btn-tenant.occupied { border-color: var(--ok-bright); color: var(--ok-bright); }
   .filter-btn-tenant.vacant   { border-color: #9e9e9e; color: #666; }
   .filter-btn-tenant.expiring { border-color: #f57c00; color: #f57c00; }
   .filter-btn-tenant.active   { background: var(--green-dark); color: white; border-color: var(--border); }
@@ -1203,11 +1228,11 @@
   /* Stats strips — colored pill row with stats across */
   .stats-strip { display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 12px; border-radius:8px; margin-bottom:10px; font-size:.83rem; }
   .stats-strip--green { background: var(--green-pale); }
-  .stats-strip--blue  { background: #e3f2fd; }
+  .stats-strip--blue  { background: var(--blue-pale); }
 
   /* Info chips — small card tiles with colored left-border accent */
   .info-chip { padding:8px 10px; background:white; border:1px solid; border-left:3px solid; border-radius:6px; font-size:.78rem; line-height:1.6; }
-  .info-chip--green   { border-color: #c8e6c9; border-left-color: #4caf50; }
+  .info-chip--green   { border-color: var(--ok-pale); border-left-color: var(--ok-bright); }
   .info-chip--orange  { border-color: #ffe0b2; border-left-color: #ff9800; }
   .info-chip--indigo  { border-color: #c5cae9; border-left-color: #3f51b5; }
   .info-chip--purple  { border-color: #e1bee7; border-left-color: #9c27b0; }
@@ -1215,11 +1240,11 @@
   .info-chip--purple-bg { border-color: #e1bee7; border-left-color: #9c27b0; background: #f3e5f5; }
 
   /* Status Pills */
-  .mx-status-pill{display:inline-block;padding:6px 14px;border-radius:20px;font-size:.75rem;font-weight:700;cursor:default;font-family:'Sarabun',sans-serif;}
-  .mx-pending{background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;}
-  .mx-inprogress{background:#e3f2fd;color:#1565c0;border:1px solid #bbdefb;}
-  .mx-done{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;}
-  .mx-urgent{background:#ffebee;color:#c62828;font-size:.7rem;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid #ffcdd2;margin-left:6px;}
+  .mx-status-pill{display:inline-block;padding:6px 14px;border-radius:20px;font-size:.75rem;font-weight:700;cursor:default;font-family:var(--font-brand);}
+  .mx-pending{background:var(--accent-pale);color:var(--accent-dark);border:1px solid #ffe0b2;}
+  .mx-inprogress{background:var(--blue-pale);color:var(--blue-dark);border:1px solid #bbdefb;}
+  .mx-done{background:#e8f5e9;color:var(--ok-dark);border:1px solid var(--ok-pale);}
+  .mx-urgent{background:#ffebee;color:var(--red-dark);font-size:.7rem;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid #ffcdd2;margin-left:6px;}
 
   /* Card-Based List Items */
   .mx-row{display:grid;grid-template-columns:1fr;gap:12px;padding:16px;border-radius:12px;border:1px solid #f0f0f0;background:#fff;margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,0.05);transition:all 0.3s ease;}
@@ -1233,21 +1258,21 @@
   .mx-row-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
 
   /* Buttons with Gradients */
-  .mx-btn{border:none;border-radius:8px;padding:8px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.3s ease;display:inline-flex;align-items:center;gap:4px;}
+  .mx-btn{border:none;border-radius:8px;padding:8px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:var(--font-brand);transition:all 0.3s ease;display:inline-flex;align-items:center;gap:4px;}
   .mx-btn:hover{transform:scale(1.05);box-shadow:0 4px 12px rgba(0,0,0,0.15);}
-  .mx-btn-next{background:linear-gradient(135deg, #2196f3 0%, #1976d2 100%);color:#fff;}
-  .mx-btn-done{background:linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);color:#fff;}
-  .mx-btn-reopen{background:linear-gradient(135deg, #2196f3 0%, #1976d2 100%);color:#fff;}
+  .mx-btn-next{background:linear-gradient(135deg, #2196f3 0%, var(--blue-bright) 100%);color:#fff;}
+  .mx-btn-done{background:linear-gradient(135deg, var(--ok-bright) 0%, var(--ok-dark) 100%);color:#fff;}
+  .mx-btn-reopen{background:linear-gradient(135deg, #2196f3 0%, var(--blue-bright) 100%);color:#fff;}
   .mx-btn-del{background:linear-gradient(135deg, #f44336 0%, #d32f2f 100%);color:#fff;}
 
   /* Notification Banner */
   #mx-notification-banner{background:linear-gradient(135deg, #fff9c4, #ffe082) !important;border-left:5px solid #fbc02d !important;padding:16px !important;margin-bottom:1.5rem !important;border-radius:12px !important;box-shadow:0 4px 12px rgba(251, 192, 45, 0.2) !important;}
-  #mx-notification-banner > div{color:#f57f17 !important;font-weight:700 !important;font-size:1rem !important;font-family:'Sarabun',sans-serif !important;}
+  #mx-notification-banner > div{color:#f57f17 !important;font-weight:700 !important;font-size:1rem !important;font-family:var(--font-brand) !important;}
 
   /* Filter Panel */
   .mx-filter-panel{border:1px solid #f0f0f0;padding:16px;border-radius:12px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.05);}
-  .mx-filter-panel label{font-size:.8rem;font-weight:700;color:#2d8653;display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;}
-  .mx-filter-panel input,.mx-filter-panel select{width:100%;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.85rem;margin-bottom:12px;transition:all 0.3s ease;}
+  .mx-filter-panel label{font-size:.8rem;font-weight:700;color:var(--green);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;}
+  .mx-filter-panel input,.mx-filter-panel select{width:100%;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-family:var(--font-brand);font-size:.85rem;margin-bottom:12px;transition:all 0.3s ease;}
   .mx-filter-panel input:focus,.mx-filter-panel select:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(76, 175, 80, 0.1);}
 
   /* Responsive Design */
@@ -1273,7 +1298,7 @@
   .ana-room-row{display:grid;grid-template-columns:70px 1fr 90px 120px;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);font-size:.83rem;align-items:center;}
   .ana-room-row:last-child{border-bottom:none;}
   .ana-room-head{background:var(--green-pale);font-weight:700;font-size:.77rem;color:var(--green-dark);border-radius:var(--radius-sm) var(--radius-sm) 0 0;}
-  .ana-vacant-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fff3e0;color:#e65100;font-weight:700;}
+  .ana-vacant-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.72rem;background:var(--accent-pale);color:var(--accent-dark);font-weight:700;}
   .ana-occ-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.72rem;background:var(--green-pale);color:var(--green-dark);font-weight:700;}
   @media(max-width:900px){.ana-kpi-grid{grid-template-columns:1fr 1fr;}.ana-charts-grid{grid-template-columns:1fr;}}
 
@@ -1289,13 +1314,13 @@
   .ct-card-info{font-size:.8rem;color:var(--text-muted);margin-bottom:3px;}
   .ct-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;margin-bottom:8px;}
   .ct-active{background:var(--green-pale);color:var(--green-dark);}
-  .ct-expiring{background:#fff3e0;color:#e65100;}
-  .ct-expired{background:#fce4ec;color:#c62828;}
+  .ct-expiring{background:var(--accent-pale);color:var(--accent-dark);}
+  .ct-expired{background:#fce4ec;color:var(--red-dark);}
   .ct-vacant-badge{background:#f5f5f5;color:#9e9e9e;}
   .ct-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
-  .ct-btn{border:none;border-radius:6px;padding:5px 12px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;}
+  .ct-btn{border:none;border-radius:6px;padding:5px 12px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:var(--font-brand);}
   .ct-btn-view{background:var(--green-pale);color:var(--green-dark);}
-  .ct-btn-renew{background:#e3f2fd;color:#1565c0;}
+  .ct-btn-renew{background:var(--blue-pale);color:var(--blue-dark);}
   .ct-btn-print{background:#f3e5f5;color:#6a1b9a;}
   .ct-filter-bar{display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;}
   /* Contract preview modal */
@@ -1401,7 +1426,7 @@
     background: none;
     color: rgba(255,255,255,0.85);
     text-align: left;
-    font-family: 'Sarabun', sans-serif;
+    font-family: var(--font-brand);
     font-size: 0.95rem;
     font-weight: 500;
     cursor: pointer;
@@ -1474,7 +1499,7 @@
     background: rgba(255,76,76,0.2);
     color: #ffcdd2;
     border-radius: 6px;
-    font-family: 'Sarabun', sans-serif;
+    font-family: var(--font-brand);
     font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
@@ -1761,7 +1786,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    font-family: 'Sarabun', sans-serif;
+    font-family: var(--font-brand);
     font-size: 0.9rem;
     font-weight: 500;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1778,7 +1803,7 @@
   }
 
   .toast.info {
-    background: #1976d2;
+    background: var(--blue-bright);
   }
 
   @keyframes slideIn {
@@ -1924,7 +1949,7 @@
     font-weight: 600;
     cursor: pointer;
     transition: background 0.2s;
-    font-family: 'Sarabun', sans-serif;
+    font-family: var(--font-brand);
   }
 
   .photo-viewer-btn:hover {
@@ -1961,9 +1986,9 @@
   .text-xs-muted{color:var(--text-muted);font-size:.85rem;}
   .form-label-upper{font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
   .field-label{font-weight:700;display:block;margin-bottom:.5rem;font-size:.9rem;}
-  .input-lg{width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;transition:all .3s;}
+  .input-lg{width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.95rem;transition:all .3s;}
   .input-sm{width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;}
-  .input-md{padding:.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;}
+  .input-md{padding:.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;}
   .input-pad10{width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:1rem;}
   .pad-box{padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);}
   .table-th{border:1px solid var(--border);padding:.8rem;text-align:left;font-weight:600;color:var(--text);}
@@ -2078,6 +2103,9 @@
   </nav>
 
   <div class="sidebar-footer">
+    <button class="gh-theme-toggle gh-theme-toggle--icon" data-action="toggle-theme" aria-label="สลับธีม" style="margin-bottom:8px;color:#fff;border-color:rgba(255,255,255,.3);">
+      <span data-theme-icon>🌓</span>
+    </button>
     <button class="sidebar-logout" data-action="handleLogout">
       <span class="sidebar-item-icon">🚪</span>Logout
     </button>
@@ -2222,7 +2250,7 @@
                Hidden fields retained so legacy save path stays a no-op for contract data. -->
           <input type="hidden" id="modalContractDocument" value="">
           <input type="hidden" id="modalContractFileName" value="">
-          <div id="contractDocStatus" style="color:#666;font-size:.85rem;padding:10px 12px;background:#f5f5f5;border:1px solid var(--border);border-radius:var(--radius-sm);"></div>
+          <div id="contractDocStatus" style="color:var(--text-muted);font-size:.85rem;padding:10px 12px;background:#f5f5f5;border:1px solid var(--border);border-radius:var(--radius-sm);"></div>
           <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
             <a href="#" data-action="showPageTab" data-page="tenant" data-tab="leases" style="font-size:.8rem;color:var(--green);text-decoration:underline;font-weight:600;">📎 อัพโหลด/จัดการเอกสาร → Tab สัญญา</a>
             <a href="#" data-action="showTenantLease" style="font-size:.75rem;color:var(--text-muted);text-decoration:underline;">📋 ประวัติผู้เช่าเก่า</a>
@@ -2251,7 +2279,7 @@
       <!-- Additional Notes Section -->
       <div class="mb-6">
         <label class="form-label-upper">📝 หมายเหตุเพิ่มเติม</label>
-        <textarea id="modalTenantNotes" placeholder="เช่น หมายเหตุพิเศษ เงื่อนไข ข้อตกลงอื่น..." rows="3" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.95rem;resize:vertical;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'"></textarea>
+        <textarea id="modalTenantNotes" placeholder="เช่น หมายเหตุพิเศษ เงื่อนไข ข้อตกลงอื่น..." rows="3" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.95rem;resize:vertical;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'"></textarea>
       </div>
 
       <!-- Quick Navigation -->
@@ -2259,17 +2287,17 @@
         <div style="font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">ข้อมูลเพิ่มเติม →</div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
           <button onclick="openTenantBillPage()" class="year-tab active" style="padding:10px 6px;background:var(--green);border-color:var(--green);color:#fff;font-size:.78rem;line-height:1.4;">💳 บิล &amp;<br>ประวัติชำระ</button>
-          <button data-action="closeThenNavigate" data-page="meter" class="year-tab active" style="padding:10px 6px;background:#1565c0;border-color:#1565c0;color:#fff;font-size:.78rem;line-height:1.4;">⚡ มิเตอร์<br>ไฟ / น้ำ</button>
+          <button data-action="closeThenNavigate" data-page="meter" class="year-tab active" style="padding:10px 6px;background:var(--blue-dark);border-color:var(--blue-dark);color:#fff;font-size:.78rem;line-height:1.4;">⚡ มิเตอร์<br>ไฟ / น้ำ</button>
           <button data-action="closeThenNavigate" data-page="gamification" class="year-tab active" style="padding:10px 6px;background:#6a1b9a;border-color:#6a1b9a;color:#fff;font-size:.78rem;line-height:1.4;">🏆 คะแนน<br>&amp; รางวัล</button>
-          <button data-action="closeThenNavigate" data-page="requests-approvals" class="year-tab active" style="padding:10px 6px;background:#e65100;border-color:#e65100;color:#fff;font-size:.78rem;line-height:1.4;">🔧 คำขอ<br>&amp; ซ่อม</button>
+          <button data-action="closeThenNavigate" data-page="requests-approvals" class="year-tab active" style="padding:10px 6px;background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;font-size:.78rem;line-height:1.4;">🔧 คำขอ<br>&amp; ซ่อม</button>
         </div>
       </div>
     </div>
 
     <!-- Modal Footer -->
     <div style="padding:1.5rem 2rem;background:#f9fafb;border-top:1px solid var(--border);display:flex;gap:12px;flex-shrink:0;">
-      <button data-action="saveTenantInfo" style="flex:1;padding:14px 24px;background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;box-shadow:0 4px 12px rgba(45,134,83,.2);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(45,134,83,.4)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(45,134,83,.2)'">💾 บันทึกข้อมูล</button>
-      <button data-action="closeTenantModal" style="flex:1;padding:14px 24px;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;" onmouseover="this.style.background='#d0d7e0'" onmouseout="this.style.background='var(--border)'">ปิด</button>
+      <button data-action="saveTenantInfo" style="flex:1;padding:14px 24px;background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;box-shadow:0 4px 12px rgba(45,134,83,.2);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(45,134,83,.4)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(45,134,83,.2)'">💾 บันทึกข้อมูล</button>
+      <button data-action="closeTenantModal" style="flex:1;padding:14px 24px;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;" onmouseover="this.style.background='#d0d7e0'" onmouseout="this.style.background='var(--border)'">ปิด</button>
     </div>
   </div>
 </div>
@@ -2309,7 +2337,7 @@
     </div>
     <div class="kpi-grid">
       <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-label">รายได้รวมทั้งปี (รวมทั้ง 2 อาคาร)</div><div class="kpi-value green" id="kpi-total">฿0</div><div class="kpi-sub" id="kpi-total-sub"></div></div>
-      <div class="kpi-card" style="background:linear-gradient(135deg, #e3f2fd, #f3e5f5); border-left: 4px solid var(--green);"><div class="kpi-icon">🏠</div><div class="kpi-label">รายได้ rooms (ห้องแถว)</div><div class="kpi-value" id="kpi-rooms-total" style="color:var(--green);">฿0</div><div class="kpi-sub" id="kpi-rooms-sub">แบ่งตามระบบตัวใจ</div></div>
+      <div class="kpi-card" style="background:linear-gradient(135deg, var(--blue-pale), #f3e5f5); border-left: 4px solid var(--green);"><div class="kpi-icon">🏠</div><div class="kpi-label">รายได้ rooms (ห้องแถว)</div><div class="kpi-value" id="kpi-rooms-total" style="color:var(--green);">฿0</div><div class="kpi-sub" id="kpi-rooms-sub">แบ่งตามระบบตัวใจ</div></div>
       <div class="kpi-card kpi-nest" style="background:linear-gradient(135deg, #fce4ec, var(--green-pale)); border-left: 4px solid #7b1fa2;"><div class="kpi-icon">🏢</div><div class="kpi-label">รายได้ Nest Building</div><div class="kpi-value" id="kpi-nest-total" style="color:#7b1fa2;">฿0</div><div class="kpi-sub" id="kpi-nest-sub">ยูนิตที่เปิดให้เช่า</div></div>
       <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
     </div>
@@ -2397,7 +2425,7 @@
       <div class="card">
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
           <span>🏆 Top Tenants</span>
-          <button data-action="showPage" data-page="gamification" style="font-size:.72rem;padding:2px 8px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">ดูทั้งหมด →</button>
+          <button data-action="showPage" data-page="gamification" style="font-size:.72rem;padding:2px 8px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:var(--font-brand);">ดูทั้งหมด →</button>
         </div>
         <div id="dashTopTenants" style="min-height:60px;"></div>
       </div>
@@ -2427,9 +2455,9 @@
   <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
     <button id="tenant-main-tab-btn-tenants" class="year-tab active" data-action="switchTenantMainTab" data-tab="tenants">👥 ผู้เช่า</button>
     <button id="tenant-main-tab-btn-leases" class="year-tab" data-action="switchTenantMainTab" data-tab="leases">📋 สัญญา</button>
-    <button id="tenant-main-tab-btn-requests" class="year-tab" data-action="switchTenantMainTab" data-tab="requests">📨 คำขอ <span id="leaseRequestsBadge" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
+    <button id="tenant-main-tab-btn-requests" class="year-tab" data-action="switchTenantMainTab" data-tab="requests">📨 คำขอ <span id="leaseRequestsBadge" style="display:none;background:var(--red-dark);color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
     <button id="tenant-main-tab-btn-alerts" class="year-tab" data-action="switchTenantMainTab" data-tab="alerts">🔔 แจ้งเตือน</button>
-    <button id="tenant-main-tab-btn-bookings" class="year-tab" data-action="switchTenantMainTab" data-tab="bookings">🗓️ จอง <span id="bookingsBadge" style="display:none;background:#1565c0;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
+    <button id="tenant-main-tab-btn-bookings" class="year-tab" data-action="switchTenantMainTab" data-tab="bookings">🗓️ จอง <span id="bookingsBadge" style="display:none;background:var(--blue-dark);color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
   </div>
   <div id="tenant-main-tab-tenants">
 
@@ -2446,13 +2474,13 @@
     <div class="stats-strip stats-strip--green">
       <span style="font-weight:700;">🏠 <span id="occupancy-total">0</span> ห้อง</span>
       <span class="color-silver">|</span>
-      <span style="color:#2e7d32;">👤 <b id="occupancy-occupied">0</b> มีผู้เช่า</span>
+      <span style="color:var(--ok-dark);">👤 <b id="occupancy-occupied">0</b> มีผู้เช่า</span>
       <span class="color-silver">|</span>
-      <span style="color:#e65100;">🚪 <b id="occupancy-vacant">0</b> ว่าง</span>
+      <span style="color:var(--accent-dark);">🚪 <b id="occupancy-vacant">0</b> ว่าง</span>
       <span class="color-silver">|</span>
       <span style="color:#6a1b9a;">📊 <b id="occupancy-rate">0%</b></span>
       <span class="color-silver">|</span>
-      <span style="color:#c62828;">⏰ <b id="occupancy-soon">0</b> ใกล้หมด</span>
+      <span style="color:var(--red-dark);">⏰ <b id="occupancy-soon">0</b> ใกล้หมด</span>
       <span style="margin-left:auto;color:var(--green-dark);font-weight:700;">💰 <span id="rooms-total-income">—</span></span>
     </div>
     <!-- Lease Expiry Alerts -->
@@ -2471,14 +2499,14 @@
     <div class="stats-strip stats-strip--blue">
       <span style="font-weight:700;">🏗️ <span id="nest-occupancy-total">0</span> ห้อง</span>
       <span class="color-silver">|</span>
-      <span style="color:#1565c0;">👤 <b id="nest-occupancy-occupied">0</b> มีผู้เช่า</span>
+      <span style="color:var(--blue-dark);">👤 <b id="nest-occupancy-occupied">0</b> มีผู้เช่า</span>
       <span class="color-silver">|</span>
-      <span style="color:#e65100;">🚪 <b id="nest-occupancy-vacant">0</b> ว่าง</span>
+      <span style="color:var(--accent-dark);">🚪 <b id="nest-occupancy-vacant">0</b> ว่าง</span>
       <span class="color-silver">|</span>
       <span style="color:#6a1b9a;">📊 <b id="nest-occupancy-rate">0%</b></span>
       <span class="color-silver">|</span>
-      <span style="color:#c62828;">⏰ <b id="nest-occupancy-soon">0</b> ใกล้หมด</span>
-      <span style="margin-left:auto;color:#1565c0;font-weight:700;">💰 <span id="nest-total-income">—</span></span>
+      <span style="color:var(--red-dark);">⏰ <b id="nest-occupancy-soon">0</b> ใกล้หมด</span>
+      <span style="margin-left:auto;color:var(--blue-dark);font-weight:700;">💰 <span id="nest-total-income">—</span></span>
     </div>
     <!-- Lease Expiry Alerts -->
     <div id="nest-lease-expiry-alerts" style="display:none;margin-bottom:8px;">
@@ -2507,8 +2535,8 @@
         <button class="filter-btn-tenant expiring" data-action="setTenantFilter" data-filter="expiring">🟠 ใกล้หมด</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
-        <input type="text" id="tenantSearch" placeholder="🔍 ค้นหาห้อง/ชื่อ..." style="padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;max-width:200px;">
-        <button data-action="exportTenantCSV" style="padding:8px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:'Sarabun',sans-serif;font-size:.85rem;cursor:pointer;font-weight:600;">📥 CSV</button>
+        <input type="text" id="tenantSearch" placeholder="🔍 ค้นหาห้อง/ชื่อ..." style="padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);font-family:var(--font-brand);font-size:.9rem;max-width:200px;">
+        <button data-action="exportTenantCSV" style="padding:8px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:var(--font-brand);font-size:.85rem;cursor:pointer;font-weight:600;">📥 CSV</button>
       </div>
     </div>
   </div>
@@ -2528,24 +2556,24 @@
 
       <!-- Room Selection -->
       <div style="margin-bottom:20px;">
-        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">📍 เลือกห้องพัก</h3>
+        <h3 style="font-size:0.95rem;font-weight:600;color:var(--text);margin-bottom:10px;">📍 เลือกห้องพัก</h3>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:8px;margin-bottom:12px;max-height:150px;overflow-y:auto;">
           <div id="roomSelectionContainer" style="grid-column:1/-1;">
             <p style="color:#999;text-align:center;">กำลังโหลด...</p>
           </div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <button data-action="selectAllRooms" style="padding:6px 12px;border-radius:6px;border:1.5px solid #4caf50;background:white;color:#4caf50;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✓ เลือกทั้งหมด</button>
-          <button data-action="deselectAllRooms" style="padding:6px 12px;border-radius:6px;border:1.5px solid #999;background:white;color:#999;font-size:.85rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✗ ยกเลิกทั้งหมด</button>
+          <button data-action="selectAllRooms" style="padding:6px 12px;border-radius:6px;border:1.5px solid var(--ok-bright);background:white;color:var(--ok-bright);font-size:.85rem;font-weight:600;cursor:pointer;font-family:var(--font-brand);">✓ เลือกทั้งหมด</button>
+          <button data-action="deselectAllRooms" style="padding:6px 12px;border-radius:6px;border:1.5px solid #999;background:white;color:#999;font-size:.85rem;font-weight:600;cursor:pointer;font-family:var(--font-brand);">✗ ยกเลิกทั้งหมด</button>
         </div>
-        <div style="font-size:0.85rem;color:#666;background:#f5f5f5;padding:10px;border-radius:6px;">
+        <div style="font-size:0.85rem;color:var(--text-muted);background:#f5f5f5;padding:10px;border-radius:6px;">
           <strong id="roomSelectionCount">0</strong> ห้องได้รับการเลือก
         </div>
       </div>
 
       <!-- Adjustment Type Selection -->
       <div style="margin-bottom:20px;">
-        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">📊 วิธีการปรับค่าเช่า</h3>
+        <h3 style="font-size:0.95rem;font-weight:600;color:var(--text);margin-bottom:10px;">📊 วิธีการปรับค่าเช่า</h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
           <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #e0e0e0;border-radius:6px;cursor:pointer;" data-action="updateAdjustmentDisplay">
             <input type="radio" name="adjustType" value="fixed-increase" checked style="cursor:pointer;">
@@ -2572,28 +2600,28 @@
 
       <!-- Adjustment Value Input -->
       <div style="margin-bottom:20px;">
-        <h3 style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:10px;">
+        <h3 style="font-size:0.95rem;font-weight:600;color:var(--text);margin-bottom:10px;">
           <span id="adjustLabel">จำนวนที่เพิ่ม</span>
         </h3>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span id="adjustSymbol" style="font-size:1.1rem;font-weight:600;color:#4caf50;">฿</span>
-          <input type="number" id="adjustmentValue" placeholder="0" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:6px;font-size:1rem;font-family:'Sarabun',sans-serif;">
-          <span id="adjustUnit" style="font-size:0.95rem;color:#666;font-weight:500;">บาท</span>
+          <span id="adjustSymbol" style="font-size:1.1rem;font-weight:600;color:var(--ok-bright);">฿</span>
+          <input type="number" id="adjustmentValue" placeholder="0" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:6px;font-size:1rem;font-family:var(--font-brand);">
+          <span id="adjustUnit" style="font-size:0.95rem;color:var(--text-muted);font-weight:500;">บาท</span>
         </div>
       </div>
 
       <!-- Preview -->
       <div style="margin-bottom:20px;padding:12px;background:#f5f5f5;border-radius:6px;max-height:120px;overflow-y:auto;">
-        <h3 style="font-size:0.9rem;font-weight:600;color:#333;margin:0 0 8px 0;">📋 ตัวอย่างผลลัพธ์</h3>
-        <div id="previewResult" style="font-size:0.85rem;color:#666;line-height:1.6;">
+        <h3 style="font-size:0.9rem;font-weight:600;color:var(--text);margin:0 0 8px 0;">📋 ตัวอย่างผลลัพธ์</h3>
+        <div id="previewResult" style="font-size:0.85rem;color:var(--text-muted);line-height:1.6;">
           <p style="margin:0;color:#999;">เลือกห้องและค่าที่ต้องการปรับเพื่อดูตัวอย่าง</p>
         </div>
       </div>
 
       <!-- Action Buttons -->
       <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button data-action="closeBatchRentAdjustmentModal" style="padding:10px 20px;border-radius:6px;border:1.5px solid #999;background:white;color:#333;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">ยกเลิก</button>
-        <button data-action="applyBatchRentAdjustment" style="padding:10px 20px;border-radius:6px;border:none;background:#4caf50;color:white;font-size:.9rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">✓ ปรับค่าเช่า</button>
+        <button data-action="closeBatchRentAdjustmentModal" style="padding:10px 20px;border-radius:6px;border:1.5px solid #999;background:white;color:var(--text);font-size:.9rem;font-weight:600;cursor:pointer;font-family:var(--font-brand);">ยกเลิก</button>
+        <button data-action="applyBatchRentAdjustment" style="padding:10px 20px;border-radius:6px;border:none;background:var(--ok-bright);color:white;font-size:.9rem;font-weight:600;cursor:pointer;font-family:var(--font-brand);">✓ ปรับค่าเช่า</button>
       </div>
     </div>
   </div>
@@ -2636,9 +2664,9 @@
           <small style="color:var(--text-muted);">ลูกบ้านส่งจากหน้า Profile → "แจ้งต่อสัญญา / ย้ายออก" — real-time</small>
         </div>
         <div style="display:flex;gap:.5rem;">
-          <button id="leaseFilterAllBtn" data-action="setLeaseRequestFilter" data-filter="all" class="lease-req-filter-btn" style="padding:6px 14px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ทั้งหมด</button>
-          <button id="leaseFilterPendingBtn" data-action="setLeaseRequestFilter" data-filter="pending" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">รอดำเนินการ</button>
-          <button id="leaseFilterDoneBtn" data-action="setLeaseRequestFilter" data-filter="done" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:#333;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.85rem;">ดำเนินการแล้ว</button>
+          <button id="leaseFilterAllBtn" data-action="setLeaseRequestFilter" data-filter="all" class="lease-req-filter-btn" style="padding:6px 14px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-size:.85rem;">ทั้งหมด</button>
+          <button id="leaseFilterPendingBtn" data-action="setLeaseRequestFilter" data-filter="pending" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:var(--text);border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-size:.85rem;">รอดำเนินการ</button>
+          <button id="leaseFilterDoneBtn" data-action="setLeaseRequestFilter" data-filter="done" class="lease-req-filter-btn" style="padding:6px 14px;background:#eee;color:var(--text);border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-size:.85rem;">ดำเนินการแล้ว</button>
         </div>
       </div>
       <div id="leaseRequestsList" style="display:grid;gap:1rem;">
@@ -2722,7 +2750,7 @@
     <!-- Building Selection -->
     <div class="mb-6">
       <label style="font-weight:600;display:block;margin-bottom:0.5rem;color:var(--text);">เลือกอาคาร</label>
-      <select id="roomConfigBuilding" data-action="loadRoomConfigUI" style="padding:0.7rem;margin-top:0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;width:100%;max-width:300px;">
+      <select id="roomConfigBuilding" data-action="loadRoomConfigUI" style="padding:0.7rem;margin-top:0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:0.9rem;width:100%;max-width:300px;">
         <option value="rooms" selected>ห้องเช่า (Rent Rooms)</option>
         <option value="nest">Nest Building</option>
       </select>
@@ -2730,9 +2758,9 @@
 
 
     <!-- Instructions -->
-    <div style="margin-bottom:1.5rem;padding:0.8rem;background:#e3f2fd;border-left:4px solid #1976d2;border-radius:4px;">
+    <div style="margin-bottom:1.5rem;padding:0.8rem;background:var(--blue-pale);border-left:4px solid var(--blue-bright);border-radius:4px;">
       <div style="font-weight:600;color:#0d47a1;font-size:0.95rem;">📝 วิธีการใช้:</div>
-      <div style="font-size:0.9rem;color:#333;margin-top:0.4rem;">
+      <div style="font-size:0.9rem;color:var(--text);margin-top:0.4rem;">
         1️⃣ คลิกเลขตัวเลขที่ต้องการแก้ไข → 2️⃣ พิมพ์ค่าใหม่ → 3️⃣ กด Tab หรือคลิกช่องอื่น<br/>
         ✅ ระบบจะบันทึกอัตโนมัติและแสดงข้อความยืนยัน "บันทึก...เรียบร้อย" ที่มุมบนขวา
       </div>
@@ -2761,7 +2789,7 @@
       <div style="display:flex;align-items:center;gap:0.8rem;color:var(--green-dark);font-weight:600;font-size:0.95rem;">
         <span>✅ การเปลี่ยนแปลงจะบันทึกอัตโนมัติ</span>
       </div>
-      <div style="font-size:0.85rem;color:#666;margin-top:0.5rem;">
+      <div style="font-size:0.85rem;color:var(--text-muted);margin-top:0.5rem;">
         💡 เมื่อคุณแก้ไขราคาหรืออัตรา ระบบจะบันทึกโดยอัตโนมัติและแสดงข้อความยืนยัน (Toast) ที่มุมบนขวา
       </div>
     </div>
@@ -2785,7 +2813,7 @@
         <input type="text" id="newRoomId" placeholder="ห้อง ID (เช่น 34)" class="input-md">
         <input type="text" id="newRoomName" placeholder="ชื่อห้อง" class="input-md">
         <input type="number" id="newRoomRent" placeholder="ราคาห้องพัก" value="1500" step="1" data-action="updateDepositDisplay" class="input-md">
-        <input type="number" id="newRoomDeposit" placeholder="มัดจำ (อัตโนมัติ)" value="3000" readonly style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.9rem;background:#f5f5f5;color:#666;">
+        <input type="number" id="newRoomDeposit" placeholder="มัดจำ (อัตโนมัติ)" value="3000" readonly style="padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:0.9rem;background:#f5f5f5;color:var(--text-muted);">
         <input type="number" id="newRoomWater" placeholder="อัตราน้ำ" value="20" step="0.01" class="input-md">
         <input type="number" id="newRoomElectric" placeholder="อัตราไฟ" value="8" step="0.01" class="input-md">
       </div>
@@ -2800,7 +2828,7 @@
         <input type="number" id="newRoomRentCopy" placeholder="ราคาห้องพัก" value="1500" step="1" class="input-md">
       </div>
 
-      <button data-action="addNewRoom" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">➕ เพิ่มห้อง</button>
+      <button data-action="addNewRoom" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">➕ เพิ่มห้อง</button>
     </div>
   </div>
 
@@ -2860,38 +2888,38 @@
         <div id="importMatchSummary" style="background:var(--green-pale);border:1px solid var(--green-light);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;"></div>
 
         <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
-          <button id="approveImportBtn" data-action="approveImportData" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
-          <button data-action="cancelImportProcess" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">❌ ยกเลิก</button>
+          <button id="approveImportBtn" data-action="approveImportData" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
+          <button data-action="cancelImportProcess" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">❌ ยกเลิก</button>
         </div>
       </div>
 
       <!-- 📊 Recorded Meter Data Display -->
       <div id="meterDataRecordedSection" class="u-hidden" style="margin-top:2rem;">
-        <div style="background:var(--green-pale);border:2px solid #2e7d32;border-radius:var(--radius);padding:2rem;">
-          <h3 style="color:#2e7d32;margin-bottom:1.5rem;font-size:1.1rem;font-weight:600;">📊 ข้อมูลที่บันทึก</h3>
+        <div style="background:var(--green-pale);border:2px solid var(--ok-dark);border-radius:var(--radius);padding:2rem;">
+          <h3 style="color:var(--ok-dark);margin-bottom:1.5rem;font-size:1.1rem;font-weight:600;">📊 ข้อมูลที่บันทึก</h3>
 
           <!-- Period Info -->
-          <div style="background:white;border:1px solid #c8e6c9;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+          <div style="background:white;border:1px solid var(--ok-pale);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
             <div style="text-align:center;">
               <div class="text-xs-muted">📅 ปี</div>
-              <div id="recordedYear" style="font-size:1.2rem;font-weight:600;color:#2e7d32;">-</div>
+              <div id="recordedYear" style="font-size:1.2rem;font-weight:600;color:var(--ok-dark);">-</div>
             </div>
             <div style="text-align:center;">
               <div class="text-xs-muted">📆 เดือน</div>
-              <div id="recordedMonth" style="font-size:1.2rem;font-weight:600;color:#2e7d32;">-</div>
+              <div id="recordedMonth" style="font-size:1.2rem;font-weight:600;color:var(--ok-dark);">-</div>
             </div>
             <div style="text-align:center;">
               <div class="text-xs-muted">⏰ เวลา</div>
-              <div id="recordedTime" style="font-size:1.2rem;font-weight:600;color:#2e7d32;">-</div>
+              <div id="recordedTime" style="font-size:1.2rem;font-weight:600;color:var(--ok-dark);">-</div>
             </div>
           </div>
 
           <!-- Building Breakdown -->
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
             <!-- Rooms -->
-            <div style="background:white;border:1px solid #c8e6c9;border-radius:var(--radius-sm);padding:1rem;">
-              <div style="color:#2e7d32;font-weight:600;margin-bottom:0.8rem;">🏠 Rooms Building</div>
-              <div id="recordedRoomsCount" style="font-size:1.5rem;font-weight:600;color:#2e7d32;">0</div>
+            <div style="background:white;border:1px solid var(--ok-pale);border-radius:var(--radius-sm);padding:1rem;">
+              <div style="color:var(--ok-dark);font-weight:600;margin-bottom:0.8rem;">🏠 Rooms Building</div>
+              <div id="recordedRoomsCount" style="font-size:1.5rem;font-weight:600;color:var(--ok-dark);">0</div>
               <div class="text-xs-muted">ห้องที่บันทึก</div>
             </div>
             <!-- Nest -->
@@ -2909,15 +2937,15 @@
           </div>
 
           <!-- Sample Data Table -->
-          <div id="recordedMeterTable" style="background:white;border:1px solid #c8e6c9;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;overflow-x:auto;"></div>
+          <div id="recordedMeterTable" style="background:white;border:1px solid var(--ok-pale);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;overflow-x:auto;"></div>
 
           <!-- Historical Comparison -->
-          <div id="meterHistoricalComparison" style="background:white;border:1px solid #c8e6c9;border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;"></div>
+          <div id="meterHistoricalComparison" style="background:white;border:1px solid var(--ok-pale);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;"></div>
 
           <!-- Status Badge -->
-          <div style="text-align:center;padding:1rem;background:white;border-radius:var(--radius-sm);border:2px solid #2e7d32;">
+          <div style="text-align:center;padding:1rem;background:white;border-radius:var(--radius-sm);border:2px solid var(--ok-dark);">
             <div style="font-size:1.5rem;margin-bottom:0.5rem;">✅</div>
-            <div style="color:#2e7d32;font-weight:600;">บันทึกข้อมูลมิเตอร์สำเร็จ</div>
+            <div style="color:var(--ok-dark);font-weight:600;">บันทึกข้อมูลมิเตอร์สำเร็จ</div>
             <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.3rem;">ข้อมูลถูกบันทึกใน Firebase database</div>
           </div>
         </div>
@@ -2986,8 +3014,8 @@
         </div>
 
         <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
-          <button id="approveBillingBtn" data-action="approveBillingImportData" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
-          <button data-action="cancelBillingImportProcess" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;font-size:0.9rem;">❌ ยกเลิก</button>
+          <button id="approveBillingBtn" data-action="approveBillingImportData" style="padding:0.8rem 1.5rem;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">✅ อนุมัติและบันทึก</button>
+          <button data-action="cancelBillingImportProcess" style="padding:0.8rem 1.5rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-family:var(--font-brand);font-size:0.9rem;">❌ ยกเลิก</button>
         </div>
       </div>
 
@@ -3009,7 +3037,7 @@
           <!-- Year Selector -->
           <div class="mb-6">
             <label style="display:block;margin-bottom:0.5rem;font-weight:600;color:var(--text);">📅 เลือกปี:</label>
-            <select id="historicalDataYearSelect" style="width:100%;padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:0.95rem;background:white;cursor:pointer;">
+            <select id="historicalDataYearSelect" style="width:100%;padding:0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:0.95rem;background:white;cursor:pointer;">
               <option value="">-- เลือกปี --</option>
             </select>
           </div>
@@ -3049,7 +3077,7 @@
         <div><label>ห้องที่เกี่ยวข้อง (ถ้ามี)</label><input type="text" id="exp-room" placeholder="เช่น 15, Amazon..."></div>
         <div><label>จำนวนเงิน (บาท)</label><input type="number" id="exp-amount" placeholder="0" min="0"></div>
       </div>
-      <button data-action="addExpense" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:11px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:4px;">💾 บันทึกรายจ่าย</button>
+      <button data-action="addExpense" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:11px;font-family:var(--font-brand);font-size:.95rem;font-weight:700;cursor:pointer;margin-top:4px;">💾 บันทึกรายจ่าย</button>
     </div>
     <!-- Summary -->
     <div>
@@ -3057,13 +3085,13 @@
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           📊 สรุปประจำเดือน
           <div style="display:flex;gap:6px;">
-            <select id="exp-filter-month" data-action="renderExpensePage" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.8rem;">
+            <select id="exp-filter-month" data-action="renderExpensePage" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.8rem;">
               <option value="1">ม.ค.</option><option value="2">ก.พ.</option><option value="3">มี.ค.</option>
               <option value="4">เม.ย.</option><option value="5">พ.ค.</option><option value="6">มิ.ย.</option>
               <option value="7">ก.ค.</option><option value="8">ส.ค.</option><option value="9">ก.ย.</option>
               <option value="10">ต.ค.</option><option value="11">พ.ย.</option><option value="12">ธ.ค.</option>
             </select>
-            <input type="number" id="exp-filter-year" data-action="renderExpensePage" value="2569" style="width:75px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.8rem;">
+            <input type="number" id="exp-filter-year" data-action="renderExpensePage" value="2569" style="width:75px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.8rem;">
           </div>
         </div>
         <div id="expSummary"></div>
@@ -3106,18 +3134,18 @@
       <div class="grid-2col">
         <div>
           <label class="field-label">หัวข้อ *</label>
-          <input type="text" id="ann-title" placeholder="เช่น แจ้งปิดน้ำ" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+          <input type="text" id="ann-title" placeholder="เช่น แจ้งปิดน้ำ" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-brand);">
         </div>
 
         <div>
           <label class="field-label">ไอคอน Emoji</label>
-          <input type="text" id="ann-icon" placeholder="💧 🧹 🔧" maxlength="2" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun'; font-size: 1.2rem;">
+          <input type="text" id="ann-icon" placeholder="💧 🧹 🔧" maxlength="2" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-brand); font-size: 1.2rem;">
         </div>
       </div>
 
       <div class="mb-4">
         <label class="field-label">เนื้อหา *</label>
-        <textarea id="ann-content" rows="4" placeholder="รายละเอียดประกาศ..." style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun'; resize: vertical;"></textarea>
+        <textarea id="ann-content" rows="4" placeholder="รายละเอียดประกาศ..." style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-brand); resize: vertical;"></textarea>
       </div>
 
       <div class="grid-2col">
@@ -3128,11 +3156,11 @@
 
         <div>
           <label class="field-label">เวลา (optional)</label>
-          <input type="text" id="ann-time" placeholder="เช่น 10:00 - 14:00" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+          <input type="text" id="ann-time" placeholder="เช่น 10:00 - 14:00" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-brand);">
         </div>
       </div>
 
-      <button data-action="saveAnnouncement" style="width: 100%; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun'; font-size: 0.95rem;">📢 สร้างประกาศ</button>
+      <button data-action="saveAnnouncement" style="width: 100%; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: var(--font-brand); font-size: 0.95rem;">📢 สร้างประกาศ</button>
     </div>
 
     <!-- List of Announcements -->
@@ -3226,7 +3254,7 @@
 
       <div class="mb-4">
         <label class="field-label">หัวข้อ *</label>
-        <input type="text" id="wellness-title" placeholder="เช่น 3 เคล็ดลับจัดห้องนอน" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+        <input type="text" id="wellness-title" placeholder="เช่น 3 เคล็ดลับจัดห้องนอน" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-brand);">
       </div>
 
       <!-- Icon picker (no more typing fa-spa manually) -->
@@ -3246,17 +3274,17 @@
 
       <div class="mb-4">
         <label class="field-label">คำโปรย (Excerpt) *</label>
-        <input type="text" id="wellness-excerpt" placeholder="สรุปสั้นๆ 1-2 ประโยคให้ลูกบ้านอยากอ่านต่อ" maxlength="160" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+        <input type="text" id="wellness-excerpt" placeholder="สรุปสั้นๆ 1-2 ประโยคให้ลูกบ้านอยากอ่านต่อ" maxlength="160" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-brand);">
         <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px;">แนะนำไม่เกิน 160 ตัวอักษร</div>
       </div>
 
       <!-- Cover image upload (single, shown as thumbnail in tenant article list) -->
       <div class="mb-4">
         <label class="field-label">🖼️ ภาพปก (แสดงหน้าปกในแอพลูกบ้าน)</label>
-        <input type="file" id="wellness-cover-input" accept="image/*" data-action="onWellnessCoverPicked" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:'Sarabun';">
+        <input type="file" id="wellness-cover-input" accept="image/*" data-action="onWellnessCoverPicked" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:var(--font-brand);">
         <div id="wellness-cover-preview" style="margin-top:8px;display:none;">
           <img id="wellness-cover-img" src="" alt="ภาพปก" style="width:120px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
-          <button type="button" data-action="clearWellnessCover" style="display:block;margin-top:4px;font-size:.72rem;background:none;border:none;color:var(--danger);cursor:pointer;font-family:'Sarabun';">✕ ลบภาพปก</button>
+          <button type="button" data-action="clearWellnessCover" style="display:block;margin-top:4px;font-size:.72rem;background:none;border:none;color:var(--danger);cursor:pointer;font-family:var(--font-brand);">✕ ลบภาพปก</button>
         </div>
         <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">ภาพปกจะแสดงแทน icon ในรายการ Wellness Tips — รองรับ JPG/PNG/WEBP</div>
       </div>
@@ -3264,7 +3292,7 @@
       <!-- Image upload (multiple, compressed inline base64) -->
       <div class="mb-4">
         <label class="field-label">📷 รูปประกอบ (เลือกหลายรูปได้)</label>
-        <input type="file" id="wellness-images-input" accept="image/*" multiple data-action="onWellnessImagesPicked" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:'Sarabun';">
+        <input type="file" id="wellness-images-input" accept="image/*" multiple data-action="onWellnessImagesPicked" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:6px;font-family:var(--font-brand);">
         <div id="wellness-images-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
         <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">รูปจะถูกย่อเป็น 800px width + แทรกเข้าเนื้อหาให้อัตโนมัติ — รองรับ JPG/PNG/WEBP</div>
       </div>
@@ -3273,25 +3301,25 @@
         <label class="field-label">เนื้อหาเต็ม *</label>
         <!-- Mini formatting toolbar (no HTML typing required) -->
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;background:#f5f7fa;padding:6px 8px;border-radius:6px 6px 0 0;border:1px solid var(--border);border-bottom:none;">
-          <button type="button" data-action="wellnessFormat" data-fmt="bold" title="ตัวหนา (Ctrl+B)" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-weight:bold;font-family:'Sarabun';">B</button>
-          <button type="button" data-action="wellnessFormat" data-fmt="italic" title="ตัวเอียง (Ctrl+I)" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-style:italic;font-family:'Sarabun';">I</button>
-          <button type="button" data-action="wellnessFormat" data-fmt="ul" title="หัวข้อแบบ bullet" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:'Sarabun';">• รายการ</button>
-          <button type="button" data-action="wellnessFormat" data-fmt="ol" title="หัวข้อแบบเลข" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:'Sarabun';">1. ลำดับ</button>
-          <button type="button" data-action="wellnessFormat" data-fmt="h3" title="หัวข้อย่อย" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:'Sarabun';font-weight:600;">H</button>
+          <button type="button" data-action="wellnessFormat" data-fmt="bold" title="ตัวหนา (Ctrl+B)" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-weight:bold;font-family:var(--font-brand);">B</button>
+          <button type="button" data-action="wellnessFormat" data-fmt="italic" title="ตัวเอียง (Ctrl+I)" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-style:italic;font-family:var(--font-brand);">I</button>
+          <button type="button" data-action="wellnessFormat" data-fmt="ul" title="หัวข้อแบบ bullet" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:var(--font-brand);">• รายการ</button>
+          <button type="button" data-action="wellnessFormat" data-fmt="ol" title="หัวข้อแบบเลข" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:var(--font-brand);">1. ลำดับ</button>
+          <button type="button" data-action="wellnessFormat" data-fmt="h3" title="หัวข้อย่อย" style="padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:var(--font-brand);font-weight:600;">H</button>
           <span style="flex:1;"></span>
           <span style="font-size:.7rem;color:var(--text-muted);align-self:center;">พิมพ์ข้อความปกติ — ขึ้นบรรทัดเปล่าจะกลายเป็นย่อหน้าใหม่</span>
         </div>
         <textarea id="wellness-body" rows="10" placeholder="พิมพ์เนื้อหาตามปกติ ไม่ต้องใส่ HTML
 
 ขึ้นบรรทัดเปล่าจะกลายเป็นย่อหน้าใหม่อัตโนมัติ
-ใช้ปุ่ม **B** หรือ **• รายการ** ด้านบนได้" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 0 0 6px 6px; font-family: 'Sarabun'; resize: vertical; border-top:none;"></textarea>
+ใช้ปุ่ม **B** หรือ **• รายการ** ด้านบนได้" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 0 0 6px 6px; font-family: var(--font-brand); resize: vertical; border-top:none;"></textarea>
         <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px;">💡 พิมพ์ตามปกติเลย — ระบบจะจัด format ให้สวยงามอัตโนมัติเวลาเซฟ</div>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
         <div>
           <label class="field-label">หมวดหมู่</label>
-          <select id="wellness-category" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Sarabun';">
+          <select id="wellness-category" style="width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-brand);">
             <option value="Wellness">Wellness</option>
             <option value="Lifestyle">Lifestyle</option>
             <option value="Mindfulness">Mindfulness</option>
@@ -3311,8 +3339,8 @@
       </div>
 
       <div style="display: flex; gap: 0.8rem;">
-        <button data-action="saveWellnessArticle" style="flex:2; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun'; font-size: 0.95rem;">💾 บันทึกบทความ</button>
-        <button data-action="resetWellnessForm" style="flex:1; background: var(--border); color: var(--text); border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: 'Sarabun';">🗑️ ล้างฟอร์ม</button>
+        <button data-action="saveWellnessArticle" style="flex:2; background: var(--green); color: #fff; border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: var(--font-brand); font-size: 0.95rem;">💾 บันทึกบทความ</button>
+        <button data-action="resetWellnessForm" style="flex:1; background: var(--border); color: var(--text); border: none; border-radius: 6px; padding: 0.8rem; font-weight: 700; cursor: pointer; font-family: var(--font-brand);">🗑️ ล้างฟอร์ม</button>
       </div>
       <input type="hidden" id="wellness-edit-id" value="">
     </div>
@@ -3321,7 +3349,7 @@
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div class="card-title" style="margin-bottom:0;">📚 รายการบทความ Wellness ทั้งหมด</div>
-        <button data-action="seedWellnessStarters" style="padding:6px 12px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun';font-size:.78rem;">📥 นำเข้าบทความเริ่มต้น (7 บทความ)</button>
+        <button data-action="seedWellnessStarters" style="padding:6px 12px;background:var(--blue-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-size:.78rem;">📥 นำเข้าบทความเริ่มต้น (7 บทความ)</button>
       </div>
       <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:10px;">ลูกบ้านในแอปเห็นบทความเริ่มต้น 7 บทความ (hardcoded) — กดปุ่มเพื่อ migrate ไป Firestore แล้วจะแก้ไขได้จากที่นี่</div>
       <div id="wellnessList" style="min-height: 200px;"></div>
@@ -3340,7 +3368,7 @@
   <!-- Main Tab Nav -->
   <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
     <button id="bill-main-tab-btn-billing" class="year-tab active" data-action="switchBillingMainTab" data-tab="billing">🧾 ออกบิล</button>
-    <button id="bill-main-tab-btn-live" class="year-tab" data-action="switchBillingMainTab" data-tab="live">🔔 Live Feed <span id="paymentBadge2" style="display:none;background:#c62828;color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
+    <button id="bill-main-tab-btn-live" class="year-tab" data-action="switchBillingMainTab" data-tab="live">🔔 Live Feed <span id="paymentBadge2" style="display:none;background:var(--red-dark);color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
     <button id="bill-main-tab-btn-history" class="year-tab" data-action="switchBillingMainTab" data-tab="history">📜 ประวัติตามห้อง</button>
     <button id="bill-main-tab-btn-monthly" class="year-tab" data-action="switchBillingMainTab" data-tab="monthly">📋 สถานะชำระรายเดือน</button>
   </div>
@@ -3361,11 +3389,11 @@
         <!-- PromptPay Info (read-only, loaded per-building from Firestore) -->
         <div id="pp-display" style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:.6rem .9rem;margin-bottom:.8rem;font-size:.82rem;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
           <div>
-            <span style="font-weight:700;color:#e65100;">📱 PromptPay:</span>
+            <span style="font-weight:700;color:var(--accent-dark);">📱 PromptPay:</span>
             <span id="pp-display-number" style="font-family:monospace;font-weight:700;color:#424242;">—</span>
             <span id="pp-display-payee" style="color:var(--text-muted);font-size:.76rem;margin-left:6px;"></span>
           </div>
-          <a href="#" data-action="navToOwnerTab" style="font-size:.74rem;color:#1565c0;text-decoration:none;">⚙️ แก้ไขในหน้า Owner</a>
+          <a href="#" data-action="navToOwnerTab" style="font-size:.74rem;color:var(--blue-dark);text-decoration:none;">⚙️ แก้ไขในหน้า Owner</a>
         </div>
 
         <!-- Step 1: Building + Room (merged) -->
@@ -3410,7 +3438,7 @@
 
         <!-- Daily rate toggle (shown for floor 1 new building rooms) -->
         <div class="daily-section" id="dailySection">
-          <div style="font-weight:700;font-size:.85rem;color:#e65100;margin-bottom:8px;">📅 ตัวเลือกรายวัน</div>
+          <div style="font-weight:700;font-size:.85rem;color:var(--accent-dark);margin-bottom:8px;">📅 ตัวเลือกรายวัน</div>
           <div class="form-grid">
             <div class="form-field">
               <label>ประเภทการเช่า</label>
@@ -3478,7 +3506,7 @@
           <div class="calc-row"><span id="c-water-label">ค่าน้ำ (0 หน่วย × ฿20)</span><span id="c-water">฿0</span></div>
           <div class="calc-row"><span>ค่าขยะ</span><span id="c-trash">฿0</span></div>
           <div class="calc-row" id="c-other-row" style="display:none;"><span>ค่าบริการอื่นๆ</span><span id="c-other">฿0</span></div>
-          <div class="calc-row" id="c-latefee-row" style="display:none;"><span style="color:#c62828;">⚠️ ค่าปรับ</span><span id="c-latefee" style="color:#c62828;">฿0</span></div>
+          <div class="calc-row" id="c-latefee-row" style="display:none;"><span style="color:var(--red-dark);">⚠️ ค่าปรับ</span><span id="c-latefee" style="color:var(--red-dark);">฿0</span></div>
           <div class="calc-row total"><span>รวมทั้งสิ้น</span><span id="c-total">฿0</span></div>
         </div>
 
@@ -3487,7 +3515,7 @@
 
         <!-- Slip verification (shown after invoice sent) -->
         <div class="slip-verify-section" id="slipVerifySection">
-          <div style="font-size:.83rem;font-weight:700;color:#e65100;margin-bottom:.7rem;">📲 ขั้นตอน 2 — ตรวจสลิปโอนเงิน</div>
+          <div style="font-size:.83rem;font-weight:700;color:var(--accent-dark);margin-bottom:.7rem;">📲 ขั้นตอน 2 — ตรวจสลิปโอนเงิน</div>
           <div class="slip-drop-area" id="slipDropArea"
                data-action="clickInput" data-target="slipFileInput"
                ondragover="event.preventDefault();this.classList.add('dragging')"
@@ -3640,7 +3668,7 @@
     <div class="card" style="margin-bottom:1rem;padding:.7rem 1rem;background:#fffde7;border-left:4px solid #fbc02d;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.85rem;">
         <span style="font-weight:700;">⚙️ เริ่มติดตามการชำระตั้งแต่:</span>
-        <select id="tracking-start-month" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.82rem;">
+        <select id="tracking-start-month" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.82rem;">
           <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
           <option value="3">มีนาคม</option><option value="4">เมษายน</option>
           <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
@@ -3648,8 +3676,8 @@
           <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
           <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
         </select>
-        <input type="number" id="tracking-start-year" min="2560" max="2590" style="width:80px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.82rem;">
-        <button data-action="saveTrackingStart" style="padding:5px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.8rem;font-weight:700;">💾 บันทึก</button>
+        <input type="number" id="tracking-start-year" min="2560" max="2590" style="width:80px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.82rem;">
+        <button data-action="saveTrackingStart" style="padding:5px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-size:.8rem;font-weight:700;">💾 บันทึก</button>
         <span id="tracking-start-info" style="color:var(--text-muted);font-size:.76rem;margin-left:auto;"></span>
       </div>
       <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">ก่อนเดือนนี้จะแสดงเป็น "📦 Archived" (ข้อมูลเก่า ไม่นับเป็นค้างชำระ) — ใช้สำหรับระบบเพิ่งเริ่ม track</div>
@@ -3659,7 +3687,7 @@
     <div class="card" class="mb-5">
       <div class="card-title" id="pvm-table-title">📋 ตารางมิเตอร์ &amp; สถานะชำระ — ห้องแถว</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.9rem;">
-        <select id="mt-month" data-action="renderMeterTable" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.88rem;">
+        <select id="mt-month" data-action="renderMeterTable" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.88rem;">
           <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
           <option value="3">มีนาคม</option><option value="4">เมษายน</option>
           <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
@@ -3668,7 +3696,7 @@
           <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
         </select>
         <input type="number" id="mt-year" value="2569" min="2560" max="2590" data-action="renderMeterTable"
-          style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.88rem;">
+          style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.88rem;">
         <span style="font-size:.78rem;color:var(--text-muted);">✅ = คลิกดูรายละเอียด · ⏳ = คลิก"ออกบิล"</span>
       </div>
       <div id="meterTableBody"></div>
@@ -3678,7 +3706,7 @@
     <div class="card" class="mb-5" id="vacantCard">
       <div class="card-title">🚪 ตรวจสอบห้องว่าง — เลือกเดือน/ปี ที่ต้องการดู</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
-        <select id="vc-month" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;">
+        <select id="vc-month" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.9rem;">
           <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
           <option value="3">มีนาคม</option><option value="4">เมษายน</option>
           <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
@@ -3687,8 +3715,8 @@
           <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
         </select>
         <input type="number" id="vc-year" value="2569" min="2560" max="2590"
-          style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-family:'Sarabun',sans-serif;font-size:.9rem;">
-        <button data-action="checkVacant" style="padding:6px 18px;background:var(--green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:.9rem;font-weight:600;">🔍 ตรวจสอบ</button>
+          style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.9rem;">
+        <button data-action="checkVacant" style="padding:6px 18px;background:var(--green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:var(--font-brand);font-size:.9rem;font-weight:600;">🔍 ตรวจสอบ</button>
         <span style="font-size:.8rem;color:var(--text-muted);">ดูจากการใช้ไฟฟ้า (ถ้ามิเตอร์ไม่เพิ่ม = อาจว่าง)</span>
       </div>
       <div id="vc-result"></div>
@@ -3727,25 +3755,25 @@
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">🔒 นโยบายความเป็นส่วนตัว (Privacy Policy)</div>
           <div id="policy-admin-privacy" data-placeholder="เขียนเนื้อหานโยบายความเป็นส่วนตัว..."></div>
-          <button id="policy-save-privacy" data-action="savePolicyDoc" data-doc="privacy" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
+          <button id="policy-save-privacy" data-action="savePolicyDoc" data-doc="privacy" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-weight:600;">💾 บันทึก</button>
         </div>
         <!-- Terms / User Manual -->
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">📖 คู่มือการใช้งาน</div>
           <div id="policy-admin-terms" data-placeholder="เขียนคู่มือการใช้งาน..."></div>
-          <button id="policy-save-terms" data-action="savePolicyDoc" data-doc="terms" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
+          <button id="policy-save-terms" data-action="savePolicyDoc" data-doc="terms" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-weight:600;">💾 บันทึก</button>
         </div>
         <!-- Compliance -->
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">⚖️ Data & Compliance</div>
           <div id="policy-admin-compliance" data-placeholder="เขียนนโยบาย Data & Compliance..."></div>
-          <button id="policy-save-compliance" data-action="savePolicyDoc" data-doc="compliance" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
+          <button id="policy-save-compliance" data-action="savePolicyDoc" data-doc="compliance" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-weight:600;">💾 บันทึก</button>
         </div>
         <!-- IP -->
         <div>
           <div style="font-weight:700;margin-bottom:.5rem;">™️ ทรัพย์สินทางปัญญา (IP Infringement)</div>
           <div id="policy-admin-ip" data-placeholder="เขียนนโยบายทรัพย์สินทางปัญญา..."></div>
-          <button id="policy-save-ip" data-action="savePolicyDoc" data-doc="ip" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;">💾 บันทึก</button>
+          <button id="policy-save-ip" data-action="savePolicyDoc" data-doc="ip" style="margin-top:.5rem;padding:8px 20px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);font-weight:600;">💾 บันทึก</button>
         </div>
       </div>
     </div>
@@ -3822,10 +3850,10 @@
   <!-- TAB 1: Maintenance -->
   <div id="requests-tab-maintenance" class="requests-mgmt-content">
     <div id="mx-notification-banner" style="display:none;background:#fff9c4;border-left:6px solid #fbc02d;padding:1rem;margin-bottom:1rem;border-radius:6px;">
-      <div style="color:#f57f17;font-weight:700;font-size:0.95rem;font-family:'Sarabun',sans-serif;">⚠️ <span id="mx-pending-count">0</span> รายการแจ้งซ่อม รอการตรวจสอบ</div>
+      <div style="color:#f57f17;font-weight:700;font-size:0.95rem;font-family:var(--font-brand);">⚠️ <span id="mx-pending-count">0</span> รายการแจ้งซ่อม รอการตรวจสอบ</div>
     </div>
     <div class="mx-kpi-grid">
-      <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-pending" style="color:#e65100;">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
+      <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-pending" style="color:var(--accent-dark);">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
       <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
       <div class="mx-kpi"><div class="mx-kpi-val" id="mx-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
     </div>
@@ -3837,7 +3865,7 @@
         <option value="inprogress">🔨 กำลังดำเนินการ</option>
         <option value="done">✅ เสร็จแล้ว</option>
       </select>
-      <button data-action="showAddMaintenanceModal" style="padding:10px 18px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">➕ แจ้งซ่อมใหม่</button>
+      <button data-action="showAddMaintenanceModal" style="padding:10px 18px;background:linear-gradient(135deg,var(--ok-bright),var(--ok-dark));color:#fff;border:none;border-radius:8px;font-family:var(--font-brand);font-weight:700;cursor:pointer;">➕ แจ้งซ่อมใหม่</button>
     </div>
     <div class="card">
       <div class="card-title">📋 รายการงานซ่อมทั้งหมด</div>
@@ -3848,7 +3876,7 @@
   <!-- TAB 2: Housekeeping -->
   <div id="requests-tab-housekeeping" class="requests-mgmt-content" style="display:none;">
     <div class="mx-kpi-grid">
-      <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-pending" style="color:#e65100;">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
+      <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-pending" style="color:var(--accent-dark);">0</div><div class="mx-kpi-label">⏳ รอดำเนินการ</div></div>
       <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-inprogress" style="color:var(--blue);">0</div><div class="mx-kpi-label">🔨 กำลังดำเนินการ</div></div>
       <div class="mx-kpi"><div class="mx-kpi-val" id="hk-kpi-done" style="color:var(--green-dark);">0</div><div class="mx-kpi-label">✅ เสร็จแล้ว</div></div>
     </div>
@@ -3874,7 +3902,7 @@
         <option value="inprogress">🔨 กำลังดำเนินการ</option>
         <option value="done">✅ เสร็จแล้ว</option>
       </select>
-      <button data-action="showAddHousekeepingModal" style="padding:10px 18px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;">➕ ขอบริการใหม่</button>
+      <button data-action="showAddHousekeepingModal" style="padding:10px 18px;background:linear-gradient(135deg,var(--ok-bright),var(--ok-dark));color:#fff;border:none;border-radius:8px;font-family:var(--font-brand);font-weight:700;cursor:pointer;">➕ ขอบริการใหม่</button>
     </div>
     <div class="card">
       <div class="card-title">📋 รายการบริการทำความสะอาดทั้งหมด</div>
@@ -3899,12 +3927,12 @@
           <div style="font-size:1.5rem;font-weight:700;color:var(--green-dark);" id="totalComplaintsCount">0</div>
           <div style="font-size:.9rem;color:var(--text-muted);">Total Complaints</div>
         </div>
-        <div style="background:#fff3e0;padding:1rem;border-radius:var(--radius-sm);text-align:center;">
+        <div style="background:var(--accent-pale);padding:1rem;border-radius:var(--radius-sm);text-align:center;">
           <div style="font-size:1.5rem;font-weight:700;color:#f57c00;" id="openComplaintsCount">0</div>
           <div style="font-size:.9rem;color:var(--text-muted);">Open</div>
         </div>
-        <div style="background:#e3f2fd;padding:1rem;border-radius:var(--radius-sm);text-align:center;">
-          <div style="font-size:1.5rem;font-weight:700;color:#1976d2;" id="inProgressComplaintsCount">0</div>
+        <div style="background:var(--blue-pale);padding:1rem;border-radius:var(--radius-sm);text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:var(--blue-bright);" id="inProgressComplaintsCount">0</div>
           <div style="font-size:.9rem;color:var(--text-muted);">In Progress</div>
         </div>
         <div style="background:var(--green-pale);padding:1rem;border-radius:var(--radius-sm);text-align:center;">
@@ -4002,7 +4030,7 @@
       <!-- Redemption Catalog CRUD (Firestore `rewards/` collection) -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <div style="font-weight: 700; font-size: 1.05rem;">🎁 Redemption Catalog</div>
-        <button data-action="openRewardEdit" style="background: var(--green-dark); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: 'Sarabun', sans-serif;">+ Add Reward</button>
+        <button data-action="openRewardEdit" style="background: var(--green-dark); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: var(--font-brand);">+ Add Reward</button>
       </div>
       <div style="overflow-x: auto;">
         <table class="data-table" style="width: 100%;">
@@ -4040,8 +4068,8 @@
             <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rewardEditActive" checked> Active (visible to tenants)</label>
           </div>
           <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.5rem;">
-            <button data-action="closeRewardEdit" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:'Sarabun',sans-serif;">Cancel</button>
-            <button data-action="saveReward" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;">Save</button>
+            <button data-action="closeRewardEdit" style="padding:8px 16px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-brand);">Cancel</button>
+            <button data-action="saveReward" style="padding:8px 16px;background:var(--green-dark);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:var(--font-brand);">Save</button>
           </div>
         </div>
       </div>
@@ -4052,38 +4080,38 @@
 </main>
 
 <!-- Firebase Monitoring Panel -->
-<div id="firebaseMonitorPanel" style="position:fixed;bottom:20px;right:20px;width:320px;background:white;border:2px solid var(--green);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:9999;font-family:'Sarabun',sans-serif;display:none;">
+<div id="firebaseMonitorPanel" style="position:fixed;bottom:20px;right:20px;width:320px;background:white;border:2px solid var(--green);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:9999;font-family:var(--font-brand);display:none;">
   <div style="background:var(--green);color:white;padding:12px;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center;">
     <span style="font-weight:700;font-size:14px;">🔥 Firebase Monitor</span>
     <button data-action="toggleFirebasePanel" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;padding:0;">×</button>
   </div>
 
   <div style="padding:14px;">
-    <div style="margin-bottom:12px;padding:10px;background:#f0f7ff;border-radius:6px;border-left:3px solid #1976d2;">
-      <div style="font-size:12px;color:#666;margin-bottom:4px;">Status</div>
+    <div style="margin-bottom:12px;padding:10px;background:#f0f7ff;border-radius:6px;border-left:3px solid var(--blue-bright);">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Status</div>
       <div style="font-weight:700;font-size:14px;color:#1a2332;">
         <span id="firebaseStatus">🔄 Connecting...</span>
       </div>
     </div>
 
     <div style="margin-bottom:12px;padding:10px;background:var(--green-pale);border-radius:6px;border-left:3px solid var(--green);">
-      <div style="font-size:12px;color:#666;margin-bottom:4px;">Connection Test</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Connection Test</div>
       <div id="firebaseTestResult" style="font-weight:600;font-size:13px;color:var(--green);">⏳ Testing...</div>
     </div>
 
     <div style="margin-bottom:12px;padding:10px;background:#fff8e1;border-radius:6px;border-left:3px solid #ff8f00;">
-      <div style="font-size:12px;color:#666;margin-bottom:4px;">Last Updated</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Last Updated</div>
       <div id="firebaseLastUpdate" style="font-weight:600;font-size:12px;color:#ff8f00;">Initializing...</div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
-      <button data-action="testFirebaseConnection" style="padding:8px;background:var(--green);color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Sarabun',sans-serif;">🧪 Test</button>
-      <button data-action="syncDataToFirebase" style="padding:8px;background:#1976d2;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Sarabun',sans-serif;">📤 Sync</button>
+      <button data-action="testFirebaseConnection" style="padding:8px;background:var(--green);color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font-brand);">🧪 Test</button>
+      <button data-action="syncDataToFirebase" style="padding:8px;background:var(--blue-bright);color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font-brand);">📤 Sync</button>
     </div>
 
     <div style="margin-top:12px;padding:10px;background:#f5f5f5;border-radius:6px;max-height:100px;overflow-y:auto;">
-      <div style="font-size:11px;color:#666;margin-bottom:6px;font-weight:600;">Functions Loaded</div>
-      <div id="firebaseFunctions" style="font-size:11px;color:#333;line-height:1.5;font-family:monospace;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;font-weight:600;">Functions Loaded</div>
+      <div id="firebaseFunctions" style="font-size:11px;color:var(--text);line-height:1.5;font-family:monospace;">
         ⏳ Loading...
       </div>
     </div>
@@ -4142,7 +4170,7 @@
           <label style="font-weight:600;font-size:.9rem;margin-bottom:.5rem;color:var(--text);">รหัสผ่านเดิม</label>
           <div style="position:relative;display:flex;align-items:center;">
             <input type="password" id="oldPassword" placeholder="กรอกรหัสผ่านเดิม"
-              style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
+              style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
               onkeypress="if(event.key==='Enter')changePassword()"
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
@@ -4157,7 +4185,7 @@
           <label style="font-weight:600;font-size:.9rem;margin-bottom:.5rem;color:var(--text);">รหัสผ่านใหม่</label>
           <div style="position:relative;display:flex;align-items:center;">
             <input type="password" id="newPassword" placeholder="กรอกรหัสผ่านใหม่ (อย่างน้อย 6 ตัว)"
-              style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
+              style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
               onkeypress="if(event.key==='Enter')changePassword()"
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
@@ -4172,7 +4200,7 @@
           <label style="font-weight:600;font-size:.9rem;margin-bottom:.5rem;color:var(--text);">ยืนยันรหัสผ่านใหม่</label>
           <div style="position:relative;display:flex;align-items:center;">
             <input type="password" id="confirmPassword" placeholder="พิมพ์รหัสผ่านใหม่ซ้ำ"
-              style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
+              style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
               onkeypress="if(event.key==='Enter')changePassword()"
               onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
@@ -4184,10 +4212,10 @@
 
         <!-- Buttons -->
         <div style="display:flex;gap:.8rem;margin-top:1.5rem;flex-wrap:wrap;">
-          <button type="submit" style="flex:1;padding:.9rem;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;font-size:.9rem;">
+          <button type="submit" style="flex:1;padding:.9rem;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;transition:all .2s;font-size:.9rem;">
             ✅ เปลี่ยนรหัสผ่าน
           </button>
-          <button type="button" data-action="closeChangePasswordModal" style="flex:1;padding:.9rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;font-size:.9rem;">
+          <button type="button" data-action="closeChangePasswordModal" style="flex:1;padding:.9rem;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;transition:all .2s;font-size:.9rem;">
             ✕ ยกเลิก
           </button>
         </div>

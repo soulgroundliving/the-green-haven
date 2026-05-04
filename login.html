@@ -9,6 +9,10 @@
   <link rel="icon" id="dynamic-favicon" href="/shared/pwa-icon.svg">
   <script>try{const _oi=JSON.parse(localStorage.getItem('owner_info')||'{}');if(_oi.faviconDataUrl)document.getElementById('dynamic-favicon').href=_oi.faviconDataUrl;}catch(_){}</script>
   <link rel="stylesheet" href="shared/brand.css">
+  <link rel="stylesheet" href="shared/components.css">
+  <script src="shared/theme-toggle.js"></script>
+  <script src="shared/modal.js"></script>
+  <script src="shared/modal-a11y-bridge.js"></script>
   <script src="shared/security.js"></script>
   <script src="shared/firebase-config-loader.js"></script>
   <style>
@@ -19,8 +23,8 @@
     }
 
     body {
-      font-family: 'Sarabun', sans-serif;
-      background: linear-gradient(135deg, #1a5c38 0%, #2d8653 60%, #3aa86a 100%);
+      font-family: var(--font-brand);
+      background: linear-gradient(135deg, var(--brand-primary-dark) 0%, var(--brand-primary) 60%, var(--brand-primary-light) 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -38,7 +42,7 @@
     }
 
     .login-header {
-      background: linear-gradient(135deg, #1a5c38 0%, #2d8653 100%);
+      background: linear-gradient(135deg, var(--brand-primary-dark) 0%, var(--brand-primary) 100%);
       color: white;
       padding: 40px 30px;
       text-align: center;
@@ -74,9 +78,9 @@
     .form-group input {
       width: 100%;
       padding: 12px;
-      border: 2px solid #e0e6ed;
+      border: 2px solid var(--stone);
       border-radius: 8px;
-      font-family: 'Sarabun', sans-serif;
+      font-family: var(--font-brand);
       font-size: 14px;
       transition: all 0.3s;
       background: white;
@@ -88,13 +92,13 @@
 
     .form-group input:focus {
       outline: none;
-      border-color: #2d8653;
+      border-color: var(--brand-primary);
       box-shadow: 0 0 8px rgba(45, 134, 83, 0.1);
       background: white;
     }
 
     .form-group input:invalid {
-      border-color: #c62828;
+      border-color: var(--alert);
     }
 
     .user-type {
@@ -106,11 +110,11 @@
 
     .user-type-btn {
       padding: 12px;
-      border: 2px solid #e0e6ed;
+      border: 2px solid var(--stone);
       background: white;
       border-radius: 8px;
       cursor: pointer;
-      font-family: 'Sarabun', sans-serif;
+      font-family: var(--font-brand);
       font-weight: 600;
       font-size: 14px;
       color: #6b7a8d;
@@ -125,20 +129,20 @@
     }
 
     .user-type-btn.active {
-      border-color: #2d8653;
-      background: #e8f5e9;
-      color: #2d8653;
+      border-color: var(--brand-primary);
+      background: var(--brand-primary-soft);
+      color: var(--brand-primary);
       box-shadow: 0 2px 8px rgba(45, 134, 83, 0.15);
     }
 
     .login-btn {
       width: 100%;
       padding: 14px;
-      background: linear-gradient(135deg, #1a5c38 0%, #2d8653 100%);
+      background: linear-gradient(135deg, var(--brand-primary-dark) 0%, var(--brand-primary) 100%);
       color: white;
       border: none;
       border-radius: 8px;
-      font-family: 'Sarabun', sans-serif;
+      font-family: var(--font-brand);
       font-weight: 700;
       font-size: 16px;
       cursor: pointer;
@@ -170,7 +174,7 @@
     }
 
     .signup-toggle a {
-      color: #2d8653;
+      color: var(--brand-primary);
       text-decoration: none;
       font-weight: 600;
       cursor: pointer;
@@ -179,23 +183,23 @@
     .error-message {
       display: none;
       background: #ffebee;
-      color: #c62828;
+      color: var(--alert);
       padding: 12px;
       border-radius: 8px;
       margin-bottom: 20px;
       font-size: 14px;
-      border-left: 4px solid #c62828;
+      border-left: 4px solid var(--alert);
     }
 
     .success-message {
       display: none;
-      background: #e8f5e9;
-      color: #2d8653;
+      background: var(--brand-primary-soft);
+      color: var(--brand-primary);
       padding: 12px;
       border-radius: 8px;
       margin-bottom: 20px;
       font-size: 14px;
-      border-left: 4px solid #2d8653;
+      border-left: 4px solid var(--brand-primary);
     }
 
     .loading {
@@ -205,8 +209,8 @@
     }
 
     .spinner {
-      border: 4px solid #e0e6ed;
-      border-top: 4px solid #2d8653;
+      border: 4px solid var(--stone);
+      border-top: 4px solid var(--brand-primary);
       border-radius: 50%;
       width: 40px;
       height: 40px;
@@ -233,7 +237,7 @@
     }
 
     .forgot-password a {
-      color: #2d8653;
+      color: var(--brand-primary);
       text-decoration: none;
       font-size: 13px;
       font-weight: 600;
@@ -271,7 +275,7 @@
     }
 
     .password-toggle:hover {
-      color: #2d8653;
+      color: var(--brand-primary);
       background: rgba(45, 134, 83, 0.08);
     }
 
@@ -575,27 +579,27 @@
 
     <div class="login-body">
       <!-- User Type Selection -->
-      <div class="user-type">
-        <button class="user-type-btn active" data-action="user-type" data-type="admin">👨‍💼 Admin</button>
-        <button class="user-type-btn" data-action="user-type" data-type="accountant">📊 บัญชี</button>
-        <button class="user-type-btn" data-action="user-type" data-type="tenant">👤 Tenant</button>
+      <div class="user-type" role="radiogroup" aria-label="ประเภทผู้ใช้งาน">
+        <button class="user-type-btn active" role="radio" aria-checked="true"  data-action="user-type" data-type="admin">👨‍💼 Admin</button>
+        <button class="user-type-btn"        role="radio" aria-checked="false" data-action="user-type" data-type="accountant">📊 บัญชี</button>
+        <button class="user-type-btn"        role="radio" aria-checked="false" data-action="user-type" data-type="tenant">👤 Tenant</button>
       </div>
 
-      <div id="errorMessage" class="error-message"></div>
-      <div id="successMessage" class="success-message"></div>
+      <div id="errorMessage"   class="error-message"   role="alert"  aria-live="assertive"></div>
+      <div id="successMessage" class="success-message" role="status" aria-live="polite"></div>
 
       <!-- Login Form -->
-      <form id="loginForm" class="form-mode active" data-action="login-submit">
+      <form id="loginForm" class="form-mode active" data-action="login-submit" aria-describedby="errorMessage">
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="loginEmail" required placeholder="your@email.com" autocomplete="email">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" required placeholder="your@email.com" autocomplete="email" inputmode="email">
         </div>
 
         <div class="form-group">
-          <label>Password</label>
+          <label for="loginPassword">Password</label>
           <div class="password-wrapper">
-            <input type="password" id="loginPassword" required placeholder="••••••••" autocomplete="password">
-            <button type="button" class="password-toggle" data-action="toggle-password" data-target="loginPassword" title="Show/Hide password">👁️</button>
+            <input type="password" id="loginPassword" required placeholder="••••••••" autocomplete="current-password">
+            <button type="button" class="password-toggle" data-action="toggle-password" data-target="loginPassword" aria-label="แสดง/ซ่อนรหัสผ่าน" aria-pressed="false">👁️</button>
           </div>
         </div>
 
@@ -607,30 +611,30 @@
       </form>
 
       <!-- Register Form -->
-      <form id="registerForm" class="form-mode" data-action="register-submit">
+      <form id="registerForm" class="form-mode" data-action="register-submit" aria-describedby="errorMessage">
         <div class="form-row-2">
           <div class="form-group form-group-flush">
-            <label>ชื่อ</label>
+            <label for="registerFirstName">ชื่อ</label>
             <input type="text" id="registerFirstName" required placeholder="ชื่อ" autocomplete="given-name">
           </div>
           <div class="form-group form-group-flush">
-            <label>นามสกุล</label>
+            <label for="registerLastName">นามสกุล</label>
             <input type="text" id="registerLastName" required placeholder="นามสกุล" autocomplete="family-name">
           </div>
         </div>
 
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="registerEmail" required placeholder="your@email.com" autocomplete="email">
+          <label for="registerEmail">Email</label>
+          <input type="email" id="registerEmail" required placeholder="your@email.com" autocomplete="email" inputmode="email">
         </div>
 
         <div class="form-group">
-          <label>Password</label>
+          <label for="registerPassword">Password</label>
           <div class="password-wrapper">
-            <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6" autocomplete="new-password" data-action="password-strength">
-            <button type="button" class="password-toggle" data-action="toggle-password" data-target="registerPassword" title="Show/Hide password">👁️</button>
+            <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6" autocomplete="new-password" data-action="password-strength" aria-describedby="passwordStrength">
+            <button type="button" class="password-toggle" data-action="toggle-password" data-target="registerPassword" aria-label="แสดง/ซ่อนรหัสผ่าน" aria-pressed="false">👁️</button>
           </div>
-          <div id="passwordStrength" class="password-strength-box hidden">
+          <div id="passwordStrength" class="password-strength-box hidden" aria-live="polite">
             <div id="strengthFeedback">ตรวจสอบความแข็งแรง...</div>
             <div class="password-req-grid">
               <div id="req-length" class="password-req-pill">8+ ตัว</div>
@@ -642,25 +646,25 @@
         </div>
 
         <div class="form-group">
-          <label>ยืนยัน Password</label>
+          <label for="registerPasswordConfirm">ยืนยัน Password</label>
           <div class="password-wrapper">
             <input type="password" id="registerPasswordConfirm" required placeholder="••••••••" autocomplete="new-password">
-            <button type="button" class="password-toggle" data-action="toggle-password" data-target="registerPasswordConfirm" title="Show/Hide password">👁️</button>
+            <button type="button" class="password-toggle" data-action="toggle-password" data-target="registerPasswordConfirm" aria-label="แสดง/ซ่อนรหัสผ่าน" aria-pressed="false">👁️</button>
           </div>
         </div>
 
         <div id="tenantFields" class="hidden">
           <div class="form-group">
-            <label>หมายเลขห้อง</label>
-            <input type="text" id="roomNumber" placeholder="เช่น 15, 101" autocomplete="off">
+            <label for="roomNumber">หมายเลขห้อง</label>
+            <input type="text" id="roomNumber" placeholder="เช่น 15, 101" autocomplete="off" inputmode="numeric">
           </div>
         </div>
 
         <button type="submit" class="login-btn" id="registerBtn">สมัครสมาชิก</button>
       </form>
 
-      <div class="loading" id="loading">
-        <div class="spinner"></div>
+      <div class="loading" id="loading" role="status" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
         <p class="loading-text">กำลังประมวลผล...</p>
       </div>
 
@@ -745,8 +749,12 @@
 
     function selectUserType(type, button) {
       currentUserType = type;
-      document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.user-type-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-checked', 'false');
+      });
       button.classList.add('active');
+      button.setAttribute('aria-checked', 'true');
 
       // ✅ Clear form fields and errors when switching role
       if (isLoginMode) {
@@ -778,6 +786,7 @@
       field.type = isPassword ? 'text' : 'password';
       // Show icon for next action: if field is password (hidden), show 👁️ to open; if text (visible), show 🙈 to close
       button.textContent = field.type === 'password' ? '👁️' : '🙈';
+      button.setAttribute('aria-pressed', field.type === 'password' ? 'false' : 'true');
     }
 
     function toggleForm() {

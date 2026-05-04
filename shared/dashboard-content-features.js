@@ -95,25 +95,26 @@ function saveAnnouncement() {
 }
 
 function deleteAnnouncement(id) {
-  if (!confirm('ลบประกาศนี้?')) return;
+  window.ghConfirm('ลบประกาศนี้?', { danger: true }).then(ok => {
+    if (!ok) return;
+    let announcements = loadAnnouncements();
+    const announcement = announcements.find(a => a.id === id);
+    announcements = announcements.filter(a => a.id !== id);
+    saveAnnouncementsData(announcements);
 
-  let announcements = loadAnnouncements();
-  const announcement = announcements.find(a => a.id === id);
-  announcements = announcements.filter(a => a.id !== id);
-  saveAnnouncementsData(announcements);
-
-  // Delete from Firestore (modular SDK)
-  if (window.firebase?.firestore && announcement) {
-    try {
-      const db = window.firebase.firestore();
-      const fs = window.firebase.firestoreFunctions;
-      fs.deleteDoc(fs.doc(fs.collection(db, 'announcements'), id));
-    } catch (err) {
-      console.warn('⚠️ Firestore announcement delete failed:', err);
+    // Delete from Firestore (modular SDK)
+    if (window.firebase?.firestore && announcement) {
+      try {
+        const db = window.firebase.firestore();
+        const fs = window.firebase.firestoreFunctions;
+        fs.deleteDoc(fs.doc(fs.collection(db, 'announcements'), id));
+      } catch (err) {
+        console.warn('⚠️ Firestore announcement delete failed:', err);
+      }
     }
-  }
 
-  renderAnnouncementsList();
+    renderAnnouncementsList();
+  });
 }
 
 function renderAnnouncementsList() {
