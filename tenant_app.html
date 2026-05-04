@@ -37,6 +37,11 @@
     <script>window.SENTRY_APP_NAME = 'tenant_app';</script>
     <script src="https://js.sentry-cdn.com/70de55e358255ab981939b708a743b1d.min.js" crossorigin="anonymous"></script>
     <script src="./shared/sentry-init.js"></script>
+    <!-- Component library + modal helper (Phase 1 design system) -->
+    <link rel="stylesheet" href="./shared/components.css">
+    <script src="./shared/modal.js"></script>
+    <!-- Modal a11y bridge: ESC + backdrop close + focus restore for legacy modals -->
+    <script src="./shared/modal-a11y-bridge.js"></script>
     <!-- QR Code library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
     <!-- html2canvas: lazy-loaded on first receipt download (≈150KB).
@@ -633,14 +638,21 @@
         }
 
         .nav-item {
+            /* button reset (was <div>, now <button> for keyboard access) */
+            background: transparent;
+            border: none;
+            font-family: inherit;
+            padding: 0;
             text-align: center;
             color: #BDC3C7;
             font-size: var(--fs-sm);
             flex: 1;
             cursor: pointer;
+            min-height: 44px;
         }
 
-        .nav-item.active {
+        .nav-item.active,
+        .nav-item[aria-current="page"] {
             color: var(--primary-green);
             font-weight: 600;
         }
@@ -1190,7 +1202,8 @@
         }
 
         .btn-receipt {
-            padding: 13px 16px;
+            padding: 14px 16px;            /* 44px effective tap target (was 13/16) */
+            min-height: 44px;
             border: none;
             border-radius: var(--radius-btn);
             font-weight: 600;
@@ -1629,6 +1642,41 @@
             padding: 2px 6px;
             font-size: 0.6rem;
             content: '🚧';
+        }
+
+        /* ─── Print stylesheet (receipts/invoices) ──────────────────────── */
+        @media print {
+            /* Strip surrounding chrome — keep paper for the receipt only */
+            .nav-bar,
+            .app-bar,
+            .btn-receipt,
+            .btn-row,
+            .btn-main,
+            #main-nav-bar,
+            .modal,
+            .modal-overlay,
+            #toast-container,
+            .skip-link,
+            audio, video,
+            .no-print { display: none !important; }
+
+            body {
+                background: #fff !important;
+                padding-bottom: 0 !important;
+                color: #000 !important;
+            }
+            .page { display: block !important; animation: none !important; }
+            .page:not(.active) { display: none !important; }
+
+            /* Receipt cards expand cleanly to the page */
+            .receipt-card {
+                box-shadow: none !important;
+                border: 1px solid #999 !important;
+                page-break-inside: avoid;
+                margin: 0 !important;
+            }
+            .card { box-shadow: none !important; border: 1px solid #ccc !important; }
+            a[href]::after { content: ""; }  /* don't print URLs after links */
         }
     </style>
 </head>
@@ -3783,22 +3831,22 @@
         </div>
     </div>
 
-    <div class="nav-bar" id="main-nav-bar" style="display: none;">
-        <div class="nav-item active" onclick="showPage('home', this)"><i class="fas fa-home"></i>หน้าหลัก</div>
-        <div class="nav-item" onclick="showPage('services', this)" style="position:relative;">
-            <i class="fas fa-leaf"></i>บริการ
-            <span id="nav-badge-services" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
-        </div>
-        <div class="nav-item" onclick="showPage('community', this); markCommunityRead();" style="position:relative;">
-            <i class="fas fa-comments"></i>ชุมชน
-            <span id="nav-badge-community" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
-        </div>
-        <div class="nav-item" onclick="showPage('usage', this)" style="position:relative;">
-            <i class="fas fa-wallet"></i>บิล
-            <span id="nav-badge-bills" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
-        </div>
-        <div class="nav-item" onclick="showPage('profile', this)"><i class="fas fa-user"></i>โปรไฟล์</div>
-    </div>
+    <nav class="nav-bar" id="main-nav-bar" style="display: none;" role="navigation" aria-label="เมนูหลัก">
+        <button type="button" class="nav-item active" aria-current="page" aria-label="หน้าหลัก" onclick="showPage('home', this)"><i class="fas fa-home" aria-hidden="true"></i>หน้าหลัก</button>
+        <button type="button" class="nav-item" aria-label="บริการ" onclick="showPage('services', this)" style="position:relative;">
+            <i class="fas fa-leaf" aria-hidden="true"></i>บริการ
+            <span id="nav-badge-services" aria-live="polite" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
+        </button>
+        <button type="button" class="nav-item" aria-label="ชุมชน" onclick="showPage('community', this); markCommunityRead();" style="position:relative;">
+            <i class="fas fa-comments" aria-hidden="true"></i>ชุมชน
+            <span id="nav-badge-community" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
+        </button>
+        <button type="button" class="nav-item" aria-label="บิล" onclick="showPage('usage', this)" style="position:relative;">
+            <i class="fas fa-wallet" aria-hidden="true"></i>บิล
+            <span id="nav-badge-bills" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
+        </button>
+        <button type="button" class="nav-item" aria-label="โปรไฟล์" onclick="showPage('profile', this)"><i class="fas fa-user" aria-hidden="true"></i>โปรไฟล์</button>
+    </nav>
 
     <script>
         // ==========================================
@@ -3920,10 +3968,14 @@
                 }
             }
 
-            // 5. อัปเดตสีปุ่มใน Nav Bar
+            // 5. อัปเดตสีปุ่มใน Nav Bar + flip aria-current="page"
             if (element) {
-                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(nav => {
+                    nav.classList.remove('active');
+                    nav.removeAttribute('aria-current');
+                });
                 element.classList.add('active');
+                element.setAttribute('aria-current', 'page');
             }
 
             // 6. อัปเดตข้อมูล API (ถ้ามี)
@@ -7703,7 +7755,11 @@
             //     network is fine. Retrying with a small delay forces a new connection.
             // See memory/auth_liff_sot.md §4 for the full failure-mode table.
             const TRANSIENT = new Set(['auth/network-request-failed', 'auth/internal-error', 'auth/timeout']);
-            const MAX_ATTEMPTS = 3;
+            // 5 attempts × 1000ms*attempt cumulative delay = ~10s window for TLS state recovery.
+            // LINE in-app browser caches TLS connections aggressively — too short a window
+            // (3×400ms = ~1.2s prior) shows the "ค้าง" banner before TLS has had time to refresh.
+            // Synced with booking.html so both pages have the same recovery characteristics.
+            const MAX_ATTEMPTS = 5;
             let signInErr;
             for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
                 try {
@@ -7722,7 +7778,7 @@
                     const transient = TRANSIENT.has(code) || /network-request-failed/i.test(e?.message || '');
                     console.warn(`⛔ signInWithCustomToken attempt ${attempt}/${MAX_ATTEMPTS} failed (${code || 'no-code'}):`, e?.message);
                     if (!transient || attempt === MAX_ATTEMPTS) break;
-                    await new Promise(r => setTimeout(r, 400 * attempt)); // 400ms, 800ms
+                    await new Promise(r => setTimeout(r, 1000 * attempt)); // 1s, 2s, 3s, 4s
                 }
             }
             if (signInErr) {
