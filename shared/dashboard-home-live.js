@@ -821,28 +821,50 @@ function updatePaymentStatusWidget() {
   const allBills = typeof window.BillStore !== 'undefined'
     ? window.BillStore.listForYear('rooms', beYear).filter(b => Number(b.month) === month)
     : [];
-  if (allBills.length === 0) {
+  // Total active rooms = canonical denominator. Without this, denominator falls back
+  // to bill count and a 6/6 widget falsely reads "all rooms paid" when actually only
+  // 6 of 23 rooms have bills issued for the month.
+  const allRooms = (typeof getActiveRoomsWithMetadata === 'function' && window.ROOMS_OLD)
+    ? getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD)
+    : [];
+  const totalRooms = allRooms.length;
+  if (totalRooms === 0 && allBills.length === 0) {
     el.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem;">ยังไม่มีบิลเดือนนี้ — กรุณา upload ข้อมูลมิเตอร์</div>';
     return;
   }
   const paidBills    = allBills.filter(b => b.status === 'paid');
   const pendingBills = allBills.filter(b => b.status !== 'paid');
   const paidCount    = paidBills.length;
-  const pendingCount = pendingBills.length;
   const totalCollected = paidBills.reduce((a, b) => a + (Number(b.totalCharge) || 0), 0);
+
+  // Rooms with NO bill yet for this month → also pending (pre-billing). Strip
+  // non-alnum chars so room id "15ก" matches "15ก" cleanly across both sources.
+  const _normRoom = s => String(s || '').replace(/[^0-9A-Za-zก-๙]/g, '');
+  const billedSet = new Set(allBills.map(b => _normRoom(b.room || b.roomId)));
+  const unbilledRooms = allRooms.filter(r => !billedSet.has(_normRoom(r.id)));
+  const pendingTotal = pendingBills.length + unbilledRooms.length;
+  // Use totalRooms as denominator when available; fall back to bills count otherwise
+  const denom = totalRooms || allBills.length;
+
   el.innerHTML = `
     <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
       <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${paidCount}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ จ่ายแล้ว</div></div>
-      <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${pendingCount}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">⏳ รอชำระ</div></div>
+      <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${pendingTotal}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">⏳ รอชำระ</div></div>
       <div><div style="font-size:1.15rem;font-weight:800;color:var(--green-dark)">฿${totalCollected.toLocaleString()}</div><div style="font-size:.72rem;color:var(--text-muted)">เก็บได้แล้ว</div></div>
     </div>
-    <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${paidCount}/${allBills.length}</div>
-    ${pendingBills.length
-      ? `<div style="font-size:.75rem;color:var(--text-muted);margin-bottom:5px;">ยังไม่จ่าย:</div>
-         <div style="display:flex;flex-wrap:wrap;gap:4px;">${pendingBills.map(b => {
-           const sr = String(b.room || b.roomId || '').replace(/[^0-9A-Za-zก-๙]/g, '');
-           return `<span onclick="goBillFromTable('${sr}',${beYear},${month})" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;cursor:pointer;">⏳${sr}</span>`;
-         }).join('')}</div>`
+    <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${paidCount}/${denom}</div>
+    ${pendingTotal
+      ? `<div style="font-size:.75rem;color:var(--text-muted);margin-bottom:5px;">ยังไม่จ่าย / ยังไม่ออกบิล:</div>
+         <div style="display:flex;flex-wrap:wrap;gap:4px;">${[
+           ...pendingBills.map(b => {
+             const sr = _normRoom(b.room || b.roomId);
+             return `<span onclick="goBillFromTable('${sr}',${beYear},${month})" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fff3e0;color:#e65100;border:1px solid #ffcc80;cursor:pointer;" title="ออกบิลแล้ว — รอชำระ">⏳${sr}</span>`;
+           }),
+           ...unbilledRooms.map(r => {
+             const sr = _normRoom(r.id);
+             return `<span onclick="goBillFromTable('${sr}',${beYear},${month})" style="padding:2px 8px;border-radius:20px;font-size:.72rem;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;cursor:pointer;" title="ยังไม่ออกบิลเดือนนี้">📄${sr}</span>`;
+           })
+         ].join('')}</div>`
       : '<div style="color:var(--green);font-weight:700;font-size:.86rem;">🎉 เก็บค่าเช่าครบทุกห้องแล้ว!</div>'}`;
 }
 
