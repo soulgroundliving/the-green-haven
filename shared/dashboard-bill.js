@@ -1131,6 +1131,13 @@ function markRoomPaid(d){
   savePS(ps);
   renderPaymentStatus();
 
+  // ===== Mirror to Firestore verifiedSlips so PaymentStore picks up + survives cache clear.
+  // SlipOK case: CF already wrote at functions/verifySlip.js:248. Our setDoc+merge with the
+  // same transactionId is idempotent. Manual case: synthetic deterministic docId
+  // `manual_<building>_<room>_<year>_<month>` so re-marking same month overwrites cleanly.
+  _mirrorPaymentToVerifiedSlips(d).catch(e =>
+    console.warn('[billing] verifiedSlips mirror failed:', e?.message));
+
   // ===== SYNC BILL STATUS → bills_YYYY (tenant app reads this) =====
   if (typeof BillingSystem !== 'undefined') {
     const yr = parseInt(d.year);
@@ -1163,6 +1170,49 @@ function markRoomPaid(d){
 
   // ===== SAVE BILL TO FIREBASE FOR TENANT APP =====
   saveBillToFirebase(d);
+}
+
+// Mirror admin manual paid-mark to Firestore verifiedSlips so PaymentStore subscription
+// (Phase 2b SoT) picks it up — survives localStorage cache clear. Idempotent:
+//   • SlipOK case: real transactionId; setDoc+merge no-ops if CF already wrote.
+//   • Manual case: deterministic synthetic ID; re-marking same month overwrites.
+// Doc shape mirrors functions/verifySlip.js:248 so PaymentStore subscription parses uniformly.
+async function _mirrorPaymentToVerifiedSlips(d) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    console.warn('[billing] Firebase not ready — skipping verifiedSlips mirror');
+    return;
+  }
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  const isSlipOk = !!(slipVerified && slipData?.ref);
+  const docId = isSlipOk
+    ? String(slipData.ref)
+    : `manual_${d.building}_${d.room}_${d.year}_${d.month}`;
+  // Construct timestamp inside the billing month (CE year, 5th @ noon BKK) so PaymentStore
+  // subscription's yearBE/month derivation (timestamp.year/month → +543) keys correctly,
+  // even when admin marks paid in a different calendar month than the bill belongs to.
+  const yearCE = parseInt(d.year) - 543;
+  const billingTs = new Date(yearCE, parseInt(d.month) - 1, 5, 12, 0, 0);
+  const ref = fs.doc(fs.collection(db, 'verifiedSlips'), docId);
+  await fs.setDoc(ref, {
+    transactionId: docId,
+    building: d.building,
+    room: String(d.room),
+    amount: d.total,
+    expectedAmount: d.total,
+    sender: isSlipOk ? slipData.sender : '(บันทึกโดย admin)',
+    receiver: isSlipOk ? (slipData.receiver || '') : '',
+    bankCode: isSlipOk ? (slipData.bankCode || '') : '',
+    date: isSlipOk && slipData.tDate ? slipData.tDate : billingTs.toISOString(),
+    timestamp: billingTs,
+    verifiedAt: new Date(),
+    verified: true,
+    receiptNo: d.no,
+    manualEntry: !isSlipOk,
+    yearBE: parseInt(d.year),
+    month: parseInt(d.month)
+  }, { merge: true });
+  console.log(`💸 Mirrored payment → verifiedSlips/${docId} (${isSlipOk ? 'SlipOK' : 'manual'})`);
 }
 
 async function saveBillToFirebase(d){
