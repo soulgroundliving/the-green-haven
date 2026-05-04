@@ -12,7 +12,7 @@
     "postinstall": "node tools/install-git-hooks.js"
   },
   "devDependencies": {
-    "@firebase/rules-unit-testing": "^4.0.1",
+    "@firebase/rules-unit-testing": "^5.0.0",
     "esbuild": "^0.28.0",
     "firebase": "^11.0.0",
     "glob": "^11.0.0",
