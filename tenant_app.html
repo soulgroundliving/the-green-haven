@@ -45,6 +45,7 @@
     <script src="./shared/empty-states.js"></script>
     <script src="./shared/haptics.js"></script>
     <script src="./shared/onboarding-tour.js"></script>
+    <script src="./shared/thai-date.js"></script>
     <!-- Modal a11y bridge: ESC + backdrop close + focus restore for legacy modals -->
     <script src="./shared/modal-a11y-bridge.js"></script>
     <!-- QR Code library -->
@@ -2075,7 +2076,7 @@
                 <div style="background:var(--soft-green); border-radius:14px; padding:14px; font-size:var(--fs-sm); display:flex; flex-direction:column; gap:10px;">
                     <div>
                         <label style="display:block; font-weight:700; margin-bottom:4px;">📅 วันที่ต้องการ</label>
-                        <input type="date" id="scm-date" style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd; font-family:inherit; box-sizing:border-box;">
+                        <input type="date" id="scm-date" data-thai-date style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd; font-family:inherit; box-sizing:border-box;">
                     </div>
                     <div>
                         <label style="display:block; font-weight:700; margin-bottom:4px;">⏰ ช่วงเวลา</label>
@@ -2602,7 +2603,7 @@
         <div class="card mx-4">
             <div class="mb-4">
                 <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">วันที่ต้องการ</label>
-                <input type="date" id="clean-date"
+                <input type="date" id="clean-date" data-thai-date
                     class="mt-2 block w-full rounded-xl border-gray-200 shadow-sm focus:border-green-500 focus:ring-green-500">
             </div>
             <div class="mb-4">
@@ -3374,12 +3375,12 @@
                 <div id="vaccine-inputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div>
                         <label style="font-size: var(--fs-sm); color: #888; font-weight: 600;">วันที่ฉีดล่าสุด</label>
-                        <input type="date" id="vaccine-date"
+                        <input type="date" id="vaccine-date" data-thai-date
                             style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 8px; font-size: var(--fs-sm); margin-top: 4px;">
                     </div>
                     <div>
                         <label style="font-size: var(--fs-sm); color: #888; font-weight: 600;">วันที่หมดอายุ</label>
-                        <input type="date" id="vaccine-expiry"
+                        <input type="date" id="vaccine-expiry" data-thai-date
                             style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 8px; font-size: var(--fs-sm); margin-top: 4px;">
                     </div>
                 </div>
@@ -3755,7 +3756,7 @@
             </div>
             <div id="moveout-form" style="display: none; animation: slideUp 0.3s ease;">
                 <label style="font-size: var(--fs-md); font-weight: 600; color: var(--danger);">วันที่คาดว่าจะย้ายออก</label>
-                <input type="date" id="moveout-date" style="margin-bottom: 10px;">
+                <input type="date" id="moveout-date" data-thai-date style="margin-bottom: 10px;">
                 <label style="font-size: var(--fs-md); font-weight: 600;">บัญชีธนาคารสำหรับรับเงินมัดจำคืน</label>
                 <input type="text" id="moveout-bank" placeholder="ระบุธนาคารและเลขบัญชี" style="margin-bottom: 15px;">
                 <label style="font-size: var(--fs-md); font-weight: 600;">เหตุผลที่ย้ายออก (ถ้าสะดวกบอก)</label>

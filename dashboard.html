@@ -21,6 +21,8 @@
 <script src="./shared/theme-toggle.js"></script>
 <script src="./shared/modal.js"></script>
 <script src="./shared/modal-a11y-bridge.js"></script>
+<script src="./shared/onboarding-tour.js"></script>
+<script src="./shared/thai-date.js"></script>
 <script src="./shared/security.js"></script>
 <script src="./shared/rich-text-policy.js"></script>
 <script src="./shared/firebase-config-loader.js"></script>
@@ -522,6 +524,46 @@
     checkDashboardSessionTimeout();
 
     console.log('✅ Authentication verified:', user.name);
+
+    // Admin onboarding tour — fires once per device (localStorage gate)
+    setTimeout(function () {
+      if (typeof window.GhTour === 'undefined') return;
+      window.GhTour.start({
+        key: 'admin_v1',
+        steps: [
+          {
+            title: 'ยินดีต้อนรับสู่ Green Haven Admin 👋',
+            body:  'ระบบจัดการอพาร์ตเมนต์ครบวงจร — ทัวร์นี้จะพาเยี่ยมชมส่วนหลักในไม่กี่ขั้นตอน',
+            placement: 'center',
+          },
+          {
+            target: '[data-page="tenant"]',
+            title:  'ผู้เช่าและสัญญา 👥',
+            body:   'เพิ่ม/แก้ไขผู้เช่า ดูข้อมูลห้อง อัปโหลดสัญญา และจัดการค่าใช้จ่ายรายห้อง',
+            placement: 'right',
+          },
+          {
+            target: '[data-page="bill"]',
+            title:  'บิลและการชำระเงิน 💳',
+            body:   'ออกบิลรายเดือน ตรวจสอบสลิป และดูสถานะการชำระของผู้เช่าแต่ละห้อง',
+            placement: 'right',
+          },
+          {
+            target: '[data-page="meter"]',
+            title:  'มิเตอร์ไฟ / น้ำ 📊',
+            body:   'อัปโหลดข้อมูลมิเตอร์ทีเดียว — ระบบคำนวณค่าไฟ/น้ำและสร้างบิลให้อัตโนมัติ',
+            placement: 'right',
+          },
+          {
+            target: '[data-page="requests-approvals"]',
+            title:  'คำขอและงานซ่อม 🔧',
+            body:   'อนุมัติคำขอซ่อม งานทำความสะอาด และแจ้งเตือนผู้เช่าผ่าน LINE ได้เลย',
+            placement: 'right',
+          },
+        ],
+        finishLabel: 'เริ่มใช้งาน',
+      });
+    }, 1200);
   }
 
   window.handleLogout = function() {
@@ -2230,11 +2272,11 @@
         <div class="grid-2col-lg">
           <div>
             <label class="form-label-upper">📍 วันเข้าพัก</label>
-            <input type="date" id="modalTenantMoveIn" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="date" id="modalTenantMoveIn" class="input-lg" data-thai-date onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
           <div>
             <label class="form-label-upper">⏰ สัญญาสิ้นสุด</label>
-            <input type="date" id="modalTenantContractEnd" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="date" id="modalTenantContractEnd" class="input-lg" data-thai-date onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
           </div>
         </div>
 
@@ -3062,7 +3104,7 @@
     <div class="card exp-form">
       <div class="card-title">➕ บันทึกรายจ่ายใหม่</div>
       <div class="form-grid">
-        <div><label>วันที่</label><input type="date" id="exp-date"></div>
+        <div><label>วันที่</label><input type="date" id="exp-date" data-thai-date></div>
         <div><label>หมวดหมู่</label>
           <select id="exp-category">
             <option value="repair">🔧 ซ่อมแซม</option>
