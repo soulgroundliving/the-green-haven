@@ -1667,6 +1667,83 @@
             }
         }
 
+        /* ─── Tone polish: neutralize inline-styled warm backgrounds in dark ─ *
+         * tenant_app has many cards with hardcoded cream/yellow/pink bg in
+         * inline styles (lease alert, accordion headers, quick actions, etc.).
+         * These looked muji-clean in light mode but stuck out in dark mode.
+         * Mirror the legacy body.night-mode rules using the new data-theme
+         * + prefers-color-scheme system so both mechanisms tone them down.
+         */
+        :root[data-theme="dark"] [style*="background:#fff"],
+        :root[data-theme="dark"] [style*="background: #fff"],
+        :root[data-theme="dark"] [style*="background:#FFF"],
+        :root[data-theme="dark"] [style*="background: #FFF"],
+        :root[data-theme="dark"] [style*="background:#fdfdfd"],
+        :root[data-theme="dark"] [style*="background-color:#fff"],
+        :root[data-theme="dark"] [style*="background-color: #fff"] {
+            background: var(--surface-card) !important;
+            color: var(--ink) !important;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) [style*="background:#fff"],
+            :root:not([data-theme="light"]) [style*="background: #fff"],
+            :root:not([data-theme="light"]) [style*="background:#FFF"],
+            :root:not([data-theme="light"]) [style*="background: #FFF"],
+            :root:not([data-theme="light"]) [style*="background:#fdfdfd"],
+            :root:not([data-theme="light"]) [style*="background-color:#fff"],
+            :root:not([data-theme="light"]) [style*="background-color: #fff"] {
+                background: var(--surface-card) !important;
+                color: var(--ink) !important;
+            }
+        }
+
+        /* Saturated semantic warm pills/cards keep accent text but dim bg */
+        :root[data-theme="dark"] [style*="background:#FFF4E5"],
+        :root[data-theme="dark"] [style*="background: #FFF4E5"],
+        :root[data-theme="dark"] [style*="background:#fff4e5"],
+        :root[data-theme="dark"] [style*="background:#fff9e5"],
+        :root[data-theme="dark"] [style*="background:#fff9c4"],
+        :root[data-theme="dark"] [style*="background:#fff8e1"],
+        :root[data-theme="dark"] [style*="background:#fffbeb"],
+        :root[data-theme="dark"] [style*="background:#fff3cd"] {
+            background: rgba(217, 119, 6, 0.14) !important;     /* warm tint at low alpha */
+            color: #f5c97b !important;
+        }
+        :root[data-theme="dark"] [style*="background:#D1FAE5"],
+        :root[data-theme="dark"] [style*="background: #D1FAE5"],
+        :root[data-theme="dark"] [style*="background:#e8f5e9"] {
+            background: rgba(20, 184, 166, 0.14) !important;    /* teal tint */
+            color: #7bf5b7 !important;
+        }
+        :root[data-theme="dark"] [style*="background:#FFF1F1"],
+        :root[data-theme="dark"] [style*="background:#fff5f5"],
+        :root[data-theme="dark"] [style*="background:#FFF0F0"],
+        :root[data-theme="dark"] [style*="background:#FEE2E2"] {
+            background: rgba(220, 38, 38, 0.14) !important;     /* alert tint */
+            color: #f5a8a8 !important;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) [style*="background:#FFF4E5"],
+            :root:not([data-theme="light"]) [style*="background:#fff4e5"],
+            :root:not([data-theme="light"]) [style*="background:#fff9c4"],
+            :root:not([data-theme="light"]) [style*="background:#fff8e1"],
+            :root:not([data-theme="light"]) [style*="background:#fffbeb"] {
+                background: rgba(217, 119, 6, 0.14) !important;
+                color: #f5c97b !important;
+            }
+            :root:not([data-theme="light"]) [style*="background:#D1FAE5"],
+            :root:not([data-theme="light"]) [style*="background:#e8f5e9"] {
+                background: rgba(20, 184, 166, 0.14) !important;
+                color: #7bf5b7 !important;
+            }
+            :root:not([data-theme="light"]) [style*="background:#FFF1F1"],
+            :root:not([data-theme="light"]) [style*="background:#fff5f5"],
+            :root:not([data-theme="light"]) [style*="background:#FFF0F0"] {
+                background: rgba(220, 38, 38, 0.14) !important;
+                color: #f5a8a8 !important;
+            }
+        }
+
         /* ─── Print stylesheet (receipts/invoices) ──────────────────────── */
         @media print {
             /* Strip surrounding chrome — keep paper for the receipt only */
