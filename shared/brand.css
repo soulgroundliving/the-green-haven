@@ -165,11 +165,11 @@ button, input, select, textarea {
   /* Surfaces */
   --cloud:   #0c1614;  /* page bg — deep teal-black */
   --mist:    #142421;  /* sunken */
-  --stone:   #28433d;  /* border base */
-  --pebble:  #5d756e;  /* edge muted */
+  --stone:   #3a544e;  /* border base — bumped for visibility */
+  --pebble:  #8aa39c;  /* edge muted — bumped 50% lightness for readable hint text */
   --shadow:  #050b09;  /* shadow base */
-  --ink:     #e5ede9;  /* primary text */
-  --muted:   #8da39c;  /* secondary text */
+  --ink:     #f5fbf8;  /* primary text — near-white, slight teal-cream tint (was #e5ede9) */
+  --muted:   #c5d6cf;  /* secondary text — bright-readable (was #8da39c, ~70% lightness) */
 
   /* Brand surface tints — tinted dark instead of mint cream */
   --brand-primary-soft: #0f2725;  /* card highlight tint */
@@ -197,11 +197,11 @@ button, input, select, textarea {
     color-scheme: dark;
     --cloud:   #0c1614;
     --mist:    #142421;
-    --stone:   #28433d;
-    --pebble:  #5d756e;
+    --stone:   #3a544e;
+    --pebble:  #8aa39c;
     --shadow:  #050b09;
-    --ink:     #e5ede9;
-    --muted:   #8da39c;
+    --ink:     #f5fbf8;
+    --muted:   #c5d6cf;
     --brand-primary-soft: #0f2725;
     --brand-primary-wash: #0c1614;
     --surface-page:   #0c1614;
@@ -224,6 +224,18 @@ button, input, select, textarea {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ─── Form placeholders — readable in both modes ────────────────────────── *
+ * Browser default placeholder (#777-ish) becomes invisible on dark surfaces.
+ * Force --pebble (a brand-aware muted) so hints stay readable without
+ * being aggressive in light mode.
+ */
+input::placeholder,
+textarea::placeholder,
+select:invalid {
+  color: var(--pebble);
+  opacity: 1;          /* Firefox dims to .54 by default */
 }
 
 /* ─── Keyboard focus ring (a11y baseline) ───────────────────────────────── *

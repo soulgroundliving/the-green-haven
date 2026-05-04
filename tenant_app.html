@@ -1656,14 +1656,90 @@
          */
         :root[data-theme="dark"] #iqair-card,
         :root[data-theme="dark"] #heat-alert {
-            filter: brightness(0.55) saturate(0.7);
+            filter: brightness(0.78) saturate(0.85);
             box-shadow: 0 0 0 1px var(--border-base) inset;
+        }
+        /* Force bright readable text inside dimmed AQI/heat-alert cards
+         * (their inline styles hardcode dark text like #1F2937 / #6B7280
+         * which become unreadable after the bg is filtered). */
+        :root[data-theme="dark"] #iqair-card,
+        :root[data-theme="dark"] #iqair-card *,
+        :root[data-theme="dark"] #heat-alert,
+        :root[data-theme="dark"] #heat-alert *,
+        :root[data-theme="dark"] #iqair-card [style*="color:#1F2937"],
+        :root[data-theme="dark"] #iqair-card [style*="color: #1F2937"],
+        :root[data-theme="dark"] #iqair-card [style*="color:#374151"],
+        :root[data-theme="dark"] #iqair-card [style*="color: #374151"],
+        :root[data-theme="dark"] #iqair-card [style*="color:#6B7280"],
+        :root[data-theme="dark"] #iqair-card [style*="color: #6B7280"] {
+            color: #ffffff !important;
         }
         @media (prefers-color-scheme: dark) {
             :root:not([data-theme="light"]) #iqair-card,
             :root:not([data-theme="light"]) #heat-alert {
-                filter: brightness(0.55) saturate(0.7);
+                filter: brightness(0.78) saturate(0.85);
                 box-shadow: 0 0 0 1px var(--border-base) inset;
+            }
+            :root:not([data-theme="light"]) #iqair-card,
+            :root:not([data-theme="light"]) #iqair-card *,
+            :root:not([data-theme="light"]) #heat-alert,
+            :root:not([data-theme="light"]) #heat-alert * {
+                color: #ffffff !important;
+            }
+        }
+
+        /* Generic dim-text rescue: catch hardcoded gray inline colors that
+         * sit on dark surfaces in dark mode and become hard to read. */
+        :root[data-theme="dark"] [style*="color:#6b7280"],
+        :root[data-theme="dark"] [style*="color: #6b7280"],
+        :root[data-theme="dark"] [style*="color:#9ca3af"],
+        :root[data-theme="dark"] [style*="color: #9ca3af"],
+        :root[data-theme="dark"] [style*="color:#888"],
+        :root[data-theme="dark"] [style*="color: #888"],
+        :root[data-theme="dark"] [style*="color:#999"],
+        :root[data-theme="dark"] [style*="color: #999"],
+        :root[data-theme="dark"] [style*="color:#666"],
+        :root[data-theme="dark"] [style*="color: #666"],
+        :root[data-theme="dark"] [style*="color:#444"],
+        :root[data-theme="dark"] [style*="color: #444"],
+        :root[data-theme="dark"] [style*="color:#374151"],
+        :root[data-theme="dark"] [style*="color: #374151"] {
+            color: var(--muted) !important;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) [style*="color:#6b7280"],
+            :root:not([data-theme="light"]) [style*="color:#9ca3af"],
+            :root:not([data-theme="light"]) [style*="color:#888"],
+            :root:not([data-theme="light"]) [style*="color:#999"],
+            :root:not([data-theme="light"]) [style*="color:#666"],
+            :root:not([data-theme="light"]) [style*="color:#444"],
+            :root:not([data-theme="light"]) [style*="color:#374151"] {
+                color: var(--muted) !important;
+            }
+        }
+
+        /* Lift opacity on dimmed text in dark mode — many inline opacities
+         * compound with already-low contrast and force users to squint. */
+        :root[data-theme="dark"] [style*="opacity:0.5"],
+        :root[data-theme="dark"] [style*="opacity: 0.5"],
+        :root[data-theme="dark"] [style*="opacity:0.55"],
+        :root[data-theme="dark"] [style*="opacity:0.6"],
+        :root[data-theme="dark"] [style*="opacity: 0.6"],
+        :root[data-theme="dark"] [style*="opacity:0.65"],
+        :root[data-theme="dark"] [style*="opacity:0.7"],
+        :root[data-theme="dark"] [style*="opacity: 0.7"],
+        :root[data-theme="dark"] [style*="opacity:0.8"],
+        :root[data-theme="dark"] [style*="opacity: 0.8"] {
+            opacity: 0.92 !important;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) [style*="opacity:0.5"],
+            :root:not([data-theme="light"]) [style*="opacity:0.55"],
+            :root:not([data-theme="light"]) [style*="opacity:0.6"],
+            :root:not([data-theme="light"]) [style*="opacity:0.65"],
+            :root:not([data-theme="light"]) [style*="opacity:0.7"],
+            :root:not([data-theme="light"]) [style*="opacity:0.8"] {
+                opacity: 0.92 !important;
             }
         }
 
@@ -1674,73 +1750,95 @@
          * Mirror the legacy body.night-mode rules using the new data-theme
          * + prefers-color-scheme system so both mechanisms tone them down.
          */
-        :root[data-theme="dark"] [style*="background:#fff"],
-        :root[data-theme="dark"] [style*="background: #fff"],
-        :root[data-theme="dark"] [style*="background:#FFF"],
-        :root[data-theme="dark"] [style*="background: #FFF"],
-        :root[data-theme="dark"] [style*="background:#fdfdfd"],
-        :root[data-theme="dark"] [style*="background-color:#fff"],
-        :root[data-theme="dark"] [style*="background-color: #fff"] {
+        /* Use case-insensitive `i` flag — many inline styles use mixed case
+         * (#FFF, #fff9e6, #FFF0F0, etc.) and CSS attribute matching is
+         * case-sensitive by default. */
+        :root[data-theme="dark"] [style*="background:#fff" i],
+        :root[data-theme="dark"] [style*="background: #fff" i],
+        :root[data-theme="dark"] [style*="background:#fdfdfd" i],
+        :root[data-theme="dark"] [style*="background-color:#fff" i],
+        :root[data-theme="dark"] [style*="background-color: #fff" i] {
             background: var(--surface-card) !important;
             color: var(--ink) !important;
         }
         @media (prefers-color-scheme: dark) {
-            :root:not([data-theme="light"]) [style*="background:#fff"],
-            :root:not([data-theme="light"]) [style*="background: #fff"],
-            :root:not([data-theme="light"]) [style*="background:#FFF"],
-            :root:not([data-theme="light"]) [style*="background: #FFF"],
-            :root:not([data-theme="light"]) [style*="background:#fdfdfd"],
-            :root:not([data-theme="light"]) [style*="background-color:#fff"],
-            :root:not([data-theme="light"]) [style*="background-color: #fff"] {
+            :root:not([data-theme="light"]) [style*="background:#fff" i],
+            :root:not([data-theme="light"]) [style*="background: #fff" i],
+            :root:not([data-theme="light"]) [style*="background:#fdfdfd" i],
+            :root:not([data-theme="light"]) [style*="background-color:#fff" i],
+            :root:not([data-theme="light"]) [style*="background-color: #fff" i] {
                 background: var(--surface-card) !important;
                 color: var(--ink) !important;
             }
         }
 
-        /* Saturated semantic warm pills/cards keep accent text but dim bg */
-        :root[data-theme="dark"] [style*="background:#FFF4E5"],
-        :root[data-theme="dark"] [style*="background: #FFF4E5"],
-        :root[data-theme="dark"] [style*="background:#fff4e5"],
-        :root[data-theme="dark"] [style*="background:#fff9e5"],
-        :root[data-theme="dark"] [style*="background:#fff9c4"],
-        :root[data-theme="dark"] [style*="background:#fff8e1"],
-        :root[data-theme="dark"] [style*="background:#fffbeb"],
-        :root[data-theme="dark"] [style*="background:#fff3cd"] {
-            background: rgba(217, 119, 6, 0.14) !important;     /* warm tint at low alpha */
+        /* Saturated semantic warm/cool/alert pills keep tint signal but dim bg */
+        :root[data-theme="dark"] [style*="background:#fff4e5" i],
+        :root[data-theme="dark"] [style*="background: #fff4e5" i],
+        :root[data-theme="dark"] [style*="background:#fff9e5" i],
+        :root[data-theme="dark"] [style*="background:#fff9e6" i],
+        :root[data-theme="dark"] [style*="background:#fff9c4" i],
+        :root[data-theme="dark"] [style*="background:#fff8e1" i],
+        :root[data-theme="dark"] [style*="background:#fffbeb" i],
+        :root[data-theme="dark"] [style*="background:#fff3cd" i],
+        :root[data-theme="dark"] [style*="background:#fffbf0" i],
+        :root[data-theme="dark"] [style*="background:#fffaf0" i] {
+            background: rgba(217, 119, 6, 0.16) !important;
             color: #f5c97b !important;
         }
-        :root[data-theme="dark"] [style*="background:#D1FAE5"],
-        :root[data-theme="dark"] [style*="background: #D1FAE5"],
-        :root[data-theme="dark"] [style*="background:#e8f5e9"] {
-            background: rgba(20, 184, 166, 0.14) !important;    /* teal tint */
-            color: #7bf5b7 !important;
+        :root[data-theme="dark"] [style*="background:#d1fae5" i],
+        :root[data-theme="dark"] [style*="background: #d1fae5" i],
+        :root[data-theme="dark"] [style*="background:#e8f5e9" i],
+        :root[data-theme="dark"] [style*="background:#ecfdf5" i] {
+            background: rgba(20, 184, 166, 0.16) !important;
+            color: #a7f3d0 !important;
         }
-        :root[data-theme="dark"] [style*="background:#FFF1F1"],
-        :root[data-theme="dark"] [style*="background:#fff5f5"],
-        :root[data-theme="dark"] [style*="background:#FFF0F0"],
-        :root[data-theme="dark"] [style*="background:#FEE2E2"] {
-            background: rgba(220, 38, 38, 0.14) !important;     /* alert tint */
-            color: #f5a8a8 !important;
+        :root[data-theme="dark"] [style*="background:#fff1f1" i],
+        :root[data-theme="dark"] [style*="background:#fff5f5" i],
+        :root[data-theme="dark"] [style*="background:#fff0f0" i],
+        :root[data-theme="dark"] [style*="background:#fee2e2" i],
+        :root[data-theme="dark"] [style*="background:#ffebee" i] {
+            background: rgba(220, 38, 38, 0.16) !important;
+            color: #fca5a5 !important;
+        }
+        :root[data-theme="dark"] [style*="background:#f0f4ff" i],
+        :root[data-theme="dark"] [style*="background:#e3f2fd" i],
+        :root[data-theme="dark"] [style*="background:#dbeafe" i] {
+            background: rgba(59, 130, 246, 0.16) !important;
+            color: #93c5fd !important;
         }
         @media (prefers-color-scheme: dark) {
-            :root:not([data-theme="light"]) [style*="background:#FFF4E5"],
-            :root:not([data-theme="light"]) [style*="background:#fff4e5"],
-            :root:not([data-theme="light"]) [style*="background:#fff9c4"],
-            :root:not([data-theme="light"]) [style*="background:#fff8e1"],
-            :root:not([data-theme="light"]) [style*="background:#fffbeb"] {
-                background: rgba(217, 119, 6, 0.14) !important;
+            :root:not([data-theme="light"]) [style*="background:#fff4e5" i],
+            :root:not([data-theme="light"]) [style*="background:#fff9e5" i],
+            :root:not([data-theme="light"]) [style*="background:#fff9e6" i],
+            :root:not([data-theme="light"]) [style*="background:#fff9c4" i],
+            :root:not([data-theme="light"]) [style*="background:#fff8e1" i],
+            :root:not([data-theme="light"]) [style*="background:#fffbeb" i],
+            :root:not([data-theme="light"]) [style*="background:#fff3cd" i],
+            :root:not([data-theme="light"]) [style*="background:#fffbf0" i],
+            :root:not([data-theme="light"]) [style*="background:#fffaf0" i] {
+                background: rgba(217, 119, 6, 0.16) !important;
                 color: #f5c97b !important;
             }
-            :root:not([data-theme="light"]) [style*="background:#D1FAE5"],
-            :root:not([data-theme="light"]) [style*="background:#e8f5e9"] {
-                background: rgba(20, 184, 166, 0.14) !important;
-                color: #7bf5b7 !important;
+            :root:not([data-theme="light"]) [style*="background:#d1fae5" i],
+            :root:not([data-theme="light"]) [style*="background:#e8f5e9" i],
+            :root:not([data-theme="light"]) [style*="background:#ecfdf5" i] {
+                background: rgba(20, 184, 166, 0.16) !important;
+                color: #a7f3d0 !important;
             }
-            :root:not([data-theme="light"]) [style*="background:#FFF1F1"],
-            :root:not([data-theme="light"]) [style*="background:#fff5f5"],
-            :root:not([data-theme="light"]) [style*="background:#FFF0F0"] {
-                background: rgba(220, 38, 38, 0.14) !important;
-                color: #f5a8a8 !important;
+            :root:not([data-theme="light"]) [style*="background:#fff1f1" i],
+            :root:not([data-theme="light"]) [style*="background:#fff5f5" i],
+            :root:not([data-theme="light"]) [style*="background:#fff0f0" i],
+            :root:not([data-theme="light"]) [style*="background:#fee2e2" i],
+            :root:not([data-theme="light"]) [style*="background:#ffebee" i] {
+                background: rgba(220, 38, 38, 0.16) !important;
+                color: #fca5a5 !important;
+            }
+            :root:not([data-theme="light"]) [style*="background:#f0f4ff" i],
+            :root:not([data-theme="light"]) [style*="background:#e3f2fd" i],
+            :root:not([data-theme="light"]) [style*="background:#dbeafe" i] {
+                background: rgba(59, 130, 246, 0.16) !important;
+                color: #93c5fd !important;
             }
         }
 
@@ -2120,10 +2218,10 @@
 
         <div class="card power-card"
             style="background: var(--soft-green); color: var(--text-dark); border-left: 4px solid var(--primary-green);">
-            <small style="color: var(--primary-dark); font-weight: 700;">🔮 คำทรงพลังวันนี้</small>
-            <span style="display:block; font-size:var(--fs-lg); font-weight:600; margin:10px 0; color: var(--primary-dark);" id="power-word">เจิดจรัส
+            <small style="color: var(--primary-green); font-weight: 700;">🔮 คำทรงพลังวันนี้</small>
+            <span style="display:block; font-size:var(--fs-lg); font-weight:700; margin:10px 0; color: var(--text-dark);" id="power-word">เจิดจรัส
                 (Radiant)</span>
-            <p style="font-size:var(--fs-sm); opacity:0.85; margin:0;" id="power-desc">วันนี้พลังงานคุณล้นเหลือ ลองทำสิ่งใหม่ๆ
+            <p style="font-size:var(--fs-sm); margin:0; color: var(--text-dark);" id="power-desc">วันนี้พลังงานคุณล้นเหลือ ลองทำสิ่งใหม่ๆ
                 นะครับ</p>
         </div>
         <div class="section-title"><span>Wellness Tips ลึกๆ 🌿</span></div>
