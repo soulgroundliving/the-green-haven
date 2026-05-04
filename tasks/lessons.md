@@ -339,3 +339,23 @@ The first audit (Explore agent #1) only caught Storage path mismatches. The seco
 **Why:** I skipped the DOM-state check. `openTenantModal:74` already had a 1-arg fallback (`detectBuildingFromRoomId`) so my "fix" was a no-op semantically. The exact pattern was already documented in `feedback_inline_style_class_toggle.md` (loaded at session start, ignored).
 
 **Rule:** When a button "doesn't open a modal," inspect the modal element's state before patching the click path. One-liner: `({inline: m.getAttribute('style'), classes: [...m.classList], computed: getComputedStyle(m).display})`. If `inline === "display:none;"` and `computed === "none"` → it's the inline-vs-class bug (this codebase's pet bug). Patch JS to set inline `display='flex'` on open + clear on close, not the click path. (Memory updated with this debug heuristic + a "wrong-cause trap" note tying back to commit `f9722b4` → `9133acd`.)
+
+---
+
+## 2026-05-04 — Bills/meter not showing in LIFF: scattered "retry on liffLinked" pattern keeps recurring (5+ times)
+
+**Mistake:** Each time a tenant reports "bill missing in LIFF" (5+ recurrences per `bills_not_showing_diagnostic.md`), past sessions added a 1-line `window.addEventListener('liffLinked', _subscribeX)` and called it done. The fix was always correct for THAT subscription — but the architecture stayed fragile. The next auth-gated read added to `tenant_app.html` would forget the listener and re-trigger the same bug class with a different symptom (this time: meter_data → synth bills → May bill + history missing).
+
+**Why:** tenant_app starts with anonymous auth (no `room`/`building` claims). `loadTenantAppData()` immediately fires off subscriptions/queries. Firestore + RTDB rules require `auth.token.room == resource.data.roomId` → anonymous reads return permission_denied. After `liffSignIn` mints a custom token (~1-2s later), the token has claims — but ONLY subscriptions that listen for `liffLinked` recover. Admin preview never sees this because admin claim bypasses room checks. So the bug is invisible during admin testing and only surfaces in real LIFF.
+
+The scattered pattern (5 callsites, each with 2-3 manual lines) made it impossible to add a new auth-gated read without forgetting. There was no central enforcement, just folklore that "you must remember to add the liffLinked listener."
+
+**Rule:** ANY new Firestore/RTDB read in `tenant_app.html` that depends on `token.room`/`token.building`/`token.admin` claims MUST go through the centralized helper:
+
+```js
+_onLiffClaimsReady(_subscribeX);   // NOT addEventListener('authReady'/'liffLinked', ...)
+```
+
+Defined at `tenant_app.html` near `let _taRoom` (around line ~7245). Function MUST be idempotent (helper may call it 3+ times: immediate + authReady + liffLinked). Direct `addEventListener('authReady', subscribeX)` calls for auth-gated reads are now a code smell — they're how this bug class kept recurring.
+
+Refactored 5 callsites to use the helper in `a9628e0` follow-up: `_subscribeBillsRealtime`, `_loadMeterHistoryFromFirestore`, `_subscribeCleaningFromRTDB`, `_subscribeMaintenanceFromRTDB`, `_subscribeComplaintsFromFirestore`. Public-config subscriptions (`_subscribeRewards`, `_subscribeCategories`, etc.) deliberately untouched — they don't need claims.

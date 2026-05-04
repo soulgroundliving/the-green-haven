@@ -4651,9 +4651,7 @@
                 }, err => console.warn('cleaning RTDB subscribe failed:', err.message));
             } catch (e) { console.warn('cleaning RTDB subscribe init failed:', e.message); }
         }
-        window.addEventListener('authReady', _subscribeCleaningFromRTDB);
-        window.addEventListener('liffLinked', _subscribeCleaningFromRTDB);
-        if (window.firebaseReady && window._authUid) _subscribeCleaningFromRTDB();
+        _onLiffClaimsReady(_subscribeCleaningFromRTDB);
 
         // ---- Receipt/tax-invoice settings ----
         // ลูกบ้านเลือกประเภทเอง (personal/company) → persist localStorage
@@ -6123,8 +6121,7 @@
                 }, err => console.warn('complaints subscribe failed:', err.message));
             } catch (e) { console.warn('complaints subscribe init failed:', e.message); }
         }
-        window.addEventListener('authReady', _subscribeComplaintsFromFirestore);
-        if (window.firebaseReady && window._authUid) _subscribeComplaintsFromFirestore();
+        _onLiffClaimsReady(_subscribeComplaintsFromFirestore);
 
         // RTDB realtime subscribe — admin writes status/workNotes/afterPhoto to RTDB,
         // tenant sees updates live without having to be on the same device
@@ -6172,9 +6169,7 @@
                 }, err => console.warn('maintenance RTDB subscribe failed:', err.message));
             } catch (e) { console.warn('maintenance RTDB subscribe init failed:', e.message); }
         }
-        window.addEventListener('authReady', _subscribeMaintenanceFromRTDB);
-        window.addEventListener('liffLinked', _subscribeMaintenanceFromRTDB);
-        if (window.firebaseReady && window._authUid) _subscribeMaintenanceFromRTDB();
+        _onLiffClaimsReady(_subscribeMaintenanceFromRTDB);
 
         function loadComplaints() {
             const all = JSON.parse(localStorage.getItem('tenant_app_complaints') || '[]');
@@ -7230,6 +7225,28 @@
         // ==========================================
         // TENANT APP — DATA INTEGRATION (Tasks 1-10)
         // ==========================================
+
+        // ── AUTH-GATED READ HELPER (mandatory for new Firestore/RTDB reads) ──
+        // Why this exists: tenant_app starts with anonymous auth (no room/building
+        // claims). Any Firestore/RTDB read that depends on token.room/building runs
+        // during loadTenantAppData() and gets permission_denied. After liffSignIn
+        // completes (~1-2s later), the token has claims — but only subscriptions
+        // that listen for liffLinked recover. Five+ "bills not showing" incidents
+        // (tasks/lessons.md, memory/bills_not_showing_diagnostic.md) trace back to
+        // forgetting one of the listeners on a new auth-gated read. This helper
+        // centralizes the pattern so it is impossible to forget.
+        //
+        // RULE: any new Firestore/RTDB read that depends on auth claims MUST use
+        // this helper. Direct addEventListener calls on authReady/liffLinked are
+        // a code smell — they're how the bug class keeps recurring.
+        //
+        // `fn` MUST be idempotent — may run 3+ times (immediate + authReady + liffLinked).
+        function _onLiffClaimsReady(fn) {
+            window.addEventListener('authReady', fn);
+            window.addEventListener('liffLinked', fn);
+            if (window.firebaseReady && window._authUid) fn();
+        }
+
         let _taRoom = '', _taBuilding = '', _taLease = null, _taTenant = null;
         let _taBills = [], _taPayments = [], _taCurrentBill = null;
         let _slipBase64 = null;
@@ -7613,13 +7630,8 @@
                 });
             } catch (e) { console.warn('subscribeBillsRealtime failed:', e.message); }
         }
-        window.addEventListener('authReady', _subscribeBillsRealtime);
-        window.addEventListener('liffLinked', _subscribeBillsRealtime);
-        // Retry meter history after LIFF custom-token sign-in.
-        // First attempt (during loadTenantAppData) runs while auth is still anonymous
-        // → Firestore rule denies (token.room === undefined). Once liffLinked fires,
-        // the token has {room, building} claims → retry succeeds → synth bills appear.
-        window.addEventListener('liffLinked', _loadMeterHistoryFromFirestore);
+        _onLiffClaimsReady(_subscribeBillsRealtime);
+        _onLiffClaimsReady(_loadMeterHistoryFromFirestore);
 
         // ---- LIFF (LINE Front-end Framework) integration ----
         const LIFF_ID = '2009790149-Db7T76sd';
