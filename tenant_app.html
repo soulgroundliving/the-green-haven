@@ -928,6 +928,32 @@
             --suggest-accent: #0d5c4e;
         }
 
+        /* In dark mode, restore the brand-aliased tokens so eco-mode's
+         * grayscale overrides don't fight the dark theme. Eco-mode's intent
+         * is to dim/save battery, which dark mode already accomplishes. */
+        :root[data-theme="dark"] body.eco-mode {
+            --bg-color: var(--brand-primary-wash);
+            --white: var(--surface-card);
+            --text-dark: var(--ink);
+            --soft-green: var(--brand-primary-soft);
+            --shadow: 0 4px 16px rgba(0, 0, 0, 0.36);
+            --suggest-bg: var(--surface-card);
+            --suggest-border: var(--border-subtle);
+            --suggest-accent: var(--brand-primary-light);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) body.eco-mode {
+                --bg-color: var(--brand-primary-wash);
+                --white: var(--surface-card);
+                --text-dark: var(--ink);
+                --soft-green: var(--brand-primary-soft);
+                --shadow: 0 4px 16px rgba(0, 0, 0, 0.36);
+                --suggest-bg: var(--surface-card);
+                --suggest-border: var(--border-subtle);
+                --suggest-accent: var(--brand-primary-light);
+            }
+        }
+
         .avatar-selector {
             display: flex;
             gap: 15px;
