@@ -3795,7 +3795,7 @@
         </div>
         <div class="nav-item" onclick="showPage('usage', this)" style="position:relative;">
             <i class="fas fa-wallet"></i>บิล
-            <span id="nav-badge-bills" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
+            <span id="nav-badge-bills" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
         </div>
         <div class="nav-item" onclick="showPage('profile', this)"><i class="fas fa-user"></i>โปรไฟล์</div>
     </div>
@@ -7615,6 +7615,11 @@
         }
         window.addEventListener('authReady', _subscribeBillsRealtime);
         window.addEventListener('liffLinked', _subscribeBillsRealtime);
+        // Retry meter history after LIFF custom-token sign-in.
+        // First attempt (during loadTenantAppData) runs while auth is still anonymous
+        // → Firestore rule denies (token.room === undefined). Once liffLinked fires,
+        // the token has {room, building} claims → retry succeeds → synth bills appear.
+        window.addEventListener('liffLinked', _loadMeterHistoryFromFirestore);
 
         // ---- LIFF (LINE Front-end Framework) integration ----
         const LIFF_ID = '2009790149-Db7T76sd';
@@ -8256,7 +8261,13 @@
         function _updateCommunityBadge(docs) {
             const badge = document.getElementById('nav-badge-community');
             if (!badge) return;
-            const lastSeen = localStorage.getItem('ta_community_seen_at') || '0';
+            let lastSeen = localStorage.getItem('ta_community_seen_at');
+            if (!lastSeen) {
+                // First open: treat all existing announcements as seen — no badge on fresh install
+                localStorage.setItem('ta_community_seen_at', new Date().toISOString());
+                badge.style.display = 'none';
+                return;
+            }
             const hasNew = docs.some(a => (a.createdAt || '') > lastSeen);
             badge.style.display = hasNew ? 'block' : 'none';
         }
@@ -9162,8 +9173,7 @@
             const pendingBills = _taBills.filter(b => !_isPaid(b)).length;
             const billBadge = document.getElementById('nav-badge-bills');
             if (billBadge) {
-                billBadge.textContent = pendingBills > 9 ? '9+' : pendingBills;
-                billBadge.style.display = pendingBills > 0 ? 'flex' : 'none';
+                billBadge.style.display = pendingBills > 0 ? 'block' : 'none';
             }
             let tickets = [];
             try { tickets = JSON.parse(localStorage.getItem('tenant_maintenance_tickets') || '[]'); } catch(e) {}
