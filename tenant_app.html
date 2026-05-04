@@ -1649,6 +1649,24 @@
             content: '🚧';
         }
 
+        /* ─── Dark mode tone-down for hardcoded data-color cards ─────────── *
+         * AQI / heat-alert cards use semantic colors (green=safe, red=bad)
+         * baked into HTML/JS. In dark mode we keep the signal but dim the
+         * brightness so they don't overwhelm the calm muji backdrop.
+         */
+        :root[data-theme="dark"] #iqair-card,
+        :root[data-theme="dark"] #heat-alert {
+            filter: brightness(0.55) saturate(0.7);
+            box-shadow: 0 0 0 1px var(--border-base) inset;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) #iqair-card,
+            :root:not([data-theme="light"]) #heat-alert {
+                filter: brightness(0.55) saturate(0.7);
+                box-shadow: 0 0 0 1px var(--border-base) inset;
+            }
+        }
+
         /* ─── Print stylesheet (receipts/invoices) ──────────────────────── */
         @media print {
             /* Strip surrounding chrome — keep paper for the receipt only */
@@ -1945,10 +1963,10 @@
                 <p id="time-greet" class="text-xs mt-1 opacity-80">ยินดีต้อนรับกลับบ้านครับ 🌿</p>
             </div>
         </div>
-        <div onclick="showPage('world-map-page')"
-            style="background: var(--primary-green); color: white; padding: 10px; border-radius: 15px; margin: 15px; text-align: center; cursor: pointer;">
-            <i class="fas fa-arrow-left"></i> กลับไปหน้าแผนที่ (Nature Map)
-        </div>
+        <button type="button" onclick="showPage('world-map-page')"
+            style="display:inline-flex; align-items:center; gap:8px; background:transparent; color:var(--primary-green); border:1px solid var(--border); padding:8px 14px; border-radius:var(--radius-pill,999px); margin:12px 15px; font-family:inherit; font-size:var(--fs-sm); font-weight:600; cursor:pointer;">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i> กลับไปหน้าแผนที่
+        </button>
 
         <div class="section-title"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
         <div id="community-filter-pills" style="display:flex; gap:8px; padding:0 15px 10px; flex-wrap:wrap;">
@@ -2024,11 +2042,11 @@
         </div>
 
         <div class="card power-card"
-            style="background: linear-gradient(135deg, var(--primary-green), var(--primary-dark)); color:white; border:none;">
-            <small>🔮 คำทรงพลังวันนี้</small>
-            <span style="display:block; font-size:var(--fs-lg); font-weight:600; margin:10px 0;" id="power-word">เจิดจรัส
+            style="background: var(--soft-green); color: var(--text-dark); border-left: 4px solid var(--primary-green);">
+            <small style="color: var(--primary-dark); font-weight: 700;">🔮 คำทรงพลังวันนี้</small>
+            <span style="display:block; font-size:var(--fs-lg); font-weight:600; margin:10px 0; color: var(--primary-dark);" id="power-word">เจิดจรัส
                 (Radiant)</span>
-            <p style="font-size:var(--fs-sm); opacity:0.9; margin:0;" id="power-desc">วันนี้พลังงานคุณล้นเหลือ ลองทำสิ่งใหม่ๆ
+            <p style="font-size:var(--fs-sm); opacity:0.85; margin:0;" id="power-desc">วันนี้พลังงานคุณล้นเหลือ ลองทำสิ่งใหม่ๆ
                 นะครับ</p>
         </div>
         <div class="section-title"><span>Wellness Tips ลึกๆ 🌿</span></div>

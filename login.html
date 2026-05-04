@@ -97,7 +97,8 @@
       background: white;
     }
 
-    .form-group input:invalid {
+    /* Only show red border AFTER user types something invalid — not on empty placeholder */
+    .form-group input:invalid:not(:placeholder-shown) {
       border-color: var(--alert);
     }
 

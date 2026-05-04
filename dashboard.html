@@ -2295,9 +2295,10 @@
     </div>
 
     <!-- Modal Footer -->
-    <div style="padding:1.5rem 2rem;background:#f9fafb;border-top:1px solid var(--border);display:flex;gap:12px;flex-shrink:0;">
-      <button data-action="saveTenantInfo" style="flex:1;padding:14px 24px;background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;box-shadow:0 4px 12px rgba(45,134,83,.2);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(45,134,83,.4)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(45,134,83,.2)'">💾 บันทึกข้อมูล</button>
-      <button data-action="closeTenantModal" style="flex:1;padding:14px 24px;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;" onmouseover="this.style.background='#d0d7e0'" onmouseout="this.style.background='var(--border)'">ปิด</button>
+    <div style="padding:1.5rem 2rem;background:#f9fafb;border-top:1px solid var(--border);display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap;">
+      <button data-action="saveTenantInfo" style="flex:1;min-width:160px;padding:14px 24px;background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;box-shadow:0 4px 12px rgba(45,134,83,.2);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(45,134,83,.4)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(45,134,83,.2)'">💾 บันทึกข้อมูล</button>
+      <button data-action="archiveTenantOnMoveOut" title="ย้ายข้อมูลผู้เช่าไป archive — ห้องกลับเป็นว่าง, ข้อมูลเดิมเก็บไว้สำหรับการกลับมาเช่าใหม่" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#b71c1c;border:1.5px solid #ef9a9a;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;" onmouseover="this.style.background='#ffebee';this.style.borderColor='#b71c1c'" onmouseout="this.style.background='#fff';this.style.borderColor='#ef9a9a'">📦 ย้ายไป Archive</button>
+      <button data-action="closeTenantModal" style="flex:1;min-width:120px;padding:14px 24px;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;" onmouseover="this.style.background='#d0d7e0'" onmouseout="this.style.background='var(--border)'">ปิด</button>
     </div>
   </div>
 </div>
@@ -2337,8 +2338,8 @@
     </div>
     <div class="kpi-grid">
       <div class="kpi-card green"><div class="kpi-icon">💰</div><div class="kpi-label">รายได้รวมทั้งปี (รวมทั้ง 2 อาคาร)</div><div class="kpi-value green" id="kpi-total">฿0</div><div class="kpi-sub" id="kpi-total-sub"></div></div>
-      <div class="kpi-card" style="background:linear-gradient(135deg, var(--blue-pale), #f3e5f5); border-left: 4px solid var(--green);"><div class="kpi-icon">🏠</div><div class="kpi-label">รายได้ rooms (ห้องแถว)</div><div class="kpi-value" id="kpi-rooms-total" style="color:var(--green);">฿0</div><div class="kpi-sub" id="kpi-rooms-sub">แบ่งตามระบบตัวใจ</div></div>
-      <div class="kpi-card kpi-nest" style="background:linear-gradient(135deg, #fce4ec, var(--green-pale)); border-left: 4px solid #7b1fa2;"><div class="kpi-icon">🏢</div><div class="kpi-label">รายได้ Nest Building</div><div class="kpi-value" id="kpi-nest-total" style="color:#7b1fa2;">฿0</div><div class="kpi-sub" id="kpi-nest-sub">ยูนิตที่เปิดให้เช่า</div></div>
+      <div class="kpi-card" style="border-left: 4px solid var(--green);"><div class="kpi-icon">🏠</div><div class="kpi-label">รายได้ rooms (ห้องแถว)</div><div class="kpi-value" id="kpi-rooms-total" style="color:var(--green);">฿0</div><div class="kpi-sub" id="kpi-rooms-sub">แบ่งตามระบบตัวใจ</div></div>
+      <div class="kpi-card kpi-nest" style="border-left: 4px solid var(--purple);"><div class="kpi-icon">🏢</div><div class="kpi-label">รายได้ Nest Building</div><div class="kpi-value" id="kpi-nest-total" style="color:var(--purple);">฿0</div><div class="kpi-sub" id="kpi-nest-sub">ยูนิตที่เปิดให้เช่า</div></div>
       <div class="kpi-card amber"><div class="kpi-icon">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
     </div>
     <div class="charts-grid">
