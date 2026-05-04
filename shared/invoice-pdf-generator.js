@@ -22,7 +22,10 @@ class InvoicePDFGenerator {
       let yPosition = 20;
 
       const _owner = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
-      const _companyName = _owner.companyLegalNameTH || 'Nature Haven';
+      const _baseCompanyName = _owner.companyLegalNameTH || 'Nature Haven';
+      const _companyName = _owner.registrationStatus === 'pending'
+        ? `${_baseCompanyName} (อยู่ระหว่างจดทะเบียน)`
+        : _baseCompanyName;
       const _promptpay = _owner.promptpayNumber || '089-1234567';
 
       // Header
@@ -193,7 +196,10 @@ class InvoicePDFGenerator {
       let yPosition = 20;
 
       const _owner = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
-      const _companyName = _owner.companyLegalNameTH || 'Nature Haven';
+      const _baseCompanyName = _owner.companyLegalNameTH || 'Nature Haven';
+      const _companyName = _owner.registrationStatus === 'pending'
+        ? `${_baseCompanyName} (อยู่ระหว่างจดทะเบียน)`
+        : _baseCompanyName;
 
       // Header
       doc.setFontSize(20);

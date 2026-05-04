@@ -951,7 +951,10 @@ function buildDocHTML(d,type,dueDate,payDate){
 
   const docId = isInvoice ? 'doc-invoice' : 'doc-receipt';
   const _ownerForDoc = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
-  const logoName = _ownerForDoc.companyLegalNameTH || 'Nature Haven';
+  const _baseLogoName = _ownerForDoc.companyLegalNameTH || 'Nature Haven';
+  const logoName = _ownerForDoc.registrationStatus === 'pending'
+    ? `${_baseLogoName} (อยู่ระหว่างจดทะเบียน)`
+    : _baseLogoName;
   const logoHTML = _ownerForDoc.logoDataUrl
     ? `<img src="${_ownerForDoc.logoDataUrl}" alt="logo" style="max-height:56px;max-width:180px;object-fit:contain;vertical-align:middle;"><div style="font-size:.85rem;color:var(--text-muted);margin-top:4px;">${logoName}</div>`
     : `🌿 ${logoName}`;

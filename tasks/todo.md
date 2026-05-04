@@ -4,6 +4,53 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
+# Owner Info — Save bug + Bills respect "อยู่ระหว่างจดทะเบียน" status
+
+## Symptom (user report 2026-05-04)
+- Owner Info form ใน people management → set "สถานะการจดทะเบียน = อยู่ระหว่างจดทะเบียน" → กดบันทึก → toast ไม่ขึ้น
+- บิล/ใบเสร็จที่ออกให้ลูกบ้านยังขึ้น "บริษัท เดอะ กรีนเฮฟเว่น จำกัด" เต็ม ๆ ไม่บอกว่าอยู่ระหว่างจดทะเบียน
+
+## Root cause
+1. **Save broken:** [shared/dashboard-extra.js:1517-1519](shared/dashboard-extra.js:1517) อ่านจาก 3 element ที่ `renderOwnerInfoPage()` ไม่ได้ render — `getElementById` คืน null → `.value` โยน TypeError → save อบอร์ตเงียบ
+2. **Bill ignores status:** [invoice-pdf-generator.js:25,196](shared/invoice-pdf-generator.js:25) + [dashboard-bill.js:954](shared/dashboard-bill.js:954) ดึง `companyLegalNameTH` ตรง ๆ ไม่เช็ค `registrationStatus` (ต่างจาก [tax-filing.html:1401](tax-filing.html:1401) ที่เช็คแล้ว)
+
+## Plan (user approved option ก — append " (อยู่ระหว่างจดทะเบียน)")
+- [x] Fix save: ใช้ optional chaining ใน 3 บรรทัด (pattern เดียวกับ company identity ด้านบน)
+- [x] Append suffix when `registrationStatus === 'pending'` ที่ 3 ฝั่ง:
+  - [x] `shared/invoice-pdf-generator.js:25` (invoice PDF header)
+  - [x] `shared/invoice-pdf-generator.js:196` (receipt PDF header)
+  - [x] `shared/dashboard-bill.js:954` (admin doc preview / PNG export)
+- [x] **Leave alone:** `dashboard-bill.js:638` (admin PromptPay payee reference) — financial transfer destination, suffix ไม่เหมาะ
+
+## Review (2026-05-04)
+**Shipped:** 4 mechanical edits across 3 files. `npm run verify:memory` ALL GREEN (212 rows, 0 fails). No Tailwind/build needed.
+
+**What changed:**
+- `shared/dashboard-extra.js:1517-1519` — defensive optional chaining (3 บรรทัด) → save function ทนต่อ DOM ที่ไม่ render แล้ว
+- `shared/invoice-pdf-generator.js:25, 196` — invoice + receipt PDF header เช็ค registrationStatus
+- `shared/dashboard-bill.js:954` — admin doc preview (logo subtitle) ที่ใช้ html2canvas → PNG export ก็ติด suffix ด้วย
+
+**Live verification (after `git push origin main`):**
+1. https://the-green-haven.vercel.app/dashboard.html → People Management → Owner Info
+2. Set "สถานะการจดทะเบียน = ⏳ อยู่ระหว่างจดทะเบียน" → กด 💾 บันทึกข้อมูล
+3. ✅ Toast "บันทึกข้อมูลเจ้าของสำเร็จ" ขึ้น
+4. F12 → `localStorage.getItem('owner_info')` → JSON parse → `registrationStatus: 'pending'` ติด
+5. Bills tab → preview ใบเสร็จ/ใบวางบิล → header แสดง "บริษัท เดอะ กรีนเฮฟเว่น จำกัด (อยู่ระหว่างจดทะเบียน)"
+6. Export PNG → ตรวจว่า suffix ติดด้วย
+7. หลังจดเสร็จ: เปลี่ยน status เป็น "✅ จดทะเบียนแล้ว" → suffix หายอัตโนมัติ
+
+**Follow-up (none required):** PromptPay payee แสดง (`pp-display-payee` ใน admin) ไม่ได้แตะ — เป็น financial transfer reference, suffix ไม่เหมาะ
+
+## Why option ก
+Consistent with tax-filing.html pattern (ใช้แล้ว) → ลูกบ้านเห็นชัดว่ายังจดทะเบียนไม่เสร็จ → โปร่งใส, ตรงกับเอกสารภาษีที่ admin ใช้
+
+## Verification
+- Build: ไม่มีการเปลี่ยน Tailwind class → ไม่ต้อง `npm run tailwind:build`
+- Memory: ไม่กระทบ load-bearing claims → ไม่ต้อง `npm run verify:memory`
+- Live: push → vercel → admin หน้า Owner Info → set pending → save → ดู toast → ตรวจ localStorage `owner_info` → render บิลใหม่ใน Bills tab
+
+---
+
 # LIFF Booking Site — Real-time Availability + Auto-Verified Deposit + Bookings SoT
 
 ## Goal

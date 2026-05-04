@@ -1514,9 +1514,9 @@ function saveOwnerInfo() {
     bankAccount: document.getElementById('ownerBankAccount').value.trim(),
 
     // ===== ACCOUNTING INFO =====
-    operationStartDate: document.getElementById('ownerOperationStartDate').value.trim(),
-    businessType: document.getElementById('ownerBusinessType').value,
-    businessCategory: document.getElementById('ownerBusinessCategory').value.trim()
+    operationStartDate: document.getElementById('ownerOperationStartDate')?.value?.trim() || '',
+    businessType: document.getElementById('ownerBusinessType')?.value || 'residential_rental',
+    businessCategory: document.getElementById('ownerBusinessCategory')?.value?.trim() || ''
   };
 
   // Use Firebase-enabled save if available

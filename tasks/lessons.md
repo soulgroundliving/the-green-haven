@@ -29,6 +29,16 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-05-04 — Save function อ่าน DOM elements ที่ไม่ได้ render → save พังเงียบ
+
+**Mistake:** `saveOwnerInfo()` ใน `shared/dashboard-extra.js:1517-1519` อ่าน `document.getElementById('ownerOperationStartDate').value.trim()` (และอีก 2 ตัว) แต่ `renderOwnerInfoPage()` ไม่ได้ render ฟิลด์เหล่านั้น → `getElementById` คืน `null` → `.value` โยน TypeError → save อบอร์ตก่อนถึง `OwnerConfigManager.saveOwnerInfoWithFirebase()` → ไม่มี toast, ไม่บันทึก, registrationStatus ที่ user ตั้งเป็น 'pending' ไม่ติด → ผลคือบิลออกชื่อบริษัทเสมอ user หาเหตุไม่เจอ
+
+**Why:** save function กับ render function แยกคนละจุดในไฟล์เดียวกัน → เพิ่ม/ลบฟิลด์ฝั่งหนึ่งโดยไม่ sync อีกฝั่ง → ฟิลด์ company identity ด้านบน (line 1496-1499) ใช้ optional chaining `?.value?.trim() || ''` ถูกแล้ว แต่ accounting fields ด้านล่างไม่ได้ทำ — defensive coding inconsistent ภายใน function เดียวกัน
+
+**Rule:** Form save handler ที่อ่านจาก DOM **ทุก** field → ใช้ optional chaining `el?.value?.trim() || defaultValue` เสมอ ไม่ใช่แค่บางบรรทัด. เวลา audit save function: grep ทุก `getElementById` แล้วเช็คว่า id นั้น render ใน corresponding render function หรือเปล่า. ถ้าไม่มี → ลบทิ้ง หรือ defensive read
+
+---
+
 ## 2026-05-02 — Firebase init async race: auth undefined in load handler
 
 **Mistake:** `initializeFirebase()` ถูก call โดยไม่ save promise → `window.addEventListener('load', ...)` callback ทำงาน → dynamic import resolves → `onAuthStateChanged(auth, ...)` โดน call ขณะ `auth` ยัง `undefined` → `TypeError: Cannot read properties of undefined (reading 'onAuthStateChanged')` เพราะ `/api/config` fetch ยังไม่ return
