@@ -212,6 +212,28 @@ service cloud.firestore {
       }
     }
 
+    // ===== TENANTS ARCHIVE (Phase 1 — preserve identity on move-out) =====
+    // Snapshot of tenant doc + its subcollections (paymentHistory, redemptions,
+    // wellnessClaimed, pets, complaintFreeMonthAwarded) at the moment admin
+    // archives the room. CF-only writes via admin SDK (archiveTenantOnMoveOut)
+    // — direct client write blocked because archive must be atomic with the
+    // accompanying list-doc blank + subcollection move.
+    //
+    // Read = admin only (Phase 1). Phase 2 will open scoped read for the
+    // returning tenant once the people/{tenantId} model lands.
+    match /tenants/{building}/archive/{contractId} {
+      allow read:  if isAdmin();
+      allow write: if isAdmin();
+
+      // Recursive wildcard so subcollection copies (paymentHistory/{ym},
+      // redemptions/{id}, wellnessClaimed/{aid}, pets/{pid}, etc.) inherit
+      // the same admin-only access without re-declaring each path.
+      match /{subPath=**} {
+        allow read:  if isAdmin();
+        allow write: if isAdmin();
+      }
+    }
+
     // ===== PETS — collectionGroup query support (admin only) =====
     // Admin's pet-approval page calls collectionGroup('pets') to aggregate
     // pets across every tenant doc. The nested rule above only matches the

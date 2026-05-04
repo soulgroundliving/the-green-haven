@@ -67,6 +67,30 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "nextAttemptAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "archive",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "linkedAuthUid", "order": "ASCENDING" },
+        { "fieldPath": "archivedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "archive",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "lineID", "order": "ASCENDING" },
+        { "fieldPath": "archivedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "archive",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "phone", "order": "ASCENDING" },
+        { "fieldPath": "archivedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

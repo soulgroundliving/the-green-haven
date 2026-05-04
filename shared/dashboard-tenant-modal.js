@@ -623,6 +623,74 @@ function saveTenantInfo() {
 // no remaining callers and was writing base64 into Firestore docs (the exact
 // pattern we consolidated away to Firebase Storage).
 
+// ─── Archive tenant on move-out (Phase 1: person-centric identity) ───
+// Calls archiveTenantOnMoveOut CF — preserves identity + history at
+// tenants/{building}/archive/{contractId} so a returning tenant gets old
+// data back (lookup runs in convertBookingToTenant). Live doc is blanked
+// to status='vacant' so admin can assign the room to a new tenant.
+async function archiveTenantOnMoveOut() {
+  const building = currentEditBuilding;
+  const roomId = currentEditRoomId;
+  if (!building || !roomId) {
+    showToast('ไม่พบข้อมูลห้อง — เปิด modal ก่อนแล้วลองใหม่', 'error');
+    return;
+  }
+
+  const occupancy = TenantLookup.getRoomOccupancyInfo(building, roomId);
+  const tenant = occupancy.tenant || {};
+  const tenantName = String(tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`).trim();
+  if (!tenant.tenantId) {
+    showToast('ห้องนี้ไม่มีผู้เช่าอยู่ — ไม่ต้อง archive', 'info');
+    return;
+  }
+
+  const ok = await window.ghConfirm(
+    `ย้ายข้อมูลของ "${tenantName || 'ผู้เช่า'}" (ห้อง ${roomId}) ไปยัง archive?\n\n` +
+    `• ข้อมูลทั้งหมด (ประวัติชำระ, points, wellness, pets) จะถูกเก็บไว้\n` +
+    `• ห้อง ${roomId} จะกลับเป็นว่าง — assign ผู้เช่าใหม่ได้ทันที\n` +
+    `• ถ้าผู้เช่าคนนี้กลับมาเช่าในอนาคต ระบบจะคืนข้อมูลเดิมให้อัตโนมัติ`,
+    { title: 'ย้ายผู้เช่าออกจากห้อง', confirmLabel: 'ย้ายไป Archive', danger: true }
+  );
+  if (!ok) return;
+
+  if (!window.firebase?.functions?.httpsCallable) {
+    showToast('Firebase functions ไม่พร้อม — รีโหลดหน้า', 'error');
+    return;
+  }
+
+  try {
+    const callable = window.firebase.functions.httpsCallable('archiveTenantOnMoveOut');
+    const res = await callable({ building, roomId, reason: 'moved_out' });
+    const data = res?.data || {};
+    showToast(
+      `✓ Archive สำเร็จ — contractId=${data.contractId}, ` +
+      `${data.archivedSubdocs} รายการประวัติถูกเก็บ`,
+      'success'
+    );
+
+    // Refresh + close
+    closeTenantModal();
+    if (typeof updateRoomStatuses === 'function') updateRoomStatuses();
+    if (typeof updateOccupancyDashboard === 'function') updateOccupancyDashboard();
+    const currentPage = document.querySelector('.page.active');
+    if (currentPage && currentPage.id === 'page-property') {
+      const nestSection = document.getElementById('property-nest-section');
+      if (nestSection && nestSection.style.display !== 'none') {
+        if (typeof initNestPage === 'function') initNestPage();
+      } else {
+        if (typeof initRoomsPage === 'function') initRoomsPage();
+        if (typeof renderCompactRoomGrid === 'function') renderCompactRoomGrid();
+      }
+    }
+  } catch (e) {
+    console.error('archiveTenantOnMoveOut failed:', e);
+    const msg = e?.message || String(e);
+    showToast('Archive ไม่สำเร็จ: ' + msg, 'error');
+  }
+}
+// Expose globally so dashboard-main.js's data-action dispatcher can find it
+window.archiveTenantOnMoveOut = archiveTenantOnMoveOut;
+
 // Close modal when clicking outside
 document.addEventListener('click', function(e) {
   const modal = document.getElementById('tenantModal');

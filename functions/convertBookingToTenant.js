@@ -81,8 +81,20 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
   }
   const lineUid = 'line:' + prospectLineId;
 
-  // Search both buildings for prior tenancy
+  // ── Returning-tenant lookup (4-pass cascade, prefers strongest match) ──
+  // Pass 1: live tenant doc by linkedAuthUid (current LINE account already linked
+  //         to a room — covers the "still has a room, signing up for another" case)
+  // Pass 2: archive doc by linkedAuthUid (Phase 1: same LINE account, previous room
+  //         was archived on move-out)
+  // Pass 3: archive doc by lineUserId field (in case linkedAuthUid was rotated)
+  // Pass 4: archive doc by phone (returning with new LINE account but same phone)
+  // Each pass picks the most recent match (orderBy archivedAt desc on archive
+  // queries) so multiple prior tenancies don't fight over the tenantId.
   let priorTenantId = null;
+  let priorGamificationFromArchive = null;
+  let restoredFrom = null; // 'live' | 'archive_uid' | 'archive_lineid' | 'archive_phone'
+
+  // Pass 1: live tenant doc by linkedAuthUid
   for (const b of ['rooms', 'nest']) {
     try {
       const q = firestore.collection('tenants').doc(b).collection('list')
@@ -92,11 +104,56 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
         const data = snap.docs[0].data() || {};
         if (data.tenantId) {
           priorTenantId = String(data.tenantId);
+          restoredFrom = 'live';
           break;
         }
       }
     } catch (e) {
-      console.warn(`convertBookingToTenant: tenant lookup in '${b}' failed:`, e.message);
+      console.warn(`convertBookingToTenant: live tenant lookup in '${b}' failed:`, e.message);
+    }
+  }
+
+  // Pass 2-4: scan archive subcollections — only if no live match
+  if (!priorTenantId) {
+    const prospectPhone = String(initialBooking.prospectPhone || '').trim();
+
+    const scanArchive = async (field, value) => {
+      if (!value) return null;
+      for (const b of ['rooms', 'nest']) {
+        try {
+          // orderBy archivedAt desc + limit 1 → most recent archive wins
+          // (a returning tenant may have rented multiple times before)
+          const q = firestore.collection('tenants').doc(b).collection('archive')
+            .where(field, '==', value)
+            .orderBy('archivedAt', 'desc')
+            .limit(1);
+          const snap = await q.get();
+          if (!snap.empty) {
+            const d = snap.docs[0].data() || {};
+            if (d.tenantId) return { tenantId: String(d.tenantId), gamification: d.gamification || null, building: b };
+          }
+        } catch (e) {
+          // Missing composite index will throw; log + continue (other passes
+          // may still match without the index).
+          console.warn(`convertBookingToTenant: archive scan ${field}='${value}' in '${b}' failed:`, e.message);
+        }
+      }
+      return null;
+    };
+
+    let hit = await scanArchive('linkedAuthUid', lineUid);
+    if (hit) restoredFrom = 'archive_uid';
+    if (!hit) {
+      hit = await scanArchive('lineID', prospectLineId);
+      if (hit) restoredFrom = 'archive_lineid';
+    }
+    if (!hit && prospectPhone) {
+      hit = await scanArchive('phone', prospectPhone);
+      if (hit) restoredFrom = 'archive_phone';
+    }
+    if (hit) {
+      priorTenantId = hit.tenantId;
+      priorGamificationFromArchive = hit.gamification;
     }
   }
 
@@ -152,7 +209,14 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
       // createBookingLock — so this branch only fires for Nest tenants. Award
       // is idempotent because convert can only run once per booking (status
       // guard rejects 'converted' on subsequent calls).
-      const priorGamification = existingTenant.exists ? (existingTenant.data().gamification || null) : null;
+      //
+      // Phase 1 archive restore: if the prior tenant was found in archive (no
+      // live doc at this room), use the archived gamification as the base so
+      // points/streaks/badges carry over. Live-doc match keeps existing
+      // behavior (rare — only fires if same person is still listed somewhere).
+      const priorGamification = existingTenant.exists
+        ? (existingTenant.data().gamification || null)
+        : (priorGamificationFromArchive || null);
       const ebPoints = Number(booking.earlyBirdPoints) || 0;
       const awardEarlyBird = !!booking.earlyBirdEligible && ebPoints > 0;
       let mergedGamification = priorGamification;
@@ -253,6 +317,7 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
         building,
         roomId,
         isReturningTenant: !!priorTenantId,
+        restoredFrom,
         earlyBirdAwarded: awardEarlyBird,
         earlyBirdPoints: awardEarlyBird ? ebPoints : 0,
       };
@@ -263,6 +328,6 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
     throw new functions.https.HttpsError('internal', e.message || 'Conversion transaction failed');
   }
 
-  console.log(`✅ convertBookingToTenant: ${bookingId} → tenants/${result.building}/list/${result.roomId} (tenantId=${result.tenantId}, returning=${result.isReturningTenant})`);
+  console.log(`✅ convertBookingToTenant: ${bookingId} → tenants/${result.building}/list/${result.roomId} (tenantId=${result.tenantId}, returning=${result.isReturningTenant}, restoredFrom=${result.restoredFrom || 'none'})`);
   return { success: true, ...result };
 });

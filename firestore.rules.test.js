@@ -618,3 +618,98 @@ describe('bookings — CF-only writes, prospect reads own only', () => {
     ));
   });
 });
+
+// ── Tenants archive (Phase 1: person-centric identity) ────────────────────
+// Archive doc + subcollections must be admin-only — they preserve PII +
+// gamification history of former tenants. CF writes via admin SDK (bypasses
+// rules); direct client write is blocked because the archive batch is atomic.
+describe('tenants archive — admin-only (Phase 1)', () => {
+  it('admin CAN read archive doc', async () => {
+    await seedDoc('tenants/rooms/archive/CONTRACT_X1', {
+      tenantId: 'TENANT_1', contractId: 'CONTRACT_X1', name: 'Old',
+      archivedAt: new Date(), archivedReason: 'moved_out', archivedBy: 'admin-1',
+    });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'tenants/rooms/archive/CONTRACT_X1')));
+  });
+
+  it('LIFF tenant CANNOT read archive (not even own former room)', async () => {
+    await seedDoc('tenants/rooms/archive/CONTRACT_X1', {
+      tenantId: 'TENANT_1', linkedAuthUid: 'line:U00000000000000000000000000000001',
+      archivedAt: new Date(),
+    });
+    await assertFails(getDoc(doc(
+      LIFF_TENANT('line:U00000000000000000000000000000001').firestore(),
+      'tenants/rooms/archive/CONTRACT_X1'
+    )));
+  });
+
+  it('anonymous CANNOT read archive', async () => {
+    await seedDoc('tenants/rooms/archive/CONTRACT_X1', { tenantId: 'TENANT_1' });
+    await assertFails(getDoc(doc(ANON().firestore(), 'tenants/rooms/archive/CONTRACT_X1')));
+  });
+
+  it('unauthenticated CANNOT read archive', async () => {
+    await seedDoc('tenants/rooms/archive/CONTRACT_X1', { tenantId: 'TENANT_1' });
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'tenants/rooms/archive/CONTRACT_X1')));
+  });
+
+  it('LIFF tenant CANNOT write archive (CF-only)', async () => {
+    await assertFails(setDoc(
+      doc(LIFF_TENANT().firestore(), 'tenants/rooms/archive/CONTRACT_HIJACK'),
+      { tenantId: 'TENANT_HIJACK', archivedAt: new Date() }
+    ));
+  });
+
+  it('admin CAN write archive (admin SDK pattern)', async () => {
+    await assertSucceeds(setDoc(
+      doc(EMAIL_ADMIN().firestore(), 'tenants/rooms/archive/CONTRACT_NEW'),
+      { tenantId: 'TENANT_1', archivedAt: new Date(), archivedReason: 'moved_out' }
+    ));
+  });
+
+  it('admin CAN read archived paymentHistory subdoc (recursive wildcard)', async () => {
+    await seedDoc('tenants/rooms/archive/CONTRACT_X1/paymentHistory/2026-04', {
+      amount: 5000, status: 'paid'
+    });
+    await assertSucceeds(getDoc(doc(
+      EMAIL_ADMIN().firestore(),
+      'tenants/rooms/archive/CONTRACT_X1/paymentHistory/2026-04'
+    )));
+  });
+
+  it('LIFF tenant CANNOT read archived paymentHistory', async () => {
+    await seedDoc('tenants/rooms/archive/CONTRACT_X1/paymentHistory/2026-04', {
+      amount: 5000
+    });
+    await assertFails(getDoc(doc(
+      LIFF_TENANT().firestore(),
+      'tenants/rooms/archive/CONTRACT_X1/paymentHistory/2026-04'
+    )));
+  });
+
+  it('LIFF tenant CANNOT read archived redemptions', async () => {
+    await seedDoc('tenants/nest/archive/CONTRACT_X2/redemptions/r1', {
+      rewardId: 'x', cost: 100
+    });
+    await assertFails(getDoc(doc(
+      LIFF_TENANT('line:U001', 'N101', 'nest').firestore(),
+      'tenants/nest/archive/CONTRACT_X2/redemptions/r1'
+    )));
+  });
+
+  it('admin CAN write archived subdoc', async () => {
+    await assertSucceeds(setDoc(
+      doc(EMAIL_ADMIN().firestore(),
+        'tenants/nest/archive/CONTRACT_X2/wellnessClaimed/article-1'),
+      { claimedAt: new Date(), points: 5 }
+    ));
+  });
+
+  it('LIFF tenant CANNOT write archived subdoc', async () => {
+    await assertFails(setDoc(
+      doc(LIFF_TENANT().firestore(),
+        'tenants/rooms/archive/CONTRACT_X1/wellnessClaimed/article-1'),
+      { claimedAt: new Date() }
+    ));
+  });
+});

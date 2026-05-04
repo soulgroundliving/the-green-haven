@@ -54,6 +54,11 @@ exports.convertBookingToTenant = require('./convertBookingToTenant').convertBook
 // (don't trust client-provided file list).
 exports.submitBookingKyc = require('./submitBookingKyc').submitBookingKyc;
 
+// Admin-only archive of a tenant on move-out — preserves identity + history at
+// tenants/{building}/archive/{contractId}. Phase 1 of person-centric identity
+// (returning tenants get old data back via convertBookingToTenant lookup).
+exports.archiveTenantOnMoveOut = require('./archiveTenantOnMoveOut').archiveTenantOnMoveOut;
+
 // Phone match check for LIFF auto-approve — admin SDK, never exposes raw phone (Phase 4C-2)
 exports.checkTenantPhone = require('./checkTenantPhone').checkTenantPhone;
 

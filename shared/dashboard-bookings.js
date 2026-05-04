@@ -309,7 +309,13 @@
       const skipKyc = b.status === 'paid';   // status='paid' means we're skipping the optional KYC step
       const res = await callable({ bookingId: b.id, skipKyc });
       const data = res?.data || {};
-      const msg = `✓ แปลงสำเร็จ! tenantId=${data.tenantId}` + (data.isReturningTenant ? ' (returning tenant)' : ' (ลูกบ้านใหม่)');
+      const restoredLabel = {
+        live: 'ลูกบ้านเดิมที่ยังเช่าอยู่',
+        archive_uid: 'ลูกบ้านเก่ากลับมา (LINE เดิม)',
+        archive_lineid: 'ลูกบ้านเก่ากลับมา (LINE ID เดิม)',
+        archive_phone: 'ลูกบ้านเก่ากลับมา (เบอร์เดิม)',
+      }[data.restoredFrom] || 'ลูกบ้านใหม่';
+      const msg = `✓ แปลงสำเร็จ! tenantId=${data.tenantId} — ${restoredLabel}`;
       toastBk(msg, 'success');
     } catch (e) {
       console.error('convertBookingToTenant failed:', e);

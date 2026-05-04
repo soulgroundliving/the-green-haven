@@ -1116,51 +1116,106 @@ Pre-deploy gate: `owner_info/main.phone` must be set in Firestore (admin sets vi
 
 ---
 
-## Phase 1 — Move-out archive (preserve identity on move-out) ⏳
+## Phase 1 — Move-out archive (preserve identity on move-out) ✅
 
 **Goal:** ผู้เช่าออกแล้วกลับมา → เจอข้อมูลเดิม. **Scope:** เฉพาะการ preserve. ยังไม่แตะ schema ใหญ่.
 
-### Step 1.1 — สร้าง `tenants/{building}/archive/{contractId}` subcollection
-- [ ] **Why:** preserve old tenant doc ก่อน admin assign ห้องให้คนใหม่. คีย์ด้วย `contractId` เพราะคนหนึ่งคนอาจเคยเช่าหลายสัญญา → ดูประวัติได้ครบ
-- [ ] Schema: copy fields จาก tenant doc + เพิ่ม `archivedAt`, `archivedReason` (`'moved_out'|'reassigned'|'admin_action'`), `archivedBy`
-- [ ] Rule: admin-only read/write (ไม่เปิด tenant อ่านเองในเฟสนี้)
-- [ ] Verification: grep `firestore.rules` มี match `/databases/{database}/documents/tenants/{b}/archive/{c}`
+### Step 1.1 — สร้าง `tenants/{building}/archive/{contractId}` subcollection ✅
+- [x] **Why:** preserve old tenant doc ก่อน admin assign ห้องให้คนใหม่. คีย์ด้วย `contractId` เพราะคนหนึ่งคนอาจเคยเช่าหลายสัญญา → ดูประวัติได้ครบ
+- [x] Schema: copy fields จาก tenant doc + เพิ่ม `archivedAt`, `archivedReason` (`'moved_out'|'reassigned'|'admin_action'`), `archivedBy`, `archivedByEmail`, `sourceRoom`
+- [x] Rule: admin-only read/write (`firestore.rules` — added `match /tenants/{building}/archive/{contractId}` block + recursive `match /{subPath=**}` for subcollections)
+- [x] Verification: `grep "tenants/{building}/archive" firestore.rules` ✓
 
-### Step 1.2 — เพิ่ม CF `archiveTenantOnMoveOut` (HTTPS callable)
-- [ ] **Why:** atomic transaction — copy → archive → reset list doc ในก้อนเดียว. ห้าม do-it-from-frontend เพราะมีจังหวะที่ admin click → archive partial → bug
-- [ ] Region SE1 (Singapore — match Firestore SE3 latency tolerance + same region as other CFs)
-- [ ] Input: `{building, roomId, reason}` from authenticated admin
-- [ ] Logic:
-  - read `tenants/{b}/list/{r}` → ถ้า `tenantId` ว่างหรือไม่มี → throw `failed-precondition`
-  - คำนวณ `contractId` (ใช้ field `contractId` ใน doc ถ้ามี — ถ้าไม่มี → fallback `LEGACY_${tenantId}_${ts}`)
-  - tx: `set archive/{contractId}` + `update list/{roomId}` ให้ blank identity (`name='', tenantId='', contractId='', linkedAuthUid='', phone='', gamification=null...`) + คง `building, roomId, status='vacant'`
-  - audit log → `system/audit_logs` (admin-only)
-- [ ] **Why blank vs delete list doc:** ห้องยังต้องอยู่ใน list (admin assign ใหม่ได้) — delete แล้วต้องมา recreate
+### Step 1.2 — เพิ่ม CF `archiveTenantOnMoveOut` (HTTPS callable) ✅
+- [x] **Why:** atomic batch — copy parent + subcolls + delete + blank live doc ในก้อนเดียว. ห้าม do-it-from-frontend
+- [x] Region SE1 (Singapore — match other tenant-flow CFs)
+- [x] Input: `{building, roomId, reason}` from authenticated admin (admin claim required)
+- [x] Logic implemented at [functions/archiveTenantOnMoveOut.js](functions/archiveTenantOnMoveOut.js):
+  - reads `tenants/{b}/list/{r}` → throws if no `tenantId` or no `name|firstName`
+  - computes contractId (live `contractId` field, or `LEGACY_${tenantId}_${ts}`)
+  - reads 5 subcollections (paymentHistory, redemptions, wellnessClaimed, pets, complaintFreeMonthAwarded)
+  - one batch: archive parent + all subdocs + delete originals + blank list doc + status='vacant'
+  - 450-op safety cap (Firestore batch limit 500)
+  - refuses overwrite of existing archive doc
+- [x] Registered in [functions/index.js](functions/index.js)
+- [x] **Why batch (not transaction):** subcollection lists need queries; concurrent archives are idempotent
 
-### Step 1.3 — UI button ใน dashboard tenant modal
-- [ ] [shared/dashboard-tenant-modal.js](shared/dashboard-tenant-modal.js): เพิ่มปุ่ม "ย้ายออก / Archive" ใน tenant detail modal
-- [ ] confirm dialog: "ข้อมูลของ {name} จะถูกย้ายไป archive — กลับมาแก้ได้ภายหลัง" + reason dropdown
-- [ ] On confirm → call `archiveTenantOnMoveOut` → reload tenant list
-- [ ] **Why button + confirm:** admin อาจ click ผิด — confirm step block accidental archive
+### Step 1.3 — UI button ใน dashboard tenant modal ✅
+- [x] [shared/dashboard-tenant-modal.js](shared/dashboard-tenant-modal.js): added `archiveTenantOnMoveOut()` function (~70 LOC) + global window export
+- [x] Confirm via `window.ghConfirm` with danger styling — message lists what will happen + reassurance about returning-tenant restore
+- [x] Reason hardcoded to `'moved_out'` (Phase 1 simplification — CF accepts moved_out|reassigned|admin_action; reason picker can be added later)
+- [x] On success → close modal, refresh room/occupancy displays, toast with contractId + subdoc count
+- [x] [dashboard.html:2298](dashboard.html#L2298) — added `📦 ย้ายไป Archive` button (red outline) between Save and Close in modal footer
+- [x] [shared/dashboard-main.js](shared/dashboard-main.js) — wired `data-action="archiveTenantOnMoveOut"` dispatch
 
-### Step 1.4 — extend Returning lookup ใน `convertBookingToTenant.js`
-- [ ] [functions/convertBookingToTenant.js:84-98](functions/convertBookingToTenant.js#L84): ขยาย scan ให้รวม `archive` subcollection
-- [ ] Match priority: (1) live tenant doc by linkedAuthUid (เดิม) → (2) archive by linkedAuthUid → (3) archive by phone → (4) archive by lineUserId
-- [ ] **Why phone fallback:** ผู้เช่ากลับมาด้วย LINE บัญชีใหม่ (เปลี่ยนเบอร์ → re-add LINE) — phone ยังตรง
-- [ ] ถ้าเจอใน archive → กลับ tenant ออกมา + ใส่ flag `restoredFrom: 'archive'` ใน return value + log
-- [ ] เก็บ `gamification` จาก archive มาใช้ต่อ (รวมกับ Early Bird)
+### Step 1.4 — extend Returning lookup ใน `convertBookingToTenant.js` ✅
+- [x] [functions/convertBookingToTenant.js:84-158](functions/convertBookingToTenant.js#L84): replaced single-pass live-doc lookup with **4-pass cascade**:
+  - Pass 1: live tenant by `linkedAuthUid` (existing behavior)
+  - Pass 2: archive by `linkedAuthUid` (orderBy archivedAt desc, limit 1)
+  - Pass 3: archive by `lineID == prospectLineId`
+  - Pass 4: archive by `phone == prospectPhone` ← key Phase 1 capability (returning with new LINE account)
+- [x] `priorGamificationFromArchive` carried into `mergedGamification` so points/streaks/badges restore
+- [x] Response includes `restoredFrom: 'live'|'archive_uid'|'archive_lineid'|'archive_phone'|null`
+- [x] [shared/dashboard-bookings.js:308](shared/dashboard-bookings.js#L308) — admin convert toast displays Thai label per restoredFrom value
+- [x] [firestore.indexes.json](firestore.indexes.json): 3 composite indexes added for archive scan: `(linkedAuthUid, archivedAt desc)`, `(lineID, archivedAt desc)`, `(phone, archivedAt desc)`
 
-### Step 1.5 — Verification + tests
-- [ ] เพิ่ม firestore rules test: admin can read archive, tenant cannot
-- [ ] Manual E2E ใน vercel:
-  1. Archive tenant ห้อง 13 → ตรวจ `tenants/rooms/archive/{contractId}` มีข้อมูล + `tenants/rooms/list/13` blank
-  2. Convert booking ของคนเดิม (LINE UID เดิม) → return `restoredFrom: 'archive'`, gamification carry over
-  3. Admin assign ห้องใหม่ให้คนอื่น → ของเก่าไม่หายจาก archive
-- [ ] `npm run test:rules`
-- [ ] อัพเดท `memory/firestore_schema_canonical.md` — เพิ่ม archive collection + verify section
-- [ ] อัพเดท `memory/lifecycle_tenant_ssot.md` — บันทึก move-out flow
+### Step 1.5 — Verification + tests ✅
+- [x] [firestore.rules.test.js](firestore.rules.test.js) — 10 new tests for archive: admin read/write OK, LIFF tenant + anon + unauth all denied, recursive wildcard for subcoll docs verified
+- [x] `npm run test:rules` cannot run locally (Java not installed for Firebase emulator); tests will execute via [.github/workflows/firestore-rules.yml](.github/workflows/firestore-rules.yml) on push
+- [x] All edited JS files pass `node --check` (syntax clean)
+- [x] [memory/firestore_schema_canonical.md](C:/Users/usEr/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/firestore_schema_canonical.md) — added archive collection block above tenants/list (with `Composite indexes required` callout)
+- [x] [memory/lifecycle_tenant_ssot.md](C:/Users/usEr/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/lifecycle_tenant_ssot.md) — added "Move-out flow + archive" section + 4 new verification grep entries
+- [x] `npm run verify:memory` ✅ ALL GREEN (22 docs, 216 verifier rows, 0 fails)
+- [ ] **PENDING — manual E2E on Vercel after push:**
+  1. Archive an existing tenant via dashboard → check Firestore `tenants/rooms/archive/{contractId}` has clone + subcolls
+  2. Verify list doc at that room is blank with status='vacant'
+  3. Create a new booking for same LINE user → convert → toast shows "ลูกบ้านเก่ากลับมา (LINE เดิม)" + tenantId reused
 
-**Phase 1 deliverable:** ผู้เช่าออก → กลับมา → เจอข้อมูลเดิม. ครอบคลุม vision ส่วน "ลูกบ้านออกแล้วกลับมา"
+**Phase 1 deliverable:** ✅ ผู้เช่าออก → กลับมา → เจอข้อมูลเดิม. ครอบคลุม vision ส่วน "ลูกบ้านออกแล้วกลับมา"
+
+## Review (Phase 1)
+
+### What shipped (8 file edits, 1 new file)
+
+| File | Type | Change |
+|---|---|---|
+| [functions/archiveTenantOnMoveOut.js](functions/archiveTenantOnMoveOut.js) | NEW | Admin callable — atomic batch archive + blank live doc + preserve 5 subcollections |
+| [functions/index.js](functions/index.js) | edit | Register `archiveTenantOnMoveOut` export |
+| [functions/convertBookingToTenant.js](functions/convertBookingToTenant.js) | edit | 4-pass returning-tenant cascade (live → archive_uid → archive_lineid → archive_phone); restore gamification from archive; surface `restoredFrom` |
+| [firestore.rules](firestore.rules) | edit | New `tenants/{b}/archive/{c}` block + recursive subcoll wildcard |
+| [firestore.rules.test.js](firestore.rules.test.js) | edit | +10 tests for archive admin-only access |
+| [firestore.indexes.json](firestore.indexes.json) | edit | +3 composite indexes for archive scan |
+| [dashboard.html](dashboard.html) | edit | "📦 ย้ายไป Archive" button in tenant modal footer |
+| [shared/dashboard-tenant-modal.js](shared/dashboard-tenant-modal.js) | edit | `archiveTenantOnMoveOut()` UI function + ghConfirm dialog |
+| [shared/dashboard-main.js](shared/dashboard-main.js) | edit | data-action dispatch for archive button |
+| [shared/dashboard-bookings.js](shared/dashboard-bookings.js) | edit | Convert-success toast labels per restoredFrom |
+| [memory/firestore_schema_canonical.md](C:/Users/usEr/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/firestore_schema_canonical.md) | edit | Archive collection schema + composite-index requirement |
+| [memory/lifecycle_tenant_ssot.md](C:/Users/usEr/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/lifecycle_tenant_ssot.md) | edit | Move-out flow section + 4 new verifier greps |
+
+### Deploy commands
+
+```bash
+# Functions (new + modified)
+firebase deploy --only functions:archiveTenantOnMoveOut,functions:convertBookingToTenant
+
+# Rules + indexes (new collection + composite indexes)
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+⚠️ **Composite indexes take a few minutes to build.** Pass 2-4 of the returning-tenant lookup will throw `FAILED_PRECONDITION` until indexes finish — ride that out before live-testing the convert flow.
+
+### Deferred / not in Phase 1
+- ❌ Reason picker UI (CF accepts 3 reasons; UI hardcodes `'moved_out'`)
+- ❌ Audit log to `system/audit_logs` (the archive doc IS the audit trail — `archivedAt`/`archivedReason`/`archivedBy`)
+- ❌ Tenant-side "see my history" view (Phase 2 with people/{tenantId})
+- ❌ Removing the old single-pass live lookup (kept; Phase 2 may consolidate when migrating to people/)
+- ❌ Migration script for existing pre-archive tenants (Phase 2 will handle bulk via `people/` migration)
+- ❌ Java/emulator-based local rules tests (CI runs them on push)
+
+### Follow-ups before Phase 2
+- Watch live archive flow for 1-2 weeks — confirm composite indexes don't blow read budget
+- If admin needs reason picker (some archive aren't move-outs), add reason dropdown to confirm dialog
+- Check whether `complaintFreeMonthAwarded` subcollection is actually used anywhere (CF only?) — if dead, drop from ARCHIVED_SUBCOLLECTIONS list
 
 ---
 
