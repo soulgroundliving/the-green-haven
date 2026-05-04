@@ -28,7 +28,10 @@ if (!admin.apps.length) admin.initializeApp();
 // based separation between tenant_app.html and booking.html).
 const LINE_CHANNEL_ID = '2009790149';
 
-exports.liffBookingSignIn = functions.region('asia-southeast1').https.onRequest(async (req, res) => {
+exports.liffBookingSignIn = functions
+  .region('asia-southeast1')
+  .runWith({ minInstances: 1 })
+  .https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') {
     res.set('Access-Control-Allow-Methods', 'POST');
@@ -36,6 +39,12 @@ exports.liffBookingSignIn = functions.region('asia-southeast1').https.onRequest(
     res.set('Access-Control-Max-Age', '3600');
     return res.status(204).send('');
   }
+
+  // Health check — Cloud Scheduler pings GET /liffBookingSignIn every 5 min to keep warm
+  if (req.method === 'GET') {
+    return res.status(200).json({ status: 'ok', ts: Date.now() });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -75,22 +84,10 @@ exports.liffBookingSignIn = functions.region('asia-southeast1').https.onRequest(
   // Auth users, no claim collision.
   const uid = 'book:' + lineUserId;
 
-  // Set displayName on the Auth user record so admin Firebase Auth Console
-  // shows "booking — John" instead of "(-)". Non-fatal.
-  const displayName = `booking${lineDisplayName ? ' — ' + lineDisplayName : ''}`;
-  try {
-    await admin.auth().updateUser(uid, { displayName });
-  } catch (e) {
-    if (e.code === 'auth/user-not-found') {
-      try {
-        await admin.auth().createUser({ uid, displayName });
-      } catch (createErr) {
-        console.warn('liffBookingSignIn: createUser displayName failed (non-fatal):', createErr.message);
-      }
-    } else {
-      console.warn('liffBookingSignIn: updateUser displayName failed (non-fatal):', e.message);
-    }
-  }
+  // NOTE: displayName update intentionally skipped — updateUser + createUser were
+  // 2 sequential Admin SDK calls adding 3-15s on cold start for a new user.
+  // Firebase Auth creates the user lazily on signInWithCustomToken; displayName
+  // is cosmetic only and can be patched later if needed.
 
   // Mint custom token with role:'prospect' claim. createBookingLock CF gates
   // on this — random signed-in users (e.g. tenants on tenant_app) cannot

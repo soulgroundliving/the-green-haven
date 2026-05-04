@@ -29,13 +29,21 @@ if (!admin.apps.length) admin.initializeApp();
 // Used as client_id when verifying LIFF ID tokens with LINE's /verify endpoint.
 const LINE_CHANNEL_ID = '2009790149';
 
-exports.liffSignIn = functions.region('asia-southeast1').https.onRequest(async (req, res) => {
+exports.liffSignIn = functions
+  .region('asia-southeast1')
+  .runWith({ minInstances: 1 })
+  .https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') {
     res.set('Access-Control-Allow-Methods', 'POST');
     res.set('Access-Control-Allow-Headers', 'Content-Type');
     res.set('Access-Control-Max-Age', '3600');
     return res.status(204).send('');
+  }
+
+  // Health check — Cloud Scheduler pings GET /liffSignIn every 5 min to keep warm
+  if (req.method === 'GET') {
+    return res.status(200).json({ status: 'ok', ts: Date.now() });
   }
 
   if (req.method !== 'POST') {

@@ -13,6 +13,10 @@ exports.cleanupAnonymousUsers = require('./cleanupAnonymousUsers').cleanupAnonym
 // ?apply=1 to commit. Admin-only.
 exports.fixLegacyBillBuilding = require('./fixLegacyBillBuilding').fixLegacyBillBuilding;
 
+// Keep liffSignIn + liffBookingSignIn warm — scheduled ping every 5 min
+// (belt-and-suspenders alongside minInstances:1 on both CFs)
+exports.keepLiffWarm = require('./keepLiffWarm').keepLiffWarm;
+
 // LIFF ID token → Firebase custom token (replaces anonymous-auth dependency)
 // Replaced legacy linkAuthUid (removed 2026-04-28: had cross-tenant hijack —
 // caller could pass any approved lineUserId and get that room's claims).
