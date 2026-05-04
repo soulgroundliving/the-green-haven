@@ -924,6 +924,25 @@
       return false;
     }
 
+    // Fast-path: returning user whose Firebase session already matches this LINE account.
+    // window._authUid is set by onAuthStateChanged in the Firebase module block above.
+    // By the time liff.init() + liff.getProfile() complete (~1-2s), IndexedDB auth
+    // restoration is done (~100-300ms), so _authUid is already populated for returning users.
+    // Skips the CF round-trip (~1-2s) — just force-refreshes the ID token (~300ms).
+    const _expectedUid = 'book:' + state.lineUserId;
+    if (window._authUid === _expectedUid && window.firebaseAuth.currentUser) {
+      try {
+        await window.firebaseAuth.currentUser.getIdToken(true); // ensure token is fresh
+        setBootMsg('🌿 กำลังโหลดห้องว่าง…');
+        state.authReady = true;
+        state.booted = true;
+        return true;
+      } catch (e) {
+        // Refresh failed (revoked session) — fall through to full CF sign-in
+        console.warn('[booking] fast-path token refresh failed, using CF:', e.message);
+      }
+    }
+
     // Exchange LIFF ID token for Firebase custom token via liffBookingSignIn CF
     setBootMsg('🔐 กำลังตั้งค่าสิทธิ์…');
     let idToken;
@@ -940,25 +959,33 @@
 
     let customToken;
     try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 30000); // 30s timeout
       const res = await fetch(`${CF_HOST}/liffBookingSignIn`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken })
+        body: JSON.stringify({ idToken }),
+        signal: ctrl.signal,
       });
+      clearTimeout(tid);
       const json = await res.json();
       if (!res.ok || !json.customToken) {
         throw new Error(json.error || `liffBookingSignIn failed (${res.status})`);
       }
       customToken = json.customToken;
     } catch (e) {
-      fatalBoot('Sign-in: ' + (e.message || e));
+      fatalBoot(e.name === 'AbortError'
+        ? 'เชื่อมต่อช้าเกินไป — ลองใหม่อีกครั้ง'
+        : 'Sign-in: ' + (e.message || e));
       return false;
     }
 
     // signInWithCustomToken with retry for transient network errors (LIFF webview quirk)
+    // auth/network-request-failed is a LINE in-app browser TLS stale state issue.
+    // Longer delays + more retries recover most cases without user intervention.
     const TRANSIENT = new Set(['auth/network-request-failed', 'auth/internal-error']);
     let signInErr = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    for (let attempt = 1; attempt <= 5; attempt++) {
       try {
         await window.firebaseSignInWithCustomToken(window.firebaseAuth, customToken);
         signInErr = null;
@@ -966,12 +993,12 @@
       } catch (e) {
         signInErr = e;
         const transient = TRANSIENT.has(e?.code) || /network-request-failed/i.test(e?.message || '');
-        if (!transient || attempt === 3) break;
-        await new Promise(r => setTimeout(r, 400 * attempt));
+        if (!transient || attempt === 5) break;
+        await new Promise(r => setTimeout(r, 1000 * attempt)); // 1s, 2s, 3s, 4s
       }
     }
     if (signInErr) {
-      fatalBoot('Sign-in failed: ' + signInErr.message);
+      fatalBoot('เชื่อมต่อไม่สำเร็จ — ปิด LINE แล้วเปิดใหม่แล้วลองอีกครั้ง');
       return false;
     }
 
@@ -984,10 +1011,11 @@
 
   // ── Data loading ──────────────────────────────────────────
   async function loadRoomsConfig() {
-    // RoomConfigManager pulls from RTDB/localStorage; default config seeds if both empty
-    state.roomsByBuilding.rooms = (window.RoomConfigManager.getRoomsConfig('rooms').rooms || [])
+    // RoomConfigManager is a class declaration in room-config.js — accessible via global scope,
+    // NOT via window.RoomConfigManager (class declarations don't auto-mount on window).
+    state.roomsByBuilding.rooms = (RoomConfigManager.getRoomsConfig('rooms').rooms || [])
       .filter(r => !r.deleted);
-    state.roomsByBuilding.nest = (window.RoomConfigManager.getRoomsConfig('nest').rooms || [])
+    state.roomsByBuilding.nest = (RoomConfigManager.getRoomsConfig('nest').rooms || [])
       .filter(r => !r.deleted);
   }
 
@@ -1662,19 +1690,26 @@
 
   // ── Boot sequence ─────────────────────────────────────────
   async function boot() {
-    attach();
-    setBootMsg('กำลังเชื่อมต่อ LINE…');
-    const ok = await bootLiff();
-    if (!ok) return;
-    await loadRoomsConfig();
-    await Promise.all([
-      refreshAvailability('rooms'),
-      refreshAvailability('nest'),
-    ]);
-    renderBuildingTabs();
-    renderDateStrip();
-    renderRoomsList();
-    hideBoot();
+    try {
+      attach();
+      setBootMsg('กำลังเชื่อมต่อ LINE…');
+      const ok = await bootLiff();
+      if (!ok) return;
+      await loadRoomsConfig();
+      // Render immediately with default status (ว่าง) — don't block on CF cold start
+      renderBuildingTabs();
+      renderDateStrip();
+      renderRoomsList();
+      hideBoot();
+      // Refresh availability in background — status badges update when CF responds
+      Promise.all([
+        refreshAvailability('rooms'),
+        refreshAvailability('nest'),
+      ]).then(() => renderRoomsList()).catch(() => {});
+    } catch (err) {
+      console.error('boot failed:', err);
+      fatalBoot('โหลดไม่สำเร็จ: ' + (err?.message || 'ลองใหม่อีกครั้ง'));
+    }
   }
 
   // Wait for DOM + Firebase before booting LIFF

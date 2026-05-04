@@ -109,44 +109,42 @@ exports.liffSignIn = functions.region('asia-southeast1').https.onRequest(async (
   // UID is deterministic per LINE user — stable across sessions.
   const uid = 'line:' + lineUserId;
 
-  // Set displayName on the Auth user record so admins see "rooms/15 — John"
-  // in Firebase Auth Console instead of "(-)". Non-fatal: if it fails the
-  // sign-in still works, just the admin Console UX is poorer. Idempotent.
+  // displayName update is cosmetic only (admin Console UX). Run it concurrently
+  // with createCustomToken — createCustomToken does NOT require the Auth user to
+  // pre-exist. This cuts the critical-path from 2 sequential Admin SDK RPCs to 1.
   const lineDisplayName = String(liffData.lineDisplayName || '').slice(0, 60);
   const displayName = `${building}/${room}${lineDisplayName ? ' — ' + lineDisplayName : ''}`;
-  try {
-    await admin.auth().updateUser(uid, { displayName });
-  } catch (e) {
+
+  const displayNameUpdate = admin.auth().updateUser(uid, { displayName }).catch(async e => {
     if (e.code === 'auth/user-not-found') {
-      try {
-        await admin.auth().createUser({ uid, displayName });
-      } catch (createErr) {
-        console.warn('liffSignIn: createUser displayName failed (non-fatal):', createErr.message);
-      }
+      await admin.auth().createUser({ uid, displayName }).catch(createErr =>
+        console.warn('liffSignIn: createUser displayName failed (non-fatal):', createErr.message));
     } else {
       console.warn('liffSignIn: updateUser displayName failed (non-fatal):', e.message);
     }
-  }
+  });
 
   let customToken;
   try {
-    customToken = await admin.auth().createCustomToken(uid, { room, building });
+    // Promise.all: displayNameUpdate (cosmetic) runs concurrently with createCustomToken (critical).
+    [, customToken] = await Promise.all([
+      displayNameUpdate,
+      admin.auth().createCustomToken(uid, { room, building }),
+    ]);
     console.log(`✅ liffSignIn: uid=${uid} → ${building}/${room} (LINE ${lineUserId})`);
   } catch (e) {
     console.error('liffSignIn: createCustomToken failed:', e.message);
     return res.status(500).json({ error: 'Failed to create custom token' });
   }
 
-  // ── Write linkedAuthUid to Firestore tenant doc ───────────────────────────
-  // Non-fatal: keeps linkedAuthUid in sync for Firestore rules that scope per-room.
-  try {
-    await firestore
-      .collection('tenants').doc(building)
-      .collection('list').doc(room)
-      .set({ linkedAuthUid: uid, linkedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
-  } catch (e) {
-    console.warn(`liffSignIn: could not write linkedAuthUid to tenants/${building}/list/${room}:`, e.message);
-  }
+  // ── Write linkedAuthUid to Firestore tenant doc (fire-and-forget) ─────────
+  // Non-blocking: keeps linkedAuthUid in sync for Firestore rules; does not
+  // delay the response. Client gets the custom token immediately.
+  firestore
+    .collection('tenants').doc(building)
+    .collection('list').doc(room)
+    .set({ linkedAuthUid: uid, linkedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true })
+    .catch(e => console.warn(`liffSignIn: linkedAuthUid write failed for ${building}/${room}:`, e.message));
 
   return res.status(200).json({ customToken, room, building });
 });
