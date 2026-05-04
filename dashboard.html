@@ -2047,6 +2047,142 @@
     to { transform: translateX(400px); opacity: 0; }
   }
 
+  /* ===== DARK MODE OVERRIDES ===== */
+  /* CSS class fixes — hardcoded #fff / light backgrounds */
+  html[data-theme="dark"] .compact-card { background: var(--surface-card); }
+  html[data-theme="dark"] .compact-card.vacant { background: var(--surface-card); }
+  html[data-theme="dark"] .compact-card.expired .compact-card-type { background: rgba(239,154,154,.18); }
+  html[data-theme="dark"] .list-sort { background: var(--surface-card); color: var(--ink); }
+  html[data-theme="dark"] .list-search input { background: var(--surface-card); color: var(--ink); }
+  html[data-theme="dark"] .slip-verify-section { background: #2a1e00; border-color: #7a5c00; }
+  html[data-theme="dark"] .slip-drop-area { background: var(--surface-card); border-color: #7a5c00; }
+  html[data-theme="dark"] .slip-drop-area:hover { background: #1e1800; }
+  html[data-theme="dark"] .doc-body { background: var(--surface-card); }
+  html[data-theme="dark"] .pay-modal { background: var(--surface-card); }
+  html[data-theme="dark"] .pay-modal-footer { background: var(--cloud); }
+  html[data-theme="dark"] .pm-btn.gray { background: var(--stone); color: var(--ink); }
+  html[data-theme="dark"] .tenant-card.occ { background: var(--surface-card); }
+  html[data-theme="dark"] .tenant-card.vac { background: var(--surface-card); }
+  html[data-theme="dark"] .exp-form input,
+  html[data-theme="dark"] .exp-form select,
+  html[data-theme="dark"] .exp-form textarea { background: var(--surface-card); color: var(--ink); border-color: var(--stone); }
+  html[data-theme="dark"] .mx-form input,
+  html[data-theme="dark"] .mx-form select,
+  html[data-theme="dark"] .mx-form textarea { background: var(--surface-card); color: var(--ink); border-color: var(--stone); }
+  html[data-theme="dark"] .mx-form input:focus,
+  html[data-theme="dark"] .mx-form select:focus,
+  html[data-theme="dark"] .mx-form textarea:focus { background: var(--surface-card); }
+  html[data-theme="dark"] .mx-kpi { background: var(--surface-card); border-color: var(--stone); }
+  html[data-theme="dark"] .mx-kpi:has(#mx-kpi-pending),
+  html[data-theme="dark"] .mx-kpi:has(#hk-kpi-pending) { background: linear-gradient(135deg,#2a1e00 0%,#3d2b00 100%); border-color:#5a3e00; }
+  html[data-theme="dark"] .mx-kpi:has(#mx-kpi-inprogress),
+  html[data-theme="dark"] .mx-kpi:has(#hk-kpi-inprogress) { background: linear-gradient(135deg,#0d1f2d 0%,#0a2744 100%); border-color:#1a3a5c; }
+  html[data-theme="dark"] .mx-kpi:has(#mx-kpi-done),
+  html[data-theme="dark"] .mx-kpi:has(#hk-kpi-done) { background: linear-gradient(135deg,#0d1e12 0%,#0f2318 100%); border-color:#1a4025; }
+  html[data-theme="dark"] .filter-btn-tenant { background: var(--surface-card); color: var(--ink); }
+  html[data-theme="dark"] .info-chip { background: var(--surface-card); }
+  html[data-theme="dark"] .info-chip--pink { background: rgba(252,228,236,.1); }
+  html[data-theme="dark"] .info-chip--purple-bg { background: rgba(243,229,245,.1); }
+  html[data-theme="dark"] .mx-row { background: var(--surface-card); border-color: var(--stone); }
+  html[data-theme="dark"] .mx-row-header { color: var(--ink); }
+  html[data-theme="dark"] .mx-row-meta { border-top-color: var(--stone); }
+  html[data-theme="dark"] .mx-filter-panel { background: var(--surface-card); border-color: var(--stone); }
+  html[data-theme="dark"] .mx-filter-panel input,
+  html[data-theme="dark"] .mx-filter-panel select { background: var(--surface-card); color: var(--ink); border-color: var(--stone); }
+  html[data-theme="dark"] #mx-notification-banner { background: linear-gradient(135deg,#2a1e00,#3d2b00) !important; border-left-color: #7a5c00 !important; }
+  html[data-theme="dark"] #mx-notification-banner > div { color: #f0b040 !important; }
+  html[data-theme="dark"] .ana-kpi { background: var(--surface-card); }
+  html[data-theme="dark"] .ct-card { background: var(--surface-card); }
+  html[data-theme="dark"] .ct-card.vacant { background: var(--cloud); }
+  html[data-theme="dark"] .ct-preview { background: var(--surface-card); }
+  html[data-theme="dark"] .ct-preview table td:first-child { background: var(--cloud); }
+  html[data-theme="dark"] .view-toggle-btn.active { background: var(--surface-card); color: var(--ink); }
+  html[data-theme="dark"] .due-box { background: #1e1200; color: #f0a060; border-color: #5a3000; }
+  /* Input / form elements — catch remaining hardcoded white */
+  html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  html[data-theme="dark"] select,
+  html[data-theme="dark"] textarea { background: var(--surface-card); color: var(--ink); border-color: var(--stone); }
+
+  /* Inline style overrides — attribute selectors catch hardcoded hex in JS-generated HTML */
+  html[data-theme="dark"] [style*="background:#fff"],
+  html[data-theme="dark"] [style*="background: #fff"],
+  html[data-theme="dark"] [style*="background:#FFF"],
+  html[data-theme="dark"] [style*="background:#ffffff"],
+  html[data-theme="dark"] [style*="background: #ffffff"],
+  html[data-theme="dark"] [style*="background-color:#fff"],
+  html[data-theme="dark"] [style*="background-color: #fff"],
+  html[data-theme="dark"] [style*="background-color:#ffffff"],
+  html[data-theme="dark"] [style*="background-color: white"],
+  html[data-theme="dark"] [style*="background: white"],
+  html[data-theme="dark"] [style*="background:white"] { background: var(--surface-card) !important; }
+
+  html[data-theme="dark"] [style*="background:#f5f5f5"],
+  html[data-theme="dark"] [style*="background: #f5f5f5"],
+  html[data-theme="dark"] [style*="background:#f9fafb"],
+  html[data-theme="dark"] [style*="background:#f3f4f6"],
+  html[data-theme="dark"] [style*="background:#fafafa"],
+  html[data-theme="dark"] [style*="background:#f8fafc"],
+  html[data-theme="dark"] [style*="background-color:#f5f5f5"],
+  html[data-theme="dark"] [style*="background-color:#fafafa"] { background: var(--cloud) !important; }
+
+  html[data-theme="dark"] [style*="background:#fff8e1"],
+  html[data-theme="dark"] [style*="background:#fff9c4"],
+  html[data-theme="dark"] [style*="background:#fffde7"],
+  html[data-theme="dark"] [style*="background:#fff3e0"],
+  html[data-theme="dark"] [style*="background:#fff4e5"],
+  html[data-theme="dark"] [style*="background:#fff8f0"],
+  html[data-theme="dark"] [style*="background: #fff8e1"],
+  html[data-theme="dark"] [style*="background:#ffe0b2"] { background: #2a1e00 !important; }
+
+  html[data-theme="dark"] [style*="background:#fce4ec"],
+  html[data-theme="dark"] [style*="background:#ffebee"],
+  html[data-theme="dark"] [style*="background:#fef2f2"] { background: #2a0a10 !important; }
+
+  html[data-theme="dark"] [style*="background:#e8f5e9"],
+  html[data-theme="dark"] [style*="background:#f0fdf4"],
+  html[data-theme="dark"] [style*="background:#e6f4ea"] { background: #0a1e10 !important; }
+
+  /* Dark text on formerly-light backgrounds */
+  html[data-theme="dark"] [style*="color:#1b5e20"],
+  html[data-theme="dark"] [style*="color: #1b5e20"] { color: var(--ok-bright) !important; }
+  html[data-theme="dark"] [style*="color:#212121"],
+  html[data-theme="dark"] [style*="color:#333"],
+  html[data-theme="dark"] [style*="color:#333333"],
+  html[data-theme="dark"] [style*="color:#222"],
+  html[data-theme="dark"] [style*="color:#1a1a1a"],
+  html[data-theme="dark"] [style*="color:#2d3748"],
+  html[data-theme="dark"] [style*="color:#374151"] { color: var(--ink) !important; }
+
+  /* Border overrides */
+  html[data-theme="dark"] [style*="border:1px solid #f0f0f0"],
+  html[data-theme="dark"] [style*="border: 1px solid #f0f0f0"],
+  html[data-theme="dark"] [style*="border-color:#e0e0e0"],
+  html[data-theme="dark"] [style*="border-color: #e0e0e0"] { border-color: var(--stone) !important; }
+
+  /* @media auto dark — no js required */
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) .compact-card { background: var(--surface-card); }
+    html:not([data-theme="light"]) .compact-card.vacant { background: var(--surface-card); }
+    html:not([data-theme="light"]) .list-sort { background: var(--surface-card); color: var(--ink); }
+    html:not([data-theme="light"]) .list-search input { background: var(--surface-card); color: var(--ink); }
+    html:not([data-theme="light"]) .slip-drop-area { background: var(--surface-card); }
+    html:not([data-theme="light"]) .pay-modal { background: var(--surface-card); }
+    html:not([data-theme="light"]) .pay-modal-footer { background: var(--cloud); }
+    html:not([data-theme="light"]) .mx-kpi { background: var(--surface-card); border-color: var(--stone); }
+    html:not([data-theme="light"]) .mx-form input,
+    html:not([data-theme="light"]) .mx-form select,
+    html:not([data-theme="light"]) .mx-form textarea { background: var(--surface-card); color: var(--ink); }
+    html:not([data-theme="light"]) .mx-filter-panel { background: var(--surface-card); border-color: var(--stone); }
+    html:not([data-theme="light"]) .mx-row { background: var(--surface-card); border-color: var(--stone); }
+    html:not([data-theme="light"]) .mx-row-header { color: var(--ink); }
+    html:not([data-theme="light"]) .ana-kpi { background: var(--surface-card); }
+    html:not([data-theme="light"]) .ct-card { background: var(--surface-card); }
+    html:not([data-theme="light"]) .ct-preview { background: var(--surface-card); }
+    html:not([data-theme="light"]) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    html:not([data-theme="light"]) select,
+    html:not([data-theme="light"]) textarea { background: var(--surface-card); color: var(--ink); border-color: var(--stone); }
+  }
+
 </style>
 </head>
 <body>
