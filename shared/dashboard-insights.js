@@ -32,11 +32,13 @@
   function cacheClear(key) { delete _cache[key]; }
 
   // ===== UI helpers =====
-  function loadingHTML() {
-    return `<div style="text-align:center;color:var(--text-muted);padding:2rem;font-size:.85rem;">
-      <span style="display:inline-block;animation:spin 1s linear infinite;">⏳</span>
-      กำลังโหลด...
-    </div>`;
+  function loadingHTML(rows) {
+    rows = rows || 5;
+    const bars = Array.from({ length: rows }, function (_, i) {
+      const w = Math.max(40, 88 - i * 11);
+      return '<div class="gh-skeleton" style="height:18px;width:' + w + '%;border-radius:6px;margin-bottom:9px;"></div>';
+    }).join('');
+    return '<div style="padding:1rem 0 .5rem;">' + bars + '</div>';
   }
   function emptyHTML(msg) {
     return `<div style="text-align:center;color:var(--text-muted);padding:2rem;">

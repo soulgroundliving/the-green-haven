@@ -294,13 +294,11 @@
 
   // ── Action: convert booking → tenant ──────────────────────────────────────
   async function doConvert(b) {
-    const proceed = confirm(
-      `แปลงการจองนี้เป็นผู้เช่าใหม่?\n\n` +
-      `ห้อง: ${b.building}/${b.roomId}\n` +
-      `ลูกบ้าน: ${b.prospectName}\n` +
-      `ค่าเช่า: ฿${formatNum(b.monthlyRent)}/เดือน\n` +
-      `ระยะสัญญา: ${b.durationMonths} เดือน\n\n` +
-      `ระบบจะสร้างเอกสารผู้เช่าและอนุมัติ LIFF ให้อัตโนมัติ`
+    const proceed = await ghConfirm(
+      `แปลงการจองห้อง ${b.building}/${b.roomId} (${b.prospectName}) เป็นผู้เช่าใหม่?\n` +
+      `ค่าเช่า ฿${formatNum(b.monthlyRent)}/เดือน · สัญญา ${b.durationMonths} เดือน\n` +
+      `ระบบจะสร้างเอกสารผู้เช่าและอนุมัติ LIFF ให้อัตโนมัติ`,
+      { confirmLabel: 'แปลงเป็นผู้เช่า' }
     );
     if (!proceed) return;
     if (!window.firebase?.functions?.httpsCallable) { toastBk('Firebase functions ไม่พร้อม', 'error'); return; }

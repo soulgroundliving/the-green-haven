@@ -1321,10 +1321,9 @@ async function autoGenerateAllBills() {
   const actualRoomCount = rooms.length;
 
   if (actualRoomCount !== expectedRoomCount) {
-    const proceed = confirm(
-      `⚠️ Warning: Expected ${expectedRoomCount} rooms but found ${actualRoomCount}.\n\n` +
-      `This may result in incomplete bill generation.\n\n` +
-      `Continue anyway?`
+    const proceed = await ghConfirm(
+      `⚠️ ตรวจพบห้องไม่ตรง: คาดว่า ${expectedRoomCount} ห้อง แต่พบ ${actualRoomCount} ห้อง\nอาจทำให้ออกบิลไม่ครบ ดำเนินการต่อไหม?`,
+      { confirmLabel: 'ดำเนินการต่อ' }
     );
     if (!proceed) {
       console.log('❌ Bill generation cancelled by user');

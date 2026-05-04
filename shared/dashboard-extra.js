@@ -273,12 +273,18 @@ function viewContract(roomId) {
 📝 หมายเหตุ: ${tenant.notes || 'ไม่มี'}
   `;
 
-  // Show dialog with option to view document
   if (tenant.contractDocument) {
-    const viewDoc = confirm(contractInfo + '\n\n✅ มีไฟล์สัญญาอยู่\n\nคลิก "ตกลง" เพื่อแสดงเอกสาร');
-    if (viewDoc) {
-      showContractDocument(roomId, tenant);
-    }
+    window.GhModal.confirm({
+      title: 'สัญญาเช่า',
+      body: function (el) {
+        el.style.whiteSpace = 'pre-wrap';
+        el.style.fontSize = '.85rem';
+        el.style.lineHeight = '1.7';
+        el.textContent = contractInfo + '\n✅ มีไฟล์สัญญาอยู่';
+      },
+      confirmLabel: 'ดูเอกสาร',
+      cancelLabel: 'ปิด',
+    }).then(function (ok) { if (ok) showContractDocument(roomId, tenant); });
   } else {
     showToast('ยังไม่มีไฟล์สัญญา', 'warning');
   }
@@ -5292,7 +5298,7 @@ async function _renderHistoricalCloudMigrateButton(historicalData) {
         const r = await HistoricalDataStore.migrateLocalToCloud();
         const msg = `☁️ Migrate เสร็จ: ${r.pushed} ปี → Firestore${r.failed?` (${r.failed} ล้มเหลว)`:''}`;
         if (typeof showToast === 'function') showToast(msg, r.failed ? 'warning' : 'success');
-        else alert(msg);
+        else ghAlert(msg);
         btn.textContent = `☁️ ขึ้น cloud แล้ว (${r.pushed})`;
         setTimeout(() => { btn.disabled = false; btn.textContent = '☁️ อัพข้อมูลเก่าขึ้น Firestore อีกครั้ง'; }, 3000);
       } catch (e) {

@@ -27,8 +27,22 @@
     }
   } catch (_) { /* noop */ }
 
+  // Quiet hours — suppress haptics overnight (BKK local time, overnight range supported)
+  let _quietStart = 22;
+  let _quietEnd   = 7;
+
+  function _inQuietHours() {
+    try {
+      const h = new Date().getHours();
+      return _quietStart > _quietEnd
+        ? (h >= _quietStart || h < _quietEnd)   // overnight: 22–07
+        : (h >= _quietStart && h < _quietEnd);  // same-day range
+    } catch (_) { return false; }
+  }
+
   function _vibrate(pattern) {
     if (!_enabled) return;
+    if (_inQuietHours()) return;
     // Try LIFF first (cleaner on supported devices)
     try {
       if (window.liff && typeof window.liff.vibrate === 'function') {
@@ -61,6 +75,8 @@
 
   function setEnabled(value) { _enabled = !!value; }
   function isEnabled() { return _enabled; }
+  function setQuietHours(start, end) { _quietStart = start; _quietEnd = end; }
+  function getQuietHours() { return { start: _quietStart, end: _quietEnd }; }
 
   window.GhHaptic = {
     tap: tap,
@@ -70,5 +86,7 @@
     select: select,
     setEnabled: setEnabled,
     isEnabled: isEnabled,
+    setQuietHours: setQuietHours,
+    getQuietHours: getQuietHours,
   };
 })();
