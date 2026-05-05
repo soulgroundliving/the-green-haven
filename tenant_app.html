@@ -31,7 +31,8 @@
 
     <!-- Tailwind: pre-built via `npm run tailwind:build` (committed to repo) instead of CDN JIT (~200KB JS) -->
     <link rel="stylesheet" href="/shared/tailwind.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
     <link rel="stylesheet" href="shared/brand.css">
     <!-- Sentry error monitoring (~5KB loader stub; full SDK pulls only on first error) -->
     <script>window.SENTRY_APP_NAME = 'tenant_app';</script>
@@ -48,8 +49,6 @@
     <script src="./shared/thai-date.js"></script>
     <!-- Modal a11y bridge: ESC + backdrop close + focus restore for legacy modals -->
     <script src="./shared/modal-a11y-bridge.js"></script>
-    <!-- QR Code library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
     <!-- html2canvas: lazy-loaded on first receipt download (≈150KB).
          jsPDF was previously loaded eagerly but is never invoked in this
          page — receipts are PNG via canvas.toDataURL — so we drop it. -->
@@ -64,6 +63,25 @@
             s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
             s.onload = res;
             s.onerror = () => { pending = null; rej(new Error('html2canvas failed to load')); };
+            document.head.appendChild(s);
+          });
+          return pending;
+        };
+      })();
+    </script>
+    <script>
+      window.ensureQRCode = (function () {
+        let pending = null;
+        return function () {
+          if (typeof window.QRCode === 'function') return Promise.resolve();
+          if (pending) return pending;
+          pending = new Promise((res, rej) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+            s.integrity = 'sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU';
+            s.crossOrigin = 'anonymous';
+            s.onload = res;
+            s.onerror = () => { pending = null; rej(new Error('QRCode failed to load')); };
             document.head.appendChild(s);
           });
           return pending;
@@ -809,8 +827,8 @@
             font-size: var(--fs-lg);
         }
 
-        /* Night & Eco Mode */
-        body.night-mode {
+        /* Night & Dark mode — unified via html[data-theme="dark"] */
+        html[data-theme="dark"] {
             --bg-color: #1A1C1A;
             --white: #2A2D2A;
             --text-dark: #e8f5e9;
@@ -821,107 +839,22 @@
             --suggest-bg: #1A1C1A;
             --suggest-border: #334435;
             --suggest-accent: #4caf50;
-        }
-        /* ══════════════════════════════════════════════════════════════
-           NIGHT-MODE comprehensive override — catch hardcoded whites
-           ══════════════════════════════════════════════════════════════ */
-        body.night-mode {
+            /* html bg — override so iPhone LIFF safe-area/scroll-bounce ไม่โชว์สีครีม */
             background-color: var(--bg-color) !important;
             color: var(--text-dark) !important;
         }
-        /* html bg — brand.css sets light --cloud; override so iPhone LIFF
-           safe-area/scroll-bounce ไม่โชว์สีครีมผ่านใต้ nav-bar */
-        html:has(body.night-mode) {
-            background-color: #1A1C1A !important;
-        }
-        /* Nav-bar */
-        body.night-mode .nav-bar {
-            background: #141615 !important;
-            border-top: 1px solid #252825 !important;
-            border-radius: 0 !important;
-            box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.4) !important;
-        }
-        body.night-mode .nav-item { color: #6b7a6b !important; }
-        body.night-mode .nav-item.active { color: var(--primary-green) !important; }
-
-        /* App-bar (top header) */
-        body.night-mode .app-bar {
-            background: #242624 !important;
-        }
-
-        /* Cards — both .card และ style="background:white" inline */
-        body.night-mode .card,
-        body.night-mode [style*="background: white"],
-        body.night-mode [style*="background:white"],
-        body.night-mode [style*="background: #fff"],
-        body.night-mode [style*="background:#fff"],
-        body.night-mode [style*="background: #FFF"],
-        body.night-mode [style*="background:#FFF"],
-        body.night-mode [style*="background: #ffffff"],
-        body.night-mode [style*="background:#ffffff"],
-        body.night-mode [style*="background-color: white"],
-        body.night-mode [style*="background-color:white"],
-        body.night-mode [style*="background-color: #fff"],
-        body.night-mode [style*="background-color:#fff"] {
-            background: #2A2D2A !important;
-            background-color: #2A2D2A !important;
-            color: var(--text-dark) !important;
-        }
-
-        /* Tab button active state (active tab ที่ใช้ background:white) */
-        body.night-mode .tab-btn.active {
-            background: #353835 !important;
-            color: var(--primary-green) !important;
-        }
-
-        /* Pet items & blog cards */
-        body.night-mode .pet-item,
-        body.night-mode .blog-card,
-        body.night-mode .menu-list,
-        body.night-mode .setting-row {
-            background: #2A2D2A !important;
-            color: var(--text-dark) !important;
-        }
-
-        /* Form fields */
-        body.night-mode .card select,
-        body.night-mode .card input,
-        body.night-mode .card textarea,
-        body.night-mode .page select,
-        body.night-mode .page input[type="text"],
-        body.night-mode .page textarea {
-            background: #1f2220 !important;
-            color: var(--text-dark) !important;
-            border-color: #3a3d3a !important;
-        }
-
+        html[data-theme="dark"] .nav-item { color: #6b7a6b !important; }
+        html[data-theme="dark"] .nav-item.active { color: var(--primary-green) !important; }
         /* Text that was hardcoded dark */
-        body.night-mode h1, body.night-mode h2, body.night-mode h3,
-        body.night-mode h4, body.night-mode p, body.night-mode label,
-        body.night-mode span:not(.nav-item span):not([style*="color"]) {
+        html[data-theme="dark"] h1, html[data-theme="dark"] h2, html[data-theme="dark"] h3,
+        html[data-theme="dark"] h4, html[data-theme="dark"] p, html[data-theme="dark"] label,
+        html[data-theme="dark"] span:not(.nav-item span):not([style*="color"]) {
             color: inherit;
         }
 
-        /* Light accent badges (due/paid) ในบิล — ให้ยังอ่านได้ */
-        body.night-mode [style*="background:#FFF4E5"],
-        body.night-mode [style*="background: #FFF4E5"] {
-            background: #3d2e1a !important;
-            color: #f5c97b !important;
-        }
-        body.night-mode [style*="background:#D1FAE5"],
-        body.night-mode [style*="background: #D1FAE5"] {
-            background: #1a3d2a !important;
-            color: #7bf5b7 !important;
-        }
-        body.night-mode [style*="background:#FFF1F1"] {
-            background: #3d1a1a !important;
-            color: #f57b7b !important;
-        }
-
-        /* ── html[data-theme="dark"] mirror ─────────────────────────────────
-           theme-toggle.js sets data-theme="dark" on <html>; night-mode is
-           the legacy class. Both paths need the same overrides.
-           @media block covers auto mode when OS is dark.
+        /* ── html[data-theme="dark"] overrides ──────────────────────────────
+           theme-toggle.js sets data-theme="dark" on <html>.
+           @media block below covers auto mode when OS is dark.
         ─────────────────────────────────────────────────────────────────── */
         html[data-theme="dark"] .card,
         html[data-theme="dark"] [style*="background: white"],
@@ -963,6 +896,8 @@
         html[data-theme="dark"] .nav-bar {
             background: #141615 !important;
             border-top: 1px solid #252825 !important;
+            border-radius: 0 !important;
+            box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.4) !important;
         }
         html[data-theme="dark"] .app-bar {
             background: #242624 !important;
@@ -1799,8 +1734,8 @@
             font-size: 10px; font-weight: 700;
             display: flex; align-items: center; justify-content: center; margin-top: 2px;
         }
-        body.night-mode .emergency-call-btn { background: #3b1a1a; color: #f87171; }
-        body.night-mode .emergency-step { border-bottom-color: #2a2d2a; }
+        html[data-theme="dark"] .emergency-call-btn { background: #3b1a1a; color: #f87171; }
+        html[data-theme="dark"] .emergency-step { border-bottom-color: #2a2d2a; }
 
         /* --- MARKETPLACE --- */
         .market-pill {
@@ -4988,7 +4923,7 @@
             await window.firebaseSet(window.firebaseRef(window.firebaseDatabase, path), hkPayload);
         }
 
-        function _openCleaningPaymentModal(record) {
+        async function _openCleaningPaymentModal(record) {
             const modal = document.getElementById('cleaning-payment-modal');
             if (!modal) return;
             document.getElementById('cpm-date').textContent = record.date || '—';
@@ -5001,9 +4936,11 @@
             document.getElementById('cpm-promptpay').textContent = phone || '—';
             const qrBox = document.getElementById('cpm-qr-canvas');
             qrBox.innerHTML = '';
-            if (phone && typeof QRCode !== 'undefined') {
-                try { new QRCode(qrBox, { text: buildPromptPayPayload(phone, 500), width:170, height:170, correctLevel: QRCode.CorrectLevel.M }); }
-                catch(e) { qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">สร้าง QR ไม่ได้</p>'; }
+            if (phone) {
+                try {
+                    await window.ensureQRCode();
+                    new QRCode(qrBox, { text: buildPromptPayPayload(phone, 500), width:170, height:170, correctLevel: QRCode.CorrectLevel.M });
+                } catch(e) { qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">สร้าง QR ไม่ได้</p>'; }
             } else qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่มีข้อมูล PromptPay</p>';
             // Reset slip state
             _cleaningSlipBase64 = null;
@@ -6350,35 +6287,28 @@
             const nightSwitch = document.getElementById('night-switch');
             const ecoSwitch = document.getElementById('eco-switch');
             if (nightSwitch && nightSwitch.checked) {
-                document.body.classList.add('night-mode');
-                document.body.classList.remove('eco-mode');
-                document.documentElement.style.background = '#1A1C1A';
                 if (ecoSwitch) ecoSwitch.checked = false;
-                localStorage.setItem('theme', 'night');
+                document.body.classList.remove('eco-mode');
+                window.GhTheme && GhTheme.set('dark');
             } else {
-                document.body.classList.remove('night-mode');
-                document.documentElement.style.background = '';
-                localStorage.setItem('theme', 'light');
+                window.GhTheme && GhTheme.set('light');
             }
         }
 
-        // Restore the persisted theme on every page load — toggle was saving to
-        // localStorage but never reading it back, so refresh/reopen reset to light.
-        // Runs at script-parse time so the night-mode class lands before first paint.
+        // Restore the persisted theme on every page load.
+        // GhTheme (theme-toggle.js) already restored html[data-theme] before this runs.
+        // This only handles eco-mode class + syncing the legacy #night-switch checkbox.
         (function _restorePersistedTheme() {
             try {
                 const t = localStorage.getItem('theme');
-                if (t === 'night') {
-                    document.body.classList.add('night-mode');
-                    document.documentElement.style.background = '#1A1C1A';
-                } else if (t === 'eco') {
+                if (t === 'eco') {
                     document.body.classList.add('eco-mode');
                 }
-                // Reflect into the toggle switches once the DOM has them
                 window.addEventListener('DOMContentLoaded', () => {
                     const ns = document.getElementById('night-switch');
                     const es = document.getElementById('eco-switch');
-                    if (ns) ns.checked = (t === 'night');
+                    const isDark = window.GhTheme ? GhTheme.effective() === 'dark' : false;
+                    if (ns) ns.checked = isDark;
                     if (es) es.checked = (t === 'eco');
                 });
             } catch (_) {}
@@ -6389,8 +6319,8 @@
             const ecoSwitch = document.getElementById('eco-switch');
             if (ecoSwitch && ecoSwitch.checked) {
                 document.body.classList.add('eco-mode');
-                document.body.classList.remove('night-mode');
                 if (nightSwitch) nightSwitch.checked = false;
+                window.GhTheme && GhTheme.set('light');
                 localStorage.setItem('theme', 'eco');
             } else {
                 document.body.classList.remove('eco-mode');
@@ -9883,7 +9813,7 @@
             });
         }
 
-        function renderPaymentInvoice(bill) {
+        async function renderPaymentInvoice(bill) {
             if (!bill) return;
             const THAI_MONTHS_FULL = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
             const mFull = THAI_MONTHS_FULL[bill.month] || bill.month || '?';
@@ -9933,9 +9863,11 @@
             const qrBox = document.getElementById('pay-qr-canvas');
             if (qrBox) {
                 qrBox.innerHTML = '';
-                if (phone && total && typeof QRCode !== 'undefined') {
-                    try { new QRCode(qrBox, { text: buildPromptPayPayload(phone, total), width:180, height:180, correctLevel: QRCode.CorrectLevel.M }); }
-                    catch(e) { qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่สามารถสร้าง QR ได้</p>'; }
+                if (phone && total) {
+                    try {
+                        await window.ensureQRCode();
+                        new QRCode(qrBox, { text: buildPromptPayPayload(phone, total), width:180, height:180, correctLevel: QRCode.CorrectLevel.M });
+                    } catch(e) { qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่สามารถสร้าง QR ได้</p>'; }
                 } else {
                     qrBox.innerHTML = '<p style="color:#aaa;font-size:var(--fs-sm);">ไม่มีข้อมูล PromptPay</p>';
                 }

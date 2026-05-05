@@ -11,7 +11,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="./shared/brand.css">
 <!-- FontAwesome 6 (icons used in Wellness picker, sidebar, etc.) -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
 <!-- Sentry error monitoring (~5KB loader stub; full SDK pulls only on first error) -->
 <script>window.SENTRY_APP_NAME = 'dashboard';</script>
 <script src="https://js.sentry-cdn.com/70de55e358255ab981939b708a743b1d.min.js" crossorigin="anonymous"></script>
@@ -2252,6 +2253,43 @@
     html:not([data-theme="light"]) select,
     html:not([data-theme="light"]) textarea { background: var(--surface-card); color: var(--ink); border-color: var(--stone); }
   }
+
+/* ── D2: generated-content utility classes (dashboard-extra.js) ─────────
+   Replace repeated inline styles in JS template strings.
+   Dark mode overrides below keep new code dark-mode-friendly by default.
+   ──────────────────────────────────────────────────────────────────────── */
+/* Labels & spacing */
+.dx-label       { display:block; margin-bottom:.5rem; font-weight:600; }
+.dx-mb          { margin-bottom:1.5rem; }
+/* Form inputs */
+.dx-field       { width:100%; padding:.7rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; }
+.dx-field-sm    { width:100%; padding:.6rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; }
+.dx-field-sm-mb { width:100%; padding:.6rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; margin-bottom:.8rem; }
+.dx-field-upload{ width:100%; padding:.5rem; border:1px solid #b3e5fc; border-radius:4px; box-sizing:border-box; font-size:.85rem; }
+/* Table cells */
+.dx-th-sm    { padding:5px 10px; text-align:left; }
+.dx-td-sm    { padding:5px 10px; }
+.dx-th-plain { border:1px solid #ddd; padding:.8rem; text-align:left; }
+.dx-td-plain { border:1px solid #ddd; padding:.8rem; }
+.dx-th-rooms { padding:.2rem; text-align:right; border-right:1px solid var(--border); font-size:.8rem; background:#e8f5e9; }
+.dx-th-nest  { padding:.2rem; text-align:right; border-right:1px solid var(--border); font-size:.8rem; background:#f3e5f5; }
+.dx-th-amazon{ padding:.2rem; text-align:right; border-right:1px solid var(--border); font-size:.8rem; background:#fff9c4; }
+.dx-td-rooms { padding:.8rem; text-align:right; border-right:1px solid var(--border); background:#e8f5e9; }
+.dx-td-nest  { padding:.8rem; text-align:right; border-right:1px solid var(--border); background:#f3e5f5; }
+.dx-td-amazon{ padding:.8rem; text-align:right; border-right:1px solid var(--border); background:#fff9c4; }
+/* Dark mode — dx class overrides */
+html[data-theme="dark"] .dx-field,
+html[data-theme="dark"] .dx-field-sm,
+html[data-theme="dark"] .dx-field-sm-mb { border-color:var(--stone); background:var(--surface-sunken); color:var(--ink); }
+html[data-theme="dark"] .dx-field-upload { border-color:var(--stone); background:var(--surface-sunken); color:var(--ink); }
+html[data-theme="dark"] .dx-th-plain,
+html[data-theme="dark"] .dx-td-plain { border-color:var(--stone); }
+html[data-theme="dark"] .dx-th-rooms,
+html[data-theme="dark"] .dx-td-rooms { background:#0a1e10; }
+html[data-theme="dark"] .dx-th-nest,
+html[data-theme="dark"] .dx-td-nest  { background:rgba(123,31,162,.18); }
+html[data-theme="dark"] .dx-th-amazon,
+html[data-theme="dark"] .dx-td-amazon{ background:#2a1e00; }
 
 </style>
 </head>

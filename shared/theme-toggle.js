@@ -24,7 +24,13 @@
   function _read() {
     try {
       const v = localStorage.getItem(STORAGE_KEY);
-      return VALID.includes(v) ? v : 'auto';
+      if (VALID.includes(v)) return v;
+      // Migrate legacy localStorage.theme='night' → gh_theme='dark' (one-time)
+      if (localStorage.getItem('theme') === 'night') {
+        localStorage.setItem(STORAGE_KEY, 'dark');
+        return 'dark';
+      }
+      return 'auto';
     } catch (_) {
       return 'auto';
     }

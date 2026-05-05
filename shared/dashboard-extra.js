@@ -976,22 +976,22 @@ function renderOwnerInfoPage() {
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
         <div>
           <label style="display:block; margin-bottom:.4rem; font-weight:600; font-size:.9rem;">ชื่อนิติบุคคล (ภาษาไทย)</label>
-          <input type="text" id="companyLegalNameTH" value="${(owner.companyLegalNameTH || 'บริษัท เดอะ กรีนเฮฟเว่น จำกัด').replace(/"/g,'&quot;')}" placeholder="บริษัท เดอะ กรีนเฮฟเว่น จำกัด" style="width:100%; padding:.6rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box;">
+          <input type="text" id="companyLegalNameTH" value="${(owner.companyLegalNameTH || 'บริษัท เดอะ กรีนเฮฟเว่น จำกัด').replace(/"/g,'&quot;')}" placeholder="บริษัท เดอะ กรีนเฮฟเว่น จำกัด" class="dx-field-sm">
         </div>
         <div>
           <label style="display:block; margin-bottom:.4rem; font-weight:600; font-size:.9rem;">ชื่อนิติบุคคล (ภาษาอังกฤษ)</label>
-          <input type="text" id="companyLegalNameEN" value="${(owner.companyLegalNameEN || 'The Green Haven Co., Ltd.').replace(/"/g,'&quot;')}" placeholder="The Green Haven Co., Ltd." style="width:100%; padding:.6rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box;">
+          <input type="text" id="companyLegalNameEN" value="${(owner.companyLegalNameEN || 'The Green Haven Co., Ltd.').replace(/"/g,'&quot;')}" placeholder="The Green Haven Co., Ltd." class="dx-field-sm">
         </div>
         <div>
           <label style="display:block; margin-bottom:.4rem; font-weight:600; font-size:.9rem;">สถานะการจดทะเบียน</label>
-          <select id="registrationStatus" style="width:100%; padding:.6rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box;">
+          <select id="registrationStatus" class="dx-field-sm">
             <option value="active" ${owner.registrationStatus !== 'pending' ? 'selected' : ''}>✅ จดทะเบียนแล้ว</option>
             <option value="pending" ${owner.registrationStatus === 'pending' ? 'selected' : ''}>⏳ อยู่ระหว่างจดทะเบียน</option>
           </select>
         </div>
         <div>
           <label style="display:block; margin-bottom:.4rem; font-weight:600; font-size:.9rem;">ประเภทเอกสารที่แสดงในรายงาน</label>
-          <select id="ownerEntityType" style="width:100%; padding:.6rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box;">
+          <select id="ownerEntityType" class="dx-field-sm">
             <option value="personal" ${owner.entityType !== 'company' ? 'selected' : ''}>บุคคลธรรมดา (ภ.ง.ด.90)</option>
             <option value="company" ${owner.entityType === 'company' ? 'selected' : ''}>นิติบุคคล (ภ.ง.ด.50)</option>
           </select>
@@ -1005,65 +1005,65 @@ function renderOwnerInfoPage() {
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
       <!-- Left column -->
       <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ชื่อ-นามสกุล (เจ้าของ/ผู้จัดทำ) *</label>
-        <input type="text" id="ownerName" value="${owner.name || ''}" placeholder="ชื่อเจ้าของ" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <label class="dx-label">ชื่อ-นามสกุล (เจ้าของ/ผู้จัดทำ) *</label>
+        <input type="text" id="ownerName" value="${owner.name || ''}" placeholder="ชื่อเจ้าของ" class="dx-field">
       </div>
       <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขประจำตัวประชาชน *</label>
-        <input type="text" id="ownerIdCard" value="${owner.idCardNumber || ''}" placeholder="เลขประจำตัวประชาชน" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <label class="dx-label">เลขประจำตัวประชาชน *</label>
+        <input type="text" id="ownerIdCard" value="${owner.idCardNumber || ''}" placeholder="เลขประจำตัวประชาชน" class="dx-field">
       </div>
       <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เบอร์โทรศัพท์</label>
-        <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" maxlength="10" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <label class="dx-label">เบอร์โทรศัพท์</label>
+        <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" maxlength="10" class="dx-field">
         <small id="ownerPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
       </div>
       <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">อีเมล</label>
-        <input type="email" id="ownerEmail" value="${owner.email || ''}" placeholder="อีเมล" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <label class="dx-label">อีเมล</label>
+        <input type="email" id="ownerEmail" value="${owner.email || ''}" placeholder="อีเมล" class="dx-field">
       </div>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1.5rem;">
       <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ที่อยู่</label>
-        <input type="text" id="ownerAddress" value="${owner.address || ''}" placeholder="ที่อยู่" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <label class="dx-label">ที่อยู่</label>
+        <input type="text" id="ownerAddress" value="${owner.address || ''}" placeholder="ที่อยู่" class="dx-field">
       </div>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
       <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">แขวง/ตำบล</label>
-        <input type="text" id="ownerSubDistrict" value="${owner.subDistrict || ''}" placeholder="แขวง/ตำบล" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <label class="dx-label">แขวง/ตำบล</label>
+        <input type="text" id="ownerSubDistrict" value="${owner.subDistrict || ''}" placeholder="แขวง/ตำบล" class="dx-field">
       </div>
       <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เขต/อำเภอ</label>
-        <input type="text" id="ownerDistrict" value="${owner.district || ''}" placeholder="เขต/อำเภอ" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <label class="dx-label">เขต/อำเภอ</label>
+        <input type="text" id="ownerDistrict" value="${owner.district || ''}" placeholder="เขต/อำเภอ" class="dx-field">
       </div>
       <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">จังหวัด</label>
-        <input type="text" id="ownerProvince" value="${owner.province || ''}" placeholder="จังหวัด" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
-      <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">รหัสไปรษณีย์</label>
-        <input type="text" id="ownerPostalCode" value="${owner.postalCode || ''}" placeholder="รหัสไปรษณีย์" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-      </div>
-      <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขประจำตัวผู้เสียภาษี</label>
-        <input type="text" id="ownerTaxId" value="${owner.taxId || ''}" placeholder="เลขประจำตัวผู้เสียภาษี" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <label class="dx-label">จังหวัด</label>
+        <input type="text" id="ownerProvince" value="${owner.province || ''}" placeholder="จังหวัด" class="dx-field">
       </div>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
       <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ชื่อธนาคาร</label>
-        <input type="text" id="ownerBankName" value="${owner.bankName || ''}" placeholder="ชื่อธนาคาร" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <label class="dx-label">รหัสไปรษณีย์</label>
+        <input type="text" id="ownerPostalCode" value="${owner.postalCode || ''}" placeholder="รหัสไปรษณีย์" class="dx-field">
       </div>
       <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขบัญชี</label>
-        <input type="text" id="ownerBankAccount" value="${owner.bankAccount || ''}" placeholder="เลขบัญชี" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <label class="dx-label">เลขประจำตัวผู้เสียภาษี</label>
+        <input type="text" id="ownerTaxId" value="${owner.taxId || ''}" placeholder="เลขประจำตัวผู้เสียภาษี" class="dx-field">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+      <div>
+        <label class="dx-label">ชื่อธนาคาร</label>
+        <input type="text" id="ownerBankName" value="${owner.bankName || ''}" placeholder="ชื่อธนาคาร" class="dx-field">
+      </div>
+      <div>
+        <label class="dx-label">เลขบัญชี</label>
+        <input type="text" id="ownerBankAccount" value="${owner.bankAccount || ''}" placeholder="เลขบัญชี" class="dx-field">
       </div>
     </div>
 
@@ -1128,9 +1128,9 @@ async function renderBuildingPaymentConfig() {
         <span style="font-size: .72rem; color: var(--text-muted); font-family: monospace;">buildings/${fsId}</span>
       </div>
       <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">PromptPay (เบอร์โทร)</label>
-      <input type="tel" id="bp-${fsId}-promptpay" value="${(data.promptpayNumber||data.payment?.promptpayNumber||'').replace(/"/g,'&quot;')}" placeholder="0xxxxxxxxx" maxlength="13" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.8rem;">
+      <input type="tel" id="bp-${fsId}-promptpay" value="${(data.promptpayNumber||data.payment?.promptpayNumber||'').replace(/"/g,'&quot;')}" placeholder="0xxxxxxxxx" maxlength="13" class="dx-field-sm-mb">
       <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">ชื่อบริษัท / ผู้รับเงิน (ใบเสร็จ)</label>
-      <input type="text" id="bp-${fsId}-company" value="${(data.companyName||data.payment?.companyName||'').replace(/"/g,'&quot;')}" placeholder="เช่น The Green Haven Co., Ltd." style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.8rem;">
+      <input type="text" id="bp-${fsId}-company" value="${(data.companyName||data.payment?.companyName||'').replace(/"/g,'&quot;')}" placeholder="เช่น The Green Haven Co., Ltd." class="dx-field-sm-mb">
       <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">ชื่อเจ้าของ (Owner)</label>
       <input type="text" id="bp-${fsId}-owner" value="${(data.ownerName||data.payment?.ownerName||'').replace(/"/g,'&quot;')}" placeholder="ชื่อเจ้าของอาคารนี้" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:1rem;">
       <button onclick="saveBuildingPaymentConfig('${fsId}')" style="width:100%;padding:.65rem;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun,sans-serif;">💾 บันทึก ${label}</button>
@@ -1205,9 +1205,9 @@ async function renderBuildingInternetConfig() {
         ${statusOpt(data.status, 'offline', '🔴 ไม่เชื่อมต่อ')}
       </select>
       <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">ผู้ให้บริการ</label>
-      <input type="text" id="bi-${fsId}-provider" value="${esc(data.provider)}" placeholder="เช่น True Internet" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.8rem;">
+      <input type="text" id="bi-${fsId}-provider" value="${esc(data.provider)}" placeholder="เช่น True Internet" class="dx-field-sm-mb">
       <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">เบอร์ติดต่อ</label>
-      <input type="tel" id="bi-${fsId}-contact" value="${esc(data.contact)}" placeholder="เช่น 1686" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.8rem;">
+      <input type="tel" id="bi-${fsId}-contact" value="${esc(data.contact)}" placeholder="เช่น 1686" class="dx-field-sm-mb">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1rem;">
         <div>
           <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">Download</label>
@@ -1639,7 +1639,7 @@ function renderTenantMasterPage() {
     <div style="margin-top: 1.5rem;">
       <!-- Building Selector -->
       <div style="margin-bottom: 1.5rem;">
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลือกอาคาร</label>
+        <label class="dx-label">เลือกอาคาร</label>
         <select id="tenantMasterBuilding" onchange="window.currentTenantMasterBuilding = this.value; renderTenantMasterPage();" style="padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px;">
           <option value="rooms" ${(window.currentTenantMasterBuilding || 'rooms') === 'rooms' ? 'selected' : ''}>ห้องแถว (Rooms)</option>
           <option value="nest" ${(window.currentTenantMasterBuilding || 'rooms') === 'nest' ? 'selected' : ''}>Nest</option>
@@ -1652,35 +1652,35 @@ function renderTenantMasterPage() {
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
           <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">รหัสผู้เช่า *</label>
-            <input type="text" id="newTenantId" placeholder="เช่น T001, T002" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <label class="dx-label">รหัสผู้เช่า *</label>
+            <input type="text" id="newTenantId" placeholder="เช่น T001, T002" class="dx-field">
           </div>
           <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ชื่อ-นามสกุล *</label>
-            <input type="text" id="newTenantName" placeholder="ชื่อผู้เช่า" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <label class="dx-label">ชื่อ-นามสกุล *</label>
+            <input type="text" id="newTenantName" placeholder="ชื่อผู้เช่า" class="dx-field">
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
           <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลขประจำตัวประชาชน/Passport</label>
-            <input type="text" id="newTenantIdCard" placeholder="เลขประจำตัว" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <label class="dx-label">เลขประจำตัวประชาชน/Passport</label>
+            <input type="text" id="newTenantIdCard" placeholder="เลขประจำตัว" class="dx-field">
           </div>
           <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เบอร์โทรศัพท์</label>
-            <input type="tel" id="newTenantPhone" placeholder="เบอร์โทรศัพท์" maxlength="10" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <label class="dx-label">เบอร์โทรศัพท์</label>
+            <input type="tel" id="newTenantPhone" placeholder="เบอร์โทรศัพท์" maxlength="10" class="dx-field">
             <small id="newTenantPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
           <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">อีเมล</label>
-            <input type="email" id="newTenantEmail" placeholder="อีเมล" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <label class="dx-label">อีเมล</label>
+            <input type="email" id="newTenantEmail" placeholder="อีเมล" class="dx-field">
           </div>
           <div>
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">ที่อยู่</label>
-            <input type="text" id="newTenantAddress" placeholder="ที่อยู่" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            <label class="dx-label">ที่อยู่</label>
+            <input type="text" id="newTenantAddress" placeholder="ที่อยู่" class="dx-field">
           </div>
         </div>
 
@@ -1696,20 +1696,20 @@ function renderTenantMasterPage() {
         <table style="width: 100%; border-collapse: collapse;">
           <thead>
             <tr style="background: #f0f0f0;">
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">รหัส</th>
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ชื่อ</th>
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">เบอร์โทร</th>
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">อีเมล</th>
+              <th class="dx-th-plain">รหัส</th>
+              <th class="dx-th-plain">ชื่อ</th>
+              <th class="dx-th-plain">เบอร์โทร</th>
+              <th class="dx-th-plain">อีเมล</th>
               <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">การกระทำ</th>
             </tr>
           </thead>
           <tbody>
             ${tenants.map(tenant => `
               <tr style="border-bottom: 1px solid #ddd;">
-                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.id}</td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.name}</td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.phone || '-'}</td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem;">${tenant.email || '-'}</td>
+                <td class="dx-td-plain">${tenant.id}</td>
+                <td class="dx-td-plain">${tenant.name}</td>
+                <td class="dx-td-plain">${tenant.phone || '-'}</td>
+                <td class="dx-td-plain">${tenant.email || '-'}</td>
                 <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">
                   <button onclick="editTenant('${tenant.id}')" style="padding: 0.4rem 0.8rem; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">📝</button>
                   <button onclick="deleteTenant('${tenant.id}')" style="padding: 0.4rem 0.8rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
@@ -1900,8 +1900,8 @@ function renderLeaseAgreementsPage() {
         </div>
 
         <div style="margin-bottom: 1rem;">
-          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">เลือกผู้เช่า *</label>
-          <select id="leaseTenant" onchange="_updateLeasePreview()" style="width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          <label class="dx-label">เลือกผู้เช่า *</label>
+          <select id="leaseTenant" onchange="_updateLeasePreview()" class="dx-field">
             <option value="">-- เลือกผู้เช่า --</option>
             ${tenantOptions}
           </select>
@@ -1917,28 +1917,28 @@ function renderLeaseAgreementsPage() {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
             <div>
               <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">💉 ใบรับรองวัคซีนสัตว์เลี้ยง</label>
-              <input type="file" id="leaseFilePetCert" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+              <input type="file" id="leaseFilePetCert" accept=".pdf,.jpg,.png" class="dx-field-upload">
             </div>
             <div>
               <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">📞 ข้อมูลติดต่อผู้เช่า</label>
-              <input type="file" id="leaseFileTenantContact" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+              <input type="file" id="leaseFileTenantContact" accept=".pdf,.jpg,.png" class="dx-field-upload">
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
             <div>
               <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">📋 สัญญาเช่า</label>
-              <input type="file" id="leaseFileAgreement" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+              <input type="file" id="leaseFileAgreement" accept=".pdf,.jpg,.png" class="dx-field-upload">
             </div>
             <div>
               <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">🆔 สำเนาบัตรประชาชน</label>
-              <input type="file" id="leaseFileId" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+              <input type="file" id="leaseFileId" accept=".pdf,.jpg,.png" class="dx-field-upload">
             </div>
           </div>
 
           <div>
             <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">💰 หลักฐานรายได้</label>
-            <input type="file" id="leaseFileIncome" accept=".pdf,.jpg,.png" style="width: 100%; padding: 0.5rem; border: 1px solid #b3e5fc; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem;">
+            <input type="file" id="leaseFileIncome" accept=".pdf,.jpg,.png" class="dx-field-upload">
           </div>
           <small style="color: #666; margin-top: 0.5rem; display: block;">📁 สนับสนุน: PDF, JPG, PNG · ขนาดสูงสุด: 5MB</small>
         </div>
@@ -1955,24 +1955,24 @@ function renderLeaseAgreementsPage() {
         <table style="width: 100%; border-collapse: collapse;">
           <thead>
             <tr style="background: #f0f0f0;">
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">อาคาร</th>
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ห้อง</th>
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ผู้เช่า</th>
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">วันเข้า</th>
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">ค่าเช่า</th>
-              <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: left;">สถานะ</th>
+              <th class="dx-th-plain">อาคาร</th>
+              <th class="dx-th-plain">ห้อง</th>
+              <th class="dx-th-plain">ผู้เช่า</th>
+              <th class="dx-th-plain">วันเข้า</th>
+              <th class="dx-th-plain">ค่าเช่า</th>
+              <th class="dx-th-plain">สถานะ</th>
               <th style="border: 1px solid #ddd; padding: 0.8rem; text-align: center;">การกระทำ</th>
             </tr>
           </thead>
           <tbody>
             ${leases.map(lease => `
               <tr style="border-bottom: 1px solid #ddd;">
-                <td style="border: 1px solid #ddd; padding: 0.8rem;">${lease.building === 'rooms' ? 'ห้องแถว' : 'Nest'}</td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem;">${lease.roomId}</td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem;">${lease.tenantName || lease.tenantId}</td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem;">${new Date(lease.moveInDate).toLocaleDateString('th-TH')}</td>
+                <td class="dx-td-plain">${lease.building === 'rooms' ? 'ห้องแถว' : 'Nest'}</td>
+                <td class="dx-td-plain">${lease.roomId}</td>
+                <td class="dx-td-plain">${lease.tenantName || lease.tenantId}</td>
+                <td class="dx-td-plain">${new Date(lease.moveInDate).toLocaleDateString('th-TH')}</td>
                 <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: right;">฿${lease.rentAmount?.toLocaleString() || '-'}</td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem;">
+                <td class="dx-td-plain">
                   <span style="padding: 0.3rem 0.8rem; border-radius: 4px; background: ${lease.status === 'active' ? '#c8e6c9' : '#f5f5f5'}; color: ${lease.status === 'active' ? '#2e7d32' : '#999'}; font-weight: 600;">
                     ${lease.status === 'active' ? '✅ กำลังเช่า' : '❌ เลิกเช่า'}
                   </span>
@@ -2321,7 +2321,7 @@ async function viewLeaseDocuments(leaseId) {
   if (lease.contractDocument) {
     const fname = lease.contractFileName || 'lease-contract';
     sections.push(`
-      <div style="margin-bottom:1.5rem;">
+      <div class="dx-mb">
         <div style="font-weight:700;color:#1b5e20;margin-bottom:.5rem;font-size:.95rem;">📋 สัญญาเช่า (อัพโหลดผ่าน Tab ผู้เช่า)</div>
         <div style="padding:10px 12px;background:#e8f5e9;border-left:3px solid #4caf50;border-radius:4px;font-size:.88rem;">
           <a href="${_escapeAttr(lease.contractDocument)}" download="${_escapeAttr(fname)}" style="color:#2e7d32;font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>
@@ -2334,7 +2334,7 @@ async function viewLeaseDocuments(leaseId) {
   // Section 1b: Lease documents from Firebase Storage (uploaded via Tab สัญญา form)
   const leaseDocsHTML = await _renderLeaseStorageDocs(lease);
   sections.push(`
-    <div style="margin-bottom:1.5rem;">
+    <div class="dx-mb">
       <div style="font-weight:700;color:#1b5e20;margin-bottom:.5rem;font-size:.95rem;">📎 เอกสารแนบสัญญา (อัพโหลดผ่าน Tab สัญญา)</div>
       ${leaseDocsHTML}
     </div>
@@ -2344,7 +2344,7 @@ async function viewLeaseDocuments(leaseId) {
   if (tenant?.contractDocument) {
     const fname = tenant.contractFileName || 'contract-legacy';
     sections.push(`
-      <div style="margin-bottom:1.5rem;">
+      <div class="dx-mb">
         <div style="font-weight:700;color:#bf360c;margin-bottom:.5rem;font-size:.95rem;">📄 สัญญาเช่า (Legacy — อยู่ใน tenant record, รอย้าย)</div>
         <div style="padding:10px 12px;background:#fff3e0;border-left:3px solid #ff9800;border-radius:4px;font-size:.88rem;">
           <a href="${_escapeAttr(tenant.contractDocument)}" download="${_escapeAttr(fname)}" style="color:#e65100;font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>
@@ -2358,7 +2358,7 @@ async function viewLeaseDocuments(leaseId) {
   if (tenant?.companyInfo?.name) {
     const ci = tenant.companyInfo;
     sections.push(`
-      <div style="margin-bottom:1.5rem;">
+      <div class="dx-mb">
         <div style="font-weight:700;color:#01579b;margin-bottom:.5rem;font-size:.95rem;">🏢 ข้อมูลบริษัท (จาก tenant_app)</div>
         <div style="padding:10px 12px;background:#e1f5fe;border-left:3px solid #0288d1;border-radius:4px;font-size:.88rem;line-height:1.6;">
           <div><b>ชื่อ:</b> ${_escapeHTML(ci.name || '-')}</div>
@@ -4838,21 +4838,21 @@ function displayBillingImportPreview(monthlyData, year) {
     </tr>
     <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
       <th style="padding:0.2rem;border-right:1px solid var(--border);"></th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">เช่า</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">ไฟ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">น้ำ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">ขยะ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">รวม</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">เช่า</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">ไฟ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">น้ำ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">ขยะ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">รวม</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">เช่า</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">ไฟ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">น้ำ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">ขยะ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">รวม</th>
+      <th class="dx-th-rooms">เช่า</th>
+      <th class="dx-th-rooms">ไฟ</th>
+      <th class="dx-th-rooms">น้ำ</th>
+      <th class="dx-th-rooms">ขยะ</th>
+      <th class="dx-th-rooms">รวม</th>
+      <th class="dx-th-nest">เช่า</th>
+      <th class="dx-th-nest">ไฟ</th>
+      <th class="dx-th-nest">น้ำ</th>
+      <th class="dx-th-nest">ขยะ</th>
+      <th class="dx-th-nest">รวม</th>
+      <th class="dx-th-amazon">เช่า</th>
+      <th class="dx-th-amazon">ไฟ</th>
+      <th class="dx-th-amazon">น้ำ</th>
+      <th class="dx-th-amazon">ขยะ</th>
+      <th class="dx-th-amazon">รวม</th>
       <th style="padding:0.2rem;text-align:right;font-size:0.8rem;color:var(--green);font-weight:700;">รวม</th>
     </tr>
   </thead>
@@ -4912,21 +4912,21 @@ function displayBillingImportPreview(monthlyData, year) {
   <tfoot>
     <tr style="background:var(--bg-secondary);border-top:2px solid var(--border);font-weight:700;">
       <td style="padding:0.8rem;border-right:1px solid var(--border);">รวมทั้งปี</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsRentSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsElecSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsWaterSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsTrashSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${roomsTotal.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestRentSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestElecSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestWaterSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestTrashSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${nestTotal.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonRentSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonElecSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonWaterSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonTrashSum.toLocaleString()}</td>
-      <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${amazonTotal.toLocaleString()}</td>
+      <td class="dx-td-rooms">฿${roomsRentSum.toLocaleString()}</td>
+      <td class="dx-td-rooms">฿${roomsElecSum.toLocaleString()}</td>
+      <td class="dx-td-rooms">฿${roomsWaterSum.toLocaleString()}</td>
+      <td class="dx-td-rooms">฿${roomsTrashSum.toLocaleString()}</td>
+      <td class="dx-td-rooms">฿${roomsTotal.toLocaleString()}</td>
+      <td class="dx-td-nest">฿${nestRentSum.toLocaleString()}</td>
+      <td class="dx-td-nest">฿${nestElecSum.toLocaleString()}</td>
+      <td class="dx-td-nest">฿${nestWaterSum.toLocaleString()}</td>
+      <td class="dx-td-nest">฿${nestTrashSum.toLocaleString()}</td>
+      <td class="dx-td-nest">฿${nestTotal.toLocaleString()}</td>
+      <td class="dx-td-amazon">฿${amazonRentSum.toLocaleString()}</td>
+      <td class="dx-td-amazon">฿${amazonElecSum.toLocaleString()}</td>
+      <td class="dx-td-amazon">฿${amazonWaterSum.toLocaleString()}</td>
+      <td class="dx-td-amazon">฿${amazonTrashSum.toLocaleString()}</td>
+      <td class="dx-td-amazon">฿${amazonTotal.toLocaleString()}</td>
       <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${yearlyTotal.toLocaleString()}</td>
     </tr>
   </tfoot>
@@ -5399,21 +5399,21 @@ function displayHistoricalDataForYear(year) {
     </tr>
     <tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border);">
       <th style="padding:0.2rem;border-right:1px solid var(--border);"></th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">เช่า</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">ไฟ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">น้ำ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">ขยะ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#e8f5e9;">รวม</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">เช่า</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">ไฟ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">น้ำ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">ขยะ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#f3e5f5;">รวม</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">เช่า</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">ไฟ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">น้ำ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">ขยะ</th>
-      <th style="padding:0.2rem;text-align:right;border-right:1px solid var(--border);font-size:0.8rem;background:#fff9c4;">รวม</th>
+      <th class="dx-th-rooms">เช่า</th>
+      <th class="dx-th-rooms">ไฟ</th>
+      <th class="dx-th-rooms">น้ำ</th>
+      <th class="dx-th-rooms">ขยะ</th>
+      <th class="dx-th-rooms">รวม</th>
+      <th class="dx-th-nest">เช่า</th>
+      <th class="dx-th-nest">ไฟ</th>
+      <th class="dx-th-nest">น้ำ</th>
+      <th class="dx-th-nest">ขยะ</th>
+      <th class="dx-th-nest">รวม</th>
+      <th class="dx-th-amazon">เช่า</th>
+      <th class="dx-th-amazon">ไฟ</th>
+      <th class="dx-th-amazon">น้ำ</th>
+      <th class="dx-th-amazon">ขยะ</th>
+      <th class="dx-th-amazon">รวม</th>
       <th style="padding:0.2rem;text-align:right;font-size:0.8rem;color:var(--green);font-weight:700;">รวม</th>
     </tr>
   </thead>`;
@@ -5521,20 +5521,20 @@ function displayHistoricalDataForYear(year) {
 
   html += `<tr style="font-weight:700;border-bottom:2px solid var(--green);">
             <td style="padding:0.8rem;border-right:1px solid var(--border);">รวมทั้งสิ้น</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${totalRoomsRent.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${totalRoomsElec.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${totalRoomsWater.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;">฿${totalRoomsTrash.toLocaleString()}</td>
+            <td class="dx-td-rooms">฿${totalRoomsRent.toLocaleString()}</td>
+            <td class="dx-td-rooms">฿${totalRoomsElec.toLocaleString()}</td>
+            <td class="dx-td-rooms">฿${totalRoomsWater.toLocaleString()}</td>
+            <td class="dx-td-rooms">฿${totalRoomsTrash.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#e8f5e9;color:#2d8653;font-weight:700;">฿${totalRoomsAll.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${totalNestRent.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${totalNestElec.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${totalNestWater.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;">฿${totalNestTrash.toLocaleString()}</td>
+            <td class="dx-td-nest">฿${totalNestRent.toLocaleString()}</td>
+            <td class="dx-td-nest">฿${totalNestElec.toLocaleString()}</td>
+            <td class="dx-td-nest">฿${totalNestWater.toLocaleString()}</td>
+            <td class="dx-td-nest">฿${totalNestTrash.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#f3e5f5;color:#7b1fa2;font-weight:700;">฿${totalNestAll.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${totalAmazonRent.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${totalAmazonElec.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${totalAmazonWater.toLocaleString()}</td>
-            <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;">฿${totalAmazonTrash.toLocaleString()}</td>
+            <td class="dx-td-amazon">฿${totalAmazonRent.toLocaleString()}</td>
+            <td class="dx-td-amazon">฿${totalAmazonElec.toLocaleString()}</td>
+            <td class="dx-td-amazon">฿${totalAmazonWater.toLocaleString()}</td>
+            <td class="dx-td-amazon">฿${totalAmazonTrash.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;border-right:1px solid var(--border);background:#fff9c4;color:#f57f17;font-weight:700;">฿${totalAmazonAll.toLocaleString()}</td>
             <td style="padding:0.8rem;text-align:right;color:var(--green);font-weight:700;">฿${totalAll.toLocaleString()}</td>
           </tr>`;
@@ -5586,41 +5586,41 @@ async function initInsightsPage() {
       <span style="font-size:1.2rem;font-weight:700;">📊 Owner Insights</span>
       <span style="font-size:.78rem;color:var(--text-muted);padding:2px 8px;background:var(--green-pale);border-radius:20px;" id="ins-status">กำลังโหลด...</span>
     </div>
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card dx-mb">
       <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">💰 อัตราการชำระเงิน (Collection Rate)</div>
       <div id="ins-collection-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
       <div style="height:220px;position:relative;"><canvas id="ins-chart-collection"></canvas></div>
     </div>
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card dx-mb">
       <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">📈 Cash Flow Forecast (6 เดือนข้างหน้า)</div>
       <div id="ins-cashflow-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
       <div style="height:220px;position:relative;"><canvas id="ins-chart-cashflow"></canvas></div>
       <div id="ins-lease-expiry-table" style="margin-top:1rem;"></div>
     </div>
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card dx-mb">
       <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">🔧 Complaint Resolution (MTTR)</div>
       <div id="ins-mttr-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
       <div style="height:220px;position:relative;"><canvas id="ins-chart-mttr"></canvas></div>
       <div id="ins-hotspot-table" style="margin-top:1rem;"></div>
     </div>
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card dx-mb">
       <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">💵 Profit per Room (เดือนปัจจุบัน)</div>
       <div id="ins-profit-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
       <div style="height:240px;position:relative;"><canvas id="ins-chart-profit"></canvas></div>
       <div id="ins-profit-table" style="margin-top:1rem;"></div>
     </div>
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card dx-mb">
       <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">🔄 Tenant Cohort Retention</div>
       <div id="ins-cohort-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
       <div style="height:220px;position:relative;"><canvas id="ins-chart-cohort"></canvas></div>
     </div>
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card dx-mb">
       <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">⚠️ Meter Anomaly Detection (z-score &gt; 2σ)</div>
       <div id="ins-meter-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
       <div id="ins-meter-table" style="margin-top:.5rem;"></div>
       <div style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem;">วิเคราะห์การใช้น้ำ/ไฟจากบิล 6 เดือนล่าสุด — ห้องที่ใช้สูงผิดปกติอาจมีน้ำรั่ว/มิเตอร์เสีย/ใช้จริงเพิ่ม</div>
     </div>
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card dx-mb">
       <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">⚙️ CF Health (LINE retry queue)</div>
       <div id="ins-cf-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;"></div>
       <div id="ins-cf-detail" style="font-size:.83rem;color:var(--text-muted);margin-bottom:1rem;"></div>
@@ -5631,7 +5631,7 @@ async function initInsightsPage() {
         <pre id="ins-award-dryrun-output" style="margin-top:.7rem;padding:.7rem;background:#f5f5f5;border-radius:6px;font-size:.75rem;max-height:240px;overflow:auto;display:none;white-space:pre-wrap;"></pre>
       </div>
     </div>
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card dx-mb">
       <div style="font-weight:700;font-size:.95rem;margin-bottom:1rem;">🔐 Admin Operations</div>
       <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:1rem;">เครื่องมือสำหรับจัดการสิทธิ์ admin/accountant — เรียก setAdminClaim CF ด้วย ID token ของคุณ</div>
       <div style="border:1px solid var(--border);border-radius:6px;padding:1rem;margin-bottom:1rem;">
@@ -5871,21 +5871,21 @@ function _insightsRenderCashFlow(tenants) {
       const badge = diff <= 0 ? '⚠️ หมดแล้ว' : diff + ' วัน';
       return `<tr>
         <td style="padding:5px 10px;font-weight:600;">${t._building === 'nest' ? 'N' : ''}${t._roomId}</td>
-        <td style="padding:5px 10px;">${t.name || '—'}</td>
-        <td style="padding:5px 10px;">${new Date(t.contractEnd).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</td>
+        <td class="dx-td-sm">${t.name || '—'}</td>
+        <td class="dx-td-sm">${new Date(t.contractEnd).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</td>
         <td style="padding:5px 10px;color:${color};font-weight:600;">${badge}</td>
-        <td style="padding:5px 10px;">฿${Number(t.rentPrice || 0).toLocaleString()}</td>
+        <td class="dx-td-sm">฿${Number(t.rentPrice || 0).toLocaleString()}</td>
       </tr>`;
     }).join('');
     document.getElementById('ins-lease-expiry-table').innerHTML = `
       <div style="font-weight:600;font-size:.82rem;margin-bottom:.5rem;color:var(--text-muted);">สัญญาหมดใน 90 วัน</div>
       <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.83rem;">
         <thead><tr style="background:var(--green-pale);">
-          <th style="padding:5px 10px;text-align:left;">ห้อง</th>
-          <th style="padding:5px 10px;text-align:left;">ผู้เช่า</th>
-          <th style="padding:5px 10px;text-align:left;">สิ้นสุด</th>
-          <th style="padding:5px 10px;text-align:left;">เหลือ</th>
-          <th style="padding:5px 10px;text-align:left;">ค่าเช่า</th>
+          <th class="dx-th-sm">ห้อง</th>
+          <th class="dx-th-sm">ผู้เช่า</th>
+          <th class="dx-th-sm">สิ้นสุด</th>
+          <th class="dx-th-sm">เหลือ</th>
+          <th class="dx-th-sm">ค่าเช่า</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table></div>`;
@@ -5953,7 +5953,7 @@ function _insightsRenderMTTR(complaints) {
       const color = s === 'resolved' ? 'var(--green-dark)' : s === 'in-progress' ? '#1976d2' : '#e65100';
       return `<tr>
         <td style="padding:5px 10px;font-weight:600;">ห้อง ${room}</td>
-        <td style="padding:5px 10px;">${count} เคส</td>
+        <td class="dx-td-sm">${count} เคส</td>
         <td style="padding:5px 10px;color:${color};">${s}</td>
       </tr>`;
     }).join('');
@@ -5961,9 +5961,9 @@ function _insightsRenderMTTR(complaints) {
       <div style="font-weight:600;font-size:.82rem;margin-bottom:.5rem;color:var(--text-muted);">ห้องที่มีการร้องเรียนซ้ำ (≥2 ครั้ง)</div>
       <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.83rem;">
         <thead><tr style="background:var(--green-pale);">
-          <th style="padding:5px 10px;text-align:left;">ห้อง</th>
-          <th style="padding:5px 10px;text-align:left;">จำนวน</th>
-          <th style="padding:5px 10px;text-align:left;">สถานะล่าสุด</th>
+          <th class="dx-th-sm">ห้อง</th>
+          <th class="dx-th-sm">จำนวน</th>
+          <th class="dx-th-sm">สถานะล่าสุด</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table></div>`;
@@ -6056,7 +6056,7 @@ function _insightsRenderProfit(bills, tenants) {
       const mgn = x.rev > 0 ? Math.round((x.rev - x.cost) / x.rev * 100) : 0;
       return `<tr>
         <td style="padding:5px 10px;font-weight:600;">ห้อง ${x.room}</td>
-        <td style="padding:5px 10px;">฿${x.rev.toLocaleString()}</td>
+        <td class="dx-td-sm">฿${x.rev.toLocaleString()}</td>
         <td style="padding:5px 10px;color:#c62828;">฿${x.cost.toLocaleString()}</td>
         <td style="padding:5px 10px;font-weight:600;color:${mgn < 0 ? '#c62828' : '#e65100'};">${mgn}%</td>
       </tr>`;
@@ -6065,10 +6065,10 @@ function _insightsRenderProfit(bills, tenants) {
       <div style="font-weight:600;font-size:.82rem;margin-bottom:.5rem;color:var(--text-muted);">ห้องที่ Margin ต่ำ (&lt;50%)</div>
       <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.83rem;">
         <thead><tr style="background:var(--green-pale);">
-          <th style="padding:5px 10px;text-align:left;">ห้อง</th>
-          <th style="padding:5px 10px;text-align:left;">รายรับ</th>
-          <th style="padding:5px 10px;text-align:left;">ค่าใช้จ่าย</th>
-          <th style="padding:5px 10px;text-align:left;">Margin</th>
+          <th class="dx-th-sm">ห้อง</th>
+          <th class="dx-th-sm">รายรับ</th>
+          <th class="dx-th-sm">ค่าใช้จ่าย</th>
+          <th class="dx-th-sm">Margin</th>
         </tr></thead><tbody>${trs}</tbody>
       </table></div>`;
   } else {
@@ -6218,18 +6218,18 @@ function _insightsRenderMeterAnomaly(bills, tenants) {
       const roomLabel = (a.building === 'nest' ? 'N' : '') + a.room;
       return `<tr>
         <td style="padding:5px 10px;font-weight:600;">${icon} ${roomLabel}</td>
-        <td style="padding:5px 10px;">${tn?.name || '—'}</td>
-        <td style="padding:5px 10px;">${a.current} <span style="color:#999;">(ปกติ ~${a.baseline})</span></td>
+        <td class="dx-td-sm">${tn?.name || '—'}</td>
+        <td class="dx-td-sm">${a.current} <span style="color:#999;">(ปกติ ~${a.baseline})</span></td>
         <td style="padding:5px 10px;color:${color};font-weight:600;">${dirIcon} z=${a.z.toFixed(1)}</td>
       </tr>`;
     }).join('');
     tEl.innerHTML = `
       <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.83rem;">
         <thead><tr style="background:var(--green-pale);">
-          <th style="padding:5px 10px;text-align:left;">ห้อง</th>
-          <th style="padding:5px 10px;text-align:left;">ผู้เช่า</th>
-          <th style="padding:5px 10px;text-align:left;">การใช้ (เดือนนี้)</th>
-          <th style="padding:5px 10px;text-align:left;">z-score</th>
+          <th class="dx-th-sm">ห้อง</th>
+          <th class="dx-th-sm">ผู้เช่า</th>
+          <th class="dx-th-sm">การใช้ (เดือนนี้)</th>
+          <th class="dx-th-sm">z-score</th>
         </tr></thead><tbody>${trs}</tbody>
       </table></div>`;
   } else {
