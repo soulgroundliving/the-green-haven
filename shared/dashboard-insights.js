@@ -1073,22 +1073,21 @@
       });
       const totalLiff = lStatus.pending + lStatus.approved + lStatus.rejected;
 
-      // ── Individual card helpers ──
-      const borderMap = { ok: '#0f766e', warn: '#d97706', danger: '#dc2626', neutral: 'var(--border)' };
-
-      const ccnt = (val, cls, lbl) =>
-        `<div class="ops-cc-num"><div class="ops-cc-v ${cls}">${val}</div><div class="ops-cc-l">${lbl}</div></div>`;
-
-      const badge = (cls, text) => `<span class="ops-cc-badge ${cls}">${text}</span>`;
-
-      const catCard = (accentCls, titleHTML, badgeHTML, numsHTML, tagsHTML) =>
-        `<div class="card" style="border-left:3px solid ${borderMap[accentCls]}">
-          <div class="ops-cc-hdr">
-            <div class="ops-cc-title">${titleHTML}</div>
+      // ── Ops v2 helpers ──
+      const accentColors = { ok: '#0f766e', warn: '#d97706', danger: '#dc2626', neutral: 'var(--border,#e5e7eb)' };
+      const ops2Badge = (cls, text) => `<span class="ops2-badge ${cls}">${text}</span>`;
+      const ops2Stat = (val, cls, lbl) =>
+        `<div class="ops2-stat"><div class="ops2-stat-v ${cls}">${val}</div><div class="ops2-stat-l">${lbl}</div></div>`;
+      const ops2Card = ({ wide, accent, icon, title, sub, bigNum, bigCls, bigLabel, statsHTML, tagsHTML, badgeHTML }) =>
+        `<div class="ops2-card${wide ? ' ops2-wide' : ''}${accent === 'danger' ? ' tint-danger' : accent === 'warn' ? ' tint-warn' : ''}" style="--ops2-accent:${accentColors[accent]}">
+          <div class="ops2-hdr">
+            <div class="ops2-title"><span class="ops2-title-icon">${icon}</span>${title}${sub ? `<span class="ops2-sub">· ${sub}</span>` : ''}</div>
             ${badgeHTML}
           </div>
-          <div class="ops-cc-nums">${numsHTML}</div>
-          ${tagsHTML ? `<div class="ops-tags" style="margin-top:.3rem;">${tagsHTML}</div>` : ''}
+          <div class="ops2-primary"><span class="ops2-big ${bigCls}">${bigNum}</span><span class="ops2-plabel">${bigLabel}</span></div>
+          <hr class="ops2-divider">
+          <div class="ops2-stats">${statsHTML}</div>
+          ${tagsHTML ? `<div class="ops2-tags">${tagsHTML}</div>` : ''}
         </div>`;
 
       // Overall health pulse
@@ -1109,26 +1108,23 @@
       const lAccent = lStatus.pending > 0 ? 'warn' : 'neutral';
 
       // Badges
-      const cBadge = cStatus.open > 0 ? badge('danger', '⚠️ Action Required')
-        : cStatus['in-progress'] > 0 ? badge('warn', '⏳ In Progress')
-        : totalComplaints > 0 ? badge('ok', '✅ Resolved') : badge('neutral', '— ยังไม่มีข้อมูล');
-      const mBadge = mOverdue.length > 0 ? badge('danger', `⏰ ค้าง ${mOverdue.length}`)
-        : mStatus.pending > 0 ? badge('warn', '⏳ Pending')
-        : totalMaint > 0 ? badge('ok', '✅ Done') : badge('neutral', '— ยังไม่มีข้อมูล');
-      const hBadge = hStatus.pending > 0 ? badge('warn', '⏳ Pending')
-        : totalHouse > 0 ? badge('ok', '✅ Done') : badge('neutral', '— ยังไม่มีข้อมูล');
-      const pBadge = pStatus.pending > 0 ? badge('warn', `⏳ รออนุมัติ ${pStatus.pending}`)
-        : badge('neutral', totalPets === 0 ? '— ยังไม่มีคำขอ' : '✅ ดำเนินการแล้ว');
-      const lBadge = lStatus.pending > 0 ? badge('warn', `⏳ รออนุมัติ ${lStatus.pending}`)
-        : badge('neutral', totalLiff === 0 ? '— ยังไม่มีคำขอ' : '✅ ดำเนินการแล้ว');
+      const cBadge = cStatus.open > 0 ? ops2Badge('danger', '⚠️ Action Required')
+        : cStatus['in-progress'] > 0 ? ops2Badge('warn', '⏳ In Progress')
+        : totalComplaints > 0 ? ops2Badge('ok', '✅ Resolved') : ops2Badge('neutral', 'ยังไม่มีข้อมูล');
+      const mBadge = mOverdue.length > 0 ? ops2Badge('danger', `⏰ ค้าง ${mOverdue.length}`)
+        : mStatus.pending > 0 ? ops2Badge('warn', '⏳ Pending')
+        : totalMaint > 0 ? ops2Badge('ok', '✅ Done') : ops2Badge('neutral', 'ยังไม่มีข้อมูล');
+      const hBadge = hStatus.pending > 0 ? ops2Badge('warn', '⏳ Pending')
+        : totalHouse > 0 ? ops2Badge('ok', '✅ Done') : ops2Badge('neutral', 'ยังไม่มีข้อมูล');
+      const pBadge = pStatus.pending > 0 ? ops2Badge('warn', `⏳ รออนุมัติ ${pStatus.pending}`)
+        : ops2Badge('neutral', totalPets === 0 ? 'ยังไม่มีคำขอ' : '✅ ดำเนินการแล้ว');
+      const lBadge = lStatus.pending > 0 ? ops2Badge('warn', `⏳ รออนุมัติ ${lStatus.pending}`)
+        : ops2Badge('neutral', totalLiff === 0 ? 'ยังไม่มีคำขอ' : '✅ ดำเนินการแล้ว');
 
-      // Tags
-      const cTagsHTML = topCats.slice(0, 4).map(([cat, n]) => `<span class="ops-tag">${esc(cat)} ${n}</span>`).join('');
-      const mTagsHTML = mOverdue.length === 0 ? '' :
-        mOverdue.slice(0, 5).map(m => `<span class="ops-tag urgent">ห้อง ${esc(m.room)}</span>`).join('') +
-        (mOverdue.length > 5 ? `<span class="ops-tag">+${mOverdue.length - 5}</span>` : '');
-
-      const cTitle = `⚠️ Complaints <span class="ops-cc-period">(90 วัน)${avgResolve ? ` · เฉลี่ย ${avgResolve} วัน` : ''}</span>`;
+      // Tags (Complaints only)
+      const cTagsHTML = topCats.slice(0, 5).map(([cat, n]) => `<span class="ops2-tag">${esc(cat)} ${n}</span>`).join('');
+      const mTagsHTML = mOverdue.slice(0, 4).map(m => `<span class="ops2-tag urgent">ห้อง ${esc(m.room)}</span>`).join('') +
+        (mOverdue.length > 4 ? `<span class="ops2-tag">+${mOverdue.length - 4}</span>` : '');
 
       container.innerHTML = `
         <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">
@@ -1136,32 +1132,37 @@
           <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
                   style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
         </div>
-        <div class="ops-pulse ${pulseClass}" style="margin-bottom:.38rem;">${pulseLabel}</div>
-        ${catCard(cAccent, cTitle, cBadge,
-          ccnt(cStatus.open, cStatus.open > 0 ? 'red' : 'muted', 'Open') +
-          ccnt(cStatus['in-progress'], cStatus['in-progress'] > 0 ? 'amber' : 'muted', 'Progress') +
-          ccnt(cStatus.resolved, cStatus.resolved > 0 ? 'green' : 'muted', 'Resolved'),
-          cTagsHTML)}
-        ${catCard(mAccent, '🔧 Maintenance', mBadge,
-          ccnt(mStatus.pending, mStatus.pending > 0 ? 'red' : 'muted', 'Pending') +
-          ccnt(mStatus.inprogress, mStatus.inprogress > 0 ? 'amber' : 'muted', 'Progress') +
-          ccnt(mStatus.done, mStatus.done > 0 ? 'green' : 'muted', 'Done'),
-          mTagsHTML)}
-        ${catCard(hAccent, '🧹 Housekeeping', hBadge,
-          ccnt(hStatus.pending, hStatus.pending > 0 ? 'amber' : 'muted', 'Pending') +
-          ccnt(hStatus.inprogress, hStatus.inprogress > 0 ? 'amber' : 'muted', 'Progress') +
-          ccnt(hStatus.done, hStatus.done > 0 ? 'green' : 'muted', 'Done'),
-          null)}
-        ${catCard(pAccent, '🐾 Pet Approvals', pBadge,
-          ccnt(pStatus.pending, pStatus.pending > 0 ? 'amber' : 'muted', 'รออนุมัติ') +
-          ccnt(pStatus.approved, pStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
-          ccnt(pStatus.rejected, pStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
-          null)}
-        ${catCard(lAccent, '🔗 LINE Requests', lBadge,
-          ccnt(lStatus.pending, lStatus.pending > 0 ? 'amber' : 'muted', 'รออนุมัติ') +
-          ccnt(lStatus.approved, lStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
-          ccnt(lStatus.rejected, lStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
-          null)}
+        <div class="ops-pulse ${pulseClass}" style="margin-bottom:.45rem;">${pulseLabel}</div>
+        <div class="ops2-grid">
+          ${ops2Card({ wide: true, accent: cAccent, icon: '⚠️', title: 'Complaints',
+            sub: avgResolve ? `90 วัน · เฉลี่ย ${avgResolve} วัน` : '90 วัน',
+            bigNum: cStatus.open, bigCls: cStatus.open > 0 ? 'red' : 'muted', bigLabel: 'Open now',
+            statsHTML: ops2Stat(cStatus['in-progress'], cStatus['in-progress'] > 0 ? 'amber' : 'muted', 'In Progress') +
+                       ops2Stat(cStatus.resolved, cStatus.resolved > 0 ? 'green' : 'muted', 'Resolved') +
+                       ops2Stat(totalComplaints, 'muted', 'Total'),
+            tagsHTML: cTagsHTML, badgeHTML: cBadge })}
+          ${ops2Card({ wide: false, accent: mAccent, icon: '🔧', title: 'Maintenance', sub: '',
+            bigNum: mStatus.pending, bigCls: mStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'Pending',
+            statsHTML: ops2Stat(mStatus.inprogress, mStatus.inprogress > 0 ? 'amber' : 'muted', 'In Progress') +
+                       ops2Stat(mStatus.done, mStatus.done > 0 ? 'green' : 'muted', 'Done') +
+                       (mOverdue.length ? ops2Stat(mOverdue.length, 'red', 'Overdue') : ''),
+            tagsHTML: mTagsHTML, badgeHTML: mBadge })}
+          ${ops2Card({ wide: false, accent: hAccent, icon: '🧹', title: 'Housekeeping', sub: '',
+            bigNum: hStatus.pending, bigCls: hStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'Pending',
+            statsHTML: ops2Stat(hStatus.inprogress, hStatus.inprogress > 0 ? 'amber' : 'muted', 'In Progress') +
+                       ops2Stat(hStatus.done, hStatus.done > 0 ? 'green' : 'muted', 'Done'),
+            tagsHTML: '', badgeHTML: hBadge })}
+          ${ops2Card({ wide: false, accent: pAccent, icon: '🐾', title: 'Pet Approvals', sub: '',
+            bigNum: pStatus.pending, bigCls: pStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'รออนุมัติ',
+            statsHTML: ops2Stat(pStatus.approved, pStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
+                       ops2Stat(pStatus.rejected, pStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
+            tagsHTML: '', badgeHTML: pBadge })}
+          ${ops2Card({ wide: false, accent: lAccent, icon: '🔗', title: 'LINE Requests', sub: '',
+            bigNum: lStatus.pending, bigCls: lStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'รออนุมัติ',
+            statsHTML: ops2Stat(lStatus.approved, lStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
+                       ops2Stat(lStatus.rejected, lStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
+            tagsHTML: '', badgeHTML: lBadge })}
+        </div>
         <div class="ops-board-ft">${fmtCacheAge(Date.now())}</div>`;
     } catch (e) {
       console.error('[insights] operations failed:', e);
