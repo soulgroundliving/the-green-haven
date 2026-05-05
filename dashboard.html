@@ -2460,6 +2460,108 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 }
 .card-header-row .card-title{ margin-bottom:0; }
 
+/* ── Dashboard page header ── */
+.dash-page-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+  margin-bottom:1.25rem;
+  padding-bottom:1.1rem;
+  border-bottom:1px solid var(--border);
+  flex-wrap:wrap;
+}
+.dash-page-title{
+  font-size:1.35rem;
+  font-weight:800;
+  color:var(--text);
+  line-height:1;
+  margin-bottom:.25rem;
+}
+.dash-page-subtitle{
+  font-size:.75rem;
+  color:var(--text-muted);
+  font-weight:500;
+}
+
+/* ── Hero KPI + cluster (financial tab) ── */
+.dash-hero-row{
+  display:grid;
+  grid-template-columns:1.15fr 1fr;
+  gap:.75rem;
+  margin-bottom:1.5rem;
+  align-items:stretch;
+}
+.dash-hero-card{
+  padding:1.5rem 1.6rem;
+  border-top-width:4px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:.5rem;
+}
+.dash-hero-card .kpi-icon{ font-size:1.4rem; opacity:.6; margin-bottom:.5rem; }
+.dash-hero-card .kpi-label{ font-size:.72rem; margin-bottom:.35rem; }
+.dash-hero-card .kpi-value{ font-size:2.55rem; line-height:1; margin-bottom:.25rem; }
+.dash-hero-card .kpi-sub{ font-size:.78rem; }
+.dash-kpi-stack{
+  display:flex;
+  flex-direction:column;
+  gap:.5rem;
+}
+.dash-kpi-stack .kpi-card{
+  flex:1;
+  padding:.75rem 1rem .65rem;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:.75rem;
+  border-top-width:3px;
+}
+.dash-kpi-stack .kpi-card .kpi-icon{ font-size:.95rem; opacity:.55; margin-bottom:0; flex-shrink:0; }
+.dash-kpi-stack .kpi-card .kpi-body{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.dash-kpi-stack .kpi-card .kpi-label{ font-size:.68rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dash-kpi-stack .kpi-card .kpi-value{ font-size:1.3rem; line-height:1; }
+.dash-kpi-stack .kpi-card .kpi-sub{ font-size:.65rem; }
+@media(max-width:1100px){ .dash-hero-row{ grid-template-columns:1fr; } }
+
+/* ── Tab intro header (each tab) ── */
+.dash-tab-header{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:1rem;
+  margin-bottom:1.25rem;
+  padding-bottom:.9rem;
+  border-bottom:1px solid var(--border);
+  flex-wrap:wrap;
+}
+.dash-tab-title{
+  font-size:1rem;
+  font-weight:700;
+  color:var(--text);
+  line-height:1;
+}
+.dash-tab-subtitle{
+  font-size:.72rem;
+  color:var(--text-muted);
+  margin-top:.2rem;
+}
+.dash-view-link{
+  font-size:.78rem;
+  font-weight:600;
+  color:var(--green-dark);
+  background:var(--green-pale);
+  border:1px solid var(--green-light);
+  border-radius:20px;
+  padding:.35rem .9rem;
+  cursor:pointer;
+  font-family:var(--font-brand);
+  white-space:nowrap;
+  transition:background .15s;
+}
+.dash-view-link:hover{ background:var(--green-light); }
+
 </style>
 </head>
 <body>
@@ -2763,17 +2865,22 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
 <!-- ===== DASHBOARD ===== -->
 <div class="page active" id="page-dashboard">
-  <div class="section-title" role="heading" aria-level="2">📊 Dashboard</div>
 
-  <!-- Property Context Row -->
-  <div class="year-tabs" style="margin-bottom:.5rem;">
-    <span class="year-tab-label">ประเภทอสังหาฯ:</span>
-    <button id="dash-prop-btn-apartment" class="year-tab active dash-prop-tab" data-action="switchDashboardProperty" data-property="apartment">🏠 Apartment</button>
-    <button id="dash-prop-btn-mall" class="year-tab dash-prop-tab" disabled title="เร็วๆ นี้" style="opacity:.4;cursor:not-allowed;">🏪 Community Mall <span style="font-size:.7rem;">(เร็วๆ นี้)</span></button>
+  <!-- Page header -->
+  <div class="dash-page-header">
+    <div>
+      <div class="dash-page-title">Dashboard</div>
+      <div class="dash-page-subtitle">Nature Haven · ข้อมูลอสังหาริมทรัพย์</div>
+    </div>
+    <div class="year-tabs" style="margin-bottom:0;gap:6px;">
+      <span class="year-tab-label" style="font-size:.72rem;">อาคาร:</span>
+      <button id="dash-prop-btn-apartment" class="year-tab active dash-prop-tab" data-action="switchDashboardProperty" data-property="apartment">🏠 Apartment</button>
+      <button id="dash-prop-btn-mall" class="year-tab dash-prop-tab" disabled title="เร็วๆ นี้" style="opacity:.4;cursor:not-allowed;">🏪 Mall</button>
+    </div>
   </div>
 
   <!-- Category Tab Nav -->
-  <div class="year-tabs dash-cat-nav" style="margin-bottom:1.2rem;">
+  <div class="year-tabs dash-cat-nav" style="margin-bottom:1.5rem;">
     <button id="dash-cat-btn-financial"  class="year-tab active" data-action="switchDashboardTab" data-tab="financial"><span aria-hidden="true">💰</span> การเงิน</button>
     <button id="dash-cat-btn-tenants"    class="year-tab"        data-action="switchDashboardTab" data-tab="tenants"><span aria-hidden="true">👥</span> ผู้เช่า</button>
     <button id="dash-cat-btn-operations" class="year-tab"        data-action="switchDashboardTab" data-tab="operations"><span aria-hidden="true">🔧</span> ปฏิบัติการ</button>
@@ -2810,11 +2917,42 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button class="year-tab" data-action="setYear" data-year="68">2568 (2025)</button>
       <button class="year-tab active" data-action="setYear" data-year="69">2569 (2026)</button>
     </div>
-    <div class="kpi-grid">
-      <div class="kpi-card green"><div class="kpi-icon" aria-hidden="true">💰</div><div class="kpi-label">รายได้รวมทั้งปี (รวมทั้ง 2 อาคาร)</div><div class="kpi-value green" id="kpi-total">฿0</div><div class="kpi-sub" id="kpi-total-sub"></div></div>
-      <div class="kpi-card green"><div class="kpi-icon" aria-hidden="true">🏠</div><div class="kpi-label">รายได้ rooms (ห้องแถว)</div><div class="kpi-value green" id="kpi-rooms-total">฿0</div><div class="kpi-sub" id="kpi-rooms-sub">แบ่งตามระบบตัวใจ</div></div>
-      <div class="kpi-card kpi-nest purple"><div class="kpi-icon" aria-hidden="true">🏢</div><div class="kpi-label">รายได้ Nest Building</div><div class="kpi-value purple" id="kpi-nest-total">฿0</div><div class="kpi-sub" id="kpi-nest-sub">ยูนิตที่เปิดให้เช่า</div></div>
-      <div class="kpi-card amber"><div class="kpi-icon" aria-hidden="true">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
+    <!-- Hero KPI + secondary cluster -->
+    <div class="dash-hero-row">
+      <div class="kpi-card green dash-hero-card">
+        <div class="kpi-icon" aria-hidden="true">💰</div>
+        <div>
+          <div class="kpi-label">รายได้รวมทั้งปี · ทั้ง 2 อาคาร</div>
+          <div class="kpi-value green" id="kpi-total">฿0</div>
+          <div class="kpi-sub" id="kpi-total-sub"></div>
+        </div>
+      </div>
+      <div class="dash-kpi-stack">
+        <div class="kpi-card green">
+          <div class="kpi-icon" aria-hidden="true">🏠</div>
+          <div class="kpi-body">
+            <div class="kpi-label">รายได้ rooms (ห้องแถว)</div>
+            <div class="kpi-value green" id="kpi-rooms-total">฿0</div>
+            <div class="kpi-sub" id="kpi-rooms-sub"></div>
+          </div>
+        </div>
+        <div class="kpi-card kpi-nest purple">
+          <div class="kpi-icon" aria-hidden="true">🏢</div>
+          <div class="kpi-body">
+            <div class="kpi-label">รายได้ Nest Building</div>
+            <div class="kpi-value purple" id="kpi-nest-total">฿0</div>
+            <div class="kpi-sub" id="kpi-nest-sub"></div>
+          </div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-icon" aria-hidden="true">📆</div>
+          <div class="kpi-body">
+            <div class="kpi-label">รายได้เฉลี่ย / เดือน</div>
+            <div class="kpi-value amber" id="kpi-monthly">฿0</div>
+            <div class="kpi-sub" id="kpi-monthly-sub"></div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="dash-section-sep">รายได้รายเดือน</div>
     <div class="charts-grid">
@@ -2867,19 +3005,29 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
   <!-- ===== TAB 3: ผู้เช่า ===== -->
   <div id="dash-cat-tenants" class="dash-cat-content u-hidden">
+    <div class="dash-tab-header">
+      <div>
+        <div class="dash-tab-title">ผู้เช่า &amp; ห้องว่าง</div>
+        <div class="dash-tab-subtitle">สถานะการเข้าพัก · อัตราการครอบครอง · สุขภาพผู้เช่า</div>
+      </div>
+      <button class="dash-view-link" data-action="showPage" data-page="tenant">ดูผู้เช่าทั้งหมด →</button>
+    </div>
     <div class="card" style="margin-bottom:1rem;">
-      <div class="card-title" role="heading" aria-level="3">👥 ผู้เช่า &amp; ห้องว่าง</div>
+      <div class="card-title" role="heading" aria-level="3">สถานะห้องพัก</div>
       <div id="dashTenantStatus" style="min-height:70px;"></div>
     </div>
-    <!-- Phase 2 Deep Analytics: Tenant Health + Churn Risk (combined card) -->
     <div id="dashTenantInsights" style="margin-bottom:1rem;"></div>
-    <div style="text-align:right;margin-bottom:1rem;">
-      <button class="year-tab" data-action="showPage" data-page="tenant">👥 ดูรายละเอียดผู้เช่าทั้งหมด →</button>
-    </div>
   </div><!-- END ผู้เช่า -->
 
   <!-- ===== TAB 4: ปฏิบัติการ ===== -->
   <div id="dash-cat-operations" class="dash-cat-content u-hidden">
+    <div class="dash-tab-header">
+      <div>
+        <div class="dash-tab-title">ปฏิบัติการ</div>
+        <div class="dash-tab-subtitle">คำร้องเรียน · งานซ่อมบำรุง · มิเตอร์ · ผู้ให้บริการ</div>
+      </div>
+      <button class="dash-view-link" data-action="showPage" data-page="requests-approvals">ดูคำขอทั้งหมด →</button>
+    </div>
     <div class="dash-2col">
       <div class="card">
         <div class="card-title" role="heading" aria-level="3">คำร้องเรียน</div>
@@ -2890,17 +3038,20 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <div id="dashMaintenanceStatus" style="min-height:60px;"></div>
       </div>
     </div>
-    <!-- Phase 2.6: Operations Deep Analytics -->
     <div id="dashOperationsInsights" style="margin-bottom:1rem;"></div>
     <div id="dashMeterSpike" style="margin-bottom:1rem;"></div>
     <div id="dashProviderScore" style="margin-bottom:1rem;"></div>
-    <div style="text-align:right;margin-bottom:1rem;">
-      <button class="year-tab" data-action="showPage" data-page="requests-approvals">🔧 ดูคำขอทั้งหมด →</button>
-    </div>
   </div><!-- END ปฏิบัติการ -->
 
   <!-- ===== TAB 5: ชุมชน ===== -->
   <div id="dash-cat-community" class="dash-cat-content u-hidden">
+    <div class="dash-tab-header">
+      <div>
+        <div class="dash-tab-title">ชุมชน</div>
+        <div class="dash-tab-subtitle">คะแนนสะสม · กิจกรรมสุขภาพ · สัตว์เลี้ยง</div>
+      </div>
+      <button class="dash-view-link" data-action="showPage" data-page="gamification">ดูคะแนนทั้งหมด →</button>
+    </div>
     <div class="dash-2col">
       <div class="card">
         <div class="card-header-row">
