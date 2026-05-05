@@ -1379,9 +1379,47 @@
     renderPaymentBehavior();
     renderOverdueBills();
   }
+  async function renderTenantDashSummary() {
+    const expEl  = document.getElementById('tenSum-exp');
+    const alEl   = document.getElementById('tenSum-alert');
+    const reqEl  = document.getElementById('tenSum-req');
+    const bookEl = document.getElementById('tenSum-book');
+    if (!expEl) return;
+
+    // Synchronous: contract expiry counts from localStorage
+    const today = new Date();
+    try {
+      if (typeof loadTenants === 'function') {
+        const tenants = loadTenants();
+        let exp30 = 0, exp7 = 0;
+        Object.values(tenants).forEach(t => {
+          if (!t.name || !t.contractEnd) return;
+          const diff = (new Date(t.contractEnd) - today) / 86400000;
+          if (diff >= 0 && diff <= 30) { exp30++; if (diff <= 7) exp7++; }
+        });
+        if (expEl) { expEl.textContent = String(exp30); if (!exp30) expEl.classList.remove('c-amber'); }
+        if (alEl)  { alEl.textContent  = String(exp7);  if (!exp7)  alEl.classList.remove('c-red'); }
+      }
+    } catch(e) { /* silent */ }
+
+    // Async: Firestore counts for requests + bookings
+    if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+    try {
+      const db = window.firebase.firestore();
+      const { collection, getDocs, query, where } = window.firebase.firestoreFunctions;
+      const [reqSnap, bookSnap] = await Promise.all([
+        getDocs(query(collection(db, 'leaseRequests'), where('status', '==', 'pending'))),
+        getDocs(query(collection(db, 'bookings'), where('status', 'in', ['locked', 'paid', 'kyc'])))
+      ]);
+      if (reqEl)  { reqEl.textContent  = String(reqSnap.size);  if (reqSnap.size > 0)  reqEl.classList.add('c-red'); }
+      if (bookEl) { bookEl.textContent = String(bookSnap.size); }
+    } catch(e) { console.warn('[tenantSummary]', e); }
+  }
+
   function initTenantInsights() {
     if (_tenInited) return;
     _tenInited = true;
+    renderTenantDashSummary();
     renderTenantInsights();
   }
   function initOperationsInsights() {
