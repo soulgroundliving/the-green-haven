@@ -2347,7 +2347,7 @@
             <i class="fas fa-arrow-left" aria-hidden="true"></i> กลับไปหน้าแผนที่
         </button>
 
-        <div class="section-title"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
         <div id="community-filter-pills" style="display:flex; gap:8px; padding:0 15px 10px; flex-wrap:wrap;">
             <button class="cf-pill cf-pill-active" data-cat="all" onclick="setCommunityFilter('all', this)">ทั้งหมด</button>
             <button class="cf-pill" data-cat="announcement" onclick="setCommunityFilter('announcement', this)">📢 ประกาศ</button>
@@ -2428,7 +2428,7 @@
             <p style="font-size:var(--fs-sm); margin:0; color: var(--text-dark);" id="power-desc">วันนี้พลังงานคุณล้นเหลือ ลองทำสิ่งใหม่ๆ
                 นะครับ</p>
         </div>
-        <div class="section-title"><span>Wellness Tips ลึกๆ 🌿</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>Wellness Tips ลึกๆ 🌿</span></div>
         <div id="wellness-list" class="blog-list"></div>
         <div id="wellness-load-more"
             style="text-align: center; color: var(--primary-green); font-size: var(--fs-md); padding: 20px; font-weight: 600; cursor: pointer;"
@@ -2660,7 +2660,7 @@
             </div>
             <i class="fas fa-chevron-right" style="color:#ccc;"></i>
         </div>
-        <div class="section-title">หมวดหมู่แจ้งเรื่อง</div>
+        <div class="section-title" role="heading" aria-level="2">หมวดหมู่แจ้งเรื่อง</div>
         <div class="menu-list">
             <div class="menu-item" onclick="showSubPage('maintenance')">
                 <div class="icon-box icon-gold"><i class="fas fa-tools"></i></div>
@@ -2679,7 +2679,7 @@
             </div>
         </div>
         <div id="records-section" style="display: none;">
-            <div class="section-title">ประวัติการแจ้งเรื่องล่าสุด</div>
+            <div class="section-title" role="heading" aria-level="2">ประวัติการแจ้งเรื่องล่าสุด</div>
             <div id="records-container" style="padding: 0 15px;"></div>
         </div>
         <div class="suggest-card" style="margin-bottom: 50px;">
@@ -2737,7 +2737,7 @@
             </form>
         </div>
 
-        <div class="section-title"><span>ประวัติการซ่อม</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>ประวัติการซ่อม</span></div>
         <div id="ticketsList" style="padding:0 16px 80px;"></div>
     </div>
 
@@ -2751,7 +2751,7 @@
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">จองบริการทำความสะอาด</h1>
         </div>
-        <div class="section-title"><span>เลือกประเภทบริการ</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>เลือกประเภทบริการ</span></div>
         <!-- Rendered dynamically by _renderCleaningServices() from Firestore system/cleaningServices.
              Admin manages prices/labels/slots in dashboard. Defaults shown until Firestore loads. -->
         <div id="cleaning-service-list" class="grid grid-cols-2 gap-3 px-4 mb-6">
@@ -2794,7 +2794,7 @@
             <button onclick="submitCleaning()" class="btn-main mt-4">ยืนยันการจองบริการ</button>
         </div>
 
-        <div class="section-title"><span>ประวัติการรับบริการ</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>ประวัติการรับบริการ</span></div>
         <div id="cleaning-records" class="px-4 pb-10">
             <p style="text-align:center;color:#9ca3af;font-size:var(--fs-sm);padding:20px;">ยังไม่มีประวัติการจอง</p>
         </div>
@@ -2860,7 +2860,7 @@
         </div>
 
         <!-- History (real-time via _subscribeComplaintsFromFirestore) -->
-        <div class="section-title"><span>ประวัติการแจ้ง</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>ประวัติการแจ้ง</span></div>
         <div id="complaint-list" style="padding:0 16px 80px;">
             <p style="text-align:center; color:#9ca3af; font-size:var(--fs-md); padding:20px;">ยังไม่มีประวัติการแจ้ง</p>
         </div>
@@ -2879,7 +2879,7 @@
             <small>วันสิ้นสุด: <strong id="leaseAlertDate">—</strong></small>
         </div>
 
-        <div class="section-title">
+        <div class="section-title" role="heading" aria-level="2">
             <span>Marketplace 🛒</span>
             <small id="market-post-trigger" style="color:var(--primary-green); cursor: pointer; font-weight: bold;"
                 onclick="showSubPage('add-market-page')">+ ลงประกาศ</small>
@@ -2962,7 +2962,7 @@
         </div><!-- end usage flex wrapper -->
 
         <div id="bills-history-section" style="display:none;">
-            <div class="section-title"><span>ประวัติย้อนหลัง</span></div>
+            <div class="section-title" role="heading" aria-level="2"><span>ประวัติย้อนหลัง</span></div>
             <div class="card" id="bills-history-list"></div>
         </div>
     </div>
@@ -3691,7 +3691,7 @@
             <h1 style="margin:0; font-size: var(--fs-lg);">ตั้งค่าความชอบ</h1>
         </div>
 
-        <div class="section-title"><span>Avatar Default</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>Avatar Default</span></div>
         <div class="card">
 
             <div class="avatar-selector" style="display: flex; gap: 15px; margin-top: 12px; flex-wrap: wrap; align-items: flex-start;">
@@ -3723,7 +3723,7 @@
                 oninput="updateName(this.value)">
         </div>
 
-        <div class="section-title"><span>ตั้งค่าดวงชะตา & ข้อมูล 🔮</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>ตั้งค่าดวงชะตา & ข้อมูล 🔮</span></div>
         <div style="padding: 0 15px;">
             <div style="border-radius:24px; padding: 20px; box-shadow: var(--shadow); background:var(--white);">
                 <label style="font-size: var(--fs-sm); opacity: 0.6;">เลือกวันเกิดของคุณ (เพื่อคำนวณดวงประจำวัน)</label>
@@ -3739,7 +3739,7 @@
             </div>
         </div>
 
-        <div class="section-title"><span>ตั้งค่าการออกใบเสร็จ</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>ตั้งค่าการออกใบเสร็จ</span></div>
         <div class="card">
             <label style="font-size: var(--fs-sm); color: var(--text-muted); display:block; margin-bottom:6px;">เลือกประเภทใบเสร็จที่ต้องการรับ</label>
             <select id="receipt-type-select" onchange="onReceiptTypeChange()">
@@ -3778,7 +3778,7 @@
             <h1 style="margin:0; font-size: var(--fs-lg);">ข้อมูลส่วนตัว</h1>
         </div>
 
-        <div class="section-title">
+        <div class="section-title" role="heading" aria-level="2">
             <span>ข้อมูลส่วนตัว</span>
             <small id="profile-edit-toggle" style="color:var(--primary-green); cursor:pointer; font-weight:bold;" onclick="toggleProfileEditMode()">✏️ แก้ไข</small>
         </div>
@@ -3849,7 +3849,7 @@
             </div>
         </div>
 
-        <div class="section-title"><span>ข้อมูลสัญญา📜</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>ข้อมูลสัญญา📜</span></div>
         <div class="card">
             <div class="receipt-item"><span>เริ่มต้นสัญญา:</span><strong id="profile-lease-start">—</strong></div>
             <div class="receipt-item"><span>สิ้นสุดสัญญา:</span><strong id="profile-lease-end">—</strong></div>
