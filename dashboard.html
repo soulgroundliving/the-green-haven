@@ -2159,6 +2159,19 @@
   html[data-theme="dark"] [style*="border-color:#e0e0e0"],
   html[data-theme="dark"] [style*="border-color: #e0e0e0"] { border-color: var(--stone) !important; }
 
+  /* Buttons with hardcoded light backgrounds */
+  html[data-theme="dark"] .year-tab { background: var(--surface-card); }
+  html[data-theme="dark"] .btn-doc-action { background: var(--surface-card); }
+  html[data-theme="dark"] .btn-doc-action.red { background: var(--red); }
+  html[data-theme="dark"] .form-field input,
+  html[data-theme="dark"] .form-field select { background: var(--surface-card); color: var(--ink); border-color: var(--stone); }
+  html[data-theme="dark"] .form-field input[readonly] { background: var(--cloud); color: var(--muted); }
+  /* #eee inline style catch */
+  html[data-theme="dark"] [style*="background:#eee"],
+  html[data-theme="dark"] [style*="background: #eee"],
+  html[data-theme="dark"] [style*="background-color:#eee"],
+  html[data-theme="dark"] [style*="background-color: #eee"] { background: var(--cloud) !important; }
+
   /* @media auto dark — no js required */
   @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) .compact-card { background: var(--surface-card); }

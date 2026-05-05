@@ -2053,6 +2053,56 @@
             }
         }
 
+        /* ─── Dark mode: buttons + inputs ─────────────────────────────── */
+        html[data-theme="dark"] select,
+        html[data-theme="dark"] input[type="text"],
+        html[data-theme="dark"] input[type="number"],
+        html[data-theme="dark"] input[type="email"],
+        html[data-theme="dark"] input[type="tel"],
+        html[data-theme="dark"] input[type="date"],
+        html[data-theme="dark"] input[type="time"],
+        html[data-theme="dark"] input[type="search"],
+        html[data-theme="dark"] input[type="password"],
+        html[data-theme="dark"] textarea {
+            background: var(--surface-card);
+            color: var(--ink);
+            border-color: var(--stone);
+        }
+        html[data-theme="dark"] .btn-outline {
+            background: var(--cloud);
+            color: var(--ink);
+            border-color: var(--stone);
+        }
+        html[data-theme="dark"] .spinner { border-color: var(--stone); }
+        html[data-theme="dark"] .day-card { background: var(--cloud); color: var(--muted); }
+        html[data-theme="dark"] .get-badge { background: #8a6d00; color: #fde68a; }
+        html[data-theme="dark"] .cf-pill { background: var(--surface-card); color: var(--muted); }
+        html[data-theme="dark"] .cf-cat-announcement { background: rgba(21,101,192,.18); color: #90caf9; }
+        html[data-theme="dark"] .cf-cat-event { background: rgba(230,81,0,.18); color: #ffcc80; }
+        html[data-theme="dark"] .market-pill { background: var(--surface-card); color: var(--muted); border-color: var(--stone); }
+        html[data-theme="dark"] .cat-radio-pill { background: var(--surface-card); border-color: var(--stone); }
+        /* @media auto-dark mirror */
+        @media (prefers-color-scheme: dark) {
+            html:not([data-theme="light"]) select,
+            html:not([data-theme="light"]) input[type="text"],
+            html:not([data-theme="light"]) input[type="number"],
+            html:not([data-theme="light"]) input[type="email"],
+            html:not([data-theme="light"]) input[type="tel"],
+            html:not([data-theme="light"]) input[type="date"],
+            html:not([data-theme="light"]) input[type="time"],
+            html:not([data-theme="light"]) input[type="search"],
+            html:not([data-theme="light"]) textarea {
+                background: var(--surface-card);
+                color: var(--ink);
+                border-color: var(--stone);
+            }
+            html:not([data-theme="light"]) .btn-outline { background: var(--cloud); color: var(--ink); }
+            html:not([data-theme="light"]) .cf-pill { background: var(--surface-card); }
+            html:not([data-theme="light"]) .market-pill { background: var(--surface-card); border-color: var(--stone); }
+            html:not([data-theme="light"]) .cat-radio-pill { background: var(--surface-card); border-color: var(--stone); }
+            html:not([data-theme="light"]) .day-card { background: var(--cloud); }
+        }
+
         /* ─── Print stylesheet (receipts/invoices) ──────────────────────── */
         @media print {
             /* Strip surrounding chrome — keep paper for the receipt only */
