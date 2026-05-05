@@ -537,7 +537,7 @@
 
     <div class="filter-row">
       <div class="filter-grid">
-        <div>
+        <div id="nestFilterFloor" style="display:none">
           <label class="filter-label" for="filterFloor">ชั้น (Nest)</label>
           <select id="filterFloor" class="filter-input">
             <option value="">ทั้งหมด</option>
@@ -547,7 +547,7 @@
             <option value="4">ชั้น 4</option>
           </select>
         </div>
-        <div>
+        <div id="nestFilterType" style="display:none">
           <label class="filter-label" for="filterType">ประเภท (Nest)</label>
           <select id="filterType" class="filter-input">
             <option value="">ทั้งหมด</option>
@@ -590,10 +590,9 @@
       <div class="modal-form-row">
         <label for="modalDuration">ระยะสัญญา</label>
         <select id="modalDuration">
-          <option value="6">6 เดือน</option>
           <option value="12" selected>12 เดือน</option>
           <option value="24">24 เดือน</option>
-          <option value="3">3 เดือน (ทดลอง)</option>
+          <option value="36">36 เดือน</option>
         </select>
       </div>
 
@@ -831,7 +830,7 @@
   const CF_HOST = 'https://asia-southeast1-the-green-haven.cloudfunctions.net';
   const LOCK_DURATION_MIN = 20;
   const EARLY_BIRD_DAYS = 30;
-  const VALID_DURATIONS = [3, 6, 12, 24];
+  const VALID_DURATIONS = [12, 24, 36];
 
   // ── State ─────────────────────────────────────────────────
   const state = {
@@ -1051,6 +1050,15 @@
     document.querySelectorAll('.building-tab').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.bld === state.building);
     });
+    const isNest = state.building === 'nest';
+    const floorDiv = document.getElementById('nestFilterFloor');
+    const typeDiv = document.getElementById('nestFilterType');
+    if (floorDiv) floorDiv.style.display = isNest ? '' : 'none';
+    if (typeDiv) typeDiv.style.display = isNest ? '' : 'none';
+    if (!isNest) {
+      document.getElementById('filterFloor').value = '';
+      document.getElementById('filterType').value = '';
+    }
   }
 
   // ── Render: date strip ────────────────────────────────────
