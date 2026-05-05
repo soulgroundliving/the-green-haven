@@ -460,3 +460,20 @@ select:invalid {
 /* Doc viewer media */
 .u-iframe-full  { height: 100%; }
 .u-img-contain  { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+/* ─── Skeleton loading ────────────────────────────── */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+.gh-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-card, #f3f4f6) 25%,
+    var(--border-subtle, #e5e7eb) 50%,
+    var(--surface-card, #f3f4f6) 75%
+  );
+  background-size: 800px 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: 4px;
+}

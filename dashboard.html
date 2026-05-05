@@ -1159,6 +1159,27 @@
   @media(max-width:600px){.form-grid,.bill-actions,.exp-form .form-grid,.mx-form .form-grid{grid-template-columns:1fr;}}
   @media(max-width:480px){.kpi-grid{grid-template-columns:1fr;}}
 
+  /* ── Cold-start skeleton overlay ── */
+  #dash-cat-financial { position: relative; }
+  #dash-cold-skeleton {
+    position: absolute; inset: 0;
+    background: var(--bg); z-index: 5;
+    pointer-events: none;
+  }
+  .dash-skel-kpi-grid    { display:grid; grid-template-columns:repeat(4,1fr); gap:.7rem; margin-bottom:1rem; }
+  .dash-skel-chart-grid  { display:grid; grid-template-columns:2fr 1fr;        gap:.7rem; margin-bottom:1rem; }
+  .dash-skel-insight-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:.7rem; margin-bottom:1rem; }
+  @media(max-width:1100px){
+    .dash-skel-kpi-grid    { grid-template-columns:repeat(2,1fr); }
+    .dash-skel-chart-grid  { grid-template-columns:1fr; }
+    .dash-skel-insight-grid{ grid-template-columns:1fr 1fr; }
+  }
+  @media(max-width:700px){
+    .dash-skel-kpi-grid    { grid-template-columns:1fr 1fr; }
+    .dash-skel-insight-grid{ grid-template-columns:1fr; }
+  }
+  @media(max-width:480px){ .dash-skel-kpi-grid { grid-template-columns:1fr; } }
+
   /* ===== PAYMENT DETAIL MODAL ===== */
   .pay-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:9000;display:none;align-items:center;justify-content:center;padding:1rem;}
   .pay-modal-overlay.show{display:flex;}
@@ -2616,6 +2637,24 @@ html[data-theme="dark"] .dx-td-amazon{ background:#2a1e00; }
 
   <!-- ===== TAB 1: การเงิน ===== -->
   <div id="dash-cat-financial" class="dash-cat-content">
+    <!-- Cold-start skeleton — removed by initDashboardCharts() after first data paint -->
+    <div id="dash-cold-skeleton" aria-hidden="true">
+      <div class="dash-skel-kpi-grid">
+        <div class="kpi-card"><div class="gh-skeleton" style="height:1.1rem;width:50%;margin-bottom:.5rem;"></div><div class="gh-skeleton" style="height:1.5rem;width:65%;margin-bottom:.35rem;"></div><div class="gh-skeleton" style="height:.75rem;width:40%;"></div></div>
+        <div class="kpi-card"><div class="gh-skeleton" style="height:1.1rem;width:50%;margin-bottom:.5rem;"></div><div class="gh-skeleton" style="height:1.5rem;width:65%;margin-bottom:.35rem;"></div><div class="gh-skeleton" style="height:.75rem;width:40%;"></div></div>
+        <div class="kpi-card"><div class="gh-skeleton" style="height:1.1rem;width:50%;margin-bottom:.5rem;"></div><div class="gh-skeleton" style="height:1.5rem;width:65%;margin-bottom:.35rem;"></div><div class="gh-skeleton" style="height:.75rem;width:40%;"></div></div>
+        <div class="kpi-card"><div class="gh-skeleton" style="height:1.1rem;width:50%;margin-bottom:.5rem;"></div><div class="gh-skeleton" style="height:1.5rem;width:65%;margin-bottom:.35rem;"></div><div class="gh-skeleton" style="height:.75rem;width:40%;"></div></div>
+      </div>
+      <div class="dash-skel-chart-grid">
+        <div class="card"><div class="gh-skeleton" style="height:.65rem;width:35%;border-radius:3px;margin-bottom:1rem;"></div><div class="gh-skeleton" style="height:200px;border-radius:8px;"></div></div>
+        <div class="card"><div class="gh-skeleton" style="height:.65rem;width:35%;border-radius:3px;margin-bottom:1rem;"></div><div class="gh-skeleton" style="height:200px;border-radius:8px;"></div></div>
+      </div>
+      <div class="dash-skel-insight-grid">
+        <div class="insight-card" style="border-color:var(--border);background:var(--card);"><div class="gh-skeleton" style="height:.65rem;width:55%;margin-bottom:.5rem;border-radius:3px;"></div><div class="gh-skeleton" style="height:1.25rem;width:60%;border-radius:3px;"></div></div>
+        <div class="insight-card" style="border-color:var(--border);background:var(--card);"><div class="gh-skeleton" style="height:.65rem;width:55%;margin-bottom:.5rem;border-radius:3px;"></div><div class="gh-skeleton" style="height:1.25rem;width:60%;border-radius:3px;"></div></div>
+        <div class="insight-card" style="border-color:var(--border);background:var(--card);"><div class="gh-skeleton" style="height:.65rem;width:55%;margin-bottom:.5rem;border-radius:3px;"></div><div class="gh-skeleton" style="height:1.25rem;width:60%;border-radius:3px;"></div></div>
+      </div>
+    </div>
     <div class="year-tabs" style="margin-bottom:.4rem;">
       <span class="year-tab-label">ปีงบประมาณ:</span>
       <button class="year-tab" data-action="setYear" data-year="all">ทั้งหมด</button>
