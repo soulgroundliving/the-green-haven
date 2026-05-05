@@ -2121,6 +2121,7 @@
   html[data-theme="dark"] [style*="background:#f9fafb"],
   html[data-theme="dark"] [style*="background:#f3f4f6"],
   html[data-theme="dark"] [style*="background:#fafafa"],
+  html[data-theme="dark"] [style*="background: #fafafa"],
   html[data-theme="dark"] [style*="background:#f8fafc"],
   html[data-theme="dark"] [style*="background-color:#f5f5f5"],
   html[data-theme="dark"] [style*="background-color:#fafafa"] { background: var(--cloud) !important; }
@@ -2163,7 +2164,17 @@
   html[data-theme="dark"] [style*="background:var(--bg-secondary)"],
   html[data-theme="dark"] [style*="background: var(--bg-secondary)"] { background: var(--surface-card) !important; }
   /* Owner section backgrounds */
-  html[data-theme="dark"] [style*="background:#f8faf9"] { background: var(--surface-card) !important; }
+  html[data-theme="dark"] [style*="background:#f8faf9"],
+  html[data-theme="dark"] [style*="background: #f8faf9"] { background: var(--surface-card) !important; }
+
+  /* #f0f0f0 — contract viewer close button, bill table header rows */
+  html[data-theme="dark"] [style*="background:#f0f0f0"],
+  html[data-theme="dark"] [style*="background: #f0f0f0"] { background: var(--cloud) !important; color: var(--ink) !important; }
+
+  /* #f3e5f5 — Nest column headers in historical data, tenant info block */
+  html[data-theme="dark"] [style*="background:#f3e5f5"],
+  html[data-theme="dark"] [style*="background: #f3e5f5"] { background: rgba(123,31,162,.18) !important; }
+  html[data-theme="dark"] [style*="color:#4a148c"] { color: #ce93d8 !important; }
 
   /* Remaining light hex patterns not caught above */
   html[data-theme="dark"] [style*="background:#f0f9f3"],
