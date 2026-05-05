@@ -373,12 +373,15 @@
   </style>
 </head>
 <body>
+<a class="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
   <div class="container">
     <!-- Header -->
-    <div class="header">
+    <header class="header">
       <h1>📋 Audit Log Viewer</h1>
       <p>Track all system access and actions across Green Haven</p>
-    </div>
+    </header>
+
+    <main id="main-content">
 
     <!-- Info Box -->
     <div class="info-box">
@@ -446,14 +449,15 @@
         <span id="logCount">Total: 0</span>
       </div>
       <div class="logs-table">
-        <table id="logsTable">
+        <table id="logsTable" aria-label="บันทึกการเข้าถึงและการกระทำในระบบ">
+          <caption class="sr-only">Audit logs — timestamp, user, role, action, status</caption>
           <thead>
             <tr>
-              <th>Timestamp</th>
-              <th>User Email</th>
-              <th>Role</th>
-              <th>Page/Action</th>
-              <th>Status</th>
+              <th scope="col">Timestamp</th>
+              <th scope="col">User Email</th>
+              <th scope="col">Role</th>
+              <th scope="col">Page/Action</th>
+              <th scope="col">Status</th>
             </tr>
           </thead>
           <tbody id="logsBody">
@@ -462,6 +466,7 @@
         </table>
       </div>
     </div>
+    </main>
   </div>
 
   <script>

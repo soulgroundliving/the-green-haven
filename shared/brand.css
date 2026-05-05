@@ -133,6 +133,23 @@ body {
   font-weight: var(--weight-regular);
 }
 
+/* Visually hidden but readable by screen readers ───────────────────────── */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* Skip-to-content — keyboard-only, visible on :focus ─────────────────────── */
+.skip-link {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--brand-primary); color: #fff;
+  padding: .6rem 1rem; border-radius: 0 0 8px 0;
+  z-index: 10000; font-weight: var(--weight-bold);
+  text-decoration: none; font-size: var(--text-sm);
+}
+.skip-link:focus { left: 0; }
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-brand);
   font-weight: var(--weight-semibold);
