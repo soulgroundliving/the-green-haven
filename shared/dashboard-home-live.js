@@ -541,7 +541,7 @@ function renderLast6MonthsTable(dataSource, mv, mgt, yr) {
     }
     return `<tr style="border-bottom:1px solid var(--border);">
       <td style="padding:.55rem .7rem;font-weight:700;">${row.label}</td>
-      <td style="padding:.55rem .7rem;text-align:right;color:#2d8653;">฿${dRent.toLocaleString()}</td>
+      <td style="padding:.55rem .7rem;text-align:right;color:#0f766e;">฿${dRent.toLocaleString()}</td>
       <td style="padding:.55rem .7rem;text-align:right;color:#ff8f00;">฿${dElec.toLocaleString()}</td>
       <td style="padding:.55rem .7rem;text-align:right;color:#2196f3;">฿${dWater.toLocaleString()}</td>
       <td style="padding:.55rem .7rem;text-align:right;font-size:.78rem;color:#666;">${dBreakdown}</td>
@@ -852,7 +852,7 @@ function updatePaymentStatusWidget() {
 
   el.innerHTML = `
     <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
-      <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${paidCount}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ จ่ายแล้ว</div></div>
+      <div><div style="font-size:1.5rem;font-weight:800;color:#0f766e">${paidCount}</div><div style="font-size:.72rem;color:#0f766e;font-weight:600;">✅ จ่ายแล้ว</div></div>
       <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${pendingTotal}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">⏳ รอชำระ</div></div>
       <div><div style="font-size:1.15rem;font-weight:800;color:var(--green-dark)">฿${totalCollected.toLocaleString()}</div><div style="font-size:.72rem;color:var(--text-muted)">เก็บได้แล้ว</div></div>
     </div>
@@ -884,7 +884,7 @@ function updateComplaintsWidget() {
     : `<div style="display:flex;gap:1.4rem;flex-wrap:wrap;">
         <div><div style="font-size:1.5rem;font-weight:800;color:#dc2626">${cOpen}</div><div style="font-size:.72rem;color:#dc2626;font-weight:600;">🔴 Open</div></div>
         <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${cInProg}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">🟡 In Progress</div></div>
-        <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${cDone}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ Resolved</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:#0f766e">${cDone}</div><div style="font-size:.72rem;color:#0f766e;font-weight:600;">✅ Resolved</div></div>
         <div><div style="font-size:1.5rem;font-weight:800;color:var(--text-muted)">${comp.length}</div><div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Total</div></div>
       </div>`;
 }
@@ -901,7 +901,7 @@ function updateMaintenanceWidget() {
     : `<div style="display:flex;gap:1.4rem;flex-wrap:wrap;">
         <div><div style="font-size:1.5rem;font-weight:800;color:#f59e0b">${mxPending}</div><div style="font-size:.72rem;color:#f59e0b;font-weight:600;">⏳ Pending</div></div>
         <div><div style="font-size:1.5rem;font-weight:800;color:#1976d2">${mxInProg}</div><div style="font-size:.72rem;color:#1976d2;font-weight:600;">🔨 In Progress</div></div>
-        <div><div style="font-size:1.5rem;font-weight:800;color:#2d8653">${mxDone}</div><div style="font-size:.72rem;color:#2d8653;font-weight:600;">✅ Done</div></div>
+        <div><div style="font-size:1.5rem;font-weight:800;color:#0f766e">${mxDone}</div><div style="font-size:.72rem;color:#0f766e;font-weight:600;">✅ Done</div></div>
         <div><div style="font-size:1.5rem;font-weight:800;color:var(--text-muted)">${mx.length}</div><div style="font-size:.72rem;color:var(--text-muted);font-weight:600;">Total</div></div>
       </div>`;
 }
@@ -930,7 +930,7 @@ function updateTenantStatusWidget() {
     <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
       <div><div style="font-size:1.5rem;font-weight:800;color:var(--blue)">${occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">มีผู้เช่า</div></div>
       <div><div style="font-size:1.5rem;font-weight:800;color:var(--accent)">${totalRooms - occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">ห้องว่าง</div></div>
-      <div><div style="font-size:1.5rem;font-weight:800;color:${occRate>=80?'#2d8653':occRate>=60?'#f59e0b':'#dc2626'}">${occRate}%</div><div style="font-size:.72rem;color:var(--text-muted)">Occupancy Rate</div></div>
+      <div><div style="font-size:1.5rem;font-weight:800;color:${occRate>=80?'#0f766e':occRate>=60?'#f59e0b':'#dc2626'}">${occRate}%</div><div style="font-size:.72rem;color:var(--text-muted)">Occupancy Rate</div></div>
       ${soonRooms.length ? `<div><div style="font-size:1.5rem;font-weight:800;color:var(--red)">${soonRooms.length}</div><div style="font-size:.72rem;color:var(--text-muted)">สัญญาใกล้หมด</div></div>` : ''}
     </div>
     <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${occCountRooms}/${activeRooms.length}</div>
