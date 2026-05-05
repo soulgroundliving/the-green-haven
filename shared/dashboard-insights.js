@@ -733,7 +733,7 @@
     // Master room list from จัดการห้องพัก (RoomConfigManager) — same source as the admin room config page
     const allRooms = [];
     for (const building of ['rooms', 'nest']) {
-      const cfg = window.RoomConfigManager ? RoomConfigManager.getRoomsConfig(building) : null;
+      const cfg = (typeof RoomConfigManager !== 'undefined') ? RoomConfigManager.getRoomsConfig(building) : null;
       if (cfg?.rooms) {
         cfg.rooms.filter(r => !r.deleted).forEach(r => {
           allRooms.push({ building, roomId: r.id, roomName: r.name || r.id });
@@ -741,9 +741,9 @@
       }
     }
 
-    // Fallback to tenant docs if RoomConfigManager unavailable
+    // Fallback to tenant docs if RoomConfigManager not loaded
     const rooms = allRooms.length > 0 ? allRooms
-      : tenants.map(t => ({ building: t.building, roomId: t.roomId, roomName: t.roomId }));
+      : tenants.map(t => ({ building: t.building, roomId: t.roomId, roomName: t.name || t.roomId }));
 
     return rooms.map(room => {
       const key = `${room.building}:${room.roomId}`;
