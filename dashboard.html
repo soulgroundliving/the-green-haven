@@ -2590,6 +2590,35 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 #dashProviderScore .card{ max-height:calc((100vh - 250px)/2); overflow-y:auto; }
 #dash-cat-operations .card{ padding:.8rem 1rem; }
 #dash-cat-operations .dash-tab-header{ margin-bottom:.75rem; padding-bottom:.65rem; }
+/* ── Operations Summary board ── */
+.ops-board-hdr{ display:flex; align-items:center; justify-content:space-between; }
+.ops-pulse{ display:flex; align-items:center; gap:.4rem; font-size:.71rem; font-weight:600; padding:.32rem .65rem; border-radius:6px; margin:.45rem 0 .55rem; }
+.ops-pulse.ok{ background:rgba(15,118,110,.09); color:#0f766e; }
+.ops-pulse.warn{ background:rgba(245,158,11,.11); color:#b45309; }
+.ops-pulse.danger{ background:rgba(220,38,38,.09); color:#dc2626; }
+.ops-row{ display:flex; align-items:center; gap:.5rem; padding:.38rem 0; border-bottom:1px solid var(--border); }
+.ops-row:last-of-type{ border-bottom:none; }
+.ops-accent{ width:3px; border-radius:2px; flex-shrink:0; align-self:stretch; min-height:30px; }
+.ops-accent.ok{ background:#0f766e; }
+.ops-accent.warn{ background:#d97706; }
+.ops-accent.danger{ background:#dc2626; }
+.ops-accent.neutral{ background:var(--border); }
+.ops-row-icon{ font-size:.9rem; flex-shrink:0; width:18px; text-align:center; }
+.ops-mid{ flex:1; min-width:0; }
+.ops-mid-title{ font-size:.71rem; font-weight:700; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ops-mid-sub{ font-size:.61rem; color:var(--text-muted); margin-top:1px; }
+.ops-tags{ display:flex; flex-wrap:wrap; gap:2px; margin-top:3px; }
+.ops-tag{ font-size:.58rem; padding:1px 5px; border-radius:3px; background:var(--bg-muted,#f3f4f6); color:var(--text-muted); }
+.ops-tag.urgent{ background:#fce4ec; color:#c06458; }
+.ops-counts{ display:flex; gap:.3rem; flex-shrink:0; }
+.ops-cnt{ text-align:center; min-width:28px; }
+.ops-cnt-v{ font-size:.92rem; font-weight:800; line-height:1.1; }
+.ops-cnt-v.red{ color:#dc2626; }
+.ops-cnt-v.amber{ color:#d97706; }
+.ops-cnt-v.green{ color:#0f766e; }
+.ops-cnt-v.muted{ color:var(--text-muted); font-weight:600; }
+.ops-cnt-l{ font-size:.55rem; color:var(--text-muted); }
+.ops-board-ft{ font-size:.61rem; color:var(--text-muted); text-align:right; margin-top:.4rem; }
 
 /* ── ชุมชน tab ── */
 #dashWellnessMatrix .card{ max-height:calc(100vh - 310px); overflow-y:auto; }

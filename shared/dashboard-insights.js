@@ -1073,97 +1073,90 @@
       });
       const totalLiff = lStatus.pending + lStatus.approved + lStatus.rejected;
 
-      // Build UI pieces
-      const pill = (label, count, color) => count === 0 ? '' :
-        `<span style="display:inline-block;padding:3px 10px;margin:2px 4px 2px 0;background:${color}22;border:1.5px solid ${color};color:${color};border-radius:999px;font-size:.75rem;font-weight:600;">${label} ${count}</span>`;
+      // ── Status board helpers ──
+      const cnt = (val, cls, lbl) =>
+        `<div class="ops-cnt"><div class="ops-cnt-v ${cls}">${val}</div><div class="ops-cnt-l">${lbl}</div></div>`;
 
-      const cStatusHTML = [
-        pill('open', cStatus.open, 'var(--alert,#c06458)'),
-        pill('กำลังดำเนินการ', cStatus['in-progress'], 'var(--accent,#ff9800)'),
-        pill('resolved', cStatus.resolved, 'var(--green)'),
-      ].join('') || `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีข้อมูล (90 วัน)</span>`;
+      const opsRow = (accentCls, icon, titleHTML, subText, countsHTML, tagsHTML) =>
+        `<div class="ops-row">
+          <div class="ops-accent ${accentCls}"></div>
+          <div class="ops-row-icon">${icon}</div>
+          <div class="ops-mid">
+            <div class="ops-mid-title">${titleHTML}</div>
+            ${subText ? `<div class="ops-mid-sub">${subText}</div>` : ''}
+            ${tagsHTML ? `<div class="ops-tags">${tagsHTML}</div>` : ''}
+          </div>
+          <div class="ops-counts">${countsHTML}</div>
+        </div>`;
 
-      const mStatusHTML = [
-        pill('pending', mStatus.pending, 'var(--alert,#c06458)'),
-        pill('กำลังดำเนินการ', mStatus.inprogress, 'var(--accent,#ff9800)'),
-        pill('เสร็จแล้ว', mStatus.done, 'var(--green)'),
-      ].join('') || `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีข้อมูล</span>`;
+      // Overall health pulse
+      const hasUrgent = cStatus.open > 0 || mOverdue.length > 0;
+      const hasPending = cStatus['in-progress'] > 0 || mStatus.pending > 0 || hStatus.pending > 0 || pStatus.pending > 0 || lStatus.pending > 0;
+      const pulseClass = hasUrgent ? 'danger' : hasPending ? 'warn' : 'ok';
+      const urgentItems = [cStatus.open ? `Complaints open ${cStatus.open}` : '', mOverdue.length ? `งานค้าง ${mOverdue.length}` : ''].filter(Boolean);
+      const pulseLabel = pulseClass === 'danger'
+        ? `⚠️ ต้องดำเนินการด่วน · ${urgentItems.join(' · ')}`
+        : pulseClass === 'warn' ? `⏳ มีรายการรอดำเนินการ`
+        : `✅ ทุกอย่างเรียบร้อย`;
 
-      const catChipsHTML = topCats.map(([cat, count]) =>
-        `<span style="display:inline-block;padding:2px 9px;margin:2px;background:var(--mist,#f2f1ec);border-radius:999px;font-size:.73rem;color:var(--ink);">${esc(cat)} <strong>${count}</strong></span>`
-      ).join('');
+      // Per-row accent colours
+      const cAccent = cStatus.open > 0 ? 'danger' : cStatus['in-progress'] > 0 ? 'warn' : totalComplaints > 0 ? 'ok' : 'neutral';
+      const mAccent = mOverdue.length > 0 ? 'danger' : mStatus.pending > 0 ? 'warn' : totalMaint > 0 ? 'ok' : 'neutral';
+      const hAccent = hStatus.pending > 0 ? 'warn' : totalHouse > 0 ? 'ok' : 'neutral';
+      const pAccent = pStatus.pending > 0 ? 'warn' : 'neutral';
+      const lAccent = lStatus.pending > 0 ? 'warn' : 'neutral';
 
-      const mOverdueHTML = mOverdue.length === 0
-        ? `<span style="color:var(--green-dark);font-size:.78rem;">✅ ไม่มีงานค้าง</span>`
-        : mOverdue.slice(0, 8).map(m =>
-            `<span style="display:inline-block;padding:2px 8px;margin:2px;background:#fce4ec;border-radius:999px;font-size:.7rem;color:var(--alert,#c06458);">ห้อง ${esc(m.room)} ${buildingLabel(m.building)}</span>`
-          ).join('') + (mOverdue.length > 8 ? ` <span style="font-size:.7rem;color:var(--alert,#c06458);">+${mOverdue.length - 8}</span>` : '');
+      // Tags
+      const cTagsHTML = topCats.slice(0, 4).map(([cat, n]) =>
+        `<span class="ops-tag">${esc(cat)} ${n}</span>`).join('');
+      const mTagsHTML = mOverdue.length === 0 ? '' :
+        mOverdue.slice(0, 5).map(m => `<span class="ops-tag urgent">ห้อง ${esc(m.room)}</span>`).join('') +
+        (mOverdue.length > 5 ? `<span class="ops-tag">+${mOverdue.length - 5}</span>` : '');
+
+      const cTitle = `Complaints <span style="font-weight:400;font-size:.64rem;color:var(--text-muted);">(90 วัน)${avgResolve ? ` · เฉลี่ย ${avgResolve} วัน` : ''}</span>`;
+      const mTitle = `Maintenance${mOverdue.length ? ` <span style="font-size:.65rem;color:#dc2626;font-weight:700;">⏰ ค้าง ${mOverdue.length}</span>` : ''}`;
 
       container.innerHTML = `
         <div class="card">
-          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="ops-board-hdr card-title">
             <span>📋 Operations Summary</span>
             <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
-                    style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+                    style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
           </div>
-
-          <div style="margin-bottom:1rem;">
-            <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
-              ⚠️ Complaints (90 วัน) · <span style="font-weight:400;">${totalComplaints} เรื่อง${avgResolve ? ` · เฉลี่ยแก้ไข ${avgResolve} วัน` : ''}</span>
-            </div>
-            <div style="margin-bottom:.5rem;">${cStatusHTML}</div>
-            ${topCats.length ? `<div style="font-size:.73rem;color:var(--text-muted);margin-bottom:.25rem;">หมวดหมู่:</div><div>${catChipsHTML}</div>` : ''}
+          <div class="ops-pulse ${pulseClass}">${pulseLabel}</div>
+          <div>
+            ${opsRow(cAccent, '⚠️', cTitle,
+              totalComplaints === 0 ? 'ยังไม่มีข้อมูล (90 วัน)' : null,
+              cnt(cStatus.open, cStatus.open > 0 ? 'red' : 'muted', 'Open') +
+              cnt(cStatus['in-progress'], cStatus['in-progress'] > 0 ? 'amber' : 'muted', 'Progress') +
+              cnt(cStatus.resolved, cStatus.resolved > 0 ? 'green' : 'muted', 'Resolved'),
+              cTagsHTML)}
+            ${opsRow(mAccent, '🔧', mTitle,
+              totalMaint === 0 ? 'ยังไม่มีข้อมูล' : mOverdue.length === 0 ? '✅ ไม่มีงานค้าง' : null,
+              cnt(mStatus.pending, mStatus.pending > 0 ? 'red' : 'muted', 'Pending') +
+              cnt(mStatus.inprogress, mStatus.inprogress > 0 ? 'amber' : 'muted', 'Progress') +
+              cnt(mStatus.done, mStatus.done > 0 ? 'green' : 'muted', 'Done'),
+              mTagsHTML)}
+            ${opsRow(hAccent, '🧹', 'Housekeeping',
+              totalHouse === 0 ? 'ยังไม่มีข้อมูล' : null,
+              cnt(hStatus.pending, hStatus.pending > 0 ? 'amber' : 'muted', 'Pending') +
+              cnt(hStatus.inprogress, hStatus.inprogress > 0 ? 'amber' : 'muted', 'Progress') +
+              cnt(hStatus.done, hStatus.done > 0 ? 'green' : 'muted', 'Done'),
+              null)}
+            ${opsRow(pAccent, '🐾', 'Pet Approvals',
+              totalPets === 0 ? 'ยังไม่มีคำขอ' : null,
+              cnt(pStatus.pending, pStatus.pending > 0 ? 'amber' : 'muted', 'รออนุมัติ') +
+              cnt(pStatus.approved, pStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
+              cnt(pStatus.rejected, pStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
+              null)}
+            ${opsRow(lAccent, '🔗', 'LINE Requests',
+              totalLiff === 0 ? 'ยังไม่มีคำขอ' : null,
+              cnt(lStatus.pending, lStatus.pending > 0 ? 'amber' : 'muted', 'รออนุมัติ') +
+              cnt(lStatus.approved, lStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
+              cnt(lStatus.rejected, lStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
+              null)}
           </div>
-
-          <div style="border-top:1px solid var(--border-subtle,#ebe9e2);padding-top:.8rem;">
-            <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
-              🔧 Maintenance · <span style="font-weight:400;">${totalMaint} รายการ${mOverdue.length ? ` · <span style="color:var(--alert,#c06458);">⏰ ค้าง ${mOverdue.length} รายการ</span>` : ''}</span>
-            </div>
-            <div style="margin-bottom:.5rem;">${mStatusHTML}</div>
-            <div style="font-size:.73rem;color:var(--text-muted);margin-bottom:.3rem;">ค้างเกิน 7 วัน:</div>
-            <div>${mOverdueHTML}</div>
-          </div>
-
-          <div style="border-top:1px solid var(--border-subtle,#ebe9e2);padding-top:.8rem;">
-            <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
-              🧹 Housekeeping · <span style="font-weight:400;">${totalHouse} รายการ</span>
-            </div>
-            <div>${[
-              pill('pending', hStatus.pending, 'var(--alert,#c06458)'),
-              pill('กำลังดำเนินการ', hStatus.inprogress, 'var(--accent,#ff9800)'),
-              pill('เสร็จแล้ว', hStatus.done, 'var(--green)'),
-            ].join('') || `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีข้อมูล</span>`}</div>
-          </div>
-
-          <div style="border-top:1px solid var(--border-subtle,#ebe9e2);padding-top:.8rem;">
-            <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
-              🐾 Pet Approvals · <span style="font-weight:400;">${totalPets} รายการ</span>
-            </div>
-            <div>${totalPets === 0
-              ? `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีคำขอ</span>`
-              : [
-                  pill('รออนุมัติ', pStatus.pending, 'var(--accent,#ff9800)'),
-                  pill('อนุมัติแล้ว', pStatus.approved, 'var(--green)'),
-                  pill('ปฏิเสธ', pStatus.rejected, 'var(--alert,#c06458)'),
-                ].join('')
-            }</div>
-          </div>
-
-          <div style="border-top:1px solid var(--border-subtle,#ebe9e2);padding-top:.8rem;">
-            <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;">
-              🔗 LINE Link Requests · <span style="font-weight:400;">${totalLiff} รายการ</span>
-            </div>
-            <div>${totalLiff === 0
-              ? `<span style="font-size:.8rem;color:var(--text-muted);">ยังไม่มีคำขอ</span>`
-              : [
-                  pill('รออนุมัติ', lStatus.pending, 'var(--accent,#ff9800)'),
-                  pill('อนุมัติแล้ว', lStatus.approved, 'var(--green)'),
-                  pill('ปฏิเสธ', lStatus.rejected, 'var(--alert,#c06458)'),
-                ].join('')
-            }</div>
-          </div>
-
-          <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.7rem;">${fmtCacheAge(Date.now())}</div>
+          <div class="ops-board-ft">${fmtCacheAge(Date.now())}</div>
         </div>`;
     } catch (e) {
       console.error('[insights] operations failed:', e);
