@@ -2483,6 +2483,56 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 .dash-kpi-stack .kpi-card .kpi-sub{ font-size:.65rem; }
 @media(max-width:1100px){ .dash-hero-row{ grid-template-columns:1fr; } }
 
+/* ── Financial tab compact no-scroll layout ── */
+.fin-top-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:.65rem;
+  margin-bottom:.65rem;
+  align-items:start;
+}
+.fin-payment-card{ height:100%; box-sizing:border-box; }
+.fin-kpi-2x2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:.5rem;
+  height:100%;
+  box-sizing:border-box;
+}
+.fin-kpi-2x2 .kpi-card{
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:.65rem;
+  padding:.75rem .9rem .65rem;
+  border-top-width:3px;
+}
+.fin-kpi-2x2 .kpi-card .kpi-icon{ font-size:.95rem; opacity:.55; margin-bottom:0; flex-shrink:0; }
+.fin-kpi-2x2 .kpi-card .kpi-body{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.fin-kpi-2x2 .kpi-card .kpi-label{ font-size:.67rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fin-kpi-2x2 .kpi-card .kpi-value{ font-size:1.2rem; line-height:1; }
+.fin-kpi-2x2 .kpi-card .kpi-sub{ font-size:.62rem; }
+.fin-bottom-grid{
+  display:grid;
+  grid-template-columns:1.5fr 1fr;
+  gap:.65rem;
+  margin-bottom:.65rem;
+  align-items:start;
+}
+.fin-right-col{ display:flex; flex-direction:column; gap:.5rem; }
+.fin-insights-row{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:.4rem;
+}
+.fin-insights-row .insight-card{ padding:.55rem .7rem; }
+.fin-insights-row .insight-title{ font-size:.66rem; }
+.fin-insights-row .insight-value{ font-size:1rem; }
+.fin-insights-row .insight-detail{ display:none; }
+@media(max-width:900px){
+  .fin-top-grid,.fin-bottom-grid{ grid-template-columns:1fr; }
+}
+
 /* ── Tab intro header (each tab) ── */
 .dash-tab-header{
   display:flex;
@@ -2875,19 +2925,26 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button class="year-tab" data-action="setYear" data-year="68">2568 (2025)</button>
       <button class="year-tab active" data-action="setYear" data-year="69">2569 (2026)</button>
     </div>
-    <!-- Hero KPI + secondary cluster -->
-    <div class="dash-hero-row">
-      <div class="kpi-card green dash-hero-card">
-        <div class="kpi-icon" aria-hidden="true">💰</div>
-        <div class="kpi-label">รายได้รวมทั้งปี · ทั้ง 2 อาคาร</div>
-        <div class="kpi-value green" id="kpi-total">฿0</div>
-        <div class="kpi-sub" id="kpi-total-sub"></div>
+    <!-- TOP ROW: Payment status (left) + 4 KPIs 2×2 (right) -->
+    <div class="fin-top-grid">
+      <div class="card fin-payment-card">
+        <div class="card-title" role="heading" aria-level="3">💳 สถานะการชำระเงินเดือนนี้</div>
+        <div id="dashPaymentStatus" style="min-height:60px;"></div>
+        <div id="dashOverdueBills"></div>
       </div>
-      <div class="dash-kpi-stack">
+      <div class="fin-kpi-2x2">
+        <div class="kpi-card green">
+          <div class="kpi-icon" aria-hidden="true">💰</div>
+          <div class="kpi-body">
+            <div class="kpi-label">รายได้รวมทั้งปี</div>
+            <div class="kpi-value green" id="kpi-total">฿0</div>
+            <div class="kpi-sub" id="kpi-total-sub"></div>
+          </div>
+        </div>
         <div class="kpi-card green">
           <div class="kpi-icon" aria-hidden="true">🏠</div>
           <div class="kpi-body">
-            <div class="kpi-label">รายได้ rooms (ห้องแถว)</div>
+            <div class="kpi-label">รายได้ rooms</div>
             <div class="kpi-value green" id="kpi-rooms-total">฿0</div>
             <div class="kpi-sub" id="kpi-rooms-sub"></div>
           </div>
@@ -2903,60 +2960,40 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <div class="kpi-card amber">
           <div class="kpi-icon" aria-hidden="true">📆</div>
           <div class="kpi-body">
-            <div class="kpi-label">รายได้เฉลี่ย / เดือน</div>
+            <div class="kpi-label">เฉลี่ย / เดือน</div>
             <div class="kpi-value amber" id="kpi-monthly">฿0</div>
             <div class="kpi-sub" id="kpi-monthly-sub"></div>
           </div>
         </div>
       </div>
     </div>
-    <div class="dash-section-sep">รายได้รายเดือน</div>
-    <div class="charts-grid">
-      <div class="card"><div class="card-title" role="heading" aria-level="3">รายได้รายเดือน (บาท)</div><div class="chart-wrap"><canvas id="chartRevenue"></canvas></div></div>
-      <div class="card"><div class="card-title" role="heading" aria-level="3">สัดส่วนรายได้</div><div class="chart-wrap"><canvas id="chartPie"></canvas></div></div>
-    </div>
-    <div class="dash-section-sep">แยกตามประเภท</div>
-    <div class="insights-grid">
-      <div class="insight-card green"><div class="insight-title">ค่าเช่าห้อง</div><div class="insight-value" id="ins-rent">—</div><div class="insight-detail" id="ins-rent-d">รวมห้องพักทั้งหมด</div></div>
-      <div class="insight-card amber"><div class="insight-title">ค่าไฟฟ้า</div><div class="insight-value" id="ins-elec">—</div><div class="insight-detail" id="ins-elec-d">อัตราตาม config ห้องพัก</div></div>
-      <div class="insight-card blue"><div class="insight-title">ค่าน้ำประปา</div><div class="insight-value" id="ins-water">—</div><div class="insight-detail" id="ins-water-d">อัตราตาม config ห้องพัก</div></div>
-    </div>
-    <div class="dash-section-sep">ประวัติรายได้ 12 เดือน</div>
-    <div class="card" style="margin-bottom:1rem;">
-      <div class="card-title" id="dash-last6-title" role="heading" aria-level="3">รายได้ย้อนหลัง 12 เดือน (ล่าสุด)</div>
-      <div style="overflow-x:auto;">
-        <table class="dash-data-table">
-          <thead>
-            <tr>
-              <th>เดือน</th>
-              <th>ค่าเช่า</th>
-              <th>ค่าไฟ</th>
-              <th>ค่าน้ำ</th>
-              <th>แยกอาคาร</th>
-              <th>รวม</th>
-            </tr>
-          </thead>
-          <tbody id="dash-last6-body">
-            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem;">กำลังโหลด...</td></tr>
-          </tbody>
-        </table>
+    <!-- BOTTOM ROW: Revenue chart (left) + Pie + 3 insights (right) -->
+    <div class="fin-bottom-grid">
+      <div class="card">
+        <div class="card-title" role="heading" aria-level="3">รายได้รายเดือน (บาท)</div>
+        <div class="chart-wrap-sm"><canvas id="chartRevenue"></canvas></div>
+      </div>
+      <div class="fin-right-col">
+        <div class="card">
+          <div class="card-title" role="heading" aria-level="3">สัดส่วนรายได้</div>
+          <div style="height:125px;"><canvas id="chartPie"></canvas></div>
+        </div>
+        <div class="fin-insights-row">
+          <div class="insight-card green"><div class="insight-title">ค่าเช่า</div><div class="insight-value" id="ins-rent">—</div><div class="insight-detail" id="ins-rent-d"></div></div>
+          <div class="insight-card amber"><div class="insight-title">ค่าไฟ</div><div class="insight-value" id="ins-elec">—</div><div class="insight-detail" id="ins-elec-d"></div></div>
+          <div class="insight-card blue"><div class="insight-title">ค่าน้ำ</div><div class="insight-value" id="ins-water">—</div><div class="insight-detail" id="ins-water-d"></div></div>
+        </div>
       </div>
     </div>
-    <div class="dash-section-sep">รายจ่ายสาธารณูปโภค</div>
-    <div class="charts-grid-3">
-      <div class="card" id="card-years-compare" style="display:none;"><div class="card-title" role="heading" aria-level="3">เปรียบเทียบ 3 ปี</div><div class="chart-wrap-sm"><canvas id="chartYears"></canvas></div></div>
-      <div class="card"><div class="card-title" role="heading" aria-level="3">ค่าไฟรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartElec"></canvas></div></div>
-      <div class="card"><div class="card-title" role="heading" aria-level="3">ค่าน้ำรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartWater"></canvas></div></div>
+    <!-- Hidden containers — keep IDs in DOM for JS compatibility -->
+    <div style="display:none;" aria-hidden="true">
+      <span id="dash-last6-title"></span>
+      <tbody id="dash-last6-body"></tbody>
+      <div id="dashPaymentBehavior"></div>
+      <div id="card-years-compare"><canvas id="chartYears"></canvas></div>
+      <canvas id="chartElec"></canvas>
+      <canvas id="chartWater"></canvas>
     </div>
-    <div class="dash-section-sep">สถานะการชำระเงิน</div>
-    <div class="card" style="margin-bottom:1rem;">
-      <div class="card-title" role="heading" aria-level="3">สถานะการชำระเงินเดือนนี้</div>
-      <div id="dashPaymentStatus" style="min-height:70px;"></div>
-    </div>
-    <!-- Phase 1 Deep Analytic: Per-Tenant Payment Behavior -->
-    <div id="dashPaymentBehavior" style="margin-bottom:1rem;"></div>
-    <!-- Phase 2.5: Overdue Bills -->
-    <div id="dashOverdueBills" style="margin-bottom:1rem;"></div>
   </div><!-- END การเงิน -->
 
   <!-- ===== TAB 3: ผู้เช่า ===== -->
