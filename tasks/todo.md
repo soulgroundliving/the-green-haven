@@ -1781,19 +1781,16 @@ Dashboard sidebar and tenant card are the two biggest mobile UX failures. These 
 
 ---
 
-## Phase B — Mobile-first overhaul (NEXT) — WAITING FOR USER APPROVAL
+## Phase B — SHIPPED `5eb3cfd` (2026-05-07) ✅
 
-### B1 — Dashboard sidebar hamburger collapse (highest impact)
-- **Files:** `dashboard.html` (CSS + HTML), `shared/dashboard-main.js`
-- **What:** hamburger `<button>` shown at ≤768px, sidebar slides in/out via `body.sidebar-open` class, backdrop overlay, `aria-expanded` toggle
-- **Why:** Admin cannot use dashboard on phone/tablet today — sidebar always eats 220px
+- [x] B1 — Sidebar collapse breakpoint 600→768px: CSS `@media (max-width:768px)` + JS guard updated in `dashboard-main.js`
+- [x] B2 — Action grid 1-col at ≤480px: `@media (max-width:480px) { .action-buttons { grid-template-columns:1fr } }` in `tenant_app.html`
+- [x] B3 — Year-tabs overflow scroll: `overflow-x:auto; flex-wrap:nowrap; scrollbar-width:none` — confirmed live
 
-### B2 — Tenant card action grid: 2×2 → 1-col at ≤480px
-- **Files:** `tenant_app.html`
-- **What:** `@media (max-width: 480px)` → action grid `grid-template-columns: 1fr`
+---
 
-### B3 — Tab overflow: horizontal scroll instead of wrap/clip
-- **Files:** `dashboard.html` (category tabs CSS), `tenant_app.html` (bottom nav/tab row)
-- **What:** `overflow-x: auto; scrollbar-width: none` on tab containers
+## Phase C — Data visualization polish — SHIPPED `5eb3cfd` + `ff9ee35` (2026-05-07) ✅
 
-Approve to start?
+- [x] C1 — Bill table emoji aria-hidden in JS template string (`tenant_app.html`)
+- [x] C2 — Chart palette: all `#2d8653` / `rgba(45,134,83)` → `#0f766e` / `rgba(15,118,110)` brand teal in `dashboard-home-live.js` (charts + inline text colors)
+- [x] C3 — KPI monthly-sub trend: `totalsTrend = trendArrow(totals)` appended after insight-card trends — confirmed `kpi-monthly-sub` updated with `⬆️/⬇️ จากเดือนก่อน`
