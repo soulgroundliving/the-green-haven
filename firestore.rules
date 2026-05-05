@@ -234,6 +234,16 @@ service cloud.firestore {
       }
     }
 
+    // ===== PEOPLE COLLECTION (person-centric identity — Phase 2) =====
+    // Holds identity + gamification for ex-tenants who transitioned to community
+    // member (role='player'). Owner reads own doc via linkedAuthUid match; admin
+    // reads/writes all. CF writes via admin SDK (transitionToPlayer, convertBookingToTenant).
+    match /people/{tenantId} {
+      allow read:  if isAdmin()
+        || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
     // ===== PETS — collectionGroup query support (admin only) =====
     // Admin's pet-approval page calls collectionGroup('pets') to aggregate
     // pets across every tenant doc. The nested rule above only matches the

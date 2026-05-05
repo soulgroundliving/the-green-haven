@@ -691,6 +691,71 @@ async function archiveTenantOnMoveOut() {
 // Expose globally so dashboard-main.js's data-action dispatcher can find it
 window.archiveTenantOnMoveOut = archiveTenantOnMoveOut;
 
+// ─── Transition tenant to community member / player role ──────────────────
+// Calls transitionToPlayer CF — archives contract, creates people/{tenantId},
+// sets role:'player' claim. Person stays in LINE with community/wellness/
+// gamification access. Billing, meter, maintenance, housekeeping are hidden.
+async function transitionToPlayer() {
+  const building = currentEditBuilding;
+  const roomId = currentEditRoomId;
+  if (!building || !roomId) {
+    showToast('ไม่พบข้อมูลห้อง — เปิด modal ก่อนแล้วลองใหม่', 'error');
+    return;
+  }
+
+  const occupancy = TenantLookup.getRoomOccupancyInfo(building, roomId);
+  const tenant = occupancy.tenant || {};
+  const tenantName = String(tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`).trim();
+  if (!tenant.tenantId) {
+    showToast('ห้องนี้ไม่มีผู้เช่าอยู่', 'info');
+    return;
+  }
+
+  const ok = await window.ghConfirm(
+    `ย้าย "${tenantName || 'ผู้เช่า'}" (ห้อง ${roomId}) เป็น Community Member?\n\n` +
+    `• ห้อง ${roomId} จะกลับเป็นว่าง — assign ผู้เช่าใหม่ได้ทันที\n` +
+    `• ข้อมูลและ points ของผู้เช่าจะถูกเก็บไว้\n` +
+    `• ผู้เช่ายังอยู่ใน LINE ได้ — เข้าถึง community / wellness / gamification\n` +
+    `• billing, meter, maintenance จะถูกซ่อน\n` +
+    `• ย้อนกลับได้ — เมื่อ booking ใหม่และ convert เป็น tenant ข้อมูลเดิมจะกลับมา`,
+    { title: 'ย้ายเป็น Community Member', confirmLabel: 'ย้ายเป็น Community', danger: false }
+  );
+  if (!ok) return;
+
+  if (!window.firebase?.functions?.httpsCallable) {
+    showToast('Firebase functions ไม่พร้อม — รีโหลดหน้า', 'error');
+    return;
+  }
+
+  try {
+    const callable = window.firebase.functions.httpsCallable('transitionToPlayer');
+    const res = await callable({ building, roomId });
+    const d = res?.data || {};
+    showToast(
+      `✓ ย้ายเป็น Community Member สำเร็จ — ${tenantName} (tenantId=${d.tenantId})`,
+      'success'
+    );
+
+    closeTenantModal();
+    if (typeof updateRoomStatuses === 'function') updateRoomStatuses();
+    if (typeof updateOccupancyDashboard === 'function') updateOccupancyDashboard();
+    const currentPage = document.querySelector('.page.active');
+    if (currentPage && currentPage.id === 'page-property') {
+      const nestSection = document.getElementById('property-nest-section');
+      if (nestSection && nestSection.style.display !== 'none') {
+        if (typeof initNestPage === 'function') initNestPage();
+      } else {
+        if (typeof initRoomsPage === 'function') initRoomsPage();
+        if (typeof renderCompactRoomGrid === 'function') renderCompactRoomGrid();
+      }
+    }
+  } catch (e) {
+    console.error('transitionToPlayer failed:', e);
+    showToast('ย้ายเป็น Community ไม่สำเร็จ: ' + (e?.message || String(e)), 'error');
+  }
+}
+window.transitionToPlayer = transitionToPlayer;
+
 // Close modal when clicking outside
 document.addEventListener('click', function(e) {
   const modal = document.getElementById('tenantModal');

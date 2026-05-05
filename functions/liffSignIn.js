@@ -100,6 +100,22 @@ exports.liffSignIn = functions
     return res.status(403).json({ error: `Account not approved (status: ${status})`, status });
   }
 
+  // ── Community member (player) path ────────────────────────────────────────
+  // transitionToPlayer CF sets liffUsers/{lineUserId}.role='player' so we can
+  // detect returning community members without requiring room/building claims.
+  if (liffData.role === 'player') {
+    const uid = 'line:' + lineUserId;
+    let playerToken;
+    try {
+      playerToken = await admin.auth().createCustomToken(uid, { role: 'player' });
+      console.log(`✅ liffSignIn (player): uid=${uid} LINE ${lineUserId}`);
+    } catch (e) {
+      console.error('liffSignIn: player token failed:', e.message);
+      return res.status(500).json({ error: 'Failed to create player token' });
+    }
+    return res.status(200).json({ customToken: playerToken, role: 'player' });
+  }
+
   const room = String(liffData.room || '');
   const building = String(liffData.building || 'rooms');
 

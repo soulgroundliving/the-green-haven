@@ -1820,3 +1820,72 @@ Dashboard sidebar and tenant card are the two biggest mobile UX failures. These 
 - [x] F2 — `.gh-avatar-initials` CSS class in `brand.css` — `50% radius, brand-primary-soft bg, brand-primary text, semibold` — ready to apply wherever initials avatars are needed
 - [x] F3 — 3-tier shadow: `--shadow` (tier-1 cards), `--shadow-hover` (tier-2 lift), `--shadow-overlay: 0 12px 40px rgba(0,0,0,.22)` (tier-3 modals). `.pay-modal` + `#notifDropdown` migrated to token
 - [x] F4 — Card micro-texture: `radial-gradient(ellipse at 12% 12%, rgba(15,118,110,.04) 0%, transparent 55%)` on `.kpi-card/.insight-card/.gh-card`; `background-image:none` in dark mode
+
+---
+
+# Community Member / Player Role (ผู้เล่น) — plan 2026-05-07
+
+## Goal
+ex-tenant (สัญญาหมด) → admin กด "🎮 ย้ายเป็น Community Member" → ยังอยู่ใน LINE → ใช้ community / wellness / gamification / marketplace ได้ → billing / meter / maintenance / housekeeping ซ่อน → ย้อนกลับได้ (new booking → convert via 4-pass cascade เดิม)
+
+## Open questions answered (from session 2026-05-07)
+- Q1: Sign-up path = admin-only manual transition เท่านั้น (ไม่มี external sign-up ตอนนี้)
+- Q2: Open features: community feed ✅ | wellness ✅ | daily-bonus ✅ | marketplace ✅ | gamification/rewards ✅ | billing ❌ | meter ❌ | maintenance ❌ | housekeeping ❌ | complaints ❌
+- Q3: Redemption ✅ — ex-tenant แลกได้
+
+## Architecture
+
+```
+tenant doc (เช่าอยู่)
+    ↓ admin กด "🎮 ย้ายเป็น Community Member"
+[A] archive contract (archiveTenantOnMoveOut batch logic เดิม)
+[B] upsert people/{tenantId}  { currentLease: null, gamification: {...} }
+[C] Firebase Auth claim → role: 'player'  (revoke building/room claims)
+    ↓
+person stays in LINE → community-only view in tenant_app
+```
+
+Reversibility (เมื่อกลับมาเช่าใหม่):
+```
+booking → admin "Convert to Tenant" → convertBookingToTenant 4-pass + people/ lookup
+    ↓ restore gamification from people/{tenantId}
+    ↓ update people/{tenantId}.currentLease = {building, roomId, contractId}
+    ↓ revoke role:'player' → issue tenant claims
+```
+
+## Task breakdown
+
+### A — Firestore collection `people/{tenantId}` ✅
+- [x] `firestore.rules`: `match /people/{tenantId}` — owner read (linkedAuthUid), admin write
+
+### B — CF `transitionToPlayer` (NEW) ✅
+- [x] `functions/transitionToPlayer.js` — archive batch + people/ upsert + role:'player' claim + liffUsers.role update
+- [x] Registered in `functions/index.js`
+
+### C — Admin UI button ✅
+- [x] `dashboard.html`: "🎮 ย้ายเป็น Community" button (teal outline, next to 📦 Archive)
+- [x] `shared/dashboard-tenant-modal.js`: `transitionToPlayer()` — ghConfirm + CF call + toast + refresh
+
+### D — `liffSignIn` CF update ✅
+- [x] `functions/liffSignIn.js`: if `liffData.role === 'player'` → mint token `{role:'player'}` → return `{customToken, role:'player'}`
+
+### E — `tenant_app.html` community view ✅
+- [x] `_applyPlayerMode()` — hides "บิล" nav button, wraps `showPage()` to block room-specific pages
+- [x] Fast-path: `tr.claims.role === 'player'` → player mode + dispatch liffLinked
+- [x] After sign-in: `data.role === 'player'` → player mode + dispatch liffLinked
+
+### F — `convertBookingToTenant` — restore from `people/` ✅
+- [x] Pass 5: query `people/` by `linkedAuthUid + currentLease==null` → restore gamification, `restoredFrom: 'people_player'`
+- [x] Post-convert: update `people/{tenantId}.currentLease`, revoke `role:'player'` claim, clear `liffUsers.role`
+- [x] `dashboard-bookings.js` toast: `people_player` → "Community Member กลับมาเช่า"
+
+## Execution order
+1. A (Firestore rules) → B (CF) → C (admin UI) — admin side; verify via Firestore console + dashboard
+2. D (liffSignIn) → E (tenant_app) — LIFF side; push to Vercel to test
+3. F (convertBookingToTenant) — reversibility; test by transitioning → re-booking
+
+## Out of scope (this phase)
+- ❌ External sign-up flow (LINE LIFF for non-tenants to self-register)
+- ❌ Full `people/` migration for existing active tenants — they stay in `tenants/list/{roomId}`
+- ❌ Community-specific leaderboard or features beyond existing gamification UI
+- ❌ Automatic transition on lease expiry — admin manual only

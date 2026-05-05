@@ -155,6 +155,28 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
       priorTenantId = hit.tenantId;
       priorGamificationFromArchive = hit.gamification;
     }
+
+    // Pass 5: check people/{tenantId} for a community-member (player) returning
+    // to a new lease. transitionToPlayer sets currentLease:null on this doc.
+    if (!priorTenantId) {
+      try {
+        const peopleSnap = await firestore.collection('people')
+          .where('linkedAuthUid', '==', lineUid)
+          .where('currentLease', '==', null)
+          .limit(1)
+          .get();
+        if (!peopleSnap.empty) {
+          const d = peopleSnap.docs[0].data() || {};
+          if (d.tenantId) {
+            priorTenantId = String(d.tenantId);
+            priorGamificationFromArchive = d.gamification || null;
+            restoredFrom = 'people_player';
+          }
+        }
+      } catch (e) {
+        console.warn('convertBookingToTenant: people/ player lookup failed:', e.message);
+      }
+    }
   }
 
   // ── Atomic conversion transaction ──────────────────────────────────────
@@ -326,6 +348,24 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
     if (e instanceof functions.https.HttpsError) throw e;
     console.error('convertBookingToTenant: transaction failed:', e);
     throw new functions.https.HttpsError('internal', e.message || 'Conversion transaction failed');
+  }
+
+  // If player returning — update people/ doc + revoke role:'player' claim (fire-and-forget).
+  if (result.restoredFrom === 'people_player' && result.tenantId) {
+    const peopleRef = firestore.collection('people').doc(result.tenantId);
+    peopleRef.update({
+      currentLease: { building: result.building, roomId: result.roomId, contractId: result.contractId },
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }).catch(e => console.warn('convertBookingToTenant: people/ currentLease update failed:', e.message));
+
+    // Revoke player claim — new tenant claims set by liffSignIn on next sign-in.
+    admin.auth().setCustomUserClaims(lineUid, {})
+      .catch(e => console.warn(`convertBookingToTenant: revoke player claim failed uid=${lineUid}:`, e.message));
+
+    // Clear role:'player' from liffUsers so liffSignIn issues tenant token next time.
+    firestore.collection('liffUsers').doc(prospectLineId)
+      .update({ role: admin.firestore.FieldValue.delete() })
+      .catch(e => console.warn('convertBookingToTenant: liffUsers role clear failed:', e.message));
   }
 
   console.log(`✅ convertBookingToTenant: ${bookingId} → tenants/${result.building}/list/${result.roomId} (tenantId=${result.tenantId}, returning=${result.isReturningTenant}, restoredFrom=${result.restoredFrom || 'none'})`);

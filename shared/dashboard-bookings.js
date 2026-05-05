@@ -312,6 +312,7 @@
         archive_uid: 'ลูกบ้านเก่ากลับมา (LINE เดิม)',
         archive_lineid: 'ลูกบ้านเก่ากลับมา (LINE ID เดิม)',
         archive_phone: 'ลูกบ้านเก่ากลับมา (เบอร์เดิม)',
+        people_player: 'Community Member กลับมาเช่า',
       }[data.restoredFrom] || 'ลูกบ้านใหม่';
       const msg = `✓ แปลงสำเร็จ! tenantId=${data.tenantId} — ${restoredLabel}`;
       toastBk(msg, 'success');

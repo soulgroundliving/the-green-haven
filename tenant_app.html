@@ -8146,6 +8146,32 @@
         window._lineProfile = null;
         window._lineLinkStatus = null; // null | 'pending' | 'approved' | 'rejected'
 
+        // Apply community-member (player) mode — hides room-specific nav + pages.
+        // Called once after sign-in confirms role:'player'; idempotent.
+        function _applyPlayerMode() {
+            // Hide "บิล" nav button (usage/billing page is room-specific)
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(btn => {
+                const onclick = btn.getAttribute('onclick') || '';
+                if (onclick.includes("'usage'") || onclick.includes('"usage"')) {
+                    btn.style.display = 'none';
+                }
+            });
+            // Guard showPage so room-specific pages redirect to community
+            const _origShowPage = window.showPage;
+            if (typeof _origShowPage === 'function') {
+                window.showPage = function(id, el) {
+                    const blocked = ['usage', 'maintenance', 'housekeeping',
+                        'contract-action-page', 'payment-page', 'meter-page'];
+                    if (blocked.includes(id)) {
+                        id = 'community';
+                        el = null;
+                    }
+                    return _origShowPage(id, el);
+                };
+            }
+        }
+
         // Call liffSignIn CF: verify LIFF ID token server-side → Firebase custom token.
         // Returns: { linked: true, room, building } | { linked: false, status } | null (error)
         async function _callLiffSignIn() {
@@ -8158,6 +8184,13 @@
                     if (tr.claims.room && tr.claims.building) {
                         window.dispatchEvent(new Event('liffLinked'));
                         return { linked: true, room: tr.claims.room, building: tr.claims.building };
+                    }
+                    // Community member (player) — has role:'player' claim, no room/building.
+                    if (tr.claims.role === 'player') {
+                        window._isPlayerMode = true;
+                        _applyPlayerMode();
+                        window.dispatchEvent(new Event('liffLinked'));
+                        return { linked: true, role: 'player' };
                     }
                 } catch (_) {}
             }
@@ -8243,6 +8276,15 @@
                     ? 'LINE in-app browser ค้าง — กรุณาปิด LINE จาก app switcher แล้วเปิดใหม่ (1 ครั้ง) แล้วลองอีกที'
                     : `sign-in ไม่สำเร็จ: ${signInErr.message}`);
                 return null;
+            }
+
+            // Community member (player) path — no room/building in response.
+            if (data.role === 'player') {
+                window._isPlayerMode = true;
+                _applyPlayerMode();
+                console.log('✅ LIFF custom token sign-in — player mode');
+                window.dispatchEvent(new Event('liffLinked'));
+                return { linked: true, role: 'player' };
             }
 
             // Set room globals BEFORE dispatching liffLinked so subscribers can read them.
