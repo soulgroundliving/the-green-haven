@@ -211,7 +211,7 @@ exports.transitionToPlayer = functions
 
     if (lineID) {
       firestore.collection('liffUsers').doc(lineID)
-        .update({ role: 'player', updatedAt: now })
+        .update({ role: 'player', tenantId, updatedAt: now })
         .catch(e => console.warn(`transitionToPlayer: liffUsers update failed lineID=${lineID}:`, e.message));
     }
 

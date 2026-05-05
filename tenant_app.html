@@ -3849,6 +3849,7 @@
             </div>
         </div>
 
+        <div id="profile-contract-section">
         <div class="section-title" role="heading" aria-level="2"><span>ข้อมูลสัญญา📜</span></div>
         <div class="card">
             <div class="receipt-item"><span>เริ่มต้นสัญญา:</span><strong id="profile-lease-start">—</strong></div>
@@ -3862,6 +3863,7 @@
             <button class="btn-main" style="margin-top: 15px; background: #334435;"
                 onclick="showSubPage('contract-action-page')"><i class="fas fa-file-signature"></i> แจ้งต่อสัญญา /
                 ย้ายออก</button>
+        </div>
         </div>
     </div>
 
@@ -8170,6 +8172,9 @@
                     return _origShowPage(id, el);
                 };
             }
+            // Hide contract section — players are not currently renting a room
+            const contractSection = document.getElementById('profile-contract-section');
+            if (contractSection) contractSection.style.display = 'none';
         }
 
         // Call liffSignIn CF: verify LIFF ID token server-side → Firebase custom token.
@@ -8188,6 +8193,7 @@
                     // Community member (player) — has role:'player' claim, no room/building.
                     if (tr.claims.role === 'player') {
                         window._isPlayerMode = true;
+                        try { window._playerProfile = JSON.parse(localStorage.getItem('player_profile') || 'null'); } catch(_) {}
                         _applyPlayerMode();
                         window.dispatchEvent(new Event('liffLinked'));
                         return { linked: true, role: 'player' };
@@ -8281,6 +8287,14 @@
             // Community member (player) path — no room/building in response.
             if (data.role === 'player') {
                 window._isPlayerMode = true;
+                // Cache identity from liffSignIn response for profile page rendering.
+                // Falls back to a previous session's localStorage copy if CF didn't return name.
+                if (data.name || data.phone) {
+                    window._playerProfile = { name: data.name || '', phone: data.phone || '', tenantId: data.tenantId || '' };
+                    try { localStorage.setItem('player_profile', JSON.stringify(window._playerProfile)); } catch(_) {}
+                } else {
+                    try { window._playerProfile = JSON.parse(localStorage.getItem('player_profile') || 'null'); } catch(_) {}
+                }
                 _applyPlayerMode();
                 console.log('✅ LIFF custom token sign-in — player mode');
                 window.dispatchEvent(new Event('liffLinked'));
@@ -9256,6 +9270,19 @@
         // ---- PROFILE ----
         function renderProfilePage() {
             const set = (id, val) => { const el = document.getElementById(id); if (el && val != null && val !== '') el.textContent = val; };
+
+            // Player mode: render identity from liffSignIn response (cached in localStorage).
+            // Contract section is already hidden by _applyPlayerMode().
+            if (window._isPlayerMode && window._playerProfile) {
+                const p = window._playerProfile;
+                set('profile-fullname', p.name || '—');
+                set('profile-phone',    p.phone || '—');
+                ['display-name', 'display-name-map'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && p.name) el.textContent = `คุณ${p.name}`;
+                });
+                return;
+            }
 
             if (_taTenant) {
                 const name = _taTenant.name || _taTenant.tenantName || '';

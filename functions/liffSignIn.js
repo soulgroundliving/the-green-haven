@@ -105,15 +105,33 @@ exports.liffSignIn = functions
   // detect returning community members without requiring room/building claims.
   if (liffData.role === 'player') {
     const uid = 'line:' + lineUserId;
+    const tenantId = String(liffData.tenantId || '');
+
+    // Fetch player identity from people/ (admin SDK — bypasses Firestore rules)
+    // so the LIFF profile page can show name/phone without a client-side query.
+    let playerName = '', playerPhone = '';
+    if (tenantId) {
+      try {
+        const peopleSnap = await firestore.collection('people').doc(tenantId).get();
+        if (peopleSnap.exists) {
+          const pd = peopleSnap.data();
+          playerName = String(pd.name || '');
+          playerPhone = String(pd.phone || '');
+        }
+      } catch (e) {
+        console.warn('liffSignIn: people lookup failed for player:', e.message);
+      }
+    }
+
     let playerToken;
     try {
-      playerToken = await admin.auth().createCustomToken(uid, { role: 'player' });
-      console.log(`✅ liffSignIn (player): uid=${uid} LINE ${lineUserId}`);
+      playerToken = await admin.auth().createCustomToken(uid, { role: 'player', tenantId });
+      console.log(`✅ liffSignIn (player): uid=${uid} tenantId=${tenantId} LINE ${lineUserId}`);
     } catch (e) {
       console.error('liffSignIn: player token failed:', e.message);
       return res.status(500).json({ error: 'Failed to create player token' });
     }
-    return res.status(200).json({ customToken: playerToken, role: 'player' });
+    return res.status(200).json({ customToken: playerToken, role: 'player', tenantId, name: playerName, phone: playerPhone });
   }
 
   const room = String(liffData.room || '');
