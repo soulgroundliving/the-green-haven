@@ -1376,7 +1376,6 @@
     if (_finInited) return;
     _finInited = true;
     renderPaymentBehavior();
-    renderOverdueBills();
   }
   async function renderTenantDashSummary() {
     const expEl  = document.getElementById('tenSum-exp');
@@ -1436,7 +1435,6 @@
       cacheClear('tenants_all'); cacheClear('payment_deltas'); cacheClear('complaints_90d');
       renderTenantInsights();
     }
-    else if (target === 'overdue') { cacheClear('bills_raw'); renderOverdueBills(); }
     else if (target === 'operations') { cacheClear('ops_insights'); renderOperationsInsights(); }
     else if (target === 'meterSpike') { cacheClear('meter_spike'); renderMeterSpike(); }
     else if (target === 'providerScore') { renderProviderScore(); }
