@@ -2554,6 +2554,42 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   .fin-util-grid{ grid-template-columns:1fr 1fr; }
 }
 
+/* ── ผู้เช่า tab ── */
+.ten-layout{
+  display:grid;
+  grid-template-columns:280px 1fr;
+  gap:.6rem;
+  align-items:start;
+}
+#dashTenantInsights .card{ max-height:calc(100vh - 270px); overflow-y:auto; }
+#dash-cat-tenants .card{ padding:.8rem 1rem; }
+#dash-cat-tenants .dash-tab-header{ margin-bottom:.75rem; padding-bottom:.65rem; }
+
+/* ── ปฏิบัติการ tab ── */
+.ops-layout{
+  display:grid;
+  grid-template-columns:1fr 1.6fr;
+  gap:.6rem;
+  margin-bottom:.6rem;
+  align-items:start;
+}
+.ops-status-col{ display:flex; flex-direction:column; gap:.5rem; }
+#dashOperationsInsights{ max-height:calc(100vh - 290px); overflow-y:auto; }
+#dash-cat-operations .card{ padding:.8rem 1rem; }
+#dash-cat-operations .dash-tab-header{ margin-bottom:.75rem; padding-bottom:.65rem; }
+#dash-cat-operations .dash-2col{ gap:.6rem; }
+
+/* ── ชุมชน tab ── */
+#dashWellnessMatrix .card{ max-height:calc(100vh - 310px); overflow-y:auto; }
+#dashStreakLeaderboard .card{ max-height:calc(100vh - 310px); overflow-y:auto; }
+#dash-cat-community .card{ padding:.8rem 1rem; }
+#dash-cat-community .dash-tab-header{ margin-bottom:.75rem; padding-bottom:.65rem; }
+#dash-cat-community .dash-2col{ gap:.6rem; margin-bottom:.6rem; }
+
+@media(max-width:900px){
+  .ten-layout,.ops-layout{ grid-template-columns:1fr; }
+}
+
 /* ── Tab intro header (each tab) ── */
 .dash-tab-header{
   display:flex;
@@ -3050,11 +3086,13 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
       <button class="dash-view-link" data-action="showPage" data-page="tenant">ดูผู้เช่าทั้งหมด →</button>
     </div>
-    <div class="card" style="margin-bottom:1rem;">
-      <div class="card-title" role="heading" aria-level="3">สถานะห้องพัก</div>
-      <div id="dashTenantStatus" style="min-height:70px;"></div>
+    <div class="ten-layout">
+      <div class="card">
+        <div class="card-title" role="heading" aria-level="3">สถานะห้องพัก</div>
+        <div id="dashTenantStatus"></div>
+      </div>
+      <div id="dashTenantInsights"></div>
     </div>
-    <div id="dashTenantInsights" style="margin-bottom:1rem;"></div>
   </div><!-- END ผู้เช่า -->
 
   <!-- ===== TAB 4: ปฏิบัติการ ===== -->
@@ -3066,19 +3104,23 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
       <button class="dash-view-link" data-action="showPage" data-page="requests-approvals">ดูคำขอทั้งหมด →</button>
     </div>
-    <div class="dash-2col">
-      <div class="card">
-        <div class="card-title" role="heading" aria-level="3">คำร้องเรียน</div>
-        <div id="dashComplaintsStatus" style="min-height:60px;"></div>
+    <div class="ops-layout">
+      <div class="ops-status-col">
+        <div class="card">
+          <div class="card-title" role="heading" aria-level="3">คำร้องเรียน</div>
+          <div id="dashComplaintsStatus"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" role="heading" aria-level="3">งานซ่อมบำรุง</div>
+          <div id="dashMaintenanceStatus"></div>
+        </div>
       </div>
-      <div class="card">
-        <div class="card-title" role="heading" aria-level="3">งานซ่อมบำรุง</div>
-        <div id="dashMaintenanceStatus" style="min-height:60px;"></div>
-      </div>
+      <div id="dashOperationsInsights"></div>
     </div>
-    <div id="dashOperationsInsights" style="margin-bottom:1rem;"></div>
-    <div id="dashMeterSpike" style="margin-bottom:1rem;"></div>
-    <div id="dashProviderScore" style="margin-bottom:1rem;"></div>
+    <div class="dash-2col">
+      <div id="dashMeterSpike"></div>
+      <div id="dashProviderScore"></div>
+    </div>
   </div><!-- END ปฏิบัติการ -->
 
   <!-- ===== TAB 5: ชุมชน ===== -->
@@ -3107,9 +3149,6 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <div class="dash-2col">
       <div id="dashWellnessMatrix"></div>
       <div id="dashStreakLeaderboard"></div>
-    </div>
-    <div style="text-align:right;margin-bottom:1rem;">
-      <button class="year-tab" data-action="showPage" data-page="gamification">🌿 ดูคะแนนทั้งหมด →</button>
     </div>
   </div><!-- END ชุมชน -->
 
