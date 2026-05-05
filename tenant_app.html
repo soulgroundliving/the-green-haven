@@ -2214,29 +2214,33 @@
        background-size: cover;
        transition: background-image 0.8s ease;">
 
-            <div onclick="showPage('home'); updateNavActiveIndex(0);"
-                style="position: absolute; top: 45%; left: 35%; cursor: pointer; z-index: 30; text-align: center; touch-action: manipulation;">
+            <button type="button" onclick="showPage('home'); updateNavActiveIndex(0);"
+                aria-label="ไปหน้าหลัก"
+                style="position:absolute;top:45%;left:35%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label">NEST</div>
                 <div class="map-icon-bounce animate-bounce">🏠</div>
-            </div>
+            </button>
 
-            <div onclick="showPage('community'); updateNavActiveIndex(2);"
-                style="position: absolute; top: 55%; left: 65%; cursor: pointer; text-align: center; z-index: 30; touch-action: manipulation;">
+            <button type="button" onclick="showPage('community'); updateNavActiveIndex(2);"
+                aria-label="ไปหน้าชุมชน / ตลาด"
+                style="position:absolute;top:55%;left:65%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #E67E22;">MARKET</div>
                 <div class="map-icon-bounce" style="animation-delay: 0.2s;">🛒</div>
-            </div>
+            </button>
 
-            <div onclick="showPage('profile'); updateNavActiveIndex(4);"
-                style="position: absolute; top: 35%; left: 60%; cursor: pointer; text-align: center; z-index: 30; touch-action: manipulation;">
+            <button type="button" onclick="showPage('profile'); updateNavActiveIndex(4);"
+                aria-label="ไปหน้าโปรไฟล์ / Pet Park"
+                style="position:absolute;top:35%;left:60%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #9B59B6;">PET PARK</div>
                 <div class="map-icon-bounce" style="animation-delay: 0.4s;">🐾</div>
-            </div>
+            </button>
 
-            <div onclick="showPage('usage'); updateNavActiveIndex(3);"
-                style="position: absolute; top: 70%; left: 18%; cursor: pointer; text-align: center; z-index: 30; touch-action: manipulation;">
+            <button type="button" onclick="showPage('usage'); updateNavActiveIndex(3);"
+                aria-label="ไปหน้าชำระบิล"
+                style="position:absolute;top:70%;left:18%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #0EA5E9;">PAY BILL</div>
                 <div class="map-icon-bounce" style="animation-delay: 0.6s;">💳</div>
-            </div>
+            </button>
         </div>
     </div>
 
@@ -10388,6 +10392,7 @@
             content.style.display = isOpen ? 'none' : 'block';
             content.classList.toggle('active');
             headerElement.classList.toggle('active');
+            headerElement.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
         }
 
         // ---- BUILDING INTERNET STATUS ----
@@ -11188,6 +11193,22 @@
                 toast('ไม่มีเอกสารสัญญาเช่า', 'warning');
             }
         }
+
+        // B2: enhance all accordion header divs with role/tabindex/aria-expanded + keyboard
+        (function enhanceAccordions() {
+            function apply() {
+                document.querySelectorAll('[onclick="toggleAccordion(this)"]').forEach(function(el) {
+                    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+                    if (!el.getAttribute('role')) el.setAttribute('role', 'button');
+                    if (!el.hasAttribute('aria-expanded')) el.setAttribute('aria-expanded', 'false');
+                    el.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleAccordion(el); }
+                    });
+                });
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
+            else apply();
+        })();
 
         // expose key ones to window for inline onclick reliability
         window.toggleAccordion = toggleAccordion;

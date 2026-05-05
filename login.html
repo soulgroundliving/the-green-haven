@@ -1279,14 +1279,36 @@
     }
 
     function showForgotPassword() {
-      const email = prompt('กรุณากรอกอีเมลของคุณ:');
-      if (email) {
-        window.firebaseAuthFunctions.sendPasswordResetEmail(email).then(() => {
-          showMessage('ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว', false);
-        }).catch(error => {
-          showMessage(error.message);
-        });
-      }
+      window.GhModal.open({
+        title: 'รีเซ็ตรหัสผ่าน',
+        body: '<p style="margin:0 0 12px;font-size:14px;color:var(--muted);">กรอกอีเมลที่ใช้ลงทะเบียน ระบบจะส่งลิงก์รีเซ็ตให้ทันที</p>' +
+          '<input type="email" id="gh-reset-email" placeholder="email@example.com" autocomplete="email" inputmode="email" ' +
+          'style="width:100%;padding:10px 12px;border:1.5px solid var(--stone);border-radius:8px;font-size:14px;box-sizing:border-box;font-family:inherit;">' +
+          '<div id="gh-reset-err" role="alert" style="display:none;margin-top:8px;color:var(--alert);font-size:13px;"></div>',
+        actions: [
+          { label: 'ยกเลิก', variant: 'ghost', onClick: function(m) { m.close(); } },
+          { label: 'ส่งลิงก์รีเซ็ต', variant: 'primary', onClick: async function(m) {
+            const emailEl = document.getElementById('gh-reset-email');
+            const errEl  = document.getElementById('gh-reset-err');
+            const email  = (emailEl?.value || '').trim();
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+              errEl.textContent = 'กรุณากรอกอีเมลให้ถูกต้อง';
+              errEl.style.display = 'block';
+              emailEl?.focus();
+              return;
+            }
+            try {
+              await window.firebaseAuthFunctions.sendPasswordResetEmail(email);
+              m.close();
+              showMessage('ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว', false);
+            } catch (err) {
+              errEl.textContent = err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+              errEl.style.display = 'block';
+            }
+          }}
+        ]
+      });
+      setTimeout(function() { document.getElementById('gh-reset-email')?.focus(); }, 80);
     }
 
     console.log('✅ Authentication logic loaded');

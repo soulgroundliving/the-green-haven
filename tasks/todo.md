@@ -1322,3 +1322,140 @@ firebase deploy --only firestore:rules,firestore:indexes
 1. **เริ่ม Phase 1 อย่างเดียวก่อน หรือไป Phase 2 เลย?** (Phase 1 = solid foundation, Phase 2 = full vision but riskier)
 2. **`contractId` ของ legacy tenant (pre-2026-05-04) จะ generate ตอน archive หรือ ตอน migration?** เสนอ: ตอน archive (lazy — ไม่กระทบ live tenant ตอนนี้)
 3. **Community member ในอนาคตจะ sign up ทางไหน?** (ผูก Phase 3 design)
+
+---
+
+# Phase 5 — Senior UI/UX Audit Fixes (2026-05-05)
+
+## Context
+Senior UI/UX audit ทำขึ้นหลัง dark mode ครบ. พบ 10 จุดที่มีผลกับ usability / accessibility / performance จริง.
+แบ่งเป็น 4 กลุ่มตาม effort จากน้อยไปมาก แต่ละจุดอิสระจากกัน (ทำแยกได้).
+
+---
+
+## กลุ่ม A — Quick UX wins (effort: เล็ก, 1-2 ไฟล์ต่อจุด)
+
+### A1 — Login forgot-password: `prompt()` → GhModal form
+- **ปัญหา:** `prompt('กรุณาใส่อีเมล')` ใน `login.html` เป็น browser native dialog — ดีไซน์ไม่ได้, ไม่ validate, block UI, บางเบราว์เซอร์ (brave) block
+- **ไฟล์:** `login.html`
+- **Fix:**
+  - เปลี่ยน call `prompt()` → `GhModal.open({ title: 'รีเซ็ตรหัสผ่าน', body: '<input type="email"...>' })`
+  - จาก callback ของ OK button → เรียก `sendPasswordResetEmail(auth, email)`
+  - ใส่ email validation + loading state บนปุ่ม OK
+- **Why:** UX ปี 2026 ไม่ใช้ `prompt()`. User trust + cross-browser consistency
+- **Verification:** คลิก "ลืมรหัสผ่าน" → modal style เดียวกับ ghAlert → ส่งอีเมลได้
+
+### A2 — Dashboard KPI grid: fixed 4-col → responsive auto-fit
+- **ปัญหา:** `grid-template-columns: repeat(4, 1fr)` บน `.kpi-grid` — บนหน้าจอ <900px truncate, admin ใช้ tablet/มือถือตอน property walk-through
+- **ไฟล์:** `dashboard.html` (CSS block ประมาณ `.kpi-grid` class)
+- **Fix:** `grid-template-columns: repeat(auto-fit, minmax(190px, 1fr))`
+- **Why:** Single-line change แต่แก้ทุก screen size. KPI ยังเต็มแถวบน desktop
+- **Verification:** resize browser ถึง 600px → KPI เปลี่ยนเป็น 2-col หรือ 1-col เองโดยไม่ truncate
+
+### A3 — Dashboard bill layout: sticky 2-col → stack on mobile
+- **ปัญหา:** Bill/payment section ใช้ `grid-template-columns: 1fr 1fr` + `position: sticky` sidebar — ใช้ไม่ได้บน mobile
+- **ไฟล์:** `dashboard.html` (CSS block, bill section)
+- **Fix:** เพิ่ม `@media (max-width: 768px)` → `grid-template-columns: 1fr; position: static`
+- **Why:** Admin อาจดูบิลบนมือถือขณะ inspect ห้อง
+- **Verification:** mobile emulation → bill tab layout stack ได้
+
+### A4 — Dashboard form 2-col: เพิ่ม mobile breakpoint
+- **ปัญหา:** Form sections ใน Owner/Settings ใช้ `grid-template-columns: 1fr 1fr` — ไม่มี media query stack
+- **ไฟล์:** `dashboard.html` (CSS)
+- **Fix:** `@media (max-width: 600px)` → `grid-template-columns: 1fr` สำหรับ form grid
+- **Verification:** mobile → form inputs เต็ม width
+
+---
+
+## กลุ่ม B — Accessibility (effort: เล็ก-กลาง)
+
+### B1 — Tenant app world map tiles: `<div onclick>` → `<button>`
+- **ปัญหา:** World map tiles (หน้าสำรวจ) ใช้ `<div class="world-item animate-bounce" onclick="...">` — ไม่ keyboard accessible, ไม่ screen reader friendly
+- **ไฟล์:** `tenant_app.html` (world map section)
+- **Fix:** เปลี่ยนจาก `<div onclick>` → `<button type="button" class="world-item animate-bounce" aria-label="ไปหน้า...">` หรือเพิ่ม `role="button" tabindex="0"` + `keydown` handler (Enter/Space)
+- **Why:** A11y + iOS Safari บางเวอร์ชัน click event บน div ไม่ reliable
+- **Verification:** Tab ผ่าน world map → focus visible, Enter กด → navigate ได้
+
+### B2 — Emergency accordion: inline `onclick` → `<button>` + aria-expanded
+- **ปัญหา:** Emergency procedure accordion header ใช้ `onclick="toggleAccordion(this)"` บน div — ไม่ semantic
+- **ไฟล์:** `tenant_app.html` (emergency section)
+- **Fix:**
+  - เปลี่ยน element เป็น `<button>` หรือ เพิ่ม `role="button" tabindex="0" aria-expanded="false"`
+  - `toggleAccordion()` toggle `aria-expanded` ด้วย
+  - `aria-controls` ชี้ไปที่ panel id
+- **Why:** Screen reader จะประกาศ "expanded/collapsed" ให้ user รู้สถานะ
+- **Verification:** Toggle accordion → aria-expanded ใน DevTools เปลี่ยนตาม
+
+---
+
+## กลุ่ม C — Performance (effort: กลาง)
+
+### C1 — Font Awesome: async load แทน render-blocking
+- **ปัญหา:** `<link rel="stylesheet" href="cdnjs...font-awesome...all.min.css">` โหลด eager (~160KB CSS) บน tenant_app + dashboard — block first paint
+- **ไฟล์:** `tenant_app.html`, `dashboard.html`
+- **Fix:** เปลี่ยนเป็น async pattern:
+  ```html
+  <link rel="stylesheet" href="...all.min.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="...all.min.css"></noscript>
+  ```
+- **Why:** Icon ไม่ใช่ critical content — defer ได้ โดยไม่มี layout shift (ตัวหนังสือ fallback ระหว่างรอ)
+- **Verification:** Lighthouse → Eliminate render-blocking resources ลดลง
+
+### C2 — QRCode.js: lazy-load เฉพาะหน้า payment
+- **ปัญหา:** `<script src="cdnjs...qrcode.min.js">` โหลด eager บน tenant_app — ส่วนใหญ่ user ไม่เข้าหน้า payment ทุกครั้ง
+- **ไฟล์:** `tenant_app.html`
+- **Fix:**
+  - ลบ `<script>` ออกจาก head
+  - ใน `showPage('payment')` handler → `if (!window.QRCode) await loadScript('/path/qrcode.min.js')`
+  - ใช้ pattern เดียวกับ `window.ensureHtml2Canvas` ที่มีอยู่แล้ว
+- **Why:** ประหยัด parse time (QRCode.js ~18KB) บน first load
+- **Verification:** DevTools Network → qrcode.js โหลดเฉพาะเมื่อเปิด payment tab
+
+---
+
+## กลุ่ม D — Structural (effort: กลาง-ใหญ่, แนะนำทำแยก session)
+
+### D1 — Unify dark mode: ลบ `body.night-mode` ออกจาก tenant_app
+- **ปัญหา:** `tenant_app.html` มี CSS block ใหญ่ใช้ `body.night-mode` selector (legacy) ขนานไปกับ `html[data-theme="dark"]` (ใหม่) — mechanism สองชั้น, ค่าอาจต่างกัน, เวลา debug สับสน
+- **ไฟล์:** `tenant_app.html` (CSS dark mode block), `shared/theme-toggle.js`
+- **Fix:**
+  - Map ทุก rule `body.night-mode X` → `html[data-theme="dark"] X`
+  - ลบ `body.classList.add('night-mode')` ออกจาก `theme-toggle.js`
+  - ทดสอบ dark mode ทุกหน้า
+- **Why:** Single mechanism → easier debug, ลด CSS size, ไม่มี specificity conflict
+- **Risk:** MEDIUM — ต้อง map ทุก rule อย่างถูกต้อง ก่อน deploy ต้อง verify visual ทุก page
+- **Verification:** dark mode บน tenant_app ทุก 25 pages ดูเหมือนกัน
+
+### D2 — dashboard-extra.js: CSS class แทน inline hex ใน dynamic HTML
+- **ปัญหา:** JS-generated HTML ใน `dashboard-extra.js` ใช้ inline style hex (เช่น `style="background:#fafafa; border:1px solid #ddd"`) — dark mode ต้องเพิ่ม attribute selector ใหม่ทุกครั้ง ไม่ scale
+- **ไฟล์:** `shared/dashboard-extra.js`, `dashboard.html` (เพิ่ม class definitions)
+- **Fix:**
+  - สร้าง CSS classes เช่น `.owner-card`, `.payment-config-card`, `.bill-table-header` ใน dashboard.html
+  - เปลี่ยน template strings ใน JS → ใช้ class แทน inline style
+  - Dark mode จะ cover อัตโนมัติผ่าน `.owner-card { background: var(--surface-card) }`
+- **Why:** Sustainable — dark mode สำหรับ element ใหม่ใน JS ไม่ต้อง touch CSS อีกต่อไป
+- **Risk:** MEDIUM — เยอะมาก ทำค่อย ๆ ทีละ function
+- **Verification:** เพิ่ม CSS class ใหม่ใน JS → ไม่ต้องเพิ่ม CSS rule ใหม่สำหรับ dark mode
+
+---
+
+## Priority แนะนำ
+
+| จุด | Impact | Effort | แนะนำ |
+|-----|--------|--------|--------|
+| A1 — Login forgot-password | สูง (trust) | เล็ก | ✅ ทำก่อน |
+| A2 — KPI responsive | สูง (usability) | เล็กมาก | ✅ ทำก่อน |
+| A3 — Bill layout mobile | กลาง | เล็ก | ✅ ทำก่อน |
+| A4 — Form grid mobile | กลาง | เล็กมาก | ✅ ทำก่อน |
+| B1 — World map button | สูง (a11y) | เล็ก | ✅ ทำก่อน |
+| B2 — Emergency accordion | กลาง (a11y) | เล็ก | ควรทำ |
+| C1 — FA async | กลาง (perf) | เล็ก | ควรทำ |
+| C2 — QRCode lazy | กลาง (perf) | เล็ก | ควรทำ |
+| D1 — Dark mode unify | ต่ำ-กลาง (debt) | ใหญ่ | เก็บไว้ |
+| D2 — JS hex → CSS class | กลาง (debt) | ใหญ่ | เก็บไว้ |
+
+## รอ User Approval ก่อนเริ่ม
+- [ ] เริ่ม Group A ทั้ง 4 จุดก่อน? (low-risk, quick wins)
+- [ ] ทำ Group B (a11y) ในรอบเดียวกัน?
+- [ ] Group C (perf) แยก session?
+- [ ] Group D (structural) เลื่อนไปก่อน?

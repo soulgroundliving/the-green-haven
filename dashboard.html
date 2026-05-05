@@ -1153,8 +1153,10 @@
   .btn-auto-bill{background:linear-gradient(135deg,#9c27b0,#673ab7);color:white;border:none;border-radius:6px;padding:.7rem 1rem;cursor:pointer;font-weight:600;font-size:.9rem;font-family:var(--font-brand);transition:all .2s;width:100%;}
   .btn-auto-bill:hover{background:linear-gradient(135deg,#7b1fa2,#512da8);transform:translateY(-1px);}
 
-  @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.charts-grid{grid-template-columns:1fr}.bill-layout{grid-template-columns:1fr}.insights-grid{grid-template-columns:1fr 1fr}.proj-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.charts-grid{grid-template-columns:1fr}.bill-layout{grid-template-columns:1fr}.bill-layout>div:last-child{position:static;}.insights-grid{grid-template-columns:1fr 1fr}.proj-grid{grid-template-columns:1fr 1fr}}
   @media(max-width:700px){.kpi-grid{grid-template-columns:1fr 1fr}.charts-grid-3{grid-template-columns:1fr}.header-nav{display:none}.main{padding:1rem}.proj-grid{grid-template-columns:1fr}.floor-rooms{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:600px){.form-grid,.bill-actions,.exp-form .form-grid,.mx-form .form-grid{grid-template-columns:1fr;}}
+  @media(max-width:480px){.kpi-grid{grid-template-columns:1fr;}}
 
   /* ===== PAYMENT DETAIL MODAL ===== */
   .pay-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:9000;display:none;align-items:center;justify-content:center;padding:1rem;}
