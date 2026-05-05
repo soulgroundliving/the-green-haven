@@ -1073,20 +1073,22 @@
       });
       const totalLiff = lStatus.pending + lStatus.approved + lStatus.rejected;
 
-      // ── Status board helpers ──
-      const cnt = (val, cls, lbl) =>
-        `<div class="ops-cnt"><div class="ops-cnt-v ${cls}">${val}</div><div class="ops-cnt-l">${lbl}</div></div>`;
+      // ── Individual card helpers ──
+      const borderMap = { ok: '#0f766e', warn: '#d97706', danger: '#dc2626', neutral: 'var(--border)' };
 
-      const opsRow = (accentCls, icon, titleHTML, subText, countsHTML, tagsHTML) =>
-        `<div class="ops-row">
-          <div class="ops-accent ${accentCls}"></div>
-          <div class="ops-row-icon">${icon}</div>
-          <div class="ops-mid">
-            <div class="ops-mid-title">${titleHTML}</div>
-            ${subText ? `<div class="ops-mid-sub">${subText}</div>` : ''}
-            ${tagsHTML ? `<div class="ops-tags">${tagsHTML}</div>` : ''}
+      const ccnt = (val, cls, lbl) =>
+        `<div class="ops-cc-num"><div class="ops-cc-v ${cls}">${val}</div><div class="ops-cc-l">${lbl}</div></div>`;
+
+      const badge = (cls, text) => `<span class="ops-cc-badge ${cls}">${text}</span>`;
+
+      const catCard = (accentCls, titleHTML, badgeHTML, numsHTML, tagsHTML) =>
+        `<div class="card" style="border-left:3px solid ${borderMap[accentCls]}">
+          <div class="ops-cc-hdr">
+            <div class="ops-cc-title">${titleHTML}</div>
+            ${badgeHTML}
           </div>
-          <div class="ops-counts">${countsHTML}</div>
+          <div class="ops-cc-nums">${numsHTML}</div>
+          ${tagsHTML ? `<div class="ops-tags" style="margin-top:.3rem;">${tagsHTML}</div>` : ''}
         </div>`;
 
       // Overall health pulse
@@ -1099,65 +1101,68 @@
         : pulseClass === 'warn' ? `⏳ มีรายการรอดำเนินการ`
         : `✅ ทุกอย่างเรียบร้อย`;
 
-      // Per-row accent colours
+      // Per-card accent
       const cAccent = cStatus.open > 0 ? 'danger' : cStatus['in-progress'] > 0 ? 'warn' : totalComplaints > 0 ? 'ok' : 'neutral';
       const mAccent = mOverdue.length > 0 ? 'danger' : mStatus.pending > 0 ? 'warn' : totalMaint > 0 ? 'ok' : 'neutral';
       const hAccent = hStatus.pending > 0 ? 'warn' : totalHouse > 0 ? 'ok' : 'neutral';
       const pAccent = pStatus.pending > 0 ? 'warn' : 'neutral';
       const lAccent = lStatus.pending > 0 ? 'warn' : 'neutral';
 
+      // Badges
+      const cBadge = cStatus.open > 0 ? badge('danger', '⚠️ Action Required')
+        : cStatus['in-progress'] > 0 ? badge('warn', '⏳ In Progress')
+        : totalComplaints > 0 ? badge('ok', '✅ Resolved') : badge('neutral', '— ยังไม่มีข้อมูล');
+      const mBadge = mOverdue.length > 0 ? badge('danger', `⏰ ค้าง ${mOverdue.length}`)
+        : mStatus.pending > 0 ? badge('warn', '⏳ Pending')
+        : totalMaint > 0 ? badge('ok', '✅ Done') : badge('neutral', '— ยังไม่มีข้อมูล');
+      const hBadge = hStatus.pending > 0 ? badge('warn', '⏳ Pending')
+        : totalHouse > 0 ? badge('ok', '✅ Done') : badge('neutral', '— ยังไม่มีข้อมูล');
+      const pBadge = pStatus.pending > 0 ? badge('warn', `⏳ รออนุมัติ ${pStatus.pending}`)
+        : badge('neutral', totalPets === 0 ? '— ยังไม่มีคำขอ' : '✅ ดำเนินการแล้ว');
+      const lBadge = lStatus.pending > 0 ? badge('warn', `⏳ รออนุมัติ ${lStatus.pending}`)
+        : badge('neutral', totalLiff === 0 ? '— ยังไม่มีคำขอ' : '✅ ดำเนินการแล้ว');
+
       // Tags
-      const cTagsHTML = topCats.slice(0, 4).map(([cat, n]) =>
-        `<span class="ops-tag">${esc(cat)} ${n}</span>`).join('');
+      const cTagsHTML = topCats.slice(0, 4).map(([cat, n]) => `<span class="ops-tag">${esc(cat)} ${n}</span>`).join('');
       const mTagsHTML = mOverdue.length === 0 ? '' :
         mOverdue.slice(0, 5).map(m => `<span class="ops-tag urgent">ห้อง ${esc(m.room)}</span>`).join('') +
         (mOverdue.length > 5 ? `<span class="ops-tag">+${mOverdue.length - 5}</span>` : '');
 
-      const cTitle = `Complaints <span style="font-weight:400;font-size:.64rem;color:var(--text-muted);">(90 วัน)${avgResolve ? ` · เฉลี่ย ${avgResolve} วัน` : ''}</span>`;
-      const mTitle = `Maintenance${mOverdue.length ? ` <span style="font-size:.65rem;color:#dc2626;font-weight:700;">⏰ ค้าง ${mOverdue.length}</span>` : ''}`;
+      const cTitle = `⚠️ Complaints <span class="ops-cc-period">(90 วัน)${avgResolve ? ` · เฉลี่ย ${avgResolve} วัน` : ''}</span>`;
 
       container.innerHTML = `
-        <div class="card">
-          <div class="ops-board-hdr card-title">
-            <span>📋 Operations Summary</span>
-            <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
-                    style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
-          </div>
-          <div class="ops-pulse ${pulseClass}">${pulseLabel}</div>
-          <div>
-            ${opsRow(cAccent, '⚠️', cTitle,
-              totalComplaints === 0 ? 'ยังไม่มีข้อมูล (90 วัน)' : null,
-              cnt(cStatus.open, cStatus.open > 0 ? 'red' : 'muted', 'Open') +
-              cnt(cStatus['in-progress'], cStatus['in-progress'] > 0 ? 'amber' : 'muted', 'Progress') +
-              cnt(cStatus.resolved, cStatus.resolved > 0 ? 'green' : 'muted', 'Resolved'),
-              cTagsHTML)}
-            ${opsRow(mAccent, '🔧', mTitle,
-              totalMaint === 0 ? 'ยังไม่มีข้อมูล' : mOverdue.length === 0 ? '✅ ไม่มีงานค้าง' : null,
-              cnt(mStatus.pending, mStatus.pending > 0 ? 'red' : 'muted', 'Pending') +
-              cnt(mStatus.inprogress, mStatus.inprogress > 0 ? 'amber' : 'muted', 'Progress') +
-              cnt(mStatus.done, mStatus.done > 0 ? 'green' : 'muted', 'Done'),
-              mTagsHTML)}
-            ${opsRow(hAccent, '🧹', 'Housekeeping',
-              totalHouse === 0 ? 'ยังไม่มีข้อมูล' : null,
-              cnt(hStatus.pending, hStatus.pending > 0 ? 'amber' : 'muted', 'Pending') +
-              cnt(hStatus.inprogress, hStatus.inprogress > 0 ? 'amber' : 'muted', 'Progress') +
-              cnt(hStatus.done, hStatus.done > 0 ? 'green' : 'muted', 'Done'),
-              null)}
-            ${opsRow(pAccent, '🐾', 'Pet Approvals',
-              totalPets === 0 ? 'ยังไม่มีคำขอ' : null,
-              cnt(pStatus.pending, pStatus.pending > 0 ? 'amber' : 'muted', 'รออนุมัติ') +
-              cnt(pStatus.approved, pStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
-              cnt(pStatus.rejected, pStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
-              null)}
-            ${opsRow(lAccent, '🔗', 'LINE Requests',
-              totalLiff === 0 ? 'ยังไม่มีคำขอ' : null,
-              cnt(lStatus.pending, lStatus.pending > 0 ? 'amber' : 'muted', 'รออนุมัติ') +
-              cnt(lStatus.approved, lStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
-              cnt(lStatus.rejected, lStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
-              null)}
-          </div>
-          <div class="ops-board-ft">${fmtCacheAge(Date.now())}</div>
-        </div>`;
+        <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">
+          <span>📋 Operations Summary</span>
+          <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
+                  style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+        </div>
+        <div class="ops-pulse ${pulseClass}" style="margin-bottom:.38rem;">${pulseLabel}</div>
+        ${catCard(cAccent, cTitle, cBadge,
+          ccnt(cStatus.open, cStatus.open > 0 ? 'red' : 'muted', 'Open') +
+          ccnt(cStatus['in-progress'], cStatus['in-progress'] > 0 ? 'amber' : 'muted', 'Progress') +
+          ccnt(cStatus.resolved, cStatus.resolved > 0 ? 'green' : 'muted', 'Resolved'),
+          cTagsHTML)}
+        ${catCard(mAccent, '🔧 Maintenance', mBadge,
+          ccnt(mStatus.pending, mStatus.pending > 0 ? 'red' : 'muted', 'Pending') +
+          ccnt(mStatus.inprogress, mStatus.inprogress > 0 ? 'amber' : 'muted', 'Progress') +
+          ccnt(mStatus.done, mStatus.done > 0 ? 'green' : 'muted', 'Done'),
+          mTagsHTML)}
+        ${catCard(hAccent, '🧹 Housekeeping', hBadge,
+          ccnt(hStatus.pending, hStatus.pending > 0 ? 'amber' : 'muted', 'Pending') +
+          ccnt(hStatus.inprogress, hStatus.inprogress > 0 ? 'amber' : 'muted', 'Progress') +
+          ccnt(hStatus.done, hStatus.done > 0 ? 'green' : 'muted', 'Done'),
+          null)}
+        ${catCard(pAccent, '🐾 Pet Approvals', pBadge,
+          ccnt(pStatus.pending, pStatus.pending > 0 ? 'amber' : 'muted', 'รออนุมัติ') +
+          ccnt(pStatus.approved, pStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
+          ccnt(pStatus.rejected, pStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
+          null)}
+        ${catCard(lAccent, '🔗 LINE Requests', lBadge,
+          ccnt(lStatus.pending, lStatus.pending > 0 ? 'amber' : 'muted', 'รออนุมัติ') +
+          ccnt(lStatus.approved, lStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
+          ccnt(lStatus.rejected, lStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
+          null)}
+        <div class="ops-board-ft">${fmtCacheAge(Date.now())}</div>`;
     } catch (e) {
       console.error('[insights] operations failed:', e);
       container.innerHTML = errorHTML('operations', e.message);
