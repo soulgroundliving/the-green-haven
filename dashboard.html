@@ -2529,8 +2529,25 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 .fin-insights-row .insight-title{ font-size:.66rem; }
 .fin-insights-row .insight-value{ font-size:1rem; }
 .fin-insights-row .insight-detail{ display:none; }
+.fin-row-c{
+  display:grid;
+  grid-template-columns:1fr 1.1fr;
+  gap:.65rem;
+  margin-bottom:.65rem;
+  align-items:start;
+}
+.fin-util-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:.5rem;
+}
+.fin-compact-table{ font-size:.75rem; }
+.fin-compact-table thead th{ padding:.3rem .55rem; font-size:.65rem; }
+.fin-compact-table tbody td{ padding:.28rem .55rem; }
+.fin-table-title{ font-size:.75rem; margin-bottom:.5rem; }
 @media(max-width:900px){
-  .fin-top-grid,.fin-bottom-grid{ grid-template-columns:1fr; }
+  .fin-top-grid,.fin-bottom-grid,.fin-row-c{ grid-template-columns:1fr; }
+  .fin-util-grid{ grid-template-columns:1fr 1fr; }
 }
 
 /* ── Tab intro header (each tab) ── */
@@ -2985,14 +3002,38 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </div>
       </div>
     </div>
-    <!-- Hidden containers — keep IDs in DOM for JS compatibility -->
+    <!-- ROW C: History table (left) + utility charts (right) -->
+    <div class="fin-row-c">
+      <div class="card">
+        <div class="card-title fin-table-title" id="dash-last6-title" role="heading" aria-level="3">รายได้ทั้งปี (12 เดือน)</div>
+        <div style="overflow-x:auto;">
+          <table class="dash-data-table fin-compact-table">
+            <thead>
+              <tr>
+                <th>เดือน</th>
+                <th>ค่าเช่า</th>
+                <th>ค่าไฟ</th>
+                <th>ค่าน้ำ</th>
+                <th>รวม</th>
+              </tr>
+            </thead>
+            <tbody id="dash-last6-body">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:1rem;">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <div class="fin-util-grid">
+          <div class="card"><div class="card-title">⚡ ค่าไฟรายเดือน</div><div style="height:130px;"><canvas id="chartElec"></canvas></div></div>
+          <div class="card"><div class="card-title">💧 ค่าน้ำรายเดือน</div><div style="height:130px;"><canvas id="chartWater"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Hidden — JS-only containers -->
     <div style="display:none;" aria-hidden="true">
-      <span id="dash-last6-title"></span>
-      <tbody id="dash-last6-body"></tbody>
       <div id="dashPaymentBehavior"></div>
       <div id="card-years-compare"><canvas id="chartYears"></canvas></div>
-      <canvas id="chartElec"></canvas>
-      <canvas id="chartWater"></canvas>
     </div>
   </div><!-- END การเงิน -->
 
