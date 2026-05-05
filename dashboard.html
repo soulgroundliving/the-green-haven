@@ -2354,9 +2354,8 @@ html[data-theme="dark"] .dx-td-amazon{ background:#2a1e00; }
   background:var(--border);
 }
 
-/* 4 · Charts — taller */
+/* 4 · Charts */
 .chart-wrap{ height:240px; }
-.chart-wrap-sm{ height:195px; }
 
 /* 5 · Insight cards — refined */
 .insights-grid{ gap:.75rem; margin-bottom:1.5rem; }
@@ -2532,19 +2531,24 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 .fin-row-c{
   display:grid;
   grid-template-columns:1fr 1.1fr;
-  gap:.65rem;
-  margin-bottom:.65rem;
+  gap:.45rem;
+  margin-bottom:.45rem;
   align-items:start;
 }
 .fin-util-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:.5rem;
+  gap:.45rem;
 }
 .fin-compact-table{ font-size:.75rem; }
-.fin-compact-table thead th{ padding:.3rem .55rem; font-size:.65rem; }
-.fin-compact-table tbody td{ padding:.28rem .55rem; }
-.fin-table-title{ font-size:.75rem; margin-bottom:.5rem; }
+.fin-compact-table thead th{ padding:.28rem .5rem; font-size:.63rem; }
+.fin-compact-table tbody td{ padding:.25rem .5rem; }
+.fin-table-title{ font-size:.72rem; margin-bottom:.4rem; }
+/* financial tab compact card padding + row spacing */
+#dash-cat-financial .card{ padding:.8rem 1rem; }
+#dash-cat-financial .fin-top-grid{ margin-bottom:.45rem; }
+#dash-cat-financial .fin-bottom-grid{ margin-bottom:.45rem; }
+#dash-cat-financial .card-title{ margin-bottom:.5rem; font-size:.78rem; }
 @media(max-width:900px){
   .fin-top-grid,.fin-bottom-grid,.fin-row-c{ grid-template-columns:1fr; }
   .fin-util-grid{ grid-template-columns:1fr 1fr; }
@@ -2993,7 +2997,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <div class="fin-right-col">
         <div class="card">
           <div class="card-title" role="heading" aria-level="3">สัดส่วนรายได้</div>
-          <div style="height:125px;"><canvas id="chartPie"></canvas></div>
+          <div style="height:100px;"><canvas id="chartPie"></canvas></div>
         </div>
         <div class="fin-insights-row">
           <div class="insight-card green"><div class="insight-title">ค่าเช่า</div><div class="insight-value" id="ins-rent">—</div><div class="insight-detail" id="ins-rent-d"></div></div>
@@ -3025,8 +3029,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
       <div>
         <div class="fin-util-grid">
-          <div class="card"><div class="card-title">⚡ ค่าไฟรายเดือน</div><div style="height:130px;"><canvas id="chartElec"></canvas></div></div>
-          <div class="card"><div class="card-title">💧 ค่าน้ำรายเดือน</div><div style="height:130px;"><canvas id="chartWater"></canvas></div></div>
+          <div class="card"><div class="card-title">⚡ ค่าไฟรายเดือน</div><div style="height:105px;"><canvas id="chartElec"></canvas></div></div>
+          <div class="card"><div class="card-title">💧 ค่าน้ำรายเดือน</div><div style="height:105px;"><canvas id="chartWater"></canvas></div></div>
         </div>
       </div>
     </div>
