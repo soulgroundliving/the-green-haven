@@ -2315,6 +2315,151 @@ html[data-theme="dark"] .dx-td-nest  { background:rgba(123,31,162,.18); }
 html[data-theme="dark"] .dx-th-amazon,
 html[data-theme="dark"] .dx-td-amazon{ background:#2a1e00; }
 
+/* ════════════════════════════════════════════════════════
+   DASHBOARD SENIOR REDESIGN — 2026-05
+   ════════════════════════════════════════════════════════ */
+
+/* 1 · Category tab nav — pill / segment-control */
+.dash-cat-nav{
+  display:flex;
+  background:var(--green-pale);
+  border-radius:calc(var(--radius) + 4px);
+  padding:4px;
+  gap:2px;
+  margin-bottom:1.75rem;
+  border-bottom:none !important;
+  padding-bottom:4px !important;
+}
+.dash-cat-nav .year-tab{
+  flex:1;
+  border-radius:var(--radius);
+  border:none !important;
+  background:transparent;
+  color:var(--text-muted);
+  padding:.5rem .6rem;
+  font-size:.81rem;
+  text-align:center;
+  margin:0;
+  line-height:1.3;
+}
+.dash-cat-nav .year-tab:hover:not(.active){
+  background:rgba(255,255,255,.55);
+  color:var(--text);
+}
+.dash-cat-nav .year-tab.active{
+  background:var(--card);
+  color:var(--green-dark);
+  box-shadow:var(--shadow);
+  border:none !important;
+}
+html[data-theme="dark"] .dash-cat-nav{
+  background:rgba(15,118,110,.15);
+}
+html[data-theme="dark"] .dash-cat-nav .year-tab.active{
+  background:var(--surface);
+  color:#4ade80;
+}
+html[data-theme="dark"] .dash-cat-nav .year-tab:hover:not(.active){
+  background:rgba(255,255,255,.1);
+}
+
+/* 2 · KPI cards — top-accent, larger value, cleaner layout */
+.kpi-card{
+  border-left:none;
+  border-top:3px solid transparent;
+  padding:1.1rem 1.1rem .95rem;
+}
+.kpi-card.green { border-left:none; border-top-color:var(--green); }
+.kpi-card.amber { border-left:none; border-top-color:var(--accent); }
+.kpi-card.blue  { border-left:none; border-top-color:var(--blue); }
+.kpi-card.purple{ border-left:none; border-top-color:var(--purple); }
+.kpi-icon{ font-size:1.05rem; opacity:.55; margin-bottom:5px; }
+.kpi-label{ font-size:.7rem; letter-spacing:.55px; }
+.kpi-value{ font-size:1.72rem; margin-bottom:2px; }
+
+/* 3 · Section separators */
+.dash-section-sep{
+  display:flex;
+  align-items:center;
+  gap:.65rem;
+  margin:1.4rem 0 .9rem;
+  color:var(--text-muted);
+  font-size:.68rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.75px;
+}
+.dash-section-sep::after{
+  content:'';
+  flex:1;
+  height:1px;
+  background:var(--border);
+}
+
+/* 4 · Charts — taller */
+.chart-wrap{ height:240px; }
+.chart-wrap-sm{ height:195px; }
+
+/* 5 · Insight cards — refined */
+.insights-grid{ gap:.75rem; margin-bottom:1.5rem; }
+.insight-card{ padding:1rem 1.1rem; }
+.insight-title{ font-size:.7rem; letter-spacing:.5px; margin-bottom:4px; }
+.insight-value{ font-size:1.3rem; }
+
+/* 6 · Dashboard revenue table */
+.dash-data-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:.82rem;
+}
+.dash-data-table thead tr{
+  background:transparent;
+  border-bottom:2px solid var(--border);
+  color:inherit;
+}
+.dash-data-table thead th{
+  padding:.5rem .7rem;
+  text-align:right;
+  font-size:.7rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+  color:var(--text-muted);
+}
+.dash-data-table thead th:first-child{ text-align:left; }
+.dash-data-table tbody tr{
+  border-bottom:1px solid var(--border);
+  transition:background .1s;
+}
+.dash-data-table tbody tr:hover{ background:var(--green-pale); }
+.dash-data-table tbody td{ padding:.5rem .7rem; text-align:right; }
+.dash-data-table tbody td:first-child{
+  text-align:left;
+  font-weight:600;
+  color:var(--text-muted);
+}
+html[data-theme="dark"] .dash-data-table tbody tr:hover{
+  background:rgba(15,118,110,.12);
+}
+
+/* 7 · 2-col layout for ops/community */
+.dash-2col{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:.75rem;
+  margin-bottom:1rem;
+}
+@media(max-width:700px){ .dash-2col{ grid-template-columns:1fr; } }
+
+/* 8 · Card header with inline action button */
+.card-header-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:.75rem;
+}
+.card-header-row .card-title{ margin-bottom:0; }
+
 </style>
 </head>
 <body>
@@ -2628,7 +2773,7 @@ html[data-theme="dark"] .dx-td-amazon{ background:#2a1e00; }
   </div>
 
   <!-- Category Tab Nav -->
-  <div class="year-tabs" style="margin-bottom:1.2rem;border-bottom:2px solid var(--border);padding-bottom:.5rem;">
+  <div class="year-tabs dash-cat-nav" style="margin-bottom:1.2rem;">
     <button id="dash-cat-btn-financial"  class="year-tab active" data-action="switchDashboardTab" data-tab="financial"><span aria-hidden="true">💰</span> การเงิน</button>
     <button id="dash-cat-btn-tenants"    class="year-tab"        data-action="switchDashboardTab" data-tab="tenants"><span aria-hidden="true">👥</span> ผู้เช่า</button>
     <button id="dash-cat-btn-operations" class="year-tab"        data-action="switchDashboardTab" data-tab="operations"><span aria-hidden="true">🔧</span> ปฏิบัติการ</button>
@@ -2667,31 +2812,34 @@ html[data-theme="dark"] .dx-td-amazon{ background:#2a1e00; }
     </div>
     <div class="kpi-grid">
       <div class="kpi-card green"><div class="kpi-icon" aria-hidden="true">💰</div><div class="kpi-label">รายได้รวมทั้งปี (รวมทั้ง 2 อาคาร)</div><div class="kpi-value green" id="kpi-total">฿0</div><div class="kpi-sub" id="kpi-total-sub"></div></div>
-      <div class="kpi-card" style="border-left: 4px solid var(--green);"><div class="kpi-icon" aria-hidden="true">🏠</div><div class="kpi-label">รายได้ rooms (ห้องแถว)</div><div class="kpi-value" id="kpi-rooms-total" style="color:var(--green);">฿0</div><div class="kpi-sub" id="kpi-rooms-sub">แบ่งตามระบบตัวใจ</div></div>
-      <div class="kpi-card kpi-nest" style="border-left: 4px solid var(--purple);"><div class="kpi-icon" aria-hidden="true">🏢</div><div class="kpi-label">รายได้ Nest Building</div><div class="kpi-value" id="kpi-nest-total" style="color:var(--purple);">฿0</div><div class="kpi-sub" id="kpi-nest-sub">ยูนิตที่เปิดให้เช่า</div></div>
+      <div class="kpi-card green"><div class="kpi-icon" aria-hidden="true">🏠</div><div class="kpi-label">รายได้ rooms (ห้องแถว)</div><div class="kpi-value green" id="kpi-rooms-total">฿0</div><div class="kpi-sub" id="kpi-rooms-sub">แบ่งตามระบบตัวใจ</div></div>
+      <div class="kpi-card kpi-nest purple"><div class="kpi-icon" aria-hidden="true">🏢</div><div class="kpi-label">รายได้ Nest Building</div><div class="kpi-value purple" id="kpi-nest-total">฿0</div><div class="kpi-sub" id="kpi-nest-sub">ยูนิตที่เปิดให้เช่า</div></div>
       <div class="kpi-card amber"><div class="kpi-icon" aria-hidden="true">📆</div><div class="kpi-label">รายได้เฉลี่ย/เดือน</div><div class="kpi-value amber" id="kpi-monthly">฿0</div><div class="kpi-sub" id="kpi-monthly-sub"></div></div>
     </div>
+    <div class="dash-section-sep">รายได้รายเดือน</div>
     <div class="charts-grid">
-      <div class="card"><div class="card-title" role="heading" aria-level="3">📈 รายได้รายเดือน (บาท)</div><div class="chart-wrap"><canvas id="chartRevenue"></canvas></div></div>
-      <div class="card"><div class="card-title" role="heading" aria-level="3">🥧 สัดส่วนรายได้</div><div class="chart-wrap"><canvas id="chartPie"></canvas></div></div>
+      <div class="card"><div class="card-title" role="heading" aria-level="3">รายได้รายเดือน (บาท)</div><div class="chart-wrap"><canvas id="chartRevenue"></canvas></div></div>
+      <div class="card"><div class="card-title" role="heading" aria-level="3">สัดส่วนรายได้</div><div class="chart-wrap"><canvas id="chartPie"></canvas></div></div>
     </div>
+    <div class="dash-section-sep">แยกตามประเภท</div>
     <div class="insights-grid">
-      <div class="insight-card green"><div class="insight-title">💵 รายได้ค่าเช่าห้อง</div><div class="insight-value" id="ins-rent">—</div><div class="insight-detail" id="ins-rent-d">รวมห้องพักทั้งหมด</div></div>
-      <div class="insight-card amber"><div class="insight-title">⚡ รายได้ค่าไฟ</div><div class="insight-value" id="ins-elec">—</div><div class="insight-detail" id="ins-elec-d">อัตราตาม config ห้องพัก</div></div>
-      <div class="insight-card blue"><div class="insight-title">💧 รายได้ค่าน้ำ</div><div class="insight-value" id="ins-water">—</div><div class="insight-detail" id="ins-water-d">อัตราตาม config ห้องพัก</div></div>
+      <div class="insight-card green"><div class="insight-title">ค่าเช่าห้อง</div><div class="insight-value" id="ins-rent">—</div><div class="insight-detail" id="ins-rent-d">รวมห้องพักทั้งหมด</div></div>
+      <div class="insight-card amber"><div class="insight-title">ค่าไฟฟ้า</div><div class="insight-value" id="ins-elec">—</div><div class="insight-detail" id="ins-elec-d">อัตราตาม config ห้องพัก</div></div>
+      <div class="insight-card blue"><div class="insight-title">ค่าน้ำประปา</div><div class="insight-value" id="ins-water">—</div><div class="insight-detail" id="ins-water-d">อัตราตาม config ห้องพัก</div></div>
     </div>
+    <div class="dash-section-sep">ประวัติรายได้ 12 เดือน</div>
     <div class="card" style="margin-bottom:1rem;">
-      <div class="card-title" id="dash-last6-title">📅 รายได้ย้อนหลัง 12 เดือน (ล่าสุด)</div>
+      <div class="card-title" id="dash-last6-title" role="heading" aria-level="3">รายได้ย้อนหลัง 12 เดือน (ล่าสุด)</div>
       <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+        <table class="dash-data-table">
           <thead>
-            <tr style="background:var(--green-pale);color:var(--green-dark);">
-              <th style="padding:.55rem .7rem;text-align:left;font-weight:700;">เดือน</th>
-              <th style="padding:.55rem .7rem;text-align:right;">💵 ค่าเช่า</th>
-              <th style="padding:.55rem .7rem;text-align:right;">⚡ ค่าไฟ</th>
-              <th style="padding:.55rem .7rem;text-align:right;">💧 ค่าน้ำ</th>
-              <th style="padding:.55rem .7rem;text-align:right;">แยกอาคาร</th>
-              <th style="padding:.55rem .7rem;text-align:right;font-weight:700;">💰 รวม</th>
+            <tr>
+              <th>เดือน</th>
+              <th>ค่าเช่า</th>
+              <th>ค่าไฟ</th>
+              <th>ค่าน้ำ</th>
+              <th>แยกอาคาร</th>
+              <th>รวม</th>
             </tr>
           </thead>
           <tbody id="dash-last6-body">
@@ -2700,13 +2848,15 @@ html[data-theme="dark"] .dx-td-amazon{ background:#2a1e00; }
         </table>
       </div>
     </div>
+    <div class="dash-section-sep">รายจ่ายสาธารณูปโภค</div>
     <div class="charts-grid-3">
-      <div class="card" id="card-years-compare" style="display:none;"><div class="card-title" role="heading" aria-level="3">📊 เปรียบเทียบ 3 ปี</div><div class="chart-wrap-sm"><canvas id="chartYears"></canvas></div></div>
-      <div class="card"><div class="card-title" role="heading" aria-level="3">⚡ ค่าไฟรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartElec"></canvas></div></div>
-      <div class="card"><div class="card-title" role="heading" aria-level="3">💧 ค่าน้ำรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartWater"></canvas></div></div>
+      <div class="card" id="card-years-compare" style="display:none;"><div class="card-title" role="heading" aria-level="3">เปรียบเทียบ 3 ปี</div><div class="chart-wrap-sm"><canvas id="chartYears"></canvas></div></div>
+      <div class="card"><div class="card-title" role="heading" aria-level="3">ค่าไฟรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartElec"></canvas></div></div>
+      <div class="card"><div class="card-title" role="heading" aria-level="3">ค่าน้ำรายเดือน</div><div class="chart-wrap-sm"><canvas id="chartWater"></canvas></div></div>
     </div>
+    <div class="dash-section-sep">สถานะการชำระเงิน</div>
     <div class="card" style="margin-bottom:1rem;">
-      <div class="card-title" role="heading" aria-level="3">💳 สถานะการชำระเงินเดือนนี้</div>
+      <div class="card-title" role="heading" aria-level="3">สถานะการชำระเงินเดือนนี้</div>
       <div id="dashPaymentStatus" style="min-height:70px;"></div>
     </div>
     <!-- Phase 1 Deep Analytic: Per-Tenant Payment Behavior -->
@@ -2730,13 +2880,13 @@ html[data-theme="dark"] .dx-td-amazon{ background:#2a1e00; }
 
   <!-- ===== TAB 4: ปฏิบัติการ ===== -->
   <div id="dash-cat-operations" class="dash-cat-content u-hidden">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
+    <div class="dash-2col">
       <div class="card">
-        <div class="card-title" role="heading" aria-level="3">⚠️ Complaints</div>
+        <div class="card-title" role="heading" aria-level="3">คำร้องเรียน</div>
         <div id="dashComplaintsStatus" style="min-height:60px;"></div>
       </div>
       <div class="card">
-        <div class="card-title" role="heading" aria-level="3">🔧 Maintenance</div>
+        <div class="card-title" role="heading" aria-level="3">งานซ่อมบำรุง</div>
         <div id="dashMaintenanceStatus" style="min-height:60px;"></div>
       </div>
     </div>
@@ -2751,21 +2901,21 @@ html[data-theme="dark"] .dx-td-amazon{ background:#2a1e00; }
 
   <!-- ===== TAB 5: ชุมชน ===== -->
   <div id="dash-cat-community" class="dash-cat-content u-hidden">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
+    <div class="dash-2col">
       <div class="card">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-          <span>🏆 Top Tenants</span>
-          <button data-action="showPage" data-page="gamification" style="font-size:.72rem;padding:2px 8px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:var(--font-brand);">ดูทั้งหมด →</button>
+        <div class="card-header-row">
+          <div class="card-title" role="heading" aria-level="3">Top Tenants</div>
+          <button data-action="showPage" data-page="gamification" style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:var(--font-brand);">ดูทั้งหมด →</button>
         </div>
         <div id="dashTopTenants" style="min-height:60px;"></div>
       </div>
       <div class="card" id="dashPetAnalyticsCard">
-        <div class="card-title" role="heading" aria-level="3">🐾 Pet Analytics (Nest)</div>
+        <div class="card-title" role="heading" aria-level="3">Pet Analytics (Nest)</div>
         <div id="dashPetAnalytics" style="min-height:60px;"></div>
       </div>
     </div>
     <!-- Phase 1 Deep Analytics: Wellness Engagement + Streak Leaderboard -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;">
+    <div class="dash-2col">
       <div id="dashWellnessMatrix"></div>
       <div id="dashStreakLeaderboard"></div>
     </div>
