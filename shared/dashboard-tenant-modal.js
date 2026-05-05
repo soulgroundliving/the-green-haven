@@ -257,7 +257,7 @@ function openTenantModal(building, roomId) {
 
   // Initialize phone validation for the modal
   setTimeout(function() {
-    initPhoneValidation();
+    if (typeof initPhoneValidation === 'function') initPhoneValidation();
   }, 100);
 }
 
