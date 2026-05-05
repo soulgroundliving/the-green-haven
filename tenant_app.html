@@ -4486,12 +4486,16 @@
         // ------------------------------------------
         // ส่วนที่ 2: ระบบเช็กอินรับแต้มรายวัน
         // ------------------------------------------
-        // 1. ฟังก์ชันเช็ก — Nest only (Rooms tenants don't earn points)
+        // 1. ฟังก์ชันเช็ก — Nest only unless player mode
         function checkDailyLogin() {
-            if (window._nestOnlyDisabled) return; // Rooms tenant — skip
+            const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+            if (!isPlayer && window._nestOnlyDisabled) return; // Rooms tenant — skip
             // Bangkok date (UTC+7) — matches the CF's today calculation
             const bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-            if (localStorage.getItem(`lastDailyClaim_${_taBuilding}_${_taRoom}`) === bkkToday) return;
+            const claimKey = isPlayer
+                ? `lastDailyClaim_player_${window._playerProfile.tenantId}`
+                : `lastDailyClaim_${_taBuilding}_${_taRoom}`;
+            if (localStorage.getItem(claimKey) === bkkToday) return;
             const modal = document.getElementById('daily-modal');
             if (!modal) return;
             const nav = document.getElementById('main-nav-bar');
@@ -4500,9 +4504,10 @@
             modal.style.display = 'flex';
         }
 
-        // 2. ฟังก์ชันกดรับพ้อยท์ — Nest only
+        // 2. ฟังก์ชันกดรับพ้อยท์ — Nest only unless player mode
         async function claimDailyPoints() {
-            if (window._nestOnlyDisabled) return;
+            const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+            if (!isPlayer && window._nestOnlyDisabled) return;
 
             const btn = document.querySelector('[onclick="claimDailyPoints()"]');
             if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
@@ -4515,12 +4520,19 @@
                 showPage('world-map');
             };
 
+            const claimKey = isPlayer
+                ? `lastDailyClaim_player_${window._playerProfile.tenantId}`
+                : `lastDailyClaim_${_taBuilding}_${_taRoom}`;
+
             try {
                 const fns = window.firebase?.functions;
                 if (!fns) throw new Error('Firebase Functions SDK not loaded');
-                if (!_taBuilding || !_taRoom) throw new Error('ยังไม่พบข้อมูลห้อง');
                 const callable = fns.httpsCallable('claimDailyLoginPoints');
-                const resp = await callable({ building: _taBuilding, roomId: String(_taRoom) });
+                const payload = isPlayer
+                    ? { tenantId: window._playerProfile.tenantId }
+                    : { building: _taBuilding, roomId: String(_taRoom) };
+                if (!isPlayer && (!_taBuilding || !_taRoom)) throw new Error('ยังไม่พบข้อมูลห้อง');
+                const resp = await callable(payload);
                 const r = resp.data || {};
                 if (typeof r.pointsAfter === 'number') {
                     userPoints = r.pointsAfter;
@@ -4532,7 +4544,7 @@
                 toast(streakMsg, 'success');
                 window.GhHaptic?.success();
                 const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-                localStorage.setItem(`lastDailyClaim_${_taBuilding}_${_taRoom}`, _bkkToday);
+                localStorage.setItem(claimKey, _bkkToday);
                 closeModal();
             } catch (e) {
                 const code = e?.code || e?.details?.code || '';
@@ -4540,7 +4552,7 @@
                     toast('รับพ้อยท์ของวันนี้ไปแล้วครับ 🌿', 'warning');
                     window.GhHaptic?.warning();
                     const _bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
-                    localStorage.setItem(`lastDailyClaim_${_taBuilding}_${_taRoom}`, _bkkToday);
+                    localStorage.setItem(claimKey, _bkkToday);
                     closeModal();
                 } else {
                     console.error('claimDailyPoints failed:', e);
@@ -7535,14 +7547,40 @@
 
         let _ecoPointsUnsub = null;
         function _subscribeEcoPoints() {
-            // Nest-only — subscribe to authoritative points field in Firestore
-            // so what the verifySlip CF writes (tenants/{b}/list/{room}.points) is what tenant sees.
+            // Subscribe to authoritative points in Firestore.
+            // Tenants: tenants/{building}/list/{roomId}  (Nest-only — verifySlip writes here)
+            // Players: people/{tenantId}  (transitionToPlayer + claimDailyLoginPoints write here)
             if (window._gamificationDisabled) return;
             if (_ecoPointsUnsub) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
             try {
                 const fs = window.firebase.firestoreFunctions;
                 const db = window.firebase.firestore();
+
+                // ── Player branch ─────────────────────────────────────────
+                if (window._isPlayerMode && window._playerProfile?.tenantId) {
+                    const peopleRef = fs.doc(db, 'people', window._playerProfile.tenantId);
+                    _ecoPointsUnsub = fs.onSnapshot(peopleRef, snap => {
+                        if (!snap.exists()) return;
+                        const gam = (snap.data() || {}).gamification || {};
+                        const pts = typeof gam.points === 'number' ? gam.points : null;
+                        if (pts !== null) {
+                            userPoints = pts;
+                            if (typeof loadGamificationData === 'function') loadGamificationData();
+                            if (typeof updateUserPointsUI === 'function') updateUserPointsUI();
+                        }
+                        const badges = Array.isArray(gam.badges) ? gam.badges : [];
+                        _lastKnownBadges = badges;
+                        if (typeof _renderBadgeGrid === 'function') _renderBadgeGrid(badges);
+                        if (typeof _renderProfileBadge === 'function') _renderProfileBadge(badges);
+                    }, err => {
+                        if (err && (err.code === 'permission-denied' || /insufficient permissions/i.test(err.message || ''))) return;
+                        console.warn('player eco points subscribe failed:', err.message);
+                    });
+                    return;
+                }
+
+                // ── Regular tenant branch ─────────────────────────────────
                 const tenantRef = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
                 _ecoPointsUnsub = fs.onSnapshot(tenantRef, snap => {
                     if (!snap.exists()) return;

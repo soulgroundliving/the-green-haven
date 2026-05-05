@@ -30,8 +30,52 @@ exports.claimDailyLoginPoints = functions.region('asia-southeast1').https.onCall
   if (!context.auth || !context.auth.uid) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign-in required');
   }
-  const { building, roomId } = data || {};
+  const { building, roomId, tenantId: reqTenantId } = data || {};
 
+  // ── Player (community member) path ────────────────────────────────────────
+  // Players send { tenantId } instead of { building, roomId }.
+  // Claim writes to people/{tenantId}.gamification (same schema).
+  if (reqTenantId && !building && !roomId) {
+    const tok = context.auth.token || {};
+    if (tok.role !== 'player' || tok.tenantId !== String(reqTenantId)) {
+      throw new functions.https.HttpsError('permission-denied',
+        'You can only claim daily points for your own player account');
+    }
+    const tenantId = String(reqTenantId);
+    const peopleRef = firestore.collection('people').doc(tenantId);
+    const now = new Date();
+    const today = bkkDateString(now);
+    const yesterday = bkkDateString(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+    try {
+      const result = await firestore.runTransaction(async tx => {
+        const snap = await tx.get(peopleRef);
+        if (!snap.exists) throw new functions.https.HttpsError('not-found', `player ${tenantId} not found`);
+        const g = (snap.data() || {}).gamification || {};
+        if (g.lastDailyClaim === today) throw new functions.https.HttpsError('already-exists', 'รับพ้อยท์ของวันนี้ไปแล้วครับ');
+        const prevStreak = Number(g.dailyStreak) || 0;
+        const streak = g.lastDailyClaim === yesterday ? prevStreak + 1 : 1;
+        const bonus = streak > 0 && streak % 7 === 0 ? 3 : 0;
+        const reward = 1 + bonus;
+        const currentPoints = Number(g.points) || 0;
+        const pointsAfter = currentPoints + reward;
+        tx.update(peopleRef, {
+          'gamification.points': pointsAfter,
+          'gamification.lastDailyClaim': today,
+          'gamification.dailyStreak': streak,
+          'gamification.lastDailyClaimAt': admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return { pointsBefore: currentPoints, pointsAfter, reward, bonus, streak };
+      });
+      console.log(`🎮 Player daily check-in: ${tenantId} +${result.reward} (streak=${result.streak})`);
+      return { success: true, ...result };
+    } catch (error) {
+      if (error instanceof functions.https.HttpsError) throw error;
+      console.error('❌ claimDailyLoginPoints (player) failed:', error);
+      throw new functions.https.HttpsError('internal', error.message || 'transaction failed');
+    }
+  }
+
+  // ── Regular tenant path ───────────────────────────────────────────────────
   if (!building || !roomId) {
     throw new functions.https.HttpsError('invalid-argument', 'building and roomId are required');
   }
