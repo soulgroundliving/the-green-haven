@@ -2153,6 +2153,18 @@
   html[data-theme="dark"] [style*="color:#2d3748"],
   html[data-theme="dark"] [style*="color:#374151"] { color: var(--ink) !important; }
 
+  /* CSS-variable backgrounds that don't flip in dark mode */
+  html[data-theme="dark"] [style*="background:var(--accent-light)"],
+  html[data-theme="dark"] [style*="background: var(--accent-light)"] { background: rgba(217,119,6,.12) !important; }
+  html[data-theme="dark"] [style*="background:var(--accent-pale)"],
+  html[data-theme="dark"] [style*="background: var(--accent-pale)"] { background: rgba(217,119,6,.18) !important; }
+  html[data-theme="dark"] [style*="background:var(--blue-pale)"],
+  html[data-theme="dark"] [style*="background: var(--blue-pale)"] { background: rgba(3,105,161,.2) !important; }
+  html[data-theme="dark"] [style*="background:var(--bg-secondary)"],
+  html[data-theme="dark"] [style*="background: var(--bg-secondary)"] { background: var(--surface-card) !important; }
+  /* Owner section backgrounds */
+  html[data-theme="dark"] [style*="background:#f8faf9"] { background: var(--surface-card) !important; }
+
   /* Remaining light hex patterns not caught above */
   html[data-theme="dark"] [style*="background:#f0f9f3"],
   html[data-theme="dark"] [style*="background:#f5f7fa"],
@@ -2161,11 +2173,35 @@
   html[data-theme="dark"] [style*="border:1px solid #c8e6d1"],
   html[data-theme="dark"] [style*="border: 1px solid #c8e6d1"] { border-color: var(--stone) !important; }
 
+  /* Text color — hardcoded dark blues */
+  html[data-theme="dark"] [style*="color:#0d47a1"],
+  html[data-theme="dark"] [style*="color: #0d47a1"] { color: #64b5f6 !important; }
+
   /* Border overrides */
+  html[data-theme="dark"] [style*="border:1px solid #ddd"],
+  html[data-theme="dark"] [style*="border: 1px solid #ddd"] { border-color: var(--stone) !important; }
+  html[data-theme="dark"] [style*="border:1px dashed #c8e6c9"],
+  html[data-theme="dark"] [style*="border: 1px dashed #c8e6c9"] { border-color: var(--stone) !important; }
+  html[data-theme="dark"] [style*="border:1px solid #e0e0e0"],
+  html[data-theme="dark"] [style*="border: 1px solid #e0e0e0"] { border-color: var(--stone) !important; }
   html[data-theme="dark"] [style*="border:1px solid #f0f0f0"],
   html[data-theme="dark"] [style*="border: 1px solid #f0f0f0"],
   html[data-theme="dark"] [style*="border-color:#e0e0e0"],
   html[data-theme="dark"] [style*="border-color: #e0e0e0"] { border-color: var(--stone) !important; }
+
+  /* ── Drop zones (background:var(--accent-light) doesn't flip) ── */
+  html[data-theme="dark"] .import-drop-zone { background: rgba(45,134,83,.10) !important; border-color: var(--stone) !important; }
+  html[data-theme="dark"] #importMonthSelect { background: var(--surface-card); color: var(--ink); }
+
+  /* ── Rich-text policy editor (CSS injected by rich-text-policy.js) ── */
+  html[data-theme="dark"] .rt-wrap { background: var(--surface-card) !important; color: var(--ink) !important; border-color: var(--stone) !important; }
+  html[data-theme="dark"] .rt-toolbar { background: var(--cloud) !important; border-bottom-color: var(--stone) !important; }
+  html[data-theme="dark"] .rt-toolbar button { background: var(--surface-card) !important; color: var(--ink) !important; border-color: var(--stone) !important; }
+  html[data-theme="dark"] .rt-toolbar button:hover { background: var(--surface-raised) !important; }
+  html[data-theme="dark"] .rt-toolbar select { background: var(--surface-card) !important; color: var(--ink) !important; border-color: var(--stone) !important; }
+  html[data-theme="dark"] .rt-sep { background: var(--stone) !important; }
+  html[data-theme="dark"] .rt-content { background: var(--surface-card) !important; color: var(--ink) !important; }
+  html[data-theme="dark"] .rt-content:focus { background: var(--surface-card) !important; }
 
   /* Buttons with hardcoded light backgrounds */
   html[data-theme="dark"] .year-tab { background: var(--surface-card); }
