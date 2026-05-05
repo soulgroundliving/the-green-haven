@@ -1548,3 +1548,228 @@ User: "แก้ทันที"
 - **a11y:** ไม่เปลี่ยน UX ปัจจุบัน — เพิ่ม metadata อย่างเดียว (no breaking change)
 - **Dark mode:** ตอนนี้ `.u-*` ทุกตัว adapt ตาม theme เพราะ brand-primary-soft override อยู่ที่ line 175 ของ brand.css
 
+# P1 — Dashboard Cold-Start Skeleton (2026-05-07)
+
+## Context
+Dashboard หน้า Dashboard (การเงิน tab) ใช้เวลา 900ms หลัง DOMContentLoaded ก่อนที่ `setYear('69')` จะ fire และ `initDashboardCharts()` populate KPI cards + charts — ระหว่างนั้น user เห็น "฿0" + canvas ว่างเปล่า
+
+## Implementation
+
+- [x] **`shared/brand.css`** — เพิ่ม `.gh-skeleton` utility + `@keyframes skeleton-shimmer`. Shimmer animation 1.4s ease-in-out, ใช้ `--surface-card` / `--border-subtle` tokens → light/dark mode ทั้งคู่ทำงาน
+- [x] **`dashboard.html` CSS** — `#dash-cat-financial { position: relative }` + `#dash-cold-skeleton` absolute overlay (inset:0, z-index:5, background: var(--bg), pointer-events:none). Responsive grids for skeleton rows match real layout: 4-col→2-col→1-1→1, 2fr-1fr→1fr, 3-col→2-col→1-col
+- [x] **`dashboard.html` HTML** — `<div id="dash-cold-skeleton" aria-hidden="true">` เป็น first child ของ `#dash-cat-financial`. มี 3 skeleton rows: 4 KPI cards + 2 chart areas + 3 insight cards — ใช้ `.kpi-card`/`.card`/`.insight-card` classes จริงเพื่อ margin/padding ตรงกับ layout จริง
+- [x] **`shared/dashboard-home-live.js`** — 2 lines เพิ่มท้าย `initDashboardCharts()`: `const _skel = document.getElementById('dash-cold-skeleton'); if (_skel) _skel.remove();` — safe to call multiple times (null check prevents error on subsequent year-clicks)
+
+## Commit
+`02114d1` — feat(ux): dashboard cold-start skeleton — hide 900ms blank state with shimmer overlay
+
+## Verification
+- [x] git push → Vercel deploy triggered
+- [ ] Live verify: เปิด dashboard บน https://the-green-haven.vercel.app → เห็น shimmer skeleton ตอน load → disappears เมื่อ KPI data arrive
+
+---
+
+# Maximum UI/UX Improvement Plan — Score 71 → 90+ (2026-05-07)
+
+## Baseline audit (2026-05-07)
+
+| Dimension | Score | Biggest gap |
+|---|---:|---|
+| Navigation & IA | 8/10 | — strong |
+| Loading & Empty States | 8/10 | — strong |
+| Color & Brand | 7.5/10 | gamification tab was broken (fixed this session) |
+| Component Quality | 7.5/10 | — |
+| Accessibility | 7/10 | emoji aria-hidden, autofill border |
+| Typography & Hierarchy | 7/10 | chart axis 8px, table emoji columns |
+| Layout & Spacing | 7/10 | — |
+| Data Visualization | 6.5/10 | axis ticks unreadable, table hard to scan |
+| Interaction States | 6/10 | hover not standard, disabled cursor missing |
+| Responsive / Mobile | 6/10 | sidebar no collapse, tenant card crushes |
+| **TOTAL** | **71/100** | |
+
+**Why:** Responsive + Interaction are the lowest scores and highest user-impact — address them first.
+
+---
+
+## Phase A — Quick wins (71 → ~75, low-risk, 1 session)
+
+Small isolated fixes, each in 1-2 files. Tackle these first — immediate visible improvement.
+
+### A1 — Emoji icons: add `aria-hidden="true"` sitewide
+- **Problem:** Emoji used as UI icons (💰 🗒️ 📊 etc.) are announced by screen readers as "money bag emoji"
+- **Files:** `tenant_app.html`, `dashboard.html` — scan all `<span>` / raw emoji in nav + buttons + headings
+- **Fix:** Add `aria-hidden="true"` to every emoji that is decorative (beside visible text). For icon-only emoji buttons, keep it visible but wrap in `<span aria-hidden="true">` + add `aria-label` on the `<button>`
+- **Why:** WCAG 2.1 SC 1.1.1 — non-text content needs text alternative or hidden decoration
+- **Verification:** VoiceOver / NVDA smoke test — nav items read as "ภาพรวม" not "house emoji ภาพรวม"
+
+### A2 — Autofill red border bug on login
+- **Problem:** Browser autofill triggers `:invalid` CSS on inputs that ARE valid — shows red border on correct pre-filled email/password
+- **Files:** `login.html`
+- **Fix:** Change validation CSS from `:invalid` pseudo-class to `.is-invalid` class set only on explicit JS validation failure. Remove `required` attribute (or use `novalidate` on `<form>`) to prevent browser-native invalid state from firing before user submits
+- **Why:** Red border on pre-filled valid inputs destroys trust / looks broken on first sight
+
+### A3 — Disabled state cursor missing
+- **Problem:** Disabled buttons show pointer cursor (or default) — not `cursor: not-allowed`
+- **Files:** `shared/brand.css`, `shared/components.css`
+- **Fix:** Add to `shared/brand.css`: `button:disabled, [aria-disabled="true"] { cursor: not-allowed; opacity: .5; }`
+- **Why:** Core interactive affordance — user needs to understand why click does nothing
+
+### A4 — Chart axis tick font floor
+- **Problem:** Chart.js axis labels render at 8-9px — unreadable on mobile
+- **Files:** `shared/dashboard-home-live.js` (Chart.js config), `shared/dashboard-extra.js`
+- **Fix:** In every `Chart()` constructor config, add `ticks: { font: { size: 11 } }` to both `xAxis` and `yAxis` scales. 11px is the minimum readable size per WCAG contrast guidance
+- **Why:** Current 8px axis labels fail readability at arm's length (typical tablet use by admin)
+
+---
+
+## Phase B — Mobile-first overhaul (75 → ~83, highest ROI, 2 sessions)
+
+Dashboard sidebar and tenant card are the two biggest mobile UX failures. These are the highest-leverage fixes.
+
+### B1 — Dashboard sidebar: collapsible on mobile (hamburger toggle)
+- **Problem:** Sidebar is `position: fixed; width: 220px` always visible — on ≤768px it eats 220px of 390px screen, leaving 170px for content. There is no hamburger button. Admin cannot use dashboard on phone
+- **Files:** `dashboard.html` (CSS + HTML), `shared/dashboard-main.js`
+- **Fix:**
+  - Add `<button id="sidebar-toggle" class="gh-btn gh-btn--icon" aria-label="เปิด/ปิดเมนู" aria-expanded="false" aria-controls="sidebar">` in the top bar (visible only at ≤768px via `display:none` → `display:flex`)
+  - At `@media (max-width: 768px)`: sidebar default `transform: translateX(-100%)`, when `.sidebar-open` class on `<body>`: `transform: translateX(0)`. Backdrop overlay (similar to modal-a11y-bridge pattern already in codebase)
+  - `dashboard-main.js`: toggle `body.classList.toggle('sidebar-open')` + update `aria-expanded` + close on nav-item click + close on backdrop click
+- **Why:** Admin walks the property with phone/tablet — dashboard must work on mobile
+- **Verification:** Chrome DevTools 390px → sidebar hidden → hamburger appears → tap → sidebar slides in → tap nav item → sidebar closes
+
+### B2 — Tenant card action grid: responsive 2×2 → single-column stack
+- **Problem:** `tenant_app.html` action buttons render as 2×2 grid on profile/home — at 390px (iPhone 14) the buttons crush to ~175px wide, text truncates
+- **Files:** `tenant_app.html`
+- **Fix:** Add `@media (max-width: 480px)` → action grid `grid-template-columns: 1fr` (single column). Ensure each button has `min-height: 44px` (already in checklist for A11y, confirms here)
+- **Why:** Primary CTA grid must be tap-able. Crushed buttons = abandonment
+
+### B3 — Horizontal tab overflow: add scroll instead of wrap/overflow-hidden
+- **Problem:** Dashboard category tabs (Financial / Operations / People / etc.) and tenant_app bottom row tabs wrap or get clipped on narrow screens
+- **Files:** `dashboard.html` (tab row CSS), `tenant_app.html` (tab bar CSS)
+- **Fix:** On tab row containers: `display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;` + `::-webkit-scrollbar { display: none; }`. Prevents wrap or clipping — user can scroll horizontally
+- **Why:** All tabs must be reachable without layout breakage
+
+### B4 — Tax-filing sidebar: hamburger collapse (already planned, verify shipped)
+- **Status:** Was shipped in Phase 1 Step 7. Verify it still works after D1 dark mode unification
+- **Files:** `tax-filing.html`
+- **Verification:** mobile emulation → hamburger visible → sidebar slides
+
+---
+
+## Phase C — Data visualization polish (83 → ~87, 1-2 sessions)
+
+### C1 — 12-month bill table: replace emoji column headers with text + icon
+- **Problem:** Table columns using emoji (💡 🚰 🔥) are hard to scan at a glance and screen reader announces emoji name
+- **Files:** `tenant_app.html` (bill history table), `dashboard.html` (bill tables)
+- **Fix:** Replace raw emoji headers with `<abbr title="ไฟฟ้า">⚡</abbr>` pattern + `aria-hidden="true"` on the emoji span + visible text abbreviation. OR replace with short Thai text labels (ไฟ / น้ำ / ค่าเช่า)
+- **Why:** Improves scannability and a11y simultaneously
+
+### C2 — Dashboard charts: consistent color palette + chart legend
+- **Problem:** Charts use ad-hoc colors that don't match the brand token system. No chart-level legend explaining what each dataset represents (relies on axis labels alone)
+- **Files:** `shared/dashboard-home-live.js`, `shared/dashboard-extra.js`
+- **Fix:** Define `const CHART_PALETTE = [getComputedStyle(document.documentElement).getPropertyValue('--brand-primary').trim(), ...]` and apply consistently. Enable `plugins.legend.display: true` on charts that have multiple datasets
+- **Why:** Consistent brand color in charts + legend = professional finish and interpretability
+
+### C3 — Insight cards: add micro-sparkline trend indicators
+- **Problem:** KPI cards show a single number with no trend direction. Admin can't tell if occupancy rate is going up or down without switching tabs
+- **Files:** `shared/dashboard-home-live.js` (after data loads, post-skeleton removal)
+- **Fix:** After Firebase data loads, compute last-month vs this-month delta. Add a `<span class="trend-up">▲ 2%</span>` or `<span class="trend-down">▼ 3%</span>` under each KPI number. CSS colors: `var(--ok)` for up, `var(--danger)` for down
+- **Why:** Trend is the single most useful addition to a KPI card — zero-cost to compute once data is loaded
+
+---
+
+## Phase D — Interaction states (87 → ~91, 1 session)
+
+### D1 — Audit and standardize hover states
+- **Problem:** Some buttons have hover (`.gh-btn`), but raw `<button>` elements in tenant_app / dashboard don't consistently show hover feedback. Some cards have hover, some don't
+- **Files:** `shared/brand.css`, `shared/components.css`
+- **Fix:** 
+  - Add a single rule: `button:not(:disabled):hover { filter: brightness(0.92); }` as a global fallback for any button not already in the `gh-btn` system
+  - Card hover: `.kpi-card:hover, .insight-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,.1)); transition: transform .15s, box-shadow .15s; }`
+- **Why:** Consistent hover feedback across the app (admin + tenant) signals that elements are interactive
+
+### D2 — Transition timing: unify to 150ms–200ms
+- **Problem:** Some components use `transition: .3s`, others use `0.15s`, others `0.4s`. Inconsistent timing feels jarring on fast actions
+- **Files:** `shared/brand.css` — add CSS custom properties for timing
+- **Fix:** Add to `:root`: `--duration-fast: 150ms; --duration-normal: 200ms; --ease-default: cubic-bezier(0.4,0,0.2,1);`. Replace scattered `transition: X` values with token-based `transition: var(--duration-fast) var(--ease-default)`
+- **Why:** Consistent motion timing = polished, deliberate feel. Single change that touches everything
+
+### D3 — Focus-visible ring: verify all surfaces work
+- **Problem:** Focus ring was added in Phase 1 Step 2 but some dynamic elements created by JS (`modal.js` injected content, `GhTour` spotlight) may bypass the rule
+- **Files:** `shared/brand.css` (existing rule), `shared/modal.js`, `shared/onboarding-tour.js`
+- **Fix:** In devtools, tab through every modal and tour step — confirm blue ring appears on all focusable elements. Fix any that use `outline: none` without a replacement
+- **Why:** Keyboard accessibility baseline — must work for every interactive element
+
+---
+
+## Phase E — Typography & hierarchy (91 → ~93, 1 session)
+
+### E1 — Font size floor: enforce 12px minimum everywhere
+- **Problem:** Some labels, table cells, and metadata text drop to 10-11px (especially at breakpoints in dashboard). Below 12px is generally inaccessible
+- **Files:** `dashboard.html` (CSS), `shared/brand.css`
+- **Fix:** Audit all `font-size` rules below 12px. Replace with `clamp(12px, ...)` or set `min-font-size: 12px`. Pay special attention to `@media` blocks that reduce font size at small breakpoints
+- **Why:** WCAG SC 1.4.4 Resize Text — content must remain readable; 10px fails at arm's length
+
+### E2 — Heading hierarchy: ensure h1 > h2 > h3 on every page
+- **Problem:** Some pages use `<div class="section-title">` instead of actual `<h2>` — screen reader can't navigate by heading
+- **Files:** `dashboard.html`, `tenant_app.html` (scan for `class="section-title|card-title|tab-title"` patterns)
+- **Fix:** Where a div functions as a section heading, change to the appropriate `<h2>` / `<h3>` element. Add `class="sr-only"` if visual design doesn't want a visible heading
+- **Why:** Screen reader users navigate by headings — correct hierarchy is essential
+
+### E3 — Line height for Thai text: set 1.6 minimum
+- **Problem:** Thai script has ascenders and descenders that collide at `line-height: 1.4` (the CSS default). Several Thai paragraphs feel cramped
+- **Files:** `shared/brand.css`
+- **Fix:** Add to base styles: `p, li, .gh-card, label, .info-text { line-height: 1.6; }`. Keep headings at 1.2-1.3 (correct for display sizes)
+- **Why:** IBM Plex Sans Thai Looped is already specified — Thai text needs breathing room
+
+---
+
+## Phase F — Visual elevation (93 → ~95, 1-2 sessions)
+
+### F1 — Sidebar depth: add subtle gradient + dividers
+- **Problem:** Dashboard sidebar is flat background with no depth cues — feels like a prototype, not a finished product
+- **Files:** `dashboard.html` (CSS for `#sidebar`, `.nav-section`)
+- **Fix:** Sidebar background: `background: linear-gradient(180deg, var(--surface-card) 0%, var(--bg) 100%)`. Add `border-right: 1px solid var(--border-subtle)`. Section dividers: `<hr class="nav-divider">` with 1px token border between nav groups
+- **Why:** Depth and definition without adding weight — Muji philosophy (functional detail)
+
+### F2 — Avatar initials for tenants without photos
+- **Problem:** Tenant cards and the LIFF profile fallback show a generic gray avatar `<div>` with no content — looks unfinished
+- **Files:** `tenant_app.html`, `shared/dashboard-tenant-modal.js`
+- **Fix:** When no photo URL, render initials `<div class="gh-avatar-initials" aria-hidden="true">สม</div>` (first 2 chars of name). CSS: `border-radius: 50%; background: var(--brand-primary-soft); color: var(--brand-primary); font-weight: 600; font-size: 1rem; display: flex; align-items: center; justify-content: center;`
+- **Why:** Initials avatars are a professional pattern (used in Gmail, Slack, Linear). Eliminates the "not yet designed" feeling
+
+### F3 — Card elevation system: 3 tiers
+- **Problem:** `.card` / `.kpi-card` / `.insight-card` all have the same box-shadow. No elevation hierarchy — everything feels flat
+- **Files:** `shared/brand.css`, `shared/components.css`
+- **Fix:** Define 3 shadow tokens: `--shadow-sm: 0 1px 3px rgba(0,0,0,.08)`, `--shadow-md: 0 4px 12px rgba(0,0,0,.1)`, `--shadow-lg: 0 8px 24px rgba(0,0,0,.12)`. Apply: KPI cards → `sm`, modals → `md`, overlays/dropdowns → `lg`
+- **Why:** Shadow hierarchy communicates z-depth and information priority — core design principle
+
+### F4 — Page background texture: subtle noise on surface-card
+- **Problem:** Page backgrounds are solid white / solid dark — no texture or depth. Muji aesthetic allows subtle material quality
+- **Files:** `shared/brand.css`
+- **Fix:** Add to `.gh-card, .kpi-card` (light mode only): `background-image: url("data:image/svg+xml,...")` with 1-2% opacity grain (inline SVG noise filter). Dark mode: omit (dark surfaces already have depth through contrast)
+- **Why:** Micro-texture adds material quality without changing the visual language. Subtle enough to be subconscious
+
+---
+
+## Execution order and score projection
+
+| Phase | Key deliverable | Sessions | Score after |
+|---|---|---:|---:|
+| A — Quick wins | emoji a11y, autofill fix, disabled cursor, chart ticks | 1 | ~75 |
+| B — Mobile overhaul | sidebar hamburger, card responsive, tab scroll | 2 | ~83 |
+| C — Data viz | table headers, chart palette, KPI trends | 1-2 | ~87 |
+| D — Interaction | hover standard, transition tokens, focus-visible audit | 1 | ~91 |
+| E — Typography | font floor, heading hierarchy, line-height Thai | 1 | ~93 |
+| F — Visual elevation | sidebar depth, initials avatars, shadow system, texture | 1-2 | ~95 |
+
+**Total: ~6-9 sessions to go from 71 → 95.**
+
+## What NOT to do (scope boundaries)
+
+- ❌ Don't replace Chart.js with a different library — migration cost exceeds benefit
+- ❌ Don't redesign page layout/navigation — IA is already strong (8/10)
+- ❌ Don't add illustration or illustration-heavy empty states — already have GhEmptyState system
+- ❌ Don't touch payment.html UI — legacy SecurityUtils session, separate concern
+- ❌ Don't add new fonts — IBM Plex Sans Thai Looped is already correct
+
+## WAITING FOR USER APPROVAL before implementation begins
