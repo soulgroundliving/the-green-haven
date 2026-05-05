@@ -748,7 +748,9 @@
     return rooms.map(room => {
       const key = `${room.building}:${room.roomId}`;
       const t = tenantMap[key];
-      const isVacant = !t;
+      // A room is vacant if no tenant doc exists, or the doc is an empty shell (no name & no lease tenant)
+      const hasTenant = !!(t?.name || t?.lease?.tenantName || t?.phone);
+      const isVacant = !hasTenant;
       const g = t?.gamification || {};
       const lease = t?.lease || {};
       const startDate = lease.startDate || lease.moveInDate || t?.moveInDate || null;
