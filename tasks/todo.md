@@ -1803,3 +1803,11 @@ Dashboard sidebar and tenant card are the two biggest mobile UX failures. These 
 - [x] D1 — Card hover lift: `.kpi-card/.insight-card/.gh-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-md) }` + transition
 - [x] D2 — Motion timing tokens: `--duration-fast:150ms`, `--duration-normal`, `--ease-default:cubic-bezier(0.4,0,0.2,1)` added to `:root`
 - [x] D3 — `outline:none` audit: all 10 usages paired with visible border+shadow replacement — no bare removals found
+
+---
+
+## Phase E — SHIPPED `f3593cd` (2026-05-07) ✅
+
+- [x] E1 — Font-size floor 12px: 14 CSS class rules in `dashboard.html` raised to `.75rem`; `.u-img-thumb-label` in `brand.css` raised to `.75rem`. Inline styles and media-query responsive reductions left (high blast radius in dense admin views)
+- [x] E2 — Heading roles: `role="heading" aria-level="2"` on all 13 `div.section-title` in dashboard + 20 in tenant_app; `aria-level="3"` on 21 `div.card-title` + 3 `div.form-section-title` in dashboard. `emergency-section-header` skipped (onclick accordion — already role=button semantic)
+- [x] E3 — Thai line-height: `--leading-normal` 1.55→1.6; `p, li, label` share the token in `brand.css`
