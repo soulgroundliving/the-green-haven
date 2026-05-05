@@ -2557,15 +2557,16 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 /* ── ผู้เช่า tab ── */
 .ten-layout{
   display:grid;
-  grid-template-columns:280px 1fr;
+  grid-template-columns:290px 1fr;
   gap:.6rem;
   align-items:start;
 }
-#dashTenantInsights .card{ max-height:calc(100vh - 375px); overflow-y:auto; }
+.ten-left-col{ display:flex; flex-direction:column; gap:.45rem; }
+#dashTenantInsights .card{ max-height:calc(100vh - 270px); overflow-y:auto; }
 #dash-cat-tenants .card{ padding:.8rem 1rem; }
 #dash-cat-tenants .dash-tab-header{ margin-bottom:.75rem; padding-bottom:.65rem; }
-/* ── ผู้เช่า summary row ── */
-.ten-summary-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:.5rem; margin-bottom:.55rem; }
+/* ── ผู้เช่า summary cards (stacked in left col) ── */
+.ten-summary-row{ display:flex; flex-direction:column; gap:.35rem; }
 .ten-stat-card{ display:flex; align-items:center; gap:.65rem; cursor:pointer; transition:box-shadow .15s,transform .1s; }
 .ten-stat-card:hover{ box-shadow:0 3px 12px rgba(0,0,0,.1); transform:translateY(-1px); }
 .ten-stat-icon{ font-size:1.3rem; flex-shrink:0; }
@@ -3145,40 +3146,42 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
       <button class="dash-view-link" data-action="showPage" data-page="tenant">ดูผู้เช่าทั้งหมด →</button>
     </div>
-    <div class="ten-summary-row">
-      <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('leases')">
-        <div class="ten-stat-icon">📋</div>
-        <div class="ten-stat-body">
-          <div class="ten-stat-value c-amber" id="tenSum-exp">—</div>
-          <div class="ten-stat-label">สัญญาใกล้หมด (30 วัน)</div>
-        </div>
-      </div>
-      <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('alerts')">
-        <div class="ten-stat-icon">🔔</div>
-        <div class="ten-stat-body">
-          <div class="ten-stat-value c-red" id="tenSum-alert">—</div>
-          <div class="ten-stat-label">แจ้งเตือนเร่งด่วน (&lt;7 วัน)</div>
-        </div>
-      </div>
-      <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('requests')">
-        <div class="ten-stat-icon">📨</div>
-        <div class="ten-stat-body">
-          <div class="ten-stat-value" id="tenSum-req">—</div>
-          <div class="ten-stat-label">คำขอรอดำเนินการ</div>
-        </div>
-      </div>
-      <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('bookings')">
-        <div class="ten-stat-icon">🗓️</div>
-        <div class="ten-stat-body">
-          <div class="ten-stat-value c-blue" id="tenSum-book">—</div>
-          <div class="ten-stat-label">การจองที่รอดำเนินการ</div>
-        </div>
-      </div>
-    </div>
     <div class="ten-layout">
-      <div class="card">
-        <div class="card-title" role="heading" aria-level="3">สถานะห้องพัก</div>
-        <div id="dashTenantStatus"></div>
+      <div class="ten-left-col">
+        <div class="card">
+          <div class="card-title" role="heading" aria-level="3">สถานะห้องพัก</div>
+          <div id="dashTenantStatus"></div>
+        </div>
+        <div class="ten-summary-row">
+          <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('leases')">
+            <div class="ten-stat-icon">📋</div>
+            <div class="ten-stat-body">
+              <div class="ten-stat-value c-amber" id="tenSum-exp">—</div>
+              <div class="ten-stat-label">สัญญาใกล้หมด (30 วัน)</div>
+            </div>
+          </div>
+          <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('alerts')">
+            <div class="ten-stat-icon">🔔</div>
+            <div class="ten-stat-body">
+              <div class="ten-stat-value c-red" id="tenSum-alert">—</div>
+              <div class="ten-stat-label">แจ้งเตือนเร่งด่วน (&lt;7 วัน)</div>
+            </div>
+          </div>
+          <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('requests')">
+            <div class="ten-stat-icon">📨</div>
+            <div class="ten-stat-body">
+              <div class="ten-stat-value" id="tenSum-req">—</div>
+              <div class="ten-stat-label">คำขอรอดำเนินการ</div>
+            </div>
+          </div>
+          <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('bookings')">
+            <div class="ten-stat-icon">🗓️</div>
+            <div class="ten-stat-body">
+              <div class="ten-stat-value c-blue" id="tenSum-book">—</div>
+              <div class="ten-stat-label">การจองที่รอดำเนินการ</div>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="dashTenantInsights"></div>
     </div>
