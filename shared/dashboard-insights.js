@@ -726,11 +726,32 @@
       loadComplaintCounts().catch(e => { console.warn('[insights] complaints load failed:', e); return {}; })
     ]);
 
-    return tenants.map(t => {
-      const key = `${t.building}:${t.roomId}`;
-      const g = t.gamification || {};
-      const lease = t.lease || {};
-      const startDate = lease.startDate || lease.moveInDate || t.moveInDate || null;
+    // Index tenant docs for O(1) lookup
+    const tenantMap = {};
+    tenants.forEach(t => { tenantMap[`${t.building}:${t.roomId}`] = t; });
+
+    // Master room list from จัดการห้องพัก (RoomConfigManager) — same source as the admin room config page
+    const allRooms = [];
+    for (const building of ['rooms', 'nest']) {
+      const cfg = window.RoomConfigManager ? RoomConfigManager.getRoomsConfig(building) : null;
+      if (cfg?.rooms) {
+        cfg.rooms.filter(r => !r.deleted).forEach(r => {
+          allRooms.push({ building, roomId: r.id, roomName: r.name || r.id });
+        });
+      }
+    }
+
+    // Fallback to tenant docs if RoomConfigManager unavailable
+    const rooms = allRooms.length > 0 ? allRooms
+      : tenants.map(t => ({ building: t.building, roomId: t.roomId, roomName: t.roomId }));
+
+    return rooms.map(room => {
+      const key = `${room.building}:${room.roomId}`;
+      const t = tenantMap[key];
+      const isVacant = !t;
+      const g = t?.gamification || {};
+      const lease = t?.lease || {};
+      const startDate = lease.startDate || lease.moveInDate || t?.moveInDate || null;
       const endDate = lease.endDate || lease.moveOutDate || null;
       const monthsTenure = monthsSince(startDate);
       const daysToEnd = daysUntil(endDate);
@@ -742,13 +763,19 @@
         complaintCount90d: complaints[key] || 0,
         monthsTenure
       };
-      const score = computeHealthScore(inputs);
-      const tier = healthTier(score.total);
+      const score = isVacant
+        ? { total: 0, payment: 0, engagement: 0, issues: 0, tenure: 0 }
+        : computeHealthScore(inputs);
+      const tier = isVacant
+        ? { key: 'vacant', emoji: '🔑', label: 'ว่าง', color: '#9ca3af' }
+        : healthTier(score.total);
 
       return {
-        building: t.building,
-        roomId: t.roomId,
-        tenantName: t.name || lease.tenantName || '',
+        building: room.building,
+        roomId: room.roomId,
+        roomName: room.roomName,
+        tenantName: t?.name || lease.tenantName || '',
+        isVacant,
         startDate, endDate, monthsTenure, daysToEnd,
         streak: inputs.streak,
         lastClaim: g.lastDailyClaim || null,
@@ -780,6 +807,7 @@
       // Annotate every record with churn flags (used for count + tile display)
       const todayBKK = new Date(Date.now() + 7*3600000).toISOString().slice(0,10);
       const annotated = records.map(r => {
+        if (r.isVacant) return { ...r, flags: [], recommend: null };
         const flags = [];
         let recommend = null;
         if (r.daysToEnd != null && r.daysToEnd >= 0 && r.daysToEnd <= 90) {
@@ -805,21 +833,26 @@
         return { ...r, flags, recommend };
       });
 
-      const churnCount = annotated.filter(r => r.flags.length > 0).length;
+      // Vacant rooms: exclude from flags/churn count
+      const occupied = annotated.filter(r => !r.isVacant);
+      const churnCount = occupied.filter(r => r.flags.length > 0).length;
 
-      // Filter + sort for display
+      // Filter + sort — vacant always last
       let rows = annotated;
-      if (_hsState.tierFilter !== 'all') rows = annotated.filter(r => r.tier.key === _hsState.tierFilter);
+      if (_hsState.tierFilter === 'vacant') rows = annotated.filter(r => r.isVacant);
+      else if (_hsState.tierFilter !== 'all') rows = annotated.filter(r => !r.isVacant && r.tier.key === _hsState.tierFilter);
       rows.sort((a, b) => {
+        if (a.isVacant !== b.isVacant) return a.isVacant ? 1 : -1;
         const order = { critical: 0, 'at-risk': 1, steady: 2, healthy: 3 };
         if ((order[a.tier.key] ?? 99) !== (order[b.tier.key] ?? 99))
           return (order[a.tier.key] ?? 99) - (order[b.tier.key] ?? 99);
         return a.score.total - b.score.total;
       });
 
-      // Distribution for filter chips
+      // Distribution for filter chips (occupied only)
       const dist = { healthy: 0, steady: 0, 'at-risk': 0, critical: 0 };
-      annotated.forEach(r => { dist[r.tier.key]++; });
+      occupied.forEach(r => { dist[r.tier.key]++; });
+      const vacantCount = annotated.length - occupied.length;
 
       const chipStyle = (active, color) =>
         `display:inline-block;padding:4px 12px;margin-right:6px;margin-bottom:4px;background:${active ? color : '#fff'};border:1.5px solid ${color};color:${active ? '#fff' : color};border-radius:999px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;`;
@@ -830,20 +863,23 @@
         <button data-action="setHSFilter" data-tier="steady" style="${chipStyle(f === 'steady', 'var(--blue)')}">🟡 ${dist.steady}</button>
         <button data-action="setHSFilter" data-tier="at-risk" style="${chipStyle(f === 'at-risk', 'var(--accent,#ff9800)')}">🟠 ${dist['at-risk']}</button>
         <button data-action="setHSFilter" data-tier="critical" style="${chipStyle(f === 'critical', 'var(--alert,#c06458)')}">🔴 ${dist.critical}</button>
+        ${vacantCount > 0 ? `<button data-action="setHSFilter" data-tier="vacant" style="${chipStyle(f === 'vacant', '#9ca3af')}">🔑 ${vacantCount}</button>` : ''}
       `;
 
       const tilesHTML = rows.length === 0
         ? `<div style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:.85rem;grid-column:1/-1;">ไม่มีห้องในกลุ่มนี้</div>`
         : rows.map(r => `
-          <div data-action="showHealthDetail" data-key="${esc(r.building)}:${esc(r.roomId)}"
-               style="cursor:pointer;background:#fff;border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;"
-               onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 2px 8px rgba(31,31,28,.08)';"
-               onmouseout="this.style.transform='';this.style.boxShadow='';">
+          <div data-action="${r.isVacant ? '' : 'showHealthDetail'}" data-key="${esc(r.building)}:${esc(r.roomId)}"
+               style="cursor:${r.isVacant ? 'default' : 'pointer'};background:${r.isVacant ? 'var(--mist,#f7f6f3)' : '#fff'};border:1px solid var(--border-subtle,#ebe9e2);border-left:4px solid ${r.tier.color};border-radius:10px;padding:.7rem .8rem;transition:transform .1s,box-shadow .1s;opacity:${r.isVacant ? '.7' : '1'};"
+               ${r.isVacant ? '' : 'onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 2px 8px rgba(31,31,28,.08)\';" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\';"'}>
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.2rem;">
-              <span style="font-weight:700;font-size:.92rem;">${esc(r.roomId)} <span style="color:var(--text-muted);font-size:.7rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
-              <span style="font-variant-numeric:tabular-nums;color:${r.tier.color};font-weight:700;font-size:1.1rem;">${r.score.total}<span style="font-size:.7rem;color:var(--text-muted);font-weight:400;">/100</span></span>
+              <span style="font-weight:700;font-size:.92rem;">${esc(r.roomName || r.roomId)} <span style="color:var(--text-muted);font-size:.7rem;font-weight:400;">${buildingLabel(r.building)}</span></span>
+              ${r.isVacant
+                ? `<span style="font-size:.68rem;font-weight:600;color:#9ca3af;background:#f3f4f6;padding:1px 7px;border-radius:99px;">ว่าง</span>`
+                : `<span style="font-variant-numeric:tabular-nums;color:${r.tier.color};font-weight:700;font-size:1.1rem;">${r.score.total}<span style="font-size:.7rem;color:var(--text-muted);font-weight:400;">/100</span></span>`}
             </div>
-            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.tenantName || '—')}</div>
+            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.isVacant ? '—' : esc(r.tenantName || '—')}</div>
+            ${r.isVacant ? '' : `
             <div style="height:5px;background:var(--mist,#f2f1ec);border-radius:3px;overflow:hidden;margin-bottom:.3rem;">
               <div style="width:${r.score.total}%;height:100%;background:${r.tier.color};"></div>
             </div>
@@ -852,7 +888,7 @@
             <div style="border-top:1px dashed var(--border-subtle,#ebe9e2);padding-top:.35rem;">
               <div style="font-size:.68rem;color:var(--text-muted);line-height:1.4;" title="${esc(r.flags.join(' · '))}">⚠️ ${esc(r.flags[0])}${r.flags.length > 1 ? ` <span style="color:var(--alert,#c06458);">+${r.flags.length - 1}</span>` : ''}</div>
               ${r.recommend ? `<div style="font-size:.68rem;color:var(--green-dark);font-weight:600;margin-top:.2rem;">💡 ${esc(r.recommend)}</div>` : ''}
-            </div>` : ''}
+            </div>` : ''}`}
           </div>`).join('');
 
       const statusLine = churnCount === 0
