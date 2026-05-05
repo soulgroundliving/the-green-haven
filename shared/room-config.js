@@ -338,3 +338,26 @@ RoomConfigManager.onChange = function(fn) {
 if (typeof window !== 'undefined') {
   setTimeout(() => RoomConfigManager.subscribeFromFirebase(), 1000);
 }
+
+/**
+ * Global SSoT for active rooms — used throughout the system wherever
+ * room lists are needed (billing, occupancy KPIs, payment status, etc.).
+ *
+ * Primary source: RoomConfigManager (จัดการห้องพัก page data).
+ * Fallback: the legacy static array passed as second argument,
+ * used only when RoomConfigManager config is not yet loaded.
+ *
+ * @param {string} building - 'rooms' | 'nest'
+ * @param {Array}  [fallback] - legacy room array (ROOMS_OLD / NEST_ROOMS)
+ * @returns {Array} active room objects (id, name, rentPrice, waterRate, electricRate, …)
+ */
+function getActiveRoomsWithMetadata(building, fallback) {
+  try {
+    const cfg = RoomConfigManager.getRoomsConfig(building);
+    const active = (cfg?.rooms || []).filter(r => !r.deleted);
+    if (active.length > 0) return active;
+  } catch (e) {
+    // fall through to fallback
+  }
+  return (fallback || []).filter(r => !r.deleted);
+}
