@@ -1455,7 +1455,28 @@ Senior UI/UX audit ทำขึ้นหลัง dark mode ครบ. พบ 10
 | D2 — JS hex → CSS class | กลาง (debt) | ใหญ่ | เก็บไว้ |
 
 ## รอ User Approval ก่อนเริ่ม
-- [ ] เริ่ม Group A ทั้ง 4 จุดก่อน? (low-risk, quick wins)
-- [ ] ทำ Group B (a11y) ในรอบเดียวกัน?
-- [ ] Group C (perf) แยก session?
-- [ ] Group D (structural) เลื่อนไปก่อน?
+- [x] เริ่ม Group A ทั้ง 4 จุดก่อน? (low-risk, quick wins)
+- [x] ทำ Group B (a11y) ในรอบเดียวกัน?
+- [x] Group C (perf) แยก session?
+- [x] Group D (structural) เลื่อนไปก่อน?
+
+---
+
+## Review — Phase 5 ครบทุก Group (2026-05-06)
+
+**Commit:** `4d7962c` (Group A+B, 2026-05-05) + `eff3fbd` (Group C+D, 2026-05-06)
+
+### Shipped
+- [x] **A1** `login.html` — `prompt()` → `GhModal.open()` with email input + validation + Firebase reset
+- [x] **A2** `dashboard.html` — KPI grid `repeat(4,1fr)` → `repeat(auto-fit, minmax(190px,1fr))`
+- [x] **A3** `dashboard.html` — bill layout sticky sidebar → `position:static` + 1-col stack at ≤1100px
+- [x] **A4** `dashboard.html` — form-grid / bill-actions / exp-form / mx-form → 1-col at ≤600px
+- [x] **B1** `tenant_app.html` — world map 4 tiles `<div onclick>` → `<button type="button" aria-label>`
+- [x] **B2** `tenant_app.html` — `toggleAccordion` sets `aria-expanded`; JS enhancer adds `tabindex=0 role=button keydown` to all 13 accordion headers
+- [x] **C1** `tenant_app.html`, `dashboard.html` — FA CSS async (`media="print" onload`), 160 KB off render-blocking path
+- [x] **C2** `tenant_app.html` — QRCode.js lazy via `ensureQRCode()` IIFE; SRI hash preserved; payment functions made async
+- [x] **D1** `tenant_app.html`, `theme-toggle.js` — `body.night-mode` 107 lines → `html[data-theme="dark"]` 22 lines; legacy localStorage key migrated at parse time
+- [x] **D2** `dashboard-extra.js`, `dashboard.html` — 17 inline style patterns → `dx-*` CSS utility classes; dark mode overrides added for all classes
+
+### Deferred
+- ไม่มี — Phase 5 ทำครบทุกจุด
