@@ -713,3 +713,59 @@ describe('tenants archive — admin-only (Phase 1)', () => {
     ));
   });
 });
+
+// ── people/{tenantId} (Phase 2 — ex-tenant player identity) ──────────────────
+// rule: read = admin OR linkedAuthUid matches caller uid; write = admin only
+describe('people — player identity, owner read / admin write', () => {
+  const PLAYER_UID = 'player-firebase-uid-1';
+  const PLAYER = () => testEnv.authenticatedContext(PLAYER_UID, {
+    role: 'player', tenantId: 'TENANT_P1',
+    firebase: { sign_in_provider: 'custom' }
+  });
+
+  it('admin CAN read people doc', async () => {
+    await seedDoc('people/TENANT_P1', { linkedAuthUid: PLAYER_UID, name: 'Test' });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'people/TENANT_P1')));
+  });
+
+  it('player CAN read their own people doc (linkedAuthUid match)', async () => {
+    await seedDoc('people/TENANT_P1', { linkedAuthUid: PLAYER_UID, name: 'Test' });
+    await assertSucceeds(getDoc(doc(PLAYER().firestore(), 'people/TENANT_P1')));
+  });
+
+  it('player CANNOT read a different people doc (other linkedAuthUid)', async () => {
+    await seedDoc('people/TENANT_OTHER', { linkedAuthUid: 'other-uid-9999', name: 'Other' });
+    await assertFails(getDoc(doc(PLAYER().firestore(), 'people/TENANT_OTHER')));
+  });
+
+  it('unauthenticated CANNOT read people doc', async () => {
+    await seedDoc('people/TENANT_P1', { linkedAuthUid: PLAYER_UID, name: 'Test' });
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'people/TENANT_P1')));
+  });
+
+  it('LIFF tenant CANNOT read people doc (no linkedAuthUid match)', async () => {
+    await seedDoc('people/TENANT_P1', { linkedAuthUid: PLAYER_UID, name: 'Test' });
+    await assertFails(getDoc(doc(LIFF_TENANT().firestore(), 'people/TENANT_P1')));
+  });
+
+  it('admin CAN write people doc', async () => {
+    await assertSucceeds(setDoc(
+      doc(EMAIL_ADMIN().firestore(), 'people/TENANT_P1'),
+      { linkedAuthUid: PLAYER_UID, name: 'Test', tenantId: 'TENANT_P1' }
+    ));
+  });
+
+  it('player CANNOT write their own people doc (CF-only writes)', async () => {
+    await assertFails(setDoc(
+      doc(PLAYER().firestore(), 'people/TENANT_P1'),
+      { linkedAuthUid: PLAYER_UID, name: 'Hack' }
+    ));
+  });
+
+  it('anonymous tenant CANNOT write people doc', async () => {
+    await assertFails(setDoc(
+      doc(ANON().firestore(), 'people/TENANT_HIJACK'),
+      { linkedAuthUid: 'anon-uid', name: 'Hack' }
+    ));
+  });
+});
