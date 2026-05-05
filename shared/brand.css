@@ -65,6 +65,15 @@
   --alert:   #dc2626;  /* danger red */
   --info:    #6b8a9d;
 
+  /* Legacy color aliases — map old "green" tokens to brand teal so existing
+     `.u-*` utilities and `var(--green, #2d8653)` references resolve to the
+     brand palette and adapt automatically in dark mode.
+     New code: prefer --brand-primary / --brand-primary-* directly. */
+  --green:       var(--brand-primary);
+  --green-dark:  var(--brand-primary-dark);
+  --green-light: var(--brand-primary-light);
+  --green-pale:  var(--brand-primary-soft);
+
   /* Surfaces ──────────────────────────────────────────────── */
   --surface-page:   var(--cloud);
   --surface-card:   #ffffff;
@@ -282,7 +291,7 @@ select:invalid {
 }
 .u-toast-center {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  background: #1a5c38; color: #fff;
+  background: var(--brand-primary-dark); color: #fff;
   padding: 10px 22px; border-radius: 24px;
   font-weight: 700; font-size: .88rem;
   z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,.25);
@@ -351,8 +360,8 @@ select:invalid {
 .u-btn-close    { flex: 1; padding: 12px; background: #f0f0f0; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
 .u-btn-confirm-cancel { padding: .6rem 1.2rem; background: #e0e0e0; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: .9rem; transition: background .2s; }
 .u-btn-confirm-cancel:hover { background: #d0d0d0; }
-.u-btn-confirm-ok { padding: .6rem 1.2rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: .9rem; transition: background .2s; }
-.u-btn-confirm-ok:hover { background: #45a049; }
+.u-btn-confirm-ok { padding: .6rem 1.2rem; background: var(--brand-primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: .9rem; transition: background .2s; }
+.u-btn-confirm-ok:hover { background: var(--brand-primary-dark); }
 /* Modal title */
 .u-modal-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 1.5rem; }
 /* Document viewer modal */
@@ -368,10 +377,10 @@ select:invalid {
 .u-confirm-foot { padding: .85rem 1.3rem; background: #fafafa; border-top: 1px solid #e0e0e0; display: flex; gap: .8rem; justify-content: flex-end; }
 /* Notification toasts */
 .u-notif         { position: fixed; top: 20px; right: 20px; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.2); font-size: 14px; font-weight: 600; z-index: 10000; animation: slideIn .3s ease-out; }
-.u-notif-success { background: #4caf50; }
+.u-notif-success { background: var(--brand-primary); }
 .u-notif-info    { background: #2196f3; }
 /* Payment/receipt inline notification rows */
-.payment-notification-item  { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px; margin: 8px 0; border-radius: 4px; font-size: 14px; }
+.payment-notification-item  { background: var(--brand-primary-soft); border-left: 4px solid var(--brand-primary); padding: 12px; margin: 8px 0; border-radius: 4px; font-size: 14px; }
 .receipt-notification-item  { background: #e3f2fd; border-left: 4px solid #1976d2; padding: 12px; margin: 8px 0; border-radius: 4px; font-size: 14px; }
 .u-payment-badge { display: inline-block; background: #f44336; color: white; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-size: 12px; font-weight: bold; margin-left: 4px; }
 /* Lightbox photo */
@@ -391,12 +400,12 @@ select:invalid {
 .u-img-thumb       { width: 100%; height: 100%; object-fit: cover; }
 .u-img-thumb-label { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,.7); color: #fff; font-size: .65rem; text-align: center; padding: 2px; font-family: monospace; }
 /* Bill room badges */
-.u-bill-paid-badge    { padding: 3px 10px; border-radius: 20px; font-size: .76rem; font-weight: 700; background: #e8f5e9; color: var(--green-dark, #1a5c38); border: 1px solid #a5d6a7; cursor: pointer; transition: background .15s; display: inline-block; }
-.u-bill-paid-badge:hover { background: #c8e6c9; }
+.u-bill-paid-badge    { padding: 3px 10px; border-radius: 20px; font-size: .76rem; font-weight: 700; background: var(--brand-primary-soft); color: var(--brand-primary-dark); border: 1px solid var(--brand-primary-light); cursor: pointer; transition: background .15s; display: inline-block; }
+.u-bill-paid-badge:hover { background: var(--brand-primary-soft); filter: brightness(0.95); }
 .u-bill-pending-badge { padding: 3px 10px; border-radius: 20px; font-size: .76rem; font-weight: 600; background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; cursor: pointer; display: inline-block; }
 /* Dynamic status message (import) */
 .u-msg-default { background: var(--accent-light, #f0fdf4); border-left: 4px solid var(--accent, #2d8653); padding: 1rem; border-radius: 4px; color: var(--text, #333); }
-.u-msg-ok      { background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 1rem; border-radius: 4px; color: var(--text, #333); }
+.u-msg-ok      { background: var(--brand-primary-soft); border-left: 4px solid var(--brand-primary-dark); padding: 1rem; border-radius: 4px; color: var(--text, #333); }
 .u-msg-err     { background: #ffebee; border-left: 4px solid #c62828; padding: 1rem; border-radius: 4px; color: var(--text, #333); }
 .u-msg-warn    { background: #fff3e0; border-left: 4px solid #e65100; padding: 1rem; border-radius: 4px; color: var(--text, #333); }
 .u-msg-info    { background: #e3f2fd; border-left: 4px solid #1565c0; padding: 1rem; border-radius: 4px; color: var(--text, #333); }
@@ -418,12 +427,12 @@ select:invalid {
 .lease-req-filter-btn.active { background: var(--green-dark, #1a5c38) !important; color: white !important; }
 /* Gamification tab */
 .u-gamification-tab        { color: var(--text-muted, #666) !important; border-bottom: 3px solid transparent !important; }
-.u-gamification-tab.active { color: #2d8653 !important; border-bottom: 3px solid #2d8653 !important; }
+.u-gamification-tab.active { color: var(--brand-primary) !important; border-bottom: 3px solid var(--brand-primary) !important; }
 /* people-mgmt-tab borderBottomColor */
 .people-mgmt-tab        { border-bottom: 3px solid transparent; }
 .people-mgmt-tab.active { border-bottom: 3px solid var(--green, #2d8653) !important; color: var(--green, #2d8653) !important; }
 /* Phone / input validation feedback */
-.u-input-valid   { border-color: #4caf50 !important; box-shadow: 0 0 10px rgba(76,175,80,.2) !important; }
+.u-input-valid   { border-color: var(--brand-primary) !important; box-shadow: 0 0 10px rgba(15,118,110,.2) !important; }
 .u-input-invalid { border-color: #d32f2f !important; box-shadow: 0 0 10px rgba(211,47,47,.2) !important; }
 /* Grid with 1rem gap */
 .u-grid-1 { display: grid; gap: 1rem; }

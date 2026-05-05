@@ -1480,3 +1480,71 @@ Senior UI/UX audit ทำขึ้นหลัง dark mode ครบ. พบ 10
 
 ### Deferred
 - ไม่มี — Phase 5 ทำครบทุกจุด
+
+---
+
+# Senior UI/UX Audit — P0 Color + a11y (2026-05-06)
+
+## Context
+Senior UI/UX วิเคราะห์โปรเจ็คหลัง Phase 5 และพบปัญหา P0 สองตัว:
+1. **Color fragmentation** — มี 3 "green" hex คนละตัวอยู่ในโค้ดเดียวกัน (`#0f766e` brand, `#2d8653` Material, `#4caf50` Material lighter). Hardcoded hex ไม่ adapt ตาม dark mode token.
+2. **a11y desert บน payment.html** — หน้าทำธุรกรรมเงินมี ARIA roles 0 ตัว, attributes 0 ตัว — ผิด WCAG 2.1 AA ชัด
+
+User: "แก้ทันที"
+
+## Step 1 — Color Consolidation (brand.css)
+- [x] เพิ่ม legacy aliases ที่ `:root`: `--green` / `--green-dark` / `--green-light` / `--green-pale` → `var(--brand-primary*)`
+  - **Why:** `.u-*` utilities ใช้ pattern `var(--green, #2d8653)` — fallback อยู่แล้ว เพิ่ม var ที่ `:root` = global fix + dark mode adapt อัตโนมัติ ผ่าน brand-primary-soft override (line 175)
+  - **How to apply:** ทุกหน้าที่ใช้ class `.u-bill-paid-badge`, `.year-tab`, `.filter-btn.active`, `.u-icon-sel`, `.property-tab.active`, `.people-mgmt-tab.active` etc. จะเปลี่ยนเป็นสี teal ทันที
+- [x] แทน hardcoded hex literals 8 จุด → brand tokens:
+  - `.u-toast-center` → `var(--brand-primary-dark)`
+  - `.u-btn-confirm-ok` + hover → `var(--brand-primary)` / `--brand-primary-dark`
+  - `.u-notif-success` → `var(--brand-primary)`
+  - `.payment-notification-item` → `var(--brand-primary-soft)` + `var(--brand-primary)`
+  - `.u-bill-paid-badge` (incl. `:hover` filter approach) → tokens
+  - `.u-msg-ok` → tokens
+  - `.u-gamification-tab.active` → `var(--brand-primary)`
+  - `.u-input-valid` border + shadow → tokens
+
+## Step 2 — payment.html: alias local CSS vars
+- [x] [payment.html:17-23](payment.html:17): local `:root --green` family ตอนนี้ `var(--brand-primary*)` แทน hex
+- [x] [payment.html:7](payment.html:7) `<meta name="theme-color">` `#2d8653` → `#0f766e`
+- [x] [payment.html:8](payment.html:8) SVG favicon `fill='%232d8653'` → `fill='%230f766e'`
+  - **Why:** PWA color บนแถบ status mobile + favicon ตรง brand
+  - **How to apply:** หลัง deploy บน Vercel แท็บเบราว์เซอร์ + เครื่อง iOS standalone จะเห็น teal แทน Material green
+
+## Step 3 — payment.html: semantic HTML + ARIA
+- [x] เพิ่ม skip-link (`<a class="skip-link" href="#main-content">`) + CSS `:focus` reveal
+- [x] `<div class="app-header">` → `<header role="banner">`
+- [x] `<div class="app-content">` → `<main id="main-content">`
+- [x] `<div class="app-footer">` → `<div role="toolbar" aria-label>`
+- [x] `<div class="footer">` → `<footer role="contentinfo">`
+- [x] icon-only buttons ได้ `aria-label`: ย้อนกลับ, ติดตั้งแอป, ออกจากระบบ, รีเฟรชหน้า, แชร์หน้านี้
+- [x] `<button>` ทั้งหมดเพิ่ม `type="button"` (ป้องกัน implicit submit)
+- [x] `#billContent` → `role="status" aria-live="polite" aria-busy="true"`
+- [x] `#paymentStatus` → `aria-live="polite" aria-labelledby`
+- [x] `#successMessage` → `role="status" aria-live="polite"`
+- [x] `#paymentHistory` → `aria-labelledby="historyCardTitle"`
+- [x] `#uploadStatus` + `#alreadyUploadedStatus` → `role="status" aria-live="polite"`
+- [x] error card body (room ID invalid) → `role="alert"` (สำหรับ AT แจ้งทันที)
+  - **Why:** Screen reader users + keyboard users ตอนนี้ navigate ได้ถูก, รู้ว่าหน้ากำลัง load หรือ error
+  - **How to apply:** WCAG 2.1 AA compliance + lighthouse a11y score น่าจะขึ้นเกิน 90
+
+## Verification
+- [x] `npm run verify:memory` → ALL GREEN (22 docs, 216 verifier rows, 0 fails)
+- [x] `grep #2d8653|#1a5c38 payment.html` → 0 matches
+- [x] `grep` ใน brand.css: hex ที่เหลือทั้งหมดเป็น **fallback defaults** ใน `var(--green, #2d8653)` pattern เท่านั้น (ไม่ active เพราะ `--green` define ที่ `:root` แล้ว)
+- [ ] **Pending live verify:** push → vercel → check teal บน:
+  - tenant_app `.u-icon-sel`, badges, year-tab
+  - dashboard `.filter-btn.active`, `.view-btn.active`, gamification tab
+  - payment.html keyboard tab order + Tab Esc Enter behavior + screen reader smoke test
+
+## Files Changed
+- `shared/brand.css` (+13/-9 lines: aliases + 8 hex→token swaps)
+- `payment.html` (+22/-9 lines: meta + favicon + CSS aliases + skip-link CSS + semantic + 12 ARIA additions)
+
+## Risk Assessment
+- **Color change:** Visual diff คือ legacy `.u-*` classes เปลี่ยนจาก Material green (`#2d8653`) → brand teal (`#0f766e`) — เป็นสิ่งที่ตั้งใจให้เกิด (color consolidation)
+- **a11y:** ไม่เปลี่ยน UX ปัจจุบัน — เพิ่ม metadata อย่างเดียว (no breaking change)
+- **Dark mode:** ตอนนี้ `.u-*` ทุกตัว adapt ตาม theme เพราะ brand-primary-soft override อยู่ที่ line 175 ของ brand.css
+

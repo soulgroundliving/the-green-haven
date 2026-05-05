@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https: wss:; frame-src 'self';">
-<meta name="theme-color" content="#2d8653">
-<link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%232d8653' width='192' height='192'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='100' font-family='Arial' fill='white' font-weight='bold'>💳</text></svg>">
+<meta name="theme-color" content="#0f766e">
+<link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%230f766e' width='192' height='192'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='100' font-family='Arial' fill='white' font-weight='bold'>💳</text></svg>">
 <title>ชำระค่าเช่า - The Green Haven</title>
 <link rel="stylesheet" href="./shared/brand.css">
 <script>window.SENTRY_APP_NAME = 'payment';</script>
@@ -15,12 +15,19 @@
 <script src="./shared/security.js"></script>
 <style>
   :root {
-    --green-dark:#1a5c38;--green:#2d8653;--green-light:#4caf50;--green-pale:#e8f5e9;
+    /* Greens aliased to brand tokens — auto-adapts to dark mode via brand.css */
+    --green-dark:var(--brand-primary-dark);
+    --green:var(--brand-primary);
+    --green-light:var(--brand-primary-light);
+    --green-pale:var(--brand-primary-soft);
     --accent:#ff8f00;--accent-light:#fff8e1;--blue:#1976d2;--blue-pale:#e3f2fd;
     --red:#c62828;--red-pale:#ffebee;
     --bg:#f4f6f8;--card:#fff;--text:#1a2332;--text-muted:#6b7a8d;
     --border:#e0e6ed;--radius:14px;--radius-sm:8px;
   }
+  /* Skip-to-content — visible on keyboard focus only */
+  .skip-link{position:absolute;left:-9999px;top:0;background:var(--brand-primary);color:#fff;padding:.6rem 1rem;border-radius:0 0 8px 0;z-index:10000;font-weight:700;}
+  .skip-link:focus{left:0;}
   *{margin:0;padding:0;box-sizing:border-box;}
   html,body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);height:100%;width:100%;}
 
@@ -222,25 +229,27 @@
 </head>
 <body>
 
+<a class="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
+
 <div class="app-container">
   <!-- App Header -->
-  <div class="app-header">
-    <button class="app-header-back hidden" data-action="back" id="backBtn">←</button>
+  <header class="app-header" role="banner">
+    <button class="app-header-back hidden" data-action="back" id="backBtn" aria-label="ย้อนกลับ" type="button">←</button>
     <div class="app-header-title">
       <h1>💳 ชำระค่าเช่า</h1>
       <p>The Green Haven</p>
     </div>
-    <div class="flex-row-8">
-      <button class="app-header-install hidden" data-action="install-app" id="installBtn">📱 ติดตั้ง</button>
-      <button class="app-header-install logout-pill" data-action="logout">🚪 Out</button>
+    <div class="flex-row-8" role="group" aria-label="การจัดการบัญชี">
+      <button class="app-header-install hidden" data-action="install-app" id="installBtn" aria-label="ติดตั้งแอป" type="button">📱 ติดตั้ง</button>
+      <button class="app-header-install logout-pill" data-action="logout" aria-label="ออกจากระบบ" type="button">🚪 Out</button>
     </div>
-  </div>
+  </header>
 
   <!-- Main Content -->
-  <div class="app-content">
+  <main class="app-content" id="main-content">
     <!-- Bill Info -->
     <div class="card">
-      <div id="billContent">
+      <div id="billContent" role="status" aria-live="polite" aria-busy="true">
         <div class="loading-center">
           🔄 กำลังโหลด...
         </div>
@@ -249,8 +258,8 @@
 
     <!-- Payment Status -->
     <div class="card">
-      <div class="status-label-sm">📊 สถานะการชำระ</div>
-      <div id="paymentStatus"></div>
+      <div class="status-label-sm" id="paymentStatusLabel">📊 สถานะการชำระ</div>
+      <div id="paymentStatus" aria-live="polite" aria-labelledby="paymentStatusLabel"></div>
     </div>
 
     <!-- Payment Methods -->
@@ -321,15 +330,15 @@
         </div>
 
         <!-- Upload Status -->
-        <div id="uploadStatus" class="hidden upload-status-box"></div>
+        <div id="uploadStatus" class="hidden upload-status-box" role="status" aria-live="polite"></div>
 
         <!-- Upload Button -->
-        <button id="uploadSlipBtn" class="btn btn-primary hidden btn-upload-slip" data-action="upload-slip">
+        <button id="uploadSlipBtn" class="btn btn-primary hidden btn-upload-slip" data-action="upload-slip" type="button">
           🚀 ส่งสลิป
         </button>
 
         <!-- Already Uploaded Status -->
-        <div id="alreadyUploadedStatus" class="hidden uploaded-status">
+        <div id="alreadyUploadedStatus" class="hidden uploaded-status" role="status" aria-live="polite">
           ✅ ส่งสลิปแล้ว<br>
           <small id="uploadedTimeText"></small><br>
           <small id="verificationStatusText" class="verification-detail"></small>
@@ -348,7 +357,7 @@
     </div>
 
     <!-- Success Message -->
-    <div id="successMessage" class="hidden">
+    <div id="successMessage" class="hidden" role="status" aria-live="polite">
       <div class="success-box">
         ✅ <strong>โอนเงินเรียบร้อย</strong><br><br>
         ระบบได้รับแจ้งแล้ว<br>
@@ -359,20 +368,20 @@
 
     <!-- Payment History -->
     <div class="card hidden" id="historyCard">
-      <div class="card-title">📋 ประวัติการชำระเงิน</div>
-      <div id="paymentHistory"></div>
+      <div class="card-title" id="historyCardTitle">📋 ประวัติการชำระเงิน</div>
+      <div id="paymentHistory" aria-labelledby="historyCardTitle"></div>
     </div>
+  </main>
+
+  <!-- App Footer Toolbar -->
+  <div class="app-footer" role="toolbar" aria-label="การกระทำหน้าชำระเงิน">
+    <button class="footer-btn" data-action="refresh" aria-label="รีเฟรชหน้า" type="button">🔄 รีเฟรช</button>
+    <button class="footer-btn" data-action="share" aria-label="แชร์หน้านี้" type="button">📤 แชร์</button>
   </div>
 
-  <!-- App Footer Navigation -->
-  <div class="app-footer">
-    <button class="footer-btn" data-action="refresh">🔄 รีเฟรช</button>
-    <button class="footer-btn" data-action="share">📤 แชร์</button>
-  </div>
-
-  <div class="footer">
+  <footer class="footer" role="contentinfo">
     <p>The Green Haven | © 2024-2025</p>
-  </div>
+  </footer>
 </div>
 
 <!-- PWA Install Prompt -->
@@ -452,7 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Validate room ID (alphanumeric only, max 10 chars)
   if (!rawRoomId || !/^[a-zA-Z0-9]{1,10}$/.test(rawRoomId)) {
     document.querySelector('.app-content').innerHTML =
-      '<div class="card"><div class="error-card-body">❌ เลขห้องไม่ถูกต้อง</div></div>';
+      '<div class="card"><div class="error-card-body" role="alert">❌ เลขห้องไม่ถูกต้อง</div></div>';
     return;
   }
 
