@@ -683,6 +683,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     // Save / action buttons
     if (a === 'saveTenantInfo') { saveTenantInfo(); return; }
     if (a === 'archiveTenantOnMoveOut') { typeof archiveTenantOnMoveOut === 'function' && archiveTenantOnMoveOut(); return; }
+    if (a === 'transitionToPlayer') { typeof transitionToPlayer === 'function' && transitionToPlayer(); return; }
     if (a === 'addNewRoom') { addNewRoom(); return; }
     if (a === 'selectAllRooms') { typeof selectAllRooms === 'function' && selectAllRooms(); return; }
     if (a === 'deselectAllRooms') { typeof deselectAllRooms === 'function' && deselectAllRooms(); return; }
