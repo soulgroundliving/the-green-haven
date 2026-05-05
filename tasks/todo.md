@@ -1794,3 +1794,12 @@ Dashboard sidebar and tenant card are the two biggest mobile UX failures. These 
 - [x] C1 — Bill table emoji aria-hidden in JS template string (`tenant_app.html`)
 - [x] C2 — Chart palette: all `#2d8653` / `rgba(45,134,83)` → `#0f766e` / `rgba(15,118,110)` brand teal in `dashboard-home-live.js` (charts + inline text colors)
 - [x] C3 — KPI monthly-sub trend: `totalsTrend = trendArrow(totals)` appended after insight-card trends — confirmed `kpi-monthly-sub` updated with `⬆️/⬇️ จากเดือนก่อน`
+
+---
+
+## Phase D — SHIPPED `06bffc7` (2026-05-07) ✅
+
+- [x] D1 — Global button hover: `button:not(:disabled):hover { filter: brightness(0.92) }` in `shared/brand.css`
+- [x] D1 — Card hover lift: `.kpi-card/.insight-card/.gh-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-md) }` + transition
+- [x] D2 — Motion timing tokens: `--duration-fast:150ms`, `--duration-normal`, `--ease-default:cubic-bezier(0.4,0,0.2,1)` added to `:root`
+- [x] D3 — `outline:none` audit: all 10 usages paired with visible border+shadow replacement — no bare removals found
