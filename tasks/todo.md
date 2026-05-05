@@ -1811,3 +1811,12 @@ Dashboard sidebar and tenant card are the two biggest mobile UX failures. These 
 - [x] E1 — Font-size floor 12px: 14 CSS class rules in `dashboard.html` raised to `.75rem`; `.u-img-thumb-label` in `brand.css` raised to `.75rem`. Inline styles and media-query responsive reductions left (high blast radius in dense admin views)
 - [x] E2 — Heading roles: `role="heading" aria-level="2"` on all 13 `div.section-title` in dashboard + 20 in tenant_app; `aria-level="3"` on 21 `div.card-title` + 3 `div.form-section-title` in dashboard. `emergency-section-header` skipped (onclick accordion — already role=button semantic)
 - [x] E3 — Thai line-height: `--leading-normal` 1.55→1.6; `p, li, label` share the token in `brand.css`
+
+---
+
+## Phase F — SHIPPED `6f495f8` (2026-05-07) ✅
+
+- [x] F1 — Sidebar depth: `border-right: 1px solid rgba(255,255,255,.12)` added to `.sidebar`; `.sidebar-group-title` 0.7rem→0.75rem (gradient + group dividers already present)
+- [x] F2 — `.gh-avatar-initials` CSS class in `brand.css` — `50% radius, brand-primary-soft bg, brand-primary text, semibold` — ready to apply wherever initials avatars are needed
+- [x] F3 — 3-tier shadow: `--shadow` (tier-1 cards), `--shadow-hover` (tier-2 lift), `--shadow-overlay: 0 12px 40px rgba(0,0,0,.22)` (tier-3 modals). `.pay-modal` + `#notifDropdown` migrated to token
+- [x] F4 — Card micro-texture: `radial-gradient(ellipse at 12% 12%, rgba(15,118,110,.04) 0%, transparent 55%)` on `.kpi-card/.insight-card/.gh-card`; `background-image:none` in dark mode
