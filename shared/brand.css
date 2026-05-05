@@ -287,11 +287,7 @@ select:invalid {
  * the page works under a strict style-src CSP (no 'unsafe-inline').
  * Rule order matters: u-hidden must come LAST so it wins over display helpers.
  */
-.u-flex   { display: flex         !important; }
-.u-grid   { display: grid         !important; }
-.u-block  { display: block        !important; }
 .u-iblock { display: inline-block !important; }
-.u-inline { display: inline       !important; }
 .u-hidden { display: none         !important; } /* always last — overrides display helpers */
 
 .u-op40    { opacity: .4; }
@@ -327,7 +323,6 @@ select:invalid {
 }
 .u-modal-panel-sm  { max-width: 450px; }
 .u-modal-panel-md  { max-width: 500px; }
-.u-modal-panel-lg  { max-width: 600px; }
 /* JS-built form elements */
 .u-form-input  { width: 100%; padding: .7rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
 .u-form-label  { display: block; margin-bottom: .4rem; font-weight: 600; }
@@ -394,8 +389,6 @@ select:invalid {
 .u-confirm-foot { padding: .85rem 1.3rem; background: #fafafa; border-top: 1px solid #e0e0e0; display: flex; gap: .8rem; justify-content: flex-end; }
 /* Notification toasts */
 .u-notif         { position: fixed; top: 20px; right: 20px; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.2); font-size: 14px; font-weight: 600; z-index: 10000; animation: slideIn .3s ease-out; }
-.u-notif-success { background: var(--brand-primary); }
-.u-notif-info    { background: #2196f3; }
 /* Payment/receipt inline notification rows */
 .payment-notification-item  { background: var(--brand-primary-soft); border-left: 4px solid var(--brand-primary); padding: 12px; margin: 8px 0; border-radius: 4px; font-size: 14px; }
 .receipt-notification-item  { background: #e3f2fd; border-left: 4px solid #1976d2; padding: 12px; margin: 8px 0; border-radius: 4px; font-size: 14px; }
@@ -443,8 +436,8 @@ select:invalid {
 .view-btn.active        { background: var(--green-pale, #e8f5e9) !important; color: var(--green-dark, #1a5c38) !important; }
 .lease-req-filter-btn.active { background: var(--green-dark, #1a5c38) !important; color: white !important; }
 /* Gamification tab */
-.u-gamification-tab        { color: var(--text-muted, #666) !important; border-bottom: 3px solid transparent !important; }
-.u-gamification-tab.active { color: var(--brand-primary) !important; border-bottom: 3px solid var(--brand-primary) !important; }
+.u-gamification-tab         { color: var(--text-muted, #666) !important; border-bottom: 3px solid transparent !important; }
+.u-gamification-tab-active  { color: var(--brand-primary) !important; border-bottom: 3px solid var(--brand-primary) !important; }
 /* people-mgmt-tab borderBottomColor */
 .people-mgmt-tab        { border-bottom: 3px solid transparent; }
 .people-mgmt-tab.active { border-bottom: 3px solid var(--green, #2d8653) !important; color: var(--green, #2d8653) !important; }
