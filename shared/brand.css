@@ -480,6 +480,40 @@ button:not(:disabled):not([aria-disabled="true"]):hover {
 .u-iframe-full  { height: 100%; }
 .u-img-contain  { max-width: 100%; max-height: 100%; object-fit: contain; }
 
+/* ─── Card micro-texture (light mode only) ────────── */
+.kpi-card,
+.insight-card,
+.gh-card {
+  background-image: radial-gradient(
+    ellipse at 12% 12%,
+    rgba(15,118,110,.04) 0%,
+    transparent 55%
+  );
+}
+:root[data-theme="dark"] .kpi-card,
+:root[data-theme="dark"] .insight-card,
+:root[data-theme="dark"] .gh-card { background-image: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .kpi-card,
+  :root:not([data-theme="light"]) .insight-card,
+  :root:not([data-theme="light"]) .gh-card { background-image: none; }
+}
+
+/* ─── Avatar initials ────────────────────────────── */
+.gh-avatar-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary);
+  font-weight: var(--weight-semibold);
+  font-size: 1rem;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+}
+
 /* ─── Skeleton loading ────────────────────────────── */
 @keyframes skeleton-shimmer {
   0%   { background-position: -400px 0; }
