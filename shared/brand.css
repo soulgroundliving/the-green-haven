@@ -109,10 +109,13 @@
   --shadow-lg: 0 8px 32px rgba(31, 31, 28, 0.09);
 
   /* Motion — calm, no bounce ────────────────────────────── */
-  --ease-quiet:  cubic-bezier(0.25, 0.1, 0.25, 1);
-  --dur-instant: 120ms;
-  --dur-quick:   200ms;
-  --dur-settle:  320ms;
+  --ease-quiet:    cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-default:  cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-instant:   120ms;
+  --dur-quick:     200ms;
+  --dur-settle:    320ms;
+  --duration-fast:   150ms;
+  --duration-normal: var(--dur-quick);
 }
 
 /* ─── Base typography reset ─────────────────────────────────────────────── */
@@ -296,6 +299,25 @@ select:invalid {
 /* Disabled state affordance — global */
 button:disabled,
 [aria-disabled="true"] { cursor: not-allowed; opacity: .5; }
+
+/* Interactive hover feedback — global fallback for unstyled buttons */
+button:not(:disabled):not([aria-disabled="true"]):hover {
+  filter: brightness(0.92);
+}
+
+/* Card lift on hover — progressive enhancement */
+.kpi-card,
+.insight-card,
+.gh-card {
+  transition: transform var(--dur-instant) var(--ease-quiet),
+              box-shadow var(--dur-instant) var(--ease-quiet);
+}
+.kpi-card:hover,
+.insight-card:hover,
+.gh-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
 
 /* ── Phase 2 CSP utilities ───────────────────────────────────────────────── */
 /* Toast notifications */
