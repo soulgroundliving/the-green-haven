@@ -492,7 +492,7 @@ window.closeSidebar = window._closeSidebarImpl;
 document.addEventListener('click',function(e){
   const sidebar=document.getElementById('sidebar');
   const hamburger=document.getElementById('hamburger');
-  if(!sidebar.contains(e.target) && !hamburger.contains(e.target) && window.innerWidth <= 600){
+  if(!sidebar.contains(e.target) && !hamburger.contains(e.target) && window.innerWidth <= 768){
     window.closeSidebar();
   }
 

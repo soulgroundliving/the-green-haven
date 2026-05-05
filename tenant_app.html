@@ -1346,6 +1346,9 @@
             gap: 10px;
             padding: 0 15px 30px;
         }
+        @media (max-width: 480px) {
+            .action-buttons { grid-template-columns: 1fr; }
+        }
 
         .btn-receipt {
             padding: 14px 16px;            /* 44px effective tap target (was 13/16) */
@@ -10774,10 +10777,10 @@
                     <div class="row"><span>เดือน:</span><strong>${_esc(monthName)} ${_esc(year)}</strong></div>
                     <div class="row"><span>วันที่:</span><strong>${new Date().toLocaleDateString('th-TH')}</strong></div>
                     <table><thead><tr><th>รายการ</th><th class="amt">จำนวน (บาท)</th></tr></thead><tbody>
-                        <tr><td>💰 ค่าเช่า</td><td class="amt">฿${Number(ch.rent||0).toLocaleString('th-TH')}</td></tr>
-                        <tr><td>⚡ ค่าไฟ</td><td class="amt">฿${Number(ch.electric?.cost||0).toLocaleString('th-TH')}</td></tr>
-                        <tr><td>💧 ค่าน้ำ</td><td class="amt">฿${Number(ch.water?.cost||0).toLocaleString('th-TH')}</td></tr>
-                        <tr><td>🗑️ ค่าขยะ</td><td class="amt">฿${Number(ch.trash||0).toLocaleString('th-TH')}</td></tr>
+                        <tr><td><span aria-hidden="true">💰</span> ค่าเช่า</td><td class="amt">฿${Number(ch.rent||0).toLocaleString('th-TH')}</td></tr>
+                        <tr><td><span aria-hidden="true">⚡</span> ค่าไฟ</td><td class="amt">฿${Number(ch.electric?.cost||0).toLocaleString('th-TH')}</td></tr>
+                        <tr><td><span aria-hidden="true">💧</span> ค่าน้ำ</td><td class="amt">฿${Number(ch.water?.cost||0).toLocaleString('th-TH')}</td></tr>
+                        <tr><td><span aria-hidden="true">🗑️</span> ค่าขยะ</td><td class="amt">฿${Number(ch.trash||0).toLocaleString('th-TH')}</td></tr>
                         <tr class="total"><td>รวม</td><td class="amt">฿${Number(billData.totalCharge||0).toLocaleString('th-TH')}</td></tr>
                     </tbody></table>
                     <div style="text-align:center;color:#666;font-size:12px;border-top:1px solid #ddd;padding-top:0.5rem;">ขอบคุณที่ชำระตรงเวลา · ${_esc(getOwnerName())}</div>

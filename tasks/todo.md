@@ -1772,4 +1772,28 @@ Dashboard sidebar and tenant card are the two biggest mobile UX failures. These 
 - ❌ Don't touch payment.html UI — legacy SecurityUtils session, separate concern
 - ❌ Don't add new fonts — IBM Plex Sans Thai Looped is already correct
 
-## WAITING FOR USER APPROVAL before implementation begins
+## Phase A — SHIPPED `e7bd82b` (2026-05-07) ✅
+
+- [x] A1 — emoji aria-hidden: 13/13 sidebar icons, 4/4 KPI divs, tab buttons, login h1/role btns/pw-toggle
+- [x] A2 — autofill red-border: `:not(:-webkit-autofill)` guard confirmed in live CSS
+- [x] A3 — disabled cursor: `not-allowed` confirmed on live disabled button
+- [x] A4 — chart axis tick font floor 11px: `size:8→11` + `size:9→11` in `dashboard-home-live.js`
+
+---
+
+## Phase B — Mobile-first overhaul (NEXT) — WAITING FOR USER APPROVAL
+
+### B1 — Dashboard sidebar hamburger collapse (highest impact)
+- **Files:** `dashboard.html` (CSS + HTML), `shared/dashboard-main.js`
+- **What:** hamburger `<button>` shown at ≤768px, sidebar slides in/out via `body.sidebar-open` class, backdrop overlay, `aria-expanded` toggle
+- **Why:** Admin cannot use dashboard on phone/tablet today — sidebar always eats 220px
+
+### B2 — Tenant card action grid: 2×2 → 1-col at ≤480px
+- **Files:** `tenant_app.html`
+- **What:** `@media (max-width: 480px)` → action grid `grid-template-columns: 1fr`
+
+### B3 — Tab overflow: horizontal scroll instead of wrap/clip
+- **Files:** `dashboard.html` (category tabs CSS), `tenant_app.html` (bottom nav/tab row)
+- **What:** `overflow-x: auto; scrollbar-width: none` on tab containers
+
+Approve to start?

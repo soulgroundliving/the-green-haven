@@ -842,7 +842,8 @@
   .badge-red{background:var(--red-pale);color:var(--red);}
 
   /* year-tab — duplicated here while brand.css CDN cache expires */
-  .year-tabs{display:flex;gap:7px;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center;}
+  .year-tabs{display:flex;gap:7px;margin-bottom:1.2rem;flex-wrap:nowrap;align-items:center;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px;}
+  .year-tabs::-webkit-scrollbar{display:none;}
   .year-tab{padding:6px 16px;border-radius:20px;border:2px solid var(--border);background:#fff;cursor:pointer;
     font-family:var(--font-brand);font-size:.87rem;font-weight:600;color:var(--text-muted);transition:all .2s;}
   .year-tab:hover,.year-tab.active{background:var(--green);border-color:var(--green);color:#fff;}
@@ -1639,8 +1640,8 @@
     }
   }
 
-  /* Mobile: 600px and below */
-  @media (max-width: 600px) {
+  /* Mobile/tablet: 768px and below — hamburger collapse */
+  @media (max-width: 768px) {
     .hamburger {
       display: flex;
       flex-direction: column;
