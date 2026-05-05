@@ -2566,18 +2566,19 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 #dash-cat-tenants .dash-tab-header{ margin-bottom:.75rem; padding-bottom:.65rem; }
 
 /* ── ปฏิบัติการ tab ── */
-.ops-layout{
+.ops-layout-v2{
   display:grid;
-  grid-template-columns:1fr 1.6fr;
+  grid-template-columns:210px 1fr 250px;
   gap:.6rem;
-  margin-bottom:.6rem;
   align-items:start;
 }
 .ops-status-col{ display:flex; flex-direction:column; gap:.5rem; }
-#dashOperationsInsights{ max-height:calc(100vh - 290px); overflow-y:auto; }
+.ops-right-col{ display:flex; flex-direction:column; gap:.5rem; }
+#dashOperationsInsights{ max-height:calc(100vh - 235px); overflow-y:auto; }
+#dashMeterSpike .card{ max-height:calc((100vh - 250px)/2); overflow-y:auto; }
+#dashProviderScore .card{ max-height:calc((100vh - 250px)/2); overflow-y:auto; }
 #dash-cat-operations .card{ padding:.8rem 1rem; }
 #dash-cat-operations .dash-tab-header{ margin-bottom:.75rem; padding-bottom:.65rem; }
-#dash-cat-operations .dash-2col{ gap:.6rem; }
 
 /* ── ชุมชน tab ── */
 #dashWellnessMatrix .card{ max-height:calc(100vh - 310px); overflow-y:auto; }
@@ -3104,7 +3105,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
       <button class="dash-view-link" data-action="showPage" data-page="requests-approvals">ดูคำขอทั้งหมด →</button>
     </div>
-    <div class="ops-layout">
+    <div class="ops-layout-v2">
       <div class="ops-status-col">
         <div class="card">
           <div class="card-title" role="heading" aria-level="3">คำร้องเรียน</div>
@@ -3116,10 +3117,10 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </div>
       </div>
       <div id="dashOperationsInsights"></div>
-    </div>
-    <div class="dash-2col">
-      <div id="dashMeterSpike"></div>
-      <div id="dashProviderScore"></div>
+      <div class="ops-right-col">
+        <div id="dashMeterSpike"></div>
+        <div id="dashProviderScore"></div>
+      </div>
     </div>
   </div><!-- END ปฏิบัติการ -->
 
