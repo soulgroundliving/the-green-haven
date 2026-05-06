@@ -8052,10 +8052,10 @@
             'contract-quiz-section', 'wellness-claim-area'
         ];
 
-        // ===== PRE-LAUNCH FEATURE FLAG =====
+        // ===== FEATURE FLAG =====
         // Controlled via Firestore system/config.gamificationLive (admin dashboard toggle).
-        // Safe default false: pre-launch behaviour until the snapshot resolves.
-        window.GAMIFICATION_LIVE = false;
+        // Default true post-launch; admin toggle in dashboard can override at runtime.
+        window.GAMIFICATION_LIVE = true;
         function _subscribeGamificationConfig() {
             if (!window.firebase?.firestoreFunctions) return;
             const fs = window.firebase.firestoreFunctions;
