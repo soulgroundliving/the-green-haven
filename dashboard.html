@@ -2570,6 +2570,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 .ten-summary-row{ display:flex; flex-direction:column; gap:.35rem; }
 .ten-stat-card{ display:flex; align-items:center; gap:.65rem; cursor:pointer; transition:box-shadow .15s,transform .1s; }
 .ten-stat-card:hover{ box-shadow:0 3px 12px rgba(0,0,0,.1); transform:translateY(-1px); }
+/* tenant modal footer buttons — hover via CSS instead of onmouseover/onmouseout */
+[data-action="saveTenantInfo"]:hover{ transform:translateY(-2px); box-shadow:0 8px 24px rgba(45,134,83,.4) !important; }
+[data-action="archiveTenantOnMoveOut"]:hover{ background:#ffebee !important; border-color:#b71c1c !important; }
+[data-action="transitionToPlayer"]:hover{ background:#f0fdfa !important; border-color:#0f766e !important; }
+[data-action="closeTenantModal"].year-tab,[data-action="closeTenantModal"]:not(.gh-btn):hover{ background:#d0d7e0 !important; }
 .ten-stat-icon{ font-size:1.3rem; flex-shrink:0; }
 .ten-stat-body{ min-width:0; }
 .ten-stat-value{ font-size:1.3rem; font-weight:800; line-height:1; }
@@ -2971,7 +2976,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <div style="border-top:2px solid var(--border);padding-top:1.2rem;">
         <div style="font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">ข้อมูลเพิ่มเติม →</div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-          <button onclick="openTenantBillPage()" class="year-tab active" style="padding:10px 6px;background:var(--green);border-color:var(--green);color:#fff;font-size:.78rem;line-height:1.4;">💳 บิล &amp;<br>ประวัติชำระ</button>
+          <button data-action="openTenantBillPage" class="year-tab active" style="padding:10px 6px;background:var(--green);border-color:var(--green);color:#fff;font-size:.78rem;line-height:1.4;">💳 บิล &amp;<br>ประวัติชำระ</button>
           <button data-action="closeThenNavigate" data-page="meter" class="year-tab active" style="padding:10px 6px;background:var(--blue-dark);border-color:var(--blue-dark);color:#fff;font-size:.78rem;line-height:1.4;">⚡ มิเตอร์<br>ไฟ / น้ำ</button>
           <button data-action="closeThenNavigate" data-page="gamification" class="year-tab active" style="padding:10px 6px;background:#6a1b9a;border-color:#6a1b9a;color:#fff;font-size:.78rem;line-height:1.4;">🏆 คะแนน<br>&amp; รางวัล</button>
           <button data-action="closeThenNavigate" data-page="requests-approvals" class="year-tab active" style="padding:10px 6px;background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;font-size:.78rem;line-height:1.4;">🔧 คำขอ<br>&amp; ซ่อม</button>
@@ -2981,10 +2986,10 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
     <!-- Modal Footer -->
     <div style="padding:1.5rem 2rem;background:#f9fafb;border-top:1px solid var(--border);display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap;">
-      <button data-action="saveTenantInfo" style="flex:1;min-width:160px;padding:14px 24px;background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;box-shadow:0 4px 12px rgba(45,134,83,.2);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(45,134,83,.4)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(45,134,83,.2)'">💾 บันทึกข้อมูล</button>
-      <button data-action="archiveTenantOnMoveOut" title="ย้ายข้อมูลผู้เช่าไป archive — ห้องกลับเป็นว่าง, ข้อมูลเดิมเก็บไว้สำหรับการกลับมาเช่าใหม่" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#b71c1c;border:1.5px solid #ef9a9a;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;" onmouseover="this.style.background='#ffebee';this.style.borderColor='#b71c1c'" onmouseout="this.style.background='#fff';this.style.borderColor='#ef9a9a'">📦 ย้ายไป Archive</button>
-      <button data-action="transitionToPlayer" title="ย้ายผู้เช่าเป็น Community Member — ยังอยู่ใน LINE ได้ แต่เข้าถึงเฉพาะ community / wellness / gamification" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#0f766e;border:1.5px solid #99f6e4;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;" onmouseover="this.style.background='#f0fdfa';this.style.borderColor='#0f766e'" onmouseout="this.style.background='#fff';this.style.borderColor='#99f6e4'">🎮 ย้ายเป็น Community</button>
-      <button data-action="closeTenantModal" style="flex:1;min-width:120px;padding:14px 24px;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;" onmouseover="this.style.background='#d0d7e0'" onmouseout="this.style.background='var(--border)'">ปิด</button>
+      <button data-action="saveTenantInfo" style="flex:1;min-width:160px;padding:14px 24px;background:linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;box-shadow:0 4px 12px rgba(45,134,83,.2);"">💾 บันทึกข้อมูล</button>
+      <button data-action="archiveTenantOnMoveOut" title="ย้ายข้อมูลผู้เช่าไป archive — ห้องกลับเป็นว่าง, ข้อมูลเดิมเก็บไว้สำหรับการกลับมาเช่าใหม่" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#b71c1c;border:1.5px solid #ef9a9a;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;"">📦 ย้ายไป Archive</button>
+      <button data-action="transitionToPlayer" title="ย้ายผู้เช่าเป็น Community Member — ยังอยู่ใน LINE ได้ แต่เข้าถึงเฉพาะ community / wellness / gamification" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#0f766e;border:1.5px solid #99f6e4;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;"">🎮 ย้ายเป็น Community</button>
+      <button data-action="closeTenantModal" style="flex:1;min-width:120px;padding:14px 24px;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;"">ปิด</button>
     </div>
   </div>
 </div>
@@ -3155,28 +3160,28 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <div id="dashTenantStatus"></div>
         </div>
         <div class="ten-summary-row">
-          <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('leases')">
+          <div class="card ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="leases">
             <div class="ten-stat-icon">📋</div>
             <div class="ten-stat-body">
               <div class="ten-stat-value c-amber" id="tenSum-exp">—</div>
               <div class="ten-stat-label">สัญญาใกล้หมด (30 วัน)</div>
             </div>
           </div>
-          <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('alerts')">
+          <div class="card ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="alerts">
             <div class="ten-stat-icon">🔔</div>
             <div class="ten-stat-body">
               <div class="ten-stat-value c-red" id="tenSum-alert">—</div>
               <div class="ten-stat-label">แจ้งเตือนเร่งด่วน (&lt;7 วัน)</div>
             </div>
           </div>
-          <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('requests')">
+          <div class="card ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="requests">
             <div class="ten-stat-icon">📨</div>
             <div class="ten-stat-body">
               <div class="ten-stat-value" id="tenSum-req">—</div>
               <div class="ten-stat-label">คำขอรอดำเนินการ</div>
             </div>
           </div>
-          <div class="card ten-stat-card" onclick="if(window.showPage)showPage('tenant');if(window.switchTenantMainTab)switchTenantMainTab('bookings')">
+          <div class="card ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="bookings">
             <div class="ten-stat-icon">🗓️</div>
             <div class="ten-stat-body">
               <div class="ten-stat-value c-blue" id="tenSum-book">—</div>

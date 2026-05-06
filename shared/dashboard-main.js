@@ -601,6 +601,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     // Navigation
     if (a === 'showPage') { window.showPage(page, el); return; }
     if (a === 'closeThenNavigate') { closeTenantModal(); window.showPage(page); return; }
+    if (a === 'openTenantBillPage') { if (typeof window.openTenantBillPage === 'function') window.openTenantBillPage(); return; }
     if (a === 'showPageTab') {
       // Close any open tenant modal + navigate to a page and auto-switch to a sub-tab.
       // Used by tenant modal's "→ Tab สัญญา" link to jump admin to the document hub.
