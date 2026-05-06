@@ -395,18 +395,51 @@ function listNonLifecycleMemoryDocs() {
     .filter(f => f.endsWith('.md'))
     .filter(f => !f.startsWith('lifecycle_'))
     .filter(f => !f.startsWith('archive_'))   // archives are intentionally frozen
+    .filter(f => !f.startsWith('session_'))   // session journals are point-in-time history,
+                                               // not current architecture; paths in them may
+                                               // reference state that's since been refactored.
+                                               // Discipline gate is `next_session_handoff_*.md`
+                                               // — those describe shipped state and DO get scanned.
     .filter(f => f !== 'MEMORY.md')           // index file, not a content doc
     .map(f => path.join(MEMORY_DIR, f));
 }
 
 function unionLifecycleContent(lifecycleDocs) {
-  // Canonical "what paths exist" blob: lifecycle docs + the actual rule files.
-  // Rule files are the SSoT for path shape (Firestore rules use `{}`, RTDB
-  // rules use `$`); lifecycle docs document them. A path is valid if it appears
-  // in either source.
+  // Canonical "what paths exist" blob: lifecycle docs + canonical SSoT/architecture
+  // docs (which use other prefixes but ARE indexed in MEMORY.md's "🏛️ System
+  // Lifecycles" + "🧭 Reference" sections) + the actual rule files.
+  //
+  // Rule files are the SSoT for path shape (Firestore rules use `{}`, RTDB rules
+  // use `$`); architecture docs document them. A path is valid if it appears in
+  // any of these sources. NOT included: session journals, handoffs, archives —
+  // those are point-in-time history.
+  //
+  // Why expand beyond lifecycle_*: rules nest matches (parent + child match blocks
+  // written separately), so a contiguous-substring check on `firestore.rules`
+  // alone misses real subcollection paths. Architecture docs flatten them in prose.
   let blob = '';
   for (const d of lifecycleDocs) {
     blob += '\n' + fs.readFileSync(d, 'utf8');
+  }
+  // Canonical non-lifecycle architecture docs — must stay in sync with MEMORY.md
+  // "🏛️ System Lifecycles" + "🧭 Reference" sections. Adding here means the
+  // path-shape check considers these as valid sources of architecture truth.
+  const canonicalNonLifecycle = [
+    'gamification_ssot.md',
+    'auth_liff_sot.md',
+    'firestore_schema_canonical.md',
+    'tenant_app_architecture.md',
+    'dashboard_architecture.md',
+    'billing_monthly_flow.md',
+    'bills_not_showing_diagnostic.md',
+    'tenant_config_manager_keys.md',
+    'owner_config.md',
+    'payment_html_legacy.md',
+    'firebase_client_sdk_v11_modular.md',
+  ];
+  for (const docName of canonicalNonLifecycle) {
+    const p = path.join(MEMORY_DIR, docName);
+    if (fs.existsSync(p)) blob += '\n' + fs.readFileSync(p, 'utf8');
   }
   for (const ruleFile of ['firestore.rules', 'config/database.rules.json', 'storage.rules']) {
     const p = path.join(REPO_ROOT, ruleFile);
@@ -416,13 +449,17 @@ function unionLifecycleContent(lifecycleDocs) {
 }
 
 function stripTemplatePlaceholders(s) {
-  // Collapse both Firestore-rule `{building}` and RTDB-rule `$building` styles
-  // to empty so the same path written in either notation matches:
-  //   `tenants/{building}/list/{roomId}` → `tenants//list/`
-  //   `payments/$building/$room`         → `payments//`
+  // Collapse template placeholders in three notation styles:
+  //   `tenants/{building}/list/{roomId}`       → `tenants//list/`     (Firestore rules)
+  //   `payments/$building/$room`               → `payments//`         (RTDB rules)
+  //   `meter_data/${building}_${ym}_${roomId}` → `meter_data/__`      (JS template literal)
   // The empty positions preserve segment count — a 3-segment path can't match
   // a 4-segment shape by accident.
+  //
+  // Order matters: `${...}` must be stripped BEFORE `{...}` (otherwise `{...}`
+  // strips the inner part, leaving a stray `$`).
   return s
+    .replace(/\$\{[^}]+\}/g, '')
     .replace(/\{[^}]+\}/g, '')
     .replace(/\$[A-Za-z_][A-Za-z0-9_]*/g, '')
     .toLowerCase();
@@ -447,8 +484,34 @@ function templatePathReport(docPath, lifecycleBlobStripped) {
     if (COVERAGE_IGNORE.has(id)) continue;
     // Skip Firestore rule-match patterns — they're rule syntax, not paths.
     if (/^match\s+\//.test(id)) continue;
+    // Skip regex literals — `/^[a-zA-Z0-9]{1,10}$/` matches the {N} quantifier
+    // syntax but is a pattern, not a Firestore path. Detect by leading `/^` or
+    // trailing `$/` (regex anchors that never appear in paths).
+    if (/^\/\^/.test(id) || /\$\/$/.test(id)) continue;
+    // Skip URLs — `https://`, `promptpay://`, `gs://` etc. include `/` but the
+    // template placeholders are query/fragment params, not collection segments.
+    if (/^[a-z]+:\/\//.test(id)) continue;
+    // Skip grep/shell command snippets — they often quote regex/path templates
+    // verbatim as arguments, but the snippet itself is a verifier line, not a claim.
+    if (/^(grep|ls|test|find|node|npm|firebase|jq|curl|cat)\s+/.test(id)) continue;
+    // Skip JSX/HTML markup — `<Foo bar={baz}><Child /></Foo>` matches both `/`
+    // (closing tag) and `{...}` (JSX expression) but is rendering code, not a path.
+    if (/^<[a-zA-Z]/.test(id) && /<\/?[a-zA-Z]/.test(id)) continue;
+    // Skip function calls — `getDoc(liffUsers/{lineUserId})` is a JS expression,
+    // not a path claim. The path lives inside the call; flag it via the inner
+    // string if at all. Detect: starts with identifier+`(` and ends with `)`.
+    if (/^[a-zA-Z_]\w*\(/.test(id) && /\)$/.test(id)) continue;
 
-    let literalShape = stripTemplatePlaceholders(id);
+    // Strip trailing field accessors before comparing paths:
+    //   `tenants/{b}/list/{r}.lease.moveInDate` → `tenants/{b}/list/{r}`
+    //   `bills/{b}/{r}/{billId}.{paidAt,dueDate}` → `bills/{b}/{r}/{billId}`
+    //   `rooms_config/{b}/{r}.rentPrice` → `rooms_config/{b}/{r}`
+    // Field references after the last placeholder are documentation sugar, not
+    // collection segments — they shouldn't change the path-match outcome.
+    const pathOnly = id
+      .replace(/\}\.\{[^}]+\}$/, '}')
+      .replace(/\}\.[a-zA-Z][a-zA-Z0-9._]*$/, '}');
+    let literalShape = stripTemplatePlaceholders(pathOnly);
     // Trailing `...` is shorthand for "more segments here" — common in prose
     // when referencing a known path family. Strip it; check the prefix only.
     literalShape = literalShape.replace(/\.\.\.$/, '');

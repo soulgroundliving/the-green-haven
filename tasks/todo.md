@@ -4,6 +4,138 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
+# Plan C-F — Continue Audit (2026-05-09b)
+
+## Recon vs audit map (real numbers)
+
+Ran grep + `npm run verify:memory:all` before planning. Several audit-map claims are stale:
+
+| Item | Map said | Real |
+|---|---|---|
+| F1 lifecycle docs | (unknown) | **0 fails ✅** (216 verifier rows green) |
+| F1 fabricated paths | (warn-only) | **58 warnings across 14 files** — mostly legitimate template `{...}` placeholders that the regex strips into empty shapes |
+| F2 booking flow doc | "may be stale after KYC" | **Already has Phase 5 KYC + Phase 6 Early Bird** (lines 181-241). DONE ✓ |
+| F3 gamification doc | "player mode not reflected" | **Confirmed**: `gamification_ssot.md` has 0 mentions of `people/`, `role:'player'`, `_subscribeEcoPoints` player branch. Real drift. |
+| D3 Sarabun in dashboard | "~40 hardcoded" | **1 occurrence** (line 728, legitimate fallback inside `var(--font-brand,...)`). DONE ✓ |
+| D1 console.log | (unknown) | 16 in tenant_app.html + 18 in dashboard.html = **34 total** |
+| C3 minInstances | "only liffSignIn + liffBookingSignIn" | Confirmed (+ `keepLiffWarm` scheduled CF) |
+| shared/*.js count | "43" | 42 |
+
+## Items dropped from scope (not pending)
+
+- **F2** — booking flow doc current (Phases 5+6 already documented)
+- **D3** — Sarabun migration already done; fallback at line 728 is correct CSS
+
+## Phases (priority = ROI × low risk first)
+
+### Phase 1 — Doc hygiene (~15 min, doc-only, no deploy) ✅ DONE
+
+#### F3 — Update `gamification_ssot.md` for player mode ✅
+- [x] Added "Player mode" section: `people/{tenantId}` schema, CFs table (5 player CFs), surfaces table, client gating pattern, Firestore rules block, what-is-NOT-awarded
+- [x] Updated "Scope" line — clarified Nest-only for tenants + players keep gamification cross-building
+- [x] Added `_subscribeEcoPoints` player branch + `getLeaderboard` merge to Consumers section
+- [x] Added Verification section (16 grep checks — all hit)
+
+#### Update `dark_mode_audit_state.md` (correct stale claim) ✅
+- [x] Replaced "~40 hardcoded `font-family:'Sarabun'`" with corrected note pointing at dashboard.html:728 (legitimate fallback inside `var(--font-brand, ...)`)
+
+### Phase 2 — Code quality quick wins (~30 min, small edits) ✅ DONE
+
+#### D1 — console.log cleanup → NO-OP (with finding) ✅
+- [x] Inventoried all 34 lines (16 tenant_app + 18 dashboard)
+- [x] Finding: ALL 34 are intentional diagnostic. Project follows `[LIFF]`/`[OTP]`/`✅`/`⚠️`/`⏳` prefix convention; logs are load-bearing for live triage per "Stop guessing — demand state" rule.
+- **Decision:** no removals. Even the chatty path-trace lines (dashboard.html 298/313/316/348) provide signal during admin "did it save" triage.
+
+#### F1 — Tighten `verify-memory:all` ✅
+- [x] Located fabricated-path scanner in `tools/verify-memory.js:431` `templatePathReport`
+- [x] Edits to `tools/verify-memory.js`:
+  - Skip `session_*.md` from scan (frozen point-in-time history; refactored paths legitimately appear there)
+  - Skip regex literals (`/^...$/`)
+  - Skip URLs (`http://`, `promptpay://`, `gs://`)
+  - Skip JSX/HTML markup (`<Foo bar={baz}>`)
+  - Skip function-call shape (`getDoc(liffUsers/{x})`)
+  - Add `node|npm|firebase|jq|curl|cat` to shell-command skip list
+  - Strip JS template-literal `${...}` (was leaving stray `$`)
+  - Strip trailing field accessors (`.lease.moveInDate`, `.{paidAt,dueDate}`)
+  - Expand union blob to include 11 canonical non-lifecycle architecture docs (`gamification_ssot.md`, `auth_liff_sot.md`, etc.)
+- [x] Result: **58 → 8 warnings**. Remaining 8 are REAL signal (5 historical-path refs to `meter_data/{building}/{yearMonth}/data` orphaned docs + 1 doctrine teaching example + 2 unindexed paths). Lifecycle verification still 100% green (216 rows, 0 fails).
+
+### Phase 3 — Performance investigation (~30 min, READ-ONLY)
+
+Output: report in `tasks/todo.md` Review section. No edits in this phase.
+
+#### C3 — CF cold start cost-benefit
+- [ ] List hot CFs by user-facing latency impact (verifySlip slip→toast, claimDailyLoginPoints daily modal, redeemReward redemption)
+- [ ] Cost: ~$0.40/CF/month per `minInstances:1` (already paying ×2)
+- [ ] Recommend: which CFs justify the spend; **user decides before any deploy**
+
+#### C2 — Bundle size audit
+- [ ] Read existing `npm run build` output if present; otherwise run esbuild stats
+- [ ] Top-5 contributors in shared/*.js (likely candidates: html2canvas, gamification, dashboard-extra, dashboard-insights)
+- [ ] Output: list + dead-export candidates for D2 follow-up
+
+#### C1 — LCP/image opportunities
+- [ ] tenant_app.html: count `<img>` without `loading="lazy"` + missing `width`/`height`
+- [ ] (Naturehaven landing site is separate repo — out of scope this session)
+
+#### C4 — Dashboard 900ms cold start
+- [ ] Identify the 4-phase init order (already in `dashboard_architecture.md`)
+- [ ] Mark which phase is the bottleneck candidate from inspection
+- [ ] Real profiling needs DevTools; defer the fix step
+
+### Phase 4 — UX gaps (decide per item)
+
+#### E2 — KPI grid mobile reflow (~20 min)
+- [ ] grep dashboard.html for `mx-kpi` grid CSS; identify breakpoint gap
+- [ ] Add `@media (max-width: 768px)` rule → 1-col stack on mobile
+- [ ] Verify on Vercel (admin dashboard is the surface)
+- **Why:** real UX issue (admin uses mobile during inspections); known gap from dark_mode_audit_state.md
+
+#### E1 — Dark mode unify `body.night-mode` → `html[data-theme="dark"]` (DEFER)
+- Touches every override across both HTML files. Dedicated session per dark_mode_audit_state.md guidance.
+
+#### E3 — Dark mode automated screenshot test (DEFER)
+- Lower priority than functional tests; needs Playwright config + baseline.
+
+#### E4 — Booking flow live E2E (USER ACTION)
+- Needs LINE account on production. Defer until user runs.
+
+### Phase 5 — Code quality larger sweeps (READ-ONLY first)
+
+Output: report only. No edits without user pick.
+
+#### D2 — Dead code in shared/*.js
+- [ ] For each of 42 files: grep cross-references; flag exports with 0 callers
+- [ ] Output: candidate list — user decides removals (per `feedback_minimal_changes`)
+
+#### D4 — Function size audit (tenant_app.html)
+- [ ] Find functions > 50 lines; report top 10
+- [ ] Don't refactor without explicit ask (per `feedback_minimal_changes`)
+
+---
+
+## Suggested session order
+
+```
+Phase 1 (F3 + dark_mode memo)            ~15 min  doc-only
+Phase 2 (D1 inventory + F1 verifier fix) ~30 min  small code
+Phase 3 (C1-C4 read-only reports)        ~30 min  no edits
+Phase 4 (E2 KPI mobile only)             ~20 min  small CSS
+Phase 5 (D2/D4 read-only reports)        ~30 min  no edits
+
+Skipped (defer): E1, E3, E4, F2, D3 (E1+E3 dedicated; E4 user action; F2+D3 already done)
+```
+
+## Approval check
+
+Want me to start?
+- **Recommend:** Phase 1 (doc fix — pure win) + Phase 2 (code quick wins — show data first) immediately
+- Phase 3+5 are reports-only — generate then user picks
+- Phase 4 = E2 only this session (E1 too big, E3 deferred, E4 needs you)
+- Or pick a different subset
+
+---
+
 # Project-Wide Audit Map (2026-05-09)
 
 แผนตรวจสอบโปรเจ็คแบบ end-to-end แยกตามมิติ — เลือกทำเป็นกลุ่ม หรือทีละ item ก็ได้
