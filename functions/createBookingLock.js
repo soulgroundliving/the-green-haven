@@ -83,6 +83,9 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
 
   const canonicalBuilding = String(building).toLowerCase();
   const canonicalRoomId = String(roomId);
+  if (!/^[A-Za-z0-9ก-๛]{1,20}$/.test(canonicalRoomId)) {
+    throw new functions.https.HttpsError('invalid-argument', 'roomId contains invalid characters');
+  }
 
   // ── Pull room rate from rooms_config (RTDB) — same source as billing ────
   // Note: room-config.js seeds RTDB rooms_config/{building}/{roomId}. We

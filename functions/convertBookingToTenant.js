@@ -153,7 +153,11 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
     }
     if (hit) {
       priorTenantId = hit.tenantId;
-      priorGamificationFromArchive = hit.gamification;
+      // Phone-only match (Pass 4) is unverified — a bad actor who knows a prior
+      // tenant's phone number could supply it as prospectPhone and claim their
+      // gamification points. UID/LINE-ID matches (Passes 1-2) are system-issued
+      // and cannot be guessed, so only those passes transfer points.
+      priorGamificationFromArchive = (restoredFrom === 'archive_phone') ? null : hit.gamification;
     }
 
     // Pass 5: check people/{tenantId} for a community-member (player) returning

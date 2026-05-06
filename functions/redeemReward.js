@@ -38,6 +38,9 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
     if (!tenantId || !playerRewardId) {
       throw new functions.https.HttpsError('invalid-argument', 'tenantId and rewardId are required for player redemption');
     }
+    if (!/^[A-Za-z0-9_-]{1,60}$/.test(playerRewardId) || !/^[A-Za-z0-9_-]{1,60}$/.test(tenantId)) {
+      throw new functions.https.HttpsError('invalid-argument', 'tenantId and rewardId must be alphanumeric (max 60 chars)');
+    }
     if (tok.admin !== true && tok.tenantId !== tenantId) {
       throw new functions.https.HttpsError('permission-denied', 'You can only redeem rewards for your own account');
     }
@@ -95,6 +98,9 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
   }
   if (!['rooms', 'nest'].includes(String(building).toLowerCase())) {
     throw new functions.https.HttpsError('invalid-argument', `unknown building: ${building}`);
+  }
+  if (!/^[A-Za-z0-9_-]{1,60}$/.test(rewardId)) {
+    throw new functions.https.HttpsError('invalid-argument', 'rewardId must be alphanumeric (max 60 chars)');
   }
   const canonicalBuilding = String(building).toLowerCase();
 
