@@ -6409,11 +6409,11 @@
                 const fns = window.firebase?.functions;
                 if (!fns) throw new Error('Firebase Functions SDK not loaded');
                 const callable = fns.httpsCallable('redeemReward');
-                const resp = await callable({
-                    building: _taBuilding,
-                    roomId: String(_taRoom),
-                    rewardId
-                });
+                const isPlayerRedeem = window._isPlayerMode && window._playerProfile?.tenantId;
+                const payload = isPlayerRedeem
+                    ? { tenantId: window._playerProfile.tenantId, rewardId }
+                    : { building: _taBuilding, roomId: String(_taRoom), rewardId };
+                const resp = await callable(payload);
                 // _subscribeEcoPoints will pick up the canonical points value via onSnapshot,
                 // but update local UI immediately for responsiveness
                 if (resp.data && typeof resp.data.pointsAfter === 'number') {
@@ -7638,9 +7638,13 @@
                     return;
                 }
                 const myRoom = String(_taRoom);
+                const isPlayerViewer = window._isPlayerMode && window._playerProfile?.tenantId;
                 const top3 = rows.slice(0, 3);
                 top3.forEach((r, i) => {
-                    const isMe = r.roomId === myRoom;
+                    const isMe = isPlayerViewer
+                        ? (r.isPlayer && r.tenantId === window._playerProfile.tenantId)
+                        : (r.roomId === myRoom);
+                    const roomLabel = r.roomId ? `ห้อง ${r.roomId}` : '🌿 สมาชิก';
                     const rank = i + 1;
                     const row = document.createElement('div');
                     row.className = 'flex items-center gap-3 p-3' + (rank === 1 ? ' bg-[#F0F7F2] rounded-2xl' : '') + (isMe ? ' bg-[#FFF8E7] rounded-2xl border-2 border-[#D4AF37]' : '');
@@ -7654,7 +7658,7 @@
                     info.className = 'flex-1';
                     const nameEl = document.createElement('p');
                     nameEl.className = 'text-xs font-bold';
-                    nameEl.textContent = isMe ? `คุณ (ห้อง ${r.roomId})` : `คุณ${r.name} (ห้อง ${r.roomId})`;
+                    nameEl.textContent = isMe ? `คุณ (${roomLabel})` : `คุณ${r.name} (${roomLabel})`;
                     const ptsEl = document.createElement('p');
                     ptsEl.className = 'text-[9px] text-gray-400';
                     ptsEl.textContent = r.points.toLocaleString() + ' Pts';
@@ -7674,10 +7678,16 @@
                     }
                     cont.appendChild(row);
                 });
-                // Add current tenant row if not in top 3
-                if (!top3.some(r => r.roomId === myRoom)) {
-                    const myRank = rows.findIndex(r => r.roomId === myRoom);
-                    const myData = myRank >= 0 ? rows[myRank] : { roomId: myRoom, name: 'ของฉัน', points: userPoints };
+                // Add current user row if not in top 3
+                const inTop3 = isPlayerViewer
+                    ? top3.some(r => r.isPlayer && r.tenantId === window._playerProfile.tenantId)
+                    : top3.some(r => r.roomId === myRoom);
+                if (!inTop3) {
+                    const myRank = isPlayerViewer
+                        ? rows.findIndex(r => r.isPlayer && r.tenantId === window._playerProfile.tenantId)
+                        : rows.findIndex(r => r.roomId === myRoom);
+                    const myData = myRank >= 0 ? rows[myRank] : { points: userPoints };
+                    const myLabel = isPlayerViewer ? '🌿 สมาชิก' : `ห้อง ${myRoom || '—'}`;
                     const row = document.createElement('div');
                     row.className = 'flex items-center gap-3 p-3 bg-[#FFF8E7] rounded-2xl border-2 border-[#D4AF37] mt-2';
                     const num = document.createElement('span');
@@ -7690,7 +7700,7 @@
                     info.className = 'flex-1';
                     const nameEl = document.createElement('p');
                     nameEl.className = 'text-xs font-bold';
-                    nameEl.textContent = `คุณ (ห้อง ${myRoom || '—'})`;
+                    nameEl.textContent = `คุณ (${myLabel})`;
                     const ptsEl = document.createElement('p');
                     ptsEl.className = 'text-[9px] text-gray-400';
                     ptsEl.id = 'eco-my-pts';
@@ -9727,13 +9737,18 @@
             btn.disabled = false;
             btn.style.opacity = '1';
             status.textContent = '';
-            // Check if already claimed
+            // Check if already claimed — supports both tenant and player paths
             try {
-                if (window.firebaseReady && typeof firebase !== 'undefined' && _taBuilding && _taRoom) {
+                if (window.firebaseReady && typeof firebase !== 'undefined') {
+                    const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+                    if (!isPlayer && (!_taBuilding || !_taRoom)) return;
                     const fns = window.firebase?.firestoreFunctions;
                     if (fns) {
                         const db = firebase.firestore();
-                        const ref = fns.doc(db, `tenants/${_taBuilding}/list/${_taRoom}/wellnessClaimed/${a.id}`);
+                        const claimPath = isPlayer
+                            ? `people/${window._playerProfile.tenantId}/wellnessClaimed/${a.id}`
+                            : `tenants/${_taBuilding}/list/${_taRoom}/wellnessClaimed/${a.id}`;
+                        const ref = fns.doc(db, claimPath);
                         const snap = await fns.getDoc(ref);
                         if (snap.exists()) {
                             btn.disabled = true;
@@ -9753,7 +9768,8 @@
             const btn = document.getElementById('wellness-claim-btn');
             const status = document.getElementById('wellness-claim-status');
             if (!btn) return;
-            if (!window.firebaseReady || typeof firebase === 'undefined' || !_taBuilding || !_taRoom) {
+            const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+            if (!window.firebaseReady || typeof firebase === 'undefined' || (!isPlayer && (!_taBuilding || !_taRoom))) {
                 if (status) status.textContent = '⚠️ ระบบยังไม่พร้อม ลองใหม่อีกครั้ง';
                 return;
             }
@@ -9761,8 +9777,14 @@
             try {
                 const fns = window.firebase.firestoreFunctions;
                 const db = firebase.firestore();
+                const claimPath = isPlayer
+                    ? `people/${window._playerProfile.tenantId}/wellnessClaimed/${a.id}`
+                    : `tenants/${_taBuilding}/list/${_taRoom}/wellnessClaimed/${a.id}`;
+                const pointsPath = isPlayer
+                    ? `people/${window._playerProfile.tenantId}`
+                    : `tenants/${_taBuilding}/list/${_taRoom}`;
                 // Idempotent check
-                const claimRef = fns.doc(db, `tenants/${_taBuilding}/list/${_taRoom}/wellnessClaimed/${a.id}`);
+                const claimRef = fns.doc(db, claimPath);
                 const claimSnap = await fns.getDoc(claimRef);
                 if (claimSnap.exists()) {
                     btn.textContent = '✅ ได้รับแต้มแล้ว';
@@ -9777,13 +9799,13 @@
                     reward: a.reward,
                     claimedAt: new Date().toISOString()
                 });
-                // Increment tenant gamification points (transaction-like increment)
-                const tenantRef = fns.doc(db, `tenants/${_taBuilding}/list/${_taRoom}`);
-                const tenantSnap = await fns.getDoc(tenantRef);
-                const cur = tenantSnap.data() || {};
+                // Increment gamification points — tenant path or player path
+                const pointsRef = fns.doc(db, pointsPath);
+                const pointsSnap = await fns.getDoc(pointsRef);
+                const cur = pointsSnap.data() || {};
                 const g = cur.gamification || {};
                 const newPts = (g.points || 0) + a.reward;
-                await fns.setDoc(tenantRef, {
+                await fns.setDoc(pointsRef, {
                     gamification: { ...g, points: newPts, wellnessPts: (g.wellnessPts || 0) + a.reward }
                 }, { merge: true });
                 btn.textContent = `✅ +${a.reward} pts! (รวม ${newPts})`;

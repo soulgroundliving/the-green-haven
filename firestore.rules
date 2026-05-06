@@ -242,6 +242,27 @@ service cloud.firestore {
       allow read:  if isAdmin()
         || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid);
       allow write: if isAdmin();
+
+      // wellnessClaimed — player reads/creates their own subcollection.
+      // Matches the same pattern as tenants/{b}/list/{r}/wellnessClaimed above.
+      // tok.tenantId is set by liffSignIn when role='player'.
+      match /wellnessClaimed/{articleId} {
+        allow read, create: if isAdmin()
+          || (isSignedIn()
+              && request.auth.token.role == 'player'
+              && request.auth.token.tenantId == tenantId);
+        allow update, delete: if isAdmin();
+      }
+
+      // redemptions — written by redeemReward CF (admin SDK).
+      // Player reads own history; admin reads all.
+      match /redemptions/{redemptionId} {
+        allow read:  if isAdmin()
+          || (isSignedIn()
+              && request.auth.token.role == 'player'
+              && request.auth.token.tenantId == tenantId);
+        allow write: if isAdmin();
+      }
     }
 
     // ===== PETS — collectionGroup query support (admin only) =====

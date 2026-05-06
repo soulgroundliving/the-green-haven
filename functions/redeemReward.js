@@ -27,6 +27,66 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
   if (!context.auth || !context.auth.uid) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign-in required');
   }
+
+  const tok = context.auth.token || {};
+
+  // ── Player branch ────────────────────────────────────────────────────────
+  // Players have role='player' + tenantId claim instead of room/building.
+  // They store points in people/{tenantId} rather than tenants/{b}/list/{r}.
+  if (tok.role === 'player') {
+    const { tenantId, rewardId: playerRewardId } = data || {};
+    if (!tenantId || !playerRewardId) {
+      throw new functions.https.HttpsError('invalid-argument', 'tenantId and rewardId are required for player redemption');
+    }
+    if (tok.admin !== true && tok.tenantId !== tenantId) {
+      throw new functions.https.HttpsError('permission-denied', 'You can only redeem rewards for your own account');
+    }
+    const rewardRef = firestore.collection('rewards').doc(playerRewardId);
+    const peopleRef = firestore.collection('people').doc(tenantId);
+    try {
+      const result = await firestore.runTransaction(async (tx) => {
+        const [rewardSnap, peopleSnap] = await Promise.all([tx.get(rewardRef), tx.get(peopleRef)]);
+        if (!rewardSnap.exists) throw new functions.https.HttpsError('not-found', `reward ${playerRewardId} not found`);
+        if (!peopleSnap.exists) throw new functions.https.HttpsError('not-found', `player ${tenantId} not found`);
+        const reward = rewardSnap.data();
+        if (reward.active === false) throw new functions.https.HttpsError('failed-precondition', `reward ${playerRewardId} is inactive`);
+        const cost = Number(reward.cost || 0);
+        if (cost <= 0) throw new functions.https.HttpsError('failed-precondition', `reward ${playerRewardId} has invalid cost`);
+        const peopleData = peopleSnap.data() || {};
+        const currentPoints = (peopleData.gamification && Number(peopleData.gamification.points)) || 0;
+        if (currentPoints < cost) {
+          throw new functions.https.HttpsError('failed-precondition', `insufficient points: have ${currentPoints}, need ${cost}`);
+        }
+        const newPoints = currentPoints - cost;
+        const redemptionRef = peopleRef.collection('redemptions').doc();
+        tx.set(redemptionRef, {
+          rewardId: playerRewardId,
+          rewardName: reward.name || '',
+          cost,
+          pointsBefore: currentPoints,
+          pointsAfter: newPoints,
+          redeemedAt: admin.firestore.FieldValue.serverTimestamp(),
+          tenantId,
+          tenantName: peopleData.name || '',
+          status: 'pending'
+        });
+        tx.update(peopleRef, {
+          'gamification.points': newPoints,
+          'gamification.totalRedeemed': admin.firestore.FieldValue.increment(cost),
+          'gamification.lastRedeemedAt': admin.firestore.FieldValue.serverTimestamp()
+        });
+        return { success: true, rewardId: playerRewardId, rewardName: reward.name, cost, pointsBefore: currentPoints, pointsAfter: newPoints, redemptionId: redemptionRef.id };
+      });
+      console.log(`🎁 Player redeemed: ${tenantId} → ${playerRewardId} (cost=${result.cost}, remain=${result.pointsAfter})`);
+      return result;
+    } catch (error) {
+      if (error instanceof functions.https.HttpsError) throw error;
+      console.error('❌ redeemReward (player) failed:', error);
+      throw new functions.https.HttpsError('internal', error.message || 'transaction failed');
+    }
+  }
+  // ── End player branch ────────────────────────────────────────────────────
+
   const { building, roomId, rewardId } = data || {};
 
   // Input validation — fail loudly so the tenant client surfaces the error
@@ -41,7 +101,6 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
   // Ownership check — caller's claims must match requested room/building.
   // Admin bypasses (ops/testing). Without this, any signed-in user could
   // drain another tenant's points by passing their building+roomId.
-  const tok = context.auth.token || {};
   if (tok.admin !== true) {
     if (tok.room !== String(roomId) || tok.building !== canonicalBuilding) {
       throw new functions.https.HttpsError('permission-denied',

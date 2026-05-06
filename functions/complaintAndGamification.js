@@ -405,23 +405,50 @@ exports.getLeaderboard = functions.region('asia-southeast1').https.onCall(async 
       throw new functions.https.HttpsError('invalid-argument', 'building must be "rooms" or "nest"');
     }
 
-    // Nested schema: tenants/{building}/list/{roomId}
-    const snapshot = await firestore
-      .collection('tenants').doc(building).collection('list')
-      .orderBy('gamification.points', 'desc')
-      .limit(10)
-      .get();
+    // Fetch active tenants and community members (players) in parallel.
+    // Players transitioned out of their room but still hold real points in
+    // people/{tenantId} — they should appear alongside current tenants.
+    const [tenantSnap, peopleSnap] = await Promise.all([
+      firestore
+        .collection('tenants').doc(building).collection('list')
+        .orderBy('gamification.points', 'desc')
+        .limit(20)
+        .get(),
+      firestore
+        .collection('people')
+        .orderBy('gamification.points', 'desc')
+        .limit(20)
+        .get()
+    ]);
 
-    const leaderboard = snapshot.docs.map((doc, index) => {
+    const tenantEntries = tenantSnap.docs.map(doc => {
       const d = doc.data();
       return {
-        rank: index + 1,
         roomId: doc.id,
+        tenantId: null,
+        isPlayer: false,
         name: d.name || d.firstName || '(ไม่มีชื่อ)',
         points: (d.gamification && d.gamification.points) || 0,
         avatar: d.avatar || '🏡',
       };
     });
+
+    const playerEntries = peopleSnap.docs.map(doc => {
+      const d = doc.data();
+      return {
+        roomId: null,
+        tenantId: doc.id,
+        isPlayer: true,
+        name: d.name || d.firstName || '(ไม่มีชื่อ)',
+        points: (d.gamification && d.gamification.points) || 0,
+        avatar: d.avatar || '🌿',
+      };
+    });
+
+    const leaderboard = [...tenantEntries, ...playerEntries]
+      .sort((a, b) => b.points - a.points)
+      .slice(0, 10)
+      .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
     return { success: true, leaderboard };
   } catch (error) {

@@ -4,6 +4,242 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
+# Project-Wide Audit Map (2026-05-09)
+
+แผนตรวจสอบโปรเจ็คแบบ end-to-end แยกตามมิติ — เลือกทำเป็นกลุ่ม หรือทีละ item ก็ได้
+
+---
+
+## 🟥 A — Gameplay ที่ยังไม่ครบ (Player mode gaps)
+> ดึงจาก handoff 2026-05-08 — shipped player mode แต่ยังมี 4 path ที่ยังไม่ทำ
+
+| # | รายการ | Impact | Effort |
+|---|-------|--------|--------|
+| A1 | **Player live E2E test** — ยังไม่มี LINE account จริงที่ถูก `transitionToPlayer` แล้วทดสอบ LIFF | HIGH | S |
+| A2 | **Wellness claim สำหรับ player** — `wellnessClaimed` subcollection อยู่ใน tenant doc; player ต้องการ path บน `people/{tenantId}/wellnessClaimed` | HIGH | M |
+| A3 | **Reward redemption สำหรับ player** — `redeemReward` CF ใช้ `tenants/{building}/list/{roomId}` ซึ่ง player ไม่มีแล้ว | HIGH | M |
+| A4 | **Leaderboard สำหรับ player** — อ่าน `tenants/nest/list/*` เท่านั้น; player ที่ transition ออกไปแล้วหายจาก leaderboard | MED | M |
+
+---
+
+## 🟧 B — Security ที่ pending อยู่
+> จาก handoff 2026-04-29 (CSP) + 2026-05-02 (inline handlers)
+
+| # | รายการ | Impact | Effort |
+|---|-------|--------|--------|
+| B1 | **CSP enforcement flip** — CSP ยังอยู่ใน report-only mode มา 2 สัปดาห์ (target 2026-05-13) ถึงเวลาแล้ว | HIGH | S |
+| B2 | **32 inline event handlers → addEventListener** — prerequisite ก่อน flip CSP enforce | HIGH | L |
+| B3 | **Security audit checklist** (`memory/security_audit_checklist.md`) — รัน on-demand, ยังไม่ได้รันหลัง booking flow + player mode ship | MED | M |
+
+---
+
+## 🟨 C — Performance
+> ยังไม่เคย audit อย่างจริงจัง
+
+| # | รายการ | Impact | Effort |
+|---|-------|--------|--------|
+| C1 | **LCP / image optimization** — `sustainability-solar.jpg` (232KB), `location-area-map.jpg` (270KB) ใน landing site เกิน budget; tenant_app ก็ยังไม่มี WebP/lazy | MED | M |
+| C2 | **bundle size audit** — tenant_app.html เป็น single 11,459-line file; shared/*.js 43 ไฟล์; ดูว่า esbuild tree-shake ได้ดีแค่ไหน | MED | S |
+| C3 | **CF cold start** — `minInstances:1` ใส่แล้วแค่ liffSignIn + liffBookingSignIn; CF อื่นที่ tenant เรียกบ่อย (verifySlip, claimDailyLoginPoints) ยังเย็นอยู่ | MED | S |
+| C4 | **Dashboard 900ms cold start** — shimmer ทำแล้ว แต่ยังไม่ได้ profile ว่า slowest query คือตัวไหน | LOW | M |
+
+---
+
+## 🟦 D — Code quality
+> ตรวจเฉพาะจุด — ไม่ใช่ full refactor
+
+| # | รายการ | Impact | Effort |
+|---|-------|--------|--------|
+| D1 | **console.log cleanup** — tenant_app.html + dashboard.html ยังมี diagnostic logs (บางอันตั้งใจ เช่น `[OTP]`, `[LIFF]`; บางอันอาจลบได้) | LOW | S |
+| D2 | **Dead code ใน shared/*.js** — 43 ไฟล์; ยังไม่เคย audit ว่ามีฟังก์ชันที่ไม่มีใครเรียกแล้ว | LOW | M |
+| D3 | **~40 hardcoded `font-family:'Sarabun'` ใน dashboard.html** — ควรเป็น CSS variable; ยังไม่ได้ทำ (จาก dark mode audit doc) | LOW | S |
+| D4 | **Function size audit** — ค้นหาฟังก์ชัน >50 บรรทัดใน tenant_app.html ที่แยกได้ | LOW | M |
+
+---
+
+## 🟩 E — UX / UI gaps ที่รู้อยู่
+> จาก dark_mode_audit_state.md + UX audit handoffs
+
+| # | รายการ | Impact | Effort |
+|---|-------|--------|--------|
+| E1 | **Dark mode dual mechanism unify** — `body.night-mode` (legacy) vs `html[data-theme="dark"]` ยังอยู่คู่กัน; ควร consolidate เป็น attribute เดียว | MED | L |
+| E2 | **KPI grid mobile** — dashboard.html KPI grid ไม่ reflow บน mobile; tenant ที่แอดมินใช้มือถือเห็นตัดขอบ | MED | M |
+| E3 | **Dark mode automated screenshot test** — verify ด้วยตามือ ทุก session; ควรมี Playwright screenshot baseline | LOW | M |
+| E4 | **Booking flow live E2E** — ship แล้ว (2026-05-04) แต่ visual verify ยังเป็น localhost placeholder; ยังไม่ได้ทดสอบ Vercel live จริง | MED | S |
+
+---
+
+## 🔵 F — Docs / Memory drift
+> เป็นงาน hygiene — ไม่ urgent แต่ป้องกัน wrong fix ในอนาคต
+
+| # | รายการ | Impact | Effort |
+|---|-------|--------|--------|
+| F1 | **verify-memory:all** — scan handoff/journal/feedback files สำหรับ fabricated path patterns | LOW | S |
+| F2 | **lifecycle_booking_flow.md** — อัปเดต state machine หลัง KYC path ship; doc อาจ stale | LOW | S |
+| F3 | **lifecycle_gamification.md** — player mode เปลี่ยน architecture (people/ collection) แต่ doc ยังไม่ reflect | MED | S |
+
+---
+
+## แนะนำ order ถ้าจะเริ่ม
+
+```
+Priority 1 (blocking / ใกล้ deadline):
+  B1 + B2 — CSP enforce (ถ้าจะทำก่อน 2026-05-13)
+
+Priority 2 (gameplay ยังไม่สมบูรณ์):
+  A2 + A3 — wellness + redemption สำหรับ player
+
+Priority 3 (hygiene, เร็ว):
+  D1 → D3 → F1 → F3
+
+Priority 4 (nice to have):
+  C1 → E2 → E1
+```
+
+> **Approval needed:** เลือก group ที่อยากทำก่อน แล้วจะ expand เป็น checkable plan พร้อม Why
+
+---
+
+# Plan A+B — Player Gameplay Completion + Security (2026-05-09)
+
+## Scope realities (จาก grep จริง)
+
+| ข้อ | ประมาณใน audit map | จริง (grep) |
+|----|------------------|------------|
+| B2 inline handlers | "32" (จาก handoff 2026-05-02) | **181 ใน tenant_app.html + 24 ใน dashboard.html = 205** |
+| A2 wellness client | "M" | ~40 lines — 2 ฟังก์ชัน (`_setupWellnessClaimUI` + `claimWellnessReward`) |
+| A3 redemption CF | "M" | ~50 lines — `redeemReward.js` + ~20 lines client |
+| A4 leaderboard CF | "M" | ~30 lines — `complaintAndGamification.js` + client display |
+
+---
+
+## Phase 1 — A2 + A3: Player wellness claim + reward redemption
+
+### Why
+Player ที่ transition ออกจากห้องแล้ว ยังมีหน้า wellness + หน้า rewards ใน tenant_app แต่ทั้งสองหน้าอ่าน/เขียน `tenants/{building}/list/{roomId}` ซึ่ง player ไม่มีแล้ว → ปุ่มพัง, points ไม่ขึ้น
+
+### A2 — Wellness claim (client-only change)
+
+`_setupWellnessClaimUI()` + `claimWellnessReward()` ที่ `tenant_app.html:~9712-9804`
+
+ปัจจุบัน:
+```js
+const ref = fns.doc(db, `tenants/${_taBuilding}/list/${_taRoom}/wellnessClaimed/${a.id}`);
+const tenantRef = fns.doc(db, `tenants/${_taBuilding}/list/${_taRoom}`);
+```
+
+Player branch (เพิ่ม):
+```js
+const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+const claimPath = isPlayer
+    ? `people/${window._playerProfile.tenantId}/wellnessClaimed/${a.id}`
+    : `tenants/${_taBuilding}/list/${_taRoom}/wellnessClaimed/${a.id}`;
+const pointsPath = isPlayer
+    ? `people/${window._playerProfile.tenantId}`
+    : `tenants/${_taBuilding}/list/${_taRoom}`;
+```
+
+- [ ] เพิ่ม `isPlayer` guard ใน `_setupWellnessClaimUI` (อ่าน claim path ที่ถูกต้อง)
+- [ ] เพิ่ม `isPlayer` guard ใน `claimWellnessReward` (เขียน claim + increment points)
+- [ ] เพิ่ม early-return สำหรับ player ที่ยังไม่มี tenantId (defensive)
+- [ ] **Firestore rules** — เพิ่ม rule ให้ player เขียน `people/{tenantId}/wellnessClaimed/{articleId}` ได้
+
+### A3 — Reward redemption (CF + client)
+
+**CF: `functions/redeemReward.js`** — เพิ่ม player branch ก่อน tenant logic (~50 lines):
+```js
+// Player branch — tok.role === 'player', tok.tenantId
+if (tok.role === 'player') {
+    const { tenantId, rewardId } = data || {};
+    // validate tok.tenantId === tenantId
+    // transaction: read people/{tenantId}, check points, write redemptions subcollection, update points
+}
+```
+
+**Client: `tenant_app.html:~6380` `redeemReward()` function** — เพิ่ม player payload:
+```js
+const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
+const payload = isPlayer
+    ? { tenantId: window._playerProfile.tenantId, rewardId }
+    : { building: _taBuilding, roomId: String(_taRoom), rewardId };
+```
+
+- [ ] `redeemReward.js` — เพิ่ม player branch (validate, transaction บน `people/{tenantId}`)
+- [ ] Client `redeemReward()` — เพิ่ม player payload branch
+- [ ] Firestore rules — `people/{tenantId}/redemptions` write สำหรับ player
+- [ ] Deploy CF: `firebase deploy --only functions:redeemReward`
+
+---
+
+## Phase 2 — A4: Leaderboard แสดง player
+
+### Why
+player ที่ transition ออกยังมีแต้ม แต่ไม่โผล่ใน leaderboard เพราะ CF อ่านแค่ `tenants/nest/list/*`
+
+**CF: `complaintAndGamification.js:~399` `getLeaderboard`:**
+- เพิ่ม read `people/` collection คู่ขนาน
+- Merge + sort ทั้งสองชุด
+- Return format เดิม (แค่ name + points + rank) ไม่โชว์ room สำหรับ player
+
+**Client: `tenant_app.html:~7627` leaderboard render:**
+- ปัจจุบัน render `r.room` — player ไม่มี room → แสดง "🌿 สมาชิก" แทน
+
+- [ ] `complaintAndGamification.js` — merge `people/` + `tenants/nest/list/*` ใน `getLeaderboard`
+- [ ] Client leaderboard render — fallback "🌿 สมาชิก" ถ้าไม่มี `r.room`
+- [ ] Deploy CF: `firebase deploy --only functions:complaintAndGamification`
+
+---
+
+## Phase 3 — B3: Security checklist run (audit only)
+
+รัน `memory/security_audit_checklist.md` ทุก domain ต่อ commit ล่าสุด (booking + player mode ship แล้ว):
+- [ ] Auth + LIFF scope (new: player claims, booking claims)
+- [ ] Firestore rules coverage (new: `people/`, `bookings/`)
+- [ ] CF input validation (new: player branch ใน redeemReward หลัง A3)
+- [ ] CSP violations (ดู report-only log จริงใน Vercel)
+- [ ] Storage rules (booking KYC docs)
+
+ไม่มี code changes — output คือ list ของ gaps ที่เหลือ
+
+---
+
+## Phase 4 — B2 → B1: Inline handlers + CSP enforce
+
+### ⚠️ Scope alert
+memory บันทึก "32 inline handlers" — จริงๆ คือ **205 handlers** (181 tenant_app + 24 dashboard)
+
+**Strategy:** Event delegation แทนการ rename ทีละตัว
+- เพิ่ม `data-action="funcName"` + `data-action-args="..."` แทน `onclick="funcName(arg)"`
+- Single `document.addEventListener('click', e => { ... })` delegator ใน `<script>`
+- ลด 205 changes → 1 delegator + 205 attribute renames (safer, ไม่ต้องเพิ่ม id)
+
+ขนาด: ใหญ่มาก (~4-6 ชั่วโมง) — แนะนำทำเป็น sub-session แยก
+
+- [ ] **B2a** — inventory handlers ที่ยาก (pass args, use `this`) vs ง่าย (no-arg)
+- [ ] **B2b** — implement delegator + replace handlers ทีละ page
+- [ ] **B2c** — verify CSP report-only log = 0 violations
+- [ ] **B1** — flip `Content-Security-Policy-Report-Only` → `Content-Security-Policy` ใน `vercel.json`
+
+---
+
+## A1 — Live E2E (user action)
+ต้องใช้ LINE account จริงที่ถูก transition: Settings → "ย้ายเป็นสมาชิก" → verify LIFF player flow
+
+---
+
+## Suggested order
+
+```
+รอบนี้: Phase 1 (A2+A3) + Phase 2 (A4)  ← gameplay complete
+รอบหน้า: Phase 3 (B3 audit) → scope B2 → flip B1
+```
+
+## Approval check
+- Phase 1+2 เริ่มได้เลย ใช่ไหม?
+- B2 ต้องการทำในรอบนี้ด้วยไหม หรือ defer?
+
+---
+
 # FAQ for tenant_app — `page-faq` (2026-05-06)
 
 ## Goal
@@ -68,7 +304,51 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
-# Nature Haven Landing Page — `naturehaven.vercel.app` (2026-05-06)
+# Nature Haven Landing Page — `naturehaven-living.vercel.app` (2026-05-06) ✅ SHIPPED
+
+## Review (final state 2026-05-06)
+
+🟢 **Live at https://naturehaven-living.vercel.app/** — separate repo, separate Vercel project, React/Vite/TS source.
+
+### What shipped (vs original plan)
+- ❌ A1 (subfolder monorepo) — abandoned. Found `naturehaven.vercel.app` was taken globally → renamed to `naturehaven-living.vercel.app`. Then user pivoted to a completely separate repo.
+- ❌ Subfolder + brand.css copy — abandoned when we moved to the separate-repo approach.
+- ✅ **Separate GitHub repo** `soulgroundliving/naturehaven` (note: account `soulgroundliving` ≠ main repo's `soulgroundliviing`).
+- ✅ **Separate Vercel project** `naturehaven-living` with auto-deploy from `main` branch.
+- ✅ **Stack: React 19 + Vite 7 + TypeScript + Tailwind v3 + GSAP + Lenis + shadcn/ui** (Kimi-Agent built source).
+- ✅ **9 sections**: Hero, About, Residences (5,800/6,200 THB), Amenities, Location, Design, Smart Living, Contact, Footer.
+- ✅ **7 real photos** in `public/assets/` (hero-living-space, about-minimal-room, design-philosophy/materials, smart-living-app, sustainability-solar, location-area-map).
+
+### Iteration history (3 design generations in one session)
+1. **Gen 1** — vanilla HTML + Tailwind in `landing/` subfolder. Built but never deployed live as production.
+2. **Gen 2** — Claude design's static HTML/CSS export. Deployed briefly (~30 min). CSS gradient placeholders only, no real photos.
+3. **Gen 3 (final)** — Kimi-Agent React/Vite/TS source from `Kimi_Agent_Nature Haven Quiet Luxury.zip`. Real photos, GSAP animations, Lenis smooth scroll. Live now.
+
+### Memory written
+- [`lifecycle_naturehaven_landing_site.md`](../../../C:/Users/usEr/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/lifecycle_naturehaven_landing_site.md) — full architecture + edit flow + gotchas
+- [`next_session_handoff_2026_05_06_naturehaven_landing.md`](../../../C:/Users/usEr/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/next_session_handoff_2026_05_06_naturehaven_landing.md) — session-specific handoff
+- [`feedback_vercel_ui_overrides_json.md`](../../../C:/Users/usEr/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/feedback_vercel_ui_overrides_json.md) — cross-project Vercel lesson
+- MEMORY.md index updated with all 3 entries
+
+### Lessons learned (this session)
+1. **`*.vercel.app` is global namespace** — plain `naturehaven` was taken, fell back to `naturehaven-living`.
+2. **Vercel UI Build settings override `vercel.json`** — pushing `"framework": "vite"` alone isn't enough if UI has explicit override; user must manually set Framework Preset = Vite. ([feedback doc written](../../../C:/Users/usEr/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/feedback_vercel_ui_overrides_json.md))
+3. **Vercel doesn't auto-build on Git connection swap** — need empty commit or manual Redeploy.
+4. **Design tool previews ≠ exports** — Claude design's preview showed photos that weren't in the zip; Kimi did include real `.jpg` files.
+
+### Pending for next session (out of scope today)
+- [ ] Custom domain (`naturehaven.co.th` / similar)
+- [ ] Cross-link CTAs to `the-green-haven.vercel.app/login` (resident sign-in) and `/booking` (LIFF prospect flow)
+- [ ] Form backend for ContactSection (currently presentational)
+- [ ] Verify LINE link `lin.ee/Z0ujovB6` is correct in source — replace if needed
+- [ ] LCP perf optimization (`sustainability-solar.jpg` + `location-area-map.jpg` are >200KB → WebP + lazy-load)
+- [ ] Cleanup unused 50+ shadcn components in `src/components/ui/`
+- [ ] Analytics (Vercel Analytics or GA)
+- [ ] i18n (Thai/English toggle)
+
+---
+
+# (Original plan kept below for traceability — superseded by Review above)
 
 ## Context
 ลูกบ้าน (resident community) ของ Nature Haven ยังไม่มีหน้า landing สาธารณะ. มีแค่ `tenant_app.html` (LIFF webview) + `booking.html` (prospect flow) + `dashboard.html` (admin). ต้องการสร้าง public marketing/portal landing ที่ `naturehaven.vercel.app` — ตรงตาม two-name rule (Nature Haven = project tenant-facing, ใน [memory/brand_two_names_rule.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\brand_two_names_rule.md)).
