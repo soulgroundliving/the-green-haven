@@ -278,8 +278,7 @@ const NEST_ROOMS = [
 // BACKWARD COMPATIBILITY & GLOBAL EXPORTS
 // ============================================================================
 
-// Make SecureConfig and CONFIG globally available
-window.SecureConfig = SecureConfig;
+// Make CONFIG globally available
 window.CONFIG = CONFIG;
 window.ROOMS_OLD = ROOMS_OLD;
 window.ROOMS_NEW = ROOMS_NEW;

@@ -1067,8 +1067,7 @@ if (typeof window !== 'undefined') {
 if (typeof window !== 'undefined') {
   window.BillingSystem = BillingSystem;
   window.BillStore = BillStore;
-  window.AutoBillCalculator = BillingSystem; // Alias for backward compatibility
-  window.BillingCalculator = BillingSystem; // Alias for backward compatibility
+window.BillingCalculator = BillingSystem; // Alias for backward compatibility
 }
 
 console.log('✅ BillingSystem (consolidated) loaded');

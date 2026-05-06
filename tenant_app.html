@@ -4853,7 +4853,7 @@
             const container = document.querySelector('#world-map-page .map-container');
             const root = document.getElementById('world-map-page');
             if (!container) return;
-            const img = `shared/bg/nest-${mode}.jpg`;
+            const img = `shared/bg/nest-${mode}.webp`;
             // stack fallback: image first → gradient (ถ้าไฟล์ 404 browser render gradient ซ้อน)
             container.style.backgroundImage = `url('${img}'), ${WORLD_MAP_GRADIENTS[mode]}`;
             container.style.backgroundSize = 'cover, cover';

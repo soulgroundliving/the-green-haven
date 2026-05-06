@@ -371,6 +371,3 @@ window.AuditLogger = AuditLogger;
 window.AuditActionTypes = AuditActionTypes;
 window.logBillGenerated = logBillGenerated;
 window.logMaintenanceCreated = logMaintenanceCreated;
-window.logPaymentVerified = logPaymentVerified;
-window.logSecurityAlert = logSecurityAlert;
-window.logError = logError;
