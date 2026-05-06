@@ -4,6 +4,198 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
+# FAQ for tenant_app — `page-faq` (2026-05-06)
+
+## Goal
+เพิ่มหน้า FAQ ใน tenant_app ตอบคำถาม 5 ข้อที่ลูกบ้านถามซ้ำบ่อย (อิงจาก recurring failure modes ใน memory)
+
+## Why
+- `page-terms` (คู่มือการใช้งาน) เป็น tutorial — สอนว่าใช้ยังไง แต่ไม่ช่วยตอน "ติดปัญหา"
+- 4 อาการที่ user ถาม (โหลดไม่ขึ้น / ค้าง / login เด้ง / ชื่อขึ้นแต่ข้อมูลไม่ขึ้น) ตรงกับ memory ที่บันทึกไว้:
+  - `bills_not_showing_diagnostic.md` — recurring 5+ ครั้ง
+  - `feedback_firebase_auth_timing.md` — auth restore race
+  - `auth_liff_sot.md` — claims race
+  - `next_session_handoff_2026_05_04_auth_speed_liff_regression.md` — cold-start
+- ลด ping admin ทาง LINE สำหรับเรื่องที่ตอบเองได้
+
+## Decisions
+- **Placement:** หน้าใหม่ `#page-faq` ลิงก์จาก Settings menu — ไม่แทรกใน `page-terms` (tutorial vs FAQ คนละหน้าที่ ตามที่คุยกัน)
+- **Pattern:** Native `<details>/<summary>` accordion — ไม่ต้อง JS, accessible โดย default, match Muji minimal
+- **โทน:** ภาษาธรรมดา, action-first ("ปิด LINE → เปิดใหม่"), ไม่ใช้ศัพท์ technical
+- **Brand tokens:** `var(--primary-green)`, `var(--soft-green)`, `var(--fs-sm)`, `var(--text-muted)` — ไม่ hardcode hex
+
+## Plan
+
+### Step 1 — Add FAQ page DOM
+- [ ] แทรก `<div id="page-faq" class="page">` ต่อจาก `#page-terms` (~บรรทัด 4068)
+- [ ] App bar: ปุ่ม back chevron (เหมือน page อื่น) + title "คำถามที่พบบ่อย"
+- [ ] Card ครอบ 5 `<details>` items
+- [ ] **Why:** match `#page-terms`/`#page-privacy` pattern → ไม่ต้องเรียน convention ใหม่
+
+### Step 2 — Wire menu entry in settings
+- [ ] เพิ่ม menu-item ใน `#settings` menu-list ก่อน "คู่มือการใช้งาน"
+- [ ] Icon: `fa-question-circle`, label "คำถามที่พบบ่อย (FAQ)"
+- [ ] `onclick="showPage('page-faq')"`
+- [ ] **Why:** วาง FAQ ก่อน User Manual เพราะคนเปิดมาตอนติดปัญหา (urgent) ก่อนอ่าน manual (browse)
+
+### Step 3 — Style accordion (`<style>` ใน head)
+- [ ] `.faq-details` wrapper + summary cursor + hover bg = `var(--soft-green)` opacity
+- [ ] `details[open] summary` border-bottom + spacing
+- [ ] Hide native marker (`::-webkit-details-marker { display:none }` + `details > summary { list-style: none }`) → custom `+`/`−` indicator
+- [ ] Reduced-motion guard ตัด transition
+
+### Step 4 — Content (5 Q&A — confirmed)
+- [ ] Q1: หน้าโหลดไม่ขึ้น / ค้างที่ spinner → ปิดแอปใน LINE → เปิดใหม่ / รอ 1-2 นาที
+- [ ] Q2: บิลเดือนนี้ไม่โผล่ → รอแอดมินอัพมิเตอร์ (ต้นเดือน) / ผ่านวันที่ X แล้วยังไม่มี = แจ้งแอดมิน
+- [ ] Q3: login เด้งกลับมาตลอด → เน็ตมีปัญหา / session หมด → ปิด LINE เปิดใหม่
+- [ ] Q4: ชื่อขึ้นแต่ข้อมูลห้องไม่ขึ้น → รอ 5 วิ → refresh / ยังไม่ได้ = แจ้งแอดมิน
+- [ ] Q5: จ่ายแล้วระบบไม่อัปเดต → สลิปกำลังตรวจ 1-2 นาที / เกิน 5 นาที ตรวจยอดให้ตรงบิล
+
+### Step 5 — Verify on live
+- [ ] `git push origin main` → รอ Vercel deploy
+- [ ] เปิด https://the-green-haven.vercel.app บน LIFF/desktop → Settings → FAQ → expand แต่ละข้อ
+- [ ] Back button กลับ Settings ได้
+- [ ] Dark mode (Settings → toggle theme) ดูได้ปกติ
+
+## Out of scope (เลื่อนไว้)
+- Search/filter ใน FAQ — แค่ 5 ข้อยังไม่ต้อง
+- Tracking ว่าข้อไหนถูกเปิดบ่อย — ค่อยใส่ตอนคำถามเยอะขึ้น
+- Auto-link จาก toast errors → FAQ — feature ใหญ่กว่านี้ ค่อยทำรอบหน้า
+- Expand FAQ เป็นเรื่องอื่น (จ่ายเงิน / แจ้งซ่อม / แต้ม / สัญญา) — รอ user ส่งคำถามจริงมาก่อน (empirical, ไม่เดา)
+
+## Approval needed before Step 1
+ยืนยัน: เลือก placement = new `#page-faq` (ไม่รวมใน page-terms), pattern = native details, 5 Q&A ตามที่ตกลง — ใช่หรือเปล่า?
+
+---
+
+# Nature Haven Landing Page — `naturehaven.vercel.app` (2026-05-06)
+
+## Context
+ลูกบ้าน (resident community) ของ Nature Haven ยังไม่มีหน้า landing สาธารณะ. มีแค่ `tenant_app.html` (LIFF webview) + `booking.html` (prospect flow) + `dashboard.html` (admin). ต้องการสร้าง public marketing/portal landing ที่ `naturehaven.vercel.app` — ตรงตาม two-name rule (Nature Haven = project tenant-facing, ใน [memory/brand_two_names_rule.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\brand_two_names_rule.md)).
+
+## Decisions ที่ต้องเลือกก่อนลงมือ
+
+### A. Repo strategy — **เลือก 1**
+
+- [ ] **A1 (แนะนำ)** — Subfolder ในรีโปนี้ + Vercel monorepo
+  - สร้าง `landing/` ในรีโปปัจจุบัน
+  - User สร้าง Vercel project ใหม่ใน dashboard, set Root Directory = `landing/`, Project Name = `naturehaven` → ได้ `naturehaven.vercel.app`
+  - **Pro:** repo เดียว, ใช้ git+vercel ที่เชื่อมไว้แล้ว, share brand.css ได้ผ่าน symlink/copy
+  - **Con:** User ต้องไปกด UI Vercel ครั้งเดียวเพื่อ create project (ผมทำให้ไม่ได้)
+
+- [ ] **A2** — Repo ใหม่แยก (`naturehaven-landing` หรือชื่ออื่น)
+  - **Pro:** isolation สมบูรณ์, build/deploy lifecycle แยก 100%
+  - **Con:** ต้องสร้าง GitHub repo ใหม่ + push + connect Vercel ใหม่ทั้งหมด, ต้องคัดลอก brand.css/font ข้ามไป
+
+- [ ] **A3** — เก็บใน path เดียวกับ main project แล้ว alias domain
+  - เช่น add path `/landing/` บน `the-green-haven.vercel.app` แล้วใช้ Vercel alias เพิ่ม `naturehaven.vercel.app`
+  - **Pro:** ไม่ต้อง create project ใหม่
+  - **Con:** สอง URL ชี้คอนเทนต์เดียวกัน (SEO ซ้อน) — และ alias `naturehaven.vercel.app` มักไม่ว่างเพราะ vercel.app เป็น shared subdomain
+
+> 👉 ส่วนตัวแนะนำ **A1**: เร็วสุด, share brand token ได้, เปลี่ยน mind ทีหลังย้ายเป็น A2 ก็ง่าย
+
+### B. Audience — **เลือก 1 หรือผสม**
+
+- [ ] **B1** — Marketing สำหรับ prospect (คนยังไม่ได้อยู่)
+  - Hero + about ชุมชน + รูปห้อง + ราคา + CTA "จองห้อง" → booking.html
+- [ ] **B2** — Portal entry สำหรับ resident (ลูกบ้านปัจจุบัน)
+  - Hero + ประกาศชุมชน + ปุ่ม "เข้าระบบลูกบ้าน" → LIFF / tenant_app
+- [ ] **B3 (แนะนำ)** — Hybrid: ใครเข้ามาก็ใช้ได้
+  - Hero ขายชุมชน + 2 CTA (resident sign-in / book a room) + about + amenities + contact
+
+### C. Visual direction — **เลือก 1**
+
+- [ ] **C1 (แนะนำ)** — Muji minimal continuation
+  - ใช้ `shared/brand.css` token ตรงๆ, IBM Plex Sans Thai Looped, teal `#0f766e`, สีพื้น cream/cloud
+  - Layout: full-bleed hero photo + restrained type + lots of whitespace
+  - Reference: muji.com, kinfolk.com, airbnb plus
+- [ ] **C2** — Editorial (warmer, photo-heavy)
+  - Bold typography, magazine-style grid, larger imagery
+- [ ] **C3** — Brutalist/hand-crafted (โดดเด่นกว่า)
+  - มากเกินสำหรับ "quiet living" brand — น่าจะข้ามไป
+
+### D. Content sections (B3 + C1) — confirm
+
+- [ ] Hero: brand name "Nature Haven" (Thai+EN), tagline "ทางสายกลาง", primary photo, 2 CTA
+- [ ] About: 3-line philosophy + photo collage (3 รูป)
+- [ ] Amenities: 6 cards (Wi-Fi, parking, cleaning, security, community events, gamification rewards)
+- [ ] Resident testimonial: 1-2 quote cards (จะใส่ placeholder ก่อน)
+- [ ] CTA section: "ลูกบ้านปัจจุบัน → เข้าระบบ" / "สนใจอยู่อาศัย → จองห้อง" — link ไปที่ tenant LIFF + booking.html
+- [ ] Contact + footer: The Green Haven Co Ltd, address, LINE official, email
+
+## Plan (สมมติเลือก A1 + B3 + C1)
+
+### Step 1 — Scaffold `landing/` directory
+- [ ] mkdir `landing/` ในรีโปนี้
+- [ ] `landing/index.html` — single page, vanilla HTML + Tailwind classes + brand.css
+- [ ] `landing/vercel.json` — minimal: clean URLs + security headers (mirror หลักจาก root vercel.json)
+- [ ] `landing/.vercelignore` — กันไม่ให้ root project deploy `landing/` ออก domain เดิม
+- [ ] เพิ่ม `landing/` ลง root `.vercelignore` (สร้างถ้ายังไม่มี) — กันไม่ให้ `the-green-haven.vercel.app/landing/` ขึ้น
+- [ ] **Why:** isolation ที่ filesystem level → 2 projects แชร์ git แต่ deploy แยกกันชัดเจน
+
+### Step 2 — Style & assets
+- [ ] copy `shared/brand.css` → `landing/styles/brand.css` (snapshot — แก้แยกได้ภายหลัง)
+- [ ] หรือ symlink — Vercel build deref symlink อยู่แล้ว (ต้อง verify บน Windows ก่อน)
+- [ ] ใช้ Tailwind CDN ตอน prototyping; ถ้า production เพิ่ม Tailwind build pipeline แยก
+- [ ] Font: load IBM Plex Sans Thai Looped จาก Google Fonts (เหมือน main app)
+- [ ] **Why:** brand consistency — ลูกบ้านเข้า landing แล้วเห็น tenant_app ต่อ จะรู้สึก seamless
+
+### Step 3 — Build content (single index.html)
+- [ ] Hero section + 2 CTA buttons
+- [ ] About philosophy section
+- [ ] Amenities grid (responsive: 3-col desktop / 2-col tablet / 1-col mobile)
+- [ ] Testimonial placeholder (ไม่ใส่รูปคนจริงจนกว่าจะมี consent)
+- [ ] Final CTA + footer
+- [ ] Skip-link + semantic HTML (header, nav, main, section, footer) per `web/coding-style.md`
+- [ ] Reduced-motion guard ใน CSS
+
+### Step 4 — Performance & SEO baseline
+- [ ] `<meta name="description">` + Open Graph tags + Twitter card
+- [ ] `<link rel="canonical">` → `https://naturehaven.vercel.app/`
+- [ ] `loading="lazy"` ทุกรูปยกเว้น hero
+- [ ] Hero image: `fetchpriority="high"` + explicit width/height (กัน CLS)
+- [ ] Preload font subset เฉพาะ weight 400 + 600
+- [ ] sitemap.xml + robots.txt (allow all)
+
+### Step 5 — Deployment (manual user steps)
+- [ ] User เปิด vercel.com dashboard → New Project → import `the-green-haven` repo อีกครั้ง
+- [ ] Project Name: `naturehaven` (ต้องไม่ซ้ำใน vercel ทั้งหมด — ถ้าซ้ำ Vercel จะแนะนำ suffix)
+- [ ] Root Directory: `landing/`
+- [ ] Framework Preset: Other (static)
+- [ ] Build Command: leave blank (or `echo "static"`)
+- [ ] Output Directory: `.`
+- [ ] Deploy → ได้ `naturehaven.vercel.app`
+- [ ] **ผมเขียน checklist screenshot-by-screenshot ให้** หลัง file commit เสร็จ
+
+### Step 6 — Verification
+- [ ] เปิด `naturehaven.vercel.app` บน Chrome desktop + iOS Safari
+- [ ] ทุก link ใช้งานได้ (resident sign-in → LIFF, booking → booking.html ของ main project)
+- [ ] Lighthouse: Performance ≥ 95, A11y ≥ 95, SEO ≥ 95 (per `web/performance.md` + `web/testing.md`)
+- [ ] Reduced-motion: เปิดใน OS แล้ว transition ทั้งหมดต้อง ≤ 0.01ms
+- [ ] Mobile responsive: 320, 375, 768, 1024 viewports
+- [ ] Verify CSP no violations
+- [ ] เปิด `the-green-haven.vercel.app/landing/` → ต้อง 404 (ยืนยัน .vercelignore ทำงาน)
+
+## Out of scope (Phase 1 — landing เท่านั้น)
+- ❌ Custom domain (เช่น naturehaven.com) — ใช้ vercel.app subdomain ก่อน
+- ❌ CMS/admin สำหรับแก้ content — แก้ HTML ตรงๆ
+- ❌ Form submission/contact form — ใช้ LINE official link แทน (ไม่ต้อง backend)
+- ❌ i18n (EN/TH) — Thai-first, EN พอเหมือน tagline
+- ❌ Analytics — เพิ่มภายหลังเมื่อ deploy เสร็จ
+- ❌ Booking flow integration ลึก — แค่ link ไป `booking.html` ของ main project
+
+## ⚠️ ขอ confirm 3 ข้อก่อนลงมือ
+
+1. **Repo strategy** = **A1** (subfolder + Vercel monorepo) ใช่ไหม?
+2. **Audience** = **B3** (hybrid) ใช่ไหม?
+3. **Visual direction** = **C1** (muji minimal ต่อจาก brand เดิม) ใช่ไหม?
+
+ถ้าตอบ "OK ทั้ง 3 ข้อ" หรือ "ลุย A1 B3 C1" → ผมจะเริ่ม Step 1 ทันทีและไม่ถามอีก
+
+ถ้าอยากเปลี่ยน → บอกตัวเลือกใหม่ (เช่น "A2 + B1" — ผมจะปรับแผนแล้วถาม confirm รอบใหม่)
+
+---
+
 # UI/UX Foundation Migration — Phase 1 (audit 2026-05-04)
 
 ## Context

@@ -2075,6 +2075,56 @@
             .card { box-shadow: none !important; border: 1px solid #ccc !important; }
             a[href]::after { content: ""; }  /* don't print URLs after links */
         }
+
+        /* ---- FAQ accordion (page-faq) ---- */
+        .faq-section-label {
+            font-weight: 700;
+            font-size: var(--fs-sm);
+            color: var(--primary-green);
+            padding: 14px 0 4px;
+            opacity: 0.85;
+        }
+        .faq-details {
+            border-bottom: 1px solid rgba(0,0,0,0.07);
+        }
+        .faq-details:last-child { border-bottom: none; }
+        .faq-details summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 13px 2px;
+            font-size: var(--fs-sm);
+            font-weight: 600;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .faq-details summary::-webkit-details-marker { display: none; }
+        .faq-details summary::marker { display: none; }
+        .faq-details summary::after {
+            content: '+';
+            font-size: 1.2rem;
+            color: var(--primary-green);
+            font-weight: 300;
+            flex-shrink: 0;
+        }
+        .faq-details[open] summary::after { content: '−'; }
+        .faq-answer {
+            font-size: var(--fs-sm);
+            color: var(--text-muted);
+            line-height: 1.65;
+            padding: 0 2px 14px;
+            margin: 0;
+        }
+        html[data-theme="dark"] .faq-details {
+            border-bottom-color: rgba(255,255,255,0.08);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .faq-details summary::after { transition: none; }
+        }
     </style>
 </head>
 
@@ -3447,6 +3497,11 @@
                 <span>คู่มือการใช้งาน (User Manual)</span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
+            <div class="menu-item" onclick="showPage('page-faq')">
+                <div class="icon-box icon-green"><i class="fas fa-question-circle"></i></div>
+                <span>คำถามที่พบบ่อย (FAQ)</span>
+                <i class="fas fa-chevron-right arrow"></i>
+            </div>
             <div class="menu-item" onclick="showPage('page-compliance')">
                 <div class="icon-box icon-gray"><i class="fas fa-shield-alt"></i></div>
                 <span>การปฏิบัติตามกฎระเบียบด้านข้อมูล (Data & Compliance)</span>
@@ -4066,6 +4121,106 @@
             • การอนุมัติสัตว์เลี้ยง/การชำระเงิน</p>
         </div>
     </div>
+
+    <!-- ===== FAQ page ===== -->
+    <div id="page-faq" class="page">
+        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
+            <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                onclick="showSubPage('settings')">
+                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+            </div>
+            <h1 style="margin:0; font-size: var(--fs-lg);">คำถามที่พบบ่อย</h1>
+        </div>
+        <div class="card" style="padding-bottom:80px;">
+
+            <!-- ปัญหาการใช้งาน -->
+            <p class="faq-section-label">⚙️ ปัญหาการใช้งาน</p>
+
+            <details class="faq-details">
+                <summary>หน้าโหลดไม่ขึ้น หรือค้างที่วงกลม</summary>
+                <p class="faq-answer">ปิดแอปใน LINE แล้วเปิดใหม่ รอ 2–3 วินาทีแล้วลอง ถ้ายังไม่ขึ้น อินเทอร์เน็ตในตึกอาจมีปัญหาชั่วคราว รอสักครู่แล้วลองอีกครั้ง หรือแจ้งแอดมิน</p>
+            </details>
+
+            <details class="faq-details">
+                <summary>กดเข้าแอปแล้ว login เด้งซ้ำ</summary>
+                <p class="faq-answer">ปิด LINE แล้วเปิดใหม่ ถ้ายังเด้ง อินเทอร์เน็ตอาจหลุดชั่วคราว รอสักครู่แล้วลองอีกครั้ง</p>
+            </details>
+
+            <details class="faq-details">
+                <summary>ชื่อขึ้นแล้ว แต่ข้อมูลห้องไม่โผล่</summary>
+                <p class="faq-answer">แอปกำลังเชื่อมข้อมูลห้อง รอ 5–10 วินาที แล้วปิดเปิดใหม่ใน LINE ถ้ายังไม่ขึ้น แจ้งแอดมินพร้อมบอกชื่อและหมายเลขห้อง</p>
+            </details>
+
+            <!-- บิล & ชำระเงิน -->
+            <p class="faq-section-label" style="margin-top:8px;">💳 บิล & การชำระเงิน</p>
+
+            <details class="faq-details">
+                <summary>บิลเดือนนี้ยังไม่โผล่</summary>
+                <p class="faq-answer">แอดมินต้องบันทึกมิเตอร์ก่อนบิลถึงจะขึ้น (ปกติต้นเดือน) ถ้าผ่านวันที่ 5 แล้วยังไม่มี แจ้งแอดมินได้เลย</p>
+            </details>
+
+            <details class="faq-details">
+                <summary>ชำระบิลยังไง</summary>
+                <p class="faq-answer">หน้าการใช้งาน → กด "ชำระบิล" → สแกน QR PromptPay → โอนเงิน → กลับมาอัปโหลดสลิปในแอป → รอยืนยัน 1–2 นาที</p>
+            </details>
+
+            <details class="faq-details">
+                <summary>อัปสลิปแล้วสถานะไม่เปลี่ยน / สลิปไม่ผ่าน</summary>
+                <p class="faq-answer">ระบบตรวจสลิปอัตโนมัติ ใช้เวลา 1–2 นาที ถ้าเกิน 5 นาทีแล้วยังไม่ผ่าน ตรวจว่า (1) ยอดโอนตรงกับบิลพอดี (2) รูปสลิปชัด ไม่เบลอ ถ้าครบแล้วยังไม่ผ่าน แจ้งแอดมินพร้อมแนบสลิป</p>
+            </details>
+
+            <!-- แจ้งซ่อม -->
+            <p class="faq-section-label" style="margin-top:8px;">🔧 แจ้งซ่อม</p>
+
+            <details class="faq-details">
+                <summary>แจ้งซ่อมยังไง</summary>
+                <p class="faq-answer">หน้าบริการ → แจ้งซ่อม → เลือกหมวด → กรอกรายละเอียด → แนบรูป (ถ้ามี) → ส่ง แอดมินจะรับเรื่องและติดต่อกลับ</p>
+            </details>
+
+            <details class="faq-details">
+                <summary>แจ้งซ่อมไปแล้ว รอนานแค่ไหน / ดูสถานะยังไง</summary>
+                <p class="faq-answer">ดูสถานะได้ที่หน้าบริการ → ประวัติแจ้งซ่อม ปกติรับเรื่องภายใน 1 วันทำการ ถ้าเร่งด่วน (ไฟดับ น้ำแตก) โทรแอดมินโดยตรงในหน้าฉุกเฉิน</p>
+            </details>
+
+            <!-- แต้ม & รางวัล -->
+            <p class="faq-section-label" style="margin-top:8px;">⭐ แต้ม & รางวัล</p>
+
+            <details class="faq-details">
+                <summary>ได้แต้มจากอะไรบ้าง</summary>
+                <p class="faq-answer">ล็อกอินทุกวัน / จ่ายบิลก่อนวันครบกำหนด / อ่านบทความ Wellness ครบ / ไม่มีเรื่องร้องเรียนทั้งเดือน ดูรายละเอียดเพิ่มเติมในโปรไฟล์ → แต้มและระดับ</p>
+            </details>
+
+            <details class="faq-details">
+                <summary>แต้มไม่ขึ้น หรือหายไป</summary>
+                <p class="faq-answer">แต้มอาจโหลดช้า รอสักครู่แล้วปิดเปิดแอปใหม่ ถ้าหายจริง แจ้งแอดมินพร้อมบอกว่าทำกิจกรรมอะไรและเมื่อไหร่</p>
+            </details>
+
+            <details class="faq-details">
+                <summary>แลกรางวัลยังไง</summary>
+                <p class="faq-answer">โปรไฟล์ → ร้านรางวัล → เลือกรางวัล → กด "แลก" บางรางวัลรับได้ทันที บางอย่างแอดมินจะจัดส่งให้ภายหลัง</p>
+            </details>
+
+            <details class="faq-details">
+                <summary>แลกรางวัลแล้วยังไม่ได้รับ</summary>
+                <p class="faq-answer">ดูสถานะในหน้าประวัติการแลก ถ้าขึ้น "รอจัดส่ง" แอดมินจะติดต่อกลับ ถ้าสถานะผ่านแล้วแต่ยังไม่ได้รับ แจ้งแอดมิน</p>
+            </details>
+
+            <!-- สัญญาเช่า -->
+            <p class="faq-section-label" style="margin-top:8px;">📄 สัญญาเช่า</p>
+
+            <details class="faq-details">
+                <summary>ดูสัญญาเช่าของตัวเองได้ที่ไหน</summary>
+                <p class="faq-answer">โปรไฟล์ → สัญญาเช่า ดูวันที่เริ่ม วันหมดอายุ และเงื่อนไขการเช่าได้ที่นี่</p>
+            </details>
+
+            <details class="faq-details">
+                <summary>ต่อสัญญา หรืออยากแจ้งย้ายออก</summary>
+                <p class="faq-answer">โปรไฟล์ → สัญญาเช่า → กด "ต่อสัญญา" หรือ "แจ้งย้ายออก" → กรอกข้อมูล → ส่ง รอแอดมินยืนยันภายใน 2 วันทำการ</p>
+            </details>
+
+        </div>
+    </div>
+    <!-- ===== /FAQ page ===== -->
 
     <div id="page-compliance" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
