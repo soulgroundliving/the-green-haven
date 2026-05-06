@@ -446,6 +446,7 @@ exports.getLeaderboard = functions.region('asia-southeast1').https.onCall(async 
     });
 
     const leaderboard = [...tenantEntries, ...playerEntries]
+      .filter(e => e.points > 0)
       .sort((a, b) => b.points - a.points)
       .slice(0, 10)
       .map((entry, index) => ({ ...entry, rank: index + 1 }));
