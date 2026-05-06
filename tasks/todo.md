@@ -60,57 +60,181 @@ Ran grep + `npm run verify:memory:all` before planning. Several audit-map claims
   - Expand union blob to include 11 canonical non-lifecycle architecture docs (`gamification_ssot.md`, `auth_liff_sot.md`, etc.)
 - [x] Result: **58 → 8 warnings**. Remaining 8 are REAL signal (5 historical-path refs to `meter_data/{building}/{yearMonth}/data` orphaned docs + 1 doctrine teaching example + 2 unindexed paths). Lifecycle verification still 100% green (216 rows, 0 fails).
 
-### Phase 3 — Performance investigation (~30 min, READ-ONLY)
+### Phase 3 — Performance investigation ✅ DONE (read-only reports)
 
-Output: report in `tasks/todo.md` Review section. No edits in this phase.
+#### C3 — CF cold start cost-benefit ✅
+**Inventory:** 41 CFs total. 3 already warm via `minInstances:1` (`liffSignIn`, `liffBookingSignIn`, `keepLiffWarm` scheduled).
 
-#### C3 — CF cold start cost-benefit
-- [ ] List hot CFs by user-facing latency impact (verifySlip slip→toast, claimDailyLoginPoints daily modal, redeemReward redemption)
-- [ ] Cost: ~$0.40/CF/month per `minInstances:1` (already paying ×2)
-- [ ] Recommend: which CFs justify the spend; **user decides before any deploy**
+**Hot tenant-facing CFs still cold:**
+| CF | Frequency | UX impact of cold-start | Worth warming? |
+|---|---|---|---|
+| `verifySlip` | ~12-15 rent slips/month + retries | +2-3s on critical "did my payment work" loop | **YES — high UX value** |
+| `claimDailyLoginPoints` | ~12-25/day (Nest tenants + players) | +2-3s on daily modal open | **YES — fires daily for every active tenant** |
+| `notifyTenantOnMeterUpload` | ~12/month (admin-triggered) | Admin-side delay — non-blocking | NO |
+| `getRoomAvailability` | low pre-launch, could grow | +2-3s on prospect first visit | DEFER — wait for traffic |
+| `redeemReward` | rare | +2-3s on redemption | NO — rare event |
+| `getLeaderboard` | unclear; possibly per-page-view | depends on call frequency | INVESTIGATE before deciding |
 
-#### C2 — Bundle size audit
-- [ ] Read existing `npm run build` output if present; otherwise run esbuild stats
-- [ ] Top-5 contributors in shared/*.js (likely candidates: html2canvas, gamification, dashboard-extra, dashboard-insights)
-- [ ] Output: list + dead-export candidates for D2 follow-up
+**Cost calc:** ~$0.40/CF/month per `minInstances:1` instance (idle baseline = 1 × 730hr × $0.0000005/MB-sec × 256MB).
 
-#### C1 — LCP/image opportunities
-- [ ] tenant_app.html: count `<img>` without `loading="lazy"` + missing `width`/`height`
-- [ ] (Naturehaven landing site is separate repo — out of scope this session)
+**Recommendation:** Add `verifySlip` + `claimDailyLoginPoints` → +$0.80/month. **Awaiting your approval before deploying.**
 
-#### C4 — Dashboard 900ms cold start
-- [ ] Identify the 4-phase init order (already in `dashboard_architecture.md`)
-- [ ] Mark which phase is the bottleneck candidate from inspection
-- [ ] Real profiling needs DevTools; defer the fix step
+#### C2 — Bundle size audit ✅
+**Total shared/*.js:** 1,286 KB across 42 files (uncompressed).
 
-### Phase 4 — UX gaps (decide per item)
+**Top 5 contributors (49% of bundle):**
+| File | Size | Notes |
+|---|---|---|
+| `dashboard-extra.js` | 308 KB | The catch-all admin module — 6,300 lines. Largest single file. Splittable by subsystem. |
+| `dashboard-insights.js` | 87 KB | Deep analytics — 8 render functions across 5 tabs. |
+| `dashboard-bill.js` | 84 KB | Billing tab + PaymentStore + global verifiedSlips listener. |
+| `dashboard-requests-admin.js` | 70 KB | Maintenance/housekeeping/complaints admin queue. |
+| `dashboard-meter-import.js` | 65 KB | xlsx import + meter saving + LINE notify. |
 
-#### E2 — KPI grid mobile reflow (~20 min)
-- [ ] grep dashboard.html for `mx-kpi` grid CSS; identify breakpoint gap
-- [ ] Add `@media (max-width: 768px)` rule → 1-col stack on mobile
-- [ ] Verify on Vercel (admin dashboard is the surface)
-- **Why:** real UX issue (admin uses mobile during inspections); known gap from dark_mode_audit_state.md
+**Build:** `build.js` runs esbuild on Vercel (whitespace + comment strip only, NO identifier renaming). Expected output ≈ 75-80% of source.
 
-#### E1 — Dark mode unify `body.night-mode` → `html[data-theme="dark"]` (DEFER)
-- Touches every override across both HTML files. Dedicated session per dark_mode_audit_state.md guidance.
+**Real opportunity:** `dashboard-extra.js` could be split (e.g., extract `_insights*` cards, ServiceProvidersStore, RequestsStore into separate files). Not urgent — admin-only, loads once per session.
 
-#### E3 — Dark mode automated screenshot test (DEFER)
-- Lower priority than functional tests; needs Playwright config + baseline.
+**Dead-export candidates** → see D2 below.
 
-#### E4 — Booking flow live E2E (USER ACTION)
-- Needs LINE account on production. Defer until user runs.
+#### C1 — LCP/image opportunities ✅
+**tenant_app.html:** 10 `<img>` tags. Of these:
+- 8 are dynamic content (slip/photo/QR/article cover) sized via inline `max-width/max-height` — width/height attrs would be wrong for variable content
+- 2 are placeholder/sample images
+- **None benefit from `loading="lazy"`** — they're all inside modals or article cards already deferred via `display:none` until interaction
 
-### Phase 5 — Code quality larger sweeps (READ-ONLY first)
+**dashboard.html:** 1 `<img>` only.
 
-Output: report only. No edits without user pick.
+**Real opportunity — `shared/bg/nest-*.jpg` background images:**
+- 11 weather/seasonal background JPGs in `shared/bg/`
+- Total: **2,452 KB** (200-300 KB each)
+- Currently loaded one at a time via `tenant_app.html:4856` based on time + weather mode
+- WebP conversion would cut each from ~250KB → ~100KB (60% saving)
+- Comment at line 4772 already mentions `.webp` paths (intent was there, files are still `.jpg`)
 
-#### D2 — Dead code in shared/*.js
-- [ ] For each of 42 files: grep cross-references; flag exports with 0 callers
-- [ ] Output: candidate list — user decides removals (per `feedback_minimal_changes`)
+**Recommendation:** Convert nest-*.jpg → nest-*.webp (offline batch). Update line 4856 selector. Add `.jpg` fallback `<picture>` element for browsers without WebP support. Estimated dev: 30 min + WebP tooling. Defer to dedicated session.
 
-#### D4 — Function size audit (tenant_app.html)
-- [ ] Find functions > 50 lines; report top 10
-- [ ] Don't refactor without explicit ask (per `feedback_minimal_changes`)
+#### C4 — Dashboard 900ms init phase identification ✅
+**Architecture:** 35 script tags in `<head>` load order (per `dashboard_architecture.md`). DOMContentLoaded handler at `dashboard-main.js:518` is the orchestrator. KPI + charts render at +600ms (per inline comment at `dashboard-main.js:562`).
+
+**Candidate bottleneck:** **84 onSnapshot subscriptions opened at boot** (71 in dashboard-extra.js, 12 in dashboard-bill.js, 1 in dashboard-home-live.js). Each opens a Firestore long-poll stream — even with parallelism, 80+ first-snapshot replays takes time.
+
+**Real profiling needs Chrome DevTools Performance tab on a cold cache** — can't profile via grep. The existing 900ms shimmer skeleton (commit 7e9f... per recent handoffs) covers this UX-wise. Real fix would be lazy-subscribing per active tab (open dashboard-home subscriptions on boot, defer tenant/bill/meter subscriptions until user clicks tab).
+
+**No edits this session** — needs DevTools profiling first.
+
+### Phase 4 — UX gaps ✅ DONE (E2 only)
+
+#### E2 — KPI grid mobile reflow ✅
+**Audit:** dashboard.html has 3 separate KPI grid systems:
+| Grid | Default | Existing breakpoints | Mobile reflow? |
+|---|---|---|---|
+| `.kpi-grid` (home) | 4 cols | 2 @1100, 2 @700, 1 @480 | ✅ already reflows |
+| `.mx-kpi-grid` (Maintenance/Housekeeping) | 3 cols | 1 @600 | ✅ already reflows |
+| `.ana-kpi-grid` (Analytics) | 4 cols | 2 @900 | ❌ **never went to 1 col** |
+
+**Fix shipped:** added `@media(max-width:480px){.ana-kpi-grid{grid-template-columns:1fr;}}` at `dashboard.html:1372` next to the existing 900px rule.
+
+**Why minimal:** the audit-map item said "KPI grid never reflows on mobile" — partially true. Only Analytics was the gap; home + Maintenance already had small-screen rules.
+
+#### E1 — Dark mode unify (DEFERRED — needs dedicated session)
+#### E3 — Dark mode automated screenshot test (DEFERRED — Playwright baseline)
+#### E4 — Booking flow live E2E (DEFERRED — needs your LINE account)
+
+### Phase 5 — Code quality larger sweeps ✅ DONE (read-only reports)
+
+#### D2 — Dead code in shared/*.js ✅ (CANDIDATE LIST — needs verification)
+
+**Caveat first:** the scan flags `window.X` exports with no external grep references — but these may still be live via:
+- `data-action="X"` event delegation (string lookup, won't grep)
+- Inline `onclick="X(...)"` handlers (would grep, but worth double-check)
+- Dynamic dispatch (`window[name]()`)
+
+**Candidates from first-pass scan (top 20):**
+| Export | Source file | Likely real-dead? |
+|---|---|---|
+| `window.logError` | audit.js | Audit logger entry point — needs grep across HTML for `data-action` |
+| `window.logPaymentVerified` | audit.js | Same — audit entry point |
+| `window.logSecurityAlert` | audit.js | Same |
+| `window.AutoBillCalculator` | billing-system.js | Bill calc — likely dead, MeterStore replaced it |
+| `window.SecureConfig` | config-unified.js | Old config indirection? |
+| `window.PaymentStore` | dashboard-bill.js | Likely live — used by dashboard-payment-verify |
+| `window.dashboardBookings` | dashboard-bookings.js | Booking admin tab — verify via dashboard-main.js |
+| `window._gamificationScored` | dashboard-extra.js | Internal flag (`_` prefix = private) — fine being unreferenced |
+| `window.calculateOccupancy` | dashboard-extra.js | Likely live — check property page |
+| `window.actLeaseRequest` | dashboard-extra.js | Lease action handler — check tenant tab |
+| `window._updateLeasePreview` | dashboard-extra.js | Internal `_` |
+| `window._resolveBillRecipient` | dashboard-extra.js | Internal `_` |
+| `window.RequestsStore` | dashboard-extra.js | Likely live — used by requests admin |
+| `window.CommunityEventsStore` | dashboard-extra.js | Likely live — community events |
+| `window._spRendererSubscribed` | dashboard-extra.js | Internal flag |
+| `window._histStoreSubscribed` | dashboard-extra.js | Internal flag |
+| `window._eventsRendererSubscribed` | dashboard-extra.js | Internal flag |
+| `window._complaintsRendererSubscribed` | dashboard-extra.js | Internal flag |
+| `window._buildingPaymentCache` | dashboard-bill.js | Internal cache |
+| `window._globalSlipsUnsub` | dashboard-bill.js | Internal subscription handle |
+
+**Real dead-code candidates worth investigating** (drop the `_` internal-flag ones):
+- `window.AutoBillCalculator` — likely superseded by MeterStore
+- `window.SecureConfig` — likely superseded by `firebase-config-loader.js`
+- `window.logError` / `logPaymentVerified` / `logSecurityAlert` — audit entries; verify they're not data-action targets
+
+**No removals this session.** Per `feedback_minimal_changes` — user picks which to verify+drop.
+
+#### D4 — Function size audit (tenant_app.html) ✅
+
+**Top 15 functions > 50 lines:**
+| Lines | Function | Start | Why long |
+|---|---|---|---|
+| 133 | `_callLiffSignIn` | 8395 | Player + tenant + error branches + token validation |
+| 114 | `renderBillsList` | 8906 | Multiple states (paid/unpaid/synthetic/empty) |
+| 109 | `saveNewPet` | 6143 | Pet form + photo upload + Firestore + validation |
+| 105 | `confirmPhoneOtp` | 7101 | OTP confirm + linkWithCredential + tenant doc + setVerifiedPhone CF |
+| 99 | `renderMarketFeed` | 5753 | Marketplace listing render |
+| 97 | `_loadLeaderboard` | 7624 | Fetch + player merge + render |
+| 82 | `_subscribeBillsRealtime` | 8273 | Auth-gated bills subscription |
+| 79 | `renderProfilePage` | 9484 | Profile tab render |
+| 78 | `renderPaymentReceipt` | 10175 | Receipt generation |
+| 72 | `confirmCleaningPayment` | 5185 | Cleaning payment flow |
+| 69 | `initTenantApp` | 8772 | App init orchestrator |
+| 68 | `initLiffAndLink` | 8579 | LIFF init + claim refresh |
+| 67 | `renderCommunityFeed` | 9030 | Community events render |
+| 67 | `_subscribeEcoPoints` | 7723 | Tenant + player branches subscription |
+| 62 | `sendPhoneOtp` | 7039 | OTP send + reCAPTCHA + Firebase |
+
+**Observation:** All 15 are "orchestration" functions — long because they handle multiple concerns end-to-end (form → upload → save → notify). Refactoring would mean extracting helpers, which adds indirection without simplifying logic. Per `feedback_minimal_changes` — no refactor without explicit ask.
+
+**If a refactor is wanted:** `_callLiffSignIn` and `confirmPhoneOtp` are best candidates — they have clear sub-stages that could become named helpers.
+
+---
+
+## Final Review — what shipped this session
+
+| Phase | Item | Status | Output |
+|---|---|---|---|
+| 1 | F3 gamification_ssot player mode | ✅ Shipped | Player section + 16 grep verifiers (all hit) in `~/.claude/.../memory/gamification_ssot.md` |
+| 1 | dark_mode memo correction | ✅ Shipped | Stale "~40 Sarabun" claim corrected |
+| 2 | D1 console.log cleanup | ✅ No-op (justified) | All 34 logs are intentional diagnostic |
+| 2 | F1 verifier tightening | ✅ Shipped (commit `b4c2f08`) | 58 → 8 warnings; 9 detector improvements; lifecycle still 100% green |
+| 3 | C3 cold-start cost-benefit | ✅ Report | Recommend `verifySlip` + `claimDailyLoginPoints` (+$0.80/mo) — awaiting approval |
+| 3 | C2 bundle audit | ✅ Report | dashboard-extra.js (308KB) is largest single file; splittable but admin-only |
+| 3 | C1 image scan | ✅ Report | Real opportunity is `shared/bg/nest-*.jpg` (2.45 MB) → WebP. Not tenant_app `<img>` tags. |
+| 3 | C4 dashboard 900ms | ✅ Report | 84 onSnapshot at boot is candidate; needs DevTools profile to confirm |
+| 4 | E2 KPI mobile reflow | ✅ Shipped | Single CSS line — `.ana-kpi-grid` 1-col @480px |
+| 5 | D2 dead code | ✅ Report | ~20 candidate exports — needs `data-action` cross-check before removal |
+| 5 | D4 function size | ✅ Report | Top 15 listed; `_callLiffSignIn` (133) + `confirmPhoneOtp` (105) best refactor candidates |
+
+**Deferred (out of scope this session):**
+- E1 (dark mode unify) — dedicated session
+- E3 (Playwright baseline) — lower priority
+- E4 (booking E2E live) — needs your LINE account on production
+- F2 (booking flow doc), D3 (Sarabun) — already done before this session
+- C1 WebP migration, C3 deploys, C4 lazy-subscribe — pending your decision
+
+**Pending your decision before further action:**
+- Approve adding `minInstances:1` to `verifySlip` + `claimDailyLoginPoints` (+$0.80/mo)? **Deploy needed.**
+- Want me to start C1 WebP conversion next session?
+- Want me to verify D2 dead-code candidates against `data-action`/`onclick` and propose removals?
 
 ---
 
