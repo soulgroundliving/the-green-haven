@@ -19,6 +19,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { buildPromptPayPayload } = require('./promptpay');
+const { checkRateLimit } = require('./_rateLimit');
 
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
@@ -41,6 +42,9 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
     throw new functions.https.HttpsError('permission-denied',
       'Only prospects (LIFF booking flow) or admins can create a booking lock');
   }
+
+  // 3 lock attempts per hour per prospect — prevents simultaneous room hoarding.
+  if (isProspect) await checkRateLimit(context.auth.uid, 'createBookingLock', 3, 3600);
 
   // ── Input validation ────────────────────────────────────────────────────
   const {

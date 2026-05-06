@@ -17,6 +17,7 @@
  */
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { checkRateLimit } = require('./_rateLimit');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -27,6 +28,9 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
   if (!context.auth || !context.auth.uid) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign-in required');
   }
+
+  // 5 redemptions per 24 h — prevents spam; point balance is the real floor.
+  await checkRateLimit(context.auth.uid, 'redeemReward', 5, 86400);
 
   const tok = context.auth.token || {};
 
