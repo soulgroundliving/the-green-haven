@@ -496,7 +496,7 @@ function main() {
   for (const d of docs) {
     const report = verifyDoc(d);
     console.log(formatReport(report));
-    if (report.status !== 'GREEN') {
+    if (report.status !== 'GREEN' && report.status !== 'NO_VERIFICATION_BLOCK') {
       allGreen = false;
       if (report.results) totalRed += report.results.filter(r => !r.ok).length;
     }

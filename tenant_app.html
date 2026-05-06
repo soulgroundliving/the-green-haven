@@ -4479,6 +4479,12 @@
             }, duration);
         }
 
+        // Global safety net — catch promise rejections that escape local try/catch.
+        // Sentry captures these automatically; this prevents silent failures in dev.
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('[UnhandledRejection]', event.reason);
+        });
+
         /** Set loading/success/error state on a status element (DRY helper) */
         function _setStatus(el, type, msg) {
             if (!el) return;
@@ -5149,7 +5155,7 @@
                     r.onerror = () => reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
                     r.readAsDataURL(file);
                 });
-            } catch(e) { alert(e.message); input.value=''; return; }
+            } catch(e) { toast(e.message || 'อ่านไฟล์ไม่สำเร็จ', 'error'); input.value=''; return; }
             const img = document.getElementById('cpm-slip-img');
             const wrap = document.getElementById('cpm-slip-preview');
             const drop = document.getElementById('cpm-slip-drop');
@@ -6231,16 +6237,17 @@
                     const petRef = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom), 'pets', petId);
                     await fs.setDoc(petRef, petObject, { merge: true });
                 }
-            } catch(e) { console.warn('Firestore pet save failed:', e); }
-
-            // Reset in-memory file picks
-            _pendingPetPhoto = null;
-            _pendingVaccineBook = null;
-
-            renderPetListToProfile();
-            toast(`บันทึกข้อมูลน้อง${_esc(name)} เรียบร้อยแล้วครับ!`);
-            resetPetForm();
-            goBackToProfile();
+                // Reset in-memory file picks
+                _pendingPetPhoto = null;
+                _pendingVaccineBook = null;
+                renderPetListToProfile();
+                toast(`บันทึกข้อมูลน้อง${_esc(name)} เรียบร้อยแล้วครับ!`);
+                resetPetForm();
+                goBackToProfile();
+            } catch(e) {
+                console.warn('Firestore pet save failed:', e);
+                toast('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+            }
         }
 
         // 3. ฟังก์ชันเตรียมการแก้ไข (Edit)
@@ -6710,7 +6717,7 @@
             });
         }
 
-        function submitComplaint(event) {
+        async function submitComplaint(event) {
             event.preventDefault();
             const category = document.getElementById('complaintCategory').value;
             const severity = (document.getElementById('complaintSeverity')?.value) || 'low';
@@ -6756,15 +6763,17 @@
                     const db = window.firebase.firestore();
                     const fs = window.firebase.firestoreFunctions;
                     const docRef = fs.doc(fs.collection(db, 'complaints'), complaint.id);
-                    fs.setDoc(docRef, complaint);
+                    await fs.setDoc(docRef, complaint);
                 }
-            } catch(e) { console.warn('Firestore complaint save failed:', e); }
-
-            toast('ส่งแจ้งเรียบร้อยแล้ว ทีมงานจะติดต่อกลับโดยเร็ว');
-            event.target.reset();
-            setSeverity('low');
-            // Immediate render — Firestore subscriber will update again when server acks
-            loadComplaints();
+                toast('ส่งแจ้งเรียบร้อยแล้ว ทีมงานจะติดต่อกลับโดยเร็ว');
+                event.target.reset();
+                setSeverity('low');
+                // Immediate render — Firestore subscriber will update again when server acks
+                loadComplaints();
+            } catch(e) {
+                console.warn('Firestore complaint save failed:', e);
+                toast('ส่งไม่สำเร็จ กรุณาลองใหม่หรือแจ้งแอดมินโดยตรง', 'error');
+            }
         }
 
         // Firestore realtime subscribe — admin updates status, tenant sees it live
@@ -8329,6 +8338,7 @@
                 }, () => {
                     // permission_denied → reset so authReady/liffLinked can retry with fresh claims
                     _billsUnsub = null;
+                    if (_taRoom && _taBuilding) toast('โหลดบิลไม่สำเร็จ ลองปิดเปิด LINE ใหม่', 'warning');
                 });
             } catch (e) { console.warn('subscribeBillsRealtime failed:', e.message); }
         }
