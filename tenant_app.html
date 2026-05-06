@@ -2169,7 +2169,7 @@
                 </select>
                 <label style="display:block;font-weight:700;font-size:var(--fs-sm);margin-bottom:5px;">หมายเลขห้อง</label>
                 <input type="text" id="liff-link-room" placeholder="เช่น 15, N101" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;margin-bottom:1.2rem;box-sizing:border-box;">
-                <button id="liff-link-submit-btn" onclick="submitLiffLinkRequest()" style="width:100%;padding:12px;background:var(--primary-green,#2d8653);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:var(--fs-md);cursor:pointer;">🔗 ส่งคำขอเชื่อมบัญชี</button>
+                <button id="liff-link-submit-btn" data-action="submitLiffLinkRequest" style="width:100%;padding:12px;background:var(--primary-green,#2d8653);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:var(--fs-md);cursor:pointer;">🔗 ส่งคำขอเชื่อมบัญชี</button>
             </div>
 
             <!-- Status (pending/rejected) -->
@@ -2203,28 +2203,28 @@
        background-size: cover;
        transition: background-image 0.8s ease;">
 
-            <button type="button" onclick="showPage('home'); updateNavActiveIndex(0);"
+            <button type="button" data-action="showPage--updateNavActiveIndex" data-page="home" data-nav-index="0"
                 aria-label="ไปหน้าหลัก"
                 style="position:absolute;top:45%;left:35%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label">NEST</div>
                 <div class="map-icon-bounce animate-bounce">🏠</div>
             </button>
 
-            <button type="button" onclick="showPage('community'); updateNavActiveIndex(2);"
+            <button type="button" data-action="showPage--updateNavActiveIndex" data-page="community" data-nav-index="2"
                 aria-label="ไปหน้าชุมชน / ตลาด"
                 style="position:absolute;top:55%;left:65%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #E67E22;">MARKET</div>
                 <div class="map-icon-bounce" style="animation-delay: 0.2s;">🛒</div>
             </button>
 
-            <button type="button" onclick="showPage('profile'); updateNavActiveIndex(4);"
+            <button type="button" data-action="showPage--updateNavActiveIndex" data-page="profile" data-nav-index="4"
                 aria-label="ไปหน้าโปรไฟล์ / Pet Park"
                 style="position:absolute;top:35%;left:60%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #9B59B6;">PET PARK</div>
                 <div class="map-icon-bounce" style="animation-delay: 0.4s;">🐾</div>
             </button>
 
-            <button type="button" onclick="showPage('usage'); updateNavActiveIndex(3);"
+            <button type="button" data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3"
                 aria-label="ไปหน้าชำระบิล"
                 style="position:absolute;top:70%;left:18%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #0EA5E9;">PAY BILL</div>
@@ -2244,8 +2244,8 @@
             <div id="quiz-options" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
             <div id="quiz-result" style="display:none; text-align:center; padding:12px 0;"></div>
             <div style="display:flex; gap:10px;">
-                <button id="quiz-cancel-btn" onclick="closeContractQuiz()" style="flex:1; padding:12px; border-radius:12px; border:1px solid var(--border); background:#fff; font-family:inherit; cursor:pointer;">ยกเลิก</button>
-                <button id="quiz-submit-btn" onclick="submitContractQuiz()" disabled class="btn-main" style="flex:2;">ส่งคำตอบ</button>
+                <button id="quiz-cancel-btn" data-action="closeContractQuiz" style="flex:1; padding:12px; border-radius:12px; border:1px solid var(--border); background:#fff; font-family:inherit; cursor:pointer;">ยกเลิก</button>
+                <button id="quiz-submit-btn" data-action="submitContractQuiz" disabled class="btn-main" style="flex:2;">ส่งคำตอบ</button>
             </div>
         </div>
     </div>
@@ -2274,7 +2274,7 @@
                 7 Days ✨ Special Bonus +3 Pts
             </div>
 
-            <button onclick="claimDailyPoints()"
+            <button data-action="claimDailyPoints"
                 style="width: 100%; background: var(--primary-green); color: white; border: none; padding: 18px; border-radius: 20px; font-weight: bold; font-size: 16px; margin-top: 25px; cursor: pointer; box-shadow: 0 10px 20px rgba(123, 166, 126, 0.3);">
                 รับพ้อยท์วันนี้
             </button>
@@ -2314,9 +2314,9 @@
                     </div>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <button onclick="dismissStandardCleanModal()"
+                    <button data-action="dismissStandardCleanModal"
                         style="padding:13px; border-radius:12px; border:1px solid #ddd; background:white; color:#666; font-family:inherit; font-weight:700; cursor:pointer;">ไว้คราวหลัง</button>
-                    <button id="scm-book-btn" onclick="bookStandardCleanFromModal()"
+                    <button id="scm-book-btn" data-action="bookStandardCleanFromModal"
                         style="padding:13px; border-radius:12px; border:none; background:var(--primary-green); color:white; font-family:inherit; font-weight:700; cursor:pointer;">
                         จองเลย
                     </button>
@@ -2354,7 +2354,7 @@
                     <p style="margin:0; font-size:var(--fs-sm); color:#6b7280;">💡 แตะค้างที่ QR เพื่อบันทึกรูป</p>
                 </div>
                 <!-- Slip upload -->
-                <div id="cpm-slip-drop" onclick="document.getElementById('cpm-slip-input').click()"
+                <div id="cpm-slip-drop" data-action="triggerInput" data-target="cpm-slip-input"
                     style="border:2px dashed #ccc; border-radius:14px; padding:18px; text-align:center; cursor:pointer;">
                     <i class="fas fa-cloud-upload-alt" style="font-size:var(--fs-lg); color:var(--primary-green);"></i>
                     <p style="margin:6px 0 2px; font-size:var(--fs-md); color:#666;">แตะเพื่ออัปโหลดสลิป</p>
@@ -2363,14 +2363,14 @@
                 <div id="cpm-slip-preview" style="display:none; text-align:center;">
                     <img id="cpm-slip-img" src="" alt="slip preview" style="max-width:100%; max-height:220px; border-radius:14px;">
                 </div>
-                <input type="file" id="cpm-slip-input" accept="image/*" style="display:none;" onchange="handleCleaningSlipUpload(this)">
+                <input type="file" id="cpm-slip-input" accept="image/*" style="display:none;" data-action-change="handleCleaningSlipUpload">
                 <!-- Status line (shown only when active) -->
                 <div id="cpm-status" style="display:none; padding:10px; border-radius:10px; font-size:var(--fs-sm); text-align:center;"></div>
                 <!-- Actions: equal width for symmetry -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <button onclick="closeCleaningPaymentModal()"
+                    <button data-action="closeCleaningPaymentModal"
                         style="padding:13px; border-radius:12px; border:1px solid #ddd; background:white; color:#666; font-family:inherit; font-weight:700; cursor:pointer;">ยกเลิก</button>
-                    <button id="cpm-confirm-btn" onclick="confirmCleaningPayment()" disabled
+                    <button id="cpm-confirm-btn" data-action="confirmCleaningPayment" disabled
                         style="padding:13px; border-radius:12px; border:none; background:var(--primary-green); color:white; font-family:inherit; font-weight:700; cursor:pointer; opacity:0.5;">
                         ยืนยันชำระเงิน
                     </button>
@@ -2381,7 +2381,7 @@
 
     <div id="home" class="page">
         <div class="app-bar" style="position:relative;">
-            <button id="nav-smart-key-btn" onclick="showSubPage('smart-key-page')"
+            <button id="nav-smart-key-btn" data-action="showSubPage" data-page="smart-key-page"
                 style="position:absolute; right:16px; top:24px; background:var(--primary-green); color:white; border:none; border-radius:12px; padding:8px 12px; font-weight:bold; box-shadow:0 4px 10px rgba(123, 166, 126, 0.4); cursor:pointer; display:inline-flex; align-items:center; gap:6px; z-index:2;">
                 <i class="fas fa-qrcode"></i><span>Smart Key</span>
                 <span style="position:absolute; top:-6px; right:-6px; background:#f59e0b; color:#fff; font-size:8px; padding:2px 5px; border-radius:6px; font-weight:bold;">SOON</span>
@@ -2392,16 +2392,16 @@
                 <p id="time-greet" class="text-xs mt-1 opacity-80">ยินดีต้อนรับกลับบ้านครับ 🌿</p>
             </div>
         </div>
-        <button type="button" onclick="showPage('world-map-page')"
+        <button type="button" data-action="showSubPage" data-page="world-map-page"
             style="display:inline-flex; align-items:center; gap:8px; background:transparent; color:var(--primary-green); border:1px solid var(--border); padding:8px 14px; border-radius:var(--radius-pill,999px); margin:12px 15px; font-family:inherit; font-size:var(--fs-sm); font-weight:600; cursor:pointer;">
             <i class="fas fa-arrow-left" aria-hidden="true"></i> กลับไปหน้าแผนที่
         </button>
 
         <div class="section-title" role="heading" aria-level="2"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
         <div id="community-filter-pills" style="display:flex; gap:8px; padding:0 15px 10px; flex-wrap:wrap;">
-            <button class="cf-pill cf-pill-active" data-cat="all" onclick="setCommunityFilter('all', this)">ทั้งหมด</button>
-            <button class="cf-pill" data-cat="announcement" onclick="setCommunityFilter('announcement', this)">📢 ประกาศ</button>
-            <button class="cf-pill" data-cat="event" onclick="setCommunityFilter('event', this)">📅 กิจกรรม</button>
+            <button class="cf-pill cf-pill-active" data-cat="all" data-action="setCommunityFilter">ทั้งหมด</button>
+            <button class="cf-pill" data-cat="announcement" data-action="setCommunityFilter">📢 ประกาศ</button>
+            <button class="cf-pill" data-cat="event" data-action="setCommunityFilter">📅 กิจกรรม</button>
         </div>
         <div id="community-feed">
             <div class="gh-empty-state">
@@ -2482,7 +2482,7 @@
         <div id="wellness-list" class="blog-list"></div>
         <div id="wellness-load-more"
             style="text-align: center; color: var(--primary-green); font-size: var(--fs-md); padding: 20px; font-weight: 600; cursor: pointer;"
-            onclick="loadMoreWellness()">
+            data-action="loadMoreWellness">
             ค้นหาแรงบันดาลใจต่อ <i class="fas fa-chevron-down"></i>
         </div>
     </div>
@@ -2491,7 +2491,7 @@
     <div id="wellness-article" class="page" style="background: var(--bg-color);">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="showPage('home')">
+                data-action="showPage--updateNavActiveIndex" data-page="home" data-nav-index="0">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 id="wellness-article-title" style="margin:0; flex:1;">บทความ</h1>
@@ -2508,7 +2508,7 @@
             </div>
             <div id="wellness-article-body" style="font-size:var(--fs-md); line-height:1.75; color:var(--text-dark);"></div>
             <div id="wellness-claim-area" style="margin-top:24px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;">
-                <button id="wellness-claim-btn" class="btn-main" onclick="claimWellnessReward()" style="width:100%; padding:14px;">
+                <button id="wellness-claim-btn" class="btn-main" data-action="claimWellnessReward" style="width:100%; padding:14px;">
                     🎁 อ่านจบ — รับ <span id="wellness-claim-pts">0</span> pts
                 </button>
                 <div id="wellness-claim-status" style="margin-top:10px; color:var(--text-muted); font-size:var(--fs-sm);"></div>
@@ -2526,7 +2526,7 @@
 
         <!-- ported from tenant.html: displayBuildingInternetStatus -->
         <div id="internetStatusSection" class="card" style="display:none; margin:0 var(--gap);">
-            <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <div data-action="toggleAccordion" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                 <span style="flex:1; font-weight:600; font-size:var(--fs-md);">🌐 สถานะอินเทอร์เน็ตอาคาร</span>
                 <span id="internetStatusIcon" style="font-size:var(--fs-md);">🟢</span>
                 <span id="internetStatusText" style="font-size:var(--fs-sm); font-weight:600;">เชื่อมต่อแล้ว</span>
@@ -2554,7 +2554,7 @@
         <!-- ROOM-level internet status — same accordion pattern as building above.
              Data source: tenants/{building}/list/{roomId}.roomInternet or localStorage fallback. -->
         <div id="roomInternetStatusSection" class="card" style="display:none; margin:0 var(--gap);">
-            <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <div data-action="toggleAccordion" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                 <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📡 สถานะอินเทอร์เน็ตห้องพัก</span>
                 <span id="roomInternetStatusIcon" style="font-size:var(--fs-md);">🟢</span>
                 <span id="roomInternetStatusText" style="font-size:var(--fs-sm); font-weight:600;">เชื่อมต่อแล้ว</span>
@@ -2583,7 +2583,7 @@
         <!-- Merged accordion: emergency contacts (🚨) + service providers.
              Uses same toggleAccordion() pattern as internetStatusSection above. -->
         <div id="emergencyContactsSection" class="card" style="margin:0 var(--gap);">
-            <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <div data-action="toggleAccordion" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                 <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📋 ขั้นตอนเมื่อเกิดเหตุฉุกเฉิน</span>
                 <i class="fas fa-chevron-down" style="color:#aaa;"></i>
             </div>
@@ -2598,7 +2598,7 @@
 
                     <!-- Police -->
                     <div style="border-radius:12px; overflow:hidden; border:1px solid #e9d5ff;">
-                        <div onclick="toggleAccordion(this)" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#faf5ff;cursor:pointer;touch-action:manipulation;">
+                        <div data-action="toggleAccordion" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#faf5ff;cursor:pointer;touch-action:manipulation;">
                             <span style="font-size:1.2rem;">🚓</span>
                             <strong style="flex:1;font-size:var(--fs-sm);">แจ้งความ / เรียกตำรวจ</strong>
                             <i class="fas fa-chevron-down" style="color:#aaa;font-size:11px;"></i>
@@ -2609,13 +2609,13 @@
                             <div class="emergency-step"><div class="emergency-step-num" style="background:#7c3aed;">3</div><span>จดบันทึก วัน เวลา รายละเอียดเหตุการณ์ และพยานที่อยู่ในเหตุการณ์</span></div>
                             <div class="emergency-step"><div class="emergency-step-num" style="background:#7c3aed;">4</div><span>ถ่ายภาพหลักฐาน (ถ้าปลอดภัย) ก่อนที่จะมีการเคลื่อนย้าย</span></div>
                             <div class="emergency-step"><div class="emergency-step-num" style="background:#7c3aed;">5</div><span>แจ้ง admin ทาง LINE เพื่อประสานงานกล้องวงจรปิดของอาคาร</span></div>
-                            <button onclick="makeCall('191')" style="width:100%;margin-top:10px;padding:9px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:var(--fs-sm);cursor:pointer;touch-action:manipulation;">📞 โทร 191 (ตำรวจ)</button>
+                            <button data-action="makeCall" data-number="191" style="width:100%;margin-top:10px;padding:9px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:var(--fs-sm);cursor:pointer;touch-action:manipulation;">📞 โทร 191 (ตำรวจ)</button>
                         </div>
                     </div>
 
                     <!-- Fire -->
                     <div style="border-radius:12px; overflow:hidden; border:1px solid #fee2e2;">
-                        <div onclick="toggleAccordion(this)" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fff5f5;cursor:pointer;touch-action:manipulation;">
+                        <div data-action="toggleAccordion" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fff5f5;cursor:pointer;touch-action:manipulation;">
                             <span style="font-size:1.2rem;">🔥</span>
                             <strong style="flex:1;font-size:var(--fs-sm);">เกิดไฟไหม้</strong>
                             <i class="fas fa-chevron-down" style="color:#aaa;font-size:11px;"></i>
@@ -2626,13 +2626,13 @@
                             <div class="emergency-step"><div class="emergency-step-num">3</div><span>ออกทางบันไดหนีไฟ — <strong>ห้ามใช้ลิฟต์</strong></span></div>
                             <div class="emergency-step"><div class="emergency-step-num">4</div><span>หากควันหนาแน่น ก้มต่ำ คลานใต้ควัน ปิดจมูกด้วยผ้าชื้น</span></div>
                             <div class="emergency-step"><div class="emergency-step-num">5</div><span>รวมพลจุดนัดพบหน้าอาคาร รอนับคนให้ครบ</span></div>
-                            <button onclick="makeCall('199')" style="width:100%;margin-top:10px;padding:9px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:var(--fs-sm);cursor:pointer;touch-action:manipulation;">📞 โทร 199</button>
+                            <button data-action="makeCall" data-number="199" style="width:100%;margin-top:10px;padding:9px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:var(--fs-sm);cursor:pointer;touch-action:manipulation;">📞 โทร 199</button>
                         </div>
                     </div>
 
                     <!-- Flood -->
                     <div style="border-radius:12px; overflow:hidden; border:1px solid #bfdbfe;">
-                        <div onclick="toggleAccordion(this)" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#eff6ff;cursor:pointer;touch-action:manipulation;">
+                        <div data-action="toggleAccordion" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#eff6ff;cursor:pointer;touch-action:manipulation;">
                             <span style="font-size:1.2rem;">💧</span>
                             <strong style="flex:1;font-size:var(--fs-sm);">น้ำท่วม / ท่อแตก</strong>
                             <i class="fas fa-chevron-down" style="color:#aaa;font-size:11px;"></i>
@@ -2648,7 +2648,7 @@
 
                     <!-- Earthquake -->
                     <div style="border-radius:12px; overflow:hidden; border:1px solid #d1fae5;">
-                        <div onclick="toggleAccordion(this)" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f0fdf4;cursor:pointer;touch-action:manipulation;">
+                        <div data-action="toggleAccordion" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f0fdf4;cursor:pointer;touch-action:manipulation;">
                             <span style="font-size:1.2rem;">🌍</span>
                             <strong style="flex:1;font-size:var(--fs-sm);">แผ่นดินไหว</strong>
                             <i class="fas fa-chevron-down" style="color:#aaa;font-size:11px;"></i>
@@ -2664,7 +2664,7 @@
 
                     <!-- Medical -->
                     <div style="border-radius:12px; overflow:hidden; border:1px solid #fde68a;">
-                        <div onclick="toggleAccordion(this)" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fffbeb;cursor:pointer;touch-action:manipulation;">
+                        <div data-action="toggleAccordion" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fffbeb;cursor:pointer;touch-action:manipulation;">
                             <span style="font-size:1.2rem;">🚑</span>
                             <strong style="flex:1;font-size:var(--fs-sm);">เจ็บป่วย / อุบัติเหตุ</strong>
                             <i class="fas fa-chevron-down" style="color:#aaa;font-size:11px;"></i>
@@ -2675,7 +2675,7 @@
                             <div class="emergency-step"><div class="emergency-step-num" style="background:#d97706;">3</div><span>หากหยุดหายใจ — CPR: กดหน้าอก 30 ครั้ง เป่าลม 2 ครั้ง</span></div>
                             <div class="emergency-step"><div class="emergency-step-num" style="background:#d97706;">4</div><span>ส่งคนออกไปรอรถพยาบาลที่ทางเข้าอาคาร</span></div>
                             <div class="emergency-step"><div class="emergency-step-num" style="background:#d97706;">5</div><span>เตรียมบัตรประชาชนและข้อมูลสิทธิรักษาพยาบาลพร้อม</span></div>
-                            <button onclick="makeCall('1669')" style="width:100%;margin-top:10px;padding:9px;background:#d97706;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:var(--fs-sm);cursor:pointer;touch-action:manipulation;">📞 โทร 1669</button>
+                            <button data-action="makeCall" data-number="1669" style="width:100%;margin-top:10px;padding:9px;background:#d97706;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:var(--fs-sm);cursor:pointer;touch-action:manipulation;">📞 โทร 1669</button>
                         </div>
                     </div>
 
@@ -2683,7 +2683,7 @@
             </div>
         </div>
         <div class="card" style="margin:0 var(--gap);">
-            <div onclick="toggleAccordion(this)" style="display:flex; align-items:center; gap:10px; cursor:pointer; touch-action:manipulation;">
+            <div data-action="toggleAccordion" style="display:flex; align-items:center; gap:10px; cursor:pointer; touch-action:manipulation;">
                 <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📄 เอกสารอาคาร</span>
                 <i class="fas fa-chevron-down" style="color:#aaa;"></i>
             </div>
@@ -2696,7 +2696,7 @@
         <div class="section-title" style="margin-top: 10px;"><span>พื้นที่ส่วนกลาง (Facilities)</span></div>
         <div class="card"
             style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;"
-            onclick="showSubPage('laundry-page')">
+            data-action="showSubPage" data-page="laundry-page">
             <div style="display:flex; align-items:center; gap:15px;">
                 <div
                     style="width:50px; height:50px; background:var(--soft-green); border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--primary-green); font-size:var(--fs-lg);">
@@ -2712,17 +2712,17 @@
         </div>
         <div class="section-title" role="heading" aria-level="2">หมวดหมู่แจ้งเรื่อง</div>
         <div class="menu-list">
-            <div class="menu-item" onclick="showSubPage('maintenance')">
+            <div class="menu-item" data-action="showSubPage" data-page="maintenance">
                 <div class="icon-box icon-gold"><i class="fas fa-tools"></i></div>
                 <span>แจ้งซ่อมแซม</span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
-            <div class="menu-item" onclick="showSubPage('cleaning-service')">
+            <div class="menu-item" data-action="showSubPage" data-page="cleaning-service">
                 <div class="icon-box icon-blue"><i class="fas fa-broom"></i></div>
                 <span>แจ้งทำความสะอาด</span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
-            <div class="menu-item" onclick="showSubPage('complaint')">
+            <div class="menu-item" data-action="showSubPage" data-page="complaint">
                 <div class="icon-box icon-red"><i class="fas fa-balance-scale"></i></div>
                 <span>แจ้งเรื่องร้องเรียน / นิติโดยตรง</span>
                 <i class="fas fa-chevron-right arrow"></i>
@@ -2736,7 +2736,7 @@
             <strong><i class="fas fa-comment-dots"></i> กระซิบถึงเจ้าของตึก</strong>
             <p style="font-size: var(--fs-sm); opacity: 0.7; margin: 8px 0;">พบปัญหาหรือมีไอเดียพัฒนาตึก? บอกแบบไม่ระบุตัวตนสิ
             </p>
-            <button class="btn-suggest" onclick="openModal('suggest')">เขียนข้อความ</button>
+            <button class="btn-suggest" data-action="openModal" data-arg="suggest">เขียนข้อความ</button>
         </div>
     </div>
 
@@ -2744,13 +2744,13 @@
     <div id="maintenance" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="goBackToService()">
+                data-action="goBackToService">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">แจ้งซ่อมใหม่</h1>
         </div>
         <div class="card">
-            <form onsubmit="submitMaintenance(event)">
+            <form data-action-submit="submitMaintenance">
                 <label>หมวดซ่อม *</label>
                 <select id="maintenanceCategory" required>
                     <option value="">เลือกประเภท</option>
@@ -2776,10 +2776,10 @@
                 <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">อัปโหลดรูปภาพ (ไม่บังคับ)</label>
                 <input type="file" id="maintenancePhoto" accept="image/*"
                     style="width:100%; margin-bottom:8px; font-size:var(--fs-md);"
-                    onchange="handleMaintenancePhotoChange('maintenancePhoto','maintenancePhotoPreview','maintenancePhotoImg')">
+                    data-action-change="handleMaintenancePhotoChange">
                 <div id="maintenancePhotoPreview" style="margin-bottom:10px; text-align:center; display:none;">
                     <img id="maintenancePhotoImg" style="max-width:100%; border-radius:10px; max-height:200px; object-fit:cover;">
-                    <button type="button" onclick="clearMaintenancePhoto()"
+                    <button type="button" data-action="clearMaintenancePhoto"
                         style="display:block; margin:6px auto 0; font-size:var(--fs-sm); color:#ef4444; background:none; border:none; cursor:pointer;">✕ ลบรูป</button>
                 </div>
 
@@ -2796,7 +2796,7 @@
     <div id="cleaning-service" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="goBackToService()">
+                data-action="goBackToService">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">จองบริการทำความสะอาด</h1>
@@ -2806,14 +2806,14 @@
              Admin manages prices/labels/slots in dashboard. Defaults shown until Firestore loads. -->
         <div id="cleaning-service-list" class="grid grid-cols-2 gap-3 px-4 mb-6">
             <div class="card p-4 border-2 border-transparent active-service" id="service-free"
-                onclick="selectService('free')">
+                data-action="selectService" data-arg="free">
                 <div class="flex flex-col items-center text-center">
                     <span class="text-2xl mb-2">✨</span>
                     <strong class="text-sm">Standard Clean</strong>
                     <p class="text-[10px] text-green-600 font-bold mt-1">ฟรี (3 เดือน/ครั้ง)</p>
                 </div>
             </div>
-            <div class="card p-4 border-2 border-transparent" id="service-deep" onclick="selectService('deep')">
+            <div class="card p-4 border-2 border-transparent" id="service-deep" data-action="selectService" data-arg="deep">
                 <div class="flex flex-col items-center text-center">
                     <span class="text-2xl mb-2">🧼</span>
                     <strong class="text-sm">Deep Cleaning</strong>
@@ -2841,7 +2841,7 @@
                 <textarea id="clean-note" rows="3" class="mt-2 block w-full rounded-xl border-gray-200"
                     placeholder="เช่น มีสัตว์เลี้ยงในห้อง, เน้นระเบียง..."></textarea>
             </div>
-            <button onclick="submitCleaning()" class="btn-main mt-4">ยืนยันการจองบริการ</button>
+            <button data-action="submitCleaning" class="btn-main mt-4">ยืนยันการจองบริการ</button>
         </div>
 
         <div class="section-title" role="heading" aria-level="2"><span>ประวัติการรับบริการ</span></div>
@@ -2853,7 +2853,7 @@
     <div id="complaint" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="goBackToService()">
+                data-action="goBackToService">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">แจ้งนิติโดยตรง</h1>
@@ -2861,7 +2861,7 @@
 
         <!-- Form (always visible — matches maintenance page layout) -->
         <div id="complaint-form-tab" class="card">
-            <form onsubmit="submitComplaint(event)">
+            <form data-action-submit="submitComplaint">
                 <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">ประเภท *</label>
                 <select id="complaintCategory" required
                     style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:10px; margin-bottom:10px;">
@@ -2878,15 +2878,15 @@
 
                 <label style="font-weight:700; margin-bottom:0.5rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">ระดับความรุนแรง *</label>
                 <div style="display:flex; gap:8px; margin-bottom:10px;">
-                    <button type="button" id="sev-low" onclick="setSeverity('low')"
+                    <button type="button" id="sev-low" data-action="setSeverity" data-arg="low"
                         style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; border:2px solid #4ade80; color:#16a34a; background:#f0fdf4; cursor:pointer;">
                         🟢 เล็กน้อย
                     </button>
-                    <button type="button" id="sev-medium" onclick="setSeverity('medium')"
+                    <button type="button" id="sev-medium" data-action="setSeverity" data-arg="medium"
                         style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; border:2px solid #ddd; color:#6b7280; background:#f9fafb; cursor:pointer;">
                         🟡 ปานกลาง
                     </button>
-                    <button type="button" id="sev-high" onclick="setSeverity('high')"
+                    <button type="button" id="sev-high" data-action="setSeverity" data-arg="high"
                         style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; border:2px solid #ddd; color:#6b7280; background:#f9fafb; cursor:pointer;">
                         🔴 เร่งด่วน
                     </button>
@@ -2932,14 +2932,14 @@
         <div class="section-title" role="heading" aria-level="2">
             <span>Marketplace 🛒</span>
             <small id="market-post-trigger" style="color:var(--primary-green); cursor: pointer; font-weight: bold;"
-                onclick="showSubPage('add-market-page')">+ ลงประกาศ</small>
+                data-action="showSubPage" data-page="add-market-page">+ ลงประกาศ</small>
         </div>
 
         <div id="market-filter-pills" style="display:flex; gap:8px; padding:0 16px 12px; overflow-x:auto; -webkit-overflow-scrolling:touch;">
-            <button class="market-pill market-pill-active" data-filter="all" onclick="filterMarket('all',this)">ทั้งหมด</button>
-            <button class="market-pill" data-filter="item" onclick="filterMarket('item',this)">🛍️ ของมือสอง</button>
-            <button class="market-pill" data-filter="service" onclick="filterMarket('service',this)">💅 บริการ</button>
-            <button class="market-pill" data-filter="free" onclick="filterMarket('free',this)">🎁 แจกฟรี</button>
+            <button class="market-pill market-pill-active" data-filter="all" data-action="filterMarket">ทั้งหมด</button>
+            <button class="market-pill" data-filter="item" data-action="filterMarket">🛍️ ของมือสอง</button>
+            <button class="market-pill" data-filter="service" data-action="filterMarket">💅 บริการ</button>
+            <button class="market-pill" data-filter="free" data-action="filterMarket">🎁 แจกฟรี</button>
         </div>
 
         <div id="market-list-container" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 8px;">
@@ -2954,7 +2954,7 @@
                 <p class="gh-empty-state__title">ยังไม่มีใครลงประกาศ</p>
                 <p id="market-empty-sub" class="gh-empty-state__text">เป็นคนแรกของตึกสิครับ — ของที่ไม่ใช้ ขายต่อให้เพื่อนบ้านได้นะ</p>
                 <div class="gh-empty-state__action">
-                    <button id="market-empty-cta" type="button" class="gh-btn gh-btn--primary gh-btn--small" onclick="showSubPage('add-market-page')">
+                    <button id="market-empty-cta" type="button" class="gh-btn gh-btn--primary gh-btn--small" data-action="showSubPage" data-page="add-market-page">
                         ✨ ลงประกาศแรกของฉัน
                     </button>
                 </div>
@@ -2984,8 +2984,8 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <h4 style="margin:0; font-size:var(--fs-md); font-weight:700; color:#334435;">📈 แนวโน้ม 6 เดือน</h4>
                 <div style="display:flex; gap:4px; background:#f3f4f6; border-radius:10px; padding:3px;">
-                    <button class="usage-chart-tab usage-chart-tab-elec" data-type="elec" onclick="switchUsageChartTab('elec')" style="padding:6px 14px; border:none; border-radius:8px; font-size:var(--fs-sm); font-weight:700; cursor:pointer; font-family:inherit; background:white; color:#d97706; box-shadow:0 1px 3px rgba(0,0,0,0.08);">⚡ ไฟ</button>
-                    <button class="usage-chart-tab usage-chart-tab-water" data-type="water" onclick="switchUsageChartTab('water')" style="padding:6px 14px; border:none; border-radius:8px; font-size:var(--fs-sm); font-weight:700; cursor:pointer; font-family:inherit; background:transparent; color:#64748b;">💧 น้ำ</button>
+                    <button class="usage-chart-tab usage-chart-tab-elec" data-type="elec" data-action="switchUsageChartTab" data-tab="elec" style="padding:6px 14px; border:none; border-radius:8px; font-size:var(--fs-sm); font-weight:700; cursor:pointer; font-family:inherit; background:white; color:#d97706; box-shadow:0 1px 3px rgba(0,0,0,0.08);">⚡ ไฟ</button>
+                    <button class="usage-chart-tab usage-chart-tab-water" data-type="water" data-action="switchUsageChartTab" data-tab="water" style="padding:6px 14px; border:none; border-radius:8px; font-size:var(--fs-sm); font-weight:700; cursor:pointer; font-family:inherit; background:transparent; color:#64748b;">💧 น้ำ</button>
                 </div>
             </div>
             <div id="usage-chart-svg-wrap" style="min-height:170px;"></div>
@@ -3005,7 +3005,7 @@
                     <i class="fas fa-clock"></i> รอการดูแล
                 </span>
             </div>
-            <button id="service-pay-btn" onclick="openPaymentFlow(false)" class="btn-main"
+            <button id="service-pay-btn" data-action="openPaymentFlow" data-arg="false" class="btn-main"
                 style="margin-top:15px;">ชำระบิล</button>
         </div>
 
@@ -3093,13 +3093,13 @@
                 </div>
             </div>
             <!-- Primary CTA — biggest, top of action area, generous padding so it can't be missed -->
-            <button class="btn-receipt btn-green" style="width:100%; margin-top:18px; padding:16px; font-size:1.05rem; font-weight:700; box-shadow:0 4px 14px rgba(45,134,83,0.28);" onclick="goToPaymentStep(2)">
+            <button class="btn-receipt btn-green" style="width:100%; margin-top:18px; padding:16px; font-size:1.05rem; font-weight:700; box-shadow:0 4px 14px rgba(45,134,83,0.28);" data-action="goToPaymentStep" data-arg="2">
                 <i class="fas fa-camera"></i> อัปโหลดสลิป
             </button>
             <!-- Secondary actions — back + save bill image (excludes nav/buttons, only the receipt-card) -->
             <div class="action-buttons" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
-                <button class="btn-receipt btn-outline" onclick="goBackFromPayment()">← กลับ</button>
-                <button class="btn-receipt btn-outline" onclick="saveInvoiceImage()"><i class="fas fa-download"></i> บันทึก</button>
+                <button class="btn-receipt btn-outline" data-action="goBackFromPayment">← กลับ</button>
+                <button class="btn-receipt btn-outline" data-action="saveInvoiceImage"><i class="fas fa-download"></i> บันทึก</button>
             </div>
         </div>
 
@@ -3113,18 +3113,18 @@
                         <img id="slip-preview-img" src="" alt="slip preview" style="max-width:100%; border-radius:12px; max-height:300px;">
                     </div>
                     <div id="slip-drop-area" style="border:2px dashed #ccc; border-radius:16px; padding:30px; text-align:center; margin:10px 0; cursor:pointer;"
-                         onclick="document.getElementById('slip-file-input').click()">
+                         data-action="triggerInput" data-target="slip-file-input">
                         <i class="fas fa-cloud-upload-alt" style="font-size:var(--fs-lg); color:var(--primary-green);"></i>
                         <p style="margin:8px 0 0; font-size:var(--fs-md); color:#666;">แตะเพื่อเลือกรูปสลิป</p>
                         <small style="color:#aaa;">JPG / PNG / WEBP ไม่เกิน 5MB</small>
                     </div>
-                    <input type="file" id="slip-file-input" accept="image/*" style="display:none;" onchange="handleSlipFileUpload(this)">
+                    <input type="file" id="slip-file-input" accept="image/*" style="display:none;" data-action-change="handleSlipFileUpload">
                     <div id="slip-verify-status" style="display:none; margin-top:10px; padding:10px; border-radius:10px; font-size:var(--fs-md); text-align:center;"></div>
                 </div>
             </div>
             <div class="action-buttons">
-                <button class="btn-receipt btn-outline" onclick="goToPaymentStep(1)">← ย้อนกลับ</button>
-                <button id="slip-verify-btn" class="btn-receipt btn-green" onclick="verifyTenantSlip()" disabled>
+                <button class="btn-receipt btn-outline" data-action="goToPaymentStep" data-arg="1">← ย้อนกลับ</button>
+                <button id="slip-verify-btn" class="btn-receipt btn-green" data-action="verifyTenantSlip" disabled>
                     <i class="fas fa-check-circle"></i> ตรวจสอบสลิป
                 </button>
             </div>
@@ -3180,8 +3180,8 @@
                 </div>
             </div>
             <div class="action-buttons" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                <button class="btn-receipt btn-outline" onclick="printReceipt()"><i class="fas fa-print"></i> พิมพ์ / PDF</button>
-                <button class="btn-receipt btn-green" onclick="goBackFromPayment()">← กลับไปบิล</button>
+                <button class="btn-receipt btn-outline" data-action="printReceipt"><i class="fas fa-print"></i> พิมพ์ / PDF</button>
+                <button class="btn-receipt btn-green" data-action="goBackFromPayment">← กลับไปบิล</button>
             </div>
             <!-- ported: hidden container so downloadReceipt() finds receiptContent fallback -->
             <div id="receiptContent" style="display:none;"></div>
@@ -3192,7 +3192,7 @@
         <div class="app-bar" style="text-align:center; position:relative;">
             <i class="fas fa-cog"
                 style="position:absolute; right:25px; top:45px; font-size:var(--fs-lg); color:var(--primary-green); cursor:pointer;"
-                onclick="showSubPage('settings')"></i>
+                data-action="showSubPage" data-page="settings"></i>
             <div id="current-avatar"
                 style="width:80px; height:80px; background:var(--soft-green); border-radius:50%; margin:0 auto 10px; border:3px solid white; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg);">
                 🌿</div>
@@ -3203,19 +3203,19 @@
         <!-- Rooms tenant fallback (shown only for ตึกห้องแถว — no gamification) -->
         <div id="profile-rooms-fallback" style="display:none; padding:0 16px; margin-bottom:16px;">
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div onclick="showPage('contract-action-page')" style="background:var(--soft-green); padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                <div data-action="showSubPage" data-page="contract-action-page" style="background:var(--soft-green); padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
                     <div style="font-size:1.8rem; margin-bottom:4px;">📄</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:var(--primary-dark);">สัญญาเช่า</div>
                 </div>
-                <div onclick="showPage('usage')" style="background:#FFF9E6; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                <div data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3" style="background:#FFF9E6; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
                     <div style="font-size:1.8rem; margin-bottom:4px;">💳</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:#8B6F00;">ชำระบิล</div>
                 </div>
-                <div onclick="showSubPage('maintenance')" style="background:#FFF0F0; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                <div data-action="showSubPage" data-page="maintenance" style="background:#FFF0F0; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
                     <div style="font-size:1.8rem; margin-bottom:4px;">🔧</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:#B00020;">แจ้งซ่อม</div>
                 </div>
-                <div onclick="showSubPage('complaint')" style="background:#F0F4FF; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
+                <div data-action="showSubPage" data-page="complaint" style="background:#F0F4FF; padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
                     <div style="font-size:1.8rem; margin-bottom:4px;">💬</div>
                     <div style="font-weight:700; font-size:var(--fs-sm); color:#003D99;">ร้องเรียน</div>
                 </div>
@@ -3247,19 +3247,19 @@
 
         <!-- Tab Nav (Nest only) -->
         <div id="profile-tab-nav" style="display:flex; gap:4px; margin:0 16px 16px; background:#e8f0e8; border-radius:0 0 14px 14px; padding:4px;">
-            <button id="eco-tab-info" onclick="switchEcoTab('info')"
+            <button id="eco-tab-info" data-action="switchEcoTab" data-tab="info"
                 style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; background:white; color:var(--primary-green); border:none; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.1); touch-action:manipulation;">
                 👤 ข้อมูล
             </button>
-            <button id="eco-tab-achievements" onclick="switchEcoTab('achievements')"
+            <button id="eco-tab-achievements" data-action="switchEcoTab" data-tab="achievements"
                 style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; background:transparent; color:#6b7280; border:none; cursor:pointer; touch-action:manipulation;">
                 🏆 เหรียญ
             </button>
-            <button id="eco-tab-rankings" onclick="switchEcoTab('rankings')"
+            <button id="eco-tab-rankings" data-action="switchEcoTab" data-tab="rankings"
                 style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; background:transparent; color:#6b7280; border:none; cursor:pointer; touch-action:manipulation;">
                 👑 อันดับ
             </button>
-            <button id="eco-tab-stats" onclick="switchEcoTab('stats')"
+            <button id="eco-tab-stats" data-action="switchEcoTab" data-tab="stats"
                 style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; background:transparent; color:#6b7280; border:none; cursor:pointer; touch-action:manipulation;">
                 📊 สถิติ
             </button>
@@ -3275,16 +3275,16 @@
                     <span id="user-total-points">0</span>
                     <small class="text-sm font-normal">Points</small>
                 </div>
-                <button onclick="openRewardsShop()"
+                <button data-action="openRewardsShop"
                     class="w-full bg-[#2d8653] text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition">
                     🎁 เข้าสู่ Rewards Shop
                 </button>
             </div>
             <div id="pet-list-container">
-                <div onclick="showSubPage('add-pet-page')"
+                <div data-action="showSubPage" data-page="add-pet-page"
                     style="border: 2px dashed #e0e0e0; padding: 30px 20px; border-radius: 25px; text-align: center; cursor: pointer; background: #fff; transition: 0.3s;"
-                    onmouseover="this.style.borderColor='var(--primary-green)'"
-                    onmouseout="this.style.borderColor='#e0e0e0'">
+                    
+                    >
                     <div style="font-size: var(--fs-lg); margin-bottom: 10px; opacity: 0.5;">🐾</div>
                     <p style="font-size: var(--fs-md); color: #888; font-weight: 500;">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
                     <p style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-top: 5px;">+
@@ -3344,7 +3344,7 @@
         <div class="w-full max-w-lg bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 shadow-2xl animate-slide-up relative overflow-hidden flex flex-col"
             style="max-height: 85vh;">
             <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 shrink-0"></div>
-            <button onclick="closeRewardsShop()"
+            <button data-action="closeRewardsShop"
                 class="absolute top-6 right-6 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">
                 ✕
             </button>
@@ -3374,7 +3374,7 @@
         <div class="app-bar"
             style="background: var(--text-dark); color: white; box-shadow: none; padding-bottom: 10px; display:flex; align-items:center; gap:15px;">
             <div style="width:40px; height:40px; background:rgba(255,255,255,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="goBackToHome()">
+                data-action="goBackToHome">
                 <i class="fas fa-chevron-left" style="color:white;"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">Smart Access</h1>
@@ -3383,7 +3383,7 @@
             <button class="tab-btn active" style="color: white; background: rgba(255,255,255,0.2);">My Key
                 (คีย์การ์ด)</button>
             <button class="tab-btn" style="color: #aaa;"
-                onclick="alert('ระบบสร้าง QR ให้แขก (Visitor Pass) กำลังพัฒนาครับ')">Visitor Pass</button>
+                data-action="alertVisitorPass">Visitor Pass</button>
         </div>
         <div class="card" style="text-align: center; padding: 40px 20px; border-radius: 30px; margin: 20px;">
             <h3 id="smart-key-room-label" style="margin-top: 0; color: var(--primary-green);">ห้อง —</h3>
@@ -3404,7 +3404,7 @@
     <div id="laundry-page" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="goBackToService()">
+                data-action="goBackToService">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">Smart Laundry 👕</h1>
@@ -3422,7 +3422,7 @@
                 </div>
                 <button
                     style="background:var(--primary-green); color:white; border:none; padding:8px 15px; border-radius:10px; font-weight:bold; cursor:pointer;"
-                    onclick="alert('จองคิวสำเร็จ กรุณานำผ้าลงเครื่องภายใน 15 นาที')">จองคิว</button>
+                    data-action="alertLaundryBook">จองคิว</button>
             </div>
             <div class="card"
                 style="margin: 0 0 15px; display: flex; align-items: center; gap: 15px; border-left: 6px solid #f59e0b; background: #fffcf5;">
@@ -3435,7 +3435,7 @@
                     <small style="color:#888;">เหลือเวลาอีกประมาณ 24 นาที</small>
                 </div>
                 <i class="fas fa-bell" style="color:#ccc; font-size: var(--fs-lg); cursor:pointer;"
-                    onclick="alert('ตั้งค่าแจ้งเตือนแล้ว')"></i>
+                    data-action="alertLaundryNotify"></i>
             </div>
         </div>
     </div>
@@ -3443,19 +3443,19 @@
     <div id="settings" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="goBackToProfile()">
+                data-action="goBackToProfile">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">Settings</h1>
         </div>
 
         <div class="menu-list">
-            <div class="menu-item" onclick="showSubPage('preference')">
+            <div class="menu-item" data-action="showSubPage" data-page="preference">
                 <div class="icon-box icon-green"><i class="fas fa-user"></i></div>
                 <span>ตั้งค่าความชอบ</span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
-            <div class="menu-item" onclick="showSubPage('profile-edit')">
+            <div class="menu-item" data-action="showSubPage" data-page="profile-edit">
                 <div class="icon-box icon-green"><i class="fas fa-user"></i></div>
                 <span>ข้อมูลส่วนตัว</span>
                 <i class="fas fa-chevron-right arrow"></i>
@@ -3473,13 +3473,13 @@
             </div>
             <div class="setting-row">
                 <span><i class="fas fa-moon" style="width:25px; color:#888;"></i> โหมดกลางคืน (Night Mode)</span>
-                <label class="switch"><input type="checkbox" id="night-switch" onchange="toggleNightMode()"><span
+                <label class="switch"><input type="checkbox" id="night-switch" data-action-change="toggleNightMode"><span
                         class="slider"></span></label>
             </div>
             <div class="setting-row">
                 <span><i class="fas fa-leaf" style="width:25px; color:var(--primary-green);"></i> โหมดประหยัด (Eco
                     Mode)</span>
-                <label class="switch"><input type="checkbox" id="eco-switch" onchange="toggleEcoMode()"><span
+                <label class="switch"><input type="checkbox" id="eco-switch" data-action-change="toggleEcoMode"><span
                         class="slider"></span></label>
             </div>
             <small style="display:block; margin-top:10px; opacity: 0.6; font-size:var(--fs-sm);">*Eco Mode
@@ -3487,27 +3487,27 @@
         </div>
 
         <div class="menu-list" style="margin-bottom: 50px;">
-            <div class="menu-item" onclick="showPage('page-privacy')">
+            <div class="menu-item" data-action="showSubPage" data-page="page-privacy">
                 <div class="icon-box icon-gray"><i class="fas fa-shield-alt"></i></div>
                 <span>นโยบายความเป็นส่วนตัว (Privacy Policy)</span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
-            <div class="menu-item" onclick="showPage('page-terms')">
+            <div class="menu-item" data-action="showSubPage" data-page="page-terms">
                 <div class="icon-box icon-gray"><i class="fas fa-book"></i></div>
                 <span>คู่มือการใช้งาน (User Manual)</span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
-            <div class="menu-item" onclick="showPage('page-faq')">
+            <div class="menu-item" data-action="showSubPage" data-page="page-faq">
                 <div class="icon-box icon-green"><i class="fas fa-question-circle"></i></div>
                 <span>คำถามที่พบบ่อย (FAQ)</span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
-            <div class="menu-item" onclick="showPage('page-compliance')">
+            <div class="menu-item" data-action="showSubPage" data-page="page-compliance">
                 <div class="icon-box icon-gray"><i class="fas fa-shield-alt"></i></div>
                 <span>การปฏิบัติตามกฎระเบียบด้านข้อมูล (Data & Compliance)</span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
-            <div class="menu-item" onclick="showPage('page-ip')">
+            <div class="menu-item" data-action="showSubPage" data-page="page-ip">
                 <div class="icon-box icon-gray"><i class="fas fa-shield-alt"></i></div>
                 <span>การละเมิดทรัพย์สินทางปัญญา (IP Infringement)</span>
                 <i class="fas fa-chevron-right arrow"></i>
@@ -3515,7 +3515,7 @@
         </div>
 
         <div class="menu-list" style="margin-bottom: 50px;">
-            <div class="menu-item" style="border:none;" onclick="logoutTenantApp()">
+            <div class="menu-item" style="border:none;" data-action="logoutTenantApp">
                 <div class="icon-box icon-red"><i class="fas fa-sign-out-alt"></i></div>
                 <span style="color: var(--danger); font-weight:bold;">ออกจากระบบ (Logout)</span>
             </div>
@@ -3529,7 +3529,7 @@
     <div id="add-pet-page" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding: 20px 20px 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="goBackToProfile()">
+                data-action="goBackToProfile">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg); color: var(--text-dark);">ข้อมูลเพื่อนตัวป่วน 🐾</h1>
@@ -3540,12 +3540,12 @@
             <input type="hidden" id="edit-pet-id" value="">
 
             <div style="text-align: center; margin-bottom: 20px;">
-                <div id="new-pet-avatar" onclick="document.getElementById('pet-photo-input').click()"
+                <div id="new-pet-avatar" data-action="triggerInput" data-target="pet-photo-input"
                     style="width:90px; height:90px; background:var(--soft-green); border-radius:30%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg); cursor:pointer; overflow: hidden; border: 2px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); background-size: cover; background-position: center;">
                     📸
                 </div>
-                <input type="file" id="pet-photo-input" accept="image/*" hidden onchange="updatePetPhotoPreview(this)">
-                <small onclick="document.getElementById('pet-photo-input').click()"
+                <input type="file" id="pet-photo-input" accept="image/*" hidden data-action-change="updatePetPhotoPreview">
+                <small data-action="triggerInput" data-target="pet-photo-input"
                     style="color: var(--primary-green); font-weight: 600; cursor: pointer;">อัปโหลดรูปภาพโปรไฟล์</small>
             </div>
 
@@ -3594,7 +3594,7 @@
                     <span style="font-size: var(--fs-md); font-weight: 600; color: #333;"><i class="fas fa-syringe"
                             style="color:var(--primary-green); margin-right: 5px;"></i> สถานะวัคซีน</span>
                     <label class="switch">
-                        <input type="checkbox" id="pet-vaccine" checked onchange="toggleVaccineInputs()">
+                        <input type="checkbox" id="pet-vaccine" checked data-action-change="toggleVaccineInputs">
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -3616,9 +3616,9 @@
             <label
                 style="font-size: var(--fs-md); font-weight: 600; margin-top: 20px; display: block; color: #555;">สมุดวัคซีน
                 (บังคับแนบเพื่อตรวจสอบ)</label>
-            <div onclick="document.getElementById('file-upload-input').click()"
+            <div data-action="triggerInput" data-target="file-upload-input"
                 style="border: 1.5px dashed var(--primary-green); padding: 25px; border-radius: 15px; text-align: center; margin-top: 8px; background: #fdfdfd; cursor: pointer; transition: 0.3s;">
-                <input type="file" id="file-upload-input" hidden onchange="updateFilePreview(this)">
+                <input type="file" id="file-upload-input" hidden data-action-change="updateFilePreview">
                 <i class="fas fa-file-medical" id="upload-icon"
                     style="color: var(--primary-green); font-size: var(--fs-lg); margin-bottom: 10px;"></i>
                 <div id="upload-status-text" style="font-size: var(--fs-md); font-weight: 600; color: var(--text-dark);">
@@ -3629,11 +3629,11 @@
         </div>
 
         <div style="padding: 10px 20px 50px;">
-            <button class="btn-main" onclick="saveNewPet()"
+            <button class="btn-main" data-action="saveNewPet"
                 style="width: 100%; background: var(--primary-green); color: white; border: none; padding: 15px; border-radius: 20px; font-weight: 600; font-size: var(--fs-md); box-shadow: 0 10px 20px rgba(123, 166, 126, 0.2); cursor: pointer;">
                 <i class="fas fa-save" style="margin-right: 8px;"></i> บันทึกข้อมูลสัตว์เลี้ยง
             </button>
-            <button onclick="goBackToProfile()"
+            <button data-action="goBackToProfile"
                 style="width: 100%; background: transparent; color: #888; border: 1px solid #ddd; padding: 15px; border-radius: 20px; font-weight: 600; font-size: var(--fs-md); margin-top: 12px; cursor: pointer;">
                 ยกเลิก
             </button>
@@ -3644,7 +3644,7 @@
     <div id="add-market-page" class="page" style="background: var(--bg-color);">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; touch-action:manipulation;"
-                onclick="goBackToCommunity()">
+                data-action="goBackToCommunity">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">ลงประกาศ 📢</h1>
@@ -3665,9 +3665,9 @@
             <!-- Category pills -->
             <label style="font-size:var(--fs-md); font-weight:600; display:block; margin-bottom:10px;">หมวดหมู่ <span style="color:red;">*</span></label>
             <div style="display:flex; gap:8px; margin-bottom:20px;">
-                <label class="cat-radio-pill"><input type="radio" name="mcat" value="item" checked onchange="_onMarketCatChange()"> 🛍️ ของมือสอง</label>
-                <label class="cat-radio-pill"><input type="radio" name="mcat" value="service" onchange="_onMarketCatChange()"> 💅 บริการ</label>
-                <label class="cat-radio-pill"><input type="radio" name="mcat" value="free" onchange="_onMarketCatChange()"> 🎁 แจกฟรี</label>
+                <label class="cat-radio-pill"><input type="radio" name="mcat" value="item" checked data-action-change="_onMarketCatChange"> 🛍️ ของมือสอง</label>
+                <label class="cat-radio-pill"><input type="radio" name="mcat" value="service" data-action-change="_onMarketCatChange"> 💅 บริการ</label>
+                <label class="cat-radio-pill"><input type="radio" name="mcat" value="free" data-action-change="_onMarketCatChange"> 🎁 แจกฟรี</label>
             </div>
 
             <!-- Title -->
@@ -3693,18 +3693,18 @@
         </div>
 
         <div style="padding:10px 15px 50px;">
-            <button id="market-submit-btn" class="btn-main" onclick="saveNewMarketItem()" style="touch-action:manipulation;">
+            <button id="market-submit-btn" class="btn-main" data-action="saveNewMarketItem" style="touch-action:manipulation;">
                 <i class="fas fa-paper-plane"></i> โพสต์ลงตลาดนัด
             </button>
             <button class="btn-main" style="background:transparent; color:#888; border:1px solid #ddd; margin-top:10px; touch-action:manipulation;"
-                onclick="goBackToCommunity()">ยกเลิก</button>
+                data-action="goBackToCommunity">ยกเลิก</button>
         </div>
     </div>
 
     <div id="building" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="goBackToUsage()">
+                data-action="goBackToUsage">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">ข้อมูลอาคาร</h1>
@@ -3740,7 +3740,7 @@
     <div id="preference" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="showSubPage('settings')">
+                data-action="showSubPage" data-page="settings">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">ตั้งค่าความชอบ</h1>
@@ -3757,15 +3757,15 @@
                     <span style="font-size:var(--fs-xs); color:var(--text-muted);">ปัจจุบัน</span>
                 </div>
                 <!-- Preset emoji choices -->
-                <div id="avatar-preview" class="avatar-option active" onclick="setAvatar('🌿', this)">🌿</div>
-                <div class="avatar-option" onclick="setAvatar('🌊', this)">🌊</div>
-                <div class="avatar-option" onclick="setAvatar('⛰️', this)">⛰️</div>
+                <div id="avatar-preview" class="avatar-option active" data-action="setAvatar" data-avatar="🌿">🌿</div>
+                <div class="avatar-option" data-action="setAvatar" data-avatar="🌊">🌊</div>
+                <div class="avatar-option" data-action="setAvatar" data-avatar="⛰️">⛰️</div>
                 <!-- Upload from device -->
                 <label class="avatar-option" for="avatar-upload-input" title="อัปโหลดรูปจากเครื่อง"
                     style="background: var(--soft-green); color: var(--primary-green); border: 2px dashed var(--primary-green); cursor: pointer;">
                     <span style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; line-height:1; font-size:1.8rem;">📸</span>
                 </label>
-                <input type="file" id="avatar-upload-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
+                <input type="file" id="avatar-upload-input" accept="image/*" style="display:none;" data-action-change="handleAvatarUpload">
             </div>
             <p style="font-size: var(--fs-sm); color: var(--text-muted); margin: 6px 0 0;">📸 = แตะเพื่ออัปโหลดรูปถ่ายจากเครื่อง (ระบบจะย่อให้อัตโนมัติ)</p>
             <p id="avatar-upload-status" style="font-size: var(--fs-sm); color: var(--text-muted); margin: 8px 0 0; display: none;"></p>
@@ -3775,14 +3775,14 @@
             <label>ชื่อเล่น</label>
             <input type="text" id="nickname-input" placeholder="ใส่นามสมมติ..."
                 style="width:100%; padding:10px; border-radius:10px; border:1px solid #eee; margin-bottom:15px;"
-                oninput="updateName(this.value)">
+                data-action-input="updateName">
         </div>
 
         <div class="section-title" role="heading" aria-level="2"><span>ตั้งค่าดวงชะตา & ข้อมูล 🔮</span></div>
         <div style="padding: 0 15px;">
             <div style="border-radius:24px; padding: 20px; box-shadow: var(--shadow); background:var(--white);">
                 <label style="font-size: var(--fs-sm); opacity: 0.6;">เลือกวันเกิดของคุณ (เพื่อคำนวณดวงประจำวัน)</label>
-                <select id="birth-day-select" onchange="updateAstro()">
+                <select id="birth-day-select" data-action-change="updateAstro">
                     <option value="Sunday">วันอาทิตย์</option>
                     <option value="Monday">วันจันทร์</option>
                     <option value="Tuesday">วันอังคาร</option>
@@ -3797,7 +3797,7 @@
         <div class="section-title" role="heading" aria-level="2"><span>ตั้งค่าการออกใบเสร็จ</span></div>
         <div class="card">
             <label style="font-size: var(--fs-sm); color: var(--text-muted); display:block; margin-bottom:6px;">เลือกประเภทใบเสร็จที่ต้องการรับ</label>
-            <select id="receipt-type-select" onchange="onReceiptTypeChange()">
+            <select id="receipt-type-select" data-action-change="onReceiptTypeChange">
                 <option value="personal">ใบเสร็จรับเงิน — นามบุคคล</option>
                 <option value="company">ใบเสร็จเต็มรูป — นามบริษัท (สำหรับเบิกบริษัท)</option>
             </select>
@@ -3810,7 +3810,7 @@
                 <input type="text" id="comp-tax-input" inputmode="numeric" maxlength="13" placeholder="0105555555555" style="margin-bottom:8px;">
                 <label style="font-size:var(--fs-sm); color:#666; display:block;">ที่อยู่สำนักงานใหญ่</label>
                 <textarea id="comp-addr-input" rows="2" placeholder="เลขที่ ... ถนน ... แขวง/ตำบล ... เขต/อำเภอ ... จังหวัด ... 10xxx" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-family:inherit; resize:vertical; margin-bottom:10px;"></textarea>
-                <button class="btn-main" id="comp-save-btn" onclick="saveCompanyInfo()" style="width:100%;"><i class="fas fa-save"></i> บันทึกข้อมูลบริษัท</button>
+                <button class="btn-main" id="comp-save-btn" data-action="saveCompanyInfo" style="width:100%;"><i class="fas fa-save"></i> บันทึกข้อมูลบริษัท</button>
                 <div id="comp-save-msg" style="display:none; background:var(--soft-green); color:var(--primary-dark, #1a5c38); padding:8px 10px; border-radius:8px; font-size:var(--fs-sm); margin-top:8px; text-align:center;"></div>
                 <div id="comp-info-missing-warn" style="display:none; background:#fff3cd; color:#856404; padding:8px 10px; border-radius:8px; font-size:var(--fs-sm); margin-top:8px;">
                     ℹ️ กรอกข้อมูลด้านบนแล้วกดบันทึก — ใบเสร็จเดือนถัดไปจะออกในนามบริษัทอัตโนมัติ
@@ -3827,7 +3827,7 @@
     <div id="profile-edit" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="showSubPage('settings')">
+                data-action="showSubPage" data-page="settings">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">ข้อมูลส่วนตัว</h1>
@@ -3835,7 +3835,7 @@
 
         <div class="section-title" role="heading" aria-level="2">
             <span>ข้อมูลส่วนตัว</span>
-            <small id="profile-edit-toggle" style="color:var(--primary-green); cursor:pointer; font-weight:bold;" onclick="toggleProfileEditMode()">✏️ แก้ไข</small>
+            <small id="profile-edit-toggle" style="color:var(--primary-green); cursor:pointer; font-weight:bold;" data-action="toggleProfileEditMode">✏️ แก้ไข</small>
         </div>
         <div class="card">
             <!-- Read-only view (default) -->
@@ -3864,12 +3864,12 @@
                     <span style="color:#666;">ปัจจุบัน:</span>
                     <strong id="profile-edit-phone-display" style="color:var(--text-dark);">—</strong>
                 </div>
-                <button class="btn-main" style="background:var(--accent); width:100%; margin-bottom:14px;" onclick="openPhoneOtpModal()"><i class="fas fa-mobile-alt"></i> เปลี่ยน / ตั้งเบอร์ใหม่ (ผ่าน OTP)</button>
+                <button class="btn-main" style="background:var(--accent); width:100%; margin-bottom:14px;" data-action="openPhoneOtpModal"><i class="fas fa-mobile-alt"></i> เปลี่ยน / ตั้งเบอร์ใหม่ (ผ่าน OTP)</button>
                 <label style="font-size:var(--fs-sm); color:#666;">อีเมล</label>
                 <input type="email" id="profile-edit-email" placeholder="example@gmail.com" style="margin-bottom:15px;">
                 <div style="display:flex; gap:8px;">
-                    <button class="btn-main" style="flex:1; background:#999;" onclick="toggleProfileEditMode(false)">ยกเลิก</button>
-                    <button class="btn-main" style="flex:1;" onclick="saveProfileEdit()"><i class="fas fa-save"></i> บันทึกอีเมล</button>
+                    <button class="btn-main" style="flex:1; background:#999;" data-action="toggleProfileEditMode" data-arg="false">ยกเลิก</button>
+                    <button class="btn-main" style="flex:1;" data-action="saveProfileEdit"><i class="fas fa-save"></i> บันทึกอีเมล</button>
                 </div>
                 <p style="font-size:var(--fs-sm); color:#888; margin-top:10px;">
                     <i class="fas fa-info-circle"></i> ชื่อ+นามสกุล, สัญญาเช่า และป้ายทะเบียน แก้ไม่ได้ — กรุณาติดต่อเจ้าของหากต้องการเปลี่ยน
@@ -3885,8 +3885,8 @@
                         <input type="tel" id="otp-new-phone" placeholder="0812345678" maxlength="10" style="margin-bottom:12px; width:100%;">
                         <div id="otp-recaptcha-container" style="margin-bottom:12px;"></div>
                         <div style="display:flex; gap:8px;">
-                            <button class="btn-main" style="flex:1; background:#999;" onclick="closePhoneOtpModal()">ยกเลิก</button>
-                            <button class="btn-main" id="otp-send-btn" style="flex:2;" onclick="sendPhoneOtp()"><i class="fas fa-paper-plane"></i> ส่งรหัส OTP</button>
+                            <button class="btn-main" style="flex:1; background:#999;" data-action="closePhoneOtpModal">ยกเลิก</button>
+                            <button class="btn-main" id="otp-send-btn" style="flex:2;" data-action="sendPhoneOtp"><i class="fas fa-paper-plane"></i> ส่งรหัส OTP</button>
                         </div>
                     </div>
                     <!-- Step 2: enter code -->
@@ -3895,8 +3895,8 @@
                         <label style="font-size:var(--fs-sm); color:#666;">รหัส OTP</label>
                         <input type="text" id="otp-code" placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="margin-bottom:12px; width:100%; font-size:var(--text-lg); letter-spacing:8px; text-align:center;">
                         <div style="display:flex; gap:8px;">
-                            <button class="btn-main" style="flex:1; background:#999;" onclick="resetPhoneOtpFlow()"><i class="fas fa-arrow-left"></i> ย้อนกลับ</button>
-                            <button class="btn-main" id="otp-confirm-btn" style="flex:2;" onclick="confirmPhoneOtp()"><i class="fas fa-check"></i> ยืนยัน</button>
+                            <button class="btn-main" style="flex:1; background:#999;" data-action="resetPhoneOtpFlow"><i class="fas fa-arrow-left"></i> ย้อนกลับ</button>
+                            <button class="btn-main" id="otp-confirm-btn" style="flex:2;" data-action="confirmPhoneOtp"><i class="fas fa-check"></i> ยืนยัน</button>
                         </div>
                     </div>
                     <p id="otp-status" style="font-size:var(--fs-sm); margin-top:12px; min-height:20px; color:var(--text-muted);"></p>
@@ -3916,7 +3916,7 @@
                 <span id="profile-contract-label">สัญญาเช่าห้อง —</span><i class="fas fa-download"></i>
             </div>
             <button class="btn-main" style="margin-top: 15px; background: #334435;"
-                onclick="showSubPage('contract-action-page')"><i class="fas fa-file-signature"></i> แจ้งต่อสัญญา /
+                data-action="showSubPage" data-page="contract-action-page"><i class="fas fa-file-signature"></i> แจ้งต่อสัญญา /
                 ย้ายออก</button>
         </div>
         </div>
@@ -3926,7 +3926,7 @@
     <div id="contract-action-page" class="page" style="background: var(--bg-color);">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="showPage('settings')"">
+                data-action="showSubPage" data-page="settings">
                 <i class=" fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">จัดการสัญญาเช่า</h1>
@@ -3942,10 +3942,10 @@
             </div>
             <!-- ported from tenant.html: viewLeaseAgreement / downloadLeaseAgreement -->
             <div style="display:flex; gap:8px; margin-top:12px;">
-                <button class="btn-main" style="flex:1; background:var(--soft-green); color:var(--primary-green);" onclick="viewLeaseAgreement()">
+                <button class="btn-main" style="flex:1; background:var(--soft-green); color:var(--primary-green);" data-action="viewLeaseAgreement">
                     <i class="fas fa-eye"></i> ดูเอกสารสัญญา
                 </button>
-                <button class="btn-main" style="flex:1;" onclick="downloadLeaseAgreement()">
+                <button class="btn-main" style="flex:1;" data-action="downloadLeaseAgreement">
                     <i class="fas fa-download"></i> ดาวน์โหลด
                 </button>
             </div>
@@ -3960,14 +3960,14 @@
                     <p style="margin:2px 0 0; font-size:var(--fs-sm); color:var(--text-muted);">ทำ quiz ตอบถูก 2/3 ได้ <strong style="color:var(--primary-green);">+20 pts</strong> (ทำได้ 1 ครั้ง/เดือน)</p>
                 </div>
             </div>
-            <button id="contract-quiz-start-btn" class="btn-main" onclick="startContractQuiz()" disabled
+            <button id="contract-quiz-start-btn" class="btn-main" data-action="startContractQuiz" disabled
                 style="width:100%; background:var(--accent-gold, #D4AF37); color:#fff;">
                 <span id="contract-quiz-btn-label">อ่าน 10 วินาที เพื่อปลดล็อก…</span>
             </button>
         </div>
         <div style="padding: 15px;">
             <label style="font-size: var(--fs-md); font-weight: 600;">ความประสงค์ของคุณ</label>
-            <select id="contract-decision" style="margin-bottom: 20px;" onchange="toggleContractForm()">
+            <select id="contract-decision" style="margin-bottom: 20px;" data-action-change="toggleContractForm">
                 <option value="">โปรดเลือกดำเนินการ...</option>
                 <option value="renew">✅ ขอต่อสัญญาเช่า (Renew Lease)</option>
                 <option value="moveout">❌ แจ้งย้ายออก (Move-out Notice)</option>
@@ -3980,7 +3980,7 @@
                 </select>
                 <label style="font-size: var(--fs-md); font-weight: 600;">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
                 <textarea id="renew-note" rows="2" placeholder="เช่น ขอลดราคาเล็กน้อย, ขอเปลี่ยนสภาพห้อง..." style="margin-bottom: 15px;"></textarea>
-                <button class="btn-main" onclick="submitLeaseRequest('renew')"><i
+                <button class="btn-main" data-action="submitLeaseRequest" data-arg="renew"><i
                         class="fas fa-paper-plane"></i> ส่งคำขอต่อสัญญา</button>
             </div>
             <div id="moveout-form" style="display: none; animation: slideUp 0.3s ease;">
@@ -3991,7 +3991,7 @@
                 <label style="font-size: var(--fs-md); font-weight: 600;">เหตุผลที่ย้ายออก (ถ้าสะดวกบอก)</label>
                 <textarea id="moveout-reason" rows="2" placeholder="เพื่อช่วยปรับปรุงบริการในอนาคต" style="margin-bottom: 15px;"></textarea>
                 <button class="btn-main" style="background: var(--danger);"
-                    onclick="submitLeaseRequest('moveout')"><i
+                    data-action="submitLeaseRequest" data-arg="moveout"><i
                         class="fas fa-sign-out-alt"></i> ยืนยันการแจ้งย้ายออก</button>
             </div>
         </div>
@@ -4000,7 +4000,7 @@
     <div id="page-privacy" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="showSubPage('settings')">
+                data-action="showSubPage" data-page="settings">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">Privacy Policy</h1>
@@ -4070,7 +4070,7 @@
     <div id="page-terms" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="showSubPage('settings')">
+                data-action="showSubPage" data-page="settings">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">คู่มือการใช้งาน</h1>
@@ -4126,7 +4126,7 @@
     <div id="page-faq" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="showSubPage('settings')">
+                data-action="showSubPage" data-page="settings">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">คำถามที่พบบ่อย</h1>
@@ -4225,7 +4225,7 @@
     <div id="page-compliance" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="showSubPage('settings')">
+                data-action="showSubPage" data-page="settings">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">Data & Compliance</h1>
@@ -4275,7 +4275,7 @@
     <div id="page-ip" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom: 25px;">
             <div style="width:40px; height:40px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                onclick="showSubPage('settings')">
+                data-action="showSubPage" data-page="settings">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg);">IP Infringement</h1>
@@ -4323,7 +4323,7 @@
     <div id="page-emergency" class="page">
         <div class="app-bar" style="display:flex;align-items:center;gap:15px;padding-bottom:20px;">
             <div style="width:40px;height:40px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;"
-                onclick="goBackToCommunity()">
+                data-action="goBackToCommunity">
                 <i class="fas fa-chevron-left" style="color:#DC2626;"></i>
             </div>
             <h1 style="margin:0;font-size:var(--fs-lg);">🚨 ขั้นตอนฉุกเฉิน</h1>
@@ -4331,13 +4331,13 @@
 
         <!-- Quick-dial bar -->
         <div style="padding:0 15px 18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-            <button class="emergency-call-btn" onclick="makeCall('191')">
+            <button class="emergency-call-btn" data-action="makeCall" data-number="191">
                 <span style="font-size:1.5rem;">🚓</span>ตำรวจ<strong>191</strong>
             </button>
-            <button class="emergency-call-btn" onclick="makeCall('199')">
+            <button class="emergency-call-btn" data-action="makeCall" data-number="199">
                 <span style="font-size:1.5rem;">🚒</span>ดับเพลิง<strong>199</strong>
             </button>
-            <button class="emergency-call-btn" onclick="makeCall('1669')">
+            <button class="emergency-call-btn" data-action="makeCall" data-number="1669">
                 <span style="font-size:1.5rem;">🚑</span>พยาบาล<strong>1669</strong>
             </button>
         </div>
@@ -4346,7 +4346,7 @@
 
             <!-- Fire -->
             <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px;">
-                <div class="emergency-section-header" onclick="toggleAccordion(this)">
+                <div class="emergency-section-header" data-action="toggleAccordion">
                     <span style="font-size:1.4rem;">🔥</span>
                     <strong style="flex:1;">เกิดไฟไหม้</strong>
                     <i class="fas fa-chevron-down" style="color:#aaa;"></i>
@@ -4357,13 +4357,13 @@
                     <div class="emergency-step"><div class="emergency-step-num">3</div><span>ออกทางบันไดหนีไฟ — <strong>ห้ามใช้ลิฟต์</strong></span></div>
                     <div class="emergency-step"><div class="emergency-step-num">4</div><span>หากควันหนาแน่น ก้มต่ำ คลานใต้ควัน ปิดจมูกด้วยผ้าชื้น</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">5</div><span>รวมพลจุดนัดพบหน้าอาคาร รอนับคนให้ครบ</span></div>
-                    <button class="btn-main" style="margin-top:12px;background:#DC2626;touch-action:manipulation;" onclick="makeCall('199')">📞 โทร 199 (ดับเพลิง)</button>
+                    <button class="btn-main" style="margin-top:12px;background:#DC2626;touch-action:manipulation;" data-action="makeCall" data-number="199">📞 โทร 199 (ดับเพลิง)</button>
                 </div>
             </div>
 
             <!-- Flood / pipe burst -->
             <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px;">
-                <div class="emergency-section-header" onclick="toggleAccordion(this)">
+                <div class="emergency-section-header" data-action="toggleAccordion">
                     <span style="font-size:1.4rem;">💧</span>
                     <strong style="flex:1;">น้ำท่วม / ท่อแตก</strong>
                     <i class="fas fa-chevron-down" style="color:#aaa;"></i>
@@ -4379,7 +4379,7 @@
 
             <!-- Earthquake -->
             <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px;">
-                <div class="emergency-section-header" onclick="toggleAccordion(this)">
+                <div class="emergency-section-header" data-action="toggleAccordion">
                     <span style="font-size:1.4rem;">🌍</span>
                     <strong style="flex:1;">แผ่นดินไหว</strong>
                     <i class="fas fa-chevron-down" style="color:#aaa;"></i>
@@ -4395,7 +4395,7 @@
 
             <!-- Medical -->
             <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px;">
-                <div class="emergency-section-header" onclick="toggleAccordion(this)">
+                <div class="emergency-section-header" data-action="toggleAccordion">
                     <span style="font-size:1.4rem;">🚑</span>
                     <strong style="flex:1;">เจ็บป่วย / อุบัติเหตุ</strong>
                     <i class="fas fa-chevron-down" style="color:#aaa;"></i>
@@ -4406,7 +4406,7 @@
                     <div class="emergency-step"><div class="emergency-step-num">3</div><span>หากหยุดหายใจ — CPR: กดหน้าอก 30 ครั้ง เป่าลม 2 ครั้ง สลับกัน</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">4</div><span>ส่งคนออกไปรอรถพยาบาลที่ทางเข้าอาคาร เพื่อนำทาง</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">5</div><span>เตรียมบัตรประชาชนและข้อมูลสิทธิรักษาพยาบาลพร้อม</span></div>
-                    <button class="btn-main" style="margin-top:12px;background:#DC2626;touch-action:manipulation;" onclick="makeCall('1669')">📞 โทร 1669 (การแพทย์ฉุกเฉิน)</button>
+                    <button class="btn-main" style="margin-top:12px;background:#DC2626;touch-action:manipulation;" data-action="makeCall" data-number="1669">📞 โทร 1669 (การแพทย์ฉุกเฉิน)</button>
                 </div>
             </div>
 
@@ -4415,27 +4415,27 @@
 
     <div id="mainModal" class="modal" role="dialog" aria-modal="true" aria-label="กล่องข้อความ">
         <div class="modal-content">
-            <i class="fas fa-times" onclick="closeModal()" role="button" aria-label="ปิดกล่องข้อความ" tabindex="0"
+            <i class="fas fa-times" data-action="closeModal" role="button" aria-label="ปิดกล่องข้อความ" tabindex="0"
                 style="position:absolute; right:20px; top:20px; cursor:pointer; color:var(--primary-green); font-size: var(--fs-lg);"></i>
             <div id="modal-body"></div>
         </div>
     </div>
 
     <nav class="nav-bar" id="main-nav-bar" style="display: none;" role="navigation" aria-label="เมนูหลัก">
-        <button type="button" class="nav-item active" aria-current="page" aria-label="หน้าหลัก" onclick="showPage('home', this)"><i class="fas fa-home" aria-hidden="true"></i>หน้าหลัก</button>
-        <button type="button" class="nav-item" aria-label="บริการ" onclick="showPage('services', this)" style="position:relative;">
+        <button type="button" class="nav-item active" aria-current="page" aria-label="หน้าหลัก" data-action="showPage--updateNavActiveIndex" data-page="home" data-nav-index="0"><i class="fas fa-home" aria-hidden="true"></i>หน้าหลัก</button>
+        <button type="button" class="nav-item" aria-label="บริการ" data-action="showPage--updateNavActiveIndex" data-page="services" data-nav-index="1" style="position:relative;">
             <i class="fas fa-leaf" aria-hidden="true"></i>บริการ
             <span id="nav-badge-services" aria-live="polite" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
         </button>
-        <button type="button" class="nav-item" aria-label="ชุมชน" onclick="showPage('community', this); markCommunityRead();" style="position:relative;">
+        <button type="button" class="nav-item" aria-label="ชุมชน" data-action="showPage--markCommunityRead" data-page="community" style="position:relative;">
             <i class="fas fa-comments" aria-hidden="true"></i>ชุมชน
             <span id="nav-badge-community" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
         </button>
-        <button type="button" class="nav-item" aria-label="บิล" onclick="showPage('usage', this)" style="position:relative;">
+        <button type="button" class="nav-item" aria-label="บิล" data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3" style="position:relative;">
             <i class="fas fa-wallet" aria-hidden="true"></i>บิล
             <span id="nav-badge-bills" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
         </button>
-        <button type="button" class="nav-item" aria-label="โปรไฟล์" onclick="showPage('profile', this)"><i class="fas fa-user" aria-hidden="true"></i>โปรไฟล์</button>
+        <button type="button" class="nav-item" aria-label="โปรไฟล์" data-action="showPage--updateNavActiveIndex" data-page="profile" data-nav-index="4"><i class="fas fa-user" aria-hidden="true"></i>โปรไฟล์</button>
     </nav>
 
     <script>
@@ -4670,7 +4670,7 @@
             const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
             if (!isPlayer && window._nestOnlyDisabled) return;
 
-            const btn = document.querySelector('[onclick="claimDailyPoints()"]');
+            const btn = document.querySelector('[data-action="claimDailyPoints"]');
             if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
 
             const closeModal = () => {
@@ -5663,7 +5663,7 @@
             if (!body || !modal) return;
 
             if (type === 'pay') {
-                body.innerHTML = `<h3>ชำระเงิน</h3><p>ยอด: 2,736.00 ฿</p><div style="border:2px dashed #ccc; padding:20px; text-align:center; border-radius:15px; background:#fdfdfd;">คลิกเพื่อแนบสลิปการโอนเงินที่นี่</div><button class="btn-main" style="margin-top:15px;" onclick="closeModal()">ส่งหลักฐาน</button>`;
+                body.innerHTML = `<h3>ชำระเงิน</h3><p>ยอด: 2,736.00 ฿</p><div style="border:2px dashed #ccc; padding:20px; text-align:center; border-radius:15px; background:#fdfdfd;">คลิกเพื่อแนบสลิปการโอนเงินที่นี่</div><button class="btn-main" style="margin-top:15px;" data-action="closeModal">ส่งหลักฐาน</button>`;
             } else if (type === 'suggest') {
                 body.innerHTML = `<h3 style="color: var(--primary-green); margin-top:0;">กระซิบถึงเจ้าของตึก</h3>
                   <p style="font-size:var(--fs-md); opacity: 0.8; margin-bottom: 15px;">ข้อความนี้จะถูกส่งตรงเพื่อพัฒนา Nature Haven ครับ</p>
@@ -5679,11 +5679,11 @@
                   <p style="margin:8px 0 15px; font-size:var(--fs-sm); color:var(--text-muted);">* แก้เบอร์/ชื่อเพิ่มเติม กรุณาแจ้งนิติเพื่ออัปเดตระบบ</p>
                   <label style="display:block; margin-top:10px;">เปลี่ยน Avatar</label>
                   <div class="avatar-selector" style="margin-bottom:15px;">
-                      <div class="avatar-option active" onclick="setAvatar('🌿', this)">🌿</div>
-                      <div class="avatar-option" onclick="setAvatar('🌊', this)">🌊</div>
-                      <div class="avatar-option" onclick="setAvatar('⛰️', this)">⛰️</div>
+                      <div class="avatar-option active" data-action="setAvatar" data-avatar="🌿">🌿</div>
+                      <div class="avatar-option" data-action="setAvatar" data-avatar="🌊">🌊</div>
+                      <div class="avatar-option" data-action="setAvatar" data-avatar="⛰️">⛰️</div>
                   </div>
-                  <button class="btn-main" onclick="closeModal()">บันทึกข้อมูล</button>`;
+                  <button class="btn-main" data-action="closeModal">บันทึกข้อมูล</button>`;
             }
             modal.style.display = 'block';
         }
@@ -6061,7 +6061,7 @@
                 container.innerHTML = `
                 <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0;">
                     <span style="font-size:var(--fs-md); font-weight:600; color:var(--text-muted);">สมาชิกตัวน้อย 🐾</span>
-                    <span onclick="showSubPage('add-pet-page')" style="font-size:var(--fs-sm); color:var(--primary-green); font-weight:700; cursor:pointer; touch-action:manipulation;">+ เพิ่ม</span>
+                    <span data-action="showSubPage" data-page="add-pet-page" style="font-size:var(--fs-sm); color:var(--primary-green); font-weight:700; cursor:pointer; touch-action:manipulation;">+ เพิ่ม</span>
                 </div>`;
                 return;
             }
@@ -6474,6 +6474,123 @@
                 window.GhTheme && GhTheme.set('light');
             }
         }
+
+        // ── CSP-safe event delegation (replaces all inline onclick/onchange) ──────
+        (function() {
+          const _ta = window; // local alias for tree-shaking
+          function _dispatch(el, e) {
+            const a = el.dataset.action;
+            const page = el.dataset.page;
+            const arg = el.dataset.arg;
+            const tab = el.dataset.tab;
+            const num = el.dataset.number;
+            const nav = el.dataset.navIndex;
+            const av = el.dataset.avatar;
+            const filter = el.dataset.filter;
+            const target = el.dataset.target;
+            // Single-function actions
+            if (a === 'claimDailyPoints' && _ta.claimDailyPoints) { _ta.claimDailyPoints(); return; }
+            if (a === 'claimWellnessReward' && _ta.claimWellnessReward) { _ta.claimWellnessReward(); return; }
+            if (a === 'closeModal' && _ta.closeModal) { _ta.closeModal(); return; }
+            if (a === 'closePhotoModal' && _ta.closePhotoModal) { _ta.closePhotoModal(); return; }
+            if (a === 'closeContractQuiz' && _ta.closeContractQuiz) { _ta.closeContractQuiz(); return; }
+            if (a === 'submitContractQuiz' && _ta.submitContractQuiz) { _ta.submitContractQuiz(); return; }
+            if (a === 'dismissStandardCleanModal' && _ta.dismissStandardCleanModal) { _ta.dismissStandardCleanModal(); return; }
+            if (a === 'bookStandardCleanFromModal' && _ta.bookStandardCleanFromModal) { _ta.bookStandardCleanFromModal(); return; }
+            if (a === 'closeCleaningPaymentModal' && _ta.closeCleaningPaymentModal) { _ta.closeCleaningPaymentModal(); return; }
+            if (a === 'confirmCleaningPayment' && _ta.confirmCleaningPayment) { _ta.confirmCleaningPayment(); return; }
+            if (a === 'submitLiffLinkRequest' && _ta.submitLiffLinkRequest) { _ta.submitLiffLinkRequest(); return; }
+            if (a === 'verifyTenantSlip' && _ta.verifyTenantSlip) { _ta.verifyTenantSlip(); return; }
+            if (a === 'viewLeaseAgreement' && _ta.viewLeaseAgreement) { _ta.viewLeaseAgreement(); return; }
+            if (a === 'downloadLeaseAgreement' && _ta.downloadLeaseAgreement) { _ta.downloadLeaseAgreement(); return; }
+            if (a === 'startContractQuiz' && _ta.startContractQuiz) { _ta.startContractQuiz(); return; }
+            if (a === 'goBackToService' && _ta.goBackToService) { _ta.goBackToService(); return; }
+            if (a === 'goBackToProfile' && _ta.goBackToProfile) { _ta.goBackToProfile(); return; }
+            if (a === 'goBackToCommunity' && _ta.goBackToCommunity) { _ta.goBackToCommunity(); return; }
+            if (a === 'goBackFromPayment' && _ta.goBackFromPayment) { _ta.goBackFromPayment(); return; }
+            if (a === 'goBackToHome' && _ta.goBackToHome) { _ta.goBackToHome(); return; }
+            if (a === 'goBackToUsage' && _ta.goBackToUsage) { _ta.goBackToUsage(); return; }
+            if (a === 'loadMoreWellness' && _ta.loadMoreWellness) { _ta.loadMoreWellness(); return; }
+            if (a === 'reloadPage') { window.location.reload(); return; }
+            if (a === 'submitMaintenance' && _ta.submitMaintenance) { e.preventDefault(); _ta.submitMaintenance(); return; }
+            if (a === 'submitComplaint' && _ta.submitComplaint) { e.preventDefault(); _ta.submitComplaint(); return; }
+            if (a === 'dismissDailyModal' && _ta.dismissDailyModal) { _ta.dismissDailyModal(); return; }
+            if (a === 'toggleProfileEditMode') { if (_ta.toggleProfileEditMode) _ta.toggleProfileEditMode(arg === 'false' ? false : undefined); return; }
+            if (a === 'saveProfileInfo' && _ta.saveProfileInfo) { _ta.saveProfileInfo(); return; }
+            if (a === 'saveProfileEdit' && _ta.saveProfileEdit) { _ta.saveProfileEdit(); return; }
+            if (a === 'cancelProfileEdit' && _ta.cancelProfileEdit) { _ta.cancelProfileEdit(); return; }
+            if (a === 'openPhoneOtpModal' && _ta.openPhoneOtpModal) { _ta.openPhoneOtpModal(); return; }
+            if (a === 'closePhoneOtpModal' && _ta.closePhoneOtpModal) { _ta.closePhoneOtpModal(); return; }
+            if (a === 'sendPhoneOtp' && _ta.sendPhoneOtp) { _ta.sendPhoneOtp(); return; }
+            if (a === 'resetPhoneOtpFlow' && _ta.resetPhoneOtpFlow) { _ta.resetPhoneOtpFlow(); return; }
+            if (a === 'confirmPhoneOtp' && _ta.confirmPhoneOtp) { _ta.confirmPhoneOtp(); return; }
+            if (a === 'saveCompanyInfo' && _ta.saveCompanyInfo) { _ta.saveCompanyInfo(); return; }
+            if (a === 'openRewardsShop' && _ta.openRewardsShop) { _ta.openRewardsShop(); return; }
+            if (a === 'closeRewardsShop' && _ta.closeRewardsShop) { _ta.closeRewardsShop(); return; }
+            if (a === 'saveNewPet' && _ta.saveNewPet) { _ta.saveNewPet(); return; }
+            if (a === 'saveNewMarketItem' && _ta.saveNewMarketItem) { _ta.saveNewMarketItem(); return; }
+            if (a === 'clearMaintenancePhoto' && _ta.clearMaintenancePhoto) { _ta.clearMaintenancePhoto(); return; }
+            if (a === 'submitCleaning' && _ta.submitCleaning) { _ta.submitCleaning(); return; }
+            if (a === 'logoutTenantApp' && _ta.logoutTenantApp) { _ta.logoutTenantApp(); return; }
+            if (a === 'printReceipt' && _ta.printReceipt) { _ta.printReceipt(); return; }
+            if (a === 'saveInvoiceImage' && _ta.saveInvoiceImage) { _ta.saveInvoiceImage(); return; }
+            if (a === 'alertVisitorPass') { alert('ระบบสร้าง QR ให้แขก (Visitor Pass) กำลังพัฒนาครับ'); return; }
+            if (a === 'alertLaundryBook') { alert('จองคิวสำเร็จ กรุณานำผ้าลงเครื่องภายใน 15 นาที'); return; }
+            if (a === 'alertLaundryNotify') { alert('ตั้งค่าแจ้งเตือนแล้ว'); return; }
+            if (a === 'openPaymentFlow') { if (_ta.openPaymentFlow) _ta.openPaymentFlow(arg !== 'false'); return; }
+            if (a === 'goToPaymentStep') { if (_ta.goToPaymentStep) _ta.goToPaymentStep(Number(arg)); return; }
+            if (a === 'selectService') { if (_ta.selectService) _ta.selectService(arg); return; }
+            if (a === 'setSeverity') { if (_ta.setSeverity) _ta.setSeverity(arg); return; }
+            if (a === 'openModal') { if (_ta.openModal) _ta.openModal(arg); return; }
+            if (a === 'submitLeaseRequest') { if (_ta.submitLeaseRequest) _ta.submitLeaseRequest(arg); return; }
+            // With-arg actions
+            if (a === 'showSubPage' && page && _ta.showSubPage) { _ta.showSubPage(page); return; }
+            if (a === 'makeCall' && num && _ta.makeCall) { _ta.makeCall(num); return; }
+            if (a === 'toggleAccordion' && _ta.toggleAccordion) { _ta.toggleAccordion(el); return; }
+            if (a === 'setAvatar' && av && _ta.setAvatar) { _ta.setAvatar(av, el); return; }
+            if (a === 'setCommunityFilter' && _ta.setCommunityFilter) { _ta.setCommunityFilter(el.dataset.cat, el); return; }
+            if (a === 'filterMarket' && _ta.filterMarket) { _ta.filterMarket(filter || el.dataset.cat, el); return; }
+            if (a === 'switchUsageChartTab' && tab && _ta.switchUsageChartTab) { _ta.switchUsageChartTab(tab); return; }
+            if (a === 'switchEcoTab' && tab && _ta.switchEcoTab) { _ta.switchEcoTab(tab); return; }
+            if (a === 'triggerInput' && target) { const t = document.getElementById(target); if (t) t.click(); return; }
+            // Multi-statement actions
+            if (a === 'showPage--updateNavActiveIndex' && _ta.showPage) {
+              _ta.showPage(page, el);
+              const ni = Number(nav);
+              if (ni >= 0 && _ta.updateNavActiveIndex) _ta.updateNavActiveIndex(ni);
+              return;
+            }
+            if (a === 'showPage--markCommunityRead' && _ta.showPage && _ta.markCommunityRead) {
+              _ta.showPage(page, el); _ta.markCommunityRead(); return;
+            }
+            // Catch-all: try calling window[action]()
+            if (a && typeof _ta[a] === 'function') { _ta[a](el, e); return; }
+          }
+          document.addEventListener('click', function(e) {
+            const el = e.target.closest('[data-action]');
+            if (el) { e.stopPropagation(); _dispatch(el, e); }
+          }, true);
+          document.addEventListener('change', function(e) {
+            const el = e.target.closest('[data-action-change]');
+            if (!el) return;
+            const fn = el.dataset.actionChange;
+            if (fn && typeof window[fn] === 'function') window[fn](el, e);
+          });
+          document.addEventListener('input', function(e) {
+            const el = e.target.closest('[data-action-input]');
+            if (!el) return;
+            const fn = el.dataset.actionInput;
+            if (fn === 'updateName' && typeof window.updateName === 'function') window.updateName(el.value);
+            else if (fn && typeof window[fn] === 'function') window[fn](el, e);
+          });
+          document.addEventListener('submit', function(e) {
+            const el = e.target.closest('[data-action-submit]');
+            if (!el) return;
+            e.preventDefault();
+            const fn = el.dataset.actionSubmit;
+            if (fn && typeof window[fn] === 'function') window[fn](e);
+          });
+        })();
 
         // Restore the persisted theme on every page load.
         // GhTheme (theme-toggle.js) already restored html[data-theme] before this runs.
@@ -9570,7 +9687,7 @@
                 try { pets = JSON.parse(localStorage.getItem(`tenant_pets_${_taRoom}`) || '[]'); } catch(e) {}
             }
             if (!pets.length) {
-                el.innerHTML = `<div onclick="showSubPage('add-pet-page')" style="border:2px dashed #e0e0e0;padding:30px 20px;border-radius:25px;text-align:center;cursor:pointer;background:#fff;">
+                el.innerHTML = `<div data-action="showSubPage" data-page="add-pet-page" style="border:2px dashed #e0e0e0;padding:30px 20px;border-radius:25px;text-align:center;cursor:pointer;background:#fff;">
                     <div style="font-size:var(--fs-lg);margin-bottom:10px;opacity:0.5;">🐾</div>
                     <p style="font-size:var(--fs-md);color:#888;font-weight:500;">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
                     <p style="font-size:var(--fs-sm);color:var(--primary-green);font-weight:600;margin-top:5px;">+ เพิ่มสัตว์เลี้ยงของคุณ</p>
@@ -11427,7 +11544,7 @@
         // B2: enhance all accordion header divs with role/tabindex/aria-expanded + keyboard
         (function enhanceAccordions() {
             function apply() {
-                document.querySelectorAll('[onclick="toggleAccordion(this)"]').forEach(function(el) {
+                document.querySelectorAll('[data-action="toggleAccordion"]').forEach(function(el) {
                     if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
                     if (!el.getAttribute('role')) el.setAttribute('role', 'button');
                     if (!el.hasAttribute('aria-expanded')) el.setAttribute('aria-expanded', 'false');
@@ -11472,7 +11589,7 @@
     <!-- ported from tenant.html: photo modal -->
     <div id="photoModal" role="dialog" aria-modal="true" aria-labelledby="photoModal-title" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:20px;">
         <div style="background:#fff; max-width:600px; width:100%; max-height:90vh; overflow:auto; border-radius:18px; padding:20px; position:relative;">
-            <button onclick="closePhotoModal()" aria-label="ปิด" style="position:absolute; top:10px; right:10px; width:36px; height:36px; border-radius:50%; border:none; background:#f3f4f6; cursor:pointer; font-size:1.2rem;">✕</button>
+            <button data-action="closePhotoModal" aria-label="ปิด" style="position:absolute; top:10px; right:10px; width:36px; height:36px; border-radius:50%; border:none; background:#f3f4f6; cursor:pointer; font-size:1.2rem;">✕</button>
             <h3 id="photoModal-title" style="margin:0 0 14px; color:var(--primary-green);">📸 รูปภาพ</h3>
             <div id="photoModalPhotos"></div>
         </div>
