@@ -587,7 +587,7 @@
 
       <div class="modal-form-row">
         <label for="modalPhone">เบอร์โทร <span style="color: var(--alert)">*</span></label>
-        <input id="modalPhone" type="tel" inputmode="numeric" maxlength="10" autocomplete="tel" placeholder="0XXXXXXXXX">
+        <input id="modalPhone" type="tel" inputmode="numeric" maxlength="12" autocomplete="tel" placeholder="0XXXXXXXXX">
         <span id="modalPhoneErr" class="err"></span>
       </div>
 
@@ -1034,6 +1034,8 @@
       btn.classList.toggle('active', btn.dataset.bld === state.building);
     });
     const isNest = state.building === 'nest';
+    const filterRow = document.querySelector('.filter-row');
+    if (filterRow) filterRow.style.display = isNest ? '' : 'none';
     const floorDiv = document.getElementById('nestFilterFloor');
     const typeDiv = document.getElementById('nestFilterType');
     if (floorDiv) floorDiv.style.display = isNest ? 'block' : 'none';
@@ -1189,7 +1191,7 @@
     state.selectedRoom = room;
 
     const summary = document.getElementById('modalSummary');
-    const dep = room.deposit > 0 ? room.deposit : Number(room.rentPrice || 0);
+    const dep = room.deposit > 0 ? room.deposit : Number(room.rentPrice || 0) * 2;
     const meta = [];
     if (room.floor != null) meta.push(`ชั้น ${room.floor}`);
     if (room.type === 'pet-allowed') meta.push('สัตว์เลี้ยงได้');

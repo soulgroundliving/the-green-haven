@@ -118,8 +118,8 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
     throw new functions.https.HttpsError('failed-precondition',
       'Room has no rent price configured — admin must set this first');
   }
-  // Per plan #6: Rooms (no deposit field) → use 1 month rent. Nest → use config.
-  const depositAmount = depositFromConfig > 0 ? depositFromConfig : monthlyRent;
+  // Per plan #6: Rooms (no deposit field) → use 2 months rent. Nest → use config.
+  const depositAmount = depositFromConfig > 0 ? depositFromConfig : monthlyRent * 2;
 
   // ── Pull receiver phone from buildings/{fsId}.promptpayNumber ────────
   // Admin configures per-building PromptPay in dashboard → People Management

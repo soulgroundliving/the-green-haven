@@ -107,6 +107,21 @@ class RoomConfigManager {
       console.log(`✅ RoomConfigManager: restored ${def.rooms.length - storedIds.size} missing rooms for building "${building}"`);
     }
 
+    // Merge structural fields (floor, type, deposit) from defaults into stored rooms
+    // if they're missing — handles localStorage caches from before these fields were added.
+    if (def && def.rooms) {
+      const defMap = new Map(def.rooms.map(r => [r.id, r]));
+      let merged = false;
+      config.rooms.forEach(r => {
+        const dr = defMap.get(r.id);
+        if (!dr) return;
+        if (r.floor == null && dr.floor != null) { r.floor = dr.floor; merged = true; }
+        if (!r.type && dr.type) { r.type = dr.type; merged = true; }
+        if (!r.deposit && dr.deposit) { r.deposit = dr.deposit; merged = true; }
+      });
+      if (merged) localStorage.setItem(`rooms_config_${building}`, JSON.stringify(config));
+    }
+
     return config;
   }
 
