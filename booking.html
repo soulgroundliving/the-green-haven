@@ -538,32 +538,15 @@
     <div class="filter-row">
       <div class="filter-grid">
         <div id="nestFilterFloor" style="display:none">
-          <label class="filter-label" for="filterFloor">ชั้น (Nest)</label>
+          <label class="filter-label" for="filterFloor">ชั้น</label>
           <select id="filterFloor" class="filter-input">
-            <option value="">ทั้งหมด</option>
-            <option value="1">ชั้น 1</option>
-            <option value="2">ชั้น 2</option>
-            <option value="3">ชั้น 3</option>
-            <option value="4">ชั้น 4</option>
+            <option value="">ทุกชั้น</option>
           </select>
         </div>
         <div id="nestFilterType" style="display:none">
-          <label class="filter-label" for="filterType">ประเภท (Nest)</label>
+          <label class="filter-label" for="filterType">ประเภท</label>
           <select id="filterType" class="filter-input">
-            <option value="">ทั้งหมด</option>
-            <option value="studio">Studio</option>
-            <option value="pet-allowed">Pet-friendly</option>
-          </select>
-        </div>
-        <div class="full">
-          <label class="filter-label" for="filterMaxRent">ราคาสูงสุด (บาท/เดือน)</label>
-          <select id="filterMaxRent" class="filter-input">
-            <option value="">ไม่จำกัด</option>
-            <option value="2000">≤ ฿2,000</option>
-            <option value="3000">≤ ฿3,000</option>
-            <option value="5000">≤ ฿5,000</option>
-            <option value="6500">≤ ฿6,500</option>
-            <option value="10000">≤ ฿10,000</option>
+            <option value="">ทุกประเภท</option>
           </select>
         </div>
       </div>
@@ -1053,8 +1036,8 @@
     const isNest = state.building === 'nest';
     const floorDiv = document.getElementById('nestFilterFloor');
     const typeDiv = document.getElementById('nestFilterType');
-    if (floorDiv) floorDiv.style.display = isNest ? '' : 'none';
-    if (typeDiv) typeDiv.style.display = isNest ? '' : 'none';
+    if (floorDiv) floorDiv.style.display = isNest ? 'block' : 'none';
+    if (typeDiv) typeDiv.style.display = isNest ? 'block' : 'none';
     if (!isNest) {
       document.getElementById('filterFloor').value = '';
       document.getElementById('filterType').value = '';
@@ -1166,14 +1149,37 @@
   function applyFilters(rooms) {
     const floor = document.getElementById('filterFloor').value;
     const type = document.getElementById('filterType').value;
-    const maxRent = Number(document.getElementById('filterMaxRent').value || 0);
     return rooms.filter(r => {
       if (state.building === 'nest') {
         if (floor && Number(r.floor) !== Number(floor)) return false;
         if (type && r.type !== type) return false;
       }
-      if (maxRent > 0 && Number(r.rentPrice) > maxRent) return false;
       return true;
+    });
+  }
+
+  function populateNestFilters() {
+    const nestRooms = state.roomsByBuilding.nest;
+    const TYPE_LABEL = { studio: 'Studio', 'pet-allowed': 'สัตว์เลี้ยงได้' };
+
+    const floors = [...new Set(nestRooms.map(r => r.floor).filter(f => f != null))].sort((a, b) => a - b);
+    const floorSel = document.getElementById('filterFloor');
+    floorSel.innerHTML = '<option value="">ทุกชั้น</option>';
+    floors.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f;
+      opt.textContent = `ชั้น ${f}`;
+      floorSel.appendChild(opt);
+    });
+
+    const types = [...new Set(nestRooms.map(r => r.type).filter(Boolean))];
+    const typeSel = document.getElementById('filterType');
+    typeSel.innerHTML = '<option value="">ทุกประเภท</option>';
+    types.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = TYPE_LABEL[t] || t;
+      typeSel.appendChild(opt);
     });
   }
 
@@ -1666,7 +1672,6 @@
     });
     document.getElementById('filterFloor').addEventListener('change', renderRoomsList);
     document.getElementById('filterType').addEventListener('change', renderRoomsList);
-    document.getElementById('filterMaxRent').addEventListener('change', renderRoomsList);
 
     document.getElementById('modalCancelBtn').addEventListener('click', closeBookingModal);
     document.getElementById('modalLockBtn').addEventListener('click', handleLockClick);
@@ -1713,6 +1718,7 @@
       const ok = await bootLiff();
       if (!ok) return;
       await loadRoomsConfig();
+      populateNestFilters();
       // Render immediately with default status (ว่าง) — don't block on CF cold start
       renderBuildingTabs();
       renderDateStrip();
