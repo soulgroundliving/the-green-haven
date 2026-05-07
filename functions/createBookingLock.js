@@ -9,7 +9,7 @@
  * Side-effects on success:
  *   1. Creates bookings/{auto} with status='locked', lockedUntil=now+20min
  *   2. Generates the PromptPay deposit QR payload (server-side — receiver
- *      phone comes from owner_info/main, never trusted from client)
+ *      phone comes from buildings/{RentRoom|nest}.promptpayNumber, never trusted from client)
  *   3. Returns { bookingId, qrPayload, qrAmount, lockedUntil } to client
  *
  * Region: asia-southeast1 (matches liffSignIn / verifySlip / redeemReward)
@@ -121,18 +121,21 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
   // Per plan #6: Rooms (no deposit field) → use 1 month rent. Nest → use config.
   const depositAmount = depositFromConfig > 0 ? depositFromConfig : monthlyRent;
 
-  // ── Pull receiver phone from owner_info/main (Firestore) ───────────────
+  // ── Pull receiver phone from buildings/{fsId}.promptpayNumber ────────
+  // Admin configures per-building PromptPay in dashboard → People Management
+  // → Payment Info (ข้อมูลการชำระเงิน). 'rooms' maps to Firestore id 'RentRoom'.
+  const fsBuildingId = canonicalBuilding === 'rooms' ? 'RentRoom' : canonicalBuilding;
   let receiverPhone;
   try {
-    const ownerSnap = await firestore.doc('owner_info/main').get();
-    receiverPhone = ownerSnap.exists ? String(ownerSnap.data().phone || '') : '';
+    const buildingSnap = await firestore.doc(`buildings/${fsBuildingId}`).get();
+    receiverPhone = buildingSnap.exists ? String(buildingSnap.data().promptpayNumber || '') : '';
   } catch (e) {
-    console.error('createBookingLock: owner_info read failed:', e.message);
+    console.error('createBookingLock: buildings read failed:', e.message);
     throw new functions.https.HttpsError('internal', 'Could not resolve receiver phone');
   }
   if (!receiverPhone) {
     throw new functions.https.HttpsError('failed-precondition',
-      'Owner phone not configured — admin must set owner_info/main.phone first');
+      'PromptPay not configured for this building — admin must save payment info first');
   }
 
   // ── Generate PromptPay payload ──────────────────────────────────────────
