@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 /**
- * Phase 4E — Generate the Content-Security-Policy-Report-Only header value.
+ * Phase 4E — Generate the Content-Security-Policy header value.
  *
  * Reads tools/csp-hashes.json, unions every script/style hash across all
  * tracked HTML files, and prints a single CSP string. Copy the output into
- * vercel.json under the "Content-Security-Policy-Report-Only" header.
+ * vercel.json under the "Content-Security-Policy" header.
  *
- * We keep Report-Only mode + leave the existing <meta CSP> (with 'unsafe-inline')
- * enforcing. The browser will still load the site normally but will report
- * every violation — this gives us the refactor scope before we flip to enforce.
+ * Enforce mode — all inline handlers have been migrated to data-action delegation.
+ * Re-run: npm run csp:hash && npm run csp:print, then paste output into vercel.json.
  *
  * Run: npm run csp:print
  */
@@ -108,7 +107,7 @@ const directives = [
 
 const cspValue = directives.join('; ');
 
-console.log('=== Content-Security-Policy-Report-Only header value ===\n');
+console.log('=== Content-Security-Policy header value ===\n');
 console.log(cspValue);
 console.log(`\n=== Stats ===`);
 console.log(`Script hashes: ${scriptHashes.size}`);

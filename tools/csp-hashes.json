@@ -9,10 +9,10 @@
     "scriptHashes": [
       "gaRx0y1ujDVT2C9UGK+tyeA9geg25TEBzvXQBaakdmo=",
       "ngWS1N/ERePLNFetFMDw62EvWtpTaVrdqUFtX5dFrno=",
-      "+e+jQ8U87ZkLavn2/I6420B3k+7FYISX/IBMYn5I4SQ="
+      "GwQ+Rh11dsHAku8rN5LXKr4TatJuPQUiQTmNGJlrA4M="
     ],
     "styleHashes": [
-      "vxJMy4DuQ6zvED9mV+LcNdBr4o+grZxGNnqDrIrIWvc="
+      "H3qiDXf+A6Sx3I7r0P70Xice69bmQYNZCJf3oj6woiY="
     ]
   },
   "dashboard.html": {
@@ -20,11 +20,11 @@
       "yfGMR3xvKC8i0dh7xhmGW94RyzXWfPhsCqkxpKGodd4=",
       "dFSAp9Kgfr6gvfhNihDrNKRxSCfOskGRMbDyMhcXqCg=",
       "VHYshmD6q2VGh+KjLfnrnidAh94OjfyfXJyBveCGYWI=",
-      "3zTK9Sf3+D/Oqoic+MX9TePaWLOo375IvfU2i22euTw=",
-      "lIQc6Jvd7aZn3+QvbxOQwTDMsMCo4sAN6d1MpJf5F3Y="
+      "v+1AnociRz35uI+g4lPPQwoeOL4aO0zsrT8BZi9YORU=",
+      "H4hOdTDUDje+/YUDhBJooLEHwUe7upfkgw1x4Z/hs3A="
     ],
     "styleHashes": [
-      "2wzx9Xngr7+OCES2+AvhsRpurp0kSqgRAQe+YS3tRB0="
+      "Vo6WhPIdYZSvbtS3hpSSh97DWQvNOHEQ25bDe5QToww="
     ]
   },
   "tenant_app.html": {
@@ -32,11 +32,12 @@
       "+dMEhGTpvRQm1W301xvKKDpHZebohbTGCRnNdCQETWs=",
       "Ic0bOeaKv88b2nOmtCwqO4v5NlJbOuUg9edQ8ZsXQpE=",
       "ZzDQ2MJBB7tdyl5NRne0ZHgxcp41ia3UUcU+BJ2a7kU=",
+      "3VaU84l+a0HaC5mZNzKHBCTl+ogkBsb25Xgkg6nU0/Q=",
       "1OFriJ3w/S1qtQLL3AHTI8EJeUzdAt0W4gfq5uoUvIU=",
-      "koyn7uromcsMcRSTuRv/Ru4q267+5sxijYyxF6hIYKk="
+      "MzqioAqcji4mQ/ukDlcFE2+43etIIyfAf6+e1/eWzUk="
     ],
     "styleHashes": [
-      "j77iDVPV9e1e6b6BZk16YIC81q1ZToPzLw5aG25RY4c=",
+      "QhgibOw7rZfwaTW+5/23rVvpz1spH97KMzg1wuNBjgk=",
       "3fk03lCBnSsRdem3+NjS/HiChFZwsKi+8TYYYEhnza4="
     ]
   },
@@ -45,10 +46,10 @@
       "gaRx0y1ujDVT2C9UGK+tyeA9geg25TEBzvXQBaakdmo=",
       "S5bCwHtHWNmGmw6eLoD01ix9g8+QKgLtkiq+BViOUts=",
       "R3QaMohIhLuWjKaRUBbjcnziZXsSN3+qz4cRWXuI45c=",
-      "Y1HNA8ymdvkpxjfanctTCmoleaCJm3ay7asCxGpKq4E="
+      "rznxyBeTXjSBFKiBCx9vBNoQ6zG2UbOO2uRHKOzPVCI="
     ],
     "styleHashes": [
-      "TroeFTwSXeHC+aDwFVvml7GpmlmvgVDeFgOcIZvhZBg="
+      "xqaVwYXi7uVdX69j1NZ2gic5FobunP/mT+4g021OZQI="
     ]
   },
   "audit-log-viewer.html": {
@@ -63,10 +64,10 @@
   "payment.html": {
     "scriptHashes": [
       "YwBU+UB+mkdJWTrI9bz3aq/2sG7mnSVgn50z/vhQ0cA=",
-      "efIaszbwZtxST0hIIlJDkaD1wUE5adud9Z1c1H8ycLY="
+      "+hxmUooTYZcgmV08PTnC5Ee9T2eicVnErX3GHcFQnAU="
     ],
     "styleHashes": [
-      "PbW+T2Wyh9oV85Y7JlBZ+EK9J4woREtHuYbvN7ao9W8="
+      "AVC6SXkLZrfIW3IGaRuHcp3oW9On7fsmyX7ygwHcrYc="
     ]
   },
   "booking.html": {
@@ -74,10 +75,10 @@
       "LYtrQv2ppy4cBBjkyZPyYNXZ9UFl/M/5LlQi2iJBXOY=",
       "v5fMESJm/Z61H+O5pXmnjOvDYf6yf+s5YuL3Ut/IoLA=",
       "dBZqy8RE3bc7fQf8pP5gtvlRh25gfoD74RN+ngSnqQU=",
-      "DC3YYZgYy2c1dbIjGY6o8UtTtL+OlcuZdTvPuMwulUM="
+      "UFo5eecBxv1YmJttEL3JE+ELVg2bb8MIwzNBAcDGgUU="
     ],
     "styleHashes": [
-      "2iwcVphM46fe5z33se6OI0wfuNrXT3xjSd8qvzSQcd0="
+      "uLwTSZuOiNnQsw6CTR/npej4Zo1lRke/XsWIZKynIH0="
     ]
   }
 }
