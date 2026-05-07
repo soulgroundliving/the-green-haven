@@ -1191,7 +1191,7 @@
     state.selectedRoom = room;
 
     const summary = document.getElementById('modalSummary');
-    const dep = room.deposit > 0 ? room.deposit : Number(room.rentPrice || 0) * 2;
+    const dep = Number(room.rentPrice || 0) * 2;
     const meta = [];
     if (room.floor != null) meta.push(`ชั้น ${room.floor}`);
     if (room.type === 'pet-allowed') meta.push('สัตว์เลี้ยงได้');
