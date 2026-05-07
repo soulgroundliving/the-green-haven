@@ -1268,7 +1268,11 @@
         ? 'ห้องนี้เพิ่งถูกล็อคโดยคนอื่น กรุณาเลือกห้องอื่น'
         : msg.includes('currently occupied')
         ? 'ห้องนี้มีคนอยู่แล้ว กรุณาเลือกห้องอื่น'
-        : msg;
+        : msg.includes('Owner phone not configured') || msg.includes('owner_info')
+        ? 'ขณะนี้ยังไม่สามารถจองออนไลน์ได้ กรุณาติดต่อเราโดยตรง'
+        : msg.includes('Room has no rent price') || msg.includes('room rate')
+        ? 'ห้องนี้ยังไม่พร้อมให้จอง กรุณาเลือกห้องอื่นหรือติดต่อเรา'
+        : 'เกิดข้อผิดพลาด กรุณาลองอีกครั้งหรือติดต่อเรา';
       document.getElementById('modalPhoneErr').textContent = friendly;
       lockBtn.disabled = false;
       lockBtn.textContent = 'ล็อคห้องและจ่ายมัดจำ';
