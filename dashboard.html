@@ -2057,6 +2057,8 @@
   .form-label-upper{font-size:.85rem;font-weight:700;color:var(--text-muted);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
   .field-label{font-weight:700;display:block;margin-bottom:.5rem;font-size:.9rem;}
   .input-lg{width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.95rem;transition:all .3s;}
+  .input-lg:focus{border-color:var(--green);box-shadow:0 0 10px rgba(45,134,83,.2);outline:none;}
+  #changePasswordModal input[type="password"]:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(45,134,83,.1);outline:none;}
   .input-sm{width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;margin-top:4px;}
   .input-md{padding:.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;}
   .input-pad10{width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:1rem;}
@@ -2842,44 +2844,44 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <div class="grid-2col-lg">
           <div>
             <label class="form-label-upper">ชื่อ</label>
-            <input type="text" id="modalTenantFirstName" placeholder="ชื่อ" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="text" id="modalTenantFirstName" placeholder="ชื่อ" class="input-lg">
           </div>
           <div>
             <label class="form-label-upper">นามสกุล</label>
-            <input type="text" id="modalTenantLastName" placeholder="นามสกุล" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="text" id="modalTenantLastName" placeholder="นามสกุล" class="input-lg">
           </div>
         </div>
 
         <div class="grid-2col-lg">
           <div>
             <label class="form-label-upper">📱 โทรศัพท์</label>
-            <input type="tel" id="modalTenantPhone" placeholder="0XX-XXX-XXXX" maxlength="10" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="tel" id="modalTenantPhone" placeholder="0XX-XXX-XXXX" maxlength="10" class="input-lg">
             <small id="modalTenantPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
           </div>
           <div>
             <label class="form-label-upper">💬 Line ID</label>
-            <input type="text" id="modalTenantLineID" placeholder="line_id (ตัวอักษรเล็ก เครื่องหมายขีด)" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="text" id="modalTenantLineID" placeholder="line_id (ตัวอักษรเล็ก เครื่องหมายขีด)" class="input-lg">
           </div>
         </div>
         <div class="grid-2col-lg">
           <div>
             <label class="form-label-upper">📧 อีเมล <span id="modalTenantEmailVerified" style="font-size:0.8em;font-weight:normal;margin-left:4px;color:var(--green);"></span></label>
-            <input type="email" id="modalTenantEmail" placeholder="example@email.com" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="email" id="modalTenantEmail" placeholder="example@email.com" class="input-lg">
           </div>
           <div>
             <label class="form-label-upper">🚗 ป้ายทะเบียน</label>
-            <input type="text" id="modalTenantLicensePlate" placeholder="เช่น 9กก9999" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="text" id="modalTenantLicensePlate" placeholder="เช่น 9กก9999" class="input-lg">
           </div>
         </div>
 
         <div class="mb-6">
           <label class="form-label-upper">🪪 เลขบัตรประชาชน / Passport</label>
-          <input type="text" id="modalTenantIdCard" placeholder="1-XXXX-XXXXX-XX-X" maxlength="17" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+          <input type="text" id="modalTenantIdCard" placeholder="1-XXXX-XXXXX-XX-X" maxlength="17" class="input-lg">
         </div>
 
         <div>
           <label class="form-label-upper">📍 ที่อยู่เดิม</label>
-          <input type="text" id="modalTenantAddress" placeholder="บ้านเลขที่ ถนน แขวง เขต จังหวัด" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+          <input type="text" id="modalTenantAddress" placeholder="บ้านเลขที่ ถนน แขวง เขต จังหวัด" class="input-lg">
         </div>
       </div>
 
@@ -2892,11 +2894,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;">
           <div>
             <label class="form-label-upper">👤 ชื่อ-นามสกุล</label>
-            <input type="text" id="modalEmergencyName" placeholder="ชื่อผู้ติดต่อฉุกเฉิน" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="text" id="modalEmergencyName" placeholder="ชื่อผู้ติดต่อฉุกเฉิน" class="input-lg">
           </div>
           <div>
             <label class="form-label-upper">📱 เบอร์โทร</label>
-            <input type="tel" id="modalEmergencyPhone" placeholder="0XX-XXX-XXXX" maxlength="10" class="input-lg" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="tel" id="modalEmergencyPhone" placeholder="0XX-XXX-XXXX" maxlength="10" class="input-lg">
           </div>
         </div>
       </div>
@@ -2920,11 +2922,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <div class="grid-2col-lg">
           <div>
             <label class="form-label-upper">📍 วันเข้าพัก</label>
-            <input type="date" id="modalTenantMoveIn" class="input-lg" data-thai-date onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="date" id="modalTenantMoveIn" class="input-lg" data-thai-date>
           </div>
           <div>
             <label class="form-label-upper">⏰ สัญญาสิ้นสุด</label>
-            <input type="date" id="modalTenantContractEnd" class="input-lg" data-thai-date onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'">
+            <input type="date" id="modalTenantContractEnd" class="input-lg" data-thai-date>
           </div>
         </div>
 
@@ -2969,7 +2971,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <!-- Additional Notes Section -->
       <div class="mb-6">
         <label class="form-label-upper">📝 หมายเหตุเพิ่มเติม</label>
-        <textarea id="modalTenantNotes" placeholder="เช่น หมายเหตุพิเศษ เงื่อนไข ข้อตกลงอื่น..." rows="3" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.95rem;resize:vertical;transition:all .3s;" onblur="this.style.borderColor='var(--border)'" onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 10px rgba(45,134,83,.2)'"></textarea>
+        <textarea id="modalTenantNotes" placeholder="เช่น หมายเหตุพิเศษ เงื่อนไข ข้อตกลงอื่น..." rows="3" class="input-lg" style="resize:vertical;"></textarea>
       </div>
 
       <!-- Quick Navigation -->
@@ -4978,9 +4980,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <div style="position:relative;display:flex;align-items:center;">
             <input type="password" id="oldPassword" placeholder="กรอกรหัสผ่านเดิม"
               style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
-              onkeypress="if(event.key==='Enter')changePassword()"
-              onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
-              onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+              >
             <button type="button" data-action="togglePasswordVisibility" data-field="oldPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
               <span id="icon-oldPassword">👁️</span>
             </button>
@@ -4993,9 +4993,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <div style="position:relative;display:flex;align-items:center;">
             <input type="password" id="newPassword" placeholder="กรอกรหัสผ่านใหม่ (อย่างน้อย 6 ตัว)"
               style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
-              onkeypress="if(event.key==='Enter')changePassword()"
-              onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
-              onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+              >
             <button type="button" data-action="togglePasswordVisibility" data-field="newPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
               <span id="icon-newPassword">👁️</span>
             </button>
@@ -5008,9 +5006,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <div style="position:relative;display:flex;align-items:center;">
             <input type="password" id="confirmPassword" placeholder="พิมพ์รหัสผ่านใหม่ซ้ำ"
               style="padding:.8rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-brand);font-size:.9rem;transition:all .2s;width:100%;padding-right:38px;"
-              onkeypress="if(event.key==='Enter')changePassword()"
-              onfocus="this.style.borderColor='var(--green)';this.style.boxShadow='0 0 0 3px rgba(45,134,83,0.1)'"
-              onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+              >
             <button type="button" data-action="togglePasswordVisibility" data-field="confirmPassword" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);padding:4px;z-index:10;pointer-events:auto;transition:all .2s;">
               <span id="icon-confirmPassword">👁️</span>
             </button>

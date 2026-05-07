@@ -5668,13 +5668,13 @@
                 body.innerHTML = `<h3 style="color: var(--primary-green); margin-top:0;">กระซิบถึงเจ้าของตึก</h3>
                   <p style="font-size:var(--fs-md); opacity: 0.8; margin-bottom: 15px;">ข้อความนี้จะถูกส่งตรงเพื่อพัฒนา Nature Haven ครับ</p>
                   <textarea id="suggest-text" placeholder="บอกเราได้ทุกเรื่องเลยครับ..." rows="5" style="width:100%; border-radius:12px; border:1px solid #eee; padding:12px; font-family:inherit; font-size:16px; box-sizing:border-box;"></textarea>
-                  <button id="suggest-submit-btn" class="btn-main" style="margin-top:20px;" onclick="submitSuggestion()">ส่งข้อความ</button>`;
+                  <button id="suggest-submit-btn" class="btn-main" style="margin-top:20px;" data-action="submitSuggestion">ส่งข้อความ</button>`;
             } else if (type === 'preference') {
                 const t = _taTenant || {};
                 const curName = t.name || t.tenantName || '';
                 const curPhone = t.phone || t.tel || '';
                 body.innerHTML = `<h3 style="margin-top:0;">แก้ไขข้อมูลส่วนตัว</h3>
-                  <label>ชื่อที่แสดงผล</label><input type="text" placeholder="คุณ..." value="${curName}" oninput="updateName(this.value)">
+                  <label>ชื่อที่แสดงผล</label><input type="text" placeholder="คุณ..." value="${curName}" data-action-input="updateName">
                   <label style="display:block; margin-top:10px;">เบอร์โทร</label><input type="text" value="${curPhone}">
                   <p style="margin:8px 0 15px; font-size:var(--fs-sm); color:var(--text-muted);">* แก้เบอร์/ชื่อเพิ่มเติม กรุณาแจ้งนิติเพื่ออัปเดตระบบ</p>
                   <label style="display:block; margin-top:10px;">เปลี่ยน Avatar</label>
@@ -6070,7 +6070,7 @@
             let headerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <span style="font-size: var(--fs-md); font-weight: 600; color: #334435;">สมาชิกตัวน้อย 🐾</span>
-            <button onclick="showSubPage('add-pet-page'); resetPetForm();" 
+            <button data-action="showSubPage--resetPetForm" data-page="add-pet-page"
                 style="background: transparent; border: none; color: var(--primary-green); font-size: var(--fs-sm); font-weight: 600; cursor: pointer;">
                 + เพิ่มสมาชิกเพิ่ม
             </button>
@@ -6097,13 +6097,13 @@
                 ${vaxStatusHTML}
                 ${pet.alertStatusHTML || ''}
                 <div style="margin-top: 5px;">
-                    <button onclick="viewVaccineBook('${safeId}')" style="background: #e8f5e9; color: #2d8653; border: none; padding: 4px 10px; border-radius: 8px; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;">
+                    <button data-action="viewVaccineBook" data-arg="${safeId}" style="background: #e8f5e9; color: #2d8653; border: none; padding: 4px 10px; border-radius: 8px; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;">
                         <i class="fas fa-book-medical"></i> ดูสมุดวัคซีน
                     </button>
                 </div>
                 <small style="opacity: 0.5; font-size: var(--fs-sm); display: block; margin-top: 4px;">เพศ${_esc(pet.gender)} | อายุ ${_esc(pet.age)}</small>
             </div>
-            <i class="fas fa-edit" style="color:var(--primary-green); opacity:0.5; cursor:pointer; font-size:var(--fs-lg);" onclick="prepareEditPet('${safeId}')"></i>
+            <i class="fas fa-edit" style="color:var(--primary-green); opacity:0.5; cursor:pointer; font-size:var(--fs-lg);" data-action="prepareEditPet" data-arg="${safeId}"></i>
         </div>`;
 
                 container.insertAdjacentHTML('beforeend', html);
@@ -6537,7 +6537,7 @@
             if (a === 'alertVisitorPass') { alert('ระบบสร้าง QR ให้แขก (Visitor Pass) กำลังพัฒนาครับ'); return; }
             if (a === 'alertLaundryBook') { alert('จองคิวสำเร็จ กรุณานำผ้าลงเครื่องภายใน 15 นาที'); return; }
             if (a === 'alertLaundryNotify') { alert('ตั้งค่าแจ้งเตือนแล้ว'); return; }
-            if (a === 'openPaymentFlow') { if (_ta.openPaymentFlow) _ta.openPaymentFlow(arg !== 'false'); return; }
+            if (a === 'openPaymentFlow') { if (_ta.openPaymentFlow) _ta.openPaymentFlow(arg !== 'false', el.dataset.bid); return; }
             if (a === 'goToPaymentStep') { if (_ta.goToPaymentStep) _ta.goToPaymentStep(Number(arg)); return; }
             if (a === 'selectService') { if (_ta.selectService) _ta.selectService(arg); return; }
             if (a === 'setSeverity') { if (_ta.setSeverity) _ta.setSeverity(arg); return; }
@@ -6563,6 +6563,11 @@
             if (a === 'showPage--markCommunityRead' && _ta.showPage && _ta.markCommunityRead) {
               _ta.showPage(page, el); _ta.markCommunityRead(); return;
             }
+            if (a === 'showSubPage--resetPetForm' && page && _ta.showSubPage) { _ta.showSubPage(page); if (_ta.resetPetForm) _ta.resetPetForm(); return; }
+            if (a === 'viewVaccineBook' && arg && _ta.viewVaccineBook) { _ta.viewVaccineBook(arg); return; }
+            if (a === 'prepareEditPet' && arg && _ta.prepareEditPet) { _ta.prepareEditPet(arg); return; }
+            if (a === '_showUsageMonthDetail' && arg && _ta._showUsageMonthDetail) { _ta._showUsageMonthDetail(arg); return; }
+            if (a === 'openWellnessArticle' && arg && _ta.openWellnessArticle) { _ta.openWellnessArticle(arg); return; }
             // Catch-all: try calling window[action]()
             if (a && typeof _ta[a] === 'function') { _ta[a](el, e); return; }
           }
@@ -8688,7 +8693,7 @@
                     <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
                     <div style="font-size:1.1rem;color:#c62828;font-weight:700;margin-bottom:.5rem;">เชื่อมต่อไม่สำเร็จ</div>
                     <div style="font-size:.85rem;color:#444;max-width:320px;line-height:1.6;margin-bottom:1.5rem;">${reason || 'ลองอีกครั้งหรือเปิด LINE LIFF ใหม่'}</div>
-                    <button onclick="location.reload()" style="padding:.7rem 2rem;background:#2d8653;color:#fff;border:none;border-radius:8px;font-family:Sarabun,sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;">🔄 ลองใหม่</button>`;
+                    <button data-action="reloadPage" style="padding:.7rem 2rem;background:#2d8653;color:#fff;border:none;border-radius:8px;font-family:Sarabun,sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;">🔄 ลองใหม่</button>`;
                 ov.style.display = 'flex';
             } catch(_) {}
         }
@@ -8838,8 +8843,8 @@
                 ? 'กรุณาติดต่อ admin โดยตรงหรือส่งคำขอใหม่'
                 : 'เมื่ออนุมัติแล้วจะเข้าใช้งานได้อัตโนมัติ กรุณารอสักครู่';
             const actionBtn = status === 'rejected'
-                ? '<button onclick="showLiffLinkForm()" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">🔄 ส่งคำขอใหม่</button>'
-                : '<button onclick="window.location.reload()" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">🔄 ตรวจสอบอีกครั้ง</button>';
+                ? '<button data-action="showLiffLinkForm" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">🔄 ส่งคำขอใหม่</button>'
+                : '<button data-action="reloadPage" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">🔄 ตรวจสอบอีกครั้ง</button>';
             box.innerHTML = `<div style="font-size:var(--fs-lg);margin-bottom:1rem;">${icon}</div>
                 <div style="font-weight:800;font-size:var(--fs-lg);margin-bottom:.5rem;">${title}</div>
                 <div style="font-size:var(--fs-md);color:var(--text-muted);max-width:320px;margin:0 auto 1.2rem;">${detail}</div>
@@ -9121,8 +9126,8 @@
                         ? `<span style="${pillBase}background:#D1FAE5;color:#065F46">✓ จ่ายแล้ว</span>`
                         : `<span style="${pillBase}background:#FFF4E5;color:#D97706">รอชำระ</span>`;
                 const actionBtn = paid
-                    ? `<button onclick="openPaymentFlow(true,'${bId}')" style="background:none;border:1px solid var(--primary-green);color:var(--primary-green);padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">ใบเสร็จ</button>`
-                    : `<button onclick="openPaymentFlow(false,'${bId}')" style="background:var(--primary-green);color:white;border:none;padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">จ่ายเลย</button>`;
+                    ? `<button data-action="openPaymentFlow" data-arg="true" data-bid="${bId}" style="background:none;border:1px solid var(--primary-green);color:var(--primary-green);padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">ใบเสร็จ</button>`
+                    : `<button data-action="openPaymentFlow" data-arg="false" data-bid="${bId}" style="background:var(--primary-green);color:white;border:none;padding:5px 12px;border-radius:10px;font-size:var(--fs-sm);cursor:pointer;">จ่ายเลย</button>`;
                 return `<div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f3f3;">
                     <div>
                         <span style="font-size:var(--fs-md);font-weight:600;">${m} ${yr}</span>
@@ -9484,7 +9489,7 @@
                 const [, mo] = p.r.month.split('-');
                 const label = _MONTHS_TH_SHORT[parseInt(mo)] || '';
                 const safeMonth = (p.r.month || '').replace(/[^0-9-]/g, '');
-                svg += `<circle cx="${p.x}" cy="${p.y}" r="6" fill="white" stroke="${stroke}" stroke-width="2.5" style="cursor:pointer;" onclick="_showUsageMonthDetail('${safeMonth}')"/>`;
+                svg += `<circle cx="${p.x}" cy="${p.y}" r="6" fill="white" stroke="${stroke}" stroke-width="2.5" style="cursor:pointer;" data-action="_showUsageMonthDetail" data-arg="${safeMonth}"/>`;
                 svg += `<text x="${p.x}" y="${H-6}" text-anchor="middle" font-size="10" fill="#6b7280" font-family="inherit">${label}</text>`;
             });
             svg += '</svg>';
@@ -9784,7 +9789,7 @@
             const src = _wellnessList.length ? _wellnessList : WELLNESS_ARTICLES;
             const toShow = src.slice(0, _wellnessShown);
             list.innerHTML = toShow.map(a => `
-                <div class="blog-card" onclick="openWellnessArticle('${a.id}')" style="cursor:pointer;">
+                <div class="blog-card" data-action="openWellnessArticle" data-arg="${a.id}" style="cursor:pointer;">
                     <div class="blog-img">${a.coverImage
                         ? `<img src="${a.coverImage}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" alt="">`
                         : `<i class="fas ${a.icon}"></i>`}</div>
