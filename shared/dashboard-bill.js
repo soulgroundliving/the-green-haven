@@ -1634,7 +1634,7 @@ function renderRoomGrid(){
   const unpaidCount = rooms.length - paidCount;
 
   if(chip) chip.innerHTML =
-    `<span style="color:var(--green-dark)">✅ ${paidCount}</span>&nbsp;·&nbsp;<span style="color:#92400e">⏳ ${unpaidCount}</span>`;
+    `<span style="color:var(--green-dark)">✅ ${paidCount}</span>&nbsp;·&nbsp;<span style="color:#c2410c">⏳ ${unpaidCount}</span>`;
 
   if(!rooms.length){
     container.innerHTML='<div style="color:var(--text-muted);font-size:.8rem;padding:.4rem;">ไม่พบห้อง</div>';
@@ -1652,7 +1652,7 @@ function renderRoomGrid(){
     const click    = isPaid
       ? `onclick="showPayDetail('${r.id}',${year},${month})"`
       : `onclick="selectRoomForBill('${r.id}')"`;
-    return `<div class="bill-room-card ${stCls}" data-room="${r.id}" ${click} title="${isPaid?'ดูรายละเอียด':'คลิกเพื่อออกบิล'}">
+    return `<div class="bill-room-card ${stCls}" data-room="${r.id}" tabindex="0" ${click} title="${isPaid?'ดูรายละเอียด':'คลิกเพื่อออกบิล'}">
       <span class="bc-icon">${icon}</span>
       <span class="bc-num">${r.id}</span>
       ${tenant?`<span class="bc-tenant">${tenant}</span>`:''}

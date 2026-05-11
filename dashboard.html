@@ -889,7 +889,7 @@
   .bill-room-card{border-radius:var(--radius-sm);padding:.6rem .4rem .5rem;cursor:pointer;text-align:center;border:2px solid transparent;transition:box-shadow .15s,border-color .15s,transform .1s;line-height:1.35;user-select:none;}
   .bill-room-card:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.12);}
   .bill-room-card.bc-paid{background:#f0fdf4;border-color:var(--green);color:var(--green-dark);}
-  .bill-room-card.bc-unpaid{background:#fff8f0;border-color:#f59e0b;color:#92400e;}
+  .bill-room-card.bc-unpaid{background:#fff8f0;border-color:#ea580c;color:#c2410c;}
   .bill-room-card.bc-active{border-color:var(--blue-bright)!important;box-shadow:0 0 0 3px rgba(2,132,199,.15)!important;background:#eff9ff!important;color:var(--blue-dark)!important;}
   .bc-icon{display:block;font-size:1rem;}
   .bc-num{display:block;font-size:.95rem;font-weight:700;}
@@ -981,6 +981,18 @@
   .slip-result-row:last-child{border:none;}
   .slip-amount-ok{color:var(--green-dark);font-weight:700;}
   .slip-amount-warn{color:var(--red);font-weight:700;}
+
+  /* ── Billing: dark mode overrides ──────────────────────────────────── */
+  :root[data-theme="dark"] .bill-room-card.bc-paid{background:#0f2e1a;border-color:var(--green);}
+  :root[data-theme="dark"] .bill-room-card.bc-unpaid{background:#2a1200;border-color:#ea580c;color:#fb923c;}
+  :root[data-theme="dark"] .bill-paid-badge.is-paid{background:#0a2514;}
+  :root[data-theme="dark"] .bill-paid-badge.is-unpaid{background:#2a1200;color:#fb923c;}
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .bill-room-card.bc-paid{background:#0f2e1a;border-color:var(--green);}
+    :root:not([data-theme="light"]) .bill-room-card.bc-unpaid{background:#2a1200;border-color:#ea580c;color:#fb923c;}
+    :root:not([data-theme="light"]) .bill-paid-badge.is-paid{background:#0a2514;}
+    :root:not([data-theme="light"]) .bill-paid-badge.is-unpaid{background:#2a1200;color:#fb923c;}
+  }
 
   /* Document panels */
   .doc-panel{border:2px dashed var(--border);border-radius:var(--radius);padding:.6rem;min-height:80px;}
