@@ -144,7 +144,17 @@ function _setupTenantRealtimeListener(){
     const unsub=onSnapshot(collection(db,`tenants/${bld}/list`),snap=>{
       const all=JSON.parse(localStorage.getItem('tenant_master_data')||'{}');
       if(!all[bld])all[bld]={};
-      snap.forEach(doc=>{all[bld][doc.id]=doc.data();});
+      snap.forEach(doc=>{
+        const d=doc.data();
+        // Bridge: if SSoT identity is empty but an active lease has the name,
+        // apply it so the tenant card shows as occupied without a Firestore write.
+        if(!d.name && !d.firstName && !d.lastName &&
+           typeof LeaseAgreementManager!=='undefined'){
+          const al=LeaseAgreementManager.getActiveLease(bld,doc.id);
+          if(al?.tenantName) d.name=al.tenantName;
+        }
+        all[bld][doc.id]=d;
+      });
       localStorage.setItem('tenant_master_data',JSON.stringify(all));
       if(!document.getElementById('page-tenant')?.classList.contains('u-hidden')){
         renderTenantPage();
