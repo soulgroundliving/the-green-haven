@@ -146,12 +146,17 @@ function _setupTenantRealtimeListener(){
       if(!all[bld])all[bld]={};
       snap.forEach(doc=>{
         const d=doc.data();
-        // Bridge: if SSoT identity is empty but an active lease has the name,
-        // apply it so the tenant card shows as occupied without a Firestore write.
+        // Bridge: if SSoT identity is empty, pull tenantName from the
+        // localStorage lease record (SSoT path from getActiveLease omits it).
         if(!d.name && !d.firstName && !d.lastName &&
-           typeof LeaseAgreementManager!=='undefined'){
-          const al=LeaseAgreementManager.getActiveLease(bld,doc.id);
-          if(al?.tenantName) d.name=al.tenantName;
+           typeof LeaseAgreementManager!=='undefined' &&
+           typeof LeaseAgreementManager.getAllLeases==='function'){
+          const all=LeaseAgreementManager.getAllLeases();
+          const ls=Object.values(all).find(l=>
+            l.building===bld && String(l.roomId)===String(doc.id) &&
+            l.status==='active' && l.tenantName
+          );
+          if(ls?.tenantName) d.name=ls.tenantName;
         }
         all[bld][doc.id]=d;
       });
