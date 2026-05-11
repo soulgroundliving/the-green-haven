@@ -1493,13 +1493,9 @@ function renderPaymentStatus(){
 
 function selectRoomForBill(roomId){
   // เปลี่ยนไปหน้า ออกบิล แล้วเลือกห้องนั้นเลย
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  // Lazy-subscribe bill-page Firestore listeners (bypass of showPage)
-  if (typeof window._subscribeBuildingPaymentForBill === 'function') window._subscribeBuildingPaymentForBill();
-  if (typeof window._subscribeGlobalVerifiedSlips === 'function') window._subscribeGlobalVerifiedSlips();
-  document.getElementById('page-bill').classList.add('active');
-  document.querySelector('[onclick*="showPage(\'bill\'"]')?.classList.add('active');
+  // Delegate to showPage() so .sidebar-item.active syncs and Firestore
+  // lazy-subscribe runs from one canonical place.
+  window.showPage('bill');
   document.getElementById('f-room').value=roomId;
   onRoomChange();
   document.getElementById('f-room').scrollIntoView({behavior:'smooth'});
