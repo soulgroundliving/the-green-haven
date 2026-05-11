@@ -157,7 +157,10 @@
         <div style="font-weight:600;">${escapeHtml(b.prospectName || '—')}</div>
         <div style="color:var(--text-muted, #666);font-size:.78rem;">${phone}</div>
       </td>
-      <td style="padding:.5rem .8rem;font-family:var(--font-numeric, monospace);">${room}</td>
+      <td style="padding:.5rem .8rem;">
+        <div style="font-family:var(--font-numeric, monospace);">${room}</div>
+        <div style="font-size:.72rem;color:var(--text-muted, #999);margin-top:1px;">${shortBookingRef(b.id)}</div>
+      </td>
       <td style="padding:.5rem .8rem;font-size:.85rem;">${startDate}<br><small style="color:var(--text-muted, #666);">${b.durationMonths || '?'} เดือน</small></td>
       <td style="padding:.5rem .8rem;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">฿${formatNum(b.depositAmount)}</td>
       <td style="padding:.5rem .8rem;">
@@ -214,7 +217,7 @@
     overlay.className = 'u-modal-overlay';
     overlay.innerHTML = `
       <div class="u-modal-panel u-modal-panel-md">
-        <div class="u-modal-title">รายละเอียดการจอง — ${escapeHtml(b.id)}</div>
+        <div class="u-modal-title">รายละเอียดการจอง — ${escapeHtml(shortBookingRef(b.id))}</div>
         ${detailsRows(b)}
         <div class="u-btn-row">
           <button class="u-btn-cancel" data-bk-modal-close>ปิด</button>
@@ -363,6 +366,16 @@
     t.textContent = msg;
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 3500);
+  }
+  function shortBookingRef(id) {
+    if (!id) return '—';
+    const parts = id.split('-');
+    if (parts.length >= 3) {
+      const roomPart = parts[2] || '';
+      const suffix = id.slice(-6).toUpperCase();
+      return `${parts[0]}-${roomPart}-${suffix}`;
+    }
+    return '#' + id.slice(-8).toUpperCase();
   }
   function formatNum(n) { return Number(n || 0).toLocaleString('th-TH'); }
   function formatDate(d) {
