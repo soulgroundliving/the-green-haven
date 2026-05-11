@@ -1880,13 +1880,13 @@ function renderLeaseAgreementsPage() {
     });
   });
 
+  // t.id is the roomId (key from TenantConfigManager). Use getActiveLease(building, roomId)
+  // which checks SSoT first then localStorage — correct for both old and new data.
   const tenantOptions = allTenants
-    .filter(t => LeaseAgreementManager.getLeasesByTenant(t.id).some(l => l.status === 'active'))
+    .filter(t => LeaseAgreementManager.getActiveLease(t.building, t.id) !== null)
     .map(t => {
-      const activeLease = LeaseAgreementManager.getLeasesByTenant(t.id).find(l => l.status === 'active');
-      const roomLabel = `ห้อง ${activeLease.roomId}`;
       const buildingLabel = t.building === 'rooms' ? 'ห้องแถว' : 'Nest';
-      return `<option value="${t.id}">${_escapeHTML(t.name || t.id)} — ${roomLabel} (${buildingLabel})</option>`;
+      return `<option value="${t.id}">${_escapeHTML(t.name || `ห้อง ${t.id}`)} — ห้อง ${t.id} (${buildingLabel})</option>`;
     }).join('');
 
   container.innerHTML = `
