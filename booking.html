@@ -178,7 +178,8 @@
     .date-strip::-webkit-scrollbar { display: none; }
     .date-chip {
       flex: 0 0 auto;
-      min-width: 64px;
+      min-width: 56px;
+      min-height: 52px;            /* A5: comfortable thumb tap target */
       padding: var(--space-2) var(--space-3);
       border: 1px solid var(--border-base);
       border-radius: var(--radius-sm);
@@ -528,6 +529,38 @@
     /* ── Hidden state utility ────────────────────────────────── */
     .hide { display: none !important; }
 
+    /* ── Offline banner ─────────────────────────────────────── */
+    .offline-banner {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: rgba(192, 100, 88, 0.96);
+      color: #fff;
+      text-align: center;
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
+      z-index: 9998;
+      animation: slideDown 0.3s ease;
+    }
+    @keyframes slideDown {
+      from { transform: translateY(-100%); }
+      to   { transform: translateY(0); }
+    }
+
+    /* ── Reduced motion ──────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      .room-card-skeleton      { animation: none; background: var(--mist); }
+      .modal-overlay           { animation: none; }
+      .modal-panel             { animation: none; }
+      .boot-overlay            { transition: none; }
+      .offline-banner          { animation: none; }
+      .step-dot                { transition: none; }
+      .step-progress-item::after { transition: none; }
+      .date-chip               { transition: none; }
+      .room-card               { transition: none; }
+      .btn                     { transition: none; }
+    }
+
     /* ── Step progress indicator ─────────────────────────────── */
     .step-progress {
       display: flex;
@@ -546,7 +579,7 @@
     .step-progress-item:not(:last-child)::after {
       content: '';
       position: absolute;
-      top: 11px;
+      top: 14px;           /* half of 28px dot */
       left: 50%;
       width: 100%;
       height: 2px;
@@ -556,12 +589,12 @@
     }
     .step-progress-item.done::after { background: var(--brand-primary); }
     .step-dot {
-      width: 22px; height: 22px;
+      width: 28px; height: 28px;   /* A5: min 44px tap area via padding; dot itself 28px */
       border-radius: 50%;
       border: 2px solid var(--border-base);
       background: var(--surface-card);
       display: flex; align-items: center; justify-content: center;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: var(--weight-semibold);
       color: var(--pebble);
       position: relative;
@@ -681,6 +714,11 @@
 <!-- ═══════════════════════════════════════════════════════════════════════════
      Main app shell (4 stepwise sections; only one visible at a time)
      ═════════════════════════════════════════════════════════════════════════ -->
+<!-- A2: offline / connectivity banner (hidden by default) -->
+<div id="offlineBanner" class="offline-banner hide" role="alert" aria-live="assertive">
+  ⚠️ ไม่มีการเชื่อมต่ออินเทอร์เน็ต — กรุณาตรวจสอบและรีเฟรช
+</div>
+
 <div class="app-shell" id="main-content">
 
   <header class="app-header">
@@ -822,7 +860,9 @@
         <div style="font-size: var(--text-sm); color: var(--shadow);">สแกน PromptPay เพื่อโอนมัดจำ</div>
         <div id="ppAccountName" class="pp-account-info"></div>
         <div class="qr-wrap" id="qrWrap"></div>
-        <div id="countdown" class="countdown-strip">⏰ ห้องถูกล็อคไว้ <span id="countdownText">20:00</span> นาที</div>
+        <!-- A3: save QR to device gallery -->
+        <button id="qrDownloadBtn" class="btn btn-secondary" style="margin-top: var(--space-2); font-size: var(--text-sm);">💾 บันทึก QR ลงเครื่อง</button>
+        <div id="countdown" class="countdown-strip" style="margin-top: var(--space-3);">⏰ ห้องถูกล็อคไว้ <span id="countdownText">20:00</span> นาที</div>
         <div id="fiveMinWarning" class="five-min-warning" role="alert">⚠️ เหลือเวลาไม่ถึง 5 นาที — กรุณาโอนและแนบสลิปโดยด่วน!</div>
       </div>
 
@@ -1387,6 +1427,12 @@
       });
       strip.appendChild(chip);
     }
+    // Scroll the active chip into view (default is day+30, which is off-screen)
+    const activeChip = strip.querySelector('.active');
+    if (activeChip) {
+      // 'nearest' avoids jerky page scroll — only moves the strip container
+      activeChip.scrollIntoView({ block: 'nearest', inline: 'center' });
+    }
   }
 
   // ── Render: rooms list ────────────────────────────────────
@@ -1520,14 +1566,23 @@
       <div class="modal-row"><span class="label">ค่ามัดจำ</span><span class="value" style="color: var(--brand-primary-dark); font-weight: var(--weight-bold);">฿${formatNum(dep)}</span></div>
     `;
 
-    // Pre-fill name with LINE display name — split on first space into first/last
+    // A1: pre-fill from sessionStorage (persists across modal open/close within the session)
+    // Falls back to LINE display name if nothing was typed yet
     const firstInput = document.getElementById('modalFirstName');
     const lastInput  = document.getElementById('modalLastName');
-    if (firstInput && !firstInput.value && state.lineDisplayName) {
+    const phoneInput = document.getElementById('modalPhone');
+    const savedFirst = sessionStorage.getItem('bk_firstName');
+    const savedLast  = sessionStorage.getItem('bk_lastName');
+    const savedPhone = sessionStorage.getItem('bk_phone');
+    if (savedFirst || savedLast) {
+      if (firstInput) firstInput.value = savedFirst || '';
+      if (lastInput)  lastInput.value  = savedLast  || '';
+    } else if (firstInput && !firstInput.value && state.lineDisplayName) {
       const parts = state.lineDisplayName.trim().split(/\s+/);
       firstInput.value = parts[0] || '';
       lastInput.value  = parts.slice(1).join(' ') || '';
     }
+    if (savedPhone && phoneInput && !phoneInput.value) phoneInput.value = savedPhone;
 
     // Early Bird hint — Nest only (gamification scope; matches createBookingLock gate)
     const eb = document.getElementById('modalEarlyBird');
@@ -1569,6 +1624,11 @@
     }
     if (!VALID_DURATIONS.includes(duration)) { return; }
     if (!state.selectedRoom || !state.selectedDate) { return; }
+
+    // A1: persist form fields so reopening modal retains what user typed
+    sessionStorage.setItem('bk_firstName', firstName);
+    sessionStorage.setItem('bk_lastName',  lastName);
+    sessionStorage.setItem('bk_phone',     phone);
 
     const lockBtn = document.getElementById('modalLockBtn');
     lockBtn.disabled = true;
@@ -1833,6 +1893,11 @@
     if (state.earlyBirdEligible) {
       document.getElementById('confEarlyBird').classList.remove('hide');
     }
+    // A1: booking succeeded — clear persisted form fields
+    sessionStorage.removeItem('bk_firstName');
+    sessionStorage.removeItem('bk_lastName');
+    sessionStorage.removeItem('bk_phone');
+
     // P1 #5: hide sticky CTA and 5-min warning on success
     const stickyCta = document.getElementById('slipStickyCta');
     if (stickyCta) stickyCta.classList.add('hide');
@@ -1942,6 +2007,25 @@
       state.kycSubmitting = false;
       updateKycSubmitButton();
     }
+  }
+
+  // ── QR download (A3) ─────────────────────────────────────
+  function downloadQR() {
+    // qrcodejs renders a <canvas> inside #qrWrap; fall back to <img> if canvas absent
+    const canvas = document.querySelector('#qrWrap canvas');
+    const img    = document.querySelector('#qrWrap img');
+    const roomId = state.selectedRoom?.id || 'room';
+    const fname  = `booking-qr-${roomId}.png`;
+    const a = document.createElement('a');
+    if (canvas) {
+      a.href = canvas.toDataURL('image/png');
+    } else if (img) {
+      a.href = img.src;
+    } else {
+      return;
+    }
+    a.download = fname;
+    a.click();
   }
 
   function showKycError(el, msg) {
@@ -2073,6 +2157,18 @@
     document.getElementById('kycSubmitBtn')?.addEventListener('click', submitKycToAdmin);
 
     document.getElementById('cancelBookingBtn').addEventListener('click', cancelBooking);
+
+    // A2: offline / online detection
+    const offlineBanner = document.getElementById('offlineBanner');
+    function syncOfflineBanner() {
+      offlineBanner?.classList.toggle('hide', navigator.onLine);
+    }
+    syncOfflineBanner();
+    window.addEventListener('offline', syncOfflineBanner);
+    window.addEventListener('online',  syncOfflineBanner);
+
+    // A3: QR download button
+    document.getElementById('qrDownloadBtn')?.addEventListener('click', downloadQR);
 
     // P1 #5: sticky slip CTA — scroll to drop zone + trigger file picker
     document.getElementById('slipStickyBtn')?.addEventListener('click', () => {
