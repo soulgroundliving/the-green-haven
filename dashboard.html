@@ -907,7 +907,7 @@
   .bill-room-hdr-tenant{font-size:.85rem;color:var(--text-muted);}
   .bill-paid-badge{font-size:.78rem;font-weight:600;padding:3px 10px;border-radius:12px;}
   .bill-paid-badge.is-paid{background:#dcfce7;color:var(--green-dark);}
-  .bill-paid-badge.is-unpaid{background:#fef3c7;color:#92400e;}
+  .bill-paid-badge.is-unpaid{background:#ffedd5;color:#c2410c;}
 
   /* ── Meter cards (2-up grid) ───────────────────────────────── */
   .bill-meter-cards{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.15rem 0;}
@@ -955,6 +955,7 @@
     padding:12px;font-family:var(--font-brand);font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s;
     display:flex;align-items:center;justify-content:center;gap:7px;}
   .btn-receipt:hover{background:var(--green-dark);transform:translateY(-1px);}
+  .btn-receipt:disabled{background:var(--border,#e2e8f0);color:var(--text-muted,#94a3b8);cursor:not-allowed;transform:none;opacity:1;}
 
   /* Bill step indicator */
   .bill-steps{display:flex;align-items:center;gap:0;margin-bottom:1rem;}
@@ -4441,7 +4442,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
           <div class="bill-actions bill-actions-col">
             <div class="bill-actions-row">
               <button class="btn-invoice" data-action="generateInvoice">📄 ส่งใบวางบิล</button>
-              <button class="btn-receipt" data-action="generateReceipt" id="btnReceipt" disabled style="opacity:.4;cursor:not-allowed;">✅ ออกใบเสร็จรับเงิน</button>
+              <button class="btn-receipt" data-action="generateReceipt" id="btnReceipt" disabled>✅ ออกใบเสร็จรับเงิน</button>
             </div>
           </div>
           <div id="billHint" style="font-size:.76rem;color:var(--text-muted);text-align:center;margin-top:4px;">📄 ส่งใบวางบิลก่อน → อัปโหลดสลิป → ออกใบเสร็จรับเงิน</div>
