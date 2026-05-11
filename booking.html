@@ -326,6 +326,33 @@
       margin-top: var(--space-1);
       min-height: 1em;
     }
+    .modal-name-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-2);
+      margin-bottom: 0;
+    }
+    .modal-name-row .modal-form-col label {
+      display: block;
+      font-size: var(--text-xs);
+      color: var(--shadow);
+      margin-bottom: var(--space-1);
+    }
+    .modal-name-row .modal-form-col input {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--border-base);
+      border-radius: var(--radius-xs);
+      font-family: var(--font-brand);
+    }
+    .modal-name-err {
+      display: block;
+      font-size: var(--text-xs);
+      color: var(--alert);
+      margin-top: var(--space-1);
+      margin-bottom: var(--space-3);
+      min-height: 1em;
+    }
     .modal-cta {
       display: flex;
       gap: var(--space-2);
@@ -578,11 +605,17 @@
         </select>
       </div>
 
-      <div class="modal-form-row">
-        <label for="modalName">ชื่อ-นามสกุล <span style="color: var(--alert)">*</span></label>
-        <input id="modalName" type="text" maxlength="80" autocomplete="name" placeholder="เช่น สมชาย ใจดี">
-        <span id="modalNameErr" class="err"></span>
+      <div class="modal-name-row">
+        <div class="modal-form-col">
+          <label for="modalFirstName">ชื่อ <span style="color: var(--alert)">*</span></label>
+          <input id="modalFirstName" type="text" maxlength="40" autocomplete="given-name" placeholder="ชื่อจริง">
+        </div>
+        <div class="modal-form-col">
+          <label for="modalLastName">นามสกุล <span style="color: var(--alert)">*</span></label>
+          <input id="modalLastName" type="text" maxlength="40" autocomplete="family-name" placeholder="นามสกุล">
+        </div>
       </div>
+      <span id="modalNameErr" class="modal-name-err"></span>
 
       <div class="modal-form-row">
         <label for="modalPhone">เบอร์โทร <span style="color: var(--alert)">*</span></label>
@@ -1227,9 +1260,14 @@
       <div class="modal-row"><span class="label">ค่ามัดจำ</span><span class="value" style="color: var(--brand-primary-dark); font-weight: var(--weight-bold);">฿${formatNum(dep)}</span></div>
     `;
 
-    // Pre-fill name with LINE display name
-    const nameInput = document.getElementById('modalName');
-    if (nameInput && !nameInput.value && state.lineDisplayName) nameInput.value = state.lineDisplayName;
+    // Pre-fill name with LINE display name — split on first space into first/last
+    const firstInput = document.getElementById('modalFirstName');
+    const lastInput  = document.getElementById('modalLastName');
+    if (firstInput && !firstInput.value && state.lineDisplayName) {
+      const parts = state.lineDisplayName.trim().split(/\s+/);
+      firstInput.value = parts[0] || '';
+      lastInput.value  = parts.slice(1).join(' ') || '';
+    }
 
     // Early Bird hint — Nest only (gamification scope; matches createBookingLock gate)
     const eb = document.getElementById('modalEarlyBird');
@@ -1238,7 +1276,7 @@
     eb.classList.toggle('hide', !eligible);
 
     document.getElementById('bookingModal').classList.remove('hide');
-    setTimeout(() => nameInput?.focus(), 100);
+    setTimeout(() => firstInput?.focus(), 100);
   }
   function closeBookingModal() {
     document.getElementById('bookingModal').classList.add('hide');
@@ -1247,7 +1285,9 @@
   }
 
   async function handleLockClick() {
-    const name = document.getElementById('modalName').value.trim();
+    const firstName = document.getElementById('modalFirstName').value.trim();
+    const lastName  = document.getElementById('modalLastName').value.trim();
+    const name = [firstName, lastName].filter(Boolean).join(' ');
     const phone = document.getElementById('modalPhone').value.replace(/\D/g, '');
     const duration = Number(document.getElementById('modalDuration').value);
     const nameErr = document.getElementById('modalNameErr');
@@ -1255,7 +1295,8 @@
     nameErr.textContent = '';
     phoneErr.textContent = '';
 
-    if (name.length < 2) { nameErr.textContent = 'กรุณากรอกชื่อ-นามสกุล'; return; }
+    if (!firstName) { nameErr.textContent = 'กรุณากรอกชื่อ'; return; }
+    if (!lastName)  { nameErr.textContent = 'กรุณากรอกนามสกุล'; return; }
     if (phone.length !== 10 || !phone.startsWith('0')) {
       phoneErr.textContent = 'เบอร์โทรต้อง 10 หลัก ขึ้นต้นด้วย 0';
       return;
