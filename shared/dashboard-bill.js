@@ -944,6 +944,12 @@ function generateReceipt(){
   document.getElementById('step2').className='step done';
   document.getElementById('slipVerifySection').classList.remove('show');
   markRoomPaid(d); // บันทึกสถานะห้องนี้ว่าชำระแล้ว
+  const _hint = document.getElementById('billHint');
+  if (_hint) {
+    _hint.textContent = slipVerified && slipData
+      ? `✅ ออกใบเสร็จแล้ว · ยืนยันสลิป ฿${slipData.amount.toLocaleString()} (${slipData.sender})`
+      : '✅ ออกใบเสร็จเรียบร้อย';
+  }
   document.getElementById('receiptPanel').scrollIntoView({behavior:'smooth'});
 }
 
