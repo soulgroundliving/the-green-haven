@@ -4,6 +4,73 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
+# Plan C4 — Dashboard lazy-subscribe (2026-05-11)
+
+## Recon (grep-verified, no DevTools needed)
+
+19 `onSnapshot` listeners in dashboard/* scripts. Categorized by trigger:
+
+### Tier A — Cold-start eager (fire on `DOMContentLoaded`, regardless of tab)
+1. **`dashboard-bill.js:660`** × 2 — `buildings/{RentRoom|nest}` doc — `_subscribeBuildingPaymentForBill` at DOMContentLoaded+500ms. **Only consumed by bill page.**
+2. **`dashboard-bill.js:731`** — `verifiedSlips` (limit 300, orderBy timestamp) — `_subscribeGlobalVerifiedSlips` at DOMContentLoaded+800ms. **Marks PaymentStore cache; consumed by Bill + Payment Verify pages.** 300-doc initial replay is the heaviest.
+
+### Tier B — Already tab-lazy (subscribe inside `initXxxPage()` called from `showPage`)
+- announcements (`dashboard-extra.js:778`) → `initAnnouncementsPage`
+- communityEvents (`:3301`) → `initCommunityEventsPage`
+- communityDocuments (`:3463`) → `initCommunityDocsPage`
+- serviceProviders (`:3090`) → `initServiceProvidersPage`
+- leaseRequests (`:1276`) → `initLeaseRequestsPage` (tenant→requests sub-tab)
+- historicalRevenue (`:5265`) → Insights page
+- wellness_articles (`dashboard-wellness-content.js:315`) → wellness tab
+- bookings (`dashboard-bookings.js:67`) → `initBookingsAdmin` (tenant→bookings sub-tab)
+- payment-verify verifiedSlips (`dashboard-payment-verify.js:116`) → ⚠️ duplicate of Tier A #2
+
+### Tier C — Trace results (2026-05-11 Phase 1)
+All 8 Tier-C listeners verified lazy ✅ — except one:
+
+| Listener | Triggered by | Verdict |
+|---|---|---|
+| liffUsers (`dashboard-main.js:281`) | `initLiffRequestsPage` ← `switchRequestsTab('liff')` | ✅ lazy |
+| meter_data (`dashboard-extra.js:724`) | `setupMeterDataListener` ← `initRoomsPage`/`initNestPage` ← `showPage('property')` | ✅ lazy |
+| **complaints (`:3902`)** | **`setTimeout(subscribeComplaints, 800)` at module load** | ⚠️ **EAGER** — but powers home `dashComplaintsStatus` widget for realtime updates. **Defensibly eager** — keep. |
+| rewards (`:4290`) | `loadRewardsAdmin` ← `switchGamificationTab('rewards')` | ✅ lazy |
+| pets (`:3607`) | `initPetApprovalsPage` ← `switchRequestsTab('pets')` | ✅ lazy |
+| gamificationConfig (`:4107`) | `subscribeGamificationConfig` ← `initGamificationPage` ← `showPage('gamification')` | ✅ lazy |
+| cleaningServices (`:979`) | `subscribeCleaningCampaign` ← `initHousekeepingPage` ← `switchRequestsTab('housekeeping')` | ✅ lazy |
+| tenants/{rooms\|nest}/list (`dashboard-tenant-page.js:142`) | `_setupTenantRealtimeListener` ← `initTenantPage` ← `showPage('tenant')` | ✅ lazy |
+
+### Duplicate check — `dashboard-bill.js:731` vs `dashboard-payment-verify.js:116`
+**Not a dup.** `dashboard-payment-verify.js:100-105` reuses `window._verifiedSlipsRawCache` via custom event when global subscriber is warm; falls through to its own listener only if user opens Payment Verify within the first 800ms (rare race). Once Tier-A2 migrates global to lazy on `showPage('bill'|'payment-verify')`, the fallback covers the gap.
+
+### Home-widget consumer check — does Tier-A migration break the home dashboard?
+- `updatePaymentStatusWidget` (`dashboard-home-live.js:814`) reads from **BillStore (RTDB)**, NOT verifiedSlips Firestore. ✅ Safe.
+- `updateComplaintsWidget` reads from `localStorage.complaints_data` populated by `RequestsStore._ingest`. ✅ Safe (complaints stays eager).
+- `_subscribeBuildingPaymentForBill` only consumed by `_refreshPromptPayDisplay` on bill page (plus a localStorage.promptpay mirror for tenant_app.html, which is a separate page and doesn't share JS context). ✅ Safe.
+
+### Phase 2 — Fix the two high-confidence wins (Tier A)
+- [ ] **A1: Building payment cache lazy-subscribe** — move `_subscribeBuildingPaymentForBill` from DOMContentLoaded into `initBillPage()` (or first `showPage('bill')`). Verification: open dashboard → switch directly to People Mgmt without visiting bill → confirm no `buildings/RentRoom` listener in Firestore IndexedDB.
+- [ ] **A2: Global verifiedSlips lazy-subscribe** — gate `_subscribeGlobalVerifiedSlips` on first `showPage('bill')` OR `showPage('payment-verify')`. 300-doc initial replay only fires when needed.
+- [ ] If `dashboard-payment-verify.js:116` is dup → remove the duplicate; let A2 cover both.
+
+### Phase 3 — Tier C fixes (after Phase 1 triage)
+- [ ] Migrate any Tier-C subscribers that fire on DOMContentLoaded but only feed admin sub-pages
+- [ ] Skip ones that need to stay always-on (gamificationConfig flag, tenants list — these inform global UI)
+
+### Phase 4 — Verify cold-start cost
+- [ ] Push to Vercel → open `Network` tab → reload dashboard → count Firestore Listen-channel connections in first 3 sec
+- [ ] Expected: drop from ~10–12 listeners on cold-start to ~3–4 (gamificationConfig + tenants + verifiedSlips-now-deferred)
+
+## Why this is safe
+- All migrations: move a `subscribe()` call from DOMContentLoaded to first `showPage()`. The render functions already handle empty-cache start (`renderPaymentStatus`, `renderBillPage`).
+- Easy rollback: revert one commit.
+- No new code, no rule changes, no CF changes — pure listener relocation.
+
+## Out-of-scope for C4
+- `dashboard-home-live.js` snapshots (dashboard home is the default tab anyway — eager is correct)
+- Tenant SSoT listener (`dashboard-tenant-page.js:142`) — cross-tab caching, needs separate analysis
+
+---
+
 # Plan C-F — Continue Audit (2026-05-09b)
 
 ## Recon vs audit map (real numbers)
