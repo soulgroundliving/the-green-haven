@@ -1835,6 +1835,106 @@ function _doResetRoomPayment() {
   renderMeterTable();
 }
 
+// ── P1 UX: Filter + Batch invoice ─────────────────────────────────────────────
+
+/** Toggle grid to show only unpaid rooms */
+let _billFilterUnpaid = false;
+function toggleUnpaidFilter(){
+  _billFilterUnpaid = !_billFilterUnpaid;
+  const grid = document.getElementById('billRoomGrid');
+  const btn  = document.getElementById('btnFilterUnpaid');
+  if(grid) grid.dataset.filter = _billFilterUnpaid ? 'unpaid' : '';
+  if(btn){
+    btn.textContent = _billFilterUnpaid ? '⏳ ยังไม่ชำระ' : 'ทั้งหมด';
+    btn.classList.toggle('active', _billFilterUnpaid);
+  }
+}
+window.toggleUnpaidFilter = toggleUnpaidFilter;
+
+/** Build bill data for a room purely from in-memory data (no DOM reads) */
+async function _buildBillDataForRoom(room, month, year){
+  const bldgInfo = getBuildingInfo(currentBuilding);
+  const fbBld    = bldgInfo.firebaseBuilding;
+
+  // Meter data via MeterStore
+  let md = await MeterStore.get(fbBld, year, month, room.id);
+  if(!md){
+    // fallback: try previous month as eOld baseline
+    const prevD = await MeterStore.getPrev(fbBld, year, month, room.id);
+    if(prevD) md = { eNew:'', eOld:prevD.eNew, wNew:'', wOld:prevD.wNew };
+  }
+
+  const eOld  = md ? (md.eOld ?? 0) : 0;
+  const eNew  = md ? (md.eNew ?? 0) : 0;
+  const wOld  = md ? (md.wOld ?? 0) : 0;
+  const wNew  = md ? (md.wNew ?? 0) : 0;
+  const eRate = room.elecRate || 8;
+  const wRate = 20;
+  const rent  = room.rentPrice || 0;
+  const trash = room.trashFee || 20;
+
+  const eUnits = Math.max(0, eNew - eOld);
+  const wUnits = Math.max(0, wNew - wOld);
+  const eCost  = eUnits * eRate;
+  const wCost  = wUnits * wRate;
+  const total  = rent + eCost + wCost + trash;
+
+  // Skip rooms with no new meter reading yet
+  if(!md || (eNew === 0 && wNew === 0 && eOld === 0)) return null;
+
+  const now     = new Date();
+  const dateStr = now.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+  const no      = `TGH-${year}${String(month).padStart(2,'0')}-${room.id.replace(/[^0-9ก-๙A-Za-z]/g,'')}-${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+
+  return { room:room.id, building:fbBld, rent, rentLabel:'ค่าเช่าห้อง',
+    eNew, eOld, eUnits, eRate, eCost, wNew, wOld, wUnits, wRate, wCost,
+    trash, other:0, lateFee:0, total, month, year:String(year), note:'', no, dateStr, now };
+}
+
+/** Batch-send invoices for all unpaid rooms that have meter data */
+let _batchRunning = false;
+async function batchSendInvoices(){
+  if(_batchRunning){ showToast('กำลังส่งอยู่ กรุณารอ...','warning'); return; }
+
+  const month    = parseInt(document.getElementById('f-month').value);
+  const year     = parseInt(document.getElementById('f-year').value);
+  const bldgInfo = getBuildingInfo(currentBuilding);
+  const fbBld    = bldgInfo.firebaseBuilding;
+  const rooms    = typeof getActiveRoomsWithMetadata==='function'
+    ? getActiveRoomsWithMetadata(fbBld, bldgInfo.metadataArray) : [];
+  const paidMap  = typeof PaymentStore!=='undefined' ? PaymentStore.listForMonth(year, month) : {};
+  const unpaid   = rooms.filter(r => !paidMap[r.id]);
+
+  if(!unpaid.length){ showToast('ทุกห้องชำระแล้ว 🎉','success'); return; }
+
+  _batchRunning = true;
+  const btn = document.getElementById('btnBatchInvoice');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ กำลังส่ง...'; }
+
+  let sent = 0, skipped = 0;
+  for(const room of unpaid){
+    const d = await _buildBillDataForRoom(room, month, year);
+    if(!d || d.total === 0){ skipped++; continue; }
+
+    // Audit log (same as single invoice)
+    if(window.logBillGenerated){
+      window.logBillGenerated(d.room, d.total, { invoiceNumber:d.no, building:d.building, month:d.month, year:d.year });
+    }
+    sent++;
+    if(btn) btn.textContent = `⏳ ส่งแล้ว ${sent}/${unpaid.length - skipped} ห้อง...`;
+    await new Promise(r => setTimeout(r, 120)); // small stagger for audit writes
+  }
+
+  _batchRunning = false;
+  if(btn){ btn.disabled = false; btn.textContent = '📤 ส่งใบวางบิลทั้งหมด (ห้องค้างชำระ)'; }
+
+  const msg = skipped
+    ? `✅ บันทึกแล้ว ${sent} ห้อง (ข้าม ${skipped} ห้องที่ไม่มีข้อมูลมิเตอร์)`
+    : `✅ บันทึกใบวางบิลครบ ${sent} ห้อง`;
+  showToast(msg, 'success');
+}
+window.batchSendInvoices = batchSendInvoices;
+
 // ── P0 UX: Keyboard-first billing flow ────────────────────────────────────────
 // Enter on elec-new → focus water-new
 // Enter on water-new → fire generateInvoice (same as clicking "ส่งใบวางบิล")

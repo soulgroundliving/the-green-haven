@@ -877,7 +877,14 @@
 
   .bill-grid-layout{display:grid;grid-template-columns:340px 1fr;gap:1.4rem;align-items:start;}
   .bill-grid-left{position:sticky;top:1.5rem;max-height:calc(100vh - 200px);overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.8rem;}
-  .bill-grid-left-title{font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.6rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
+  .bill-grid-left-title{font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.6rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.4rem;}
+  .bill-filter-btn{font-size:.71rem;font-weight:600;padding:2px 8px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:all .15s;}
+  .bill-filter-btn.active{background:var(--amber-pale,#fff8e1);color:#92400e;border-color:#f59e0b;}
+  /* hide paid cards when filter is active */
+  #billRoomGrid[data-filter="unpaid"] .bill-room-card.bc-paid{display:none;}
+  .bill-batch-btn{width:100%;margin-top:.5rem;padding:.4rem;background:var(--blue-pale,#e3f2fd);color:var(--blue-dark,#1565c0);border:1.5px solid var(--blue-bright,#1e88e5);border-radius:var(--radius-sm);font-size:.76rem;font-weight:600;cursor:pointer;transition:background .15s;}
+  .bill-batch-btn:hover{background:var(--blue-bright,#1e88e5);color:#fff;}
+  .bill-batch-btn:disabled{opacity:.5;cursor:not-allowed;}
   .bill-room-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:.5rem;}
   .bill-room-card{border-radius:var(--radius-sm);padding:.6rem .4rem .5rem;cursor:pointer;text-align:center;border:2px solid transparent;transition:box-shadow .15s,border-color .15s,transform .1s;line-height:1.35;user-select:none;}
   .bill-room-card:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.12);}
@@ -4268,10 +4275,16 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
     <!-- LEFT: Sticky room-status grid -->
     <div class="bill-grid-left">
-      <div class="bill-grid-left-title">ห้องทั้งหมด — คลิกเพื่อออกบิล</div>
+      <div class="bill-grid-left-title">
+        <span>ห้องทั้งหมด</span>
+        <button id="btnFilterUnpaid" class="bill-filter-btn" data-action="toggleUnpaidFilter">ทั้งหมด</button>
+      </div>
       <div id="billRoomGrid" class="bill-room-grid">
         <div style="color:var(--text-muted);font-size:.8rem;padding:.5rem;">กำลังโหลด...</div>
       </div>
+      <button id="btnBatchInvoice" class="bill-batch-btn" data-action="batchSendInvoices" style="margin-top:.6rem;">
+        📤 ส่งใบวางบิลทั้งหมด (ห้องค้างชำระ)
+      </button>
     </div>
 
     <!-- RIGHT: Form panel -->
