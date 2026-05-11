@@ -1153,6 +1153,10 @@
   .bill-actions-col{display:flex;flex-direction:column;gap:.5rem;}
   .bill-actions-row{display:flex;gap:.5rem;}
   .bill-actions-row .btn-invoice,.bill-actions-row .btn-receipt{flex:1;}
+  /* Payment-state visual feedback on bill action buttons */
+  .bill-actions-row.room-paid .btn-invoice,
+  .bill-actions-row.room-paid .btn-receipt{opacity:.42!important;filter:saturate(.3)!important;}
+  .bill-actions-row.room-unpaid .btn-receipt{opacity:1!important;filter:none!important;}
   .btn-auto-bill{background:linear-gradient(135deg,#9c27b0,#673ab7);color:white;border:none;border-radius:6px;padding:.7rem 1rem;cursor:pointer;font-weight:600;font-size:.9rem;font-family:var(--font-brand);transition:all .2s;width:100%;}
   .btn-auto-bill:hover{background:linear-gradient(135deg,#7b1fa2,#512da8);transform:translateY(-1px);}
 
