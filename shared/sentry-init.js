@@ -21,6 +21,29 @@
  * BEFORE this file loads, so we can tag events with the right surface.
  */
 
+// Swap media="print" → media="all" for [data-gh-lazy-style] <link> tags.
+// CSP-clean replacement for inline `onload="this.media='all'"` (which would
+// need 'unsafe-hashes' for event handler attributes).
+(function () {
+  if (typeof document === 'undefined') return;
+  function activate(link) {
+    if (!link || link.dataset.ghLazyStyleActivated === '1') return;
+    link.dataset.ghLazyStyleActivated = '1';
+    link.media = 'all';
+  }
+  function scan() {
+    document.querySelectorAll('link[data-gh-lazy-style]').forEach(function (link) {
+      if (link.sheet) { activate(link); return; }
+      link.addEventListener('load', function () { activate(link); }, { once: true });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', scan);
+  } else {
+    scan();
+  }
+})();
+
 (function () {
   if (typeof window === 'undefined') return;
 

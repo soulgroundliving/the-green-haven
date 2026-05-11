@@ -125,21 +125,6 @@
     });
   });
 
-  function attach() {
-    document.querySelectorAll(DIALOG_SELECTOR).forEach(function (dialog) {
-      observer.observe(dialog, {
-        attributes: true,
-        attributeFilter: ['style', 'class'],
-      });
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', attach);
-  } else {
-    attach();
-  }
-
   // Re-scan when new dialogs are appended (rare but possible)
   const docObserver = new MutationObserver(function (mutations) {
     mutations.forEach(function (m) {
@@ -156,7 +141,27 @@
       });
     });
   });
-  docObserver.observe(document.body, { childList: true, subtree: true });
+
+  function attach() {
+    document.querySelectorAll(DIALOG_SELECTOR).forEach(function (dialog) {
+      observer.observe(dialog, {
+        attributes: true,
+        attributeFilter: ['style', 'class'],
+      });
+    });
+    // document.body is guaranteed by the time DOMContentLoaded fires (or if
+    // readyState is already 'interactive'/'complete'). Calling .observe(null)
+    // earlier would throw "parameter 1 is not of type 'Node'".
+    if (document.body) {
+      docObserver.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attach);
+  } else {
+    attach();
+  }
 
   window.GhModalA11yBridge = {
     closeTopmost: function () { closeDialog(topmost(visibleDialogs())); },
