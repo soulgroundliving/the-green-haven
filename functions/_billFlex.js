@@ -142,75 +142,28 @@ function normalizeBill(bill) {
 /**
  * Build LINE Flex "ใบแจ้งหนี้" bubble.
  *
- * @param {object} bill       - computeBill output or RTDB bill shape
+ * @param {object} bill     - computeBill output or RTDB bill shape
  * @param {object} [opts]
- * @param {string} [opts.tenantName]   - Full tenant name (shown as "คุณ ...")
- * @param {object} [opts.ownerInfo]    - { bankName, bankAccount, name } from loadOwnerInfo()
+ * @param {string} [opts.tenantName] - Full tenant name (shown as "คุณ ...")
  */
 function buildBillFlex(bill, opts = {}) {
-  const { tenantName = '', ownerInfo = {} } = opts;
+  const { tenantName = '' } = opts;
   const b = normalizeBill(bill);
 
-  const monthLabel  = `${THAI_MONTHS_SHORT[b.month] || b.month}/${b.year}`;
+  const monthLabel   = `${THAI_MONTHS_SHORT[b.month] || b.month}/${b.year}`;
   const dueDateLabel = fmtThaiDate(b.dueDate);
 
-  // Short invoice reference: INV-R15-2505 (building initial + room + YYМM)
   const buildingInitial = String(b.building || '').charAt(0).toUpperCase() || 'X';
   const invoiceRef = `INV-${buildingInitial}${b.room}-${String(b.year % 100).padStart(2,'0')}${String(b.month).padStart(2,'0')}`;
 
   const nameLabel = tenantName ? `คุณ ${tenantName}` : `ห้อง ${b.room}`;
 
-  // ── Body contents ──
-  const bodyContents = [
-    // Invoice meta
-    row('ผู้เช่า', nameLabel),
-    row('เลขที่บิล', invoiceRef),
-    row('ครบกำหนด', dueDateLabel),
-    { type: 'separator', margin: 'md' },
-    // Line items
-    row('ค่าเช่า', fmtBaht(b.rent), { labelColor: '#444444' }),
-    row(`ค่าน้ำ (${b.wUnits || 0} หน่วย)`, fmtBaht(b.wCost), { labelColor: '#444444' }),
-    row(`ค่าไฟ (${b.eUnits || 0} หน่วย)`, fmtBaht(b.eCost), { labelColor: '#444444' }),
-    row('ค่าขยะ', fmtBaht(b.trash), { labelColor: '#444444' }),
-    { type: 'separator', margin: 'md' },
-    // Total
-    {
-      type: 'box', layout: 'horizontal', margin: 'md',
-      contents: [
-        { type: 'text', text: 'ยอดชำระทั้งสิ้น', size: 'sm', weight: 'bold', flex: 3, color: '#333333' },
-        { type: 'text', text: fmtBaht(b.total), size: 'xl', weight: 'bold', color: '#1565c0', flex: 2, align: 'end' }
-      ]
-    }
-  ];
-
-  // Bank account block (only if ownerInfo populated)
-  if (ownerInfo.bankAccount) {
-    const bankLabel = ownerInfo.bankName ? `ธนาคาร${ownerInfo.bankName}` : 'ธนาคาร';
-    bodyContents.push({ type: 'separator', margin: 'md' });
-    bodyContents.push({
-      type: 'box', layout: 'vertical', margin: 'md', spacing: 'xs',
-      contents: [
-        { type: 'text', text: 'ช่องทางการชำระเงิน', size: 'xs', color: '#999999' },
-        { type: 'text', text: bankLabel, size: 'sm', color: '#444444', margin: 'xs' },
-        { type: 'text', text: ownerInfo.bankAccount, size: 'lg', weight: 'bold', color: '#222222' },
-        ...(ownerInfo.name ? [{ type: 'text', text: `ชื่อบัญชี: ${ownerInfo.name}`, size: 'xs', color: '#666666' }] : [])
-      ]
-    });
-  }
-
-  // ── Footer buttons ──
   const footerButtons = [
     {
       type: 'button', style: 'primary', color: '#1565c0', height: 'sm',
       action: { type: 'uri', label: 'ดูใบแจ้งหนี้', uri: TENANT_APP_PAYMENT_URL }
     }
   ];
-  if (ownerInfo.bankAccount) {
-    footerButtons.push({
-      type: 'button', style: 'secondary', height: 'sm', margin: 'sm',
-      action: { type: 'clipboard', label: 'คัดลอกเลขบัญชี', clipboardText: ownerInfo.bankAccount }
-    });
-  }
 
   const bubble = {
     type: 'bubble',
@@ -224,7 +177,24 @@ function buildBillFlex(bill, opts = {}) {
     },
     body: {
       type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px',
-      contents: bodyContents
+      contents: [
+        row('ผู้เช่า', nameLabel),
+        row('เลขที่บิล', invoiceRef),
+        row('ครบกำหนด', dueDateLabel),
+        { type: 'separator', margin: 'md' },
+        row('ค่าเช่า', fmtBaht(b.rent), { labelColor: '#444444' }),
+        row(`ค่าน้ำ (${b.wUnits || 0} หน่วย)`, fmtBaht(b.wCost), { labelColor: '#444444' }),
+        row(`ค่าไฟ (${b.eUnits || 0} หน่วย)`, fmtBaht(b.eCost), { labelColor: '#444444' }),
+        row('ค่าขยะ', fmtBaht(b.trash), { labelColor: '#444444' }),
+        { type: 'separator', margin: 'md' },
+        {
+          type: 'box', layout: 'horizontal', margin: 'md',
+          contents: [
+            { type: 'text', text: 'ยอดชำระทั้งสิ้น', size: 'sm', weight: 'bold', flex: 3, color: '#333333' },
+            { type: 'text', text: fmtBaht(b.total), size: 'xl', weight: 'bold', color: '#1565c0', flex: 2, align: 'end' }
+          ]
+        }
+      ]
     },
     footer: {
       type: 'box', layout: 'vertical', paddingAll: '12px',

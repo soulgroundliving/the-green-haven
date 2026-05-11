@@ -52,7 +52,7 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
-const { loadRoomConfig, loadOwnerInfo, computeBill, buildBillFlex } = require('./_billFlex');
+const { loadRoomConfig, computeBill, buildBillFlex } = require('./_billFlex');
 
 const LINE_TOKEN = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
 
@@ -100,10 +100,7 @@ async function notifyOne({ docId, force = false }) {
     return { docId, skipped: 'no_line_token' };
   }
 
-  const [ownerInfo, tenantSnap] = await Promise.all([
-    loadOwnerInfo(),
-    firestore.collection('tenants').doc(building).collection('list').doc(String(roomId)).get()
-  ]);
+  const tenantSnap = await firestore.collection('tenants').doc(building).collection('list').doc(String(roomId)).get();
   const tenantName = tenantSnap.exists ? (tenantSnap.data()?.name || '') : '';
 
   let usersSnap;
@@ -126,7 +123,7 @@ async function notifyOne({ docId, force = false }) {
     return { docId, skipped: 'no_approved_tenant' };
   }
 
-  const flexMsg = buildBillFlex(bill, { tenantName, ownerInfo });
+  const flexMsg = buildBillFlex(bill, { tenantName });
   const { enqueueLineRetry } = require('./_lineRetry');
   const results = await Promise.allSettled(usersSnap.docs.map(udoc => {
     const lineUserId = udoc.id;
