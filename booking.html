@@ -612,7 +612,7 @@
       color: #fff;
     }
     .step-label {
-      font-size: 9px;
+      font-size: 10px;
       color: var(--pebble);
       text-align: center;
       line-height: 1.2;
@@ -879,6 +879,7 @@
       <img id="slipPreview" class="slip-preview hide" alt="สลิปธนาคาร" style="margin-top: var(--space-3);">
       <div id="slipStatus" class="status-line hide"></div>
       <button id="slipVerifyBtn" class="btn btn-primary hide" style="width:100%; margin-top: var(--space-3);">ยืนยันสลิปและตรวจสอบอัตโนมัติ</button>
+      <button id="expiredRestartBtn" class="btn btn-primary hide" style="width:100%; margin-top: var(--space-3);">เริ่มการจองใหม่อีกครั้ง</button>
     </div>
 
     <button id="cancelBookingBtn" class="btn btn-secondary" style="width:100%; margin-bottom: var(--space-4);">ยกเลิกการจอง</button>
@@ -1104,8 +1105,9 @@
       const el = document.getElementById('spi-' + i);
       if (!el) continue;
       el.classList.remove('active', 'done');
+      el.removeAttribute('aria-current');
       if (i < n) el.classList.add('done');
-      else if (i === n) el.classList.add('active');
+      else if (i === n) { el.classList.add('active'); el.setAttribute('aria-current', 'step'); }
     }
   }
 
@@ -1372,7 +1374,9 @@
       if (el) el.textContent = (free >= 0 ? free : 0) + ' ห้องว่าง';
     });
     document.querySelectorAll('.building-tab').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.bld === state.building);
+      const isActive = btn.dataset.bld === state.building;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
     const isNest = state.building === 'nest';
     const filterRow = document.querySelector('.filter-row');
@@ -1654,7 +1658,7 @@
       state.monthlyRent = data.monthlyRent;
       state.earlyBirdEligible = !!data.earlyBirdEligible;
       state.earlyBirdPoints = Number(data.earlyBirdPoints || 0);
-      state.lockedUntilMs = data.lockedUntil;
+      state.lockedUntilMs = Number(data.lockedUntil) || 0;
 
       closeBookingModal();
       enterPaymentStep(duration);
@@ -1699,6 +1703,11 @@
     if (typeof QRCode === 'function' && state.qrPayload) {
       // eslint-disable-next-line no-new
       new QRCode(qrWrap, { text: state.qrPayload, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+      // Add accessible label to the generated canvas for screen readers
+      requestAnimationFrame(() => {
+        const canvas = qrWrap.querySelector('canvas');
+        if (canvas) { canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', 'QR code สำหรับ PromptPay'); }
+      });
     } else {
       qrWrap.textContent = 'QR สร้างไม่สำเร็จ';
     }
@@ -1709,7 +1718,11 @@
     if (ppNameEl) {
       if (ppInfo && (ppInfo.name || ppInfo.phone)) {
         const phonePart = ppInfo.phone ? ` · ${formatPhone(ppInfo.phone)}` : '';
-        ppNameEl.innerHTML = `บัญชี: <strong>${ppInfo.name || 'Nature Haven'}</strong>${phonePart}`;
+        ppNameEl.textContent = '';
+        const prefix = document.createTextNode('บัญชี: ');
+        const strong = document.createElement('strong');
+        strong.textContent = ppInfo.name || 'Nature Haven';
+        ppNameEl.append(prefix, strong, document.createTextNode(phonePart));
       } else {
         ppNameEl.textContent = '';
       }
@@ -1740,12 +1753,15 @@
         const status = document.getElementById('slipStatus');
         status.classList.remove('hide');
         status.className = 'status-line error';
-        status.textContent = '⏰ หมดเวลาล็อคห้อง — กรุณาเริ่มการจองใหม่';
+        status.textContent = '⏰ หมดเวลาล็อคห้อง';
         // Dismiss sticky CTA and 5-min warning
         const stickyCta = document.getElementById('slipStickyCta');
         if (stickyCta) stickyCta.classList.add('hide');
         const warn = document.getElementById('fiveMinWarning');
         if (warn) warn.classList.remove('show');
+        // Restart CTA — give user a clear next action
+        const restartBtn = document.getElementById('expiredRestartBtn');
+        if (restartBtn) restartBtn.classList.remove('hide');
         return;
       }
       const totalSec = Math.floor(remainMs / 1000);
@@ -2037,7 +2053,9 @@
 
   // ── Cancel booking (during payment step) ──────────────────
   function cancelBooking() {
-    if (!confirm('ยกเลิกการจองและกลับไปเลือกห้องใหม่?')) return;
+    // Skip confirm if lock already expired — nothing left to cancel
+    const alreadyExpired = !state.lockedUntilMs || Date.now() >= state.lockedUntilMs;
+    if (!alreadyExpired && !confirm('ยกเลิกการจองและกลับไปเลือกห้องใหม่?')) return;
     if (state.bookingUnsubscribe) {
       try { state.bookingUnsubscribe(); } catch (_) {}
       state.bookingUnsubscribe = null;
@@ -2045,6 +2063,7 @@
     if (state.countdownTimer) { clearInterval(state.countdownTimer); state.countdownTimer = null; }
     // Don't flip status server-side — expireBookingLocks will pick it up
     state.bookingId = null;
+    state.lockedUntilMs = 0;
     state.qrPayload = null;
     state.qrAmount = 0;
     state.slipBase64 = null;
@@ -2054,6 +2073,8 @@
     if (stickyCta) stickyCta.classList.add('hide');
     const fiveWarn = document.getElementById('fiveMinWarning');
     if (fiveWarn) fiveWarn.classList.remove('show');
+    const restartBtn = document.getElementById('expiredRestartBtn');
+    if (restartBtn) restartBtn.classList.add('hide');
     document.getElementById('stepPayment').classList.add('hide');
     document.getElementById('stepPicker').classList.remove('hide');
     // Re-fetch availability for accurate status after cancellation
@@ -2078,8 +2099,9 @@
     return Number(n || 0).toLocaleString('th-TH');
   }
   function daysBetween(a, b) {
-    const ms = b.setHours(0, 0, 0, 0) - a.setHours(0, 0, 0, 0);
-    return Math.floor(ms / 86400000);
+    const aMs = new Date(a).setHours(0, 0, 0, 0);
+    const bMs = new Date(b).setHours(0, 0, 0, 0);
+    return Math.floor((bMs - aMs) / 86400000);
   }
   function escapeHtml(s) {
     return String(s == null ? '' : s)
@@ -2137,10 +2159,14 @@
     document.getElementById('bookingModal').addEventListener('click', (e) => {
       if (e.target.id === 'bookingModal') closeBookingModal();
     });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !document.getElementById('bookingModal').classList.contains('hide')) {
+        closeBookingModal();
+      }
+    });
 
-    const slipDrop = document.getElementById('slipDrop');
+    // slipDrop is a <label for="slipFileInput"> — no redundant click listener needed
     const slipInput = document.getElementById('slipFileInput');
-    slipDrop.addEventListener('click', () => slipInput.click());
     slipInput.addEventListener('change', (e) => handleSlipFile(e.target.files?.[0]));
     document.getElementById('slipVerifyBtn').addEventListener('click', verifySlip);
 
@@ -2157,6 +2183,7 @@
     document.getElementById('kycSubmitBtn')?.addEventListener('click', submitKycToAdmin);
 
     document.getElementById('cancelBookingBtn').addEventListener('click', cancelBooking);
+    document.getElementById('expiredRestartBtn').addEventListener('click', cancelBooking);
 
     // A2: offline / online detection
     const offlineBanner = document.getElementById('offlineBanner');
