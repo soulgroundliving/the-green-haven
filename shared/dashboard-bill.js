@@ -223,6 +223,8 @@ function calcBill(){
   const lfEl=document.getElementById('c-latefee');
   if(lfEl) lfEl.textContent='฿'+lateFee.toLocaleString();
   document.getElementById('c-total').textContent='฿'+total.toLocaleString();
+  // Live-update QR when invoice panel is already visible (e.g. admin adjusts ค่าปรับ after preview)
+  renderQR('qr-payment', total);
 }
 
 // ===== FORM VALIDATION FUNCTIONS =====
@@ -1260,7 +1262,8 @@ async function saveBillToFirebase(d){
           rate: d.wRate || 20
         },
         trash: d.trash || 0,
-        common: d.other || 0
+        common: d.other || 0,
+        penalty: d.lateFee || 0
       },
       meterReadings: {
         electric: { old: d.eOld || 0, new: d.eNew || 0, units: d.eUnits || 0 },
