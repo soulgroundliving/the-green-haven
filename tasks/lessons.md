@@ -359,3 +359,27 @@ _onLiffClaimsReady(_subscribeX);   // NOT addEventListener('authReady'/'liffLink
 Defined at `tenant_app.html` near `let _taRoom` (around line ~7245). Function MUST be idempotent (helper may call it 3+ times: immediate + authReady + liffLinked). Direct `addEventListener('authReady', subscribeX)` calls for auth-gated reads are now a code smell — they're how this bug class kept recurring.
 
 Refactored 5 callsites to use the helper in `a9628e0` follow-up: `_subscribeBillsRealtime`, `_loadMeterHistoryFromFirestore`, `_subscribeCleaningFromRTDB`, `_subscribeMaintenanceFromRTDB`, `_subscribeComplaintsFromFirestore`. Public-config subscriptions (`_subscribeRewards`, `_subscribeCategories`, etc.) deliberately untouched — they don't need claims.
+
+---
+
+## 2026-05-11 — modal-a11y-bridge conflicts with classList.hide modal pattern
+
+**Mistake:** `booking.html` loads `shared/modal-a11y-bridge.js`. The bridge closes modals via `dialog.style.display = 'none'` (inline). The booking modal uses `classList.add('hide')` / `classList.remove('hide')`. After the bridge fires its ESC handler and sets the inline style, subsequent `classList.remove('hide')` won't reopen the modal — the inline style wins over the CSS class.
+
+**Why:** Two close mechanisms coexisted: bridge's `closeDialog()` (inline style) + our `closeBookingModal()` (class toggle). ESC triggered both (bridge in capture phase, ours in bubble). First close set inline `display:none`; reopen only removed the class, leaving inline intact.
+
+**Rule:** Any modal in this codebase that uses the `classList.hide` open/close pattern MUST either:
+- Use `style.display` throughout (matches bridge convention), OR
+- Add `data-gh-no-bridge="true"` to opt out of the bridge and own ESC + focus-trap + focus-restore manually.
+
+`#bookingModal` in `booking.html` uses option 2 (`data-gh-no-bridge="true"`, `5a6068c`). Modals in `dashboard.html` / `tenant_app.html` that the bridge already manages correctly should NOT get `data-gh-no-bridge` — they use inline style, which matches.
+
+---
+
+## 2026-05-11 — Memory verifier caught stale deposit formula claim before commit
+
+**Mistake:** `lifecycle_stores_facade.md` claimed deposit formula in `createBookingLock.js` was `depositFromConfig > 0 ? depositFromConfig : monthlyRent`. Actual code since a prior session had simplified it to `const depositAmount = monthlyRent * 2` (always 2× rent). The verifier grep returned 0 hits → pre-commit hook blocked the push.
+
+**Why:** The memory doc was written when the formula was conditional. A code simplification was made later without updating the memory verifier claim.
+
+**Rule:** When simplifying a formula or removing a conditional path, grep `memory/lifecycle_*.md` for the old expression and update the claim + verifier command. Memory drift is caught at commit time by `npm run verify:memory` — don't bypass with `--no-verify`.
