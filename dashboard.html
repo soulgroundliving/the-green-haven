@@ -889,11 +889,12 @@
   .bc-tenant{display:block;font-size:.67rem;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
   .bc-amount{display:block;font-size:.72rem;font-weight:600;margin-top:1px;}
 
-  .bill-grid-right{display:flex;flex-direction:column;gap:.9rem;}
+  .bill-grid-right{display:flex;flex-direction:column;gap:.4rem;}
   .bill-empty-state{text-align:center;padding:4rem 1.5rem;color:var(--text-muted);border:2px dashed var(--border);border-radius:var(--radius-sm);background:var(--surface);}
   .bill-empty-state .bill-empty-icon{font-size:2.8rem;margin-bottom:.6rem;}
 
-  .bill-room-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;flex-wrap:wrap;padding:.8rem 1rem;}
+  #billActiveRoom .card{padding:.65rem .9rem;}
+  .bill-room-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:.4rem;flex-wrap:wrap;padding:.5rem .7rem;}
   .bill-room-hdr-left{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap;}
   .bill-room-hdr-num{font-size:1.4rem;font-weight:700;color:var(--text);}
   .bill-room-hdr-tenant{font-size:.85rem;color:var(--text-muted);}
@@ -901,7 +902,7 @@
   .bill-paid-badge.is-paid{background:#dcfce7;color:var(--green-dark);}
   .bill-paid-badge.is-unpaid{background:#fef3c7;color:#92400e;}
 
-  .bill-meter-compact{display:flex;flex-direction:column;gap:.5rem;padding:.6rem 0;}
+  .bill-meter-compact{display:flex;flex-direction:column;gap:.35rem;padding:.2rem 0;}
   .bill-meter-row{display:grid;grid-template-columns:1.4rem 3.5rem 1fr auto 1fr 2.5rem auto auto;align-items:center;gap:.4rem;font-size:.84rem;}
   .bill-meter-row .bm-icon{font-size:1rem;justify-self:center;}
   .bill-meter-row .bm-label{font-size:.75rem;font-weight:600;color:var(--text-muted);}
@@ -916,7 +917,7 @@
   .bill-next-btn:hover{background:var(--green-pale);color:var(--green-dark);border-color:var(--green);}
 
   @media(max-width:900px){.bill-grid-layout{grid-template-columns:1fr}.bill-grid-left{position:static;max-height:280px;}}
-  .bill-form{display:flex;flex-direction:column;gap:.9rem;}
+  .bill-form{display:flex;flex-direction:column;gap:.5rem;}
   .form-section{background:var(--green-pale);border-radius:var(--radius-sm);padding:1.1rem;}
   .form-section.amber{background:var(--accent-light);}
   .form-section-title{font-size:.82rem;font-weight:700;color:var(--green-dark);margin-bottom:.9rem;display:flex;align-items:center;gap:6px;}
@@ -930,7 +931,7 @@
   .form-field input:focus,.form-field select:focus{outline:none;border-color:var(--green);}
   .form-field input[readonly]{background:#f5f5f5;color:var(--text-muted);}
 
-  .calc-display{background:var(--green-pale);border-radius:var(--radius-sm);padding:.95rem;font-size:.86rem;display:flex;flex-direction:column;gap:5px;}
+  .calc-display{background:var(--green-pale);border-radius:var(--radius-sm);padding:.55rem .75rem;font-size:.84rem;display:flex;flex-direction:column;gap:3px;}
   .calc-row{display:flex;justify-content:space-between;}
   .calc-row.total{font-weight:700;font-size:.98rem;color:var(--green-dark);padding-top:7px;border-top:1px solid var(--green-light);}
 
@@ -947,7 +948,7 @@
 
   /* Bill step indicator */
   .bill-steps{display:flex;align-items:center;gap:0;margin-bottom:1rem;}
-  .step{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:var(--radius-sm);font-size:.82rem;font-weight:600;}
+  .step{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-sm);font-size:.79rem;font-weight:600;}
   .step.active{background:var(--blue-pale);color:var(--blue);}
   .step.done{background:var(--green-pale);color:var(--green-dark);}
   .step.pending{background:#f5f5f5;color:var(--text-muted);}
@@ -971,11 +972,11 @@
   .slip-amount-warn{color:var(--red);font-weight:700;}
 
   /* Document panels */
-  .doc-panel{border:2px dashed var(--border);border-radius:var(--radius);padding:1.3rem;min-height:200px;}
+  .doc-panel{border:2px dashed var(--border);border-radius:var(--radius);padding:.6rem;min-height:80px;}
   .doc-panel.invoice-panel{border-color:var(--blue-bright);}
   .doc-panel.receipt-panel{border-color:var(--green);}
-  .doc-placeholder{text-align:center;padding:2.5rem 1rem;color:var(--text-muted);}
-  .doc-placeholder .icon{font-size:2.5rem;margin-bottom:.8rem;}
+  .doc-placeholder{text-align:center;padding:.6rem 1rem;color:var(--text-muted);}
+  .doc-placeholder .icon{font-size:1.6rem;margin-bottom:.2rem;}
 
   /* ===== DOCUMENT STYLES ===== */
   /* Print is handled by printDoc() popup — no @media print needed here */
@@ -4292,7 +4293,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <span class="bill-room-hdr-tenant" id="fpTenantLabel"></span>
             <span class="bill-paid-badge is-unpaid" id="fpPaidBadge">⏳ ยังไม่ชำระ</span>
           </div>
-          <div style="display:flex;align-items:center;gap:.7rem;margin-top:.5rem;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-top:.25rem;flex-wrap:wrap;">
             <!-- Step indicator (per-room) -->
             <div class="bill-steps" id="billSteps" style="margin:0;flex:1;">
               <div class="step active" id="step1"><div class="step-num">1</div>ส่งใบวางบิล</div>
@@ -4422,7 +4423,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
               <button class="btn-receipt" data-action="generateReceipt" id="btnReceipt" disabled style="opacity:.4;cursor:not-allowed;">✅ ออกใบเสร็จรับเงิน</button>
             </div>
           </div>
-          <div id="billHint" style="font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:8px;">📄 ส่งใบวางบิลก่อน → อัปโหลดสลิป → ออกใบเสร็จรับเงิน</div>
+          <div id="billHint" style="font-size:.76rem;color:var(--text-muted);text-align:center;margin-top:4px;">📄 ส่งใบวางบิลก่อน → อัปโหลดสลิป → ออกใบเสร็จรับเงิน</div>
 
           <!-- Next unpaid room (batch workflow) -->
           <button id="btnNextUnpaidRoom" class="bill-next-btn" data-action="goToNextUnpaidRoom">→ ห้องถัดไปที่ยังไม่ชำระ</button>
@@ -4431,7 +4432,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
         <!-- Document panels (below the form) -->
         <div class="card">
-          <div class="card-title" style="color:var(--blue);">📄 ใบวางบิล (ส่งให้ลูกบ้าน)</div>
+          <div class="card-title" style="color:var(--blue);margin-bottom:.3rem;">📄 ใบวางบิล (ส่งให้ลูกบ้าน)</div>
           <div class="doc-panel invoice-panel" id="invoicePanel">
             <div class="doc-placeholder">
               <div class="icon">📄</div>
@@ -4442,7 +4443,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </div>
 
         <div class="card">
-          <div class="card-title" style="color:var(--green);">✅ ใบเสร็จรับเงิน (หลังรับชำระ)</div>
+          <div class="card-title" style="color:var(--green);margin-bottom:.3rem;">✅ ใบเสร็จรับเงิน (หลังรับชำระ)</div>
           <div class="doc-panel receipt-panel" id="receiptPanel">
             <div class="doc-placeholder">
               <div class="icon">✅</div>
