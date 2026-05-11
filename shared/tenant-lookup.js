@@ -39,10 +39,30 @@ class TenantLookup {
       };
     }
 
-    // Legacy fallback
+    // Legacy fallback — try tenantId chain first, then tenantName synthesis.
+    // The latter handles rooms where _syncLeaseToTenantSSoT wrote lease fields
+    // but never carried tenantName → SSoT identity (pre-fix data gap).
     const lease = LeaseAgreementManager.getActiveLease(building, roomId);
-    if (!lease || !lease.tenantId) return null;
-    return TenantConfigManager.getTenant(building, lease.tenantId);
+    if (!lease) return null;
+    if (lease.tenantId) {
+      return TenantConfigManager.getTenant(building, lease.tenantId) || null;
+    }
+    if (lease.tenantName) {
+      // Synthesize minimal tenant from active lease so modal shows as occupied
+      const lsub = ssotDoc?.lease || {};
+      return {
+        ...(ssotDoc || {}),
+        name: lease.tenantName,
+        moveInDate:  lease.moveInDate  || lease.startDate  || lsub.moveInDate  || null,
+        contractEnd: lease.moveOutDate || lease.endDate    || lsub.moveOutDate || null,
+        moveOutDate: lease.moveOutDate || lease.endDate    || lsub.moveOutDate || null,
+        rentAmount:  lease.rentAmount  ?? lsub.rentAmount  ?? null,
+        deposit:     lease.deposit     ?? lsub.deposit     ?? null,
+        contractDocument: lease.contractDocument || lsub.contractDocument || null,
+        contractFileName: lease.contractFileName || lsub.contractFileName || null,
+      };
+    }
+    return null;
   }
 
   // Get lease for a room.

@@ -219,7 +219,11 @@ class LeaseAgreementManager {
         documents:        leaseData.documents || leaseData.documentURLs || null,
         leaseId:          leaseId,
       };
+      // Carry tenantName → name so getTenantByRoom sees an occupied room.
+      // Only written when present; merge:true means existing identity isn't cleared.
+      const identityPatch = leaseData.tenantName ? { name: leaseData.tenantName } : {};
       await fs.setDoc(ref, {
+        ...identityPatch,
         lease: leaseSubobject,
         tenantId: leaseData.tenantId || null,
         building,
