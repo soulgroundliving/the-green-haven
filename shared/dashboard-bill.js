@@ -19,7 +19,7 @@ function onBuildingChange(){
   const lf=document.getElementById('f-latefee'); if(lf) lf.value=0;
   renderPaymentStatus();
   if (typeof _refreshPromptPayDisplay === 'function') _refreshPromptPayDisplay();
-  calcBill(); resetBillFlow();
+  calcBill(); resetBillFlow(); _updateBillActionPaidState();
 }
 
 function populateRoomDropdown(){
@@ -53,8 +53,9 @@ function onRoomChange(){
     const t2 = tenants2[roomId2];
     tn.textContent = t2?.name ? `👤 ${t2.name}${t2.phone?' · '+t2.phone:''}` : '';
   }
-  autoFillMeters().then(()=>{ renderPaymentStatus(); resetBillFlow(); });
+  autoFillMeters().then(()=>{ renderPaymentStatus(); resetBillFlow(); _updateBillActionPaidState(); });
   renderPaymentStatus();
+  _updateBillActionPaidState();
 }
 
 function checkVacant(){
@@ -833,6 +834,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof renderPaymentStatus === 'function' &&
             document.getElementById('page-bill')?.classList.contains('active')) {
           try { renderPaymentStatus(); } catch(e){}
+          try { _updateBillActionPaidState(); } catch(e){}
         }
       });
     }
@@ -1459,6 +1461,23 @@ async function autoGenerateAllBills() {
     console.error('❌ Error in auto-generate bills:', error);
     showToast(`เกิดข้อผิดพลาด: ${error.message}`, 'error');
   }
+}
+
+// Update visual state of ส่งใบวางบิล + ออกใบเสร็จรับเงิน buttons
+// based on whether the selected room has already paid this month.
+// PAID   → both buttons faded  (room is settled, no urgent action)
+// UNPAID → invoice vivid, receipt vivid-override (awaiting payment)
+function _updateBillActionPaidState(){
+  const row=document.querySelector('.bill-actions-row');
+  if(!row)return;
+  const roomId=(document.getElementById('f-room')||{}).value;
+  if(!roomId){row.classList.remove('room-paid','room-unpaid');return;}
+  const month=parseInt(document.getElementById('f-month').value);
+  const year=parseInt(document.getElementById('f-year').value);
+  const fbBld=getBuildingInfo(currentBuilding).firebaseBuilding;
+  const paid=typeof PaymentStore!=='undefined'&&PaymentStore.isPaid(fbBld,roomId,year,month);
+  row.classList.toggle('room-paid',paid);
+  row.classList.toggle('room-unpaid',!paid);
 }
 
 function renderPaymentStatus(){
