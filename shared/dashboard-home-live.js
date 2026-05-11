@@ -710,6 +710,9 @@ function renderMeterTable(){
 function goBillFromTable(roomId, year, month){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  // Lazy-subscribe bill-page Firestore listeners (bypass of showPage)
+  if (typeof window._subscribeBuildingPaymentForBill === 'function') window._subscribeBuildingPaymentForBill();
+  if (typeof window._subscribeGlobalVerifiedSlips === 'function') window._subscribeGlobalVerifiedSlips();
   document.getElementById('page-bill').classList.add('active');
   document.querySelector('.nav-btn[onclick*="\'bill\'"]')?.classList.add('active');
   if(month)document.getElementById('f-month').value=month;

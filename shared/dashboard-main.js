@@ -22,6 +22,12 @@ window._showPageImpl = function(page,btn){
     window._closeSidebarImpl();
   }
   if(page==='dashboard'){setTimeout(initDashboardCharts,100);updateDashboardLive();syncDashboardYearUI();if(typeof applyBuildingAvailability==='function')applyBuildingAvailability(currentYear);}
+  if(page==='bill'){
+    // Lazy-subscribe Firestore listeners only when admin actually visits Bill page.
+    // Both are guard-idempotent — safe to call on every entry.
+    if (typeof window._subscribeBuildingPaymentForBill === 'function') window._subscribeBuildingPaymentForBill();
+    if (typeof window._subscribeGlobalVerifiedSlips === 'function') window._subscribeGlobalVerifiedSlips();
+  }
   if(page==='tenant')initTenantPage();
   if(page==='expense')initExpensePage();
   if(page==='requests-approvals'){

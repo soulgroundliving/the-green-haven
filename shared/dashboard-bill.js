@@ -647,11 +647,16 @@ function _refreshPromptPayDisplay(){
 }
 
 // Subscribe Firestore buildings/{RentRoom|nest} once Firebase ready
+// Lazy: triggered on first showPage('bill') — see dashboard-main.js. The
+// `_buildingPaymentSubscribed` guard makes this idempotent across re-entry.
+window._buildingPaymentSubscribed = window._buildingPaymentSubscribed || false;
 function _subscribeBuildingPaymentForBill(){
+  if (window._buildingPaymentSubscribed) return;
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
     setTimeout(_subscribeBuildingPaymentForBill, 1000);
     return;
   }
+  window._buildingPaymentSubscribed = true;
   const db = window.firebase.firestore();
   const fs = window.firebase.firestoreFunctions;
   const map = { rooms: 'RentRoom', nest: 'nest' };
@@ -664,7 +669,7 @@ function _subscribeBuildingPaymentForBill(){
     } catch(e) { console.warn('buildings subscribe error:', e); }
   });
 }
-document.addEventListener('DOMContentLoaded', () => setTimeout(_subscribeBuildingPaymentForBill, 500));
+window._subscribeBuildingPaymentForBill = _subscribeBuildingPaymentForBill;
 
 // ===== PaymentStore — single facade for payment lookups (Phase 2b 2026-04-19) =====
 // Single Source of Truth: Firestore verifiedSlips (CF-written by SlipOK).
@@ -811,7 +816,12 @@ function _subscribeGlobalVerifiedSlips(){
     }, err => console.warn('global verifiedSlips listen:', err?.message));
   } catch(e) { console.warn('subscribeGlobalVerifiedSlips:', e); }
 }
-document.addEventListener('DOMContentLoaded', () => setTimeout(_subscribeGlobalVerifiedSlips, 800));
+// Lazy: triggered on first showPage('bill') — see dashboard-main.js. The
+// `window._globalSlipsUnsub` guard inside the function makes this idempotent.
+// Consumers (PaymentStore.isPaid grid + dashboard-payment-verify.js fallback)
+// only need the data once the bill page is visible; the home dashboard
+// payment widget reads from BillStore (RTDB), not verifiedSlips Firestore.
+window._subscribeGlobalVerifiedSlips = _subscribeGlobalVerifiedSlips;
 
 // PaymentStore listener: auto-rerender payment grid when a new slip arrives
 document.addEventListener('DOMContentLoaded', () => {
@@ -1482,6 +1492,9 @@ function selectRoomForBill(roomId){
   // เปลี่ยนไปหน้า ออกบิล แล้วเลือกห้องนั้นเลย
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  // Lazy-subscribe bill-page Firestore listeners (bypass of showPage)
+  if (typeof window._subscribeBuildingPaymentForBill === 'function') window._subscribeBuildingPaymentForBill();
+  if (typeof window._subscribeGlobalVerifiedSlips === 'function') window._subscribeGlobalVerifiedSlips();
   document.getElementById('page-bill').classList.add('active');
   document.querySelector('[onclick*="showPage(\'bill\'"]')?.classList.add('active');
   document.getElementById('f-room').value=roomId;
