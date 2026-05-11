@@ -910,10 +910,11 @@
   .bill-paid-badge.is-unpaid{background:#fef3c7;color:#92400e;}
 
   .bill-meter-compact{display:flex;flex-direction:column;gap:.35rem;padding:.2rem 0;}
-  .bill-meter-row{display:grid;grid-template-columns:1.4rem 3.5rem auto auto 1fr auto;align-items:center;gap:.4rem;font-size:.84rem;}
+  .bill-meter-row{display:grid;grid-template-columns:1.4rem 3.5rem 4rem .8rem 4rem 1fr auto;align-items:center;gap:.4rem;font-size:.84rem;}
   .bill-meter-row .bm-icon{font-size:1rem;justify-self:center;}
   .bill-meter-row .bm-label{font-size:.75rem;font-weight:600;color:var(--text-muted);}
   .bill-meter-row .bm-old-val{font-size:.82rem;color:var(--text-muted);font-variant-numeric:tabular-nums;text-align:right;min-width:3.5rem;letter-spacing:.01em;}
+  .bill-meter-row .bm-new-val{font-size:.88rem;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;text-align:right;min-width:3.5rem;letter-spacing:.01em;}
   .bill-meter-row .bm-arrow{color:var(--text-muted);justify-self:center;}
   .bill-meter-row .bm-input{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:5px 7px;font-family:var(--font-brand);font-size:.84rem;background:#fff;width:100%;min-width:0;}
   .bill-meter-row .bm-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px var(--green-pale);}
@@ -4364,7 +4365,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
               <span class="bm-old-val" id="d-elec-old">—</span>
               <input type="number" id="f-elec-old" data-action="calcBill" class="u-hidden" aria-hidden="true" tabindex="-1">
               <span class="bm-arrow">→</span>
-              <input type="number" id="f-elec-new" placeholder="ใหม่" data-action="calcBill" class="bm-input" inputmode="numeric" autocomplete="off">
+              <span class="bm-new-val" id="d-elec-new">—</span>
+              <input type="number" id="f-elec-new" class="u-hidden" aria-hidden="true" tabindex="-1">
               <span class="bm-rate-chip" id="d-elec-rate-lbl">฿8/u</span>
               <input type="number" id="f-elec-rate" value="8" data-action="calcBill" class="u-hidden bm-rate-input" aria-hidden="true" tabindex="-1">
               <input type="number" id="f-elec-units" readonly class="u-hidden">
@@ -4375,7 +4377,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
               <span class="bm-old-val" id="d-water-old">—</span>
               <input type="number" id="f-water-old" data-action="calcBill" class="u-hidden" aria-hidden="true" tabindex="-1">
               <span class="bm-arrow">→</span>
-              <input type="number" id="f-water-new" placeholder="ใหม่" data-action="calcBill" class="bm-input" inputmode="numeric" autocomplete="off">
+              <span class="bm-new-val" id="d-water-new">—</span>
+              <input type="number" id="f-water-new" class="u-hidden" aria-hidden="true" tabindex="-1">
               <span class="bm-rate-chip" id="d-water-rate-lbl">฿20/u</span>
               <input type="number" id="f-water-rate" value="20" data-action="calcBill" class="u-hidden bm-rate-input" aria-hidden="true" tabindex="-1">
               <input type="number" id="f-water-units" readonly class="u-hidden">

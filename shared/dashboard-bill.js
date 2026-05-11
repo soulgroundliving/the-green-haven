@@ -153,9 +153,11 @@ async function autoFillMeters(){
     document.getElementById('f-elec-old').value=(meterData.eOld!=null?meterData.eOld:'');
     document.getElementById('f-water-new').value=(meterData.wNew!=null?meterData.wNew:'');
     document.getElementById('f-water-old').value=(meterData.wOld!=null?meterData.wOld:'');
-    // Update static display labels (P0 UX — old reading shown as label, not input)
+    // Update static display labels (old + new readings shown as labels, not inputs)
     const dEO=document.getElementById('d-elec-old'); if(dEO) dEO.textContent=(meterData.eOld!=null&&meterData.eOld!=='') ? meterData.eOld : '—';
     const dWO=document.getElementById('d-water-old'); if(dWO) dWO.textContent=(meterData.wOld!=null&&meterData.wOld!=='') ? meterData.wOld : '—';
+    const dEN=document.getElementById('d-elec-new'); if(dEN) dEN.textContent=(meterData.eNew!=null&&meterData.eNew!=='') ? meterData.eNew : '—';
+    const dWN=document.getElementById('d-water-new'); if(dWN) dWN.textContent=(meterData.wNew!=null&&meterData.wNew!=='') ? meterData.wNew : '—';
   } else {
     document.getElementById('f-elec-new').value='';
     document.getElementById('f-elec-old').value='';
@@ -163,6 +165,8 @@ async function autoFillMeters(){
     document.getElementById('f-water-old').value='';
     const dEO=document.getElementById('d-elec-old'); if(dEO) dEO.textContent='—';
     const dWO=document.getElementById('d-water-old'); if(dWO) dWO.textContent='—';
+    const dEN=document.getElementById('d-elec-new'); if(dEN) dEN.textContent='—';
+    const dWN=document.getElementById('d-water-new'); if(dWN) dWN.textContent='—';
     // Retry once after 1.2s if METER_DATA was still empty (Firebase not ready yet)
     const isMDEmpty = !window.METER_DATA || (
       Object.keys(window.METER_DATA.rooms||{}).length === 0 &&
@@ -1553,8 +1557,7 @@ function selectRoomForBill(roomId){
   document.querySelectorAll('.bill-room-card').forEach(c=>c.classList.remove('bc-active'));
   const card = document.querySelector(`.bill-room-card[data-room="${roomId}"]`);
   if(card){ card.classList.add('bc-active'); card.scrollIntoView({behavior:'smooth',block:'nearest'}); }
-  // P0 UX: auto-focus the elec-new input for keyboard-first billing
-  setTimeout(()=>{ document.getElementById('f-elec-new')?.focus(); }, 300);
+  // Meter inputs are read-only from database — no auto-focus needed
 }
 
 // ── Direction A helpers ────────────────────────────────────────────────────
@@ -1960,29 +1963,7 @@ window.batchSendInvoices = batchSendInvoices;
   }
 })();
 
-// ── P0 UX: Keyboard-first billing flow ────────────────────────────────────────
-// Enter on elec-new → focus water-new
-// Enter on water-new → fire generateInvoice (same as clicking "ส่งใบวางบิล")
-(function _bindBillKeyboard(){
-  function handleEnter(e){
-    if(e.key!=='Enter'||e.shiftKey||e.ctrlKey||e.metaKey) return;
-    const id=e.target?.id;
-    if(id==='f-elec-new'){
-      e.preventDefault();
-      document.getElementById('f-water-new')?.focus();
-    } else if(id==='f-water-new'){
-      e.preventDefault();
-      if(typeof generateInvoice==='function') generateInvoice();
-    }
-  }
-  // Wire immediately + on DOMContentLoaded (handles both load orders)
-  function wire(){
-    document.getElementById('f-elec-new')?.addEventListener('keydown',handleEnter);
-    document.getElementById('f-water-new')?.addEventListener('keydown',handleEnter);
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire);
-  else wire();
-})();
+// Keyboard Enter flow removed — meter readings are read-only from database
 
 // ── P0 UX: Rate field toggle (⚙️ แก้อัตรา) ──────────────────────────────────
 function toggleRateEdit(){
