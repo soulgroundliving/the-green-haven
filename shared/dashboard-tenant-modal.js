@@ -228,7 +228,8 @@ function openTenantModal(building, roomId) {
   document.getElementById('modalContractDocument').value = contractData || '';
   document.getElementById('modalContractFileName').value = contractFileName || '';
 
-  if (contractStorageURL || contractData) {
+  const _roomOccupied = !!(occupancyInfo?.isOccupied);
+  if ((contractStorageURL || contractData) && _roomOccupied) {
     const tick = document.createTextNode('✅ มีสัญญา: ');
     const strong = document.createElement('strong');
     strong.textContent = contractFileName;
@@ -244,6 +245,9 @@ function openTenantModal(building, roomId) {
       }
     });
     if (statusEl) statusEl.append(tick, strong, previewBtn);
+  } else if (contractStorageURL || contractData) {
+    // Room vacant but SSoT retains an orphaned lease/contract — redirect to history
+    if (statusEl) statusEl.textContent = '📁 พบเอกสารสัญญาเก่า — ดูได้ใน "ประวัติผู้เช่าเก่า"';
   } else {
     if (statusEl) statusEl.textContent = '📋 ยังไม่มีสัญญา — อัพโหลดได้ที่ Tab สัญญา';
   }

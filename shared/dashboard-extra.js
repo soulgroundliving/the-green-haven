@@ -6384,8 +6384,28 @@ async function runAwardComplaintFreeMonthDryRun() {
       'https://asia-southeast1-the-green-haven.cloudfunctions.net/awardComplaintFreeMonthManual?dryRun=1',
       { method: 'POST', headers: { 'Authorization': 'Bearer ' + idToken } }
     );
-    const json = await res.json();
-    out.textContent = '✅ Dry run สำเร็จ:\n\n' + JSON.stringify(json, null, 2);
+    const j = await res.json();
+    // Human-readable summary instead of raw JSON
+    const [yr, mo] = (j.monthKey || '').split('-');
+    const beYear = yr ? Number(yr) + 543 : '?';
+    const monthThai = mo ? mo + '/' + beYear : j.monthKey || '?';
+    const wouldAward = (j.wouldAward || []).join(', ') || '— ไม่มี';
+    const complained = (j.complainedRooms || []).join(', ') || '— ไม่มี';
+    out.textContent = [
+      '✅ Dry run — เดือน ' + monthThai,
+      '',
+      '📊 สรุป:',
+      '  จะได้รับ 40 แต้ม:      ' + (j.awarded ?? '?') + ' ห้อง',
+      '  ข้ามเพราะรับแล้ว:     ' + (j.skippedAlreadyAwarded ?? '?') + ' ห้อง',
+      '  ข้ามเพราะร้องเรียน:   ' + (j.skippedHadComplaint ?? '?') + ' ห้อง',
+      '  ทั้งหมด Nest:         ' + (j.totalRooms ?? '?') + ' ห้อง  (ร้องเรียน ' + (j.complaintsLastMonth ?? '?') + ' ครั้ง)',
+      '',
+      '📋 ห้องที่จะได้แต้ม:',
+      '  ' + wouldAward,
+      '',
+      '⚠️  ห้องที่ร้องเรียน:',
+      '  ' + complained,
+    ].join('\n');
   } catch (e) {
     out.textContent = '❌ Error: ' + e.message;
   }

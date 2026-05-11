@@ -182,6 +182,9 @@
     if (b.slipImagePath) {
       buttons.push(`<button data-bk-action="slip" data-id="${id}" class="u-btn-preview" style="margin:0;padding:4px 10px;">🧾 สลิป</button>`);
     }
+    if (b.kycDocsPath && (status === 'kyc_pending' || status === 'kyc_approved')) {
+      buttons.push(`<button data-bk-action="viewKyc" data-id="${id}" class="u-btn-tbl-edit" style="background:#e3f2fd;border-color:#1976d2;color:#1565c0;">🪪 เอกสาร</button>`);
+    }
     if (status === 'kyc_pending') {
       buttons.push(`<button data-bk-action="approveKyc" data-id="${id}" class="u-btn-tbl-edit" style="background:#bbdefb;border-color:#1976d2;color:#0d47a1;">✓ อนุมัติ KYC</button>`);
     }
@@ -204,6 +207,7 @@
     if (!booking) return;
     if (action === 'details') return openDetailsModal(booking);
     if (action === 'slip') return openSlipViewer(booking);
+    if (action === 'viewKyc') return openKycViewer(booking);
     if (action === 'approveKyc') return doApproveKyc(booking);
     if (action === 'convert') return doConvert(booking);
     if (action === 'cancel') return doCancelLock(booking);
@@ -272,6 +276,93 @@
     } catch (e) {
       console.error('slip download URL failed:', e);
       toastBk('ดึงสลิปไม่สำเร็จ: ' + (e.message || e), 'error');
+    }
+  }
+
+  // ── Action: KYC document viewer ───────────────────────────────────────────
+  async function openKycViewer(b) {
+    if (!b.kycDocsPath) { toastBk('ไม่มีเอกสาร KYC', 'warn'); return; }
+    if (!window.firebase?.storage || !window.firebase?.storageFunctions) {
+      toastBk('Storage SDK ไม่พร้อม', 'error');
+      return;
+    }
+
+    closeAnyModal();
+    const overlay = document.createElement('div');
+    overlay.id = 'booking-kyc-modal';
+    overlay.className = 'u-modal-overlay';
+    overlay.innerHTML = `
+      <div class="u-modal-panel u-modal-panel-md">
+        <div class="u-modal-title">🪪 เอกสาร KYC — ${escapeHtml(b.prospectName || shortBookingRef(b.id))}</div>
+        <div id="kyc-docs-body" style="min-height:100px;display:flex;align-items:center;justify-content:center;">
+          <span style="color:var(--text-muted);">⏳ กำลังโหลด...</span>
+        </div>
+        <div class="u-btn-row" style="margin-top:1rem;">
+          ${b.status === 'kyc_pending'
+            ? `<button id="kyc-approve-btn" class="u-btn-ok" style="background:var(--green-dark);color:#fff;border-color:var(--green-dark);">✓ อนุมัติ KYC</button>`
+            : ''}
+          <button class="u-btn-cancel" data-bk-kyc-close>ปิด</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    _modalOpen = true;
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay || e.target.matches('[data-bk-kyc-close]')) closeAnyModal();
+    });
+    const approveBtn = overlay.querySelector('#kyc-approve-btn');
+    if (approveBtn) approveBtn.addEventListener('click', async () => { closeAnyModal(); await doApproveKyc(b); });
+
+    const DOC_LABELS = {
+      idCardFront:      'บัตร ปชช. หน้า',
+      idCardBack:       'บัตร ปชช. หลัง',
+      houseReg:         'ทะเบียนบ้าน',
+      employmentLetter: 'หนังสือรับรองเงินเดือน',
+    };
+
+    try {
+      const sf = window.firebase.storageFunctions;
+      const stg = window.firebase.storage();
+      const folder = b.kycDocsPath.endsWith('/') ? b.kycDocsPath : b.kycDocsPath + '/';
+      const listResult = await sf.listAll(sf.ref(stg, folder));
+      const body = document.getElementById('kyc-docs-body');
+      if (!body) return;
+
+      if (listResult.items.length === 0) {
+        body.innerHTML = '<div style="padding:1.5rem;color:var(--text-muted);text-align:center;">ไม่พบไฟล์เอกสารใน Storage</div>';
+        return;
+      }
+
+      const items = await Promise.all(listResult.items.map(async itemRef => {
+        const url = await sf.getDownloadURL(itemRef);
+        const name = itemRef.name;
+        const docType = name.replace(/\.[^.]+$/, '');
+        const label = DOC_LABELS[docType] || docType;
+        const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(name);
+        return { url, name, label, isImage };
+      }));
+
+      body.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.8rem;width:100%;padding:.5rem 0;">
+        ${items.map(it => `
+          <a href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer"
+             style="display:block;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;text-decoration:none;color:inherit;transition:box-shadow .15s;"
+             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.15)'" onmouseout="this.style.boxShadow=''">
+            ${it.isImage
+              ? `<img src="${escapeHtml(it.url)}" alt="${escapeHtml(it.label)}"
+                     style="width:100%;height:120px;object-fit:cover;display:block;"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                 <div style="display:none;height:120px;align-items:center;justify-content:center;font-size:2.5rem;background:var(--surface-sunken);">📄</div>`
+              : `<div style="height:120px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;background:var(--surface-sunken);">📄</div>`
+            }
+            <div style="padding:.4rem .6rem .1rem;font-size:.82rem;font-weight:600;color:var(--text);">${escapeHtml(it.label)}</div>
+            <div style="padding:.1rem .6rem .5rem;font-size:.72rem;color:var(--green-dark);">คลิกเพื่อเปิด ↗</div>
+          </a>
+        `).join('')}
+      </div>`;
+    } catch (e) {
+      const body = document.getElementById('kyc-docs-body');
+      if (body) body.innerHTML = `<div style="padding:1rem;color:#c62828;">โหลดเอกสารไม่สำเร็จ: ${escapeHtml(e.message || String(e))}</div>`;
+      console.error('openKycViewer failed:', e);
     }
   }
 
@@ -349,8 +440,10 @@
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function closeAnyModal() {
-    const m = document.getElementById('booking-details-modal');
-    if (m) m.remove();
+    ['booking-details-modal', 'booking-kyc-modal'].forEach(id => {
+      const m = document.getElementById(id);
+      if (m) m.remove();
+    });
     _modalOpen = false;
   }
   function toastBk(msg, kind) {

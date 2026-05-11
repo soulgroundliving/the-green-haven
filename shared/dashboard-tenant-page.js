@@ -16,6 +16,8 @@ function _projectSSoTToFlat(t) {
   const lease = t.lease || {};
   return {
     ...t,
+    // Align with TenantFirebaseSync.loadLease() — combine firstName+lastName when name is empty
+    name: t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim() || null,
     contractEnd: t.contractEnd || lease.endDate || lease.moveOutDate || t.moveOutDate || null,
     moveInDate:  t.moveInDate  || lease.startDate || lease.moveInDate || null,
     moveOutDate: t.moveOutDate || lease.endDate || lease.moveOutDate || null,
