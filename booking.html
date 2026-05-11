@@ -380,6 +380,12 @@
       color: var(--shadow);
       flex: 0 0 auto;
     }
+    .btn-danger {
+      background: rgba(192,100,88,0.12);
+      color: var(--alert);
+      border: 1px solid rgba(192,100,88,0.3);
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(192,100,88,0.2); }
 
     /* ── Payment step ────────────────────────────────────────── */
     .payment-card {
@@ -789,7 +795,7 @@
   </section>
 
   <!-- ──────────── Step 2: Booking detail modal ──────────── -->
-  <div id="bookingModal" class="modal-overlay hide" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div id="bookingModal" class="modal-overlay hide" role="dialog" aria-modal="true" aria-labelledby="modalTitle" data-gh-no-bridge="true">
     <div class="modal-panel">
       <h2 id="modalTitle" class="modal-title">ยืนยันการจอง</h2>
       <div id="modalSummary"></div>
@@ -882,7 +888,15 @@
       <button id="expiredRestartBtn" class="btn btn-primary hide" style="width:100%; margin-top: var(--space-3);">เริ่มการจองใหม่อีกครั้ง</button>
     </div>
 
-    <button id="cancelBookingBtn" class="btn btn-secondary" style="width:100%; margin-bottom: var(--space-4);">ยกเลิกการจอง</button>
+    <button id="cancelBookingBtn" class="btn btn-secondary" style="width:100%; margin-bottom: var(--space-2);">ยกเลิกการจอง</button>
+    <!-- Inline confirm panel (replaces window.confirm) -->
+    <div id="cancelConfirmPanel" class="hide" style="display:none; background:rgba(192,100,88,0.07); border:1px solid rgba(192,100,88,0.22); border-radius:var(--radius-sm); padding:var(--space-3) var(--space-4); margin-bottom:var(--space-4); text-align:center;">
+      <p style="font-size:var(--text-sm); color:var(--ink); margin:0 0 var(--space-3);">ยืนยันยกเลิกการจองและกลับไปเลือกห้องใหม่?</p>
+      <div style="display:flex; gap:var(--space-2); justify-content:center;">
+        <button id="cancelConfirmYes" class="btn btn-danger" style="flex:1; max-width:120px;">ยกเลิกการจอง</button>
+        <button id="cancelConfirmNo"  class="btn btn-secondary" style="flex:1; max-width:120px;">ไม่</button>
+      </div>
+    </div>
     <!-- Extra bottom padding so sticky CTA never overlaps content -->
     <div style="height: 72px;"></div>
   </section>
@@ -1090,6 +1104,7 @@
     countdownTimer: null,
     slipBase64: null,
     confirmed: false,
+    _modalPrevFocus: null,
     // Phase 5: KYC upload tracking
     kycUploaded: { idCardFront: false, idCardBack: false, houseReg: false, employmentLetter: false },
     kycSubmitting: false,
@@ -1418,7 +1433,8 @@
       if (iso === state.selectedDate) chip.classList.add('active');
       // P1 #2: mark early-bird qualifying dates with a subtle indicator
       if (isEarlyBird) chip.classList.add('eb-eligible');
-      chip.setAttribute('aria-label', `${d.getDate()} ${months[d.getMonth()]}${isEarlyBird ? ' (Early Bird)' : ''}`);
+      chip.setAttribute('aria-label', `${d.getDate()} ${months[d.getMonth()]}${isEarlyBird ? ' (Early Bird +500 แต้ม)' : ''}`);
+      if (isEarlyBird) chip.setAttribute('title', 'Early Bird: จองล่วงหน้า ≥ 30 วัน รับ +500 แต้ม');
       chip.innerHTML = `
         <div class="dow">${dows[d.getDay()]}</div>
         <div class="day">${d.getDate()}</div>
@@ -1595,12 +1611,17 @@
     eb.classList.toggle('hide', !eligible);
 
     setStep(2);  // P1 #1
+    state._modalPrevFocus = document.activeElement;
     document.getElementById('bookingModal').classList.remove('hide');
     setTimeout(() => firstInput?.focus(), 100);
   }
   function closeBookingModal() {
     setStep(1);  // P1 #1: back to room selection
     document.getElementById('bookingModal').classList.add('hide');
+    if (state._modalPrevFocus && typeof state._modalPrevFocus.focus === 'function') {
+      try { state._modalPrevFocus.focus(); } catch (_) {}
+      state._modalPrevFocus = null;
+    }
     document.getElementById('modalNameErr').textContent = '';
     document.getElementById('modalPhoneErr').textContent = '';
     const genErr = document.getElementById('modalGeneralErr');
@@ -2053,9 +2074,7 @@
 
   // ── Cancel booking (during payment step) ──────────────────
   function cancelBooking() {
-    // Skip confirm if lock already expired — nothing left to cancel
-    const alreadyExpired = !state.lockedUntilMs || Date.now() >= state.lockedUntilMs;
-    if (!alreadyExpired && !confirm('ยกเลิกการจองและกลับไปเลือกห้องใหม่?')) return;
+    // Confirm panel (1b) handles the non-expired case; this function is always a committed cancel
     if (state.bookingUnsubscribe) {
       try { state.bookingUnsubscribe(); } catch (_) {}
       state.bookingUnsubscribe = null;
@@ -2075,6 +2094,8 @@
     if (fiveWarn) fiveWarn.classList.remove('show');
     const restartBtn = document.getElementById('expiredRestartBtn');
     if (restartBtn) restartBtn.classList.add('hide');
+    const cancelPanel = document.getElementById('cancelConfirmPanel');
+    if (cancelPanel) { cancelPanel.style.display = 'none'; cancelPanel.classList.add('hide'); }
     document.getElementById('stepPayment').classList.add('hide');
     document.getElementById('stepPicker').classList.remove('hide');
     // Re-fetch availability for accurate status after cancellation
@@ -2160,8 +2181,18 @@
       if (e.target.id === 'bookingModal') closeBookingModal();
     });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !document.getElementById('bookingModal').classList.contains('hide')) {
-        closeBookingModal();
+      const modal = document.getElementById('bookingModal');
+      if (modal.classList.contains('hide')) return;
+      if (e.key === 'Escape') { closeBookingModal(); return; }
+      // Focus trap: keep Tab / Shift-Tab inside the modal
+      if (e.key === 'Tab') {
+        const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+        const focusable = Array.from(modal.querySelectorAll(FOCUSABLE)).filter(el => el.offsetParent !== null || window.getComputedStyle(el).position === 'fixed');
+        if (!focusable.length) { e.preventDefault(); return; }
+        const first = focusable[0];
+        const last  = focusable[focusable.length - 1];
+        if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
+        else            { if (document.activeElement === last)  { e.preventDefault(); first.focus(); } }
       }
     });
 
@@ -2182,7 +2213,25 @@
     });
     document.getElementById('kycSubmitBtn')?.addEventListener('click', submitKycToAdmin);
 
-    document.getElementById('cancelBookingBtn').addEventListener('click', cancelBooking);
+    // cancelBookingBtn shows inline confirm panel (1b — replaces window.confirm)
+    const cancelPanel = document.getElementById('cancelConfirmPanel');
+    document.getElementById('cancelBookingBtn').addEventListener('click', () => {
+      const alreadyExpired = !state.lockedUntilMs || Date.now() >= state.lockedUntilMs;
+      if (alreadyExpired) { cancelBooking(); return; }
+      cancelPanel.style.display = '';
+      cancelPanel.classList.remove('hide');
+      document.getElementById('cancelConfirmYes').focus();
+    });
+    document.getElementById('cancelConfirmYes').addEventListener('click', () => {
+      cancelPanel.style.display = 'none';
+      cancelPanel.classList.add('hide');
+      cancelBooking();
+    });
+    document.getElementById('cancelConfirmNo').addEventListener('click', () => {
+      cancelPanel.style.display = 'none';
+      cancelPanel.classList.add('hide');
+      document.getElementById('cancelBookingBtn').focus();
+    });
     document.getElementById('expiredRestartBtn').addEventListener('click', cancelBooking);
 
     // A2: offline / online detection
