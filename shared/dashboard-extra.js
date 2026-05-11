@@ -1880,13 +1880,13 @@ function renderLeaseAgreementsPage() {
     });
   });
 
-  // t.id is the roomId (key from TenantConfigManager). Use getActiveLease(building, roomId)
-  // which checks SSoT first then localStorage — correct for both old and new data.
+  // t.roomId is the canonical room key from TenantConfigManager (reference equality to find t.id
+  // was always broken — t.id is undefined). Filter to occupied rooms via getActiveLease.
   const tenantOptions = allTenants
-    .filter(t => LeaseAgreementManager.getActiveLease(t.building, t.id) !== null)
+    .filter(t => t.roomId && LeaseAgreementManager.getActiveLease(t.building, t.roomId) !== null)
     .map(t => {
       const buildingLabel = t.building === 'rooms' ? 'ห้องแถว' : 'Nest';
-      return `<option value="${t.id}">${_escapeHTML(t.name || `ห้อง ${t.id}`)} — ห้อง ${t.id} (${buildingLabel})</option>`;
+      return `<option value="${t.roomId}">${_escapeHTML(t.name || `ห้อง ${t.roomId}`)} — ห้อง ${t.roomId} (${buildingLabel})</option>`;
     }).join('');
 
   container.innerHTML = `
@@ -1988,10 +1988,10 @@ function createNewLease() {
   }
   const { tenant, building } = tenantInfo;
 
-  // Derive room from active lease (tenant→lease→room relationship)
-  // If no active lease exists yet, that's a data gap — tenant wasn't fully saved in Tab ผู้เช่า
-  const activeLease = LeaseAgreementManager.getLeasesByTenant(tenantId).find(l => l.status === 'active');
-  const roomId = activeLease?.roomId;
+  // tenantId here is the roomId (select value = t.roomId). Use getActiveLease(building, roomId)
+  // which checks SSoT first — consistent with the filter used to build the dropdown.
+  const roomId = tenantId;
+  const activeLease = LeaseAgreementManager.getActiveLease(building, roomId);
   if (!roomId) {
     showToast('ผู้เช่านี้ยังไม่มีห้อง กรุณาแก้ไขผ่าน Tab ผู้เช่าก่อน', 'error');
     return;
