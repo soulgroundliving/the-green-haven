@@ -864,6 +864,58 @@
   /* ===== BILL FLOW ===== */
   .bill-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.8rem;}
   .bill-layout > div:last-child{position:sticky;top:1.5rem;align-self:start;}
+
+  /* === Direction A: Room-Grid-First === */
+  .bill-cmd-strip{display:flex;align-items:center;gap:.6rem;padding:.7rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:1.2rem;flex-wrap:wrap;}
+  .bill-cmd-strip label{font-size:.75rem;font-weight:600;color:var(--text-muted);white-space:nowrap;}
+  .bill-cmd-strip select,.bill-cmd-strip input[type=number]{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-family:var(--font-brand);font-size:.85rem;background:#fff;color:var(--text);}
+  .bill-cmd-strip select:focus,.bill-cmd-strip input[type=number]:focus{outline:none;border-color:var(--green);}
+  .bill-cmd-year{width:80px;}
+  .bill-cmd-building{min-width:190px;}
+  .bill-cmd-sep{width:1px;height:24px;background:var(--border);margin:0 .2rem;}
+  .bill-progress-chip{margin-left:auto;font-size:.82rem;font-weight:600;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 12px;white-space:nowrap;}
+
+  .bill-grid-layout{display:grid;grid-template-columns:340px 1fr;gap:1.4rem;align-items:start;}
+  .bill-grid-left{position:sticky;top:1.5rem;max-height:calc(100vh - 200px);overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.8rem;}
+  .bill-grid-left-title{font-size:.78rem;font-weight:700;color:var(--text-muted);margin-bottom:.6rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
+  .bill-room-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:.5rem;}
+  .bill-room-card{border-radius:var(--radius-sm);padding:.6rem .4rem .5rem;cursor:pointer;text-align:center;border:2px solid transparent;transition:box-shadow .15s,border-color .15s,transform .1s;line-height:1.35;user-select:none;}
+  .bill-room-card:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.12);}
+  .bill-room-card.bc-paid{background:#f0fdf4;border-color:var(--green);color:var(--green-dark);}
+  .bill-room-card.bc-unpaid{background:#fff8f0;border-color:#f59e0b;color:#92400e;}
+  .bill-room-card.bc-active{border-color:var(--blue-bright)!important;box-shadow:0 0 0 3px rgba(2,132,199,.15)!important;background:#eff9ff!important;color:var(--blue-dark)!important;}
+  .bc-icon{display:block;font-size:1rem;}
+  .bc-num{display:block;font-size:.95rem;font-weight:700;}
+  .bc-tenant{display:block;font-size:.67rem;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+  .bc-amount{display:block;font-size:.72rem;font-weight:600;margin-top:1px;}
+
+  .bill-grid-right{display:flex;flex-direction:column;gap:.9rem;}
+  .bill-empty-state{text-align:center;padding:4rem 1.5rem;color:var(--text-muted);border:2px dashed var(--border);border-radius:var(--radius-sm);background:var(--surface);}
+  .bill-empty-state .bill-empty-icon{font-size:2.8rem;margin-bottom:.6rem;}
+
+  .bill-room-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;flex-wrap:wrap;padding:.8rem 1rem;}
+  .bill-room-hdr-left{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap;}
+  .bill-room-hdr-num{font-size:1.4rem;font-weight:700;color:var(--text);}
+  .bill-room-hdr-tenant{font-size:.85rem;color:var(--text-muted);}
+  .bill-paid-badge{font-size:.78rem;font-weight:600;padding:3px 10px;border-radius:12px;}
+  .bill-paid-badge.is-paid{background:#dcfce7;color:var(--green-dark);}
+  .bill-paid-badge.is-unpaid{background:#fef3c7;color:#92400e;}
+
+  .bill-meter-compact{display:flex;flex-direction:column;gap:.5rem;padding:.6rem 0;}
+  .bill-meter-row{display:grid;grid-template-columns:1.4rem 3.5rem 1fr auto 1fr 2.5rem auto auto;align-items:center;gap:.4rem;font-size:.84rem;}
+  .bill-meter-row .bm-icon{font-size:1rem;justify-self:center;}
+  .bill-meter-row .bm-label{font-size:.75rem;font-weight:600;color:var(--text-muted);}
+  .bill-meter-row .bm-arrow{color:var(--text-muted);justify-self:center;}
+  .bill-meter-row .bm-input{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:5px 7px;font-family:var(--font-brand);font-size:.84rem;background:#fff;width:100%;min-width:0;}
+  .bill-meter-row .bm-input:focus{outline:none;border-color:var(--green);}
+  .bill-meter-row .bm-rate{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:5px 6px;font-size:.8rem;width:46px;background:#f9fafb;font-family:var(--font-brand);}
+  .bill-meter-row .bm-unit{font-size:.72rem;color:var(--text-muted);}
+  .bill-meter-row .bm-cost{font-weight:700;font-size:.88rem;color:var(--green-dark);white-space:nowrap;justify-self:end;}
+
+  .bill-next-btn{width:100%;padding:.55rem;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-muted);font-size:.82rem;cursor:pointer;transition:background .15s,color .15s;}
+  .bill-next-btn:hover{background:var(--green-pale);color:var(--green-dark);border-color:var(--green);}
+
+  @media(max-width:900px){.bill-grid-layout{grid-template-columns:1fr}.bill-grid-left{position:static;max-height:280px;}}
   .bill-form{display:flex;flex-direction:column;gap:.9rem;}
   .form-section{background:var(--green-pale);border-radius:var(--radius-sm);padding:1.1rem;}
   .form-section.amber{background:var(--accent-light);}
@@ -4187,204 +4239,222 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   </div>
   <div id="bill-main-tab-billing">
 
-  <!-- Step indicator -->
-  <div class="bill-steps" id="billSteps">
-    <div class="step active" id="step1"><div class="step-num">1</div>กรอกข้อมูล & ส่งใบวางบิล</div>
-    <div class="step-arrow">→</div>
-    <div class="step pending" id="step2"><div class="step-num">2</div>ยืนยันรับเงิน & ออกใบเสร็จ</div>
+  <!-- Command strip: building / month / year — always visible, drives the grid -->
+  <div class="bill-cmd-strip">
+    <label>ตึก</label>
+    <select id="f-building" class="bill-cmd-building" data-action="onBuildingChange">
+      <option value="old">🏠 ห้องแถว (1,200–2,000 บาท)</option>
+      <option value="new">🏗️ Nest (Studio / Pet Friendly)</option>
+    </select>
+    <div class="bill-cmd-sep"></div>
+    <label>เดือน</label>
+    <select id="f-month" data-action="autoFillMeters">
+      <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+      <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+      <option value="5" selected>พฤษภาคม</option><option value="6">มิถุนายน</option>
+      <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+      <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+      <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+    </select>
+    <label>ปี</label>
+    <input type="number" id="f-year" value="2569" min="2560" max="2590" class="bill-cmd-year" data-action="autoFillMeters">
+    <div id="billProgressChip" class="bill-progress-chip">—</div>
   </div>
 
-  <div class="bill-layout">
-    <!-- LEFT: FORM -->
-    <div>
-      <div class="card bill-form">
+  <!-- Main grid: left room cards + right form panel -->
+  <div class="bill-grid-layout">
 
-        <!-- PromptPay Info (read-only, loaded per-building from Firestore) -->
-        <div id="pp-display" style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:.6rem .9rem;margin-bottom:.8rem;font-size:.82rem;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-          <div>
-            <span style="font-weight:700;color:var(--accent-dark);">📱 PromptPay:</span>
-            <span id="pp-display-number" style="font-family:monospace;font-weight:700;color:#424242;">—</span>
-            <span id="pp-display-payee" style="color:var(--text-muted);font-size:.76rem;margin-left:6px;"></span>
+    <!-- LEFT: Sticky room-status grid -->
+    <div class="bill-grid-left">
+      <div class="bill-grid-left-title">ห้องทั้งหมด — คลิกเพื่อออกบิล</div>
+      <div id="billRoomGrid" class="bill-room-grid">
+        <div style="color:var(--text-muted);font-size:.8rem;padding:.5rem;">กำลังโหลด...</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Form panel -->
+    <div class="bill-grid-right">
+
+      <!-- Empty state (no room selected) -->
+      <div id="billEmptyState" class="bill-empty-state">
+        <div class="bill-empty-icon">👈</div>
+        <div style="font-weight:600;font-size:.95rem;">เลือกห้องจากกริดเพื่อออกบิล</div>
+        <div style="font-size:.8rem;margin-top:.3rem;opacity:.65;">คลิกห้อง ⏳ (สีเหลือง) เพื่อเริ่มออกบิล<br>คลิกห้อง ✅ (สีเขียว) เพื่อดูรายละเอียด</div>
+      </div>
+
+      <!-- Active room form (hidden until room clicked) -->
+      <div id="billActiveRoom" class="u-hidden">
+
+        <!-- Room header card -->
+        <div class="card bill-room-hdr">
+          <div class="bill-room-hdr-left">
+            <span class="bill-room-hdr-num" id="fpRoomNum">ห้อง —</span>
+            <span class="bill-room-hdr-tenant" id="fpTenantLabel"></span>
+            <span class="bill-paid-badge is-unpaid" id="fpPaidBadge">⏳ ยังไม่ชำระ</span>
           </div>
-          <a href="#" data-action="navToOwnerTab" style="font-size:.74rem;color:var(--blue-dark);text-decoration:none;">⚙️ แก้ไขในหน้า Owner</a>
-        </div>
-
-        <!-- Step 1: Building + Room (merged) -->
-        <div class="form-section amber">
-          <div class="form-section-title" role="heading" aria-level="3">🏠 ขั้นตอนที่ 1 — เลือกห้อง</div>
-          <div class="form-grid">
-            <div class="form-field full">
-              <label>ตึก</label>
-              <select id="f-building" data-action="onBuildingChange">
-                <option value="old">🏠 ห้องแถว (ห้องพัก 1,200–2,000 บาท)</option>
-                <option value="new">🏗️ Nest (Studio / Pet Friendly)</option>
-              </select>
+          <div style="display:flex;align-items:center;gap:.7rem;margin-top:.5rem;flex-wrap:wrap;">
+            <!-- Step indicator (per-room) -->
+            <div class="bill-steps" id="billSteps" style="margin:0;flex:1;">
+              <div class="step active" id="step1"><div class="step-num">1</div>ส่งใบวางบิล</div>
+              <div class="step-arrow">→</div>
+              <div class="step pending" id="step2"><div class="step-num">2</div>ออกใบเสร็จ</div>
             </div>
-            <div class="form-field">
-              <label>ห้องเลขที่</label>
-              <select id="f-room" data-action="onRoomChange">
-                <option value="">-- เลือกห้อง --</option>
-              </select>
-              <div id="f-tenant-name" style="font-size:.76rem;color:var(--green-dark);font-weight:600;margin-top:3px;min-height:16px;"></div>
-            </div>
-            <div class="form-field">
-              <label>ค่าเช่าห้อง (บาท)</label>
-              <input type="number" id="f-rent" placeholder="0" data-action="calcBill">
-            </div>
-            <div class="form-field">
-              <label>ประจำเดือน</label>
-              <select id="f-month" data-action="autoFillMeters">
-                <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
-                <option value="3">มีนาคม</option><option value="4">เมษายน</option>
-                <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
-                <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
-                <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
-                <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label>ปี (พ.ศ.)</label>
-              <input type="number" id="f-year" value="2569" min="2560" max="2590" data-action="autoFillMeters">
+            <!-- PromptPay (compact) -->
+            <div id="pp-display" style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:.4rem .8rem;font-size:.78rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span style="font-weight:700;color:var(--accent-dark);">📱</span>
+              <span id="pp-display-number" style="font-family:monospace;font-weight:700;color:#424242;">—</span>
+              <span id="pp-display-payee" style="color:var(--text-muted);font-size:.73rem;"></span>
+              <a href="#" data-action="navToOwnerTab" style="font-size:.72rem;color:var(--blue-dark);text-decoration:none;white-space:nowrap;">⚙️ แก้ไข</a>
             </div>
           </div>
         </div>
 
-        <!-- Daily rate toggle (shown for floor 1 new building rooms) -->
-        <div class="daily-section" id="dailySection">
-          <div style="font-weight:700;font-size:.85rem;color:var(--accent-dark);margin-bottom:8px;">📅 ตัวเลือกรายวัน</div>
-          <div class="form-grid">
-            <div class="form-field">
-              <label>ประเภทการเช่า</label>
-              <select id="f-rent-type" data-action="onRentTypeChange">
-                <option value="monthly">รายเดือน (5,600 บาท)</option>
-                <option value="daily">รายวัน (~400 บาท/คืน)</option>
-              </select>
-            </div>
-            <div class="form-field" id="dailyNightsField" style="display:none;">
-              <label>จำนวนคืน</label>
-              <input type="number" id="f-nights" value="1" min="1" data-action="calcBill">
-            </div>
-            <div class="form-field" id="dailyRateField" style="display:none;">
-              <label>ราคา/คืน (บาท)</label>
-              <input type="number" id="f-daily-rate" value="400" data-action="calcBill">
-            </div>
+        <!-- Form card -->
+        <div class="card bill-form">
+
+          <!-- Hidden legacy selectors driven by card clicks -->
+          <div class="u-hidden" aria-hidden="true">
+            <select id="f-room" data-action="onRoomChange"><option value="">-- เลือกห้อง --</option></select>
+            <div id="f-tenant-name"></div>
+            <input type="number" id="f-rent" placeholder="0" data-action="calcBill">
           </div>
-        </div>
 
-        <!-- Step 2 label -->
-        <div class="step-group-label">📊 ขั้นตอนที่ 2 — บันทึกมิเตอร์</div>
-
-        <!-- Electricity -->
-        <div class="form-section">
-          <div class="form-section-title" role="heading" aria-level="3">⚡ มิเตอร์ไฟฟ้า</div>
-          <div class="form-grid">
-            <div class="form-field"><label>เลขมิเตอร์ล่าสุด</label><input type="number" id="f-elec-new" placeholder="0" data-action="calcBill"></div>
-            <div class="form-field"><label>เลขมิเตอร์เดิม</label><input type="number" id="f-elec-old" placeholder="0" data-action="calcBill"></div>
-            <div class="form-field"><label>ราคา (บาท/หน่วย)</label><input type="number" id="f-elec-rate" value="8" data-action="calcBill"></div>
-            <div class="form-field"><label>หน่วยที่ใช้ (คำนวณอัตโนมัติ)</label><input type="number" id="f-elec-units" readonly></div>
-          </div>
-        </div>
-
-        <!-- Water -->
-        <div class="form-section">
-          <div class="form-section-title" role="heading" aria-level="3">💧 มิเตอร์น้ำประปา</div>
-          <div class="form-grid">
-            <div class="form-field"><label>เลขมิเตอร์ล่าสุด</label><input type="number" id="f-water-new" placeholder="0" data-action="calcBill"></div>
-            <div class="form-field"><label>เลขมิเตอร์เดิม</label><input type="number" id="f-water-old" placeholder="0" data-action="calcBill"></div>
-            <div class="form-field"><label>ราคา (บาท/หน่วย)</label><input type="number" id="f-water-rate" value="20" data-action="calcBill"></div>
-            <div class="form-field"><label>หน่วยที่ใช้ (คำนวณอัตโนมัติ)</label><input type="number" id="f-water-units" readonly></div>
-          </div>
-        </div>
-
-        <!-- Extras (collapsible) -->
-        <details open class="extras-details-wrap">
-          <summary class="extras-details-summary">🗑️ ค่าบริการเพิ่มเติม
-            <span style="font-size:.74rem;font-weight:400;color:var(--text-muted);">(ขยะ ฿20 — คลิกเพื่อพับ)</span>
-          </summary>
-          <div class="form-section" style="border-radius:0 0 var(--radius-sm) var(--radius-sm);margin-top:0;">
+          <!-- Daily rate toggle (shown for floor-1 Nest rooms) -->
+          <div class="daily-section" id="dailySection">
+            <div style="font-weight:700;font-size:.82rem;color:var(--accent-dark);margin-bottom:6px;">📅 ตัวเลือกรายวัน</div>
             <div class="form-grid">
-              <div class="form-field"><label>ค่าขยะ (บาท)</label><input type="number" id="f-trash" value="20" data-action="calcBill"></div>
-              <div class="form-field"><label>ค่าบริการอื่นๆ (บาท)</label><input type="number" id="f-other" value="0" data-action="calcBill"></div>
-              <div class="form-field"><label>⚠️ ค่าปรับ (บาท)</label><input type="number" id="f-latefee" value="0" min="0" data-action="calcBill" placeholder="0"></div>
-              <div class="form-field full"><label>หมายเหตุ (ถ้ามี)</label><input type="text" id="f-note" placeholder="เช่น ชำระล่วงหน้า, ค้างชำระงวดที่แล้ว..."></div>
+              <div class="form-field">
+                <label>ประเภทการเช่า</label>
+                <select id="f-rent-type" data-action="onRentTypeChange">
+                  <option value="monthly">รายเดือน (5,600 บาท)</option>
+                  <option value="daily">รายวัน (~400 บาท/คืน)</option>
+                </select>
+              </div>
+              <div class="form-field" id="dailyNightsField" style="display:none;">
+                <label>จำนวนคืน</label>
+                <input type="number" id="f-nights" value="1" min="1" data-action="calcBill">
+              </div>
+              <div class="form-field" id="dailyRateField" style="display:none;">
+                <label>ราคา/คืน (บาท)</label>
+                <input type="number" id="f-daily-rate" value="400" data-action="calcBill">
+              </div>
             </div>
           </div>
-        </details>
 
-        <!-- Summary -->
-        <div class="calc-display">
-          <div style="font-weight:700;font-size:.83rem;color:var(--green-dark);margin-bottom:4px;">💰 สรุปค่าใช้จ่าย</div>
-          <div class="calc-row"><span>ค่าเช่าห้อง</span><span id="c-rent">฿0</span></div>
-          <div class="calc-row"><span id="c-elec-label">ค่าไฟ (0 หน่วย × ฿8)</span><span id="c-elec">฿0</span></div>
-          <div class="calc-row"><span id="c-water-label">ค่าน้ำ (0 หน่วย × ฿20)</span><span id="c-water">฿0</span></div>
-          <div class="calc-row"><span>ค่าขยะ</span><span id="c-trash">฿0</span></div>
-          <div class="calc-row" id="c-other-row" style="display:none;"><span>ค่าบริการอื่นๆ</span><span id="c-other">฿0</span></div>
-          <div class="calc-row" id="c-latefee-row" style="display:none;"><span style="color:var(--red-dark);">⚠️ ค่าปรับ</span><span id="c-latefee" style="color:var(--red-dark);">฿0</span></div>
-          <div class="calc-row total"><span>รวมทั้งสิ้น</span><span id="c-total">฿0</span></div>
-        </div>
-
-        <!-- Payment status grid -->
-        <div id="payStatusGrid" style="background:#fafafa;border:1px solid var(--border);border-radius:var(--radius-sm);padding:.8rem;font-size:.82rem;"></div>
-
-        <!-- Slip verification (shown after invoice sent) -->
-        <div class="slip-verify-section" id="slipVerifySection">
-          <div style="font-size:.83rem;font-weight:700;color:var(--accent-dark);margin-bottom:.7rem;">📲 ขั้นตอน 2 — ตรวจสลิปโอนเงิน</div>
-          <div class="slip-drop-area" id="slipDropArea"
-               data-action="clickInput" data-target="slipFileInput"
-               ondragover="event.preventDefault();this.classList.add('dragging')"
-               ondragleave="this.classList.remove('dragging')"
-               ondrop="handleSlipDrop(event)">
-            <input type="file" id="slipFileInput" accept="image/*" style="display:none" data-action="verifySlipFromInput">
-            <div id="slipDropText" style="font-size:.86rem;color:var(--text-muted);line-height:1.8;">
-              🖼️ แตะเพื่ออัปโหลดสลิป หรือลากมาวางที่นี่<br>
-              <small>SlipOK ตรวจสอบชื่อ ยอด วันเวลา สลิปซ้ำ ภายใน 3 วินาที</small>
+          <!-- Compact meter entry -->
+          <div class="bill-meter-compact">
+            <div class="bill-meter-row">
+              <span class="bm-icon">⚡</span>
+              <span class="bm-label">ไฟฟ้า</span>
+              <input type="number" id="f-elec-old" placeholder="เดิม" data-action="calcBill" class="bm-input">
+              <span class="bm-arrow">→</span>
+              <input type="number" id="f-elec-new" placeholder="ใหม่" data-action="calcBill" class="bm-input">
+              <input type="number" id="f-elec-rate" value="8" data-action="calcBill" class="bm-rate">
+              <span class="bm-unit">฿/u</span>
+              <input type="number" id="f-elec-units" readonly class="u-hidden">
+            </div>
+            <div class="bill-meter-row">
+              <span class="bm-icon">💧</span>
+              <span class="bm-label">น้ำ</span>
+              <input type="number" id="f-water-old" placeholder="เดิม" data-action="calcBill" class="bm-input">
+              <span class="bm-arrow">→</span>
+              <input type="number" id="f-water-new" placeholder="ใหม่" data-action="calcBill" class="bm-input">
+              <input type="number" id="f-water-rate" value="20" data-action="calcBill" class="bm-rate">
+              <span class="bm-unit">฿/u</span>
+              <input type="number" id="f-water-units" readonly class="u-hidden">
             </div>
           </div>
-          <div id="slipResult"></div>
-          <div style="text-align:right;margin-top:.4rem;">
-            <button data-action="skipSlipVerify" style="font-size:.75rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;padding:2px 0;">รับเงินสด / ข้ามการตรวจสลิป →</button>
+
+          <!-- Extras (collapsible) -->
+          <details class="extras-details-wrap">
+            <summary class="extras-details-summary">🗑️ ค่าบริการเพิ่มเติม
+              <span style="font-size:.74rem;font-weight:400;color:var(--text-muted);">(ขยะ ฿20 — คลิกเพื่อขยาย)</span>
+            </summary>
+            <div class="form-section" style="border-radius:0 0 var(--radius-sm) var(--radius-sm);margin-top:0;">
+              <div class="form-grid">
+                <div class="form-field"><label>ค่าขยะ (บาท)</label><input type="number" id="f-trash" value="20" data-action="calcBill"></div>
+                <div class="form-field"><label>ค่าบริการอื่นๆ (บาท)</label><input type="number" id="f-other" value="0" data-action="calcBill"></div>
+                <div class="form-field"><label>⚠️ ค่าปรับ (บาท)</label><input type="number" id="f-latefee" value="0" min="0" data-action="calcBill" placeholder="0"></div>
+                <div class="form-field full"><label>หมายเหตุ (ถ้ามี)</label><input type="text" id="f-note" placeholder="เช่น ชำระล่วงหน้า, ค้างชำระงวดที่แล้ว..."></div>
+              </div>
+            </div>
+          </details>
+
+          <!-- Summary -->
+          <div class="calc-display">
+            <div style="font-weight:700;font-size:.83rem;color:var(--green-dark);margin-bottom:4px;">💰 สรุปค่าใช้จ่าย</div>
+            <div class="calc-row"><span>ค่าเช่าห้อง</span><span id="c-rent">฿0</span></div>
+            <div class="calc-row"><span id="c-elec-label">ค่าไฟ (0 หน่วย × ฿8)</span><span id="c-elec">฿0</span></div>
+            <div class="calc-row"><span id="c-water-label">ค่าน้ำ (0 หน่วย × ฿20)</span><span id="c-water">฿0</span></div>
+            <div class="calc-row"><span>ค่าขยะ</span><span id="c-trash">฿0</span></div>
+            <div class="calc-row u-hidden" id="c-other-row"><span>ค่าบริการอื่นๆ</span><span id="c-other">฿0</span></div>
+            <div class="calc-row u-hidden" id="c-latefee-row"><span style="color:var(--red-dark);">⚠️ ค่าปรับ</span><span id="c-latefee" style="color:var(--red-dark);">฿0</span></div>
+            <div class="calc-row total"><span>รวมทั้งสิ้น</span><span id="c-total">฿0</span></div>
+          </div>
+
+          <!-- payStatusGrid: hidden, kept for renderPaymentStatus() backward compat -->
+          <div id="payStatusGrid" class="u-hidden"></div>
+
+          <!-- Slip verification (shown after invoice sent) -->
+          <div class="slip-verify-section" id="slipVerifySection">
+            <div style="font-size:.83rem;font-weight:700;color:var(--accent-dark);margin-bottom:.7rem;">📲 ขั้นตอน 2 — ตรวจสลิปโอนเงิน</div>
+            <div class="slip-drop-area" id="slipDropArea"
+                 data-action="clickInput" data-target="slipFileInput"
+                 ondragover="event.preventDefault();this.classList.add('dragging')"
+                 ondragleave="this.classList.remove('dragging')"
+                 ondrop="handleSlipDrop(event)">
+              <input type="file" id="slipFileInput" accept="image/*" style="display:none" data-action="verifySlipFromInput">
+              <div id="slipDropText" style="font-size:.86rem;color:var(--text-muted);line-height:1.8;">
+                🖼️ แตะเพื่ออัปโหลดสลิป หรือลากมาวางที่นี่<br>
+                <small>SlipOK ตรวจสอบชื่อ ยอด วันเวลา สลิปซ้ำ ภายใน 3 วินาที</small>
+              </div>
+            </div>
+            <div id="slipResult"></div>
+            <div style="text-align:right;margin-top:.4rem;">
+              <button data-action="skipSlipVerify" style="font-size:.75rem;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;padding:2px 0;">รับเงินสด / ข้ามการตรวจสลิป →</button>
+            </div>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="bill-actions bill-actions-col">
+            <div class="bill-actions-row">
+              <button class="btn-invoice" data-action="generateInvoice">📄 ส่งใบวางบิล</button>
+              <button class="btn-receipt" data-action="generateReceipt" id="btnReceipt" disabled style="opacity:.4;cursor:not-allowed;">✅ ออกใบเสร็จรับเงิน</button>
+            </div>
+          </div>
+          <div id="billHint" style="font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:8px;">📄 ส่งใบวางบิลก่อน → อัปโหลดสลิป → ออกใบเสร็จรับเงิน</div>
+
+          <!-- Next unpaid room (batch workflow) -->
+          <button id="btnNextUnpaidRoom" class="bill-next-btn" data-action="goToNextUnpaidRoom">→ ห้องถัดไปที่ยังไม่ชำระ</button>
+
+        </div><!-- /card bill-form -->
+
+        <!-- Document panels (below the form) -->
+        <div class="card">
+          <div class="card-title" style="color:var(--blue);">📄 ใบวางบิล (ส่งให้ลูกบ้าน)</div>
+          <div class="doc-panel invoice-panel" id="invoicePanel">
+            <div class="doc-placeholder">
+              <div class="icon">📄</div>
+              <div style="font-size:.9rem;font-weight:600;">กรอกข้อมูลและกด "ส่งใบวางบิล"</div>
+              <div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 1 — แจ้งยอดก่อนชำระ</div>
+            </div>
           </div>
         </div>
 
-        <!-- Action buttons -->
-        <div class="bill-actions bill-actions-col">
-          <div class="bill-actions-row">
-            <button class="btn-invoice" data-action="generateInvoice">📄 ส่งใบวางบิล</button>
-            <button class="btn-receipt" data-action="generateReceipt" id="btnReceipt" disabled style="opacity:.4;cursor:not-allowed;">✅ ออกใบเสร็จรับเงิน</button>
+        <div class="card">
+          <div class="card-title" style="color:var(--green);">✅ ใบเสร็จรับเงิน (หลังรับชำระ)</div>
+          <div class="doc-panel receipt-panel" id="receiptPanel">
+            <div class="doc-placeholder">
+              <div class="icon">✅</div>
+              <div style="font-size:.9rem;font-weight:600;">กด "ออกใบเสร็จรับเงิน" หลังรับเงินแล้ว</div>
+              <div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 2 — ยืนยันการชำระเงิน</div>
+            </div>
           </div>
         </div>
-        <div id="billHint" style="font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:8px;">📄 ส่งใบวางบิลก่อน → อัปโหลดสลิป → ออกใบเสร็จรับเงิน</div>
-      </div>
-    </div>
 
-    <!-- RIGHT: DOCUMENTS -->
-    <div style="display:flex;flex-direction:column;gap:1rem;">
-
-      <!-- Invoice panel -->
-      <div class="card">
-        <div class="card-title" style="color:var(--blue);">📄 ใบวางบิล (ส่งให้ลูกบ้าน)</div>
-        <div class="doc-panel invoice-panel" id="invoicePanel">
-          <div class="doc-placeholder">
-            <div class="icon">📄</div>
-            <div style="font-size:.9rem;font-weight:600;">กรอกข้อมูลและกด "ส่งใบวางบิล"</div>
-            <div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 1 — แจ้งยอดก่อนชำระ</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Receipt panel -->
-      <div class="card">
-        <div class="card-title" style="color:var(--green);">✅ ใบเสร็จรับเงิน (หลังรับชำระ)</div>
-        <div class="doc-panel receipt-panel" id="receiptPanel">
-          <div class="doc-placeholder">
-            <div class="icon">✅</div>
-            <div style="font-size:.9rem;font-weight:600;">กด "ออกใบเสร็จรับเงิน" หลังรับเงินแล้ว</div>
-            <div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 2 — ยืนยันการชำระเงิน</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+      </div><!-- /billActiveRoom -->
+    </div><!-- /bill-grid-right -->
+  </div><!-- /bill-grid-layout -->
   </div><!-- /bill-main-tab-billing -->
 
   <!-- Live Feed -->

@@ -33,6 +33,8 @@ window._showPageImpl = function(page,btn){
     // Both are guard-idempotent — safe to call on every entry.
     if (typeof window._subscribeBuildingPaymentForBill === 'function') window._subscribeBuildingPaymentForBill();
     if (typeof window._subscribeGlobalVerifiedSlips === 'function') window._subscribeGlobalVerifiedSlips();
+    // Render the room-grid on each visit (data may have changed)
+    setTimeout(()=>{ if(typeof window.renderRoomGrid==='function') window.renderRoomGrid(); }, 200);
   }
   if(page==='tenant')initTenantPage();
   if(page==='expense')initExpensePage();
@@ -720,6 +722,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'generateInvoice') { typeof generateInvoice === 'function' && generateInvoice(); return; }
     if (a === 'generateReceipt') { typeof generateReceipt === 'function' && generateReceipt(); return; }
     if (a === 'skipSlipVerify') { typeof skipSlipVerify === 'function' && skipSlipVerify(); return; }
+    if (a === 'goToNextUnpaidRoom') { typeof window.goToNextUnpaidRoom === 'function' && window.goToNextUnpaidRoom(); return; }
     if (a === 'saveServiceProvider') { typeof saveServiceProvider === 'function' && saveServiceProvider(); return; }
     if (a === 'showAddMaintenanceModal') { typeof showAddMaintenanceModal === 'function' && showAddMaintenanceModal(); return; }
     if (a === 'showAddHousekeepingModal') { typeof showAddHousekeepingModal === 'function' && showAddHousekeepingModal(); return; }

@@ -53,9 +53,10 @@ function onRoomChange(){
     const t2 = tenants2[roomId2];
     tn.textContent = t2?.name ? `👤 ${t2.name}${t2.phone?' · '+t2.phone:''}` : '';
   }
-  autoFillMeters().then(()=>{ renderPaymentStatus(); resetBillFlow(); _updateBillActionPaidState(); });
+  autoFillMeters().then(()=>{ renderPaymentStatus(); resetBillFlow(); _updateBillActionPaidState(); _updateBillRoomHeader(); });
   renderPaymentStatus();
   _updateBillActionPaidState();
+  _updateBillRoomHeader();
 }
 
 function checkVacant(){
@@ -1487,44 +1488,171 @@ function _updateBillActionPaidState(){
 }
 
 function renderPaymentStatus(){
-  const el=document.getElementById('payStatusGrid');if(!el)return;
+  // Keep #payStatusGrid updated for backward compat (it's hidden in the new layout)
+  const el=document.getElementById('payStatusGrid');
   const month=parseInt(document.getElementById('f-month').value);
   const year=document.getElementById('f-year').value;
-  // Phase 2b: PaymentStore unifies verifiedSlips (Firestore) + payment_status (legacy)
   const paid = (typeof PaymentStore !== 'undefined')
     ? PaymentStore.listForMonth(year, month)
     : (loadPS()[`${year}_${month}`] || {});
-  // Map building names and get active rooms
   const bldgInfo = getBuildingInfo(currentBuilding);
   const rooms = getActiveRoomsWithMetadata(bldgInfo.firebaseBuilding, bldgInfo.metadataArray);
-  const monthName=MONTHS_FULL[month]||month;
-  const countPaid=Object.keys(paid).length;
-  el.innerHTML=`<div style="font-size:.8rem;font-weight:700;color:var(--text-muted);margin-bottom:6px;">
-    📋 สถานะการชำระ — ${monthName} ${year} &nbsp;
-    <span style="color:var(--green)">✅ จ่ายแล้ว ${countPaid}</span> /
-    <span style="color:var(--accent)">⏳ รอ ${rooms.length-countPaid}</span>
-  </div>
-  <div style="display:flex;flex-wrap:wrap;gap:5px;">
-  ${rooms.map(r=>{
-    const p=paid[r.id];
-    if(p){
-      return`<span onclick="showPayDetail('${r.id}')" title="คลิกดูรายละเอียด / แก้ไข" class="u-bill-paid-badge">✅ ${r.id}</span>`;
-    } else {
+  if(el){
+    const monthName=MONTHS_FULL[month]||month;
+    const countPaid=Object.keys(paid).length;
+    el.innerHTML=`<div style="font-size:.8rem;font-weight:700;color:var(--text-muted);margin-bottom:6px;">
+      📋 สถานะการชำระ — ${monthName} ${year} &nbsp;
+      <span style="color:var(--green)">✅ จ่ายแล้ว ${countPaid}</span> /
+      <span style="color:var(--accent)">⏳ รอ ${rooms.length-countPaid}</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;">
+    ${rooms.map(r=>{
+      const p=paid[r.id];
+      if(p) return`<span onclick="showPayDetail('${r.id}')" title="คลิกดูรายละเอียด" class="u-bill-paid-badge">✅ ${r.id}</span>`;
       return`<span onclick="selectRoomForBill('${r.id}')" title="คลิกเพื่อออกบิล" class="u-bill-pending-badge">⏳ ${r.id}</span>`;
-    }
-  }).join('')}
-  </div>`;
+    }).join('')}
+    </div>`;
+  }
+  // Also refresh the new room-grid UI
+  renderRoomGrid();
 }
 
 function selectRoomForBill(roomId){
-  // เปลี่ยนไปหน้า ออกบิล แล้วเลือกห้องนั้นเลย
-  // Delegate to showPage() so .sidebar-item.active syncs and Firestore
-  // lazy-subscribe runs from one canonical place.
+  // Ensure we're on the bill page (sidebar sync via showPage)
   window.showPage('bill');
-  document.getElementById('f-room').value=roomId;
-  onRoomChange();
-  document.getElementById('f-room').scrollIntoView({behavior:'smooth'});
+  // Drive the hidden select — triggers onRoomChange() via data-action delegation
+  const sel = document.getElementById('f-room');
+  if(sel){
+    sel.value = roomId;
+    sel.dispatchEvent(new Event('change', {bubbles: true}));
+  }
+  // Show the right-panel form
+  _showBillActiveRoom(roomId);
+  // Highlight the active card in the grid
+  document.querySelectorAll('.bill-room-card').forEach(c=>c.classList.remove('bc-active'));
+  const card = document.querySelector(`.bill-room-card[data-room="${roomId}"]`);
+  if(card){ card.classList.add('bc-active'); card.scrollIntoView({behavior:'smooth',block:'nearest'}); }
 }
+
+// ── Direction A helpers ────────────────────────────────────────────────────
+
+/** Show/hide the right-panel active-room form */
+function _showBillActiveRoom(roomId){
+  const empty  = document.getElementById('billEmptyState');
+  const active = document.getElementById('billActiveRoom');
+  if(!empty||!active) return;
+  if(roomId){
+    empty.classList.add('u-hidden');
+    active.classList.remove('u-hidden');
+  } else {
+    empty.classList.remove('u-hidden');
+    active.classList.add('u-hidden');
+  }
+}
+
+/** Update the room-header card (room #, tenant, paid badge) after onRoomChange() */
+function _updateBillRoomHeader(){
+  const roomId = document.getElementById('f-room')?.value;
+  if(!roomId) return;
+
+  const fpNum = document.getElementById('fpRoomNum');
+  const fpTenant = document.getElementById('fpTenantLabel');
+  const fpBadge = document.getElementById('fpPaidBadge');
+  if(fpNum) fpNum.textContent = 'ห้อง ' + roomId;
+
+  // Tenant name from the hidden #f-tenant-name span (already filled by onRoomChange)
+  const tn = document.getElementById('f-tenant-name');
+  if(fpTenant) fpTenant.textContent = tn?.textContent || '';
+
+  // Paid badge
+  if(fpBadge){
+    const month = parseInt(document.getElementById('f-month').value);
+    const year  = parseInt(document.getElementById('f-year').value);
+    const fbBld = getBuildingInfo(currentBuilding).firebaseBuilding;
+    const isPaid = typeof PaymentStore!=='undefined' && PaymentStore.isPaid(fbBld, roomId, year, month);
+    fpBadge.textContent = isPaid ? '✅ ชำระแล้ว' : '⏳ ยังไม่ชำระ';
+    fpBadge.className = 'bill-paid-badge ' + (isPaid ? 'is-paid' : 'is-unpaid');
+  }
+}
+
+/** Render large clickable room cards in #billRoomGrid */
+function renderRoomGrid(){
+  const container = document.getElementById('billRoomGrid');
+  const chip      = document.getElementById('billProgressChip');
+  if(!container) return;
+
+  const month    = parseInt(document.getElementById('f-month').value) || (new Date().getMonth()+1);
+  const year     = parseInt(document.getElementById('f-year').value)  || (new Date().getFullYear()+543);
+  const bldgInfo = getBuildingInfo(currentBuilding);
+  const rooms    = typeof getActiveRoomsWithMetadata==='function'
+    ? getActiveRoomsWithMetadata(bldgInfo.firebaseBuilding, bldgInfo.metadataArray)
+    : [];
+  const paidMap  = typeof PaymentStore!=='undefined' ? PaymentStore.listForMonth(year, month) : {};
+  const activeId = document.getElementById('f-room')?.value || '';
+
+  // Tenant name lookup
+  const tenantNames = {};
+  try {
+    const list = (typeof TenantConfigManager!=='undefined')
+      ? TenantConfigManager.getTenantList(bldgInfo.firebaseBuilding) : {};
+    Object.values(list).forEach(t=>{ if(t.roomId) tenantNames[t.roomId] = t.name||''; });
+  } catch(e){}
+
+  const paidCount   = rooms.filter(r=>paidMap[r.id]).length;
+  const unpaidCount = rooms.length - paidCount;
+
+  if(chip) chip.innerHTML =
+    `<span style="color:var(--green-dark)">✅ ${paidCount}</span>&nbsp;·&nbsp;<span style="color:#92400e">⏳ ${unpaidCount}</span>`;
+
+  if(!rooms.length){
+    container.innerHTML='<div style="color:var(--text-muted);font-size:.8rem;padding:.4rem;">ไม่พบห้อง</div>';
+    return;
+  }
+
+  const cards = rooms.map(r=>{
+    const isPaid   = !!paidMap[r.id];
+    const isActive = r.id===activeId;
+    const tenant   = tenantNames[r.id]||'';
+    const entry    = paidMap[r.id];
+    const amount   = entry?.amount ? '฿'+parseInt(entry.amount).toLocaleString() : '';
+    const stCls    = isActive ? 'bc-active' : (isPaid ? 'bc-paid' : 'bc-unpaid');
+    const icon     = isPaid ? '✅' : '⏳';
+    const click    = isPaid
+      ? `onclick="showPayDetail('${r.id}',${year},${month})"`
+      : `onclick="selectRoomForBill('${r.id}')"`;
+    return `<div class="bill-room-card ${stCls}" data-room="${r.id}" ${click} title="${isPaid?'ดูรายละเอียด':'คลิกเพื่อออกบิล'}">
+      <span class="bc-icon">${icon}</span>
+      <span class="bc-num">${r.id}</span>
+      ${tenant?`<span class="bc-tenant">${tenant}</span>`:''}
+      ${amount?`<span class="bc-amount">${amount}</span>`:''}
+    </div>`;
+  }).join('');
+
+  container.innerHTML = cards;
+}
+window.renderRoomGrid = renderRoomGrid;
+
+/** Advance to the next unpaid room (batch workflow) */
+function _goToNextUnpaidRoom(){
+  const month    = parseInt(document.getElementById('f-month').value);
+  const year     = parseInt(document.getElementById('f-year').value);
+  const bldgInfo = getBuildingInfo(currentBuilding);
+  const rooms    = typeof getActiveRoomsWithMetadata==='function'
+    ? getActiveRoomsWithMetadata(bldgInfo.firebaseBuilding, bldgInfo.metadataArray) : [];
+  const paidMap  = typeof PaymentStore!=='undefined' ? PaymentStore.listForMonth(year, month) : {};
+  const currentId= document.getElementById('f-room')?.value||'';
+  const currentIdx = rooms.findIndex(r=>r.id===currentId);
+  // Search from current+1, then wrap around
+  const after   = rooms.slice(currentIdx+1).find(r=>!paidMap[r.id]);
+  const before  = rooms.slice(0, currentIdx).find(r=>!paidMap[r.id]);
+  const next    = after||before;
+  if(next){
+    selectRoomForBill(next.id);
+  } else {
+    if(typeof showToast==='function') showToast('ทุกห้องชำระแล้วสำหรับเดือนนี้ 🎉','success');
+  }
+}
+window.goToNextUnpaidRoom = _goToNextUnpaidRoom;
 
 // ===== PAYMENT DETAIL MODAL =====
 let payModalRoomId=null, payModalYear=null, payModalMonth=null;
