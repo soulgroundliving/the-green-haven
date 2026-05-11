@@ -6,9 +6,10 @@
 # DO NOT EDIT .git/hooks/pre-commit directly — it will be overwritten on next
 # `npm install`. Edit THIS file instead, then re-run `npm install` (or `node tools/install-git-hooks.js`).
 #
-# The hook does two checks:
+# The hook does three checks:
 #   1. Credential leak detection (API keys, secrets in staged files)
 #   2. Memory doc drift detection (lifecycle_*.md verifier — see verify-via-grep doctrine)
+#   3. Anti-pattern detection (Firebase compat API, BillStore misuse, RTDB subscription gate)
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -65,5 +66,103 @@ if ! node tools/verify-memory.js > /tmp/verify-memory.out 2>&1; then
   exit 1
 fi
 echo -e "${GREEN}✅ Memory verifier: all green${NC}"
+
+# ===== 2b. CF unit tests (fast, ~200ms) =====
+# Run functions/__tests__/*.test.js if any functions/ files are staged
+if git diff --cached --name-only | grep -qE "^functions/"; then
+  echo -e "${YELLOW}🧪 Running CF unit tests (functions/ changed)...${NC}"
+  if ! node --test functions/__tests__/*.test.js > /tmp/unit-tests.out 2>&1; then
+    echo -e "${RED}❌ CF unit tests failed:${NC}"
+    grep -E "✖|fail" /tmp/unit-tests.out | head -20
+    echo ""
+    echo -e "${YELLOW}Run: npm run test:unit to see full output${NC}"
+    exit 1
+  fi
+  PASS=$(grep "pass" /tmp/unit-tests.out | tail -1 | grep -oE "[0-9]+")
+  echo -e "${GREEN}✅ CF unit tests: ${PASS} passed${NC}"
+fi
+
+# ===== 3. Anti-pattern detection =====
+# Catches the top recurring bugs from tasks/lessons.md before they land in commits.
+# Only scans lines ADDED in this commit (grep on diff +lines) to avoid flagging
+# pre-existing code that's outside the current change.
+echo -e "${YELLOW}🔎 Checking for known anti-patterns...${NC}"
+ANTIPATTERN_FOUND=0
+
+STAGED_DIFF=$(git diff --cached -- '*.js' '*.html' 2>/dev/null)
+
+# A. Firebase compat API (v11 modular only — firebase.database() / compat chain calls)
+# Wrong:  firebase.database().ref(path).once('value')
+# Correct: window.firebaseGet(window.firebaseRef(window.firebaseDatabase, path))
+if echo "$STAGED_DIFF" | grep -E "^\+" | grep -qvE "^\+\+" && \
+   echo "$STAGED_DIFF" | grep -E "^\+[^+]" | grep -qE "firebase\.database\(\)|\.ref\(['\"]" ; then
+  # narrower check: .ref() on a firebase object (not window.firebaseRef)
+  if echo "$STAGED_DIFF" | grep -E "^\+[^+]" | grep -qE "firebase\.(database|auth|storage)\(\)\." ; then
+    echo -e "${RED}❌ BLOCKED: Firebase compat API detected (firebase.database().xxx)${NC}"
+    echo -e "${YELLOW}   This codebase uses Firebase v11 modular SDK — no compat layer exists${NC}"
+    echo -e "${YELLOW}   Use: window.firebaseGet(window.firebaseRef(window.firebaseDatabase, path))${NC}"
+    echo -e "${YELLOW}   See CLAUDE.md §7B for full pattern reference${NC}"
+    ANTIPATTERN_FOUND=1
+  fi
+fi
+
+# B. BillStore.listForYear().filter(b => b.room) — RTDB bill docs have no 'room' field
+# Wrong:  BillStore.listForYear(bld, y).filter(b => b.room === roomId)
+# Correct: BillStore.getByRoom(building, roomId, year)
+if echo "$STAGED_DIFF" | grep -E "^\+[^+]" | grep -qE "listForYear.*\.filter\(.*\b(b|bill)\.(room|roomId)\b" ; then
+  echo -e "${RED}❌ BLOCKED: BillStore.listForYear().filter(b.room) detected${NC}"
+  echo -e "${YELLOW}   RTDB bill documents have no 'room' field — filter always returns []${NC}"
+  echo -e "${YELLOW}   Use: BillStore.getByRoom(building, roomId, year) instead${NC}"
+  echo -e "${YELLOW}   See CLAUDE.md §7D for details${NC}"
+  ANTIPATTERN_FOUND=1
+fi
+
+# C. addEventListener('liffLinked') for auth-gated data subscriptions in tenant_app
+# Wrong:  window.addEventListener('liffLinked', _subscribeBills)
+# Correct: _onLiffClaimsReady(_subscribeBills)
+STAGED_TENANT=$(git diff --cached -- 'tenant_app.html' 2>/dev/null)
+if [ -n "$STAGED_TENANT" ]; then
+  if echo "$STAGED_TENANT" | grep -E "^\+[^+]" | grep -qE "addEventListener\(['\"]liffLinked['\"]" ; then
+    echo -e "${YELLOW}⚠️  WARNING: addEventListener('liffLinked') added to tenant_app.html${NC}"
+    echo -e "${YELLOW}   Auth-gated reads (Firestore/RTDB needing room/building claims) must use:${NC}"
+    echo -e "${YELLOW}     _onLiffClaimsReady(fn)   — not addEventListener('liffLinked', fn)${NC}"
+    echo -e "${YELLOW}   Admin preview bypasses room checks → bug only visible in real LIFF${NC}"
+    echo -e "${YELLOW}   See CLAUDE.md §7A. If intentional, add a comment explaining why.${NC}"
+    # Warn only — don't block, edge cases exist (non-data event handlers)
+  fi
+fi
+
+# D. Auto-approving financial actions — never allowed (see CLAUDE.md §7I)
+# Catches: programmatic .click() on approve/confirm buttons in admin JS
+STAGED_ADMIN=$(git diff --cached -- 'dashboard.html' 'shared/dashboard*.js' 2>/dev/null)
+if [ -n "$STAGED_ADMIN" ]; then
+  if echo "$STAGED_ADMIN" | grep -E "^\+[^+]" | grep -qE "\.click\(\).*approv|approv.*\.click\(\)|triggerApprove|autoApprove|simulateClick.*confirm" ; then
+    echo -e "${RED}❌ BLOCKED: Auto-clicking approve/confirm detected in admin code${NC}"
+    echo -e "${YELLOW}   Financial/admin approvals must require explicit user interaction${NC}"
+    echo -e "${YELLOW}   See CLAUDE.md §7I — production action gate${NC}"
+    ANTIPATTERN_FOUND=1
+  fi
+fi
+
+if [ $ANTIPATTERN_FOUND -eq 1 ]; then
+  echo ""
+  echo -e "${RED}❌ Commit blocked: Fix anti-patterns and try again${NC}"
+  echo -e "${YELLOW}   Reference: CLAUDE.md §7 — Recurring Anti-Patterns${NC}"
+  echo ""
+  exit 1
+fi
+echo -e "${GREEN}✅ Anti-pattern checks passed${NC}"
+
+# ===== 4. Memory fabricated-path scan (warn-only) =====
+# Scans handoff/journal/feedback files for backtick-quoted paths that don't
+# exist in the codebase — catches the "19 errors from one session" class
+# before it silently lands in memory. Warn-only: does not block the commit.
+if command -v node &> /dev/null && [ -f tools/verify-memory.js ]; then
+  if ! node tools/verify-memory.js --all-memory > /tmp/verify-memory-all.out 2>&1; then
+    echo -e "${YELLOW}⚠️  Memory fabricated-path warnings (non-blocking):${NC}"
+    grep -E "WARN|❌" /tmp/verify-memory-all.out | head -10
+    echo -e "${YELLOW}   Run: npm run verify:memory:all to see full report${NC}"
+  fi
+fi
 
 exit 0

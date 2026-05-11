@@ -100,6 +100,9 @@ async function notifyOne({ docId, force = false }) {
     return { docId, skipped: 'no_line_token' };
   }
 
+  const tenantSnap = await firestore.collection('tenants').doc(building).collection('list').doc(String(roomId)).get();
+  const tenantName = tenantSnap.exists ? (tenantSnap.data()?.name || '') : '';
+
   let usersSnap;
   try {
     usersSnap = await firestore.collection('liffUsers')
@@ -120,7 +123,7 @@ async function notifyOne({ docId, force = false }) {
     return { docId, skipped: 'no_approved_tenant' };
   }
 
-  const flexMsg = buildBillFlex(bill);
+  const flexMsg = buildBillFlex(bill, { tenantName });
   const { enqueueLineRetry } = require('./_lineRetry');
   const results = await Promise.allSettled(usersSnap.docs.map(udoc => {
     const lineUserId = udoc.id;

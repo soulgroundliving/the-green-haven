@@ -95,7 +95,10 @@ exports.notifyBillOnCreate = functions.region('asia-southeast1')
       return null;
     }
 
-    const flexMsg = buildBillFlex(bill);
+    const tenantSnap = await firestore.collection('tenants').doc(building).collection('list').doc(String(roomId)).get();
+    const tenantName = tenantSnap.exists ? (tenantSnap.data()?.name || '') : '';
+
+    const flexMsg = buildBillFlex(bill, { tenantName });
     const { enqueueLineRetry } = require('./_lineRetry');
     const results = await Promise.allSettled(usersSnap.docs.map(doc => {
       const lineUserId = doc.id;

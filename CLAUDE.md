@@ -121,6 +121,94 @@ Read both at the start of every session. `tasks/lessons.md` first (it's where th
 
 Service Worker auto-versions from `VERCEL_GIT_COMMIT_SHA` — no manual `CACHE_VERSION` bump needed.
 
+## 7. Recurring Anti-Patterns — Read Before Touching These Areas
+
+Distilled from `tasks/lessons.md`. Each pattern cost 2–5 sessions to debug. Check the relevant one BEFORE writing code, not after.
+
+### A. Auth-gated reads in `tenant_app.html`
+ANY Firestore/RTDB read that needs `token.room`/`token.building`/`token.admin` claims:
+```js
+// ✅ CORRECT — always
+_onLiffClaimsReady(_subscribeX);
+
+// ❌ WRONG — causes bills/meter to show "ไม่มีข้อมูล" in real LIFF (admin preview works fine)
+window.addEventListener('liffLinked', _subscribeX);
+window.addEventListener('authReady', _subscribeX);
+```
+5+ sessions were lost to this. Admin preview bypasses room checks → bug invisible until LIFF test.
+
+### B. Firebase SDK — modular only, no compat API
+```js
+// ✅ CORRECT
+const ref = window.firebaseRef(window.firebaseDatabase, 'bills/rooms/15');
+const snap = await window.firebaseGet(ref);
+
+// ❌ WRONG — firebase.database is undefined (v11 modular, no compat layer)
+await window.firebase.database().ref('bills').once('value');
+```
+When in doubt: `grep "firebaseRef\|firebaseGet\|firebaseSet" dashboard.html` for the actual globals.
+
+### C. Modal display — inline style wins over class
+```js
+// ✅ CORRECT — set inline style explicitly on open, clear on close
+modal.style.display = 'flex';   // open
+modal.style.display = '';       // close
+
+// ❌ WRONG — classList alone fails if element has inline style="display:none"
+modal.classList.remove('u-hidden');  // doesn't override inline style
+```
+Debug one-liner: `({inline: m.getAttribute('style'), computed: getComputedStyle(m).display})`
+
+### D. BillStore — getByRoom not listForYear for single-room queries
+```js
+// ✅ CORRECT — RTDB bill docs have no 'room' field in the body; filter by path key
+BillStore.getByRoom(building, roomId, year)
+
+// ❌ WRONG — b.room is always undefined → returns [] silently
+BillStore.listForYear(building, y).filter(b => b.room === roomId)
+```
+
+### E. Year formats — 3 different formats coexist
+| Source | Format | Example |
+|--------|--------|---------|
+| `meter_data` Firestore | 2-digit BE | `69` |
+| RTDB bills (`BillStore._cache`) | 4-digit BE string | `"2569"` |
+| `synthesizeFromMeter` + grid row `y` | 4-digit BE int | `2569` |
+Convert: 2-digit BE → CE: `1957 + shortYear`. Always use `BillStore._be(b.year)` to compare.
+
+### F. Recurring symptom → demand state FIRST, propose fix SECOND
+If a symptom has appeared before (bills, modals, auth): **stop, ask for ONE observation** before proposing a fix.
+```
+✅ "ช่วยเปิด DevTools แล้วบอก: currentUser?.email, token claims, network 4xx ที่เห็น"
+❌ "ลอง fix X... ถ้าไม่ได้ ลอง fix Y... ถ้าไม่ได้ ลอง fix Z..."
+```
+1 observation ตัดสาเหตุได้ 80% ของ hypothesis tree ทันที.
+
+### G. Cross-session self-conflict check
+After touching 2+ files in the same user flow: re-read ALL diffs from this session end-to-end before saying done. Two individually correct changes can conflict (happened: auth gate blocked URL that same session's login redirect was generating).
+
+### I. Production data actions — never automate
+Before any action that touches:
+- Financial approval (approve meter import, mark bill paid, batch writes to RTDB bills/)
+- Bulk Firestore/RTDB write outside a single user's own document
+- Admin-only CF trigger via `.click()` or `dispatchEvent`
+
+**Always**: show preview → wait for explicit user click. Never call `.click()` programmatically on approve/confirm buttons.
+```
+✅ Show the data to be written, wait for user to press the button
+❌ document.querySelector('#approveMeterBtn').click()   // blocked by pre-commit hook
+```
+Root incident (2026-05-01): auto-clicked "อนุมัติและบันทึก" → wrong building data entered Firestore production. Required manual rollback.
+
+### H. Memory identifiers — grep before typing
+When writing ANY memory file (handoff, journal, lifecycle): every backtick-quoted path/function/field name must be grep-verified BEFORE typing — not after. Paraphrasing from memory produced 19 errors in one session.
+```bash
+# Template: before writing `path/to/doc` in a memory file
+grep -r "path/to/doc" functions/ shared/ *.html | head -3
+```
+
+---
+
 ## 6. Cross-references — where to look in MEMORY.md
 
 [MEMORY.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\MEMORY.md) is the architecture + history index. Read these sections by purpose:
