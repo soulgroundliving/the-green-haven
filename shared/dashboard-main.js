@@ -15,6 +15,12 @@ window._showPageImpl = function(page,btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.sidebar-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
+  // Auto-locate the sidebar item if caller didn't pass one. Many call
+  // sites (notif click, payment-verify back-link, tenant modal "→ บิล"
+  // link, meter-import auto-nav) just call showPage('X') with no btn,
+  // which would leave sidebar with NO item highlighted at all. Falling
+  // back to the [data-page] sidebar item keeps the visual in sync.
+  if(!btn) btn = document.querySelector('.sidebar-item[data-action="showPage"][data-page="'+page+'"]');
   if(btn)btn.classList.add('active');
   window.scrollTo(0,0);
   // Close sidebar on mobile after navigation
