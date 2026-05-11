@@ -527,6 +527,144 @@
 
     /* ── Hidden state utility ────────────────────────────────── */
     .hide { display: none !important; }
+
+    /* ── Step progress indicator ─────────────────────────────── */
+    .step-progress {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: var(--space-4);
+      padding: var(--space-2) 0;
+    }
+    .step-progress-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+      position: relative;
+    }
+    .step-progress-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 11px;
+      left: 50%;
+      width: 100%;
+      height: 2px;
+      background: var(--border-base);
+      z-index: 0;
+      transition: background var(--dur-settle) var(--ease-quiet);
+    }
+    .step-progress-item.done::after { background: var(--brand-primary); }
+    .step-dot {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--border-base);
+      background: var(--surface-card);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      font-weight: var(--weight-semibold);
+      color: var(--pebble);
+      position: relative;
+      z-index: 1;
+      transition: all var(--dur-quick) var(--ease-quiet);
+    }
+    .step-progress-item.active .step-dot {
+      border-color: var(--brand-primary);
+      background: var(--brand-primary);
+      color: #fff;
+    }
+    .step-progress-item.done .step-dot {
+      border-color: var(--brand-primary);
+      background: var(--brand-primary);
+      color: #fff;
+    }
+    .step-label {
+      font-size: 9px;
+      color: var(--pebble);
+      text-align: center;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .step-progress-item.active .step-label { color: var(--brand-primary); font-weight: var(--weight-medium); }
+    .step-progress-item.done .step-label   { color: var(--brand-primary); }
+
+    /* ── Room skeleton shimmer ───────────────────────────────── */
+    @keyframes shimmer {
+      0%   { background-position: -600px 0; }
+      100% { background-position: 600px 0; }
+    }
+    .room-card-skeleton {
+      height: 76px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(90deg, var(--mist) 25%, var(--cloud) 50%, var(--mist) 75%);
+      background-size: 1200px 100%;
+      animation: shimmer 1.4s infinite linear;
+    }
+
+    /* ── Modal general error banner ──────────────────────────── */
+    .modal-general-err {
+      display: none;
+      background: rgba(192, 100, 88, 0.09);
+      border: 1px solid rgba(192, 100, 88, 0.25);
+      border-radius: var(--radius-xs);
+      padding: var(--space-3) var(--space-3);
+      font-size: var(--text-sm);
+      color: var(--alert);
+      margin-bottom: var(--space-3);
+      line-height: var(--leading-relaxed);
+    }
+    .modal-general-err.show { display: block; }
+
+    /* ── 5-min countdown warning ─────────────────────────────── */
+    .five-min-warning {
+      display: none;
+      background: rgba(192, 100, 88, 0.09);
+      border: 1px solid rgba(192, 100, 88, 0.28);
+      border-radius: var(--radius-sm);
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--text-sm);
+      color: var(--alert);
+      font-weight: var(--weight-medium);
+      text-align: center;
+      margin-top: var(--space-2);
+      animation: fadeIn 0.3s ease;
+    }
+    .five-min-warning.show { display: block; }
+
+    /* ── Sticky slip CTA ─────────────────────────────────────── */
+    .slip-sticky-cta {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      padding: var(--space-3) var(--space-4);
+      padding-bottom: max(var(--space-3), env(safe-area-inset-bottom, var(--space-3)));
+      background: var(--surface-card);
+      border-top: 1px solid var(--border-subtle);
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.07);
+      z-index: 50;
+    }
+
+    /* ── Early Bird date chip ────────────────────────────────── */
+    .date-chip { position: relative; }
+    .date-chip.eb-eligible { border-color: rgba(74,157,110,0.35); }
+    .date-chip.eb-eligible::after {
+      content: '';
+      position: absolute;
+      top: 3px; right: 3px;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--brand-primary);
+    }
+    .date-chip.eb-eligible.active::after { background: rgba(255,255,255,0.7); }
+
+    /* ── PromptPay account info ───────────────────────────────── */
+    .pp-account-info {
+      margin-top: var(--space-2);
+      font-size: var(--text-xs);
+      color: var(--shadow);
+      text-align: center;
+      line-height: var(--leading-relaxed);
+    }
+    .pp-account-info strong { color: var(--ink); }
   </style>
 </head>
 <body>
@@ -549,6 +687,26 @@
     <h1>จองห้องพัก Nature Haven</h1>
     <div class="sub">เลือกห้อง · จ่ายมัดจำ · ยืนยัน — ทำผ่าน LINE LIFF</div>
   </header>
+
+  <!-- Step progress indicator -->
+  <nav id="stepProgress" class="step-progress" aria-label="ขั้นตอนการจอง">
+    <div class="step-progress-item active" id="spi-1">
+      <div class="step-dot">1</div>
+      <div class="step-label">เลือกห้อง</div>
+    </div>
+    <div class="step-progress-item" id="spi-2">
+      <div class="step-dot">2</div>
+      <div class="step-label">ยืนยัน</div>
+    </div>
+    <div class="step-progress-item" id="spi-3">
+      <div class="step-dot">3</div>
+      <div class="step-label">ชำระเงิน</div>
+    </div>
+    <div class="step-progress-item" id="spi-4">
+      <div class="step-dot">4</div>
+      <div class="step-label">สำเร็จ</div>
+    </div>
+  </nav>
 
   <!-- ──────────── Step 1: Calendar / Room picker ──────────── -->
   <section id="stepPicker" class="step">
@@ -582,6 +740,7 @@
     <div>
       <label class="filter-label">เลือกวันที่ย้ายเข้า</label>
       <div id="dateStrip" class="date-strip" aria-label="เลือกวันที่ย้ายเข้า"></div>
+      <div style="font-size: var(--text-xs); color: var(--brand-primary-dark); margin-top: var(--space-1);">🎁 จุด • = จองล่วงหน้า ≥ 30 วัน รับ 500 แต้ม Early Bird (เฉพาะ Nest)</div>
     </div>
 
     <div id="roomsList" class="rooms-list"></div>
@@ -604,6 +763,9 @@
           <option value="24">24 เดือน</option>
         </select>
       </div>
+
+      <!-- General CF error banner (non-phone errors route here) -->
+      <div id="modalGeneralErr" class="modal-general-err" role="alert"></div>
 
       <div class="modal-name-row">
         <div class="modal-form-col">
@@ -658,8 +820,10 @@
       <div style="text-align:center;">
         <div class="qr-amount" id="payAmountText">— <span class="qr-amount-suffix">บาท</span></div>
         <div style="font-size: var(--text-sm); color: var(--shadow);">สแกน PromptPay เพื่อโอนมัดจำ</div>
+        <div id="ppAccountName" class="pp-account-info"></div>
         <div class="qr-wrap" id="qrWrap"></div>
         <div id="countdown" class="countdown-strip">⏰ ห้องถูกล็อคไว้ <span id="countdownText">20:00</span> นาที</div>
+        <div id="fiveMinWarning" class="five-min-warning" role="alert">⚠️ เหลือเวลาไม่ถึง 5 นาที — กรุณาโอนและแนบสลิปโดยด่วน!</div>
       </div>
 
       <hr style="border:none; border-top: 1px solid var(--border-subtle); margin: var(--space-4) 0;">
@@ -678,7 +842,14 @@
     </div>
 
     <button id="cancelBookingBtn" class="btn btn-secondary" style="width:100%; margin-bottom: var(--space-4);">ยกเลิกการจอง</button>
+    <!-- Extra bottom padding so sticky CTA never overlaps content -->
+    <div style="height: 72px;"></div>
   </section>
+
+  <!-- Sticky slip upload CTA (shown during payment step, hidden after slip selected) -->
+  <div id="slipStickyCta" class="slip-sticky-cta hide">
+    <button id="slipStickyBtn" class="btn btn-primary" style="width:100%;">📎 โอนเสร็จแล้ว? แนบสลิปที่นี่</button>
+  </div>
 
   <!-- ──────────── Step 4: Confirmation ──────────── -->
   <section id="stepConfirm" class="step hide">
@@ -690,8 +861,12 @@
       </p>
 
       <div class="modal-row">
-        <span class="label">หมายเลขจอง</span>
-        <span class="value" id="confBookingId">—</span>
+        <span class="label">รหัสการจอง</span>
+        <span class="value" id="confBookingRef" style="font-family: monospace; letter-spacing: 0.05em;">—</span>
+      </div>
+      <div style="text-align:right; padding-bottom: var(--space-2);">
+        <span style="font-size: 10px; color: var(--pebble);">ref: </span>
+        <span id="confBookingId" style="font-size: 10px; color: var(--pebble); user-select: all; word-break: break-all;">—</span>
       </div>
       <div class="modal-row">
         <span class="label">ห้อง</span>
@@ -859,6 +1034,8 @@
     roomsByBuilding: { rooms: [], nest: [] },
     occupied: { rooms: new Set(), nest: new Set() },
     activeBookings: { rooms: [], nest: [] },
+    availabilityLoaded: { rooms: false, nest: false },  // P1 #9: skeleton until loaded
+    promptpayInfo: {},                                   // P1 #4: { rooms: {phone, name}, nest: {phone, name} }
     selectedDate: null,         // YYYY-MM-DD
     selectedRoom: null,         // roomId
     bookingId: null,
@@ -879,6 +1056,65 @@
   };
 
   const KYC_REQUIRED = ['idCardFront', 'idCardBack'];
+
+  // ── Step progress indicator ───────────────────────────────
+  // P1 #1: update the 4-step pill strip based on current step (1-4)
+  function setStep(n) {
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById('spi-' + i);
+      if (!el) continue;
+      el.classList.remove('active', 'done');
+      if (i < n) el.classList.add('done');
+      else if (i === n) el.classList.add('active');
+    }
+  }
+
+  // ── Human-readable booking reference ─────────────────────
+  // P1 #8: convert raw booking ID into a short display reference
+  function formatBookingRef(id) {
+    if (!id) return '—';
+    // If structured (e.g. "BKG-rooms-R01-1748123456789"), show "BKG-R01-456789"
+    const parts = id.split('-');
+    if (parts.length >= 3) {
+      const roomPart = parts[2] || '';                // e.g. "R01"
+      const suffix = id.replace(/^.*?-\d+-/, '').slice(-6).toUpperCase() || id.slice(-6).toUpperCase();
+      return `${parts[0]}-${roomPart}-${suffix}`;    // e.g. "BKG-R01-456789"
+    }
+    // Auto Firestore ID: last 8 chars
+    return '#' + id.slice(-8).toUpperCase();
+  }
+
+  function formatPhone(phone) {
+    const p = String(phone || '').replace(/\D/g, '');
+    if (p.length === 10) return `${p.slice(0,3)}-${p.slice(3,6)}-${p.slice(6)}`;
+    return phone || '';
+  }
+
+  // ── PromptPay info fetch ──────────────────────────────────
+  // P1 #4: fetch building promptpay number from Firestore to show next to QR
+  async function loadPromptpayInfo() {
+    if (!window.bookingFirebase) return;
+    const BLD_MAP = { rooms: 'RentRoom', nest: 'nest' };
+    const DISPLAY_NAMES = { rooms: 'Nature Haven (ห้องแถว)', nest: 'Nature Haven Nest' };
+    await Promise.all(Object.entries(BLD_MAP).map(async ([bld, docId]) => {
+      try {
+        const ref = window.bookingFirebase.doc(`buildings/${docId}`);
+        const snap = await window.bookingFirebase.getDoc(ref);
+        if (snap.exists()) {
+          const d = snap.data();
+          state.promptpayInfo[bld] = {
+            phone: d.promptpayNumber || d.promptpay || '',
+            name: d.displayName || d.name || DISPLAY_NAMES[bld],
+          };
+        } else {
+          state.promptpayInfo[bld] = { phone: '', name: DISPLAY_NAMES[bld] };
+        }
+      } catch (e) {
+        console.warn('loadPromptpayInfo:', bld, e?.message);
+        state.promptpayInfo[bld] = { phone: '', name: DISPLAY_NAMES[bld] };
+      }
+    }));
+  }
 
   // ── Boot overlay ──────────────────────────────────────────
   function setBootMsg(msg) {
@@ -1063,16 +1299,25 @@
   }
 
   async function refreshAvailability(building) {
-    if (!window.bookingFirebase) return;
     try {
-      const callable = window.bookingFirebase.callable('getRoomAvailability');
-      const res = await callable({ building });
-      const data = res.data || {};
-      state.occupied[building] = new Set(data.occupied || []);
-      state.activeBookings[building] = data.activeBookings || [];
+      if (window.bookingFirebase) {
+        const callable = window.bookingFirebase.callable('getRoomAvailability');
+        const res = await callable({ building });
+        const data = res.data || {};
+        state.occupied[building] = new Set(data.occupied || []);
+        state.activeBookings[building] = data.activeBookings || [];
+      }
     } catch (e) {
       console.warn('getRoomAvailability failed:', e?.message || e);
-      // Non-fatal — calendar still renders, just without status overlay
+      // Non-fatal — show rooms without status overlay
+    } finally {
+      // P1 #9: mark loaded so skeleton is replaced by real cards
+      state.availabilityLoaded[building] = true;
+      // Re-render if user is currently viewing this building
+      if (state.building === building && state.booted) {
+        renderBuildingTabs();
+        renderRoomsList();
+      }
     }
   }
 
@@ -1122,10 +1367,14 @@
       const d = new Date(today);
       d.setDate(d.getDate() + i);
       const iso = isoDate(d);
+      const isEarlyBird = i >= EARLY_BIRD_DAYS;
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'date-chip';
       if (iso === state.selectedDate) chip.classList.add('active');
+      // P1 #2: mark early-bird qualifying dates with a subtle indicator
+      if (isEarlyBird) chip.classList.add('eb-eligible');
+      chip.setAttribute('aria-label', `${d.getDate()} ${months[d.getMonth()]}${isEarlyBird ? ' (Early Bird)' : ''}`);
       chip.innerHTML = `
         <div class="dow">${dows[d.getDay()]}</div>
         <div class="day">${d.getDate()}</div>
@@ -1145,8 +1394,17 @@
     const list = document.getElementById('roomsList');
     const empty = document.getElementById('roomsEmpty');
     if (!list || !empty) return;
-    list.innerHTML = '';
 
+    // P1 #9: show shimmer skeleton until availability data arrives from CF
+    if (!state.availabilityLoaded[state.building]) {
+      list.innerHTML = [1, 0.7, 0.45].map(op =>
+        `<div class="room-card-skeleton" style="opacity:${op}"></div>`
+      ).join('');
+      empty.classList.add('hide');
+      return;
+    }
+
+    list.innerHTML = '';
     const rooms = state.roomsByBuilding[state.building] || [];
     const filtered = applyFilters(rooms);
     if (filtered.length === 0) {
@@ -1181,6 +1439,7 @@
       }
       const meta = [];
       if (r.floor != null) meta.push(`ชั้น ${r.floor}`);
+      if (r.size) meta.push(`${r.size} ตร.ม.`);          // P1 #3: show size if available
       if (r.type === 'pet-allowed') meta.push('สัตว์เลี้ยงได้');
       else if (r.type) meta.push(r.type);
       const dep = Number(r.rentPrice || 0) * 2;
@@ -1250,6 +1509,7 @@
     const dep = Number(room.rentPrice || 0) * 2;
     const meta = [];
     if (room.floor != null) meta.push(`ชั้น ${room.floor}`);
+    if (room.size) meta.push(`${room.size} ตร.ม.`);
     if (room.type === 'pet-allowed') meta.push('สัตว์เลี้ยงได้');
     else if (room.type === 'studio') meta.push('Studio');
     summary.innerHTML = `
@@ -1275,13 +1535,17 @@
     const eligible = days >= EARLY_BIRD_DAYS && state.building === 'nest';
     eb.classList.toggle('hide', !eligible);
 
+    setStep(2);  // P1 #1
     document.getElementById('bookingModal').classList.remove('hide');
     setTimeout(() => firstInput?.focus(), 100);
   }
   function closeBookingModal() {
+    setStep(1);  // P1 #1: back to room selection
     document.getElementById('bookingModal').classList.add('hide');
     document.getElementById('modalNameErr').textContent = '';
     document.getElementById('modalPhoneErr').textContent = '';
+    const genErr = document.getElementById('modalGeneralErr');
+    if (genErr) { genErr.textContent = ''; genErr.classList.remove('show'); }
   }
 
   async function handleLockClick() {
@@ -1292,8 +1556,10 @@
     const duration = Number(document.getElementById('modalDuration').value);
     const nameErr = document.getElementById('modalNameErr');
     const phoneErr = document.getElementById('modalPhoneErr');
+    const generalErr = document.getElementById('modalGeneralErr');
     nameErr.textContent = '';
     phoneErr.textContent = '';
+    if (generalErr) { generalErr.textContent = ''; generalErr.classList.remove('show'); }
 
     if (!firstName) { nameErr.textContent = 'กรุณากรอกชื่อ'; return; }
     if (!lastName)  { nameErr.textContent = 'กรุณากรอกนามสกุล'; return; }
@@ -1335,17 +1601,19 @@
       subscribeToBooking(data.bookingId);
     } catch (e) {
       const msg = e?.message || String(e);
-      // HttpsError surfaces here as `internal: <message>`; pull friendlier text
+      // P1 #7: CF errors → #modalGeneralErr; phone validation stays in #modalPhoneErr
       const friendly = msg.includes('room-already-locked') || msg.includes('currently held')
-        ? 'ห้องนี้เพิ่งถูกล็อคโดยคนอื่น กรุณาเลือกห้องอื่น'
+        ? 'ห้องนี้เพิ่งถูกล็อคโดยคนอื่น — กรุณาเลือกห้องอื่น'
         : msg.includes('currently occupied')
-        ? 'ห้องนี้มีคนอยู่แล้ว กรุณาเลือกห้องอื่น'
+        ? 'ห้องนี้มีคนอยู่แล้ว — กรุณาเลือกห้องอื่น'
         : msg.includes('Owner phone not configured') || msg.includes('owner_info') || msg.includes('PromptPay not configured')
         ? 'ขณะนี้ยังไม่สามารถจองออนไลน์ได้ กรุณาติดต่อเราโดยตรง'
         : msg.includes('Room has no rent price') || msg.includes('room rate')
         ? 'ห้องนี้ยังไม่พร้อมให้จอง กรุณาเลือกห้องอื่นหรือติดต่อเรา'
         : 'เกิดข้อผิดพลาด กรุณาลองอีกครั้งหรือติดต่อเรา';
-      document.getElementById('modalPhoneErr').textContent = friendly;
+      // Route to general error banner (not phone field) — these are CF errors, not form validation
+      const genErr = document.getElementById('modalGeneralErr');
+      if (genErr) { genErr.textContent = friendly; genErr.classList.add('show'); }
       lockBtn.disabled = false;
       lockBtn.textContent = 'ล็อคห้องและจ่ายมัดจำ';
     }
@@ -1353,6 +1621,7 @@
 
   // ── Payment step ──────────────────────────────────────────
   function enterPaymentStep(duration) {
+    setStep(3);  // P1 #1
     document.getElementById('stepPicker').classList.add('hide');
     document.getElementById('stepPayment').classList.remove('hide');
 
@@ -1373,6 +1642,22 @@
     } else {
       qrWrap.textContent = 'QR สร้างไม่สำเร็จ';
     }
+
+    // P1 #4: show PromptPay account name next to QR
+    const ppInfo = state.promptpayInfo[state.building];
+    const ppNameEl = document.getElementById('ppAccountName');
+    if (ppNameEl) {
+      if (ppInfo && (ppInfo.name || ppInfo.phone)) {
+        const phonePart = ppInfo.phone ? ` · ${formatPhone(ppInfo.phone)}` : '';
+        ppNameEl.innerHTML = `บัญชี: <strong>${ppInfo.name || 'Nature Haven'}</strong>${phonePart}`;
+      } else {
+        ppNameEl.textContent = '';
+      }
+    }
+
+    // P1 #5: show sticky slip CTA
+    const stickyCta = document.getElementById('slipStickyCta');
+    if (stickyCta) stickyCta.classList.remove('hide');
 
     startCountdown();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1396,6 +1681,11 @@
         status.classList.remove('hide');
         status.className = 'status-line error';
         status.textContent = '⏰ หมดเวลาล็อคห้อง — กรุณาเริ่มการจองใหม่';
+        // Dismiss sticky CTA and 5-min warning
+        const stickyCta = document.getElementById('slipStickyCta');
+        if (stickyCta) stickyCta.classList.add('hide');
+        const warn = document.getElementById('fiveMinWarning');
+        if (warn) warn.classList.remove('show');
         return;
       }
       const totalSec = Math.floor(remainMs / 1000);
@@ -1404,6 +1694,9 @@
       txtEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
       if (totalSec <= 60) tickEl.classList.add('danger');
       else if (totalSec <= 300) tickEl.classList.add('warning');
+      // P1 #6: show banner when ≤ 5 min remain
+      const warn = document.getElementById('fiveMinWarning');
+      if (warn) warn.classList.toggle('show', totalSec <= 300);
     }
     tick();
     state.countdownTimer = setInterval(tick, 1000);
@@ -1435,6 +1728,9 @@
     document.getElementById('slipVerifyBtn').disabled = false;
     showSlipStatus('loading', 'พร้อมตรวจสอบสลิป — กดปุ่มยืนยันด้านล่าง');
     document.getElementById('slipStatus').className = 'status-line';
+    // P1 #5: hide sticky CTA once user has selected a slip
+    const stickyCta = document.getElementById('slipStickyCta');
+    if (stickyCta) stickyCta.classList.add('hide');
   }
 
   async function verifySlip() {
@@ -1523,16 +1819,25 @@
 
   // ── Confirmation step ─────────────────────────────────────
   function enterConfirmStep(booking) {
+    setStep(4);  // P1 #1
     if (state.countdownTimer) { clearInterval(state.countdownTimer); state.countdownTimer = null; }
     document.getElementById('stepPayment').classList.add('hide');
     document.getElementById('stepConfirm').classList.remove('hide');
-    document.getElementById('confBookingId').textContent = state.bookingId;
+    // P1 #8: show human-readable short ref + full ID in smaller text
+    const refEl = document.getElementById('confBookingRef');
+    if (refEl) refEl.textContent = formatBookingRef(state.bookingId);
+    document.getElementById('confBookingId').textContent = state.bookingId || '—';
     document.getElementById('confRoom').textContent = state.selectedRoom?.name || booking.roomId || '—';
     document.getElementById('confAmount').textContent = '฿' + formatNum(booking.qrAmount || state.qrAmount);
     document.getElementById('confTxRef').textContent = booking.slipTransactionRef || '—';
     if (state.earlyBirdEligible) {
       document.getElementById('confEarlyBird').classList.remove('hide');
     }
+    // P1 #5: hide sticky CTA and 5-min warning on success
+    const stickyCta = document.getElementById('slipStickyCta');
+    if (stickyCta) stickyCta.classList.add('hide');
+    const fiveWarn = document.getElementById('fiveMinWarning');
+    if (fiveWarn) fiveWarn.classList.remove('show');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -1654,19 +1959,23 @@
       state.bookingUnsubscribe = null;
     }
     if (state.countdownTimer) { clearInterval(state.countdownTimer); state.countdownTimer = null; }
-    // Don't actually flip status server-side — expireBookingLocks will pick it up.
-    // Not deleting on cancel keeps audit trail of abandoned bookings.
+    // Don't flip status server-side — expireBookingLocks will pick it up
     state.bookingId = null;
     state.qrPayload = null;
     state.qrAmount = 0;
     state.slipBase64 = null;
     state.confirmed = false;
+    setStep(1);  // P1 #1
+    const stickyCta = document.getElementById('slipStickyCta');
+    if (stickyCta) stickyCta.classList.add('hide');
+    const fiveWarn = document.getElementById('fiveMinWarning');
+    if (fiveWarn) fiveWarn.classList.remove('show');
     document.getElementById('stepPayment').classList.add('hide');
     document.getElementById('stepPicker').classList.remove('hide');
-    refreshAvailability(state.building).then(() => {
-      renderBuildingTabs();
-      renderRoomsList();
-    });
+    // Re-fetch availability for accurate status after cancellation
+    state.availabilityLoaded[state.building] = false;
+    renderRoomsList();  // shows skeleton while fetching
+    refreshAvailability(state.building);
   }
 
   // ── Helpers ───────────────────────────────────────────────
@@ -1765,13 +2074,18 @@
 
     document.getElementById('cancelBookingBtn').addEventListener('click', cancelBooking);
 
+    // P1 #5: sticky slip CTA — scroll to drop zone + trigger file picker
+    document.getElementById('slipStickyBtn')?.addEventListener('click', () => {
+      const drop = document.getElementById('slipDrop');
+      drop?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => document.getElementById('slipFileInput')?.click(), 500);
+    });
+
     // Refresh availability when window regains focus (someone might've taken a room while we were away)
     window.addEventListener('focus', () => {
       if (state.booted && !state.bookingId) {
-        refreshAvailability(state.building).then(() => {
-          renderBuildingTabs();
-          renderRoomsList();
-        });
+        // refreshAvailability() internally re-renders when done
+        refreshAvailability(state.building).catch(() => {});
       }
     });
   }
@@ -1783,18 +2097,28 @@
       setBootMsg('กำลังเชื่อมต่อ LINE…');
       const ok = await bootLiff();
       if (!ok) return;
+      setBootMsg('🌿 กำลังโหลดข้อมูลห้อง…');
       await loadRoomsConfig();
       populateNestFilters();
-      // Render immediately with default status (ว่าง) — don't block on CF cold start
+      // P1 #4: fetch PromptPay info after auth (needs firebaseAuth session)
+      loadPromptpayInfo().catch(() => {});  // non-blocking, best-effort
+      setStep(1);  // P1 #1
       renderBuildingTabs();
       renderDateStrip();
+      // P1 #9: rooms list starts as skeleton — availability comes from CF below
       renderRoomsList();
       hideBoot();
-      // Refresh availability in background — status badges update when CF responds
+      // Fetch availability for both buildings; refreshAvailability() re-renders when done
       Promise.all([
         refreshAvailability('rooms'),
         refreshAvailability('nest'),
-      ]).then(() => renderRoomsList()).catch(() => {});
+      ]).catch(() => {
+        // Ensure skeleton clears even if both CFs fail
+        state.availabilityLoaded.rooms = true;
+        state.availabilityLoaded.nest = true;
+        renderBuildingTabs();
+        renderRoomsList();
+      });
     } catch (err) {
       console.error('boot failed:', err);
       fatalBoot('โหลดไม่สำเร็จ: ' + (err?.message || 'ลองใหม่อีกครั้ง'));
