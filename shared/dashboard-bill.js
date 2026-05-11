@@ -1985,3 +1985,12 @@ function toggleRateEdit(){
 }
 window.toggleRateEdit=toggleRateEdit;
 
+// ── Keyboard accessibility: Space activates focused room cards ────────────
+document.addEventListener('keydown', function(e){
+  if(e.key !== ' ') return;
+  const card = e.target.closest('.bill-room-card');
+  if(!card) return;
+  e.preventDefault(); // prevent page scroll
+  card.click();
+});
+

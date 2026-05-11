@@ -891,6 +891,7 @@
   .bill-room-card.bc-paid{background:#f0fdf4;border-color:var(--green);color:var(--green-dark);}
   .bill-room-card.bc-unpaid{background:#fff8f0;border-color:#ea580c;color:#c2410c;}
   .bill-room-card.bc-active{border-color:var(--blue-bright)!important;box-shadow:0 0 0 3px rgba(2,132,199,.15)!important;background:#eff9ff!important;color:var(--blue-dark)!important;}
+  .bill-room-card.bc-active:hover{transform:none;box-shadow:0 0 0 3px rgba(2,132,199,.15)!important;}
   .bc-icon{display:block;font-size:1rem;}
   .bc-num{display:block;font-size:.95rem;font-weight:700;}
   .bc-tenant{display:block;font-size:.67rem;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
@@ -927,6 +928,7 @@
   .bill-next-btn:hover{background:var(--green-pale);color:var(--green-dark);border-color:var(--green);}
 
   @media(max-width:900px){.bill-grid-layout{grid-template-columns:1fr}.bill-grid-left{position:static;max-height:280px;}}
+  @media(max-width:640px){.bill-room-grid{grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:.35rem;}.bill-room-card{padding:.5rem .3rem .4rem;}.bc-num{font-size:.88rem;}.bill-grid-left{max-height:220px;}.bill-meter-cards{grid-template-columns:1fr;}}
   .bill-form{display:flex;flex-direction:column;gap:.5rem;}
   .form-section{background:var(--green-pale);border-radius:var(--radius-sm);padding:1.1rem;}
   .form-section.amber{background:var(--accent-light);}
@@ -987,11 +989,15 @@
   :root[data-theme="dark"] .bill-room-card.bc-unpaid{background:#2a1200;border-color:#ea580c;color:#fb923c;}
   :root[data-theme="dark"] .bill-paid-badge.is-paid{background:#0a2514;}
   :root[data-theme="dark"] .bill-paid-badge.is-unpaid{background:#2a1200;color:#fb923c;}
+  :root[data-theme="dark"] .slip-drop-area{background:var(--surface-card);border-color:#b45309;}
+  :root[data-theme="dark"] .slip-drop-area:hover{background:#2a1e00;border-color:#d97706;}
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .bill-room-card.bc-paid{background:#0f2e1a;border-color:var(--green);}
     :root:not([data-theme="light"]) .bill-room-card.bc-unpaid{background:#2a1200;border-color:#ea580c;color:#fb923c;}
     :root:not([data-theme="light"]) .bill-paid-badge.is-paid{background:#0a2514;}
     :root:not([data-theme="light"]) .bill-paid-badge.is-unpaid{background:#2a1200;color:#fb923c;}
+    :root:not([data-theme="light"]) .slip-drop-area{background:var(--surface-card);border-color:#b45309;}
+    :root:not([data-theme="light"]) .slip-drop-area:hover{background:#2a1e00;border-color:#d97706;}
   }
 
   /* Document panels */
