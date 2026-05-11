@@ -25,6 +25,7 @@ const db = admin.firestore();
 // Param:  set in functions/.env (e.g. SLIPOK_API_URL=https://api.slipok.com/...)
 const SLIPOK_API_KEY = defineSecret('SLIPOK_API_KEY');
 const SLIPOK_API_URL = defineString('SLIPOK_API_URL');
+const LINE_CHANNEL_ACCESS_TOKEN = defineSecret('LINE_CHANNEL_ACCESS_TOKEN');
 
 // Rate limiting configuration
 // Per-room/userId caps (not global — admin can still verify all rooms in a
@@ -392,6 +393,64 @@ async function recordPaymentAndAwardPoints(slipData, params) {
   return { roomId, points, status, daysDiff, monthKey };
 }
 
+// ==================== RECEIPT NOTIFICATION ====================
+/**
+ * Push a LINE "ใบเสร็จรับเงิน" Flex to all approved tenants for the room.
+ * Non-blocking — caller must wrap in try/catch.
+ */
+async function sendReceiptNotification(slipData, params) {
+  const token = LINE_CHANNEL_ACCESS_TOKEN.value();
+  if (!token) return;
+
+  const building = params.building === 'nest' ? 'nest' : 'rooms';
+  const room = String(params.room || '');
+  if (!room) return;
+
+  // Find approved LINE user IDs for the room
+  const usersSnap = await db.collection('liffUsers')
+    .where('building', '==', building)
+    .where('room', '==', room)
+    .where('status', '==', 'approved')
+    .get();
+  if (usersSnap.empty) return;
+
+  // Fetch RTDB bill for line-item breakdown
+  const billSnap = await admin.database().ref(`bills/${building}/${room}`).once('value');
+  const billsObj = billSnap.val() || {};
+  const allBills = Object.values(billsObj).filter(Boolean);
+  // Prefer the bill we just marked paid by transactionId, fall back to latest paid bill
+  const paidBill = allBills.find(b => b.paidRef === slipData.transactionId)
+    || allBills.filter(b => b.status === 'paid').sort((a, b) => (b.paidAt || 0) - (a.paidAt || 0))[0];
+
+  // Tenant name from SSoT
+  const tenantDoc = await db.collection('tenants').doc(building).collection('list').doc(room).get();
+  const tenantName = tenantDoc.exists ? (tenantDoc.data()?.name || '') : '';
+
+  const { buildReceiptFlex } = require('./_billFlex');
+  const paidAt = new Date(slipData.transTimestamp || slipData.date || Date.now());
+
+  // Fallback bill shape when no RTDB bill matched (shows only total)
+  const billForReceipt = paidBill || {
+    room, building,
+    month: paidAt.getMonth() + 1,
+    year: paidAt.getFullYear() + 543,
+    rent: 0, eCost: 0, wCost: 0, trash: 0, eUnits: 0, wUnits: 0,
+    totalCharge: slipData.amount
+  };
+
+  const receiptMsg = buildReceiptFlex(billForReceipt, { tenantName, paidAt });
+
+  await Promise.allSettled(usersSnap.docs.map(udoc =>
+    fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ to: udoc.id, messages: [receiptMsg] })
+    })
+  ));
+
+  console.log(`🧾 Receipt notification sent: ${building}/${room} → ${usersSnap.size} user(s)`);
+}
+
 // ==================== MAIN CLOUD FUNCTION ====================
 /**
  * HTTP Cloud Function: Verify payment slip with SlipOK
@@ -420,7 +479,7 @@ async function recordPaymentAndAwardPoints(slipData, params) {
  */
 exports.verifySlip = functions
   .region('asia-southeast1')
-  .runWith({ secrets: [SLIPOK_API_KEY] })
+  .runWith({ secrets: [SLIPOK_API_KEY, LINE_CHANNEL_ACCESS_TOKEN] })
   .https.onRequest(async (req, res) => {
   try {
     // CORS headers
@@ -572,6 +631,13 @@ exports.verifySlip = functions
       await markBillPaidInRTDB(slipData, req.body);
     } catch (e) {
       console.error('⚠️ markBillPaidInRTDB failed (non-blocking):', e);
+    }
+
+    // ===== SEND RECEIPT NOTIFICATION (non-blocking) =====
+    try {
+      await sendReceiptNotification(slipData, req.body);
+    } catch (e) {
+      console.error('⚠️ sendReceiptNotification failed (non-blocking):', e);
     }
 
     // ===== GAMIFICATION: record payment + award points (non-blocking) =====

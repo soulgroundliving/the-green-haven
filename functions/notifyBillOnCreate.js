@@ -32,7 +32,7 @@ if (!admin.apps.length) admin.initializeApp();
 const rtdb = admin.database();
 const firestore = admin.firestore();
 
-const { buildBillFlex } = require('./_billFlex');
+const { loadOwnerInfo, buildBillFlex } = require('./_billFlex');
 
 exports.notifyBillOnCreate = functions.region('asia-southeast1')
   .runWith({ secrets: ['LINE_CHANNEL_ACCESS_TOKEN'] })
@@ -95,7 +95,13 @@ exports.notifyBillOnCreate = functions.region('asia-southeast1')
       return null;
     }
 
-    const flexMsg = buildBillFlex(bill);
+    const [ownerInfo, tenantSnap] = await Promise.all([
+      loadOwnerInfo(),
+      firestore.collection('tenants').doc(building).collection('list').doc(String(roomId)).get()
+    ]);
+    const tenantName = tenantSnap.exists ? (tenantSnap.data()?.name || '') : '';
+
+    const flexMsg = buildBillFlex(bill, { tenantName, ownerInfo });
     const { enqueueLineRetry } = require('./_lineRetry');
     const results = await Promise.allSettled(usersSnap.docs.map(doc => {
       const lineUserId = doc.id;

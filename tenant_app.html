@@ -8950,6 +8950,8 @@
                 if ((target === 'bill' || target === 'bills' || target === 'usage') && typeof showPage === 'function') {
                     showPage('usage');
                     if (typeof updateNavActiveIndex === 'function') updateNavActiveIndex(3);
+                } else if (target === 'payment' && typeof showPage === 'function') {
+                    showPage('payment-page');
                 }
             } catch(e) {}
             document.getElementById('app-loading-splash')?.remove();
