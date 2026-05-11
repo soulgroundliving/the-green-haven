@@ -1881,9 +1881,10 @@ function renderLeaseAgreementsPage() {
   });
 
   const tenantOptions = allTenants
+    .filter(t => LeaseAgreementManager.getLeasesByTenant(t.id).some(l => l.status === 'active'))
     .map(t => {
       const activeLease = LeaseAgreementManager.getLeasesByTenant(t.id).find(l => l.status === 'active');
-      const roomLabel = activeLease ? `ห้อง ${activeLease.roomId}` : 'ยังไม่ผูกห้อง';
+      const roomLabel = `ห้อง ${activeLease.roomId}`;
       const buildingLabel = t.building === 'rooms' ? 'ห้องแถว' : 'Nest';
       return `<option value="${t.id}">${_escapeHTML(t.name || t.id)} — ${roomLabel} (${buildingLabel})</option>`;
     }).join('');
@@ -1912,33 +1913,10 @@ function renderLeaseAgreementsPage() {
 
         <!-- FILE UPLOADS SECTION -->
         <div style="background: #f0f9ff; padding: 1rem; border-radius: 6px; border: 1px solid #b3e5fc; margin-bottom: 1rem;">
-          <div style="font-weight: 600; margin-bottom: 0.8rem; color: #01579b;">📄 เอกสารประกอบสัญญา (optional)</div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
-            <div>
-              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">💉 ใบรับรองวัคซีนสัตว์เลี้ยง</label>
-              <input type="file" id="leaseFilePetCert" accept=".pdf,.jpg,.png" class="dx-field-upload">
-            </div>
-            <div>
-              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">📞 ข้อมูลติดต่อผู้เช่า</label>
-              <input type="file" id="leaseFileTenantContact" accept=".pdf,.jpg,.png" class="dx-field-upload">
-            </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
-            <div>
-              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">📋 สัญญาเช่า</label>
-              <input type="file" id="leaseFileAgreement" accept=".pdf,.jpg,.png" class="dx-field-upload">
-            </div>
-            <div>
-              <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">🆔 สำเนาบัตรประชาชน</label>
-              <input type="file" id="leaseFileId" accept=".pdf,.jpg,.png" class="dx-field-upload">
-            </div>
-          </div>
-
+          <div style="font-weight: 600; margin-bottom: 0.8rem; color: #01579b;">📄 เอกสารสัญญาเช่า (optional)</div>
           <div>
-            <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">💰 หลักฐานรายได้</label>
-            <input type="file" id="leaseFileIncome" accept=".pdf,.jpg,.png" class="dx-field-upload">
+            <label style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem;">📋 ไฟล์สัญญาเช่า</label>
+            <input type="file" id="leaseFileAgreement" accept=".pdf,.jpg,.png" class="dx-field-upload">
           </div>
           <small style="color: #666; margin-top: 0.5rem; display: block;">📁 สนับสนุน: PDF, JPG, PNG · ขนาดสูงสุด: 5MB</small>
         </div>
@@ -2027,17 +2005,8 @@ function createNewLease() {
 
   // Collect uploaded files
   const documentsToUpload = {};
-  const petCertFile = document.getElementById('leaseFilePetCert')?.files[0];
-  const tenantContactFile = document.getElementById('leaseFileTenantContact')?.files[0];
   const agreementFile = document.getElementById('leaseFileAgreement')?.files[0];
-  const idFile = document.getElementById('leaseFileId')?.files[0];
-  const incomeFile = document.getElementById('leaseFileIncome')?.files[0];
-
-  if (petCertFile) documentsToUpload.petCert = petCertFile;
-  if (tenantContactFile) documentsToUpload.tenantContact = tenantContactFile;
   if (agreementFile) documentsToUpload.agreement = agreementFile;
-  if (idFile) documentsToUpload.id = idFile;
-  if (incomeFile) documentsToUpload.income = incomeFile;
 
   let leaseId = activeLease?.id;
 
@@ -2086,8 +2055,8 @@ function createNewLease() {
     document.getElementById('leaseTenant').value = '';
     const preview = document.getElementById('leasePreviewCard');
     if (preview) preview.classList.add('u-hidden');
-    ['leaseFilePetCert', 'leaseFileTenantContact', 'leaseFileAgreement', 'leaseFileId', 'leaseFileIncome']
-      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const leaseAgreementEl = document.getElementById('leaseFileAgreement');
+    if (leaseAgreementEl) leaseAgreementEl.value = '';
 
     renderLeaseAgreementsPage();
   }
