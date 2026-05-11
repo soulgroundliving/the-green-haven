@@ -723,6 +723,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'generateReceipt') { typeof generateReceipt === 'function' && generateReceipt(); return; }
     if (a === 'skipSlipVerify') { typeof skipSlipVerify === 'function' && skipSlipVerify(); return; }
     if (a === 'goToNextUnpaidRoom') { typeof window.goToNextUnpaidRoom === 'function' && window.goToNextUnpaidRoom(); return; }
+    if (a === 'toggleRateEdit') { typeof window.toggleRateEdit === 'function' && window.toggleRateEdit(); return; }
     if (a === 'saveServiceProvider') { typeof saveServiceProvider === 'function' && saveServiceProvider(); return; }
     if (a === 'showAddMaintenanceModal') { typeof showAddMaintenanceModal === 'function' && showAddMaintenanceModal(); return; }
     if (a === 'showAddHousekeepingModal') { typeof showAddHousekeepingModal === 'function' && showAddHousekeepingModal(); return; }

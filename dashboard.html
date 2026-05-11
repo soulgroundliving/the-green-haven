@@ -903,14 +903,15 @@
   .bill-paid-badge.is-unpaid{background:#fef3c7;color:#92400e;}
 
   .bill-meter-compact{display:flex;flex-direction:column;gap:.35rem;padding:.2rem 0;}
-  .bill-meter-row{display:grid;grid-template-columns:1.4rem 3.5rem 1fr auto 1fr 2.5rem auto auto;align-items:center;gap:.4rem;font-size:.84rem;}
+  .bill-meter-row{display:grid;grid-template-columns:1.4rem 3.5rem auto auto 1fr auto;align-items:center;gap:.4rem;font-size:.84rem;}
   .bill-meter-row .bm-icon{font-size:1rem;justify-self:center;}
   .bill-meter-row .bm-label{font-size:.75rem;font-weight:600;color:var(--text-muted);}
+  .bill-meter-row .bm-old-val{font-size:.82rem;color:var(--text-muted);font-variant-numeric:tabular-nums;text-align:right;min-width:3.5rem;letter-spacing:.01em;}
   .bill-meter-row .bm-arrow{color:var(--text-muted);justify-self:center;}
   .bill-meter-row .bm-input{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:5px 7px;font-family:var(--font-brand);font-size:.84rem;background:#fff;width:100%;min-width:0;}
-  .bill-meter-row .bm-input:focus{outline:none;border-color:var(--green);}
-  .bill-meter-row .bm-rate{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:5px 6px;font-size:.8rem;width:46px;background:#f9fafb;font-family:var(--font-brand);}
-  .bill-meter-row .bm-unit{font-size:.72rem;color:var(--text-muted);}
+  .bill-meter-row .bm-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px var(--green-pale);}
+  .bill-meter-row .bm-rate-chip{font-size:.72rem;color:var(--text-muted);white-space:nowrap;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 5px;}
+  .bill-meter-row .bm-rate-input{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:4px 5px;font-size:.8rem;width:46px;background:#f9fafb;font-family:var(--font-brand);}
   .bill-meter-row .bm-cost{font-weight:700;font-size:.88rem;color:var(--green-dark);white-space:nowrap;justify-self:end;}
 
   .bill-next-btn{width:100%;padding:.55rem;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-muted);font-size:.82rem;cursor:pointer;transition:background .15s,color .15s;}
@@ -4347,23 +4348,29 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <div class="bill-meter-row">
               <span class="bm-icon">⚡</span>
               <span class="bm-label">ไฟฟ้า</span>
-              <input type="number" id="f-elec-old" placeholder="เดิม" data-action="calcBill" class="bm-input">
+              <span class="bm-old-val" id="d-elec-old">—</span>
+              <input type="number" id="f-elec-old" data-action="calcBill" class="u-hidden" aria-hidden="true" tabindex="-1">
               <span class="bm-arrow">→</span>
-              <input type="number" id="f-elec-new" placeholder="ใหม่" data-action="calcBill" class="bm-input">
-              <input type="number" id="f-elec-rate" value="8" data-action="calcBill" class="bm-rate">
-              <span class="bm-unit">฿/u</span>
+              <input type="number" id="f-elec-new" placeholder="ใหม่" data-action="calcBill" class="bm-input" inputmode="numeric" autocomplete="off">
+              <span class="bm-rate-chip" id="d-elec-rate-lbl">฿8/u</span>
+              <input type="number" id="f-elec-rate" value="8" data-action="calcBill" class="u-hidden bm-rate-input" aria-hidden="true" tabindex="-1">
               <input type="number" id="f-elec-units" readonly class="u-hidden">
             </div>
             <div class="bill-meter-row">
               <span class="bm-icon">💧</span>
               <span class="bm-label">น้ำ</span>
-              <input type="number" id="f-water-old" placeholder="เดิม" data-action="calcBill" class="bm-input">
+              <span class="bm-old-val" id="d-water-old">—</span>
+              <input type="number" id="f-water-old" data-action="calcBill" class="u-hidden" aria-hidden="true" tabindex="-1">
               <span class="bm-arrow">→</span>
-              <input type="number" id="f-water-new" placeholder="ใหม่" data-action="calcBill" class="bm-input">
-              <input type="number" id="f-water-rate" value="20" data-action="calcBill" class="bm-rate">
-              <span class="bm-unit">฿/u</span>
+              <input type="number" id="f-water-new" placeholder="ใหม่" data-action="calcBill" class="bm-input" inputmode="numeric" autocomplete="off">
+              <span class="bm-rate-chip" id="d-water-rate-lbl">฿20/u</span>
+              <input type="number" id="f-water-rate" value="20" data-action="calcBill" class="u-hidden bm-rate-input" aria-hidden="true" tabindex="-1">
               <input type="number" id="f-water-units" readonly class="u-hidden">
             </div>
+          </div>
+          <!-- Rate edit toggle (hidden fields) -->
+          <div style="text-align:right;margin-top:1px;">
+            <button type="button" id="btnRateEdit" data-action="toggleRateEdit" style="font-size:.71rem;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:2px 0;text-decoration:underline dotted;">⚙️ แก้อัตรา</button>
           </div>
 
           <!-- Extras (collapsible) -->
@@ -4430,28 +4437,30 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
         </div><!-- /card bill-form -->
 
-        <!-- Document panels (below the form) -->
-        <div class="card">
-          <div class="card-title" style="color:var(--blue);margin-bottom:.3rem;">📄 ใบวางบิล (ส่งให้ลูกบ้าน)</div>
-          <div class="doc-panel invoice-panel" id="invoicePanel">
-            <div class="doc-placeholder">
-              <div class="icon">📄</div>
-              <div style="font-size:.9rem;font-weight:600;">กรอกข้อมูลและกด "ส่งใบวางบิล"</div>
-              <div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 1 — แจ้งยอดก่อนชำระ</div>
+        <!-- Document panels — hidden until invoice is generated -->
+        <div id="billDocPanels" class="u-hidden">
+          <div class="card">
+            <div class="card-title" style="color:var(--blue);margin-bottom:.3rem;">📄 ใบวางบิล (ส่งให้ลูกบ้าน)</div>
+            <div class="doc-panel invoice-panel" id="invoicePanel">
+              <div class="doc-placeholder">
+                <div class="icon">📄</div>
+                <div style="font-size:.9rem;font-weight:600;">กรอกข้อมูลและกด "ส่งใบวางบิล"</div>
+                <div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 1 — แจ้งยอดก่อนชำระ</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="card">
-          <div class="card-title" style="color:var(--green);margin-bottom:.3rem;">✅ ใบเสร็จรับเงิน (หลังรับชำระ)</div>
-          <div class="doc-panel receipt-panel" id="receiptPanel">
-            <div class="doc-placeholder">
-              <div class="icon">✅</div>
-              <div style="font-size:.9rem;font-weight:600;">กด "ออกใบเสร็จรับเงิน" หลังรับเงินแล้ว</div>
-              <div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 2 — ยืนยันการชำระเงิน</div>
+          <div class="card">
+            <div class="card-title" style="color:var(--green);margin-bottom:.3rem;">✅ ใบเสร็จรับเงิน (หลังรับชำระ)</div>
+            <div class="doc-panel receipt-panel" id="receiptPanel">
+              <div class="doc-placeholder">
+                <div class="icon">✅</div>
+                <div style="font-size:.9rem;font-weight:600;">กด "ออกใบเสร็จรับเงิน" หลังรับเงินแล้ว</div>
+                <div style="font-size:.77rem;margin-top:5px;">ขั้นตอนที่ 2 — ยืนยันการชำระเงิน</div>
+              </div>
             </div>
           </div>
-        </div>
+        </div><!-- /billDocPanels -->
 
       </div><!-- /billActiveRoom -->
     </div><!-- /bill-grid-right -->

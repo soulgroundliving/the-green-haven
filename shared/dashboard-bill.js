@@ -39,8 +39,12 @@ function onRoomChange(){
   const opt=document.getElementById('f-room').selectedOptions[0];
   if(!opt||!opt.dataset.rent)return;
   document.getElementById('f-rent').value=opt.dataset.rent;
-  document.getElementById('f-elec-rate').value=opt.dataset.elec||8;
+  const _elecRate=opt.dataset.elec||8;
+  document.getElementById('f-elec-rate').value=_elecRate;
   document.getElementById('f-trash').value=opt.dataset.trash||20;
+  // Update rate chip display labels
+  const _dER=document.getElementById('d-elec-rate-lbl'); if(_dER) _dER.textContent='฿'+_elecRate+'/u';
+  const _dWR=document.getElementById('d-water-rate-lbl'); if(_dWR) _dWR.textContent='฿'+(opt.dataset.water||20)+'/u';
 
   const isDaily=opt.dataset.type==='daily';
   const ds=document.getElementById('dailySection');
@@ -149,11 +153,16 @@ async function autoFillMeters(){
     document.getElementById('f-elec-old').value=(meterData.eOld!=null?meterData.eOld:'');
     document.getElementById('f-water-new').value=(meterData.wNew!=null?meterData.wNew:'');
     document.getElementById('f-water-old').value=(meterData.wOld!=null?meterData.wOld:'');
+    // Update static display labels (P0 UX — old reading shown as label, not input)
+    const dEO=document.getElementById('d-elec-old'); if(dEO) dEO.textContent=(meterData.eOld!=null&&meterData.eOld!=='') ? meterData.eOld : '—';
+    const dWO=document.getElementById('d-water-old'); if(dWO) dWO.textContent=(meterData.wOld!=null&&meterData.wOld!=='') ? meterData.wOld : '—';
   } else {
     document.getElementById('f-elec-new').value='';
     document.getElementById('f-elec-old').value='';
     document.getElementById('f-water-new').value='';
     document.getElementById('f-water-old').value='';
+    const dEO=document.getElementById('d-elec-old'); if(dEO) dEO.textContent='—';
+    const dWO=document.getElementById('d-water-old'); if(dWO) dWO.textContent='—';
     // Retry once after 1.2s if METER_DATA was still empty (Firebase not ready yet)
     const isMDEmpty = !window.METER_DATA || (
       Object.keys(window.METER_DATA.rooms||{}).length === 0 &&
@@ -912,7 +921,9 @@ function generateInvoice(){
   document.getElementById('billHint').textContent='📲 อัปโหลดสลิปเพื่อตรวจสอบ → จากนั้นออกใบเสร็จได้เลย';
   document.getElementById('step1').className='step done';
   document.getElementById('step2').className='step active';
-  document.getElementById('invoicePanel').scrollIntoView({behavior:'smooth'});
+  // Reveal doc panels (hidden by default until first invoice generated)
+  document.getElementById('billDocPanels')?.classList.remove('u-hidden');
+  setTimeout(()=>{ document.getElementById('billDocPanels')?.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 100);
 }
 
 let isGeneratingReceipt = false; // Prevent rapid clicks
@@ -1532,6 +1543,8 @@ function selectRoomForBill(roomId){
   document.querySelectorAll('.bill-room-card').forEach(c=>c.classList.remove('bc-active'));
   const card = document.querySelector(`.bill-room-card[data-room="${roomId}"]`);
   if(card){ card.classList.add('bc-active'); card.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  // P0 UX: auto-focus the elec-new input for keyboard-first billing
+  setTimeout(()=>{ document.getElementById('f-elec-new')?.focus(); }, 300);
 }
 
 // ── Direction A helpers ────────────────────────────────────────────────────
@@ -1548,6 +1561,8 @@ function _showBillActiveRoom(roomId){
     empty.classList.remove('u-hidden');
     active.classList.add('u-hidden');
   }
+  // Always hide doc panels when switching rooms — they reveal again after ส่งใบวางบิล
+  document.getElementById('billDocPanels')?.classList.add('u-hidden');
 }
 
 /** Update the room-header card (room #, tenant, paid badge) after onRoomChange() */
@@ -1819,4 +1834,51 @@ function _doResetRoomPayment() {
   renderPaymentStatus();
   renderMeterTable();
 }
+
+// ── P0 UX: Keyboard-first billing flow ────────────────────────────────────────
+// Enter on elec-new → focus water-new
+// Enter on water-new → fire generateInvoice (same as clicking "ส่งใบวางบิล")
+(function _bindBillKeyboard(){
+  function handleEnter(e){
+    if(e.key!=='Enter'||e.shiftKey||e.ctrlKey||e.metaKey) return;
+    const id=e.target?.id;
+    if(id==='f-elec-new'){
+      e.preventDefault();
+      document.getElementById('f-water-new')?.focus();
+    } else if(id==='f-water-new'){
+      e.preventDefault();
+      if(typeof generateInvoice==='function') generateInvoice();
+    }
+  }
+  // Wire immediately + on DOMContentLoaded (handles both load orders)
+  function wire(){
+    document.getElementById('f-elec-new')?.addEventListener('keydown',handleEnter);
+    document.getElementById('f-water-new')?.addEventListener('keydown',handleEnter);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire);
+  else wire();
+})();
+
+// ── P0 UX: Rate field toggle (⚙️ แก้อัตรา) ──────────────────────────────────
+function toggleRateEdit(){
+  const rows=document.querySelectorAll('.bill-meter-row');
+  rows.forEach(row=>{
+    const chip=row.querySelector('.bm-rate-chip');
+    const input=row.querySelector('.bm-rate-input');
+    if(!chip||!input) return;
+    const opening=chip.style.display!=='none'&&!chip.classList.contains('u-hidden');
+    // toggle: chip ↔ input
+    chip.classList.toggle('u-hidden', opening);
+    input.classList.toggle('u-hidden', !opening);
+    if(opening) input.removeAttribute('tabindex');
+    else input.setAttribute('tabindex','-1');
+    if(opening) setTimeout(()=>input.focus(),50);
+  });
+  const btn=document.getElementById('btnRateEdit');
+  if(btn){
+    const nowEdit=!document.querySelector('.bill-meter-row .bm-rate-input.u-hidden');
+    btn.textContent=nowEdit?'⚙️ แก้อัตรา':'✕ ปิด';
+  }
+}
+window.toggleRateEdit=toggleRateEdit;
 
