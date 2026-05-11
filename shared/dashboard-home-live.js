@@ -708,13 +708,12 @@ function renderMeterTable(){
 }
 
 function goBillFromTable(roomId, year, month){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  // Lazy-subscribe bill-page Firestore listeners (bypass of showPage)
-  if (typeof window._subscribeBuildingPaymentForBill === 'function') window._subscribeBuildingPaymentForBill();
-  if (typeof window._subscribeGlobalVerifiedSlips === 'function') window._subscribeGlobalVerifiedSlips();
-  document.getElementById('page-bill').classList.add('active');
-  document.querySelector('.nav-btn[onclick*="\'bill\'"]')?.classList.add('active');
+  // Delegate to showPage() so .sidebar-item.active syncs (previously
+  // this function did its own DOM toggling and missed sidebar — left the
+  // Dashboard item highlighted while content showed Bill page).
+  // showPage() also handles the Firestore lazy-subscribe internally.
+  const billSidebarBtn = document.querySelector('.sidebar-item[data-action="showPage"][data-page="bill"]');
+  window.showPage('bill', billSidebarBtn);
   if(month)document.getElementById('f-month').value=month;
   if(year)document.getElementById('f-year').value=year;
   const wantBld = (window._pvmBuilding === 'nest') ? 'new' : 'old';
