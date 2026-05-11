@@ -47,18 +47,25 @@ All 8 Tier-C listeners verified lazy ✅ — except one:
 - `updateComplaintsWidget` reads from `localStorage.complaints_data` populated by `RequestsStore._ingest`. ✅ Safe (complaints stays eager).
 - `_subscribeBuildingPaymentForBill` only consumed by `_refreshPromptPayDisplay` on bill page (plus a localStorage.promptpay mirror for tenant_app.html, which is a separate page and doesn't share JS context). ✅ Safe.
 
-### Phase 2 — Fix the two high-confidence wins (Tier A)
-- [ ] **A1: Building payment cache lazy-subscribe** — move `_subscribeBuildingPaymentForBill` from DOMContentLoaded into `initBillPage()` (or first `showPage('bill')`). Verification: open dashboard → switch directly to People Mgmt without visiting bill → confirm no `buildings/RentRoom` listener in Firestore IndexedDB.
-- [ ] **A2: Global verifiedSlips lazy-subscribe** — gate `_subscribeGlobalVerifiedSlips` on first `showPage('bill')` OR `showPage('payment-verify')`. 300-doc initial replay only fires when needed.
-- [ ] If `dashboard-payment-verify.js:116` is dup → remove the duplicate; let A2 cover both.
+### Phase 2 — Fix the two high-confidence wins (Tier A) ✅ DONE (commit 281c9b1)
+- [x] **A1: Building payment cache lazy-subscribe** — removed DOMContentLoaded+500ms trigger; added `_buildingPaymentSubscribed` idempotency guard; exposed `window._subscribeBuildingPaymentForBill`; hooked into `showPage('bill')`, `goBillFromTable`, `selectRoomForBill`.
+- [x] **A2: Global verifiedSlips lazy-subscribe** — removed DOMContentLoaded+800ms trigger; exposed `window._subscribeGlobalVerifiedSlips`; hooked into all 3 bill-page entry paths (same as A1). `dashboard-payment-verify.js` fallback intact.
+- [x] `dashboard-payment-verify.js:116` is NOT a dup — uses its own `_pvUnsubscribe` var; only fires when user opens Payment Verify sub-tab; does NOT set `window._globalSlipsUnsub`.
 
 ### Phase 3 — Tier C fixes (after Phase 1 triage)
 - [ ] Migrate any Tier-C subscribers that fire on DOMContentLoaded but only feed admin sub-pages
 - [ ] Skip ones that need to stay always-on (gamificationConfig flag, tenants list — these inform global UI)
 
-### Phase 4 — Verify cold-start cost
-- [ ] Push to Vercel → open `Network` tab → reload dashboard → count Firestore Listen-channel connections in first 3 sec
-- [ ] Expected: drop from ~10–12 listeners on cold-start to ~3–4 (gamificationConfig + tenants + verifiedSlips-now-deferred)
+### Phase 4 — Verify cold-start cost ✅ DONE (Chrome MCP, 2026-05-11)
+- [x] Pushed to Vercel (origin/main, commit 281c9b1) → verified via Chrome MCP.
+- [x] **Cold-start (page-dashboard active):**
+  - `window._buildingPaymentSubscribed === false` ✅ — buildings Firestore subscription idle
+  - `window._globalSlipsUnsub === null` ✅ — verifiedSlips Firestore subscription idle
+  - Both DOMContentLoaded eager triggers removed from `dashboard-bill.js`
+- [x] **After first Billing & Payment click:**
+  - `window._buildingPaymentSubscribed === true` ✅ — subscription fired on-demand
+  - `window._globalSlipsUnsub === function` ✅ — subscription fired on-demand
+  - Bill page UI renders correctly with all form fields and receipt sections
 
 ## Why this is safe
 - All migrations: move a `subscribe()` call from DOMContentLoaded to first `showPage()`. The render functions already handle empty-cache start (`renderPaymentStatus`, `renderBillPage`).
