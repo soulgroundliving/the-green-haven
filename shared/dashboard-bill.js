@@ -924,6 +924,16 @@ function generateInvoice(){
   // Reveal doc panels (hidden by default until first invoice generated)
   document.getElementById('billDocPanels')?.classList.remove('u-hidden');
   setTimeout(()=>{ document.getElementById('billDocPanels')?.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 100);
+  // Reveal "next unpaid room" button and update its label with remaining count
+  const _nextBtn = document.getElementById('btnNextUnpaidRoom');
+  if(_nextBtn){
+    const _paidMap = typeof PaymentStore!=='undefined' ? PaymentStore.listForMonth(parseInt(document.getElementById('f-year')?.value), parseInt(document.getElementById('f-month')?.value)) : {};
+    const _bldgInfo = getBuildingInfo(currentBuilding);
+    const _rooms = typeof getActiveRoomsWithMetadata==='function' ? getActiveRoomsWithMetadata(_bldgInfo.firebaseBuilding, _bldgInfo.metadataArray) : [];
+    const _remaining = _rooms.filter(r=>!_paidMap[r.id] && r.id !== (document.getElementById('f-room')?.value||'')).length;
+    _nextBtn.textContent = _remaining > 0 ? `→ ห้องถัดไปที่ยังไม่ชำระ (${_remaining} ห้อง)` : '🎉 ทุกห้องชำระแล้ว';
+    _nextBtn.classList.remove('u-hidden');
+  }
 }
 
 let isGeneratingReceipt = false; // Prevent rapid clicks
@@ -1561,8 +1571,9 @@ function _showBillActiveRoom(roomId){
     empty.classList.remove('u-hidden');
     active.classList.add('u-hidden');
   }
-  // Always hide doc panels when switching rooms — they reveal again after ส่งใบวางบิล
+  // Always hide doc panels + next-btn when switching rooms — they reveal again after ส่งใบวางบิล
   document.getElementById('billDocPanels')?.classList.add('u-hidden');
+  document.getElementById('btnNextUnpaidRoom')?.classList.add('u-hidden');
 }
 
 /** Update the room-header card (room #, tenant, paid badge) after onRoomChange() */
@@ -1934,6 +1945,20 @@ async function batchSendInvoices(){
   showToast(msg, 'success');
 }
 window.batchSendInvoices = batchSendInvoices;
+
+// ── P2 UX: Auto-on unpaid filter on page load ─────────────────────────────────
+// Start every session in "ยังไม่ชำระ" mode so admin sees outstanding rooms first
+(function _autoEnableUnpaidFilter(){
+  function _try(){
+    if(!document.getElementById('billRoomGrid')) return; // billing section not in DOM yet
+    if(!_billFilterUnpaid) toggleUnpaidFilter();
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', ()=>setTimeout(_try, 900));
+  } else {
+    setTimeout(_try, 900);
+  }
+})();
 
 // ── P0 UX: Keyboard-first billing flow ────────────────────────────────────────
 // Enter on elec-new → focus water-new
