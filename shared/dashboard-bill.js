@@ -927,7 +927,12 @@ function generateInvoice(){
   document.getElementById('slipVerifySection').classList.add('show');
   document.getElementById('billHint').textContent='📲 อัปโหลดสลิปเพื่อตรวจสอบ → จากนั้นออกใบเสร็จได้เลย';
   document.getElementById('step1').className='step done';
+  const _sn1 = document.getElementById('step1').querySelector('.step-num');
+  if(_sn1) _sn1.textContent='✓';
   document.getElementById('step2').className='step active';
+  // Mark invoice button as sent
+  const _invBtn = document.querySelector('[data-action="generateInvoice"]');
+  if(_invBtn){ _invBtn.textContent='✅ ส่งแล้ว'; _invBtn.disabled=true; _invBtn.classList.add('u-op40','u-no-ptr'); }
   // Reveal doc panels (hidden by default until first invoice generated)
   document.getElementById('billDocPanels')?.classList.remove('u-hidden');
   setTimeout(()=>{ document.getElementById('billDocPanels')?.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 100);
@@ -971,8 +976,22 @@ function generateReceipt(){
     : '';
   document.getElementById('receiptPanel').innerHTML=buildDocHTML(d,'receipt',null,payDate)+slipNote;
   document.getElementById('step2').className='step done';
+  const _sn2 = document.getElementById('step2').querySelector('.step-num');
+  if(_sn2) _sn2.textContent='✓';
   document.getElementById('slipVerifySection').classList.remove('show');
   markRoomPaid(d); // บันทึกสถานะห้องนี้ว่าชำระแล้ว
+  // Update next-room button with specific next unpaid room id
+  setTimeout(()=>{
+    const _nextBtn = document.getElementById('btnNextUnpaidRoom');
+    if(!_nextBtn || _nextBtn.classList.contains('u-hidden')) return;
+    const _paidMap = typeof PaymentStore!=='undefined' ? PaymentStore.listForMonth(parseInt(document.getElementById('f-year')?.value), parseInt(document.getElementById('f-month')?.value)) : {};
+    const _bldgInfo = getBuildingInfo(currentBuilding);
+    const _rooms = typeof getActiveRoomsWithMetadata==='function' ? getActiveRoomsWithMetadata(_bldgInfo.firebaseBuilding, _bldgInfo.metadataArray) : [];
+    const _curIdx = _rooms.findIndex(r=>r.id===d.room);
+    const _next = _rooms.slice(_curIdx+1).find(r=>!_paidMap[r.id]) || _rooms.slice(0,_curIdx).find(r=>!_paidMap[r.id]);
+    const _rem = _rooms.filter(r=>!_paidMap[r.id]).length;
+    _nextBtn.textContent = _next ? `→ ห้อง ${_next.id} (ยังค้าง ${_rem} ห้อง)` : '🎉 ทุกห้องชำระแล้ว';
+  }, 200);
   const _hint = document.getElementById('billHint');
   if (_hint) {
     _hint.textContent = slipVerified && slipData
@@ -1081,9 +1100,15 @@ function resetBillFlow(){
   document.getElementById('btnReceipt').disabled=true;
   document.getElementById('btnReceipt').classList.add('u-op40');
   document.getElementById('btnReceipt').classList.add('u-no-ptr');
+  const _invBtnR = document.querySelector('[data-action="generateInvoice"]');
+  if(_invBtnR){ _invBtnR.textContent='📄 ส่งใบวางบิล'; _invBtnR.disabled=false; _invBtnR.classList.remove('u-op40','u-no-ptr'); }
   document.getElementById('billHint').textContent='ส่งใบวางบิลก่อน → อัปโหลดสลิป → ออกใบเสร็จรับเงิน';
   document.getElementById('step1').className='step active';
+  const _sn1r = document.getElementById('step1').querySelector('.step-num');
+  if(_sn1r) _sn1r.textContent='1';
   document.getElementById('step2').className='step pending';
+  const _sn2r = document.getElementById('step2').querySelector('.step-num');
+  if(_sn2r) _sn2r.textContent='2';
   document.getElementById('slipVerifySection').classList.remove('show');
   document.getElementById('slipResult').innerHTML='';
 }
@@ -1560,7 +1585,8 @@ function selectRoomForBill(roomId){
   document.querySelectorAll('.bill-room-card').forEach(c=>c.classList.remove('bc-active'));
   const card = document.querySelector(`.bill-room-card[data-room="${roomId}"]`);
   if(card){ card.classList.add('bc-active'); card.scrollIntoView({behavior:'smooth',block:'nearest'}); }
-  // Meter inputs are read-only from database — no auto-focus needed
+  // Auto-focus the invoice button so keyboard users can hit Enter immediately
+  setTimeout(()=>{ document.querySelector('[data-action="generateInvoice"]:not([disabled])')?.focus(); }, 80);
 }
 
 // ── Direction A helpers ────────────────────────────────────────────────────
@@ -1985,12 +2011,23 @@ function toggleRateEdit(){
 }
 window.toggleRateEdit=toggleRateEdit;
 
-// ── Keyboard accessibility: Space activates focused room cards ────────────
+// ── Keyboard accessibility ────────────────────────────────────────────────
 document.addEventListener('keydown', function(e){
-  if(e.key !== ' ') return;
-  const card = e.target.closest('.bill-room-card');
-  if(!card) return;
-  e.preventDefault(); // prevent page scroll
-  card.click();
+  // Space on room card → click it
+  if(e.key === ' '){
+    const card = e.target.closest('.bill-room-card');
+    if(card){ e.preventDefault(); card.click(); return; }
+  }
+  // Enter in extras inputs → move to next field, last one focuses invoice btn
+  if(e.key === 'Enter'){
+    const ORDER = ['f-trash','f-other','f-latefee'];
+    const idx = ORDER.indexOf(e.target.id);
+    if(idx !== -1){
+      e.preventDefault();
+      const nextId = ORDER[idx+1];
+      if(nextId) document.getElementById(nextId)?.focus();
+      else document.querySelector('[data-action="generateInvoice"]:not([disabled])')?.focus();
+    }
+  }
 });
 

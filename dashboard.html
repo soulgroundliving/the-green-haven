@@ -898,13 +898,14 @@
   .bc-amount{display:block;font-size:.72rem;font-weight:600;margin-top:1px;}
 
   .bill-grid-right{display:flex;flex-direction:column;gap:.4rem;}
-  .bill-empty-state{text-align:center;padding:4rem 1.5rem;color:var(--text-muted);border:2px dashed var(--border);border-radius:var(--radius-sm);background:var(--surface);}
-  .bill-empty-state .bill-empty-icon{font-size:2.8rem;margin-bottom:.6rem;}
+  @keyframes billArrowPulse{0%,100%{transform:translateX(0);}50%{transform:translateX(-6px);}}
+  .bill-empty-state{text-align:center;padding:3rem 1.5rem;color:var(--text-muted);border:2px dashed var(--border);border-radius:var(--radius-sm);background:var(--surface);}
+  .bill-empty-state .bill-empty-icon{font-size:2.4rem;margin-bottom:.7rem;display:block;animation:billArrowPulse 1.6s ease-in-out infinite;}
 
   #billActiveRoom .card{padding:.65rem .9rem;}
-  .bill-room-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:.4rem;flex-wrap:wrap;padding:.5rem .7rem;}
-  .bill-room-hdr-left{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap;}
-  .bill-room-hdr-num{font-size:1.4rem;font-weight:700;color:var(--text);}
+  .bill-room-hdr{display:flex;flex-direction:column;gap:.45rem;padding:.6rem .9rem;}
+  .bill-room-hdr-top{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;}
+  .bill-room-hdr-num{font-size:1.6rem;font-weight:800;color:var(--text);}
   .bill-room-hdr-tenant{font-size:.85rem;color:var(--text-muted);}
   .bill-paid-badge{font-size:.78rem;font-weight:600;padding:3px 10px;border-radius:12px;}
   .bill-paid-badge.is-paid{background:#dcfce7;color:var(--green-dark);}
@@ -960,16 +961,16 @@
   .btn-receipt:disabled{background:var(--border,#e2e8f0);color:var(--text-muted,#94a3b8);cursor:not-allowed;transform:none;opacity:1;}
 
   /* Bill step indicator */
-  .bill-steps{display:flex;align-items:center;gap:0;margin-bottom:1rem;}
-  .step{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-sm);font-size:.79rem;font-weight:600;}
+  .bill-steps{display:flex;align-items:center;gap:0;width:100%;}
+  .step{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-sm);font-size:.79rem;font-weight:600;transition:background .2s,color .2s;}
   .step.active{background:var(--blue-pale);color:var(--blue);}
   .step.done{background:var(--green-pale);color:var(--green-dark);}
   .step.pending{background:#f5f5f5;color:var(--text-muted);}
-  .step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;}
+  .step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;transition:background .2s;}
   .step.active .step-num{background:var(--blue);color:#fff;}
   .step.done .step-num{background:var(--green);color:#fff;}
   .step.pending .step-num{background:#bdbdbd;color:#fff;}
-  .step-arrow{color:#bdbdbd;margin:0 4px;font-size:1.1rem;}
+  .step-arrow{color:#bdbdbd;margin:0 4px;font-size:1.1rem;flex-shrink:0;}
 
   /* ===== SLIP VERIFICATION ===== */
   .slip-verify-section{background:#fff8e1;border:2px solid #ffcc02;border-radius:var(--radius-sm);padding:1rem;display:none;}
@@ -987,15 +988,21 @@
   /* ── Billing: dark mode overrides ──────────────────────────────────── */
   :root[data-theme="dark"] .bill-room-card.bc-paid{background:#0f2e1a;border-color:var(--green);}
   :root[data-theme="dark"] .bill-room-card.bc-unpaid{background:#2a1200;border-color:#ea580c;color:#fb923c;}
+  :root[data-theme="dark"] .bill-room-card.bc-active{background:#0d2540!important;border-color:var(--blue-bright)!important;color:var(--blue-bright)!important;}
   :root[data-theme="dark"] .bill-paid-badge.is-paid{background:#0a2514;}
   :root[data-theme="dark"] .bill-paid-badge.is-unpaid{background:#2a1200;color:#fb923c;}
+  :root[data-theme="dark"] .step.active{background:#0d2540;color:var(--blue-bright);}
+  :root[data-theme="dark"] .step.pending{background:var(--surface-raised);color:var(--text-muted);}
   :root[data-theme="dark"] .slip-drop-area{background:var(--surface-card);border-color:#b45309;}
   :root[data-theme="dark"] .slip-drop-area:hover{background:#2a1e00;border-color:#d97706;}
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .bill-room-card.bc-paid{background:#0f2e1a;border-color:var(--green);}
     :root:not([data-theme="light"]) .bill-room-card.bc-unpaid{background:#2a1200;border-color:#ea580c;color:#fb923c;}
+    :root:not([data-theme="light"]) .bill-room-card.bc-active{background:#0d2540!important;border-color:var(--blue-bright)!important;color:var(--blue-bright)!important;}
     :root:not([data-theme="light"]) .bill-paid-badge.is-paid{background:#0a2514;}
     :root:not([data-theme="light"]) .bill-paid-badge.is-unpaid{background:#2a1200;color:#fb923c;}
+    :root:not([data-theme="light"]) .step.active{background:#0d2540;color:var(--blue-bright);}
+    :root:not([data-theme="light"]) .step.pending{background:var(--surface-raised);color:var(--text-muted);}
     :root:not([data-theme="light"]) .slip-drop-area{background:var(--surface-card);border-color:#b45309;}
     :root:not([data-theme="light"]) .slip-drop-area:hover{background:#2a1e00;border-color:#d97706;}
   }
@@ -4313,9 +4320,12 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
       <!-- Empty state (no room selected) -->
       <div id="billEmptyState" class="bill-empty-state">
-        <div class="bill-empty-icon">👈</div>
-        <div style="font-weight:600;font-size:.95rem;">เลือกห้องจากกริดเพื่อออกบิล</div>
-        <div style="font-size:.8rem;margin-top:.3rem;opacity:.65;">คลิกห้อง ⏳ (สีเหลือง) เพื่อเริ่มออกบิล<br>คลิกห้อง ✅ (สีเขียว) เพื่อดูรายละเอียด</div>
+        <span class="bill-empty-icon">←</span>
+        <div style="font-weight:700;font-size:1rem;color:var(--text);">เลือกห้องเพื่อเริ่มออกบิล</div>
+        <div style="font-size:.82rem;margin-top:.6rem;line-height:1.8;">
+          <span style="color:#c2410c;font-weight:600;">⏳ สีส้ม</span> — คลิกเพื่อออกบิล<br>
+          <span style="color:var(--green-dark);font-weight:600;">✅ สีเขียว</span> — คลิกเพื่อดูรายละเอียด
+        </div>
       </div>
 
       <!-- Active room form (hidden until room clicked) -->
@@ -4323,18 +4333,16 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
         <!-- Room header card -->
         <div class="card bill-room-hdr">
-          <div class="bill-room-hdr-left">
+          <div class="bill-room-hdr-top">
             <span class="bill-room-hdr-num" id="fpRoomNum">ห้อง —</span>
             <span class="bill-room-hdr-tenant" id="fpTenantLabel"></span>
             <span class="bill-paid-badge is-unpaid" id="fpPaidBadge">⏳ ยังไม่ชำระ</span>
           </div>
-          <div style="display:flex;align-items:center;gap:.5rem;margin-top:.25rem;flex-wrap:wrap;">
-            <!-- Step indicator (per-room) -->
-            <div class="bill-steps" id="billSteps" style="margin:0;flex:1;">
-              <div class="step active" id="step1"><div class="step-num">1</div>ส่งใบวางบิล</div>
-              <div class="step-arrow">→</div>
-              <div class="step pending" id="step2"><div class="step-num">2</div>ออกใบเสร็จ</div>
-            </div>
+          <!-- Step indicator (per-room) -->
+          <div class="bill-steps" id="billSteps">
+            <div class="step active" id="step1"><div class="step-num">1</div>ส่งใบวางบิล</div>
+            <div class="step-arrow">→</div>
+            <div class="step pending" id="step2"><div class="step-num">2</div>ออกใบเสร็จ</div>
           </div>
         </div>
 
