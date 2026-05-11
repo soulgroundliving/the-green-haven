@@ -187,6 +187,19 @@ If a symptom has appeared before (bills, modals, auth): **stop, ask for ONE obse
 ### G. Cross-session self-conflict check
 After touching 2+ files in the same user flow: re-read ALL diffs from this session end-to-end before saying done. Two individually correct changes can conflict (happened: auth gate blocked URL that same session's login redirect was generating).
 
+### I. Production data actions — never automate
+Before any action that touches:
+- Financial approval (approve meter import, mark bill paid, batch writes to RTDB bills/)
+- Bulk Firestore/RTDB write outside a single user's own document
+- Admin-only CF trigger via `.click()` or `dispatchEvent`
+
+**Always**: show preview → wait for explicit user click. Never call `.click()` programmatically on approve/confirm buttons.
+```
+✅ Show the data to be written, wait for user to press the button
+❌ document.querySelector('#approveMeterBtn').click()   // blocked by pre-commit hook
+```
+Root incident (2026-05-01): auto-clicked "อนุมัติและบันทึก" → wrong building data entered Firestore production. Required manual rollback.
+
 ### H. Memory identifiers — grep before typing
 When writing ANY memory file (handoff, journal, lifecycle): every backtick-quoted path/function/field name must be grep-verified BEFORE typing — not after. Paraphrasing from memory produced 19 errors in one session.
 ```bash

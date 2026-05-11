@@ -65,9 +65,10 @@ async function loadOwnerInfo() {
 function computeBill({ building, roomId, year, month, eOld, eNew, wOld, wNew }, cfg) {
   const rent  = Number(cfg.rentPrice)    || 0;
   if (rent <= 0) return null;
-  const eRate = Number(cfg.electricRate) || 8;
-  const wRate = Number(cfg.waterRate)    || 20;
-  const trash = Number(cfg.trashRate)    || 20;
+  const eRate = cfg.electricRate != null ? Number(cfg.electricRate) : 8;
+  const wRate = cfg.waterRate    != null ? Number(cfg.waterRate)    : 20;
+  // trashRate: 0 is valid (free trash) — use != null not || to avoid treating 0 as falsy
+  const trash = cfg.trashRate    != null ? Number(cfg.trashRate)    : 20;
 
   const eU = Math.max(0, (Number(eNew) || 0) - (Number(eOld) || 0));
   const wU = Math.max(0, (Number(wNew) || 0) - (Number(wOld) || 0));
