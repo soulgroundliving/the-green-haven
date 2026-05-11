@@ -909,18 +909,19 @@
   .bill-paid-badge.is-paid{background:#dcfce7;color:var(--green-dark);}
   .bill-paid-badge.is-unpaid{background:#fef3c7;color:#92400e;}
 
-  .bill-meter-compact{display:flex;flex-direction:column;gap:.35rem;padding:.2rem 0;}
-  .bill-meter-row{display:grid;grid-template-columns:1.4rem 3.5rem 4rem .8rem 4rem 1fr auto;align-items:center;gap:.4rem;font-size:.84rem;}
-  .bill-meter-row .bm-icon{font-size:1rem;justify-self:center;}
-  .bill-meter-row .bm-label{font-size:.75rem;font-weight:600;color:var(--text-muted);}
-  .bill-meter-row .bm-old-val{font-size:.82rem;color:var(--text-muted);font-variant-numeric:tabular-nums;text-align:right;min-width:3.5rem;letter-spacing:.01em;}
-  .bill-meter-row .bm-new-val{font-size:.88rem;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;text-align:right;min-width:3.5rem;letter-spacing:.01em;}
-  .bill-meter-row .bm-arrow{color:var(--text-muted);justify-self:center;}
-  .bill-meter-row .bm-input{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:5px 7px;font-family:var(--font-brand);font-size:.84rem;background:#fff;width:100%;min-width:0;}
-  .bill-meter-row .bm-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px var(--green-pale);}
-  .bill-meter-row .bm-rate-chip{font-size:.72rem;color:var(--text-muted);white-space:nowrap;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 5px;}
-  .bill-meter-row .bm-rate-input{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:4px 5px;font-size:.8rem;width:46px;background:#f9fafb;font-family:var(--font-brand);}
-  .bill-meter-row .bm-cost{font-weight:700;font-size:.88rem;color:var(--green-dark);white-space:nowrap;justify-self:end;}
+  /* ── Meter cards (2-up grid) ───────────────────────────────── */
+  .bill-meter-cards{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.15rem 0;}
+  .bill-meter-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.5rem .65rem;display:flex;flex-direction:column;gap:.15rem;}
+  .bmc-header{display:flex;align-items:center;justify-content:space-between;gap:.3rem;}
+  .bmc-label{display:flex;align-items:center;gap:.3rem;font-size:.73rem;font-weight:600;color:var(--text-muted);}
+  .bmc-label .bmc-icon{font-size:.92rem;}
+  .bm-rate-chip{font-size:.71rem;color:var(--text-muted);white-space:nowrap;background:var(--bg,#f4f5f7);border:1px solid var(--border);border-radius:4px;padding:2px 5px;cursor:default;}
+  .bm-rate-input{border:1.5px solid var(--border);border-radius:4px;padding:3px 5px;font-size:.78rem;width:44px;background:#f9fafb;font-family:var(--font-brand);}
+  .bmc-reading{display:flex;align-items:baseline;gap:.3rem;font-variant-numeric:tabular-nums;font-size:.85rem;margin-top:.05rem;}
+  .bmc-old{color:var(--text-muted);}
+  .bmc-arrow{color:var(--border);font-size:.78rem;}
+  .bmc-new{font-weight:700;color:var(--text);}
+  .bmc-units{font-size:.7rem;color:var(--text-muted);margin-top:.05rem;min-height:.9rem;}
 
   .bill-next-btn{width:100%;padding:.55rem;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-muted);font-size:.82rem;cursor:pointer;transition:background .15s,color .15s;}
   .bill-next-btn:hover{background:var(--green-pale);color:var(--green-dark);border-color:var(--green);}
@@ -4357,36 +4358,40 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             </div>
           </div>
 
-          <!-- Compact meter entry -->
-          <div class="bill-meter-compact">
-            <div class="bill-meter-row">
-              <span class="bm-icon">⚡</span>
-              <span class="bm-label">ไฟฟ้า</span>
-              <span class="bm-old-val" id="d-elec-old">—</span>
+          <!-- Meter cards (2-up, read-only from database) -->
+          <div class="bill-meter-cards">
+            <div class="bill-meter-card" id="bmc-elec">
+              <div class="bmc-header">
+                <span class="bmc-label"><span class="bmc-icon">⚡</span><span>ไฟฟ้า</span></span>
+                <span class="bm-rate-chip" id="d-elec-rate-lbl" title="⚙️ คลิกเพื่อแก้อัตรา" style="cursor:pointer;" data-action="toggleRateEdit">฿8/u</span>
+                <input type="number" id="f-elec-rate" value="8" data-action="calcBill" class="u-hidden bm-rate-input" aria-hidden="true" tabindex="-1">
+              </div>
+              <div class="bmc-reading">
+                <span class="bmc-old" id="d-elec-old">—</span>
+                <span class="bmc-arrow">→</span>
+                <span class="bmc-new" id="d-elec-new">—</span>
+              </div>
+              <div class="bmc-units" id="d-elec-units-lbl"></div>
               <input type="number" id="f-elec-old" data-action="calcBill" class="u-hidden" aria-hidden="true" tabindex="-1">
-              <span class="bm-arrow">→</span>
-              <span class="bm-new-val" id="d-elec-new">—</span>
               <input type="number" id="f-elec-new" class="u-hidden" aria-hidden="true" tabindex="-1">
-              <span class="bm-rate-chip" id="d-elec-rate-lbl">฿8/u</span>
-              <input type="number" id="f-elec-rate" value="8" data-action="calcBill" class="u-hidden bm-rate-input" aria-hidden="true" tabindex="-1">
               <input type="number" id="f-elec-units" readonly class="u-hidden">
             </div>
-            <div class="bill-meter-row">
-              <span class="bm-icon">💧</span>
-              <span class="bm-label">น้ำ</span>
-              <span class="bm-old-val" id="d-water-old">—</span>
+            <div class="bill-meter-card" id="bmc-water">
+              <div class="bmc-header">
+                <span class="bmc-label"><span class="bmc-icon">💧</span><span>น้ำ</span></span>
+                <span class="bm-rate-chip" id="d-water-rate-lbl" title="⚙️ คลิกเพื่อแก้อัตรา" style="cursor:pointer;" data-action="toggleRateEdit">฿20/u</span>
+                <input type="number" id="f-water-rate" value="20" data-action="calcBill" class="u-hidden bm-rate-input" aria-hidden="true" tabindex="-1">
+              </div>
+              <div class="bmc-reading">
+                <span class="bmc-old" id="d-water-old">—</span>
+                <span class="bmc-arrow">→</span>
+                <span class="bmc-new" id="d-water-new">—</span>
+              </div>
+              <div class="bmc-units" id="d-water-units-lbl"></div>
               <input type="number" id="f-water-old" data-action="calcBill" class="u-hidden" aria-hidden="true" tabindex="-1">
-              <span class="bm-arrow">→</span>
-              <span class="bm-new-val" id="d-water-new">—</span>
               <input type="number" id="f-water-new" class="u-hidden" aria-hidden="true" tabindex="-1">
-              <span class="bm-rate-chip" id="d-water-rate-lbl">฿20/u</span>
-              <input type="number" id="f-water-rate" value="20" data-action="calcBill" class="u-hidden bm-rate-input" aria-hidden="true" tabindex="-1">
               <input type="number" id="f-water-units" readonly class="u-hidden">
             </div>
-          </div>
-          <!-- Rate edit toggle (hidden fields) -->
-          <div style="text-align:right;margin-top:1px;">
-            <button type="button" id="btnRateEdit" data-action="toggleRateEdit" style="font-size:.71rem;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:2px 0;text-decoration:underline dotted;">⚙️ แก้อัตรา</button>
           </div>
 
           <!-- Extras (collapsible) -->

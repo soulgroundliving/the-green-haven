@@ -224,6 +224,9 @@ function calcBill(){
 
   document.getElementById('f-elec-units').value=eUnits;
   document.getElementById('f-water-units').value=wUnits;
+  // Update units-label inside meter cards
+  const _eUL=document.getElementById('d-elec-units-lbl'); if(_eUL) _eUL.textContent=eUnits>0?`${eUnits} หน่วย × ฿${eRate} = ฿${eCost.toLocaleString()}`:'';
+  const _wUL=document.getElementById('d-water-units-lbl'); if(_wUL) _wUL.textContent=wUnits>0?`${wUnits} หน่วย × ฿${wRate} = ฿${wCost.toLocaleString()}`:'';
   document.getElementById('c-rent').textContent='฿'+rent.toLocaleString();
   document.getElementById('c-elec-label').textContent=`ค่าไฟ (${eUnits} หน่วย × ฿${eRate})`;
   document.getElementById('c-elec').textContent='฿'+eCost.toLocaleString();
@@ -1967,24 +1970,18 @@ window.batchSendInvoices = batchSendInvoices;
 
 // ── P0 UX: Rate field toggle (⚙️ แก้อัตรา) ──────────────────────────────────
 function toggleRateEdit(){
-  const rows=document.querySelectorAll('.bill-meter-row');
-  rows.forEach(row=>{
-    const chip=row.querySelector('.bm-rate-chip');
-    const input=row.querySelector('.bm-rate-input');
+  const cards=document.querySelectorAll('.bill-meter-card');
+  cards.forEach(card=>{
+    const chip=card.querySelector('.bm-rate-chip');
+    const input=card.querySelector('.bm-rate-input');
     if(!chip||!input) return;
-    const opening=chip.style.display!=='none'&&!chip.classList.contains('u-hidden');
+    const opening=!chip.classList.contains('u-hidden');
     // toggle: chip ↔ input
     chip.classList.toggle('u-hidden', opening);
     input.classList.toggle('u-hidden', !opening);
-    if(opening) input.removeAttribute('tabindex');
+    if(opening){ input.removeAttribute('tabindex'); setTimeout(()=>input.focus(),50); }
     else input.setAttribute('tabindex','-1');
-    if(opening) setTimeout(()=>input.focus(),50);
   });
-  const btn=document.getElementById('btnRateEdit');
-  if(btn){
-    const nowEdit=!document.querySelector('.bill-meter-row .bm-rate-input.u-hidden');
-    btn.textContent=nowEdit?'⚙️ แก้อัตรา':'✕ ปิด';
-  }
 }
 window.toggleRateEdit=toggleRateEdit;
 
