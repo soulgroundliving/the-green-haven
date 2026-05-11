@@ -1127,7 +1127,7 @@
       if (r.floor != null) meta.push(`ชั้น ${r.floor}`);
       if (r.type === 'pet-allowed') meta.push('สัตว์เลี้ยงได้');
       else if (r.type) meta.push(r.type);
-      const dep = r.deposit > 0 ? r.deposit : Number(r.rentPrice || 0);
+      const dep = Number(r.rentPrice || 0) * 2;
       meta.push(`มัดจำ ฿${formatNum(dep)}`);
       card.innerHTML = `
         <div class="room-icon">🏠</div>
