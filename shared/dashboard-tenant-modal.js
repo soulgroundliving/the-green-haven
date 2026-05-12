@@ -472,34 +472,35 @@ function saveTenantInfo() {
     return;
   }
 
-  const tenantData = {
-    name: fullName,
-    firstName: firstName,
-    lastName: lastName,
-    phone: document.getElementById('modalTenantPhone').value,
-    idCardNumber: document.getElementById('modalTenantIdCard')?.value || '',
-    email: document.getElementById('modalTenantEmail')?.value || '',
-    licensePlate: document.getElementById('modalTenantLicensePlate')?.value || '',
-    address: document.getElementById('modalTenantAddress')?.value || '',
-    lineID: document.getElementById('modalTenantLineID').value,
-    moveInDate: document.getElementById('modalTenantMoveIn').value,
+  // Read all modal inputs into a local object — used for lease + people/ writes.
+  // After Phase 6: tenant doc is a thin slot pointer, not an identity record.
+  // Identity → people/{tenantId} (via PersonManager.savePerson below)
+  // Lease snapshot → leases/{b}/list/{leaseId} (via createLease/updateLease below)
+  const inputs = {
+    phone:         document.getElementById('modalTenantPhone').value,
+    idCardNumber:  document.getElementById('modalTenantIdCard')?.value || '',
+    email:         document.getElementById('modalTenantEmail')?.value || '',
+    licensePlate:  document.getElementById('modalTenantLicensePlate')?.value || '',
+    address:       document.getElementById('modalTenantAddress')?.value || '',
+    lineID:        document.getElementById('modalTenantLineID').value,
+    moveInDate:    document.getElementById('modalTenantMoveIn').value,
     contractStart: document.getElementById('modalTenantContractStart')?.value || '',
     contractMonths: parseInt(document.getElementById('modalTenantContractMonths')?.value || '', 10) || null,
-    moveOutDate: document.getElementById('modalTenantContractEnd').value,
-    deposit: (RoomConfigManager.getRentPrice(building, roomId) || 0) * 2,
-    // Meter fields removed - no longer used
-    // elecMeterStart and waterMeterStart now managed by Firebase only
-    notes: document.getElementById('modalTenantNotes').value,
+    moveOutDate:   document.getElementById('modalTenantContractEnd').value,
+    deposit:       (RoomConfigManager.getRentPrice(building, roomId) || 0) * 2,
+    notes:         document.getElementById('modalTenantNotes').value,
     emergencyContact: {
-      name: document.getElementById('modalEmergencyName')?.value?.trim() || '',
+      name:  document.getElementById('modalEmergencyName')?.value?.trim() || '',
       phone: document.getElementById('modalEmergencyPhone')?.value?.trim() || ''
     },
-    // Phase 3: contractDocument moved to lease record (SSoT). Tenant record no
-    // longer stores the base64 — contract uploads now happen in Tab สัญญา and
-    // land in Firebase Storage (lease.documentURLs.agreement).
-    // receiptType + companyInfo are tenant-self-serve via tenant_app — admin
-    // does NOT overwrite from this modal. They flow into the doc separately
-    // when the tenant edits in their app (TenantFirebaseSync.saveCompanyInfo).
+  };
+
+  // Phase 6 slim tenant doc — only validation-name + room/building meta.
+  // Identity overlay comes from PersonManager.getPersonSync at read time.
+  // TenantConfigManager.addTenant validates `tenantData.name`, so we keep that
+  // single identity field; readers always prefer person doc when cached.
+  const tenantData = {
+    name: fullName,
   };
   // Capture contract fields separately — written only to lease, not tenant
   const contractDocumentValue = document.getElementById('modalContractDocument').value || '';
@@ -529,12 +530,12 @@ function saveTenantInfo() {
     const leaseUpdates = {
       tenantName: fullName,
       tenantId: tenantId,
-      moveInDate: tenantData.moveInDate,
-      contractStart: tenantData.contractStart || tenantData.moveInDate || null,
-      contractMonths: tenantData.contractMonths || null,
-      moveOutDate: tenantData.moveOutDate || null,
+      moveInDate: inputs.moveInDate,
+      contractStart: inputs.contractStart || inputs.moveInDate || null,
+      contractMonths: inputs.contractMonths || null,
+      moveOutDate: inputs.moveOutDate || null,
       rentAmount: rentPrice,
-      deposit: tenantData.deposit,
+      deposit: inputs.deposit,
       status: 'active',
       contractFileName: contractFileNameValue,
       contractDocument: contractDocumentValue
@@ -561,12 +562,12 @@ function saveTenantInfo() {
       roomId: roomId,
       tenantId: tenantId,
       tenantName: fullName,
-      moveInDate: tenantData.moveInDate,
-      contractStart: tenantData.contractStart || tenantData.moveInDate || null,
-      contractMonths: tenantData.contractMonths || null,
-      moveOutDate: tenantData.moveOutDate || null,
+      moveInDate: inputs.moveInDate,
+      contractStart: inputs.contractStart || inputs.moveInDate || null,
+      contractMonths: inputs.contractMonths || null,
+      moveOutDate: inputs.moveOutDate || null,
       rentAmount: rentPrice,
-      deposit: tenantData.deposit,
+      deposit: inputs.deposit,
       status: 'active',
       contractFileName: contractFileNameValue,
       contractDocument: contractDocumentValue
@@ -592,14 +593,14 @@ function saveTenantInfo() {
       name: fullName,
       firstName,
       lastName,
-      phone: tenantData.phone || '',
-      email: tenantData.email || '',
-      lineUserId: tenantData.lineID || '',
-      idCardNumber: tenantData.idCardNumber || '',
-      address: tenantData.address || '',
-      licensePlate: tenantData.licensePlate || '',
-      emergencyContact: tenantData.emergencyContact || null,
-      notes: tenantData.notes || '',
+      phone: inputs.phone || '',
+      email: inputs.email || '',
+      lineUserId: inputs.lineID || '',
+      idCardNumber: inputs.idCardNumber || '',
+      address: inputs.address || '',
+      licensePlate: inputs.licensePlate || '',
+      emergencyContact: inputs.emergencyContact || null,
+      notes: inputs.notes || '',
     });
     // Mark the current room link so person doc tracks where this tenant lives.
     window.PersonManager.linkRoom(tenantId, building, roomId, leaseId || tenantId);
@@ -617,13 +618,15 @@ function saveTenantInfo() {
     LeaseAgreementManager.createLeaseWithFirebase(LeaseAgreementManager.getLease(leaseId));
   }
 
-  // Log the action
+  // Log the action — describe what changed (slim tenant doc has only name;
+  // capture the inputs keys that the admin actually filled in so the audit
+  // entry is meaningful).
   if (window.AuditLogger) {
     AuditLogger.log('TENANT_UPDATED', {
       building: building,
       roomId: roomId,
       tenantId: tenantId,
-      changes: Object.keys(tenantData).filter(k => tenantData[k])
+      changes: Object.keys(inputs).filter(k => inputs[k])
     });
   }
 

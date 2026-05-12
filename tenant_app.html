@@ -5374,28 +5374,18 @@
             const btn = $('comp-save-btn');
             if (btn) { btn.disabled = true; btn.textContent = 'กำลังบันทึก...'; }
             try {
-                if (typeof TenantFirebaseSync !== 'undefined' && window.firebaseReady && window._tenantAppRoom) {
-                    const userStr = sessionStorage.getItem('user');
-                    const user = userStr ? JSON.parse(userStr) : { roomNumber: window._tenantAppRoom };
-                    TenantFirebaseSync.initialize(user, window._tenantAppBuilding, window._tenantAppRoom);
-                    if (typeof TenantFirebaseSync.saveCompanyInfo === 'function') {
-                        await TenantFirebaseSync.saveCompanyInfo(co);
-                    } else {
-                        // Fallback: write directly via Firestore client
-                        const db = window.firebase?.firestore?.();
-                        const fs = window.firebase?.firestoreFunctions;
-                        if (db && fs) {
-                            const ref = fs.doc(db, `tenants/${window._tenantAppBuilding}/list/${window._tenantAppRoom}`);
-                            await fs.setDoc(ref, { companyInfo: co }, { merge: true });
-                        }
-                    }
-                    // Update in-memory tenant for downstream reads
-                    if (_taTenant) _taTenant.companyInfo = co;
-                    // Phase 3c-2 dual-write: companyInfo → people/{tenantId}
-                    if (window.PersonManager && _taTenant?.tenantId) {
-                        window.PersonManager.savePerson(_taTenant.tenantId, { companyInfo: co });
-                    }
+                // Phase 6: companyInfo lives on people/{tenantId} only.
+                // Tenant doc is a thin slot — identity-adjacent fields like
+                // company info belong on the person SSoT. Readers (receipt
+                // generator, dashboard) overlay companyInfo from people/ via
+                // PersonManager.getPersonSync. Legacy tenant-doc fields are
+                // left intact (merge:true didn't remove them) until the
+                // one-shot data migration sweeps them up.
+                if (window.firebaseReady && window.PersonManager && _taTenant?.tenantId) {
+                    await window.PersonManager.savePerson(_taTenant.tenantId, { companyInfo: co });
                 }
+                // Update in-memory tenant for downstream reads
+                if (_taTenant) _taTenant.companyInfo = co;
                 _showCompMsg('✅ บันทึกข้อมูลบริษัทเรียบร้อย — ใบเสร็จเดือนถัดไปจะออกในนามนี้', 'var(--soft-green)', 'var(--primary-dark, #1a5c38)');
             } catch(e) {
                 _showCompMsg('❌ บันทึกไม่สำเร็จ: ' + (e?.message || 'unknown'), '#fee', '#b71c1c');

@@ -20,8 +20,11 @@ class TenantLookup {
     if (!building || !roomId) return null;
 
     // SSoT path — direct roomId lookup
+    // Phase 6: accept slim docs (no identity fields) as long as tenantId is
+    // present. Identity is overlaid from people/{tenantId} via getPersonSync.
+    // ssotDoc.name is no longer the occupancy indicator — tenantId is.
     const ssotDoc = TenantConfigManager.getTenant(building, String(roomId));
-    if (ssotDoc && ssotDoc.name) {
+    if (ssotDoc && (ssotDoc.name || ssotDoc.tenantId)) {
       const lease = ssotDoc.lease || {};
       // Phase 3d: tenant.lease is a reduced mirror — only carries
       // {leaseId, status, startDate, endDate}. Fetch the full lease doc for

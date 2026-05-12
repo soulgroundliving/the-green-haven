@@ -4,6 +4,69 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
+# Plan — Phase 6 Cleanup: slim down tenant doc (2026-05-12)
+
+## Why
+After Phase 3 dual-writes ran for one session, `people/{tid}` SSoT now has 1/1 coverage (ห้อง 15 → people/TENANT_1774620396700_15). Tenant docs still carry duplicate identity fields (name, phone, email, lineID, idCardNumber, address, licensePlate, emergencyContact, notes) AND duplicate lease state (rentAmount, deposit, moveInDate, moveOutDate, contractStart, contractEnd, contractMonths, contractDocument, etc.). With readers already using fallback chain (Phase 3e) + PersonManager overlay, the duplicates are now dead weight — risk of drift between sources, harder to reason about who owns what.
+
+Goal: shrink tenant doc to **slot + room link + reduced lease mirror** only. People/ is THE identity SSoT. Leases/ is THE lease SSoT.
+
+**Scope decision — code-only, no destructive data migration this session.** Stop the writes that create duplicates; existing data on rooms/15 stays for now. Next session can run a one-shot migration script with audit log.
+
+## Recon — current tenant doc field inventory
+
+Verified via `tenants/rooms/list/15` (sole active tenant) in this session. Tenant doc currently carries:
+
+**Identity (now duplicated in people/{tid}):**
+- `name`, `firstName`, `lastName`
+- `phone`, `email`, `lineID`
+- `idCardNumber`, `address`
+- `licensePlate`, `emergencyContact`, `notes`
+- `companyInfo`, `avatar`, `receiptType`
+- `emailVerified`, `emailVerifiedAt`, `phoneVerifiedAt`
+- `linkedAuthUid`, `linkedAt`
+
+**Lease state (now duplicated in leases/{b}/list/{leaseId}):**
+- `moveInDate`, `moveOutDate`
+- `contractStart`, `contractEnd`, `contractMonths`
+- `rentAmount`, `deposit`, `depositPaid`, `depositPaidAt`, `depositSlipRef`
+- `contractDocument`, `contractFileName`
+
+**Keep (canonical for tenant slot):**
+- `tenantId` (pointer into people/)
+- `contractId`, `activeContractId` (pointer into leases/)
+- `lease: { leaseId, status, startDate, endDate }` (reduced 4-field mirror)
+- `building`, `roomId`
+- `gamification` (per-tenancy state, ties to lease not person — stays on tenant doc)
+- `sourceBookingId` (audit)
+- `status` (vacant/archived/movedOut flags)
+- `createdAt`, `updatedAt`
+
+## Tasks
+
+- [x] **A1. Audit reader fallback chain** — 0 ⚠️ DIRECT_READ, 35+ already fallback-protected, 4 display-only
+- [x] **A5. Person overlay + prefetch wiring** (moved up after A1 audit revealed risk gate: `_projectSSoTToFlat` had no person overlay) — `prefetchAllPeople()` wired at dashboard DOMContentLoaded; `_projectSSoTToFlat` now overlays person identity; `getTenantByRoom` accepts slim docs (drops `&& ssotDoc.name` requirement); `loadAllData` in tenant_app awaits person doc + overlays
+- [x] **A2. saveTenantInfo slim** — tenant doc reduced to `{ name }`; identity routed via `inputs` to PersonManager; lease snapshot routed via `inputs` to lease doc
+- [x] **A3. convertBookingToTenant CF slim** — tenant doc carries only pointers + reduced lease mirror + slot audit; deposit audit fields moved to lease doc
+- [x] **A4. tenant_app saveCompanyInfo slim** — tenant-doc write removed, people/ only (saveAvatar already only writes to people/)
+- [x] **A6. Tests + verifier** — 5 new Phase 6 invariants in convertBookingToTenant.test.js, 10/10 pass; full suite 84/84; memory verifier ALL GREEN (23 docs, 216 rows)
+- [ ] **A7. Deploy + live verify** — push, deploy CF, open admin modal ห้อง 15, save → confirm Firestore tenant doc is slim
+
+## Out of scope this session
+- Data migration to strip duplicates from existing tenant docs (next session — one-shot script)
+- Pruning gamification from tenant docs (separate concern — ties to lease lifecycle)
+- liffSignIn person-aware lookup (deferred per handoff unless incident)
+
+## Review (so far — pending A7 deploy)
+- 7 files touched; +297/-79 LOC excluding tests, +73 test LOC
+- Code-only cleanup — existing data on `tenants/rooms/list/15` unchanged (merge:true preserves legacy fields). New writes are slim. Readers fall back to people/ via prefetched cache.
+- Risk discovered + fixed during A1: `_projectSSoTToFlat` had only lease overlay, no person overlay. Added before any write changes shipped.
+
+
+Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get approval before implementing.
+
+---
+
 # Plan C4 — Dashboard lazy-subscribe (2026-05-11)
 
 ## Recon (grep-verified, no DevTools needed)
