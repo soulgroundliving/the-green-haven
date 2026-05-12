@@ -278,6 +278,7 @@ function switchRequestsTab(tabName, btn) {
     else if(tabName === 'pets' && typeof initPetApprovalsPage === 'function') initPetApprovalsPage();
     else if(tabName === 'liff' && typeof initLiffRequestsPage === 'function') initLiffRequestsPage();
     else if(tabName === 'broadcast' && typeof initBroadcastPage === 'function') initBroadcastPage();
+    else if(tabName === 'deposits' && typeof initDepositsPage === 'function') initDepositsPage();
   }
 }
 
@@ -746,6 +747,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'batchSendInvoices') { typeof window.batchSendInvoices === 'function' && window.batchSendInvoices(); return; }
     if (a === 'saveServiceProvider') { typeof saveServiceProvider === 'function' && saveServiceProvider(); return; }
     if (a === 'showAddMaintenanceModal') { typeof showAddMaintenanceModal === 'function' && showAddMaintenanceModal(); return; }
+    if (a === 'showReturnDepositModal') { typeof showReturnDepositModal === 'function' && showReturnDepositModal(el.dataset.building, el.dataset.room); return; }
+    if (a === 'exportDepositReceipt') { typeof exportDepositReceipt === 'function' && exportDepositReceipt(el.dataset.building, el.dataset.room); return; }
     if (a === 'showAddHousekeepingModal') { typeof showAddHousekeepingModal === 'function' && showAddHousekeepingModal(); return; }
     if (a === 'saveReward') { typeof saveReward === 'function' && saveReward(); return; }
     if (a === 'publishBroadcast') { typeof window.publishBroadcast === 'function' && window.publishBroadcast(); return; }
@@ -778,6 +781,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     // Requests page filters
     if (a === 'renderMaintenancePage') { typeof renderMaintenancePage === 'function' && renderMaintenancePage(); return; }
     if (a === 'renderHousekeepingList') { typeof renderHousekeepingList === 'function' && renderHousekeepingList(); return; }
+    if (a === 'renderDepositsPage') { typeof renderDepositsPage === 'function' && renderDepositsPage(); return; }
     if (a === 'filterPetsByStatus') { typeof filterPetsByStatus === 'function' && filterPetsByStatus(el.value); return; }
     // Phase 4E Step 2 chunk 2: page-meter / page-expense / page-content / page-payment-verify
     if (a === 'loadRoomConfigUI') { typeof loadRoomConfigUI === 'function' && loadRoomConfigUI(); return; }

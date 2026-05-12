@@ -4804,6 +4804,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <button id="tab-pets-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="pets">🐾 Pet Approvals</button>
     <button id="tab-liff-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="liff">🔗 LINE Link Requests</button>
     <button id="tab-broadcast-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="broadcast">📣 ประกาศ</button>
+    <button id="tab-deposits-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="deposits">💰 มัดจำ</button>
   </div>
 
   <!-- TAB: Broadcast Announcement (in-app notification) -->
@@ -4848,6 +4849,40 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <div class="card">
       <div class="card-title" role="heading" aria-level="3">📜 ประกาศที่ผ่านมา</div>
       <div id="bcLogList" style="min-height:120px;"></div>
+    </div>
+  </div>
+
+  <!-- TAB: Deposits -->
+  <div id="requests-tab-deposits" class="requests-mgmt-content" style="display:none;">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
+      <div class="card cell-center">
+        <div id="dep-kpi-holding" style="font-size:1.5rem;font-weight:800;color:#d97706;">0</div>
+        <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">💰 ถือมัดจำ</div>
+      </div>
+      <div class="card cell-center">
+        <div id="dep-kpi-returned" style="font-size:1.5rem;font-weight:800;color:#059669;">0</div>
+        <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">✅ คืนแล้ว</div>
+      </div>
+      <div class="card cell-center">
+        <div id="dep-kpi-total" style="font-size:1.5rem;font-weight:800;color:#334435;">฿0</div>
+        <div style="font-size:var(--fs-sm);color:#6b7280;margin-top:2px;">รวมมัดจำ</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+      <select id="dep-filter-building" data-action="renderDepositsPage" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
+        <option value="all">🏠 ทุกอาคาร</option>
+        <option value="rooms">rooms</option>
+        <option value="nest">nest</option>
+      </select>
+      <select id="dep-filter-status" data-action="renderDepositsPage" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:var(--fs-sm);">
+        <option value="all">📋 ทุกสถานะ</option>
+        <option value="holding">💰 ถือมัดจำ</option>
+        <option value="returned">✅ คืนแล้ว</option>
+      </select>
+    </div>
+    <div class="card">
+      <div class="card-title" role="heading" aria-level="3">📋 รายการมัดจำทั้งหมด</div>
+      <div id="depList" style="min-height:80px;"></div>
     </div>
   </div>
 
