@@ -841,3 +841,47 @@ describe('broadcastMessages — admin write, audience-filtered tenant read', () 
     ));
   });
 });
+
+describe('expenses — admin CRUD, accountant read, tenants denied', () => {
+  const EXP_PATH = 'expenses/rooms/2026-05/exp1';
+  const EXP_DATA = { date: '2026-05-13', category: 'repair', desc: 'ซ่อมประตู', room: '15', amount: 500 };
+
+  it('admin can read an expense', async () => {
+    await seedDoc(EXP_PATH, EXP_DATA);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), EXP_PATH)));
+  });
+
+  it('admin can write (add) an expense', async () => {
+    await assertSucceeds(addDoc(
+      collection(EMAIL_ADMIN().firestore(), 'expenses/rooms/2026-05'),
+      EXP_DATA
+    ));
+  });
+
+  it('admin can delete an expense', async () => {
+    await seedDoc(EXP_PATH, EXP_DATA);
+    await assertSucceeds(deleteDoc(doc(EMAIL_ADMIN().firestore(), EXP_PATH)));
+  });
+
+  it('accountant can read an expense', async () => {
+    await seedDoc(EXP_PATH, EXP_DATA);
+    await assertSucceeds(getDoc(doc(ACCOUNTANT().firestore(), EXP_PATH)));
+  });
+
+  it('accountant CANNOT write an expense', async () => {
+    await assertFails(addDoc(
+      collection(ACCOUNTANT().firestore(), 'expenses/rooms/2026-05'),
+      EXP_DATA
+    ));
+  });
+
+  it('LIFF tenant CANNOT read expenses', async () => {
+    await seedDoc(EXP_PATH, EXP_DATA);
+    await assertFails(getDoc(doc(LIFF_TENANT().firestore(), EXP_PATH)));
+  });
+
+  it('unauthenticated CANNOT read expenses', async () => {
+    await seedDoc(EXP_PATH, EXP_DATA);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), EXP_PATH)));
+  });
+});
