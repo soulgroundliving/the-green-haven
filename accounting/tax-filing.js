@@ -55,6 +55,10 @@ async function _loadExpenseCacheForYear(ceYear) {
   ));
   _expenseCache = fetched;
   _expenseCacheYear = ceYear;
+  // Refresh dashboard KPI cards now that real expense data is available
+  if (window._taxSummary && typeof renderTaxDashboardLive === 'function') {
+    renderTaxDashboardLive(window._taxSummary);
+  }
 }
 
 async function _ensureExpenseCache(ceYear) {
@@ -78,24 +82,8 @@ function initializeTaxFiling() {
  * @returns {number} Total revenue (Baht)
  */
 function calculateMonthlyRevenue(month, year) {
-  try {
-    const bills = JSON.parse(localStorage.getItem('bills') || '[]');
-    let total = 0;
-
-    bills.forEach(bill => {
-      if (bill.year === year && bill.month === month && bill.paid === true) {
-        const rent = parseFloat(bill.rent) || 0;
-        const electricity = parseFloat(bill.electricity) || 0;
-        const water = parseFloat(bill.water) || 0;
-        total += rent + electricity + water;
-      }
-    });
-
-    return total;
-  } catch (error) {
-    console.error('❌ Error calculating monthly revenue:', error);
-    return 0;
-  }
+  const d = window._taxSummary?.months?.[month];
+  return d ? Number(d.totalRevenue) || 0 : 0;
 }
 
 /**
@@ -147,31 +135,32 @@ function calculateAnnualRevenue(year) {
  */
 function getRevenueByRoom(month, year) {
   try {
-    const bills = JSON.parse(localStorage.getItem('bills') || '[]');
-    const breakdown = {};
-
-    bills.forEach(bill => {
-      if (bill.year === year && bill.month === month && bill.paid === true) {
-        if (!breakdown[bill.room]) {
-          breakdown[bill.room] = {
-            rent: 0,
-            electricity: 0,
-            water: 0,
-            total: 0
-          };
+    const byRoom = {};
+    const bills = window._billsCache || {};
+    for (const building of Object.keys(bills)) {
+      const roomMap = bills[building] || {};
+      for (const room of Object.keys(roomMap)) {
+        const billsObj = roomMap[room] || {};
+        for (const billId of Object.keys(billsObj)) {
+          const b = billsObj[billId];
+          if (!b) continue;
+          const ceYear = window.YearUtils ? window.YearUtils.toCE(b.year)
+            : (Number(b.year) < 2500 ? 1957 + Number(b.year) : Number(b.year) - 543);
+          if (ceYear !== year || Number(b.month) !== Number(month)) continue;
+          const total = Number(b.totalCharge || b.totalAmount) || 0;
+          if (total <= 0 && !b.charges) continue;
+          const key = `${building}/${room}`;
+          if (!byRoom[key]) byRoom[key] = { room, building, rent: 0, electricity: 0, water: 0, trash: 0, total: 0 };
+          const c = b.charges || {};
+          byRoom[key].rent        += Number(c.rent) || 0;
+          byRoom[key].electricity += Number(c.electric?.cost) || 0;
+          byRoom[key].water       += Number(c.water?.cost) || 0;
+          byRoom[key].trash       += Number(c.trash) || 0;
+          byRoom[key].total       += total;
         }
-        const rent = parseFloat(bill.rent) || 0;
-        const electricity = parseFloat(bill.electricity) || 0;
-        const water = parseFloat(bill.water) || 0;
-
-        breakdown[bill.room].rent += rent;
-        breakdown[bill.room].electricity += electricity;
-        breakdown[bill.room].water += water;
-        breakdown[bill.room].total += rent + electricity + water;
       }
-    });
-
-    return breakdown;
+    }
+    return byRoom;
   } catch (error) {
     console.error('❌ Error getting revenue by room:', error);
     return {};
@@ -704,21 +693,32 @@ function generateAnnualReport(year) {
       expenses: []
     };
 
-    // Add revenue transactions (from bills)
-    const bills = JSON.parse(localStorage.getItem('bills') || '[]');
-    bills.forEach(bill => {
-      if (bill.year === year && bill.paid === true) {
-        transactions.revenue.push({
-          date: `${year}-${String(bill.month).padStart(2, '0')}-01`,
-          room: bill.room,
-          rent: parseFloat(bill.rent) || 0,
-          electricity: parseFloat(bill.electricity) || 0,
-          water: parseFloat(bill.water) || 0,
-          total: (parseFloat(bill.rent) || 0) + (parseFloat(bill.electricity) || 0) + (parseFloat(bill.water) || 0),
-          type: 'REVENUE'
-        });
+    // Add revenue transactions (from RTDB bills cache loaded by tax-filing.html)
+    const billsCache = window._billsCache || {};
+    for (const bld of Object.keys(billsCache)) {
+      const roomMap = billsCache[bld] || {};
+      for (const room of Object.keys(roomMap)) {
+        const billsObj = roomMap[room] || {};
+        for (const billId of Object.keys(billsObj)) {
+          const b = billsObj[billId];
+          if (!b) continue;
+          const bCeYear = window.YearUtils ? window.YearUtils.toCE(b.year)
+            : (Number(b.year) < 2500 ? 1957 + Number(b.year) : Number(b.year) - 543);
+          if (bCeYear !== year || b.status !== 'paid') continue;
+          const c = b.charges || {};
+          const rent = Number(c.rent) || 0;
+          const electricity = Number(c.electric?.cost) || 0;
+          const water = Number(c.water?.cost) || 0;
+          const total = Number(b.totalCharge || b.totalAmount) || (rent + electricity + water);
+          if (total <= 0) continue;
+          transactions.revenue.push({
+            date: `${year}-${String(Number(b.month)).padStart(2, '0')}-01`,
+            room, building: bld, rent, electricity, water, total,
+            type: 'REVENUE'
+          });
+        }
       }
-    });
+    }
 
     // Add expense transactions (from Firestore cache)
     _expenseCache.forEach(expense => {

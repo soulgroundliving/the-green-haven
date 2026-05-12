@@ -902,7 +902,7 @@
   // per the dashboard auth policy.
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-  import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, getDocs, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
   (async () => {
     try {
       const cfg = await window.loadFirebaseConfig();
@@ -911,7 +911,7 @@
       const firestore = getFirestore(app);
       window.firebaseApp = app;
       window.firebaseAuth = auth;
-      window.firebase = { firestore: () => firestore, firestoreFunctions: { doc, onSnapshot } };
+      window.firebase = { firestore: () => firestore, firestoreFunctions: { doc, getDoc, getDocs, collection, onSnapshot } };
       let settled = false;
       const unsub = onAuthStateChanged(auth, (user) => {
         if (user && user.email) {
@@ -1049,14 +1049,6 @@
       }
       return byRoom;
     };
-    // Patch getExpenseBreakdown to return empty (we don't track expenses yet in system)
-    window.getExpenseBreakdown = function(month, year) {
-      // TODO: wire to page-expense when that's migrated to Firestore
-      return { utilities: 0, maintenance: 0, insurance: 0, other: 0 };
-    };
-    window.calculateMonthlyExpenses = function() { return 0; };
-    window.calculateAnnualExpenses = function() { return 0; };
-    window.calculateQuarterlyExpenses = function() { return 0; };
     // Withholding empty for now (no tenant-corporate data yet)
     window.getWithholdingDetails = function() { return []; };
     window.calculateWithholdingTax = function() { return 0; };
@@ -1220,12 +1212,14 @@
     const fmt = n => '฿' + Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     setTxt('annual-revenue',  fmt(annual.totalRevenue));
-    // Expenses TBD — user hasn't entered PEA/MWA cost yet. For now show 30% standard deduction as "expense equivalent"
+    // Use real Firestore expense data if cache is loaded; fall back to 30% standard deduction
+    const ceYear = new Date().getFullYear();
     const stdDed = annual.taxEstimate?.standardDeduction || Math.round((annual.totalRevenue||0) * 0.30);
-    setTxt('annual-expenses', fmt(stdDed));
-    const net = annual.taxEstimate?.netRevenue || ((annual.totalRevenue||0) - stdDed);
+    const realExp = typeof calculateAnnualExpenses === 'function' ? calculateAnnualExpenses(ceYear) : 0;
+    const expToShow = realExp > 0 ? realExp : stdDed;
+    setTxt('annual-expenses', fmt(expToShow));
+    const net = (Number(annual.totalRevenue) || 0) - expToShow;
     setTxt('net-income', fmt(net));
-    // Thai personal progressive tax estimate on netRevenue — rough
     setTxt('estimated-tax', fmt(estimateThaiPersonalTax(net)));
     // Monthly trend chart
     renderLiveRevenueChart(data);
