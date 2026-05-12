@@ -9,6 +9,26 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-05-13 — flex:1 + overflow:hidden บน flex children ทำให้ card ทับกัน
+
+**Mistake:** ใช้ `.ops-right-col > *{ flex:1; min-height:0 }` บังคับให้ Meter Spike และ Provider Scorecard แบ่งความสูงเท่ากัน แล้วใช้ `overflow:hidden` clip เนื้อหา — ผลลัพธ์: rounded corner ของ Meter Spike ไป render ทับบน border-top ของ Provider Scorecard
+
+**Why:** `flex:1` กับ `overflow:hidden` ร่วมกันสร้าง hard-clip boundary ที่ขอบล่างของ card ซึ่งอยู่แน่นกับ card ถัดไป ทำให้ CSS border-radius ของ card บนดู "ทับ" card ล่าง
+
+**Rule:** ถ้า right column มีหลาย card และแต่ละ card มีเนื้อหาต่างกัน → ใช้ `overflow-y:auto` บน column container + `flex-shrink:0` บน child cards แทน `flex:1` บีบให้สูงเท่ากัน page scroll ยังกันได้ด้วย `overflow:hidden` บน container หลัก
+
+---
+
+## 2026-05-13 — screenshot width ≠ window.innerWidth — ใช้ JS วัดแทน
+
+**Mistake:** ดู screenshot ขนาด 1381px แล้วคิดว่า viewport = 1381px → คำนวณ column width ผิด ทั้งที่ `window.innerWidth` = 1745px จริง
+
+**Why:** screenshot tool scale ภาพลง (อาจมี device pixel ratio หรือ window zoom) ทำให้ขนาด pixel ของภาพ ≠ CSS viewport width
+
+**Rule:** เมื่อต้องการ viewport/element dimensions ที่แม่นยำ — วัดด้วย JS เสมอ: `window.innerWidth` + `element.getBoundingClientRect()` อย่า infer จาก screenshot dimensions
+
+---
+
 ## 2026-05-12 — Defined-but-never-called functions are silent coverage gaps
 
 **Mistake:** Planned Phase 6 to slim tenant docs assuming `TenantLookup.prefetchAllPeople()` was wired at page load (it had been written in Phase 3e). It WASN'T — defined in `shared/tenant-lookup.js:238` but no caller anywhere. PersonManager cache stayed cold; without person overlay, slim tenant docs would have rendered "—" for every name across the admin dashboard.
