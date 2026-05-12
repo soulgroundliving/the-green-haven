@@ -44,9 +44,12 @@ const FIELDS_TO_CLEAR = {
   name: '', firstName: '', lastName: '', phone: '', email: '',
   emailVerified: false, lineID: '', address: '', idCardNumber: '',
   tenantId: '', contractId: '', linkedAuthUid: '',
+  linkedAt: admin.firestore.FieldValue.delete(),
+  phoneVerifiedAt: admin.firestore.FieldValue.delete(),
   moveInDate: '', moveOutDate: '', rentAmount: 0, deposit: 0,
   depositPaid: false, contractDocument: '', contractFileName: '',
   contractStart: '', contractEnd: '', contractMonths: 0,
+  lease: admin.firestore.FieldValue.delete(),
   notes: '', licensePlate: '', emergencyContact: null, companyInfo: null,
   gamification: null, sourceBookingId: '',
 };

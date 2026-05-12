@@ -91,6 +91,8 @@ const FIELDS_TO_CLEAR = {
   contractId: '',
   // Auth link
   linkedAuthUid: '',
+  linkedAt: admin.firestore.FieldValue.delete(),
+  phoneVerifiedAt: admin.firestore.FieldValue.delete(),
   // Lease state
   moveInDate: '',
   moveOutDate: '',
@@ -102,6 +104,7 @@ const FIELDS_TO_CLEAR = {
   contractStart: '',
   contractEnd: '',
   contractMonths: 0,
+  lease: admin.firestore.FieldValue.delete(),
   // Misc
   notes: '',
   licensePlate: '',

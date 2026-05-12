@@ -180,12 +180,19 @@ exports.liffSignIn = functions
   }
 
   // ── Write linkedAuthUid to Firestore tenant doc (fire-and-forget) ─────────
-  // Non-blocking: keeps linkedAuthUid in sync for Firestore rules; does not
-  // delay the response. Client gets the custom token immediately.
-  firestore
-    .collection('tenants').doc(building)
-    .collection('list').doc(room)
-    .set({ linkedAuthUid: uid, linkedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true })
+  // Guard: read status first — skip write if room is vacant so transitionToPlayer /
+  // archiveTenantOnMoveOut blanks are not re-populated by a returning LINE user.
+  firestore.collection('tenants').doc(building).collection('list').doc(room).get()
+    .then(snap => {
+      if (!snap.exists || (snap.data() || {}).status === 'vacant') {
+        console.warn(`liffSignIn: ${building}/${room} is vacant — skipping linkedAuthUid write`);
+        return;
+      }
+      return snap.ref.set(
+        { linkedAuthUid: uid, linkedAt: admin.firestore.FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+    })
     .catch(e => console.warn(`liffSignIn: linkedAuthUid write failed for ${building}/${room}:`, e.message));
 
   return res.status(200).json({ customToken, room, building });
