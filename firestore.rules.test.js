@@ -769,3 +769,75 @@ describe('people — player identity, owner read / admin write', () => {
     ));
   });
 });
+
+// ── broadcastMessages (admin → tenant in-app announcement) ────────────────────
+// CF-only writes; tenant read scoped by audience match.
+describe('broadcastMessages — admin write, audience-filtered tenant read', () => {
+  const seedBroadcast = (audience, extra = {}) => seedDoc(`broadcastMessages/B_${audience}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, {
+    title: 'Test',
+    body: 'hello',
+    audience,
+    sender: { uid: 'admin-1', email: 'admin@test.com' },
+    sentAt: new Date().toISOString(),
+    status: 'published',
+    ...extra,
+  });
+
+  it('admin CAN read any broadcast', async () => {
+    await seedDoc('broadcastMessages/B1', {
+      title: 't', body: 'b', audience: 'rooms', status: 'published',
+    });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'broadcastMessages/B1')));
+  });
+
+  it('LIFF tenant in rooms CAN read audience=rooms broadcast', async () => {
+    await seedDoc('broadcastMessages/B1', {
+      title: 't', body: 'b', audience: 'rooms', status: 'published',
+    });
+    await assertSucceeds(getDoc(doc(
+      LIFF_TENANT('line:U1', '15', 'rooms').firestore(),
+      'broadcastMessages/B1'
+    )));
+  });
+
+  it('LIFF tenant in rooms CAN read audience=all broadcast', async () => {
+    await seedDoc('broadcastMessages/B2', {
+      title: 't', body: 'b', audience: 'all', status: 'published',
+    });
+    await assertSucceeds(getDoc(doc(
+      LIFF_TENANT('line:U1', '15', 'rooms').firestore(),
+      'broadcastMessages/B2'
+    )));
+  });
+
+  it('LIFF tenant in nest CANNOT read audience=rooms broadcast (building mismatch)', async () => {
+    await seedDoc('broadcastMessages/B3', {
+      title: 't', body: 'b', audience: 'rooms', status: 'published',
+    });
+    await assertFails(getDoc(doc(
+      LIFF_TENANT('line:U2', 'N101', 'nest').firestore(),
+      'broadcastMessages/B3'
+    )));
+  });
+
+  it('unauthenticated CANNOT read any broadcast', async () => {
+    await seedDoc('broadcastMessages/B4', {
+      title: 't', body: 'b', audience: 'all', status: 'published',
+    });
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'broadcastMessages/B4')));
+  });
+
+  it('LIFF tenant CANNOT create broadcast directly (CF-only writes)', async () => {
+    await assertFails(addDoc(
+      collection(LIFF_TENANT().firestore(), 'broadcastMessages'),
+      { title: 'spam', body: 'hijack', audience: 'all', status: 'published' }
+    ));
+  });
+
+  it('admin CANNOT write broadcast directly (rule blocks even admin; CF uses admin SDK)', async () => {
+    await assertFails(addDoc(
+      collection(EMAIL_ADMIN().firestore(), 'broadcastMessages'),
+      { title: 't', body: 'b', audience: 'all', status: 'published' }
+    ));
+  });
+});
