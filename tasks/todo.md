@@ -169,5 +169,45 @@ Add 3 cases to `firestore.rules.test.js`:
 
 ---
 
-## Review (filled at end)
-_(pending)_
+## Review (2026-05-12)
+
+### Shipped
+- CF `broadcastMessage` deployed (asia-southeast1) — admin-only, validated, returns `{ok, id}`
+- 13/13 CF unit tests pass (validation + 400/403/500 + whitespace + OPTIONS)
+- Firestore rules: `broadcastMessages` admin write blocked + tenant reads filtered by audience
+- 7 new rules tests (admin / tenant building match / mismatch / unauth / direct write blocked)
+- Dashboard admin tab "📣 ประกาศ" — compose form + char counters + audience radio + ghConfirm + live publication log (onSnapshot, last 20)
+- Tenant_app bell icon on World Map top-right + red unread badge + fullscreen panel + auto-mark-read + toast on new
+- Subscription via `_onLiffClaimsReady(_subscribeBroadcasts)` per CLAUDE.md §7.A anti-pattern guard
+- Inline toast helper `_broadcastShowToast` (no global showToast dependency)
+- Memory: new `lifecycle_broadcast_announcement.md` + handoff doc + MEMORY.md index — verifier 24 docs / 224 rows ALL GREEN
+
+### Live verified
+- Admin published 1 test broadcast → toast `✅ เผยแพร่สำเร็จ` + log row shows correctly
+- Firestore REST query: `broadcastMessages` has 1 doc with proper shape (title/audience/sender/sentAt)
+- Bell DOM rendered on tenant_app (admin preview chrome occludes it visually — not a real-world issue)
+- Zero console errors on dashboard or tenant_app
+
+### Bug found + fixed mid-session
+- `publishBroadcast` not in dashboard-main.js event delegation hub → button click had no effect.
+  Fixed in commit `112a98e` (1 line added).
+
+### Commits + merges
+- `37d861b` — feat(tier1a): broadcast announcements
+- `112a98e` — fix: wire publishBroadcast in data-action hub
+- `9706cd5`, `0f03598` — merge commits on main
+- CF + rules deployed via `firebase deploy`; UI deployed via Vercel auto-build
+
+### Deferred (out of scope this session)
+- LINE multicast (cost gated)
+- Scheduled broadcasts
+- Per-room granular filter UI
+- Server-side read receipts
+- FCM push
+- Soft-delete from admin UI
+- Saved drafts
+- Bell on tenant_app pages other than World Map
+
+### Next session
+- Tier 1B: Monthly Expense Tracking (`expenses/{building}/{YYYY-MM}/{auto}` + dashboard tab + P&L integration with `aggregateMonthlyRevenue`)
+- Or extend Phase 6 migration manifest to cover leftover legacy fields if found in active rooms
