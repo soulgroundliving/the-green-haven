@@ -885,3 +885,44 @@ describe('expenses — admin CRUD, accountant read, tenants denied', () => {
     await assertFails(getDoc(doc(UNAUTH().firestore(), EXP_PATH)));
   });
 });
+
+describe('deposits — admin write, accountant read, tenants denied', () => {
+  const DEP_PATH = 'deposits/rooms_15';
+  const DEP_DATA = {
+    amount: 10000, status: 'holding', receivedAt: '2026-01-01',
+    deductions: [], notes: '', updatedAt: '2026-05-13'
+  };
+
+  it('admin can read a deposit doc', async () => {
+    await seedDoc(DEP_PATH, DEP_DATA);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), DEP_PATH)));
+  });
+
+  it('admin can write (create) a deposit doc', async () => {
+    await assertSucceeds(setDoc(doc(EMAIL_ADMIN().firestore(), DEP_PATH), DEP_DATA));
+  });
+
+  it('admin can update a deposit doc', async () => {
+    await seedDoc(DEP_PATH, DEP_DATA);
+    await assertSucceeds(updateDoc(doc(EMAIL_ADMIN().firestore(), DEP_PATH), { status: 'returned' }));
+  });
+
+  it('accountant can read a deposit doc', async () => {
+    await seedDoc(DEP_PATH, DEP_DATA);
+    await assertSucceeds(getDoc(doc(ACCOUNTANT().firestore(), DEP_PATH)));
+  });
+
+  it('accountant CANNOT write a deposit doc', async () => {
+    await assertFails(setDoc(doc(ACCOUNTANT().firestore(), DEP_PATH), DEP_DATA));
+  });
+
+  it('LIFF tenant CANNOT read deposit doc', async () => {
+    await seedDoc(DEP_PATH, DEP_DATA);
+    await assertFails(getDoc(doc(LIFF_TENANT().firestore(), DEP_PATH)));
+  });
+
+  it('unauthenticated CANNOT read deposit doc', async () => {
+    await seedDoc(DEP_PATH, DEP_DATA);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), DEP_PATH)));
+  });
+});

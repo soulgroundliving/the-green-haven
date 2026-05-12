@@ -3944,7 +3944,7 @@
             <div class="receipt-item"><span>เริ่มต้นสัญญา:</span><strong id="profile-lease-start">—</strong></div>
             <div class="receipt-item"><span>สิ้นสุดสัญญา:</span><strong id="profile-lease-end">—</strong></div>
             <div class="receipt-item"><span>ระยะเวลาคงเหลือ:</span><strong id="profile-lease-remaining" style="color:var(--primary-green);">—</strong></div>
-            <div class="receipt-item"><span>เงินมัดจำ (Deposit):</span><strong id="profile-deposit" style="color:var(--danger);">—</strong></div>
+            <div class="receipt-item"><span>เงินมัดจำ (Deposit):</span><span style="display:flex;align-items:center;gap:8px;"><strong id="profile-deposit" style="color:var(--danger);">—</strong><span id="profile-deposit-badge" style="display:none;"></span></span></div>
             <div
                 style="display:flex; justify-content:space-between; margin-top:10px; font-size:var(--fs-md); color:var(--primary-green); cursor:pointer;">
                 <span id="profile-contract-label">สัญญาเช่าห้อง —</span><i class="fas fa-download"></i>
@@ -9868,7 +9868,17 @@
                 }
             }
             const deposit = l.deposit || l.depositAmount;
-            if (deposit) set('profile-deposit', Number(deposit).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+            if (deposit) {
+                set('profile-deposit', Number(deposit).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท');
+                const badge = document.getElementById('profile-deposit-badge');
+                if (badge) {
+                    const isReturned = (l.depositStatus === 'returned') || (t && t.depositStatus === 'returned');
+                    badge.style.display = '';
+                    badge.innerHTML = isReturned
+                        ? '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">✅ คืนแล้ว</span>'
+                        : '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">💰 ถือมัดจำ</span>';
+                }
+            }
             if (_taRoom) set('profile-contract-label', `สัญญาเช่าห้อง ${_taRoom}`);
 
             const roomEl = document.getElementById('profile-room-display');

@@ -345,6 +345,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ===== DEPOSITS (admin manages; accountant reads for tax reporting) =====
+    // Flat collection: deposits/{building}_{roomId} (e.g. deposits/rooms_15)
+    // Each doc stores building + roomId fields for client-side filtering.
+    // Tenants have no direct access — deposit status surfaced via tenant SSoT.
+    match /deposits/{docId} {
+      allow read:   if isAdmin() || isAccountant();
+      allow write:  if isAdmin();
+    }
+
     // ===== DEFAULT DENY (catch-all) =====
     match /{document=**} {
       allow read, write: if false;
