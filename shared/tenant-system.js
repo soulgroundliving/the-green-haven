@@ -907,20 +907,36 @@ class TenantFirebaseSync {
           if (ssotSnap.exists()) {
             const d = ssotSnap.data();
             const lease = d.lease || {};
+            // Phase 3d: tenant.lease mirror is reduced — fetch full lease
+            // record when leaseId is present so amounts + contract docs
+            // resolve correctly even when the mirror omits them.
+            let fullLease = {};
+            const leaseId = lease.leaseId || d.activeContractId;
+            if (leaseId) {
+              try {
+                const leaseRef = fs.doc(db, 'leases', building, 'list', String(leaseId));
+                const leaseSnap = await fs.getDoc(leaseRef);
+                if (leaseSnap.exists()) fullLease = leaseSnap.data() || {};
+              } catch (e) {
+                // Permission errors aren't fatal — fall back to mirror.
+                console.debug(`  ⚠️ leases lookup failed for ${leaseId}:`, e.message);
+              }
+            }
             const leaseData = {
               building,
               roomId,
-              // Lease — read from .lease subobject; fall back to top-level
-              // for unmigrated docs (Phase 6 will remove top-level dupes).
-              rentAmount: lease.rentAmount ?? d.rentAmount ?? 0,
-              deposit: lease.deposit ?? d.deposit ?? 0,
-              startDate: lease.startDate || lease.moveInDate || d.moveInDate,
-              endDate: lease.endDate || lease.moveOutDate || d.moveOutDate,
-              moveInDate: lease.startDate || lease.moveInDate || d.moveInDate,
-              moveOutDate: lease.endDate || lease.moveOutDate || d.moveOutDate,
-              status: lease.status || 'empty',
-              contractDocument: lease.contractDocument || d.contractDocument,
-              contractFileName: lease.contractFileName || d.contractFileName,
+              // Lease — read from .lease subobject; fall back to full lease
+              // record; then top-level for unmigrated docs (Phase 6 will
+              // remove top-level dupes).
+              rentAmount: lease.rentAmount ?? fullLease.rentAmount ?? d.rentAmount ?? 0,
+              deposit: lease.deposit ?? fullLease.deposit ?? d.deposit ?? 0,
+              startDate: lease.startDate || lease.moveInDate || fullLease.startDate || fullLease.moveInDate || d.moveInDate,
+              endDate: lease.endDate || lease.moveOutDate || fullLease.endDate || fullLease.moveOutDate || d.moveOutDate,
+              moveInDate: lease.startDate || lease.moveInDate || fullLease.startDate || fullLease.moveInDate || d.moveInDate,
+              moveOutDate: lease.endDate || lease.moveOutDate || fullLease.endDate || fullLease.moveOutDate || d.moveOutDate,
+              status: lease.status || fullLease.status || 'empty',
+              contractDocument: lease.contractDocument || fullLease.contractDocument || d.contractDocument,
+              contractFileName: lease.contractFileName || fullLease.contractFileName || d.contractFileName,
               billingCycle: d.billingCycle ?? 1,
               emergencyContact: d.emergencyContact,
               // Identity
