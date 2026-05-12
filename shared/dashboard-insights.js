@@ -1224,14 +1224,12 @@
           </div>
         </div>`;
         complaintsRow.innerHTML = `
-          <div class="ops-board-hdr card-title" style="margin-bottom:.3rem;">
-            <span>📋 Operations Summary</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.28rem;">
+            <div class="ops-pulse ${pulseClass}" style="margin:0;">${pulseLabel}</div>
             <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
                     style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
           </div>
-          <div class="ops-pulse ${pulseClass}" style="margin:.15rem 0 .3rem;">${pulseLabel}</div>
-          ${complaintsHorizHTML}
-          <div class="ops-board-ft" style="margin-top:.15rem;">${fmtCacheAge(Date.now())}</div>`;
+          ${complaintsHorizHTML}`;
         miniCardsCol.innerHTML = `<div class="ops2-grid">
           ${ops2Card({ wide: false, accent: mAccent, icon: '🔧', title: 'Maintenance', sub: '',
             bigNum: mStatus.pending, bigCls: mStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'Pending',
@@ -1346,8 +1344,7 @@
         const moreHTML = spikes.length > TOP_N
           ? `<div style="font-size:.73rem;color:var(--text-muted);padding:.35rem .7rem;">+${spikes.length - TOP_N} ห้องเพิ่มเติม</div>`
           : '';
-        bodyHTML = `<div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+        bodyHTML = `<table style="width:100%;border-collapse:collapse;font-size:.82rem;">
             <thead><tr style="background:var(--mist,#f2f1ec);">
               <th style="padding:.3rem .5rem;text-align:left;">ห้อง</th>
               <th style="padding:.3rem .5rem;text-align:right;">ล่าสุด</th>
@@ -1356,21 +1353,17 @@
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
-        </div>
-        ${moreHTML}
-        <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem;">Spike = ใช้เกิน 1.5× ค่า median 3 เดือนก่อน · ต้องการข้อมูลอย่างน้อย 4 เดือน</div>`;
+          ${moreHTML}`;
       }
 
       const _spikeBorderColor = spikes.length > 0 ? 'var(--alert,#dc2626)' : 'var(--ok,#14b8a6)';
-      container.innerHTML = `<div class="card" style="border-left:4px solid ${_spikeBorderColor};">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+      container.innerHTML = `<div class="card" style="border-top:3px solid ${_spikeBorderColor};">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
           <span>⚡ Meter Usage Spike</span>
           <button data-action="refreshInsight" data-target="meterSpike" aria-label="รีเฟรช Meter Spike"
                   style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
         </div>
-        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.7rem;">ห้องที่ใช้ไฟฟ้าเดือนล่าสุดสูงผิดปกติ เทียบกับ median 3 เดือนก่อน</div>
         ${bodyHTML}
-        <div style="font-size:.73rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${fmtCacheAge(Date.now())}</div>
       </div>`;
     } catch (e) {
       console.error('[insights] meter spike failed:', e);
@@ -1433,39 +1426,35 @@
         const tableRows = rows.map(r => {
           const rateColor = r.completionRate >= 80 ? 'var(--green)' : r.completionRate >= 50 ? 'var(--blue)' : 'var(--accent,#ff9800)';
           return `<tr style="border-bottom:1px solid var(--border-subtle,#ebe9e2);">
-            <td style="padding:.5rem .7rem;max-width:110px;">
+            <td style="padding:.3rem .5rem;max-width:110px;">
               <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.prov.name)}">${esc(r.prov.name)}</div>
               ${r.prov.type ? `<div style="font-size:.7rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.prov.type)}</div>` : ''}
             </td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.total}</td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${rateColor};font-weight:600;">${r.completionRate}%</td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.avgCost != null ? '฿' + r.avgCost.toLocaleString() : '—'}</td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.avgDays != null ? r.avgDays + ' วัน' : '—'}</td>
+            <td style="padding:.3rem .5rem;text-align:right;font-variant-numeric:tabular-nums;">${r.total}</td>
+            <td style="padding:.3rem .5rem;text-align:right;font-variant-numeric:tabular-nums;color:${rateColor};font-weight:600;">${r.completionRate}%</td>
+            <td style="padding:.3rem .5rem;text-align:right;font-variant-numeric:tabular-nums;">${r.avgCost != null ? '฿' + r.avgCost.toLocaleString() : '—'}</td>
+            <td style="padding:.3rem .5rem;text-align:right;font-variant-numeric:tabular-nums;">${r.avgDays != null ? r.avgDays + ' วัน' : '—'}</td>
           </tr>`;
         }).join('');
-        bodyHTML = `<div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+        bodyHTML = `<table style="width:100%;border-collapse:collapse;font-size:.82rem;">
             <thead><tr style="background:var(--mist,#f2f1ec);">
-              <th style="padding:.55rem .7rem;text-align:left;">ผู้รับเหมา</th>
-              <th style="padding:.55rem .7rem;text-align:right;">งานทั้งหมด</th>
-              <th style="padding:.55rem .7rem;text-align:right;">เสร็จ %</th>
-              <th style="padding:.55rem .7rem;text-align:right;">ค่าใช้จ่ายเฉลี่ย</th>
-              <th style="padding:.55rem .7rem;text-align:right;">เวลาเฉลี่ย</th>
+              <th style="padding:.3rem .5rem;text-align:left;">ผู้รับเหมา</th>
+              <th style="padding:.3rem .5rem;text-align:right;">งาน</th>
+              <th style="padding:.3rem .5rem;text-align:right;">เสร็จ %</th>
+              <th style="padding:.3rem .5rem;text-align:right;">ค่าเฉลี่ย</th>
+              <th style="padding:.3rem .5rem;text-align:right;">เวลา</th>
             </tr></thead>
             <tbody>${tableRows}</tbody>
-          </table>
-        </div>`;
+          </table>`;
       }
 
-      container.innerHTML = `<div class="card" style="border-left:4px solid var(--brand-primary,#0f766e);">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+      container.innerHTML = `<div class="card" style="border-top:3px solid var(--brand-primary,#0f766e);">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
           <span>🏗️ Provider Scorecard</span>
           <button data-action="refreshInsight" data-target="providerScore" aria-label="รีเฟรช Provider Scorecard"
                   style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
         </div>
-        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.7rem;">สถิติผู้รับเหมาจากงานซ่อมแซมที่มีการกำหนดผู้รับเหมา · ข้อมูล forward-tracking เท่านั้น</div>
         ${bodyHTML}
-        <div style="font-size:.73rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${new Date().toLocaleDateString('th-TH')}</div>
       </div>`;
     } catch (e) {
       console.error('[insights] provider scorecard failed:', e);
