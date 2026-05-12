@@ -743,6 +743,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'showAddMaintenanceModal') { typeof showAddMaintenanceModal === 'function' && showAddMaintenanceModal(); return; }
     if (a === 'showAddHousekeepingModal') { typeof showAddHousekeepingModal === 'function' && showAddHousekeepingModal(); return; }
     if (a === 'saveReward') { typeof saveReward === 'function' && saveReward(); return; }
+    if (a === 'publishBroadcast') { typeof window.publishBroadcast === 'function' && window.publishBroadcast(); return; }
 
     // Phase 4E Step 2 — page-people-management policy saves + page-requests-approvals housekeeping campaign + wellness form
     if (a === 'savePolicyDoc') { typeof savePolicyDoc === 'function' && savePolicyDoc(el.dataset.doc); return; }
