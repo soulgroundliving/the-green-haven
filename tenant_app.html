@@ -99,6 +99,7 @@
     <script src="./shared/gamification-rules.js"></script>
     <script src="./shared/room-config.js"></script>
     <script src="./shared/tenant-system.js"></script>
+    <script src="./shared/person-ssot.js"></script>
     <script src="./shared/lease-config.js"></script>
     <script src="./shared/billing-system.js"></script>
     <script src="./shared/invoice-receipt-manager.js"></script>
@@ -5390,6 +5391,10 @@
                     }
                     // Update in-memory tenant for downstream reads
                     if (_taTenant) _taTenant.companyInfo = co;
+                    // Phase 3c-2 dual-write: companyInfo → people/{tenantId}
+                    if (window.PersonManager && _taTenant?.tenantId) {
+                        window.PersonManager.savePerson(_taTenant.tenantId, { companyInfo: co });
+                    }
                 }
                 _showCompMsg('✅ บันทึกข้อมูลบริษัทเรียบร้อย — ใบเสร็จเดือนถัดไปจะออกในนามนี้', 'var(--soft-green)', 'var(--primary-dark, #1a5c38)');
             } catch(e) {
@@ -5571,6 +5576,10 @@
                         if (typeof TenantFirebaseSync.saveAvatar === 'function') TenantFirebaseSync.saveAvatar(data);
                     }
                 } catch(_){}
+                // Phase 3c-2 dual-write: avatar → people/{tenantId}
+                if (window.PersonManager && _taTenant?.tenantId) {
+                    window.PersonManager.savePerson(_taTenant.tenantId, { avatar: data });
+                }
             } catch(_){}
         }
         function loadAvatar() {

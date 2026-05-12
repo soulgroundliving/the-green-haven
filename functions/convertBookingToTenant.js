@@ -294,6 +294,25 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
 
       tx.set(tenantRef, tenantData, { merge: true });
 
+      // Phase 3b-1: people/{tenantId} canonical write — runs for ALL conversions
+      // (not just returning-player) so every new tenant has a person SSoT doc
+      // from day one. merge:true so returning tenants don't lose accrued state
+      // (gamification carried from archive, prior identity fields, etc.).
+      const peopleRef = firestore.collection('people').doc(tenantId);
+      const personPayload = {
+        tenantId,
+        name: String(booking.prospectName || ''),
+        phone: String(booking.prospectPhone || ''),
+        lineUserId: prospectLineId,
+        lineDisplayName: String(booking.prospectName || ''),
+        linkedAuthUid: lineUid,
+        currentLease: { building, roomId, contractId },
+        sourceBookingId: bookingId,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      if (mergedGamification) personPayload.gamification = mergedGamification;
+      tx.set(peopleRef, personPayload, { merge: true });
+
       // Audit ledger for the Early Bird award (mirrors verifySlip's
       // paymentHistory pattern). monthKey is the conversion month so it
       // doesn't collide with rent payments — rent uses YYYY-MM, this uses
@@ -354,14 +373,10 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
     throw new functions.https.HttpsError('internal', e.message || 'Conversion transaction failed');
   }
 
-  // If player returning — update people/ doc + revoke role:'player' claim (fire-and-forget).
+  // If player returning — revoke role:'player' claim + clear liffUsers.role
+  // (fire-and-forget). currentLease pointer is set inside the transaction
+  // above via the unified person-doc write — no separate update needed here.
   if (result.restoredFrom === 'people_player' && result.tenantId) {
-    const peopleRef = firestore.collection('people').doc(result.tenantId);
-    peopleRef.update({
-      currentLease: { building: result.building, roomId: result.roomId, contractId: result.contractId },
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }).catch(e => console.warn('convertBookingToTenant: people/ currentLease update failed:', e.message));
-
     // Revoke player claim — new tenant claims set by liffSignIn on next sign-in.
     admin.auth().setCustomUserClaims(lineUid, {})
       .catch(e => console.warn(`convertBookingToTenant: revoke player claim failed uid=${lineUid}:`, e.message));

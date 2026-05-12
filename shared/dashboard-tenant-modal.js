@@ -565,6 +565,27 @@ function saveTenantInfo() {
   if (typeof TenantConfigManager.saveTenantToFirebase === 'function') {
     TenantConfigManager.saveTenantToFirebase(building, tenantId, tenantData);
   }
+  // Phase 3c-1 dual-write: identity → people/{tenantId} (the canonical person
+  // doc in the person-centric model). Async + non-blocking — failures don't
+  // affect the legacy tenant-doc write path. As admin edits flow through over
+  // time, every active tenant ends up with a people/* doc (Phase 4 lazy).
+  if (window.PersonManager) {
+    window.PersonManager.savePerson(tenantId, {
+      name: fullName,
+      firstName,
+      lastName,
+      phone: tenantData.phone || '',
+      email: tenantData.email || '',
+      lineUserId: tenantData.lineID || '',
+      idCardNumber: tenantData.idCardNumber || '',
+      address: tenantData.address || '',
+      licensePlate: tenantData.licensePlate || '',
+      emergencyContact: tenantData.emergencyContact || null,
+      notes: tenantData.notes || '',
+    });
+    // Mark the current room link so person doc tracks where this tenant lives.
+    window.PersonManager.linkRoom(tenantId, building, roomId, leaseId || tenantId);
+  }
   // updateTenant/addTenant key tenant_master_data by tenantId, but getTenantByRoom()
   // reads by roomId. Write the roomId key now so the modal re-opens with fresh data
   // without waiting for the next Firestore → localStorage sync.
