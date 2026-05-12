@@ -277,6 +277,7 @@ function switchRequestsTab(tabName, btn) {
     else if(tabName === 'complaints' && typeof initComplaintsPage === 'function') initComplaintsPage();
     else if(tabName === 'pets' && typeof initPetApprovalsPage === 'function') initPetApprovalsPage();
     else if(tabName === 'liff' && typeof initLiffRequestsPage === 'function') initLiffRequestsPage();
+    else if(tabName === 'broadcast' && typeof initBroadcastPage === 'function') initBroadcastPage();
   }
 }
 

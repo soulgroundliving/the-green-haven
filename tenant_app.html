@@ -2197,6 +2197,22 @@
             </div>
         </div>
 
+        <!-- Bell icon: mirror of avatar chip at top-right. Shows in-app broadcasts. -->
+        <button type="button" id="map-bell-btn" data-action="openBroadcastsPanel"
+            aria-label="ประกาศจากผู้ดูแล"
+            style="position: absolute; top: 20px; right: 20px; z-index: 20;
+                   display: flex; align-items: center; gap: 6px;
+                   background: rgba(255,255,255,0.8); padding: 10px 14px;
+                   border: none; border-radius: 30px; backdrop-filter: blur(5px);
+                   cursor: pointer; font: inherit;">
+            <span style="font-size: var(--fs-lg); line-height: 1;">🔔</span>
+            <span id="map-bell-badge" aria-live="polite"
+                style="display: none; min-width: 18px; padding: 0 6px; height: 18px;
+                       background: #E74C3C; color: #fff; border-radius: 9px;
+                       font-size: 11px; font-weight: 800;
+                       align-items: center; justify-content: center; line-height: 1;">0</span>
+        </button>
+
         <div class="map-container" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10;
        background-image: linear-gradient(180deg, #cfe5d8 0%, #e8f5e9 50%, #f3ece0 100%);
        background-position: center;
@@ -2231,6 +2247,23 @@
                 <div class="map-label" style="background: #0EA5E9;">PAY BILL</div>
                 <div class="map-icon-bounce" style="animation-delay: 0.6s;">💳</div>
             </button>
+        </div>
+    </div>
+
+    <!-- Broadcasts Panel — fullscreen overlay listing recent admin announcements -->
+    <div id="broadcasts-panel" role="dialog" aria-modal="true" aria-labelledby="broadcasts-panel-title"
+         style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1600;
+                align-items:flex-start; justify-content:center; padding:0;">
+        <div style="background:#fff; width:100%; max-width:480px; max-height:100vh; height:100vh;
+                    border-radius:0; padding:0; display:flex; flex-direction:column; overflow:hidden;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px;
+                        border-bottom:1px solid var(--border); background:#fff;">
+                <strong id="broadcasts-panel-title" style="font-size:var(--fs-lg);">📣 ประกาศ</strong>
+                <button type="button" data-action="closeBroadcastsPanel"
+                    aria-label="ปิด"
+                    style="border:none; background:transparent; font-size:1.4rem; cursor:pointer; padding:4px 10px;">✕</button>
+            </div>
+            <div id="broadcasts-panel-list" style="flex:1; overflow-y:auto; padding:8px 0;"></div>
         </div>
     </div>
 
@@ -6541,6 +6574,8 @@
             if (a === 'resetPhoneOtpFlow' && _ta.resetPhoneOtpFlow) { _ta.resetPhoneOtpFlow(); return; }
             if (a === 'confirmPhoneOtp' && _ta.confirmPhoneOtp) { _ta.confirmPhoneOtp(); return; }
             if (a === 'saveCompanyInfo' && _ta.saveCompanyInfo) { _ta.saveCompanyInfo(); return; }
+            if (a === 'openBroadcastsPanel' && _ta.openBroadcastsPanel) { _ta.openBroadcastsPanel(); return; }
+            if (a === 'closeBroadcastsPanel' && _ta.closeBroadcastsPanel) { _ta.closeBroadcastsPanel(); return; }
             if (a === 'openRewardsShop' && _ta.openRewardsShop) { _ta.openRewardsShop(); return; }
             if (a === 'closeRewardsShop' && _ta.closeRewardsShop) { _ta.closeRewardsShop(); return; }
             if (a === 'saveNewPet' && _ta.saveNewPet) { _ta.saveNewPet(); return; }
@@ -6945,6 +6980,156 @@
             } catch (e) { console.warn('complaints subscribe init failed:', e.message); }
         }
         _onLiffClaimsReady(_subscribeComplaintsFromFirestore);
+
+        // ===== Broadcast Announcements (in-app, from admin) =====
+        // Subscribe to broadcastMessages, filter by audience (all OR matching building),
+        // keep last 20 in memory, drive bell badge + dropdown panel.
+        let _broadcastsUnsub = null;
+        let _broadcastsList  = [];          // cached, filtered, newest first
+        let _broadcastsInitialReplay = true; // toast suppressed during first snapshot
+        function _broadcastShowToast(msg) {
+            try {
+                const el = document.createElement('div');
+                el.textContent = String(msg || '');
+                el.setAttribute('role', 'status');
+                el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:80px;' +
+                    'background:rgba(20,30,25,0.94);color:#fff;padding:11px 18px;border-radius:22px;' +
+                    'font-size:14px;font-family:inherit;z-index:2000;box-shadow:0 6px 24px rgba(0,0,0,.25);' +
+                    'max-width:88vw;text-align:center;line-height:1.4;animation:fadein .25s;';
+                document.body.appendChild(el);
+                setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; }, 3400);
+                setTimeout(() => el.remove(), 3800);
+            } catch (_) {}
+        }
+        function _broadcastReadKey() {
+            const tid = _taTenant?.tenantId || _taTenant?.id || _taRoom || 'anon';
+            return 'gh_last_broadcast_read_' + tid;
+        }
+        function _getLastBroadcastReadAt() {
+            try { return localStorage.getItem(_broadcastReadKey()) || ''; } catch (_) { return ''; }
+        }
+        function _setLastBroadcastReadAt(iso) {
+            try { localStorage.setItem(_broadcastReadKey(), iso); } catch (_) {}
+        }
+        function _broadcastSentAtIso(d) {
+            if (!d || !d.sentAt) return '';
+            if (typeof d.sentAt === 'string') return d.sentAt;
+            if (typeof d.sentAt.toDate === 'function') return d.sentAt.toDate().toISOString();
+            return '';
+        }
+        function _unreadBroadcastCount() {
+            const cutoff = _getLastBroadcastReadAt();
+            return _broadcastsList.filter(d => {
+                const iso = _broadcastSentAtIso(d);
+                return iso && (!cutoff || iso > cutoff);
+            }).length;
+        }
+        function _renderBroadcastBadge() {
+            const badge = document.getElementById('map-bell-badge');
+            if (!badge) return;
+            const n = _unreadBroadcastCount();
+            if (n > 0) {
+                badge.textContent = n > 99 ? '99+' : String(n);
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        function _escapeBroadcastHtml(s) {
+            return String(s || '')
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+        function _broadcastRelTime(iso) {
+            if (!iso) return '';
+            const t = new Date(iso).getTime();
+            if (!Number.isFinite(t)) return '';
+            const diff = Date.now() - t;
+            if (diff < 60*1000)            return 'เมื่อสักครู่';
+            if (diff < 60*60*1000)         return Math.floor(diff/60000) + ' นาทีที่แล้ว';
+            if (diff < 24*60*60*1000)      return Math.floor(diff/3600000) + ' ชั่วโมงที่แล้ว';
+            if (diff < 7*24*60*60*1000)    return Math.floor(diff/86400000) + ' วันที่แล้ว';
+            return new Date(t).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' });
+        }
+        function _renderBroadcastsList() {
+            const el = document.getElementById('broadcasts-panel-list');
+            if (!el) return;
+            if (!_broadcastsList.length) {
+                el.innerHTML = '<div style="text-align:center; padding:3rem 1rem; color:var(--text-muted); font-size:.92rem;">ยังไม่มีประกาศ</div>';
+                return;
+            }
+            const cutoff = _getLastBroadcastReadAt();
+            el.innerHTML = _broadcastsList.map(d => {
+                const iso    = _broadcastSentAtIso(d);
+                const unread = iso && (!cutoff || iso > cutoff);
+                const title  = _escapeBroadcastHtml(d.title || '(ไม่มีหัวข้อ)');
+                const body   = _escapeBroadcastHtml(d.body || '');
+                const when   = _broadcastRelTime(iso);
+                return `<div style="border-bottom:1px solid var(--border, #e5e5e5); padding:14px 20px;
+                            ${unread ? 'border-left:3px solid var(--primary-green, #4caf50);' : ''}">
+                    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:.35rem;">
+                        <strong style="font-size:.98rem; ${unread ? 'color:var(--text-dark);' : 'color:var(--text-muted);'}">${title}</strong>
+                        <span style="font-size:.78rem; color:var(--text-muted); white-space:nowrap;">${when}</span>
+                    </div>
+                    <div style="font-size:.9rem; color:var(--text-dark, #333); white-space:pre-wrap;">${body}</div>
+                </div>`;
+            }).join('');
+        }
+        function _subscribeBroadcasts() {
+            if (_broadcastsUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            const fs = window.firebase.firestoreFunctions;
+            const db = window.firebase.firestore();
+            const audience = _taBuilding || '';   // tenant's building from claims
+            try {
+                const q = fs.query(
+                    fs.collection(db, 'broadcastMessages'),
+                    fs.orderBy('sentAt', 'desc'),
+                    fs.limit(20)
+                );
+                _broadcastsUnsub = fs.onSnapshot(q, snap => {
+                    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    // Client filter: only docs whose audience is 'all' OR matches building.
+                    // Server rules already enforce this, but filter defensively.
+                    const filtered = docs.filter(d => d.audience === 'all' || d.audience === audience);
+                    const priorIds = new Set(_broadcastsList.map(b => b.id));
+                    _broadcastsList = filtered;
+                    _renderBroadcastBadge();
+                    _renderBroadcastsList();
+                    // Toast on truly new broadcasts (after initial replay)
+                    if (!_broadcastsInitialReplay) {
+                        const fresh = filtered.find(d => !priorIds.has(d.id));
+                        if (fresh) _broadcastShowToast('📣 ประกาศใหม่: ' + (fresh.title || ''));
+                    }
+                    _broadcastsInitialReplay = false;
+                }, err => console.warn('broadcasts subscribe failed:', err?.message || err));
+            } catch (e) {
+                console.warn('broadcasts subscribe init failed:', e?.message || e);
+            }
+        }
+        _onLiffClaimsReady(_subscribeBroadcasts);
+
+        function openBroadcastsPanel() {
+            const panel = document.getElementById('broadcasts-panel');
+            if (!panel) return;
+            _renderBroadcastsList();
+            panel.style.display = 'flex';
+            // Mark all as read using newest sentAt
+            const newest = _broadcastsList[0];
+            const iso = newest ? _broadcastSentAtIso(newest) : new Date().toISOString();
+            if (iso) {
+                _setLastBroadcastReadAt(iso);
+                _renderBroadcastBadge();
+                // Re-render list so the unread accents disappear
+                setTimeout(_renderBroadcastsList, 0);
+            }
+        }
+        function closeBroadcastsPanel() {
+            const panel = document.getElementById('broadcasts-panel');
+            if (panel) panel.style.display = 'none';
+        }
+        window.openBroadcastsPanel  = openBroadcastsPanel;
+        window.closeBroadcastsPanel = closeBroadcastsPanel;
 
         // RTDB realtime subscribe — admin writes status/workNotes/afterPhoto to RTDB,
         // tenant sees updates live without having to be on the same device

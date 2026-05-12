@@ -36,6 +36,16 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ===== BROADCAST MESSAGES (admin → tenant in-app announcement) =====
+    // Written EXCLUSIVELY by broadcastMessage CF (admin SDK bypasses rules).
+    // Read scoped by audience: 'all' (everyone signed-in) or building match.
+    match /broadcastMessages/{id} {
+      allow read:  if isAdmin()
+                || (isSignedIn() && resource.data.audience == 'all')
+                || (isSignedIn() && resource.data.audience == request.auth.token.building);
+      allow write: if false;  // CF only
+    }
+
     // ===== COMMUNITY EVENTS / DOCS / WELLNESS =====
     match /communityEvents/{id}    { allow read: if true; allow write: if isAdmin(); }
     match /communityDocuments/{id} { allow read: if true; allow write: if isAdmin(); }
