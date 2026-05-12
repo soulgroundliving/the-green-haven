@@ -699,6 +699,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'saveTenantInfo') { saveTenantInfo(); return; }
     if (a === 'archiveTenantOnMoveOut') { typeof archiveTenantOnMoveOut === 'function' && archiveTenantOnMoveOut(); return; }
     if (a === 'transitionToPlayer') { typeof transitionToPlayer === 'function' && transitionToPlayer(); return; }
+    if (a === 'revertTransitionToPlayer') { typeof revertTransitionToPlayer === 'function' && revertTransitionToPlayer(); return; }
     if (a === 'addNewRoom') { addNewRoom(); return; }
     if (a === 'selectAllRooms') { typeof selectAllRooms === 'function' && selectAllRooms(); return; }
     if (a === 'deselectAllRooms') { typeof deselectAllRooms === 'function' && deselectAllRooms(); return; }

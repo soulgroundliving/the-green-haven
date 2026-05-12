@@ -63,6 +63,10 @@ exports.archiveTenantOnMoveOut = require('./archiveTenantOnMoveOut').archiveTena
 // people/{tenantId} doc, sets role:'player' claim. Person stays in LINE with community access.
 exports.transitionToPlayer = require('./transitionToPlayer').transitionToPlayer;
 
+// Undo a mistaken transitionToPlayer — restores tenant from archive, copies subcollections
+// back, revokes player Auth claim, clears liffUsers.role. Archive doc kept as audit trail.
+exports.revertTransitionToPlayer = require('./revertTransitionToPlayer').revertTransitionToPlayer;
+
 // Phone match check for LIFF auto-approve — admin SDK, never exposes raw phone (Phase 4C-2)
 exports.checkTenantPhone = require('./checkTenantPhone').checkTenantPhone;
 

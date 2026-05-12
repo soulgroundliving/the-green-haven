@@ -760,6 +760,64 @@ async function transitionToPlayer() {
 }
 window.transitionToPlayer = transitionToPlayer;
 
+// ─── Revert a mistaken transitionToPlayer ─────────────────────────────────
+// Calls revertTransitionToPlayer CF — restores tenant from archive doc, copies
+// subcollections back to live doc, revokes player Auth claim, clears
+// liffUsers.role. Archive doc kept as audit trail with revertedAt stamp.
+async function revertTransitionToPlayer() {
+  const building = currentEditBuilding;
+  const roomId = currentEditRoomId;
+  if (!building || !roomId) {
+    showToast('ไม่พบข้อมูลห้อง — เปิด modal ก่อนแล้วลองใหม่', 'error');
+    return;
+  }
+
+  const ok = await window.ghConfirm(
+    `ย้อน transitionToPlayer สำหรับห้อง ${roomId}?\n\n` +
+    `• คืนข้อมูลผู้เช่าจาก archive doc → ห้อง active อีกครั้ง\n` +
+    `• คืน subcollections (paymentHistory, redemptions, pets, etc.)\n` +
+    `• revoke role:'player' จาก Firebase Auth claim ของผู้ใช้\n` +
+    `• ล้าง liffUsers.role → liffSignIn จะออก tenant token ครั้งถัดไป\n` +
+    `• archive doc ยังเก็บไว้เป็น audit (มี revertedAt stamp)\n\n` +
+    `เงื่อนไข: ห้องต้อง status='vacant' + lastArchivedContractId ของ archive doc archivedReason='transitioned_to_player'`,
+    { title: 'ย้อน transitionToPlayer', confirmLabel: 'ย้อนกลับเป็น Tenant', danger: false }
+  );
+  if (!ok) return;
+
+  if (!window.firebase?.functions?.httpsCallable) {
+    showToast('Firebase functions ไม่พร้อม — รีโหลดหน้า', 'error');
+    return;
+  }
+
+  try {
+    const callable = window.firebase.functions.httpsCallable('revertTransitionToPlayer');
+    const res = await callable({ building, roomId });
+    const d = res?.data || {};
+    showToast(
+      `✓ ย้อน transitionToPlayer สำเร็จ — tenantId=${d.tenantId}, subdocs=${d.restoredSubdocs}`,
+      'success'
+    );
+
+    closeTenantModal();
+    if (typeof updateRoomStatuses === 'function') updateRoomStatuses();
+    if (typeof updateOccupancyDashboard === 'function') updateOccupancyDashboard();
+    const currentPage = document.querySelector('.page.active');
+    if (currentPage && currentPage.id === 'page-property') {
+      const nestSection = document.getElementById('property-nest-section');
+      if (nestSection && nestSection.style.display !== 'none') {
+        if (typeof initNestPage === 'function') initNestPage();
+      } else {
+        if (typeof initRoomsPage === 'function') initRoomsPage();
+        if (typeof renderCompactRoomGrid === 'function') renderCompactRoomGrid();
+      }
+    }
+  } catch (e) {
+    console.error('revertTransitionToPlayer failed:', e);
+    showToast('ย้อนกลับไม่สำเร็จ: ' + (e?.message || String(e)), 'error');
+  }
+}
+window.revertTransitionToPlayer = revertTransitionToPlayer;
+
 // Close modal when clicking outside
 document.addEventListener('click', function(e) {
   const modal = document.getElementById('tenantModal');
