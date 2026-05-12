@@ -1010,9 +1010,13 @@
   // FEATURE 7: Operations Summary (ปฏิบัติการ tab)
   // ============================================================
   async function renderOperationsInsights() {
-    const container = document.getElementById('dashComplaintsCol') || document.getElementById('dashOperationsInsights');
+    const complaintsRow = document.getElementById('dashOpsComplaintsRow');
+    const miniCardsCol  = document.getElementById('dashMiniCardsCol');
+    const container = complaintsRow || document.getElementById('dashComplaintsCol') || document.getElementById('dashOperationsInsights');
     if (!container) return;
-    container.innerHTML = loadingHTML();
+    if (complaintsRow) complaintsRow.innerHTML = loadingHTML();
+    if (miniCardsCol)  miniCardsCol.innerHTML  = loadingHTML();
+    else if (!complaintsRow) container.innerHTML = loadingHTML();
     try {
       if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions)
         throw new Error('Firestore ยังไม่พร้อม');
@@ -1197,19 +1201,56 @@
             tagsHTML: '', badgeHTML: lBadge })}
         </div></div>`;
 
-      container.innerHTML = `
-        <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">
-          <span>📋 Operations Summary</span>
-          <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
-                  style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
-        </div>
-        <div class="ops-pulse ${pulseClass}" style="margin-bottom:.45rem;">${pulseLabel}</div>
-        ${complaintsCardHTML}
-        ${opsCardsHTML}
-        <div class="ops-board-ft">${fmtCacheAge(Date.now())}</div>`;
+      if (complaintsRow && miniCardsCol) {
+        complaintsRow.innerHTML = `
+          <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">
+            <span>📋 Operations Summary</span>
+            <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
+                    style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
+          </div>
+          <div class="ops-pulse ${pulseClass}" style="margin-bottom:.45rem;">${pulseLabel}</div>
+          ${complaintsCardHTML}
+          <div class="ops-board-ft">${fmtCacheAge(Date.now())}</div>`;
+        miniCardsCol.innerHTML = `<div class="ops2-grid">
+          ${ops2Card({ wide: false, accent: mAccent, icon: '🔧', title: 'Maintenance', sub: '',
+            bigNum: mStatus.pending, bigCls: mStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'Pending',
+            statsHTML: ops2Stat(mStatus.inprogress, mStatus.inprogress > 0 ? 'amber' : 'muted', 'In Progress') +
+                       ops2Stat(mStatus.done, mStatus.done > 0 ? 'green' : 'muted', 'Done') +
+                       (mOverdue.length ? ops2Stat(mOverdue.length, 'red', 'Overdue') : ''),
+            tagsHTML: mTagsHTML, badgeHTML: mBadge })}
+          ${ops2Card({ wide: false, accent: hAccent, icon: '🧹', title: 'Housekeeping', sub: '',
+            bigNum: hStatus.pending, bigCls: hStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'Pending',
+            statsHTML: ops2Stat(hStatus.inprogress, hStatus.inprogress > 0 ? 'amber' : 'muted', 'In Progress') +
+                       ops2Stat(hStatus.done, hStatus.done > 0 ? 'green' : 'muted', 'Done'),
+            tagsHTML: '', badgeHTML: hBadge })}
+          ${ops2Card({ wide: false, accent: pAccent, icon: '🐾', title: 'Pet Approvals', sub: '',
+            bigNum: pStatus.pending, bigCls: pStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'รออนุมัติ',
+            statsHTML: ops2Stat(pStatus.approved, pStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
+                       ops2Stat(pStatus.rejected, pStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
+            tagsHTML: '', badgeHTML: pBadge })}
+          ${ops2Card({ wide: false, accent: lAccent, icon: '🔗', title: 'LINE Requests', sub: '',
+            bigNum: lStatus.pending, bigCls: lStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'รออนุมัติ',
+            statsHTML: ops2Stat(lStatus.approved, lStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
+                       ops2Stat(lStatus.rejected, lStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
+            tagsHTML: '', badgeHTML: lBadge })}
+        </div>`;
+      } else {
+        container.innerHTML = `
+          <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">
+            <span>📋 Operations Summary</span>
+            <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
+                    style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
+          </div>
+          <div class="ops-pulse ${pulseClass}" style="margin-bottom:.45rem;">${pulseLabel}</div>
+          ${complaintsCardHTML}
+          ${opsCardsHTML}
+          <div class="ops-board-ft">${fmtCacheAge(Date.now())}</div>`;
+      }
     } catch (e) {
       console.error('[insights] operations failed:', e);
-      container.innerHTML = errorHTML('operations', e.message);
+      if (complaintsRow) complaintsRow.innerHTML = errorHTML('operations', e.message);
+      if (miniCardsCol) miniCardsCol.innerHTML = '';
+      else container.innerHTML = errorHTML('operations', e.message);
     }
   }
 
