@@ -2701,7 +2701,18 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   align-items:start;
   min-width:0;
 }
-#dashOpsComplaintsRow{ margin-bottom:.6rem; }
+/* Ops tab — fit viewport height, no page scroll */
+#dash-cat-operations{
+  display:flex; flex-direction:column;
+  height:calc(100vh - 170px);
+  overflow:hidden;
+}
+#dash-cat-operations .dash-tab-header{ flex-shrink:0; }
+#dashOpsComplaintsRow{ flex-shrink:0; margin-bottom:.4rem; }
+.ops-layout-v2{ flex:1; min-height:0; }
+.ops-right-col{ height:100%; }
+.ops-right-col > *{ flex:1; min-height:0; }
+#dash-cat-operations .card{ overflow:hidden; }
 .ops-layout-v2 > *{ min-width:0; }
 .ops-status-col{ display:flex; flex-direction:column; gap:.5rem; }
 .ops-right-col{ display:flex; flex-direction:column; gap:.5rem; }
