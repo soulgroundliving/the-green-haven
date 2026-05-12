@@ -22,6 +22,22 @@
  * touch firestoreFunctions directly.
  */
 class PersonManager {
+  // ── in-memory cache ────────────────────────────────────────────────
+  // Sync access to person docs for reader-side overlays (Phase 3e). Populated
+  // on getPerson() fetch + savePerson() write. Not persisted — refills on the
+  // first read after page load.
+  static _cache = new Map();
+
+  static getPersonSync(tenantId) {
+    if (!tenantId) return null;
+    return this._cache.get(tenantId) || null;
+  }
+
+  static _setCache(tenantId, data) {
+    if (!tenantId || !data) return;
+    this._cache.set(tenantId, data);
+  }
+
   // ── private helpers ───────────────────────────────────────────────
   static _db() { return window.firebase?.firestore?.(); }
   static _fs() { return window.firebase?.firestoreFunctions; }
@@ -34,7 +50,7 @@ class PersonManager {
 
   // ── reads ─────────────────────────────────────────────────────────
 
-  /** Read people/{tenantId}. Returns { id, ...data } or null. */
+  /** Read people/{tenantId}. Returns { id, ...data } or null. Updates cache. */
   static async getPerson(tenantId) {
     if (!tenantId) return null;
     const ref = this._ref(tenantId);
@@ -42,7 +58,10 @@ class PersonManager {
     try {
       const fs = this._fs();
       const snap = await fs.getDoc(ref);
-      return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+      if (!snap.exists()) return null;
+      const data = { id: snap.id, ...snap.data() };
+      this._setCache(tenantId, data);
+      return data;
     } catch (e) {
       console.warn(`PersonManager.getPerson(${tenantId}) failed:`, e.message);
       return null;
@@ -121,11 +140,32 @@ class PersonManager {
         tenantId,
         updatedAt: fs.serverTimestamp(),
       }, { merge: true });
+      // Cache locally for sync reads (overlay in getTenantByRoom etc.).
+      // Merge with existing cache so partial saves don't lose other fields.
+      const prior = this._cache.get(tenantId) || {};
+      this._setCache(tenantId, { ...prior, ...data, tenantId });
       return true;
     } catch (e) {
       console.error(`PersonManager.savePerson(${tenantId}) failed:`, e.message);
       return false;
     }
+  }
+
+  /**
+   * Bulk-prefetch people/* docs that match a list of tenantIds. Used at page
+   * load to warm the cache so sync overlays in getTenantByRoom have data.
+   * Returns the number of docs fetched.
+   */
+  static async prefetchByTenantIds(tenantIds) {
+    if (!Array.isArray(tenantIds) || tenantIds.length === 0) return 0;
+    const unique = [...new Set(tenantIds.filter(Boolean))];
+    let fetched = 0;
+    // Parallel reads — small N (≤ ~50 tenants), no need to batch.
+    await Promise.all(unique.map(async (tid) => {
+      const data = await this.getPerson(tid);
+      if (data) fetched++;
+    }));
+    return fetched;
   }
 
   /**

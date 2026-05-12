@@ -14,15 +14,23 @@ const _escTP = (s) => String(s == null ? '' : s)
 function _projectSSoTToFlat(t) {
   if (!t || typeof t !== 'object') return t;
   const lease = t.lease || {};
+  // Phase 3d: tenant.lease may be a reduced mirror (leaseId, status,
+  // startDate, endDate only). Look up the full lease via
+  // LeaseAgreementManager cache so amount fields the mirror omits still
+  // render. fullLease is empty when leaseId missing or cache cold.
+  const leaseId = lease.leaseId || t.activeContractId;
+  const fullLease = (leaseId && typeof LeaseAgreementManager !== 'undefined')
+    ? (LeaseAgreementManager.getLease(leaseId) || {})
+    : {};
   return {
     ...t,
     // Align with TenantFirebaseSync.loadLease() — combine firstName+lastName when name is empty
     name: t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim() || null,
-    contractEnd: t.contractEnd || lease.endDate || lease.moveOutDate || t.moveOutDate || null,
-    moveInDate:  t.moveInDate  || lease.startDate || lease.moveInDate || null,
-    moveOutDate: t.moveOutDate || lease.endDate || lease.moveOutDate || null,
-    deposit:     (t.deposit !== undefined && t.deposit !== null) ? t.deposit : (lease.deposit ?? null),
-    rentAmount:  t.rentAmount ?? lease.rentAmount ?? null,
+    contractEnd: t.contractEnd || lease.endDate || lease.moveOutDate || fullLease.endDate || fullLease.moveOutDate || t.moveOutDate || null,
+    moveInDate:  t.moveInDate  || lease.startDate || lease.moveInDate || fullLease.startDate || fullLease.moveInDate || null,
+    moveOutDate: t.moveOutDate || lease.endDate || lease.moveOutDate || fullLease.endDate || fullLease.moveOutDate || null,
+    deposit:     (t.deposit !== undefined && t.deposit !== null) ? t.deposit : (lease.deposit ?? fullLease.deposit ?? null),
+    rentAmount:  t.rentAmount ?? lease.rentAmount ?? fullLease.rentAmount ?? null,
   };
 }
 function loadTenants(){

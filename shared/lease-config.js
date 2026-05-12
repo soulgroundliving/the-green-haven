@@ -31,7 +31,10 @@ class LeaseAgreementManager {
     }
 
     const leases = this.getAllLeases();
-    const leaseId = `${leaseData.building}_${leaseData.roomId}_${leaseData.tenantId}_${Date.now()}`;
+    // Phase 3c-3 (Decision A1): lease ID is the contractId — single ID per
+    // lease instance. New pattern: CONTRACT_<ts>_<roomId>. Old leases keep
+    // their <building>_<roomId>_<tenantId>_<ts> ids — lookups accept both.
+    const leaseId = `CONTRACT_${Date.now()}_${leaseData.roomId}`;
 
     leases[leaseId] = {
       ...leaseData,
@@ -53,16 +56,27 @@ class LeaseAgreementManager {
       const ssotDoc = TenantConfigManager.getTenant(building, String(roomId));
       const ssotLease = ssotDoc?.lease;
       if (ssotLease && (ssotLease.leaseId || ssotLease.status === 'active')) {
+        // Phase 3d: tenant.lease is a reduced mirror — fetch full lease from
+        // localStorage (LeaseAgreementManager cache) to recover rentAmount,
+        // deposit, contractDocument, etc. that the reduced mirror omits.
+        const leaseId = ssotLease.leaseId || ssotDoc.activeContractId;
+        const fullLease = leaseId ? (this.getLease(leaseId) || {}) : {};
         return {
+          ...fullLease,
           ...ssotLease,
-          id: ssotLease.leaseId,
+          id: ssotLease.leaseId || leaseId,
           building,
           roomId: String(roomId),
           tenantId: ssotDoc.tenantId,
           tenantName: ssotDoc.name,
+          // Fields that may live only on full lease doc (after Phase 3d):
+          rentAmount:       ssotLease.rentAmount       ?? fullLease.rentAmount       ?? null,
+          deposit:          ssotLease.deposit          ?? fullLease.deposit          ?? null,
+          contractDocument: ssotLease.contractDocument ?? fullLease.contractDocument ?? null,
+          contractFileName: ssotLease.contractFileName ?? fullLease.contractFileName ?? null,
           // Compatibility — flat field aliases for legacy consumers
-          moveInDate:  ssotLease.moveInDate || ssotLease.startDate,
-          moveOutDate: ssotLease.moveOutDate || ssotLease.endDate,
+          moveInDate:  ssotLease.moveInDate || ssotLease.startDate || fullLease.moveInDate || fullLease.startDate,
+          moveOutDate: ssotLease.moveOutDate || ssotLease.endDate || fullLease.moveOutDate || fullLease.endDate,
         };
       }
     }
@@ -197,9 +211,17 @@ class LeaseAgreementManager {
     return this.getActiveLease(building, roomId) !== null;
   }
 
-  // Phase 4 SSoT: project lease fields onto tenants/{b}/list/{roomId}.lease
-  // (current active lease snapshot). leases/{b}/list/{leaseId} stays as the
-  // history archive — old leases keep their record for audit / lease history.
+  // Phase 4 SSoT (Phase 3d reduced): project minimum lease snapshot onto
+  // tenants/{b}/list/{roomId}.lease — just enough for fast vacancy checks and
+  // date displays in cards/lists. Authoritative lease record lives at
+  // leases/{b}/list/{leaseId}. Readers needing rentAmount, deposit, contract
+  // documents, etc. should fetch the full doc via LeaseAgreementManager
+  // .getLease(lease.leaseId) — the projected mirror no longer carries them.
+  //
+  // merge:true means existing tenant.lease nested fields aren't actively
+  // cleared on update — old data persists until a deliberate cleanup pass
+  // (Phase 6). The reduction here just stops re-writing duplicate state on
+  // every save.
   static async _syncLeaseToTenantSSoT(building, roomId, leaseId, leaseData) {
     if (!window.firebase || !roomId) return;
     try {
@@ -207,17 +229,10 @@ class LeaseAgreementManager {
       const fs = window.firebase.firestoreFunctions;
       const ref = fs.doc(db, 'tenants', building, 'list', String(roomId));
       const leaseSubobject = {
-        startDate:        leaseData.moveInDate || leaseData.startDate || null,
-        endDate:          leaseData.moveOutDate || leaseData.endDate || null,
-        moveInDate:       leaseData.moveInDate || leaseData.startDate || null,
-        moveOutDate:      leaseData.moveOutDate || leaseData.endDate || null,
-        rentAmount:       leaseData.rentAmount ?? null,
-        deposit:          leaseData.deposit ?? null,
-        status:           leaseData.status || 'active',
-        contractDocument: leaseData.contractDocument || null,
-        contractFileName: leaseData.contractFileName || null,
-        documents:        leaseData.documents || leaseData.documentURLs || null,
-        leaseId:          leaseId,
+        leaseId:   leaseId,
+        status:    leaseData.status || 'active',
+        startDate: leaseData.moveInDate || leaseData.startDate || null,
+        endDate:   leaseData.moveOutDate || leaseData.endDate || null,
       };
       // Carry tenantName → name so getTenantByRoom sees an occupied room.
       // Only written when present; merge:true means existing identity isn't cleared.
@@ -226,11 +241,12 @@ class LeaseAgreementManager {
         ...identityPatch,
         lease: leaseSubobject,
         tenantId: leaseData.tenantId || null,
+        activeContractId: leaseId,
         building,
         roomId: String(roomId),
         updatedAt: new Date().toISOString(),
       }, { merge: true });
-      console.log(`✅ Lease projected to tenants/${building}/list/${roomId}.lease`);
+      console.log(`✅ Lease projected to tenants/${building}/list/${roomId}.lease (reduced mirror)`);
     } catch (e) {
       console.warn(`⚠️ Lease SSoT sync failed for ${roomId}:`, e.message);
     }

@@ -23,19 +23,50 @@ class TenantLookup {
     const ssotDoc = TenantConfigManager.getTenant(building, String(roomId));
     if (ssotDoc && ssotDoc.name) {
       const lease = ssotDoc.lease || {};
+      // Phase 3d: tenant.lease is a reduced mirror — only carries
+      // {leaseId, status, startDate, endDate}. Fetch the full lease doc for
+      // rentAmount, deposit, contractDocument etc. that the reduced mirror
+      // no longer projects. Old tenant docs still have the legacy 11-field
+      // mirror — the fallback chain below prefers tenant doc fields, then
+      // mirror, then full lease lookup.
+      const leaseId = lease.leaseId || ssotDoc.activeContractId;
+      const fullLease = (leaseId && typeof LeaseAgreementManager !== 'undefined')
+        ? (LeaseAgreementManager.getLease(leaseId) || {})
+        : {};
+      // Phase 3e: overlay canonical identity from people/{tenantId} when
+      // cached. people/ is the long-term home for identity + cross-room state
+      // (gamification, companyInfo, avatar). Tenant-doc fields stay as the
+      // fallback while Phase 4 lazy migration backfills the people collection.
+      const person = ssotDoc.tenantId && window.PersonManager
+        ? window.PersonManager.getPersonSync(ssotDoc.tenantId)
+        : null;
       return {
         ...ssotDoc,
+        // Identity fields: prefer person doc when present
+        name:             person?.name             || ssotDoc.name,
+        firstName:        person?.firstName        || ssotDoc.firstName,
+        lastName:         person?.lastName         || ssotDoc.lastName,
+        phone:            person?.phone            || ssotDoc.phone,
+        email:            person?.email            || ssotDoc.email,
+        lineID:           person?.lineUserId       || ssotDoc.lineID,
+        idCardNumber:     person?.idCardNumber     || ssotDoc.idCardNumber,
+        address:          person?.address          || ssotDoc.address,
+        emergencyContact: person?.emergencyContact || ssotDoc.emergencyContact,
+        notes:            person?.notes            || ssotDoc.notes,
+        companyInfo:      person?.companyInfo      || ssotDoc.companyInfo,
+        avatar:           person?.avatar           || ssotDoc.avatar,
+        gamification:     person?.gamification     || ssotDoc.gamification,
         // Flat-field projection for legacy modal/card render code
-        contractEnd: ssotDoc.contractEnd || lease.endDate || lease.moveOutDate || ssotDoc.moveOutDate || null,
-        moveInDate:  ssotDoc.moveInDate  || lease.startDate || lease.moveInDate || null,
-        moveOutDate: ssotDoc.moveOutDate || lease.endDate || lease.moveOutDate || null,
-        deposit:     (ssotDoc.deposit !== undefined && ssotDoc.deposit !== null) ? ssotDoc.deposit : (lease.deposit ?? null),
-        rentAmount:  ssotDoc.rentAmount ?? lease.rentAmount ?? null,
+        contractEnd: ssotDoc.contractEnd || lease.endDate || lease.moveOutDate || fullLease.endDate || fullLease.moveOutDate || ssotDoc.moveOutDate || null,
+        moveInDate:  ssotDoc.moveInDate  || lease.startDate || lease.moveInDate || fullLease.startDate || fullLease.moveInDate || null,
+        moveOutDate: ssotDoc.moveOutDate || lease.endDate || lease.moveOutDate || fullLease.endDate || fullLease.moveOutDate || null,
+        deposit:     (ssotDoc.deposit !== undefined && ssotDoc.deposit !== null) ? ssotDoc.deposit : (lease.deposit ?? fullLease.deposit ?? null),
+        rentAmount:  ssotDoc.rentAmount ?? lease.rentAmount ?? fullLease.rentAmount ?? null,
         // Canonical field is licensePlate; fall back to legacy vehiclePlate
         // for any pre-2026-04-26 doc that was written by the buggy admin modal
         // before the field name was unified. Once admin re-saves once, the
         // legacy key naturally drops out.
-        licensePlate: ssotDoc.licensePlate || ssotDoc.vehiclePlate || null,
+        licensePlate: person?.licensePlate || ssotDoc.licensePlate || ssotDoc.vehiclePlate || null,
       };
     }
 
@@ -70,18 +101,33 @@ class TenantLookup {
   static getLeaseByRoom(building, roomId) {
     if (!building || !roomId) return null;
 
-    // SSoT path — derive lease from the merged tenant doc
+    // SSoT path — derive lease from the merged tenant doc + full lease record
     const ssotDoc = TenantConfigManager.getTenant(building, String(roomId));
     const ssotLease = ssotDoc?.lease;
-    if (ssotLease && (ssotLease.status === 'active' || ssotLease.rentAmount || ssotLease.deposit)) {
+    if (ssotLease && (ssotLease.status === 'active' || ssotLease.rentAmount || ssotLease.deposit || ssotLease.leaseId)) {
+      // Phase 3d: tenant.lease is a reduced mirror — fetch full lease for
+      // rentAmount/deposit/contractDocument/etc that the mirror no longer
+      // carries. Falls back gracefully for old tenant docs that still hold
+      // the legacy 11-field mirror.
+      const leaseId = ssotLease.leaseId || ssotDoc.activeContractId;
+      const fullLease = (leaseId && typeof LeaseAgreementManager !== 'undefined')
+        ? (LeaseAgreementManager.getLease(leaseId) || {})
+        : {};
       return {
+        ...fullLease,
         ...ssotLease,
+        // Re-merge fields that may exist in fullLease but not ssotLease
+        rentAmount:       ssotLease.rentAmount       ?? fullLease.rentAmount       ?? null,
+        deposit:          ssotLease.deposit          ?? fullLease.deposit          ?? null,
+        contractDocument: ssotLease.contractDocument ?? fullLease.contractDocument ?? null,
+        contractFileName: ssotLease.contractFileName ?? fullLease.contractFileName ?? null,
+        documents:        ssotLease.documents        ?? fullLease.documents        ?? fullLease.documentURLs ?? null,
         building,
         roomId: String(roomId),
         tenantId: ssotDoc.tenantId,
         // Compatibility — flat fields for legacy consumers
-        moveInDate: ssotLease.startDate || ssotLease.moveInDate,
-        moveOutDate: ssotLease.endDate || ssotLease.moveOutDate,
+        moveInDate: ssotLease.startDate || ssotLease.moveInDate || fullLease.startDate || fullLease.moveInDate,
+        moveOutDate: ssotLease.endDate || ssotLease.moveOutDate || fullLease.endDate || fullLease.moveOutDate,
         tenantName: ssotDoc.name,
       };
     }
@@ -181,6 +227,25 @@ class TenantLookup {
       roomId: lease.roomId,
       lease: lease
     }));
+  }
+
+  /**
+   * Phase 3e: warm PersonManager cache for every tenantId visible in
+   * TenantConfigManager. Called once at page load (dashboard + tenant_app)
+   * so getTenantByRoom's sync overlay sees fresh person docs immediately.
+   * Returns the count of fetched docs.
+   */
+  static async prefetchAllPeople() {
+    if (!window.PersonManager) return 0;
+    const ids = new Set();
+    for (const b of ['rooms', 'nest']) {
+      const tenants = TenantConfigManager.getAllTenants(b) || {};
+      for (const key of Object.keys(tenants)) {
+        const t = tenants[key];
+        if (t?.tenantId) ids.add(String(t.tenantId));
+      }
+    }
+    return window.PersonManager.prefetchByTenantIds([...ids]);
   }
 
   // Validate tenant data before save
