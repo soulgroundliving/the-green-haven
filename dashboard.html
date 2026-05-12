@@ -2696,13 +2696,14 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 /* ── ปฏิบัติการ tab ── */
 .ops-layout-v2{
   display:grid;
-  grid-template-columns:1fr 350px;
+  grid-template-columns:1fr 1fr 300px;
   gap:.6rem;
   align-items:start;
 }
 .ops-status-col{ display:flex; flex-direction:column; gap:.5rem; }
 .ops-right-col{ display:flex; flex-direction:column; gap:.5rem; }
-#dashOperationsInsights{ max-height:calc(100vh - 235px); overflow-y:auto; }
+#dashComplaintsCol{ max-height:calc(100vh - 235px); overflow-y:auto; }
+#dashOpsCardsCol{ max-height:calc(100vh - 235px); overflow-y:auto; }
 #dashMeterSpike .card{ max-height:calc((100vh - 250px)/2); overflow-y:auto; }
 #dashProviderScore .card{ max-height:calc((100vh - 250px)/2); overflow-y:auto; }
 #dash-cat-operations .card{ padding:.8rem 1rem; }
@@ -3325,7 +3326,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button class="dash-view-link" data-action="showPage" data-page="requests-approvals">ดูคำขอทั้งหมด →</button>
     </div>
     <div class="ops-layout-v2">
-      <div id="dashOperationsInsights"></div>
+      <div id="dashComplaintsCol"></div>
+      <div id="dashOpsCardsCol"></div>
       <div class="ops-right-col">
         <div id="dashMeterSpike"></div>
         <div id="dashProviderScore"></div>
