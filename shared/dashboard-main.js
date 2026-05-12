@@ -559,6 +559,17 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   // Initialize all room users if not already done
   initializeAllRoomUsers();
 
+  // Phase 6: warm PersonManager cache before any tenant-render code runs.
+  // Without this, getPersonSync returns null for every tenantId and the
+  // sync overlay in getTenantByRoom / _projectSSoTToFlat falls back to
+  // tenant-doc identity. As tenant docs slim down (Phase 6), the overlay
+  // becomes the primary identity source — must be warm at first render.
+  if (typeof TenantLookup !== 'undefined' && typeof TenantLookup.prefetchAllPeople === 'function') {
+    TenantLookup.prefetchAllPeople()
+      .then(n => { if (n > 0) console.log(`✅ PersonManager cache warmed: ${n} person docs`); })
+      .catch(e => console.warn('PersonManager prefetch failed:', e.message));
+  }
+
   populateRoomDropdown();
   const now=new Date();
   document.getElementById('f-month').value=now.getMonth()+1;

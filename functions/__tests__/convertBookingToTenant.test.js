@@ -240,3 +240,76 @@ describe('convertBookingToTenant — Phase 3b-3 True A1 ID alignment', () => {
       `contractId should match CONTRACT_<ts>_20 (roomId=20), got: ${result.contractId}`);
   });
 });
+
+// ── Tests: Phase 6 slim tenant doc invariants ───────────────────────────────
+
+describe('convertBookingToTenant — Phase 6 slim tenant doc', () => {
+  beforeEach(() => { resetStubs(); });
+
+  it('tenant doc does NOT contain identity fields (those live on people/)', async () => {
+    await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    const tenantSet = findSet('tenants/rooms/list/20');
+    const t = tenantSet.data;
+
+    const forbidden = ['name', 'firstName', 'lastName', 'phone', 'email', 'lineID'];
+    for (const k of forbidden) {
+      assert.equal(t[k], undefined,
+        `Phase 6: tenant doc should NOT carry "${k}" — that's on people/{tenantId}`);
+    }
+  });
+
+  it('tenant doc does NOT contain lease snapshot fields (those live on leases/{leaseId})', async () => {
+    await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    const tenantSet = findSet('tenants/rooms/list/20');
+    const t = tenantSet.data;
+
+    const forbidden = [
+      'moveInDate', 'moveOutDate', 'contractStart', 'contractEnd', 'contractMonths',
+      'rentAmount', 'deposit', 'depositPaid', 'depositPaidAt', 'depositSlipRef'
+    ];
+    for (const k of forbidden) {
+      assert.equal(t[k], undefined,
+        `Phase 6: tenant doc should NOT carry "${k}" — that's on leases/{b}/list/{contractId}`);
+    }
+  });
+
+  it('tenant doc carries only slot pointers + reduced lease mirror + slot audit', async () => {
+    await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    const tenantSet = findSet('tenants/rooms/list/20');
+    const t = tenantSet.data;
+
+    // Required slot fields
+    assert.ok(t.tenantId, 'tenantId pointer required');
+    assert.ok(t.contractId, 'contractId pointer required');
+    assert.ok(t.activeContractId, 'activeContractId pointer required');
+    assert.ok(t.lease, 'lease reduced mirror required');
+    assert.equal(t.building, 'rooms');
+    assert.equal(t.roomId, '20');
+    // Reduced lease mirror — exactly 4 fields
+    assert.deepEqual(Object.keys(t.lease).sort(), ['endDate', 'leaseId', 'startDate', 'status']);
+    // Slot-level audit (linkedAuthUid, sourceBookingId, createdAt, updatedAt)
+    assert.ok(t.linkedAuthUid, 'linkedAuthUid slot audit required');
+    assert.ok(t.sourceBookingId, 'sourceBookingId slot audit required');
+  });
+
+  it('lease doc carries deposit audit fields (moved from tenant doc)', async () => {
+    await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    const leaseSet = findSet('leases/rooms/list/');
+    const l = leaseSet.data;
+
+    assert.equal(l.depositPaid, true);
+    assert.ok(l.depositPaidAt, 'depositPaidAt should be on lease doc');
+    assert.equal(l.depositSlipRef, 'REF12345');
+  });
+
+  it('people/{tenantId} doc carries identity (name, phone, lineUserId)', async () => {
+    await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    const peopleSet = findSet('people/');
+    const p = peopleSet.data;
+
+    assert.equal(p.name, 'ทดสอบ ทดสอบ');
+    assert.equal(p.phone, '0812345678');
+    assert.equal(p.lineUserId, 'Utest1234567890');
+    assert.ok(p.linkedAuthUid);
+  });
+});

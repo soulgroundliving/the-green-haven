@@ -22,10 +22,31 @@ function _projectSSoTToFlat(t) {
   const fullLease = (leaseId && typeof LeaseAgreementManager !== 'undefined')
     ? (LeaseAgreementManager.getLease(leaseId) || {})
     : {};
+  // Phase 6: overlay canonical identity from people/{tenantId} so card-render
+  // code continues to display name/phone/email even after tenant docs slim
+  // down. Cache is warmed by TenantLookup.prefetchAllPeople() at page load.
+  // Falls through to tenant-doc fields when cache cold or person doc missing.
+  const person = (t.tenantId && typeof PersonManager !== 'undefined')
+    ? PersonManager.getPersonSync(t.tenantId)
+    : null;
+  const personName = person?.name || `${person?.firstName || ''} ${person?.lastName || ''}`.trim() || null;
   return {
     ...t,
-    // Align with TenantFirebaseSync.loadLease() — combine firstName+lastName when name is empty
-    name: t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim() || null,
+    // Identity: prefer person doc when present, fall back to tenant doc
+    name:             personName              || t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim() || null,
+    firstName:        person?.firstName       || t.firstName,
+    lastName:         person?.lastName        || t.lastName,
+    phone:            person?.phone           || t.phone,
+    email:            person?.email           || t.email,
+    lineID:           person?.lineUserId      || t.lineID,
+    idCardNumber:     person?.idCardNumber    || t.idCardNumber,
+    address:          person?.address         || t.address,
+    licensePlate:     person?.licensePlate    || t.licensePlate,
+    emergencyContact: person?.emergencyContact|| t.emergencyContact,
+    notes:            person?.notes           || t.notes,
+    companyInfo:      person?.companyInfo     || t.companyInfo,
+    avatar:           person?.avatar          || t.avatar,
+    // Lease snapshot fallback chain (tenant doc → reduced mirror → full lease)
     contractEnd:    t.contractEnd    || lease.endDate    || lease.moveOutDate || fullLease.endDate    || fullLease.moveOutDate || t.moveOutDate    || null,
     moveInDate:     t.moveInDate     || lease.startDate  || lease.moveInDate  || fullLease.startDate  || fullLease.moveInDate  || null,
     moveOutDate:    t.moveOutDate    || lease.endDate    || lease.moveOutDate || fullLease.endDate    || fullLease.moveOutDate || null,

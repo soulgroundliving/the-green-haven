@@ -1367,6 +1367,36 @@ class TenantFirebaseSync {
         }
       }
 
+      // Phase 6: overlay canonical identity from people/{tenantId}. After
+      // Phase 6 slim-down, tenant docs no longer carry identity fields —
+      // people/ is the SSoT. Falls through to tenant-doc fields when person
+      // doc is missing (legacy tenants pre-people/ creation).
+      if (tenant?.tenantId && typeof window !== 'undefined' && window.PersonManager) {
+        try {
+          const person = await window.PersonManager.getPerson(tenant.tenantId);
+          if (person) {
+            tenant = {
+              ...tenant,
+              name:             person.name             || tenant.name,
+              firstName:        person.firstName        || tenant.firstName,
+              lastName:         person.lastName         || tenant.lastName,
+              phone:            person.phone            || tenant.phone,
+              email:            person.email            || tenant.email,
+              lineID:           person.lineUserId       || tenant.lineID,
+              idCardNumber:     person.idCardNumber     || tenant.idCardNumber,
+              address:          person.address          || tenant.address,
+              licensePlate:     person.licensePlate     || tenant.licensePlate,
+              emergencyContact: person.emergencyContact || tenant.emergencyContact,
+              companyInfo:      person.companyInfo      || tenant.companyInfo,
+              avatar:           person.avatar           || tenant.avatar,
+              notes:            person.notes            || tenant.notes,
+            };
+          }
+        } catch (e) {
+          console.warn('Phase 6 person overlay failed:', e.message);
+        }
+      }
+
       const allData = {
         lease,
         tenant,

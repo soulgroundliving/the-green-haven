@@ -256,12 +256,16 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
         };
       }
 
-      // Build tenant doc — minimal but complete enough that tenant_app.html
-      // can render the room without admin filling more fields. Admin can still
-      // edit via dashboard's existing tenant modal afterward.
+      // Phase 6 slim tenant doc — thin room slot pointer only.
+      // Identity (name, phone, email, lineID, ...) → people/{tenantId} below
+      // Lease snapshot (moveInDate, deposit, rentAmount, ...) → leases/{b}/list/{contractId} below
+      // tenants/{b}/list/{roomId} now carries only: pointers + reduced lease mirror
+      // + slot-level audit (linkedAuthUid, sourceBookingId, gamification).
+      // Readers overlay identity via PersonManager.getPersonSync and lease snapshot
+      // via LeaseAgreementManager.getLease(lease.leaseId).
       //
       // Phase 3b-3 (True A1 unification): tenant.lease reduced mirror + activeContractId
-      // pointer are set here so getActiveLease(building, roomId) returns the lease
+      // pointer are set so getActiveLease(building, roomId) returns the lease
       // we create below in the same tx. Admin save then enters the UPDATE path
       // (preserving contractId == leaseId end-to-end) instead of minting a new
       // CONTRACT_<newTs>_<r> id.
@@ -275,24 +279,9 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
           startDate: startDateIso,
           endDate: moveOutDateIso,
         },
-        name: String(booking.prospectName || ''),
-        firstName: '',
-        lastName: '',
-        phone: String(booking.prospectPhone || ''),
-        email: '',
-        lineID: '',
         building,
         roomId,
-        moveInDate: startDateIso,
-        moveOutDate: moveOutDateIso,
-        rentAmount: Number(booking.monthlyRent) || 0,
-        deposit: Number(booking.depositAmount) || 0,
-        depositPaid: true,                                  // booking flow always paid in advance
-        depositPaidAt: booking.slipVerifiedAt || admin.firestore.FieldValue.serverTimestamp(),
-        depositSlipRef: booking.slipTransactionRef || '',
-        contractStart: startDateIso,
-        contractEnd: moveOutDateIso,
-        contractMonths: durationMonths,
+        // Slot-level audit (cross-room continuity, lifecycle)
         linkedAuthUid: lineUid,
         linkedAt: admin.firestore.FieldValue.serverTimestamp(),
         sourceBookingId: bookingId,
@@ -325,6 +314,10 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
         contractMonths: durationMonths,
         rentAmount: Number(booking.monthlyRent) || 0,
         deposit: Number(booking.depositAmount) || 0,
+        // Phase 6: deposit audit fields now live on lease doc (moved from tenant doc)
+        depositPaid: true,                                  // booking flow always paid in advance
+        depositPaidAt: booking.slipVerifiedAt || admin.firestore.FieldValue.serverTimestamp(),
+        depositSlipRef: booking.slipTransactionRef || '',
         status: 'active',
         contractFileName: '',
         contractDocument: '',
