@@ -1010,13 +1010,9 @@
   // FEATURE 7: Operations Summary (ปฏิบัติการ tab)
   // ============================================================
   async function renderOperationsInsights() {
-    const cCol = document.getElementById('dashComplaintsCol');
-    const oCol = document.getElementById('dashOpsCardsCol');
-    const container = cCol || document.getElementById('dashOperationsInsights');
+    const container = document.getElementById('dashComplaintsCol') || document.getElementById('dashOperationsInsights');
     if (!container) return;
-    if (cCol) cCol.innerHTML = loadingHTML();
-    if (oCol) oCol.innerHTML = loadingHTML();
-    else container.innerHTML = loadingHTML();
+    container.innerHTML = loadingHTML();
     try {
       if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions)
         throw new Error('Firestore ยังไม่พร้อม');
@@ -1201,42 +1197,19 @@
             tagsHTML: '', badgeHTML: lBadge })}
         </div>`;
 
-      if (cCol && oCol) {
-        cCol.innerHTML = `
-          <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">
-            <span>📋 Operations Summary</span>
-            <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
-                    style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
-          </div>
-          <div class="ops-pulse ${pulseClass}" style="margin-bottom:.45rem;">${pulseLabel}</div>
-          ${complaintsCardHTML}
-          <div class="ops-board-ft">${fmtCacheAge(Date.now())}</div>`;
-        oCol.innerHTML = opsCardsHTML;
-      } else {
-        container.innerHTML = `
-          <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">
-            <span>📋 Operations Summary</span>
-            <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
-                    style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
-          </div>
-          <div class="ops-pulse ${pulseClass}" style="margin-bottom:.45rem;">${pulseLabel}</div>
-          <div class="ops2-grid">
-            ${ops2Card({ wide: true, accent: cAccent, icon: '⚠️', title: 'Complaints',
-              sub: avgResolve ? `90 วัน · เฉลี่ย ${avgResolve} วัน` : '90 วัน',
-              bigNum: cStatus.open, bigCls: cStatus.open > 0 ? 'red' : 'muted', bigLabel: 'Open now',
-              statsHTML: ops2Stat(cStatus['in-progress'], cStatus['in-progress'] > 0 ? 'amber' : 'muted', 'In Progress') +
-                         ops2Stat(cStatus.resolved, cStatus.resolved > 0 ? 'green' : 'muted', 'Resolved') +
-                         ops2Stat(totalComplaints, 'muted', 'Total'),
-              tagsHTML: cTagsHTML, badgeHTML: cBadge })}
-            ${opsCardsHTML.replace('<div class="ops2-grid">', '').replace('</div>', '')}
-          </div>
-          <div class="ops-board-ft">${fmtCacheAge(Date.now())}</div>`;
-      }
+      container.innerHTML = `
+        <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">
+          <span>📋 Operations Summary</span>
+          <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
+                  style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
+        </div>
+        <div class="ops-pulse ${pulseClass}" style="margin-bottom:.45rem;">${pulseLabel}</div>
+        ${complaintsCardHTML}
+        ${opsCardsHTML}
+        <div class="ops-board-ft">${fmtCacheAge(Date.now())}</div>`;
     } catch (e) {
       console.error('[insights] operations failed:', e);
-      if (cCol) cCol.innerHTML = errorHTML('operations', e.message);
-      if (oCol) oCol.innerHTML = '';
-      else container.innerHTML = errorHTML('operations', e.message);
+      container.innerHTML = errorHTML('operations', e.message);
     }
   }
 
