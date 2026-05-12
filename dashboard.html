@@ -2696,10 +2696,12 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 /* ── ปฏิบัติการ tab ── */
 .ops-layout-v2{
   display:grid;
-  grid-template-columns:1fr 1fr 300px;
+  grid-template-columns:1fr 1fr minmax(260px,320px);
   gap:.6rem;
   align-items:start;
+  min-width:0;
 }
+.ops-layout-v2 > *{ min-width:0; }
 .ops-status-col{ display:flex; flex-direction:column; gap:.5rem; }
 .ops-right-col{ display:flex; flex-direction:column; gap:.5rem; }
 #dash-cat-operations .card{ padding:.8rem 1rem; }
@@ -2711,7 +2713,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 .ops-pulse.warn{ background:rgba(245,158,11,.11); color:#b45309; }
 .ops-pulse.danger{ background:rgba(220,38,38,.09); color:#dc2626; }
 /* ── Operations v2 — 2-col grid + KPI cards ── */
-.ops2-grid{ display:grid; grid-template-columns:1fr 1fr; gap:.45rem; }
+.ops2-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.45rem; min-width:0; }
 .ops2-wide{ grid-column:1/-1; }
 .ops2-card{
   background:var(--bg-card,#fff);
@@ -2760,8 +2762,13 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 #dash-cat-community .dash-tab-header{ margin-bottom:.75rem; padding-bottom:.65rem; }
 #dash-cat-community .dash-2col{ gap:.6rem; margin-bottom:.6rem; }
 
+@media(max-width:1100px){
+  .ops-layout-v2{ grid-template-columns:1fr minmax(260px,320px); }
+  #dashOpsCardsCol{ grid-column:1 / -1; }
+}
 @media(max-width:900px){
-  .ten-layout,.ops-layout{ grid-template-columns:1fr; }
+  .ten-layout,.ops-layout-v2{ grid-template-columns:1fr; }
+  #dashOpsCardsCol{ grid-column:auto; }
 }
 
 /* ── Tab intro header (each tab) ── */

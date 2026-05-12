@@ -1315,9 +1315,9 @@
           <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
             <thead><tr style="background:var(--mist,#f2f1ec);">
               <th style="padding:.55rem .7rem;text-align:left;">ห้อง</th>
-              <th style="padding:.55rem .7rem;text-align:right;">เดือนล่าสุด</th>
-              <th style="padding:.55rem .7rem;text-align:right;">median 3 เดือน</th>
-              <th style="padding:.55rem .7rem;text-align:right;">สัดส่วน</th>
+              <th style="padding:.55rem .7rem;text-align:right;">ล่าสุด</th>
+              <th style="padding:.55rem .7rem;text-align:right;">median</th>
+              <th style="padding:.55rem .7rem;text-align:right;">×</th>
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
@@ -1398,9 +1398,9 @@
         const tableRows = rows.map(r => {
           const rateColor = r.completionRate >= 80 ? 'var(--green)' : r.completionRate >= 50 ? 'var(--blue)' : 'var(--accent,#ff9800)';
           return `<tr style="border-bottom:1px solid var(--border-subtle,#ebe9e2);">
-            <td style="padding:.5rem .7rem;">
-              <div style="font-weight:600;">${esc(r.prov.name)}</div>
-              ${r.prov.type ? `<div style="font-size:.7rem;color:var(--text-muted);">${esc(r.prov.type)}</div>` : ''}
+            <td style="padding:.5rem .7rem;max-width:110px;">
+              <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.prov.name)}">${esc(r.prov.name)}</div>
+              ${r.prov.type ? `<div style="font-size:.7rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.prov.type)}</div>` : ''}
             </td>
             <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${r.total}</td>
             <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${rateColor};font-weight:600;">${r.completionRate}%</td>
