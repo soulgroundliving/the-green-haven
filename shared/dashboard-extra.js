@@ -4326,12 +4326,15 @@ function openRewardEdit(rewardId) {
     document.getElementById('rewardEditNote').value = r.note || '';
     document.getElementById('rewardEditActive').checked = r.active !== false;
   }
-  modal.classList.remove('u-hidden'); /*flex*/;
+  modal.style.display = 'flex';
+  modal.classList.remove('u-hidden');
 }
 
 function closeRewardEdit() {
   const modal = document.getElementById('rewardEditModal');
-  if (modal) modal.classList.add('u-hidden');
+  if (!modal) return;
+  modal.style.display = '';
+  modal.classList.add('u-hidden');
 }
 
 async function saveReward() {

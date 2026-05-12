@@ -8045,8 +8045,8 @@
         let _ecoPointsUnsub = null;
         function _subscribeEcoPoints() {
             // Subscribe to authoritative points in Firestore.
-            // Tenants: tenants/{building}/list/{roomId}  (Nest-only — verifySlip writes here)
-            // Players: people/{tenantId}  (transitionToPlayer + claimDailyLoginPoints write here)
+            // Both tenants and players now read from people/{tenantId}.gamification
+            // (Phase 3+4 SSoT; verifySlip + CFs write gamification there).
             if (window._gamificationDisabled) return;
             if (_ecoPointsUnsub) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
@@ -8078,15 +8078,17 @@
                 }
 
                 // ── Regular tenant branch ─────────────────────────────────
-                const tenantRef = fs.doc(db, 'tenants', _taBuilding, 'list', String(_taRoom));
-                _ecoPointsUnsub = fs.onSnapshot(tenantRef, snap => {
+                // Phase 3+4: gamification SSoT moved to people/{tenantId}.
+                // tenantId comes from _taTenant (loaded from localStorage cache or
+                // async Firestore fetch). If not yet available, return without setting
+                // _ecoPointsUnsub so the next call (via _onLiffClaimsReady) can retry.
+                const tenantId = _taTenant?.tenantId;
+                if (!tenantId) return;
+                const peopleRef = fs.doc(db, 'people', tenantId);
+                _ecoPointsUnsub = fs.onSnapshot(peopleRef, snap => {
                     if (!snap.exists()) return;
-                    const data = snap.data() || {};
-                    // Schema: tenants/{building}/list/{roomId} stores gamification subobject
-                    // (verifySlip CF writes data.gamification.points; flat data.points is a legacy fallback)
-                    const pts = (data.gamification && typeof data.gamification.points === 'number')
-                              ? data.gamification.points
-                              : (typeof data.points === 'number' ? data.points : null);
+                    const gam = (snap.data() || {}).gamification || {};
+                    const pts = typeof gam.points === 'number' ? gam.points : null;
                     if (pts !== null) {
                         userPoints = pts;
                         try { localStorage.setItem(`tenant_eco_points_${_taBuilding}_${_taRoom}`, String(userPoints)); } catch(e) {}
@@ -8095,7 +8097,7 @@
                         const lastPts = parseInt(sessionStorage.getItem('_badgeCheckPts') || '-1');
                         if (pts !== lastPts) { sessionStorage.setItem('_badgeCheckPts', String(pts)); _checkBadgesViaFF(); }
                     }
-                    const badges = (data.gamification && Array.isArray(data.gamification.badges)) ? data.gamification.badges : [];
+                    const badges = Array.isArray(gam.badges) ? gam.badges : [];
                     _lastKnownBadges = badges;
                     _renderBadgeGrid(badges);
                     _renderProfileBadge(badges);
@@ -8677,6 +8679,9 @@
         }
         _onLiffClaimsReady(_subscribeBillsRealtime);
         _onLiffClaimsReady(_loadMeterHistoryFromFirestore);
+        // Re-run after liffLinked so _taTenant.tenantId is available for the
+        // people/{tenantId} subscription (tenant branch of _subscribeEcoPoints).
+        _onLiffClaimsReady(loadGamificationData);
 
         // ---- LIFF (LINE Front-end Framework) integration ----
         const LIFF_ID = '2009790149-Db7T76sd';
