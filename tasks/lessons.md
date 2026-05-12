@@ -9,6 +9,32 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-05-12 — Defined-but-never-called functions are silent coverage gaps
+
+**Mistake:** Planned Phase 6 to slim tenant docs assuming `TenantLookup.prefetchAllPeople()` was wired at page load (it had been written in Phase 3e). It WASN'T — defined in `shared/tenant-lookup.js:238` but no caller anywhere. PersonManager cache stayed cold; without person overlay, slim tenant docs would have rendered "—" for every name across the admin dashboard.
+
+**Why:** Phase 3e introduced the helper but the wiring task was deferred and forgotten. Audit (A1) caught it before any destructive write change shipped, but only because A1 grepped readers and noticed `_projectSSoTToFlat` had no person overlay — leading to a deeper check of `getPersonSync` usage.
+
+**Rule:** When you add bulk-prefetch / cache-warming helpers, **wire them up in the SAME commit**. If a method exists in the codebase and looks load-bearing, **grep for callers** before assuming it's active. "X is defined" ≠ "X runs". The verify-via-grep doctrine extends to helpers, not just doc claims.
+
+## 2026-05-12 — Minifier strips comments → don't verify deployment via comment text
+
+**Mistake:** After Phase 6 push, polled production for `"Phase 6: overlay canonical identity"` (a comment I wrote in `dashboard-tenant-page.js`). Never matched. Minifier dropped all comments. Wasted 2 minutes thinking deploy was stalled when it had actually succeeded.
+
+**Why:** Vercel's esbuild bundle minify strips comments by default. Production `shared/*.js` files have ZERO comments after bundling.
+
+**Rule:** When polling for "is this deployed?", grep for an actual identifier that survives minification — function name (`prefetchAllPeople`), property access (`getPersonSync`), or string literal. Never grep for comment text. Quick check: `curl -sL <url>/shared/x.js | grep -c "identifier"` should return ≥1.
+
+## 2026-05-12 — `merge: true` preserves old fields; "code is slim" ≠ "data is slim"
+
+**Mistake:** Initial Phase 6 commit message implied tenant doc was "slim" after deploy. It wasn't — existing rooms/15 still had all 40+ duplicate fields because Firestore `setDoc(..., { merge: true })` only WRITES the fields you specify; it never DELETES old ones unless you use `FieldValue.delete()`.
+
+**Why:** I conflated "future writes are slim" with "current data is slim". The code change reduces what NEW writes contain, but legacy docs persist with their old shape until an explicit migration strips fields.
+
+**Rule:** In handoffs, separate "code-only" cleanup from "code + data migration" cleanup. Be explicit: "future writes are slim; existing docs preserve legacy fields (reader fallback handles this) until one-shot migration runs." This is a SAFETY feature, not a bug — readers can degrade gracefully during the transition.
+
+---
+
 ## 2026-05-01 — Auto-click approve ในระบบการเงิน ทำให้ข้อมูลผิดเข้า production
 
 **Mistake:** auto-click "อนุมัติและบันทึก" ผ่าน JavaScript โดยไม่ให้ user ตรวจ preview table ก่อน — ส่งผลให้ข้อมูลผิด (ร้านใหญ่ บันทึกผิด building) เข้า Firestore production ทันที
