@@ -3584,8 +3584,8 @@
                     </select>
                 </div>
                 <div>
-                    <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">อายุ</label>
-                    <input type="text" id="pet-age" placeholder="เช่น 2 ปี"
+                    <label style="font-size: var(--fs-md); font-weight: 600; color: #555;">วันเกิด</label>
+                    <input type="date" id="pet-dob"
                         style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; font-family: inherit;">
                 </div>
             </div>
@@ -6002,6 +6002,7 @@
                     desc, showRoom,
                     room: showRoom ? String(_taRoom || '') : '',
                     building: _taBuilding || '',
+                    tenantId: _taTenant?.tenantId || '',
                     imageData: _marketImageData || '',
                     status: 'active',
                     lineUserId: window._lineUserId || '',
@@ -6148,6 +6149,19 @@
             return { url, path, fileName: file.name };
         }
 
+        function _computePetAge(dob) {
+            const birth = new Date(dob);
+            const now = new Date();
+            let years = now.getFullYear() - birth.getFullYear();
+            let months = now.getMonth() - birth.getMonth();
+            if (months < 0) { years--; months += 12; }
+            if (years > 0 && months > 0) return `${years} ปี ${months} เดือน`;
+            if (years > 0) return `${years} ปี`;
+            if (months > 0) return `${months} เดือน`;
+            const days = Math.floor((now - birth) / 86400000);
+            return days > 0 ? `${days} วัน` : 'แรกเกิด';
+        }
+
         // 2. ฟังก์ชันบันทึกข้อมูล
         async function saveNewPet() {
             const editId = document.getElementById('edit-pet-id').value;
@@ -6162,7 +6176,8 @@
             const typeEmoji = document.getElementById('pet-type')?.value;
             const breed = document.getElementById('pet-breed')?.value || 'ไม่ระบุสายพันธุ์';
             const gender = document.getElementById('pet-gender')?.value;
-            const age = document.getElementById('pet-age')?.value || 'ไม่ระบุอายุ';
+            const dob = document.getElementById('pet-dob')?.value || '';
+            const age = dob ? _computePetAge(dob) : (document.getElementById('pet-age')?.value || 'ไม่ระบุอายุ');
             const isVaccinated = document.getElementById('pet-vaccine')?.checked;
             const vaxDate = document.getElementById('vaccine-date').value;
             const vaxExpiry = document.getElementById('vaccine-expiry').value;
@@ -6194,7 +6209,7 @@
 
             const petObject = {
                 id: petId,
-                name, typeEmoji, breed, gender, age, isVaccinated, vaxDate, vaxExpiry, alertStatusHTML,
+                name, typeEmoji, breed, gender, age, dateOfBirth: dob || null, isVaccinated, vaxDate, vaxExpiry, alertStatusHTML,
                 type: typeEmoji,
                 room, building,
                 status: editId ? (existing?.status || 'pending') : 'pending',
@@ -6269,7 +6284,8 @@
             document.getElementById('pet-type').value = pet.typeEmoji;
             document.getElementById('pet-breed').value = pet.breed;
             document.getElementById('pet-gender').value = pet.gender;
-            document.getElementById('pet-age').value = pet.age;
+            const _dobEditEl = document.getElementById('pet-dob');
+            if (_dobEditEl) _dobEditEl.value = pet.dateOfBirth || '';
             document.getElementById('pet-vaccine').checked = pet.isVaccinated;
             document.getElementById('vaccine-date').value = pet.vaxDate;
             document.getElementById('vaccine-expiry').value = pet.vaxExpiry;
@@ -6314,7 +6330,8 @@
             document.getElementById('edit-pet-id').value = '';
             document.getElementById('pet-name').value = '';
             document.getElementById('pet-breed').value = '';
-            document.getElementById('pet-age').value = '';
+            const _dobResetEl = document.getElementById('pet-dob');
+            if (_dobResetEl) _dobResetEl.value = '';
             document.getElementById('vaccine-date').value = '';
             document.getElementById('vaccine-expiry').value = '';
             document.getElementById('pet-vaccine').checked = true;

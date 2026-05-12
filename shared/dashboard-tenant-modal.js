@@ -144,6 +144,10 @@ function openTenantModal(building, roomId) {
   if (evEl) evEl.textContent = tenant.email ? (tenant.emailVerified ? '✅ ยืนยันแล้ว' : '(ยังไม่ยืนยัน)') : '';
   document.getElementById('modalTenantLicensePlate').value = tenant.licensePlate || '';
   document.getElementById('modalTenantMoveIn').value = tenant.moveInDate || '';
+  const _csEl = document.getElementById('modalTenantContractStart');
+  if (_csEl) _csEl.value = tenant.contractStart || tenant.moveInDate || '';
+  const _cmEl = document.getElementById('modalTenantContractMonths');
+  if (_cmEl) _cmEl.value = tenant.contractMonths || '';
   document.getElementById('modalTenantContractEnd').value = tenant.contractEnd || '';
   // Meter fields removed - no longer used
   document.getElementById('modalTenantNotes').value = tenant.notes || '';
@@ -479,6 +483,8 @@ function saveTenantInfo() {
     address: document.getElementById('modalTenantAddress')?.value || '',
     lineID: document.getElementById('modalTenantLineID').value,
     moveInDate: document.getElementById('modalTenantMoveIn').value,
+    contractStart: document.getElementById('modalTenantContractStart')?.value || '',
+    contractMonths: parseInt(document.getElementById('modalTenantContractMonths')?.value || '', 10) || null,
     moveOutDate: document.getElementById('modalTenantContractEnd').value,
     deposit: (RoomConfigManager.getRentPrice(building, roomId) || 0) * 2,
     // Meter fields removed - no longer used
@@ -524,6 +530,8 @@ function saveTenantInfo() {
       tenantName: fullName,
       tenantId: tenantId,
       moveInDate: tenantData.moveInDate,
+      contractStart: tenantData.contractStart || tenantData.moveInDate || null,
+      contractMonths: tenantData.contractMonths || null,
       moveOutDate: tenantData.moveOutDate || null,
       rentAmount: rentPrice,
       deposit: tenantData.deposit,
@@ -540,12 +548,22 @@ function saveTenantInfo() {
   } else {
     // Create new lease — lease is SSoT for contract document
     const rentPrice = RoomConfigManager.getRentPrice(building, roomId);
+    // Phase 3b-3 (True A1): reuse existing contractId minted by convertBookingToTenant
+    // CF (if any) so tenant.contractId === lease.id end-to-end. If no contractId is
+    // present (purely admin-created tenant), createLease mints a fresh one.
+    const existingTenant = (typeof TenantConfigManager !== 'undefined'
+      ? TenantConfigManager.getTenant(building, String(roomId))
+      : null) || {};
+    const reuseContractId = existingTenant.activeContractId || existingTenant.contractId || null;
     leaseId = LeaseAgreementManager.createLease({
+      id: reuseContractId,
       building: building,
       roomId: roomId,
       tenantId: tenantId,
       tenantName: fullName,
       moveInDate: tenantData.moveInDate,
+      contractStart: tenantData.contractStart || tenantData.moveInDate || null,
+      contractMonths: tenantData.contractMonths || null,
       moveOutDate: tenantData.moveOutDate || null,
       rentAmount: rentPrice,
       deposit: tenantData.deposit,

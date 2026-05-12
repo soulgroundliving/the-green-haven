@@ -259,9 +259,22 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
       // Build tenant doc — minimal but complete enough that tenant_app.html
       // can render the room without admin filling more fields. Admin can still
       // edit via dashboard's existing tenant modal afterward.
+      //
+      // Phase 3b-3 (True A1 unification): tenant.lease reduced mirror + activeContractId
+      // pointer are set here so getActiveLease(building, roomId) returns the lease
+      // we create below in the same tx. Admin save then enters the UPDATE path
+      // (preserving contractId == leaseId end-to-end) instead of minting a new
+      // CONTRACT_<newTs>_<r> id.
       const tenantData = {
         tenantId,
         contractId,
+        activeContractId: contractId,
+        lease: {
+          leaseId: contractId,
+          status: 'active',
+          startDate: startDateIso,
+          endDate: moveOutDateIso,
+        },
         name: String(booking.prospectName || ''),
         firstName: '',
         lastName: '',
@@ -293,6 +306,33 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
       }
 
       tx.set(tenantRef, tenantData, { merge: true });
+
+      // Phase 3b-3: create the lease doc up-front with full booking terms so
+      // tenant.contractId === lease.id end-to-end. Admin's saveTenantInfo will
+      // find this via getActiveLease (reduced mirror above carries leaseId) and
+      // enter the UPDATE path. Schema matches LeaseAgreementManager.createLease
+      // output so the client-side reader is happy.
+      const leaseRef = firestore.collection('leases').doc(building).collection('list').doc(contractId);
+      const leaseData = {
+        id: contractId,
+        building,
+        roomId,
+        tenantId,
+        tenantName: String(booking.prospectName || ''),
+        moveInDate: startDateIso,
+        moveOutDate: moveOutDateIso,
+        contractStart: startDateIso,
+        contractMonths: durationMonths,
+        rentAmount: Number(booking.monthlyRent) || 0,
+        deposit: Number(booking.depositAmount) || 0,
+        status: 'active',
+        contractFileName: '',
+        contractDocument: '',
+        sourceBookingId: bookingId,
+        createdDate: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      tx.set(leaseRef, leaseData, { merge: false });
 
       // Phase 3b-1: people/{tenantId} canonical write — runs for ALL conversions
       // (not just returning-player) so every new tenant has a person SSoT doc
