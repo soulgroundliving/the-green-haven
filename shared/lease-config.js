@@ -34,7 +34,11 @@ class LeaseAgreementManager {
     // Phase 3c-3 (Decision A1): lease ID is the contractId — single ID per
     // lease instance. New pattern: CONTRACT_<ts>_<roomId>. Old leases keep
     // their <building>_<roomId>_<tenantId>_<ts> ids — lookups accept both.
-    const leaseId = `CONTRACT_${Date.now()}_${leaseData.roomId}`;
+    //
+    // Phase 3b-3 (True A1): caller may pass leaseData.id to reuse an existing
+    // contractId (e.g. minted by convertBookingToTenant CF) so tenant.contractId
+    // === lease.id end-to-end. Otherwise mint a fresh one.
+    const leaseId = leaseData.id || `CONTRACT_${Date.now()}_${leaseData.roomId}`;
 
     leases[leaseId] = {
       ...leaseData,

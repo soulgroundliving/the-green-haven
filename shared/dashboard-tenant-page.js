@@ -26,11 +26,13 @@ function _projectSSoTToFlat(t) {
     ...t,
     // Align with TenantFirebaseSync.loadLease() — combine firstName+lastName when name is empty
     name: t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim() || null,
-    contractEnd: t.contractEnd || lease.endDate || lease.moveOutDate || fullLease.endDate || fullLease.moveOutDate || t.moveOutDate || null,
-    moveInDate:  t.moveInDate  || lease.startDate || lease.moveInDate || fullLease.startDate || fullLease.moveInDate || null,
-    moveOutDate: t.moveOutDate || lease.endDate || lease.moveOutDate || fullLease.endDate || fullLease.moveOutDate || null,
-    deposit:     (t.deposit !== undefined && t.deposit !== null) ? t.deposit : (lease.deposit ?? fullLease.deposit ?? null),
-    rentAmount:  t.rentAmount ?? lease.rentAmount ?? fullLease.rentAmount ?? null,
+    contractEnd:    t.contractEnd    || lease.endDate    || lease.moveOutDate || fullLease.endDate    || fullLease.moveOutDate || t.moveOutDate    || null,
+    moveInDate:     t.moveInDate     || lease.startDate  || lease.moveInDate  || fullLease.startDate  || fullLease.moveInDate  || null,
+    moveOutDate:    t.moveOutDate    || lease.endDate    || lease.moveOutDate || fullLease.endDate    || fullLease.moveOutDate || null,
+    contractStart:  t.contractStart  || lease.contractStart  || fullLease.contractStart  || lease.startDate || lease.moveInDate || fullLease.startDate || null,
+    contractMonths: t.contractMonths ?? lease.contractMonths ?? fullLease.contractMonths ?? null,
+    deposit:        (t.deposit !== undefined && t.deposit !== null) ? t.deposit : (lease.deposit ?? fullLease.deposit ?? null),
+    rentAmount:     t.rentAmount ?? lease.rentAmount ?? fullLease.rentAmount ?? null,
   };
 }
 function loadTenants(){
