@@ -744,9 +744,16 @@ function updateDashboardLive(){
   const currentDate=now.getFullYear()+543;
   const currentMonth=now.getMonth()+1;
 
+  // Compute shared values ONCE for this render cycle so widget functions
+  // don't each call getActiveRoomsWithMetadata / BillStore.listForYear separately
+  const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
+  const allBillsThisMonth = typeof window.BillStore !== 'undefined'
+    ? window.BillStore.listForYear('rooms', currentDate).filter(b => Number(b.month) === currentMonth)
+    : [];
+
   // These widgets are year-independent — always render current live state
-  updatePaymentStatusWidget();
-  updateTenantStatusWidget();
+  updatePaymentStatusWidget(activeRooms, allBillsThisMonth);
+  updateTenantStatusWidget(activeRooms);
   updateGamificationWidget();
   updatePetAnalyticsWidget();
   updateComplaintsWidget();
@@ -759,14 +766,8 @@ function updateDashboardLive(){
   const year=currentDate;
 
   // Rooms building only — Nest ยังไม่เปิด (มิถุนายน 2569)
-  const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
   const activeNest = []; // exclude Nest until it opens
   const totalRooms = activeRooms.length;
-
-  // KPI: payment counts from BillStore (RTDB) as SSoT
-  const allBillsThisMonth = typeof window.BillStore !== 'undefined'
-    ? window.BillStore.listForYear('rooms', year).filter(b => Number(b.month) === month)
-    : [];
   const paidCountAll    = allBillsThisMonth.filter(b => b.status === 'paid').length;
   const pendingCount    = allBillsThisMonth.filter(b => b.status !== 'paid').length;
   const totalCollected  = allBillsThisMonth
@@ -813,7 +814,7 @@ function updateDashboardLive(){
 }
 
 let _payWidgetBillsUnsub = null;
-function updatePaymentStatusWidget() {
+function updatePaymentStatusWidget(_activeRooms, _bills) {
   const el = document.getElementById('dashPaymentStatus');
   if (!el) return;
   // Subscribe once — auto-rerenders whenever RTDB bills change
@@ -823,16 +824,16 @@ function updatePaymentStatusWidget() {
   const now = new Date();
   const beYear = now.getFullYear() + 543;
   const month = now.getMonth() + 1;
-  // SSoT: read from BillStore (RTDB bills/) — not payment_status localStorage
-  const allBills = typeof window.BillStore !== 'undefined'
+  // Use pre-computed values from updateDashboardLive when available (avoids redundant calls)
+  const allBills = _bills || (typeof window.BillStore !== 'undefined'
     ? window.BillStore.listForYear('rooms', beYear).filter(b => Number(b.month) === month)
-    : [];
+    : []);
   // Total active rooms = canonical denominator. Without this, denominator falls back
   // to bill count and a 6/6 widget falsely reads "all rooms paid" when actually only
   // 6 of 23 rooms have bills issued for the month.
-  const allRooms = (typeof getActiveRoomsWithMetadata === 'function' && window.ROOMS_OLD)
+  const allRooms = _activeRooms || ((typeof getActiveRoomsWithMetadata === 'function' && window.ROOMS_OLD)
     ? getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD)
-    : [];
+    : []);
   const totalRooms = allRooms.length;
   if (totalRooms === 0 && allBills.length === 0) {
     el.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem;">ยังไม่มีบิลเดือนนี้ — กรุณา upload ข้อมูลมิเตอร์</div>';
@@ -908,12 +909,13 @@ function updateMaintenanceWidget() {
       </div>`;
 }
 
-function updateTenantStatusWidget() {
+function updateTenantStatusWidget(_activeRooms) {
   const dashTen = document.getElementById('dashTenantStatus');
   if (!dashTen) return;
   if (!window.ROOMS_OLD || window.ROOMS_OLD.length === 0) return;
   const today = new Date();
-  const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
+  // Use pre-computed value from updateDashboardLive when available
+  const activeRooms = _activeRooms || getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
   const activeNest = [];
   const totalRooms = activeRooms.length;
   const tenants = loadTenants();
