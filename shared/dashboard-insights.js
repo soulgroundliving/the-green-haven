@@ -1202,15 +1202,36 @@
         </div></div>`;
 
       if (complaintsRow && miniCardsCol) {
+        // Compact horizontal complaints card for full-width row (saves ~150px vs vertical)
+        const complaintsHorizHTML = `<div class="ops2-card${cAccent === 'danger' ? ' tint-danger' : cAccent === 'warn' ? ' tint-warn' : ''}" style="--ops2-accent:${accentColors[cAccent]};padding:.45rem .85rem;">
+          <div style="display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;min-width:0;">
+            <div style="display:flex;align-items:center;gap:.28rem;flex-shrink:0;">
+              <span style="font-size:.82rem;">⚠️</span>
+              <span style="font-size:.72rem;font-weight:700;color:var(--text-primary);">Complaints</span>
+              ${avgResolve ? `<span style="font-size:.6rem;color:var(--text-muted);">· เฉลี่ย ${avgResolve} วัน</span>` : ''}
+            </div>
+            ${cBadge}
+            <div style="display:flex;align-items:baseline;gap:.22rem;padding:0 .55rem;border-left:1px solid var(--border);flex-shrink:0;">
+              <span class="ops2-big ${cStatus.open > 0 ? 'red' : 'muted'}" style="font-size:1.5rem;line-height:1;">${cStatus.open}</span>
+              <span style="font-size:.6rem;color:var(--text-muted);">Open</span>
+            </div>
+            <div class="ops2-stats" style="padding:0 .55rem;border-left:1px solid var(--border);">
+              ${ops2Stat(cStatus['in-progress'], cStatus['in-progress'] > 0 ? 'amber' : 'muted', 'In Progress')}
+              ${ops2Stat(cStatus.resolved, cStatus.resolved > 0 ? 'green' : 'muted', 'Resolved')}
+              ${ops2Stat(totalComplaints, 'muted', 'Total')}
+            </div>
+            ${cTagsHTML ? `<div style="display:flex;flex-wrap:wrap;gap:.22rem;padding:0 .55rem;border-left:1px solid var(--border);">${cTagsHTML}</div>` : ''}
+          </div>
+        </div>`;
         complaintsRow.innerHTML = `
-          <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">
+          <div class="ops-board-hdr card-title" style="margin-bottom:.3rem;">
             <span>📋 Operations Summary</span>
             <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
                     style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
           </div>
-          <div class="ops-pulse ${pulseClass}" style="margin-bottom:.45rem;">${pulseLabel}</div>
-          ${complaintsCardHTML}
-          <div class="ops-board-ft">${fmtCacheAge(Date.now())}</div>`;
+          <div class="ops-pulse ${pulseClass}" style="margin:.15rem 0 .3rem;">${pulseLabel}</div>
+          ${complaintsHorizHTML}
+          <div class="ops-board-ft" style="margin-top:.15rem;">${fmtCacheAge(Date.now())}</div>`;
         miniCardsCol.innerHTML = `<div class="ops2-grid">
           ${ops2Card({ wide: false, accent: mAccent, icon: '🔧', title: 'Maintenance', sub: '',
             bigNum: mStatus.pending, bigCls: mStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'Pending',
@@ -1316,10 +1337,10 @@
         const rows = spikes.slice(0, TOP_N).map(s => {
           const color = s.ratio >= 2 ? 'var(--alert,#c06458)' : 'var(--accent,#ff9800)';
           return `<tr style="border-bottom:1px solid var(--border-subtle,#ebe9e2);border-left:3px solid ${color};">
-            <td style="padding:.5rem .7rem;font-weight:600;">${esc(s.roomId)} <span style="color:var(--text-muted);font-size:.72rem;">${buildingLabel(s.building)}</span></td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${s.latestE} <span style="color:var(--text-muted);font-size:.72rem;">หน่วย</span></td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;">${s.medianE} <span style="color:var(--text-muted);font-size:.72rem;">หน่วย</span></td>
-            <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${color};font-weight:600;">${s.ratio}×</td>
+            <td style="padding:.3rem .5rem;font-weight:600;">${esc(s.roomId)} <span style="color:var(--text-muted);font-size:.72rem;">${buildingLabel(s.building)}</span></td>
+            <td style="padding:.3rem .5rem;text-align:right;font-variant-numeric:tabular-nums;">${s.latestE} <span style="color:var(--text-muted);font-size:.72rem;">หน่วย</span></td>
+            <td style="padding:.3rem .5rem;text-align:right;font-variant-numeric:tabular-nums;">${s.medianE} <span style="color:var(--text-muted);font-size:.72rem;">หน่วย</span></td>
+            <td style="padding:.3rem .5rem;text-align:right;font-variant-numeric:tabular-nums;color:${color};font-weight:600;">${s.ratio}×</td>
           </tr>`;
         }).join('');
         const moreHTML = spikes.length > TOP_N
@@ -1328,10 +1349,10 @@
         bodyHTML = `<div style="overflow-x:auto;">
           <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
             <thead><tr style="background:var(--mist,#f2f1ec);">
-              <th style="padding:.55rem .7rem;text-align:left;">ห้อง</th>
-              <th style="padding:.55rem .7rem;text-align:right;">ล่าสุด</th>
-              <th style="padding:.55rem .7rem;text-align:right;">median</th>
-              <th style="padding:.55rem .7rem;text-align:right;">×</th>
+              <th style="padding:.3rem .5rem;text-align:left;">ห้อง</th>
+              <th style="padding:.3rem .5rem;text-align:right;">ล่าสุด</th>
+              <th style="padding:.3rem .5rem;text-align:right;">median</th>
+              <th style="padding:.3rem .5rem;text-align:right;">×</th>
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
