@@ -1173,7 +1173,7 @@
         tagsHTML: cTagsHTML, badgeHTML: cBadge });
 
       const opsCardsHTML = `
-        <div class="ops2-grid">
+        <div class="ops2-grid-section"><div class="ops2-grid">
           ${ops2Card({ wide: false, accent: mAccent, icon: '🔧', title: 'Maintenance', sub: '',
             bigNum: mStatus.pending, bigCls: mStatus.pending > 0 ? 'amber' : 'muted', bigLabel: 'Pending',
             statsHTML: ops2Stat(mStatus.inprogress, mStatus.inprogress > 0 ? 'amber' : 'muted', 'In Progress') +
@@ -1195,7 +1195,7 @@
             statsHTML: ops2Stat(lStatus.approved, lStatus.approved > 0 ? 'green' : 'muted', 'อนุมัติ') +
                        ops2Stat(lStatus.rejected, lStatus.rejected > 0 ? 'red' : 'muted', 'ปฏิเสธ'),
             tagsHTML: '', badgeHTML: lBadge })}
-        </div>`;
+        </div></div>`;
 
       container.innerHTML = `
         <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">

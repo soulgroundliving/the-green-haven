@@ -2713,7 +2713,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 .ops-pulse.warn{ background:rgba(245,158,11,.11); color:#b45309; }
 .ops-pulse.danger{ background:rgba(220,38,38,.09); color:#dc2626; }
 /* ── Operations v2 — 2-col grid + KPI cards ── */
-.ops2-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.45rem; min-width:0; }
+.ops2-grid{ display:grid; grid-template-columns:1fr 1fr; gap:.45rem; min-width:0; }
+.ops2-grid-section{ margin-top:.5rem; }
 .ops2-wide{ grid-column:1/-1; }
 .ops2-card{
   background:var(--bg-card,#fff);
