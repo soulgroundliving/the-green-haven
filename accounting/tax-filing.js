@@ -13,6 +13,54 @@ let taxCharts = {
 
 let currentTaxYear = new Date().getFullYear();
 
+// ===== EXPENSE CACHE (Firestore → sync-compatible flat array) =====
+// Populated by _loadExpenseCacheForYear() before any sync expense fn runs.
+// Schema normalised to match the old accounting_expenses shape so all
+// downstream calc functions stay synchronous.
+let _expenseCache = [];
+let _expenseCacheYear = null; // CE year currently in cache
+
+const _EXP_CAT_TO_TYPE = {
+  repair:  'contractor',
+  wages:   'contractor',
+  utility: 'utilities',
+  supply:  'common',
+  other:   'common',
+};
+
+async function _loadExpenseCacheForYear(ceYear) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+  const buildings = ['rooms', 'nest'];
+  const fetched = [];
+  await Promise.all(buildings.flatMap(building =>
+    Array.from({ length: 12 }, (_, i) => i + 1).map(async month => {
+      const key = `${ceYear}-${String(month).padStart(2, '0')}`;
+      try {
+        const snap = await fs.getDocs(fs.collection(db, 'expenses', building, key));
+        snap.forEach(d => {
+          const raw = d.data();
+          fetched.push({
+            date:        raw.date || `${ceYear}-${String(month).padStart(2, '0')}-01`,
+            type:        _EXP_CAT_TO_TYPE[raw.category] || 'common',
+            amount:      raw.amount || 0,
+            description: raw.desc || raw.description || '',
+            contractor:  'ไม่ระบุ',
+            building,
+          });
+        });
+      } catch (_) { /* single-month fetch failure is non-fatal */ }
+    })
+  ));
+  _expenseCache = fetched;
+  _expenseCacheYear = ceYear;
+}
+
+async function _ensureExpenseCache(ceYear) {
+  if (_expenseCacheYear !== ceYear) await _loadExpenseCacheForYear(ceYear);
+}
+
 // ===== INITIALIZATION =====
 
 function initializeTaxFiling() {
@@ -140,16 +188,13 @@ function getRevenueByRoom(month, year) {
  */
 function calculateMonthlyExpenses(month, year) {
   try {
-    const expenses = JSON.parse(localStorage.getItem('accounting_expenses') || '[]');
     let total = 0;
-
-    expenses.forEach(expense => {
+    _expenseCache.forEach(expense => {
       const expDate = new Date(expense.date);
       if (expDate.getFullYear() === year && (expDate.getMonth() + 1) === month) {
         total += parseFloat(expense.amount) || 0;
       }
     });
-
     return total;
   } catch (error) {
     console.error('❌ Error calculating monthly expenses:', error);
@@ -221,25 +266,17 @@ function calculateAnnualExpenses(year) {
  */
 function getExpenseBreakdown(month, year) {
   try {
-    const expenses = JSON.parse(localStorage.getItem('accounting_expenses') || '[]');
-    const breakdown = {
-      contractor: 0,
-      housekeeping: 0,
-      utilities: 0,
-      common: 0
-    };
-
-    expenses.forEach(expense => {
+    const breakdown = { contractor: 0, housekeeping: 0, utilities: 0, common: 0 };
+    _expenseCache.forEach(expense => {
       const expDate = new Date(expense.date);
       if (expDate.getFullYear() === year && (expDate.getMonth() + 1) === month) {
         const amount = parseFloat(expense.amount) || 0;
         const category = expense.type || 'contractor';
-        if (breakdown.hasOwnProperty(category)) {
+        if (Object.prototype.hasOwnProperty.call(breakdown, category)) {
           breakdown[category] += amount;
         }
       }
     });
-
     return breakdown;
   } catch (error) {
     console.error('❌ Error getting expense breakdown:', error);
@@ -257,21 +294,16 @@ function getExpenseBreakdown(month, year) {
  */
 function calculateWithholdingTax(month, year) {
   try {
-    const expenses = JSON.parse(localStorage.getItem('accounting_expenses') || '[]');
     const taxRate = parseFloat(localStorage.getItem('tax_rate') || '10') / 100;
     let withholding = 0;
-
-    // Get contractor expenses and calculate 10% withholding
-    expenses.forEach(expense => {
+    _expenseCache.forEach(expense => {
       const expDate = new Date(expense.date);
       if (expDate.getFullYear() === year &&
           (expDate.getMonth() + 1) === month &&
           expense.type === 'contractor') {
-        const amount = parseFloat(expense.amount) || 0;
-        withholding += amount * taxRate;
+        withholding += (parseFloat(expense.amount) || 0) * taxRate;
       }
     });
-
     return withholding;
   } catch (error) {
     console.error('❌ Error calculating withholding tax:', error);
@@ -305,29 +337,25 @@ function calculateAnnualWithholdingTax(year) {
  */
 function getWithholdingDetails(month, year) {
   try {
-    const expenses = JSON.parse(localStorage.getItem('accounting_expenses') || '[]');
     const taxRate = parseFloat(localStorage.getItem('tax_rate') || '10') / 100;
     const withholdings = [];
-
-    expenses.forEach(expense => {
+    _expenseCache.forEach(expense => {
       const expDate = new Date(expense.date);
       if (expDate.getFullYear() === year &&
           (expDate.getMonth() + 1) === month &&
           expense.type === 'contractor') {
         const amount = parseFloat(expense.amount) || 0;
         const withheldAmount = amount * taxRate;
-
         withholdings.push({
-          date: expense.date,
-          description: expense.description || 'ค่าจ้างช่าง',
-          paymentAmount: amount,
+          date:           expense.date,
+          description:    expense.description || 'ค่าจ้างช่าง',
+          paymentAmount:  amount,
           withheldAmount: withheldAmount,
-          netAmount: amount - withheldAmount,
-          contractor: expense.contractor || 'ไม่ระบุ'
+          netAmount:      amount - withheldAmount,
+          contractor:     expense.contractor || 'ไม่ระบุ',
         });
       }
     });
-
     return withholdings;
   } catch (error) {
     console.error('❌ Error getting withholding details:', error);
@@ -670,8 +698,6 @@ function generateQuarterlyReturn(quarter, year) {
 function generateAnnualReport(year) {
   try {
     const taxInfo = calculateAnnualIncomeTax(year);
-    const allExpenses = JSON.parse(localStorage.getItem('accounting_expenses') || '[]');
-
     // Build transaction list
     const transactions = {
       revenue: [],
@@ -694,16 +720,16 @@ function generateAnnualReport(year) {
       }
     });
 
-    // Add expense transactions
-    allExpenses.forEach(expense => {
+    // Add expense transactions (from Firestore cache)
+    _expenseCache.forEach(expense => {
       const expDate = new Date(expense.date);
       if (expDate.getFullYear() === year) {
         transactions.expenses.push({
-          date: expense.date,
+          date:        expense.date,
           description: expense.description || expense.type,
-          type: expense.type || 'contractor',
-          amount: parseFloat(expense.amount) || 0,
-          contractor: expense.contractor || 'ไม่ระบุ'
+          type:        expense.type || 'contractor',
+          amount:      parseFloat(expense.amount) || 0,
+          contractor:  expense.contractor || 'ไม่ระบุ',
         });
       }
     });
@@ -871,9 +897,10 @@ function getQuarterlyBreakdown(year) {
 /**
  * Load and display tax dashboard data
  */
-function loadTaxDashboard() {
+async function loadTaxDashboard() {
   try {
     const currentYear = new Date().getFullYear();
+    await _loadExpenseCacheForYear(currentYear);
 
     // Calculate KPI values
     const annualRevenue = calculateAnnualRevenue(currentYear);
@@ -1264,8 +1291,7 @@ function displayQuarterlyReturn(quarter) {
 
     const currentYear = new Date().getFullYear();
 
-    // Use setTimeout to prevent blocking
-    setTimeout(() => {
+    _ensureExpenseCache(currentYear).then(() => {
       try {
         const report = generateQuarterlyReturn(quarter, currentYear);
 
@@ -1324,7 +1350,9 @@ function displayQuarterlyReturn(quarter) {
         contentDiv.innerHTML = '<div style="padding: 20px; color: var(--red);">❌ เกิดข้อผิดพลาด: ' + error.message + '</div>';
         showError('เกิดข้อผิดพลาด: ' + error.message);
       }
-    }, 100);
+    }).catch(err => {
+      console.error('❌ Expense cache load failed:', err);
+    });
   } catch (error) {
     console.error('❌ Error in displayQuarterlyReturn:', error);
     showError('เกิดข้อผิดพลาด: ' + error.message);
@@ -1345,8 +1373,7 @@ function displayAnnualReport() {
     const buddhYear = parseInt(document.getElementById('annual-year').value) || 2567;
     const year = convertBuddhistToGregorian(buddhYear);
 
-    // Use setTimeout to prevent blocking
-    setTimeout(() => {
+    _ensureExpenseCache(year).then(() => {
       try {
         const report = generateAnnualReport(year);
 
@@ -1426,7 +1453,9 @@ function displayAnnualReport() {
         contentDiv.innerHTML = '<div style="padding: 20px; color: var(--red);">❌ เกิดข้อผิดพลาด: ' + error.message + '</div>';
         showError('เกิดข้อผิดพลาด: ' + error.message);
       }
-    }, 100);
+    }).catch(err => {
+      console.error('❌ Expense cache load failed:', err);
+    });
   } catch (error) {
     console.error('❌ Error in displayAnnualReport:', error);
     showError('เกิดข้อผิดพลาด: ' + error.message);

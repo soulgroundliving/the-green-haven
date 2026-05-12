@@ -722,6 +722,11 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'approveBillingImportData') { typeof approveBillingImportData === 'function' && approveBillingImportData(); return; }
     if (a === 'cancelBillingImportProcess') { typeof cancelBillingImportProcess === 'function' && cancelBillingImportProcess(); return; }
     if (a === 'addExpense') { typeof addExpense === 'function' && addExpense(); return; }
+    if (a === 'deleteExpense') {
+      const { building, monthKey, expId } = t.dataset;
+      if (building && monthKey && expId && typeof deleteExpense === 'function') deleteExpense(building, monthKey, expId);
+      return;
+    }
     if (a === 'saveAnnouncement') { typeof saveAnnouncement === 'function' && saveAnnouncement(); return; }
     if (a === 'saveCommunityEvent') { typeof saveCommunityEvent === 'function' && saveCommunityEvent(); return; }
     if (a === 'saveCommunityDocument') { typeof saveCommunityDocument === 'function' && saveCommunityDocument(); return; }

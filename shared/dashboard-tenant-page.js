@@ -500,75 +500,115 @@ function deleteTenant(roomId){
 }
 
 // ===== EXPENSE MANAGEMENT =====
-function loadExpenses(){return JSON.parse(localStorage.getItem('expense_data')||'[]');}
-function saveExpenses(e){localStorage.setItem('expense_data',JSON.stringify(e));}
+// Firestore path: expenses/{building}/{ceYYYY-MM}/{autoId}
+// building = 'rooms' | 'nest'  |  monthKey = CE year e.g. '2026-05'
 
-function initExpensePage(){
-  const now=new Date();
-  const fm=document.getElementById('exp-filter-month');
-  const fy=document.getElementById('exp-filter-year');
-  const ed=document.getElementById('exp-date');
-  if(fm)fm.value=now.getMonth()+1;
-  if(fy)fy.value=now.getFullYear()+543;
-  if(ed&&!ed.value)ed.value=now.toISOString().split('T')[0];
+function _expMonthKey(date) {
+  const d = new Date(date);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${d.getFullYear()}-${m}`;
+}
+
+function _expMonthKeyFromFilter(beYear, month) {
+  return `${beYear - 543}-${String(month).padStart(2, '0')}`;
+}
+
+function initExpensePage() {
+  const now = new Date();
+  const fm = document.getElementById('exp-filter-month');
+  const fy = document.getElementById('exp-filter-year');
+  const ed = document.getElementById('exp-date');
+  if (fm) fm.value = now.getMonth() + 1;
+  if (fy) fy.value = now.getFullYear() + 543;
+  if (ed && !ed.value) ed.value = now.toISOString().split('T')[0];
   renderExpensePage();
 }
 
-function renderExpensePage(){
-  const now=new Date();
-  const filterMonth=parseInt(document.getElementById('exp-filter-month')?.value||now.getMonth()+1);
-  const filterYear=parseInt(document.getElementById('exp-filter-year')?.value||now.getFullYear()+543);
-  const expenses=loadExpenses();
-  const filtered=expenses.filter(e=>{
-    if(!e.date)return false;
-    const d=new Date(e.date);
-    return d.getMonth()+1===filterMonth&&(d.getFullYear()+543)===filterYear;
-  });
-  const total=filtered.reduce((a,e)=>a+e.amount,0);
-  const byCat={};
-  filtered.forEach(e=>{byCat[e.category]=(byCat[e.category]||0)+e.amount;});
-  const ps=loadPS();
-  const income=Object.values(ps[`${filterYear}_${filterMonth}`]||{}).reduce((a,p)=>a+(p.amount||0),0);
-  const profit=income-total;
-  const catLabels={repair:'ซ่อมแซม',utility:'ค่าน้ำ/ไฟ',supply:'ซื้อของ',wages:'ค่าแรง',other:'อื่นๆ'};
-  const catCls={repair:'cat-repair',utility:'cat-utility',supply:'cat-supply',wages:'cat-wages',other:'cat-other'};
-  const expSum=document.getElementById('expSummary');
-  if(expSum){
-    expSum.innerHTML=`
+async function renderExpensePage() {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  const now = new Date();
+  const filterMonth = parseInt(document.getElementById('exp-filter-month')?.value || now.getMonth() + 1);
+  const filterYear  = parseInt(document.getElementById('exp-filter-year')?.value  || now.getFullYear() + 543);
+  const filterBuilding = document.getElementById('exp-filter-building')?.value || 'rooms';
+  const monthKey = _expMonthKeyFromFilter(filterYear, filterMonth);
+
+  const expSum = document.getElementById('expSummary');
+  const listEl = document.getElementById('expList');
+  if (expSum) expSum.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:.85rem;">กำลังโหลด...</div>';
+  if (listEl) listEl.innerHTML = '';
+
+  const db = window.firebase.firestore();
+  const fs = window.firebase.firestoreFunctions;
+
+  let expenses = [];
+  try {
+    const snap = await fs.getDocs(fs.collection(db, 'expenses', filterBuilding, monthKey));
+    snap.forEach(d => expenses.push({ id: d.id, building: filterBuilding, monthKey, ...d.data() }));
+  } catch (err) {
+    if (expSum) expSum.innerHTML = '<div style="color:var(--red);padding:.8rem;font-size:.85rem;">โหลดข้อมูลไม่สำเร็จ</div>';
+    return;
+  }
+
+  // Income from taxSummary (CF-aggregated revenue)
+  let income = 0;
+  let incomeLabel = 'รายรับ';
+  try {
+    const tsSnap = await fs.getDoc(fs.doc(db, 'taxSummary', String(filterYear)));
+    if (tsSnap.exists()) {
+      income = tsSnap.data()?.months?.[filterMonth]?.totalRevenue ?? 0;
+    } else {
+      incomeLabel = 'รายรับ (ยังไม่มีข้อมูล)';
+    }
+  } catch (_) {
+    incomeLabel = 'รายรับ (โหลดไม่สำเร็จ)';
+  }
+
+  const total = expenses.reduce((a, e) => a + (e.amount || 0), 0);
+  const profit = income - total;
+  const byCat = {};
+  expenses.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + (e.amount || 0); });
+  const catLabels = { repair: 'ซ่อมแซม', utility: 'ค่าน้ำ/ไฟ', supply: 'ซื้อของ', wages: 'ค่าแรง', other: 'อื่นๆ' };
+  const catCls    = { repair: 'cat-repair', utility: 'cat-utility', supply: 'cat-supply', wages: 'cat-wages', other: 'cat-other' };
+
+  if (expSum) {
+    expSum.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;margin-bottom:1rem;">
         <div style="text-align:center;padding:.75rem;background:var(--green-pale);border-radius:var(--radius-sm);">
           <div style="font-size:1.25rem;font-weight:800;color:var(--green-dark)">฿${income.toLocaleString()}</div>
-          <div style="font-size:.72rem;color:var(--text-muted)">รายรับ</div>
+          <div style="font-size:.72rem;color:var(--text-muted)">${incomeLabel}</div>
         </div>
         <div style="text-align:center;padding:.75rem;background:var(--red-pale);border-radius:var(--radius-sm);">
           <div style="font-size:1.25rem;font-weight:800;color:var(--red)">฿${total.toLocaleString()}</div>
           <div style="font-size:.72rem;color:var(--text-muted)">รายจ่าย</div>
         </div>
-        <div style="text-align:center;padding:.75rem;background:${profit>=0?'var(--green-pale)':'var(--red-pale)'};border-radius:var(--radius-sm);">
-          <div style="font-size:1.25rem;font-weight:800;color:${profit>=0?'var(--green-dark)':'var(--red)'}">${profit>=0?'+':''}฿${profit.toLocaleString()}</div>
-          <div style="font-size:.72rem;color:var(--text-muted)">${profit>=0?'กำไร':'ขาดทุน'}</div>
+        <div style="text-align:center;padding:.75rem;background:${profit >= 0 ? 'var(--green-pale)' : 'var(--red-pale)'};border-radius:var(--radius-sm);">
+          <div style="font-size:1.25rem;font-weight:800;color:${profit >= 0 ? 'var(--green-dark)' : 'var(--red)'}">${profit >= 0 ? '+' : ''}฿${profit.toLocaleString()}</div>
+          <div style="font-size:.72rem;color:var(--text-muted)">${profit >= 0 ? 'กำไร' : 'ขาดทุน'}</div>
         </div>
       </div>
-      ${Object.keys(byCat).length?`<div style="font-size:.78rem;color:var(--text-muted);margin-bottom:6px;">แยกตามหมวด:</div>
-      <div style="display:flex;flex-direction:column;gap:5px;">${Object.entries(byCat).map(([cat,amt])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);">
-        <span class="exp-cat-pill ${catCls[cat]||'cat-other'}">${catLabels[cat]||cat}</span>
-        <strong>฿${amt.toLocaleString()}</strong></div>`).join('')}</div>`
-      :'<div style="text-align:center;color:var(--text-muted);padding:.8rem;font-size:.84rem;">ยังไม่มีรายจ่ายเดือนนี้</div>'}`;
+      ${Object.keys(byCat).length
+        ? `<div style="font-size:.78rem;color:var(--text-muted);margin-bottom:6px;">แยกตามหมวด:</div>
+           <div style="display:flex;flex-direction:column;gap:5px;">${Object.entries(byCat).map(([cat, amt]) =>
+             `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);">
+               <span class="exp-cat-pill ${catCls[cat] || 'cat-other'}">${catLabels[cat] || cat}</span>
+               <strong>฿${amt.toLocaleString()}</strong></div>`).join('')}</div>`
+        : '<div style="text-align:center;color:var(--text-muted);padding:.8rem;font-size:.84rem;">ยังไม่มีรายจ่ายเดือนนี้</div>'}`;
   }
-  const listEl=document.getElementById('expList');
-  if(listEl){
-    if(!filtered.length){
-      listEl.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-muted);">ยังไม่มีรายการค่าใช้จ่ายในเดือนนี้</div>';
-    }else{
-      listEl.innerHTML=`<div class="scroll-x"><table class="data-table">
+
+  if (listEl) {
+    if (!expenses.length) {
+      listEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">ยังไม่มีรายการค่าใช้จ่ายในเดือนนี้</div>';
+    } else {
+      const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+      listEl.innerHTML = `<div class="scroll-x"><table class="data-table">
         <thead><tr><th>วันที่</th><th>หมวด</th><th>รายการ</th><th>ห้อง</th><th>จำนวน</th><th></th></tr></thead>
-        <tbody>${filtered.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e=>`<tr>
-          <td style="font-size:.8rem;">${new Date(e.date).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}</td>
-          <td><span class="exp-cat-pill ${catCls[e.category]||'cat-other'}">${catLabels[e.category]||e.category}</span></td>
-          <td>${e.desc}</td>
-          <td style="font-size:.8rem;color:var(--text-muted)">${e.room||'—'}</td>
-          <td style="font-weight:700;color:var(--red)">฿${e.amount.toLocaleString()}</td>
-          <td><button onclick="deleteExpense(${e.id})" style="background:none;border:none;cursor:pointer;font-size:.9rem;" title="ลบ">🗑️</button></td>
+        <tbody>${sorted.map(e => `<tr>
+          <td style="font-size:.8rem;">${new Date(e.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}</td>
+          <td><span class="exp-cat-pill ${catCls[e.category] || 'cat-other'}">${catLabels[e.category] || e.category}</span></td>
+          <td>${e.desc || ''}</td>
+          <td style="font-size:.8rem;color:var(--text-muted)">${e.room || '—'}</td>
+          <td style="font-weight:700;color:var(--red)">฿${(e.amount || 0).toLocaleString()}</td>
+          <td><button data-action="deleteExpense" data-building="${e.building}" data-month-key="${e.monthKey}" data-exp-id="${e.id}" style="background:none;border:none;cursor:pointer;font-size:.9rem;" title="ลบ">🗑️</button></td>
         </tr>`).join('')}</tbody>
         <tfoot><tr style="background:var(--red-pale);"><td colspan="4" style="font-weight:700;">รวม</td>
           <td style="font-weight:800;color:var(--red)">฿${total.toLocaleString()}</td><td></td></tr></tfoot>
@@ -577,31 +617,62 @@ function renderExpensePage(){
   }
 }
 
-function addExpense(){
-  const date=document.getElementById('exp-date').value;
-  const category=document.getElementById('exp-category').value;
-  const desc=document.getElementById('exp-desc').value.trim();
-  const room=document.getElementById('exp-room').value.trim();
-  const amount=parseFloat(document.getElementById('exp-amount').value)||0;
-  if(!date||!desc||!amount){showToast('กรุณากรอกวันที่ รายการ และจำนวนเงิน', 'warning');return;}
-  const expenses=loadExpenses();
-  expenses.push({id:Date.now(),date,category,desc,room,amount});
-  saveExpenses(expenses);
-  document.getElementById('exp-desc').value='';
-  document.getElementById('exp-amount').value='';
-  document.getElementById('exp-room').value='';
-  renderExpensePage();
-  const toast=document.createElement('div');
-  toast.textContent=`✅ บันทึกรายจ่าย ฿${amount.toLocaleString()} เรียบร้อย`;
-  toast.className='u-toast-center';
-  document.body.appendChild(toast);setTimeout(()=>toast.remove(),2000);
+async function addExpense() {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    showToast('ระบบยังไม่พร้อม กรุณาลองใหม่', 'warning');
+    return;
+  }
+  const date     = document.getElementById('exp-date')?.value;
+  const building = document.getElementById('exp-building')?.value || 'rooms';
+  const category = document.getElementById('exp-category')?.value;
+  const desc     = document.getElementById('exp-desc')?.value.trim();
+  const room     = document.getElementById('exp-room')?.value.trim();
+  const amount   = parseFloat(document.getElementById('exp-amount')?.value) || 0;
+  if (!date || !desc || !amount) { showToast('กรุณากรอกวันที่ รายการ และจำนวนเงิน', 'warning'); return; }
+
+  const monthKey = _expMonthKey(date);
+  const btn = document.querySelector('[data-action="addExpense"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...'; }
+
+  try {
+    const db = window.firebase.firestore();
+    const fs = window.firebase.firestoreFunctions;
+    await fs.addDoc(fs.collection(db, 'expenses', building, monthKey), {
+      date, category, desc, room: room || '', amount,
+      createdAt: fs.serverTimestamp(),
+    });
+    document.getElementById('exp-desc').value   = '';
+    document.getElementById('exp-amount').value = '';
+    if (document.getElementById('exp-room')) document.getElementById('exp-room').value = '';
+    // Sync filter to match what was just added so user sees it immediately
+    const d = new Date(date);
+    const fm = document.getElementById('exp-filter-month');
+    const fy = document.getElementById('exp-filter-year');
+    const fb = document.getElementById('exp-filter-building');
+    if (fm) fm.value = d.getMonth() + 1;
+    if (fy) fy.value = d.getFullYear() + 543;
+    if (fb) fb.value = building;
+    showToast(`✅ บันทึกรายจ่าย ฿${amount.toLocaleString()} เรียบร้อย`, 'success');
+    renderExpensePage();
+  } catch (err) {
+    showToast('บันทึกไม่สำเร็จ: ' + (err.message || err), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 บันทึกรายจ่าย'; }
+  }
 }
 
-function deleteExpense(id){
-  window.ghConfirm('ลบรายการรายจ่ายนี้?', { danger: true }).then(ok => {
+function deleteExpense(building, monthKey, expId) {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  window.ghConfirm('ลบรายการรายจ่ายนี้?', { danger: true }).then(async ok => {
     if (!ok) return;
-    saveExpenses(loadExpenses().filter(e=>e.id!==id));
-    renderExpensePage();
+    try {
+      const db = window.firebase.firestore();
+      const fs = window.firebase.firestoreFunctions;
+      await fs.deleteDoc(fs.doc(db, 'expenses', building, monthKey, expId));
+      renderExpensePage();
+    } catch (err) {
+      showToast('ลบไม่สำเร็จ: ' + (err.message || err), 'error');
+    }
   });
 }
 

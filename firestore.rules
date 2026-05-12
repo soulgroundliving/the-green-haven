@@ -124,6 +124,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ===== MONTHLY EXPENSES (admin write, accountant read for tax-filing) =====
+    match /expenses/{building}/{monthKey}/{expId} {
+      allow read:  if isAdmin() || isAccountant();
+      allow write: if isAdmin();
+    }
+
     // ===== RATE LIMITS (CF only) =====
     match /rateLimits/{key} {
       allow read, write: if false;

@@ -3990,6 +3990,14 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <div class="card-title" role="heading" aria-level="3">➕ บันทึกรายจ่ายใหม่</div>
       <div class="form-grid">
         <div><label>วันที่</label><input type="date" id="exp-date" data-thai-date></div>
+        <div><label>ตึก</label>
+          <select id="exp-building">
+            <option value="rooms">🏠 ห้องแถว</option>
+            <option value="nest">🏢 Nest</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid">
         <div><label>หมวดหมู่</label>
           <select id="exp-category">
             <option value="repair">🔧 ซ่อมแซม</option>
@@ -3999,6 +4007,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <option value="other">📦 อื่นๆ</option>
           </select>
         </div>
+        <div></div>
       </div>
       <div style="margin-bottom:10px;"><label>รายการ / รายละเอียด</label><input type="text" id="exp-desc" placeholder="เช่น เปลี่ยนหลอดไฟห้อง 22, ซ่อมท่อน้ำ..."></div>
       <div class="form-grid">
@@ -4012,7 +4021,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <div class="card" style="margin-bottom:1rem;">
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           📊 สรุปประจำเดือน
-          <div style="display:flex;gap:6px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <select id="exp-filter-building" data-action="renderExpensePage" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.8rem;">
+              <option value="rooms">🏠 ห้องแถว</option>
+              <option value="nest">🏢 Nest</option>
+            </select>
             <select id="exp-filter-month" data-action="renderExpensePage" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.8rem;">
               <option value="1">ม.ค.</option><option value="2">ก.พ.</option><option value="3">มี.ค.</option>
               <option value="4">เม.ย.</option><option value="5">พ.ค.</option><option value="6">มิ.ย.</option>
