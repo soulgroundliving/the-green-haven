@@ -1298,7 +1298,8 @@
       if (spikes.length === 0) {
         bodyHTML = `<div style="color:var(--green-dark);font-size:.88rem;padding:.4rem 0;">✅ ไม่พบการใช้ไฟฟ้าผิดปกติ</div>`;
       } else {
-        const rows = spikes.map(s => {
+        const TOP_N = 5;
+        const rows = spikes.slice(0, TOP_N).map(s => {
           const color = s.ratio >= 2 ? 'var(--alert,#c06458)' : 'var(--accent,#ff9800)';
           return `<tr style="border-bottom:1px solid var(--border-subtle,#ebe9e2);border-left:3px solid ${color};">
             <td style="padding:.5rem .7rem;font-weight:600;">${esc(s.roomId)} <span style="color:var(--text-muted);font-size:.72rem;">${buildingLabel(s.building)}</span></td>
@@ -1307,6 +1308,9 @@
             <td style="padding:.5rem .7rem;text-align:right;font-variant-numeric:tabular-nums;color:${color};font-weight:600;">${s.ratio}×</td>
           </tr>`;
         }).join('');
+        const moreHTML = spikes.length > TOP_N
+          ? `<div style="font-size:.73rem;color:var(--text-muted);padding:.35rem .7rem;">+${spikes.length - TOP_N} ห้องเพิ่มเติม</div>`
+          : '';
         bodyHTML = `<div style="overflow-x:auto;">
           <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
             <thead><tr style="background:var(--mist,#f2f1ec);">
@@ -1318,6 +1322,7 @@
             <tbody>${rows}</tbody>
           </table>
         </div>
+        ${moreHTML}
         <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem;">Spike = ใช้เกิน 1.5× ค่า median 3 เดือนก่อน · ต้องการข้อมูลอย่างน้อย 4 เดือน</div>`;
       }
 
