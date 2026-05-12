@@ -2696,11 +2696,12 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 /* ── ปฏิบัติการ tab ── */
 .ops-layout-v2{
   display:grid;
-  grid-template-columns:1fr minmax(260px,320px);
+  grid-template-columns:1fr minmax(400px,460px);
   gap:.6rem;
   align-items:start;
   min-width:0;
 }
+#dashOpsComplaintsRow{ margin-bottom:.6rem; }
 .ops-layout-v2 > *{ min-width:0; }
 .ops-status-col{ display:flex; flex-direction:column; gap:.5rem; }
 .ops-right-col{ display:flex; flex-direction:column; gap:.5rem; }
@@ -3324,8 +3325,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
       <button class="dash-view-link" data-action="showPage" data-page="requests-approvals">ดูคำขอทั้งหมด →</button>
     </div>
+    <div id="dashOpsComplaintsRow"></div>
     <div class="ops-layout-v2">
-      <div id="dashComplaintsCol"></div>
+      <div id="dashMiniCardsCol"></div>
       <div class="ops-right-col">
         <div id="dashMeterSpike"></div>
         <div id="dashProviderScore"></div>
