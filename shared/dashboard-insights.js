@@ -1148,12 +1148,12 @@
       // Badges
       const cBadge = cStatus.open > 0 ? ops2Badge('danger', '⚠️ Action Required')
         : cStatus['in-progress'] > 0 ? ops2Badge('warn', '⏳ In Progress')
-        : totalComplaints > 0 ? ops2Badge('ok', '✅ Resolved') : ops2Badge('neutral', 'ยังไม่มีข้อมูล');
+        : totalComplaints > 0 ? ops2Badge('ok', '✅ Resolved') : ops2Badge('neutral', '—');
       const mBadge = mOverdue.length > 0 ? ops2Badge('danger', `⏰ ค้าง ${mOverdue.length}`)
         : mStatus.pending > 0 ? ops2Badge('warn', '⏳ Pending')
-        : totalMaint > 0 ? ops2Badge('ok', '✅ Done') : ops2Badge('neutral', 'ยังไม่มีข้อมูล');
+        : totalMaint > 0 ? ops2Badge('ok', '✅ Done') : ops2Badge('neutral', '—');
       const hBadge = hStatus.pending > 0 ? ops2Badge('warn', '⏳ Pending')
-        : totalHouse > 0 ? ops2Badge('ok', '✅ Done') : ops2Badge('neutral', 'ยังไม่มีข้อมูล');
+        : totalHouse > 0 ? ops2Badge('ok', '✅ Done') : ops2Badge('neutral', '—');
       const pBadge = pStatus.pending > 0 ? ops2Badge('warn', `⏳ รออนุมัติ ${pStatus.pending}`)
         : ops2Badge('neutral', totalPets === 0 ? 'ยังไม่มีคำขอ' : '✅ ดำเนินการแล้ว');
       const lBadge = lStatus.pending > 0 ? ops2Badge('warn', `⏳ รออนุมัติ ${lStatus.pending}`)
@@ -1168,7 +1168,7 @@
         <div class="ops-board-hdr card-title" style="margin-bottom:.38rem;">
           <span>📋 Operations Summary</span>
           <button data-action="refreshInsight" data-target="operations" aria-label="รีเฟรช"
-                  style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+                  style="font-size:.69rem;padding:2px 9px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
         </div>
         <div class="ops-pulse ${pulseClass}" style="margin-bottom:.45rem;">${pulseLabel}</div>
         <div class="ops2-grid">
@@ -1289,15 +1289,16 @@
         <div style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem;">Spike = ใช้เกิน 1.5× ค่า median 3 เดือนก่อน · ต้องการข้อมูลอย่างน้อย 4 เดือน</div>`;
       }
 
-      container.innerHTML = `<div class="card" style="border-left:4px solid var(--alert,#c06458);">
+      const _spikeBorderColor = spikes.length > 0 ? 'var(--alert,#dc2626)' : 'var(--ok,#14b8a6)';
+      container.innerHTML = `<div class="card" style="border-left:4px solid ${_spikeBorderColor};">
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
           <span>⚡ Meter Usage Spike</span>
           <button data-action="refreshInsight" data-target="meterSpike" aria-label="รีเฟรช Meter Spike"
-                  style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+                  style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
         </div>
         <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.7rem;">ห้องที่ใช้ไฟฟ้าเดือนล่าสุดสูงผิดปกติ เทียบกับ median 3 เดือนก่อน</div>
         ${bodyHTML}
-        <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${fmtCacheAge(Date.now())}</div>
+        <div style="font-size:.73rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${fmtCacheAge(Date.now())}</div>
       </div>`;
     } catch (e) {
       console.error('[insights] meter spike failed:', e);
@@ -1384,15 +1385,15 @@
         </div>`;
       }
 
-      container.innerHTML = `<div class="card" style="border-left:4px solid var(--blue);">
+      container.innerHTML = `<div class="card" style="border-left:4px solid var(--brand-primary,#0f766e);">
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
           <span>🏗️ Provider Scorecard</span>
           <button data-action="refreshInsight" data-target="providerScore" aria-label="รีเฟรช Provider Scorecard"
-                  style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;font-family:'Sarabun',sans-serif;">↻ refresh</button>
+                  style="font-size:.72rem;padding:2px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:999px;cursor:pointer;">↻ refresh</button>
         </div>
         <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.7rem;">สถิติผู้รับเหมาจากงานซ่อมแซมที่มีการกำหนดผู้รับเหมา · ข้อมูล forward-tracking เท่านั้น</div>
         ${bodyHTML}
-        <div style="font-size:.7rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${new Date().toLocaleDateString('th-TH')}</div>
+        <div style="font-size:.73rem;color:var(--text-muted);text-align:right;margin-top:.5rem;">${new Date().toLocaleDateString('th-TH')}</div>
       </div>`;
     } catch (e) {
       console.error('[insights] provider scorecard failed:', e);
