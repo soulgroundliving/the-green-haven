@@ -359,6 +359,29 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ===== FACILITY BOOKINGS (Tier 3G) =====
+    // Tenant creates a booking only for their own building (token.building match).
+    // Tenant reads only their own bookings. Admin reads/writes all.
+    // Cancel is handled server-side via cancelFacilityBooking CF.
+    match /facilityBookings/{bookingId} {
+      allow read:  if isAdmin()
+                || (isSignedIn() && resource.data.tenantUid == request.auth.uid);
+      allow create: if isSignedIn()
+                 && request.auth.token.building != null
+                 && request.resource.data.tenantBuilding == request.auth.token.building
+                 && request.resource.data.tenantUid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // ===== FACILITY CONFIG (Tier 3G) =====
+    // Admin configures slots + timeSlots per building+facilityType.
+    // Signed-in tenants read to render the slot grid.
+    // Doc IDs use the pattern {building}_{facilityType} (e.g. rooms_parking).
+    match /facilityConfig/{configId} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // ===== DEPOSITS (admin manages; accountant reads for tax reporting) =====
     // Flat collection: deposits/{building}_{roomId} (e.g. deposits/rooms_15)
     // Each doc stores building + roomId fields for client-side filtering.

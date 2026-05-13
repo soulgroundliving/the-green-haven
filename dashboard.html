@@ -4873,6 +4873,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <button id="tab-liff-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="liff">🔗 LINE Link Requests</button>
     <button id="tab-broadcast-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="broadcast">📣 ประกาศ</button>
     <button id="tab-deposits-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="deposits">💰 มัดจำ</button>
+    <button id="tab-facility-btn" class="requests-mgmt-tab year-tab" data-action="switchRequestsTab" data-tab="facility">🏛️ สิ่งอำนวยความสะดวก</button>
   </div>
 
   <!-- TAB: Broadcast Announcement (in-app notification) -->
@@ -5089,6 +5090,72 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     </div>
   </div>
 
+  <!-- TAB: Facility Bookings (Tier 3G) -->
+  <div id="requests-tab-facility" class="requests-mgmt-content" style="display:none;">
+
+    <!-- Building + Facility type filter -->
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
+      <select id="facility-admin-building" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.88rem;" data-action="facilityAdminFilter">
+        <!-- populated dynamically -->
+      </select>
+      <select id="facility-admin-type" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.88rem;" data-action="facilityAdminFilter">
+        <option value="">— ทุกประเภท —</option>
+        <option value="parking">🅿️ ที่จอดรถ</option>
+        <option value="laundry">👕 ห้องซักผ้า</option>
+        <option value="rooftop">🌿 ดาดฟ้า</option>
+        <option value="other">🏛️ อื่น ๆ</option>
+      </select>
+      <input type="date" id="facility-admin-date" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.88rem;" data-action="facilityAdminFilter">
+    </div>
+
+    <!-- Bookings list -->
+    <div class="card" style="margin-bottom:1.25rem;">
+      <div class="card-title" role="heading" aria-level="3">📋 รายการจอง</div>
+      <div id="facility-admin-bookings-list" style="min-height:100px;">
+        <div style="color:var(--text-muted);text-align:center;padding:2rem;">เลือกอาคาร + วันที่เพื่อดูข้อมูล</div>
+      </div>
+    </div>
+
+    <!-- Config panel (slots management) -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+        <div class="card-title" role="heading" aria-level="3" style="margin:0;">⚙️ ตั้งค่า Facility Config</div>
+        <button data-action="facilityOpenConfig" style="padding:.45rem 1rem;background:var(--green-dark);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;">+ เพิ่ม / แก้ไข</button>
+      </div>
+      <div id="facility-config-list" style="min-height:60px;">
+        <div style="color:var(--text-muted);font-size:.88rem;padding:1rem;">กำลังโหลด...</div>
+      </div>
+    </div>
+
+    <!-- Config edit modal -->
+    <div id="facility-config-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9998;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:1.5rem;width:94%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+        <div style="font-weight:700;font-size:1.05rem;margin-bottom:1rem;">⚙️ ตั้งค่า Facility</div>
+        <label style="display:block;margin-bottom:.4rem;font-size:.88rem;font-weight:600;">ประเภท</label>
+        <select id="fc-type" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;margin-bottom:.85rem;">
+          <option value="parking">🅿️ ที่จอดรถ</option>
+          <option value="laundry">👕 ห้องซักผ้า</option>
+          <option value="rooftop">🌿 ดาดฟ้า</option>
+          <option value="other">🏛️ อื่น ๆ</option>
+        </select>
+        <label style="display:block;margin-bottom:.4rem;font-size:.88rem;font-weight:600;">ชื่อที่แสดง</label>
+        <input type="text" id="fc-displayName" placeholder="เช่น ที่จอดรถ ชั้น 1" maxlength="60" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;margin-bottom:.85rem;">
+        <label style="display:block;margin-bottom:.4rem;font-size:.88rem;font-weight:600;">Slots (JSON array) <span style="font-weight:400;color:#888;font-size:.8rem;">เช่น: [{"id":"A1","label":"A1","enabled":true}]</span></label>
+        <textarea id="fc-slots" rows="4" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;font-family:monospace;font-size:.82rem;margin-bottom:.85rem;" placeholder='[{"id":"A1","label":"A1","enabled":true}]'></textarea>
+        <label style="display:block;margin-bottom:.4rem;font-size:.88rem;font-weight:600;">Time Slots (JSON array หรือเว้นว่างเพื่อใช้ค่าเริ่มต้น)</label>
+        <textarea id="fc-timeSlots" rows="3" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;font-family:monospace;font-size:.82rem;margin-bottom:.85rem;" placeholder='[{"id":"morning","label":"เช้า"},{"id":"afternoon","label":"บ่าย"},{"id":"evening","label":"เย็น"}]'></textarea>
+        <label style="display:block;margin-bottom:.4rem;font-size:.88rem;font-weight:600;">จองล่วงหน้าได้ (วัน)</label>
+        <input type="number" id="fc-maxDays" value="14" min="1" max="90" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;margin-bottom:.85rem;">
+        <label style="display:flex;align-items:center;gap:.5rem;margin-bottom:1.25rem;">
+          <input type="checkbox" id="fc-active" checked> <span style="font-size:.88rem;font-weight:600;">เปิดใช้งาน</span>
+        </label>
+        <div style="display:flex;gap:.5rem;">
+          <button data-action="facilityCloseConfig" style="flex:1;padding:.7rem;background:#fff;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-weight:600;">ยกเลิก</button>
+          <button data-action="facilitySaveConfig" style="flex:2;padding:.7rem;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">💾 บันทึก</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </div>
 
@@ -5264,6 +5331,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-content-features.js"></script>
 <script src="./shared/dashboard-payment-verify.js"></script>
 <script src="./shared/dashboard-buildings.js"></script>
+<script src="./shared/facility-booking.js"></script>
 
 <!-- ===== PAYMENT DETAIL MODAL ===== -->
 <div class="pay-modal-overlay" id="payModalOverlay" role="dialog" aria-modal="true" aria-labelledby="payModalTitle" data-action="closePayModalIfOverlay">

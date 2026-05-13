@@ -7,6 +7,10 @@ exports.setAdminClaim = require('./setAdminClaim').setAdminClaim;
 // Grant / revoke per-building manager claims (Tier 3c — SaaS prep)
 exports.grantBuildingManager = require('./grantBuildingManager').grantBuildingManager;
 
+// Facility bookings — parking / laundry / rooftop (Tier 3G)
+exports.createFacilityBooking = require('./createFacilityBooking').createFacilityBooking;
+exports.cancelFacilityBooking = require('./cancelFacilityBooking').cancelFacilityBooking;
+
 // Admin-only: publish in-app announcement to tenants (broadcastMessages/{id})
 // In-app only — no LINE Multicast (free tier 200/mo too low; deferred).
 exports.broadcastMessage = require('./broadcastMessage').broadcastMessage;

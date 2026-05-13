@@ -1064,3 +1064,110 @@ describe('building manager — scoped read, no write (Tier 3c)', () => {
     await assertFails(getDoc(doc(EMAIL_NO_CLAIM().firestore(), TENANT_PATH)));
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tier 3G: facilityBookings — tenant creates own, reads own; admin reads/writes all
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('facilityBookings — slot reservations (Tier 3G)', () => {
+  const BOOKING_ID   = 'booking-test-001';
+  const BOOKING_PATH = `facilityBookings/${BOOKING_ID}`;
+  const BOOKING_DATA = {
+    building:       'rooms',
+    facilityType:   'parking',
+    slot:           'A1',
+    date:           '2030-12-01',
+    timeSlot:       'morning',
+    tenantUid:      'line:U00000000000000000000000000000001',
+    tenantRoom:     '101',
+    tenantBuilding: 'rooms',
+    tenantName:     'Test Tenant',
+    status:         'confirmed',
+    cancelledBy:    null,
+  };
+
+  it('LIFF tenant can CREATE a booking in their own building', async () => {
+    const fs = LIFF_TENANT().firestore();
+    await assertSucceeds(setDoc(doc(fs, BOOKING_PATH), BOOKING_DATA));
+  });
+
+  it('LIFF tenant CANNOT create booking for a different building', async () => {
+    const badData = { ...BOOKING_DATA, building: 'nest', tenantBuilding: 'nest' };
+    // tenant has building='rooms' claim but tries to book for 'nest'
+    await assertFails(setDoc(doc(LIFF_TENANT().firestore(), `facilityBookings/booking-other-bld`), badData));
+  });
+
+  it('LIFF tenant can READ their own booking', async () => {
+    await seedDoc(BOOKING_PATH, BOOKING_DATA);
+    await assertSucceeds(getDoc(doc(LIFF_TENANT().firestore(), BOOKING_PATH)));
+  });
+
+  it('LIFF tenant CANNOT read another tenant\'s booking', async () => {
+    await seedDoc(BOOKING_PATH, BOOKING_DATA);
+    // Different uid — uid='line:Uother'
+    const otherTenant = testEnv.authenticatedContext('line:Uother', {
+      room: '102', building: 'rooms', firebase: { sign_in_provider: 'custom' }
+    });
+    await assertFails(getDoc(doc(otherTenant.firestore(), BOOKING_PATH)));
+  });
+
+  it('admin can READ any facilityBooking', async () => {
+    await seedDoc(BOOKING_PATH, BOOKING_DATA);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), BOOKING_PATH)));
+  });
+
+  it('admin can CREATE a facilityBooking for any building', async () => {
+    await assertSucceeds(setDoc(doc(EMAIL_ADMIN().firestore(), `facilityBookings/admin-booking-001`), BOOKING_DATA));
+  });
+
+  it('admin can UPDATE (cancel) a facilityBooking', async () => {
+    await seedDoc(BOOKING_PATH, BOOKING_DATA);
+    await assertSucceeds(updateDoc(doc(EMAIL_ADMIN().firestore(), BOOKING_PATH), { status: 'cancelled', cancelledBy: 'admin' }));
+  });
+
+  it('unauthenticated user CANNOT read facilityBookings', async () => {
+    await seedDoc(BOOKING_PATH, BOOKING_DATA);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), BOOKING_PATH)));
+  });
+
+  it('unauthenticated user CANNOT create facilityBookings', async () => {
+    await assertFails(setDoc(doc(UNAUTH().firestore(), BOOKING_PATH), BOOKING_DATA));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tier 3G: facilityConfig — any signed-in user reads; admin writes
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('facilityConfig — slot configuration (Tier 3G)', () => {
+  const CONFIG_PATH = 'facilityConfig/rooms_parking';
+  const CONFIG_DATA = {
+    building:      'rooms',
+    facilityType:  'parking',
+    displayName:   'ที่จอดรถ',
+    active:        true,
+    slots:         [{ id: 'A1', label: 'A1', enabled: true }],
+    timeSlots:     [],
+    maxAdvanceDays: 14,
+  };
+
+  it('signed-in user can READ facilityConfig', async () => {
+    await seedDoc(CONFIG_PATH, CONFIG_DATA);
+    await assertSucceeds(getDoc(doc(LIFF_TENANT().firestore(), CONFIG_PATH)));
+  });
+
+  it('admin can WRITE facilityConfig', async () => {
+    await assertSucceeds(setDoc(doc(EMAIL_ADMIN().firestore(), CONFIG_PATH), CONFIG_DATA));
+  });
+
+  it('non-admin CANNOT write facilityConfig', async () => {
+    await assertFails(setDoc(doc(LIFF_TENANT().firestore(), CONFIG_PATH), CONFIG_DATA));
+  });
+
+  it('accountant CANNOT write facilityConfig', async () => {
+    await assertFails(setDoc(doc(ACCOUNTANT().firestore(), CONFIG_PATH), CONFIG_DATA));
+  });
+
+  it('unauthenticated user CANNOT read facilityConfig', async () => {
+    await seedDoc(CONFIG_PATH, CONFIG_DATA);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), CONFIG_PATH)));
+  });
+});

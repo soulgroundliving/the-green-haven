@@ -285,6 +285,7 @@ function switchRequestsTab(tabName, btn) {
     else if(tabName === 'liff' && typeof initLiffRequestsPage === 'function') initLiffRequestsPage();
     else if(tabName === 'broadcast' && typeof initBroadcastPage === 'function') initBroadcastPage();
     else if(tabName === 'deposits' && typeof initDepositsPage === 'function') initDepositsPage();
+    else if(tabName === 'facility' && typeof initFacilityBookingsTab === 'function') initFacilityBookingsTab();
   }
 }
 
