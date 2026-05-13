@@ -148,16 +148,24 @@ await window.firebase.database().ref('bills').once('value');
 ```
 When in doubt: `grep "firebaseRef\|firebaseGet\|firebaseSet" dashboard.html` for the actual globals.
 
-### C. Modal display — inline style wins over class
+### C. Modal display — inline style wins over class, AND `''` ≠ `'none'`
 ```js
-// ✅ CORRECT — set inline style explicitly on open, clear on close
+// ✅ Modal with a CSS class binding display:none (e.g. .modal, .u-hidden)
 modal.style.display = 'flex';   // open
-modal.style.display = '';       // close
+modal.style.display = '';       // close — CSS class fallback wins → none
 
-// ❌ WRONG — classList alone fails if element has inline style="display:none"
-modal.classList.remove('u-hidden');  // doesn't override inline style
+// ✅ Modal that ONLY has inline style="display:none;..." (no CSS rule!)
+modal.style.display = 'flex';   // open
+modal.style.display = 'none';   // close — MUST be explicit; '' falls back to block
+
+// ❌ classList alone fails if element has inline style="display:none"
+modal.classList.remove('u-hidden');
 ```
-Debug one-liner: `({inline: m.getAttribute('style'), computed: getComputedStyle(m).display})`
+**Decision rule:** before close handler, grep the modal's class in stylesheets. No CSS rule binding `display:none` → `= 'none'` explicit. CSS rule exists → `= ''` is fine.
+
+Debug one-liner: `({inline: m.style.display, computed: getComputedStyle(m).display})` — computed `block` after close = inline-only fallback bug.
+
+2026-05-13 incident: `checklist-template-modal` + `facility-config-modal` were inline-only `display:none` → close handlers cleared display → fell back to `block` (still visible, ปุ่มยกเลิกดู "ไม่ทำงาน"). Fixed in `32902be`.
 
 ### D. BillStore — getByRoom not listForYear for single-room queries
 ```js

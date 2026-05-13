@@ -9,6 +9,25 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-05-13 — Modal `style.display = ''` ใน close handler → modal ไม่ปิด (fall back เป็น `display:block`)
+
+**Mistake:** เขียน `closeChecklistEditor()` และ `facilityCloseConfig()` ใช้ `modal.style.display = ''` (clear inline). คิดว่าจะ fall back ไป CSS default = `none`. แต่ modal ทั้งคู่ define ด้วย `<div id="..." style="display:none;...">` เท่านั้น — **ไม่มี CSS rule ที่ตั้ง `display:none`** ภายนอก. ผลลัพธ์: คลิก "ยกเลิก" หรือ ✕ → inline display ถูกล้าง → fall back เป็น computed default = `block` (สำหรับ `<div>`) → modal **ยังโชว์อยู่**, แค่ layout เพี้ยน.
+
+**Why:** CLAUDE.md §7-C ระบุ pattern นี้ไว้แล้ว แต่ตีความผิด:
+> ✅ CORRECT — set inline style explicitly on open, clear on close
+
+ที่ doc บอกว่า "clear on close" ได้ **เฉพาะเมื่อ** มี CSS rule ภายนอกที่ตั้ง `display:none` อยู่ (เช่น `.modal { display:none }`). Modal ของ tenant กับ booking ที่อ้างใน doc มี CSS class จัดการอยู่. แต่ modal สอง modal ใหม่ของผม inline-only — pattern ที่ clear ใช้ไม่ได้.
+
+**Rule:**
+- Modal ที่ define ด้วย **inline `display:none` เท่านั้น** (ไม่มี CSS class คู่กัน) → close handler ต้อง `modal.style.display = 'none'` **explicit** เสมอ
+- Modal ที่มี CSS class `.modal { display: none; }` หรือ utility class (`.u-hidden`) → clear inline ได้ (`= ''`)
+- กฎทอง: **เปิดดูว่า modal มี CSS rule นอกเหนือจาก inline ไหม** ก่อนเลือก close pattern
+- Debug one-liner: `({ inline: m.style.display, computed: getComputedStyle(m).display })` — computed=`block` หลัง close = หลุด CSS fallback
+
+Fix: commit `32902be`.
+
+---
+
 ## 2026-05-13 — Tier 3G + 3I ใช้ Firebase globals ที่ไม่มีอยู่จริง — ทุก write path silently broken
 
 **Mistake:** เขียน `shared/facility-booking.js` และ `shared/checklist-manager.js` ใหม่ โดย assume globals เหล่านี้:
