@@ -119,7 +119,7 @@
    * @param {function} cb  called with Array<instance doc>
    * @returns {function} unsub
    */
-  function subscribeAdminInstances(building, cb) {
+  function subscribeAdminInstances(building, cb, errCb) {
     const q = _query(
       _collection('checklistInstances'),
       _where('building', '==', building),
@@ -127,7 +127,10 @@
     );
     return _onSnapshot(q, (snap) => {
       cb(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.error('[ChecklistManager] subscribeAdminInstances failed:', err));
+    }, (err) => {
+      console.error('[ChecklistManager] subscribeAdminInstances failed:', err);
+      if (errCb) errCb(err);
+    });
   }
 
   // ── Storage ───────────────────────────────────────────────────────────

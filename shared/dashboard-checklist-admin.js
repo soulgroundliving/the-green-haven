@@ -102,6 +102,13 @@
     _unsub = window.ChecklistManager.subscribeAdminInstances(_currentBuilding, (rows) => {
       _instances = rows || [];
       _render();
+    }, (err) => {
+      const el = document.getElementById('checklist-admin-list');
+      if (!el) return;
+      const msg = err.code === 'failed-precondition'
+        ? 'Firestore index ยังไม่พร้อม — รอสักครู่แล้วรีเฟรช'
+        : _esc(err.message || 'ไม่สามารถโหลดได้');
+      el.innerHTML = `<div style="color:#c62828;text-align:center;padding:1.5rem;">⚠️ ${msg}</div>`;
     });
   }
 
