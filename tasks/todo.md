@@ -86,4 +86,46 @@ Room config stays in RTDB `rooms_config/{building}/{roomId}` via RoomConfigManag
 
 ---
 
-## Review (append after done)
+## Review
+
+### Shipped (commit `0fdc0d2`, merge `355edcf` → main)
+
+**Phase 1 ✅** `shared/building-registry.js` — client module exposes `window.BuildingRegistry` with `init/list/getById/create/update/archive/refresh`. Reads `buildings` collection from Firestore; falls back to hardcoded `['rooms','nest']` when collection is empty or Firestore unavailable.
+
+**Phase 2 ✅** Admin Buildings page in `dashboard.html` — sidebar nav "🏘️ Buildings", `page-buildings` cards grid, `buildingFormModal` (slug, displayName, address, promptPayId, contact, companyName, ownerName). All CRUD goes through `BuildingRegistry`. `shared/dashboard-buildings.js` owns the page logic (`initBuildingsPage/openBuildingModal/saveBuildingForm/archiveBuildingPrompt`).
+
+**Phase 3 ✅** Announcements building selector now dynamically renders from `BuildingRegistry.list()` on page init (`_renderAnnouncementBuildingTabs` in `dashboard-content-features.js`). **Deferred to Tier 3b:** Tenant tab + PVM tab selectors — their handlers (`setTenantBuilding`, `setPVMBuilding`) have hardcoded `bld==='old'/'new'/'nest'` branches that call building-specific init functions (`initRoomsPage`/`initNestPage`). Truly dynamic selectors need those handlers refactored into generic per-building inits, which is its own session.
+
+**Phase 4 ✅** `functions/buildingRegistry.js` — CF helper with 5-min in-memory cache. Exports `getAllBuildings()` (Promise<string[]>) for iteration CFs and `getValidBuildings()` (Promise<Set>) for validation CFs. Falls back to `['rooms','nest']` if Firestore read fails.
+
+**Phase 5 ✅** 9 CFs migrated off hardcoded constants:
+- Iteration: `aggregateMonthlyRevenue` (`EMPTY_MONTH().byBuilding` now built dynamically too), `cleanupOldDocs`, `remindLatePayments`, `remindLeaseExpiry`
+- Validation: `archiveTenantOnMoveOut`, `createBookingLock`, `getRoomAvailability`, `transitionToPlayer`, `revertTransitionToPlayer`
+
+All 97/97 unit tests pass.
+
+**Phase 6 ✅ (with caveat)** Added `describe('buildings — admin CRUD, signed-in read')` block to `firestore.rules.test.js` with 11 test cases (admin create/update/archive/read, LIFF-tenant read/deny-write, accountant read/deny-write, anon deny). **Caveat:** Java not installed in this environment, so emulator-based rules tests can't run locally. Rules themselves are unchanged (existing `buildings/{id}` rule already allows admin write, signed-in read). Tests will run in CI / Java-enabled developer envs.
+
+**Phase 7+8 ✅ (static deploy verified, functional needs admin login)**
+Vercel deploy verified live on https://the-green-haven.vercel.app/dashboard:
+- `building-registry.js` + `dashboard-buildings.js` both load (3.3KB + 8.0KB)
+- Sidebar shows "🏘️ Buildings" entry
+- `page-buildings` + `buildingFormModal` present in DOM
+- `window.BuildingRegistry` populated; `list()` returns fallback `['rooms','nest']` correctly when unauthenticated
+- No console errors
+
+### Pending — needs user action
+
+1. **Admin login + seed:** Log in to https://the-green-haven.vercel.app/dashboard → click "🏘️ Buildings" sidebar → for each of the 2 fallback cards (rooms, nest), click "✏️ แก้ไข", fill payment/contact details, save. This creates the canonical `buildings/rooms` and `buildings/nest` Firestore docs.
+
+2. **CF deploy:** `firebase deploy --only functions:aggregateMonthlyRevenue,cleanupOldDocs,createBookingLock,getRoomAvailability,archiveTenantOnMoveOut,transitionToPlayer,revertTransitionToPlayer,remindLatePayments,remindLeaseExpiry`. Until deployed, CFs keep using their OLD hardcoded `['rooms','nest']` arrays. New buildings created via admin UI won't be CF-accepted until this deploys.
+
+3. **End-to-end test (after CF deploy):** Create a test building (slug=`test_b1`) via Buildings UI → confirm card shows → confirm it appears in Announcements selector → test a CF that takes a `building` arg with `test_b1` → confirm it doesn't reject → archive the test building.
+
+### Out of scope (deferred to Tier 3b)
+
+- Per-building LIFF IDs and per-building LINE OA (each needs LINE Developer setup per property owner)
+- Multi-owner authentication (custom claims `building` scoping for non-super-admins)
+- Refactor of `setTenantBuilding` + `setPVMBuilding` + `initRoomsPage`/`initNestPage` to be building-generic so all dashboard selectors become dynamic
+- Tenant-facing property switcher (current tenant_app already gets `building` from LIFF claims, so this is for tenants who own units in multiple properties)
+- SaaS billing / subscription gating
