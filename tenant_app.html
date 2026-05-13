@@ -8835,9 +8835,24 @@
                             localStorage.setItem(key, JSON.stringify(Array.from(cache.values())));
                         });
                     } catch(_) {}
-                }, () => {
-                    // permission_denied → reset so authReady/liffLinked can retry with fresh claims
+                }, async (err) => {
+                    // permission_denied → reset so authReady/liffLinked can retry with fresh claims.
+                    // Force-refresh the token ONCE and log the actual claim values vs the path
+                    // being queried — without this, the toast "ลองปิดเปิด LINE ใหม่" gives no
+                    // signal whether the bug is claim drift (rooms vs RentRoom) or missing claims.
                     _billsUnsub = null;
+                    try {
+                        const u = window.firebaseAuth?.currentUser;
+                        const fresh = u ? await u.getIdTokenResult(true).catch(() => null) : null;
+                        console.warn('[bills] permission_denied', {
+                            err: err && (err.code || err.message) || String(err),
+                            path: `bills/${_taBuilding}/${_taRoom}`,
+                            claimRoom: fresh?.claims?.room || '(none)',
+                            claimBuilding: fresh?.claims?.building || '(none)',
+                            uid: u?.uid?.slice(0, 14),
+                            isAnon: u?.isAnonymous,
+                        });
+                    } catch (_) {}
                     if (_taRoom && _taBuilding) toast('โหลดบิลไม่สำเร็จ ลองปิดเปิด LINE ใหม่', 'warning');
                 });
             } catch (e) { console.warn('subscribeBillsRealtime failed:', e.message); }
@@ -12513,16 +12528,25 @@
       const _origSSP_cl = window.showSubPage;
       window.showSubPage = function(page) {
         if (page === 'checklist') {
-          // Show the page
+          // Hide all pages and show checklist. Must match the canonical
+          // showSubPage pattern (line ~4757): the CSS rule `.page { display:none }`
+          // means `style.display = ''` resolves to none — must set 'block'
+          // explicitly AND add `.active` class (anti-pattern C).
           document.querySelectorAll('.page').forEach(p => {
+            p.classList.remove('active');
             p.style.display = 'none';
-            p.classList.add('u-hidden');
+            p.style.pointerEvents = 'none';
           });
           const target = document.getElementById('checklist');
           if (target) {
-            target.style.display = '';
-            target.classList.remove('u-hidden');
+            target.classList.add('active');
+            target.style.display = 'block';
+            target.style.pointerEvents = 'auto';
+            target.style.zIndex = '20';
           }
+          // Hide bottom nav (matches canonical sub-page pattern)
+          const _navBar = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
+          if (_navBar) _navBar.style.display = 'none';
 
           // Show loading immediately so the user sees something is happening
           // even if claims take a moment to propagate.
