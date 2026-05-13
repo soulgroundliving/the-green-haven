@@ -236,17 +236,33 @@
       `
       : '';
 
+    // Audit trail — show only steps that have happened
+    const _auditSteps = [
+      { label: 'สร้างโดยแอดมิน', ts: _viewer.createdAt, icon: '📋' },
+      { label: 'ผู้เช่าส่งแบบฟอร์ม', ts: _viewer.submittedAt, icon: '📝' },
+      { label: 'แอดมินเซ็นยืนยัน', ts: _viewer.adminSignedAt, icon: '✅' },
+    ].filter(s => !!s.ts);
+    const _auditHtml = _auditSteps.length === 0 ? '' : `
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.9rem;padding:.6rem .75rem;background:#f5f5f5;border-radius:8px;">
+        ${_auditSteps.map((s, idx) => `
+          <div style="display:flex;align-items:center;gap:.3rem;font-size:.75rem;color:#444;">
+            ${idx > 0 ? '<span style="color:#bbb;">→</span>' : ''}
+            <span>${s.icon}</span>
+            <span><span style="font-weight:600;">${_esc(s.label)}</span><br><span style="color:var(--text-muted);">${_fmtDate(s.ts)}</span></span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
     body.innerHTML = `
       <div id="clv-printable" style="background:#fff;">
-        <div style="margin-bottom:1rem;">
+        <div style="margin-bottom:.75rem;">
           <div style="font-weight:700;font-size:1.1rem;">📋 Checklist — ${_typeLabel(_viewer.type)}</div>
           <div style="font-size:.85rem;color:var(--text-muted);margin-top:.25rem;">
             อาคาร: ${_esc(_viewer.building)} · ห้อง: ${_esc(_viewer.roomId || '?')} · ${_esc(_viewer.tenantName || '—')}
           </div>
-          <div style="font-size:.78rem;color:var(--text-muted);margin-top:.15rem;">
-            สร้าง: ${_fmtDate(_viewer.createdAt)} · สถานะ: ${_viewer.status}
-          </div>
         </div>
+        ${_auditHtml}
         <div>${itemsHtml}</div>
         ${tenantSigBlock}
         ${adminSigBlock}

@@ -12406,6 +12406,17 @@
         if (!_clInstance || _clUploading) return;
         if (_isSigEmpty()) { alert('กรุณาเซ็นชื่อก่อนส่ง'); return; }
 
+        // Required items check — each item needs a tick OR a note
+        const _preItems = (_clInstance.items || []).map((item, idx) => ({
+          checked: document.getElementById(`cl-check-${idx}`)?.checked || false,
+          note:    (document.getElementById(`cl-note-${idx}`)?.value || '').trim(),
+        }));
+        const _unfilled = _preItems.filter(it => !it.checked && !it.note);
+        if (_unfilled.length > 0) {
+          alert(`ยังมี ${_unfilled.length} รายการที่ยังไม่ได้ตรวจสอบ\n\nกรุณาติ๊กถูก หรือเพิ่มหมายเหตุสำหรับทุกรายการก่อนส่ง`);
+          return;
+        }
+
         const submitBtn = document.getElementById('cl-submit-btn');
         if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ กำลังส่ง...'; }
         _clUploading = true;
