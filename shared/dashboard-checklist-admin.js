@@ -136,7 +136,7 @@
             </div>
             <div style="display:flex;gap:.4rem;align-items:center;">
               ${_statusBadge(i.status)}
-              <button onclick="openChecklistInstanceViewer('${_esc(i.id)}')" style="padding:5px 12px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;">ดู</button>
+              <button data-action="openChecklistInstanceViewer" data-id="${_esc(i.id)}" style="padding:5px 12px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;">ดู</button>
             </div>
           </div>
         `).join('')}
@@ -230,7 +230,7 @@
         <div style="margin-top:1rem;padding-top:1rem;border-top:1px dashed #ddd;">
           <div style="font-size:.88rem;font-weight:600;margin-bottom:.4rem;">✍️ เซ็นที่นี่ (admin):</div>
           <canvas id="clv-admin-canvas" style="width:100%;height:160px;border:1px solid #ddd;border-radius:8px;touch-action:none;background:#fafafa;display:block;"></canvas>
-          <button onclick="clearAdminSignature()" style="margin-top:.4rem;font-size:.8rem;color:#888;background:none;border:none;cursor:pointer;">🔄 ล้างลายเซ็น</button>
+          <button data-action="clearAdminSignature" style="margin-top:.4rem;font-size:.8rem;color:#888;background:none;border:none;cursor:pointer;">🔄 ล้างลายเซ็น</button>
         </div>
       `
       : '';

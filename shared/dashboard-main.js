@@ -791,7 +791,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
     // Checklist admin co-sign + PNG export (Tier 3I-9, 3I-10)
     if (a === 'checklistAdminFilter')          { typeof window.checklistAdminFilter          === 'function' && window.checklistAdminFilter(); return; }
+    if (a === 'openChecklistInstanceViewer')   { typeof window.openChecklistInstanceViewer   === 'function' && window.openChecklistInstanceViewer(el.dataset.id); return; }
     if (a === 'closeChecklistInstanceViewer')  { typeof window.closeChecklistInstanceViewer  === 'function' && window.closeChecklistInstanceViewer(); return; }
+    if (a === 'clearAdminSignature')           { typeof window.clearAdminSignature           === 'function' && window.clearAdminSignature(); return; }
     if (a === 'adminSignChecklistSubmit')      { typeof window.adminSignChecklistSubmit      === 'function' && window.adminSignChecklistSubmit(); return; }
     if (a === 'exportChecklistPng')            { typeof window.exportChecklistPng            === 'function' && window.exportChecklistPng(); return; }
   });
