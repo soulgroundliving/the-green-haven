@@ -4,61 +4,85 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
-# Plan — Tier 1B: Monthly Expense Tracking
+# Plan — Feature F: Multi-Property Support (Tier 3)
 
 ## Why
-Expenses are currently stored in `localStorage('expense_data')` — lost on browser clear, not shared across sessions/devices, disconnected from the real revenue system. The P&L income line reads from `loadPS()` (localStorage payment slips) rather than the authoritative `taxSummary` Firestore data. This task makes expenses durable (Firestore), per-building, and wires the P&L to real revenue figures.
+
+Adding a new building today requires changes in 9+ Cloud Function files, 3 shared JS modules,
+and dashboard.html. After this session, a new property is onboarded entirely from the admin UI —
+no code changes needed.
 
 ## Key decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| YYYY-MM format in path | **CE year** (`2026-05`) | `YYYY-MM` is ISO convention → CE. BE only used in display layer. Consistent with `aggregateMonthlyRevenue` HTTP param. |
-| Firestore path | `expenses/{building}/{YYYY-MM}/{auto}` | Per user spec. building = `rooms` \| `nest`. |
-| Income source | `taxSummary/{yearBE}.months[m].totalRevenue` | CF-aggregated; already admin/accountant readable. Per-building available via `.byBuilding`. |
-| Building filter in UI | Add `rooms` / `nest` selector to form + filter | Expenses are building-scoped, so filter must match path. |
-| taxSummary income format | BE year as doc key (e.g. `2569`), month as integer key | Match existing CF output. Convert: CE `2026` → BE `2569` = CE+543. |
-| accounting/tax-filing.js | **Out of scope** | Uses a separate `accounting_expenses` localStorage key with a different schema. Separate task. |
-| New CF for expense aggregation | **Not needed** | Admin queries subcollections client-side. Small dataset. |
+| Registry | `buildings/{id}` root Firestore doc | Collection + rules already exist; admin write, signed-in read |
+| Room config | RTDB `rooms_config/{building}/{roomId}` (existing RoomConfigManager) | Proven pattern; no migration needed |
+| CF validation | `functions/buildingRegistry.js` with 5-min in-memory cache | Avoids Firestore read on every CF invocation |
+| Dashboard selector | Dynamic from Firestore; fallback to `rooms`/`nest` if empty | Zero breakage if docs don't exist yet |
+| LINE OA / LIFF | Out of scope | Single OA serves all buildings via claims; per-OA needs LINE Developer setup |
+| Multi-owner auth | Out of scope | Tier 3b |
 
-## Files to change
+## Building root-doc schema (`buildings/{id}`)
 
-| File | What changes |
-|------|-------------|
-| `firestore.rules` | Add `expenses/{building}/{monthKey}/{expId}` block |
-| `firestore.rules.test.js` | Add expenses describe block (admin CRUD, accountant read, anon denied) |
-| `dashboard.html` | Add building select to expense form + building filter in summary header |
-| `shared/dashboard-tenant-page.js` | Migrate expense CRUD localStorage→Firestore; fix P&L income from taxSummary |
+```json
+{
+  "displayName": "Nature Haven",
+  "address":     "...",
+  "promptPayId": "...",
+  "contact":     "...",
+  "status":      "active",
+  "createdAt":   serverTimestamp(),
+  "createdBy":   "uid"
+}
+```
 
-## Implementation phases
+Room config stays in RTDB `rooms_config/{building}/{roomId}` via RoomConfigManager (unchanged).
 
-- [ ] **Phase 1 — Firestore rules**: Add expenses collection after `historicalRevenue` block. Admin: read+write+delete. Accountant: read. Wildcard subcollection path: `/expenses/{building}/{monthKey}/{expId}`.
-  - Why: Without rules no client can write. Rule structure mirrors the nested path.
+## Files
 
-- [ ] **Phase 2 — Rules tests**: Add `describe('expenses — admin CRUD, accountant read, anon denied')` block in `firestore.rules.test.js`. Run `npm run test:rules` — must be green.
+| File | Change |
+|------|--------|
+| `shared/building-registry.js` | NEW — client module, loads buildings from Firestore |
+| `dashboard.html` | Add script tag; replace 3 hardcoded button sets with dynamic render; add Buildings page + nav |
+| `functions/buildingRegistry.js` | NEW — CF helper, `getValidBuildings()` + `getAllBuildings()` with 5-min cache |
+| `functions/aggregateMonthlyRevenue.js` | Replace `BUILDINGS = ['rooms','nest']` with `await getAllBuildings(db)` |
+| `functions/cleanupOldDocs.js` | Same |
+| `functions/remindLatePayments.js` | Same |
+| `functions/remindLeaseExpiry.js` | Same |
+| `functions/archiveTenantOnMoveOut.js` | Replace `VALID_BUILDINGS = new Set([...])` with `await getValidBuildings(db)` |
+| `functions/createBookingLock.js` | Same |
+| `functions/getRoomAvailability.js` | Same |
+| `functions/transitionToPlayer.js` | Same |
+| `functions/revertTransitionToPlayer.js` | Same |
+| `firestore.rules` | No change — buildings rules already correct |
+| `firestore.rules.test.js` | Add buildings CRUD describe block |
 
-- [ ] **Phase 3 — dashboard.html**: Add `<select id="exp-building">` (rooms/nest) to the expense form (beside date/category). Add the same building selector to the filter section so summary and list filter by building too.
+## Phases
 
-- [ ] **Phase 4 — Firestore CRUD in dashboard-tenant-page.js**:
-  - Drop `loadExpenses()` / `saveExpenses()` (localStorage).
-  - `addExpense()`: build `monthKey` = `${ceYear}-${String(month).padStart(2,'0')}`; call `fs.addDoc(fs.collection(db,'expenses',building,monthKey), { date, category, desc, room, amount, createdAt: fs.serverTimestamp() })`. Show loading state on button.
-  - `renderExpensePage()`: call `fs.getDocs(fs.collection(db,'expenses',building,monthKey))` → map docs. Async; show spinner while loading.
-  - `deleteExpense(building, monthKey, docId)`: call `fs.deleteDoc(fs.doc(db,'expenses',building,monthKey,docId))`. Update delete button to pass these args.
-  - Why: Data now survives browser clear; visible across admin sessions.
+- [ ] **Phase 1 — `shared/building-registry.js`**: Loads `buildings` collection (status=='active') from Firestore. Exports `window.BuildingRegistry` with `list()`, `getById(id)`. Fallback to hardcoded `rooms`/`nest` if collection empty.
 
-- [ ] **Phase 5 — P&L income from taxSummary**:
-  - Replace `loadPS()` call with `fs.getDoc(fs.doc(db,'taxSummary', String(filterYear)))`. 
-  - Extract `snap.data()?.months?.[filterMonth]?.totalRevenue ?? 0` as income.
-  - Render P&L summary: income (from taxSummary), expenses (from Firestore query), profit = income − expenses.
-  - Graceful fallback: if taxSummary doc missing for that year, income shows `฿0` with muted label "ยังไม่มีข้อมูลรายรับ".
-  - Why: P&L now reflects real collected rent/util/water instead of stale localStorage slips.
+- [ ] **Phase 2 — Admin Buildings page in `dashboard.html`**: New page section (id=`page-buildings`): building cards (id, displayName, address, status) + "เพิ่มอาคาร" button → modal form (slug, displayName, address, promptPayId, contact) → Firestore `addDoc`. Edit building via same modal pre-filled. Sidebar nav entry.
 
-- [ ] **Phase 6 — Verify on Vercel**: Push to main, open expense page on https://the-green-haven.vercel.app/dashboard.html, add one test expense, verify it persists after page reload (Firestore), verify P&L income row shows taxSummary figure.
+- [ ] **Phase 3 — Dynamic building selectors**: Replace 3 sets of hardcoded buttons (Tenant tab, Announcements tab, PVM tab) with `BuildingRegistry.list()` rendered on init. "ทุกตึก" option added where appropriate.
+
+- [ ] **Phase 4 — `functions/buildingRegistry.js`**: Helper module: `getValidBuildings(db)` → `Promise<Set<string>>`, `getAllBuildings(db)` → `Promise<string[]>`. In-memory cache, 5-min TTL. Falls back to `['rooms','nest']` if Firestore unavailable (safety net for seeding lag).
+
+- [ ] **Phase 5 — Update 9 CFs**: Iteration CFs get `await getAllBuildings(db)`. Validation CFs get `await getValidBuildings(db)`. Remove hardcoded arrays.
+
+- [ ] **Phase 6 — Firestore rules test**: Add `describe('buildings — admin CRUD, tenant read, anon denied')` block. Run `npm run test:rules`.
+
+- [ ] **Phase 7 — Seed `buildings/rooms` + `buildings/nest`**: Use the admin UI to create both buildings as proper Firestore docs so the dynamic selectors work on live.
+
+- [ ] **Phase 8 — Verify on Vercel**: Push → dashboard Buildings page visible → create test building → appears in all selectors → add a test tenant doc for that building → CF doesn't reject → delete test building.
 
 ## Out of scope
-- `accounting/tax-filing.js` expense reads — different schema, separate ticket
-- `aggregateMonthlyExpenses` CF — not needed at this scale
-- Expense export (CSV/PDF) — Tier 2
+
+- Per-building LIFF IDs
+- Per-building LINE OA
+- Multi-owner auth / SaaS billing
+- Migrating NEST_ROOMS / ROOMS_NEW to Firestore (stay as static fallback)
+- Changing `tenant_app.html` (LIFF claims already carry building info)
 
 ---
 

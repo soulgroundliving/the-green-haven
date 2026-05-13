@@ -69,6 +69,7 @@
 <script src="./shared/invoice-pdf-generator.js"></script>
 <script src="./shared/config-unified.js"></script>
 <script src="./shared/building-config.js"></script>
+<script src="./shared/building-registry.js"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 <!-- TEST/MOCK DATA REMOVED FOR PRODUCTION DEPLOYMENT -->
 <!-- (Was: mock-tenant-data.js, mock-meter-history.js, init-test-data.js) -->
@@ -2904,6 +2905,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button class="sidebar-item" data-action="showPage" data-page="people-management">
         <span class="sidebar-item-icon" aria-hidden="true">👨‍💼</span>People Management
       </button>
+      <button class="sidebar-item" data-action="showPage" data-page="buildings">
+        <span class="sidebar-item-icon" aria-hidden="true">🏘️</span>Buildings
+      </button>
       <button class="sidebar-item" data-action="goToAuditLog">
         <span class="sidebar-item-icon" aria-hidden="true">📋</span>Audit Logs
       </button>
@@ -4064,7 +4068,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <!-- TAB 1: Announcements -->
   <div id="content-tab-announcements" class="content-mgmt-content active">
     <!-- Building Selection -->
-    <div class="year-tabs" class="mb-5">
+    <div class="year-tabs mb-5" id="ann-building-tabs">
       <span class="year-tab-label">ตึก:</span>
       <button class="year-tab active" data-action="setAnnouncementBuilding" data-building="all">🌐 ทุกตึก</button>
       <button class="year-tab" data-action="setAnnouncementBuilding" data-building="rooms">🏠 ห้องแถว</button>
@@ -4795,6 +4799,57 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 </div>
 
 
+<!-- ===== BUILDINGS (MULTI-PROPERTY REGISTRY) ===== -->
+<div class="page" id="page-buildings">
+  <div class="section-title" role="heading" aria-level="2">🏘️ Buildings (Multi-Property)</div>
+  <p style="color:var(--text-muted);margin:.25rem 0 1.25rem;font-size:.9rem;">จัดการอาคารในระบบ — เพิ่มอาคารใหม่ที่นี่เพื่อให้ระบบ recognize อัตโนมัติ (CF + Dashboard)</p>
+
+  <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+    <button data-action="openBuildingModal" data-id="" class="year-tab active" style="padding:.6rem 1.2rem;font-weight:600;background:var(--green-dark);border-color:var(--green-dark);color:#fff;">+ เพิ่มอาคารใหม่</button>
+  </div>
+
+  <div id="buildings-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem;">
+    <div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted);">กำลังโหลด...</div>
+  </div>
+</div>
+
+<!-- Buildings: add/edit modal -->
+<div id="buildingFormModal" class="u-hidden" role="dialog" aria-modal="true" aria-labelledby="bld-modal-title" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:12px;max-width:520px;width:100%;padding:1.5rem;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h3 id="bld-modal-title" style="margin:0;font-size:1.1rem;">เพิ่มอาคารใหม่</h3>
+      <button data-action="closeBuildingModal" aria-label="ปิด" style="background:none;border:none;font-size:1.5rem;cursor:pointer;line-height:1;">×</button>
+    </div>
+
+    <label style="display:block;margin-bottom:.5rem;font-weight:600;font-size:.9rem;">Building ID (slug) <span style="color:#f44336;">*</span></label>
+    <input type="text" id="bld-form-id" placeholder="เช่น 'rooms', 'nest', 'green_tower_1'" maxlength="40" style="width:100%;padding:.65rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.85rem;font-family:monospace;">
+
+    <label style="display:block;margin-bottom:.5rem;font-weight:600;font-size:.9rem;">ชื่ออาคาร (display) <span style="color:#f44336;">*</span></label>
+    <input type="text" id="bld-form-displayName" placeholder="เช่น 'Nature Haven', 'Green Tower 1'" maxlength="80" style="width:100%;padding:.65rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.85rem;">
+
+    <label style="display:block;margin-bottom:.5rem;font-weight:600;font-size:.9rem;">ที่อยู่</label>
+    <input type="text" id="bld-form-address" placeholder="ที่อยู่อาคาร" maxlength="200" style="width:100%;padding:.65rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.85rem;">
+
+    <label style="display:block;margin-bottom:.5rem;font-weight:600;font-size:.9rem;">PromptPay (เบอร์โทร)</label>
+    <input type="tel" id="bld-form-promptpay" placeholder="0xxxxxxxxx" maxlength="13" style="width:100%;padding:.65rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.85rem;">
+
+    <label style="display:block;margin-bottom:.5rem;font-weight:600;font-size:.9rem;">ติดต่อ</label>
+    <input type="text" id="bld-form-contact" placeholder="เช่น เบอร์โทรนิติฯ / Line OA" maxlength="100" style="width:100%;padding:.65rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.85rem;">
+
+    <label style="display:block;margin-bottom:.5rem;font-weight:600;font-size:.9rem;">ชื่อบริษัท (ใบเสร็จ)</label>
+    <input type="text" id="bld-form-companyName" placeholder="เช่น The Green Haven Co., Ltd." maxlength="120" style="width:100%;padding:.65rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:.85rem;">
+
+    <label style="display:block;margin-bottom:.5rem;font-weight:600;font-size:.9rem;">ชื่อเจ้าของ (Owner)</label>
+    <input type="text" id="bld-form-ownerName" placeholder="ชื่อเจ้าของอาคาร" maxlength="120" style="width:100%;padding:.65rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:1.25rem;">
+
+    <div style="display:flex;gap:.5rem;">
+      <button data-action="closeBuildingModal" style="flex:1;padding:.7rem;background:#fff;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-weight:600;">ยกเลิก</button>
+      <button id="bld-form-save-btn" data-action="saveBuildingForm" style="flex:2;padding:.7rem;background:var(--green-dark);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- ===== PET REGISTRATIONS APPROVAL ===== -->
 <div class="page" id="page-requests-approvals">
   <div class="section-title" role="heading" aria-level="2">✅ Requests & Approvals</div>
@@ -5198,6 +5253,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-broadcast.js"></script>
 <script src="./shared/dashboard-content-features.js"></script>
 <script src="./shared/dashboard-payment-verify.js"></script>
+<script src="./shared/dashboard-buildings.js"></script>
 
 <!-- ===== PAYMENT DETAIL MODAL ===== -->
 <div class="pay-modal-overlay" id="payModalOverlay" role="dialog" aria-modal="true" aria-labelledby="payModalTitle" data-action="closePayModalIfOverlay">

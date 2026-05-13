@@ -926,3 +926,67 @@ describe('deposits — admin write, accountant read, tenants denied', () => {
     await assertFails(getDoc(doc(UNAUTH().firestore(), DEP_PATH)));
   });
 });
+
+describe('buildings — admin CRUD, signed-in read (Multi-Property registry)', () => {
+  const BLD_PATH = 'buildings/test_b1';
+  const BLD_DATA = {
+    displayName: 'Test Building 1',
+    address: '123 Test Road',
+    promptPayId: '0812345678',
+    contact: '',
+    companyName: '',
+    ownerName: '',
+    status: 'active'
+  };
+
+  it('admin can create a building doc', async () => {
+    await assertSucceeds(setDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH), BLD_DATA));
+  });
+
+  it('admin can update a building doc', async () => {
+    await seedDoc(BLD_PATH, BLD_DATA);
+    await assertSucceeds(updateDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH), { displayName: 'Renamed' }));
+  });
+
+  it('admin can archive a building (status update)', async () => {
+    await seedDoc(BLD_PATH, BLD_DATA);
+    await assertSucceeds(updateDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH), { status: 'archived' }));
+  });
+
+  it('admin can read a building doc', async () => {
+    await seedDoc(BLD_PATH, BLD_DATA);
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), BLD_PATH)));
+  });
+
+  it('LIFF tenant can read a building doc (needed for tenant_app display name)', async () => {
+    await seedDoc(BLD_PATH, BLD_DATA);
+    await assertSucceeds(getDoc(doc(LIFF_TENANT().firestore(), BLD_PATH)));
+  });
+
+  it('LIFF tenant CANNOT create a building doc', async () => {
+    await assertFails(setDoc(doc(LIFF_TENANT().firestore(), BLD_PATH), BLD_DATA));
+  });
+
+  it('LIFF tenant CANNOT update a building doc', async () => {
+    await seedDoc(BLD_PATH, BLD_DATA);
+    await assertFails(updateDoc(doc(LIFF_TENANT().firestore(), BLD_PATH), { displayName: 'Hacked' }));
+  });
+
+  it('accountant can read a building doc', async () => {
+    await seedDoc(BLD_PATH, BLD_DATA);
+    await assertSucceeds(getDoc(doc(ACCOUNTANT().firestore(), BLD_PATH)));
+  });
+
+  it('accountant CANNOT write a building doc', async () => {
+    await assertFails(setDoc(doc(ACCOUNTANT().firestore(), BLD_PATH), BLD_DATA));
+  });
+
+  it('unauthenticated CANNOT read a building doc', async () => {
+    await seedDoc(BLD_PATH, BLD_DATA);
+    await assertFails(getDoc(doc(UNAUTH().firestore(), BLD_PATH)));
+  });
+
+  it('unauthenticated CANNOT create a building doc', async () => {
+    await assertFails(setDoc(doc(UNAUTH().firestore(), BLD_PATH), BLD_DATA));
+  });
+});

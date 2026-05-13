@@ -21,7 +21,7 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
-const VALID_BUILDINGS = ['rooms', 'nest'];
+const { getValidBuildings } = require('./buildingRegistry');
 
 exports.getRoomAvailability = functions.region('asia-southeast1').https.onCall(async (data, context) => {
   if (!context.auth || !context.auth.uid) {
@@ -34,7 +34,8 @@ exports.getRoomAvailability = functions.region('asia-southeast1').https.onCall(a
   }
 
   const { building } = data || {};
-  if (!building || !VALID_BUILDINGS.includes(String(building).toLowerCase())) {
+  const validBuildings = await getValidBuildings();
+  if (!building || !validBuildings.has(String(building).toLowerCase())) {
     throw new functions.https.HttpsError('invalid-argument', `Unknown building: ${building}`);
   }
   const canonicalBuilding = String(building).toLowerCase();

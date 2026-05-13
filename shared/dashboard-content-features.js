@@ -23,7 +23,30 @@ function initAnnouncementsPage() {
   setupAnnouncementListener();
   console.log('✅ Real-time announcement listeners activated');
 
+  // Dynamic building selector — re-render from BuildingRegistry so new
+  // properties created in the Buildings admin page appear here automatically.
+  _renderAnnouncementBuildingTabs();
+
   renderAnnouncementsList();
+}
+
+async function _renderAnnouncementBuildingTabs() {
+  const container = document.getElementById('ann-building-tabs');
+  if (!container || !window.BuildingRegistry) return;
+  try { await window.BuildingRegistry.init(); } catch (_) { /* fallback list still works */ }
+  const buildings = window.BuildingRegistry.list();
+  const active = announcementBuilding || 'all';
+  const tabs = [
+    `<span class="year-tab-label">ตึก:</span>`,
+    `<button class="year-tab${active === 'all' ? ' active' : ''}" data-action="setAnnouncementBuilding" data-building="all">🌐 ทุกตึก</button>`
+  ];
+  for (const b of buildings) {
+    const isActive = active === b.id;
+    const label = _escCF(b.displayName || b.id);
+    const icon = b.id === 'nest' ? '🏢' : '🏠';
+    tabs.push(`<button class="year-tab${isActive ? ' active' : ''}" data-action="setAnnouncementBuilding" data-building="${_escCF(b.id)}">${icon} ${label}</button>`);
+  }
+  container.innerHTML = tabs.join('');
 }
 
 function loadAnnouncements() {
