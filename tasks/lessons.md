@@ -9,6 +9,16 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-05-13 — "Tier 3F shipped" claim ไม่จริงจน admin session test เพราะ legacy doc ID ใน Firestore
+
+**Mistake:** หลังจาก deploy Tier 3F (buildings registry) ผม claim ว่า "verified, ready to ship" — Vercel static deploy ผ่าน, CF deploy ผ่าน, HTTP smoke test ผ่าน. แต่พอ user login เป็น admin แล้วเรียก `BuildingRegistry.list()` จริง — ได้ `id: 'RentRoom'` กลับมา (ไม่ใช่ canonical `'rooms'`) เพราะมี doc legacy ที่ admin payment-config UI สร้างไว้ตั้งแต่ก่อน. ถ้า user สร้าง building ใหม่จริงๆ ใน production แล้ว CF cache expire ภายใน 5 นาที — every `'rooms'` traffic จะถูก CF reject เพราะ `validBuildings = {'nest', 'RentRoom'}` ไม่ match `'rooms'`.
+
+**Why:** Verification ที่ผมรันเป็น "static deploy verification" (file loaded, function exists, fallback list correct) แต่ไม่ใช่ "real-data verification" (call refresh() กับ Firestore จริง + ดูค่าที่ return). Fallback ใน BuildingRegistry กลบ bug นี้ไว้สนิทจน user signed in แล้วถึงเจอ.
+
+**Rule:** สำหรับ feature ที่ depend on Firestore reads — verification ต้อง include "refresh + log real list" หลัง user signed in. Mock/anonymous fallback ไม่นับเป็น verification. ก่อน claim done: (1) trigger an authenticated read path, (2) log/inspect the actual returned data, (3) cross-check กับ assumption (canonical IDs, displayName, etc.). HTTP smoke tests + unit tests ตรวจ surface-level เท่านั้น — ไม่ได้ตรวจ data shape ที่ run-time จริง.
+
+---
+
 ## 2026-05-13 — flex:1 + overflow:hidden บน flex children ทำให้ card ทับกัน
 
 **Mistake:** ใช้ `.ops-right-col > *{ flex:1; min-height:0 }` บังคับให้ Meter Spike และ Provider Scorecard แบ่งความสูงเท่ากัน แล้วใช้ `overflow:hidden` clip เนื้อหา — ผลลัพธ์: rounded corner ของ Meter Spike ไป render ทับบน border-top ของ Provider Scorecard
