@@ -140,8 +140,20 @@ function _pvEscape(text) {
   return String(text == null ? '' : text).replace(/[&<>"']/g, m => map[m]);
 }
 
+// Backfilled entries store paidAt (when admin processed) as timestamp, not the billing period.
+// The billing month is embedded in the docId: manual_{building}_{room}_{yearBE}_{month}.
+// For filtering and display, use that encoded date; real slips use their actual timestamp.
+function _pvEffectiveDate(s) {
+  if (s.sender === '(backfilled from RTDB)') {
+    const id = s.transactionId || s.id || '';
+    const m = id.match(/_(\d{4})_(\d{1,2})$/);
+    if (m) return new Date(parseInt(m[1]) - 543, parseInt(m[2]) - 1, 5, 12, 0, 0);
+  }
+  return s.timestamp?.toDate ? s.timestamp.toDate() : new Date(s.timestamp || s.verifiedAt);
+}
+
 function _pvInRange(slip) {
-  const ts = slip.timestamp?.toDate ? slip.timestamp.toDate() : new Date(slip.timestamp || slip.verifiedAt);
+  const ts = _pvEffectiveDate(slip);
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const weekStart = new Date(todayStart - 6 * 86400000);
@@ -157,9 +169,8 @@ function updatePVStats(slips) {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const toDate = s => s.timestamp?.toDate ? s.timestamp.toDate() : new Date(s.timestamp || s.verifiedAt);
-  const todaySlips = slips.filter(s => toDate(s) >= todayStart);
-  const monthSlips = slips.filter(s => toDate(s) >= monthStart);
+  const todaySlips = slips.filter(s => _pvEffectiveDate(s) >= todayStart);
+  const monthSlips = slips.filter(s => _pvEffectiveDate(s) >= monthStart);
   const monthTotal = monthSlips.reduce((sum, s) => sum + (s.amount || 0), 0);
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   set('pv-today-count', todaySlips.length);
@@ -180,7 +191,7 @@ function renderPVFeed(slips) {
   }
   const bankName = code => ({'004':'กสิกรไทย','014':'ไทยพาณิชย์','025':'กรุงไทย','002':'กรุงเทพ','006':'กรุงศรี','011':'TMB','065':'ทิสโก้','069':'เกียรตินาคิน','022':'CIMB','067':'ทีทีบี'})[code] || (code || '—');
   feed.innerHTML = filtered.map(s => {
-    const ts = s.timestamp?.toDate ? s.timestamp.toDate() : new Date(s.timestamp || s.verifiedAt);
+    const ts = _pvEffectiveDate(s);
     const timeStr = ts.toLocaleString('th-TH', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
     const amountOk = !s.expectedAmount || Math.abs(s.amount - s.expectedAmount) < 1;
     return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
