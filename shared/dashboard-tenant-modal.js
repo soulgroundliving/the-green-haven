@@ -263,6 +263,12 @@ function openTenantModal(building, roomId) {
   modal.style.display = 'flex';
   modal.classList.remove('u-hidden');
 
+  // Always start at the top — browsers persist scrollTop on the scrollable
+  // container across hide/show, so re-opening the modal for a different room
+  // would land mid-form. The inner wrapper carries `overflow-y:auto`.
+  const scrollContainer = modal.firstElementChild;
+  if (scrollContainer) scrollContainer.scrollTop = 0;
+
   // Initialize phone validation for the modal
   setTimeout(function() {
     if (typeof initPhoneValidation === 'function') initPhoneValidation();
