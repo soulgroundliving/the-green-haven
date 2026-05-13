@@ -1869,7 +1869,7 @@ async function facilityOpenConfig(facilityType) {
 /** Close the config modal. */
 function facilityCloseConfig() {
   const modal = document.getElementById('facility-config-modal');
-  if (modal) modal.style.display = '';
+  if (modal) modal.style.display = 'none';
 }
 
 /** Parse + save facility config from modal inputs. */

@@ -221,7 +221,7 @@
 
   function closeChecklistEditor() {
     const modal = document.getElementById('checklist-template-modal');
-    if (modal) modal.style.display = '';
+    if (modal) modal.style.display = 'none';
   }
 
   async function saveChecklistTemplate() {
