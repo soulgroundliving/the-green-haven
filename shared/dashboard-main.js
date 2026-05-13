@@ -127,6 +127,9 @@ window.switchBillingMainTab = function(tab, btn) {
   // initPaymentVerify is idempotent (unsubscribes prior listener) — safe to call on every verify-side switch
   if (tab !== 'billing' && typeof initPaymentVerify === 'function') initPaymentVerify();
   if (tab === 'monthly' && typeof window._pvPrefillMonthly === 'function') window._pvPrefillMonthly();
+  // Append extra building tabs to PVM selector on every monthly-tab activation
+  // (idempotent — removes prior data-dynamic buttons first).
+  if (tab === 'monthly' && typeof window._renderPVMBuildingTabs === 'function') window._renderPVMBuildingTabs();
 };
 
 // Meter Tab Switching Function

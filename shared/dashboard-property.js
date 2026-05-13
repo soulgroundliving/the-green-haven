@@ -881,3 +881,61 @@ function updateRoomsInfoCards() {
   set('rooms-total-breakdown', `${totalRooms} ห้องพัก + 1 พาณิชย์`);
 }
 
+// ============================================================================
+// Generic per-building page — for any building beyond rooms/nest. Renders a
+// basic room grid + KPI strip into #tenant-generic-section. Used by
+// setTenantBuilding when the selected building is not one of the legacy two.
+// ============================================================================
+
+// Resolve a room array for any building id. Order of preference:
+//   1. RoomConfigManager.getRoomsConfig(building) — admin-edited config
+//   2. Legacy hardcoded array for rooms/nest
+//   3. Empty array
+function _getRoomsList(building) {
+  if (!building) return [];
+  let fallback = null;
+  if (building === 'rooms') fallback = window.ROOMS_OLD || null;
+  else if (building === 'nest') fallback = window.NEST_ROOMS || null;
+  try {
+    if (typeof getActiveRoomsWithMetadata === 'function') {
+      return getActiveRoomsWithMetadata(building, fallback) || [];
+    }
+  } catch (_) {}
+  return Array.isArray(fallback) ? fallback.slice() : [];
+}
+
+function initGenericBuildingPage(building) {
+  const statsEl = document.getElementById('tenant-generic-stats');
+  if (!statsEl) return;
+  const rooms = _getRoomsList(building);
+  const displayName = (window.BuildingConfig?.getDisplayName?.(building)) || building;
+
+  const allTenants = (typeof loadTenants === 'function') ? loadTenants() : {};
+  const _esc = s => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  let occupied = 0, vacant = 0, totalIncome = 0;
+  rooms.forEach(r => {
+    const t = allTenants[r.id];
+    if (t && t.name) { occupied++; totalIncome += Number(r.rentPrice) || 0; }
+    else vacant++;
+  });
+  const total = rooms.length;
+  const rate = total ? Math.round((occupied / total) * 100) : 0;
+
+  statsEl.innerHTML = `
+    <span style="font-weight:700;">🏘️ ${_esc(displayName)} · ${total} ห้อง</span>
+    <span class="color-silver">|</span>
+    <span style="color:var(--ok-dark);">👤 <b>${occupied}</b> มีผู้เช่า</span>
+    <span class="color-silver">|</span>
+    <span style="color:var(--accent-dark);">🚪 <b>${vacant}</b> ว่าง</span>
+    <span class="color-silver">|</span>
+    <span style="color:#6a1b9a;">📊 <b>${rate}%</b></span>
+    <span style="margin-left:auto;color:var(--green-dark);font-weight:700;">💰 ฿${totalIncome.toLocaleString()}/เดือน</span>
+  `;
+}
+
+window._getRoomsList = _getRoomsList;
+window.initGenericBuildingPage = initGenericBuildingPage;
+
