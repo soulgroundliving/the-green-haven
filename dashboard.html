@@ -4863,8 +4863,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
 <!-- ===== CHECKLIST TEMPLATE EDITOR MODAL (Tier 3I) ===== -->
 <div id="checklist-template-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9997;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:16px;padding:1.5rem;width:94%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);">
-    <div style="font-weight:700;font-size:1.05rem;margin-bottom:.25rem;">🗒️ Checklist Template</div>
+  <div style="position:relative;background:#fff;border-radius:16px;padding:1.5rem;width:94%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+    <button data-action="closeChecklistEditor" aria-label="ปิด" style="position:absolute;top:.75rem;right:.75rem;width:32px;height:32px;border-radius:50%;background:var(--green-dark);color:#fff;border:none;cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;">✕</button>
+    <div style="font-weight:700;font-size:1.05rem;margin-bottom:.25rem;padding-right:2rem;">🗒️ Checklist Template</div>
     <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">อาคาร: <strong id="clt-building-label"></strong></div>
     <label style="display:block;margin-bottom:.4rem;font-size:.88rem;font-weight:600;">รายการตรวจ (หนึ่งบรรทัด = หนึ่งรายการ)</label>
     <textarea id="clt-items" rows="12" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;font-family:inherit;font-size:.875rem;margin-bottom:1rem;" placeholder="เช่น:&#10;ประตูห้อง&#10;กุญแจ&#10;เครื่องปรับอากาศ&#10;ตู้เย็น&#10;..."></textarea>
@@ -5144,8 +5145,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
     <!-- Config edit modal -->
     <div id="facility-config-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9998;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:16px;padding:1.5rem;width:94%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);">
-        <div style="font-weight:700;font-size:1.05rem;margin-bottom:1rem;">⚙️ ตั้งค่า Facility</div>
+      <div style="position:relative;background:#fff;border-radius:16px;padding:1.5rem;width:94%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+        <button data-action="facilityCloseConfig" aria-label="ปิด" style="position:absolute;top:.75rem;right:.75rem;width:32px;height:32px;border-radius:50%;background:var(--green-dark);color:#fff;border:none;cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;">✕</button>
+        <div style="font-weight:700;font-size:1.05rem;margin-bottom:1rem;padding-right:2rem;">⚙️ ตั้งค่า Facility</div>
         <label style="display:block;margin-bottom:.4rem;font-size:.88rem;font-weight:600;">ประเภท</label>
         <select id="fc-type" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;margin-bottom:.85rem;">
           <option value="parking">🅿️ ที่จอดรถ</option>
