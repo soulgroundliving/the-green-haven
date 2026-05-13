@@ -213,6 +213,18 @@
     return res.data;
   }
 
+  /**
+   * Admin deletes a checklist instance (Firestore doc + all Storage assets
+   * under checklists/{building}/{roomId}/{instanceId}/).
+   * @param {string} instanceId
+   * @returns {Promise<{ deleted: true, storageFilesDeleted: number }>}
+   */
+  async function deleteInstance(instanceId) {
+    const fn = _httpsCallable('deleteChecklistInstance');
+    const res = await fn({ instanceId });
+    return res.data;
+  }
+
   // ── Export ────────────────────────────────────────────────────────────
 
   window.ChecklistManager = {
@@ -227,5 +239,6 @@
     getSignedUrl,
     submitChecklist,
     adminSignChecklist,
+    deleteInstance,
   };
 })();

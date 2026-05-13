@@ -15,6 +15,7 @@ exports.cancelFacilityBooking = require('./cancelFacilityBooking').cancelFacilit
 exports.createChecklistInstance = require('./createChecklistInstance').createChecklistInstance;
 exports.submitChecklist          = require('./submitChecklist').submitChecklist;
 exports.adminSignChecklist       = require('./adminSignChecklist').adminSignChecklist;
+exports.deleteChecklistInstance  = require('./deleteChecklistInstance').deleteChecklistInstance;
 
 // Admin-only: publish in-app announcement to tenants (broadcastMessages/{id})
 // In-app only — no LINE Multicast (free tier 200/mo too low; deferred).

@@ -266,6 +266,7 @@
     const canExport = _viewer.status === 'admin_signed' || _viewer.status === 'submitted';
     footer.innerHTML = `
       <button data-action="closeChecklistInstanceViewer" style="flex:1;min-width:100px;padding:10px 16px;background:var(--border);color:var(--text);border:none;border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer;">ปิด</button>
+      <button data-action="deleteChecklistInstanceFromViewer" style="flex:0 0 auto;padding:10px 14px;background:#fff;color:#c62828;border:1px solid #ef9a9a;border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer;" title="ลบ checklist นี้ถาวร (รวมรูปและลายเซ็น)">🗑️ ลบ</button>
       ${canExport ? `<button data-action="exportChecklistPng" style="flex:1;min-width:120px;padding:10px 16px;background:#1565c0;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer;">⬇️ ดาวน์โหลด PNG</button>` : ''}
       ${canSign ? `<button id="clv-sign-btn" data-action="adminSignChecklistSubmit" style="flex:2;min-width:160px;padding:10px 16px;background:var(--green-dark);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;">✍️ บันทึกลายเซ็น</button>` : ''}
     `;
@@ -361,6 +362,28 @@
     }
   }
 
+  // ── Delete (3I-12) ────────────────────────────────────────────────────────
+
+  async function deleteChecklistInstanceFromViewer() {
+    if (!_viewer || !window.ChecklistManager) return;
+    const proceed = window.confirm(
+      `ลบ checklist นี้ถาวร?\n\n` +
+      `ห้อง ${_viewer.roomId} · ${_viewer.tenantName || '—'}\n` +
+      `${_typeLabel(_viewer.type)} · สถานะ ${_viewer.status}\n\n` +
+      `รวมรูปถ่ายและลายเซ็นใน Storage — ย้อนกลับไม่ได้`
+    );
+    if (!proceed) return;
+    try {
+      const res = await window.ChecklistManager.deleteInstance(_viewer.id);
+      const n = res?.storageFilesDeleted ?? 0;
+      window.showToast?.(`🗑️ ลบ checklist สำเร็จ (storage: ${n} ไฟล์)`, 'success');
+      closeChecklistInstanceViewer();
+    } catch (err) {
+      console.error('deleteChecklistInstance error:', err);
+      window.showToast?.('ลบไม่สำเร็จ: ' + (err.message || err), 'error');
+    }
+  }
+
   // ── PNG export (3I-10) ────────────────────────────────────────────────────
 
   async function exportChecklistPng() {
@@ -417,4 +440,5 @@
   window.clearAdminSignature           = clearAdminSignature;
   window.adminSignChecklistSubmit      = adminSignChecklistSubmit;
   window.exportChecklistPng            = exportChecklistPng;
+  window.deleteChecklistInstanceFromViewer = deleteChecklistInstanceFromViewer;
 })();
