@@ -784,7 +784,7 @@
     <div>
       <label class="filter-label">เลือกวันที่ย้ายเข้า</label>
       <div id="dateStrip" class="date-strip" aria-label="เลือกวันที่ย้ายเข้า"></div>
-      <div style="font-size: var(--text-xs); color: var(--brand-primary-dark); margin-top: var(--space-1);">🎁 จุด • = จองล่วงหน้า ≥ 30 วัน รับ 500 แต้ม Early Bird (เฉพาะ Nest)</div>
+      <div id="earlyBirdHint" style="font-size: var(--text-xs); color: var(--brand-primary-dark); margin-top: var(--space-1); display:none;">🎁 จุด • = จองล่วงหน้า ≥ 30 วัน รับ 500 แต้ม Early Bird (เฉพาะ Nest)</div>
     </div>
 
     <div id="roomsList" class="rooms-list"></div>
@@ -1404,6 +1404,8 @@
       document.getElementById('filterFloor').value = '';
       document.getElementById('filterType').value = '';
     }
+    const ebHint = document.getElementById('earlyBirdHint');
+    if (ebHint) ebHint.style.display = isNest ? '' : 'none';
   }
 
   // ── Render: date strip ────────────────────────────────────
@@ -1422,7 +1424,7 @@
       def.setDate(def.getDate() + 30);
       state.selectedDate = isoDate(def);
     }
-    for (let i = 0; i < DAY_COUNT; i++) {
+    for (let i = 1; i <= DAY_COUNT; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() + i);
       const iso = isoDate(d);
