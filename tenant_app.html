@@ -8223,6 +8223,8 @@
                             userPoints = pts;
                             if (typeof loadGamificationData === 'function') loadGamificationData();
                             if (typeof updateUserPointsUI === 'function') updateUserPointsUI();
+                            const lastPts = parseInt(sessionStorage.getItem('_badgeCheckPts') || '-1');
+                            if (pts !== lastPts) { sessionStorage.setItem('_badgeCheckPts', String(pts)); _checkBadgesViaFF(); }
                         }
                         const badges = Array.isArray(gam.badges) ? gam.badges : [];
                         _lastKnownBadges = badges;
@@ -8415,8 +8417,14 @@
         }
 
         function _checkBadgesViaFF() {
-            if (!window.firebase?.functions || !window._taBuilding || !window._taRoom || window._gamificationDisabled) return;
+            if (!window.firebase?.functions || window._gamificationDisabled) return;
             const callable = window.firebase.functions.httpsCallable('checkAndAwardBadges');
+            if (window._isPlayerMode && window._playerProfile?.tenantId) {
+                callable({ tenantId: window._playerProfile.tenantId })
+                    .catch(e => console.warn('badge check (player) failed:', e.message));
+                return;
+            }
+            if (!window._taBuilding || !window._taRoom) return;
             callable({ building: _taBuilding, roomId: String(_taRoom) })
                 .catch(e => console.warn('badge check failed:', e.message));
         }

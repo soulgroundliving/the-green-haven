@@ -317,15 +317,51 @@ exports.awardComplaintFreeMonth = functions.region('asia-southeast1').pubsub
     return result;
   });
 
+// Extracted for unit testing — called by checkAndAwardBadges when tenantId is provided.
+async function _runCheckAndAwardBadgesPlayer(tenantId, authToken) {
+  const tok = authToken || {};
+  if (!tok.admin && tok.tenantId !== String(tenantId)) {
+    throw new functions.https.HttpsError('permission-denied', 'Not authorized to check badges for this player');
+  }
+  const peopleRef = firestore.collection('people').doc(String(tenantId));
+  const peopleDoc = await peopleRef.get();
+  if (!peopleDoc.exists) {
+    throw new functions.https.HttpsError('not-found', 'Player not found');
+  }
+  const playerData = peopleDoc.data();
+  const points = playerData.gamification?.points || 0;
+  const rawBadges = playerData.gamification?.badges || [];
+  const now = new Date().toISOString();
+  const normalised = normaliseBadges(rawBadges, now);
+  const earnedIds = new Set(normalised.map(badgeId));
+  const toAward = BADGE_CATALOG.filter(c => !earnedIds.has(c.id) && points >= c.minPts)
+    .map(c => ({ id: c.id, emoji: c.emoji, label: c.label, earnedAt: now }));
+  if (toAward.length > 0) {
+    await peopleRef.update({ 'gamification.badges': [...normalised, ...toAward] });
+    toAward.forEach(b => console.log(`🎖️ Awarded "${b.label}" to player ${tenantId}`));
+  }
+  return { success: true, badgesAwarded: toAward.length, newBadges: toAward };
+}
+exports._runCheckAndAwardBadgesPlayer = _runCheckAndAwardBadgesPlayer;
+
 /**
  * Check and award badges based on points milestones.
- * Accepts { building, roomId } — uses canonical tenants/{building}/list/{roomId} path.
+ *
+ * Accepts either:
+ *   { building, roomId } — active tenant path (tenants/{b}/list/{r}.gamification)
+ *   { tenantId }         — player path (people/{tenantId}.gamification)
+ *
  * Stores badges as [{ id, emoji, label, earnedAt }] (migrates legacy string[] automatically).
  * BADGE_CATALOG is imported from shared/gamification-rules.js (SSoT).
  */
 exports.checkAndAwardBadges = functions.region('asia-southeast1').https.onCall(async (data, context) => {
   try {
-    const { building, roomId } = data;
+    const { building, roomId, tenantId } = data;
+
+    // ── Player path ──────────────────────────────────────────────────────────
+    if (tenantId) return await _runCheckAndAwardBadgesPlayer(tenantId, context.auth?.token);
+
+    // ── Active tenant path ───────────────────────────────────────────────────
     if (!building || !roomId) {
       throw new functions.https.HttpsError('invalid-argument', 'building and roomId are required');
     }
