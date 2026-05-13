@@ -931,6 +931,16 @@ async function openChecklistModal() {
       type,
     });
     showToast(`✅ สร้าง checklist ${typeText} แล้ว — ผู้เช่าจะเห็นใน app`, 'success');
+
+    // Auto-navigate to Checklists tab so admin can see the new instance immediately
+    if (typeof window.showPage === 'function') {
+      window.showPage('requests-approvals');
+      setTimeout(() => {
+        const tabBtn = document.getElementById('tab-checklist-btn');
+        if (typeof switchRequestsTab === 'function') switchRequestsTab('checklist', tabBtn);
+        if (typeof window.setChecklistAdminBuilding === 'function') window.setChecklistAdminBuilding(building);
+      }, 150);
+    }
   } catch (err) {
     console.error('openChecklistModal error:', err);
     showToast('สร้างไม่สำเร็จ: ' + (err.message || err), 'error');

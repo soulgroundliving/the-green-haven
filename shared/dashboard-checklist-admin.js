@@ -397,10 +397,21 @@
     }
   }
 
+  // ── External API ──────────────────────────────────────────────────────────
+
+  function setChecklistAdminBuilding(buildingId) {
+    if (!buildingId) return;
+    const sel = document.getElementById('checklist-admin-building');
+    if (sel) sel.value = buildingId;
+    _currentBuilding = buildingId;
+    _subscribe();
+  }
+
   // ── Export ────────────────────────────────────────────────────────────────
 
   window.initChecklistAdminTab         = initChecklistAdminTab;
   window.checklistAdminFilter          = checklistAdminFilter;
+  window.setChecklistAdminBuilding     = setChecklistAdminBuilding;
   window.openChecklistInstanceViewer   = openChecklistInstanceViewer;
   window.closeChecklistInstanceViewer  = closeChecklistInstanceViewer;
   window.clearAdminSignature           = clearAdminSignature;
