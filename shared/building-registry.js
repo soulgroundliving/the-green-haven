@@ -44,13 +44,29 @@
     const fs = window.firebase.firestoreFunctions;
     try {
       const snap = await fs.getDocs(fs.collection(db, 'buildings'));
-      const list = [];
+      const byCanonical = new Map();
       snap.forEach(doc => {
         const data = doc.data() || {};
         if (data.status && data.status !== 'active') return;
-        list.push({
-          id: doc.id,
-          displayName: data.displayName || data.name || doc.id,
+        // Normalize legacy Firestore doc IDs (e.g. 'RentRoom' → 'rooms') so the
+        // registry presents canonical IDs everywhere. Multiple legacy docs that
+        // alias to the same canonical merge into one entry (first-wins, with
+        // displayName preferring a value that isn't the raw doc ID).
+        const canonical = (window.BuildingConfig?.normalizeId?.(doc.id)) || doc.id;
+        const legacyDocId = doc.id !== canonical ? doc.id : null;
+        // Prefer Firestore displayName, but treat a value that equals the raw
+        // doc ID as a placeholder (legacy `saveBuildingPaymentConfig` auto-
+        // filled `displayName: doc.id` for 'nest' and 'RentRoom'). Fall back to
+        // BuildingConfig's human-readable name in that case.
+        const rawName = (data.displayName || data.name || '').trim();
+        const isPlaceholder = !rawName || rawName === doc.id;
+        const displayName = isPlaceholder
+          ? ((window.BuildingConfig?.getDisplayName?.(canonical)) || canonical)
+          : rawName;
+        const entry = {
+          id: canonical,
+          legacyDocId,
+          displayName,
           address: data.address || '',
           promptPayId: data.promptPayId || data.promptpayNumber || '',
           contact: data.contact || '',
@@ -59,8 +75,12 @@
           status: data.status || 'active',
           createdAt: data.createdAt || null,
           createdBy: data.createdBy || null
-        });
+        };
+        const existing = byCanonical.get(canonical);
+        if (!existing) byCanonical.set(canonical, entry);
+        else if (existing.legacyDocId && !entry.legacyDocId) byCanonical.set(canonical, entry);
       });
+      const list = Array.from(byCanonical.values());
       if (list.length === 0) return FALLBACK.slice();
       list.sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), 'th'));
       return list;
@@ -132,7 +152,11 @@
     if (!id) throw new Error('id ว่าง');
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
-    const ref = fs.doc(db, 'buildings', id);
+    // If the entry came from a legacy doc (e.g. 'RentRoom'), write to that
+    // exact path — otherwise canonical 'rooms' would create a duplicate doc.
+    const entry = getById(id);
+    const docId = entry?.legacyDocId || id;
+    const ref = fs.doc(db, 'buildings', docId);
     const allowed = ['displayName', 'address', 'promptPayId', 'contact', 'companyName', 'ownerName', 'status'];
     const clean = {};
     for (const k of allowed) {

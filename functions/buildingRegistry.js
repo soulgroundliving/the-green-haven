@@ -27,6 +27,20 @@ const admin = require('firebase-admin');
 const STATIC_FALLBACK = ['rooms', 'nest'];
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
+// Keep aligned with shared/building-config.js ALIASES. A handful of legacy
+// Firestore building doc IDs (notably 'RentRoom') resolve to canonical IDs
+// used in every other path (tenants/{b}/list/, bills/{b}/, meter_data/{b}).
+// Without this, CFs receive `building='rooms'` from clients but the registry
+// returns 'RentRoom' from Firestore → validation rejects everything.
+const ALIASES = {
+  rooms: 'rooms',
+  old: 'rooms',
+  RentRoom: 'rooms',
+  nest: 'nest',
+  new: 'nest'
+};
+function _canonical(id) { return ALIASES[id] || id; }
+
 let _cache = null;
 let _cacheTime = 0;
 
@@ -35,17 +49,17 @@ async function _fetch() {
     if (!admin.apps.length) admin.initializeApp();
     const fs = admin.firestore();
     const snap = await fs.collection('buildings').get();
-    const ids = [];
+    const ids = new Set();
     snap.forEach((doc) => {
       const data = doc.data() || {};
       // Skip explicitly archived buildings. Treat any other value (including
       // undefined) as active for backward compat with docs that pre-date the
       // `status` field.
       if (data.status === 'archived' || data.status === 'inactive') return;
-      ids.push(doc.id);
+      ids.add(_canonical(doc.id));
     });
-    if (ids.length === 0) return STATIC_FALLBACK.slice();
-    return ids;
+    if (ids.size === 0) return STATIC_FALLBACK.slice();
+    return Array.from(ids);
   } catch (err) {
     console.warn('[buildingRegistry] Firestore fetch failed, using fallback:', err && err.message ? err.message : err);
     return STATIC_FALLBACK.slice();
