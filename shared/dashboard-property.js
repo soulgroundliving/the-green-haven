@@ -908,7 +908,9 @@ function initGenericBuildingPage(building) {
   const statsEl = document.getElementById('tenant-generic-stats');
   if (!statsEl) return;
   const rooms = _getRoomsList(building);
-  const displayName = (window.BuildingConfig?.getDisplayName?.(building)) || building;
+  const displayName = (window.BuildingRegistry?.getById?.(building)?.displayName)
+    || (window.BuildingConfig?.getDisplayName?.(building))
+    || building;
 
   const allTenants = (typeof loadTenants === 'function') ? loadTenants() : {};
   const _esc = s => String(s == null ? '' : s)
