@@ -6973,7 +6973,8 @@
                         reportedAt: ticket.reportedAt || new Date().toISOString().split('T')[0],
                         beforePhoto: ticket.beforePhoto || null,
                         photoFileName: ticket.photoFileName || null,
-                        createdAt: new Date().toISOString()
+                        createdAt: new Date().toISOString(),
+                        tenantUid: window.firebaseAuth?.currentUser?.uid || null
                     };
                     window.firebaseSet(window.firebaseRef(window.firebaseDatabase, path), payload);
                 }

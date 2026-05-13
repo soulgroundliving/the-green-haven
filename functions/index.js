@@ -21,6 +21,9 @@ exports.deleteChecklistInstance  = require('./deleteChecklistInstance').deleteCh
 // In-app only — no LINE Multicast (free tier 200/mo too low; deferred).
 exports.broadcastMessage = require('./broadcastMessage').broadcastMessage;
 
+// Admin-only: LINE push to tenant when maintenance ticket status changes.
+exports.notifyMaintenanceTenant = require('./notifyMaintenanceTenant').notifyMaintenanceTenant;
+
 // Bulk-delete legacy anonymous user records (run after disabling Anonymous
 // sign-in at Firebase Console — otherwise tenants regenerate them).
 exports.cleanupAnonymousUsers = require('./cleanupAnonymousUsers').cleanupAnonymousUsers;

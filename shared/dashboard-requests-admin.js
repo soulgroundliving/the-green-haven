@@ -520,6 +520,15 @@ function updateMaintenanceStatus(id,newStatus){
     }
   }
 
+  // Fire-and-forget LINE notify to tenant
+  if (window.firebase?.functions?.httpsCallable) {
+    try {
+      const notifyFn = window.firebase.functions.httpsCallable('notifyMaintenanceTenant');
+      notifyFn({ ticketId: id, building: item.building || 'rooms', roomId: item.room, newStatus, category: item.category })
+        .catch(e => console.warn('notifyMaintenanceTenant failed (non-critical):', e.message));
+    } catch(e) { console.warn('notifyMaintenanceTenant call error:', e.message); }
+  }
+
   renderMaintenancePage();
   updateMxBadge();
   updateMaintenanceBadge();
