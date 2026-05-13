@@ -884,12 +884,23 @@ async function openChecklistModal() {
 
   const occupancy  = TenantLookup.getRoomOccupancyInfo(building, roomId);
   const tenant     = occupancy.tenant || {};
-  const tenantUid  = tenant.linkedAuthUid || '';
   const tenantName = String(tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`).trim();
+  let   tenantUid  = tenant.linkedAuthUid || '';
 
   if (!tenantUid) {
-    showToast('ห้องนี้ยังไม่มีผู้เช่า (ต้อง Link LIFF ก่อน)', 'info');
-    return;
+    // No LIFF-linked UID — allow admin to still create an instance for their own flow
+    // (tenant won't see it in LIFF app until they link their account)
+    if (!tenantName) {
+      showToast('ห้องนี้ยังไม่มีผู้เช่า', 'info');
+      return;
+    }
+    const proceed = confirm(
+      `ผู้เช่า "${tenantName}" ยังไม่ได้ Link LIFF\n\n` +
+      `สามารถสร้าง checklist ได้ แต่ผู้เช่าจะไม่เห็นใน app จนกว่าจะ Link\n\n` +
+      `ต้องการสร้างสำหรับแอดมินตรวจสอบเองหรือไม่?`
+    );
+    if (!proceed) return;
+    tenantUid = window.firebase?.auth?.()?.currentUser?.uid || ('admin_' + Date.now());
   }
 
   // Check if building has a template
