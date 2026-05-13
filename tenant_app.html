@@ -12524,14 +12524,32 @@
             target.classList.remove('u-hidden');
           }
 
-          // Init with LIFF claims
-          const tok = window._liffClaims || {};
-          _clBuilding  = tok.building || 'rooms';
-          _clRoomId    = tok.room     || '';
-          _clTenantUid = window._authUid || '';
-          _clSigCtx    = null; // reset canvas
+          // Show loading immediately so the user sees something is happening
+          // even if claims take a moment to propagate.
+          const _clStatusEl = document.getElementById('cl-status-area');
+          if (_clStatusEl) _clStatusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">⏳ กำลังโหลด...</div>';
+          const _clFormEl = document.getElementById('cl-form-area');
+          const _clDoneEl = document.getElementById('cl-done-area');
+          if (_clFormEl) _clFormEl.style.display = 'none';
+          if (_clDoneEl) _clDoneEl.style.display = 'none';
+          _clSigCtx = null;
 
-          _initChecklistPage();
+          // Gate init on LIFF claims — without this, tapping before custom-token
+          // sign-in completes left the page hanging on ⏳ and triggered a
+          // separate permission_denied bills toast (anti-pattern A).
+          window._onLiffClaimsReady(function _clInitOnce() {
+            // Idempotent: re-read fresh state each fire
+            const tok = window._liffClaims || {};
+            _clBuilding  = tok.building || 'rooms';
+            _clRoomId    = tok.room     || '';
+            _clTenantUid = window._authUid || '';
+            if (!_clTenantUid) {
+              // Anon sign-in hasn't completed yet (or failed) — show clear msg
+              if (_clStatusEl) _clStatusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#c62828;">⛔ ยังไม่ได้เข้าระบบ — ลองปิด/เปิด LINE ใหม่</div>';
+              return;
+            }
+            _initChecklistPage();
+          });
           return;
         }
         if (_origSSP_cl) _origSSP_cl(page);

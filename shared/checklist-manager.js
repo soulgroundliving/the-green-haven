@@ -97,24 +97,34 @@
    * @returns {Promise<object|null>}
    */
   async function getMyLatestInstance(tenantUid) {
+    if (!tenantUid) throw new Error('tenantUid required');
     const q = _query(
       _collection('checklistInstances'),
       _where('tenantUid', '==', tenantUid)
     );
     return new Promise((resolve, reject) => {
-      const unsub = _onSnapshot(q, (snap) => {
-        unsub();
-        if (snap.empty) { resolve(null); return; }
-        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        docs.sort((a, b) => {
-          const aMs = a.createdAt?.toMillis?.() ?? 0;
-          const bMs = b.createdAt?.toMillis?.() ?? 0;
-          return bMs - aMs;
+      let settled = false;
+      let unsub = null;
+      const finish = (cb) => { if (settled) return; settled = true; try { unsub && unsub(); } catch (_) {} cb(); };
+      // Hard timeout — if Firestore rules silently delay (e.g. claims not yet
+      // propagated), surface a real error instead of hanging on ⏳ forever.
+      const timer = setTimeout(() => finish(() => reject(new Error('คิวรีหมดเวลา — ลองรีเฟรชอีกครั้ง'))), 10000);
+      unsub = _onSnapshot(q, (snap) => {
+        clearTimeout(timer);
+        finish(() => {
+          if (snap.empty) { resolve(null); return; }
+          const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          docs.sort((a, b) => {
+            const aMs = a.createdAt?.toMillis?.() ?? 0;
+            const bMs = b.createdAt?.toMillis?.() ?? 0;
+            return bMs - aMs;
+          });
+          resolve(docs[0]);
         });
-        resolve(docs[0]);
       }, (err) => {
-        unsub();
-        reject(err);
+        clearTimeout(timer);
+        console.error('[ChecklistManager] getMyLatestInstance failed:', err);
+        finish(() => reject(err));
       });
     });
   }
