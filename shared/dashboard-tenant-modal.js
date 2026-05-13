@@ -930,7 +930,7 @@ async function openChecklistModal() {
       tenantName,
       type,
     });
-    showToast(`✅ สร้าง checklist ${typeText} แล้ว (${result.instanceId.slice(0, 8)}...)`, 'success');
+    showToast(`✅ สร้าง checklist ${typeText} แล้ว — ผู้เช่าจะเห็นใน app`, 'success');
   } catch (err) {
     console.error('openChecklistModal error:', err);
     showToast('สร้างไม่สำเร็จ: ' + (err.message || err), 'error');
