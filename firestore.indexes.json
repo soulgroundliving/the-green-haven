@@ -91,6 +91,23 @@
         { "fieldPath": "phone", "order": "ASCENDING" },
         { "fieldPath": "archivedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "checklistInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "building", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "checklistInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantUid", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
