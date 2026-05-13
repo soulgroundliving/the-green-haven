@@ -49,7 +49,7 @@
  *           reason: 'moved_out' | 'reassigned' | 'admin_action'
  * Output: { success, contractId, tenantId, building, roomId, archivedSubdocs }
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();

@@ -35,7 +35,7 @@
  *
  * Idempotent: rerun any time, no-op once cleanup is complete.
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { requireAdmin } = require('./_auth');
 

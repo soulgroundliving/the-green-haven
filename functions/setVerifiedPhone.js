@@ -16,7 +16,7 @@
  * Data: { oldAnonUid: "abc...", building: "rooms"|"nest", room: "201", phone: "0xxxxxxxxx" }
  * Returns: { ok: true } | throws HttpsError
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {

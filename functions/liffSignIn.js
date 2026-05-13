@@ -19,7 +19,7 @@
  * Response 403: { error, status }   (pending | rejected)
  * Response 404: { error }           (first-time user, no liffUsers doc)
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const fetch = require('node-fetch');
 const { getValidBuildings } = require('./buildingRegistry');

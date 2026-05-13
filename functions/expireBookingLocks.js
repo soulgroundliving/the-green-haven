@@ -14,7 +14,7 @@
  * Region: asia-southeast1, BKK timezone (matches other scheduled CFs)
  * Auth: scheduled — no caller
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();

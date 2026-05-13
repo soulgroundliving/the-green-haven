@@ -27,7 +27,7 @@
  * Returns retry:   { success: false, retryable: true, code: 'scb_delay', retryAfterSec, message }
  * Throws HttpsError on hard failures (amount mismatch, duplicate, no booking, etc.)
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const fetch = require('node-fetch');

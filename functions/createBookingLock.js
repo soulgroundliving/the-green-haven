@@ -16,7 +16,7 @@
  * Auth: caller must have role='prospect' claim (set by liffBookingSignIn).
  *       Admin claim bypasses for ops/dashboard manual booking.
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { buildPromptPayPayload } = require('./promptpay');
 const { checkRateLimit } = require('./_rateLimit');

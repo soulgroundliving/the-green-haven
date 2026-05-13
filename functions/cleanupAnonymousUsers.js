@@ -13,7 +13,7 @@
  *
  * Returns: { success, scanned, deleted, sample (up to 5 deleted UIDs) }.
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { requireAdmin } = require('./_auth');
 

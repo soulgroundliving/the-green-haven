@@ -28,7 +28,7 @@
  * Region: asia-southeast1 (matches rest of project)
  */
 
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { BigQuery } = require('@google-cloud/bigquery');
 

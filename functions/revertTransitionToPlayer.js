@@ -38,7 +38,7 @@
  *           contractId optional — falls back to live doc's lastArchivedContractId
  * Output: { success, tenantId, contractId, building, roomId, linkedAuthUid, restoredSubdocs }
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();

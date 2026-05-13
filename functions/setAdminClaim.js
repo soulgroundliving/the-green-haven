@@ -16,7 +16,7 @@
  * NOTE: after this CF runs for an email, that user must sign out and back in
  * to pick up the new claim in their ID token.
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {

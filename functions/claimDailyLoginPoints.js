@@ -13,7 +13,7 @@
  * Transaction prevents double-claim when the tenant taps twice quickly.
  * Region: asia-southeast1 (matches redeemReward / verifySlip).
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {

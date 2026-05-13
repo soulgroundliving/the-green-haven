@@ -2,7 +2,7 @@
  * Cloud Functions for Complaint Management and Gamification System
  */
 
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 // Shared gamification rules (auto-synced from shared/gamification-rules.js on deploy)
 const { BADGE_CATALOG, badgeId, normaliseBadges, getLevelProgress } = require('./gamification-rules');

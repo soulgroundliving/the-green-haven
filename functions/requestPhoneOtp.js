@@ -21,7 +21,7 @@
  *   phone_<digits> { count, windowStart, updatedAt }
  * Cleaned up by cleanupOldDocs.cleanupRateLimitsScheduled (already scheduled).
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {

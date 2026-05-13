@@ -16,7 +16,7 @@
  * cached value (even >1h old), serve the stale one with `stale: true`.
  * Better than blanking the card on a transient outage.
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin     = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();

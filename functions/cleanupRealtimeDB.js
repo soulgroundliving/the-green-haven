@@ -3,7 +3,7 @@
  * Deletes data/rooms after successful migration to Firestore
  */
 
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {

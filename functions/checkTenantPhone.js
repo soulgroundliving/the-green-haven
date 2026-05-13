@@ -9,7 +9,7 @@
  * Context: any signed-in Firebase user (anonymous tenant during LIFF linking).
  * Data: { building: "rooms"|"nest", room: "101", phone: "0812345678" }
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {

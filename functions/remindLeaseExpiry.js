@@ -27,7 +27,7 @@
  * Region: asia-southeast1. Secret: LINE_CHANNEL_ACCESS_TOKEN.
  */
 
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();

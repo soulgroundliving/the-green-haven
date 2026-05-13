@@ -16,7 +16,7 @@
  * Idempotency: items live at lineRetryQueue/{idempotencyKey} so the same
  * underlying event only ever enqueues once.
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 // Node 22 has fetch globally — no require needed (matches notifyBillOnCreate).

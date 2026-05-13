@@ -21,7 +21,7 @@
  * with no other changes — { aqi, mainPollutant, mainLabel, concentration,
  * temp, humidity, windKmh, pressure, weatherIcon, city, attribution[] }.
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin     = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();

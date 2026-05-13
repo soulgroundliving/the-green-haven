@@ -15,7 +15,7 @@
  * Auth: caller's custom claims (room/building, set by liffSignIn) must match
  *       the requested building+roomId. Admin claim bypasses for ops/testing.
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { checkRateLimit } = require('./_rateLimit');
 

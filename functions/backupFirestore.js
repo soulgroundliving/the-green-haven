@@ -35,7 +35,7 @@
  * was initially provisioned).
  */
 
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const firestoreLib = require('@google-cloud/firestore');
 const { Storage } = require('@google-cloud/storage');

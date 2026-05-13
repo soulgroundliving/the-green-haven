@@ -32,7 +32,7 @@
  * Input:  { bookingId, skipKyc?: boolean }
  * Output: { success, bookingId, tenantId, building, roomId, isReturningTenant }
  */
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();

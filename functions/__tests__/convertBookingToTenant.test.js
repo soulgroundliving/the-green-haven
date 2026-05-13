@@ -166,7 +166,7 @@ describe('convertBookingToTenant — Phase 3b-3 True A1 ID alignment', () => {
   beforeEach(() => { resetStubs(); });
 
   it('writes tenant doc with contractId, activeContractId, lease.leaseId all equal', async () => {
-    const result = await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    const result = await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
 
     const tenantSet = findSet('tenants/rooms/list/20');
     assert.ok(tenantSet, 'tenant doc should be written');
@@ -182,7 +182,7 @@ describe('convertBookingToTenant — Phase 3b-3 True A1 ID alignment', () => {
   });
 
   it('creates lease doc at leases/{building}/list/{contractId} with id === contractId', async () => {
-    const result = await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    const result = await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
 
     const leaseSet = findSet('leases/rooms/list/');
     assert.ok(leaseSet, 'lease doc should be written');
@@ -201,7 +201,7 @@ describe('convertBookingToTenant — Phase 3b-3 True A1 ID alignment', () => {
   });
 
   it('updates booking doc with contractId matching tenant + lease', async () => {
-    const result = await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    const result = await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
 
     const bookingUpdate = findUpdate('bookings/BKtest001');
     assert.ok(bookingUpdate, 'booking should be updated');
@@ -211,7 +211,7 @@ describe('convertBookingToTenant — Phase 3b-3 True A1 ID alignment', () => {
   });
 
   it('uses ONE contractId across tenant, lease, booking, and people docs', async () => {
-    await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
 
     const tenantSet = findSet('tenants/rooms/list/20');
     const leaseSet = findSet('leases/rooms/list/');
@@ -235,7 +235,7 @@ describe('convertBookingToTenant — Phase 3b-3 True A1 ID alignment', () => {
   });
 
   it('contractId follows CONTRACT_<ts>_<roomId> pattern', async () => {
-    const result = await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    const result = await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
     assert.match(result.contractId, /^CONTRACT_\d+_20$/,
       `contractId should match CONTRACT_<ts>_20 (roomId=20), got: ${result.contractId}`);
   });
@@ -247,7 +247,7 @@ describe('convertBookingToTenant — Phase 6 slim tenant doc', () => {
   beforeEach(() => { resetStubs(); });
 
   it('tenant doc does NOT contain identity fields (those live on people/)', async () => {
-    await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
     const tenantSet = findSet('tenants/rooms/list/20');
     const t = tenantSet.data;
 
@@ -259,7 +259,7 @@ describe('convertBookingToTenant — Phase 6 slim tenant doc', () => {
   });
 
   it('tenant doc does NOT contain lease snapshot fields (those live on leases/{leaseId})', async () => {
-    await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
     const tenantSet = findSet('tenants/rooms/list/20');
     const t = tenantSet.data;
 
@@ -274,7 +274,7 @@ describe('convertBookingToTenant — Phase 6 slim tenant doc', () => {
   });
 
   it('tenant doc carries only slot pointers + reduced lease mirror + slot audit', async () => {
-    await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
     const tenantSet = findSet('tenants/rooms/list/20');
     const t = tenantSet.data;
 
@@ -293,7 +293,7 @@ describe('convertBookingToTenant — Phase 6 slim tenant doc', () => {
   });
 
   it('lease doc carries deposit audit fields (moved from tenant doc)', async () => {
-    await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
     const leaseSet = findSet('leases/rooms/list/');
     const l = leaseSet.data;
 
@@ -303,7 +303,7 @@ describe('convertBookingToTenant — Phase 6 slim tenant doc', () => {
   });
 
   it('people/{tenantId} doc carries identity (name, phone, lineUserId)', async () => {
-    await convertBookingToTenant({ bookingId: 'BKtest001' }, adminContext());
+    await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
     const peopleSet = findSet('people/');
     const p = peopleSet.data;
 
