@@ -241,7 +241,7 @@ class TenantLookup {
   static async prefetchAllPeople() {
     if (!window.PersonManager) return 0;
     const ids = new Set();
-    for (const b of ['rooms', 'nest']) {
+    for (const b of (window.BuildingRegistry?.list()?.map(x=>x.id)) || ['rooms','nest']) {
       const tenants = TenantConfigManager.getAllTenants(b) || {};
       for (const key of Object.keys(tenants)) {
         const t = tenants[key];

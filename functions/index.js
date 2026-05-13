@@ -4,6 +4,9 @@
 // Admin custom-claims management (Phase 4A)
 exports.setAdminClaim = require('./setAdminClaim').setAdminClaim;
 
+// Grant / revoke per-building manager claims (Tier 3c — SaaS prep)
+exports.grantBuildingManager = require('./grantBuildingManager').grantBuildingManager;
+
 // Admin-only: publish in-app announcement to tenants (broadcastMessages/{id})
 // In-app only — no LINE Multicast (free tier 200/mo too low; deferred).
 exports.broadcastMessage = require('./broadcastMessage').broadcastMessage;

@@ -68,6 +68,12 @@ const PROSPECT = (uid = 'book:U00000000000000000000000000000001') =>
     firebase: { sign_in_provider: 'custom' }
   });
 const UNAUTH = () => testEnv.unauthenticatedContext();
+// Tier 3c: building manager — managedBuildings claim scopes read to their building(s)
+const BUILDING_MANAGER = (buildings = ['rooms'], uid = 'manager-1') =>
+  testEnv.authenticatedContext(uid, {
+    managedBuildings: buildings,
+    firebase: { sign_in_provider: 'password' }
+  });
 
 // Seed helpers ---------------------------------------------------------
 async function seedTenant(tenantData = {}) {
@@ -988,5 +994,73 @@ describe('buildings — admin CRUD, signed-in read (Multi-Property registry)', (
 
   it('unauthenticated CANNOT create a building doc', async () => {
     await assertFails(setDoc(doc(UNAUTH().firestore(), BLD_PATH), BLD_DATA));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tier 3c: isBuildingManager — per-building read scope (SaaS prep)
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('building manager — scoped read, no write (Tier 3c)', () => {
+  const TENANT_PATH = 'tenants/rooms/list/101';
+  const TENANT_DATA = {
+    name: 'สมชาย',
+    phone: '0800000001',
+    linkedAuthUid: 'uid-rooms-101',
+    status: 'occupied',
+    gamification: { points: 50 }
+  };
+  const METER_PATH = 'meter_data/rooms_101_2569';
+  const METER_DATA = { building: 'rooms', roomId: '101', year: 2569, month: 5 };
+
+  // ── Tenant path ──────────────────────────────────────────────────────────
+
+  it('building manager can read tenants in their building', async () => {
+    await seedDoc(TENANT_PATH, TENANT_DATA);
+    await assertSucceeds(getDoc(doc(BUILDING_MANAGER(['rooms']).firestore(), TENANT_PATH)));
+  });
+
+  it('building manager CANNOT read tenants in a different building', async () => {
+    await seedDoc('tenants/nest/list/N101', { name: 'อื่น', linkedAuthUid: 'uid-nest-n101', status: 'occupied' });
+    await assertFails(getDoc(doc(BUILDING_MANAGER(['rooms']).firestore(), 'tenants/nest/list/N101')));
+  });
+
+  it('building manager CANNOT create a tenant doc (admin-only)', async () => {
+    await assertFails(setDoc(doc(BUILDING_MANAGER(['rooms']).firestore(), 'tenants/rooms/list/999'), { name: 'test', status: 'vacant' }));
+  });
+
+  it('building manager CANNOT update protected fields (gamification)', async () => {
+    await seedDoc(TENANT_PATH, TENANT_DATA);
+    await assertFails(updateDoc(doc(BUILDING_MANAGER(['rooms']).firestore(), TENANT_PATH), { gamification: { points: 9999 } }));
+  });
+
+  it('building manager with multiple buildings can read each', async () => {
+    await seedDoc(TENANT_PATH, TENANT_DATA);
+    await seedDoc('tenants/nest/list/N101', { name: 'อื่น', linkedAuthUid: 'uid-nest-n101', status: 'occupied' });
+    const mgr = BUILDING_MANAGER(['rooms', 'nest']);
+    await assertSucceeds(getDoc(doc(mgr.firestore(), TENANT_PATH)));
+    await assertSucceeds(getDoc(doc(mgr.firestore(), 'tenants/nest/list/N101')));
+  });
+
+  // ── Meter data path ──────────────────────────────────────────────────────
+
+  it('building manager can read meter_data for their building', async () => {
+    await seedDoc(METER_PATH, METER_DATA);
+    await assertSucceeds(getDoc(doc(BUILDING_MANAGER(['rooms']).firestore(), METER_PATH)));
+  });
+
+  it('building manager CANNOT read meter_data for a different building', async () => {
+    await seedDoc('meter_data/nest_N101_2569', { building: 'nest', roomId: 'N101', year: 2569, month: 5 });
+    await assertFails(getDoc(doc(BUILDING_MANAGER(['rooms']).firestore(), 'meter_data/nest_N101_2569')));
+  });
+
+  // ── No escalation ────────────────────────────────────────────────────────
+
+  it('building manager CANNOT write admin-only collections (taxSummary)', async () => {
+    await assertFails(setDoc(doc(BUILDING_MANAGER(['rooms']).firestore(), 'taxSummary/2569'), { revenue: 1 }));
+  });
+
+  it('user with no managedBuildings claim CANNOT use building manager path', async () => {
+    await seedDoc(TENANT_PATH, TENANT_DATA);
+    await assertFails(getDoc(doc(EMAIL_NO_CLAIM().firestore(), TENANT_PATH)));
   });
 });

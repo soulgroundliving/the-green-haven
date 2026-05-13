@@ -1865,10 +1865,10 @@ function renderLeaseAgreementsPage() {
 
   const leases = LeaseAgreementManager.getAllLeasesList();
 
-  // Aggregate tenants from both buildings (SSoT: Tab ผู้เช่า)
+  // Aggregate tenants from all registered buildings (SSoT: Tab ผู้เช่า)
   // We tag each tenant with its building so the info card can show it without re-asking.
   const allTenants = [];
-  ['rooms', 'nest'].forEach(b => {
+  ((window.BuildingRegistry?.list()?.map(b=>b.id)) || ['rooms','nest']).forEach(b => {
     const list = (typeof TenantConfigManager !== 'undefined')
       ? TenantConfigManager.getTenantList(b) || []
       : [];
@@ -2062,10 +2062,10 @@ function createNewLease() {
   }
 }
 
-// Find a tenant record across both buildings, return with building tag
+// Find a tenant record across all registered buildings, return with building tag
 function _findTenantWithBuilding(tenantId) {
   if (typeof TenantConfigManager === 'undefined') return null;
-  for (const b of ['rooms', 'nest']) {
+  for (const b of (window.BuildingRegistry?.list()?.map(b=>b.id)) || ['rooms','nest']) {
     const raw = TenantConfigManager.getAllTenants(b);
     if (raw[tenantId]) return { tenant: raw[tenantId], building: b };
   }

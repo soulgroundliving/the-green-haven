@@ -106,7 +106,7 @@
     const db = window.firebase.firestore();
     const { collection, getDocs } = window.firebase.firestoreFunctions;
     const all = [];
-    for (const building of ['rooms', 'nest']) {
+    for (const building of (window.BuildingRegistry?.list()?.map(b=>b.id)) || ['rooms','nest']) {
       try {
         const snap = await getDocs(collection(db, `tenants/${building}/list`));
         snap.forEach(d => all.push({ building, roomId: d.id, ...d.data() }));
@@ -732,7 +732,7 @@
 
     // Master room list from จัดการห้องพัก (RoomConfigManager) — same source as the admin room config page
     const allRooms = [];
-    for (const building of ['rooms', 'nest']) {
+    for (const building of (window.BuildingRegistry?.list()?.map(b=>b.id)) || ['rooms','nest']) {
       const cfg = (typeof RoomConfigManager !== 'undefined') ? RoomConfigManager.getRoomsConfig(building) : null;
       if (cfg?.rooms) {
         cfg.rooms.filter(r => !r.deleted).forEach(r => {

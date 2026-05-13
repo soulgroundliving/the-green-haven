@@ -22,6 +22,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const fetch = require('node-fetch');
+const { getValidBuildings } = require('./buildingRegistry');
 
 if (!admin.apps.length) admin.initializeApp();
 
@@ -143,7 +144,11 @@ exports.liffSignIn = functions
   if (!/^[A-Za-z0-9_-]{1,30}$/.test(room)) {
     return res.status(400).json({ error: 'Invalid room format in liffUsers doc' });
   }
-  if (!['rooms', 'nest'].includes(building)) {
+  // Dynamic building validation — uses the same 5-min Firestore cache as other CFs.
+  // Replaces the hardcoded ['rooms','nest'] so new buildings added via the admin
+  // Buildings page are immediately accepted without a code deploy.
+  const validBuildings = await getValidBuildings(firestore);
+  if (!validBuildings.has(building)) {
     return res.status(400).json({ error: `Unknown building: ${building}` });
   }
 

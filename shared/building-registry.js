@@ -10,7 +10,9 @@
  * being initialized.
  *
  * Schema for `buildings/{id}` root doc:
- *   { displayName, address, promptPayId, contact, status, createdAt, createdBy }
+ *   { displayName, address, promptPayId, contact, companyName, ownerName,
+ *     ownerEmail, ownerUid,   ← SaaS prep: building manager identity
+ *     status, createdAt, createdBy }
  *
  * Usage:
  *   await BuildingRegistry.init();                     // fetch from Firestore

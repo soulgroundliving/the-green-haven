@@ -1430,7 +1430,7 @@ async function _seedDepositsFromTenants() {
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
   try {
-    for (const building of ['rooms', 'nest']) {
+    for (const building of (window.BuildingRegistry?.list()?.map(b=>b.id)) || ['rooms','nest']) {
       const snap = await fs.getDocs(fs.collection(db, `tenants/${building}/list`));
       for (const d of snap.docs) {
         const t = d.data() || {};

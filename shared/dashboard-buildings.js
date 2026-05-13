@@ -71,6 +71,7 @@
         ${b.companyName ? `<div style="font-size:.85rem;">🏢 ${_esc(b.companyName)}</div>` : ''}
         ${b.promptPayId ? `<div style="font-size:.85rem;font-family:monospace;">💰 ${_esc(b.promptPayId)}</div>` : ''}
         ${b.contact ? `<div style="font-size:.85rem;">☎️ ${_esc(b.contact)}</div>` : ''}
+        ${b.ownerEmail ? `<div style="font-size:.78rem;color:var(--text-muted);">👤 ${_esc(b.ownerEmail)}</div>` : ''}
         ${isFallback ? `<div style="font-size:.72rem;color:#ff9800;margin-top:.25rem;">⚠️ ยังไม่ได้บันทึกใน Firestore — กด "แก้ไข" เพื่อสร้าง</div>` : ''}
         ${_renderRoomChips(b.id, rooms)}
         <div style="display:flex;gap:.5rem;margin-top:.5rem;">
@@ -125,6 +126,7 @@
     document.getElementById('bld-form-contact').value = existing?.contact || '';
     document.getElementById('bld-form-companyName').value = existing?.companyName || '';
     document.getElementById('bld-form-ownerName').value = existing?.ownerName || '';
+    document.getElementById('bld-form-ownerEmail').value = existing?.ownerEmail || '';
     modal.style.display = 'flex';
     modal.classList.remove('u-hidden');
     setTimeout(() => document.getElementById(id ? 'bld-form-displayName' : 'bld-form-id')?.focus(), 50);
@@ -146,6 +148,7 @@
     const contact = document.getElementById('bld-form-contact')?.value?.trim() || '';
     const companyName = document.getElementById('bld-form-companyName')?.value?.trim() || '';
     const ownerName = document.getElementById('bld-form-ownerName')?.value?.trim() || '';
+    const ownerEmail = document.getElementById('bld-form-ownerEmail')?.value?.trim() || '';
     if (!id) {
       window.showToast?.('กรุณากรอก Building ID (slug)', 'warning');
       return;
@@ -162,10 +165,10 @@
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'กำลังบันทึก...'; }
     try {
       if (_editingId) {
-        await window.BuildingRegistry.update(_editingId, { displayName, address, promptPayId, contact, companyName, ownerName });
+        await window.BuildingRegistry.update(_editingId, { displayName, address, promptPayId, contact, companyName, ownerName, ownerEmail });
         window.showToast?.(`อัปเดต ${_editingId} สำเร็จ`, 'success');
       } else {
-        const newId = await window.BuildingRegistry.create({ id, displayName, address, promptPayId, contact, companyName, ownerName });
+        const newId = await window.BuildingRegistry.create({ id, displayName, address, promptPayId, contact, companyName, ownerName, ownerEmail });
         window.showToast?.(`สร้างอาคาร ${newId} สำเร็จ`, 'success');
       }
       closeBuildingModal();

@@ -186,7 +186,8 @@ function _setupTenantRealtimeListener(){
   if(!window.firebase?.firestoreFunctions) return;
   const {collection,onSnapshot}=window.firebase.firestoreFunctions;
   const db=window.firebase.firestore();
-  ['rooms','nest'].forEach(bld=>{
+  const _bldgs = (window.BuildingRegistry?.list()?.map(b=>b.id)) || ['rooms','nest'];
+  _bldgs.forEach(bld=>{
     const unsub=onSnapshot(collection(db,`tenants/${bld}/list`),snap=>{
       const all=JSON.parse(localStorage.getItem('tenant_master_data')||'{}');
       if(!all[bld])all[bld]={};
@@ -876,4 +877,14 @@ function loadTenantProfile(){
 
   document.getElementById('tenantProfileContent').innerHTML = profileHTML;
 }
+
+// Re-wire Firestore listeners whenever the building registry updates
+// (new building added or archived via the Buildings admin page).
+// _setupTenantRealtimeListener tears down existing listeners before
+// re-iterating the current BuildingRegistry.list() — idempotent & safe.
+window.addEventListener('buildingRegistryChanged', function() {
+  if (typeof _setupTenantRealtimeListener === 'function') {
+    _setupTenantRealtimeListener();
+  }
+});
 

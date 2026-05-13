@@ -11,6 +11,15 @@ service cloud.firestore {
     function isAccountant() {
       return isSignedIn() && request.auth.token.accountant == true;
     }
+    // Tier 3c SaaS prep: building manager has read access to their building(s).
+    // Granted via grantBuildingManager CF or tools/grant-building-manager.js.
+    // Write operations still require isAdmin(). `managedBuildings` is a string[]
+    // custom claim set on the user's Firebase Auth token.
+    function isBuildingManager(building) {
+      return isSignedIn()
+        && request.auth.token.managedBuildings != null
+        && building in request.auth.token.managedBuildings;
+    }
 
     // ===== REWARDS / SYSTEM / OWNER INFO — public read (catalog/config/landlord profile) =====
     // Read opened to public so disabling Anonymous auth at Firebase Console doesn't
@@ -189,9 +198,12 @@ service cloud.firestore {
 
     // ===== TENANTS COLLECTION (NESTED: tenants/{building}/list/{roomId}) =====
     // Phase 4C-2: read scoped to own room via linkedAuthUid custom field.
-    // Admin reads all rooms. Tenant reads only their own linked room.
+    // Admin reads all rooms. Building manager reads all rooms in their building(s).
+    // Tenant reads only their own linked room.
     match /tenants/{building}/list/{roomId} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid);
+      allow read: if isAdmin()
+               || isBuildingManager(building)
+               || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid);
       allow update: if isSignedIn() &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['gamification', 'rentAmount', 'building', 'roomId', 'tenantId']);
       allow create, delete: if isAdmin();
@@ -303,7 +315,9 @@ service cloud.firestore {
 
     // ===== METER DATA =====
     match /meter_data/{docId} {
-      allow read:  if isAdmin() || (isSignedIn() && resource.data.roomId == request.auth.token.room && resource.data.building == request.auth.token.building);
+      allow read:  if isAdmin()
+               || isBuildingManager(resource.data.building)
+               || (isSignedIn() && resource.data.roomId == request.auth.token.room && resource.data.building == request.auth.token.building);
       allow write: if isAdmin();
     }
 
