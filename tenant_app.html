@@ -5886,6 +5886,20 @@
         let _marketFilter = 'all';
         let _marketImageData = null;
 
+        function _marketSeenKey() {
+            return 'gh_market_seen_at_' + (_taBuilding || '') + '_' + (_taRoom || '');
+        }
+        function _getMarketSeenAt() { return localStorage.getItem(_marketSeenKey()); }
+        function _setMarketSeenAt() {
+            localStorage.setItem(_marketSeenKey(), new Date().toISOString());
+        }
+        function _hasNewMarketItem() {
+            if (!_marketItems.length) return false;
+            const seen = _getMarketSeenAt();
+            if (!seen) { _setMarketSeenAt(); return false; } // first open — treat all as seen
+            return _marketItems.some(i => (i.createdAt || '') > seen);
+        }
+
         function _subscribeMarketplace() {
             if (_marketUnsub) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions || !_taBuilding) return;
@@ -5904,6 +5918,7 @@
                         .map(d => ({ id: d.id, ...d.data() }))
                         .filter(i => !i.expiresAt || i.expiresAt > now);
                     renderMarketFeed();
+                    if (typeof _renderBellVisibility === 'function') _renderBellVisibility();
                 }, err => console.warn('marketplace subscribe:', err?.message));
             } catch(e) { console.warn('subscribeMarketplace:', e); }
         }
@@ -7152,17 +7167,24 @@
         }
         function _renderBroadcastBadge() {
             const badge = document.getElementById('map-bell-badge');
-            const btn   = document.getElementById('map-bell-btn');
             if (!badge) return;
             const n = _unreadBroadcastCount();
             if (n > 0) {
                 badge.textContent = n > 99 ? '99+' : String(n);
                 badge.style.display = 'inline-flex';
-                if (btn) btn.style.display = 'flex';
             } else {
                 badge.style.display = 'none';
-                if (btn) btn.style.display = 'none';
             }
+            _renderBellVisibility();
+        }
+        function _renderBellVisibility() {
+            const btn = document.getElementById('map-bell-btn');
+            if (!btn) return;
+            const _isPaid = (b) => window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid');
+            const hasBroadcast = _unreadBroadcastCount() > 0;
+            const hasNewBill   = (() => { const b = _taBills[0]; return b && !_isPaid(b); })();
+            const hasMarket    = _hasNewMarketItem();
+            btn.style.display = (hasBroadcast || hasNewBill || hasMarket) ? 'flex' : 'none';
         }
         function _escapeBroadcastHtml(s) {
             return String(s || '')
@@ -9594,6 +9616,8 @@
             localStorage.setItem('ta_community_seen_at', new Date().toISOString());
             const badge = document.getElementById('nav-badge-community');
             if (badge) badge.style.display = 'none';
+            _setMarketSeenAt();
+            _renderBellVisibility();
         }
 
         function renderAnnouncements() {
@@ -10539,6 +10563,7 @@
                 svcBadge.textContent = pendingTix > 9 ? '9+' : pendingTix;
                 svcBadge.style.display = pendingTix > 0 ? 'flex' : 'none';
             }
+            _renderBellVisibility();
         }
 
         // ---- PAYMENT FLOW ----
