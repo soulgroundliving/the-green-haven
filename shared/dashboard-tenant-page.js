@@ -129,17 +129,32 @@ function setTenantBuilding(bld,btn){
     b.classList.toggle('active',i===0);
     // CSS .filter-btn-tenant.active handles active state
   });
-  // Show/hide building-specific sections
-  const roomsSec = document.getElementById('tenant-rooms-section');
-  const nestSec  = document.getElementById('tenant-nest-section');
-  if(roomsSec) roomsSec.classList.toggle('u-hidden', !(bld==='old'));
-  if(nestSec)  nestSec.classList.toggle('u-hidden', !(bld==='new'));
-  // Init the building's room grid & info cards
-  if(bld==='old'){ initRoomsPage(); } else { initNestPage(); }
+  // Dispatcher: rooms/nest use their existing sections + init functions
+  // (which carry pet badges, shop card, etc). Any other building uses the
+  // generic section + initGenericBuildingPage. The 'old'/'new' aliases are
+  // legacy from when the toggle was binary; we keep them so existing buttons
+  // and renderers (renderTenantPage, _getTenantRooms) keep working.
+  const canonical = (window.BuildingConfig?.normalizeId?.(bld === 'old' ? 'rooms' : (bld === 'new' ? 'nest' : bld))) || bld;
+  const isLegacyRooms = (canonical === 'rooms');
+  const isLegacyNest  = (canonical === 'nest');
+  const isGeneric = !isLegacyRooms && !isLegacyNest;
+  const roomsSec   = document.getElementById('tenant-rooms-section');
+  const nestSec    = document.getElementById('tenant-nest-section');
+  const genericSec = document.getElementById('tenant-generic-section');
+  if (roomsSec)   { roomsSec.classList.toggle('u-hidden', !isLegacyRooms); roomsSec.style.display = isLegacyRooms ? '' : 'none'; }
+  if (nestSec)    { nestSec.classList.toggle('u-hidden',  !isLegacyNest);  nestSec.style.display  = isLegacyNest  ? '' : 'none'; }
+  if (genericSec) { genericSec.classList.toggle('u-hidden', !isGeneric);   genericSec.style.display = isGeneric ? '' : 'none'; }
+  if (isLegacyRooms)      initRoomsPage();
+  else if (isLegacyNest)  initNestPage();
+  else if (typeof initGenericBuildingPage === 'function') initGenericBuildingPage(canonical);
   renderTenantPage();
 }
 
 function initTenantPage(){
+  // Dynamic building tabs — appends any building beyond rooms/nest from the
+  // multi-property registry while preserving the existing inline 'old'/'new'
+  // buttons (so their icons + behaviour stay identical).
+  _renderTenantBuildingTabs();
   // Show/hide building sections based on current building tab
   const roomsSec = document.getElementById('tenant-rooms-section');
   const nestSec  = document.getElementById('tenant-nest-section');
@@ -209,9 +224,42 @@ function _setupTenantRealtimeListener(){
 }
 
 function _getTenantRooms(){
-  return tenantBuilding==='old'
-    ?getActiveRoomsWithMetadata('rooms',window.ROOMS_OLD)
-    :getActiveRoomsWithMetadata('nest',window.NEST_ROOMS);
+  if (tenantBuilding === 'old') return getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
+  if (tenantBuilding === 'new') return getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
+  // Generic building — defer to _getRoomsList (RoomConfigManager + fallback).
+  if (typeof window._getRoomsList === 'function') return window._getRoomsList(tenantBuilding);
+  return [];
+}
+
+function _getTenantBuildingCanonical() {
+  if (tenantBuilding === 'old') return 'rooms';
+  if (tenantBuilding === 'new') return 'nest';
+  return (window.BuildingConfig?.normalizeId?.(tenantBuilding)) || tenantBuilding;
+}
+
+function _renderTenantBuildingTabs() {
+  const container = document.getElementById('tenant-building-tabs');
+  if (!container || !window.BuildingRegistry) return;
+  // Best-effort: trigger an async init but don't await — first render uses
+  // cached/fallback list, registry changes fire `buildingRegistryChanged`
+  // which we don't subscribe to here (rare event; user can switch tabs to
+  // refresh). Keeps initTenantPage synchronous.
+  try { window.BuildingRegistry.init?.(); } catch (_) {}
+  const buildings = window.BuildingRegistry.list();
+  const extras = buildings.filter(b => b.id !== 'rooms' && b.id !== 'nest');
+  // Drop any previously-appended dynamic buttons so we don't double-add on
+  // re-init (signature attr: data-dynamic="1").
+  container.querySelectorAll('button[data-dynamic="1"]').forEach(b => b.remove());
+  for (const b of extras) {
+    const btn = document.createElement('button');
+    btn.className = 'year-tab';
+    if (tenantBuilding === b.id) btn.classList.add('active');
+    btn.dataset.action = 'setTenantBuilding';
+    btn.dataset.building = b.id;
+    btn.dataset.dynamic = '1';
+    btn.textContent = `🏘️ ${b.displayName || b.id}`;
+    container.appendChild(btn);
+  }
 }
 
 function renderTenantPage(){
@@ -229,9 +277,13 @@ function renderTenantPage(){
       }
     }else vac++;
   });
-  // Write สัญญาใกล้หมด to the unified building KPI (occupancy-soon / nest-occupancy-soon)
-  const soonId = tenantBuilding==='old' ? 'occupancy-soon' : 'nest-occupancy-soon';
-  const soonEl = document.getElementById(soonId);
+  // Write สัญญาใกล้หมด to the unified building KPI. Only legacy buildings have
+  // pre-defined KPI ids; generic buildings carry their stats inside their own
+  // section (rendered by initGenericBuildingPage) so this write is skipped.
+  const soonId = tenantBuilding==='old' ? 'occupancy-soon'
+               : tenantBuilding==='new' ? 'nest-occupancy-soon'
+               : null;
+  const soonEl = soonId ? document.getElementById(soonId) : null;
   if(soonEl){
     soonEl.textContent = soon;
     // Color: red if any expiring, purple otherwise
@@ -291,7 +343,7 @@ function renderTenantPage(){
       ${t.deposit?`<div class="compact-card-info"><span style="font-size:.75rem;color:var(--text-muted);">มัดจำ</span><span style="font-weight:700;color:var(--green-dark);">฿${Number(t.deposit).toLocaleString()}</span></div>`:''}
       `:`<div class="compact-card-info" style="text-align:center;padding:1rem 0;color:var(--text-muted);"><span>🚪 ไม่มีผู้เช่า</span></div>`}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
-        <button onclick="openTenantModal('${tenantBuilding==='old'?'rooms':'nest'}','${r.id}')" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">📄 สัญญา</button>
+        <button onclick="openTenantModal('${_getTenantBuildingCanonical()}','${r.id}')" style="background:#e3f2fd;color:#1976d2;border:1px solid #1976d2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">📄 สัญญา</button>
         <button onclick="showBillingModal('${r.id}')" style="background:#e8f5e9;color:#388e3c;border:1px solid #388e3c;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">💰 ชำระ</button>
         <button onclick="showBillingHistoryModal('${r.id}')" style="background:#fff3e0;color:#f57c00;border:1px solid #f57c00;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🧾 บิล</button>
         <button onclick="window.showPage('requests-approvals')" style="background:#f3e5f5;color:#7b1fa2;border:1px solid #7b1fa2;padding:6px;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;">🔧 ซ่อม</button>

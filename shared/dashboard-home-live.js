@@ -578,10 +578,19 @@ window.isArchivedMonth = function(year, month){
 
 window._pvmBuilding = 'rooms';
 window.setPVMBuilding = function(bld, btn){
-  window._pvmBuilding = bld;
+  // Normalize legacy aliases (rare for PVM but harmless) and any future
+  // building IDs — keeps stored state canonical.
+  const canonical = (window.BuildingConfig?.normalizeId?.(bld)) || bld;
+  window._pvmBuilding = canonical;
   document.querySelectorAll('#pv-tab-monthly .year-tab').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  const label = bld==='nest' ? 'Nest' : 'ห้องแถว';
+  // Prefer BuildingRegistry displayName (e.g. "Nature Haven" / "Test Building 1"),
+  // fall back to BuildingConfig DISPLAY_NAMES for the two legacy buildings, then
+  // to the raw id. Was previously hardcoded `bld==='nest' ? 'Nest' : 'ห้องแถว'`
+  // which broke for any 3rd building.
+  const label = (window.BuildingRegistry?.getById?.(canonical)?.displayName)
+    || (window.BuildingConfig?.getDisplayName?.(canonical))
+    || canonical;
   const secT = document.getElementById('pvm-section-title');
   if(secT) secT.innerHTML = `📋 สถานะชำระรายเดือน &amp; ห้องว่าง — ${label}`;
   const tabT = document.getElementById('pvm-table-title');
@@ -589,6 +598,28 @@ window.setPVMBuilding = function(bld, btn){
   if(typeof renderMeterTable === 'function') renderMeterTable();
   const vcRes = document.getElementById('vc-result');
   if(vcRes) vcRes.innerHTML = '';
+};
+
+// Append extra building buttons to PVM tab from BuildingRegistry. Same pattern
+// as Tenant tab — preserves the legacy hardcoded rooms/nest buttons (with their
+// stable ids `pvm-bld-rooms` / `pvm-bld-nest`) and only adds extras dynamically.
+window._renderPVMBuildingTabs = function() {
+  const container = document.getElementById('pvm-building-tabs');
+  if (!container || !window.BuildingRegistry) return;
+  try { window.BuildingRegistry.init?.(); } catch (_) {}
+  const buildings = window.BuildingRegistry.list();
+  const extras = buildings.filter(b => b.id !== 'rooms' && b.id !== 'nest');
+  container.querySelectorAll('button[data-dynamic="1"]').forEach(b => b.remove());
+  for (const b of extras) {
+    const btn = document.createElement('button');
+    btn.className = 'year-tab';
+    if (window._pvmBuilding === b.id) btn.classList.add('active');
+    btn.dataset.action = 'setPVMBuilding';
+    btn.dataset.building = b.id;
+    btn.dataset.dynamic = '1';
+    btn.textContent = `🏘️ ${b.displayName || b.id}`;
+    container.appendChild(btn);
+  }
 };
 
 function renderMeterTable(){
@@ -656,8 +687,12 @@ function renderMeterTable(){
     return out;
   })();
   let totalPaid=0, totalPending=0, totalAmt=0;
-  const roomList = bld==='nest' ? (window.NEST_ROOMS||[]) : (window.ROOMS_OLD||[]);
-  const rooms = getActiveRoomsWithMetadata(bld, roomList);
+  // Room source: prefer the shared _getRoomsList helper (resolves
+  // RoomConfigManager → ROOMS_OLD/NEST_ROOMS fallback → empty). Falls back to
+  // legacy direct lookup if the helper isn't loaded yet.
+  const rooms = (typeof window._getRoomsList === 'function')
+    ? window._getRoomsList(bld)
+    : getActiveRoomsWithMetadata(bld, bld==='nest' ? (window.NEST_ROOMS||[]) : (window.ROOMS_OLD||[]));
   const rows=rooms.map(r=>{
     const lookupId=r.id;
     const md=(typeof METER_DATA!=='undefined'&&METER_DATA[bld]&&METER_DATA[bld][mdKey])?METER_DATA[bld][mdKey][lookupId]:null;

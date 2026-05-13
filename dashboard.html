@@ -3397,7 +3397,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
   <div id="tenant-main-tab-tenants">
 
   <!-- Building Selection -->
-  <div class="year-tabs" class="mb-5">
+  <div id="tenant-building-tabs" class="year-tabs mb-5">
     <span class="year-tab-label">ตึก:</span>
     <button class="year-tab active" data-action="setTenantBuilding" data-building="old">🏠 ห้องแถว</button>
     <button class="year-tab" data-action="setTenantBuilding" data-building="new">🏗️ Nest</button>
@@ -3459,6 +3459,13 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
     </div>
   </div><!-- end tenant-nest-section -->
+
+  <!-- ===== Generic Building Section (any building beyond rooms/nest) ===== -->
+  <!-- Only carries the stats strip; the searchable room grid below (#tenantGrid)
+       is shared across all buildings and rendered by renderTenantPage(). -->
+  <div id="tenant-generic-section" style="display:none;">
+    <div id="tenant-generic-stats" class="stats-strip stats-strip--green"></div>
+  </div><!-- end tenant-generic-section -->
 
   <!-- Filter + Search Bar -->
   <div class="mb-5">
@@ -4645,7 +4652,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <div class="section-title" style="margin-top:0;" id="pvm-section-title">📋 สถานะชำระรายเดือน &amp; ห้องว่าง — ห้องแถว</div>
 
     <!-- Building selector -->
-    <div class="year-tabs" style="margin-bottom:1rem;">
+    <div id="pvm-building-tabs" class="year-tabs" style="margin-bottom:1rem;">
       <span class="year-tab-label">อาคาร:</span>
       <button id="pvm-bld-rooms" class="year-tab active" data-action="setPVMBuilding" data-building="rooms">🏠 ห้องแถว</button>
       <button id="pvm-bld-nest" class="year-tab" data-action="setPVMBuilding" data-building="nest">🏢 Nest</button>
