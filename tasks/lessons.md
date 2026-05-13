@@ -9,6 +9,35 @@ Read this file at the start of every session per `CLAUDE.md § 1`.
 
 ---
 
+## 2026-05-13 — Tier 3G + 3I ใช้ Firebase globals ที่ไม่มีอยู่จริง — ทุก write path silently broken
+
+**Mistake:** เขียน `shared/facility-booking.js` และ `shared/checklist-manager.js` ใหม่ โดย assume globals เหล่านี้:
+- `window.firebaseHttpsCallable(fns, name)` — ไม่มีจริง (undefined)
+- `window.firebase.functions()` (with parens) — throws `is not a function` เพราะ `functions` เป็น static object
+- `window.firebaseStorageUploadBytes`, `window.firebaseStorageGetDownloadURL` — ไม่มีจริง
+- `window.firebaseFirestoreFunctions.httpsCallable(fns, name)` (fallback) — `firestoreFunctions` ไม่ได้ namespace under `window` ตรงๆ; ของจริงคือ `window.firebase.firestoreFunctions` และไม่มี `httpsCallable`
+
+ผลลัพธ์: ทุก write path (createBooking / cancelBooking / saveConfig / createInstance / submitChecklist / adminSignChecklist / photo + signature uploads) จะ throw ทันทีที่ user click. Test ผ่านหมดก่อน push เพราะ test เป็น CF unit tests (Node-side) + load-check (`typeof module === 'object'`) ไม่ใช่ runtime CF call.
+
+**Why:** ไม่ได้ grep ดู canonical pattern ใน codebase ก่อน. ในที่นี้ pattern จริงคือ `window.firebase.functions.httpsCallable('name')` (1 arg only, ไม่ต้องส่ง fns instance) ใช้กันทั่ว `dashboard-bookings.js`, `dashboard-meter-import.js`, `dashboard-tenant-modal.js`. ผม copy pattern จาก module อื่นที่ใช้ globals namespace อีกแบบ (อาจเป็น helper จาก project อื่น) มาโดยไม่ verify.
+
+**Rule:** ก่อนเขียน module ใหม่ที่ depend on Firebase SDK — grep `httpsCallable\|firebase.functions\|firebase.firestore` ใน existing shared files **ก่อน** แล้ว copy pattern ตรงๆ. ห้ามคิดเอง. และก่อน claim done: open chrome MCP → login → call `typeof window.X` + run one smoke call (เช่น `await getTemplate('rooms')`) เพื่อ trigger code path จริง. Surface tests (file 200, `typeof === 'object'`) ไม่นับเป็น verification.
+
+Reference shape (canonical, verified 2026-05-13):
+```
+window.firebase = {
+  firestore: () => DB,                              // function call
+  firestoreFunctions: { collection, doc, getDoc, ... }, // modular API
+  storage: () => StorageInstance,                   // function call
+  storageFunctions: { ref, uploadBytes, getDownloadURL, ... },
+  functions: { httpsCallable: (name) => callable }  // static object, NO parens
+}
+```
+
+Fix: commit `70ef654`.
+
+---
+
 ## 2026-05-13 — "Tier 3F shipped" claim ไม่จริงจน admin session test เพราะ legacy doc ID ใน Firestore
 
 **Mistake:** หลังจาก deploy Tier 3F (buildings registry) ผม claim ว่า "verified, ready to ship" — Vercel static deploy ผ่าน, CF deploy ผ่าน, HTTP smoke test ผ่าน. แต่พอ user login เป็น admin แล้วเรียก `BuildingRegistry.list()` จริง — ได้ `id: 'RentRoom'` กลับมา (ไม่ใช่ canonical `'rooms'`) เพราะมี doc legacy ที่ admin payment-config UI สร้างไว้ตั้งแต่ก่อน. ถ้า user สร้าง building ใหม่จริงๆ ใน production แล้ว CF cache expire ภายใน 5 นาที — every `'rooms'` traffic จะถูก CF reject เพราะ `validBuildings = {'nest', 'RentRoom'}` ไม่ match `'rooms'`.
