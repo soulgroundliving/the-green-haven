@@ -6,18 +6,28 @@ Loaded at every session start. Overrides any default behavior — follow exactly
 
 Two docs auto-load at session start; they are **complementary, not duplicates**:
 
-- **This file (CLAUDE.md)** — *workflow + stack* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, pointers to `tasks/*`.
-- **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, session journals, archive.
+- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-O** (project-specific lessons that auto-load every session).
+- **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, archive.
 
-**Boundary rule for new content:** if it's about a workflow/process or a build/deploy fact → here. If it's about a system's behavior, an incident pattern, or a user preference that survives across projects → MEMORY.md. Project-specific incidents go to `tasks/lessons.md` (see § 1 Self-Improvement Loop).
+**Boundary rule for new content:**
+- Workflow / build / deploy facts → here
+- A system's behavior, lifecycle, schema → MEMORY.md as `lifecycle_*.md` or reference doc
+- A cross-project user preference → MEMORY.md as `feedback_*.md`
+- **A project-specific recurring anti-pattern** → §7 below (was previously `tasks/lessons.md`; that file is now archived as `tasks/lessons.md.archive` for git history)
 
 ## 1. Workflow Orchestration
 
 ### Plan-First Protocol
-- **Mandatory** for any non-trivial task (3+ steps OR architectural decisions): write the plan to `tasks/todo.md` BEFORE editing code.
-- Plan format: checkable items, sub-tasks nested. Architectural decisions include a **Why** line explaining the approach.
-- **WAIT for user approval** before implementing.
-- **Pivot rule:** if something goes sideways mid-implementation, STOP, re-plan, get approval again.
+**Mandatory** only when ALL three apply:
+- Touches **5+ files** OR involves a **schema/security/architectural** change OR spans **multiple sessions**, AND
+- Is **not reversible** with a single revert (data migrations, rules changes, multi-CF deploys), AND
+- Has **2+ valid approaches** with real tradeoffs.
+
+Then: write the plan to `tasks/todo.md` BEFORE editing code (checkable items + **Why** line) → WAIT for user approval → execute → append "Review" section.
+
+For everything else (bug fixes, single-feature additions, UX polish, doc updates), use **TodoWrite** for live tracking instead — no `tasks/todo.md` written, no approval gate, just status updates as you go. See [memory/feedback_decision_protocol.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_decision_protocol.md) for the full autonomous / choice-menu / plan-first / one-question decision tree.
+
+**Pivot rule:** if scope grows mid-implementation past the 5-file / architectural threshold, STOP, escalate to plan-first, get approval before continuing.
 
 ### Subagent Strategy
 - Use Explore subagents liberally for codebase research — keep the main context clean.
@@ -38,14 +48,13 @@ After writing, **run `npm run verify:memory`** (also in § 5). Exit 1 = at least
 The full rule + incident history: [memory/feedback_verify_via_grep_doctrine.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_verify_via_grep_doctrine.md).
 
 ### Self-Improvement Loop (Lessons)
-After ANY correction from the user, decide where to log it using this rule:
+After ANY correction from the user, decide where to log it:
 
-- **Project incident** (e.g. "I shipped wrong UI text in `cleanupAnonymousUsers` → all LIFF tenants locked out") → `tasks/lessons.md` in this repo. Format: **Mistake** · **Why** · **Rule**.
-- **Cross-project preference** (e.g. "user wants minimal changes, no surrounding cleanup") → `~/.claude/projects/.../memory/feedback_<topic>.md`. The auto-memory MEMORY.md index lists them under "🤝 Working style".
+- **Recurring anti-pattern in THIS project** (cost 2+ sessions, will likely re-occur) → add to **§7 below** as a new letter (J, K, L...). These are auto-loaded with this file every session. Format: short title · 1-2 sentence rule · code example or grep command.
+- **One-off project incident** (specific commit fix, niche edge case) → don't promote; the commit message + lifecycle doc update is enough.
+- **Cross-project preference** ("user wants X always") → `~/.claude/projects/.../memory/feedback_<topic>.md`. MEMORY.md "🤝 Working style" indexes them.
 
-**Decision rule:** if the lesson could apply to a different codebase → `feedback_*.md`. If it's about THIS project's bugs, architecture, or wrong claims I made about it → `tasks/lessons.md`.
-
-Read both at the start of every session. `tasks/lessons.md` first (it's where the most recent project-specific corrections live).
+**Why no more `tasks/lessons.md`:** It was append-only and rarely opened (neither by user nor agent). Promoting recurring patterns to §7 (which IS auto-loaded) and routing one-offs to commit messages keeps the signal where it actually gets read. Old lessons still live in `tasks/lessons.md.archive` for git-history searches.
 
 ### Verification Before Done
 - Never mark a task complete without proof: tests pass, logs show success, browser verified live, etc.
@@ -89,12 +98,18 @@ Read both at the start of every session. `tasks/lessons.md` first (it's where th
 
 ## 3. Task Management
 
-1. **Plan first** — write plan to `tasks/todo.md` with checkable items.
-2. **Verify plan** — get user check-in before starting implementation.
-3. **Track progress** — mark items complete as you go (use TodoWrite tool in parallel for live status).
-4. **Explain changes** — at each step, give a high-level *What* and *Why* summary.
-5. **Document results** — at the end, append a "Review" section to `tasks/todo.md` (what shipped, what was deferred, follow-ups).
-6. **Capture lessons** — update `tasks/lessons.md` after every correction or bug fix.
+**For tasks above the Plan-First threshold (§1):**
+1. Write plan to `tasks/todo.md` (checkable items + Why) → wait for user check-in
+2. Implement, marking items complete as you go (TodoWrite in parallel for live status)
+3. At each phase: brief *What* + *Why* summary to user
+4. At end: append "Review" section to `tasks/todo.md` (shipped / deferred / follow-ups)
+
+**For everything else (default):**
+- Skip `tasks/todo.md`, use **TodoWrite** for tracking
+- One sentence at the start ("Going to do X by Y"), one at the end (what changed)
+- No mid-flight summaries unless the user asks
+
+**After every correction:** decide where to log it per §1 Self-Improvement Loop (§7 anti-pattern for recurring project issues, `feedback_*.md` for cross-project preferences, commit message only for one-offs).
 
 ## 4. Core Principles
 
@@ -123,7 +138,7 @@ Service Worker auto-versions from `VERCEL_GIT_COMMIT_SHA` — no manual `CACHE_V
 
 ## 7. Recurring Anti-Patterns — Read Before Touching These Areas
 
-Distilled from `tasks/lessons.md`. Each pattern cost 2–5 sessions to debug. Check the relevant one BEFORE writing code, not after.
+Each pattern cost 2–5 sessions to debug. Check the relevant one BEFORE writing code, not after. Append new patterns here directly when a recurring issue surfaces — see §1 Self-Improvement Loop for routing.
 
 ### A. Auth-gated reads in `tenant_app.html`
 ANY Firestore/RTDB read that needs `token.room`/`token.building`/`token.admin` claims:
@@ -195,6 +210,13 @@ If a symptom has appeared before (bills, modals, auth): **stop, ask for ONE obse
 ### G. Cross-session self-conflict check
 After touching 2+ files in the same user flow: re-read ALL diffs from this session end-to-end before saying done. Two individually correct changes can conflict (happened: auth gate blocked URL that same session's login redirect was generating).
 
+### H. Memory identifiers — grep before typing
+When writing ANY memory file (handoff, journal, lifecycle): every backtick-quoted path/function/field name must be grep-verified BEFORE typing — not after. Paraphrasing from memory produced 19 errors in one session.
+```bash
+# Template: before writing `path/to/doc` in a memory file
+grep -r "path/to/doc" functions/ shared/ *.html | head -3
+```
+
 ### I. Production data actions — never automate
 Before any action that touches:
 - Financial approval (approve meter import, mark bill paid, batch writes to RTDB bills/)
@@ -208,11 +230,64 @@ Before any action that touches:
 ```
 Root incident (2026-05-01): auto-clicked "อนุมัติและบันทึก" → wrong building data entered Firestore production. Required manual rollback.
 
-### H. Memory identifiers — grep before typing
-When writing ANY memory file (handoff, journal, lifecycle): every backtick-quoted path/function/field name must be grep-verified BEFORE typing — not after. Paraphrasing from memory produced 19 errors in one session.
+### J. Static deploy ≠ live-data verified
+Vercel "deploy succeeded" + HTTP smoke test + unit tests + fallback list working — none of these prove a Firestore-dependent feature works for a real signed-in user. Tier 3F (2026-05-13) shipped "verified" only to fail on first admin login because a legacy `RentRoom` doc was returned instead of canonical `rooms`.
+
+**Rule:** Before claiming done on any feature that reads Firestore at runtime:
+1. Trigger an authenticated read path (Chrome MCP login → call the read).
+2. Log/inspect the actual returned data (canonical IDs, displayName, expected fields).
+3. Cross-check vs the assumption — fallbacks/mocks hide drift silently.
+
+### K. Defined ≠ wired — grep for callers
+A function existing in the codebase doesn't mean it runs. Phase 6 audit caught `prefetchAllPeople()` defined in `shared/tenant-lookup.js:238` but with **zero callers anywhere** — slim tenant docs would have rendered "—" for every name on the admin dashboard.
+
+**Rule:** When a method looks load-bearing (cache-warming helper, prefetch, init function), grep for callers before assuming it's active. "X is defined" ≠ "X runs". Wire bulk-prefetch / cache-warming helpers in the SAME commit they're added.
 ```bash
-# Template: before writing `path/to/doc` in a memory file
-grep -r "path/to/doc" functions/ shared/ *.html | head -3
+grep -rn "prefetchAllPeople\|getPersonSync" shared/ *.html  # who actually calls it?
+```
+
+### L. Code-only cleanup ≠ data migrated
+`setDoc(..., { merge: true })` only WRITES the fields you specify; it never DELETES old ones. After the Phase 6 "slim tenant doc" code shipped, existing `rooms/15` still had all 40+ duplicate fields because there was no migration.
+
+**Rule:** In handoffs, separate "code-only" from "code + data migration":
+- "Future writes are slim; existing docs preserve legacy fields (reader fallback handles this) until one-shot migration runs."
+- This is intentional graceful-degradation, not a bug — readers transition cleanly.
+- For destructive cleanup, use `FieldValue.delete()` in an explicit migration script (see `tools/migrate-tenant-doc-to-slim.js` template).
+
+### M. "Loadable in browser" ≠ "in production flow"
+`payment.html` (923 lines) is in the CSP hash list, has Sentry monitoring, has SRI scripts — looks like a production page. Reading the code: uses `SecurityUtils.getSecureSession()` (NOT Firebase Auth), localStorage-only slip flow (NOT verifySlip CF), no LIFF SDK at all. It's a standalone legacy portal.
+
+**Rule:** Build pipelines (CSP, SRI, Sentry, bundling) don't distinguish "live in production" from "still loadable in browser". Before claiming file X integrates with flow Y:
+- Read auth model: Firebase Auth? SecurityUtils? LIFF?
+- Check CF calls: `httpsCallable`? `fetch /verifySlip`? localStorage only?
+- Verify data source: Firestore? RTDB? base64-in-doc?
+- Build-pipeline membership ≠ runtime use.
+
+### N. onSnapshot must have error callback
+`onSnapshot(query, onNext)` swallows errors silently. Tier 3I-9 spent ~30 min debugging "stuck loading" — turned out `failed-precondition: query requires an index` was thrown but no callback received it. UI sat at "กำลังโหลด..." forever with zero console output.
+
+**Rule:**
+```js
+// ❌ silent failure
+fs.onSnapshot(q, (snap) => { ... });
+
+// ✅ surfaces errors to console + UI
+fs.onSnapshot(q, (snap) => { ... }, (err) => {
+  console.error('[ModuleName] subscription failed:', err);
+  // also surface to UI: render error state instead of "loading..."
+});
+```
+Debug recipe when subscription doesn't fire: try `getDocs(q)` directly — `getDocs` throws visibly, `onSnapshot` swallows. Composite query needs index → add to `firestore.indexes.json` + `firebase deploy --only firestore:indexes` BEFORE UI deploy (build takes 1-5 min).
+
+### O. Pre-built feature search — Thai keywords + orphaned APIs
+Almost wrote 3-4 hours of new code for "tenant chooses bill format (personal/นิติบุคคล)" — feature was already built (`receipt-type-select` + `getReceiptMetaForBill` in `tenant_app.html`). Missed it because grepped English identifiers (`billRecipient|recipientType`) instead of the Thai keyword from the mockup.
+
+**Rule:** Before planning any new feature, search:
+1. **Thai keywords** from mockup/screenshot — user said "นิติบุคคล" → `grep "นิติบุคคล"` BEFORE `grep "recipientType"`.
+2. **Orphaned `window.X = ...` APIs** — defined but uncalled = unfinished feature waiting to be wired. Often you only need to wire it, not rebuild.
+```bash
+grep -rn "นิติบุคคล\|บุคคลธรรมดา" tenant_app.html dashboard.html shared/  # Thai-first
+grep -rn "window\.getReceiptMeta\|window\.saveCompany" shared/ *.html  # orphaned APIs?
 ```
 
 ---
@@ -222,9 +297,40 @@ grep -r "path/to/doc" functions/ shared/ *.html | head -3
 [MEMORY.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\MEMORY.md) is the architecture + history index. Read these sections by purpose:
 
 - **⛔ Critical rules** → before touching any rule, auth, or LIFF code. Each entry is a real incident with its lesson.
-- **🏛️ System lifecycles** → "how does X work end-to-end". 11 docs: LIFF onboarding, auth/login/gate, Stores facade (7 stores), tenant SSoT, Storage uploads, LINE notification, monthly billing, gamification, tenant_app architecture, Firestore schema (canonical + gotchas).
-- **🧭 Reference** → durable narrow-scope docs: Firebase Admin SDK gotchas, region split (SE1 vs SE3), the frozen `generateBillsOnMeterUpdate` CF, the `GAMIFICATION_LIVE` flag, etc.
-- **🤝 Working style** → cross-project user preferences (`feedback_*.md`). Apply these to every project, not just this one.
-- **🎯 Current state** → latest `next_session_handoff_*.md` for what shipped and what's pending.
-- **📔 Session journals** → dated snapshots; scan only when debugging something within a date range.
+- **🏛️ System lifecycles** → "how does X work end-to-end". ~28 docs split into Core/Tenant-facing/Admin sections. Includes the recent Tier 1B/2D/3F/3I features (expense, deposit, building registry, checklist).
+- **🧭 Reference** → durable narrow-scope docs: Firebase SDK gotchas (admin + client v11 + functions v7), region split (SE1 vs SE3), `generateBillsOnMeterUpdate` frozen, brand OS, etc.
+- **🤝 Working style** → cross-project user preferences (`feedback_*.md`) including the new [decision protocol](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_decision_protocol.md). Apply to every project.
+- **🎯 Current state** → latest 2026-05-13 handoffs only. Older handoffs archived.
 - **🗄️ Archive** → superseded docs; do NOT rely on (kept for git-blame style traceability).
+
+For **multi-repo workflows** (Green Haven ↔ Naturehaven landing site), see [memory/multi_repo_protocol.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\multi_repo_protocol.md).
+
+## 8. Session Lifecycle — checkpoints
+
+Every session has three phases. Don't skip the end phase — it's where memory drift gets caught.
+
+### Session start
+1. Auto-loaded: `CLAUDE.md` + `MEMORY.md`. Both already in context — no need to re-read.
+2. Run `git status` + `git log -5 --oneline` to see prior-session state (per [feedback_git_status_before_add.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_git_status_before_add.md)).
+3. If user references a feature → check the matching `lifecycle_*.md` in MEMORY.md index BEFORE writing code.
+4. Pick decision mode per [feedback_decision_protocol.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_decision_protocol.md): autonomous / choice menu / plan-first / one-question.
+
+### Session middle
+- Use **TodoWrite** for live tracking (not `tasks/todo.md` unless above Plan-First threshold).
+- Verify load-bearing claims with `grep` before typing them in memory files (per §7-H).
+- For UI changes: `git push origin main` → verify on Vercel via Chrome MCP. Never localhost.
+- For production data actions: preview → wait for user click. Never auto-`.click()` (per §7-I).
+
+### Session end (CHECKPOINT — easy to skip, costly when missed)
+Before saying "done" or stopping work:
+
+| Did you... | Then... |
+|------------|---------|
+| Edit a `lifecycle_*.md` or `firestore_schema_*.md`? | Run `npm run verify:memory` — exit 1 = stop, fix the claim or the code. |
+| Touch architecture (schema/CF/rules)? | Update the matching `lifecycle_*.md` SAME session — don't defer. Stale architecture docs cost the next session. |
+| Touch 2+ files in one user flow? | Re-read all session diffs end-to-end (per [feedback_self_conflict_check_my_own_changes.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_self_conflict_check_my_own_changes.md)) before claiming done. |
+| Get a correction from the user? | Log per §1 Self-Improvement Loop — §7 for recurring project anti-patterns, `feedback_*.md` for cross-project. One-offs stay in commit message. |
+| Ship a non-trivial feature OR architectural change? | Write a `next_session_handoff_<date>_<topic>.md` summarizing what shipped + what's pending + verification grep. Add to MEMORY.md 🎯 Current state. |
+| Make ANY commit? | Pre-commit hook runs `npm run verify:memory` automatically — don't bypass with `--no-verify`. |
+
+If you only fixed a typo / one-line config / single-file UX tweak, end-checklist boils down to: did you push? did the user verify? Done.

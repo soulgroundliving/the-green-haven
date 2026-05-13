@@ -8196,8 +8196,15 @@
         let _ecoPointsUnsub = null;
         function _subscribeEcoPoints() {
             // Subscribe to authoritative points in Firestore.
-            // Both tenants and players now read from people/{tenantId}.gamification
-            // (Phase 3+4 SSoT; verifySlip + CFs write gamification there).
+            // Gamification storage is split by tenant lifecycle:
+            //   - Active tenant (in a room): tenants/{building}/list/{roomId}.gamification
+            //     (writers: verifySlip, redeemReward tenant path)
+            //   - Player (post-tenancy, within 1-yr grace): people/{tenantId}.gamification
+            //     (writers: claimDailyLoginPoints, redeemReward player path; transitionToPlayer
+            //     CF copies from tenant doc at lease end)
+            // Phase 3+4 moved IDENTITY to people/, NOT gamification. eebc40b earlier today
+            // mistakenly moved the tenant-branch reader to people/ too — reverted here.
+            // See memory/gamification_ssot.md + feature_state_canonical.md.
             if (window._gamificationDisabled) return;
             if (_ecoPointsUnsub) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
@@ -8228,15 +8235,13 @@
                     return;
                 }
 
-                // ── Regular tenant branch ─────────────────────────────────
-                // Phase 3+4: gamification SSoT moved to people/{tenantId}.
-                // tenantId comes from _taTenant (loaded from localStorage cache or
-                // async Firestore fetch). If not yet available, return without setting
-                // _ecoPointsUnsub so the next call (via _onLiffClaimsReady) can retry.
-                const tenantId = _taTenant?.tenantId;
-                if (!tenantId) return;
-                const peopleRef = fs.doc(db, 'people', tenantId);
-                _ecoPointsUnsub = fs.onSnapshot(peopleRef, snap => {
+                // ── Active tenant branch ──────────────────────────────────
+                // SSoT for active tenants is tenants/{building}/list/{roomId}.gamification.
+                // Wait until LIFF claims hydrate _taBuilding + _taRoom before subscribing;
+                // if not yet set, return without _ecoPointsUnsub so _onLiffClaimsReady retries.
+                if (!_taBuilding || !_taRoom) return;
+                const tenantRef = fs.doc(db, 'tenants', _taBuilding, 'list', _taRoom);
+                _ecoPointsUnsub = fs.onSnapshot(tenantRef, snap => {
                     if (!snap.exists()) return;
                     const gam = (snap.data() || {}).gamification || {};
                     const pts = typeof gam.points === 'number' ? gam.points : null;
@@ -8830,8 +8835,8 @@
         }
         _onLiffClaimsReady(_subscribeBillsRealtime);
         _onLiffClaimsReady(_loadMeterHistoryFromFirestore);
-        // Re-run after liffLinked so _taTenant.tenantId is available for the
-        // people/{tenantId} subscription (tenant branch of _subscribeEcoPoints).
+        // Re-run after liffLinked so _taBuilding/_taRoom are available for the
+        // tenants/{b}/list/{r} subscription (active tenant branch of _subscribeEcoPoints).
         _onLiffClaimsReady(loadGamificationData);
 
         // ---- LIFF (LINE Front-end Framework) integration ----

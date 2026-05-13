@@ -83,7 +83,7 @@ if git diff --cached --name-only | grep -qE "^functions/"; then
 fi
 
 # ===== 3. Anti-pattern detection =====
-# Catches the top recurring bugs from tasks/lessons.md before they land in commits.
+# Catches the top recurring bugs from CLAUDE.md §7 anti-patterns before they land in commits.
 # Only scans lines ADDED in this commit (grep on diff +lines) to avoid flagging
 # pre-existing code that's outside the current change.
 echo -e "${YELLOW}🔎 Checking for known anti-patterns...${NC}"
