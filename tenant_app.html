@@ -2204,7 +2204,7 @@
         <button type="button" id="map-bell-btn" data-action="openBroadcastsPanel"
             aria-label="ประกาศจากผู้ดูแล"
             style="position: absolute; top: 20px; right: 20px; z-index: 20;
-                   display: flex; align-items: center; gap: 6px;
+                   display: none; align-items: center; gap: 6px;
                    background: rgba(255,255,255,0.8); padding: 10px 14px;
                    border: none; border-radius: 30px; backdrop-filter: blur(5px);
                    cursor: pointer; font: inherit;">
@@ -7152,13 +7152,16 @@
         }
         function _renderBroadcastBadge() {
             const badge = document.getElementById('map-bell-badge');
+            const btn   = document.getElementById('map-bell-btn');
             if (!badge) return;
             const n = _unreadBroadcastCount();
             if (n > 0) {
                 badge.textContent = n > 99 ? '99+' : String(n);
                 badge.style.display = 'inline-flex';
+                if (btn) btn.style.display = 'flex';
             } else {
                 badge.style.display = 'none';
+                if (btn) btn.style.display = 'none';
             }
         }
         function _escapeBroadcastHtml(s) {
@@ -10523,10 +10526,10 @@
         // ---- NAV BADGES ----
         function updateNavBadges() {
             const _isPaid = (b) => window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid');
-            const pendingBills = _taBills.filter(b => !_isPaid(b)).length;
+            const latestBill = _taBills[0];
             const billBadge = document.getElementById('nav-badge-bills');
             if (billBadge) {
-                billBadge.style.display = pendingBills > 0 ? 'block' : 'none';
+                billBadge.style.display = (latestBill && !_isPaid(latestBill)) ? 'block' : 'none';
             }
             let tickets = [];
             try { tickets = JSON.parse(localStorage.getItem('tenant_maintenance_tickets') || '[]'); } catch(e) {}
