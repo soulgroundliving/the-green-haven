@@ -38,7 +38,7 @@
   function _query(...args)   { return _fs().query(...args); }
   function _where(...args)   { return _fs().where(...args); }
   function _orderBy(...args) { return _fs().orderBy(...args); }
-  function _onSnapshot(ref, cb) { return _fs().onSnapshot(ref, cb); }
+  function _onSnapshot(ref, cb, errCb) { return _fs().onSnapshot(ref, cb, errCb); }
 
   // window.firebase.functions is a static object { httpsCallable(name) }, NOT a function.
   function _httpsCallable(name) {
@@ -100,12 +100,15 @@
       _where('status', '==', 'pending'),
       _orderBy('createdAt', 'desc')
     );
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const unsub = _onSnapshot(q, (snap) => {
         unsub();
         if (snap.empty) { resolve(null); return; }
         const d = snap.docs[0];
         resolve({ id: d.id, ...d.data() });
+      }, (err) => {
+        unsub();
+        reject(err);
       });
     });
   }
@@ -124,7 +127,7 @@
     );
     return _onSnapshot(q, (snap) => {
       cb(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => console.error('[ChecklistManager] subscribeAdminInstances failed:', err));
   }
 
   // ── Storage ───────────────────────────────────────────────────────────
