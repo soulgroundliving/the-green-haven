@@ -357,3 +357,64 @@ Vercel deploy verified live on https://the-green-haven.vercel.app/dashboard:
 - Refactor of `setTenantBuilding` + `setPVMBuilding` + `initRoomsPage`/`initNestPage` to be building-generic so all dashboard selectors become dynamic
 - Tenant-facing property switcher (current tenant_app already gets `building` from LIFF claims, so this is for tenants who own units in multiple properties)
 - SaaS billing / subscription gating
+
+---
+
+# Review — Tier 3I-9 + 3I-10 session (2026-05-13)
+
+## ✅ Shipped
+
+| Commit | สรุป |
+|--------|------|
+| `a4551b6` | Toast fix — `openChecklistModal` แสดง "✅ สร้าง checklist {type} แล้ว — ผู้เช่าจะเห็นใน app" |
+| `fcb8b00` | **3I-9 + 3I-10**: Admin co-sign panel + PNG export (3 files, +470 lines) |
+| `7fc7764` | Firestore composite indexes สำหรับ `checklistInstances` (deploy ด้วย `firebase deploy --only firestore:indexes`) |
+
+**Files touched:**
+- `dashboard.html` — `📋 Checklists` tab button + tab content (filters + list) + viewer modal + `ensureHtml2Canvas` lazy loader + script tag
+- `shared/dashboard-checklist-admin.js` (NEW) — list/viewer/co-sign/PNG export
+- `shared/dashboard-main.js` — wire actions (click + change) + `initChecklistAdminTab` dispatch
+- `firestore.indexes.json` — 2 composite indexes
+
+**Seeded ผ่าน live admin UI:**
+- `checklistTemplates/nest` — 15 items (Nest-specific equipment)
+- `checklistTemplates/rooms` — 6 items (legacy, can expand later)
+- `facilityConfig/{rooms,nest}_{parking,laundry,rooftop}` — 6 docs ผ่าน `saveConfig()` (API path เดียวกับ UI)
+
+## 🧪 Live verification (Vercel)
+
+- ✅ Build deployed (toastFresh = LATEST after SW cache clear)
+- ✅ Tab "📋 Checklists" รับ click + dispatch `initChecklistAdminTab`
+- ✅ Building dropdown populated จาก BuildingRegistry
+- ✅ Firestore index `(building asc + createdAt desc)` built (~3 นาที)
+- ✅ Subscription callback fires → empty state "— ยังไม่มี checklist ในเงื่อนไขนี้ —"
+- ✅ html2canvas lazy-loaded จาก CDN
+- ✅ All 6 actions wired (filter / openViewer / close / sign / export / clearSig)
+
+## 🚧 End-to-end test ที่เหลือ (manual — production data)
+
+ตาม CLAUDE.md §7-I:
+1. Tenant modal ห้องจริง → 🗒️ Checklist ห้อง → `in`/`out` → toast
+2. ผู้เช่าเปิด LIFF → กรอก checklist + ถ่ายรูป + เซ็น → submit
+3. Admin: Requests → 📋 Checklists → คลิก "ดู" → review → เซ็น canvas → บันทึก
+4. Admin: คลิก "⬇️ ดาวน์โหลด PNG"
+
+## 📌 Follow-up (deferred)
+
+- **Silent subscription failure** — `subscribeAdminInstances` ใน `checklist-manager.js` ไม่ส่ง error callback ไปยัง `onSnapshot` → ถ้า rules/index พลาด, UI ค้าง "กำลังโหลด..." เงียบ. แนะนำเพิ่ม `(snap, err) => { if (err) console.error(...); }` (ดู lesson 2026-05-13 ใน lessons.md)
+- `checklistTemplates/rooms` ยังมีแค่ 6 items (อาจจะเก่า) — admin อาจอยากเสริมให้เทียบเท่า nest (15 items)
+- รวม 3I-9 admin co-sign panel + 3I-10 PNG export เข้า lifecycle doc (`lifecycle_checklist.md`?)
+
+## 🗂️ Tier 3I phases — สถานะรวม
+
+- [x] 3I-1 — Firestore + Storage rules
+- [x] 3I-2 — `shared/checklist-manager.js`
+- [x] 3I-3 — `createChecklistInstance` CF
+- [x] 3I-4 — `submitChecklist` CF
+- [x] 3I-5 — `adminSignChecklist` CF
+- [x] 3I-6 — Template editor in Buildings page
+- [x] 3I-7 — Instance trigger in Tenant modal
+- [x] 3I-8 — Tenant app checklist page
+- [x] **3I-9 — Admin co-sign panel** (this session)
+- [x] **3I-10 — PNG export** (this session)
+- [ ] 3I-11 — E2E verify on Vercel (manual, production data — pending)

@@ -487,3 +487,28 @@ Refactored 5 callsites to use the helper in `a9628e0` follow-up: `_subscribeBill
 **Why:** The memory doc was written when the formula was conditional. A code simplification was made later without updating the memory verifier claim.
 
 **Rule:** When simplifying a formula or removing a conditional path, grep `memory/lifecycle_*.md` for the old expression and update the claim + verifier command. Memory drift is caught at commit time by `npm run verify:memory` — don't bypass with `--no-verify`.
+
+---
+
+## 2026-05-13 — Firestore composite query ใหม่ → ต้องประกาศ index ก่อน UI deploy + subscription error silent
+
+**Mistake:** เปิด Tier 3I-9 admin co-sign panel ที่ใช้ `subscribeAdminInstances(building, cb)` — query คือ `where('building', '==', X) + orderBy('createdAt', 'desc')` ใน `checklistInstances`. Deploy code + ทดสอบบน live → UI ค้างที่ "กำลังโหลด..." ไม่หาย. 0 console error visible. ตรวจ Network → no failed requests. ใช้เวลานานกว่าจะรู้สาเหตุ.
+
+ลอง `getDocs(q)` ตรงๆ บน console → ได้ `failed-precondition: The query requires an index. You can create it here: https://console.firebase.google.com/...`. **Firestore composite query ต้องมี index ก่อน** — สำหรับ `onSnapshot` error นี้ถูก swallow เพราะ callback ไม่ได้รับ error parameter.
+
+**Why:** 2 root causes:
+1. **Forgot to add to `firestore.indexes.json` + deploy** ก่อน UI deploy. Single where + single orderBy ที่ใช้ field ต่างกันต้องมี composite index — `where('building'=='X').orderBy('createdAt')` ไม่ใช่ default index.
+2. **Silent subscription failure**: `checklist-manager.js:124` เขียน `_onSnapshot(q, (snap) => { cb(...); })` — onSnapshot signature คือ `(observer | onNext, onError, onCompletion)`. ผมส่งแค่ onNext → error ถูก swallow → UI stuck loading. ตรงนี้คือ "silent failure" pattern ที่ MEMORY.md เตือนไว้.
+
+**Rule:**
+1. **Index workflow**: เขียน query ใหม่ที่ผสม `where` + `orderBy` (หรือ multiple where) → ก่อน push UI:
+   - เพิ่ม composite index ใน `firestore.indexes.json` (collectionGroup, queryScope=COLLECTION, fields[]) 
+   - `firebase deploy --only firestore:indexes` (build ใช้เวลา 1-5 นาทีบน empty collection, นานกว่าถ้ามี data)
+   - ทดสอบ query หลัง build เสร็จก่อน push UI
+   - หรืออย่างน้อย deploy index ก่อน UI deploy → ตอน UI live, index พร้อมแล้ว
+2. **Subscription error callback**: ทุก `onSnapshot(q, onNext)` ต้องเป็น `onSnapshot(q, onNext, (err) => console.error('[ModuleName] subscription failed:', err))` — silent listener = debug ยาก. แก้ pattern ใน `checklist-manager.js`, `facility-booking.js`, และ subscription ใหม่ๆ ทั้งหมด
+3. **Debug recipe**: ถ้า `onSnapshot` callback ไม่ fire → ทดสอบ `getDocs(q)` ตรงๆ ในก่อนใช่ — `getDocs` throw error visibly, `onSnapshot` swallow
+
+Fix: commit `7fc7764` (indexes deployed). Subscription error callback fix ยังเป็น follow-up (ใน `tasks/todo.md` Review section).
+
+Related: [silent_failure_hunter](https://example/agent) เคยจับ silent failures ใน session ก่อนๆ — น่าจะต้อง audit subscription patterns ทั่วโปรเจ็คอีกครั้ง.
