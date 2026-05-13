@@ -110,11 +110,10 @@ const CONFIG = {
     return 'rooms'; // safer default — main building
   },
 
-  // Convert canonical id → Firestore `buildings/` doc id ('RentRoom' | 'nest').
-  // Use only at the Firestore boundary; everywhere else keep the canonical id.
+  // Convert canonical id → Firestore `buildings/` doc id.
+  // Canonical ids ('rooms', 'nest') ARE the Firestore doc ids since the B4 migration.
   getFirestoreBuilding(type) {
-    const canonical = this.getBuildingConfig(type);
-    return canonical === 'rooms' ? 'RentRoom' : 'nest';
+    return this.getBuildingConfig(type);
   },
 
   // SSoT for displaying building names in the UI.

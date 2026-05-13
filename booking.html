@@ -1151,7 +1151,7 @@
   // P1 #4: fetch building promptpay number from Firestore to show next to QR
   async function loadPromptpayInfo() {
     if (!window.bookingFirebase) return;
-    const BLD_MAP = { rooms: 'RentRoom', nest: 'nest' };
+    const BLD_MAP = { rooms: 'rooms', nest: 'nest' };
     const DISPLAY_NAMES = { rooms: 'Nature Haven (ห้องแถว)', nest: 'Nature Haven Nest' };
     await Promise.all(Object.entries(BLD_MAP).map(async ([bld, docId]) => {
       try {

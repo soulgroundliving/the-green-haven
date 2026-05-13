@@ -882,12 +882,10 @@ class TenantFirebaseSync {
    * Load tenant lease information from Firestore meta_data collection
    * Priority: Firestore FIRST → localStorage FALLBACK
    */
-  // Map code building name → Firestore building name
-  //   'rooms' → 'RentRoom'  (ตึกแถว)
-  //   'nest'  → 'nest'       (ตึก Nest)
+  // Canonical building id IS the Firestore doc id since B4 migration (rooms → buildings/rooms).
   // Room IDs: ใช้ตามที่ admin ตั้งใน Firestore ตรงๆ (เช่น '15ก', 'ร้านใหญ่' ภาษาไทย)
   // หาก Firestore docId ไม่ตรง → loadLease() คืน null + console แจ้ง path ที่ค้น
-  static _fsBuilding(b) { return b === 'rooms' ? 'RentRoom' : b; }
+  static _fsBuilding(b) { return b; }
   static _fsRoomId(r) { return r; }
 
   static async loadLease() {

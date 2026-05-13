@@ -666,7 +666,7 @@ function _refreshPromptPayDisplay(){
   } catch(e) { console.warn('_refreshPromptPayDisplay:', e); }
 }
 
-// Subscribe Firestore buildings/{RentRoom|nest} once Firebase ready
+// Subscribe Firestore buildings/{rooms|nest} once Firebase ready
 // Lazy: triggered on first showPage('bill') — see dashboard-main.js. The
 // `_buildingPaymentSubscribed` guard makes this idempotent across re-entry.
 window._buildingPaymentSubscribed = window._buildingPaymentSubscribed || false;
@@ -679,7 +679,7 @@ function _subscribeBuildingPaymentForBill(){
   window._buildingPaymentSubscribed = true;
   const db = window.firebase.firestore();
   const fs = window.firebase.firestoreFunctions;
-  const map = { rooms: 'RentRoom', nest: 'nest' };
+  const map = { rooms: 'rooms', nest: 'nest' };
   Object.entries(map).forEach(([canonical, fsId]) => {
     try {
       fs.onSnapshot(fs.doc(db, 'buildings', fsId), snap => {

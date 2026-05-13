@@ -122,10 +122,10 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
   }
   const depositAmount = monthlyRent * 2;
 
-  // ── Pull receiver phone from buildings/{fsId}.promptpayNumber ────────
-  // Admin configures per-building PromptPay in dashboard → People Management
-  // → Payment Info (ข้อมูลการชำระเงิน). 'rooms' maps to Firestore id 'RentRoom'.
-  const fsBuildingId = canonicalBuilding === 'rooms' ? 'RentRoom' : canonicalBuilding;
+  // ── Pull receiver phone from buildings/{canonicalBuilding}.promptpayNumber ────────
+  // Admin configures per-building PromptPay in dashboard → Buildings page.
+  // Canonical building id ('rooms', 'nest') IS the Firestore doc id since B4 migration.
+  const fsBuildingId = canonicalBuilding;
   let receiverPhone;
   try {
     const buildingSnap = await firestore.doc(`buildings/${fsBuildingId}`).get();

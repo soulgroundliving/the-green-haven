@@ -1116,7 +1116,7 @@ async function renderBuildingPaymentConfig() {
   const db = window.firebase.firestore();
   // Load both building docs in parallel
   const [rrSnap, nestSnap] = await Promise.all([
-    fs.getDoc(fs.doc(db, 'buildings', 'RentRoom')).catch(() => null),
+    fs.getDoc(fs.doc(db, 'buildings', 'rooms')).catch(() => null),
     fs.getDoc(fs.doc(db, 'buildings', 'nest')).catch(() => null)
   ]);
   const rr = rrSnap?.exists() ? rrSnap.data() : {};
@@ -1136,11 +1136,11 @@ async function renderBuildingPaymentConfig() {
       <button onclick="saveBuildingPaymentConfig('${fsId}')" style="width:100%;padding:.65rem;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun,sans-serif;">💾 บันทึก ${label}</button>
     </div>
   `;
-  container.innerHTML = cardHtml('🏠 ห้องแถว', 'RentRoom', rr) + cardHtml('🏢 Nest', 'nest', nest);
+  container.innerHTML = cardHtml('🏠 ห้องแถว', 'rooms', rr) + cardHtml('🏢 Nest', 'nest', nest);
 }
 
 async function saveBuildingPaymentConfig(fsId) {
-  if (!['RentRoom', 'nest'].includes(fsId)) return;
+  if (!['rooms', 'nest'].includes(fsId)) return;
   const promptpayNumber = document.getElementById(`bp-${fsId}-promptpay`)?.value?.trim() || '';
   const companyName = document.getElementById(`bp-${fsId}-company`)?.value?.trim() || '';
   const ownerName = document.getElementById(`bp-${fsId}-owner`)?.value?.trim() || '';
@@ -1159,7 +1159,7 @@ async function saveBuildingPaymentConfig(fsId) {
       promptpayNumber, companyName, ownerName,
       updatedAt: new Date().toISOString()
     }, { merge: true });
-    showToast(`✅ บันทึกข้อมูล ${fsId === 'RentRoom' ? 'ห้องแถว' : 'Nest'} แล้ว`, 'success');
+    showToast(`✅ บันทึกข้อมูล ${fsId === 'rooms' ? 'ห้องแถว' : 'Nest'} แล้ว`, 'success');
   } catch (e) {
     console.error('saveBuildingPaymentConfig failed:', e);
     showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
@@ -1185,7 +1185,7 @@ async function renderBuildingInternetConfig() {
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
   const [rrSnap, nestSnap] = await Promise.all([
-    fs.getDoc(fs.doc(db, 'buildings', 'RentRoom')).catch(() => null),
+    fs.getDoc(fs.doc(db, 'buildings', 'rooms')).catch(() => null),
     fs.getDoc(fs.doc(db, 'buildings', 'nest')).catch(() => null)
   ]);
   const rr = rrSnap?.exists() ? (rrSnap.data().internet || {}) : {};
@@ -1221,11 +1221,11 @@ async function renderBuildingInternetConfig() {
       <button onclick="saveBuildingInternetConfig('${fsId}')" style="width:100%;padding:.65rem;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun,sans-serif;">💾 บันทึก ${label}</button>
     </div>
   `;
-  container.innerHTML = cardHtml('🏠 ห้องแถว', 'RentRoom', rr) + cardHtml('🏢 Nest', 'nest', nest);
+  container.innerHTML = cardHtml('🏠 ห้องแถว', 'rooms', rr) + cardHtml('🏢 Nest', 'nest', nest);
 }
 
 async function saveBuildingInternetConfig(fsId) {
-  if (!['RentRoom', 'nest'].includes(fsId)) return;
+  if (!['rooms', 'nest'].includes(fsId)) return;
   const status = document.getElementById(`bi-${fsId}-status`)?.value || 'online';
   const provider = document.getElementById(`bi-${fsId}-provider`)?.value?.trim() || '';
   const contact = document.getElementById(`bi-${fsId}-contact`)?.value?.trim() || '';
@@ -1244,7 +1244,7 @@ async function saveBuildingInternetConfig(fsId) {
         updatedAt: new Date().toISOString()
       }
     }, { merge: true });
-    showToast(`✅ บันทึกสถานะเน็ต ${fsId === 'RentRoom' ? 'ห้องแถว' : 'Nest'} แล้ว`, 'success');
+    showToast(`✅ บันทึกสถานะเน็ต ${fsId === 'rooms' ? 'ห้องแถว' : 'Nest'} แล้ว`, 'success');
   } catch (e) {
     console.error('saveBuildingInternetConfig failed:', e);
     showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
