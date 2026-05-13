@@ -771,6 +771,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'closeBuildingModal')     { typeof window.closeBuildingModal     === 'function' && window.closeBuildingModal(); return; }
     if (a === 'saveBuildingForm')       { typeof window.saveBuildingForm       === 'function' && window.saveBuildingForm(); return; }
     if (a === 'archiveBuildingPrompt')  { typeof window.archiveBuildingPrompt  === 'function' && window.archiveBuildingPrompt(el.dataset.id); return; }
+    if (a === 'openRoomFromBuilding')   { typeof window.openRoomFromBuilding   === 'function' && window.openRoomFromBuilding(el.dataset.building, el.dataset.room); return; }
   });
 
   // ===== CHANGE / INPUT EVENT DELEGATION =====
