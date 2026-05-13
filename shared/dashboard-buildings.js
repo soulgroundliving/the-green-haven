@@ -24,11 +24,40 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  function _getBuildingRooms(buildingId) {
+    if (typeof getActiveRoomsWithMetadata !== 'function') return [];
+    let fallback = null;
+    if (buildingId === 'rooms') fallback = window.ROOMS_OLD || window.ROOMS_NEW || null;
+    else if (buildingId === 'nest') fallback = window.NEST_ROOMS || null;
+    try {
+      return getActiveRoomsWithMetadata(buildingId, fallback) || [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function _renderRoomChips(buildingId, rooms) {
+    if (!rooms || rooms.length === 0) {
+      return `<div style="font-size:.78rem;color:var(--text-muted);font-style:italic;margin-top:.25rem;">— ยังไม่มีห้องในอาคารนี้ —</div>`;
+    }
+    const chips = rooms.map(r => {
+      const rid = _esc(r.id);
+      return `<button data-action="openRoomFromBuilding" data-building="${_esc(buildingId)}" data-room="${rid}" title="จัดการข้อมูลห้อง ${rid}" style="background:#fff8e1;color:#ef6c00;border:1px solid #ffe0b2;border-radius:8px;padding:.25rem .55rem;font-size:.78rem;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;display:inline-flex;align-items:center;gap:.25rem;transition:all .15s;" onmouseover="this.style.background='#ffe0b2'" onmouseout="this.style.background='#fff8e1'">📄 ${rid}</button>`;
+    }).join('');
+    return `
+      <div style="margin-top:.5rem;">
+        <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:.35rem;">ห้อง (${rooms.length}) — กดเพื่อจัดการ:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem;max-height:140px;overflow-y:auto;padding:.25rem;border:1px dashed #eee;border-radius:6px;">${chips}</div>
+      </div>
+    `;
+  }
+
   function _renderCard(b) {
     const id = _esc(b.id);
     const status = b.status === 'archived' ? 'archived' : 'active';
     const badgeColor = status === 'archived' ? '#9e9e9e' : 'var(--green)';
     const isFallback = b._fallback;
+    const rooms = _getBuildingRooms(b.id);
     return `
       <div class="card" style="padding:1.25rem;display:flex;flex-direction:column;gap:.5rem;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
@@ -43,12 +72,21 @@
         ${b.promptPayId ? `<div style="font-size:.85rem;font-family:monospace;">💰 ${_esc(b.promptPayId)}</div>` : ''}
         ${b.contact ? `<div style="font-size:.85rem;">☎️ ${_esc(b.contact)}</div>` : ''}
         ${isFallback ? `<div style="font-size:.72rem;color:#ff9800;margin-top:.25rem;">⚠️ ยังไม่ได้บันทึกใน Firestore — กด "แก้ไข" เพื่อสร้าง</div>` : ''}
+        ${_renderRoomChips(b.id, rooms)}
         <div style="display:flex;gap:.5rem;margin-top:.5rem;">
           <button data-action="openBuildingModal" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;flex:1;">✏️ แก้ไข</button>
           ${status === 'active' && !isFallback ? `<button data-action="archiveBuildingPrompt" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;background:#fff;border:1px solid #f44336;color:#f44336;">🗑️ Archive</button>` : ''}
         </div>
       </div>
     `;
+  }
+
+  function openRoomFromBuilding(building, roomId) {
+    if (typeof window.openTenantModal !== 'function') {
+      window.showToast?.('openTenantModal not loaded', 'error');
+      return;
+    }
+    window.openTenantModal(building, roomId);
   }
 
   async function initBuildingsPage() {
@@ -159,4 +197,5 @@
   window.closeBuildingModal = closeBuildingModal;
   window.saveBuildingForm = saveBuildingForm;
   window.archiveBuildingPrompt = archiveBuildingPrompt;
+  window.openRoomFromBuilding = openRoomFromBuilding;
 })();
