@@ -13,11 +13,13 @@
  * verifies that UID is the tenant doc's linkedAuthUid before writing — that
  * prevents a malicious caller from writing to someone else's room.
  *
- * Data: { oldAnonUid: "abc...", building: "rooms"|"nest", room: "201", phone: "0xxxxxxxxx" }
+ * Data: { oldAnonUid: "abc...", building: "<registered-id>", room: "201", phone: "0xxxxxxxxx" }
+ *   building is validated against the Tier 3F registry (any active building accepted).
  * Returns: { ok: true } | throws HttpsError
  */
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
+const { getValidBuildings } = require('./buildingRegistry');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -26,6 +28,11 @@ if (!admin.apps.length) {
 function normalizePhone(p) {
   return String(p || '').replace(/\D/g, '');
 }
+
+// Legacy Firestore doc IDs that pre-date the canonical scheme. Only the two
+// original buildings have legacy paths; any building added via the Tier 3F
+// registry uses its canonical ID directly.
+const LEGACY_DOC_ALIASES = { rooms: ['RentRoom'], nest: ['Nest'] };
 
 exports.setVerifiedPhone = functions.region('asia-southeast1').https.onCall(async (data, context) => {
   if (!context.auth) {
@@ -45,8 +52,10 @@ exports.setVerifiedPhone = functions.region('asia-southeast1').https.onCall(asyn
   const { oldAnonUid, lineUserId, building, room, phone } = data || {};
   const phoneDigits = normalizePhone(phone);
 
-  if (!['rooms', 'nest'].includes(String(building))) {
-    throw new functions.https.HttpsError('invalid-argument', 'building must be rooms or nest');
+  const validBuildings = await getValidBuildings();
+  if (!validBuildings.has(String(building))) {
+    throw new functions.https.HttpsError('invalid-argument',
+      'building must be one of: ' + Array.from(validBuildings).join(', '));
   }
   if (!room || typeof room !== 'string') {
     throw new functions.https.HttpsError('invalid-argument', 'room required');
@@ -63,11 +72,9 @@ exports.setVerifiedPhone = functions.region('asia-southeast1').https.onCall(asyn
   }
 
   const fs = admin.firestore();
-  // Try canonical building key first, then legacy display key as fallback.
-  // Some older docs were created at tenants/RentRoom/* before the canonical
-  // rooms/nest scheme was settled — accept either to avoid orphaning them.
-  const buildingCandidates = building === 'rooms' ? ['rooms', 'RentRoom'] :
-                             building === 'nest'  ? ['nest', 'Nest'] : [building];
+  // Try canonical building key first, then any legacy doc IDs as fallback for
+  // backward-compat with docs created before the canonical scheme was settled.
+  const buildingCandidates = [building, ...(LEGACY_DOC_ALIASES[building] || [])];
   let ref = null;
   let tenantData = null;
   let resolvedBuilding = null;
