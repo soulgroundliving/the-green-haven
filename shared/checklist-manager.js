@@ -13,69 +13,42 @@
  *   adminSignChecklist(instanceId, adminSignaturePath)      → { signed }
  *   getSignedUrl(storagePath)                 → download URL
  *
- * Depends on globals set by shared Firebase init:
- *   window.firebaseFirestore, window.firebaseFunctions
- *   window.firebaseStorage, window.firebaseStorageRef,
- *   window.firebaseStorageUploadBytes, window.firebaseStorageGetDownloadURL
+ * Depends on canonical Firebase globals (set in dashboard.html / tenant_app.html):
+ *   window.firebase.firestore()           — Firestore instance (function call)
+ *   window.firebase.firestoreFunctions    — { collection, doc, getDoc, setDoc, query, where, orderBy, onSnapshot, ... }
+ *   window.firebase.storage()             — Storage instance (function call)
+ *   window.firebase.storageFunctions      — { ref, uploadBytes, getDownloadURL, ... }
+ *   window.firebase.functions             — { httpsCallable(name) } static object
  *
  * UMD-style: sets window.ChecklistManager.
  */
 (function() {
   'use strict';
 
-  // ── Firebase SDK helpers (set by shared init) ──────────────────────────
-  function _db()  { return window.firebaseFirestore; }
-  function _fns() { return window.firebaseFunctions; }
-  function _st()  { return window.firebaseStorage; }
+  // ── Firebase SDK helpers (canonical window.firebase.* pattern) ─────────
+  function _db()  { return window.firebase?.firestore?.(); }
+  function _fs()  { return window.firebase?.firestoreFunctions; }
+  function _st()  { return window.firebase?.storage?.(); }
+  function _sf()  { return window.firebase?.storageFunctions; }
 
-  function _collection(path) {
-    return window.firebaseCollection
-      ? window.firebaseCollection(_db(), path)
-      : window.firebaseFirestoreFunctions.collection(_db(), path);
-  }
-  function _doc(path) {
-    return window.firebaseDoc
-      ? window.firebaseDoc(_db(), path)
-      : window.firebaseFirestoreFunctions.doc(_db(), path);
-  }
-  function _getDoc(ref) {
-    return window.firebaseGetDoc
-      ? window.firebaseGetDoc(ref)
-      : window.firebaseFirestoreFunctions.getDoc(ref);
-  }
-  function _setDoc(ref, data) {
-    return window.firebaseSetDoc
-      ? window.firebaseSetDoc(ref, data)
-      : window.firebaseFirestoreFunctions.setDoc(ref, data);
-  }
-  function _query(...args) {
-    return window.firebaseQuery
-      ? window.firebaseQuery(...args)
-      : window.firebaseFirestoreFunctions.query(...args);
-  }
-  function _where(...args) {
-    return window.firebaseWhere
-      ? window.firebaseWhere(...args)
-      : window.firebaseFirestoreFunctions.where(...args);
-  }
-  function _orderBy(...args) {
-    return window.firebaseOrderBy
-      ? window.firebaseOrderBy(...args)
-      : window.firebaseFirestoreFunctions.orderBy(...args);
-  }
-  function _onSnapshot(ref, cb) {
-    return window.firebaseOnSnapshot
-      ? window.firebaseOnSnapshot(ref, cb)
-      : window.firebaseFirestoreFunctions.onSnapshot(ref, cb);
-  }
+  function _collection(path) { return _fs().collection(_db(), path); }
+  function _doc(path)        { return _fs().doc(_db(), path); }
+  function _getDoc(ref)      { return _fs().getDoc(ref); }
+  function _setDoc(ref, data){ return _fs().setDoc(ref, data); }
+  function _query(...args)   { return _fs().query(...args); }
+  function _where(...args)   { return _fs().where(...args); }
+  function _orderBy(...args) { return _fs().orderBy(...args); }
+  function _onSnapshot(ref, cb) { return _fs().onSnapshot(ref, cb); }
+
+  // window.firebase.functions is a static object { httpsCallable(name) }, NOT a function.
   function _httpsCallable(name) {
-    return window.firebaseHttpsCallable
-      ? window.firebaseHttpsCallable(_fns(), name)
-      : window.firebaseFirestoreFunctions.httpsCallable(_fns(), name);
+    const fn = window.firebase?.functions?.httpsCallable?.(name);
+    if (!fn) throw new Error(`[ChecklistManager] CF "${name}" not available — firebase.functions not ready`);
+    return fn;
   }
-  function _storageRef(path) {
-    return window.firebaseStorageRef(_st(), path);
-  }
+  function _storageRef(path) { return _sf().ref(_st(), path); }
+  function _uploadBytes(ref, data, meta) { return _sf().uploadBytes(ref, data, meta); }
+  function _getDownloadURL(ref) { return _sf().getDownloadURL(ref); }
 
   // ── Template ───────────────────────────────────────────────────────────
 
@@ -164,7 +137,7 @@
     const ext = file.name ? file.name.split('.').pop().toLowerCase() : 'jpg';
     const path = `checklists/${building}/${roomId}/${instanceId}/item_${itemId}.${ext}`;
     const ref = _storageRef(path);
-    await window.firebaseStorageUploadBytes(ref, file);
+    await _uploadBytes(ref, file);
     return path;
   }
 
@@ -180,7 +153,7 @@
     // Convert data-URL to Blob
     const res = await fetch(dataUrl);
     const blob = await res.blob();
-    await window.firebaseStorageUploadBytes(ref, blob, { contentType: 'image/png' });
+    await _uploadBytes(ref, blob, { contentType: 'image/png' });
     return path;
   }
 
@@ -193,7 +166,7 @@
     const ref = _storageRef(path);
     const res = await fetch(dataUrl);
     const blob = await res.blob();
-    await window.firebaseStorageUploadBytes(ref, blob, { contentType: 'image/png' });
+    await _uploadBytes(ref, blob, { contentType: 'image/png' });
     return path;
   }
 
@@ -204,7 +177,7 @@
    */
   async function getSignedUrl(storagePath) {
     const ref = _storageRef(storagePath);
-    return window.firebaseStorageGetDownloadURL(ref);
+    return _getDownloadURL(ref);
   }
 
   // ── CF calls ───────────────────────────────────────────────────────────

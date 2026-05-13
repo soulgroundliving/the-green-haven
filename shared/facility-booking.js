@@ -26,7 +26,8 @@
 
   function _db() { return window.firebase?.firestore?.(); }
   function _fs() { return window.firebase?.firestoreFunctions; }
-  function _fn() { return window.firebase?.functions?.(); }
+  // window.firebase.functions is a static object { httpsCallable(name) }, NOT a function.
+  function _callable(name) { return window.firebase?.functions?.httpsCallable?.(name); }
 
   function _ready() {
     return !!(window.firebase?.firestore && window.firebase?.firestoreFunctions && window.firebase?.functions);
@@ -161,11 +162,7 @@
    * Returns { bookingId } on success.
    */
   async function createBooking(data) {
-    if (!_fn()) throw new Error('Firebase functions not ready');
-    const fn = _fn();
-    const callable = fn.httpsCallable
-      ? fn.httpsCallable('createFacilityBooking')
-      : window.firebase.firestoreFunctions?.httpsCallable?.('createFacilityBooking');
+    const callable = _callable('createFacilityBooking');
     if (!callable) throw new Error('createFacilityBooking CF not available');
     const result = await callable(data);
     return result.data;
@@ -177,11 +174,7 @@
    * Returns { cancelled: true } on success.
    */
   async function cancelBooking(bookingId) {
-    if (!_fn()) throw new Error('Firebase functions not ready');
-    const fn = _fn();
-    const callable = fn.httpsCallable
-      ? fn.httpsCallable('cancelFacilityBooking')
-      : window.firebase.firestoreFunctions?.httpsCallable?.('cancelFacilityBooking');
+    const callable = _callable('cancelFacilityBooking');
     if (!callable) throw new Error('cancelFacilityBooking CF not available');
     const result = await callable({ bookingId });
     return result.data;
