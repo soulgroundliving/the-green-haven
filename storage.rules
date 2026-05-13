@@ -84,6 +84,24 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    // ===== CHECKLIST PHOTOS + SIGNATURES (Tier 3I) =====
+    // Path: checklists/{building}/{roomId}/{instanceId}/{fileName}
+    // Tenant uploads photos/signature for their own instance.
+    // Admin reads all (for co-sign review). Tenant reads own instance files.
+    // Uses firestore.get to confirm instanceId belongs to the caller.
+    match /checklists/{building}/{roomId}/{instanceId}/{fileName} {
+      allow read: if isAdmin()
+        || (isSignedIn()
+            && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.tenantUid == request.auth.uid);
+      allow write: if fitsSizeLimit() && isImageOrPdf()
+        && (isAdmin()
+            || (isSignedIn()
+                && request.auth.token.room == roomId
+                && request.auth.token.building == building
+                && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.tenantUid == request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
     // Default deny.
     match /{allPaths=**} {
       allow read, write: if false;

@@ -382,6 +382,25 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ===== CHECKLIST TEMPLATES (Tier 3I) =====
+    // Admin creates/edits templates per building. Signed-in users read.
+    // Doc IDs: {building} (one template per building, overwritten on save).
+    match /checklistTemplates/{building} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ===== CHECKLIST INSTANCES (Tier 3I) =====
+    // Instances are created by admin CF (createChecklistInstance).
+    // Tenant fills in and submits via submitChecklist CF.
+    // Admin co-signs via adminSignChecklist CF.
+    // All direct client writes are forbidden — CF-only.
+    match /checklistInstances/{instanceId} {
+      allow read:  if isAdmin()
+                || (isSignedIn() && resource.data.tenantUid == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
     // ===== DEPOSITS (admin manages; accountant reads for tax reporting) =====
     // Flat collection: deposits/{building}_{roomId} (e.g. deposits/rooms_15)
     // Each doc stores building + roomId fields for client-side filtering.

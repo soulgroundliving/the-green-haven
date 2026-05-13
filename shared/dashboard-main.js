@@ -776,6 +776,17 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'saveBuildingForm')       { typeof window.saveBuildingForm       === 'function' && window.saveBuildingForm(); return; }
     if (a === 'archiveBuildingPrompt')  { typeof window.archiveBuildingPrompt  === 'function' && window.archiveBuildingPrompt(el.dataset.id); return; }
     if (a === 'openRoomFromBuilding')   { typeof window.openRoomFromBuilding   === 'function' && window.openRoomFromBuilding(el.dataset.building, el.dataset.room); return; }
+
+    // Facility booking admin tab (Tier 3G)
+    if (a === 'facilityAdminFilter')  { typeof window.facilityAdminFilter  === 'function' && window.facilityAdminFilter(); return; }
+    if (a === 'facilityOpenConfig')   { typeof window.facilityOpenConfig   === 'function' && window.facilityOpenConfig(); return; }
+    if (a === 'facilityCloseConfig')  { typeof window.facilityCloseConfig  === 'function' && window.facilityCloseConfig(); return; }
+    if (a === 'facilitySaveConfig')   { typeof window.facilitySaveConfig   === 'function' && window.facilitySaveConfig(); return; }
+
+    // Checklist template + tenant action (Tier 3I)
+    if (a === 'openChecklistModal')    { typeof window.openChecklistModal    === 'function' && window.openChecklistModal(); return; }
+    if (a === 'closeChecklistEditor')  { typeof window.closeChecklistEditor  === 'function' && window.closeChecklistEditor(); return; }
+    if (a === 'saveChecklistTemplate') { typeof window.saveChecklistTemplate === 'function' && window.saveChecklistTemplate(); return; }
   });
 
   // ===== CHANGE / INPUT EVENT DELEGATION =====
@@ -796,6 +807,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'renderMaintenancePage') { typeof renderMaintenancePage === 'function' && renderMaintenancePage(); return; }
     if (a === 'renderHousekeepingList') { typeof renderHousekeepingList === 'function' && renderHousekeepingList(); return; }
     if (a === 'renderDepositsPage') { typeof renderDepositsPage === 'function' && renderDepositsPage(); return; }
+    if (a === 'facilityAdminFilter') { typeof window.facilityAdminFilter === 'function' && window.facilityAdminFilter(); return; }
     if (a === 'filterPetsByStatus') { typeof filterPetsByStatus === 'function' && filterPetsByStatus(el.value); return; }
     // Phase 4E Step 2 chunk 2: page-meter / page-expense / page-content / page-payment-verify
     if (a === 'loadRoomConfigUI') { typeof loadRoomConfigUI === 'function' && loadRoomConfigUI(); return; }

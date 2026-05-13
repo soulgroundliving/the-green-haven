@@ -866,6 +866,80 @@ async function revertTransitionToPlayer() {
 }
 window.revertTransitionToPlayer = revertTransitionToPlayer;
 
+// ─── Checklist instance trigger (Tier 3I) ────────────────────────────────────
+// Opens a quick dialog to choose move_in or move_out, then calls
+// ChecklistManager.createInstance so tenant can fill it in their LIFF app.
+async function openChecklistModal() {
+  const building = currentEditBuilding;
+  const roomId   = currentEditRoomId;
+  if (!building || !roomId) {
+    showToast('ไม่พบข้อมูลห้อง', 'error');
+    return;
+  }
+
+  if (!window.ChecklistManager) {
+    showToast('ChecklistManager ยังไม่โหลด', 'error');
+    return;
+  }
+
+  const occupancy  = TenantLookup.getRoomOccupancyInfo(building, roomId);
+  const tenant     = occupancy.tenant || {};
+  const tenantUid  = tenant.linkedAuthUid || '';
+  const tenantName = String(tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`).trim();
+
+  if (!tenantUid) {
+    showToast('ห้องนี้ยังไม่มีผู้เช่า (ต้อง Link LIFF ก่อน)', 'info');
+    return;
+  }
+
+  // Check if building has a template
+  const tpl = await window.ChecklistManager.getTemplate(building).catch(() => null);
+  if (!tpl || !Array.isArray(tpl.items) || !tpl.items.length) {
+    const goEdit = confirm(`ยังไม่มี checklist template สำหรับอาคาร "${building}"\n\nไปตั้งค่า template ใน Buildings → ⚙️ Checklist Template หรือไม่?`);
+    if (goEdit && typeof window.showPage === 'function') {
+      window.showPage('buildings');
+    }
+    return;
+  }
+
+  const typeLabel = prompt(
+    `สร้าง Checklist ห้อง ${roomId} — ${tenantName || 'ผู้เช่า'}\n\n` +
+    `พิมพ์ "in" สำหรับ Move-In หรือ "out" สำหรับ Move-Out:`,
+    'in'
+  );
+  if (!typeLabel) return;
+  const type = typeLabel.trim().toLowerCase() === 'out' ? 'move_out' : 'move_in';
+  const typeText = type === 'move_out' ? 'ย้ายออก' : 'ย้ายเข้า';
+
+  const confirmed = confirm(
+    `ยืนยันสร้าง checklist ${typeText} สำหรับห้อง ${roomId}?\n` +
+    `ผู้เช่า: ${tenantName || tenantUid}\n` +
+    `จะส่ง instance ไปยังแอป LIFF ของผู้เช่าทันที`
+  );
+  if (!confirmed) return;
+
+  const btn = document.querySelector('[data-action="openChecklistModal"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง...'; }
+
+  try {
+    const result = await window.ChecklistManager.createInstance({
+      building,
+      roomId,
+      tenantUid,
+      tenantRoom: roomId,
+      tenantName,
+      type,
+    });
+    showToast(`✅ สร้าง checklist ${typeText} แล้ว (${result.instanceId.slice(0, 8)}...)`, 'success');
+  } catch (err) {
+    console.error('openChecklistModal error:', err);
+    showToast('สร้างไม่สำเร็จ: ' + (err.message || err), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🗒️ Checklist ห้อง'; }
+  }
+}
+window.openChecklistModal = openChecklistModal;
+
 // Close modal when clicking outside
 document.addEventListener('click', function(e) {
   const modal = document.getElementById('tenantModal');

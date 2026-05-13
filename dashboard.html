@@ -3126,6 +3126,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button data-action="archiveTenantOnMoveOut" title="ย้ายข้อมูลผู้เช่าไป archive — ห้องกลับเป็นว่าง, ข้อมูลเดิมเก็บไว้สำหรับการกลับมาเช่าใหม่" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#b71c1c;border:1.5px solid #ef9a9a;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;"">📦 ย้ายไป Archive</button>
       <button data-action="transitionToPlayer" title="ย้ายผู้เช่าเป็น Community Member — ยังอยู่ใน LINE ได้ แต่เข้าถึงเฉพาะ community / wellness / gamification" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#0f766e;border:1.5px solid #99f6e4;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;"">🎮 ย้ายเป็น Community</button>
       <button data-action="revertTransitionToPlayer" title="ย้อน transitionToPlayer ที่ทำผิด — ห้องว่างที่มี lastArchivedContractId='transitioned_to_player' จะกลับเป็น tenant ปกติ; revoke player claim; เก็บ archive doc ไว้เป็น audit" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#c2410c;border:1.5px solid #fed7aa;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;"">↩️ ย้อนกลับเป็น Tenant</button>
+      <button data-action="openChecklistModal" title="สร้าง checklist ตรวจห้องสำหรับผู้เช่าคนนี้ (เข้า/ออก)" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#1565c0;border:1.5px solid #90caf9;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;">🗒️ Checklist ห้อง</button>
       <button data-action="closeTenantModal" style="flex:1;min-width:120px;padding:14px 24px;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;"">ปิด</button>
     </div>
   </div>
@@ -4860,6 +4861,20 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 </div>
 
 
+<!-- ===== CHECKLIST TEMPLATE EDITOR MODAL (Tier 3I) ===== -->
+<div id="checklist-template-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9997;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:1.5rem;width:94%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+    <div style="font-weight:700;font-size:1.05rem;margin-bottom:.25rem;">🗒️ Checklist Template</div>
+    <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">อาคาร: <strong id="clt-building-label"></strong></div>
+    <label style="display:block;margin-bottom:.4rem;font-size:.88rem;font-weight:600;">รายการตรวจ (หนึ่งบรรทัด = หนึ่งรายการ)</label>
+    <textarea id="clt-items" rows="12" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:6px;box-sizing:border-box;font-family:inherit;font-size:.875rem;margin-bottom:1rem;" placeholder="เช่น:&#10;ประตูห้อง&#10;กุญแจ&#10;เครื่องปรับอากาศ&#10;ตู้เย็น&#10;..."></textarea>
+    <div style="display:flex;gap:.5rem;">
+      <button data-action="closeChecklistEditor" style="flex:1;padding:.7rem;background:#fff;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-weight:600;">ยกเลิก</button>
+      <button data-action="saveChecklistTemplate" style="flex:2;padding:.7rem;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== PET REGISTRATIONS APPROVAL ===== -->
 <div class="page" id="page-requests-approvals">
   <div class="section-title" role="heading" aria-level="2">✅ Requests & Approvals</div>
@@ -5332,6 +5347,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-payment-verify.js"></script>
 <script src="./shared/dashboard-buildings.js"></script>
 <script src="./shared/facility-booking.js"></script>
+<script src="./shared/checklist-manager.js"></script>
 
 <!-- ===== PAYMENT DETAIL MODAL ===== -->
 <div class="pay-modal-overlay" id="payModalOverlay" role="dialog" aria-modal="true" aria-labelledby="payModalTitle" data-action="closePayModalIfOverlay">

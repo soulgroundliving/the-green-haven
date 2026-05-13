@@ -74,8 +74,9 @@
         ${b.ownerEmail ? `<div style="font-size:.78rem;color:var(--text-muted);">👤 ${_esc(b.ownerEmail)}</div>` : ''}
         ${isFallback ? `<div style="font-size:.72rem;color:#ff9800;margin-top:.25rem;">⚠️ ยังไม่ได้บันทึกใน Firestore — กด "แก้ไข" เพื่อสร้าง</div>` : ''}
         ${_renderRoomChips(b.id, rooms)}
-        <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+        <div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap;">
           <button data-action="openBuildingModal" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;flex:1;">✏️ แก้ไข</button>
+          <button onclick="openChecklistEditor('${id}')" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;flex:1;background:#e3f2fd;border-color:#90caf9;color:#1565c0;">🗒️ Checklist</button>
           ${status === 'active' && !isFallback ? `<button data-action="archiveBuildingPrompt" data-id="${id}" class="year-tab" style="padding:.4rem .8rem;font-size:.85rem;background:#fff;border:1px solid #f44336;color:#f44336;">🗑️ Archive</button>` : ''}
         </div>
       </div>
@@ -195,10 +196,61 @@
     }
   }
 
+  // ── Checklist Template Editor (Tier 3I) ──────────────────────────────
+
+  let _checklistBuilding = '';
+
+  async function openChecklistEditor(building) {
+    _checklistBuilding = building;
+    const modal = document.getElementById('checklist-template-modal');
+    if (!modal) return;
+    document.getElementById('clt-building-label').textContent = building;
+    document.getElementById('clt-items').value = '';
+
+    if (window.ChecklistManager) {
+      try {
+        const tpl = await window.ChecklistManager.getTemplate(building);
+        if (tpl && Array.isArray(tpl.items)) {
+          document.getElementById('clt-items').value =
+            tpl.items.map(i => i.label).join('\n');
+        }
+      } catch (_) { /* new template */ }
+    }
+    modal.style.display = 'flex';
+  }
+
+  function closeChecklistEditor() {
+    const modal = document.getElementById('checklist-template-modal');
+    if (modal) modal.style.display = '';
+  }
+
+  async function saveChecklistTemplate() {
+    if (!window.ChecklistManager) { alert('ChecklistManager ยังไม่พร้อม'); return; }
+    const raw = document.getElementById('clt-items')?.value || '';
+    const labels = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!labels.length) { alert('กรุณาใส่รายการอย่างน้อย 1 รายการ'); return; }
+    const items = labels.map((label, idx) => ({ id: String(idx + 1), label }));
+    const btn = document.querySelector('[data-action="saveChecklistTemplate"]');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...'; }
+    try {
+      await window.ChecklistManager.saveTemplate(_checklistBuilding, { items });
+      window.showToast?.('✅ บันทึก template แล้ว');
+      closeChecklistEditor();
+    } catch (err) {
+      console.error('saveChecklistTemplate error:', err);
+      alert('บันทึกไม่ได้: ' + (err.message || err));
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '💾 บันทึก'; }
+    }
+  }
+
   window.initBuildingsPage = initBuildingsPage;
   window.openBuildingModal = openBuildingModal;
   window.closeBuildingModal = closeBuildingModal;
   window.saveBuildingForm = saveBuildingForm;
   window.archiveBuildingPrompt = archiveBuildingPrompt;
   window.openRoomFromBuilding = openRoomFromBuilding;
+  window.openChecklistEditor = openChecklistEditor;
+  window.closeChecklistEditor = closeChecklistEditor;
+  window.saveChecklistTemplate = saveChecklistTemplate;
 })();
