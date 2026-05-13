@@ -50,10 +50,11 @@ if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 const rtdb = admin.database();
 
+const { getAllBuildings } = require('./buildingRegistry');
+
 const RATE_LIMITS_TTL_MS = 24 * 60 * 60 * 1000;          // 1 day
 const MAINTENANCE_DONE_TTL_MS = 30 * 24 * 60 * 60 * 1000;  // 30 days
 const LIFF_REJECTED_TTL_MS = 90 * 24 * 60 * 60 * 1000;     // 90 days
-const BUILDINGS = ['rooms', 'nest'];
 const BATCH_SIZE = 500;
 
 // ============================================================
@@ -114,7 +115,8 @@ async function runMaintenanceCleanup() {
   let scanned = 0, deleted = 0;
   const ops = [];
 
-  for (const building of BUILDINGS) {
+  const buildings = await getAllBuildings();
+  for (const building of buildings) {
     const bldSnap = await rtdb.ref(`maintenance/${building}`).once('value');
     const rooms = bldSnap.val() || {};
 

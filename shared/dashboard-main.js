@@ -60,6 +60,9 @@ window._showPageImpl = function(page,btn){
     if(typeof initOwnerInfoPage==='function')initOwnerInfoPage();
     if(typeof initServiceProvidersPage==='function')initServiceProvidersPage();
   }
+  if(page==='buildings'){
+    if(typeof initBuildingsPage==='function')initBuildingsPage();
+  }
 };
 // Assign to global scope after definition
 window.showPage = window._showPageImpl;
@@ -762,6 +765,12 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       viewLiffTenantInfo(el.dataset.building, el.dataset.room);
       return;
     }
+
+    // Buildings (Multi-Property registry)
+    if (a === 'openBuildingModal')      { typeof window.openBuildingModal      === 'function' && window.openBuildingModal(el.dataset.id || ''); return; }
+    if (a === 'closeBuildingModal')     { typeof window.closeBuildingModal     === 'function' && window.closeBuildingModal(); return; }
+    if (a === 'saveBuildingForm')       { typeof window.saveBuildingForm       === 'function' && window.saveBuildingForm(); return; }
+    if (a === 'archiveBuildingPrompt')  { typeof window.archiveBuildingPrompt  === 'function' && window.archiveBuildingPrompt(el.dataset.id); return; }
   });
 
   // ===== CHANGE / INPUT EVENT DELEGATION =====

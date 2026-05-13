@@ -24,10 +24,11 @@ const { checkRateLimit } = require('./_rateLimit');
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
+const { getValidBuildings } = require('./buildingRegistry');
+
 const LOCK_DURATION_MS = 20 * 60 * 1000; // 20 minutes
 const EARLY_BIRD_WINDOW_DAYS = 30;
 const EARLY_BIRD_POINTS = 500;
-const VALID_BUILDINGS = ['rooms', 'nest'];
 const VALID_DURATIONS = [3, 6, 12, 24];
 
 exports.createBookingLock = functions.region('asia-southeast1').https.onCall(async (data, context) => {
@@ -60,7 +61,8 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
     throw new functions.https.HttpsError('invalid-argument',
       'Missing required fields: building, roomId, startDate, durationMonths, prospectName, prospectPhone');
   }
-  if (!VALID_BUILDINGS.includes(String(building).toLowerCase())) {
+  const validBuildings = await getValidBuildings();
+  if (!validBuildings.has(String(building).toLowerCase())) {
     throw new functions.https.HttpsError('invalid-argument', `Unknown building: ${building}`);
   }
   if (!VALID_DURATIONS.includes(Number(durationMonths))) {

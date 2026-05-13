@@ -44,7 +44,7 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
-const VALID_BUILDINGS = new Set(['rooms', 'nest']);
+const { getValidBuildings } = require('./buildingRegistry');
 
 const ARCHIVED_SUBCOLLECTIONS = [
   'paymentHistory', 'redemptions', 'wellnessClaimed', 'pets', 'complaintFreeMonthAwarded',
@@ -70,9 +70,10 @@ exports.revertTransitionToPlayer = functions
 
     // ── Input ─────────────────────────────────────────────────────────────
     const { building, roomId, contractId: explicitContractId } = data || {};
-    if (!VALID_BUILDINGS.has(building)) {
+    const validBuildings = await getValidBuildings();
+    if (!validBuildings.has(building)) {
       throw new functions.https.HttpsError('invalid-argument',
-        `building must be 'rooms' or 'nest' (got '${building}')`);
+        `building must be one of [${Array.from(validBuildings).join(', ')}] (got '${building}')`);
     }
     if (typeof roomId !== 'string' || !/^[A-Za-z0-9ก-๛]{1,20}$/.test(roomId)) {
       throw new functions.https.HttpsError('invalid-argument',

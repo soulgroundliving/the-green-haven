@@ -55,8 +55,9 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
+const { getValidBuildings } = require('./buildingRegistry');
+
 const VALID_REASONS = new Set(['moved_out', 'reassigned', 'admin_action']);
-const VALID_BUILDINGS = new Set(['rooms', 'nest']);
 
 // Subcollections under tenant docs that should travel with the archive.
 // Order doesn't matter — each is read independently.
@@ -131,9 +132,10 @@ exports.archiveTenantOnMoveOut = functions
 
     // ── Input ──────────────────────────────────────────────────────────────
     const { building, roomId, reason } = data || {};
-    if (!VALID_BUILDINGS.has(building)) {
+    const validBuildings = await getValidBuildings();
+    if (!validBuildings.has(building)) {
       throw new functions.https.HttpsError('invalid-argument',
-        `building must be 'rooms' or 'nest' (got '${building}')`);
+        `building must be one of [${Array.from(validBuildings).join(', ')}] (got '${building}')`);
     }
     if (typeof roomId !== 'string' || !/^[A-Za-z0-9ก-๛]{1,20}$/.test(roomId)) {
       throw new functions.https.HttpsError('invalid-argument',

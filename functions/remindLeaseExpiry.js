@@ -36,7 +36,7 @@ const firestore = admin.firestore();
 const TENANT_APP_URL = 'https://the-green-haven.vercel.app/tenant_app.html?page=profile';
 const THAI_MONTHS_SHORT = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
                            'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-const BUILDINGS = ['rooms', 'nest'];
+const { getAllBuildings } = require('./buildingRegistry');
 
 // Tier breakpoints — ordered from farthest-ahead to expired. We pick the
 // MOST-RECENT tier the lease has crossed (e.g. if daysLeft=12, we're in
@@ -144,7 +144,8 @@ async function runExpirySweep() {
   let scanned = 0, sent = 0, skipped = 0, errors = 0;
   const adminSummary = [];  // { building, room, tenant, daysLeft, tier, notified }
 
-  for (const building of BUILDINGS) {
+  const buildings = await getAllBuildings();
+  for (const building of buildings) {
     let leaseSnap;
     try {
       leaseSnap = await firestore.collection(`leases/${building}/list`)

@@ -38,17 +38,24 @@ if (!admin.apps.length) {
 const rtdb = admin.database();
 const firestore = admin.firestore();
 
-const BUILDINGS = ['rooms', 'nest'];
-const EMPTY_MONTH = () => ({
-  rentIncome: 0, electricIncome: 0, waterIncome: 0, trashIncome: 0,
-  totalRevenue: 0,
-  paidCount: 0, paidRevenue: 0,
-  pendingCount: 0, pendingRevenue: 0,
-  byBuilding: {
-    rooms: { rent: 0, electric: 0, water: 0, trash: 0, total: 0, paid: 0, pending: 0 },
-    nest:  { rent: 0, electric: 0, water: 0, trash: 0, total: 0, paid: 0, pending: 0 }
+const { getAllBuildings } = require('./buildingRegistry');
+
+function _emptyByBuilding(buildings) {
+  const out = {};
+  for (const b of buildings) {
+    out[b] = { rent: 0, electric: 0, water: 0, trash: 0, total: 0, paid: 0, pending: 0 };
   }
-});
+  return out;
+}
+function _emptyMonth(buildings) {
+  return {
+    rentIncome: 0, electricIncome: 0, waterIncome: 0, trashIncome: 0,
+    totalRevenue: 0,
+    paidCount: 0, paidRevenue: 0,
+    pendingCount: 0, pendingRevenue: 0,
+    byBuilding: _emptyByBuilding(buildings)
+  };
+}
 
 function normalizeBeYear(y) {
   const n = Number(y);
@@ -58,12 +65,13 @@ function normalizeBeYear(y) {
 }
 
 async function aggregateYear(yearBE) {
+  const buildings = await getAllBuildings();
   // Initialize all 12 months
   const months = {};
-  for (let m = 1; m <= 12; m++) months[m] = EMPTY_MONTH();
+  for (let m = 1; m <= 12; m++) months[m] = _emptyMonth(buildings);
 
-  // Walk all bills for both buildings
-  for (const building of BUILDINGS) {
+  // Walk all bills for every active building
+  for (const building of buildings) {
     const buildingSnap = await rtdb.ref(`bills/${building}`).once('value');
     const rooms = buildingSnap.val() || {};
     for (const roomId of Object.keys(rooms)) {
@@ -114,10 +122,7 @@ async function aggregateYear(yearBE) {
     rentIncome: 0, electricIncome: 0, waterIncome: 0, trashIncome: 0,
     totalRevenue: 0, paidRevenue: 0, pendingRevenue: 0,
     paidCount: 0, pendingCount: 0,
-    byBuilding: {
-      rooms: { rent: 0, electric: 0, water: 0, trash: 0, total: 0, paid: 0, pending: 0 },
-      nest:  { rent: 0, electric: 0, water: 0, trash: 0, total: 0, paid: 0, pending: 0 }
-    }
+    byBuilding: _emptyByBuilding(buildings)
   };
   for (let m = 1; m <= 12; m++) {
     const x = months[m];
@@ -130,7 +135,7 @@ async function aggregateYear(yearBE) {
     annual.pendingRevenue += x.pendingRevenue;
     annual.paidCount      += x.paidCount;
     annual.pendingCount   += x.pendingCount;
-    BUILDINGS.forEach(b => {
+    buildings.forEach(b => {
       const a = annual.byBuilding[b]; const s = x.byBuilding[b];
       if (!a || !s) return;
       ['rent','electric','water','trash','total','paid','pending'].forEach(k => { a[k] += s[k]; });
