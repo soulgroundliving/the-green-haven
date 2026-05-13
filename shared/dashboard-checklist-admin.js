@@ -137,6 +137,7 @@
             <div style="display:flex;gap:.4rem;align-items:center;">
               ${_statusBadge(i.status)}
               <button data-action="openChecklistInstanceViewer" data-id="${_esc(i.id)}" style="padding:5px 12px;background:var(--green-dark);color:#fff;border:none;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;">ดู</button>
+              <button data-action="deleteChecklistInstanceFromRow" data-id="${_esc(i.id)}" style="padding:5px 9px;background:#fff;color:#c62828;border:1px solid #ef9a9a;border-radius:6px;font-size:.82rem;cursor:pointer;" title="ลบถาวร">🗑️</button>
             </div>
           </div>
         `).join('')}
@@ -364,6 +365,26 @@
 
   // ── Delete (3I-12) ────────────────────────────────────────────────────────
 
+  async function deleteChecklistInstanceFromRow(instanceId) {
+    const inst = _instances.find(i => i.id === instanceId);
+    if (!inst) { window.showToast?.('ไม่พบ checklist', 'error'); return; }
+    const proceed = window.confirm(
+      `ลบ checklist นี้ถาวร?\n\n` +
+      `ห้อง ${inst.roomId} · ${inst.tenantName || '—'}\n` +
+      `${_typeLabel(inst.type)} · สถานะ ${inst.status}\n\n` +
+      `รวมรูปถ่ายและลายเซ็นใน Storage — ย้อนกลับไม่ได้`
+    );
+    if (!proceed) return;
+    try {
+      const res = await window.ChecklistManager.deleteInstance(instanceId);
+      const n = res?.storageFilesDeleted ?? 0;
+      window.showToast?.(`🗑️ ลบ checklist สำเร็จ (storage: ${n} ไฟล์)`, 'success');
+    } catch (err) {
+      console.error('deleteChecklistInstanceFromRow error:', err);
+      window.showToast?.('ลบไม่สำเร็จ: ' + (err.message || err), 'error');
+    }
+  }
+
   async function deleteChecklistInstanceFromViewer() {
     if (!_viewer || !window.ChecklistManager) return;
     const proceed = window.confirm(
@@ -440,5 +461,6 @@
   window.clearAdminSignature           = clearAdminSignature;
   window.adminSignChecklistSubmit      = adminSignChecklistSubmit;
   window.exportChecklistPng            = exportChecklistPng;
+  window.deleteChecklistInstanceFromRow    = deleteChecklistInstanceFromRow;
   window.deleteChecklistInstanceFromViewer = deleteChecklistInstanceFromViewer;
 })();

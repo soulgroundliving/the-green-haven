@@ -886,6 +886,7 @@ async function openChecklistModal() {
   const tenant     = occupancy.tenant || {};
   const tenantName = String(tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`).trim();
   let   tenantUid  = tenant.linkedAuthUid || '';
+  const hasLiff    = !!tenant.linkedAuthUid;
 
   if (!tenantUid) {
     // No LIFF-linked UID — allow admin to still create an instance for their own flow
@@ -913,6 +914,18 @@ async function openChecklistModal() {
     return;
   }
 
+  // Duplicate guard — warn if an active (pending/submitted) instance already exists
+  const existingInstance = await window.ChecklistManager.getActiveInstanceForRoom(building, roomId).catch(() => null);
+  if (existingInstance) {
+    const statusLabel = existingInstance.status === 'submitted' ? 'รอแอดมิน sign' : 'รอผู้เช่ากรอก';
+    const proceed = confirm(
+      `⚠️ ห้อง ${roomId} มี checklist ที่ยังค้างอยู่ (${statusLabel})\n\n` +
+      `สร้างอีก instance จะทำให้ผู้เช่าสับสน\n\n` +
+      `ต้องการสร้างใหม่ทับอยู่ดีหรือไม่?`
+    );
+    if (!proceed) return;
+  }
+
   const typeLabel = prompt(
     `สร้าง Checklist ห้อง ${roomId} — ${tenantName || 'ผู้เช่า'}\n\n` +
     `พิมพ์ "in" สำหรับ Move-In หรือ "out" สำหรับ Move-Out:`,
@@ -925,7 +938,9 @@ async function openChecklistModal() {
   const confirmed = confirm(
     `ยืนยันสร้าง checklist ${typeText} สำหรับห้อง ${roomId}?\n` +
     `ผู้เช่า: ${tenantName || tenantUid}\n` +
-    `จะส่ง instance ไปยังแอป LIFF ของผู้เช่าทันที`
+    (hasLiff
+      ? `ผู้เช่าจะเห็น instance ใน app ทันที`
+      : `⚠️ ผู้เช่ายังไม่ได้เชื่อม LINE — instance จะรอจนกว่าจะ Link`)
   );
   if (!confirmed) return;
 
@@ -941,7 +956,11 @@ async function openChecklistModal() {
       tenantName,
       type,
     });
-    showToast(`✅ สร้าง checklist ${typeText} แล้ว — ผู้เช่าจะเห็นใน app`, 'success');
+    showToast(
+      `✅ สร้าง checklist ${typeText} แล้ว — ` +
+      (hasLiff ? `ผู้เช่าจะเห็นใน app` : `⚠️ ผู้เช่ายังไม่ได้เชื่อม LINE`),
+      hasLiff ? 'success' : 'warning'
+    );
 
     // Auto-navigate to Checklists tab so admin can see the new instance immediately
     if (typeof window.showPage === 'function') {

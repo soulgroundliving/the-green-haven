@@ -12332,7 +12332,7 @@
         }
 
         try {
-          _clInstance = await window.ChecklistManager.getMyPendingInstance(_clTenantUid);
+          _clInstance = await window.ChecklistManager.getMyLatestInstance(_clTenantUid);
         } catch (err) {
           statusEl.innerHTML = `<div style="color:#c62828;padding:1rem;">โหลดข้อมูลไม่ได้: ${err.message}</div>`;
           return;

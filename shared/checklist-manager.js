@@ -6,6 +6,7 @@
  *   saveTemplate(building, templateData)      → void
  *   createInstance(data)                      → { instanceId }
  *   getMyPendingInstance(tenantUid)           → instance doc or null
+ *   getActiveInstanceForRoom(building, roomId) → pending/submitted instance or null
  *   subscribeAdminInstances(building, cb)     → unsub fn
  *   uploadPhoto(instanceId, building, roomId, itemId, file) → storagePath
  *   uploadSignature(instanceId, building, roomId, dataUrl)  → storagePath
@@ -89,29 +90,37 @@
   }
 
   /**
-   * Tenant — get their most recent pending checklist instance (if any).
+   * Tenant — get their most recent checklist instance (any status except archived).
+   * Uses a single equality filter so no composite index is needed.
+   * Client-side sort by createdAt desc (tenants have at most a handful of instances).
    * @param {string} tenantUid
    * @returns {Promise<object|null>}
    */
-  async function getMyPendingInstance(tenantUid) {
+  async function getMyLatestInstance(tenantUid) {
     const q = _query(
       _collection('checklistInstances'),
-      _where('tenantUid', '==', tenantUid),
-      _where('status', '==', 'pending'),
-      _orderBy('createdAt', 'desc')
+      _where('tenantUid', '==', tenantUid)
     );
     return new Promise((resolve, reject) => {
       const unsub = _onSnapshot(q, (snap) => {
         unsub();
         if (snap.empty) { resolve(null); return; }
-        const d = snap.docs[0];
-        resolve({ id: d.id, ...d.data() });
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        docs.sort((a, b) => {
+          const aMs = a.createdAt?.toMillis?.() ?? 0;
+          const bMs = b.createdAt?.toMillis?.() ?? 0;
+          return bMs - aMs;
+        });
+        resolve(docs[0]);
       }, (err) => {
         unsub();
         reject(err);
       });
     });
   }
+
+  /** @deprecated use getMyLatestInstance */
+  const getMyPendingInstance = getMyLatestInstance;
 
   /**
    * Admin — subscribe to all instances for a building (live).
@@ -225,13 +234,42 @@
     return res.data;
   }
 
+  /**
+   * Admin duplicate guard — find any non-archived instance for a specific room
+   * that is still in pending or submitted status.
+   * Single equality filter on roomId; client-side status filter avoids index.
+   * @param {string} building
+   * @param {string} roomId
+   * @returns {Promise<object|null>} first active instance, or null
+   */
+  async function getActiveInstanceForRoom(building, roomId) {
+    const q = _query(
+      _collection('checklistInstances'),
+      _where('building', '==', building),
+      _where('roomId', '==', roomId)
+    );
+    return new Promise((resolve, reject) => {
+      const unsub = _onSnapshot(q, (snap) => {
+        unsub();
+        if (snap.empty) { resolve(null); return; }
+        const active = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(d => d.status === 'pending' || d.status === 'submitted');
+        active.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+        resolve(active[0] || null);
+      }, (err) => { unsub(); reject(err); });
+    });
+  }
+
   // ── Export ────────────────────────────────────────────────────────────
 
   window.ChecklistManager = {
     getTemplate,
     saveTemplate,
     createInstance,
+    getMyLatestInstance,
     getMyPendingInstance,
+    getActiveInstanceForRoom,
     subscribeAdminInstances,
     uploadPhoto,
     uploadSignature,

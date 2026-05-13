@@ -796,6 +796,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'clearAdminSignature')           { typeof window.clearAdminSignature           === 'function' && window.clearAdminSignature(); return; }
     if (a === 'adminSignChecklistSubmit')      { typeof window.adminSignChecklistSubmit      === 'function' && window.adminSignChecklistSubmit(); return; }
     if (a === 'exportChecklistPng')            { typeof window.exportChecklistPng            === 'function' && window.exportChecklistPng(); return; }
+    if (a === 'deleteChecklistInstanceFromRow')    { typeof window.deleteChecklistInstanceFromRow    === 'function' && window.deleteChecklistInstanceFromRow(el.dataset.id); return; }
     if (a === 'deleteChecklistInstanceFromViewer') { typeof window.deleteChecklistInstanceFromViewer === 'function' && window.deleteChecklistInstanceFromViewer(); return; }
   });
 
