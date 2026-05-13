@@ -190,6 +190,10 @@ exports.cleanupMaintenanceRTDBScheduled = require('./cleanupOldDocs').cleanupMai
 exports.cleanupLiffUsersRejectedScheduled = require('./cleanupOldDocs').cleanupLiffUsersRejectedScheduled;
 exports.cleanupOldDocs = require('./cleanupOldDocs').cleanupOldDocs;
 
+// Prunes people/{tenantId} docs (and all subcollections) where transitionedAt
+// is older than 1 year — enforces the grace-period expiry for former tenants.
+exports.cleanupPlayersOver1YearScheduled = require('./cleanupPlayersOver1Year').cleanupPlayersOver1YearScheduled;
+
 // Drains lineRetryQueue every 15 min — surfaces transient LINE push
 // failures (5xx, network blips, rate limits) into Firestore so they don't
 // silently disappear like before.
