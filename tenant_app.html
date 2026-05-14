@@ -12459,6 +12459,10 @@
         const list = document.getElementById('cl-items-list');
         if (!list || !_clInstance) return;
         const items = _clInstance.items || [];
+        // Two file inputs per item: one forces camera, one opens gallery.
+        // Both are hidden — user taps the visible button labels above them.
+        // After a file is chosen, the picker row hides and the preview row
+        // (with retake/remove buttons) takes its place.
         list.innerHTML = items.map((item, idx) => `
           <div id="cl-item-${idx}" style="border-bottom:1px solid #f0f0f0;padding:.75rem 0;">
             <div style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;">${idx+1}. ${_esc(item.label)}</div>
@@ -12467,12 +12471,25 @@
             </label>
             <textarea id="cl-note-${idx}" rows="1" placeholder="หมายเหตุ (ถ้ามี)"
               style="width:100%;padding:.4rem;border:1px solid #ddd;border-radius:6px;font-family:inherit;font-size:.82rem;box-sizing:border-box;resize:none;"></textarea>
-            <label style="display:block;margin-top:.4rem;font-size:.82rem;color:#1976d2;cursor:pointer;">
-              📷 แนบรูปภาพ
-              <input type="file" id="cl-photo-${idx}" accept="image/*" capture="environment"
-                style="display:none;" onchange="clPhotoChange(this, ${idx})">
-            </label>
-            <div id="cl-photo-preview-${idx}" style="margin-top:.25rem;"></div>
+
+            <!-- Hidden file inputs: one for camera, one for gallery. -->
+            <input type="file" id="cl-photo-${idx}"        accept="image/*" capture="environment" style="display:none;" onchange="clPhotoChange(this, ${idx})">
+            <input type="file" id="cl-photo-${idx}-gallery" accept="image/*"                      style="display:none;" onchange="clPhotoChange(this, ${idx})">
+
+            <!-- Picker buttons (shown when no photo selected) -->
+            <div id="cl-photo-picker-${idx}" style="display:flex;gap:.5rem;margin-top:.4rem;flex-wrap:wrap;">
+              <button type="button" onclick="clRequestPhoto(${idx}, 'camera')"
+                style="flex:1;min-width:120px;padding:.5rem;font-size:.82rem;color:#1976d2;background:#e3f2fd;border:1px dashed #90caf9;border-radius:6px;cursor:pointer;font-family:inherit;">
+                📷 ถ่ายรูป
+              </button>
+              <button type="button" onclick="clRequestPhoto(${idx}, 'gallery')"
+                style="flex:1;min-width:120px;padding:.5rem;font-size:.82rem;color:#388e3c;background:#e8f5e9;border:1px dashed #a5d6a7;border-radius:6px;cursor:pointer;font-family:inherit;">
+                🖼️ เลือกจากคลังภาพ
+              </button>
+            </div>
+
+            <!-- Preview + action buttons (shown when a photo is selected) -->
+            <div id="cl-photo-preview-${idx}" style="margin-top:.4rem;display:none;"></div>
           </div>
         `).join('');
       }
@@ -12481,11 +12498,68 @@
         return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       }
 
+      // First-time permission notice. Shown ONCE per LIFF install (gated by
+      // localStorage) before the first 📷 or 🖼️ tap actually opens the OS
+      // picker. After the user taps "ดำเนินการ" we set the flag and proceed —
+      // subsequent taps go straight to the OS picker as before.
+      window.clRequestPhoto = function(idx, source) {
+        const proceed = () => {
+          const id = source === 'gallery' ? `cl-photo-${idx}-gallery` : `cl-photo-${idx}`;
+          const el = document.getElementById(id);
+          if (el) el.click();
+        };
+        try {
+          if (!localStorage.getItem('cl_photo_notice_shown')) {
+            const ok = confirm(
+              '📸 แนบรูปภาพหลักฐาน\n\n' +
+              'แอปจะใช้กล้องหรือรูปภาพในคลังของคุณเพื่อแนบหลักฐานการตรวจห้อง — รูปภาพจะถูกส่งให้แอดมินดูเท่านั้น ไม่เผยแพร่ที่ไหน\n\n' +
+              'กด OK เพื่อดำเนินการ'
+            );
+            if (!ok) return;
+            localStorage.setItem('cl_photo_notice_shown', '1');
+          }
+        } catch (_) { /* localStorage may be disabled — fall through */ }
+        proceed();
+      };
+
       window.clPhotoChange = function(input, idx) {
         const preview = document.getElementById(`cl-photo-preview-${idx}`);
+        const picker  = document.getElementById(`cl-photo-picker-${idx}`);
         if (!input.files[0] || !preview) return;
         const url = URL.createObjectURL(input.files[0]);
-        preview.innerHTML = `<img src="${url}" alt="preview" style="max-width:100%;max-height:120px;border-radius:6px;object-fit:cover;">`;
+        // Mirror selection across both inputs so clSubmit's getElementById
+        // (which only reads `cl-photo-${idx}`, the camera input) sees the
+        // file regardless of which picker actually captured it.
+        if (input.id.endsWith('-gallery')) {
+          try {
+            const camInput = document.getElementById(`cl-photo-${idx}`);
+            if (camInput) {
+              const dt = new DataTransfer();
+              dt.items.add(input.files[0]);
+              camInput.files = dt.files;
+            }
+          } catch (_) { /* DataTransfer may not exist on old browsers — submit will fall back to gallery input */ }
+        }
+        preview.style.display = 'block';
+        preview.innerHTML =
+          `<img src="${url}" alt="preview" style="max-width:100%;max-height:160px;border-radius:6px;object-fit:cover;display:block;">` +
+          `<div style="display:flex;gap:.5rem;margin-top:.3rem;">` +
+            `<button type="button" onclick="clRequestPhoto(${idx}, 'camera')" style="flex:1;padding:.4rem;font-size:.78rem;color:#1976d2;background:#fff;border:1px solid #90caf9;border-radius:6px;cursor:pointer;font-family:inherit;">🔄 ถ่ายใหม่</button>` +
+            `<button type="button" onclick="clRequestPhoto(${idx}, 'gallery')" style="flex:1;padding:.4rem;font-size:.78rem;color:#388e3c;background:#fff;border:1px solid #a5d6a7;border-radius:6px;cursor:pointer;font-family:inherit;">🖼️ เลือกใหม่</button>` +
+            `<button type="button" onclick="clRemovePhoto(${idx})" style="padding:.4rem .65rem;font-size:.78rem;color:#c62828;background:#fff;border:1px solid #ef9a9a;border-radius:6px;cursor:pointer;font-family:inherit;">🗑️</button>` +
+          `</div>`;
+        if (picker) picker.style.display = 'none';
+      };
+
+      window.clRemovePhoto = function(idx) {
+        const camInput     = document.getElementById(`cl-photo-${idx}`);
+        const galInput     = document.getElementById(`cl-photo-${idx}-gallery`);
+        const preview      = document.getElementById(`cl-photo-preview-${idx}`);
+        const picker       = document.getElementById(`cl-photo-picker-${idx}`);
+        if (camInput) camInput.value = '';
+        if (galInput) galInput.value = '';
+        if (preview) { preview.innerHTML = ''; preview.style.display = 'none'; }
+        if (picker)  picker.style.display = 'flex';
       };
 
       // ── Submit ────────────────────────────────────────────────────────────
@@ -12513,7 +12587,11 @@
           const filledItems = items.map((item, idx) => {
             const checked = document.getElementById(`cl-check-${idx}`)?.checked || false;
             const note    = document.getElementById(`cl-note-${idx}`)?.value?.trim() || '';
-            const file    = document.getElementById(`cl-photo-${idx}`)?.files?.[0] || null;
+            // Fallback to gallery input if the DataTransfer mirror failed in
+            // clPhotoChange (older WebViews without DataTransfer support).
+            const file    = document.getElementById(`cl-photo-${idx}`)?.files?.[0]
+                         || document.getElementById(`cl-photo-${idx}-gallery`)?.files?.[0]
+                         || null;
             return { id: item.id, note, checked, _file: file, photoPath: null };
           });
 
