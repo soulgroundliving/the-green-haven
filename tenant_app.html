@@ -8933,16 +8933,37 @@
                 return null;
             }
 
-            let resp, data;
-            try {
-                resp = await fetch(
-                    'https://asia-southeast1-the-green-haven.cloudfunctions.net/liffSignIn',
-                    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) }
-                );
-                data = await resp.json().catch(() => ({}));
-            } catch (e) {
-                console.error('⛔ liffSignIn call failed:', e.message);
-                _showAuthErrorBanner(`เชื่อมห้องไม่สำเร็จ (network): ${e.message}`);
+            // Fetch with per-attempt timeout — without AbortController, a stale
+            // LINE in-app TLS connection can leave this hanging indefinitely
+            // (the "🔐 กำลังตั้งค่าสิทธิ์..." overlay shown forever). Two attempts
+            // give the LINE webview a chance to renegotiate the TLS connection.
+            let resp, data, fetchErr;
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                const ctrl = new AbortController();
+                const to = setTimeout(() => ctrl.abort(), 12000);
+                try {
+                    resp = await fetch(
+                        'https://asia-southeast1-the-green-haven.cloudfunctions.net/liffSignIn',
+                        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ idToken }), signal: ctrl.signal }
+                    );
+                    data = await resp.json().catch(() => ({}));
+                    fetchErr = null;
+                    break;
+                } catch (e) {
+                    fetchErr = e;
+                    const aborted = e && (e.name === 'AbortError' || /aborted/i.test(e.message || ''));
+                    console.warn(`⛔ liffSignIn fetch attempt ${attempt}/2 failed (${aborted ? 'timeout' : (e.code || e.name || 'error')}):`, e.message);
+                    if (attempt < 2) await new Promise(r => setTimeout(r, 1500));
+                } finally {
+                    clearTimeout(to);
+                }
+            }
+            if (fetchErr) {
+                const aborted = fetchErr.name === 'AbortError' || /aborted/i.test(fetchErr.message || '');
+                _showAuthErrorBanner(aborted
+                    ? 'เซิร์ฟเวอร์ตอบช้า — ลองปิด LINE จาก app switcher แล้วเปิดใหม่'
+                    : `เชื่อมห้องไม่สำเร็จ (network): ${fetchErr.message}`);
                 return null;
             }
 
