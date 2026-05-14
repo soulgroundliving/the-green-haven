@@ -73,20 +73,33 @@
     _renderBroadcastAudienceRadios();
   }
 
+  // BuildingRegistry.init() returns FALLBACK synchronously when Firebase isn't
+  // ready yet; only refresh() forces a Firestore re-fetch + fires the
+  // `buildingRegistryChanged` event. Poll for firebaseReady, then refresh once
+  // — the event listener below picks up the new list.
+  function _refreshOnceFirebaseReady() {
+    const started = Date.now();
+    const tick = () => {
+      if (window.firebaseReady && window.BuildingRegistry?.refresh) {
+        window.BuildingRegistry.refresh().catch(() => { /* keep fallback */ });
+        return;
+      }
+      if (Date.now() - started < 10_000) setTimeout(tick, 200);
+    };
+    tick();
+  }
+
+  function _start() {
+    _populateAll();                    // first paint — FALLBACK is fine
+    _refreshOnceFirebaseReady();       // triggers buildingRegistryChanged → re-populate
+  }
+
   // Wire up: initial populate + re-populate on registry change.
   window.addEventListener('buildingRegistryChanged', _populateAll);
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      _populateAll();
-      if (window.BuildingRegistry && typeof window.BuildingRegistry.init === 'function') {
-        window.BuildingRegistry.init().then(_populateAll).catch(() => { /* fallback already rendered */ });
-      }
-    });
+    document.addEventListener('DOMContentLoaded', _start);
   } else {
-    _populateAll();
-    if (window.BuildingRegistry && typeof window.BuildingRegistry.init === 'function') {
-      window.BuildingRegistry.init().then(_populateAll).catch(() => { /* fallback already rendered */ });
-    }
+    _start();
   }
 
   window._populateBuildingSelects = _populateAll;
