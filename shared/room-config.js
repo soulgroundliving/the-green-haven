@@ -77,7 +77,13 @@ class RoomConfigManager {
     }
 
     const stored = localStorage.getItem(`rooms_config_${building}`);
-    const config = stored ? JSON.parse(stored) : DEFAULT_ROOMS_CONFIG[building];
+    // For Tier-3F buildings without a localStorage entry AND without a
+    // DEFAULT_ROOMS_CONFIG seed, return an empty rooms list — admin should
+    // add rooms via the Room Config UI first. Coercing them to 'rooms' would
+    // silently borrow the legacy room list and confuse downstream consumers.
+    const config = stored
+      ? JSON.parse(stored)
+      : (DEFAULT_ROOMS_CONFIG[building] || { name: building, building, rooms: [] });
 
     // Migration: rename legacy 'Amazon ☕' id → 'ร้านใหญ่' (one-time, auto-save)
     if (building === 'rooms' && config?.rooms) {
@@ -90,10 +96,11 @@ class RoomConfigManager {
       }
     }
 
-    // Ensure config has rooms array
+    // Ensure config has rooms array — return an empty list rather than
+    // borrowing 'rooms' so new Tier-3F buildings render cleanly empty.
     if (!config || !config.rooms) {
       console.warn(`⚠️ RoomConfigManager: No config found for building "${building}"`);
-      return DEFAULT_ROOMS_CONFIG[building] || DEFAULT_ROOMS_CONFIG['rooms'];
+      return DEFAULT_ROOMS_CONFIG[building] || { name: building, building, rooms: [] };
     }
 
     // Sanity check: if stored rooms are fewer than default, add missing rooms
