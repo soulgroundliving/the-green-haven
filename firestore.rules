@@ -395,9 +395,20 @@ service cloud.firestore {
     // Tenant fills in and submits via submitChecklist CF.
     // Admin co-signs via adminSignChecklist CF.
     // All direct client writes are forbidden — CF-only.
+    //
+    // Tenant read paths (either is sufficient):
+    //   (a) tenantUid == auth.uid — works when the user's authUid matches the
+    //       linkedAuthUid snapshot at the time the instance was created.
+    //   (b) room+building claims match the doc — works after anon-UID drift
+    //       (each fresh LIFF session mints a new anonymous UID, but custom
+    //       claims still point to the same room). Without (b) a tenant whose
+    //       authUid changed since instance creation sees "ยังไม่มี checklist".
     match /checklistInstances/{instanceId} {
       allow read:  if isAdmin()
-                || (isSignedIn() && resource.data.tenantUid == request.auth.uid);
+                || (isSignedIn() && resource.data.tenantUid == request.auth.uid)
+                || (isSignedIn()
+                    && resource.data.building == request.auth.token.building
+                    && resource.data.roomId   == request.auth.token.room);
       allow write: if isAdmin();
     }
 

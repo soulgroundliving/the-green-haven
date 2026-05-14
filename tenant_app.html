@@ -12389,7 +12389,16 @@
         }
 
         try {
-          _clInstance = await window.ChecklistManager.getMyLatestInstance(_clTenantUid);
+          // Prefer room+building lookup (stable across anon UID drift). Falls
+          // back to tenantUid for compatibility with older instances created
+          // before this fix — and so the function still works during a brief
+          // window when room/building claims aren't yet on the token.
+          if (_clBuilding && _clRoomId) {
+            _clInstance = await window.ChecklistManager.getInstanceForMyRoom(_clBuilding, _clRoomId);
+          }
+          if (!_clInstance && _clTenantUid) {
+            _clInstance = await window.ChecklistManager.getMyLatestInstance(_clTenantUid);
+          }
         } catch (err) {
           statusEl.innerHTML = `<div style="color:#c62828;padding:1rem;">โหลดข้อมูลไม่ได้: ${err.message}</div>`;
           return;

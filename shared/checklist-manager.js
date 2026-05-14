@@ -133,6 +133,54 @@
   const getMyPendingInstance = getMyLatestInstance;
 
   /**
+   * Tenant — get their latest instance by ROOM (not authUid).
+   * Why: tenant_app uses signInAnonymously, which mints a fresh UID on each
+   * fresh LIFF session. linkAuthUid updates tenant.linkedAuthUid AND custom
+   * claims (room, building) on that new UID — but existing instance docs
+   * still carry the OLD authUid. Querying by tenantUid would miss them.
+   * Querying by building + roomId is stable across UID drift because the
+   * claims (room, building) always reflect the current tenant.
+   *
+   * Firestore rule must allow tenant read when room+building claims match
+   * the doc — see firestore.rules `checklistInstances`.
+   *
+   * @param {string} building
+   * @param {string} roomId
+   * @returns {Promise<object|null>}
+   */
+  async function getInstanceForMyRoom(building, roomId) {
+    if (!building || !roomId) throw new Error('building and roomId required');
+    const q = _query(
+      _collection('checklistInstances'),
+      _where('building', '==', String(building)),
+      _where('roomId',   '==', String(roomId))
+    );
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      let unsub = null;
+      const finish = (cb) => { if (settled) return; settled = true; try { unsub && unsub(); } catch (_) {} cb(); };
+      const timer = setTimeout(() => finish(() => reject(new Error('คิวรีหมดเวลา — ลองรีเฟรชอีกครั้ง'))), 10000);
+      unsub = _onSnapshot(q, (snap) => {
+        clearTimeout(timer);
+        finish(() => {
+          if (snap.empty) { resolve(null); return; }
+          const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          docs.sort((a, b) => {
+            const aMs = a.createdAt?.toMillis?.() ?? 0;
+            const bMs = b.createdAt?.toMillis?.() ?? 0;
+            return bMs - aMs;
+          });
+          resolve(docs[0]);
+        });
+      }, (err) => {
+        clearTimeout(timer);
+        console.error('[ChecklistManager] getInstanceForMyRoom failed:', err);
+        finish(() => reject(err));
+      });
+    });
+  }
+
+  /**
    * Admin — subscribe to all instances for a building (live).
    * @param {string} building
    * @param {function} cb  called with Array<instance doc>
@@ -279,6 +327,7 @@
     createInstance,
     getMyLatestInstance,
     getMyPendingInstance,
+    getInstanceForMyRoom,
     getActiveInstanceForRoom,
     subscribeAdminInstances,
     uploadPhoto,
