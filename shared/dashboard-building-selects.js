@@ -9,6 +9,7 @@
 //   #pvh-building                             — Bill page · ประวัติตามห้อง
 //   #f-building                                — Bill page · ออกบิล (canonical IDs)
 //   #eventBuilding, #eventBuildingFilter      — Community Events
+//   #dep-filter-building                       — Requests & Approvals · Deposits filter
 //   #bc-audience-row (radio group)            — Requests & Approvals · Broadcast ส่งถึง
 //
 // Adding a new dropdown? Add a spec entry below — no other file change needed.
@@ -21,7 +22,8 @@
     { id: 'pvh-building',         placeholder: '-- เลือกตึก --' },
     { id: 'f-building' },
     { id: 'eventBuildingFilter',  allOption: true,  allLabel: '🌐 ทุกตึก' },
-    { id: 'eventBuilding',        allOption: true,  allLabel: '🌐 ทุกตึก (ทั้งห้องแถว + Nest เห็น)', suffix: ' เท่านั้น' }
+    { id: 'eventBuilding',        allOption: true,  allLabel: '🌐 ทุกตึก (ทั้งห้องแถว + Nest เห็น)', suffix: ' เท่านั้น' },
+    { id: 'dep-filter-building',  allOption: true,  allLabel: '🏠 ทุกอาคาร' }
   ];
 
   function _list() {
