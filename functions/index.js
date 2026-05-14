@@ -111,8 +111,11 @@ exports.migrateTenantsToSSoT = require('./migrateTenantsToSSoT').migrateTenantsT
 exports.cleanupTenantsSSoT = require('./cleanupTenantsSSoT').cleanupTenantsSSoT;
 
 // Complaint & Gamification
-exports.onComplaintCreated = require('./complaintAndGamification').onComplaintCreated;
-exports.sendComplaintConfirmation = require('./complaintAndGamification').sendComplaintConfirmation;
+// onComplaintCreated + sendComplaintConfirmation removed 2026-05-14: both
+// onCall CFs had zero client callers (complaints write directly to RTDB);
+// sendComplaintConfirmation also referenced a never-set COMPLAINT_TOKEN env
+// var and a never-implemented email service stub. Deleted from deployed
+// region via `firebase functions:delete`.
 exports.cleanupResolvedComplaints = require('./complaintAndGamification').cleanupResolvedComplaints;
 exports.awardComplaintFreeMonth = require('./complaintAndGamification').awardComplaintFreeMonth;
 // Admin-only manual trigger / dry-run wrapper for the same logic.
