@@ -980,6 +980,10 @@ function updateTenantStatusWidget(_activeRooms) {
   const dashTen = document.getElementById('dashTenantStatus');
   if (!dashTen) return;
   if (!window.ROOMS_OLD || window.ROOMS_OLD.length === 0) return;
+  // loadTenants is defined in dashboard-tenant-page.js which loads after this
+  // file — guard against script-load races (rare; happens when something
+  // synchronously triggers showPage('dashboard') before all scripts land).
+  if (typeof loadTenants !== 'function') return;
   const today = new Date();
   const tenants = loadTenants();
   // Tier-3F: iterate every registered building so new properties contribute
