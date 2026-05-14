@@ -654,9 +654,17 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'goToTaxFiling') { goToTaxFiling(v || 'dashboard'); return; }
     if (a === 'clickInput') { const t = document.getElementById(el.dataset.target); if(t) t.click(); return; }
     if (a === 'reload') { window.location.reload(); return; }
-    if (a === 'navToOwnerTab') {
-      window.showPage('people-management');
-      setTimeout(() => document.querySelector('[data-action="switchPeopleTab"][data-tab="owner"]')?.click(), 50);
+    if (a === 'navToBuildingEdit') {
+      // PromptPay edit shortcut from Bill page → jumps to Buildings page and
+      // opens the edit modal for the currently-selected building. Canonical IDs
+      // are 'rooms' / 'nest'; f-building uses 'old' / 'new' aliases.
+      const bldg = document.getElementById('f-building')?.value || 'rooms';
+      const canonical = (window.BuildingConfig?.normalizeId?.(bldg))
+        || ((bldg === 'new' || bldg === 'nest') ? 'nest' : 'rooms');
+      window.showPage('buildings');
+      setTimeout(() => {
+        if (typeof window.openBuildingModal === 'function') window.openBuildingModal(canonical);
+      }, 200);
       return;
     }
     if (a === 'testFirebaseConnection') { typeof window.testFirebaseConnection === 'function' && window.testFirebaseConnection(); return; }
