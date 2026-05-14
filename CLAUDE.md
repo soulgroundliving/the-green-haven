@@ -6,7 +6,7 @@ Loaded at every session start. Overrides any default behavior — follow exactly
 
 Two docs auto-load at session start; they are **complementary, not duplicates**:
 
-- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-O** (project-specific lessons that auto-load every session).
+- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-S** (project-specific lessons that auto-load every session).
 - **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, archive.
 
 **Boundary rule for new content:**
@@ -326,6 +326,20 @@ try {
 ```
 
 Specific surfaces with this risk: `_callLiffSignIn`, `verifySlip`, any direct CF HTTPS call (vs httpsCallable, which already has a timeout).
+
+### S. Multiple LIFF apps from the same LINE account share the auth handshake — second open hangs the first
+
+Opening a second LIFF app (e.g. booking) while the first (e.g. tenant_app) is still inside `liff.init` / awaiting `getIDToken` leaves the first tab stuck at "ตั้งค่าสิทธิ์" forever. The second LIFF steals the auth state the first was waiting on. This is a LINE platform constraint, not a code bug — no client retry recovers cleanly because `liff.init` never rejects, it just sits.
+
+Incident 2026-05-14: user opened booking LIFF while tenant_app LIFF was still completing auth → tenant tab hung indefinitely at "ตั้งค่าสิทธิ์".
+
+**Rule:** treat `liff.init` as *can-hang-forever* in multi-LIFF flows. Mitigations (already partly applied in `_callLiffSignIn` via the 12s fetch timeout):
+
+1. Ceiling timer around the whole init flow (e.g. 30s) that surfaces a styled "เปิด LIFF หลายแอปพร้อมกัน — กรุณาปิดแอปอื่นแล้ว Reload" overlay with a Reload button. Never silent-spin.
+2. When adding a NEW LIFF entrypoint (booking, future facility-booking-as-LIFF, etc.), call out the conflict in the user-facing instructions ("ปิด LIFF อื่นก่อนเปิด").
+3. Don't auto-redirect users between LIFF apps inside one session — force a sign-out → reopen via menu cycle so the prior auth state is cleanly torn down.
+
+Detection during debugging: if a user reports the "ตั้งค่าสิทธิ์" overlay stuck and **no** network errors / no timeouts fired, ask "เปิด LINE LIFF อื่นในเวลาใกล้กันไหม?" before chasing TLS / claim / index theories.
 
 ---
 
