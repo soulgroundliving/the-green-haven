@@ -88,17 +88,28 @@ service firebase.storage {
     // Path: checklists/{building}/{roomId}/{instanceId}/{fileName}
     // Tenant uploads photos/signature for their own instance.
     // Admin reads all (for co-sign review). Tenant reads own instance files.
-    // Uses firestore.get to confirm instanceId belongs to the caller.
+    //
+    // Claim-based (not auth.uid) because tenant_app uses signInAnonymously:
+    // each fresh LIFF session mints a NEW anonymous UID, but room/building
+    // custom claims always reflect the current tenant. The doc's tenantUid
+    // is frozen at admin-create time, so a uid-equality rule breaks on every
+    // UID rotation. We instead verify (a) the user's claims match the path
+    // prefix, AND (b) the instance lives at the same building+roomId —
+    // making it impossible to touch another room's tree.
     match /checklists/{building}/{roomId}/{instanceId}/{fileName} {
       allow read: if isAdmin()
         || (isSignedIn()
-            && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.tenantUid == request.auth.uid);
+            && request.auth.token.room == roomId
+            && request.auth.token.building == building
+            && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.building == building
+            && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.roomId == roomId);
       allow write: if fitsSizeLimit() && isImageOrPdf()
         && (isAdmin()
             || (isSignedIn()
                 && request.auth.token.room == roomId
                 && request.auth.token.building == building
-                && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.tenantUid == request.auth.uid));
+                && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.building == building
+                && firestore.get(/databases/(default)/documents/checklistInstances/$(instanceId)).data.roomId == roomId));
       allow delete: if isAdmin();
     }
 
