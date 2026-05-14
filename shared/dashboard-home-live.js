@@ -217,6 +217,18 @@ function _debouncedRerender(key, fn, delay = 250) {
   }, delay);
 }
 
+// Tier-3F: re-render dashboard KPI cards when a new building is created or
+// archived (BuildingRegistry.refresh fires `buildingRegistryChanged`).
+if (typeof window !== 'undefined' && !window._dashBuildingsListenerAdded) {
+  window._dashBuildingsListenerAdded = true;
+  window.addEventListener('buildingRegistryChanged', () => {
+    if (document.getElementById('page-dashboard')?.classList.contains('active')
+        && typeof initDashboardCharts === 'function') {
+      _debouncedRerender('dashboard-charts', initDashboardCharts);
+    }
+  });
+}
+
 // Phase 2c: re-render dashboard charts whenever HistoricalDataStore cloud data
 // arrives (handles F5 → Firestore subscribe lag where localStorage is empty).
 // Debounced: Firestore often emits several updates in quick succession on initial load.
@@ -336,56 +348,76 @@ async function initDashboardCharts(){
   document.getElementById('kpi-monthly').textContent='฿'+avg.toLocaleString();
   document.getElementById('kpi-monthly-sub').textContent=maxV>0?('สูงสุด: ฿'+maxV.toLocaleString()+(maxIdx>=0&&MONTHS_TH[maxIdx+1]?' ('+MONTHS_TH[maxIdx+1]+')':'')):'—';
 
-  // ─── Building breakdown from HISTORICAL_DATA ───
-  const activeRooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
-  const activeNest  = getActiveRoomsWithMetadata('nest',  window.NEST_ROOMS);
+  // ─── Per-building KPI cards (dynamic from BuildingRegistry) ───
   const tenants = loadTenants();
-  const occupiedRooms = activeRooms.filter(r=>tenants[r.id]?.name).length;
-  const occupiedNest  = activeNest.filter(r=>tenants[r.id]?.name).length;
-
-  let yearlyRoomsTotal=0, yearlyNestTotal=0, yearlyAmazonTotal=0;
-  let yearlyRoomsRent=0, yearlyNestRent=0;
-
-  const yearsToSum = yr==='all'?['67','68','69']:[yr];
-  yearsToSum.forEach(y=>{
-    (dataSource[y]?.months||[]).forEach(month=>{
-      if(!month)return;
-      if(!Array.isArray(month)){
-        // New object format — sum per building
-        yearlyRoomsTotal  += (month.rooms?.[4]  || 0);
-        yearlyNestTotal   += (month.nest?.[4]   || 0);
-        yearlyAmazonTotal += (month.amazon?.[4] || 0);
-        yearlyRoomsRent   += (month.rooms?.[0]  || 0);
-        yearlyNestRent    += (month.nest?.[0]   || 0);
-      }
-    });
-  });
-
-  // Fallback: estimate from active tenants if no historical data
-  const estRoomsMonthly = activeRooms.filter(r=>tenants[r.id]?.name).reduce((s,r)=>s+(r.rentPrice||0),0);
-  const estNestMonthly  = activeNest.filter(r=>tenants[r.id]?.name).reduce((s,r)=>s+(r.rentPrice||0),0);
   const mCount = valid.length || 1;
-
-  // Potential Revenue (100% occupancy)
-  const potentialRoomsMonthly = activeRooms.reduce((s,r)=>s+(r.rentPrice||0),0);
-  const potentialNestMonthly  = activeNest.reduce((s,r)=>s+(r.rentPrice||0),0);
-
-  const kpiRooms = yearlyRoomsTotal>0 ? yearlyRoomsTotal : estRoomsMonthly*mCount;
-  const kpiNest  = yearlyNestTotal>0  ? yearlyNestTotal  : estNestMonthly*mCount;
-
-  document.getElementById('kpi-rooms-total').textContent='฿'+kpiRooms.toLocaleString();
-  document.getElementById('kpi-rooms-sub').textContent=yearlyRoomsTotal>0
-    ? `เช่า ฿${Math.round(yearlyRoomsRent/mCount).toLocaleString()}/เดือน · Potential ฿${potentialRoomsMonthly.toLocaleString()}/เดือน`
-    : `${occupiedRooms}/${activeRooms.length} ห้อง · Potential ฿${potentialRoomsMonthly.toLocaleString()}/เดือน`;
-
-  if (yr !== '69' && yr !== 'all') {
-    document.getElementById('kpi-nest-total').textContent = '—';
-    document.getElementById('kpi-nest-sub').textContent = 'ยังไม่มีตึกนี้ในปีนั้น';
-  } else {
-    document.getElementById('kpi-nest-total').textContent='฿'+kpiNest.toLocaleString();
-    document.getElementById('kpi-nest-sub').textContent=yearlyNestTotal>0
-      ? `เช่า ฿${Math.round(yearlyNestRent/mCount).toLocaleString()}/เดือน · Potential ฿${potentialNestMonthly.toLocaleString()}/เดือน`
-      : `${occupiedNest}/${activeNest.length} ยูนิต · Potential ฿${potentialNestMonthly.toLocaleString()}/เดือน`;
+  const yearsToSum = yr==='all'?['67','68','69']:[yr];
+  // Tier-3F: iterate every registered building instead of hardcoding rooms/nest.
+  const buildings = (window.BuildingRegistry?.list?.() || [
+    { id: 'rooms', displayName: 'ห้องแถว' },
+    { id: 'nest',  displayName: 'Nest Building' }
+  ]);
+  // Color/icon palette for buildings beyond rooms/nest — cycles through
+  // accent-bright KPI styles already defined in dashboard.html.
+  const FALLBACK_PALETTE = ['blue', 'amber', 'green', 'purple'];
+  const SPECIFIC_STYLE = {
+    rooms: { color: 'green',  icon: '🏠' },
+    nest:  { color: 'purple', icon: '🏢' }
+  };
+  let extraIdx = 0;
+  const styleFor = (id) => {
+    if (SPECIFIC_STYLE[id]) return SPECIFIC_STYLE[id];
+    const color = FALLBACK_PALETTE[(extraIdx++) % FALLBACK_PALETTE.length];
+    return { color, icon: '🏘️' };
+  };
+  const container = document.getElementById('dash-per-building-kpi');
+  if (container) {
+    const cards = buildings.map(b => {
+      const id = b.id;
+      const displayName = b.displayName || id;
+      const metadataDefault = id === 'rooms' ? window.ROOMS_OLD : id === 'nest' ? window.NEST_ROOMS : [];
+      let active = [];
+      try { active = getActiveRoomsWithMetadata(id, metadataDefault || []); } catch (_) { active = []; }
+      const occupied = active.filter(r => tenants[r.id]?.name).length;
+      const potentialMonthly = active.reduce((s, r) => s + (r.rentPrice || 0), 0);
+      let yearlyTotal = 0, yearlyRent = 0;
+      yearsToSum.forEach(y => {
+        (dataSource[y]?.months || []).forEach(month => {
+          if (!month || Array.isArray(month)) return;
+          yearlyTotal += (month[id]?.[4] || 0);
+          yearlyRent  += (month[id]?.[0] || 0);
+        });
+      });
+      const estMonthly = active.filter(r => tenants[r.id]?.name).reduce((s, r) => s + (r.rentPrice || 0), 0);
+      const value = yearlyTotal > 0 ? yearlyTotal : estMonthly * mCount;
+      // Nest only started 2569; older years show '—' for it (preserves old UX).
+      const noDataYet = (id === 'nest' && yr !== '69' && yr !== 'all' && yearlyTotal === 0);
+      const sub = noDataYet
+        ? 'ยังไม่มีตึกนี้ในปีนั้น'
+        : (yearlyTotal > 0
+            ? `เช่า ฿${Math.round(yearlyRent / mCount).toLocaleString()}/เดือน · Potential ฿${potentialMonthly.toLocaleString()}/เดือน`
+            : `${occupied}/${active.length} ${id === 'nest' ? 'ยูนิต' : 'ห้อง'} · Potential ฿${potentialMonthly.toLocaleString()}/เดือน`);
+      const display = noDataYet ? '—' : '฿' + value.toLocaleString();
+      const style = styleFor(id);
+      const legacyId = id === 'rooms' ? 'kpi-rooms-total' : id === 'nest' ? 'kpi-nest-total' : `kpi-${id}-total`;
+      const legacySubId = legacyId.replace('-total', '-sub');
+      // Use innerText/textContent on the rendered nodes after — safer than
+      // string-templating user-controlled displayName into innerHTML.
+      const card = document.createElement('div');
+      card.className = `kpi-card ${style.color}`;
+      card.innerHTML = `
+        <div class="kpi-icon" aria-hidden="true">${style.icon}</div>
+        <div class="kpi-body">
+          <div class="kpi-label"></div>
+          <div class="kpi-value ${style.color}" id="${legacyId}"></div>
+          <div class="kpi-sub" id="${legacySubId}"></div>
+        </div>`;
+      card.querySelector('.kpi-label').textContent = `รายได้ ${displayName}`;
+      card.querySelector(`#${legacyId}`).textContent = display;
+      card.querySelector(`#${legacySubId}`).textContent = sub;
+      return card;
+    });
+    container.replaceChildren(...cards);
   }
 
   // ─── Insight cards ───

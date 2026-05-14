@@ -2604,7 +2604,9 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 .fin-payment-card{ height:100%; box-sizing:border-box; }
 .fin-kpi-2x2{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  /* Auto-fits 2..N cards across the row. Was 2x2 fixed; now stretches for
+     Tier-3F buildings so any new property surface here without a layout edit. */
+  grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
   gap:.5rem;
   height:100%;
   box-sizing:border-box;
@@ -3275,22 +3277,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <div class="kpi-sub" id="kpi-total-sub"></div>
           </div>
         </div>
-        <div class="kpi-card green">
-          <div class="kpi-icon" aria-hidden="true">🏠</div>
-          <div class="kpi-body">
-            <div class="kpi-label">รายได้ rooms</div>
-            <div class="kpi-value green" id="kpi-rooms-total">฿0</div>
-            <div class="kpi-sub" id="kpi-rooms-sub"></div>
-          </div>
-        </div>
-        <div class="kpi-card kpi-nest purple">
-          <div class="kpi-icon" aria-hidden="true">🏢</div>
-          <div class="kpi-body">
-            <div class="kpi-label">รายได้ Nest Building</div>
-            <div class="kpi-value purple" id="kpi-nest-total">฿0</div>
-            <div class="kpi-sub" id="kpi-nest-sub"></div>
-          </div>
-        </div>
+        <!-- Per-building KPI cards (populated dynamically from BuildingRegistry
+             by renderDashboardKpis in dashboard-home-live.js). The legacy
+             #kpi-rooms-total / #kpi-nest-total ids are kept on the rooms and
+             nest entries so older callers that read them still work. -->
+        <div id="dash-per-building-kpi" style="display:contents;"></div>
         <div class="kpi-card amber">
           <div class="kpi-icon" aria-hidden="true">📆</div>
           <div class="kpi-body">
