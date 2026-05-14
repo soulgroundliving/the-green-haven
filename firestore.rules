@@ -425,6 +425,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ===== DATA-DELETION AUDIT (PDPA §32) =====
+    // dataDeletionLog/{tenantId}_{iso} — immutable audit trail for every
+    // erasure request. Written by requestDataDeletion CF (Admin SDK bypass).
+    // Tenants read their own row keyed by tenantId claim (NOT auth.uid —
+    // survives UID drift per anti-pattern P). Admin reads all for audit.
+    match /dataDeletionLog/{docId} {
+      allow read: if isAdmin()
+                || (isSignedIn() && resource.data.tenantId == request.auth.token.tenantId);
+      allow write: if false;
+    }
+
     // ===== DEPOSITS (admin manages; accountant reads for tax reporting) =====
     // Flat collection: deposits/{building}_{roomId} (e.g. deposits/rooms_15)
     // Each doc stores building + roomId fields for client-side filtering.

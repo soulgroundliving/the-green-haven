@@ -210,6 +210,11 @@ exports.recordChecklistConsent = require('./recordChecklistConsent').recordCheck
 // PDPA Section 30 (Data Subject Right): tenant downloads JSON of all their data.
 exports.exportMyData = require('./exportMyData').exportMyData;
 
+// PDPA Section 32 (Data Subject Right): tenant requests erasure of their data.
+// Active tenants are refused (must terminate lease first); only players can run
+// the cascade. Retains bills/leases/BigQuery audit per §32(2)(b)/(c)/(e) carve-outs.
+exports.requestDataDeletion = require('./requestDataDeletion').requestDataDeletion;
+
 // Prunes people/{tenantId} docs (and all subcollections) where transitionedAt
 // is older than 1 year — enforces the grace-period expiry for former tenants.
 exports.cleanupPlayersOver1YearScheduled = require('./cleanupPlayersOver1Year').cleanupPlayersOver1YearScheduled;

@@ -418,3 +418,449 @@ Vercel deploy verified live on https://the-green-haven.vercel.app/dashboard:
 - [x] **3I-9 — Admin co-sign panel** (this session)
 - [x] **3I-10 — PNG export** (this session)
 - [ ] 3I-11 — E2E verify on Vercel (manual, production data — pending)
+
+---
+
+# Plan — PDPA §32 Right to Erasure (2026-05-14, V2 — layered)
+
+> Continues the PDPA framework shipped in `4004f77` (retention + signed URLs + consent ledger + DSR export). This is the 5th piece: data-subject DELETE.
+>
+> **V2 supersedes V1** — deep-research surfaced 6 critical issues V1 didn't address. See "What changed from V1" at the bottom.
+
+## User decisions (locked in, 2026-05-14)
+
+1. **Active tenant**: REFUSED. Throw `failed-precondition` "ต้องสิ้นสุดสัญญาก่อนถึงจะลบข้อมูลได้ — โปรดติดต่อแอดมิน". Only PLAYERS can run the cascade. → §3.3 conditional logic SIMPLIFIES: D11 = skip always; D12 = always `recursiveDelete`. The cascade becomes the player path only.
+2. **Modal**: 2-step (disclosure + 2 checkboxes → typed phrase)
+3. **Cooldown**: 7 days
+4. **Detection of active tenant** (refusal trigger): `tenantId` claim present AND `tenants/{b}/list/{r}` exists with same `tenantId` AND `linkedAuthUid === auth.uid` → REFUSE.
+
+---
+
+## §1 Legal framework — what we can/must/cannot delete
+
+### §1.1 PDPA §32 is NOT unconditional
+Two carve-outs apply directly to this project:
+- **§32(2)(b)** "for compliance with a legal obligation" → bills/payments (Revenue Code §87 = 5yr tax retention)
+- **§32(2)(c)** "for the establishment, exercise or defence of legal claims" → leases (Civil Code §193/34 = 5yr rent prescription)
+- **§32(2)(e)** "for legitimate interests of the controller, with regard to fraud prevention" → `auth_events` + `slipLogs` BigQuery archives (restricted-write IAM by design)
+
+### §1.2 Three tenant lifecycle states → three cascade behaviors
+
+| State | Detection | Cascade behavior |
+|-------|-----------|------------------|
+| **Active tenant** | `tenants/{b}/list/{r}.tenantId === token.tenantId AND linkedAuthUid === auth.uid` | Zero-out PII fields in tenants doc + people doc; cannot fully delete (active relationship) |
+| **Player** (post-lease, in `people/` for 1yr) | `people/{tenantId}` exists, NO matching active `tenants/*/list/*` for this tenantId | `firestore.recursiveDelete(people/{tenantId})` whole tree |
+| **Returning tenant** | active tenant doc AND archive(s) `tenants/{b}/archive/*` with same tenantId | Active path + delete all matching archive docs (with subcollections) |
+
+### §1.3 What MUST be disclosed to the user (consent dialog)
+
+The user must SEE before clicking confirm:
+1. ✅ Will delete: 7 categories (see §3 below)
+2. ⚠️ Retained for legal compliance: bills (5yr tax), leases (5yr Civil Code), payment history
+3. 🔒 Retained in security archives (cannot delete, IAM-locked): `auth_events` (90d+ in BigQuery), `slipLogs` (30d+ in BigQuery) — for fraud prevention per §32(2)(e)
+4. 🚫 **liffUsers deletion is TERMINAL** — cannot re-sign-in without admin re-approval (this is the most surprising consequence; must be explicit)
+5. 🕐 7-day cooldown after request
+
+---
+
+## §2 The 6 critical surprises from deep research
+
+| # | Issue | Mitigation |
+|---|-------|------------|
+| **S1** | **Cached ID tokens survive ~1 hour** after `setCustomUserClaims({})`. Tenant could still write via stale claims during this window. | Add `admin.auth().revokeRefreshTokens(uid)` immediately AFTER claim clear. This force-invalidates all existing tokens. |
+| **S2** | **liffUsers deletion is TERMINAL** — `liffSignIn.js:93-94` returns 404 if doc not found. No auto-create. | Disclose explicitly in modal. Add `liffUsers/{lineUserId}.pdpaErasedAt` marker (not deletion) — but no, this leaks lineUserId. Stick with full deletion + clear UX warning. |
+| **S3** | **`tenants/{b}/archive/{contractId}` has full PII clones** from prior move-outs (returning tenants). V1 missed these. | Query `tenants/{building}/archive where tenantId == X` for every building; cascade-delete each. |
+| **S4** | **Storage paths beyond checklists/**: `bookings/{bId}/kyc/*` (ID cards!), `bookings/{bId}/slips/*`, `leases/{b}/{r}/{lId}/`, `pets/{b}/{r}/{pId}/*` all hold tenant PII. V1 missed these. | Add to cascade. Find KYC via `bookings where prospectUid == authUid OR prospectLineId == lineUserId`. |
+| **S5** | **BigQuery audit archives have restricted-write IAM** — even compromised CF cannot delete. PDPA §32(2)(e) covers this but MUST disclose. | Disclose in consent modal. Optionally: write a `dataDeletionRequests` row to BigQuery so auditors can correlate. |
+| **S6** | **Anti-pattern P** — never gate this CF on `tenantUid == auth.uid`. UID drifts across LIFF sessions. | Gate by `token.tenantId` + verify against `tenants/{b}/list/{r}.tenantId` (which is stable). |
+
+---
+
+## §3 Complete cascade specification
+
+### §3.1 DELETE (no legal basis to keep)
+
+| # | Resource | Path | Key | Storage cascade |
+|---|----------|------|-----|-----------------|
+| D1 | checklistInstances | Firestore `checklistInstances/*` where `building+roomId` match | composite query | `checklists/{b}/{r}/{instanceId}/*` |
+| D2 | consents | Firestore `consents/*` where `tenantId` matches | tenantId query | none |
+| D3 | liffUsers | Firestore `liffUsers/{lineUserId}` | direct doc | none |
+| D4 | RTDB complaints | RTDB `complaints/{building}/{room}` | path | none |
+| D5 | RTDB maintenance | RTDB `maintenance/{building}/{room}` | path | none |
+| D6 | bookings (player KYC) | Firestore `bookings/*` where `prospectUid == authUid OR prospectLineId == lineUserId` | composite | `bookings/{bId}/kyc/*`, `bookings/{bId}/slips/*` |
+| D7 | pets | Firestore `tenants/{b}/list/{r}/pets/*` subcollection | subcoll | `pets/{b}/{r}/{petId}/*` |
+| D8 | lineRetryQueue | Firestore `lineRetryQueue/*` where `to == lineUserId` AND status pending | query | none |
+| D9 | rateLimits | Firestore `rateLimits/{authUid}_*` | prefix | none |
+| D10 | tenants archive (returning tenants) | Firestore `tenants/{b}/archive/{contractId}` for EACH building, where `tenantId` matches | composite per building | none (already cleaned via separate retention) |
+| D11 | tenants/{b}/list/{r} | conditional behavior — see §3.3 | direct doc | none |
+| D12 | people/{tenantId} | conditional behavior — see §3.3 | direct doc | none |
+
+### §3.2 RETAIN (statutory obligation, disclosed in response)
+
+| Resource | Reason | Citation |
+|----------|--------|----------|
+| RTDB `bills/{b}/{r}/*` | Tax retention | Revenue Code §87 (5yr) |
+| Firestore `leases/{b}/list/{contractId}` | Rent claim prescription | Civil Code §193/34 (5yr) |
+| Firestore `tenants/{b}/list/{r}/paymentHistory/*` subcoll | Financial audit | Revenue Code §87 |
+| RTDB `payments/{b}/{r}/*` | Financial audit | Revenue Code §87 |
+| BigQuery `audit_archive.auth_events` | Fraud prevention legitimate interest | PDPA §32(2)(e) |
+| BigQuery `audit_archive.slipLogs` | Fraud prevention legitimate interest | PDPA §32(2)(e) |
+| Firestore `audit_logs/bills/*` | Operational audit | PDPA §32(2)(e) |
+| Firestore `auth_events/*` (recent, pre-archive) | Recent sign-in security | PDPA §32(2)(e) |
+
+### §3.3 Conditional behavior for D11 (tenants doc) and D12 (people doc)
+
+```
+IF active tenant (tenants/{b}/list/{r} exists with this tenantId, linkedAuthUid match):
+  D11: tenants doc → zero-out FIELDS_TO_ERASE only (name, firstName, lastName, phone, email,
+       idCardNumber, lineID, address, emergencyContact, companyInfo, licensePlate),
+       set { pdpaErasedAt: now, pdpaErasureRequestId: <id> }, leave room/contract/lease intact
+  D12: people/{tenantId} → zero-out same FIELDS_TO_ERASE, leave gamification + tenantId + erasure marker
+
+ELSE IF player (people/{tenantId} exists, no active tenants doc):
+  D11: skip
+  D12: firestore.recursiveDelete(people/{tenantId}) — deletes all 5 subcollections too
+
+ELSE (orphan token — mismatched tenantId): ABORT with permission-denied
+```
+
+---
+
+## §4 Cloud Function design — `requestDataDeletion`
+
+### §4.1 Signature
+```js
+exports.requestDataDeletion = functions
+  .region('asia-southeast1')
+  .runWith({ timeoutSeconds: 300, memory: '512MB' })  // recursiveDelete needs headroom
+  .https.onCall(async (data, context) => { ... });
+```
+
+### §4.2 Input
+```js
+{
+  confirmationPhrase: 'ลบข้อมูลของฉัน',
+  acknowledgedRetention: true,        // user clicked the "I understand bills/leases retained" box
+  acknowledgedTerminal: true,         // user clicked the "I understand I cannot sign back in" box
+}
+```
+
+### §4.3 Pre-flight gate (in order)
+1. `if (!context.auth?.uid)` → `unauthenticated`
+2. `tenantId = token.tenantId`; `room = token.room`; `building = token.building`; `lineUserId = token.lineUserId || (uid starts with 'line:' ? slice : '')`
+3. `if (!tenantId)` → `permission-denied` (cannot erase without canonical key)
+4. `if (data?.confirmationPhrase?.trim() !== 'ลบข้อมูลของฉัน')` → `failed-precondition` "confirmation phrase mismatch"
+5. `if (!data?.acknowledgedRetention || !data?.acknowledgedTerminal)` → `failed-precondition` "acknowledgements required"
+6. **Cooldown check**: query `dataDeletionLog where tenantId == X order by requestedAt desc limit 1`; if exists AND `requestedAt > now - 7d` → `resource-exhausted` with `retry-after` in error details
+7. **Mismatch check** (anti-pattern P): if room AND building present, read `tenants/{b}/list/{r}` — if exists AND `tenantId !== claim tenantId` → `permission-denied` "tenant identity mismatch — contact admin"
+
+### §4.4 Idempotency fence
+```js
+const requestId = `${tenantId}_${new Date().toISOString().replace(/[:.]/g, '-')}`;
+const logRef = firestore.collection('dataDeletionLog').doc(requestId);
+await logRef.create({                  // throws ALREADY_EXISTS on duplicate
+  tenantId, authUid, room, building, lineUserId,
+  requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+  status: 'in_progress',
+  startedAt: Date.now(),
+});
+```
+
+### §4.5 Order of operations (CRITICAL — gets compliance right)
+
+```
+Step 0: Audit-fence write (§4.4)
+Step 1: Revoke tokens IMMEDIATELY
+        await admin.auth().setCustomUserClaims(authUid, {})
+        await admin.auth().revokeRefreshTokens(authUid)   // ← S1 mitigation
+Step 2: Cascade DELETE (per §3.1, best-effort)
+        - Collect per-resource counts and errors into `summary`
+        - Storage cleanups: log-and-continue on failure
+        - Firestore deletes: log-and-continue per doc; ABORT only on catastrophic admin SDK fail
+        - recursiveDelete for D12 player path
+Step 3: Write auth_events row
+        firestore.collection('auth_events').add({
+          action: 'pdpa_erasure', authUid, tenantId, room, building,
+          ts: serverTimestamp(), requestId, maskedEmail: masked(email)
+        })
+Step 4: Update log doc with completion
+        logRef.update({ status, summary, completedAt, errors })
+Step 5: Return { success, summary, retainedReason, signOutRequired: true }
+```
+
+Why this order:
+- **Step 1 BEFORE step 2**: closes the stale-token-write window. Even if step 2 fails halfway, user CANNOT add more data.
+- **Step 3 AFTER step 2**: the auth_events entry is the cross-system audit anchor. If step 2 throws catastrophically, we still flush the log with `status: 'failed'` in a `finally` block.
+
+### §4.6 Error handling matrix
+
+| Failure point | Action |
+|---------------|--------|
+| Storage prefix delete fails | log warn, increment `summary.storageErrors`, continue |
+| Single Firestore doc delete fails | log warn, append `{ path, error.message }` to `summary.errors`, continue |
+| `recursiveDelete` on player doc fails | log error, mark `summary.errors[D12]`, continue (player doc partially deleted is acceptable; retention sweep will catch remainder) |
+| `revokeRefreshTokens` fails | LOG ERROR, but proceed — claims already cleared, tokens expire in <1hr regardless |
+| `setCustomUserClaims` fails | ABORT, mark log status='failed', throw |
+| `dataDeletionLog.create()` throws ALREADY_EXISTS | catch, query existing doc, return its summary (idempotent retry) |
+| `auth_events` write fails | log warn, continue (audit log is the primary record) |
+
+### §4.7 Cleanup loop pseudo-code
+
+```js
+async function cascade(ctx) {
+  const summary = { deleted: {}, retained: {}, errors: [], storageErrors: 0 };
+  const helpers = [
+    () => deleteChecklistsByRoom(ctx, summary),
+    () => deleteConsentsByTenantId(ctx, summary),
+    () => deleteLiffUser(ctx, summary),
+    () => deleteRtdbPaths(ctx, summary),
+    () => deleteBookingsByOwner(ctx, summary),
+    () => deletePetsSubcollection(ctx, summary),
+    () => deleteLineRetryQueueEntries(ctx, summary),
+    () => deleteRateLimits(ctx, summary),
+    () => deleteAllTenantArchives(ctx, summary),
+    () => handleTenantsDoc(ctx, summary),       // conditional zero-out vs skip
+    () => handlePeopleDoc(ctx, summary),        // conditional zero-out vs recursiveDelete
+  ];
+  for (const h of helpers) {
+    try { await h(); }
+    catch (e) { summary.errors.push({ step: h.name, error: e.message }); }
+  }
+  return summary;
+}
+```
+
+---
+
+## §5 Firestore rules
+
+### §5.1 New `dataDeletionLog` block (after consents block)
+```
+// PDPA §32 erasure audit trail. Server-only writes (CF via Admin SDK).
+// Tenant reads their own row by tenantId claim (NOT by authUid — survives UID drift, per anti-pattern P).
+match /dataDeletionLog/{docId} {
+  allow read: if isAdmin()
+           || (isSignedIn() && resource.data.tenantId == request.auth.token.tenantId);
+  allow write: if false;
+}
+```
+
+### §5.2 Sanity-check consents rule (no change expected)
+Current `consents` has `allow write: if false;`. Admin SDK bypasses rules — confirmed. Leave as-is.
+
+### §5.3 Lineretryqueue rule check (might need patch)
+The CF queries `lineRetryQueue where to == lineUserId AND status == 'pending'`. Admin SDK bypasses. Check rule denies tenant direct write/delete (security review).
+
+---
+
+## §6 Composite indexes — `firestore.indexes.json`
+
+Add:
+```json
+{
+  "collectionGroup": "dataDeletionLog",
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "tenantId", "order": "ASCENDING" },
+    { "fieldPath": "requestedAt", "order": "DESCENDING" }
+  ]
+}
+```
+
+Verify existing indexes cover:
+- `consents where tenantId == X` (likely covered already — DSR export already uses it)
+- `bookings where prospectUid == X` and `bookings where prospectLineId == X` (verify)
+- `tenants/{b}/archive where tenantId == X` per building (collection-group? check existing index for similar query)
+
+---
+
+## §7 UI in `tenant_app.html`
+
+### §7.1 Menu row (after exportMyData around line 3627)
+```html
+<div class="menu-item" data-action="confirmDataDeletion">
+    <div class="icon-box icon-red"><i class="fas fa-user-slash"></i></div>
+    <span>ลบข้อมูลของฉัน (PDPA §32)</span>
+    <i class="fas fa-chevron-right arrow"></i>
+</div>
+```
+
+### §7.2 Wire data-action (around line 6743)
+```js
+if (a === 'confirmDataDeletion') { if (window.confirmDataDeletion) window.confirmDataDeletion(); return; }
+```
+
+### §7.3 Styled modal (NOT native confirm — anti-pattern Q)
+Two-step modal:
+
+**Step 1 — Disclosure**:
+- Title: "🗑️ ลบข้อมูลของฉัน (PDPA §32)"
+- Body:
+  - ✅ จะลบ: ประวัติเช็คลิสต์ + รูปถ่าย, ประวัติยินยอม (consents), การเชื่อมต่อ LINE, ประวัติแจ้งซ่อม/ร้องเรียน, รูป KYC ในการจองที่ผ่านมา, รูปสัตว์เลี้ยง, ข้อมูลผู้เช่าที่เก็บไว้ในนี้
+  - ⚠️ ต้องเก็บไว้ตามกฎหมาย: บิลค่าเช่า (5 ปี - พ.ร.บ.สรรพากร), สัญญาเช่า (5 ปี - ป.พ.พ.), ประวัติชำระเงิน
+  - 🔒 อยู่ในระบบความปลอดภัย ลบไม่ได้: บันทึกการเข้าระบบ + การตรวจสลิป (สำหรับป้องกันการฉ้อโกง - PDPA §32(2)(จ))
+  - 🚫 **หลังลบจะไม่สามารถเข้าใช้งานได้อีก** — ต้องให้แอดมินอนุมัติใหม่ทุกครั้ง
+- 2 checkboxes:
+  - [ ] ฉันเข้าใจว่าบิลและสัญญาจะถูกเก็บไว้ตามกฎหมาย
+  - [ ] ฉันเข้าใจว่าจะไม่สามารถเข้าใช้งานได้อีกหลังลบ
+- Buttons: ยกเลิก | ดำเนินการต่อ (disabled until both checkboxes ticked)
+
+**Step 2 — Friction confirmation**:
+- "พิมพ์ ลบข้อมูลของฉัน เพื่อยืนยัน:"
+- Input box (case-sensitive, trim)
+- Buttons: ย้อนกลับ | ✅ ลบข้อมูล (disabled until phrase matches exactly)
+
+### §7.4 Handler `window.confirmDataDeletion`
+```js
+window.confirmDataDeletion = async function() {
+  // 1. Open Step 1 modal, wait for both checkboxes + ดำเนินการต่อ
+  // 2. Open Step 2 modal, wait for phrase
+  // 3. Call CF with { confirmationPhrase, acknowledgedRetention: true, acknowledgedTerminal: true }
+  // 4. On success: show summary modal (deleted: X, retained: Y, requestId: Z)
+  //    Then: await firebase.auth().signOut() → location.href = '/login.html'
+  // 5. On cooldown: show modal with retry-after date
+  // 6. On other error: toast with error code + requestId (if any) so admin can investigate
+};
+```
+
+### §7.5 Modals — markup
+Add at end of `<body>` near `photoModal`:
+- `#pdpaDeleteStep1Modal` (disclosure)
+- `#pdpaDeleteStep2Modal` (friction)
+- `#pdpaDeleteSummaryModal` (result)
+
+All use styled `<div>` not native — explicit `style="display:none"` toggle (anti-pattern C check: no CSS rule binds them → must use `= 'none'` not `= ''` on close).
+
+---
+
+## §8 `functions/index.js` registration
+```js
+// PDPA Section 32 (Data Subject Right): tenant requests erasure of their data.
+// Cascades across Firestore + RTDB + Storage. Retains bills/leases per legal carve-outs.
+exports.requestDataDeletion = require('./requestDataDeletion').requestDataDeletion;
+```
+
+---
+
+## §9 Tests — `functions/__tests__/requestDataDeletion.test.js`
+
+Follow `checklist.test.js` Module._load stub pattern. **12 cases**:
+
+| # | Case | Expected |
+|---|------|----------|
+| T1 | No auth uid | throws `unauthenticated` |
+| T2 | Auth but no tenantId claim | throws `permission-denied` |
+| T3 | Wrong confirmation phrase | throws `failed-precondition` |
+| T4 | Missing `acknowledgedRetention` | throws `failed-precondition` |
+| T5 | Missing `acknowledgedTerminal` | throws `failed-precondition` |
+| T6 | Within 7d cooldown | throws `resource-exhausted` |
+| T7 | tenantId claim doesn't match tenants doc | throws `permission-denied` |
+| T8 | Idempotency — duplicate requestId | catch ALREADY_EXISTS, return existing summary |
+| T9 | Active tenant happy path | tenants doc zeroed, people doc zeroed, NOT deleted; bills NOT touched; audit log written |
+| T10 | Player happy path (no active tenant) | `recursiveDelete(people/{tenantId})` called; audit log written |
+| T11 | Storage prefix delete fails | doc delete still proceeds; `summary.storageErrors > 0` |
+| T12 | `revokeRefreshTokens` fails | claims still cleared; CF returns success with warning in summary |
+
+---
+
+## §10 Memory updates — `~/.claude/.../memory/lifecycle_pdpa_checklist.md`
+
+Add §5 to the four-piece pattern:
+
+```markdown
+### 5. Right to erasure — `requestDataDeletion`
+- File: `functions/requestDataDeletion.js`
+- Caller: tenant via styled modal (NOT confirm()) on profile page
+- Cascade: 12 resources deleted, 5 retained per PDPA §32(2) carve-outs
+- Order: audit-fence write → revoke tokens → cascade → cross-write auth_events → update log
+- ...
+```
+
+Update "What's NOT done" section — remove DELETE-my-data line.
+
+Add to verification table:
+| Claim | Verifier |
+|-------|----------|
+| Erasure CF exports the handler | `grep -n "exports.requestDataDeletion" functions/requestDataDeletion.js` |
+| Order: revokeRefreshTokens after setCustomUserClaims | `grep -n "revokeRefreshTokens" functions/requestDataDeletion.js` |
+| Tenants archive scanned per building | `grep -n "tenants.*archive" functions/requestDataDeletion.js` |
+
+---
+
+## §11 Files touched (8 — bigger than V1)
+
+1. `functions/requestDataDeletion.js` (new, ~400 lines)
+2. `functions/__tests__/requestDataDeletion.test.js` (new, ~350 lines, 12 cases)
+3. `functions/index.js` (+3 lines registration)
+4. `firestore.rules` (+6 lines `dataDeletionLog` block)
+5. `firestore.indexes.json` (+1 composite index for dataDeletionLog)
+6. `tenant_app.html` (~150 lines: 1 menu row + 3 modals + 1 handler + 1 wire-up)
+7. `~/.claude/.../memory/lifecycle_pdpa_checklist.md` (update template to 5 pieces)
+8. *(possible)* `firestore.indexes.json` extra indexes if `bookings where prospectUid == X` not already covered
+
+---
+
+## §12 Execution order
+
+1. [ ] Build `requestDataDeletion.js` helpers (one helper per cascade item D1–D12) + main handler
+2. [ ] Build test file with 12 cases
+3. [ ] Run tests until green
+4. [ ] Register in `functions/index.js`
+5. [ ] Update `firestore.rules` + `firestore.indexes.json`
+6. [ ] Deploy CF + rules + indexes: `firebase deploy --only functions:requestDataDeletion,firestore:rules,firestore:indexes`
+7. [ ] Build modal + menu + handler in `tenant_app.html`
+8. [ ] Run `npm run test:rules` (no new rule cases added but ensure no regression)
+9. [ ] Update lifecycle_pdpa_checklist.md
+10. [ ] Run `npm run verify:memory` — exit 0
+11. [ ] Commit + `git push origin main`
+12. [ ] User verifies on LIFF (need user testing — production data action — DO NOT auto-click)
+
+---
+
+## §13 Risk register + rollback strategy
+
+| Risk | Likelihood | Impact | Mitigation/Rollback |
+|------|------------|--------|---------------------|
+| User clicks delete by mistake | Low | High (irreversible) | Two-step modal + checkbox + typed phrase; cooldown blocks rapid retries |
+| Step 2 fails mid-cascade after step 1 (tokens revoked, data partially intact) | Low | Medium | `dataDeletionLog.status='partial_failure'` + admin alert (auth_events row); admin can manually finish via cleanupChecklistsManual + manual scripts; tenant locked out until admin re-approves liffUsers |
+| `setCustomUserClaims` fails (rare admin SDK failure) | Very low | High (entire CF aborts) | Pre-flight check: try a no-op `getUser(uid)` first; abort cleanly before any destructive op if Auth SDK unreachable |
+| Stale cached ID token used to write to RTDB during the ~1s between step 1 and Firestore deletes | Very low | Low | `revokeRefreshTokens` invalidates on next admin verification (5-min Firestore cache exception per docs, but writes are server-side and verify fresh) |
+| `recursiveDelete` on player doc times out | Low | Medium | 300s timeout + 512MB. If still times out, the remaining subcols sweep on next `cleanupPlayersOver1YearScheduled` run |
+| Tenant has 100+ checklistInstances → cascade slow | Very low (max ~3 in practice) | Low | Pagination at 200/batch already; CF stays under 300s for realistic data sizes |
+| Index missing for a query | Medium | High (CF throws at runtime) | Deploy indexes BEFORE CF; verify in `firestore.indexes.json` |
+| Anti-pattern N — onSnapshot in tenant_app fires permission_denied after liffUsers deletion | Certain (by design) | Low | Client UI signs out immediately after CF returns; listener cleanup happens in signOut path |
+| BigQuery archive still has user's auth events / slip logs after "erasure" | Certain (by design) | Legal disclosure | Modal explicitly discloses §32(2)(e) legitimate-interest retention |
+
+**Rollback strategy if shipped broken**:
+- Hide menu row in `tenant_app.html` (1-line `style="display:none"`); push; CF stays deployed but unreachable from UI
+- Or: throw `unimplemented` early in CF until fix lands
+- No data rollback possible — destructive by nature; relies on Firestore daily backup (`backupFirestoreScheduled` 03:00 BKK)
+
+---
+
+## §14 What changed from V1
+
+| Issue | V1 missed | V2 adds |
+|-------|-----------|---------|
+| Stale token write window | Did not address | `revokeRefreshTokens` after claim clear |
+| `tenants/{b}/archive/*` PII clones | Not deleted | D10: scan all buildings, delete matching archives |
+| Storage paths beyond checklists | Only checklists | D6/D7: bookings KYC + slips, pets |
+| BigQuery archive disclosure | Silent | Explicit "🔒 cannot delete" line in modal |
+| liffUsers terminal effect | Not warned | 🚫 explicit warning + acknowledged checkbox |
+| Mismatched tenantId attack vector | Not checked | §4.3 step 7 mismatch check |
+| Idempotency | Cooldown only | Idempotency fence via `.create()` returns existing summary on duplicate |
+| auth_events cross-system audit | Not written | Step 3 of cascade |
+| Two-step modal | Single confirm | Disclosure step + friction step |
+| `lineRetryQueue` cleanup | Missed | D8: delete pending pushes to this lineUserId |
+| `rateLimits` cleanup | Missed | D9: clean up authUid-keyed entries |
+
+---
+
+## §15 Open questions for user (answer before I implement)
+
+1. **Disclosure language** — comfortable with my Thai text in §7.3, or you want softer / more legalese?
+2. **Two-step modal vs single-page modal** — two-step adds friction (good for irreversible action); single-page is faster. Prefer?
+3. **Active-tenant erasure** — should we allow it (zero-out fields, keep room slot) per my plan, OR refuse outright and tell user "end your lease first"? V2 plan = allow. Tradeoff: data minimisation vs admin overhead.
+4. **`revokeRefreshTokens` blast radius** — this also kicks out the user from booking.html if they're signed into both. Acceptable?
+5. **Privacy policy `/privacy.html`** — should the modal link to it (TBD page), or inline disclosure is enough for now?
+6. **Cooldown duration** — 7 days OK, or different (24h / 30 days)?
