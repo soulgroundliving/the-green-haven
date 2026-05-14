@@ -57,9 +57,9 @@
         const canonical = (window.BuildingConfig?.normalizeId?.(doc.id)) || doc.id;
         const legacyDocId = doc.id !== canonical ? doc.id : null;
         // Prefer Firestore displayName, but treat a value that equals the raw
-        // doc ID as a placeholder (legacy `saveBuildingPaymentConfig` auto-
-        // filled `displayName: doc.id` for 'nest' and 'RentRoom'). Fall back to
-        // BuildingConfig's human-readable name in that case.
+        // doc ID as a placeholder (a now-removed legacy admin UI auto-filled
+        // `displayName: doc.id` for 'nest' and 'RentRoom' before Tier 3F).
+        // Fall back to BuildingConfig's human-readable name in that case.
         const rawName = (data.displayName || data.name || '').trim();
         const isPlaceholder = !rawName || rawName === doc.id;
         const displayName = isPlaceholder

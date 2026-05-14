@@ -86,7 +86,7 @@ async function main() {
       console.log();
     }
     console.log('  ACTION REQUIRED:');
-    console.log('  1. Admin → Dashboard → Settings → ข้อมูลการชำระเงิน (per-building)');
+    console.log('  1. Admin → Dashboard → Buildings → ✏️ แก้ไข rooms');
     console.log('  2. Save the rooms building with the correct values above.');
     console.log('  3. Re-run this script — if output is "✅ Safe", delete buildings/RentRoom.\n');
   }

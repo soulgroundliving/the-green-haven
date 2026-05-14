@@ -651,10 +651,10 @@ function _refreshPromptPayDisplay(){
     if (!bldg) return;
     const canonical = (bldg === 'new' || bldg === 'nest') ? 'nest' : 'rooms';
     const cfg = window._buildingPaymentCache[canonical] || {};
-    // Fallback chain: canonical promptPayId (Buildings page) → legacy promptpayNumber
-    // (People-Mgmt-Owner UI) → localStorage cache → empty. Dual-write enforced
-    // by saveBuildingPaymentConfig keeps both in sync; this read order makes
-    // Buildings-page-only writes visible to Bill page without a migration.
+    // Fallback chain: canonical promptPayId (Buildings page is the only writer
+    // since 2026-05-14 consolidation) → legacy promptpayNumber (pre-Tier-3F
+    // docs like `buildings/nest` seeded 2026-05-07) → localStorage cache → empty.
+    // Legacy branch stays until a migration backfills `promptPayId` everywhere.
     const num = cfg.promptPayId
                 || cfg.promptpayNumber || cfg.payment?.promptpayNumber
                 || localStorage.getItem('promptpay') || '';

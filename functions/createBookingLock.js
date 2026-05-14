@@ -128,9 +128,10 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
   // Canonical building id ('rooms', 'nest') IS the Firestore doc id since B4 migration.
   //
   // Field name accepts BOTH spellings: Tier 3F Buildings UI writes `promptPayId`
-  // (shared/building-registry.js), while the legacy saveBuildingPaymentConfig
-  // (shared/dashboard-extra.js) writes `promptpayNumber`. Reading both keeps
-  // bookings working regardless of which UI saved the building's payment info.
+  // (shared/building-registry.js, canonical since 2026-05-13). Legacy docs that
+  // pre-date Tier 3F may still hold `promptpayNumber` (e.g. `buildings/nest`
+  // seeded 2026-05-07). Reading both keeps bookings working until a migration
+  // drops the legacy field. See CLAUDE.md §7-T.
   const fsBuildingId = canonicalBuilding;
   let receiverPhone;
   try {

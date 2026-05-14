@@ -7987,9 +7987,10 @@
         if (window.firebaseReady && window._authUid) _subscribeEmergencyContacts();
 
         // ===== PAYMENT CONFIG SUBSCRIBE (PromptPay # + company name) =====
-        // Firestore: buildings/{RentRoom|nest} doc fields { promptpayNumber, companyName, ownerName }
-        // Mirrors values to localStorage so legacy callers (buildPromptPayPayload, getOwnerName)
-        // keep working without refactor. Admin sets this in dashboard.html → Settings → Payment.
+        // Firestore: buildings/{rooms|nest} doc fields { promptPayId (canonical) /
+        // promptpayNumber (legacy), companyName, ownerName }. Admin sets this in
+        // dashboard.html → Buildings → ✏️ แก้ไข. Reader is canonical-first;
+        // localStorage mirror keeps legacy callers (buildPromptPayPayload, getOwnerName) working.
         let _paymentCfgUnsub = null;
         function _subscribePaymentConfig() {
             if (_paymentCfgUnsub) return;
@@ -8002,7 +8003,7 @@
                 _paymentCfgUnsub = fs.onSnapshot(ref, snap => {
                     if (!snap.exists()) return;
                     const data = snap.data() || {};
-                    const pp = data.promptpayNumber || data.payment?.promptpayNumber;
+                    const pp = data.promptPayId || data.promptpayNumber || data.payment?.promptpayNumber;
                     const cn = data.companyName    || data.payment?.companyName;
                     const on = data.ownerName      || data.payment?.ownerName;
                     if (pp) try { localStorage.setItem('promptpay', String(pp)); } catch(e) {}

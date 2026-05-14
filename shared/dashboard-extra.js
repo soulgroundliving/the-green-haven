@@ -1077,17 +1077,6 @@ function renderOwnerInfoPage() {
       </button>
     </div>
 
-    <!-- Per-building Payment Config (subscribed by tenant_app _subscribePaymentConfig) -->
-    <hr style="margin: 2.5rem 0 1.5rem; border: none; border-top: 1px solid var(--border);">
-    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: .25rem;">💳 ข้อมูลการชำระเงิน (ต่อตึก)</div>
-    <div style="font-size: .85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
-      ตั้งค่า PromptPay + ชื่อบริษัทแยกตามตึก — ลูกบ้านแต่ละตึกจะเห็น QR + ชื่อ payee ของตึกตัวเอง.
-      <br>เก็บที่ Firestore <code>buildings/{RentRoom|nest}</code>
-    </div>
-    <div id="buildingPaymentConfigContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
-      <div style="text-align:center;color:var(--text-muted);padding:1rem;grid-column:span 2;">กำลังโหลด...</div>
-    </div>
-
     <!-- Per-building Internet Status (subscribed by tenant_app displayBuildingInternetStatus) -->
     <hr style="margin: 2.5rem 0 1.5rem; border: none; border-top: 1px solid var(--border);">
     <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: .25rem;">🌐 สถานะอินเทอร์เน็ตอาคาร</div>
@@ -1099,84 +1088,11 @@ function renderOwnerInfoPage() {
       <div style="text-align:center;color:var(--text-muted);padding:1rem;grid-column:span 2;">กำลังโหลด...</div>
     </div>
   `;
-  // Lazy-load building payment + internet config (after Firebase ready)
-  if (typeof renderBuildingPaymentConfig === 'function') renderBuildingPaymentConfig();
+  // Lazy-load building internet config (after Firebase ready). Payment config
+  // (PromptPay/companyName/ownerName) lives in the Buildings page since 2026-05-14
+  // consolidation — see CLAUDE.md §7-T.
   if (typeof renderBuildingInternetConfig === 'function') renderBuildingInternetConfig();
 }
-
-// ===== BUILDING PAYMENT CONFIG (per-building PromptPay + company name) =====
-async function renderBuildingPaymentConfig() {
-  const container = document.getElementById('buildingPaymentConfigContainer');
-  if (!container) return;
-  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-    container.innerHTML = '<div style="color:#c62828;text-align:center;padding:1rem;grid-column:span 2;">Firestore unavailable</div>';
-    return;
-  }
-  const fs = window.firebase.firestoreFunctions;
-  const db = window.firebase.firestore();
-  // Load both building docs in parallel
-  const [rrSnap, nestSnap] = await Promise.all([
-    fs.getDoc(fs.doc(db, 'buildings', 'rooms')).catch(() => null),
-    fs.getDoc(fs.doc(db, 'buildings', 'nest')).catch(() => null)
-  ]);
-  const rr = rrSnap?.exists() ? rrSnap.data() : {};
-  const nest = nestSnap?.exists() ? nestSnap.data() : {};
-  const cardHtml = (label, fsId, data) => `
-    <div style="border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1.25rem; background: #fafafa;">
-      <div style="font-weight: 700; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-        <span>${label}</span>
-        <span style="font-size: .72rem; color: var(--text-muted); font-family: monospace;">buildings/${fsId}</span>
-      </div>
-      <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">PromptPay (เบอร์โทร)</label>
-      <input type="tel" id="bp-${fsId}-promptpay" value="${(data.promptPayId||data.promptpayNumber||data.payment?.promptpayNumber||'').replace(/"/g,'&quot;')}" placeholder="0xxxxxxxxx" maxlength="13" class="dx-field-sm-mb">
-      <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">ชื่อบริษัท / ผู้รับเงิน (ใบเสร็จ)</label>
-      <input type="text" id="bp-${fsId}-company" value="${(data.companyName||data.payment?.companyName||'').replace(/"/g,'&quot;')}" placeholder="เช่น The Green Haven Co., Ltd." class="dx-field-sm-mb">
-      <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">ชื่อเจ้าของ (Owner)</label>
-      <input type="text" id="bp-${fsId}-owner" value="${(data.ownerName||data.payment?.ownerName||'').replace(/"/g,'&quot;')}" placeholder="ชื่อเจ้าของอาคารนี้" style="width:100%;padding:.6rem;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-bottom:1rem;">
-      <button onclick="saveBuildingPaymentConfig('${fsId}')" style="width:100%;padding:.65rem;background:#4caf50;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:Sarabun,sans-serif;">💾 บันทึก ${label}</button>
-    </div>
-  `;
-  container.innerHTML = cardHtml('🏠 ห้องแถว', 'rooms', rr) + cardHtml('🏢 Nest', 'nest', nest);
-}
-
-async function saveBuildingPaymentConfig(fsId) {
-  if (!['rooms', 'nest'].includes(fsId)) return;
-  const promptpayNumber = document.getElementById(`bp-${fsId}-promptpay`)?.value?.trim() || '';
-  const companyName = document.getElementById(`bp-${fsId}-company`)?.value?.trim() || '';
-  const ownerName = document.getElementById(`bp-${fsId}-owner`)?.value?.trim() || '';
-  if (promptpayNumber && !/^\d{9,13}$/.test(promptpayNumber.replace(/\D/g, ''))) {
-    showToast('PromptPay ต้องเป็นตัวเลข 9-13 หลัก', 'warning');
-    return;
-  }
-  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
-    showToast('Firestore ไม่พร้อม', 'error');
-    return;
-  }
-  try {
-    const fs = window.firebase.firestoreFunctions;
-    const db = window.firebase.firestore();
-    await fs.setDoc(fs.doc(db, 'buildings', fsId), {
-      // Dual-write during deprecation window — Buildings page reads `promptPayId`
-      // (canonical, Tier 3F), legacy readers still pin to `promptpayNumber`.
-      // Both fields stay in sync until one-off migration drops the legacy field.
-      // See CLAUDE.md §7-T for the field-drift incident this resolves.
-      promptPayId: promptpayNumber,
-      promptpayNumber,
-      companyName, ownerName,
-      updatedAt: new Date().toISOString()
-    }, { merge: true });
-    showToast(`✅ บันทึกข้อมูล ${fsId === 'rooms' ? 'ห้องแถว' : 'Nest'} แล้ว`, 'success');
-  } catch (e) {
-    console.error('saveBuildingPaymentConfig failed:', e);
-    showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
-  }
-}
-
-if (typeof window !== 'undefined') {
-  window.renderBuildingPaymentConfig = renderBuildingPaymentConfig;
-  window.saveBuildingPaymentConfig = saveBuildingPaymentConfig;
-}
-
 
 // ===== BUILDING INTERNET CONFIG (per-building ISP + status + speed) =====
 // Same pattern as payment config: writes buildings/{RentRoom|nest}.internet (merged).
