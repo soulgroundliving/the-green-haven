@@ -6,7 +6,7 @@ Loaded at every session start. Overrides any default behavior — follow exactly
 
 Two docs auto-load at session start; they are **complementary, not duplicates**:
 
-- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-S** (project-specific lessons that auto-load every session).
+- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-T** (project-specific lessons that auto-load every session).
 - **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, archive.
 
 **Boundary rule for new content:**
@@ -340,6 +340,27 @@ Incident 2026-05-14: user opened booking LIFF while tenant_app LIFF was still co
 3. Don't auto-redirect users between LIFF apps inside one session — force a sign-out → reopen via menu cycle so the prior auth state is cleanly torn down.
 
 Detection during debugging: if a user reports the "ตั้งค่าสิทธิ์" overlay stuck and **no** network errors / no timeouts fired, ask "เปิด LINE LIFF อื่นในเวลาใกล้กันไหม?" before chasing TLS / claim / index theories.
+
+### T. Two admin UIs writing the same Firestore doc with different field names — reader pinned to one of them
+
+When two admin UIs edit the same `buildings/{id}` (or any shared) Firestore doc but choose different field names for the same value (one canonical, one legacy), a downstream consumer that reads only one of those names is invisibly broken from the OTHER UI's perspective. The admin "saves" but the consumer never updates.
+
+Incident 2026-05-14: `buildings/{id}.promptPayId` (written by `building-registry.js:140` Buildings page form) vs `buildings/{id}.promptpayNumber` (written by `dashboard-extra.js:1158` People Mgmt → Owner UI). Bill page (`dashboard-bill.js:655`) read only `promptpayNumber`. After re-seeding `buildings/rooms` via Buildings form, Bill page kept showing `— (ยังไม่ตั้ง)` for ห้องแถว until the user wrote `promptpayNumber` via the OTHER UI.
+
+**Rule:** before adding a new admin UI that edits an existing Firestore doc, grep both for every WRITER of that doc AND every READER. If writer field name doesn't match reader field name, you've just created field drift.
+
+```bash
+# Template — replace YOUR_FIELD with the field your new UI is about to write
+grep -rn "YOUR_FIELD\|legacy_name_if_known" shared/ functions/ dashboard.html tenant_app.html booking.html
+# Confirm there's only ONE writer pattern and ALL readers see it.
+```
+
+Fix pattern when drift is already shipped:
+1. **Reader fix first** — extend the consumer to read BOTH (`data.canonical || data.legacy || ...`). Safe, additive.
+2. **Writer fix** — make the legacy-name writer ALSO write the canonical name (dual-write). Don't drop legacy yet.
+3. After ≥1 user-visible cycle of stable dual-write, deprecate: one-off migration `setDoc({canonical: data.legacy}, {merge:true}) + updateDoc({legacy: FieldValue.delete()})`, then drop legacy from reader + writer.
+
+Anti-pattern K (defined ≠ wired) is the function-level cousin of this. Same instinct: grep for callers/readers before assuming a value/function flows where you expect.
 
 ---
 
