@@ -981,22 +981,53 @@ function updateTenantStatusWidget(_activeRooms) {
   if (!dashTen) return;
   if (!window.ROOMS_OLD || window.ROOMS_OLD.length === 0) return;
   const today = new Date();
-  // Use pre-computed value from updateDashboardLive when available
-  const activeRooms = _activeRooms || getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
-  const activeNest = [];
-  const totalRooms = activeRooms.length;
   const tenants = loadTenants();
-  const occCountRooms = activeRooms.filter(r => tenants[r.id]?.name).length;
-  const occCountNest = 0;
-  const occCount = occCountRooms + occCountNest;
-  const vacantRoomsArr = activeRooms.filter(r => !tenants[r.id]?.name).map(r => r.id);
-  const soonRooms = activeRooms.filter(r => {
-    const t = tenants[r.id];
-    if (!t?.contractEnd) return false;
-    const diff = (new Date(t.contractEnd) - today) / (1000 * 60 * 60 * 24);
-    return diff >= 0 && diff <= 30;
-  });
+  // Tier-3F: iterate every registered building so new properties contribute
+  // to the occupancy total automatically. Falls back to rooms+nest when the
+  // registry hasn't loaded yet (cold start).
+  const buildings = (window.BuildingRegistry?.list?.() || [{ id: 'rooms' }, { id: 'nest' }]);
+  let occCount = 0;
+  let totalRooms = 0;
+  const vacantRoomsArr = [];
+  const soonRooms = [];
+  const perBuildingStats = [];
+  for (const b of buildings) {
+    const id = b.id;
+    let active = [];
+    try {
+      // Reuse the shared rooms list from updateDashboardLive when available.
+      if (id === 'rooms' && _activeRooms) {
+        active = _activeRooms;
+      } else {
+        const fallback = id === 'rooms' ? window.ROOMS_OLD
+                        : id === 'nest' ? window.NEST_ROOMS
+                        : [];
+        active = getActiveRoomsWithMetadata(id, fallback || []);
+      }
+    } catch (_) { active = []; }
+    const occupied = active.filter(r => tenants[r.id]?.name).length;
+    occCount += occupied;
+    totalRooms += active.length;
+    active.filter(r => !tenants[r.id]?.name).forEach(r => vacantRoomsArr.push(r.id));
+    active.forEach(r => {
+      const t = tenants[r.id];
+      if (!t?.contractEnd) return;
+      const diff = (new Date(t.contractEnd) - today) / (1000 * 60 * 60 * 24);
+      if (diff >= 0 && diff <= 30) soonRooms.push(r);
+    });
+    if (active.length > 0) {
+      perBuildingStats.push({
+        displayName: b.displayName || id,
+        occupied,
+        total: active.length,
+        icon: id === 'nest' ? '🏢' : id === 'rooms' ? '🏠' : '🏘️'
+      });
+    }
+  }
   const occRate = totalRooms > 0 ? Math.round(occCount / totalRooms * 100) : 0;
+  const breakdownHtml = perBuildingStats
+    .map(s => `<div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">${s.icon} ${s.displayName}: ${s.occupied}/${s.total}</div>`)
+    .join('');
   dashTen.innerHTML = `
     <div style="display:flex;gap:1.4rem;margin-bottom:.75rem;flex-wrap:wrap;">
       <div><div style="font-size:1.5rem;font-weight:800;color:var(--blue)">${occCount}</div><div style="font-size:.72rem;color:var(--text-muted)">มีผู้เช่า</div></div>
@@ -1004,7 +1035,7 @@ function updateTenantStatusWidget(_activeRooms) {
       <div><div style="font-size:1.5rem;font-weight:800;color:${occRate>=80?'#0f766e':occRate>=60?'#f59e0b':'#dc2626'}">${occRate}%</div><div style="font-size:.72rem;color:var(--text-muted)">Occupancy Rate</div></div>
       ${soonRooms.length ? `<div><div style="font-size:1.5rem;font-weight:800;color:var(--red)">${soonRooms.length}</div><div style="font-size:.72rem;color:var(--text-muted)">สัญญาใกล้หมด</div></div>` : ''}
     </div>
-    <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;">🏠 Rooms: ${occCountRooms}/${activeRooms.length}</div>
+    ${breakdownHtml}
     ${vacantRoomsArr.length ? `<div style="font-size:.74rem;color:var(--text-muted);">ว่าง: ${vacantRoomsArr.slice(0,8).join(', ')}${vacantRoomsArr.length>8?'...':''}</div>`
     : '<div style="color:var(--green);font-weight:700;font-size:.85rem;">✅ ไม่มีห้องว่าง</div>'}
     ${soonRooms.length ? `<div style="font-size:.74rem;color:var(--red);margin-top:4px;">⚠️ สัญญาใกล้หมด: ${soonRooms.map(r=>r.id).join(', ')}</div>` : ''}`;
