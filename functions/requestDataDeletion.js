@@ -1,11 +1,21 @@
 /**
- * requestDataDeletion — PDPA §32 Right-to-Erasure endpoint.
+ * requestDataDeletion — PDPA §32 admin-triggered erasure.
  *
- * Caller: tenant from styled modal in tenant_app.html (NOT confirm()).
+ * Caller: admin only. Tenants do NOT self-serve erasure — they contact
+ * admin (via LINE/email/in-person), admin runs this CF with target params.
  *
- * Refused for active tenants — they must terminate their lease first
- * (legal basis to keep their data exists while the rental relationship
- * is ongoing). Erasure runs only for PLAYERS (post-lease, in people/).
+ * Why admin-only:
+ *   1. Tenant self-service deletion is a footgun for non-power users —
+ *      a misclick = irreversible cascade across 9 resources.
+ *   2. PDPA §32 doesn't mandate a self-service button — the data
+ *      controller (admin) decides how to receive requests.
+ *   3. Routine cleanup is already automatic: cleanupChecklistsScheduled
+ *      (2yr/5yr retention) + cleanupPlayersOver1Year (1yr post-transition)
+ *      + cleanupOldDocs* (rateLimits/maintenance/liffUsers-rejected).
+ *      This CF handles only ad-hoc §32 requests above-and-beyond.
+ *
+ * Refused for active tenants — admin must run transitionToPlayer first
+ * to archive the contract, then call this CF on the resulting player.
  *
  * Cascade is grouped into DELETE vs RETAIN buckets per PDPA §32(2):
  *   DELETE: checklists+storage, consents, liffUsers, RTDB
@@ -20,14 +30,14 @@
  *
  * Order of operations:
  *   1. Idempotency-fence write to dataDeletionLog/{requestId}
- *   2. Revoke auth claims + revokeRefreshTokens (closes stale-token
- *      write window before any destructive op)
+ *   2. Revoke target's auth claims + revokeRefreshTokens (closes the
+ *      stale-token write window before any destructive op)
  *   3. Cascade (best-effort per resource; errors collected, not aborted)
  *   4. Cross-write auth_events row
- *   5. Update log with summary, return to client
+ *   5. Update log with summary, return to admin caller
  *
  * Why this order: step 2 BEFORE step 3 means even if a downstream
- * delete fails halfway, the user CANNOT add more data — partial
+ * delete fails halfway, the target user CANNOT add more data — partial
  * state is recoverable; data leak via stale token is not.
  */
 const functions = require('firebase-functions/v1');
@@ -41,16 +51,6 @@ const { getAllBuildings } = require('./buildingRegistry');
 const CONFIRMATION_PHRASE = 'ลบข้อมูลของฉัน';
 const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;  // 7 days between erasure requests
 const PAGE_SIZE = 200;                         // batch limit for query pages
-
-// PII fields zeroed when a record cannot be fully deleted (kept for
-// future audit / mismatch debugging only; primarily relevant if we
-// later relax the active-tenant refusal).
-const PII_FIELDS_TO_CLEAR = {
-  name: '', firstName: '', lastName: '', phone: '', email: '',
-  emailVerified: false, lineID: '', address: '', idCardNumber: '',
-  licensePlate: '', emergencyContact: null, companyInfo: null,
-  avatar: '',
-};
 
 // ── Storage helpers ──────────────────────────────────────────────────────────
 
@@ -181,7 +181,7 @@ async function deleteLineRetryQueueEntries(ctx, summary) {
       catch (e) { summary.errors.push({ step: `lineRetryQueue/${doc.id}`, error: e.message }); }
     }
   } catch (e) {
-    // No "to" index? Skip silently — queue is non-load-bearing for compliance.
+    // Index missing? Skip — queue is non-load-bearing for compliance.
     summary.errors.push({ step: 'lineRetryQueue.query', error: e.message });
   }
   summary.deleted.lineRetryQueue = n;
@@ -189,8 +189,6 @@ async function deleteLineRetryQueueEntries(ctx, summary) {
 
 async function deleteRateLimits(ctx, summary) {
   if (!ctx.authUid) return;
-  // rateLimits keys are `${uid}_${action}` — no list-by-prefix in Firestore;
-  // we have to query all by uid field (some rows persist it).
   let n = 0;
   try {
     const snap = await firestore.collection('rateLimits')
@@ -250,16 +248,17 @@ async function deletePlayerPeopleDoc(ctx, summary) {
   }
 }
 
-async function writeAuthEventsRow(ctx, requestId, summary) {
+async function writeAuthEventsRow(ctx, requestId, summary, adminInfo) {
   try {
     await firestore.collection('auth_events').add({
       action: 'pdpa_erasure',
       docId: requestId,
-      authUid: ctx.authUid,
-      tenantId: ctx.tenantId,
+      targetAuthUid: ctx.authUid,
+      targetTenantId: ctx.tenantId,
+      initiatedBy: adminInfo.uid,
+      initiatedByEmail: adminInfo.email || '',
+      reason: adminInfo.reason || '',
       ts: admin.firestore.FieldValue.serverTimestamp(),
-      maskedEmail: '',  // tenants doc is gone by this point; nothing safe to read
-      ua: ctx.userAgent || '',
     });
     summary.audit_events_written = true;
   } catch (e) {
@@ -274,41 +273,51 @@ async function preflight(data, context) {
   if (!context.auth?.uid) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign-in required');
   }
-  const authUid = context.auth.uid;
-  const tok = context.auth.token || {};
-  const tenantId = String(tok.tenantId || '');
-  const room = String(tok.room || '');
-  const building = String(tok.building || '');
-  const lineUserId = String(tok.lineUserId || '') ||
-    (String(authUid).startsWith('line:') ? String(authUid).slice(5) : '');
-
-  if (!tenantId) {
+  // ADMIN-ONLY: tenants do not self-serve erasure (see file header).
+  if (context.auth.token?.admin !== true) {
     throw new functions.https.HttpsError('permission-denied',
-      'tenantId claim required — cannot identify subject for erasure');
+      'Admin claim required — tenants cannot self-trigger erasure');
   }
 
+  const adminUid = context.auth.uid;
+  const adminEmail = String(context.auth.token?.email || '');
+
+  // Required target identifiers (admin specifies which tenant to erase)
+  const targetTenantId = String(data?.targetTenantId || '').trim();
+  const targetAuthUid  = String(data?.targetAuthUid  || '').trim();
+  const targetRoom     = String(data?.targetRoom     || '').trim();
+  const targetBuilding = String(data?.targetBuilding || '').trim();
+  const targetLineUserId = String(data?.targetLineUserId || '').trim() ||
+    (targetAuthUid.startsWith('line:') ? targetAuthUid.slice(5) : '');
+  const reason = String(data?.reason || '').slice(0, 500);
+
+  if (!targetTenantId) {
+    throw new functions.https.HttpsError('invalid-argument',
+      'targetTenantId required');
+  }
+  if (!targetAuthUid) {
+    throw new functions.https.HttpsError('invalid-argument',
+      'targetAuthUid required (for token revocation)');
+  }
   if (data?.confirmationPhrase?.trim() !== CONFIRMATION_PHRASE) {
     throw new functions.https.HttpsError('failed-precondition',
       `confirmation phrase mismatch (expected "${CONFIRMATION_PHRASE}")`);
   }
-  if (!data?.acknowledgedRetention || !data?.acknowledgedTerminal) {
-    throw new functions.https.HttpsError('failed-precondition',
-      'must acknowledge retention + terminal-access disclosures');
-  }
 
   // ── Active-tenant refusal ──
-  // Active tenant = tenants/{b}/list/{r} exists with this tenantId AND
-  // linkedAuthUid points at this caller. Refuse — they must end lease first.
-  if (room && building) {
+  // If target tenant is still active in tenants/{b}/list/{r}, admin must
+  // run transitionToPlayer first to archive the contract, then call this CF
+  // on the resulting player. Prevents accidental erasure of paying tenants.
+  if (targetRoom && targetBuilding) {
     try {
-      const tSnap = await firestore.collection('tenants').doc(building)
-        .collection('list').doc(room).get();
+      const tSnap = await firestore.collection('tenants').doc(targetBuilding)
+        .collection('list').doc(targetRoom).get();
       if (tSnap.exists) {
         const td = tSnap.data() || {};
-        if (String(td.tenantId || '') === tenantId &&
-            String(td.linkedAuthUid || '') === authUid) {
+        if (String(td.tenantId || '') === targetTenantId &&
+            String(td.linkedAuthUid || '') === targetAuthUid) {
           throw new functions.https.HttpsError('failed-precondition',
-            'active tenant — please end your lease via admin before requesting erasure');
+            'target is still an active tenant — run transitionToPlayer first');
         }
       }
     } catch (e) {
@@ -321,7 +330,7 @@ async function preflight(data, context) {
   // ── 7-day cooldown ──
   try {
     const recentSnap = await firestore.collection('dataDeletionLog')
-      .where('tenantId', '==', tenantId)
+      .where('tenantId', '==', targetTenantId)
       .orderBy('requestedAt', 'desc')
       .limit(1)
       .get();
@@ -337,19 +346,25 @@ async function preflight(data, context) {
     }
   } catch (e) {
     if (e instanceof functions.https.HttpsError) throw e;
-    // Index missing? Fall through (idempotency-fence below will still catch
-    // same-day duplicates atomically).
     console.warn('[requestDataDeletion] cooldown check failed:', e.message);
   }
 
-  return { authUid, tenantId, room, building, lineUserId };
+  return {
+    target: {
+      authUid: targetAuthUid,
+      tenantId: targetTenantId,
+      room: targetRoom,
+      building: targetBuilding,
+      lineUserId: targetLineUserId,
+    },
+    admin: { uid: adminUid, email: adminEmail, reason },
+  };
 }
 
 // ── Main handler ─────────────────────────────────────────────────────────────
 
 async function handler(data, context) {
-  const ctx = await preflight(data, context);
-  ctx.userAgent = String(data?.userAgent || '').slice(0, 256);
+  const { target: ctx, admin: adminInfo } = await preflight(data, context);
 
   const requestId = `${ctx.tenantId}_${new Date().toISOString().replace(/[:.]/g, '-')}`;
   const logRef = firestore.collection('dataDeletionLog').doc(requestId);
@@ -366,6 +381,9 @@ async function handler(data, context) {
       requestedAt: admin.firestore.FieldValue.serverTimestamp(),
       startedAtMs: Date.now(),
       status: 'in_progress',
+      initiatedBy: adminInfo.uid,
+      initiatedByEmail: adminInfo.email,
+      reason: adminInfo.reason,
     });
   } catch (e) {
     if (e.code === 6 /* ALREADY_EXISTS */ || /already exists/i.test(e.message || '')) {
@@ -395,7 +413,7 @@ async function handler(data, context) {
     audit_events_written: false,
   };
 
-  // ── Step 1: Revoke claims + refresh tokens FIRST ──
+  // ── Step 1: Revoke target's claims + refresh tokens FIRST ──
   // Closes the stale-cached-token write window before any destructive op.
   try {
     await admin.auth().setCustomUserClaims(ctx.authUid, {});
@@ -408,7 +426,7 @@ async function handler(data, context) {
       errors: [{ step: 'setCustomUserClaims', error: e.message }],
     }).catch(() => { /* best-effort */ });
     throw new functions.https.HttpsError('internal',
-      `failed to clear custom claims: ${e.message}`);
+      `failed to clear target's custom claims: ${e.message}`);
   }
   try {
     await admin.auth().revokeRefreshTokens(ctx.authUid);
@@ -437,7 +455,7 @@ async function handler(data, context) {
   }
 
   // ── Step 3: Cross-system audit anchor ──
-  await writeAuthEventsRow(ctx, requestId, summary);
+  await writeAuthEventsRow(ctx, requestId, summary, adminInfo);
 
   // ── Step 4: Finalize log ──
   const status = summary.errors.length > 0 ? 'completed_with_errors' : 'completed';
@@ -451,15 +469,14 @@ async function handler(data, context) {
     console.error('[requestDataDeletion] failed to finalize log:', e.message);
   }
 
-  console.log(`✅ pdpa_erasure: tenantId=${ctx.tenantId} status=${status} ` +
-              `errors=${summary.errors.length} storageErrors=${summary.storageErrors}`);
+  console.log(`✅ pdpa_erasure: target=${ctx.tenantId} status=${status} ` +
+              `initiatedBy=${adminInfo.uid} errors=${summary.errors.length}`);
 
   return {
     success: true,
     status,
     requestId,
     summary,
-    signOutRequired: true,
   };
 }
 

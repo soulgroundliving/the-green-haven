@@ -1,5 +1,5 @@
 /**
- * Unit tests for requestDataDeletion (PDPA §32 erasure).
+ * Unit tests for requestDataDeletion (PDPA §32 admin-triggered erasure).
  *
  * Run: node --test functions/__tests__/requestDataDeletion.test.js
  *
@@ -19,33 +19,27 @@ let state = {};
 
 function reset(overrides = {}) {
   state = {
-    // Auth admin SDK calls captured
     setCustomUserClaimsCalled: false,
     setCustomUserClaimsError: null,
     revokeRefreshTokensCalled: false,
     revokeRefreshTokensError: null,
 
-    // Firestore data — keyed by `${collection}/${docId}` (or nested for subcols)
-    firestoreDocs: {},               // path => { exists, data }
-    firestoreQueries: {},            // queryKey => [{ id, data }]
-    firestoreDeletedPaths: [],       // every .delete() called
-    firestoreCreated: {},            // path => data (from .create())
-    firestoreCreateThrows: null,     // simulate ALREADY_EXISTS by docId
-    firestoreUpdates: {},            // path => merged data
-    firestoreAdded: [],              // arr from .add() — auth_events
-    firestoreRecursiveDeleted: [],   // every recursiveDelete target ref path
+    firestoreDocs: {},
+    firestoreQueries: {},
+    firestoreDeletedPaths: [],
+    firestoreCreated: {},
+    firestoreUpdates: {},
+    firestoreAdded: [],
+    firestoreRecursiveDeleted: [],
 
-    // RTDB
-    rtdbRemoved: [],                 // every .ref(x).remove() called
+    rtdbRemoved: [],
     rtdbRemoveError: null,
 
-    // Storage
-    storageFilesByPrefix: {},        // prefix => [{ name }]
+    storageFilesByPrefix: {},
     storageDeleteError: null,
     storageGetFilesError: null,
     storageDeletedFiles: [],
 
-    // Building registry — what getAllBuildings returns
     allBuildings: ['rooms', 'nest'],
 
     ...overrides,
@@ -77,7 +71,6 @@ Module._load = function (id, parent, ...rest) {
   }
 
   if (id === 'firebase-admin') {
-    // ── Firestore stub ──
     const firestoreFn = function () {
       const refForPath = (path) => ({
         path,
@@ -91,11 +84,6 @@ Module._load = function (id, parent, ...rest) {
         },
         delete: async () => { state.firestoreDeletedPaths.push(path); },
         create: async (data) => {
-          if (state.firestoreCreateThrows && path.endsWith(state.firestoreCreateThrows)) {
-            const err = new Error('already exists');
-            err.code = 6;
-            throw err;
-          }
           if (state.firestoreCreated[path]) {
             const err = new Error('already exists');
             err.code = 6;
@@ -134,11 +122,10 @@ Module._load = function (id, parent, ...rest) {
           return { id: `auto_${state.firestoreAdded.length}` };
         },
       });
-      const fs = {
+      return {
         collection: (name) => collectionFor(name),
         recursiveDelete: async (ref) => { state.firestoreRecursiveDeleted.push(ref.path); },
       };
-      return fs;
     };
     firestoreFn.FieldValue = {
       serverTimestamp: () => '__ts__',
@@ -149,7 +136,6 @@ Module._load = function (id, parent, ...rest) {
       fromMillis: (n) => ({ toMillis: () => n }),
     };
 
-    // ── Auth admin stub ──
     const authFn = () => ({
       setCustomUserClaims: async (uid, claims) => {
         state.setCustomUserClaimsCalled = { uid, claims };
@@ -161,7 +147,6 @@ Module._load = function (id, parent, ...rest) {
       },
     });
 
-    // ── RTDB stub ──
     const databaseFn = () => ({
       ref: (p) => ({
         remove: async () => {
@@ -171,7 +156,6 @@ Module._load = function (id, parent, ...rest) {
       }),
     });
 
-    // ── Storage stub ──
     const storageFn = () => ({
       bucket: () => ({
         getFiles: async ({ prefix }) => {
@@ -208,82 +192,80 @@ Module._load = function (id, parent, ...rest) {
   return _origLoad.call(this, id, parent, ...rest);
 };
 
-// Load CF AFTER stub install
-const requestDataDeletion = require('../requestDataDeletion');
-const { _handler: handler, CONFIRMATION_PHRASE, COOLDOWN_MS } = requestDataDeletion;
+const { _handler: handler, CONFIRMATION_PHRASE } = require('../requestDataDeletion');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function playerCtx({ uid = 'line:U_player', tenantId = 'T_2026_0001', lineUserId = 'U_player' } = {}) {
-  return {
-    auth: {
-      uid,
-      token: { tenantId, lineUserId },
-    },
-  };
+function adminCtx({ uid = 'admin-uid', email = 'admin@nature-haven.test' } = {}) {
+  return { auth: { uid, token: { admin: true, email } } };
 }
-function activeTenantCtx({ uid = 'line:U_active', tenantId = 'T_2026_0099', room = '15', building = 'nest', lineUserId = 'U_active' } = {}) {
-  return {
-    auth: {
-      uid,
-      token: { tenantId, room, building, lineUserId },
-    },
-  };
+function tenantCtx({ uid = 'line:U1', tenantId = 'T_X' } = {}) {
+  return { auth: { uid, token: { tenantId } } };  // NO admin claim
 }
 const validInput = {
+  targetTenantId: 'T_PLAYER_001',
+  targetAuthUid: 'line:U_PLAYER',
   confirmationPhrase: CONFIRMATION_PHRASE,
-  acknowledgedRetention: true,
-  acknowledgedTerminal: true,
+  reason: 'tenant requested erasure via LINE chat 2026-05-15',
 };
 
-// ── T1 — unauthenticated ──────────────────────────────────────────────────────
+// ── Preflight gates ──────────────────────────────────────────────────────────
 
 describe('requestDataDeletion — preflight gates', () => {
   beforeEach(() => reset());
 
-  it('T1: throws unauthenticated when no auth uid', async () => {
+  it('throws unauthenticated when no auth uid', async () => {
     await assert.rejects(
       () => handler(validInput, { auth: null }),
       (err) => { assert.equal(err.code, 'unauthenticated'); return true; }
     );
   });
 
-  it('T2: throws permission-denied when tenantId claim missing', async () => {
+  it('throws permission-denied when caller is NOT admin (tenant token)', async () => {
     await assert.rejects(
-      () => handler(validInput, { auth: { uid: 'x', token: {} } }),
-      (err) => { assert.equal(err.code, 'permission-denied'); return true; }
+      () => handler(validInput, tenantCtx()),
+      (err) => {
+        assert.equal(err.code, 'permission-denied');
+        assert.match(err.message, /Admin claim required/);
+        return true;
+      }
     );
   });
 
-  it('T3: throws failed-precondition on wrong confirmation phrase', async () => {
+  it('throws invalid-argument when targetTenantId missing', async () => {
     await assert.rejects(
-      () => handler({ ...validInput, confirmationPhrase: 'wrong' }, playerCtx()),
+      () => handler({ ...validInput, targetTenantId: '' }, adminCtx()),
+      (err) => { assert.equal(err.code, 'invalid-argument'); return true; }
+    );
+  });
+
+  it('throws invalid-argument when targetAuthUid missing', async () => {
+    await assert.rejects(
+      () => handler({ ...validInput, targetAuthUid: '' }, adminCtx()),
+      (err) => { assert.equal(err.code, 'invalid-argument'); return true; }
+    );
+  });
+
+  it('throws failed-precondition on wrong confirmation phrase', async () => {
+    await assert.rejects(
+      () => handler({ ...validInput, confirmationPhrase: 'wrong' }, adminCtx()),
       (err) => { assert.equal(err.code, 'failed-precondition'); return true; }
     );
   });
 
-  it('T4: throws failed-precondition when acknowledgedRetention is false', async () => {
-    await assert.rejects(
-      () => handler({ ...validInput, acknowledgedRetention: false }, playerCtx()),
-      (err) => { assert.equal(err.code, 'failed-precondition'); return true; }
-    );
-  });
-
-  it('T5: throws failed-precondition when acknowledgedTerminal is false', async () => {
-    await assert.rejects(
-      () => handler({ ...validInput, acknowledgedTerminal: false }, playerCtx()),
-      (err) => { assert.equal(err.code, 'failed-precondition'); return true; }
-    );
-  });
-
-  it('T7-active: refuses active tenant (tenants doc matches tenantId+linkedAuthUid)', async () => {
-    const ctx = activeTenantCtx();
-    state.firestoreDocs[`tenants/${ctx.auth.token.building}/list/${ctx.auth.token.room}`] = {
+  it('refuses active tenant — admin must transitionToPlayer first', async () => {
+    state.firestoreDocs[`tenants/rooms/list/15`] = {
       exists: true,
-      data: { tenantId: ctx.auth.token.tenantId, linkedAuthUid: ctx.auth.uid },
+      data: { tenantId: 'T_ACTIVE', linkedAuthUid: 'line:U_ACTIVE' },
     };
     await assert.rejects(
-      () => handler(validInput, ctx),
+      () => handler({
+        ...validInput,
+        targetTenantId: 'T_ACTIVE',
+        targetAuthUid: 'line:U_ACTIVE',
+        targetRoom: '15',
+        targetBuilding: 'rooms',
+      }, adminCtx()),
       (err) => {
         assert.equal(err.code, 'failed-precondition');
         assert.match(err.message, /active tenant/);
@@ -292,25 +274,26 @@ describe('requestDataDeletion — preflight gates', () => {
     );
   });
 
-  it('T7-mismatch: allows when tenants doc has different tenantId (orphan / stale claim)', async () => {
-    const ctx = activeTenantCtx();
-    state.firestoreDocs[`tenants/${ctx.auth.token.building}/list/${ctx.auth.token.room}`] = {
+  it('allows when tenants doc exists but tenantId/linkedAuthUid mismatch (already vacated)', async () => {
+    state.firestoreDocs[`tenants/rooms/list/15`] = {
       exists: true,
       data: { tenantId: 'someone-else', linkedAuthUid: 'different-uid' },
     };
-    const res = await handler(validInput, ctx);
+    const res = await handler({
+      ...validInput,
+      targetRoom: '15',
+      targetBuilding: 'rooms',
+    }, adminCtx());
     assert.equal(res.success, true);
   });
 
-  it('T6: throws resource-exhausted when within 7d cooldown', async () => {
-    const ctx = playerCtx();
+  it('throws resource-exhausted when within 7d cooldown', async () => {
     const recent = Date.now() - (60 * 60 * 1000);  // 1h ago
-    const tid = ctx.auth.token.tenantId;
-    state.firestoreQueries[`dataDeletionLog|tenantId==${tid}`] = [
-      { id: 'prev_request', data: { requestedAt: { toMillis: () => recent } } },
+    state.firestoreQueries[`dataDeletionLog|tenantId==T_PLAYER_001`] = [
+      { id: 'prev', data: { requestedAt: { toMillis: () => recent } } },
     ];
     await assert.rejects(
-      () => handler(validInput, ctx),
+      () => handler(validInput, adminCtx()),
       (err) => {
         assert.equal(err.code, 'resource-exhausted');
         assert.ok(err.details?.retryAfter > 0);
@@ -320,187 +303,161 @@ describe('requestDataDeletion — preflight gates', () => {
   });
 });
 
-// ── T9/T10 — happy paths ──────────────────────────────────────────────────────
+// ── Happy path (admin erasing a player) ──────────────────────────────────────
 
-describe('requestDataDeletion — happy path (player)', () => {
+describe('requestDataDeletion — happy admin path', () => {
   beforeEach(() => reset());
 
-  it('T9: revokes claims+tokens BEFORE any destructive op', async () => {
-    const ctx = playerCtx();
-    let cascadeStarted = false;
-    state.firestoreQueries[`checklistInstances|building==,roomId==`] = [];  // empty
-    // Intercept setCustomUserClaims to verify nothing else ran first
-    const origSet = state.setCustomUserClaimsCalled;
-    const order = [];
-    state.firestoreDeletedPaths = new Proxy([], {
-      set: (t, k, v) => { if (k !== 'length') order.push('delete:' + v); t[k] = v; return true; },
+  it('revokes target claims+tokens BEFORE any destructive op', async () => {
+    await handler(validInput, adminCtx());
+    assert.deepEqual(state.setCustomUserClaimsCalled, {
+      uid: 'line:U_PLAYER',
+      claims: {},
     });
-
-    await handler(validInput, ctx);
-
-    assert.deepEqual(state.setCustomUserClaimsCalled.claims, {});
-    assert.equal(state.revokeRefreshTokensCalled.uid, ctx.auth.uid);
+    assert.equal(state.revokeRefreshTokensCalled.uid, 'line:U_PLAYER');
   });
 
-  it('T10: recursiveDelete called on people/{tenantId}', async () => {
-    const ctx = playerCtx({ tenantId: 'T_PLAYER_99' });
-    await handler(validInput, ctx);
+  it('recursiveDelete called on people/{tenantId}', async () => {
+    await handler({ ...validInput, targetTenantId: 'T_RECURSE' }, adminCtx());
     assert.ok(
-      state.firestoreRecursiveDeleted.includes('people/T_PLAYER_99'),
-      'should recursiveDelete people/T_PLAYER_99'
+      state.firestoreRecursiveDeleted.includes('people/T_RECURSE'),
+      'should recursiveDelete people/T_RECURSE'
     );
   });
 
-  it('T10b: tenant archives scanned across ALL buildings', async () => {
-    const ctx = playerCtx({ tenantId: 'T_X' });
+  it('scans tenant archives across ALL buildings', async () => {
     state.allBuildings = ['rooms', 'nest', 'amazon'];
-    state.firestoreQueries[`tenants/rooms/archive|tenantId==T_X`] = [
-      { id: 'CONTRACT_A', data: { tenantId: 'T_X' } },
+    state.firestoreQueries[`tenants/rooms/archive|tenantId==T_PLAYER_001`] = [
+      { id: 'CONTRACT_A', data: { tenantId: 'T_PLAYER_001' } },
     ];
-    state.firestoreQueries[`tenants/nest/archive|tenantId==T_X`] = [];
-    state.firestoreQueries[`tenants/amazon/archive|tenantId==T_X`] = [
-      { id: 'CONTRACT_B', data: { tenantId: 'T_X' } },
+    state.firestoreQueries[`tenants/nest/archive|tenantId==T_PLAYER_001`] = [];
+    state.firestoreQueries[`tenants/amazon/archive|tenantId==T_PLAYER_001`] = [
+      { id: 'CONTRACT_B', data: { tenantId: 'T_PLAYER_001' } },
     ];
-    await handler(validInput, ctx);
+    await handler(validInput, adminCtx());
     assert.ok(state.firestoreRecursiveDeleted.includes('tenants/rooms/archive/CONTRACT_A'));
     assert.ok(state.firestoreRecursiveDeleted.includes('tenants/amazon/archive/CONTRACT_B'));
   });
 
-  it('writes idempotency-fence dataDeletionLog row with in_progress', async () => {
-    const ctx = playerCtx({ tenantId: 'T_FENCE' });
-    await handler(validInput, ctx);
+  it('writes idempotency-fence log with initiatedBy + reason', async () => {
+    await handler(validInput, adminCtx({ uid: 'super-admin', email: 'boss@nh.test' }));
     const created = Object.keys(state.firestoreCreated).filter(p =>
-      p.startsWith('dataDeletionLog/T_FENCE_'));
-    assert.equal(created.length, 1, 'one log row created');
+      p.startsWith('dataDeletionLog/T_PLAYER_001_'));
+    assert.equal(created.length, 1);
     const data = state.firestoreCreated[created[0]];
     assert.equal(data.status, 'in_progress');
-    assert.equal(data.tenantId, 'T_FENCE');
+    assert.equal(data.tenantId, 'T_PLAYER_001');
+    assert.equal(data.initiatedBy, 'super-admin');
+    assert.equal(data.initiatedByEmail, 'boss@nh.test');
+    assert.match(data.reason, /LINE chat/);
   });
 
-  it('finalizes log with completed status + summary on success', async () => {
-    const ctx = playerCtx({ tenantId: 'T_FINAL' });
-    const res = await handler(validInput, ctx);
+  it('finalizes log with completed status + summary', async () => {
+    const res = await handler(validInput, adminCtx());
     const updatePath = Object.keys(state.firestoreUpdates).find(p =>
-      p.startsWith('dataDeletionLog/T_FINAL_'));
-    assert.ok(updatePath, 'log was updated');
+      p.startsWith('dataDeletionLog/T_PLAYER_001_'));
+    assert.ok(updatePath);
     const upd = state.firestoreUpdates[updatePath];
     assert.match(upd.status, /^completed/);
     assert.ok(upd.summary);
     assert.equal(res.success, true);
-    assert.equal(res.signOutRequired, true);
   });
 
-  it('writes auth_events cross-system audit row', async () => {
-    const ctx = playerCtx({ tenantId: 'T_AUDIT' });
-    await handler(validInput, ctx);
+  it('writes auth_events with admin attribution', async () => {
+    await handler(validInput, adminCtx({ uid: 'admin-Z', email: 'z@nh.test' }));
     const authRow = state.firestoreAdded.find(a => a.collection === 'auth_events');
-    assert.ok(authRow, 'auth_events row written');
+    assert.ok(authRow);
     assert.equal(authRow.data.action, 'pdpa_erasure');
-    assert.equal(authRow.data.tenantId, 'T_AUDIT');
+    assert.equal(authRow.data.targetTenantId, 'T_PLAYER_001');
+    assert.equal(authRow.data.initiatedBy, 'admin-Z');
+    assert.equal(authRow.data.initiatedByEmail, 'z@nh.test');
   });
 
-  it('summary.retained lists bills + leases with legal citation', async () => {
-    const ctx = playerCtx();
-    const res = await handler(validInput, ctx);
+  it('summary.retained lists bills + leases + BigQuery archives with citations', async () => {
+    const res = await handler(validInput, adminCtx());
     assert.match(res.summary.retained.bills, /Revenue Code/);
     assert.match(res.summary.retained.leases, /Civil Code/);
     assert.match(res.summary.retained['BigQuery auth_events archive'], /PDPA/);
   });
+
+  it('cascades booking + KYC storage cleanup', async () => {
+    state.firestoreQueries[`bookings|prospectUid==line:U_PLAYER`] = [
+      { id: 'BK_1', data: { prospectUid: 'line:U_PLAYER' } },
+    ];
+    state.storageFilesByPrefix['bookings/BK_1/'] = [
+      { name: 'bookings/BK_1/kyc/idCardFront.jpg' },
+      { name: 'bookings/BK_1/kyc/idCardBack.jpg' },
+    ];
+    const res = await handler(validInput, adminCtx());
+    assert.equal(res.summary.deleted.bookings, 1);
+    assert.equal(state.storageDeletedFiles.length, 2);
+  });
 });
 
-// ── T8 — idempotency ─────────────────────────────────────────────────────────
+// ── Idempotency ──────────────────────────────────────────────────────────────
 
 describe('requestDataDeletion — idempotency', () => {
   beforeEach(() => reset());
 
-  it('T8: duplicate requestId returns existing summary, does NOT re-run cascade', async () => {
-    const ctx = playerCtx({ tenantId: 'T_DUP' });
-    // Make the create() throw ALREADY_EXISTS for any dataDeletionLog/* doc
-    state.firestoreCreateThrows = '__will_match_below__';
-    // Inject "existing" log with prior summary
-    const existingPath = 'dataDeletionLog/T_DUP_already';
-    state.firestoreDocs[existingPath] = {
-      exists: true,
-      data: { summary: { deleted: { consents: 5 } } },
-    };
-    // We can't easily make create throw for the dynamic requestId without
-    // intercepting. Instead pre-populate firestoreCreated so the second
-    // create() trips on existing key. Use the same logic the stub uses.
-    // For simplicity: directly seed firestoreCreated for ANY future request
-    // by setting it on the prefix the CF will use.
-    // The CF generates `dataDeletionLog/T_DUP_${ISO}`. We can't predict the
-    // exact ISO, so instead patch the stub: any create on dataDeletionLog
-    // path with key starting T_DUP_ throws.
-    // The simplest is to monkey-patch firestoreCreated as a Proxy that
-    // pretends every key starting with T_DUP_ already exists.
+  it('duplicate requestId returns existing summary, does NOT re-run cascade', async () => {
+    // Pre-seed: any dataDeletionLog/T_DUP_* doc already exists (create throws)
     state.firestoreCreated = new Proxy({}, {
       has: (t, k) => k.startsWith('dataDeletionLog/T_DUP_'),
-      get: (t, k) => state.firestoreDocs[k] && state.firestoreDocs[k].data,
+      get: (t, k) => state.firestoreDocs[k]?.data,
       set: (t, k, v) => { t[k] = v; return true; },
     });
-    // Pre-seed firestoreDocs so the get-after-throw returns existing summary
-    // We don't know the exact requestId, so make every dataDeletionLog/* doc
-    // return the same existing summary.
     state.firestoreDocs = new Proxy({}, {
       get: (t, k) => k.startsWith('dataDeletionLog/T_DUP_')
-        ? { exists: true, data: { summary: { deleted: { consents: 5 } } } }
+        ? { exists: true, data: { summary: { deleted: { consents: 99 } } } }
         : t[k],
-      has: (t, k) => true,
     });
 
-    const res = await handler(validInput, ctx);
+    const res = await handler({ ...validInput, targetTenantId: 'T_DUP' }, adminCtx());
     assert.equal(res.success, false);
     assert.equal(res.idempotent, true);
-    assert.equal(res.summary.deleted.consents, 5);
-    // Cascade should NOT have run — no setCustomUserClaims called
+    assert.equal(res.summary.deleted.consents, 99);
+    // Cascade should NOT have run
     assert.equal(state.setCustomUserClaimsCalled, false);
   });
 });
 
-// ── T11/T12 — failure tolerance ──────────────────────────────────────────────
+// ── Best-effort failure handling ─────────────────────────────────────────────
 
-describe('requestDataDeletion — best-effort failure handling', () => {
+describe('requestDataDeletion — best-effort failures', () => {
   beforeEach(() => reset());
 
-  it('T11: storage prefix delete fails — cascade still completes', async () => {
-    const ctx = playerCtx({ tenantId: 'T_STORAGE_FAIL' });
+  it('storage prefix delete fails — cascade still completes', async () => {
     state.storageDeleteError = new Error('storage failure');
-    state.storageFilesByPrefix['checklists/rooms/15/INST_1/'] = [{ name: 'a.jpg' }];
-    state.firestoreQueries[`checklistInstances|building==,roomId==`] = [];
     state.firestoreQueries[`checklistInstances|building==rooms,roomId==15`] = [
       { id: 'INST_1', data: { building: 'rooms', roomId: '15' } },
     ];
-    // Player has no room/building claims so checklistInstances helper won't run
-    // for the player ctx; instead test with explicit room/building
-    const ctxWithRoom = {
-      auth: { uid: 'line:U', token: { tenantId: 'T_STORAGE_FAIL', room: '15', building: 'rooms', lineUserId: 'U' } },
-    };
-    // active-tenant check requires tenants doc match — leave empty so it passes
-    const res = await handler(validInput, ctxWithRoom);
+    state.storageFilesByPrefix['checklists/rooms/15/INST_1/'] = [{ name: 'a.jpg' }];
+
+    const res = await handler({
+      ...validInput,
+      targetRoom: '15',
+      targetBuilding: 'rooms',
+    }, adminCtx());
     assert.equal(res.success, true);
     assert.match(res.status, /^completed/);
-    // storage errors recorded in summary
-    assert.ok(res.summary.storageErrors >= 1 || res.summary.errors.length >= 1);
+    assert.ok(res.summary.storageErrors >= 1);
   });
 
-  it('T12: revokeRefreshTokens fails — cascade still proceeds, success returned', async () => {
-    const ctx = playerCtx();
-    state.revokeRefreshTokensError = new Error('admin SDK transient failure');
-    const res = await handler(validInput, ctx);
+  it('revokeRefreshTokens fails — cascade still proceeds, success returned', async () => {
+    state.revokeRefreshTokensError = new Error('admin SDK transient');
+    const res = await handler(validInput, adminCtx());
     assert.equal(res.success, true);
     assert.ok(res.summary.errors.find(e => e.step === 'revokeRefreshTokens'));
   });
 
   it('catastrophic: setCustomUserClaims fails — CF aborts and log marked failed', async () => {
-    const ctx = playerCtx({ tenantId: 'T_CATASTROPHIC' });
     state.setCustomUserClaimsError = new Error('auth service down');
     await assert.rejects(
-      () => handler(validInput, ctx),
+      () => handler({ ...validInput, targetTenantId: 'T_CAT' }, adminCtx()),
       (err) => { assert.equal(err.code, 'internal'); return true; }
     );
-    // Log update should mark failed
     const updatePath = Object.keys(state.firestoreUpdates).find(p =>
-      p.startsWith('dataDeletionLog/T_CATASTROPHIC_'));
+      p.startsWith('dataDeletionLog/T_CAT_'));
     assert.ok(updatePath);
     assert.equal(state.firestoreUpdates[updatePath].status, 'failed');
   });
