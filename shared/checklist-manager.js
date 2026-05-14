@@ -249,6 +249,19 @@
    * @returns {Promise<string>} URL
    */
   async function getSignedUrl(storagePath) {
+    // Prefer the CF-minted short-lived (1h) signed URL — leaked links expire
+    // quickly, satisfying PDPA "data minimisation". Falls back to the perm-
+    // anent download URL only if the CF is unreachable, so the admin viewer
+    // and tenant submit-recap still render in an outage. The fallback path
+    // is still gated by storage.rules.
+    try {
+      const fn = _httpsCallable('getChecklistMediaUrl');
+      const res = await fn({ path: storagePath });
+      const url = res?.data?.url;
+      if (url) return url;
+    } catch (err) {
+      console.warn('[ChecklistManager] getChecklistMediaUrl CF failed, falling back to getDownloadURL:', err?.message || err);
+    }
     const ref = _storageRef(storagePath);
     return _getDownloadURL(ref);
   }

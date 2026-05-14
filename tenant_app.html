@@ -3620,6 +3620,11 @@
                 <span>ข้อมูลส่วนตัว</span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
+            <div class="menu-item" data-action="exportMyData">
+                <div class="icon-box icon-green"><i class="fas fa-download"></i></div>
+                <span>ดาวน์โหลดข้อมูลของฉัน (PDPA)</span>
+                <i class="fas fa-chevron-right arrow"></i>
+            </div>
         </div>
 
         <div class="section-title" style="padding-top: 5px;"><span>ตั้งค่าระบบ (System Preferences)</span></div>
@@ -6735,6 +6740,7 @@
             if (a === 'setSeverity') { if (_ta.setSeverity) _ta.setSeverity(arg); return; }
             if (a === 'openModal') { if (_ta.openModal) _ta.openModal(arg); return; }
             if (a === 'submitLeaseRequest') { if (_ta.submitLeaseRequest) _ta.submitLeaseRequest(arg); return; }
+            if (a === 'exportMyData') { if (window.exportMyData) window.exportMyData(); return; }
             // With-arg actions
             if (a === 'showSubPage' && page && _ta.showSubPage) { _ta.showSubPage(page); return; }
             if (a === 'makeCall' && num && _ta.makeCall) { _ta.makeCall(num); return; }
@@ -12409,6 +12415,35 @@
           return;
         }
 
+        // PDPA: gate first-ever form render behind explicit consent. We use a
+        // localStorage flag for the fast path and a server-side ledger row at
+        // consents/{tenantId}_checklist_v1 for proof. The CF is fire-and-forget;
+        // even if the ledger write fails the UX continues — the worst case is
+        // re-prompting on the next device/install.
+        const _consentKey = 'cl_consent_v1';
+        if (!localStorage.getItem(_consentKey)) {
+          const ok = confirm(
+            '🛡️ ข้อตกลงการใช้ข้อมูลส่วนบุคคล (PDPA)\n\n' +
+            'การกรอกใบตรวจสภาพห้องจะมีการเก็บ:\n' +
+            '• รูปภาพภายในห้องที่คุณแนบ\n' +
+            '• ลายเซ็นของคุณ\n' +
+            '• บันทึก/หมายเหตุที่คุณพิมพ์\n\n' +
+            'ข้อมูลเหล่านี้จะถูกใช้เพื่อยืนยันสภาพห้อง ณ วันย้ายเข้า/ย้ายออกเท่านั้น และจะถูกลบอัตโนมัติภายใน 2 ปีหลังแอดมินเซ็นรับ\n\n' +
+            'กด OK เพื่อยินยอม'
+          );
+          if (!ok) {
+            statusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">ยังไม่ยินยอม — กลับมากดอีกครั้งเมื่อพร้อม</div>';
+            return;
+          }
+          localStorage.setItem(_consentKey, '1');
+          // Fire-and-forget server ledger write
+          try {
+            const fn = window.firebase?.functions?.httpsCallable?.('recordChecklistConsent');
+            if (fn) fn({ purpose: 'checklist_v1', noticeVersion: 'v1', userAgent: navigator.userAgent.slice(0, 256) })
+              .catch(e => console.warn('[checklist] consent ledger write failed (non-fatal):', e?.message));
+          } catch (_) { /* CF not wired in this build — non-fatal */ }
+        }
+
         try {
           // Prefer room+building lookup (stable across anon UID drift). Falls
           // back to tenantUid for compatibility with older instances created
@@ -12694,6 +12729,36 @@
         _clTenantUid = window._authUid || '';
         // The card is always visible — no need to hide it; user sees it on services page
       });
+
+      // PDPA §30: tenant downloads a JSON of all their personal data via CF.
+      // Triggered by the "ดาวน์โหลดข้อมูลของฉัน (PDPA)" menu row on the profile
+      // page. The file name embeds room + timestamp so the user can keep multiple
+      // snapshots over time.
+      window.exportMyData = async function() {
+        let toastFn = typeof toast === 'function' ? toast : (m) => alert(m);
+        try {
+          toastFn('⏳ กำลังรวบรวมข้อมูล...', 'info');
+          const fn = window.firebase?.functions?.httpsCallable?.('exportMyData');
+          if (!fn) { toastFn('ฟังก์ชันยังไม่พร้อม — ลองอีกครั้ง', 'error'); return; }
+          const res = await fn({});
+          const payload = res?.data;
+          if (!payload) { toastFn('ดาวน์โหลดไม่สำเร็จ — ลองอีกครั้ง', 'error'); return; }
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          const ts   = new Date().toISOString().slice(0, 10);
+          const room = String(payload?.subject?.room || 'me');
+          a.href = url;
+          a.download = `nature-haven-mydata-${room}-${ts}.json`;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+          toastFn('✅ ดาวน์โหลดข้อมูลเรียบร้อย', 'success');
+        } catch (err) {
+          console.error('exportMyData failed:', err);
+          toastFn('ดาวน์โหลดไม่สำเร็จ: ' + (err.message || err.code || 'unknown'), 'error');
+        }
+      };
 
     })();
     </script>

@@ -412,6 +412,19 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ===== CONSENTS LEDGER (PDPA evidence) =====
+    // consents/{tenantId}_{purpose} — server-side proof that a tenant accepted
+    // a privacy notice before personal data was processed. Written by the
+    // recordChecklistConsent CF; never client-writable.
+    // Tenants can READ their own row (so the LIFF page can avoid re-prompting
+    // after a device wipe); admin can read all for audit.
+    match /consents/{docId} {
+      allow read: if isAdmin()
+                || (isSignedIn() && resource.data.authUid == request.auth.uid)
+                || (isSignedIn() && resource.data.tenantId == request.auth.token.tenantId);
+      allow write: if false;
+    }
+
     // ===== DEPOSITS (admin manages; accountant reads for tax reporting) =====
     // Flat collection: deposits/{building}_{roomId} (e.g. deposits/rooms_15)
     // Each doc stores building + roomId fields for client-side filtering.

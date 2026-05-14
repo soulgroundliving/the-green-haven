@@ -193,6 +193,23 @@ exports.cleanupMaintenanceRTDBScheduled = require('./cleanupOldDocs').cleanupMai
 exports.cleanupLiffUsersRejectedScheduled = require('./cleanupOldDocs').cleanupLiffUsersRejectedScheduled;
 exports.cleanupOldDocs = require('./cleanupOldDocs').cleanupOldDocs;
 
+// PDPA retention sweep for checklist instances + storage assets.
+// Schedule: daily 03:05 BKK. See functions/cleanupChecklistsScheduled.js
+// for retention policy (signed >2yr OR orphan >5yr).
+exports.cleanupChecklistsScheduled = require('./cleanupChecklistsScheduled').cleanupChecklistsScheduled;
+exports.cleanupChecklistsManual = require('./cleanupChecklistsScheduled').cleanupChecklistsManual;
+
+// Issue a 1-hour signed URL for a checklist asset (item photo, tenant/admin
+// signature). Replaces the permanent getDownloadURL token — PDPA-friendly.
+exports.getChecklistMediaUrl = require('./getChecklistMediaUrl').getChecklistMediaUrl;
+
+// PDPA Section 19 ledger: record tenant consent for checklist data processing.
+// Written to consents/{tenantId}_{purpose}.
+exports.recordChecklistConsent = require('./recordChecklistConsent').recordChecklistConsent;
+
+// PDPA Section 30 (Data Subject Right): tenant downloads JSON of all their data.
+exports.exportMyData = require('./exportMyData').exportMyData;
+
 // Prunes people/{tenantId} docs (and all subcollections) where transitionedAt
 // is older than 1 year — enforces the grace-period expiry for former tenants.
 exports.cleanupPlayersOver1YearScheduled = require('./cleanupPlayersOver1Year').cleanupPlayersOver1YearScheduled;
