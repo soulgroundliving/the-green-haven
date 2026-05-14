@@ -1419,12 +1419,11 @@
     today.setHours(0, 0, 0, 0);
     const DAY_COUNT = 60;  // 2 months ahead
     if (!state.selectedDate) {
-      // Default: 30 days out (qualifies for Early Bird)
-      const def = new Date(today);
-      def.setDate(def.getDate() + 30);
-      state.selectedDate = isoDate(def);
+      // Default: today (per product decision — prospect can move in immediately).
+      // Early Bird (+500 pts) still applies if user manually picks a date ≥ 30 days out.
+      state.selectedDate = isoDate(today);
     }
-    for (let i = 1; i <= DAY_COUNT; i++) {
+    for (let i = 0; i <= DAY_COUNT; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() + i);
       const iso = isoDate(d);

@@ -122,14 +122,20 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
   }
   const depositAmount = monthlyRent * 2;
 
-  // ── Pull receiver phone from buildings/{canonicalBuilding}.promptpayNumber ────────
+  // ── Pull receiver phone from buildings/{canonicalBuilding}.{promptPayId|promptpayNumber} ────────
   // Admin configures per-building PromptPay in dashboard → Buildings page.
   // Canonical building id ('rooms', 'nest') IS the Firestore doc id since B4 migration.
+  //
+  // Field name accepts BOTH spellings: Tier 3F Buildings UI writes `promptPayId`
+  // (shared/building-registry.js), while the legacy saveBuildingPaymentConfig
+  // (shared/dashboard-extra.js) writes `promptpayNumber`. Reading both keeps
+  // bookings working regardless of which UI saved the building's payment info.
   const fsBuildingId = canonicalBuilding;
   let receiverPhone;
   try {
     const buildingSnap = await firestore.doc(`buildings/${fsBuildingId}`).get();
-    receiverPhone = buildingSnap.exists ? String(buildingSnap.data().promptpayNumber || '') : '';
+    const bd = buildingSnap.exists ? buildingSnap.data() : {};
+    receiverPhone = String(bd.promptPayId || bd.promptpayNumber || '');
   } catch (e) {
     console.error('createBookingLock: buildings read failed:', e.message);
     throw new functions.https.HttpsError('internal', 'Could not resolve receiver phone');
