@@ -1128,7 +1128,7 @@ async function renderBuildingPaymentConfig() {
         <span style="font-size: .72rem; color: var(--text-muted); font-family: monospace;">buildings/${fsId}</span>
       </div>
       <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">PromptPay (เบอร์โทร)</label>
-      <input type="tel" id="bp-${fsId}-promptpay" value="${(data.promptpayNumber||data.payment?.promptpayNumber||'').replace(/"/g,'&quot;')}" placeholder="0xxxxxxxxx" maxlength="13" class="dx-field-sm-mb">
+      <input type="tel" id="bp-${fsId}-promptpay" value="${(data.promptPayId||data.promptpayNumber||data.payment?.promptpayNumber||'').replace(/"/g,'&quot;')}" placeholder="0xxxxxxxxx" maxlength="13" class="dx-field-sm-mb">
       <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">ชื่อบริษัท / ผู้รับเงิน (ใบเสร็จ)</label>
       <input type="text" id="bp-${fsId}-company" value="${(data.companyName||data.payment?.companyName||'').replace(/"/g,'&quot;')}" placeholder="เช่น The Green Haven Co., Ltd." class="dx-field-sm-mb">
       <label style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">ชื่อเจ้าของ (Owner)</label>
@@ -1156,7 +1156,13 @@ async function saveBuildingPaymentConfig(fsId) {
     const fs = window.firebase.firestoreFunctions;
     const db = window.firebase.firestore();
     await fs.setDoc(fs.doc(db, 'buildings', fsId), {
-      promptpayNumber, companyName, ownerName,
+      // Dual-write during deprecation window — Buildings page reads `promptPayId`
+      // (canonical, Tier 3F), legacy readers still pin to `promptpayNumber`.
+      // Both fields stay in sync until one-off migration drops the legacy field.
+      // See CLAUDE.md §7-T for the field-drift incident this resolves.
+      promptPayId: promptpayNumber,
+      promptpayNumber,
+      companyName, ownerName,
       updatedAt: new Date().toISOString()
     }, { merge: true });
     showToast(`✅ บันทึกข้อมูล ${fsId === 'rooms' ? 'ห้องแถว' : 'Nest'} แล้ว`, 'success');

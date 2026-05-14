@@ -651,8 +651,12 @@ function _refreshPromptPayDisplay(){
     if (!bldg) return;
     const canonical = (bldg === 'new' || bldg === 'nest') ? 'nest' : 'rooms';
     const cfg = window._buildingPaymentCache[canonical] || {};
-    // Fallback chain: Firestore per-building → legacy localStorage.promptpay → empty
-    const num = cfg.promptpayNumber || cfg.payment?.promptpayNumber
+    // Fallback chain: canonical promptPayId (Buildings page) → legacy promptpayNumber
+    // (People-Mgmt-Owner UI) → localStorage cache → empty. Dual-write enforced
+    // by saveBuildingPaymentConfig keeps both in sync; this read order makes
+    // Buildings-page-only writes visible to Bill page without a migration.
+    const num = cfg.promptPayId
+                || cfg.promptpayNumber || cfg.payment?.promptpayNumber
                 || localStorage.getItem('promptpay') || '';
     const ownerInfo = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
     const payee = cfg.companyName || cfg.payment?.companyName
