@@ -7235,31 +7235,41 @@
         function _subscribeBroadcasts() {
             if (_broadcastsUnsub) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            // Wait until building is known — anonymous phase has no token.building claim,
+            // which causes Firestore to reject the query when building-specific docs exist.
+            if (!_taBuilding) return;
             const fs = window.firebase.firestoreFunctions;
             const db = window.firebase.firestore();
-            const audience = _taBuilding || '';   // tenant's building from claims
+            const audience = _taBuilding;
             try {
+                // Server-side filter matches the Firestore rule: audience == 'all' OR building.
+                // Without this, any building-specific doc in the result set causes a
+                // permission-denied for tenants of OTHER buildings, rejecting the whole query.
                 const q = fs.query(
                     fs.collection(db, 'broadcastMessages'),
+                    fs.where('audience', 'in', ['all', audience]),
                     fs.orderBy('sentAt', 'desc'),
                     fs.limit(20)
                 );
                 _broadcastsUnsub = fs.onSnapshot(q, snap => {
                     const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    // Client filter: only docs whose audience is 'all' OR matches building.
-                    // Server rules already enforce this, but filter defensively.
-                    const filtered = docs.filter(d => d.audience === 'all' || d.audience === audience);
                     const priorIds = new Set(_broadcastsList.map(b => b.id));
-                    _broadcastsList = filtered;
+                    _broadcastsList = docs;
                     _renderBroadcastBadge();
                     _renderBroadcastsList();
                     // Toast on truly new broadcasts (after initial replay)
                     if (!_broadcastsInitialReplay) {
-                        const fresh = filtered.find(d => !priorIds.has(d.id));
+                        const fresh = docs.find(d => !priorIds.has(d.id));
                         if (fresh) _broadcastShowToast('📣 ประกาศใหม่: ' + (fresh.title || ''));
                     }
                     _broadcastsInitialReplay = false;
-                }, err => console.warn('broadcasts subscribe failed:', err?.message || err));
+                }, err => {
+                    console.warn('broadcasts subscribe failed:', err?.message || err);
+                    // Reset so liffLinked can retry with proper claims
+                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                        _broadcastsUnsub = null;
+                    }
+                });
             } catch (e) {
                 console.warn('broadcasts subscribe init failed:', e?.message || e);
             }
