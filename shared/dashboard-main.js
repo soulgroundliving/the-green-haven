@@ -721,6 +721,13 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'archiveTenantOnMoveOut') { typeof archiveTenantOnMoveOut === 'function' && archiveTenantOnMoveOut(); return; }
     if (a === 'transitionToPlayer') { typeof transitionToPlayer === 'function' && transitionToPlayer(); return; }
     if (a === 'revertTransitionToPlayer') { typeof revertTransitionToPlayer === 'function' && revertTransitionToPlayer(); return; }
+    // PDPA §32 admin erasure (modal flow in shared/dashboard-pdpa-erasure.js)
+    if (a === 'confirmAdminDataDeletion') { typeof window.confirmAdminDataDeletion === 'function' && window.confirmAdminDataDeletion(); return; }
+    if (a === '_pdpaAdmCancel')          { typeof window._pdpaAdmCancel          === 'function' && window._pdpaAdmCancel();          return; }
+    if (a === '_pdpaAdmStep1Continue')   { typeof window._pdpaAdmStep1Continue   === 'function' && window._pdpaAdmStep1Continue();   return; }
+    if (a === '_pdpaAdmBackToStep1')     { typeof window._pdpaAdmBackToStep1     === 'function' && window._pdpaAdmBackToStep1();     return; }
+    if (a === '_pdpaAdmConfirm')         { typeof window._pdpaAdmConfirm         === 'function' && window._pdpaAdmConfirm();         return; }
+    if (a === '_pdpaAdmCloseSummary')    { typeof window._pdpaAdmCloseSummary    === 'function' && window._pdpaAdmCloseSummary();    return; }
     if (a === 'addNewRoom') { addNewRoom(); return; }
     if (a === 'selectAllRooms') { typeof selectAllRooms === 'function' && selectAllRooms(); return; }
     if (a === 'deselectAllRooms') { typeof deselectAllRooms === 'function' && deselectAllRooms(); return; }
