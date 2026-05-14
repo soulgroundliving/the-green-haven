@@ -377,8 +377,15 @@ window.loadPVHistoryRooms = function(){
     }
   } catch(e){}
   if(roomNumbers.length===0){
-    const list = (building==='rooms') ? (window.ROOMS_OLD||[]) : (window.ROOMS_NEW||[]);
-    roomNumbers = list.map(r => typeof r === 'object' ? r.id : String(r));
+    // Fallback to hardcoded room lists ONLY for the two legacy buildings.
+    // Tier-3F buildings without RoomConfig entries render an empty selector
+    // (admin must seed via Room Config first) — better than misattributing
+    // them to Nest's room list.
+    if (building === 'rooms') {
+      roomNumbers = (window.ROOMS_OLD || []).map(r => typeof r === 'object' ? r.id : String(r));
+    } else if (building === 'nest') {
+      roomNumbers = (window.ROOMS_NEW || window.NEST_ROOMS || []).map(r => typeof r === 'object' ? r.id : String(r));
+    }
   }
   roomNumbers.forEach(r=>{
     const opt = document.createElement('option');

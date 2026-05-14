@@ -4982,15 +4982,10 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         </label>
         <div>
           <div style="font-weight:700;font-size:.92rem;margin-bottom:.4rem;">ส่งถึง</div>
-          <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+          <div id="bc-audience-row" style="display:flex;gap:.6rem;flex-wrap:wrap;">
+            <!-- Populated by shared/dashboard-building-selects.js from BuildingRegistry -->
             <label class="bc-audience-radio" style="display:flex;align-items:center;gap:.4rem;padding:.5rem .9rem;border:1px solid var(--border);border-radius:8px;cursor:pointer;">
               <input type="radio" name="bc-audience" value="all" checked> 🏢 ทุกอาคาร
-            </label>
-            <label class="bc-audience-radio" style="display:flex;align-items:center;gap:.4rem;padding:.5rem .9rem;border:1px solid var(--border);border-radius:8px;cursor:pointer;">
-              <input type="radio" name="bc-audience" value="rooms"> 🏠 ห้องแถว
-            </label>
-            <label class="bc-audience-radio" style="display:flex;align-items:center;gap:.4rem;padding:.5rem .9rem;border:1px solid var(--border);border-radius:8px;cursor:pointer;">
-              <input type="radio" name="bc-audience" value="nest"> 🪺 Nest
             </label>
           </div>
         </div>
@@ -5460,6 +5455,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-content-features.js"></script>
 <script src="./shared/dashboard-payment-verify.js"></script>
 <script src="./shared/dashboard-buildings.js"></script>
+<script src="./shared/dashboard-building-selects.js"></script>
 <script src="./shared/facility-booking.js"></script>
 <script src="./shared/checklist-manager.js"></script>
 <script src="./shared/dashboard-checklist-admin.js"></script>

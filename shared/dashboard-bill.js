@@ -1,20 +1,30 @@
 // ===== BILL PAGE =====
-let currentBuilding='old';
+let currentBuilding='rooms';
 let invoiceData=null;
 
-// Helper: Convert legacy building names to Firebase config + metadata
-function getBuildingInfo(legacyBuilding) {
-  const firebaseBuilding = window.CONFIG?.getBuildingConfig?.(legacyBuilding) || (legacyBuilding === 'old' ? 'rooms' : 'nest');
-  // Nest building uses NEST_ROOMS (N101-N405) so bill room IDs match tenant app reads (bills/nest/N201)
-  const metadataArray = legacyBuilding === 'old' ? window.ROOMS_OLD : (window.NEST_ROOMS || window.ROOMS_NEW);
-  const displayName = legacyBuilding === 'old' ? 'เดอะ กรีน เฮฟเว่น' : 'Nest · เดอะ กรีน เฮฟเว่น';
+// Helper: Resolve building id (canonical or legacy alias) → Firebase config + metadata.
+// Accepts canonical ids ('rooms', 'nest', 'test1', any Tier-3F id) and legacy aliases
+// ('old'→rooms, 'new'→nest, 'RentRoom'→rooms). New buildings without a hardcoded
+// metadata array render an empty room list — admin should seed rooms via Room Config
+// or Tenant Information page first.
+function getBuildingInfo(buildingId) {
+  const firebaseBuilding = window.CONFIG?.getBuildingConfig?.(buildingId) || 'rooms';
+  let metadataArray = [];
+  if (firebaseBuilding === 'rooms') metadataArray = window.ROOMS_OLD || [];
+  else if (firebaseBuilding === 'nest') metadataArray = window.NEST_ROOMS || window.ROOMS_NEW || [];
+  const fromRegistry = window.BuildingRegistry?.getById?.(firebaseBuilding)?.displayName;
+  const displayName = fromRegistry
+    || (firebaseBuilding === 'rooms' ? 'เดอะ กรีน เฮฟเว่น'
+        : firebaseBuilding === 'nest' ? 'Nest · เดอะ กรีน เฮฟเว่น'
+        : firebaseBuilding);
   return { firebaseBuilding, metadataArray, displayName };
 }
 
 function onBuildingChange(){
   currentBuilding=document.getElementById('f-building').value;
   populateRoomDropdown();
-  document.getElementById('f-trash').value=currentBuilding==='new'?40:20;
+  const canonical = window.CONFIG?.getBuildingConfig?.(currentBuilding) || 'rooms';
+  document.getElementById('f-trash').value = canonical === 'nest' ? 40 : 20;
   document.getElementById('f-elec-rate').value=8;
   const lf=document.getElementById('f-latefee'); if(lf) lf.value=0;
   renderPaymentStatus();
@@ -544,8 +554,9 @@ async function verifySlip(file){
     });
     const billTotal = invoiceData?.total || 0;
     const room = invoiceData?.room || 'unknown';
-    // invoiceData.building is a display name — map to 'rooms' or 'nest' for Cloud Function
-    const buildingRaw = (currentBuilding === 'nest') ? 'nest' : 'rooms';
+    // Normalize to canonical building id for the Cloud Function. Accepts legacy
+    // aliases ('old'/'new') and any Tier-3F canonical id (e.g. 'test1').
+    const buildingRaw = window.CONFIG?.getBuildingConfig?.(currentBuilding) || 'rooms';
     // Get Firebase ID token so the CF can verify this is a signed-in admin.
     // dashboard.html exposes auth as window.firebaseAuth; login.html as window.auth.
     const authInstance = window.firebaseAuth || window.auth;
@@ -649,8 +660,8 @@ function _refreshPromptPayDisplay(){
   try {
     const bldg = document.getElementById('f-building')?.value;
     if (!bldg) return;
-    const canonical = (bldg === 'new' || bldg === 'nest') ? 'nest' : 'rooms';
-    const cfg = window._buildingPaymentCache[canonical] || {};
+    const canonical = window.CONFIG?.getBuildingConfig?.(bldg) || bldg;
+    const cfg = window._buildingPaymentCache[canonical] || window._buildingPaymentCache[bldg] || {};
     // Fallback chain: canonical promptPayId (Buildings page is the only writer
     // since 2026-05-14 consolidation) → legacy promptpayNumber (pre-Tier-3F
     // docs like `buildings/nest` seeded 2026-05-07) → localStorage cache → empty.
@@ -683,13 +694,16 @@ function _subscribeBuildingPaymentForBill(){
   window._buildingPaymentSubscribed = true;
   const db = window.firebase.firestore();
   const fs = window.firebase.firestoreFunctions;
-  const map = { rooms: 'rooms', nest: 'nest' };
-  Object.entries(map).forEach(([canonical, fsId]) => {
+  // Subscribe to every known building (canonical IDs from BuildingRegistry,
+  // plus rooms/nest as the safe fallback for the cold-start case).
+  const ids = new Set(['rooms', 'nest']);
+  (window.BuildingRegistry?.list?.() || []).forEach(b => ids.add(b.id));
+  ids.forEach(id => {
     try {
-      fs.onSnapshot(fs.doc(db, 'buildings', fsId), snap => {
-        window._buildingPaymentCache[canonical] = snap.exists ? snap.data() : {};
+      fs.onSnapshot(fs.doc(db, 'buildings', id), snap => {
+        window._buildingPaymentCache[id] = snap.exists ? snap.data() : {};
         _refreshPromptPayDisplay();
-      }, err => console.warn('buildings/'+fsId+' listen:', err?.message));
+      }, err => console.warn('buildings/'+id+' listen:', err?.message));
     } catch(e) { console.warn('buildings subscribe error:', e); }
   });
 }
@@ -1230,7 +1244,7 @@ function markRoomPaid(d){
   try {
     const fbBuilding = (typeof getBuildingInfo === 'function')
       ? getBuildingInfo(currentBuilding).firebaseBuilding
-      : (currentBuilding === 'old' ? 'rooms' : 'nest');
+      : (window.CONFIG?.getBuildingConfig?.(currentBuilding) || 'rooms');
     const phKey = `payment_${fbBuilding}_${d.room}`;
     const history = JSON.parse(localStorage.getItem(phKey) || '[]');
     history.unshift({
@@ -1356,8 +1370,9 @@ async function saveBillToFirebase(d){
     // Tenant app expects: bills/{building}/{room} as an object with billIds as keys
     const { ref: firebaseRef } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
 
-    // Determine Firebase building ID using proper conversion
-    // currentBuilding is 'old' or 'new', need to convert to 'rooms' or 'nest'
+    // Determine Firebase building ID. currentBuilding may be a canonical id
+    // ('rooms', 'nest', 'test1', …) or a legacy alias ('old', 'new'); the
+    // helper normalises both into the canonical id used as the Firestore doc id.
     const fbBuildingId = window.CONFIG.getBuildingConfig(currentBuilding);
 
     // Idempotent path: reuse existing bill's RTDB key for same room/month/year

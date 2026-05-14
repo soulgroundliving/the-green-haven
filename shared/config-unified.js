@@ -100,14 +100,17 @@ const CONFIG = {
   },
 
   // Single source of truth — normalize any legacy/Firestore alias to the canonical
-  // logical id ('rooms' | 'nest'). Used everywhere except the Firestore boundary.
-  // Aliases handled: 'old' (legacy admin), 'RentRoom' (Firestore buildings/ doc id),
-  // 'new' (legacy admin), bare 'rooms'/'nest' (passthrough).
+  // building id. Aliases handled: 'old'→'rooms', 'RentRoom'→'rooms', 'new'→'nest'.
+  // Bare canonical ids ('rooms', 'nest', or any Tier-3F building like 'test1') pass
+  // through. Empty/unknown values fall back to 'rooms' so legacy callsites stay safe.
   getBuildingConfig(type) {
     const t = String(type || '').toLowerCase();
-    if (t === 'rooms' || t === 'old' || t === 'rentroom') return 'rooms';
-    if (t === 'nest' || t === 'new') return 'nest';
-    return 'rooms'; // safer default — main building
+    if (!t) return 'rooms';
+    if (t === 'old' || t === 'rentroom') return 'rooms';
+    if (t === 'new') return 'nest';
+    // Pass through canonical ids — including Tier 3F additions registered via
+    // BuildingRegistry. Don't coerce unknown values away from their id.
+    return t;
   },
 
   // Convert canonical id → Firestore `buildings/` doc id.
