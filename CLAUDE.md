@@ -290,6 +290,43 @@ grep -rn "นิติบุคคล\|บุคคลธรรมดา" tenant
 grep -rn "window\.getReceiptMeta\|window\.saveCompany" shared/ *.html  # orphaned APIs?
 ```
 
+### P. UID-drift fixes must traverse EVERY rule layer (Firestore + Storage + CF guards)
+
+Tier 3I checklist debugging (2026-05-14) cost 4 rounds because the same UID-drift bug showed up in three different security layers and each fix only unblocked the next failure:
+
+1. Tenant queries `where tenantUid == authUid` → empty → "ยังไม่มี checklist" (Firestore rule + client query path)
+2. Tenant submits photo → permission_denied (storage.rules has same `instance.tenantUid == auth.uid` check)
+3. Admin viewer reads photo via `getDownloadURL` → tokenised URL bypasses rules so it works, but the *token itself* is the leak risk (separate concern, same root)
+
+`signInAnonymously` mints a NEW anon UID on every fresh LIFF session, so `instance.tenantUid` (frozen at admin-create time) drifts away from the current `auth.uid` quickly. Any auth check that ties `resource.data.tenantUid == request.auth.uid` will break.
+
+**Rule:** When you fix a "no permission to X" issue with the `claim-match-not-uid-match` pattern in ONE place, grep for the same `tenantUid == auth.uid` pattern in EVERY rule + CF file before declaring it fixed. The pattern lives in:
+
+```bash
+grep -rn "tenantUid == request.auth.uid\|tenantUid.*request.auth.uid" firestore.rules storage.rules functions/
+```
+
+Canonical replacement: gate by token claims (`request.auth.token.room`, `request.auth.token.building`) matching the path/doc, NOT by uid match. Custom claims survive UID rotation.
+
+### Q. Native dialogs (`confirm`, `alert`, `prompt`) don't render in Chrome MCP screenshots
+
+When the user asks "show me what the dialog looks like", `confirm('...')` returns immediately (Chrome's automation API auto-dismisses it without rendering). Don't try to screenshot the native one — build a styled `<div>` overlay that mimics the OS look, screenshot that, then clean up. See the iOS-style mock-up pattern used 2026-05-14 (`#mock-dialog` injected, screenshotted, removed). The user only needs the LAYOUT preview, not a literal native screenshot.
+
+### R. `fetch()` from LIFF webview must always have AbortController + timeout
+
+LINE's in-app browser caches TLS connections aggressively. A stale cached connection can leave a `fetch()` hanging indefinitely (minutes) before failing, leaving the user staring at a loading overlay. Native `signInWithCustomToken` retry loops (e.g. the 5×backoff one in `_callLiffSignIn`) don't help — the fetch is upstream of them. Every fetch in tenant_app/booking inside the LIFF entry flow must be wrapped:
+
+```js
+const ctrl = new AbortController();
+const to = setTimeout(() => ctrl.abort(), 12000);  // 12s per attempt
+try {
+  const resp = await fetch(url, { ..., signal: ctrl.signal });
+  ...
+} finally { clearTimeout(to); }
+```
+
+Specific surfaces with this risk: `_callLiffSignIn`, `verifySlip`, any direct CF HTTPS call (vs httpsCallable, which already has a timeout).
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
