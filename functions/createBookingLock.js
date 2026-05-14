@@ -25,6 +25,7 @@ if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
 const { getValidBuildings } = require('./buildingRegistry');
+const { isActiveTenant } = require('./_occupancy');
 
 const LOCK_DURATION_MS = 20 * 60 * 1000; // 20 minutes
 const EARLY_BIRD_WINDOW_DAYS = 30;
@@ -198,14 +199,20 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
           `Room ${canonicalBuilding}/${canonicalRoomId} is currently held or booked`);
       }
 
-      // Check active tenant on the room (existence + name = active occupant)
+      // Check active tenant on the room. Post-Phase-3 conversions write a SLIM
+      // tenant doc — identity (name/phone/email) is in people/{tenantId}, so a
+      // name-only check (legacy) misses active rooms. Treat the doc as occupied
+      // if ANY of these signals is present: tenantId, linkedAuthUid, an active
+      // lease subobject, or the legacy name field. archiveTenantOnMoveOut +
+      // transitionToPlayer clear ALL of these to empty strings, so a truly
+      // vacant doc returns false here.
       const tenantRef = firestore
         .collection('tenants').doc(canonicalBuilding)
         .collection('list').doc(canonicalRoomId);
       const tenantSnap = await tx.get(tenantRef);
       if (tenantSnap.exists) {
         const td = tenantSnap.data() || {};
-        if (td.name && String(td.name).trim() && !td.movedOut) {
+        if (isActiveTenant(td)) {
           throw new functions.https.HttpsError('failed-precondition',
             `Room ${canonicalBuilding}/${canonicalRoomId} is currently occupied`);
         }

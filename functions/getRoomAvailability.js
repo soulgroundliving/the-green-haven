@@ -22,6 +22,7 @@ if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
 const { getValidBuildings } = require('./buildingRegistry');
+const { isActiveTenant } = require('./_occupancy');
 
 exports.getRoomAvailability = functions.region('asia-southeast1').https.onCall(async (data, context) => {
   if (!context.auth || !context.auth.uid) {
@@ -49,9 +50,8 @@ exports.getRoomAvailability = functions.region('asia-southeast1').https.onCall(a
       .get();
     snap.docs.forEach(d => {
       const td = d.data() || {};
-      // Active tenant heuristic: has name AND not flagged as moved out.
-      // Same heuristic createBookingLock uses for occupancy gate.
-      if (td.name && String(td.name).trim() && !td.movedOut) {
+      // Shared with createBookingLock — see functions/_occupancy.js for why.
+      if (isActiveTenant(td)) {
         occupied.push(d.id);
       }
     });
