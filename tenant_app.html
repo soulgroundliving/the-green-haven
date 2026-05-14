@@ -3620,11 +3620,6 @@
                 <span>ข้อมูลส่วนตัว</span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
-            <div class="menu-item" data-action="exportMyData">
-                <div class="icon-box icon-green"><i class="fas fa-download"></i></div>
-                <span>ดาวน์โหลดข้อมูลของฉัน (PDPA)</span>
-                <i class="fas fa-chevron-right arrow"></i>
-            </div>
         </div>
 
         <div class="section-title" style="padding-top: 5px;"><span>ตั้งค่าระบบ (System Preferences)</span></div>
@@ -4219,16 +4214,20 @@
             • <strong>Google Firebase</strong>: สำหรับการจัดเก็บและซิงค์ข้อมูลแบบ Real-time<br>
             • เราไม่ขายหรือเผยแพร่ข้อมูลส่วนตัวแก่บุคคลภายนอกเพื่อวัตถุประสงค์ทางการค้า</p>
 
-            <p style="font-weight:700; margin-top:12px;">4. สิทธิ์ของเจ้าของข้อมูล (PDPA)</p>
+            <p style="font-weight:700; margin-top:12px;">4. สิทธิ์ของเจ้าของข้อมูล (PDPA §30, §32)</p>
             <p>ภายใต้ พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 คุณมีสิทธิ์:<br>
-            • เข้าถึงและรับสำเนาข้อมูลของตนเอง<br>
-            • แก้ไขข้อมูลที่ไม่ถูกต้อง<br>
-            • ลบข้อมูล (เมื่อสิ้นสุดการเช่า)<br>
-            • คัดค้านหรือจำกัดการประมวลผลข้อมูล<br>
-            ติดต่อได้ที่: admin@the-green-haven.com</p>
+            • <strong>ขอสำเนาข้อมูล (§30)</strong>: ขอให้ admin ส่งข้อมูลของคุณในรูปแบบ JSON<br>
+            • <strong>แก้ไขข้อมูล</strong>: แก้ไขในแอปได้โดยตรง (ชื่อ, เบอร์, อีเมล, ทะเบียนรถ)<br>
+            • <strong>ลบข้อมูล (§32)</strong>: แจ้ง admin เพื่อดำเนินการ (ข้อมูลบัญชีที่กฎหมายบังคับเก็บจะถูก retain ไว้)<br>
+            • <strong>คัดค้านการประมวลผล</strong>: แจ้ง admin<br>
+            <br>ติดต่อได้ผ่าน LINE Official หรือ admin@the-green-haven.com</p>
 
-            <p style="font-weight:700; margin-top:12px;">5. การเก็บรักษาข้อมูล</p>
-            <p>ข้อมูลจะถูกเก็บตลอดระยะเวลาการเช่า และลบออกภายใน 90 วันหลังสิ้นสุดสัญญา ยกเว้นข้อมูลทางบัญชีที่กฎหมายกำหนดให้เก็บ 5 ปี</p>
+            <p style="font-weight:700; margin-top:12px;">5. ระยะเวลาการเก็บรักษาข้อมูล</p>
+            <p>• <strong>ใบตรวจสภาพห้อง</strong> (รูปภาพ, ลายเซ็น, บันทึก): ลบอัตโนมัติ 2 ปีหลังแอดมินเซ็นรับ<br>
+            • <strong>ข้อมูลผู้เช่า</strong> (ชื่อ, ติดต่อ, gamification): ลบอัตโนมัติ 1 ปีหลังสิ้นสุดสัญญา<br>
+            • <strong>บิล, รายการชำระเงิน</strong>: เก็บ 5 ปี ตามประมวลรัษฎากร มาตรา 87<br>
+            • <strong>สัญญาเช่า</strong>: เก็บ 5 ปี ตาม ป.พ.พ. มาตรา 193/34<br>
+            ข้อมูลที่ไม่มีวัตถุประสงค์ที่ชัดเจนจะถูกลบอัตโนมัติภายใน 5 ปีจากวันที่สร้าง</p>
         </div>
     </div>
 
@@ -6740,7 +6739,7 @@
             if (a === 'setSeverity') { if (_ta.setSeverity) _ta.setSeverity(arg); return; }
             if (a === 'openModal') { if (_ta.openModal) _ta.openModal(arg); return; }
             if (a === 'submitLeaseRequest') { if (_ta.submitLeaseRequest) _ta.submitLeaseRequest(arg); return; }
-            if (a === 'exportMyData') { if (window.exportMyData) window.exportMyData(); return; }
+
             // With-arg actions
             if (a === 'showSubPage' && page && _ta.showSubPage) { _ta.showSubPage(page); return; }
             if (a === 'makeCall' && num && _ta.makeCall) { _ta.makeCall(num); return; }
@@ -12729,36 +12728,6 @@
         _clTenantUid = window._authUid || '';
         // The card is always visible — no need to hide it; user sees it on services page
       });
-
-      // PDPA §30: tenant downloads a JSON of all their personal data via CF.
-      // Triggered by the "ดาวน์โหลดข้อมูลของฉัน (PDPA)" menu row on the profile
-      // page. The file name embeds room + timestamp so the user can keep multiple
-      // snapshots over time.
-      window.exportMyData = async function() {
-        let toastFn = typeof toast === 'function' ? toast : (m) => alert(m);
-        try {
-          toastFn('⏳ กำลังรวบรวมข้อมูล...', 'info');
-          const fn = window.firebase?.functions?.httpsCallable?.('exportMyData');
-          if (!fn) { toastFn('ฟังก์ชันยังไม่พร้อม — ลองอีกครั้ง', 'error'); return; }
-          const res = await fn({});
-          const payload = res?.data;
-          if (!payload) { toastFn('ดาวน์โหลดไม่สำเร็จ — ลองอีกครั้ง', 'error'); return; }
-          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-          const url  = URL.createObjectURL(blob);
-          const a    = document.createElement('a');
-          const ts   = new Date().toISOString().slice(0, 10);
-          const room = String(payload?.subject?.room || 'me');
-          a.href = url;
-          a.download = `nature-haven-mydata-${room}-${ts}.json`;
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-          toastFn('✅ ดาวน์โหลดข้อมูลเรียบร้อย', 'success');
-        } catch (err) {
-          console.error('exportMyData failed:', err);
-          toastFn('ดาวน์โหลดไม่สำเร็จ: ' + (err.message || err.code || 'unknown'), 'error');
-        }
-      };
 
     })();
     </script>
