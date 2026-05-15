@@ -2460,7 +2460,7 @@
             <button id="nav-smart-key-btn" data-action="showSubPage" data-page="smart-key-page"
                 style="position:absolute; right:16px; top:24px; background:var(--primary-green); color:white; border:none; border-radius:12px; padding:8px 12px; font-weight:bold; box-shadow:0 4px 10px rgba(123, 166, 126, 0.4); cursor:pointer; display:inline-flex; align-items:center; gap:6px; z-index:2;">
                 <i class="fas fa-qrcode"></i><span>Smart Key</span>
-                <span style="position:absolute; top:-6px; right:-6px; background:#f59e0b; color:#fff; font-size:8px; padding:2px 5px; border-radius:6px; font-weight:bold;">SOON</span>
+                <span style="position:absolute; top:-6px; right:-6px; background:var(--warn); color:#fff; font-size:8px; padding:2px 5px; border-radius:6px; font-weight:bold;">SOON</span>
             </button>
             <div style="padding-right: 120px;">
                 <div class="date-display text-[10px]" id="current-date">--/--/--</div>
@@ -2740,7 +2740,7 @@
                 </div>
                 <div>
                     <strong>Smart Laundry</strong>
-                    <span style="display:inline-block; background:#f59e0b; color:#fff; font-size:9px; padding:2px 6px; border-radius:8px; font-weight:bold; margin-left:6px; vertical-align:middle;">เร็ว ๆ นี้</span><br>
+                    <span style="display:inline-block; background:var(--warn); color:#fff; font-size:9px; padding:2px 6px; border-radius:8px; font-weight:bold; margin-left:6px; vertical-align:middle;">เร็ว ๆ นี้</span><br>
                     <small style="color:#888;">เช็คสถานะเครื่องซักผ้า / อบผ้า 👕</small>
                 </div>
             </div>
@@ -2816,7 +2816,7 @@
                 <div id="maintenancePhotoPreview" style="margin-bottom:10px; text-align:center; display:none;">
                     <img id="maintenancePhotoImg" style="max-width:100%; border-radius:10px; max-height:200px; object-fit:cover;">
                     <button type="button" data-action="clearMaintenancePhoto"
-                        style="display:block; margin:6px auto 0; font-size:var(--fs-sm); color:#ef4444; background:none; border:none; cursor:pointer;">✕ ลบรูป</button>
+                        style="display:block; margin:6px auto 0; font-size:var(--fs-sm); color:var(--alert); background:none; border:none; cursor:pointer;">✕ ลบรูป</button>
                 </div>
 
                 <button type="submit" class="btn-main" style="margin-top:10px;" id="maintenanceSubmitBtn">📤 ส่งแจ้งปัญหา</button>
@@ -3580,12 +3580,12 @@
                     data-action="alertLaundryBook">จองคิว</button>
             </div>
             <div class="card"
-                style="margin: 0 0 15px; display: flex; align-items: center; gap: 15px; border-left: 6px solid #f59e0b; background: #fffcf5;">
-                <div style="font-size: var(--fs-lg); color: #f59e0b;"><i class="fas fa-spinner fa-spin"></i> <span
+                style="margin: 0 0 15px; display: flex; align-items: center; gap: 15px; border-left: 6px solid var(--warn); background: #fffcf5;">
+                <div style="font-size: var(--fs-lg); color: var(--warn);"><i class="fas fa-spinner fa-spin"></i> <span
                         style="font-size:var(--fs-md);">W2</span></div>
                 <div style="flex: 1;">
                     <strong style="font-size: var(--fs-lg);">เครื่อง 2 (15kg)</strong>
-                    <div style="color: #f59e0b; font-weight: 600; font-size: var(--fs-md);"><i
+                    <div style="color: var(--warn); font-weight: 600; font-size: var(--fs-md);"><i
                             class="fas fa-hourglass-half"></i> กำลังทำงาน</div>
                     <small style="color:#888;">เหลือเวลาอีกประมาณ 24 นาที</small>
                 </div>
@@ -4532,7 +4532,7 @@
         <div class="app-bar" style="display:flex;align-items:center;gap:15px;padding-bottom:20px;">
             <div style="width:44px;height:44px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;"
                 data-action="goBackToService">
-                <i class="fas fa-chevron-left" style="color:#DC2626;"></i>
+                <i class="fas fa-chevron-left" style="color:var(--alert);"></i>
             </div>
             <h1 style="margin:0;font-size:var(--fs-lg);">🚨 ขั้นตอนฉุกเฉิน</h1>
         </div>
@@ -4565,7 +4565,7 @@
                     <div class="emergency-step"><div class="emergency-step-num">3</div><span>จดบันทึก วัน เวลา รายละเอียดเหตุการณ์ และพยานที่อยู่ในเหตุการณ์</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">4</div><span>ถ่ายภาพหลักฐาน (ถ้าปลอดภัย) ก่อนที่จะมีการเคลื่อนย้าย</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">5</div><span>แจ้ง admin ทาง LINE เพื่อประสานงานกล้องวงจรปิดของอาคาร</span></div>
-                    <button class="btn-main" style="margin-top:12px;background:#DC2626;touch-action:manipulation;" data-action="makeCall" data-number="191">📞 โทร 191 (ตำรวจ)</button>
+                    <button class="btn-main" style="margin-top:12px;background:var(--alert);touch-action:manipulation;" data-action="makeCall" data-number="191">📞 โทร 191 (ตำรวจ)</button>
                 </div>
             </div>
 
@@ -4582,7 +4582,7 @@
                     <div class="emergency-step"><div class="emergency-step-num">3</div><span>ออกทางบันไดหนีไฟ — <strong>ห้ามใช้ลิฟต์</strong></span></div>
                     <div class="emergency-step"><div class="emergency-step-num">4</div><span>หากควันหนาแน่น ก้มต่ำ คลานใต้ควัน ปิดจมูกด้วยผ้าชื้น</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">5</div><span>รวมพลจุดนัดพบหน้าอาคาร รอนับคนให้ครบ</span></div>
-                    <button class="btn-main" style="margin-top:12px;background:#DC2626;touch-action:manipulation;" data-action="makeCall" data-number="199">📞 โทร 199 (ดับเพลิง)</button>
+                    <button class="btn-main" style="margin-top:12px;background:var(--alert);touch-action:manipulation;" data-action="makeCall" data-number="199">📞 โทร 199 (ดับเพลิง)</button>
                 </div>
             </div>
 
@@ -4631,7 +4631,7 @@
                     <div class="emergency-step"><div class="emergency-step-num">3</div><span>หากหยุดหายใจ — CPR: กดหน้าอก 30 ครั้ง เป่าลม 2 ครั้ง สลับกัน</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">4</div><span>ส่งคนออกไปรอรถพยาบาลที่ทางเข้าอาคาร เพื่อนำทาง</span></div>
                     <div class="emergency-step"><div class="emergency-step-num">5</div><span>เตรียมบัตรประชาชนและข้อมูลสิทธิรักษาพยาบาลพร้อม</span></div>
-                    <button class="btn-main" style="margin-top:12px;background:#DC2626;touch-action:manipulation;" data-action="makeCall" data-number="1669">📞 โทร 1669 (การแพทย์ฉุกเฉิน)</button>
+                    <button class="btn-main" style="margin-top:12px;background:var(--alert);touch-action:manipulation;" data-action="makeCall" data-number="1669">📞 โทร 1669 (การแพทย์ฉุกเฉิน)</button>
                 </div>
             </div>
 
@@ -4650,15 +4650,15 @@
         <button type="button" class="nav-item active" aria-current="page" aria-label="หน้าหลัก" data-action="showPage--updateNavActiveIndex" data-page="home" data-nav-index="0"><i class="fas fa-home" aria-hidden="true"></i>หน้าหลัก</button>
         <button type="button" class="nav-item" aria-label="บริการ" data-action="showPage--updateNavActiveIndex" data-page="services" data-nav-index="1" style="position:relative;">
             <i class="fas fa-leaf" aria-hidden="true"></i>บริการ
-            <span id="nav-badge-services" aria-live="polite" style="display:none; position:absolute; top:4px; right:8px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
+            <span id="nav-badge-services" aria-live="polite" style="display:none; position:absolute; top:4px; right:8px; background:var(--alert); color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
         </button>
         <button type="button" class="nav-item" aria-label="ชุมชน" data-action="showPage--markCommunityRead" data-page="community" style="position:relative;">
             <i class="fas fa-comments" aria-hidden="true"></i>ชุมชน
-            <span id="nav-badge-community" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
+            <span id="nav-badge-community" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:var(--alert); border-radius:50%;"></span>
         </button>
         <button type="button" class="nav-item" aria-label="บิล" data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3" style="position:relative;">
             <i class="fas fa-wallet" aria-hidden="true"></i>บิล
-            <span id="nav-badge-bills" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:#ef4444; border-radius:50%;"></span>
+            <span id="nav-badge-bills" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:var(--alert); border-radius:50%;"></span>
         </button>
         <button type="button" class="nav-item" aria-label="โปรไฟล์" data-action="showPage--updateNavActiveIndex" data-page="profile" data-nav-index="4"><i class="fas fa-user" aria-hidden="true"></i>โปรไฟล์</button>
     </nav>
@@ -6335,7 +6335,7 @@
             petDataList.forEach(pet => {
                 const vaxStatusHTML = pet.isVaccinated
                     ? '<p style="margin:4px 0; font-size:var(--fs-sm); color:#22c55e; font-weight: 600;">✓ ฉีดวัคซีนแล้ว</p>'
-                    : '<p style="margin:4px 0; font-size:var(--fs-sm); color:#f59e0b; font-weight: 600;">⚠️ รออัปเดตวัคซีน</p>';
+                    : '<p style="margin:4px 0; font-size:var(--fs-sm); color:var(--warn); font-weight: 600;">⚠️ รออัปเดตวัคซีน</p>';
 
                 const safeId = _esc(pet.id);
                 const avatarStyle = pet.photoURL
@@ -6440,9 +6440,9 @@
                 const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
 
                 if (diffDays <= 0) {
-                    alertStatusHTML = `<div style="color: #ef4444; font-size: var(--fs-sm); font-weight: 700;">🛑 วัคซีนหมดอายุแล้ว!</div>`;
+                    alertStatusHTML = `<div style="color: var(--alert); font-size: var(--fs-sm); font-weight: 700;">🛑 วัคซีนหมดอายุแล้ว!</div>`;
                 } else if (diffDays <= 30) {
-                    alertStatusHTML = `<div style="color: #f59e0b; font-size: var(--fs-sm); font-weight: 700;">⚠️ หมดอายุใน ${diffDays} วัน</div>`;
+                    alertStatusHTML = `<div style="color: var(--warn); font-size: var(--fs-sm); font-weight: 700;">⚠️ หมดอายุใน ${diffDays} วัน</div>`;
                 }
             }
 
