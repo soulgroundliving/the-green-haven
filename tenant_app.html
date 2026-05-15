@@ -7494,7 +7494,9 @@
             const container = document.getElementById('complaint-list');
             if (!container) return;
             if (filtered.length === 0) {
-                container.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:var(--fs-md);padding:20px;">ไม่พบรายการ</p>';
+                container.innerHTML = window.GhEmptyState
+                    ? window.GhEmptyState.html('messages', { title:'ไม่พบรายการ', text:'ยังไม่มีประวัติการแจ้งที่ตรงกับตัวกรอง' })
+                    : '<p style="text-align:center;color:#9ca3af;font-size:var(--fs-md);padding:20px;">ไม่พบรายการ</p>';
                 return;
             }
             const statusLabel = { open:'⏳ รอดำเนินการ', 'in-progress':'🔧 กำลังดำเนินการ', resolved:'✅ แก้ไขแล้ว' };
@@ -9634,7 +9636,19 @@
                         text: 'เมื่อมีบิลใหม่จะแสดงที่นี่ — รออดมินส่งให้',
                     });
                 } else {
-                    el.innerHTML = '';
+                    // Fallback when empty-states.js hasn't loaded yet (race during init):
+                    // write the same SVG markup inline so the slot never goes dark.
+                    el.innerHTML = '<div class="gh-empty-state">' +
+                        '<div class="gh-empty-state__illust">' +
+                        '<svg viewBox="0 0 120 120" aria-hidden="true">' +
+                        '<path d="M30 22 h60 v76 l-12-8 -12 8 -12-8 -12 8 -12-8z"/>' +
+                        '<path d="M42 42 h36 M42 56 h36 M42 70 h22"/>' +
+                        '<circle cx="78" cy="70" r="9"/>' +
+                        '<path d="M73 70 l4 4 6-7"/>' +
+                        '</svg></div>' +
+                        '<p class="gh-empty-state__title">ยังไม่มีบิล</p>' +
+                        '<p class="gh-empty-state__text">เมื่อมีบิลใหม่จะแสดงที่นี่</p>' +
+                        '</div>';
                 }
                 const amtEl = document.getElementById('current-bill-amount');
                 if (amtEl) amtEl.textContent = '฿ —';
