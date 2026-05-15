@@ -3462,19 +3462,14 @@
             <button class="tab-btn" style="color: #aaa;"
                 data-action="alertVisitorPass">Visitor Pass</button>
         </div>
-        <div class="card" style="text-align: center; padding: 40px 20px; border-radius: 30px; margin: 20px;">
+        <div class="card" style="text-align: center; padding: 40px 24px; border-radius: 30px; margin: 20px;">
             <h3 id="smart-key-room-label" style="margin-top: 0; color: var(--primary-green);">ห้อง —</h3>
-            <p style="font-size: var(--fs-md); color: #888; margin-bottom: 20px;">สแกนที่จุดทาบบัตรเพื่อเข้าอาคารส่วนกลาง</p>
-            <div
-                style="width: 200px; height: 200px; border: 3px solid var(--primary-green); border-radius: 20px; margin: 0 auto; padding: 10px; position: relative;">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
-                    alt="Smart Key" style="width: 100%; height: 100%; opacity: 0.9;">
-                <div
-                    style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: rgba(123,166,126,0.8); box-shadow: 0 0 15px var(--primary-green); animation: scanline 2s linear infinite;">
-                </div>
+            <div style="width: 200px; height: 200px; border: 2px dashed rgba(255,255,255,0.3); border-radius: 24px; margin: 24px auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: rgba(255,255,255,0.7);">
+                <span style="font-size: 3rem;" aria-hidden="true">🔒</span>
+                <span style="font-size: var(--fs-sm); font-weight: 600;">QR ยังไม่เปิดใช้งาน</span>
             </div>
-            <div style="margin-top: 25px; font-size: var(--fs-md); font-weight: 600; color: var(--danger);"><i
-                    class="fas fa-sync-alt"></i> อัปเดตอัตโนมัติใน <span id="qr-timer">59</span> วินาที</div>
+            <p style="font-size: var(--fs-md); color: rgba(255,255,255,0.7); margin: 0 0 6px;">Smart Access กำลังจะเปิดให้บริการ</p>
+            <p style="font-size: var(--fs-sm); color: rgba(255,255,255,0.5); margin: 0;">ระบบจะแจ้งทาง LINE เมื่อพร้อมใช้งาน</p>
         </div>
     </div>
 
@@ -3855,11 +3850,12 @@
             <textarea id="market-desc" placeholder="บอกรายละเอียด สภาพสินค้า หรือเงื่อนไข..." rows="3"
                 style="width:100%; padding:12px; border-radius:12px; border:1px solid #eee; margin-top:10px; font-family:inherit;"></textarea>
 
-            <!-- Show room toggle -->
+            <!-- Show room toggle — opt-in only (PDPA: don't disclose room number by default) -->
             <div class="setting-row" style="margin-top:15px; padding:12px 15px; border:1px solid #eee;">
                 <span><i class="fas fa-door-open" style="color:#888; width:25px;"></i> แสดงเลขห้องให้ผู้ซื้อติดต่อ</span>
-                <label class="switch"><input type="checkbox" id="market-show-room" checked><span class="slider"></span></label>
+                <label class="switch"><input type="checkbox" id="market-show-room"><span class="slider"></span></label>
             </div>
+            <small style="display:block; margin-top:6px; padding:0 4px; font-size:var(--fs-sm); color:var(--text-muted);">เปิดเฉพาะเมื่อสะดวกให้เพื่อนบ้านรู้ห้อง — ปิดไว้จะติดต่อผ่าน LINE หรือ chat แทน</small>
         </div>
 
         <div style="padding:10px 15px 50px;">
@@ -12540,15 +12536,25 @@
         // re-prompting on the next device/install.
         const _consentKey = 'cl_consent_v1';
         if (!localStorage.getItem(_consentKey)) {
-          const ok = confirm(
-            '🛡️ ข้อตกลงการใช้ข้อมูลส่วนบุคคล (PDPA)\n\n' +
-            'การกรอกใบตรวจสภาพห้องจะมีการเก็บ:\n' +
-            '• รูปภาพภายในห้องที่คุณแนบ\n' +
-            '• ลายเซ็นของคุณ\n' +
-            '• บันทึก/หมายเหตุที่คุณพิมพ์\n\n' +
-            'ข้อมูลเหล่านี้จะถูกใช้เพื่อยืนยันสภาพห้อง ณ วันย้ายเข้า/ย้ายออกเท่านั้น และจะถูกลบอัตโนมัติภายใน 2 ปีหลังแอดมินเซ็นรับ\n\n' +
-            'กด OK เพื่อยินยอม'
-          );
+          // In-app GhModal (per CLAUDE.md §7-Q: native confirm() can't be
+          // screenshotted in support flows and looks off-brand in LIFF).
+          const consentBody = document.createElement('div');
+          consentBody.style.cssText = 'font-size:var(--fs-sm); line-height:1.55; color:var(--text-dark);';
+          consentBody.innerHTML =
+            '<p style="margin:0 0 10px;">การกรอกใบตรวจสภาพห้องจะมีการเก็บ:</p>' +
+            '<ul style="margin:0 0 12px; padding-left:20px;">' +
+              '<li>รูปภาพภายในห้องที่คุณแนบ</li>' +
+              '<li>ลายเซ็นของคุณ</li>' +
+              '<li>บันทึก/หมายเหตุที่คุณพิมพ์</li>' +
+            '</ul>' +
+            '<p style="margin:0; color:var(--text-muted); font-size:var(--fs-sm);">ใช้เพื่อยืนยันสภาพห้อง ณ วันย้ายเข้า/ย้ายออกเท่านั้น — ลบอัตโนมัติภายใน 2 ปีหลังแอดมินเซ็นรับ</p>';
+          const ok = await window.GhModal.confirm({
+            title: '🛡️ ข้อตกลงการใช้ข้อมูลส่วนบุคคล (PDPA)',
+            body: consentBody,
+            confirmLabel: 'ยินยอม',
+            cancelLabel: 'ยกเลิก',
+            dismissible: false,
+          });
           if (!ok) {
             if (typeof goBackToService === 'function') goBackToService();
             return;
@@ -12668,13 +12674,20 @@
         };
         try {
           if (!localStorage.getItem('cl_photo_notice_shown')) {
-            const ok = confirm(
-              '📸 แนบรูปภาพหลักฐาน\n\n' +
-              'แอปจะใช้กล้องหรือรูปภาพในคลังของคุณเพื่อแนบหลักฐานการตรวจห้อง — รูปภาพจะถูกส่งให้แอดมินดูเท่านั้น ไม่เผยแพร่ที่ไหน\n\n' +
-              'กด OK เพื่อดำเนินการ'
-            );
-            if (!ok) return;
-            localStorage.setItem('cl_photo_notice_shown', '1');
+            // In-app modal — see PDPA consent above for rationale.
+            // Promise-based; the click chain is short so .then() is fine without
+            // awaiting (no later state to consume).
+            window.GhModal.confirm({
+              title: '📸 แนบรูปภาพหลักฐาน',
+              body: 'แอปจะใช้กล้องหรือรูปภาพในคลังของคุณเพื่อแนบหลักฐานการตรวจห้อง — รูปภาพจะถูกส่งให้แอดมินดูเท่านั้น ไม่เผยแพร่ที่ไหน',
+              confirmLabel: 'ดำเนินการ',
+              cancelLabel: 'ยกเลิก',
+            }).then(ok => {
+              if (!ok) return;
+              try { localStorage.setItem('cl_photo_notice_shown', '1'); } catch (_) { /* private mode */ }
+              proceed();
+            });
+            return;
           }
         } catch (_) { /* localStorage may be disabled — fall through */ }
         proceed();
