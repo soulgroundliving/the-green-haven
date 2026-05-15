@@ -2319,6 +2319,24 @@
                 <div class="map-label" style="background: #0EA5E9;">PAY BILL</div>
                 <div class="map-icon-bounce" style="animation-delay: 0.6s;">💳</div>
             </button>
+
+            <!-- SMART KEY map icon — moved here from the home app-bar so the door is
+                 visible immediately on entry (the "front gate" of the village). Door
+                 icon + clay color signal "access / lock" without screaming. The id is
+                 preserved so NEST_ONLY_ELEMENT_IDS + COMING_SOON_IDS still gate
+                 visibility (hidden for Rooms, "🚧 SOON" overlay for Nest pre-launch). -->
+            <button type="button" id="nav-smart-key-btn"
+                data-action="showSubPage" data-page="smart-key-page"
+                aria-label="Smart Key — เปิดประตูห้อง (เร็ว ๆ นี้)"
+                style="position:absolute;top:80%;left:43%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
+                <div class="map-label" style="background: var(--clay); position:relative;">
+                    SMART KEY
+                    <span style="position:absolute; top:-8px; right:-10px; background:var(--warn); color:#fff; font-size:8px; padding:2px 5px; border-radius:6px; font-weight:bold; letter-spacing:.02em;">SOON</span>
+                </div>
+                <div class="map-icon-bounce" style="animation-delay: 0.8s; font-size: 1.75rem; line-height: 1; margin-top: 4px;">
+                    <i class="fas fa-door-closed" style="color: var(--clay);" aria-hidden="true"></i>
+                </div>
+            </button>
         </div>
     </div>
 
@@ -2491,12 +2509,8 @@
                 style="position:absolute; left:16px; top:24px; width:36px; height:36px; background:transparent; color:var(--primary-green); border:1px solid var(--border); border-radius:50%; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; z-index:2;">
                 <i class="fas fa-map" aria-hidden="true"></i>
             </button>
-            <button id="nav-smart-key-btn" data-action="showSubPage" data-page="smart-key-page"
-                style="position:absolute; right:16px; top:24px; background:var(--primary-green); color:white; border:none; border-radius:12px; padding:8px 12px; font-weight:bold; box-shadow:0 4px 10px rgba(123, 166, 126, 0.4); cursor:pointer; display:inline-flex; align-items:center; gap:6px; z-index:2;">
-                <i class="fas fa-qrcode"></i><span>Smart Key</span>
-                <span style="position:absolute; top:-6px; right:-6px; background:var(--warn); color:#fff; font-size:8px; padding:2px 5px; border-radius:6px; font-weight:bold;">SOON</span>
-            </button>
-            <div style="padding-left: 52px; padding-right: 120px;">
+            <!-- Smart Key moved to world-map-page (door icon "front gate" of the village). -->
+            <div style="padding-left: 52px; padding-right: 16px;">
                 <div class="date-display text-[10px]" id="current-date">--/--/--</div>
                 <h1 id="user-greeting" class="page-title-top font-bold">สวัสดีครับ คุณลูกบ้าน</h1>
                 <p id="time-greet" class="text-xs mt-1 opacity-80">ยินดีต้อนรับกลับบ้านครับ 🌿</p>
