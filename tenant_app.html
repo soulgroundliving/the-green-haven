@@ -323,7 +323,16 @@
 
         .page {
             display: none;
-            animation: slideUp 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* Blink overlay — covers screen during nav-tab page swaps */
+        #blink-overlay {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 9990;
+            opacity: 0;
+            pointer-events: none;
         }
 
         .page.active {
@@ -4611,6 +4620,7 @@
         </button>
         <button type="button" class="nav-item" aria-label="โปรไฟล์" data-action="showPage--updateNavActiveIndex" data-page="profile" data-nav-index="4"><i class="fas fa-user" aria-hidden="true"></i>โปรไฟล์</button>
     </nav>
+    <div id="blink-overlay" aria-hidden="true"></div>
 
     <script>
         // ==========================================
@@ -4703,6 +4713,23 @@
         // current ↔ new instead of iterating every .page node.
         let _currentPageEl = null;
         let _navItemsCache = null;
+        let _blinkBusy = false;
+
+        // Eye-blink transition: screen closes (55ms) → swap → opens (100ms).
+        // If a blink is already running, swap immediately (no double-blink).
+        function _blinkTransition(doSwap) {
+            const overlay = document.getElementById('blink-overlay');
+            if (!overlay || _blinkBusy) { doSwap(); return; }
+            _blinkBusy = true;
+            overlay.style.transition = 'opacity 55ms ease-in';
+            overlay.style.opacity = '1';
+            setTimeout(() => {
+                doSwap();
+                overlay.style.transition = 'opacity 100ms ease-out';
+                overlay.style.opacity = '0';
+                setTimeout(() => { _blinkBusy = false; }, 100);
+            }, 60);
+        }
 
         function _hideOtherPages(target) {
             // First call: no _currentPageEl, must hide all .page nodes once to clean
@@ -4731,42 +4758,44 @@
                 return;
             }
 
-            // Fast path: swap only current → new (instead of iterating every .page)
-            _hideOtherPages(target);
+            _blinkTransition(() => {
+                // Fast path: swap only current → new (instead of iterating every .page)
+                _hideOtherPages(target);
 
-            target.style.display = 'block';
-            target.classList.add('active');
-            target.style.pointerEvents = 'auto';
-            // หน้าแผนที่อยู่เลเยอร์ล่าง (เผื่อมี Effect) หน้าอื่นอยู่บน
-            target.style.zIndex = (target.id === 'world-map-page' || target.id === 'world-map') ? "5" : "10";
-            window.scrollTo(0, 0);
-            _currentPageEl = target;
+                target.style.display = 'block';
+                target.classList.add('active');
+                target.style.pointerEvents = 'auto';
+                // หน้าแผนที่อยู่เลเยอร์ล่าง (เผื่อมี Effect) หน้าอื่นอยู่บน
+                target.style.zIndex = (target.id === 'world-map-page' || target.id === 'world-map') ? "5" : "10";
+                window.scrollTo(0, 0);
+                _currentPageEl = target;
 
-            // Nav bar (ซ่อนเฉพาะตอนอยู่หน้าแผนที่โลก)
-            const navBar = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
-            if (navBar) {
-                navBar.style.display = (id === 'world-map' || target.id === 'world-map-page') ? 'none' : 'flex';
-            }
-
-            // Nav item active state — cache nav items lookup (called repeatedly)
-            if (element) {
-                if (!_navItemsCache) _navItemsCache = document.querySelectorAll('.nav-item');
-                _navItemsCache.forEach(nav => {
-                    nav.classList.remove('active');
-                    nav.removeAttribute('aria-current');
-                });
-                element.classList.add('active');
-                element.setAttribute('aria-current', 'page');
-            }
-
-            // Page-specific data refresh
-            if (id === 'payment' || id === 'usage') {
-                if (typeof updateDashboard === 'function') updateDashboard();
-                if (id === 'usage') {
-                    if (typeof showBillsSkeleton === 'function') showBillsSkeleton();
-                    if (typeof renderBillsList === 'function') renderBillsList();
+                // Nav bar (ซ่อนเฉพาะตอนอยู่หน้าแผนที่โลก)
+                const navBar = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
+                if (navBar) {
+                    navBar.style.display = (id === 'world-map' || target.id === 'world-map-page') ? 'none' : 'flex';
                 }
-            }
+
+                // Nav item active state — cache nav items lookup (called repeatedly)
+                if (element) {
+                    if (!_navItemsCache) _navItemsCache = document.querySelectorAll('.nav-item');
+                    _navItemsCache.forEach(nav => {
+                        nav.classList.remove('active');
+                        nav.removeAttribute('aria-current');
+                    });
+                    element.classList.add('active');
+                    element.setAttribute('aria-current', 'page');
+                }
+
+                // Page-specific data refresh
+                if (id === 'payment' || id === 'usage') {
+                    if (typeof updateDashboard === 'function') updateDashboard();
+                    if (id === 'usage') {
+                        if (typeof showBillsSkeleton === 'function') showBillsSkeleton();
+                        if (typeof renderBillsList === 'function') renderBillsList();
+                    }
+                }
+            });
         }
 
         // ฟังก์ชันเข้าหน้าย่อย (แก้บั๊กเนื้อหาซ้อนกัน)
