@@ -1683,6 +1683,28 @@
             letter-spacing: 0.01em;
         }
 
+        /* Secondary button — outline style for cancel/back, paired with .btn-main.
+           Matches .btn-main dimensions so side-by-side rows align. */
+        .btn-secondary {
+            width: 100%;
+            min-height: 52px;
+            padding: 14px 20px;
+            border-radius: 14px;
+            border: 1.5px solid var(--border, #e0e0e0);
+            background: transparent;
+            color: var(--text-dark);
+            font-size: var(--fs-md);
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.15s;
+            touch-action: manipulation;
+        }
+        .btn-secondary:active {
+            background: var(--soft-green);
+            transform: scale(0.98);
+        }
+
         /* suggest-card (home) — เปลี่ยนจากสีฟ้าเป็น brand green wash */
         .suggest-card {
             background: var(--brand-primary-wash, #f0f7f2) !important;
@@ -3991,7 +4013,7 @@
                 <label style="font-size:var(--fs-sm); color:#666;">อีเมล</label>
                 <input type="email" id="profile-edit-email" placeholder="example@gmail.com" style="margin-bottom:15px;">
                 <div style="display:flex; gap:8px;">
-                    <button class="btn-main" style="flex:1; background:#999;" data-action="toggleProfileEditMode" data-arg="false">ยกเลิก</button>
+                    <button class="btn-secondary" style="flex:1;" data-action="toggleProfileEditMode" data-arg="false">ยกเลิก</button>
                     <button class="btn-main" style="flex:1;" data-action="saveProfileEdit"><i class="fas fa-save"></i> บันทึกอีเมล</button>
                 </div>
                 <p style="font-size:var(--fs-sm); color:#888; margin-top:10px;">
@@ -4008,7 +4030,7 @@
                         <input type="tel" id="otp-new-phone" placeholder="0812345678" maxlength="10" style="margin-bottom:12px; width:100%;">
                         <div id="otp-recaptcha-container" style="margin-bottom:12px;"></div>
                         <div style="display:flex; gap:8px;">
-                            <button class="btn-main" style="flex:1; background:#999;" data-action="closePhoneOtpModal">ยกเลิก</button>
+                            <button class="btn-secondary" style="flex:1;" data-action="closePhoneOtpModal">ยกเลิก</button>
                             <button class="btn-main" id="otp-send-btn" style="flex:2;" data-action="sendPhoneOtp"><i class="fas fa-paper-plane"></i> ส่งรหัส OTP</button>
                         </div>
                     </div>
@@ -4018,7 +4040,7 @@
                         <label style="font-size:var(--fs-sm); color:#666;">รหัส OTP</label>
                         <input type="text" id="otp-code" placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="margin-bottom:12px; width:100%; font-size:var(--text-lg); letter-spacing:8px; text-align:center;">
                         <div style="display:flex; gap:8px;">
-                            <button class="btn-main" style="flex:1; background:#999;" data-action="resetPhoneOtpFlow"><i class="fas fa-arrow-left"></i> ย้อนกลับ</button>
+                            <button class="btn-secondary" style="flex:1;" data-action="resetPhoneOtpFlow"><i class="fas fa-arrow-left"></i> ย้อนกลับ</button>
                             <button class="btn-main" id="otp-confirm-btn" style="flex:2;" data-action="confirmPhoneOtp"><i class="fas fa-check"></i> ยืนยัน</button>
                         </div>
                     </div>
