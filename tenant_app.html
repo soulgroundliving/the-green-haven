@@ -776,6 +776,34 @@
             font-size: var(--fs-md);
         }
 
+        /* Accordion variant inside .menu-list — wraps a trigger + content pair.
+           Keeps `section.style.display='none'/'block'` semantics that JS uses to
+           hide/show the whole group (e.g. internetStatusSection until data arrives). */
+        .menu-list .menu-item-group > .accordion-content {
+            padding: 2px 20px 16px 73px;
+            background: rgba(0, 0, 0, 0.015);
+            border-bottom: 1px solid #f5f5f5;
+            font-size: var(--fs-sm);
+        }
+        .menu-list > .menu-item-group:last-child > .menu-item,
+        .menu-list > .menu-item:last-child {
+            border-bottom: none;
+        }
+        .menu-list > .menu-item-group:last-child > .accordion-content {
+            border-bottom: none;
+        }
+        .menu-list .menu-item .accordion-chev {
+            transition: transform 0.25s ease;
+        }
+        .menu-list .menu-item.active .accordion-chev {
+            transform: rotate(180deg);
+        }
+        html[data-theme="dark"] .menu-list .menu-item-group > .accordion-content {
+            background: rgba(255, 255, 255, 0.025) !important;
+            border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+            color: var(--ink, #f5fbf8) !important;
+        }
+
         /* Tabs */
         .tabs {
             display: flex;
@@ -2601,156 +2629,135 @@
         </div>
 
         <div class="section-title" role="heading" aria-level="2"><span>ข้อมูลอาคาร & เอกสาร</span></div>
-        <div style="display:flex; flex-direction:column; gap:var(--gap-sm);">
+        <div class="menu-list">
 
-        <!-- ported from tenant.html: displayBuildingInternetStatus -->
-        <div id="internetStatusSection" class="card" style="display:none; margin:0 var(--gap);">
-            <div data-action="toggleAccordion" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                <span style="flex:1; font-weight:600; font-size:var(--fs-md);">🌐 สถานะอินเทอร์เน็ตอาคาร</span>
-                <span id="internetStatusIcon" style="font-size:var(--fs-md);">🟢</span>
-                <span id="internetStatusText" style="font-size:var(--fs-sm); font-weight:600;">เชื่อมต่อแล้ว</span>
-                <i class="fas fa-chevron-down" style="color:#aaa;"></i>
-            </div>
-            <div class="accordion-content" style="display:none;">
-                <div id="internetSpeedSection" style="display:none; margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
-                        <small style="color:#666;">⬇️ Download</small>
-                        <div id="internetDownloadSpeed" style="font-weight:700;">-</div>
+            <!-- Building internet status (accordion, hidden until Firestore data arrives) -->
+            <div id="internetStatusSection" class="menu-item-group" style="display:none;">
+                <div class="menu-item" data-action="toggleAccordion">
+                    <div class="icon-box icon-blue"><i class="fas fa-wifi"></i></div>
+                    <span>สถานะอินเทอร์เน็ตอาคาร</span>
+                    <span id="internetStatusIcon" style="flex:0 0 auto; font-size:var(--fs-md); margin-right:6px;">🟢</span>
+                    <span id="internetStatusText" style="flex:0 0 auto; font-size:var(--fs-sm); font-weight:600; margin-right:10px;">เชื่อมต่อแล้ว</span>
+                    <i class="fas fa-chevron-down arrow accordion-chev"></i>
+                </div>
+                <div class="accordion-content" style="display:none;">
+                    <div id="internetSpeedSection" style="display:none; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
+                            <small style="color:#666;">⬇️ Download</small>
+                            <div id="internetDownloadSpeed" style="font-weight:700;">-</div>
+                        </div>
+                        <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
+                            <small style="color:#666;">⬆️ Upload</small>
+                            <div id="internetUploadSpeed" style="font-weight:700;">-</div>
+                        </div>
                     </div>
-                    <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
-                        <small style="color:#666;">⬆️ Upload</small>
-                        <div id="internetUploadSpeed" style="font-weight:700;">-</div>
+                    <div id="internetProviderSection" style="display:none; margin-top:10px; font-size:var(--fs-sm);">
+                        <div>ผู้ให้บริการ: <strong id="internetProvider">-</strong></div>
+                        <div>ติดต่อ: <span id="internetContact">-</span></div>
                     </div>
+                    <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="internetLastCheck">-</span></small>
                 </div>
-                <div id="internetProviderSection" style="display:none; margin-top:10px; font-size:var(--fs-sm);">
-                    <div>ผู้ให้บริการ: <strong id="internetProvider">-</strong></div>
-                    <div>ติดต่อ: <span id="internetContact">-</span></div>
-                </div>
-                <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="internetLastCheck">-</span></small>
             </div>
-        </div>
 
-        <!-- ROOM-level internet status — same accordion pattern as building above.
-             Data source: tenants/{building}/list/{roomId}.roomInternet or localStorage fallback. -->
-        <div id="roomInternetStatusSection" class="card" style="display:none; margin:0 var(--gap);">
-            <div data-action="toggleAccordion" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📡 สถานะอินเทอร์เน็ตห้องพัก</span>
-                <span id="roomInternetStatusIcon" style="font-size:var(--fs-md);">🟢</span>
-                <span id="roomInternetStatusText" style="font-size:var(--fs-sm); font-weight:600;">เชื่อมต่อแล้ว</span>
-                <i class="fas fa-chevron-down" style="color:#aaa;"></i>
-            </div>
-            <div class="accordion-content" style="display:none;">
-                <div id="roomInternetSpeedSection" style="display:none; margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
-                        <small style="color:#666;">⬇️ ความเร็วประมาณ</small>
-                        <div id="roomInternetDownloadSpeed" style="font-weight:700;">-</div>
+            <!-- Room-level internet status (accordion) -->
+            <div id="roomInternetStatusSection" class="menu-item-group" style="display:none;">
+                <div class="menu-item" data-action="toggleAccordion">
+                    <div class="icon-box icon-green"><i class="fas fa-tower-broadcast"></i></div>
+                    <span>สถานะอินเทอร์เน็ตห้องพัก</span>
+                    <span id="roomInternetStatusIcon" style="flex:0 0 auto; font-size:var(--fs-md); margin-right:6px;">🟢</span>
+                    <span id="roomInternetStatusText" style="flex:0 0 auto; font-size:var(--fs-sm); font-weight:600; margin-right:10px;">เชื่อมต่อแล้ว</span>
+                    <i class="fas fa-chevron-down arrow accordion-chev"></i>
+                </div>
+                <div class="accordion-content" style="display:none;">
+                    <div id="roomInternetSpeedSection" style="display:none; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
+                            <small style="color:#666;">⬇️ ความเร็วประมาณ</small>
+                            <div id="roomInternetDownloadSpeed" style="font-weight:700;">-</div>
+                        </div>
+                        <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
+                            <small style="color:#666;">🕐 Latency</small>
+                            <div id="roomInternetUploadSpeed" style="font-weight:700;">-</div>
+                        </div>
                     </div>
-                    <div style="padding:10px; background:var(--soft-green); border-radius:10px; text-align:center;">
-                        <small style="color:#666;">🕐 Latency</small>
-                        <div id="roomInternetUploadSpeed" style="font-weight:700;">-</div>
+                    <div id="roomInternetProviderSection" style="display:none; margin-top:10px; font-size:var(--fs-sm);">
+                        <div>ห้อง: <strong id="roomInternetRoom">-</strong></div>
+                        <div>ชนิดเครือข่าย: <span id="roomInternetSSID">-</span></div>
                     </div>
+                    <small style="display:block; margin-top:6px; color:#aaa; font-style:italic;">* วัดจากอุปกรณ์ของคุณเอง</small>
+                    <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="roomInternetLastCheck">-</span></small>
                 </div>
-                <div id="roomInternetProviderSection" style="display:none; margin-top:10px; font-size:var(--fs-sm);">
-                    <div>ห้อง: <strong id="roomInternetRoom">-</strong></div>
-                    <div>ชนิดเครือข่าย: <span id="roomInternetSSID">-</span></div>
-                </div>
-                <small style="display:block; margin-top:6px; color:#aaa; font-style:italic;">* วัดจากอุปกรณ์ของคุณเอง</small>
-                <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="roomInternetLastCheck">-</span></small>
             </div>
-        </div>
 
-        <!-- Admin-managed emergency contacts + service providers — kept inline as
-             an accordion since these are dynamic per-building data (รพ.ใกล้บ้าน,
-             ช่างประจำตึก, รปภ., internet provider). The hardcoded 5-procedure
-             accordion that used to live here moved to page-emergency (linked
-             via the tile below) — cuts services-hub density and consolidates
-             one canonical emergency page. -->
-        <div id="emergencyContactsSection" class="card" style="margin:0 var(--gap);">
-            <div data-action="toggleAccordion" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📞 เบอร์โทรฉุกเฉินอาคาร</span>
-                <i class="fas fa-chevron-down" style="color:#aaa;"></i>
-            </div>
-            <div class="accordion-content" style="display:none;">
-                <div id="emergencyContactsList" style="display:grid; gap:8px; margin-top:10px;"></div>
-                <div id="serviceProvidersList" style="display:grid; gap:10px; margin-top:12px;"></div>
-            </div>
-        </div>
-
-        <!-- Tile-card → page-emergency (the canonical 5-procedure flow). -->
-        <div class="card" id="emergency-procedures-tile"
-            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin:0 var(--gap);"
-            data-action="showSubPage" data-page="page-emergency">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <div style="width:50px; height:50px; background:#fee2e2; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg);">
-                    🚨
+            <!-- Admin-managed emergency contacts + service providers (accordion).
+                 The hardcoded 5-procedure accordion that used to live here moved
+                 to page-emergency (linked via the tile below). -->
+            <div id="emergencyContactsSection" class="menu-item-group">
+                <div class="menu-item" data-action="toggleAccordion">
+                    <div class="icon-box" style="background:#fee2e2; color:#dc2626;"><i class="fas fa-phone"></i></div>
+                    <span>เบอร์โทรฉุกเฉินอาคาร</span>
+                    <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
-                <div>
-                    <strong>ขั้นตอนเมื่อเกิดเหตุฉุกเฉิน</strong><br>
-                    <small style="color:#888;">ไฟไหม้ · น้ำท่วม · แผ่นดินไหว · อุบัติเหตุ</small>
+                <div class="accordion-content" style="display:none;">
+                    <div id="emergencyContactsList" style="display:grid; gap:8px;"></div>
+                    <div id="serviceProvidersList" style="display:grid; gap:10px; margin-top:12px;"></div>
                 </div>
             </div>
-            <i class="fas fa-chevron-right" style="color:#ccc;"></i>
-        </div>
-        <div class="card" style="margin:0 var(--gap);">
-            <div data-action="toggleAccordion" style="display:flex; align-items:center; gap:10px; cursor:pointer; touch-action:manipulation;">
-                <span style="flex:1; font-weight:600; font-size:var(--fs-md);">📄 เอกสารอาคาร</span>
-                <i class="fas fa-chevron-down" style="color:#aaa;"></i>
-            </div>
-            <div class="accordion-content" style="display:none; padding-top:10px;">
-                <div id="documentsList" style="display:grid; gap:10px;"></div>
-            </div>
-        </div>
 
-        </div><!-- end Section A flex wrapper -->
+            <!-- Tile → page-emergency (the canonical 5-procedure flow). -->
+            <div class="menu-item" id="emergency-procedures-tile"
+                data-action="showSubPage" data-page="page-emergency">
+                <div class="icon-box icon-red"><i class="fas fa-triangle-exclamation"></i></div>
+                <span>
+                    ขั้นตอนเมื่อเกิดเหตุฉุกเฉิน
+                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">ไฟไหม้ · น้ำท่วม · แผ่นดินไหว · อุบัติเหตุ</small>
+                </span>
+                <i class="fas fa-chevron-right arrow"></i>
+            </div>
+
+            <!-- Building documents (accordion) -->
+            <div class="menu-item-group">
+                <div class="menu-item" data-action="toggleAccordion">
+                    <div class="icon-box" style="background:#dbeafe; color:#1d4ed8;"><i class="fas fa-file-lines"></i></div>
+                    <span>เอกสารอาคาร</span>
+                    <i class="fas fa-chevron-down arrow accordion-chev"></i>
+                </div>
+                <div class="accordion-content" style="display:none;">
+                    <div id="documentsList" style="display:grid; gap:10px;"></div>
+                </div>
+            </div>
+
+        </div><!-- end Section A menu-list -->
         <div class="section-title" style="margin-top: 10px;"><span>พื้นที่ส่วนกลาง (Facilities)</span></div>
-        <div style="display:flex; flex-direction:column; gap:var(--gap-sm);">
-        <!-- Facility Booking card (Tier 3G) -->
-        <div class="card"
-            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin:0 var(--gap);"
-            data-action="showSubPage" data-page="facility-booking">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <div style="width:50px; height:50px; background:#e8f5e9; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--primary-green); font-size:var(--fs-lg);">
-                    🅿️
-                </div>
-                <div>
-                    <strong>จองพื้นที่ส่วนกลาง</strong><br>
-                    <small style="color:#888;">ที่จอดรถ · ห้องซักผ้า · ดาดฟ้า</small>
-                </div>
+        <div class="menu-list">
+            <!-- Facility Booking (Tier 3G) -->
+            <div class="menu-item" data-action="showSubPage" data-page="facility-booking">
+                <div class="icon-box" style="background:#e8f5e9; color:var(--primary-green);"><i class="fas fa-square-parking"></i></div>
+                <span>
+                    จองพื้นที่ส่วนกลาง
+                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">ที่จอดรถ · ห้องซักผ้า · ดาดฟ้า</small>
+                </span>
+                <i class="fas fa-chevron-right arrow"></i>
             </div>
-            <i class="fas fa-chevron-right" style="color:#ccc;"></i>
-        </div>
-        <!-- Checklist card (Tier 3I) -->
-        <div class="card" id="checklist-card"
-            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin:0 var(--gap);"
-            data-action="showSubPage" data-page="checklist">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <div style="width:50px; height:50px; background:#e3f2fd; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg);">
-                    🗒️
-                </div>
-                <div>
-                    <strong>ตรวจสภาพห้อง</strong><br>
-                    <small style="color:#888;">Move-In / Move-Out Checklist</small>
-                </div>
+            <!-- Checklist (Tier 3I) -->
+            <div class="menu-item" id="checklist-card" data-action="showSubPage" data-page="checklist">
+                <div class="icon-box" style="background:#e3f2fd; color:#1d4ed8;"><i class="fas fa-clipboard-check"></i></div>
+                <span>
+                    ตรวจสภาพห้อง
+                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">Move-In / Move-Out Checklist</small>
+                </span>
+                <i class="fas fa-chevron-right arrow"></i>
             </div>
-            <i class="fas fa-chevron-right" style="color:#ccc;"></i>
-        </div>
-        <div class="card"
-            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin:0 var(--gap);"
-            data-action="showSubPage" data-page="laundry-page">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <div
-                    style="width:50px; height:50px; background:var(--soft-green); border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--primary-green); font-size:var(--fs-lg);">
-                    <i class="fas fa-tshirt"></i>
-                </div>
-                <div>
-                    <strong>Smart Laundry</strong>
-                    <span style="display:inline-block; background:var(--warn); color:#fff; font-size:9px; padding:2px 6px; border-radius:8px; font-weight:bold; margin-left:6px; vertical-align:middle;">เร็ว ๆ นี้</span><br>
-                    <small style="color:#888;">เช็คสถานะเครื่องซักผ้า / อบผ้า 👕</small>
-                </div>
+            <!-- Smart Laundry -->
+            <div class="menu-item" data-action="showSubPage" data-page="laundry-page">
+                <div class="icon-box icon-green"><i class="fas fa-tshirt"></i></div>
+                <span>
+                    Smart Laundry
+                    <span style="display:inline-block; background:var(--warn); color:#fff; font-size:9px; padding:2px 6px; border-radius:8px; font-weight:bold; margin-left:6px; vertical-align:middle; flex:0 0 auto;">เร็ว ๆ นี้</span>
+                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">เช็คสถานะเครื่องซักผ้า / อบผ้า 👕</small>
+                </span>
+                <i class="fas fa-chevron-right arrow"></i>
             </div>
-            <i class="fas fa-chevron-right" style="color:#ccc;"></i>
-        </div>
-        </div><!-- end Section B Facilities wrapper -->
+        </div><!-- end Section B menu-list -->
         <div class="section-title" role="heading" aria-level="2"><span>หมวดหมู่แจ้งเรื่อง</span></div>
         <div class="menu-list">
             <div class="menu-item" data-action="showSubPage" data-page="maintenance">
