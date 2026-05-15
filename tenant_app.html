@@ -2223,7 +2223,7 @@
         <button type="button" id="map-bell-btn" data-action="openBroadcastsPanel"
             aria-label="ประกาศจากผู้ดูแล"
             style="position: absolute; top: 20px; right: 20px; z-index: 20;
-                   display: none; align-items: center; gap: 6px;
+                   display: flex; align-items: center; gap: 6px;
                    background: rgba(255,255,255,0.8); padding: 10px 14px;
                    border: none; border-radius: 30px; backdrop-filter: blur(5px);
                    cursor: pointer; font: inherit;">
@@ -7264,11 +7264,7 @@
         function _renderBellVisibility() {
             const btn = document.getElementById('map-bell-btn');
             if (!btn) return;
-            const _isPaid = _isBillPaid;
-            const hasBroadcast = _unreadBroadcastCount() > 0;
-            const hasNewBill   = (() => { const b = _taBills[0]; return b && !_isPaid(b); })();
-            const hasMarket    = _hasNewMarketItem();
-            btn.style.display = (hasBroadcast || hasNewBill || hasMarket) ? 'flex' : 'none';
+            btn.style.display = 'flex';
         }
         function _escapeBroadcastHtml(s) {
             return String(s || '')
