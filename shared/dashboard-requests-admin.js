@@ -85,7 +85,6 @@ function initMaintenancePage(){
   renderMaintenancePage();
   renderHousekeepingList();
   updateMxBadge();
-  updateMaintenanceBadge();
   subscribeMaintenanceRTDB();
   if(typeof subscribeHousekeepingRTDB === 'function') subscribeHousekeepingRTDB();
 }
