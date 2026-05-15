@@ -292,8 +292,10 @@
         h3 { font-size: var(--fs-md); }
         h4 { font-size: var(--fs-md); }
         p, label, span { font-size: inherit; }
-        /* Top-level page title — only on 5 bottom-nav pages (home/services/community/usage/profile) */
-        .page-title-top { font-size: var(--fs-xl) !important; font-weight: 700; letter-spacing: -0.01em; }
+        /* Top-level page title — only on 5 bottom-nav pages (home/services/community/usage/profile).
+           Selector qualified with `.app-bar h1` to beat the existing `.app-bar h1 { font-size: var(--fs-lg) !important }`
+           rule at line ~1616 (which has specificity (0,1,1) — we need (0,2,1) to win). */
+        .app-bar h1.page-title-top { font-size: var(--fs-xl) !important; font-weight: 700 !important; letter-spacing: -0.01em; }
 
         /* Tailwind utility overrides — ยัดเข้า 3 tier */
         .text-xs,
