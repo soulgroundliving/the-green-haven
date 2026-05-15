@@ -251,12 +251,15 @@
             --text-3xl:  clamp(28px, 11.6px + 5.18vw, 34px);   /* 28→34 */
 
             /* ═══════════════════════════════════════════════════════════
-               STRICT 3-SIZE SYSTEM — ทั้งหน้าใช้แค่ 3 ขนาดนี้
+               STRICT 3+1 SIZE SYSTEM — ทั้งหน้าใช้แค่ 3 ขนาดหลัก
+               --fs-xl ใช้เฉพาะ top-level page title (5 หน้า bottom-nav)
+               เพื่อให้มี hierarchy ระหว่าง top-level vs sub-page
                (อ้างอิงจาก rewards-shop modal hierarchy)
                ═══════════════════════════════════════════════════════════ */
             --fs-sm: clamp(11px,  8.1px + 0.91vw, 12px);   /* meta/hint/badge/nav  */
             --fs-md: clamp(13px, 10.1px + 0.91vw, 14px);   /* body/button/item     */
-            --fs-lg: clamp(17px,  8.3px + 2.73vw, 20px);   /* page title/headline  */
+            --fs-lg: clamp(17px,  8.3px + 2.73vw, 20px);   /* sub-page title       */
+            --fs-xl: clamp(21px,  9.6px + 3.55vw, 24px);   /* top-level page title */
 
             /* Fluid spacing — gutters/gaps scale with viewport */
             --gap-xs:    clamp(4px,   2.5px + 0.46vw, 6px);
@@ -287,6 +290,8 @@
         h3 { font-size: var(--fs-md); }
         h4 { font-size: var(--fs-md); }
         p, label, span { font-size: inherit; }
+        /* Top-level page title — only on 5 bottom-nav pages (home/services/community/usage/profile) */
+        .page-title-top { font-size: var(--fs-xl) !important; font-weight: 700; letter-spacing: -0.01em; }
 
         /* Tailwind utility overrides — ยัดเข้า 3 tier */
         .text-xs,
@@ -2435,7 +2440,7 @@
             </button>
             <div style="padding-right: 120px;">
                 <div class="date-display text-[10px]" id="current-date">--/--/--</div>
-                <h1 id="user-greeting" class="text-xl font-bold">สวัสดีครับ คุณลูกบ้าน</h1>
+                <h1 id="user-greeting" class="page-title-top font-bold">สวัสดีครับ คุณลูกบ้าน</h1>
                 <p id="time-greet" class="text-xs mt-1 opacity-80">ยินดีต้อนรับกลับบ้านครับ 🌿</p>
             </div>
         </div>
@@ -2565,7 +2570,7 @@
 
     <div id="services" class="page">
         <div class="app-bar">
-            <h1>การดูแลห้องพัก</h1>
+            <h1 class="page-title-top">การดูแลห้องพัก</h1>
             <p>เราพร้อมดูแลคุณในทุกรายละเอียดครับ ✨</p>
         </div>
 
@@ -2925,7 +2930,7 @@
 
     <div id="community" class="page">
         <div class="app-bar">
-            <h1>ชุมชน</h1>
+            <h1 class="page-title-top">ชุมชน</h1>
             <p>แบ่งปันและร่วมกันสร้างสังคมที่อบอุ่น 🤝</p>
         </div>
 
@@ -2977,7 +2982,7 @@
     <div id="usage" class="page">
         <div class="app-bar" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
             <div>
-                <h1 style="margin:0;">การใช้งาน</h1>
+                <h1 class="page-title-top" style="margin:0;">การใช้งาน</h1>
                 <p style="margin:4px 0 0; color: var(--text-muted);">สรุปบิล &amp; การใช้ประจำเดือน</p>
             </div>
             <div id="usage-room-badge"
@@ -3203,7 +3208,7 @@
             <div id="current-avatar"
                 style="width:80px; height:80px; background:var(--soft-green); border-radius:50%; margin:0 auto 10px; border:3px solid white; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg);">
                 🌿</div>
-            <h1 id="display-name" style="margin:0;">คุณลูกบ้าน</h1>
+            <h1 id="display-name" class="page-title-top" style="margin:0;">คุณลูกบ้าน</h1>
             <p id="profile-room-display" style="margin:5px 0; font-size:var(--fs-md); opacity:0.6;">ห้อง — | —</p>
         </div>
 
