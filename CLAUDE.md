@@ -440,6 +440,60 @@ grep -rn "= onSnapshot\b" shared/dashboard*.js shared/checklist-manager.js
 
 **Sibling diagnostic:** noisy `console.log` inside the onSnapshot handler made the leak visible. Once the leak was fixed, the per-event log added no diagnostic value (only fired on real changes which the UI already reflects). Per-init/per-snapshot logs in setupXxx functions are usually the *tail* of a stacking bug — drop them once the stacking is closed, not before.
 
+### W. `!important` doesn't beat higher specificity — check the cascade, don't just stamp `!important`
+
+Two cascade conflicts in tenant_app.html (2026-05-15 evening (4)) shipped through static review and were only caught by live `getComputedStyle()` on the deployed page:
+
+1. P1.5 typography — `.page-title-top { font-size: var(--fs-xl) !important }` (specificity 0,1,0) lost to existing `.app-bar h1, .app-bar h2 { font-size: var(--fs-lg) !important }` (specificity 0,1,1). Both had `!important`, so higher specificity won. Result: top-level h1s stayed at 20px instead of 24px. Fix: qualify the selector to `.app-bar h1.page-title-top` (0,2,1) so it actually beats the legacy rule.
+2. P2.13 power-card — inline `style="border-left: 4px solid var(--clay)"` (no `!important`) lost to `.card { border-left: 1px solid rgba(0,0,0,0.04) !important }`. Clay accent stripe never showed; only the 1px rgba border. Fix: add `!important` to the inline declaration too — inline styles only win when there are no `!important` rules at all.
+
+**Rule:** when adding a new style that overrides an existing one in this codebase, `!important` is a starting move, not a finishing one. Always verify on the deployed page with:
+
+```js
+// In Chrome MCP / DevTools after page load:
+getComputedStyle(document.querySelector('YOUR_SELECTOR')).propertyName
+// Then if wrong:
+[...document.styleSheets]
+  .flatMap(s => { try { return [...s.cssRules]; } catch { return []; } })
+  .filter(r => r.selectorText && el.matches(r.selectorText) && r.style[propertyName])
+  .map(r => ({ sel: r.selectorText, val: r.style[propertyName], imp: r.style.getPropertyPriority(propertyName) }))
+```
+
+This trace tells you the cascade order. If multiple `!important` rules match, the one with HIGHER selector specificity wins. Specificity primer: inline > id-selector > class/attribute/pseudo-class > element. `.a .b` beats `.b !important`. `.a h1` beats `.h1-class !important`.
+
+**Pre-commit habit:** for any new style rule meant to override an existing one, predict the live computed value out loud before pushing. If the prediction is "well, I added !important so it should win" — that's a yellow flag. Specificity check first.
+
+Related: anti-pattern Q (native dialogs don't screenshot) and S (LIFF multi-tab) — all of these only surface when the deployed page is actually loaded and inspected, not from source review.
+
+### X. `innerHTML = ""` is a footgun — every assignment needs a non-empty fallback
+
+Three independent dead-zone bugs in tenant_app.html (2026-05-15 evening (4) scroll-reduction batch) all traced to the same root pattern: code wrote `el.innerHTML = ""` (or equivalent: `array.map(...).join("")` with empty array, or string-concat of optional values that all turned out empty) and the slot went dark with no fallback.
+
+Three sites caught:
+
+1. `renderBillsList` else branch: `if (window.GhEmptyState) { el.innerHTML = ... } else { el.innerHTML = ''; }` — race during init when GhEmptyState helper hadn't loaded yet (script tag order) → empty slot forever.
+2. `renderBillsList` main render path: `el.innerHTML = validBills.slice(0,12).map(b => ...).join('')` — when `_taBills` had items but all were orphan stubs (no `totalAmount` / no charges / no meter), `validBills` was `[]` and the join returned `""`.
+3. `showBillsSkeleton`: unconditionally overwrote the static empty-state markup in the HTML with 3 `gh-skeleton` cards, even when no fetch was about to fire (e.g. admin preview path that never gets LIFF claims). The skeletons then sat there forever with no real data to replace them — animated dead-zone.
+
+**Rule:** every `el.innerHTML = X` is a contract that says "I am now responsible for this slot's content." If `X` can be empty, you must EITHER:
+
+a. Branch before the assignment and render an empty state instead of an empty string.
+b. Guard the function with `if (!list.children.length)` so you don't wipe content that's still good (idempotent overwrite).
+c. Chain a fallback in the assignment: `el.innerHTML = primaryMarkup || fallbackMarkup` where fallback is a literal non-empty string of empty-state HTML.
+
+Detection recipe — anywhere you find `el.innerHTML = ...` in code, ask:
+
+- Can the right-hand side resolve to an empty string?
+- If the function runs before the helper it depends on is loaded?
+- If the data array is non-empty but filters down to empty?
+- If the function runs more than once (idempotency)?
+
+If any "yes", you need a fallback.
+
+**Detection signal in QA:** a card with no border-bottom-content, header above but blank below, or a UI element that vanishes after page reload but came back on force-refresh — all classic `innerHTML = ''` symptoms. Walk every assignment in the relevant render function before declaring it fixed.
+
+Related: anti-pattern N (onSnapshot must have error callback) — same family of "silent failure leaves slot dark" bugs. Both are visible only on the deployed page, not in source.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
