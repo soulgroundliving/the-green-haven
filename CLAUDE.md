@@ -362,6 +362,52 @@ Fix pattern when drift is already shipped:
 
 Anti-pattern K (defined ≠ wired) is the function-level cousin of this. Same instinct: grep for callers/readers before assuming a value/function flows where you expect.
 
+### U. `_onLiffClaimsReady(fn)` + idempotency guard + claims-not-yet-set = stale subscription forever
+
+`_onLiffClaimsReady(fn)` registers `fn` on BOTH `authReady` AND `liffLinked` events (plus immediate if already ready). The `authReady` event fires TWICE in LIFF:
+1. First when `signInAnonymously` completes — **NO** `token.building` / `token.room` claims yet
+2. Second after `signInWithCustomToken` from `liffSignIn` CF — claims now present
+
+`liffLinked` fires once, after the 2nd `authReady`. The whole point of registering on both is to catch whichever fires last and re-run with proper claims.
+
+**The trap:** subscribe functions typically self-guard with `if (_xxxUnsub) return;` for idempotency. But when:
+1. First `authReady` (anonymous) fires → `_xxxUnsub = null`, function proceeds with `_taBuilding = ''`
+2. `_xxxUnsub` is SET to a stale subscription (wrong building, may even fail with `permission-denied`)
+3. `liffLinked` fires with real claims → guard `if (_xxxUnsub) return;` skips re-subscription
+4. Stale subscription persists for entire session
+
+This bit twice:
+- `_subscribeBroadcasts` (2026-05-15, `95dc4a1`) — bell never showed in LIFF
+- `_subscribePaymentConfig` (2026-05-15, `ade5648`) — Nest tenants got `buildings/rooms` PromptPay data
+
+**Rule:** every subscribe function wired through `_onLiffClaimsReady` MUST guard claim presence as the FIRST check, BEFORE setting its `_xxxUnsub`:
+
+```js
+function _subscribeXxx() {
+    if (_xxxUnsub) return;                  // idempotency
+    if (!window.firebase?.firestore) return; // SDK readiness
+    if (!_taBuilding) return;                // ← REQUIRED — wait for claims
+    // ... only NOW can we set _xxxUnsub
+    _xxxUnsub = fs.onSnapshot(query, ..., err => {
+        console.warn('[xxx] subscribe failed:', err?.message || err);
+        // Reset on permission-denied so liffLinked retry can resubscribe
+        if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+            _xxxUnsub = null;
+        }
+    });
+}
+```
+
+Audit recipe — find every `_onLiffClaimsReady` wiring and verify each callee has the guard:
+
+```bash
+grep -n "_onLiffClaimsReady(" tenant_app.html | grep -v "function _onLiff"
+# For each callee, open the function — it MUST have `if (!_taBuilding) return;`
+# OR equivalent claim guard (some need _taRoom, some need _taLease, etc.)
+```
+
+Related anti-pattern: this is a cousin of N (onSnapshot must have error callback). The error callback's job here is double — surface failures AND reset the unsub so retry can succeed. A bare `console.warn` swallows both halves of the recovery.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
