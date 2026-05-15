@@ -9717,6 +9717,18 @@
                 if (hasMeter) return true;      // has meter readings — synth-able
                 return false;                   // orphan stub
             });
+            // If everything filters out (orphan stubs only, or a transient sync state
+            // where _taBills has placeholders but no real bills), fall through to the
+            // same empty-state UX rather than wiping innerHTML to "".
+            if (!validBills.length) {
+                if (window.GhEmptyState) {
+                    el.innerHTML = window.GhEmptyState.html('bills', {
+                        title: 'ยังไม่มีบิล',
+                        text: 'เมื่อมีบิลใหม่จะแสดงที่นี่',
+                    });
+                }
+                return;
+            }
             el.innerHTML = validBills.slice(0,12).map(b => {
                 const m = THAI_MONTHS_SHORT[b.month] || b.month || '?';
                 const yr = window.YearUtils.toBE(b.year) || '?';
