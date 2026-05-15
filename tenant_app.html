@@ -2459,21 +2459,21 @@
 
     <div id="home" class="page">
         <div class="app-bar" style="position:relative;">
+            <button type="button" data-action="showSubPage" data-page="world-map-page" aria-label="กลับไปหน้าแผนที่"
+                style="position:absolute; left:16px; top:24px; width:36px; height:36px; background:transparent; color:var(--primary-green); border:1px solid var(--border); border-radius:50%; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; z-index:2;">
+                <i class="fas fa-map" aria-hidden="true"></i>
+            </button>
             <button id="nav-smart-key-btn" data-action="showSubPage" data-page="smart-key-page"
                 style="position:absolute; right:16px; top:24px; background:var(--primary-green); color:white; border:none; border-radius:12px; padding:8px 12px; font-weight:bold; box-shadow:0 4px 10px rgba(123, 166, 126, 0.4); cursor:pointer; display:inline-flex; align-items:center; gap:6px; z-index:2;">
                 <i class="fas fa-qrcode"></i><span>Smart Key</span>
                 <span style="position:absolute; top:-6px; right:-6px; background:var(--warn); color:#fff; font-size:8px; padding:2px 5px; border-radius:6px; font-weight:bold;">SOON</span>
             </button>
-            <div style="padding-right: 120px;">
+            <div style="padding-left: 52px; padding-right: 120px;">
                 <div class="date-display text-[10px]" id="current-date">--/--/--</div>
                 <h1 id="user-greeting" class="page-title-top font-bold">สวัสดีครับ คุณลูกบ้าน</h1>
                 <p id="time-greet" class="text-xs mt-1 opacity-80">ยินดีต้อนรับกลับบ้านครับ 🌿</p>
             </div>
         </div>
-        <button type="button" data-action="showSubPage" data-page="world-map-page"
-            style="display:inline-flex; align-items:center; gap:8px; background:transparent; color:var(--primary-green); border:1px solid var(--border); padding:8px 14px; border-radius:var(--radius-pill,999px); margin:12px 15px; font-family:inherit; font-size:var(--fs-sm); font-weight:600; cursor:pointer;">
-            <i class="fas fa-arrow-left" aria-hidden="true"></i> กลับไปหน้าแผนที่
-        </button>
 
         <div class="section-title" role="heading" aria-level="2"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
         <div id="community-filter-pills" style="display:flex; gap:8px; padding:0 15px 10px; flex-wrap:wrap;">
@@ -2600,7 +2600,8 @@
             <p>เราพร้อมดูแลคุณในทุกรายละเอียดครับ ✨</p>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:var(--gap);">
+        <div class="section-title" role="heading" aria-level="2"><span>ข้อมูลอาคาร & เอกสาร</span></div>
+        <div style="display:flex; flex-direction:column; gap:var(--gap-sm);">
 
         <!-- ported from tenant.html: displayBuildingInternetStatus -->
         <div id="internetStatusSection" class="card" style="display:none; margin:0 var(--gap);">
@@ -2700,11 +2701,12 @@
             </div>
         </div>
 
-        </div><!-- end accordion flex wrapper -->
+        </div><!-- end Section A flex wrapper -->
         <div class="section-title" style="margin-top: 10px;"><span>พื้นที่ส่วนกลาง (Facilities)</span></div>
+        <div style="display:flex; flex-direction:column; gap:var(--gap-sm);">
         <!-- Facility Booking card (Tier 3G) -->
         <div class="card"
-            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;"
+            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin:0 var(--gap);"
             data-action="showSubPage" data-page="facility-booking">
             <div style="display:flex; align-items:center; gap:15px;">
                 <div style="width:50px; height:50px; background:#e8f5e9; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--primary-green); font-size:var(--fs-lg);">
@@ -2719,7 +2721,7 @@
         </div>
         <!-- Checklist card (Tier 3I) -->
         <div class="card" id="checklist-card"
-            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;"
+            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin:0 var(--gap);"
             data-action="showSubPage" data-page="checklist">
             <div style="display:flex; align-items:center; gap:15px;">
                 <div style="width:50px; height:50px; background:#e3f2fd; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:var(--fs-lg);">
@@ -2733,7 +2735,7 @@
             <i class="fas fa-chevron-right" style="color:#ccc;"></i>
         </div>
         <div class="card"
-            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;"
+            style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin:0 var(--gap);"
             data-action="showSubPage" data-page="laundry-page">
             <div style="display:flex; align-items:center; gap:15px;">
                 <div
@@ -2748,7 +2750,8 @@
             </div>
             <i class="fas fa-chevron-right" style="color:#ccc;"></i>
         </div>
-        <div class="section-title" role="heading" aria-level="2">หมวดหมู่แจ้งเรื่อง</div>
+        </div><!-- end Section B Facilities wrapper -->
+        <div class="section-title" role="heading" aria-level="2"><span>หมวดหมู่แจ้งเรื่อง</span></div>
         <div class="menu-list">
             <div class="menu-item" data-action="showSubPage" data-page="maintenance">
                 <div class="icon-box icon-gold"><i class="fas fa-tools"></i></div>
