@@ -4961,9 +4961,13 @@
         //   nest-day-clear.webp, nest-day-cloudy.webp, nest-rain.webp,
         //   nest-night-clear.webp, nest-night-rain.webp
         // Fallback gradients กรณีไฟล์ไม่มี — ไม่ทำให้หน้าพัง
+        // Hoist Intl formatters — `new Intl.DateTimeFormat(...)` is expensive (~ms each
+        // on mobile). Called per world-map refresh tick + per ticket render.
+        const _BKK_HOUR_FMT = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Bangkok', hour: 'numeric', hour12: false });
+        const _TH_DATE_FMT = new Intl.DateTimeFormat('th-TH');
         function _bangkokHour() {
             try {
-                const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Bangkok', hour: 'numeric', hour12: false }).formatToParts(new Date());
+                const parts = _BKK_HOUR_FMT.formatToParts(new Date());
                 const h = parseInt(parts.find(p => p.type === 'hour').value, 10);
                 return isNaN(h) ? new Date().getHours() : h;
             } catch (_) { return new Date().getHours(); }
@@ -5986,75 +5990,58 @@
                 free:    { bg: '#F0FDF4', text: '#16A34A', label: '🎁' }
             };
 
-            filtered.forEach(item => {
+            // Build full list as innerHTML — was 20 items × ~10 createElement +
+            // style.cssText writes (~200 style parses, 20-40ms). Now a single innerHTML
+            // assignment, with event delegation on the container for button clicks.
+            const myUid = window._authUid;
+            const cards = filtered.map(item => {
                 const col = catColors[item.category] || catColors.item;
-                const isFree = item.category === 'free';
+                const isFree   = item.category === 'free';
                 const priceText = isFree ? 'ฟรี' : '฿' + (item.price || 0);
                 const priceBg  = isFree ? '#F0FDF4' : '#FFF7ED';
                 const priceCol = isFree ? '#16A34A' : '#D97706';
-                const isOwn    = item.ownerUid === window._authUid;
+                const isOwn    = item.ownerUid === myUid;
+                const safeId   = _esc(item.id);
+                const safeTitle = _esc(item.title || '');
+                const imageHtml = item.imageData
+                    ? `<img src="${_esc(item.imageData)}" alt="${safeTitle}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`
+                    : `<span style="font-size:2.2rem;">${col.label}</span>`;
+                const roomHtml = (item.showRoom && item.room)
+                    ? `<span style="font-size:var(--fs-xs);color:#888;">ห้อง ${_esc(item.room)}</span>`
+                    : '';
+                const actionLabel = item.category === 'service' ? '📞 นัดหมาย' : isFree ? '🙋 ขอรับ' : '💬 สนใจ';
+                const actionBtn = isOwn
+                    ? `<button type="button" data-mkt-act="close" data-mid="${safeId}" style="width:100%;padding:7px;background:#f3f4f6;color:#555;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;touch-action:manipulation;">✅ ปิดประกาศ</button>`
+                    : `<button type="button" class="btn-main" data-mkt-act="contact" data-mid="${safeId}" style="width:100%;padding:7px;font-size:var(--fs-xs);margin:0;touch-action:manipulation;">${actionLabel}</button>`;
+                return `<div class="card" style="margin:0;padding:0;overflow:hidden;">
+                    <div style="height:100px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">${imageHtml}</div>
+                    <div style="padding:10px;">
+                        <div style="font-weight:700;font-size:var(--fs-sm);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:6px;line-height:1.3;">${safeTitle}</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                            <span style="background:${priceBg};color:${priceCol};font-weight:700;font-size:var(--fs-xs);padding:2px 8px;border-radius:6px;">${_esc(priceText)}</span>
+                            ${roomHtml}
+                        </div>
+                        ${actionBtn}
+                    </div>
+                </div>`;
+            }).join('');
+            container.innerHTML = cards;
 
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.style.cssText = 'margin:0;padding:0;overflow:hidden;';
-
-                // Image / placeholder
-                const imgDiv = document.createElement('div');
-                imgDiv.style.cssText = 'height:100px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;';
-                if (item.imageData) {
-                    const img = document.createElement('img');
-                    img.src = item.imageData;
-                    img.alt = item.title || '';
-                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-                    imgDiv.appendChild(img);
-                } else {
-                    const emo = document.createElement('span');
-                    emo.style.cssText = 'font-size:2.2rem;';
-                    emo.textContent = col.label;
-                    imgDiv.appendChild(emo);
-                }
-                card.appendChild(imgDiv);
-
-                const body = document.createElement('div');
-                body.style.cssText = 'padding:10px;';
-
-                const titleEl = document.createElement('div');
-                titleEl.style.cssText = 'font-weight:700;font-size:var(--fs-sm);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:6px;line-height:1.3;';
-                titleEl.textContent = item.title || '';
-                body.appendChild(titleEl);
-
-                const meta = document.createElement('div');
-                meta.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;';
-                const badge = document.createElement('span');
-                badge.style.cssText = `background:${priceBg};color:${priceCol};font-weight:700;font-size:var(--fs-xs);padding:2px 8px;border-radius:6px;`;
-                badge.textContent = priceText;
-                meta.appendChild(badge);
-                if (item.showRoom && item.room) {
-                    const roomEl = document.createElement('span');
-                    roomEl.style.cssText = 'font-size:var(--fs-xs);color:#888;';
-                    roomEl.textContent = 'ห้อง ' + item.room;
-                    meta.appendChild(roomEl);
-                }
-                body.appendChild(meta);
-
-                if (isOwn) {
-                    const closeBtn = document.createElement('button');
-                    closeBtn.style.cssText = 'width:100%;padding:7px;background:#f3f4f6;color:#555;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;touch-action:manipulation;';
-                    closeBtn.textContent = '✅ ปิดประกาศ';
-                    closeBtn.onclick = () => markMarketClosed(item.id);
-                    body.appendChild(closeBtn);
-                } else {
-                    const contactBtn = document.createElement('button');
-                    contactBtn.className = 'btn-main';
-                    contactBtn.style.cssText = 'width:100%;padding:7px;font-size:var(--fs-xs);margin:0;touch-action:manipulation;';
-                    contactBtn.textContent = item.category === 'service' ? '📞 นัดหมาย' : isFree ? '🙋 ขอรับ' : '💬 สนใจ';
-                    contactBtn.onclick = () => contactSeller(item);
-                    body.appendChild(contactBtn);
-                }
-
-                card.appendChild(body);
-                container.appendChild(card);
-            });
+            // Single delegated listener for all buttons — replaces 20× onclick assignments
+            if (!container._mktDelegated) {
+                container.addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-mkt-act]');
+                    if (!btn) return;
+                    const id = btn.dataset.mid;
+                    const act = btn.dataset.mktAct;
+                    if (act === 'close') return markMarketClosed(id);
+                    if (act === 'contact') {
+                        const it = _marketItems.find(i => i.id === id);
+                        if (it) contactSeller(it);
+                    }
+                });
+                container._mktDelegated = true;
+            }
 
             renderMyListings();
         }
@@ -6166,7 +6153,10 @@
                 const file = e.target.files?.[0];
                 if (!file) return;
                 try {
-                    _marketImageData = await compressImage(file, 400, 0.75);
+                    // Pass File directly — compressImage handles Blob via createObjectURL
+                    // (avoids FileReader→base64 buffer). Fix: signature is
+                    // (source, maxW, maxH, quality) — was passing 0.75 as maxHeight.
+                    _marketImageData = await compressImage(file, 400, 400, 0.75);
                     if (prev) { prev.src = _marketImageData; prev.style.display = 'block'; }
                     if (ph) ph.style.display = 'none';
                 } catch(err) { console.warn('compress market image:', err); }
@@ -6888,10 +6878,28 @@
             if (preview) preview.style.display = 'none';
         }
 
-        async function compressImage(base64Data, maxWidth = 1280, maxHeight = 1280, quality = 0.75) {
+        // Accepts a base64 string (legacy) OR a File/Blob (preferred). Passing a Blob
+        // avoids the FileReader→base64 round-trip that held 3-5x file size in main-
+        // thread heap simultaneously (file + base64 string + decoded image + canvas).
+        // With createObjectURL the browser keeps the bytes in native memory, decoded
+        // straight to GPU/canvas, then revoked.
+        async function compressImage(source, maxWidth = 1280, maxHeight = 1280, quality = 0.75) {
             return new Promise(resolve => {
+                let url = null;
+                let revoke = false;
+                const fallback = () => (typeof source === 'string') ? source : '';
                 try {
+                    if (typeof source === 'string') {
+                        url = source;
+                    } else if (source instanceof Blob) {
+                        url = URL.createObjectURL(source);
+                        revoke = true;
+                    } else {
+                        resolve(fallback());
+                        return;
+                    }
                     const img = new Image();
+                    const cleanup = () => { if (revoke) URL.revokeObjectURL(url); };
                     img.onload = function () {
                         let w = img.width, h = img.height;
                         if (w > maxWidth || h > maxHeight) {
@@ -6901,11 +6909,15 @@
                         const canvas = document.createElement('canvas');
                         canvas.width = w; canvas.height = h;
                         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        cleanup();
                         resolve(canvas.toDataURL('image/jpeg', quality));
                     };
-                    img.onerror = () => resolve(base64Data);
-                    img.src = base64Data;
-                } catch (e) { resolve(base64Data); }
+                    img.onerror = () => { cleanup(); resolve(fallback()); };
+                    img.src = url;
+                } catch (e) {
+                    if (revoke && url) URL.revokeObjectURL(url);
+                    resolve(fallback());
+                }
             });
         }
 
@@ -6937,7 +6949,7 @@
             const statusText = { pending:'⏳ รอดำเนินการ', inprogress:'🔧 กำลังซ่อม', done:'✅ เสร็จสิ้น' };
             const statusColor = { pending:'#f59e0b', inprogress:'#3b82f6', done:'#22c55e' };
             container.innerHTML = tickets.map(t => {
-                const date = t.submittedDate ? new Date(t.submittedDate).toLocaleDateString('th-TH') : (t.date || '');
+                const date = t.submittedDate ? _TH_DATE_FMT.format(new Date(t.submittedDate)) : (t.date || '');
                 const status = t.status || 'pending';
                 return `<div style="background:white;border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid #f0f0f0;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -6981,18 +6993,16 @@
                 submittedDate: new Date().toISOString()
             };
 
-            // Handle photo upload
+            // Handle photo upload — pass File directly to compressImage (avoids
+            // FileReader→base64 round-trip that briefly held 3-5x file size in heap).
             if (photoInput && photoInput.files && photoInput.files[0]) {
                 const file = photoInput.files[0];
-                const reader = new FileReader();
-                reader.onload = async e => {
-                    ticket.beforePhoto = await compressImage(e.target.result, 1280, 1280, 0.75);
+                compressImage(file, 1280, 1280, 0.75).then(b64 => {
+                    ticket.beforePhoto = b64;
                     ticket.photoFileName = file.name;
                     _saveMaintenanceTicket(ticket);
                     _afterMaintenanceSave(event.target, btn);
-                };
-                reader.onerror = () => { _saveMaintenanceTicket(ticket); _afterMaintenanceSave(event.target, btn); };
-                reader.readAsDataURL(file);
+                }).catch(() => { _saveMaintenanceTicket(ticket); _afterMaintenanceSave(event.target, btn); });
             } else {
                 _saveMaintenanceTicket(ticket);
                 _afterMaintenanceSave(event.target, btn);
@@ -7225,7 +7235,7 @@
         function _renderBellVisibility() {
             const btn = document.getElementById('map-bell-btn');
             if (!btn) return;
-            const _isPaid = (b) => window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid');
+            const _isPaid = _isBillPaid;
             const hasBroadcast = _unreadBroadcastCount() > 0;
             const hasNewBill   = (() => { const b = _taBills[0]; return b && !_isPaid(b); })();
             const hasMarket    = _hasNewMarketItem();
@@ -8107,44 +8117,43 @@
         function _renderRewardsList() {
             const container = document.getElementById('rewards-list');
             if (!container) return;
-            container.innerHTML = '';
             if (!_rewardsCache.length) {
-                const empty = document.createElement('div');
-                empty.className = 'text-center text-xs text-gray-400 py-8';
-                empty.textContent = 'ยังไม่มีของรางวัลในขณะนี้';
-                container.appendChild(empty);
+                container.innerHTML = '<div class="text-center text-xs text-gray-400 py-8">ยังไม่มีของรางวัลในขณะนี้</div>';
                 return;
             }
-            _rewardsCache.forEach(r => {
-                const card = document.createElement('div');
-                card.className = 'p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition';
-                const left = document.createElement('div');
-                left.className = 'flex items-center gap-4';
-                const icon = document.createElement('span');
-                icon.className = 'text-3xl';
-                icon.textContent = r.icon || '🎁';
-                const info = document.createElement('div');
-                const title = document.createElement('p');
-                title.className = 'font-bold text-sm';
-                title.textContent = r.name || '(unnamed)';
-                const cost = document.createElement('p');
-                cost.className = 'text-[10px] text-gray-400';
-                cost.textContent = `ใช้ ${Number(r.cost || 0).toLocaleString()} Points`;
-                info.appendChild(title); info.appendChild(cost);
-                if (r.note) {
-                    const note = document.createElement('p');
-                    note.className = 'text-[9px] text-orange-500 font-bold';
-                    note.textContent = r.note;
-                    info.appendChild(note);
-                }
-                left.appendChild(icon); left.appendChild(info);
-                const btn = document.createElement('button');
-                btn.className = 'bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition';
-                btn.textContent = 'แลก';
-                btn.addEventListener('click', () => redeemReward(btn, r.name, Number(r.cost || 0), r.id));
-                card.appendChild(left); card.appendChild(btn);
-                container.appendChild(card);
-            });
+            // innerHTML template + one delegated listener — replaces per-button
+            // addEventListener that leaked N references on every Firestore update
+            // (innerHTML='' wipes DOM but leaves detached listener refs).
+            container.innerHTML = _rewardsCache.map(r => {
+                const id = _esc(r.id);
+                const name = _esc(r.name || '(unnamed)');
+                const icon = _esc(r.icon || '🎁');
+                const cost = Number(r.cost || 0);
+                const noteHtml = r.note
+                    ? `<p class="text-[9px] text-orange-500 font-bold">${_esc(r.note)}</p>`
+                    : '';
+                return `<div class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">${icon}</span>
+                        <div>
+                            <p class="font-bold text-sm">${name}</p>
+                            <p class="text-[10px] text-gray-400">ใช้ ${cost.toLocaleString()} Points</p>
+                            ${noteHtml}
+                        </div>
+                    </div>
+                    <button type="button" data-reward-id="${id}" data-reward-cost="${cost}" data-reward-name="${name}"
+                            class="bg-[#2d8653] text-white px-5 py-2 rounded-xl text-xs font-bold active:scale-90 transition">แลก</button>
+                </div>`;
+            }).join('');
+
+            if (!container._rewardsDelegated) {
+                container.addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-reward-id]');
+                    if (!btn) return;
+                    redeemReward(btn, btn.dataset.rewardName, Number(btn.dataset.rewardCost), btn.dataset.rewardId);
+                });
+                container._rewardsDelegated = true;
+            }
         }
         // Auto-subscribe on app ready (rewards visible to all buildings, not Nest-only)
         window.addEventListener('authReady', _subscribeRewards);
@@ -8361,7 +8370,10 @@
         }
 
         // Render "วิธีสะสมคะแนน" (earning guide) from SSoT — EARNING_SOURCES + RENT_POINT_TIERS.
+        // Content is purely from constants — render once + skip rebuilds on every points update.
+        let _earningGuideRendered = false;
         function _renderEarningGuide() {
+            if (_earningGuideRendered) return;
             const el = document.getElementById('earning-guide-list');
             if (!el || !window.GamificationRules) return;
             const R = window.GamificationRules;
@@ -8388,12 +8400,16 @@
                     <span class="text-xs font-bold text-[#2d8653]">${s.display}</span>
                 </div>`;
             }).join('');
+            _earningGuideRendered = true;
         }
 
         // Render "ภารกิจเร่งด่วน" (urgent quests) from SSoT URGENT_QUESTS.
         // Only fixed set of border colors to keep Tailwind JIT-safe.
+        // Static from constants — render once.
         const URGENT_QUEST_BORDER = { orange: 'border-orange-400', green: 'border-green-400', blue: 'border-blue-400', red: 'border-red-400' };
+        let _urgentQuestsRendered = false;
         function _renderUrgentQuests() {
+            if (_urgentQuestsRendered) return;
             const el = document.getElementById('urgent-quests-list');
             if (!el || !window.GamificationRules) return;
             el.innerHTML = window.GamificationRules.URGENT_QUESTS.map(q => {
@@ -8406,13 +8422,19 @@
                     <button class="bg-[#2d8653] text-white text-[10px] px-4 py-1.5 rounded-full font-bold" disabled title="Coming soon">รับ ${q.points} Pts</button>
                 </div>`;
             }).join('');
+            _urgentQuestsRendered = true;
         }
 
         // Render the "ระดับในระบบ" legend from SSoT LEVEL_TIERS. Current tier highlighted.
+        // Re-render only when current tier id changes — points within same tier
+        // don't need a full DOM rebuild.
+        let _lastRenderedTierId = null;
         function _renderTierLegend(pts) {
             const el = document.getElementById('tier-legend');
             if (!el || !window.GamificationRules) return;
             const lp = window.GamificationRules.getLevelProgress(pts);
+            if (lp.tier?.id === _lastRenderedTierId) return;
+            _lastRenderedTierId = lp.tier?.id || null;
             const rows = window.GamificationRules.LEVEL_TIERS.map(t => {
                 const range = t.max === Infinity
                     ? `${t.min.toLocaleString()}+ Pts`
@@ -8517,6 +8539,10 @@
         }
 
         let _taRoom = '', _taBuilding = '', _taLease = null, _taTenant = null;
+        // Module-level helper — was declared as inline closure in 5+ places, allocating
+        // a new arrow function on every render call. Function declaration (not const)
+        // so the binding is fully hoisted and callable from earlier-defined functions.
+        function _isBillPaid(b) { return window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid'); }
         let _taBills = [], _taPayments = [], _taCurrentBill = null;
         let _slipBase64 = null;
         // Default true so checkDailyLogin() is always suppressed until applyBuildingVisibility()
@@ -9542,7 +9568,7 @@
             if (section) section.style.display = '';
             // SSoT paid-check via BillStore.isPaid — survives bills that have paidAt
             // but no status field, and is case-insensitive on the status string.
-            const _isPaid = (b) => window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid');
+            const _isPaid = _isBillPaid;
             const latest = _taBills[0];
             _taCurrentBill = latest;
             const amtEl = document.getElementById('current-bill-amount');
@@ -10696,14 +10722,13 @@
 
         // ---- NAV BADGES ----
         function updateNavBadges() {
-            const _isPaid = (b) => window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid');
+            const _isPaid = _isBillPaid;
             const latestBill = _taBills[0];
             const billBadge = document.getElementById('nav-badge-bills');
             if (billBadge) {
                 billBadge.style.display = (latestBill && !_isPaid(latestBill)) ? 'block' : 'none';
             }
-            let tickets = [];
-            try { tickets = JSON.parse(localStorage.getItem('tenant_maintenance_tickets') || '[]'); } catch(e) {}
+            const tickets = (typeof getMaintenanceTickets === 'function') ? getMaintenanceTickets() : [];
             const pendingTix = tickets.filter(t => t.status === 'pending' || t.status === 'inprogress').length;
             const svcBadge = document.getElementById('nav-badge-services');
             if (svcBadge) {
@@ -10722,7 +10747,7 @@
                 const found = _taBills.find(b => (b.id||b.billId) === billId);
                 if (found) _taCurrentBill = found;
             } else if (!_taCurrentBill) {
-                const _isPaid = (b) => window.BillStore?.isPaid?.(b) ?? (b?.status === 'paid');
+                const _isPaid = _isBillPaid;
                 _taCurrentBill = _taBills.find(b => !_isPaid(b)) || _taBills[0] || null;
             }
             // Auto-redirect to receipt if bill already paid
