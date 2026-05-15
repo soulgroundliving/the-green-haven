@@ -12555,7 +12555,7 @@
             'กด OK เพื่อยินยอม'
           );
           if (!ok) {
-            statusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">ยังไม่ยินยอม — กลับมากดอีกครั้งเมื่อพร้อม</div>';
+            if (typeof goBackToService === 'function') goBackToService();
             return;
           }
           localStorage.setItem(_consentKey, '1');
@@ -12794,25 +12794,13 @@
       const _origSSP_cl = window.showSubPage;
       window.showSubPage = function(page) {
         if (page === 'checklist') {
-          // Hide all pages and show checklist. Must match the canonical
-          // showSubPage pattern (line ~4757): the CSS rule `.page { display:none }`
-          // means `style.display = ''` resolves to none — must set 'block'
-          // explicitly AND add `.active` class (anti-pattern C).
-          document.querySelectorAll('.page').forEach(p => {
-            p.classList.remove('active');
-            p.style.display = 'none';
-            p.style.pointerEvents = 'none';
-          });
-          const target = document.getElementById('checklist');
-          if (target) {
-            target.classList.add('active');
-            target.style.display = 'block';
-            target.style.pointerEvents = 'auto';
-            target.style.zIndex = '20';
-          }
-          // Hide bottom nav (matches canonical sub-page pattern)
-          const _navBar = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
-          if (_navBar) _navBar.style.display = 'none';
+          // Delegate page swap to canonical showSubPage (line ~4773). This is
+          // the same pattern facility-booking uses at line ~12419. The canonical
+          // path correctly updates `_currentPageEl` so subsequent navigation
+          // hides the checklist; doing the swap inline here leaves the tracker
+          // pointing at the prior page → checklist bleeds under every page
+          // after first open (anti-pattern G, 2026-05-15 incident).
+          if (_origSSP_cl) _origSSP_cl(page);
 
           // Show loading immediately so the user sees something is happening
           // even if claims take a moment to propagate.
