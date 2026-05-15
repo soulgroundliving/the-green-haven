@@ -3355,7 +3355,12 @@
         <div id="eco-panel-achievements" style="display:none;" class="px-4">
             <h3 class="font-bold text-sm mb-3">🏅 เหรียญที่ได้รับ</h3>
             <div id="badge-grid-container" class="grid grid-cols-3 gap-3 mb-6">
-                <p style="grid-column:1/-1; text-align:center; font-size:var(--fs-sm); color:#aaa; padding:16px 0;">กำลังโหลด...</p>
+                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
+                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
+                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
+                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
+                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
+                <div class="gh-skeleton" style="height:96px; border-radius:14px;"></div>
             </div>
             <h3 class="font-bold text-sm mb-3">💡 วิธีสะสมคะแนน</h3>
             <!-- Rendered by _renderEarningGuide() from EARNING_SOURCES + RENT_POINT_TIERS (SSoT) -->
@@ -3367,7 +3372,9 @@
             <div class="muji-card p-5 mb-4 mx-4">
                 <h3 class="font-bold text-sm mb-4">👑 ผู้พิทักษ์ป่าประจำสัปดาห์</h3>
                 <div id="eco-leaderboard" class="space-y-3">
-                    <div class="text-center text-xs text-gray-400 py-4">กำลังโหลดอันดับ…</div>
+                    <div class="gh-skeleton" style="height:48px; border-radius:12px;"></div>
+                    <div class="gh-skeleton" style="height:48px; border-radius:12px;"></div>
+                    <div class="gh-skeleton" style="height:48px; border-radius:12px;"></div>
                 </div>
             </div>
             <div class="mx-4 mb-6">
@@ -3476,7 +3483,9 @@
 
         <!-- Slot grid -->
         <div id="fb-slot-grid" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
-            <div style="text-align:center;color:var(--text-muted);padding:2rem;">กำลังโหลด...</div>
+            <div class="gh-skeleton" style="height:56px; border-radius:12px;"></div>
+            <div class="gh-skeleton" style="height:56px; border-radius:12px;"></div>
+            <div class="gh-skeleton" style="height:56px; border-radius:12px;"></div>
         </div>
 
         <!-- My upcoming bookings -->
@@ -12278,7 +12287,9 @@
       async function _renderSlotGrid() {
         const grid = document.getElementById('fb-slot-grid');
         if (!grid) return;
-        grid.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1rem;">กำลังโหลด...</div>';
+        grid.innerHTML = '<div class="gh-skeleton" style="height:56px; border-radius:12px; margin-bottom:10px;"></div>'
+                       + '<div class="gh-skeleton" style="height:56px; border-radius:12px; margin-bottom:10px;"></div>'
+                       + '<div class="gh-skeleton" style="height:56px; border-radius:12px;"></div>';
 
         const config = _fbConfigs.find(c => c.type === _fbType);
         if (!config) {
@@ -12574,7 +12585,9 @@
         // Reset visibility
         formEl && (formEl.style.display = 'none');
         doneEl && (doneEl.style.display = 'none');
-        statusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">⏳ กำลังโหลด...</div>';
+        statusEl.innerHTML = '<div class="gh-skeleton" style="height:1em; width:60%; margin:0 auto 12px;"></div>'
+                           + '<div class="gh-skeleton" style="height:1em; width:80%; margin:0 auto 12px;"></div>'
+                           + '<div class="gh-skeleton" style="height:120px; border-radius:12px; margin:8px 16px 0;"></div>';
 
         if (!window.ChecklistManager) {
           statusEl.innerHTML = '<div style="color:#888;text-align:center;padding:2rem;">เปิดในแอป LIFF เพื่อใช้งาน</div>';
@@ -12870,7 +12883,9 @@
           // Show loading immediately so the user sees something is happening
           // even if claims take a moment to propagate.
           const _clStatusEl = document.getElementById('cl-status-area');
-          if (_clStatusEl) _clStatusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">⏳ กำลังโหลด...</div>';
+          if (_clStatusEl) _clStatusEl.innerHTML = '<div class="gh-skeleton" style="height:1em; width:60%; margin:0 auto 12px;"></div>'
+                                                 + '<div class="gh-skeleton" style="height:1em; width:80%; margin:0 auto 12px;"></div>'
+                                                 + '<div class="gh-skeleton" style="height:120px; border-radius:12px; margin:8px 16px 0;"></div>';
           const _clFormEl = document.getElementById('cl-form-area');
           const _clDoneEl = document.getElementById('cl-done-area');
           if (_clFormEl) _clFormEl.style.display = 'none';
