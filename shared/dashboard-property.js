@@ -38,11 +38,11 @@ function initRoomsPage(){
   updateOccupancyDashboard();
   updateLeaseExpiryAlerts();
 
-  // Set up real-time Firebase listeners
+  // Set up real-time Firebase listeners (setupMeterDataListener is idempotent —
+  // unsubs prior onSnapshot before creating a new one so rerenders don't stack).
   setupRoomDataListener();
   setupLeaseDataListener();
   setupMeterDataListener();
-  console.log('✅ Real-time listeners activated for Rooms page');
 
   const allTenants = loadTenants();
   const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
@@ -702,11 +702,11 @@ function initNestPage(){
   updateOccupancyDashboard();
   updateLeaseExpiryAlerts();
 
-  // Set up real-time Firebase listeners
+  // Set up real-time Firebase listeners (setupMeterDataListener is idempotent —
+  // unsubs prior onSnapshot before creating a new one so rerenders don't stack).
   setupRoomDataListener();
   setupLeaseDataListener();
   setupMeterDataListener();
-  console.log('✅ Real-time listeners activated for Nest page');
 
   // Update info cards from live RoomConfigManager data (must be before early returns)
   updateNestInfoCards();

@@ -717,6 +717,17 @@ function setupMeterDataListener() {
   }
   if (!window.firebaseAuth?.currentUser) return;
 
+  // Idempotency: initNestPage() runs on every roomconfig-updated event (debounced
+  // 250ms). Without this guard each call stacked a fresh onSnapshot on top of the
+  // previous one — collection replay then fires once per stacked listener, and
+  // subsequent meter writes fan out N times. After ~10 rerenders the console
+  // shows the alternating "Real-time listeners activated" / "Meter data updated"
+  // pattern from the screenshot. Tear down the prior listener first.
+  if (typeof realtimeListeners.meter === 'function') {
+    try { realtimeListeners.meter(); } catch (_) { /* noop */ }
+    realtimeListeners.meter = null;
+  }
+
   const db = window.firebase.firestore();
   const { collection, onSnapshot } = window.firebase.firestoreFunctions;
 
@@ -724,7 +735,6 @@ function setupMeterDataListener() {
     const meterUnsubscribe = onSnapshot(
       collection(db, 'meter_data'),
       (snapshot) => {
-        console.log('✅ Meter data updated in real-time');
         updateDashboardLive();
       },
       (error) => {
