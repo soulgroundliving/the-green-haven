@@ -4715,20 +4715,22 @@
         let _navItemsCache = null;
         let _blinkBusy = false;
 
-        // Eye-blink transition: screen closes (55ms) → swap → opens (100ms).
+        // Eye-blink transition: instant black (2 RAF frames) → swap → opens (80ms).
         // If a blink is already running, swap immediately (no double-blink).
         function _blinkTransition(doSwap) {
             const overlay = document.getElementById('blink-overlay');
             if (!overlay || _blinkBusy) { doSwap(); return; }
             _blinkBusy = true;
-            overlay.style.transition = 'opacity 55ms ease-in';
+            overlay.style.transition = 'none';
             overlay.style.opacity = '1';
-            setTimeout(() => {
-                doSwap();
-                overlay.style.transition = 'opacity 100ms ease-out';
-                overlay.style.opacity = '0';
-                setTimeout(() => { _blinkBusy = false; }, 100);
-            }, 60);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    doSwap();
+                    overlay.style.transition = 'opacity 80ms ease-out';
+                    overlay.style.opacity = '0';
+                    setTimeout(() => { _blinkBusy = false; }, 80);
+                });
+            });
         }
 
         function _hideOtherPages(target) {
@@ -8965,17 +8967,16 @@
                             localStorage.setItem(key, JSON.stringify(Array.from(cache.values())));
                         });
                     } catch(_) {}
-                }, async (err) => {
-                    // permission_denied → reset so authReady/liffLinked can retry with fresh claims.
-                    // Force-refresh the token ONCE and log the actual claim values vs the path
-                    // being queried — without this, the toast "ลองปิดเปิด LINE ใหม่" gives no
-                    // signal whether the bug is claim drift (rooms vs RentRoom) or missing claims.
+                }, async () => {
+                    // permission_denied during LIFF auth transition: expected — signInWithCustomToken
+                    // briefly invalidates the existing RTDB session. liffLinked re-triggers
+                    // _subscribeBillsRealtime automatically; 2s setTimeout is the backstop if it
+                    // already fired. No user-visible toast — this always self-heals.
                     _billsUnsub = null;
                     try {
                         const u = window.firebaseAuth?.currentUser;
                         const fresh = u ? await u.getIdTokenResult(true).catch(() => null) : null;
-                        console.warn('[bills] permission_denied', {
-                            err: err && (err.code || err.message) || String(err),
+                        console.warn('[bills] permission_denied — silent retry in 2s', {
                             path: `bills/${_taBuilding}/${_taRoom}`,
                             claimRoom: fresh?.claims?.room || '(none)',
                             claimBuilding: fresh?.claims?.building || '(none)',
@@ -8983,7 +8984,7 @@
                             isAnon: u?.isAnonymous,
                         });
                     } catch (_) {}
-                    if (_taRoom && _taBuilding) toast('โหลดบิลไม่สำเร็จ ลองปิดเปิด LINE ใหม่', 'warning');
+                    setTimeout(_subscribeBillsRealtime, 2000);
                 });
             } catch (e) { console.warn('subscribeBillsRealtime failed:', e.message); }
         }
