@@ -9607,7 +9607,12 @@
             const amt = document.getElementById('current-bill-amount');
             const label = document.getElementById('bill-label');
             if (section) section.style.display = '';
-            if (list) {
+            // Only inject skeletons if the slot is empty. If the static
+            // gh-empty-state from the HTML markup is still there (or any
+            // other content), preserve it — overwriting with skeletons that
+            // never resolve creates a dead-zone when no fetch fires
+            // (e.g. admin preview without LIFF claims).
+            if (list && !list.children.length) {
                 list.innerHTML =
                     '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>' +
                     '<div class="gh-skeleton gh-skeleton--card" style="margin:10px 0;"></div>' +
