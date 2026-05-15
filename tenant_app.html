@@ -222,12 +222,12 @@
             --bg-color:      var(--brand-primary-wash);
             --white:         var(--surface-card);
             --border:        var(--stone);
-            --accent: #d97706;           /* Accent amber (dashboard --accent) */
-            --accent-gold: #D4AF37;
-            --danger: #dc2626;           /* Danger red (dashboard --red) */
-            --shadow: 0 4px 20px rgba(13, 92, 78, 0.07);
-            --shadow-sm: 0 1px 8px rgba(13, 92, 78, 0.06);   /* Aligned with dashboard */
-            --receipt-green: #0d5c4e;
+            --accent:       var(--warn, #d97706);            /* Amber accent — aliased to brand --warn */
+            --accent-gold:  #D4AF37;                          /* Reward gold — no brand equivalent */
+            --danger:       var(--alert, #dc2626);            /* Danger red — aliased to brand --alert */
+            --shadow:       0 4px 20px rgba(13, 92, 78, 0.07);
+            --shadow-sm:    0 1px 8px rgba(13, 92, 78, 0.06); /* Aligned with dashboard */
+            --receipt-green: var(--brand-primary-dark, #0d5c4e); /* Receipt — aliased to brand --brand-primary-dark */
             --radius-card: 22px;         /* Tenant keeps softer radii for mobile UX */
             --radius-sm: 8px;            /* Same as dashboard --radius-sm */
             /* Suggestion Colors */
