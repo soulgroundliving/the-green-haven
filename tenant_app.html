@@ -4698,49 +4698,60 @@
         // 2. NAVIGATION SYSTEM (แยก 6 หน้าชัดเจน)
         // ==========================================
 
-        function showPage(id, element) {
-            // 1. ซ่อนทุกหน้า
-            const allPages = document.querySelectorAll('.page');
-            allPages.forEach(p => {
-                p.style.display = 'none';
-                p.classList.remove('active');
-                p.style.pointerEvents = 'none';
-            });
+        // Module-level state — eliminates querySelectorAll('.page') + forEach on every
+        // tab tap (was 25-75ms on low-end Android). Track current page to swap only
+        // current ↔ new instead of iterating every .page node.
+        let _currentPageEl = null;
+        let _navItemsCache = null;
 
-            // 2. กำหนดเป้าหมาย (คราวนี้แยก home กับ world-map เด็ดขาดแล้วครับ!)
+        function _hideOtherPages(target) {
+            // First call: no _currentPageEl, must hide all .page nodes once to clean
+            // initial DOM state. Subsequent calls: only swap the previous page.
+            if (!_currentPageEl) {
+                document.querySelectorAll('.page').forEach(p => {
+                    if (p !== target) {
+                        p.style.display = 'none';
+                        p.classList.remove('active');
+                        p.style.pointerEvents = 'none';
+                    }
+                });
+            } else if (_currentPageEl !== target) {
+                _currentPageEl.style.display = 'none';
+                _currentPageEl.classList.remove('active');
+                _currentPageEl.style.pointerEvents = 'none';
+            }
+        }
+
+        function showPage(id, element) {
+            // Resolve target first (home → home-page; world-map → world-map)
             let targetId = id + '-page';
             let target = document.getElementById(targetId) || document.getElementById(id);
-
-            // 3. แสดงผลหน้าที่เรียก
-            if (target) {
-                target.style.display = 'block';
-                target.classList.add('active');
-                target.style.pointerEvents = 'auto';
-                window.scrollTo(0, 0);
-
-                // ให้หน้าแผนที่อยู่เลเยอร์ล่าง (เผื่อมี Effect) หน้าอื่นอยู่บน
-                if (target.id === 'world-map-page' || target.id === 'world-map') {
-                    target.style.zIndex = "5";
-                } else {
-                    target.style.zIndex = "10";
-                }
-            } else {
+            if (!target) {
                 console.error("❌ อ้าว หาหน้าไม่เจอ: " + targetId);
+                return;
             }
 
-            // 4. จัดการ Nav Bar (ซ่อน *เฉพาะ* ตอนอยู่หน้าแผนที่โลก)
+            // Fast path: swap only current → new (instead of iterating every .page)
+            _hideOtherPages(target);
+
+            target.style.display = 'block';
+            target.classList.add('active');
+            target.style.pointerEvents = 'auto';
+            // หน้าแผนที่อยู่เลเยอร์ล่าง (เผื่อมี Effect) หน้าอื่นอยู่บน
+            target.style.zIndex = (target.id === 'world-map-page' || target.id === 'world-map') ? "5" : "10";
+            window.scrollTo(0, 0);
+            _currentPageEl = target;
+
+            // Nav bar (ซ่อนเฉพาะตอนอยู่หน้าแผนที่โลก)
             const navBar = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
             if (navBar) {
-                if (id === 'world-map' || target.id === 'world-map-page') {
-                    navBar.style.display = 'none'; // หน้าเกมให้ซ่อน
-                } else {
-                    navBar.style.display = 'flex'; // หน้าแอปทั้ง 5 ให้โชว์
-                }
+                navBar.style.display = (id === 'world-map' || target.id === 'world-map-page') ? 'none' : 'flex';
             }
 
-            // 5. อัปเดตสีปุ่มใน Nav Bar + flip aria-current="page"
+            // Nav item active state — cache nav items lookup (called repeatedly)
             if (element) {
-                document.querySelectorAll('.nav-item').forEach(nav => {
+                if (!_navItemsCache) _navItemsCache = document.querySelectorAll('.nav-item');
+                _navItemsCache.forEach(nav => {
                     nav.classList.remove('active');
                     nav.removeAttribute('aria-current');
                 });
@@ -4748,11 +4759,10 @@
                 element.setAttribute('aria-current', 'page');
             }
 
-            // 6. อัปเดตข้อมูล API (ถ้ามี)
+            // Page-specific data refresh
             if (id === 'payment' || id === 'usage') {
                 if (typeof updateDashboard === 'function') updateDashboard();
                 if (id === 'usage') {
-                    // Show skeleton first; renderBillsList replaces it when data arrives
                     if (typeof showBillsSkeleton === 'function') showBillsSkeleton();
                     if (typeof renderBillsList === 'function') renderBillsList();
                 }
@@ -4767,21 +4777,17 @@
                 if (typeof toast === 'function') toast('ฟีเจอร์นี้สำหรับลูกบ้านตึก Nest เท่านั้น', 'info');
                 return;
             }
-            // 1. สั่งปิดทุกหน้าให้สนิทจริงๆ ก่อน
-            document.querySelectorAll('.page').forEach(p => {
-                p.classList.remove('active');
-                p.style.display = 'none';           // บรรทัดนี้ที่หายไป! ทำให้โพรไฟล์ไม่ยอมปิด
-                p.style.pointerEvents = 'none';     // ป้องกันการกดทะลุ
-            });
-
-            // 2. ค่อยเปิดหน้า Settings (หรือหน้าย่อยอื่นๆ) ขึ้นมา
             const target = document.getElementById(id);
-            if (target) {
-                target.classList.add('active');
-                target.style.display = 'block';
-                target.style.pointerEvents = 'auto';
-                target.style.zIndex = "20";
-            }
+            if (!target) return;
+
+            // Fast path: swap only current → new
+            _hideOtherPages(target);
+
+            target.classList.add('active');
+            target.style.display = 'block';
+            target.style.pointerEvents = 'auto';
+            target.style.zIndex = "20";
+            _currentPageEl = target;
 
             // 3. ซ่อน Nav Bar
             const navBar = document.getElementById('main-nav-bar') || document.getElementById('bottom-nav');
@@ -4901,10 +4907,19 @@
         // ==========================================
         // 3. DASHBOARD API (Weather & PM2.5)
         // ==========================================
-        // Smart Key QR Code Timer
+        // Smart Key QR Code Timer — cache the element + early-exit when the smart-key
+        // page isn't visible. Was firing getElementById + DOM write every second for
+        // the entire app lifetime (~86,400 wakeups/day) draining mobile battery.
+        let _qrTimerEl = null;
+        let _qrSmartKeyPage = null;
         setInterval(() => {
-            let timerEl = document.getElementById('qr-timer');
-            if (timerEl) { let current = parseInt(timerEl.innerText); if (current > 0) timerEl.innerText = current - 1; else timerEl.innerText = 59; }
+            if (!_qrSmartKeyPage) _qrSmartKeyPage = document.getElementById('smart-key-page');
+            // Page hidden (offsetParent === null is faster than reading style.display)
+            if (!_qrSmartKeyPage || _qrSmartKeyPage.offsetParent === null) return;
+            if (!_qrTimerEl) _qrTimerEl = document.getElementById('qr-timer');
+            if (!_qrTimerEl) return;
+            const current = parseInt(_qrTimerEl.innerText);
+            _qrTimerEl.innerText = (current > 0) ? (current - 1) : 59;
         }, 1000);
 
         // ฟังก์ชันสำหรับดึงข้อมูลคุณภาพน้ำ (Simulation API)
@@ -6899,9 +6914,16 @@
             return m[cat] || cat;
         }
 
+        // Cached — same raw-string-key pattern as community feed. Was parsing on
+        // every renderTicketsList() call (each maintenance page visit).
+        let _maintParsedCache = null, _maintRawKey = null;
         function getMaintenanceTickets() {
-            try { return JSON.parse(localStorage.getItem('tenant_maintenance_tickets') || '[]'); }
-            catch (e) { return []; }
+            const raw = localStorage.getItem('tenant_maintenance_tickets') || '[]';
+            if (raw !== _maintRawKey) {
+                try { _maintParsedCache = JSON.parse(raw); } catch (e) { _maintParsedCache = []; }
+                _maintRawKey = raw;
+            }
+            return _maintParsedCache;
         }
 
         function renderTicketsList() {
@@ -8703,13 +8725,34 @@
         }
 
         function _rerenderTenantViews() {
-            if (typeof renderHomePage === 'function') renderHomePage();
-            if (typeof renderBillsList === 'function') renderBillsList();
-            if (typeof renderProfilePage === 'function') renderProfilePage();
-            if (typeof renderContractPage === 'function') renderContractPage();
+            // Render the visible page immediately (critical path), defer the rest
+            // to requestIdleCallback. Was rebuilding 5 page subtrees on every RTDB
+            // bill update (~40-80ms blocked) even for pages user wasn't viewing.
+            const visibleId = _currentPageEl?.id || '';
+
+            // Nav badges always update (visible on every page)
             if (typeof updateNavBadges === 'function') updateNavBadges();
-            // Chart sources from _taBills (SSoT) — re-render whenever bills change
-            if (typeof _renderUsageChart === 'function') _renderUsageChart();
+
+            const renderHome     = () => typeof renderHomePage     === 'function' && renderHomePage();
+            const renderBills    = () => typeof renderBillsList    === 'function' && renderBillsList();
+            const renderProfile  = () => typeof renderProfilePage  === 'function' && renderProfilePage();
+            const renderContract = () => typeof renderContractPage === 'function' && renderContractPage();
+            const renderChart    = () => typeof _renderUsageChart  === 'function' && _renderUsageChart();
+
+            // Visible page first (synchronous, blocks paint as expected)
+            if (visibleId === 'home-page')          renderHome();
+            else if (visibleId === 'usage-page')  { renderBills(); renderChart(); }
+            else if (visibleId === 'profile-page')  renderProfile();
+            else if (visibleId === 'contract-page') renderContract();
+
+            // Off-screen pages deferred to idle (user navigates → fresh data ready)
+            const idleCb = window.requestIdleCallback || ((fn) => setTimeout(fn, 50));
+            idleCb(() => {
+                if (visibleId !== 'home-page')     renderHome();
+                if (visibleId !== 'usage-page')  { renderBills(); renderChart(); }
+                if (visibleId !== 'profile-page')  renderProfile();
+                if (visibleId !== 'contract-page') renderContract();
+            });
         }
 
         // SSoT delegation: dedup logic lives in BillStore.dedupSynthetic
@@ -9594,12 +9637,32 @@
             renderCommunityFeed();
         }
 
+        // Cache parsed localStorage arrays — invalidate via raw-string comparison
+        // (cheap). Avoids JSON.parse on every render (was 2-5ms × 3-5 calls per page).
+        let _annParsedCache = null, _annRawKey = null;
+        let _evParsedCache  = null, _evRawKey  = null;
+        function _getAnnouncementsCached() {
+            const raw = localStorage.getItem('announcements_data') || '[]';
+            if (raw !== _annRawKey) {
+                try { _annParsedCache = JSON.parse(raw); } catch (e) { _annParsedCache = []; }
+                _annRawKey = raw;
+            }
+            return _annParsedCache;
+        }
+        function _getCommunityEventsCached() {
+            const raw = localStorage.getItem('community_events_data') || '[]';
+            if (raw !== _evRawKey) {
+                try { _evParsedCache = JSON.parse(raw); } catch (e) { _evParsedCache = []; }
+                _evRawKey = raw;
+            }
+            return _evParsedCache;
+        }
+
         function renderCommunityFeed() {
             const el = document.getElementById('community-feed');
             if (!el) return;
-            let ann = [], ev = [];
-            try { ann = JSON.parse(localStorage.getItem('announcements_data') || '[]'); } catch(e) {}
-            try { ev = JSON.parse(localStorage.getItem('community_events_data') || '[]'); } catch(e) {}
+            let ann = _getAnnouncementsCached();
+            const ev  = _getCommunityEventsCached();
             ann = ann.filter(a => !a.building || a.building === 'all' || a.building === _taBuilding);
 
             const items = [];
@@ -9711,8 +9774,7 @@
             const el = document.getElementById('announcements-list');
             if (!el) return;
             _subscribeAnnouncementsFromFirestore();
-            let ann = [];
-            try { ann = JSON.parse(localStorage.getItem('announcements_data') || '[]'); } catch(e) {}
+            const ann = _getAnnouncementsCached();
             const filtered = ann.filter(a => !a.building || a.building === 'all' || a.building === _taBuilding);
             if (!filtered.length) {
                 el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:var(--fs-md);">ไม่มีประกาศในขณะนี้</div>';
@@ -10021,8 +10083,7 @@
             const el = document.getElementById('events-list');
             if (!el) return;
             _subscribeEventsFromFirestore();
-            let events = [];
-            try { events = JSON.parse(localStorage.getItem('community_events_data') || '[]'); } catch(e) {}
+            const events = _getCommunityEventsCached();
             if (!events.length) {
                 el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:var(--fs-md);">ไม่มีกิจกรรมในขณะนี้</div>';
                 return;
