@@ -408,6 +408,38 @@ grep -n "_onLiffClaimsReady(" tenant_app.html | grep -v "function _onLiff"
 
 Related anti-pattern: this is a cousin of N (onSnapshot must have error callback). The error callback's job here is double — surface failures AND reset the unsub so retry can succeed. A bare `console.warn` swallows both halves of the recovery.
 
+### V. `setupXxxListener` that reruns must call the prior unsub before overwriting it
+
+Dashboard `setupMeterDataListener` (and any setup function that stores its unsub in `realtimeListeners.X`) is called every time `initRoomsPage`/`initNestPage` runs — which is on every `roomconfig-updated` event (debounced 250ms, but still fires repeatedly across a session). The original implementation just did `realtimeListeners.meter = onSnapshot(...)`. The OLD unsub function was dropped on the floor, the listener it referenced stayed live in Firestore, AND a fresh listener was added. After 10 rerenders the page had 11 live `meter_data` subscriptions; every real meter write fanned out N times.
+
+Incident 2026-05-15 (`bccabdc`): user reported `✅ Real-time listeners activated for Nest page` + `✅ Meter data updated in real-time` repeating in pairs in the dashboard console. Two diagnostics from the same root cause — repeat init logs + collection-replay running once per stacked listener.
+
+**Rule:** every `setupXxxListener` that assigns into a stable slot (`realtimeListeners.X`, module-level `_xxxUnsub`, etc.) MUST tear down the prior listener first:
+
+```js
+function setupMeterDataListener() {
+    // …readiness guards…
+    if (typeof realtimeListeners.meter === 'function') {
+        try { realtimeListeners.meter(); } catch (_) { /* noop */ }
+        realtimeListeners.meter = null;
+    }
+    realtimeListeners.meter = onSnapshot(query, onNext, onError);
+}
+```
+
+Audit recipe:
+
+```bash
+# Any place that assigns into realtimeListeners.X — each must have a prior-unsub guard
+grep -n "realtimeListeners\.\w\+ *=" shared/dashboard*.js
+# Any setupXxx that returns from onSnapshot without checking — same hazard
+grep -rn "= onSnapshot\b" shared/dashboard*.js shared/checklist-manager.js
+```
+
+**Difference from U:** U is about `_onLiffClaimsReady` callbacks WANTING idempotent re-entry (`if (_xxxUnsub) return`) but failing because claims weren't ready yet on the first fire. V is about callbacks that genuinely SHOULD rebind (claims now correct, building changed, page reopened) but leak the old listener. The fix in U is "guard claim presence first"; the fix in V is "unsub before rebind".
+
+**Sibling diagnostic:** noisy `console.log` inside the onSnapshot handler made the leak visible. Once the leak was fixed, the per-event log added no diagnostic value (only fired on real changes which the UI already reflects). Per-init/per-snapshot logs in setupXxx functions are usually the *tail* of a stacking bug — drop them once the stacking is closed, not before.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
