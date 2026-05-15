@@ -2276,7 +2276,7 @@
                     aria-label="ปิด"
                     style="border:none; background:transparent; font-size:1.4rem; cursor:pointer; padding:4px 10px;">✕</button>
             </div>
-            <div id="broadcasts-panel-list" style="flex:1; overflow-y:auto; padding:8px 0;"></div>
+            <div id="broadcasts-panel-list" style="flex:1; overflow-y:auto; padding:8px 0; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain;"></div>
         </div>
     </div>
 
@@ -5367,14 +5367,21 @@
             btn.disabled = true; btn.style.opacity = '0.5'; btn.textContent = 'กำลังตรวจสอบ...';
             let result;
             try {
-                const resp = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
-                    method:'POST', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({ file: _cleaningSlipBase64, expectedAmount: 500, building: _taBuilding, room: _taRoom, context: 'cleaning' })
-                });
+                const ctrl = new AbortController();
+                const to = setTimeout(() => ctrl.abort(), 12000);
+                let resp;
+                try {
+                    resp = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({ file: _cleaningSlipBase64, expectedAmount: 500, building: _taBuilding, room: _taRoom, context: 'cleaning' }),
+                        signal: ctrl.signal
+                    });
+                } finally { clearTimeout(to); }
                 result = await resp.json();
             } catch(e) {
+                const isTimeout = e?.name === 'AbortError';
                 console.warn('verifySlip (cleaning) network error:', e.message);
-                _setCpmStatus('error', 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่');
+                _setCpmStatus('error', isTimeout ? 'เชื่อมต่อนานเกินไป กรุณาลองใหม่' : 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่');
                 btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'ยืนยันชำระเงิน';
                 return;
             }
@@ -8015,6 +8022,10 @@
         function _subscribePaymentConfig() {
             if (_paymentCfgUnsub) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            // Wait until building is known — same pattern as _subscribeBroadcasts.
+            // Without this, Nest tenants subscribe to buildings/rooms in the anonymous
+            // phase and the idempotency guard prevents a retry when claims arrive.
+            if (!_taBuilding) return;
             try {
                 const fs = window.firebase.firestoreFunctions;
                 const db = window.firebase.firestore();
@@ -8048,8 +8059,7 @@
                 }, err => console.warn('payment config subscribe failed:', err.message));
             } catch (e) { console.warn('payment config subscribe init failed:', e.message); }
         }
-        window.addEventListener('authReady', _subscribePaymentConfig);
-        if (window.firebaseReady && window._authUid) _subscribePaymentConfig();
+        _onLiffClaimsReady(_subscribePaymentConfig);
 
         // ===== REWARDS COLLECTION SUBSCRIBE =====
         // Admin manages rewards in Firestore `rewards/{id}`. Tenant app renders dynamically
@@ -9669,7 +9679,7 @@
                     localStorage.setItem('announcements_data', JSON.stringify(Array.from(byId.values())));
                     renderAnnouncements();
                     _updateCommunityBadge(docs);
-                });
+                }, err => console.warn('[announcements] subscribe failed:', err?.message || err));
             } catch(e) { console.warn('tenant announcements subscribe failed:', e); }
         }
         window.addEventListener('load', () => setTimeout(_subscribeAnnouncementsFromFirestore, 1000));
@@ -10001,7 +10011,7 @@
                     docs.forEach(e => byId.set(e.id, e));
                     localStorage.setItem('community_events_data', JSON.stringify(Array.from(byId.values())));
                     renderCommunityEvents();
-                });
+                }, err => console.warn('[communityEvents] subscribe failed:', err?.message || err));
             } catch(e) { console.warn('tenant events subscribe failed:', e); }
         }
         window.addEventListener('load', () => setTimeout(_subscribeEventsFromFirestore, 1000));
@@ -10890,10 +10900,16 @@
             if (btn) btn.disabled = true;
             try {
                 const total = _taCurrentBill ? (_taCurrentBill.totalAmount||_taCurrentBill.total||0) : 0;
-                const resp = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
-                    method:'POST', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({ file: _slipBase64, expectedAmount: total, building: _taBuilding, room: _taRoom })
-                });
+                const ctrl = new AbortController();
+                const to = setTimeout(() => ctrl.abort(), 12000);
+                let resp;
+                try {
+                    resp = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/verifySlip', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({ file: _slipBase64, expectedAmount: total, building: _taBuilding, room: _taRoom }),
+                        signal: ctrl.signal
+                    });
+                } finally { clearTimeout(to); }
                 const result = await resp.json();
                 if (result.success || result.verified) {
                     _setStatus(statusEl, 'success', 'ตรวจสอบสำเร็จ!');
@@ -10919,7 +10935,8 @@
                     if (btn) btn.disabled = false;
                 }
             } catch(e) {
-                _setStatus(statusEl, 'error', 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+                const isTimeout = e?.name === 'AbortError';
+                _setStatus(statusEl, 'error', isTimeout ? 'เชื่อมต่อนานเกินไป กรุณาลองใหม่' : 'เกิดข้อผิดพลาด กรุณาลองใหม่');
                 if (btn) btn.disabled = false;
             }
         }
