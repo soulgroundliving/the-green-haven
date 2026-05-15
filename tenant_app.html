@@ -12579,7 +12579,12 @@
         }
 
         if (!_clInstance) {
-          statusEl.innerHTML = '<div class="card" style="text-align:center;padding:2rem;"><div style="font-size:2rem;margin-bottom:.5rem;">🗒️</div><div style="color:#888;font-size:.9rem;">ยังไม่มี checklist รอดำเนินการ</div><div style="margin-top:.5rem;font-size:.8rem;color:#bbb;">ผู้ดูแลจะสร้างใบตรวจให้คุณก่อนย้ายเข้า/ออก</div></div>';
+          // Diagnostic: surface the actual search params on screen so admin can
+          // confirm whether doc.building/doc.roomId match this tenant's token
+          // claims. Most "stuck at ยังไม่มี" reports are data drift between
+          // liffUsers.room (token.room) and doc.roomId (e.g. '15' vs '15ก').
+          console.warn('[checklist] no instance found for', { building: _clBuilding, roomId: _clRoomId, tenantUid: _clTenantUid });
+          statusEl.innerHTML = `<div class="card" style="text-align:center;padding:2rem;"><div style="font-size:2rem;margin-bottom:.5rem;">🗒️</div><div style="color:#888;font-size:.9rem;">ยังไม่มี checklist รอดำเนินการ</div><div style="margin-top:.5rem;font-size:.8rem;color:#bbb;">ผู้ดูแลจะสร้างใบตรวจให้คุณก่อนย้ายเข้า/ออก</div><div style="margin-top:.6rem;font-size:.7rem;color:#ccc;">(ห้อง ${_esc(_clRoomId)} · ${_esc(_clBuilding)})</div></div>`;
           return;
         }
 
@@ -12819,6 +12824,16 @@
             if (!_clTenantUid) {
               // Anon sign-in hasn't completed yet (or failed) — show clear msg
               if (_clStatusEl) _clStatusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#c62828;">⛔ ยังไม่ได้เข้าระบบ — ลองปิด/เปิด LINE ใหม่</div>';
+              return;
+            }
+            if (!_clRoomId) {
+              // signInWithCustomToken hasn't completed yet — token has no room/
+              // building claims yet. Without this guard, _initChecklistPage runs
+              // with empty roomId, queries where roomId=='', gets snap.empty,
+              // shows "ยังไม่มี" + sets PDPA flag — and the later liffLinked re-
+              // fire never recovers because the user has navigated/closed by then.
+              // Per CLAUDE.md §7-U: claims-not-yet-set must guard FIRST.
+              if (_clStatusEl) _clStatusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">⏳ กำลังเชื่อมต่อกับ LINE — รอสักครู่...</div>';
               return;
             }
             _initChecklistPage();
