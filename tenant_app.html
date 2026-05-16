@@ -8144,6 +8144,15 @@
         }
         if (typeof window !== 'undefined') window.confirmLeaseRequest = confirmLeaseRequest;
 
+        function toggleContractForm() {
+            const val = document.getElementById('contract-decision')?.value || '';
+            const renewEl   = document.getElementById('renew-form');
+            const moveoutEl = document.getElementById('moveout-form');
+            if (renewEl)   renewEl.style.display   = val === 'renew'   ? 'block' : 'none';
+            if (moveoutEl) moveoutEl.style.display  = val === 'moveout' ? 'block' : 'none';
+        }
+        if (typeof window !== 'undefined') window.toggleContractForm = toggleContractForm;
+
         // ===== EMERGENCY CONTACTS SUBSCRIBE =====
         // Firestore: system/emergencyContacts doc with field `items: [{ icon, label, number }]`.
         // Admin manages via dashboard.html — สำหรับเบอร์เฉพาะอาคาร (รพ./ช่าง/รปภ.)
