@@ -4119,10 +4119,6 @@
             <div class="receipt-item"><span>สิ้นสุดสัญญา:</span><strong id="profile-lease-end">—</strong></div>
             <div class="receipt-item"><span>ระยะเวลาคงเหลือ:</span><strong id="profile-lease-remaining" style="color:var(--primary-green);">—</strong></div>
             <div class="receipt-item"><span>เงินมัดจำ (Deposit):</span><span style="display:flex;align-items:center;gap:8px;"><strong id="profile-deposit" style="color:var(--danger);">—</strong><span id="profile-deposit-badge" style="display:none;"></span></span></div>
-            <div
-                style="display:flex; justify-content:space-between; margin-top:10px; font-size:var(--fs-md); color:var(--primary-green); cursor:pointer;">
-                <span id="profile-contract-label">สัญญาเช่าห้อง —</span><i class="fas fa-download"></i>
-            </div>
             <button class="btn-main" style="margin-top: 15px; background: #334435;"
                 data-action="showSubPage" data-page="contract-action-page"><i class="fas fa-file-signature"></i> แจ้งต่อสัญญา /
                 ย้ายออก</button>
@@ -10388,7 +10384,6 @@
                         : '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;">💰 ถือมัดจำ</span>';
                 }
             }
-            if (_taRoom) set('profile-contract-label', `สัญญาเช่าห้อง ${_taRoom}`);
 
             const roomEl = document.getElementById('profile-room-display');
             if (roomEl && _taRoom) {
