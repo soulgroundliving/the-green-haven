@@ -2147,6 +2147,20 @@ async function uploadLeaseDocuments(leaseId, building, roomId, documents) {
           } catch (e) {
             console.warn('⚠️ Failed to persist document URL to lease:', e.message);
           }
+          // Mirror storage PATH (not permanent download URL) to tenant SSoT so
+          // tenant app can call getLeaseDocUrl CF for a PDPA-friendly 1-hour signed URL.
+          if (docType === 'agreement') {
+            try {
+              const db = window.firebase.firestore();
+              const { doc: fsDoc, updateDoc } = window.firebase.firestoreFunctions;
+              updateDoc(
+                fsDoc(db, 'tenants', building, 'list', roomId),
+                { 'lease.contractPath': storagePath, 'lease.contractFileName': fileName },
+              ).catch(e2 => console.warn('[LeaseDoc] tenant mirror update failed:', e2.message));
+            } catch (e) {
+              console.warn('[LeaseDoc] Firestore unavailable for tenant mirror write:', e.message);
+            }
+          }
         })
         .catch((error) => {
           console.error(`❌ Error uploading ${docType}:`, error);

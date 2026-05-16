@@ -206,6 +206,10 @@ exports.cleanupChecklistsManual = require('./cleanupChecklistsScheduled').cleanu
 // signature). Replaces the permanent getDownloadURL token — PDPA-friendly.
 exports.getChecklistMediaUrl = require('./getChecklistMediaUrl').getChecklistMediaUrl;
 
+// Issue a 1-hour signed URL for a tenant's lease contract PDF.
+// Same PDPA pattern as getChecklistMediaUrl — no permanent download token exposed.
+exports.getLeaseDocUrl = require('./getLeaseDocUrl').getLeaseDocUrl;
+
 // PDPA Section 19 ledger: record tenant consent for checklist data processing.
 // Written to consents/{tenantId}_{purpose}.
 exports.recordChecklistConsent = require('./recordChecklistConsent').recordChecklistConsent;

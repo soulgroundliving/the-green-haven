@@ -4148,12 +4148,13 @@
                 style="background: var(--soft-green); color: var(--primary-green); padding: 10px; border-radius: 12px; font-size: var(--fs-sm); margin-top: 15px;">
                 แจ้งความประสงค์ต่อสัญญา หรือแจ้งย้ายออกล่วงหน้าอย่างน้อย 30 วัน
             </div>
-            <!-- ported from tenant.html: viewLeaseAgreement / downloadLeaseAgreement -->
-            <div style="display:flex; gap:8px; margin-top:12px;">
-                <button class="btn-main" style="flex:1; background:var(--soft-green); color:var(--primary-green);" data-action="viewLeaseAgreement">
+            <!-- Lease document buttons — shown only when admin has uploaded a contract.
+                 renderContractPage() controls visibility via lease.contractPath on the tenant mirror. -->
+            <div id="lease-doc-btns" style="display:none; gap:8px; margin-top:12px;">
+                <button id="view-lease-btn" class="btn-main" style="flex:1; background:var(--soft-green); color:var(--primary-green);" data-action="viewLeaseAgreement">
                     <i class="fas fa-eye"></i> ดูเอกสารสัญญา
                 </button>
-                <button class="btn-main" style="flex:1;" data-action="downloadLeaseAgreement">
+                <button id="download-lease-btn" class="btn-main" style="flex:1;" data-action="downloadLeaseAgreement">
                     <i class="fas fa-download"></i> ดาวน์โหลด
                 </button>
             </div>
@@ -10405,6 +10406,12 @@
                     }
                 }
             }
+            // Wire lease document — prefer storage PATH for PDPA signed-URL flow;
+            // fall back to legacy contractDocument URL if path not yet set.
+            const contractPath = _taLease?.contractPath || null;
+            window.currentContractDocument = contractPath || _taLease?.contractDocument || null;
+            const docBtns = document.getElementById('lease-doc-btns');
+            if (docBtns) docBtns.style.display = window.currentContractDocument ? 'flex' : 'none';
             setupContractQuizGate();
         }
 
@@ -12211,24 +12218,39 @@
         }
 
         // ---- LEASE AGREEMENT VIEW / DOWNLOAD ----
-        function viewLeaseAgreement() {
-            if (window.currentContractDocument) {
-                window.open(window.currentContractDocument, '_blank');
-            } else {
-                toast('ไม่มีเอกสารสัญญาเช่า', 'warning');
+        // Uses getLeaseDocUrl CF to mint a 1-hour signed URL (PDPA-friendly —
+        // no permanent download token exposed to the client). Falls back to the
+        // legacy contractDocument URL if the path-based flow is not wired yet.
+        async function _getLeaseSignedUrl() {
+            const path = window.currentContractDocument;
+            if (!path) return null;
+            // If value looks like a full https:// URL (legacy contractDocument), use directly.
+            if (path.startsWith('https://')) return path;
+            try {
+                const fn = window.firebase.functions.httpsCallable('getLeaseDocUrl');
+                const result = await fn({ path });
+                return result?.data?.url || null;
+            } catch (err) {
+                console.error('[LeaseDoc] getLeaseDocUrl error:', err);
+                toast('ไม่สามารถเปิดเอกสารได้ กรุณาลองใหม่', 'error');
+                return null;
             }
         }
-        function downloadLeaseAgreement() {
-            if (window.currentContractDocument) {
-                const link = document.createElement('a');
-                link.href = window.currentContractDocument;
-                link.download = `lease-agreement-${_legacyBuilding()}-${_legacyRoom()}.pdf`;
-                document.body.appendChild(link); link.click();
-                document.body.removeChild(link);
-                toast('เริ่มดาวน์โหลดสัญญา', 'success');
-            } else {
-                toast('ไม่มีเอกสารสัญญาเช่า', 'warning');
-            }
+        async function viewLeaseAgreement() {
+            if (!window.currentContractDocument) { toast('ยังไม่มีเอกสารสัญญาเช่า', 'warning'); return; }
+            const url = await _getLeaseSignedUrl();
+            if (url) window.open(url, '_blank', 'noopener');
+        }
+        async function downloadLeaseAgreement() {
+            if (!window.currentContractDocument) { toast('ยังไม่มีเอกสารสัญญาเช่า', 'warning'); return; }
+            const url = await _getLeaseSignedUrl();
+            if (!url) return;
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `lease-agreement-${_legacyBuilding()}-${_legacyRoom()}.pdf`;
+            document.body.appendChild(link); link.click();
+            document.body.removeChild(link);
+            toast('เริ่มดาวน์โหลดสัญญา', 'success');
         }
 
         // B2: enhance all accordion header divs with role/tabindex/aria-expanded + keyboard
