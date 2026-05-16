@@ -716,7 +716,10 @@
             margin: 15px;
             border-radius: 20px;
             overflow: hidden;
-            box-shadow: var(--shadow);
+            /* Use --shadow-sm (brand-green-tinted, lightweight) so eco-mode's
+               heavy --shadow override (0 10px 30px rgba(0,0,0,0.3)) doesn't
+               cause adjacent cards to visually overlap each other. */
+            box-shadow: var(--shadow-sm);
         }
 
         .menu-item {
