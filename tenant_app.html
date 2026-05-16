@@ -4174,7 +4174,7 @@
                 <span id="contract-quiz-btn-label">อ่าน 10 วินาที เพื่อปลดล็อก…</span>
             </button>
         </div>
-        <div style="padding: 15px;">
+        <div id="contract-forms-section" style="padding: 15px;">
             <label style="font-size: var(--fs-md); font-weight: 600;">ความประสงค์ของคุณ</label>
             <select id="contract-decision" style="margin-bottom: 20px;" data-action-change="toggleContractForm">
                 <option value="">โปรดเลือกดำเนินการ...</option>
@@ -4189,7 +4189,7 @@
                 </select>
                 <label style="font-size: var(--fs-md); font-weight: 600;">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
                 <textarea id="renew-note" rows="2" placeholder="เช่น ขอลดราคาเล็กน้อย, ขอเปลี่ยนสภาพห้อง..." style="margin-bottom: 15px;"></textarea>
-                <button class="btn-main" data-action="submitLeaseRequest" data-arg="renew"><i
+                <button class="btn-main" data-action="confirmLeaseRequest" data-arg="renew"><i
                         class="fas fa-paper-plane"></i> ส่งคำขอต่อสัญญา</button>
             </div>
             <div id="moveout-form" style="display: none; animation: slideUp 0.3s ease;">
@@ -4200,8 +4200,19 @@
                 <label style="font-size: var(--fs-md); font-weight: 600;">เหตุผลที่ย้ายออก (ถ้าสะดวกบอก)</label>
                 <textarea id="moveout-reason" rows="2" placeholder="เพื่อช่วยปรับปรุงบริการในอนาคต" style="margin-bottom: 15px;"></textarea>
                 <button class="btn-main" style="background: var(--danger);"
-                    data-action="submitLeaseRequest" data-arg="moveout"><i
+                    data-action="confirmLeaseRequest" data-arg="moveout"><i
                         class="fas fa-sign-out-alt"></i> ยืนยันการแจ้งย้ายออก</button>
+            </div>
+        </div>
+        <div id="lease-request-success" style="display:none; padding:15px; text-align:center;">
+            <div class="card" style="border-top:4px solid var(--primary-green); text-align:center; padding:24px 16px;">
+                <div style="font-size:48px; margin-bottom:8px;">✅</div>
+                <h3 id="lease-success-title" style="color:var(--primary-green); margin:0 0 8px;">ส่งคำขอสำเร็จ</h3>
+                <p id="lease-success-msg" style="color:var(--text-muted); margin:0 0 20px; font-size:var(--fs-sm);">รอเจ้าของยืนยัน</p>
+                <button class="btn-main" style="background:var(--soft-green); color:var(--primary-green);"
+                    data-action="showSubPage" data-page="settings">
+                    <i class="fas fa-arrow-left"></i> กลับหน้าหลัก
+                </button>
             </div>
         </div>
     </div>
@@ -8101,14 +8112,40 @@
             }
             try {
                 await fs.addDoc(fs.collection(db, 'leaseRequests'), payload);
-                toast(type === 'renew' ? '✅ ส่งคำขอต่อสัญญาแล้ว — รอเจ้าของยืนยัน' : '✅ แจ้งย้ายออกแล้ว — เจ้าของจะติดต่อกลับ', 'success');
-                showPage('profile');
+                document.getElementById('contract-forms-section').style.display = 'none';
+                document.getElementById('contract-quiz-section').style.display = 'none';
+                const successEl = document.getElementById('lease-request-success');
+                document.getElementById('lease-success-title').textContent =
+                    type === 'renew' ? 'ส่งคำขอต่อสัญญาแล้ว' : 'แจ้งย้ายออกแล้ว';
+                document.getElementById('lease-success-msg').textContent =
+                    type === 'renew' ? 'รอเจ้าของยืนยัน — ทีมงานจะติดต่อกลับเร็วๆ นี้'
+                                     : 'เจ้าของจะติดต่อกลับเร็วๆ นี้';
+                successEl.style.display = 'block';
             } catch (e) {
                 console.error('submitLeaseRequest failed:', e);
                 toast('ส่งคำขอไม่สำเร็จ — กรุณาลองใหม่', 'error');
             }
         }
         if (typeof window !== 'undefined') window.submitLeaseRequest = submitLeaseRequest;
+
+        async function confirmLeaseRequest(type) {
+            if (!_taRoom || !_taBuilding) { toast('ข้อมูลห้องไม่พร้อม กรุณาลองใหม่', 'error'); return; }
+            if (type === 'moveout') {
+                const date = document.getElementById('moveout-date')?.value;
+                const bank = document.getElementById('moveout-bank')?.value?.trim();
+                if (!date) { toast('กรุณาระบุวันที่ย้ายออก', 'warning'); return; }
+                if (!bank) { toast('กรุณาระบุบัญชีธนาคารรับมัดจำ', 'warning'); return; }
+            }
+            const labels = { renew: 'ต่อสัญญาเช่า', moveout: 'แจ้งย้ายออก' };
+            const ok = await window.GhModal.confirm({
+                title: type === 'renew' ? '✅ ยืนยันต่อสัญญา' : '❌ ยืนยันแจ้งย้ายออก',
+                body: `ต้องการ${labels[type]}ใช่หรือไม่? หลังจากส่งแล้วทีมงานจะติดต่อกลับ`,
+                confirmLabel: 'ยืนยัน',
+                cancelLabel: 'ยกเลิก',
+            });
+            if (ok) submitLeaseRequest(type);
+        }
+        if (typeof window !== 'undefined') window.confirmLeaseRequest = confirmLeaseRequest;
 
         // ===== EMERGENCY CONTACTS SUBSCRIBE =====
         // Firestore: system/emergencyContacts doc with field `items: [{ icon, label, number }]`.
@@ -12247,7 +12284,12 @@
         async function viewLeaseAgreement() {
             if (!window.currentContractDocument) { toast('ยังไม่มีเอกสารสัญญาเช่า', 'warning'); return; }
             const url = await _getLeaseSignedUrl();
-            if (url) window.open(url, '_blank', 'noopener');
+            if (!url) return;
+            if (window.liff?.openWindow) {
+                window.liff.openWindow({ url, external: true });
+            } else {
+                window.open(url, '_blank', 'noopener');
+            }
         }
         async function downloadLeaseAgreement() {
             if (!window.currentContractDocument) { toast('ยังไม่มีเอกสารสัญญาเช่า', 'warning'); return; }
