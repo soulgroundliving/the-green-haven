@@ -156,9 +156,6 @@ exports.liffSignIn = functions
   // UID is deterministic per LINE user — stable across sessions.
   const uid = 'line:' + lineUserId;
 
-  // displayName update is cosmetic only (admin Console UX). Run it concurrently
-  // with createCustomToken — createCustomToken does NOT require the Auth user to
-  // pre-exist. This cuts the critical-path from 2 sequential Admin SDK RPCs to 1.
   const lineDisplayName = String(liffData.lineDisplayName || '').slice(0, 60);
   const displayName = `${building}/${room}${lineDisplayName ? ' — ' + lineDisplayName : ''}`;
 
@@ -171,34 +168,68 @@ exports.liffSignIn = functions
     }
   });
 
+  // Read tenant doc in parallel with displayName update (both non-critical-chain).
+  // We need tenantId from the doc so it can be embedded in the custom token claim,
+  // enabling the people/{tenantId} Firestore rule to gate reads via
+  // request.auth.token.tenantId == tenantId (claims-stable, no UID-drift risk).
+  const tenantDocRef = firestore.collection('tenants').doc(building).collection('list').doc(room);
+  let tenantSnap = null;
+  try {
+    [, tenantSnap] = await Promise.all([
+      displayNameUpdate,
+      tenantDocRef.get().catch(() => null),
+    ]);
+  } catch (_) {}
+
+  const tenantData = tenantSnap?.exists ? (tenantSnap.data() || {}) : {};
+  const tenantId = String(tenantData.tenantId || '');
+
   let customToken;
   try {
-    // Promise.all: displayNameUpdate (cosmetic) runs concurrently with createCustomToken (critical).
-    [, customToken] = await Promise.all([
-      displayNameUpdate,
-      admin.auth().createCustomToken(uid, { room, building }),
-    ]);
-    console.log(`✅ liffSignIn: uid=${uid} → ${building}/${room} (LINE ${lineUserId})`);
+    // Embed { room, building, tenantId } claims so client-side Firestore rules
+    // can gate people/{tenantId} reads without UID-drift issues (§7-P).
+    customToken = await admin.auth().createCustomToken(uid, { room, building, tenantId });
+    console.log(`✅ liffSignIn: uid=${uid} → ${building}/${room}${tenantId ? ' tenantId=' + tenantId : ''} (LINE ${lineUserId})`);
   } catch (e) {
     console.error('liffSignIn: createCustomToken failed:', e.message);
     return res.status(500).json({ error: 'Failed to create custom token' });
   }
 
-  // ── Write linkedAuthUid to Firestore tenant doc (fire-and-forget) ─────────
-  // Guard: read status first — skip write if room is vacant so transitionToPlayer /
-  // archiveTenantOnMoveOut blanks are not re-populated by a returning LINE user.
-  firestore.collection('tenants').doc(building).collection('list').doc(room).get()
-    .then(snap => {
-      if (!snap.exists || (snap.data() || {}).status === 'vacant') {
-        console.warn(`liffSignIn: ${building}/${room} is vacant — skipping linkedAuthUid write`);
-        return;
-      }
-      return snap.ref.set(
-        { linkedAuthUid: uid, linkedAt: admin.firestore.FieldValue.serverTimestamp() },
-        { merge: true }
-      );
-    })
-    .catch(e => console.warn(`liffSignIn: linkedAuthUid write failed for ${building}/${room}:`, e.message));
+  // ── Write linkedAuthUid to Firestore (fire-and-forget) ────────────────────
+  // Guard: skip vacant rooms so transitionToPlayer / archiveTenantOnMoveOut
+  // blanks are not re-populated by a returning LINE user.
+  if (tenantSnap?.exists && tenantData.status !== 'vacant') {
+    const linkedUpdate = {
+      linkedAuthUid: uid,
+      linkedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    // Write to tenant doc (existing behaviour)
+    tenantSnap.ref.set(linkedUpdate, { merge: true })
+      .catch(e => console.warn(`liffSignIn: tenants linkedAuthUid write failed:`, e.message));
+    // Also write to people/{tenantId} so the people/ Firestore rule
+    // (resource.data.linkedAuthUid == request.auth.uid) resolves correctly.
+    if (tenantId) {
+      firestore.collection('people').doc(tenantId)
+        .set(linkedUpdate, { merge: true })
+        .catch(e => console.warn(`liffSignIn: people/${tenantId} linkedAuthUid write failed:`, e.message));
+    }
+  } else if (!tenantSnap) {
+    // tenantDocRef.get() failed above — fall back to a fresh read (original behaviour)
+    tenantDocRef.get()
+      .then(snap => {
+        if (!snap.exists || (snap.data() || {}).status === 'vacant') {
+          console.warn(`liffSignIn: ${building}/${room} is vacant — skipping linkedAuthUid write`);
+          return;
+        }
+        return snap.ref.set(
+          { linkedAuthUid: uid, linkedAt: admin.firestore.FieldValue.serverTimestamp() },
+          { merge: true }
+        );
+      })
+      .catch(e => console.warn(`liffSignIn: linkedAuthUid write failed for ${building}/${room}:`, e.message));
+  } else {
+    console.warn(`liffSignIn: ${building}/${room} is vacant — skipping linkedAuthUid write`);
+  }
 
   return res.status(200).json({ customToken, room, building });
 });

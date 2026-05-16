@@ -267,8 +267,14 @@ service cloud.firestore {
     // member (role='player'). Owner reads own doc via linkedAuthUid match; admin
     // reads/writes all. CF writes via admin SDK (transitionToPlayer, convertBookingToTenant).
     match /people/{tenantId} {
+      // Read: admin always; tenant who owns the doc via UID-match (legacy); OR
+      // via tenantId claim minted by liffSignIn (claims-stable, no UID-drift — §7-P).
+      // The tenantId claim was added to liffSignIn on 2026-05-17 so that
+      // people/{tenantId}.linkedAuthUid drift no longer blocks personal-info reads.
       allow read:  if isAdmin()
-        || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid);
+        || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid)
+        || (isSignedIn() && request.auth.token.tenantId == tenantId
+                         && request.auth.token.tenantId != '');
       allow write: if isAdmin();
 
       // wellnessClaimed — player reads/creates their own subcollection.
