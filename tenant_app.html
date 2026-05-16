@@ -1798,6 +1798,12 @@
         .emergency-section-body {
             display: none; padding: 0 16px 14px;
         }
+        /* When emergency-section-body lives inside .menu-list (post-refactor),
+           the long-form steps need full content width — override the deep 73px
+           left padding that menu-list defaults to. */
+        .menu-list .menu-item-group > .accordion-content.emergency-section-body {
+            padding: 4px 16px 14px;
+        }
         .emergency-step {
             display: flex; gap: 12px; padding: 10px 0;
             border-bottom: 1px solid #f0f0f0;
@@ -4586,14 +4592,14 @@
             </button>
         </div>
 
-        <div style="padding:0 15px;">
+        <div class="menu-list">
 
             <!-- Police -->
-            <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px;">
-                <div class="emergency-section-header" data-action="toggleAccordion">
-                    <span style="font-size:1.4rem;">🚓</span>
-                    <strong style="flex:1;">แจ้งความ / เรียกตำรวจ</strong>
-                    <i class="fas fa-chevron-down" style="color:#aaa;"></i>
+            <div class="menu-item-group">
+                <div class="menu-item" data-action="toggleAccordion">
+                    <div class="icon-box" style="background:#dbeafe; color:#1d4ed8;">🚓</div>
+                    <span>แจ้งความ / เรียกตำรวจ</span>
+                    <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
                 <div class="accordion-content emergency-section-body" style="display:none;">
                     <div class="emergency-step"><div class="emergency-step-num">1</div><span>โทร <strong>191</strong> หรือ <strong>1599</strong> (สายด่วนตำรวจ) แจ้งเหตุและสถานที่</span></div>
@@ -4606,11 +4612,11 @@
             </div>
 
             <!-- Fire -->
-            <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px;">
-                <div class="emergency-section-header" data-action="toggleAccordion">
-                    <span style="font-size:1.4rem;">🔥</span>
-                    <strong style="flex:1;">เกิดไฟไหม้</strong>
-                    <i class="fas fa-chevron-down" style="color:#aaa;"></i>
+            <div class="menu-item-group">
+                <div class="menu-item" data-action="toggleAccordion">
+                    <div class="icon-box" style="background:#ffedd5; color:#ea580c;">🔥</div>
+                    <span>เกิดไฟไหม้</span>
+                    <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
                 <div class="accordion-content emergency-section-body" style="display:none;">
                     <div class="emergency-step"><div class="emergency-step-num">1</div><span>กดสัญญาณเตือนไฟไหม้ที่ชั้นใกล้เคียงทันที</span></div>
@@ -4623,11 +4629,11 @@
             </div>
 
             <!-- Flood / pipe burst -->
-            <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px;">
-                <div class="emergency-section-header" data-action="toggleAccordion">
-                    <span style="font-size:1.4rem;">💧</span>
-                    <strong style="flex:1;">น้ำท่วม / ท่อแตก</strong>
-                    <i class="fas fa-chevron-down" style="color:#aaa;"></i>
+            <div class="menu-item-group">
+                <div class="menu-item" data-action="toggleAccordion">
+                    <div class="icon-box" style="background:#e0f2fe; color:#0284c7;">💧</div>
+                    <span>น้ำท่วม / ท่อแตก</span>
+                    <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
                 <div class="accordion-content emergency-section-body" style="display:none;">
                     <div class="emergency-step"><div class="emergency-step-num">1</div><span>ปิดวาล์วน้ำหลักในห้องทันที (ใต้อ่างล้างจาน หรือหลังชักโครก)</span></div>
@@ -4639,11 +4645,11 @@
             </div>
 
             <!-- Earthquake -->
-            <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px;">
-                <div class="emergency-section-header" data-action="toggleAccordion">
-                    <span style="font-size:1.4rem;">🌍</span>
-                    <strong style="flex:1;">แผ่นดินไหว</strong>
-                    <i class="fas fa-chevron-down" style="color:#aaa;"></i>
+            <div class="menu-item-group">
+                <div class="menu-item" data-action="toggleAccordion">
+                    <div class="icon-box" style="background:#fef3c7; color:#a16207;">🌍</div>
+                    <span>แผ่นดินไหว</span>
+                    <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
                 <div class="accordion-content emergency-section-body" style="display:none;">
                     <div class="emergency-step"><div class="emergency-step-num">1</div><span><strong>DROP</strong> — นอนหรือก้มลงทันที</span></div>
@@ -4655,11 +4661,11 @@
             </div>
 
             <!-- Medical -->
-            <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px;">
-                <div class="emergency-section-header" data-action="toggleAccordion">
-                    <span style="font-size:1.4rem;">🚑</span>
-                    <strong style="flex:1;">เจ็บป่วย / อุบัติเหตุ</strong>
-                    <i class="fas fa-chevron-down" style="color:#aaa;"></i>
+            <div class="menu-item-group">
+                <div class="menu-item" data-action="toggleAccordion">
+                    <div class="icon-box" style="background:#fee2e2; color:#dc2626;">🚑</div>
+                    <span>เจ็บป่วย / อุบัติเหตุ</span>
+                    <i class="fas fa-chevron-down arrow accordion-chev"></i>
                 </div>
                 <div class="accordion-content emergency-section-body" style="display:none;">
                     <div class="emergency-step"><div class="emergency-step-num">1</div><span>โทร <strong>1669</strong> แจ้งอาการเบื้องต้น ชื่ออาคาร ชั้น และห้อง</span></div>
