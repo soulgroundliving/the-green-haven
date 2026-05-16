@@ -12286,8 +12286,10 @@
             previewEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             const url = await _getLeaseSignedUrl();
             if (!url) { previewEl.style.display = 'none'; return; }
-            const path = window.currentContractDocument;
-            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
+            const origPath = window.currentContractDocument || '';
+            // data:image/... → image; otherwise strip query-params then test extension
+            const isImage = origPath.startsWith('data:image/')
+                || /\.(jpg|jpeg|png|gif|webp)$/i.test(origPath.split('?')[0]);
             if (isImage) {
                 contentEl.innerHTML = '';
                 const img = document.createElement('img');
