@@ -2024,6 +2024,9 @@ function _updateLeasePreview() {
   const moveIn = tenant.moveInDate ? new Date(tenant.moveInDate).toLocaleDateString('th-TH') : '—';
   const deposit = Number(tenant.deposit) || 0;
 
+  const existingDoc = activeLease?.documentURLs?.agreement;
+  const existingFileName = existingDoc?.fileName || activeLease?.contractFileName || null;
+
   card.classList.remove('u-hidden');
   card.innerHTML = `
     <div style="font-weight: 700; color: #1b5e20; margin-bottom: 6px;">📋 ข้อมูลจาก SSoT (read-only)</div>
@@ -2032,6 +2035,7 @@ function _updateLeasePreview() {
     <div>📅 วันเข้าเช่า: ${_escapeHTML(moveIn)} <span style="color:#666;font-size:.78rem;">(จาก Tab ผู้เช่า)</span></div>
     <div>💰 ค่าเช่า: ฿${rent.toLocaleString()}/เดือน <span style="color:#666;font-size:.78rem;">(จาก Tab จัดการห้อง)</span></div>
     <div>💵 มัดจำ: ฿${deposit.toLocaleString()} <span style="color:#666;font-size:.78rem;">(จาก Tab ผู้เช่า)</span></div>
+    ${existingFileName ? `<div style="margin-top:8px; padding:6px 10px; background:#fff3e0; border-left:3px solid #f57c00; border-radius:4px; font-size:.85rem;">📎 เอกสารปัจจุบัน: <b>${_escapeHTML(existingFileName)}</b> — อัพโหลดใหม่เพื่อเปลี่ยน</div>` : ''}
     ${!roomId ? '<div style="color:#c62828;margin-top:6px;">⚠️ ต้องกำหนดห้องใน Tab ผู้เช่าก่อนบันทึกสัญญา</div>' : ''}
   `;
 }
