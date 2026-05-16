@@ -12224,8 +12224,9 @@
         async function _getLeaseSignedUrl() {
             const path = window.currentContractDocument;
             if (!path) return null;
-            // If value looks like a full https:// URL (legacy contractDocument), use directly.
-            if (path.startsWith('https://')) return path;
+            // Legacy: base64 data URL or external https URL — use directly, no CF needed.
+            if (!path.startsWith('leases/')) return path;
+            // New flow: storage path → CF mints 1-hour signed URL (PDPA-friendly).
             try {
                 const fn = window.firebase.functions.httpsCallable('getLeaseDocUrl');
                 const result = await fn({ path });
