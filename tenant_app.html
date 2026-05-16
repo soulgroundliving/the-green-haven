@@ -9072,6 +9072,13 @@
         // Re-run after liffLinked so _taBuilding/_taRoom are available for the
         // tenants/{b}/list/{r} subscription (active tenant branch of _subscribeEcoPoints).
         _onLiffClaimsReady(loadGamificationData);
+        // Reload tenant identity + lease from Firestore after liffLinked delivers real
+        // custom-token claims. The initial call at initTenantApp() fires before claims
+        // exist → TenantFirebaseSync.loadAllData() → loadLease() gets permission_denied
+        // from Firestore and silently falls back to stale localStorage → ข้อมูลส่วนตัว
+        // shows cached/empty data.  This second fire (after real claims) retries the
+        // Firestore read and re-renders the profile page with current data. (§7-A)
+        _onLiffClaimsReady(loadTenantAppData);
 
         // ---- LIFF (LINE Front-end Framework) integration ----
         const LIFF_ID = '2009790149-Db7T76sd';
@@ -12583,10 +12590,10 @@
             if (target) target.classList.remove('u-hidden');
           }
 
-          // Init with current auth claims
-          const tok = window._liffClaims || {};
-          _fbBuilding = tok.building || 'rooms';
-          _fbRoom     = tok.room     || '';
+          // Init with current auth claims — read canonical globals (window._liffClaims
+          // is never assigned anywhere in this codebase, always resolves to {}).
+          _fbBuilding = _taBuilding  || 'rooms';
+          _fbRoom     = _taRoom      || '';
           _fbUid      = window._authUid || '';
           _fbDate     = new Date();
           _initFacilityPage();
@@ -12597,6 +12604,16 @@
 
       // Also expose for _onLiffClaimsReady warm-up (no-op if page not visible)
       window._initFacilityPage = _initFacilityPage;
+
+      // Warm-up: prime building/room/uid so _initFacilityPage has correct context
+      // when called before showSubPage('facility-booking') is tapped.
+      // window._liffClaims is never assigned — read canonical globals (same as
+      // every other auth-gated subscriber). This was the previous bug.
+      window._onLiffClaimsReady(function() {
+        _fbBuilding = _taBuilding || 'rooms';
+        _fbRoom     = _taRoom     || '';
+        _fbUid      = window._authUid || '';
+      });
     })();
     </script>
 
@@ -13002,10 +13019,12 @@
           // sign-in completes left the page hanging on ⏳ and triggered a
           // separate permission_denied bills toast (anti-pattern A).
           window._onLiffClaimsReady(function _clInitOnce() {
-            // Idempotent: re-read fresh state each fire
-            const tok = window._liffClaims || {};
-            _clBuilding  = tok.building || 'rooms';
-            _clRoomId    = tok.room     || '';
+            // Idempotent: re-read fresh state each fire.
+            // window._liffClaims is never assigned anywhere — read from the canonical
+            // module-level globals set by detectRoomBuilding() + linkAuthUid() (liffLinked).
+            // Same source every other auth-gated subscriber in this file uses.
+            _clBuilding  = _taBuilding  || 'rooms';
+            _clRoomId    = _taRoom      || '';
             _clTenantUid = window._authUid || '';
             if (!_clTenantUid) {
               // Anon sign-in hasn't completed yet (or failed) — show clear msg

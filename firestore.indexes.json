@@ -104,6 +104,14 @@
       "collectionGroup": "checklistInstances",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "building", "order": "ASCENDING" },
+        { "fieldPath": "roomId",   "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "checklistInstances",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "tenantUid", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
