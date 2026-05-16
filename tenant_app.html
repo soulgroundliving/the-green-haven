@@ -4146,14 +4146,15 @@
             </div>
             <!-- Lease document buttons — shown only when admin has uploaded a contract.
                  renderContractPage() controls visibility via lease.contractPath on the tenant mirror. -->
-            <div id="lease-doc-btns" style="display:none; gap:8px; margin-top:12px;">
-                <button id="view-lease-btn" class="btn-main" style="flex:1; background:var(--soft-green); color:var(--primary-green);" data-action="viewLeaseAgreement">
+            <div id="lease-doc-btns" style="display:none; margin-top:12px;">
+                <button id="view-lease-btn" class="btn-main" style="width:100%; background:var(--soft-green); color:var(--primary-green);" data-action="viewLeaseAgreement">
                     <i class="fas fa-eye"></i> ดูเอกสารสัญญา
                 </button>
-                <button id="download-lease-btn" class="btn-main" style="flex:1;" data-action="downloadLeaseAgreement">
-                    <i class="fas fa-download"></i> ดาวน์โหลด
-                </button>
             </div>
+        </div>
+
+        <div id="lease-doc-preview" style="display:none; padding:0 0 12px;">
+            <div id="lease-doc-preview-content"></div>
         </div>
 
         <!-- Contract Quiz MVP — อ่านสัญญาจบ → ทำ quiz → +20 pts (1 ครั้ง/เดือน) -->
@@ -12278,24 +12279,29 @@
         }
         async function viewLeaseAgreement() {
             if (!window.currentContractDocument) { toast('ยังไม่มีเอกสารสัญญาเช่า', 'warning'); return; }
+            const previewEl = document.getElementById('lease-doc-preview');
+            const contentEl = document.getElementById('lease-doc-preview-content');
+            previewEl.style.display = 'block';
+            contentEl.innerHTML = '<div style="text-align:center;padding:24px 0;color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="font-size:22px;"></i><br><span style="font-size:var(--fs-sm);">กำลังโหลด…</span></div>';
+            previewEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             const url = await _getLeaseSignedUrl();
-            if (!url) return;
-            if (window.liff?.openWindow) {
-                window.liff.openWindow({ url, external: true });
+            if (!url) { previewEl.style.display = 'none'; return; }
+            const path = window.currentContractDocument;
+            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
+            if (isImage) {
+                contentEl.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = 'เอกสารสัญญา';
+                img.style.cssText = 'width:100%;border-radius:12px;display:block;';
+                img.onerror = () => { contentEl.innerHTML = '<p style="text-align:center;color:var(--danger);padding:16px;">โหลดเอกสารไม่ได้ กรุณาลองใหม่</p>'; };
+                contentEl.appendChild(img);
             } else {
-                window.open(url, '_blank', 'noopener');
+                // PDF — open externally (LINE WebView cannot render PDFs inline)
+                previewEl.style.display = 'none';
+                if (window.liff?.openWindow) window.liff.openWindow({ url, external: true });
+                else window.open(url, '_blank', 'noopener');
             }
-        }
-        async function downloadLeaseAgreement() {
-            if (!window.currentContractDocument) { toast('ยังไม่มีเอกสารสัญญาเช่า', 'warning'); return; }
-            const url = await _getLeaseSignedUrl();
-            if (!url) return;
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `lease-agreement-${_legacyBuilding()}-${_legacyRoom()}.pdf`;
-            document.body.appendChild(link); link.click();
-            document.body.removeChild(link);
-            toast('เริ่มดาวน์โหลดสัญญา', 'success');
         }
 
         // B2: enhance all accordion header divs with role/tabindex/aria-expanded + keyboard
@@ -12327,7 +12333,6 @@
         window.printReceipt = printReceipt;
         window.saveInvoiceImage = saveInvoiceImage;
         window.viewLeaseAgreement = viewLeaseAgreement;
-        window.downloadLeaseAgreement = downloadLeaseAgreement;
         window.downloadBillTemplate = downloadBillTemplate;
         window.uploadPhotoToStorage = uploadPhotoToStorage;
         window.generateReceipt = generateReceipt;
