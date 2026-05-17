@@ -2880,25 +2880,7 @@
             <h1 style="margin:0; font-size: var(--fs-lg);">จองบริการทำความสะอาด</h1>
         </div>
 
-        <!-- History first (so "ฉันเคยจองอะไรไว้?" = 0 scroll).
-             Booking flow (service type + form) lives below. -->
-        <div class="section-title" role="heading" aria-level="2"><span>ประวัติการรับบริการ</span></div>
-        <div id="cleaning-records" class="px-4" style="padding-bottom:10px;">
-            <div class="gh-empty-state">
-                <div class="gh-empty-state__illust">
-                    <svg viewBox="0 0 120 120" aria-hidden="true">
-                        <path d="M28 38 a8 8 0 0 1 8-8 h48 a8 8 0 0 1 8 8 v34 a8 8 0 0 1-8 8 h-32 l-12 12 v-12 h-4 a8 8 0 0 1-8-8 z"/>
-                        <circle cx="50" cy="55" r="2"/>
-                        <circle cx="60" cy="55" r="2"/>
-                        <circle cx="70" cy="55" r="2"/>
-                    </svg>
-                </div>
-                <p class="gh-empty-state__title">ยังไม่มีประวัติการจอง</p>
-                <p class="gh-empty-state__text">เมื่อจองบริการแล้ว ประวัติจะแสดงที่นี่</p>
-            </div>
-        </div>
-
-        <div class="section-title" role="heading" aria-level="2" style="margin-top:8px;"><span>จองใหม่ — เลือกประเภทบริการ</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>จองใหม่ — เลือกประเภทบริการ</span></div>
         <!-- Rendered dynamically by _renderCleaningServices() from Firestore system/cleaningServices.
              Admin manages prices/labels/slots in dashboard. Defaults shown until Firestore loads. -->
         <div id="cleaning-service-list" class="grid grid-cols-2 gap-3 px-4 mb-6">
@@ -2940,6 +2922,22 @@
             </div>
             <button data-action="submitCleaning" class="btn-main mt-4">ยืนยันการจองบริการ</button>
         </div>
+
+        <div class="section-title" role="heading" aria-level="2" style="margin-top:16px;"><span>ประวัติการรับบริการ</span></div>
+        <div id="cleaning-records" class="px-4" style="padding-bottom:10px;">
+            <div class="gh-empty-state">
+                <div class="gh-empty-state__illust">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                        <path d="M28 38 a8 8 0 0 1 8-8 h48 a8 8 0 0 1 8 8 v34 a8 8 0 0 1-8 8 h-32 l-12 12 v-12 h-4 a8 8 0 0 1-8-8 z"/>
+                        <circle cx="50" cy="55" r="2"/>
+                        <circle cx="60" cy="55" r="2"/>
+                        <circle cx="70" cy="55" r="2"/>
+                    </svg>
+                </div>
+                <p class="gh-empty-state__title">ยังไม่มีประวัติการจอง</p>
+                <p class="gh-empty-state__text">เมื่อจองบริการแล้ว ประวัติจะแสดงที่นี่</p>
+            </div>
+        </div>
     </div>
 
     <div id="complaint" class="page">
@@ -2951,27 +2949,7 @@
             <h1 style="margin:0; font-size: var(--fs-lg);">แจ้งนิติโดยตรง</h1>
         </div>
 
-        <!-- History first (real-time via _subscribeComplaintsFromFirestore).
-             Placed above the form so the most common read-task ("เช็คประวัติฉัน")
-             needs zero scroll; submitting a new complaint is one scroll down. -->
-        <div class="section-title" role="heading" aria-level="2"><span>ประวัติการแจ้ง</span></div>
-        <div id="complaint-list" style="padding:0 16px 10px;">
-            <div class="gh-empty-state">
-                <div class="gh-empty-state__illust">
-                    <svg viewBox="0 0 120 120" aria-hidden="true">
-                        <path d="M28 38 a8 8 0 0 1 8-8 h48 a8 8 0 0 1 8 8 v34 a8 8 0 0 1-8 8 h-32 l-12 12 v-12 h-4 a8 8 0 0 1-8-8 z"/>
-                        <circle cx="50" cy="55" r="2"/>
-                        <circle cx="60" cy="55" r="2"/>
-                        <circle cx="70" cy="55" r="2"/>
-                    </svg>
-                </div>
-                <p class="gh-empty-state__title">ยังไม่มีประวัติการแจ้ง</p>
-                <p class="gh-empty-state__text">เมื่อมีการแจ้งนิติ ประวัติจะแสดงที่นี่</p>
-            </div>
-        </div>
-
-        <!-- Form below history. -->
-        <div class="section-title" role="heading" aria-level="2" style="margin-top:8px;"><span>แจ้งเรื่องใหม่</span></div>
+        <div class="section-title" role="heading" aria-level="2"><span>แจ้งเรื่องใหม่</span></div>
         <div id="complaint-form-tab" class="card">
             <form data-action-submit="submitComplaint">
                 <label style="font-weight:700; margin-bottom:0.3rem; color:var(--text-dark); font-size:var(--fs-md); display:block;">ประเภท *</label>
@@ -3019,6 +2997,22 @@
 
                 <button type="submit" class="btn-main" style="margin-top:10px;">✈️ ส่งแจ้ง</button>
             </form>
+        </div>
+
+        <div class="section-title" role="heading" aria-level="2" style="margin-top:16px;"><span>ประวัติการแจ้ง</span></div>
+        <div id="complaint-list" style="padding:0 16px 10px;">
+            <div class="gh-empty-state">
+                <div class="gh-empty-state__illust">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                        <path d="M28 38 a8 8 0 0 1 8-8 h48 a8 8 0 0 1 8 8 v34 a8 8 0 0 1-8 8 h-32 l-12 12 v-12 h-4 a8 8 0 0 1-8-8 z"/>
+                        <circle cx="50" cy="55" r="2"/>
+                        <circle cx="60" cy="55" r="2"/>
+                        <circle cx="70" cy="55" r="2"/>
+                    </svg>
+                </div>
+                <p class="gh-empty-state__title">ยังไม่มีประวัติการแจ้ง</p>
+                <p class="gh-empty-state__text">เมื่อมีการแจ้งนิติ ประวัติจะแสดงที่นี่</p>
+            </div>
         </div>
     </div>
 
