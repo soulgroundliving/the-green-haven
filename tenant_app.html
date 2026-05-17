@@ -7665,6 +7665,38 @@
         }
         _onLiffClaimsReady(_subscribeBroadcasts);
 
+        // C4 S1 v2.2 (2026-05-17): if Firebase Auth becomes available AFTER the bell
+        // first subscribed (or while the subscribers were stuck in permission-denied),
+        // re-trigger _subscribeBroadcasts so the now-authenticated queries can succeed.
+        // Real-LIFF symptom observed: `signed in: no` at first subscribe → permission-denied
+        // on broadcastMessages + announcements → bell stayed empty for the session.
+        (function _wireBellAuthRecovery() {
+            const tryWire = () => {
+                const auth = window.firebaseAuth;
+                if (!auth || typeof auth.onAuthStateChanged !== 'function') {
+                    setTimeout(tryWire, 800);
+                    return;
+                }
+                auth.onAuthStateChanged((user) => {
+                    if (!user || !_taBuilding) return;
+                    const errs = window._bellLastErr || {};
+                    const someSourceFailed = !!(errs.new || errs.legacy || errs.legacyEvents);
+                    // Re-subscribe if (a) never subscribed OR (b) at least one source
+                    // previously failed (likely with permission-denied while auth was null).
+                    // After (b) we must tear down so the idempotency check inside
+                    // _subscribeBroadcasts doesn't short-circuit.
+                    if (!_broadcastsUnsub || someSourceFailed) {
+                        if (_broadcastsUnsub) {
+                            try { _broadcastsUnsub(); } catch(_){}
+                            _broadcastsUnsub = null;
+                        }
+                        _subscribeBroadcasts();
+                    }
+                });
+            };
+            tryWire();
+        })();
+
         function openBroadcastsPanel() {
             const panel = document.getElementById('broadcasts-panel');
             if (!panel) return;
