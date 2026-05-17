@@ -7390,8 +7390,28 @@
         function _renderBroadcastsList() {
             const el = document.getElementById('broadcasts-panel-list');
             if (!el) return;
+            const renderDebugFooter = () => {
+                // Surfaces error/state info inline so users can screenshot from LIFF
+                // when bell looks wrong. Removed in S2 cleanup.
+                const errs = window._bellLastErr || {};
+                const auds = window._bellLastAudiences || [];
+                const user = window.firebase?.auth?.currentUser;
+                const errLines = Object.entries(errs)
+                    .filter(([_, v]) => v)
+                    .map(([k, v]) => `${k}: ${_escapeBroadcastHtml(String(v))}`)
+                    .join('<br>') || '(no errors)';
+                return `<details style="margin:1.2rem 1rem 0; font-size:.72rem; color:#999; padding:.8rem; background:#fafafa; border-radius:6px;">
+                    <summary style="cursor:pointer; color:#666;">🛠 ดู debug info</summary>
+                    <div style="margin-top:.6rem; line-height:1.6;">
+                        <div>audiences: [${auds.map(a => _escapeBroadcastHtml(a)).join(', ')}]</div>
+                        <div>_taBuilding: ${_escapeBroadcastHtml(_taBuilding || '(empty)')}</div>
+                        <div>signed in: ${user ? 'yes' : 'no'} ${user?.uid ? '(uid: ' + _escapeBroadcastHtml(user.uid.slice(0, 12)) + '...)' : ''}</div>
+                        <div style="margin-top:.4rem;">errors: <br>${errLines}</div>
+                    </div>
+                </details>`;
+            };
             if (!_broadcastsList.length) {
-                el.innerHTML = '<div style="text-align:center; padding:3rem 1rem; color:var(--text-muted); font-size:.92rem;">ยังไม่มีประกาศ</div>';
+                el.innerHTML = '<div style="text-align:center; padding:3rem 1rem; color:var(--text-muted); font-size:.92rem;">ยังไม่มีประกาศ</div>' + renderDebugFooter();
                 return;
             }
             const cutoff = _getLastBroadcastReadAt();
@@ -7400,7 +7420,8 @@
             const MONTHS_TH  = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
             const fmtEventDate = (ts) => {
                 let d;
-                if (ts?.toDate) d = ts.toDate();
+                if (ts instanceof Date) d = ts;
+                else if (ts?.toDate) d = ts.toDate();
                 else if (typeof ts === 'string') d = new Date(ts);
                 else if (typeof ts === 'number') d = new Date(ts);
                 else return '';
@@ -7432,25 +7453,54 @@
                     <div style="font-size:.9rem; color:var(--text-dark, #333); white-space:pre-wrap;">${body}</div>
                     ${eventMeta}
                 </div>`;
-            }).join('');
+            }).join('') + renderDebugFooter();
         }
         // C4 Session 1 v2 (2026-05-17): bell shows ALL announcement types
         // (notice/event/banner) merged with legacy broadcastMessages. UX consolidation
         // — community feed "ประกาศ & กิจกรรม" section is hidden; bell is the single surface.
         //
-        // Bug fix: each source has INDEPENDENT unsub. Previous version had composite
-        // teardown — if either query errored (e.g. composite index race on first deploy),
-        // both queries died together and bell stayed empty for the session. Now: per-source
-        // teardown + setTimeout retry on failed-precondition (index still building).
+        // S1 v2.1 bug fix: audience filter now derived from the ACTUAL token claim
+        // (getIdTokenResult), not _taBuilding. Reason: if _taBuilding is set client-side
+        // (default 'rooms') but the Firebase Auth token doesn't actually carry that
+        // building claim, the rule `audience == request.auth.token.building` fails for
+        // building-specific docs in the result set → WHOLE QUERY rejected. Using the
+        // real claim guarantees rule alignment.
         let _broadcastsRefreshScheduled = false;
-        function _subscribeBroadcasts() {
+        window._bellLastErr = window._bellLastErr || {};
+
+        async function _bellResolveAudiences() {
+            const audiences = ['all'];
+            try {
+                const user = window.firebase?.auth?.currentUser;
+                if (user && typeof user.getIdTokenResult === 'function') {
+                    const res = await user.getIdTokenResult();
+                    const claimed = res?.claims?.building;
+                    if (typeof claimed === 'string' && claimed && claimed !== 'all') {
+                        audiences.push(claimed);
+                    }
+                }
+            } catch (e) {
+                console.warn('[bell] getIdTokenResult failed:', e?.message || e);
+            }
+            // Defensive: if no claim resolved, ALSO try _taBuilding (so non-LIFF/admin
+            // preview still sees something building-scoped). Rule allows 'all' always.
+            if (audiences.length === 1 && _taBuilding && _taBuilding !== 'all') {
+                audiences.push(_taBuilding);
+            }
+            window._bellLastAudiences = audiences;
+            return audiences;
+        }
+
+        async function _subscribeBroadcasts() {
             if (_broadcastsUnsub) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
             // Anti-pattern §7-U: claim-presence guard FIRST, before setting unsub.
             if (!_taBuilding) return;
             const fs = window.firebase.firestoreFunctions;
             const db = window.firebase.firestore();
-            const audience = _taBuilding;
+            // Resolve audiences from the ACTUAL token claims (not the client-side
+            // _taBuilding shortcut). Prevents rule denial on building-specific docs.
+            const audiences = await _bellResolveAudiences();
 
             const legacyCache = new Map();        // broadcastMessages
             const newCache    = new Map();        // announcements (all types)
@@ -7491,16 +7541,18 @@
                     // Index needed: announcements audience ASC + sentAt DESC.
                     const qNew = fs.query(
                         fs.collection(db, 'announcements'),
-                        fs.where('audience', 'in', ['all', audience]),
+                        fs.where('audience', 'in', audiences),
                         fs.orderBy('sentAt', 'desc'),
                         fs.limit(20)
                     );
                     unsubNew = fs.onSnapshot(qNew, snap => {
                         newCache.clear();
                         snap.docs.forEach(d => newCache.set(d.id, { id: d.id, ...d.data() }));
+                        window._bellLastErr.new = null;
                         rerender('new');
                     }, err => {
                         console.warn('announcements/bell subscribe failed:', err?.message || err);
+                        window._bellLastErr.new = err?.code || err?.message || String(err);
                         if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
                             try { unsubNew && unsubNew(); } catch(_){}
                             unsubNew = null;
@@ -7516,6 +7568,7 @@
                     });
                 } catch (e) {
                     console.warn('announcements/bell init failed:', e?.message || e);
+                    window._bellLastErr.new = 'init: ' + (e?.message || e);
                 }
             };
 
@@ -7524,16 +7577,18 @@
                 try {
                     const qLegacy = fs.query(
                         fs.collection(db, 'broadcastMessages'),
-                        fs.where('audience', 'in', ['all', audience]),
+                        fs.where('audience', 'in', audiences),
                         fs.orderBy('sentAt', 'desc'),
                         fs.limit(20)
                     );
                     unsubLegacy = fs.onSnapshot(qLegacy, snap => {
                         legacyCache.clear();
                         snap.docs.forEach(d => legacyCache.set(d.id, { id: d.id, ...d.data() }));
+                        window._bellLastErr.legacy = null;
                         rerender('legacy');
                     }, err => {
                         console.warn('broadcasts/legacy subscribe failed:', err?.message || err);
+                        window._bellLastErr.legacy = err?.code || err?.message || String(err);
                         if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
                             try { unsubLegacy && unsubLegacy(); } catch(_){}
                             unsubLegacy = null;
@@ -7541,6 +7596,7 @@
                     });
                 } catch (e) {
                     console.warn('broadcasts/legacy init failed:', e?.message || e);
+                    window._bellLastErr.legacy = 'init: ' + (e?.message || e);
                 }
             };
 
@@ -7548,13 +7604,16 @@
                 if (unsubLegacyEvents) return;
                 try {
                     // Pre-C4 events in communityEvents/{id} — public-read rule, no audience field.
-                    // Normalize to bell-compatible shape; client-side audience filter via legacy `building`.
+                    // Normalize to bell-compatible shape; client-side filter using resolved audiences.
                     const qLegacyEvents = fs.query(fs.collection(db, 'communityEvents'));
                     unsubLegacyEvents = fs.onSnapshot(qLegacyEvents, snap => {
                         legacyEventsCache.clear();
                         snap.docs.forEach(d => {
                             const data = d.data() || {};
-                            if (data.building && data.building !== 'all' && data.building !== audience) return;
+                            // Mirror server-side audience IN [...] using client-side filter.
+                            // Legacy collection uses `building` field; 'all' is wildcard.
+                            const docAud = data.building || 'all';
+                            if (docAud !== 'all' && !audiences.includes(docAud)) return;
                             // Combine date + time to a Timestamp-like; fall back to date-only.
                             let eventDateObj = null;
                             if (data.date) {
@@ -7569,15 +7628,17 @@
                                 type: 'event',
                                 title: data.title || 'กิจกรรม',
                                 body: data.description || '',
-                                audience: data.building || 'all',
+                                audience: docAud,
                                 sentAt: sentAtIso,
                                 eventDate: eventDateObj,
                                 location: data.location || '',
                             });
                         });
+                        window._bellLastErr.legacyEvents = null;
                         rerender('legacyEvents');
                     }, err => {
                         console.warn('communityEvents/legacy subscribe failed:', err?.message || err);
+                        window._bellLastErr.legacyEvents = err?.code || err?.message || String(err);
                         if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
                             try { unsubLegacyEvents && unsubLegacyEvents(); } catch(_){}
                             unsubLegacyEvents = null;
@@ -7585,6 +7646,7 @@
                     });
                 } catch (e) {
                     console.warn('communityEvents/legacy init failed:', e?.message || e);
+                    window._bellLastErr.legacyEvents = 'init: ' + (e?.message || e);
                 }
             };
 
