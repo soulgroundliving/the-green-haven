@@ -171,19 +171,50 @@ function updatePVStats(slips) {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const todaySlips = slips.filter(s => _pvEffectiveDate(s) >= todayStart);
   const monthSlips = slips.filter(s => _pvEffectiveDate(s) >= monthStart);
-  const monthTotal = monthSlips.reduce((sum, s) => sum + (s.amount || 0), 0);
-  // Count unique rooms (admin's mental model: "ห้องที่ชำระ") + slip submissions
-  // separately. A single room may submit multiple slips (catch-up, retry,
-  // backfill) — counting slips as "ห้องเดือนนี้" inflates the number and made
-  // admin think rooms were double-billed.
-  const uniqueRoomsToday = new Set(todaySlips.map(s => `${s.building}|${s.room}`)).size;
-  const uniqueRoomsMonth = new Set(monthSlips.map(s => `${s.building}|${s.room}`)).size;
+  // SoT for totals: BillStore (canonical bills with status='paid') — NOT slip
+  // aggregation. The slip feed contains backfill + manual + verifiedSlips for
+  // the same payment with different transactionIds → dedupe by txid leaves
+  // duplicates, inflating both count and amount (incident: ฿109,602 reported
+  // vs canonical ฿68,272). Slip feed below the widget still shows raw activity.
+  const yearBE = now.getFullYear() + 543;
+  const monthNum = now.getMonth() + 1;
+  let billStorePaidCount = 0;
+  let billStorePaidTotal = 0;
+  let billStorePaidToday = 0;
+  let billStoreTotalToday = 0;
+  const paidRooms = new Set();
+  const paidRoomsToday = new Set();
+  if (window.BillStore?._cache) {
+    Object.entries(window.BillStore._cache).forEach(([bld, roomsObj]) => {
+      Object.entries(roomsObj || {}).forEach(([roomId, byId]) => {
+        Object.values(byId || {}).forEach(b => {
+          if (!b || typeof b !== 'object') return;
+          if (typeof b.billId === 'string' && b.billId.startsWith(window.BillStore.SYNTH_PREFIX || 'SYNTH-')) return;
+          if (parseInt(b.year) !== yearBE || parseInt(b.month) !== monthNum) return;
+          const status = String(b.status || '').toLowerCase();
+          if (status !== 'paid' && !b.paidAt) return;
+          const amount = b.totalCharge || b.amount || 0;
+          billStorePaidCount++;
+          billStorePaidTotal += amount;
+          paidRooms.add(`${bld}|${roomId}`);
+          // Today-bucket: when paidAt is within today's window
+          const paidAt = b.paidAt ? new Date(b.paidAt) : null;
+          if (paidAt && paidAt >= todayStart) {
+            paidRoomsToday.add(`${bld}|${roomId}`);
+            billStoreTotalToday += amount;
+            billStorePaidToday++;
+          }
+        });
+      });
+    });
+  }
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  set('pv-today-count', uniqueRoomsToday);
-  set('pv-month-count', uniqueRoomsMonth);
-  set('pv-month-total', '฿' + monthTotal.toLocaleString());
-  // Subtitle: show slip-submission counts so admin still sees workflow throughput
-  const setSub = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n > 0 ? `📄 ${n} รายการ` : ''; };
+  set('pv-today-count', paidRoomsToday.size);
+  set('pv-month-count', paidRooms.size);
+  set('pv-month-total', '฿' + billStorePaidTotal.toLocaleString());
+  // Subtitle: show raw slip-feed counts so admin still sees workflow throughput.
+  // Difference between bill count and slip count = retries / multi-source recordings.
+  const setSub = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n > 0 ? `📄 ${n} slip` : ''; };
   setSub('pv-today-subcount', todaySlips.length);
   setSub('pv-month-subcount', monthSlips.length);
   // Update notification badge
