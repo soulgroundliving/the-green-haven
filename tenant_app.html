@@ -1126,15 +1126,15 @@
 
         .avatar-selector {
             display: flex;
-            gap: 15px;
+            gap: 8px;
             margin-top: 15px;
             justify-content: flex-start;
             align-items: center;
         }
 
         .avatar-option {
-            width: 60px;
-            height: 60px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             border: 3px solid transparent;
             cursor: pointer;
@@ -1143,7 +1143,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: var(--fs-lg);
+            font-size: 1.4rem;
+            flex-shrink: 0;
         }
 
         .avatar-option.active {
@@ -2322,11 +2323,18 @@
                 <div class="map-icon-bounce" style="animation-delay: 0.2s;">🛒</div>
             </button>
 
-            <button type="button" data-action="showPage--updateNavActiveIndex" data-page="profile" data-nav-index="4"
-                aria-label="ไปหน้าโปรไฟล์ / Pet Park"
+            <button type="button" data-action="showSubPage" data-page="pet-park-page"
+                aria-label="ไปหน้า Pet Park"
                 style="position:absolute;top:35%;left:60%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #9B59B6;">PET PARK</div>
                 <div class="map-icon-bounce" style="animation-delay: 0.4s;">🐾</div>
+            </button>
+
+            <button type="button" data-action="showSubPage" data-page="quest-page"
+                aria-label="ไปหน้า Quest Ecosystem"
+                style="position:absolute;top:25%;left:30%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
+                <div class="map-label" style="background: #D4AF37;">QUEST</div>
+                <div class="map-icon-bounce" style="animation-delay: 0.3s;">🎮</div>
             </button>
 
             <button type="button" data-action="showPage--updateNavActiveIndex" data-page="usage" data-nav-index="3"
@@ -3082,7 +3090,7 @@
                     <button class="usage-chart-tab usage-chart-tab-water" data-type="water" data-action="switchUsageChartTab" data-tab="water" style="padding:6px 14px; border:none; border-radius:8px; font-size:var(--fs-sm); font-weight:700; cursor:pointer; font-family:inherit; background:transparent; color:#64748b;">💧 น้ำ</button>
                 </div>
             </div>
-            <div id="usage-chart-svg-wrap" style="min-height:170px; overflow-x:auto; -webkit-overflow-scrolling:touch;"></div>
+            <div id="usage-chart-svg-wrap" style="min-height:170px;"></div>
             <p style="font-size:10px; color:#9ca3af; text-align:center; margin:6px 0 4px; font-style:normal;">แตะจุดใดจุดหนึ่งเพื่อดูรายละเอียด</p>
             <div id="usage-chart-detail" style="display:none; margin-top:10px; padding:12px; background:#f9fafb; border-radius:12px;"></div>
             <p style="font-size:9px; color:#9ca3af; margin:10px 0 0; text-align:center; font-style:italic;">ⓘ ข้อมูลรายวันสำหรับไฟจะพร้อมใช้เมื่อเชื่อม Smart Home (ก.ค.-ส.ค.) ส่วนน้ำคำนวณค่าเฉลี่ยจากยอดรวมเดือน</p>
@@ -3128,7 +3136,7 @@
     </div>
 
     <div id="payment-page" class="page">
-        <div class="app-bar" style="padding-bottom: 25px;">
+        <div class="app-bar" style="padding-bottom: 12px;">
             <div>
                 <h1 style="margin:0; font-size: var(--fs-lg);"><i class="fas fa-credit-card" style="color:var(--primary-green); margin-right:6px;"></i>ชำระเงิน</h1>
                 <p style="margin:4px 0 0; color: var(--text-muted); font-size:var(--fs-sm);">ทำตามขั้นตอนด้านล่างเพื่อชำระเงินค่าบิล</p>
@@ -3154,56 +3162,46 @@
         <div id="payment-step-1">
             <div class="receipt-card" style="border-color:#3b82f6;">
                 <div class="receipt-inner">
-                    <!-- Brand header -->
-                    <div style="text-align:center; margin-bottom:4px;">
-                        <span style="font-size:1.2rem; margin-right:4px;">🌿</span>
-                        <strong style="color:var(--primary-green); font-size:1.15rem;">The Green Haven</strong>
-                    </div>
-                    <p style="text-align:center; font-size:var(--fs-sm); color:#888; margin:0 0 14px;">เดอะ กรีน เฮฟเว่น</p>
                     <!-- Document title -->
                     <h2 class="receipt-title" style="margin-bottom:2px;">ใบวางบิล / Invoice</h2>
-                    <p style="text-align:center; color:#888; font-size:var(--fs-sm); margin:0 0 18px;">เลขที่: <span id="inv-bill-no">—</span></p>
+                    <p style="text-align:center; color:#888; font-size:var(--fs-sm); margin:0 0 10px;">เลขที่: <span id="inv-bill-no">—</span></p>
                     <!-- Info rows -->
                     <div style="font-size:var(--fs-md);">
-                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                        <div style="display:flex; justify-content:space-between; padding:3px 0;">
                             <span style="color:#666;">ห้องเลขที่:</span><strong id="inv-room">—</strong>
                         </div>
-                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                        <div style="display:flex; justify-content:space-between; padding:3px 0;">
                             <span style="color:#666;">ประจำเดือน:</span><strong id="inv-period">—</strong>
                         </div>
-                        <div style="display:flex; justify-content:space-between; padding:5px 0;">
+                        <div style="display:flex; justify-content:space-between; padding:3px 0;">
                             <span style="color:#666;">วันที่ออกบิล:</span><strong id="inv-date">—</strong>
                         </div>
                     </div>
-                    <hr style="border:none; border-top:1px dashed #ddd; margin:12px 0;">
+                    <hr style="border:none; border-top:1px dashed #ddd; margin:8px 0;">
                     <!-- Line items (populated by renderPaymentInvoice) -->
                     <div id="inv-items" style="font-size:var(--fs-md);"></div>
-                    <hr style="border:none; border-top:1px dashed #ddd; margin:12px 0;">
-                    <div style="text-align:center; padding:8px 0;">
-                        <div style="color:#666; font-size:var(--fs-md); margin-bottom:4px;">รวมทั้งสิ้น</div>
-                        <div id="inv-total" style="font-weight:bold; color:var(--primary-green); font-size:1.7rem; line-height:1.2;">฿—</div>
+                    <hr style="border:none; border-top:1px dashed #ddd; margin:8px 0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0;">
+                        <span style="color:#666; font-size:var(--fs-md);">รวมทั้งสิ้น</span>
+                        <div id="inv-total" style="font-weight:bold; color:var(--primary-green); font-size:1.5rem; line-height:1.2;">฿—</div>
                     </div>
                     <!-- QR PromptPay -->
-                    <div id="pay-qr-box" style="background:linear-gradient(135deg,var(--soft-green),#f0faf1); border-radius:12px; padding:16px; margin-top:18px; text-align:center;">
-                        <p style="margin:0 0 10px; font-weight:600; color:var(--primary-green);">📱 สแกน QR เพื่อชำระเงิน</p>
+                    <div id="pay-qr-box" style="background:linear-gradient(135deg,var(--soft-green),#f0faf1); border-radius:12px; padding:12px; margin-top:10px; text-align:center;">
+                        <p style="margin:0 0 8px; font-weight:600; color:var(--primary-green); font-size:var(--fs-sm);">📱 สแกน QR เพื่อชำระเงิน</p>
                         <div id="pay-qr-canvas" style="display:flex; justify-content:center; margin:0 auto;"></div>
-                        <div id="inv-qr-amount" style="background:var(--primary-green); color:#fff; border-radius:20px; padding:6px 22px; font-weight:bold; margin:12px auto 6px; display:inline-block;">฿—</div>
-                        <p style="margin:4px 0 0; font-size:var(--fs-sm);">พร้อมเพย์: <strong id="inv-promptpay">—</strong></p>
-                        <p style="margin:0; font-size:var(--fs-sm); color:#888;">สแกนแล้วยอดจะขึ้นอัตโนมัติ ไม่ต้องพิมพ์ตัวเลข</p>
+                        <div id="inv-qr-amount" style="background:var(--primary-green); color:#fff; border-radius:20px; padding:5px 18px; font-weight:bold; margin:8px auto 4px; display:inline-block;">฿—</div>
+                        <p style="margin:2px 0 0; font-size:var(--fs-sm);">พร้อมเพย์: <strong id="inv-promptpay">—</strong></p>
                     </div>
-                    <!-- Due date warning -->
-                    <div style="background:#fff4e5; border:1px solid #ffd591; border-radius:10px; padding:10px; margin-top:14px; text-align:center; font-size:var(--fs-sm); color:#b45309;">
-                        📅 กรุณาชำระภายใน <strong id="inv-due-date">—</strong>
+                    <!-- Due date + status inline -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:8px;">
+                        <div style="background:#fff4e5; border:1px solid #ffd591; border-radius:8px; padding:6px 10px; font-size:var(--fs-sm); color:#b45309; flex:1; text-align:center;">
+                            📅 ชำระภายใน <strong id="inv-due-date">—</strong>
+                        </div>
+                        <span style="border:1.5px solid #d97706; color:#b45309; padding:5px 12px; border-radius:20px; font-size:var(--fs-sm); font-weight:600; background:#fff9e5; white-space:nowrap;">⏳ รอชำระ</span>
                     </div>
-                    <!-- Status badge -->
-                    <div style="text-align:center; margin-top:14px;">
-                        <span style="border:1.5px solid #d97706; color:#b45309; padding:5px 18px; border-radius:20px; font-size:var(--fs-sm); font-weight:600; background:#fff9e5;">⏳ รอชำระ</span>
-                    </div>
-                    <p style="text-align:center; font-size:var(--fs-sm); color:#888; margin:10px 0 0;">ขอบคุณที่ใช้บริการ The Green Haven</p>
                 </div>
             </div>
-            <!-- Primary CTA — biggest, top of action area, generous padding so it can't be missed -->
-            <button class="btn-receipt btn-green" style="width:100%; margin-top:18px; padding:16px; font-size:1.05rem; font-weight:700; box-shadow:0 4px 14px rgba(45,134,83,0.28);" data-action="goToPaymentStep" data-arg="2">
+            <button class="btn-receipt btn-green" style="width:100%; margin-top:10px; padding:13px; font-size:1rem; font-weight:700; box-shadow:0 4px 14px rgba(45,134,83,0.28);" data-action="goToPaymentStep" data-arg="2">
                 <i class="fas fa-camera"></i> อัปโหลดสลิป
             </button>
             <!-- Secondary actions — back + save bill image (excludes nav/buttons, only the receipt-card) -->
@@ -3310,8 +3308,8 @@
             <p id="profile-room-display" style="margin:5px 0; font-size:var(--fs-md); opacity:0.6;">ห้อง — | —</p>
         </div>
 
-        <!-- Rooms tenant fallback (shown only for ตึกห้องแถว — no gamification) -->
-        <div id="profile-rooms-fallback" style="display:none; padding:0 16px; margin-bottom:16px;">
+        <!-- Shortcut grid — all tenants (rooms + Nest) -->
+        <div id="profile-shortcuts" style="padding:0 16px; margin-bottom:16px;">
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                 <div data-action="showSubPage" data-page="contract-action-page" style="background:var(--soft-green); padding:18px 12px; border-radius:16px; text-align:center; cursor:pointer;">
                     <div style="font-size:1.8rem; margin-bottom:4px;">📄</div>
@@ -3331,8 +3329,19 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Points Banner (Nest only) -->
+    <!-- Quest Ecosystem sector — accessed from world map, not nav bar -->
+    <div id="quest-page" class="page">
+        <div class="app-bar" style="display:flex; align-items:center; gap:12px;">
+            <button type="button" data-action="showSubPage" data-page="world-map-page" aria-label="กลับไปหน้าแผนที่"
+                style="width:36px; height:36px; background:var(--soft-green); border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;">
+                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+            </button>
+            <h1 style="margin:0; font-size:var(--fs-lg);">🎮 Quest Ecosystem</h1>
+        </div>
+
+        <!-- Points Banner -->
         <div id="profile-points-banner" class="border-none mx-4 p-5" style="background:linear-gradient(135deg,var(--primary-green),var(--primary-dark)); color:white; border-radius:16px 16px 0 0;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <div>
@@ -3355,7 +3364,7 @@
             </div>
         </div>
 
-        <!-- Tab Nav (Nest only) -->
+        <!-- Tab Nav -->
         <div id="profile-tab-nav" style="display:flex; gap:4px; margin:0 16px 16px; background:#e8f0e8; border-radius:0 0 16px 16px; padding:4px;">
             <button id="eco-tab-info" data-action="switchEcoTab" data-tab="info"
                 style="flex:1; padding:8px; border-radius:10px; font-size:var(--fs-sm); font-weight:700; background:white; color:var(--primary-green); border:none; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.1); touch-action:manipulation;">
@@ -3389,17 +3398,6 @@
                     class="w-full bg-[#2d8653] text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition">
                     🎁 เข้าสู่ Rewards Shop
                 </button>
-            </div>
-            <div id="pet-list-container">
-                <div data-action="showSubPage" data-page="add-pet-page"
-                    style="border: 2px dashed #e0e0e0; padding: 30px 20px; border-radius: 25px; text-align: center; cursor: pointer; background: #fff; transition: 0.3s;"
-                    
-                    >
-                    <div style="font-size: var(--fs-lg); margin-bottom: 10px; opacity: 0.5;">🐾</div>
-                    <p style="font-size: var(--fs-md); color: #888; font-weight: 500;">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
-                    <p style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-top: 5px;">+
-                        เพิ่มสัตว์เลี้ยงของคุณ</p>
-                </div>
             </div>
         </div>
 
@@ -3452,6 +3450,26 @@
                 <h3 class="font-bold text-sm mb-3">🎯 ระดับในระบบ</h3>
                 <!-- Rendered by _renderTierLegend() from LEVEL_TIERS (SSoT) -->
                 <div id="tier-legend" class="space-y-2 text-xs"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pet Park sector — accessed from world map, not nav bar -->
+    <div id="pet-park-page" class="page">
+        <div class="app-bar" style="display:flex; align-items:center; gap:12px;">
+            <button type="button" data-action="showSubPage" data-page="world-map-page" aria-label="กลับไปหน้าแผนที่"
+                style="width:36px; height:36px; background:var(--soft-green); border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;">
+                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+            </button>
+            <h1 style="margin:0; font-size:var(--fs-lg);">🐾 Pet Park</h1>
+        </div>
+
+        <div id="pet-list-container" style="padding:0 16px 24px;">
+            <div data-action="showSubPage" data-page="add-pet-page"
+                style="border: 2px dashed #e0e0e0; padding: 30px 20px; border-radius: 25px; text-align: center; cursor: pointer; background: #fff; transition: 0.3s;">
+                <div style="font-size: var(--fs-lg); margin-bottom: 10px; opacity: 0.5;">🐾</div>
+                <p style="font-size: var(--fs-md); color: #888; font-weight: 500;">ยังไม่มีข้อมูลเพื่อนตัวป่วน</p>
+                <p style="font-size: var(--fs-sm); color: var(--primary-green); font-weight: 600; margin-top: 5px;">+ เพิ่มสัตว์เลี้ยงของคุณ</p>
             </div>
         </div>
     </div>
@@ -3736,7 +3754,7 @@
     <div id="add-pet-page" class="page">
         <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding: 20px 20px 25px;">
             <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                data-action="goBackToProfile">
+                data-action="showSubPage" data-page="pet-park-page">
                 <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
             </div>
             <h1 style="margin:0; font-size: var(--fs-lg); color: var(--text-dark);">ข้อมูลเพื่อนตัวป่วน 🐾</h1>
@@ -3840,7 +3858,7 @@
                 style="width: 100%; background: var(--primary-green); color: white; border: none; padding: 15px; border-radius: 20px; font-weight: 600; font-size: var(--fs-md); box-shadow: 0 10px 20px rgba(123, 166, 126, 0.2); cursor: pointer;">
                 <i class="fas fa-save" style="margin-right: 8px;"></i> บันทึกข้อมูลสัตว์เลี้ยง
             </button>
-            <button data-action="goBackToProfile"
+            <button data-action="showSubPage" data-page="pet-park-page"
                 style="width: 100%; background: transparent; color: #888; border: 1px solid #ddd; padding: 15px; border-radius: 20px; font-weight: 600; font-size: var(--fs-md); margin-top: 12px; cursor: pointer;">
                 ยกเลิก
             </button>
@@ -3957,22 +3975,17 @@
         <div class="section-title" role="heading" aria-level="2"><span>Avatar Default</span></div>
         <div class="card">
 
-            <div class="avatar-selector" style="display: flex; gap: 15px; margin-top: 12px; flex-wrap: wrap; align-items: flex-start;">
-                <!-- Current avatar (display-only mirror — shows what tenant actually sees in nav/community) -->
-                <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-                    <div id="avatar-current-tile" class="avatar-option" title="รูปปัจจุบันของคุณ"
-                         style="cursor:default; border:2px solid var(--primary-green); box-shadow:0 0 0 3px var(--soft-green);">🌿</div>
-                    <span style="font-size:var(--fs-xs); color:var(--text-muted);">ปัจจุบัน</span>
-                </div>
+            <div class="avatar-selector" style="gap: 8px; margin-top: 12px;">
+                <!-- Current avatar (display-only mirror — green ring signals "current") -->
+                <div id="avatar-current-tile" class="avatar-option" title="รูปปัจจุบันของคุณ"
+                     style="cursor:default; border:2px solid var(--primary-green); box-shadow:0 0 0 3px var(--soft-green);">🌿</div>
                 <!-- Preset emoji choices -->
                 <div id="avatar-preview" class="avatar-option active" data-action="setAvatar" data-avatar="🌿">🌿</div>
                 <div class="avatar-option" data-action="setAvatar" data-avatar="🌊">🌊</div>
                 <div class="avatar-option" data-action="setAvatar" data-avatar="⛰️">⛰️</div>
                 <!-- Upload from device -->
                 <label class="avatar-option" for="avatar-upload-input" title="อัปโหลดรูปจากเครื่อง"
-                    style="background: var(--soft-green); color: var(--primary-green); border: 2px dashed var(--primary-green); cursor: pointer;">
-                    <span style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; line-height:1; font-size:1.8rem;">📸</span>
-                </label>
+                    style="background: var(--soft-green); color: var(--primary-green); border: 2px dashed var(--primary-green); cursor: pointer; font-size:1.5rem;">📸</label>
                 <input type="file" id="avatar-upload-input" accept="image/*" style="display:none;" data-action-change="handleAvatarUpload">
             </div>
             <p style="font-size: var(--fs-sm); color: var(--text-muted); margin: 6px 0 0;">📸 = แตะเพื่ออัปโหลดรูปถ่ายจากเครื่อง (ระบบจะย่อให้อัตโนมัติ)</p>
@@ -4916,6 +4929,8 @@
                 if (typeof _maybeOpenStandardCleanModal === 'function') _maybeOpenStandardCleanModal();
             }
             if (id === 'maintenance' && typeof renderTicketsList === 'function') renderTicketsList();
+            if (id === 'quest-page'    && typeof loadGamificationData    === 'function') loadGamificationData();
+            if (id === 'pet-park-page' && typeof renderPetListToProfile  === 'function') renderPetListToProfile();
             window.scrollTo(0, 0);
         }
 
@@ -6570,7 +6585,7 @@
                 renderPetListToProfile();
                 toast(`บันทึกข้อมูลน้อง${_esc(name)} เรียบร้อยแล้วครับ!`);
                 resetPetForm();
-                goBackToProfile();
+                showSubPage('pet-park-page');
             } catch(e) {
                 console.warn('Firestore pet save failed:', e);
                 toast('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
@@ -8916,7 +8931,7 @@
             // Visible page first (synchronous, blocks paint as expected)
             if (visibleId === 'home-page')          renderHome();
             else if (visibleId === 'usage-page')  { renderBills(); renderChart(); }
-            else if (visibleId === 'profile-page')  renderProfile();
+            else if (visibleId === 'profile' || visibleId === 'quest-page') renderProfile();
             else if (visibleId === 'contract-page') renderContract();
 
             // Off-screen pages deferred to idle (user navigates → fresh data ready)
@@ -8924,7 +8939,7 @@
             idleCb(() => {
                 if (visibleId !== 'home-page')     renderHome();
                 if (visibleId !== 'usage-page')  { renderBills(); renderChart(); }
-                if (visibleId !== 'profile-page')  renderProfile();
+                if (visibleId !== 'profile' && visibleId !== 'quest-page') renderProfile();
                 if (visibleId !== 'contract-page') renderContract();
             });
         }
@@ -10151,7 +10166,7 @@
             });
         }
 
-        // ===== 6-month Usage Chart (combined elec+water, tab toggle, tap-for-detail) =====
+        // ===== 12-month Usage Chart (combined elec+water, tab toggle, tap-for-detail) =====
         let _usageChartType = 'elec';
         const _MONTHS_TH_SHORT = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
@@ -10180,8 +10195,8 @@
             // rows are newest first; reverse for left-to-right timeline
             const data = [...rows].reverse();
             const maxUnits = Math.max(...data.map(r => r.units), 1);
-            const MIN_PT_GAP = 36, H = 170, PAD_X = 24, PAD_TOP = 14, PAD_BOTTOM = 24;
-            const W = Math.max(320, PAD_X * 2 + MIN_PT_GAP * Math.max(1, data.length - 1));
+            const H = 170, PAD_X = 20, PAD_TOP = 14, PAD_BOTTOM = 24;
+            const W = Math.max(260, wrap.clientWidth || 300);
             const PLOT_W = W - 2 * PAD_X;
             const PLOT_H = H - PAD_TOP - PAD_BOTTOM;
             const isElec = _usageChartType === 'elec';
@@ -10196,7 +10211,7 @@
             const linePath = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
             const areaPath = linePath + ` L${points[points.length-1].x.toFixed(1)},${PAD_TOP+PLOT_H} L${points[0].x.toFixed(1)},${PAD_TOP+PLOT_H} Z`;
 
-            let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:${W}px; min-width:100%; height:170px; display:block;">`;
+            let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:170px; display:block;">`;
             // 3 horizontal gridlines
             for (let k = 0; k <= 2; k++) {
                 const gy = PAD_TOP + (PLOT_H * k / 2);
@@ -10407,7 +10422,6 @@
                      || userPoints || 0;
                 ptEl.textContent = Number(pts).toLocaleString();
             }
-            renderPetList();
         }
 
         function renderPetList() {

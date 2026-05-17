@@ -4,6 +4,220 @@ Per `CLAUDE.md § 3`: any non-trivial task starts here as a checkable plan. Get 
 
 ---
 
+# Plan — Profile/Quest/Pet restructure + 3 UI fixes (2026-05-17)
+
+## Goal
+
+User-requested restructure of `tenant_app.html` — extract gamification + pet UI from profile into dedicated world-map sectors (Quest, Pet Park), simplify profile to a 4-card shortcut grid (forward-compat with future tenant-character creation). Plus 3 unrelated UI fixes flagged in the same session.
+
+## SoT end-to-end check — abnormalities found
+
+User asked me to flag anything off. Found 4 (all to be fixed in this plan):
+
+| # | Where | Issue | Fix in this plan |
+|---|---|---|---|
+| A1 | `tenant_app.html:10105` `_getMeterHistory` + chart card title line 3079 | Card says "12 เดือน" but loader doesn't slice → returns however many bills are in `_taBills` (1–24). Comment at line 10006 says "6-month" — drift in 3 places. | Slice last 12 in `_getMeterHistory`. Update comment. |
+| A2 | `tenant_app.html:10184` `_renderUsageChart` | Fixed-pitch SVG (`MIN_PT_GAP=36 × 11 + 48 = 444px`) exceeds phone width (360–414) → wrap has `overflow-x:auto` → chart scrolls horizontally. | Make SVG width = container clientWidth; remove horizontal scroll. |
+| A3 | `tenant_app.html:2325` world-map PET PARK button | `data-page="profile"` → opens profile (gamification + avatar) when user expects pet page. UX confusion. | Rewire to new `pet-park-page`. Already in user's ask. |
+| A4 | `tenant_app.html:8919` visible-first render check | `visibleId === 'profile-page'` but actual id is `profile` (line 3301) → `renderProfile()` never runs in the synchronous fast path, always defers to idle callback. Latent bug. | Fix check to match real id while restructuring. |
+
+## Scope — 6 changes, 2 categories
+
+### Category A — UI polish (independent, ship as Commit 1)
+
+#### 1. 12-month meter chart fits container + truly shows 12 months
+
+**Why:** A1 + A2 above. Title promises 12 months but underdelivers (often) or overdelivers (rarely); and the chart scrolls sideways which is ugly on phones.
+
+**Change:**
+- [ ] In `_getMeterHistory()` ([tenant_app.html:10105](tenant_app.html:10105)) — after building rows, `return rows.slice(0, 12);` (rows are sorted newest-first). Update comment at line 10006 from "6-month" → "12-month".
+- [ ] In `_renderUsageChart()` ([tenant_app.html:10172](tenant_app.html:10172)) — compute `W = Math.max(280, wrap.clientWidth || 320)` instead of fixed `PAD_X*2 + MIN_PT_GAP*(n-1)`. Set SVG `width="100%"` style. Drop `min-width:100%` style hack. Recompute `PLOT_W` from new W.
+- [ ] Remove `overflow-x:auto` + `-webkit-overflow-scrolling:touch` from `#usage-chart-svg-wrap` ([line 3085](tenant_app.html:3085)).
+- [ ] Verify dot-tap still works after responsive resize (`data-action="_showUsageMonthDetail"`).
+
+#### 2. Payment page Step 1 fits one viewport
+
+**Why:** Step 1 (`#payment-step-1`) is ~700px tall on iPhone 12 (390×844) — user has to scroll to see the QR or the CTA. Comprises duplicate brand header (also in app bar), large QR box padding, status badge + thanks message on separate lines, generous CTA padding.
+
+**Change:**
+- [ ] Remove duplicate brand header inside receipt-inner ([lines 3157-3162](tenant_app.html:3157)) — already shown in app-bar (line 3133).
+- [ ] Tighten QR box `padding:16px → 12px`, `margin-top:18px → 10px` ([line 3187](tenant_app.html:3187)).
+- [ ] Reduce info-row padding `5px → 3px` ([lines 3168-3176](tenant_app.html:3168)).
+- [ ] Reduce primary CTA padding `16px → 12px`, font-size `1.05rem → 1rem` ([line 3206](tenant_app.html:3206)).
+- [ ] Compact app-bar `padding-bottom:25px → 12px` ([line 3131](tenant_app.html:3131)).
+- [ ] Goal viewport: iPhone 12 (390×844). Verify entire Step 1 visible without scroll for typical 3-item bill.
+
+#### 3. Avatar default — all 5 icons on one line
+
+**Why:** `.avatar-option` is 60×60 with 15px gap × 5 items = 360px minimum. With card padding (16+16=32) on 360px phone, available width ≈ 296px → wraps to 2 rows. Also first child has "ปัจจุบัน" label below making it taller.
+
+**Change:**
+- [ ] `.avatar-option` CSS ([line 1135](tenant_app.html:1135)): `width:60px → 48px; height:60px → 48px; font-size:var(--fs-lg) → 1.4rem`.
+- [ ] `.avatar-selector` CSS ([line 1127](tenant_app.html:1127)): `gap:15px → 8px`.
+- [ ] HTML inline gap ([line 3960](tenant_app.html:3960)): `gap:15px → 8px`; remove `flex-wrap:wrap` so they stay on one line.
+- [ ] Remove "ปัจจุบัน" label below current tile ([lines 3962-3966](tenant_app.html:3962)) — green ring + soft-green halo already signal "current". Drop the column wrapper, keep just the `#avatar-current-tile` div as a direct sibling.
+- [ ] Verify on 360px viewport: 5×48 + 4×8 = 272px ≤ 296px available ✓.
+
+### Category B — Navigation restructure (cascading, ship as Commit 2)
+
+#### 4. New Quest sector (gamification moves out of profile)
+
+**Why:** Profile currently mixes "who I am" (avatar/name/room) with "what I've earned" (points/badges/leaderboard/stats). User wants Quest as a discoverable sector via world map (entry under "quest ecosystem" mental model).
+
+**Decision:** Move HTML chunks intact — preserve all existing ID names so `loadGamificationData`, `_renderEarningGuide`, `_renderUrgentQuests`, `_renderTierLegend`, `switchEcoTab` keep working with zero JS rename.
+
+**Change:**
+- [ ] Create new `<div id="quest-page" class="page">` placed AFTER `#profile` in HTML (right before world-map page or wherever sibling sectors live).
+- [ ] Inside quest-page, top-to-bottom:
+  - app-bar with back-arrow → `data-action="showSubPage" data-page="world-map-page"` (matching NEST/usage back pattern at line 2506)
+  - Title: "🎮 Quest Ecosystem" (matches world-map label QUEST 🎮)
+  - **Move** `#profile-points-banner` (lines 3336-3356) here intact
+  - **Move** `#profile-tab-nav` (lines 3359-3376) here intact
+  - **Move** all 4 panels:
+    - `#eco-panel-info` (lines 3379-3404) — but extract `#pet-list-container` (lines 3393-3403) BEFORE moving (goes to pet-park-page instead). Keep `#profile-top-badge` + `#profile-rewards-card` (pure gamification).
+    - `#eco-panel-achievements` (lines 3407-3420) intact
+    - `#eco-panel-rankings` (lines 3423-3437) intact
+    - `#eco-panel-stats` (lines 3440-3456) intact
+- [ ] Add new world-map button `QUEST 🎮` ([world-map-page lines 2304-2338](tenant_app.html:2304)) at position `top:25%; left:30%` (above NEST). Color: warm accent `#D4AF37` (gold) — matches "achievement" semantics.
+  ```html
+  <button type="button" data-action="showPage--updateNavActiveIndex" data-page="quest-page"
+      aria-label="ไปหน้า Quest Ecosystem"
+      style="position:absolute;top:25%;left:30%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
+      <div class="map-label" style="background: #D4AF37;">QUEST</div>
+      <div class="map-icon-bounce" style="animation-delay: 0.8s;">🎮</div>
+  </button>
+  ```
+  Note: nav-index not needed (not a nav-bar tab) — drop `--updateNavActiveIndex` suffix → use `data-action="showPage"`.
+- [ ] Add render trigger in the visible-first switch ([line 8917 area](tenant_app.html:8917)):
+  ```js
+  else if (visibleId === 'quest-page')    { if (typeof loadGamificationData==='function') loadGamificationData(); }
+  ```
+  (loadGamificationData is already called via `_onLiffClaimsReady` at line 9116 so it warms; this just ensures fresh render when sector opened.)
+- [ ] No changes needed to: `loadGamificationData`, `switchEcoTab`, badge rendering, leaderboard subscription — all target IDs that moved with HTML.
+
+#### 5. New Pet Park sector (pet UI moves out of profile, world-map button fixed)
+
+**Why:** A3 above. PET PARK button currently lands user on profile (confusing). Pet list lives in profile's `eco-panel-info` — extract to its own sector.
+
+**Change:**
+- [ ] Create new `<div id="pet-park-page" class="page">` placed after `#quest-page`.
+- [ ] Inside pet-park-page, top-to-bottom:
+  - app-bar with back-arrow → world-map; title "🐾 Pet Park"
+  - **Move** `#pet-list-container` (lines 3393-3403) here intact
+- [ ] Rewire world-map PET PARK button ([line 2325](tenant_app.html:2325)):
+  - `data-action="showPage--updateNavActiveIndex"` → `data-action="showPage"` (no nav index)
+  - `data-page="profile"` → `data-page="pet-park-page"`
+  - `data-nav-index="4"` → remove
+  - `aria-label="ไปหน้าโปรไฟล์ / Pet Park"` → `"ไปหน้า Pet Park"`
+- [ ] No JS changes — pet rendering targets `#pet-list-container` which preserves ID.
+- [ ] Verify add-pet-page back button still returns to pet-park (was returning to profile). May need to update `goBack` logic if hardcoded.
+
+#### 6. Profile page simplification
+
+**Why:** Profile becomes "me as tenant" landing — avatar header + 4 shortcuts. Forward-compatible with future character creation (per user roadmap).
+
+**Change:**
+- [ ] Keep app-bar with avatar + name + room + settings cog ([lines 3302-3311](tenant_app.html:3302)) unchanged.
+- [ ] **Always show** the 4-card shortcut grid (formerly `#profile-rooms-fallback` lines 3314-3333). Rename id from `profile-rooms-fallback` → `profile-shortcuts`. Drop the `style="display:none;..."` inline; show by default.
+- [ ] Remove from `#profile`:
+  - `#profile-points-banner` (moved to Quest)
+  - `#profile-tab-nav` (moved to Quest)
+  - `#eco-panel-info` (split: pet → Pet Park, rest → Quest)
+  - `#eco-panel-achievements` (moved to Quest)
+  - `#eco-panel-rankings` (moved to Quest)
+  - `#eco-panel-stats` (moved to Quest)
+- [ ] Update JS:
+  - `renderProfilePage()` ([line 7557 area + 7622](tenant_app.html:7622)) — strip gamification rendering; keep only avatar/name/room refresh + visibility of shortcut grid for both nest + rooms tenants.
+  - Remove the rooms-only branch that toggles fallback grid vs gamification panel — both now show shortcuts.
+- [ ] Fix A4: change line 8919 from `visibleId === 'profile-page'` → `visibleId === 'profile'` (match actual id from line 3301).
+
+### Cross-cutting touches
+
+- **Anti-pattern G compliance** (self-conflict check): after both commits, grep these — must remain consistent:
+  ```bash
+  grep -n "showPage('profile\|data-page=\"profile\"\|goBackToProfile" tenant_app.html shared/
+  grep -n "eco-tab-\|eco-panel-\|profile-rewards-card\|profile-points-banner" tenant_app.html shared/
+  grep -n "pet-list-container\|add-pet-page" tenant_app.html shared/
+  ```
+  - `goBackToProfile()` at [line 4923](tenant_app.html:4923) — used by add-pet-page back button? Will likely need update so add-pet returns to pet-park-page (not profile).
+- **Daily-login modal / wellness-claim modal**: these may have CTAs that `showPage('profile')` or close → land on profile expecting to see the points banner. After restructure those should go to Quest sector instead. Grep + audit during impl.
+- **Bell + map-bell-btn** — only on world-map. Quest + Pet Park sectors don't need bell (user opens from map → can return to see bell). No change needed.
+- **Service Worker cache** — auto-versioned from VERCEL_GIT_COMMIT_SHA, no manual bump.
+
+### Out of scope (explicit, do NOT touch)
+
+- Tenant character creation UI (future work per user)
+- Rewards modal logic / rewards Firestore subscription
+- Pet add flow, pet vaccine book photo upload
+- Daily login CF / wellness claim CF
+- Any Firestore rules, indexes, or CFs
+- Any dashboard.html surface
+- Brand tokens / colors beyond using existing `var(--clay)`, `var(--accent-gold)` for new sector labels
+- payment-step-2 / step-3 (only step-1 mentioned)
+
+### Risks & rollback
+
+| Risk | Mitigation | Rollback |
+|---|---|---|
+| Hidden JS that references `#profile-points-banner` from outside profile init | grep before commit (cross-cutting touches above) | `git revert` Commit 2 |
+| Chart responsive width breaks `_showUsageMonthDetail` tap targets | tap test on Vercel via Chrome MCP before claim done | `git revert` Commit 1 |
+| Payment step-1 compaction makes QR illegibly small on small phones | min-width on `#pay-qr-canvas` preserved (existing 200×200 from QRCode lib) | inline padding tweak in follow-up commit |
+| Profile shortcut grid empty space looks barren | acceptable per user — future character creation fills it | none — design intent |
+| Avatar size 48 too small for thumb tap (44px is WCAG min) | 48px ≥ 44px ✓ | bump back to 52 |
+
+**Rollback unit:** 2 separate commits (Category A = 1 commit, Category B = 1 commit). Single revert per category.
+
+### Test plan
+
+After each commit:
+- [ ] `git push origin main` → wait Vercel deploy (~30s)
+- [ ] Chrome MCP → https://the-green-haven.vercel.app/tenant_app.html?admin=1 as admin preview
+- [ ] Test on iPhone 12 viewport (390×844) via DevTools device emulation
+
+**Commit 1 (Category A) checks:**
+- [ ] /usage page → chart visible, ≤12 points, no horizontal scroll, dot-tap → detail panel
+- [ ] Payment page Step 1 → fits entire viewport without scroll for 3-line bill
+- [ ] Settings → Avatar Default → 5 icons on one line
+
+**Commit 2 (Category B) checks:**
+- [ ] World map → 5 icons visible (NEST, MARKET, QUEST, PET PARK, PAY BILL)
+- [ ] QUEST click → loads quest-page, 4 tabs work, badges/leaderboard render
+- [ ] PET PARK click → loads pet-park-page (not profile), pet list or empty state visible
+- [ ] Profile nav tab → only avatar header + 4 shortcuts
+- [ ] Each shortcut → correct page (สัญญา/บิล/แจ้งซ่อม/ร้องเรียน)
+- [ ] Back from each new sector → returns to world map
+
+### Verification grep (post-impl, before "done")
+
+```bash
+# Confirm new pages exist
+grep -c "id=\"quest-page\"\|id=\"pet-park-page\"" tenant_app.html  # expect 2
+
+# Confirm world map has 5 buttons (was 4)
+grep -c "class=\"map-icon-bounce\"" tenant_app.html  # expect 5
+
+# Confirm profile is stripped
+grep -c "profile-points-banner\|eco-tab-\|eco-panel-" tenant_app.html  # IDs exist but inside quest-page now
+
+# No orphan references
+grep -rn "showPage('profile')\|data-page=\"profile\"" tenant_app.html shared/ | grep -v "nav-item\|profile.html"
+
+# A4 fixed
+grep "visibleId === 'profile" tenant_app.html  # expect 'profile' not 'profile-page'
+```
+
+### Open questions / ask before impl (user already answered 3 — none remaining)
+
+(User answered: 4 tabs in Quest · QUEST 🎮 label · 4 cards in Profile.)
+
+### Review (filled in AFTER ship — per CLAUDE.md §3)
+
+- Shipped:
+- Deferred:
+- Follow-ups:
+
+---
+
 # Plan — Tier 3c + 3G + 3I (2026-05-13)
 
 ## Overview & priority order
