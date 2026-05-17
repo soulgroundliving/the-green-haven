@@ -7538,11 +7538,13 @@
                 if (unsubNew) return;
                 try {
                     // Drop type filter — bell shows ALL types (notice/event/banner).
-                    // Index needed: announcements audience ASC + sentAt DESC.
+                    // Also drop orderBy so this query works on Firestore's auto single-field
+                    // index for `audience` (no composite needed). Client-side sort by sentAt
+                    // happens in `rerender`. Trade-off: limit returns "some 20" not "newest 20";
+                    // acceptable because rerender sorts and the collection is small.
                     const qNew = fs.query(
                         fs.collection(db, 'announcements'),
                         fs.where('audience', 'in', audiences),
-                        fs.orderBy('sentAt', 'desc'),
                         fs.limit(20)
                     );
                     unsubNew = fs.onSnapshot(qNew, snap => {
