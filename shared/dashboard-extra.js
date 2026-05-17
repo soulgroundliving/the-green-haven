@@ -3082,6 +3082,7 @@ function loadAndRenderServiceProviders() {
         <div>📱 Phone: <strong>${_esc(p.phone)}</strong></div>
         <div>📧 Email: <strong>${_esc(p.email || '-')}</strong></div>
         <div style="grid-column: 1/-1;">🌐 Website: <strong>${websiteHtml}</strong></div>
+        ${p.details ? `<div style="grid-column: 1/-1; padding-top: 0.5rem; border-top: 1px dashed var(--border); font-size: 0.85rem; color: var(--text-muted); white-space: pre-wrap;">📝 ${_esc(p.details)}</div>` : ''}
       </div>
     </div>
   `;
@@ -3103,6 +3104,7 @@ async function saveServiceProvider() {
   const phone = document.getElementById('providerPhone')?.value.trim();
   const email = document.getElementById('providerEmail')?.value.trim();
   const website = document.getElementById('providerWebsite')?.value.trim();
+  const details = document.getElementById('providerDetails')?.value.trim();
 
   if (!type || !name || !phone) {
     showToast('Please fill in Type, Name, and Phone', 'warning');
@@ -3111,14 +3113,14 @@ async function saveServiceProvider() {
 
   const newProvider = {
     id: 'sp_' + Date.now(),
-    type, name, phone, email, website,
+    type, name, phone, email, website, details,
     createdDate: new Date().toISOString()
   };
 
   // Phase 4: dual-write via ServiceProvidersStore (Firestore + localStorage)
   await ServiceProvidersStore.add(newProvider);
 
-  ['providerType','providerName','providerPhone','providerEmail','providerWebsite']
+  ['providerType','providerName','providerPhone','providerEmail','providerWebsite','providerDetails']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   toggleAddProviderForm();
   loadAndRenderServiceProviders();
@@ -3135,6 +3137,8 @@ function editServiceProvider(id) {
   document.getElementById('providerPhone').value = provider.phone;
   document.getElementById('providerEmail').value = provider.email || '';
   document.getElementById('providerWebsite').value = provider.website || '';
+  const detailsEl = document.getElementById('providerDetails');
+  if (detailsEl) detailsEl.value = provider.details || '';
 
   const form = document.getElementById('addProviderForm');
   form.classList.remove('u-hidden');
@@ -3148,11 +3152,12 @@ function editServiceProvider(id) {
       name: document.getElementById('providerName').value.trim(),
       phone: document.getElementById('providerPhone').value.trim(),
       email: document.getElementById('providerEmail').value.trim(),
-      website: document.getElementById('providerWebsite').value.trim()
+      website: document.getElementById('providerWebsite').value.trim(),
+      details: document.getElementById('providerDetails')?.value.trim() || ''
     };
     const ok = await ServiceProvidersStore.update(id, changes);
     if (ok !== false) {
-      ['providerType','providerName','providerPhone','providerEmail','providerWebsite']
+      ['providerType','providerName','providerPhone','providerEmail','providerWebsite','providerDetails']
         .forEach(i => { const el = document.getElementById(i); if (el) el.value = ''; });
       form.classList.add('u-hidden');
       button.textContent = originalText;

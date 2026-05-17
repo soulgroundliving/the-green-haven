@@ -718,13 +718,28 @@ function renderMeterTable(){
     }
     return out;
   })();
-  let totalPaid=0, totalPending=0, totalAmt=0;
+  let totalPaid=0, totalPending=0, totalVacantPending=0, totalAmt=0;
   // Room source: prefer the shared _getRoomsList helper (resolves
   // RoomConfigManager → ROOMS_OLD/NEST_ROOMS fallback → empty). Falls back to
   // legacy direct lookup if the helper isn't loaded yet.
   const rooms = (typeof window._getRoomsList === 'function')
     ? window._getRoomsList(bld)
     : getActiveRoomsWithMetadata(bld, bld==='nest' ? (window.NEST_ROOMS||[]) : (window.ROOMS_OLD||[]));
+  // Vacant detection: a room is "vacant" when its tenant record has no `name`.
+  // Read once per render — feeds the orange "ว่าง — มีค้าง" badge.
+  const vacantSet = (function buildVacantSet() {
+    const out = new Set();
+    try {
+      const tenants = (typeof TenantConfigManager !== 'undefined')
+        ? (TenantConfigManager.getTenantList(bld) || [])
+        : [];
+      const occupiedIds = new Set(tenants.filter(t => t && t.name).map(t => String(t.id)));
+      for (const r of rooms) {
+        if (!occupiedIds.has(String(r.id))) out.add(String(r.id));
+      }
+    } catch (_) { /* no tenant data yet — treat as all occupied (no badge) */ }
+    return out;
+  })();
   const rows=rooms.map(r=>{
     const lookupId=r.id;
     const md=(typeof METER_DATA!=='undefined'&&METER_DATA[bld]&&METER_DATA[bld][mdKey])?METER_DATA[bld][mdKey][lookupId]:null;
@@ -737,15 +752,25 @@ function renderMeterTable(){
     const eU=(typeof eNew==='number'&&typeof eOld==='number')?eNew-eOld:'—';
     const wU=(typeof wNew==='number'&&typeof wOld==='number')?wNew-wOld:'—';
     const isPaid=!!p;
-    if(isPaid){totalPaid++;totalAmt+=p.amount||0;}else totalPending++;
-    const statusCell=isPaid
-      ?`<button class="mt-paid-badge" onclick="showPayDetail('${r.id}',${year},${month})">✅ จ่ายแล้ว ฿${(p.amount||0).toLocaleString()}</button>`
-      :`<span class="mt-pending-badge">⏳ รอ</span>`;
+    const isVacant = vacantSet.has(String(r.id));
+    const hasUsage = (typeof eU === 'number' && eU > 0) || (typeof wU === 'number' && wU > 0);
+    // 3-way status: paid → green · vacant+pending+usage → orange (เด่นกว่า รอ ปกติ) · pending → amber
+    if (isPaid) { totalPaid++; totalAmt += p.amount || 0; }
+    else if (isVacant && hasUsage) totalVacantPending++;
+    else totalPending++;
+    let statusCell;
+    if (isPaid) {
+      statusCell = `<button class="mt-paid-badge" onclick="showPayDetail('${r.id}',${year},${month})">✅ จ่ายแล้ว ฿${(p.amount||0).toLocaleString()}</button>`;
+    } else if (isVacant && hasUsage) {
+      statusCell = `<span class="mt-pending-badge" style="background:#fff3e0;color:#e65100;border-color:#ffb74d;" title="ห้องไม่มีผู้เช่าแต่มิเตอร์เพิ่ม — admin ตรวจสอบ">🟡 ว่าง — มีค้าง</span>`;
+    } else {
+      statusCell = `<span class="mt-pending-badge">⏳ รอ</span>`;
+    }
     const actionCell=isPaid?''
       :`<button class="mt-go-btn" onclick="goBillFromTable('${r.id}',${year},${month})">📄 ออกบิล</button>`;
     const rowBg=isPaid?'':'';
     const meterStyle=md?'':'color:var(--text-muted);font-style:italic;';
-    return`<tr style="${isPaid?'background:#fafffe;':''}">
+    return`<tr style="${isPaid?'background:#fafffe;':(isVacant&&hasUsage?'background:#fff8f0;':'')}">
       <td><strong style="${isPaid?'color:var(--green-dark);':''}">${r.id}</strong></td>
       <td style="font-size:.8rem;${meterStyle}">${eOld} → ${eNew}</td>
       <td style="${eU==='—'?'color:var(--text-muted);':eU>0?'color:var(--accent);font-weight:700;':'color:var(--red);'}">${eU}</td>
@@ -762,6 +787,7 @@ function renderMeterTable(){
       <strong>${monthName} ${year}</strong>
       <span class="mt-pill green">✅ จ่ายแล้ว ${totalPaid} ห้อง · ฿${totalAmt.toLocaleString()}</span>
       <span class="mt-pill amber">⏳ รอ ${totalPending} ห้อง</span>
+      ${totalVacantPending > 0 ? `<span class="mt-pill" style="background:#fff3e0;color:#e65100;border:1px solid #ffb74d;">🟡 ว่าง&nbsp;—&nbsp;มีค้าง ${totalVacantPending} ห้อง</span>` : ''}
     </div>
     <div class="scroll-x">
       <table class="data-table">
