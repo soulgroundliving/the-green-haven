@@ -2770,12 +2770,28 @@
         </div><!-- end Section A menu-list -->
         <div class="section-title" style="margin-top: 10px;"><span>พื้นที่ส่วนกลาง (Facilities)</span></div>
         <div class="menu-list">
-            <!-- Facility Booking (Tier 3G) -->
-            <div class="menu-item" data-action="showSubPage" data-page="facility-booking">
-                <div class="icon-box" style="background:#e8f5e9; color:var(--primary-green);"><i class="fas fa-square-parking"></i></div>
+            <!-- Facility Booking — 3 deep-link tiles (Tier 3G) -->
+            <div class="menu-item" data-action="showFacilityTab" data-type="parking">
+                <div class="icon-box" style="background:#e8f5e9; color:var(--primary-green);">🅿️</div>
                 <span>
-                    จองพื้นที่ส่วนกลาง
-                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">ที่จอดรถ · ดาดฟ้า · จองล่วงหน้า</small>
+                    ที่จอดรถ
+                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">จองล่วงหน้า</small>
+                </span>
+                <i class="fas fa-chevron-right arrow"></i>
+            </div>
+            <div class="menu-item" data-action="showFacilityTab" data-type="laundry">
+                <div class="icon-box" style="background:#e3f2fd; color:#1d4ed8;">👕</div>
+                <span>
+                    ห้องซักผ้า
+                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">จองล่วงหน้า</small>
+                </span>
+                <i class="fas fa-chevron-right arrow"></i>
+            </div>
+            <div class="menu-item" data-action="showFacilityTab" data-type="rooftop">
+                <div class="icon-box" style="background:#f3e8ff; color:#7c3aed;">🌿</div>
+                <span>
+                    ดาดฟ้า
+                    <small style="display:block; color:#888; font-weight:400; font-size:var(--fs-xs); margin-top:2px;">จองล่วงหน้า</small>
                 </span>
                 <i class="fas fa-chevron-right arrow"></i>
             </div>
@@ -6965,6 +6981,7 @@
 
             // With-arg actions
             if (a === 'showSubPage' && page && _ta.showSubPage) { _ta.showSubPage(page); return; }
+            if (a === 'showFacilityTab' && _ta.showSubPage) { _ta.showSubPage('facility-booking'); const t = el.dataset.type; if (t && window.fbSelectType) window.fbSelectType({ dataset: { type: t } }); return; }
             if (a === 'makeCall' && num && _ta.makeCall) { _ta.makeCall(num); return; }
             if (a === 'toggleAccordion' && _ta.toggleAccordion) { _ta.toggleAccordion(el); return; }
             if (a === 'setAvatar' && av && _ta.setAvatar) { _ta.setAvatar(av, el); return; }
