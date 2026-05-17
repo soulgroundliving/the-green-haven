@@ -172,10 +172,20 @@ function updatePVStats(slips) {
   const todaySlips = slips.filter(s => _pvEffectiveDate(s) >= todayStart);
   const monthSlips = slips.filter(s => _pvEffectiveDate(s) >= monthStart);
   const monthTotal = monthSlips.reduce((sum, s) => sum + (s.amount || 0), 0);
+  // Count unique rooms (admin's mental model: "ห้องที่ชำระ") + slip submissions
+  // separately. A single room may submit multiple slips (catch-up, retry,
+  // backfill) — counting slips as "ห้องเดือนนี้" inflates the number and made
+  // admin think rooms were double-billed.
+  const uniqueRoomsToday = new Set(todaySlips.map(s => `${s.building}|${s.room}`)).size;
+  const uniqueRoomsMonth = new Set(monthSlips.map(s => `${s.building}|${s.room}`)).size;
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  set('pv-today-count', todaySlips.length);
-  set('pv-month-count', monthSlips.length);
+  set('pv-today-count', uniqueRoomsToday);
+  set('pv-month-count', uniqueRoomsMonth);
   set('pv-month-total', '฿' + monthTotal.toLocaleString());
+  // Subtitle: show slip-submission counts so admin still sees workflow throughput
+  const setSub = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n > 0 ? `📄 ${n} รายการ` : ''; };
+  setSub('pv-today-subcount', todaySlips.length);
+  setSub('pv-month-subcount', monthSlips.length);
   // Update notification badge
   const badge = document.getElementById('paymentBadge');
   if (badge) { badge.classList.add('u-hidden'); }
