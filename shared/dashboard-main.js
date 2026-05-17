@@ -312,10 +312,12 @@ function renderLiffRequestsList(docs){
   const pending = docs.filter(d => d.status === 'pending');
   const approved = docs.filter(d => d.status === 'approved');
   const rejected = docs.filter(d => d.status === 'rejected');
+  const unlinked = docs.filter(d => d.status === 'unlinked');
   const setTxt = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
   setTxt('liff-pending-count', pending.length);
   setTxt('liff-approved-count', approved.length);
   setTxt('liff-rejected-count', rejected.length);
+  setTxt('liff-unlinked-count', unlinked.length);
 
   const list = document.getElementById('liffRequestsList');
   if(!list) return;
@@ -323,8 +325,8 @@ function renderLiffRequestsList(docs){
     list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);">📭 ยังไม่มีคำขอเชื่อมบัญชี</div>';
     return;
   }
-  // Sort: pending first, then approved, then rejected
-  const order = { pending: 0, approved: 1, rejected: 2 };
+  // Sort: pending first, then approved, then rejected, then unlinked (audit trail tail)
+  const order = { pending: 0, approved: 1, rejected: 2, unlinked: 3 };
   docs.sort((a,b) => (order[a.status]??9) - (order[b.status]??9) || (b.requestedAt||'').localeCompare(a.requestedAt||''));
 
   // Escape user-controlled fields before innerHTML render
@@ -350,8 +352,13 @@ function renderLiffRequestsList(docs){
         <button onclick="approveLiffLink('${esc(d.id)}')" style="padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">✅ อนุมัติ</button>
         <button onclick="rejectLiffLink('${esc(d.id)}')" style="padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem;">❌ ปฏิเสธ</button>
       </div>` : (d.status === 'approved'
-        ? `<div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">โดย ${esc(d.approvedBy||'Admin')} · ${d.approvedAt?new Date(d.approvedAt).toLocaleDateString('th-TH'):''}</div>`
-        : `<button onclick="approveLiffLink('${esc(d.id)}')" style="padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.75rem;margin-top:4px;">↩️ อนุมัติย้อนหลัง</button>`);
+        ? `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+            <div style="font-size:.72rem;color:var(--text-muted);">โดย ${esc(d.approvedBy||'Admin')} · ${d.approvedAt?new Date(d.approvedAt).toLocaleDateString('th-TH'):''}</div>
+            <button onclick="unlinkLiffLink('${esc(d.id)}','${esc(d.lineDisplayName||'-')}')" style="padding:4px 10px;background:transparent;color:#c62828;border:1px solid #ef9a9a;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.72rem;font-weight:600;" title="ยกเลิกการเชื่อมต่อ LINE ของลูกบ้านนี้">🔌 ยกเลิกการเชื่อม</button>
+          </div>`
+        : d.status === 'unlinked'
+          ? `<div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">🔌 ยกเลิกการเชื่อมแล้ว${d.unlinkedAt?' · '+new Date(d.unlinkedAt.toDate?d.unlinkedAt.toDate():d.unlinkedAt).toLocaleDateString('th-TH'):''}</div>`
+          : `<button onclick="approveLiffLink('${esc(d.id)}')" style="padding:4px 10px;background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.75rem;margin-top:4px;">↩️ อนุมัติย้อนหลัง</button>`);
     return `<div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
       ${pic}
       <div style="flex:1;min-width:0;">
@@ -460,6 +467,31 @@ async function rejectLiffLink(lineUserId){
     }, { merge: true });
     _pushLiffStatusToTenant(lineUserId, 'rejected', finalReason);
   } catch(e) { window.ghAlert(e.message, { title: 'ขัดข้อง' }); }
+}
+
+// Admin-only soft-unlink. Calls server CF for atomic multi-doc cleanup so
+// tenant_app + people docs stay coherent (anti-pattern §7-T avoidance).
+async function unlinkLiffLink(lineUserId, displayName){
+  const ok = await window.ghConfirm(
+    `ยกเลิกการเชื่อม LINE ของ "${displayName || lineUserId}" ?\n\nระบบจะ:\n• ตั้ง liffUsers status = 'unlinked' (เก็บประวัติ)\n• เคลียร์ linkedAuthUid จาก tenants/{ตึก}/list/{ห้อง}\n• เคลียร์ข้อมูล LINE จาก people/{tenantId}\n\nลูกบ้านจะต้องส่งคำขอเชื่อมใหม่ครั้งหน้า`,
+    { title: '🔌 ยกเลิกการเชื่อม LINE', danger: true, confirmLabel: 'ยกเลิกการเชื่อม' }
+  );
+  if (!ok) return;
+  if (!window.firebase?.functions) {
+    window.ghAlert('Firebase Functions SDK ยังไม่พร้อม', { title: 'ขัดข้อง' });
+    return;
+  }
+  try {
+    const callable = window.firebase.functions().httpsCallable('unlinkLiffUser');
+    const result = await callable({ lineUserId });
+    const r = result?.data || {};
+    if (typeof showToast === 'function') {
+      showToast(`✅ ยกเลิกการเชื่อมแล้ว · ห้อง ${r.room || '-'} · เคลียร์ people ${r.peopleCleared || 0} ราย`, 'success');
+    }
+  } catch (e) {
+    console.error('unlinkLiffUser failed:', e);
+    window.ghAlert(e?.message || String(e), { title: 'ยกเลิกการเชื่อมไม่สำเร็จ' });
+  }
 }
 
 // ===== PEOPLE MANAGEMENT TAB SWITCHING =====

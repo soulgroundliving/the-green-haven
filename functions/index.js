@@ -42,6 +42,11 @@ exports.keepLiffWarm = require('./keepLiffWarm').keepLiffWarm;
 // caller could pass any approved lineUserId and get that room's claims).
 exports.liffSignIn = require('./liffSignIn').liffSignIn;
 
+// Admin-only soft-unlink of an approved LINE link. Atomic batch clears
+// linkedAuthUid from tenant + people docs so tenant_app stops treating the
+// LINE user as still-linked. Keeps liffUsers doc for audit trail.
+exports.unlinkLiffUser = require('./unlinkLiffUser').unlinkLiffUser;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOKING FLOW (LIFF prospect → deposit-paid booking → admin convert to tenant)
 // Separate auth namespace from liffSignIn (uid prefix "book:" vs "line:") so

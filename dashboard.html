@@ -5033,7 +5033,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 
   <!-- TAB: LINE Link Requests -->
   <div id="requests-tab-liff" class="requests-mgmt-content" style="display:none;">
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.2rem;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.8rem;margin-bottom:1.2rem;">
       <div class="card cell-center">
         <div style="font-size:1.8rem;font-weight:800;color:#f57c00;" id="liff-pending-count">—</div>
         <div class="text-sm-muted">⏳ รออนุมัติ</div>
@@ -5045,6 +5045,10 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <div class="card cell-center">
         <div style="font-size:1.8rem;font-weight:800;color:var(--red);" id="liff-rejected-count">—</div>
         <div class="text-sm-muted">❌ ปฏิเสธ</div>
+      </div>
+      <div class="card cell-center">
+        <div style="font-size:1.8rem;font-weight:800;color:#757575;" id="liff-unlinked-count">—</div>
+        <div class="text-sm-muted">🔌 ยกเลิกแล้ว</div>
       </div>
     </div>
     <div class="card">
