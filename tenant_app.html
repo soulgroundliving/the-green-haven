@@ -2534,26 +2534,17 @@
             </div>
         </div>
 
-        <div class="section-title" role="heading" aria-level="2"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
-        <div id="community-filter-pills" style="display:flex; gap:8px; padding:0 15px 10px; flex-wrap:wrap;">
+        <!-- C4 Session 1 v2 (2026-05-17): community feed announcement+event section
+             hidden — all announcement surfaces consolidated into the 🔔 Bell panel.
+             Subscribers still hydrate localStorage caches (harmless) but the visible
+             rendering is gone. Session 3 will remove the dead DOM + subscribers entirely. -->
+        <div class="section-title" role="heading" aria-level="2" style="display:none;"><span>ประกาศ &amp; กิจกรรม 📢</span></div>
+        <div id="community-filter-pills" style="display:none; gap:8px; padding:0 15px 10px; flex-wrap:wrap;">
             <button class="cf-pill cf-pill-active" data-cat="all" data-action="setCommunityFilter">ทั้งหมด</button>
             <button class="cf-pill" data-cat="announcement" data-action="setCommunityFilter">📢 ประกาศ</button>
             <button class="cf-pill" data-cat="event" data-action="setCommunityFilter">📅 กิจกรรม</button>
         </div>
-        <div id="community-feed">
-            <div class="gh-empty-state">
-                <div class="gh-empty-state__illust">
-                    <svg viewBox="0 0 120 120" aria-hidden="true">
-                        <path d="M28 38 a8 8 0 0 1 8-8 h48 a8 8 0 0 1 8 8 v34 a8 8 0 0 1-8 8 h-32 l-12 12 v-12 h-4 a8 8 0 0 1-8-8 z"/>
-                        <circle cx="50" cy="55" r="2"/>
-                        <circle cx="60" cy="55" r="2"/>
-                        <circle cx="70" cy="55" r="2"/>
-                    </svg>
-                </div>
-                <p class="gh-empty-state__title">ยังไม่มีประกาศหรือกิจกรรม</p>
-                <p class="gh-empty-state__text">เมื่อมีข่าวสารจากแอดมินจะขึ้นที่นี่</p>
-            </div>
-        </div>
+        <div id="community-feed" style="display:none;"></div>
         <!-- Hidden legacy containers for backward-compat with existing render funcs -->
         <div id="announcements-list" style="display:none;"></div>
         <div id="events-list" style="display:none;"></div>
@@ -7404,26 +7395,54 @@
                 return;
             }
             const cutoff = _getLastBroadcastReadAt();
+            const TYPE_BADGE = { notice: '📢', event: '📅', banner: '🎉' };
+            const TYPE_LABEL = { notice: 'ประกาศ', event: 'กิจกรรม', banner: 'ประกาศ' };
+            const MONTHS_TH  = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+            const fmtEventDate = (ts) => {
+                let d;
+                if (ts?.toDate) d = ts.toDate();
+                else if (typeof ts === 'string') d = new Date(ts);
+                else if (typeof ts === 'number') d = new Date(ts);
+                else return '';
+                if (!d || isNaN(d.getTime())) return '';
+                return `${d.getDate()} ${MONTHS_TH[d.getMonth()]} ${d.getFullYear()+543} · ${('0'+d.getHours()).slice(-2)}:${('0'+d.getMinutes()).slice(-2)}`;
+            };
             el.innerHTML = _broadcastsList.map(d => {
                 const iso    = _broadcastSentAtIso(d);
                 const unread = iso && (!cutoff || iso > cutoff);
+                const type   = d.type || 'notice';
+                const badge  = TYPE_BADGE[type] || '📢';
+                const label  = TYPE_LABEL[type] || 'ประกาศ';
                 const title  = _escapeBroadcastHtml(d.title || '(ไม่มีหัวข้อ)');
                 const body   = _escapeBroadcastHtml(d.body || '');
                 const when   = _broadcastRelTime(iso);
+                // Event-specific: show date + location below body.
+                const eventMeta = (type === 'event' && (d.eventDate || d.location)) ? `
+                    <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #e5e7eb; font-size:.82rem; color:var(--text-muted); display:flex; flex-wrap:wrap; gap:12px;">
+                        ${d.eventDate ? `<span>📅 ${_escapeBroadcastHtml(fmtEventDate(d.eventDate))}</span>` : ''}
+                        ${d.location ? `<span>📍 ${_escapeBroadcastHtml(d.location)}</span>` : ''}
+                    </div>` : '';
                 return `<div style="border-bottom:1px solid var(--border, #e5e5e5); padding:14px 20px;
                             ${unread ? 'border-left:3px solid var(--primary-green, #4caf50);' : ''}">
                     <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:.35rem;">
-                        <strong style="font-size:.98rem; ${unread ? 'color:var(--text-dark);' : 'color:var(--text-muted);'}">${title}</strong>
+                        <strong style="font-size:.98rem; ${unread ? 'color:var(--text-dark);' : 'color:var(--text-muted);'}">${badge} ${title}</strong>
                         <span style="font-size:.78rem; color:var(--text-muted); white-space:nowrap;">${when}</span>
                     </div>
+                    <div style="font-size:.74rem; color:var(--text-muted); margin-bottom:.4rem;">${label}</div>
                     <div style="font-size:.9rem; color:var(--text-dark, #333); white-space:pre-wrap;">${body}</div>
+                    ${eventMeta}
                 </div>`;
             }).join('');
         }
-        // C4 Session 1 (2026-05-17): dual-source subscribe. New notices live in
-        // announcements WHERE type='notice'; legacy notices still in broadcastMessages.
-        // Merged into _broadcastsList by id; sorted by sentAt desc; truncated to 20.
-        // Session 2 will migrate legacy → new and drop the legacy subscriber.
+        // C4 Session 1 v2 (2026-05-17): bell shows ALL announcement types
+        // (notice/event/banner) merged with legacy broadcastMessages. UX consolidation
+        // — community feed "ประกาศ & กิจกรรม" section is hidden; bell is the single surface.
+        //
+        // Bug fix: each source has INDEPENDENT unsub. Previous version had composite
+        // teardown — if either query errored (e.g. composite index race on first deploy),
+        // both queries died together and bell stayed empty for the session. Now: per-source
+        // teardown + setTimeout retry on failed-precondition (index still building).
+        let _broadcastsRefreshScheduled = false;
         function _subscribeBroadcasts() {
             if (_broadcastsUnsub) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
@@ -7433,15 +7452,22 @@
             const db = window.firebase.firestore();
             const audience = _taBuilding;
 
-            const legacyCache = new Map();
-            const newCache    = new Map();
-            const sourcesReplayed = new Set();   // tracks which sources have had their first snapshot
-            const TOTAL_SOURCES = 2;
+            const legacyCache = new Map();        // broadcastMessages
+            const newCache    = new Map();        // announcements (all types)
+            const legacyEventsCache = new Map();  // communityEvents (pre-C4 events)
+            const sourcesReplayed = new Set();    // tracks which sources have had their first snapshot
+            const TOTAL_SOURCES = 3;
+            let unsubNew = null;
+            let unsubLegacy = null;
+            let unsubLegacyEvents = null;
+            let retryNewTimer = null;
+
             const rerender = (sourceId) => {
                 sourcesReplayed.add(sourceId);
                 const byId = new Map();
-                for (const d of newCache.values())    byId.set(d.id, d);
-                for (const d of legacyCache.values()) if (!byId.has(d.id)) byId.set(d.id, d);
+                for (const d of newCache.values())          byId.set(d.id, d);
+                for (const d of legacyCache.values())       if (!byId.has(d.id)) byId.set(d.id, d);
+                for (const d of legacyEventsCache.values()) if (!byId.has(d.id)) byId.set(d.id, d);
                 const priorIds = new Set(_broadcastsList.map(b => b.id));
                 _broadcastsList = [...byId.values()].sort((a, b) => {
                     const ta = a.sentAt?.toDate?.()?.getTime?.() ?? new Date(a.sentAt || 0).getTime();
@@ -7450,8 +7476,6 @@
                 }).slice(0, 20);
                 _renderBroadcastBadge();
                 _renderBroadcastsList();
-                // Suppress toast until BOTH sources have replayed initially —
-                // otherwise the 2nd source's initial docs fire as "new".
                 if (_broadcastsInitialReplay) {
                     if (sourcesReplayed.size >= TOTAL_SOURCES) _broadcastsInitialReplay = false;
                     return;
@@ -7459,46 +7483,123 @@
                 const fresh = _broadcastsList.find(d => !priorIds.has(d.id));
                 if (fresh) _broadcastShowToast('📣 ประกาศใหม่: ' + (fresh.title || ''));
             };
-            const onErr = (label) => (err) => {
-                console.warn(label + ' subscribe failed:', err?.message || err);
-                // Anti-pattern §7-N + §7-U: reset composite unsub so liffLinked retry can rebind.
-                if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                    if (_broadcastsUnsub) { try { _broadcastsUnsub(); } catch(_){} }
-                    _broadcastsUnsub = null;
+
+            const subscribeNew = () => {
+                if (unsubNew) return;
+                try {
+                    // Drop type filter — bell shows ALL types (notice/event/banner).
+                    // Index needed: announcements audience ASC + sentAt DESC.
+                    const qNew = fs.query(
+                        fs.collection(db, 'announcements'),
+                        fs.where('audience', 'in', ['all', audience]),
+                        fs.orderBy('sentAt', 'desc'),
+                        fs.limit(20)
+                    );
+                    unsubNew = fs.onSnapshot(qNew, snap => {
+                        newCache.clear();
+                        snap.docs.forEach(d => newCache.set(d.id, { id: d.id, ...d.data() }));
+                        rerender('new');
+                    }, err => {
+                        console.warn('announcements/bell subscribe failed:', err?.message || err);
+                        if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                            try { unsubNew && unsubNew(); } catch(_){}
+                            unsubNew = null;
+                            // Composite index may still be building (1-5 min after deploy).
+                            // Retry once after 8s; legacy source keeps working in the meantime.
+                            if (err?.code === 'failed-precondition' && !retryNewTimer) {
+                                retryNewTimer = setTimeout(() => {
+                                    retryNewTimer = null;
+                                    if (_broadcastsUnsub) subscribeNew();
+                                }, 8000);
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.warn('announcements/bell init failed:', e?.message || e);
                 }
             };
 
-            try {
-                const qLegacy = fs.query(
-                    fs.collection(db, 'broadcastMessages'),
-                    fs.where('audience', 'in', ['all', audience]),
-                    fs.orderBy('sentAt', 'desc'),
-                    fs.limit(20)
-                );
-                const qNew = fs.query(
-                    fs.collection(db, 'announcements'),
-                    fs.where('type', '==', 'notice'),
-                    fs.where('audience', 'in', ['all', audience]),
-                    fs.orderBy('sentAt', 'desc'),
-                    fs.limit(20)
-                );
-                const unsubLegacy = fs.onSnapshot(qLegacy, snap => {
-                    legacyCache.clear();
-                    snap.docs.forEach(d => legacyCache.set(d.id, { id: d.id, ...d.data() }));
-                    rerender('legacy');
-                }, onErr('broadcasts/legacy'));
-                const unsubNew = fs.onSnapshot(qNew, snap => {
-                    newCache.clear();
-                    snap.docs.forEach(d => newCache.set(d.id, { id: d.id, ...d.data() }));
-                    rerender('new');
-                }, onErr('announcements/notice'));
-                _broadcastsUnsub = () => {
-                    try { unsubLegacy(); } catch(_){}
-                    try { unsubNew(); } catch(_){}
-                };
-            } catch (e) {
-                console.warn('broadcasts subscribe init failed:', e?.message || e);
-            }
+            const subscribeLegacy = () => {
+                if (unsubLegacy) return;
+                try {
+                    const qLegacy = fs.query(
+                        fs.collection(db, 'broadcastMessages'),
+                        fs.where('audience', 'in', ['all', audience]),
+                        fs.orderBy('sentAt', 'desc'),
+                        fs.limit(20)
+                    );
+                    unsubLegacy = fs.onSnapshot(qLegacy, snap => {
+                        legacyCache.clear();
+                        snap.docs.forEach(d => legacyCache.set(d.id, { id: d.id, ...d.data() }));
+                        rerender('legacy');
+                    }, err => {
+                        console.warn('broadcasts/legacy subscribe failed:', err?.message || err);
+                        if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                            try { unsubLegacy && unsubLegacy(); } catch(_){}
+                            unsubLegacy = null;
+                        }
+                    });
+                } catch (e) {
+                    console.warn('broadcasts/legacy init failed:', e?.message || e);
+                }
+            };
+
+            const subscribeLegacyEvents = () => {
+                if (unsubLegacyEvents) return;
+                try {
+                    // Pre-C4 events in communityEvents/{id} — public-read rule, no audience field.
+                    // Normalize to bell-compatible shape; client-side audience filter via legacy `building`.
+                    const qLegacyEvents = fs.query(fs.collection(db, 'communityEvents'));
+                    unsubLegacyEvents = fs.onSnapshot(qLegacyEvents, snap => {
+                        legacyEventsCache.clear();
+                        snap.docs.forEach(d => {
+                            const data = d.data() || {};
+                            if (data.building && data.building !== 'all' && data.building !== audience) return;
+                            // Combine date + time to a Timestamp-like; fall back to date-only.
+                            let eventDateObj = null;
+                            if (data.date) {
+                                const t = data.time && /^\d{2}:\d{2}/.test(data.time) ? data.time : '00:00';
+                                const dt = new Date(`${data.date}T${t}`);
+                                if (!isNaN(dt.getTime())) eventDateObj = dt;
+                            }
+                            const createdMs = Date.parse(data.createdDate || data.createdAt || data.date || '');
+                            const sentAtIso = Number.isFinite(createdMs) ? new Date(createdMs).toISOString() : '';
+                            legacyEventsCache.set(d.id, {
+                                id: d.id,
+                                type: 'event',
+                                title: data.title || 'กิจกรรม',
+                                body: data.description || '',
+                                audience: data.building || 'all',
+                                sentAt: sentAtIso,
+                                eventDate: eventDateObj,
+                                location: data.location || '',
+                            });
+                        });
+                        rerender('legacyEvents');
+                    }, err => {
+                        console.warn('communityEvents/legacy subscribe failed:', err?.message || err);
+                        if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                            try { unsubLegacyEvents && unsubLegacyEvents(); } catch(_){}
+                            unsubLegacyEvents = null;
+                        }
+                    });
+                } catch (e) {
+                    console.warn('communityEvents/legacy init failed:', e?.message || e);
+                }
+            };
+
+            subscribeNew();
+            subscribeLegacy();
+            subscribeLegacyEvents();
+            _broadcastsUnsub = () => {
+                if (retryNewTimer) { clearTimeout(retryNewTimer); retryNewTimer = null; }
+                try { unsubNew && unsubNew(); } catch(_){}
+                try { unsubLegacy && unsubLegacy(); } catch(_){}
+                try { unsubLegacyEvents && unsubLegacyEvents(); } catch(_){}
+                unsubNew = null;
+                unsubLegacy = null;
+                unsubLegacyEvents = null;
+            };
         }
         _onLiffClaimsReady(_subscribeBroadcasts);
 
