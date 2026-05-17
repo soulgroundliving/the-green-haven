@@ -2926,6 +2926,18 @@
                 <textarea id="clean-note" rows="3" class="mt-2 block w-full rounded-xl border-gray-200"
                     placeholder="เช่น มีสัตว์เลี้ยงในห้อง, เน้นระเบียง..."></textarea>
             </div>
+            <div style="display:flex; align-items:flex-start; gap:10px; margin-top:12px; padding:14px; background:var(--soft-green,#f0faf0); border-radius:12px;">
+                <input type="checkbox" id="clean-terms-agree"
+                    style="width:18px; height:18px; margin-top:2px; accent-color:var(--primary-green); flex-shrink:0; cursor:pointer;">
+                <label for="clean-terms-agree" style="font-size:var(--fs-sm); color:var(--text-dark); line-height:1.6; cursor:pointer;">
+                    ข้าพเจ้าได้อ่านและยอมรับ
+                    <span data-action="showSubPage" data-page="cleaning-terms-page"
+                        style="color:var(--primary-green); text-decoration:underline; cursor:pointer; font-weight:600;">
+                        ข้อตกลงการใช้บริการทำความสะอาด
+                    </span>
+                    และรับทราบว่าทางโครงการจะไม่รับผิดชอบต่อความเสียหายของทรัพย์สินที่ไม่ได้เก็บมิดชิดก่อนให้บริการ
+                </label>
+            </div>
             <button data-action="submitCleaning" class="btn-main mt-4">ยืนยันการจองบริการ</button>
         </div>
 
@@ -2943,6 +2955,57 @@
                 <p class="gh-empty-state__title">ยังไม่มีประวัติการจอง</p>
                 <p class="gh-empty-state__text">เมื่อจองบริการแล้ว ประวัติจะแสดงที่นี่</p>
             </div>
+        </div>
+    </div>
+
+    <div id="cleaning-terms-page" class="page">
+        <div class="app-bar" style="display:flex; align-items:center; gap:15px; padding-bottom:25px;">
+            <div style="width:44px; height:44px; background:var(--soft-green); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                data-action="showSubPage" data-page="cleaning-service">
+                <i class="fas fa-chevron-left" style="color:var(--primary-green);"></i>
+            </div>
+            <h1 style="margin:0; font-size:var(--fs-lg);">ข้อตกลงการใช้บริการ</h1>
+        </div>
+
+        <div class="card" style="margin-bottom:80px;">
+            <h2 style="font-size:var(--fs-md); font-weight:700; color:var(--text-dark); margin:0 0 16px;">🧹 ข้อตกลงและเงื่อนไขการทำความสะอาด</h2>
+
+            <div style="margin-bottom:20px; padding:14px; background:#fff8f0; border-radius:12px; border-left:4px solid #f97316;">
+                <h3 style="font-size:var(--fs-sm); font-weight:700; color:#c2410c; margin:0 0 8px;">⚠️ ความรับผิดชอบของผู้เช่า</h3>
+                <ul style="margin:0; padding-left:18px; font-size:var(--fs-sm); color:var(--text-dark); line-height:1.9;">
+                    <li><strong>โปรดเก็บทรัพย์สินมีค่า เงินสด เครื่องประดับ และเอกสารสำคัญให้มิดชิด</strong>ก่อนให้แม่บ้านเข้าทำความสะอาด</li>
+                    <li>ทางโครงการ<strong>จะไม่รับผิดชอบ</strong>ต่อความสูญหายหรือเสียหายของทรัพย์สินที่เกิดขึ้นในระหว่างการให้บริการ</li>
+                    <li>หากมีสัตว์เลี้ยง โปรดแจ้งในหมายเหตุและจัดพื้นที่ให้ปลอดภัยก่อนแม่บ้านมาถึง</li>
+                </ul>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <h3 style="font-size:var(--fs-sm); font-weight:700; color:var(--text-dark); margin:0 0 8px;">📅 การยกเลิกและเลื่อนนัด</h3>
+                <ul style="margin:0; padding-left:18px; font-size:var(--fs-sm); color:var(--text-secondary,#6b7280); line-height:1.9;">
+                    <li>กรุณาแจ้งยกเลิกหรือเลื่อนนัดล่วงหน้าอย่างน้อย <strong>24 ชั่วโมง</strong> ผ่านช่องทางติดต่อของโครงการ</li>
+                    <li>การยกเลิกกะทันหันโดยไม่แจ้งล่วงหน้าอาจถูกระงับสิทธิ์การใช้บริการในรอบถัดไป</li>
+                </ul>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <h3 style="font-size:var(--fs-sm); font-weight:700; color:var(--text-dark); margin:0 0 8px;">✨ Standard Clean (ฟรี)</h3>
+                <ul style="margin:0; padding-left:18px; font-size:var(--fs-sm); color:var(--text-secondary,#6b7280); line-height:1.9;">
+                    <li>สิทธิ์ใช้งาน <strong>1 ครั้ง ต่อ 3 เดือน</strong> ต่อห้อง</li>
+                    <li>ครอบคลุมการทำความสะอาดทั่วไป ปัดฝุ่น ดูดฝุ่น และถูพื้น</li>
+                    <li>ไม่รวมการทำความสะอาดเชิงลึกหรือเฟอร์นิเจอร์หนัก</li>
+                </ul>
+            </div>
+
+            <div style="margin-bottom:28px;">
+                <h3 style="font-size:var(--fs-sm); font-weight:700; color:#1565c0; margin:0 0 8px;">🧼 Deep Cleaning (500 ฿)</h3>
+                <ul style="margin:0; padding-left:18px; font-size:var(--fs-sm); color:var(--text-secondary,#6b7280); line-height:1.9;">
+                    <li>ค่าบริการ <strong>500 ฿</strong> ต่อครั้ง ชำระผ่าน PromptPay ก่อนดำเนินการ</li>
+                    <li>ครอบคลุมการทำความสะอาดเชิงลึกทั่วทั้งห้อง รวมถึงห้องน้ำและครัว</li>
+                    <li>ใช้ได้ไม่จำกัดครั้ง ขึ้นอยู่กับความพร้อมของแม่บ้าน</li>
+                </ul>
+            </div>
+
+            <button class="btn-main" data-action="showSubPage" data-page="cleaning-service">รับทราบและกลับไปจอง</button>
         </div>
     </div>
 
@@ -5351,6 +5414,10 @@
             const time = document.getElementById('clean-time')?.value;
             const note = document.getElementById('clean-note')?.value.trim() || '';
 
+            if (!document.getElementById('clean-terms-agree')?.checked) {
+                toast('กรุณายอมรับข้อตกลงก่อนจองบริการ', 'warning');
+                return;
+            }
             if (!date) {
                 toast('กรุณาเลือกวันที่ต้องการนะครับ', 'warning');
                 document.getElementById('clean-date')?.focus();
@@ -5378,6 +5445,8 @@
                 await _saveCleaningBooking(record);
                 toast('จองบริการทำความสะอาดเรียบร้อยแล้วครับ 🧹', 'success');
                 _renderCleaningHistory();
+                const agreeEl = document.getElementById('clean-terms-agree');
+                if (agreeEl) agreeEl.checked = false;
                 setTimeout(() => goBackToService(), 1200);
             } catch (err) {
                 console.error('cleaning booking sync failed:', err);
