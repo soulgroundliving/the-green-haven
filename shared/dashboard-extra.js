@@ -1,14 +1,20 @@
 // ===== Password Change Modal Functions =====
+// Modal has inline style="display:none" so we must set display explicitly per §7-C.
 function openChangePasswordModal() {
-  document.getElementById('changePasswordModal').classList.remove('u-hidden'); /*flex*/;
-  document.getElementById('oldPassword').focus();
+  const modal = document.getElementById('changePasswordModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  modal.classList.remove('u-hidden');
+  document.getElementById('oldPassword')?.focus();
 }
 
 function closeChangePasswordModal() {
-  document.getElementById('changePasswordModal').classList.add('u-hidden');
-  document.getElementById('oldPassword').value = '';
-  document.getElementById('newPassword').value = '';
-  document.getElementById('confirmPassword').value = '';
+  const modal = document.getElementById('changePasswordModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  modal.classList.add('u-hidden');
+  const ids = ['oldPassword', 'newPassword', 'confirmPassword'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 }
 
 async function changePassword() {
@@ -1881,7 +1887,13 @@ function renderLeaseAgreementsPage() {
                 <td class="dx-td-plain">${lease.roomId}</td>
                 <td class="dx-td-plain">${lease.tenantName || lease.tenantId}</td>
                 <td class="dx-td-plain">${new Date(lease.moveInDate).toLocaleDateString('th-TH')}</td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: right;">฿${lease.rentAmount?.toLocaleString() || '-'}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: right;">${(() => {
+                  // Live rent from RoomConfigManager (current source of truth). Falls back to frozen lease.rentAmount.
+                  const live = (typeof RoomConfigManager !== 'undefined')
+                    ? (RoomConfigManager.getRentPrice(lease.building, lease.roomId) || 0) : 0;
+                  const v = live || lease.rentAmount || 0;
+                  return v ? '฿' + v.toLocaleString() : '-';
+                })()}</td>
                 <td class="dx-td-plain">
                   <span style="padding: 0.3rem 0.8rem; border-radius: 4px; background: ${lease.status === 'active' ? '#c8e6c9' : '#f5f5f5'}; color: ${lease.status === 'active' ? '#2e7d32' : '#999'}; font-weight: 600;">
                     ${lease.status === 'active' ? '✅ กำลังเช่า' : '❌ เลิกเช่า'}
@@ -3280,7 +3292,7 @@ function loadAndRenderCommunityEvents() {
     const isPast = new Date(e.date) < today;
     const bldgLabel = e.building === 'nest' ? '🏢 Nest' : e.building === 'rooms' ? '🏠 ห้องแถว' : '🌐 ทุกตึก';
     return `
-    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${isPast ? '#999' : '#ff8f00'}; ${isPast ? 'opacity:0.65;' : ''}">
+    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${isPast ? '#999' : '#ff8f00'};">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
         <div style="flex: 1;">
           <div style="font-weight: 700; font-size: 1rem;">📅 ${esc(e.title)} ${isPast ? '<span style="font-size:.7rem;color:#999;">(ผ่านแล้ว)</span>' : ''}</div>
@@ -3449,7 +3461,7 @@ function toggleAddDocForm() {
   }
 }
 
-function saveCommunityDocument() {
+async function saveCommunityDocument() {
   const title = document.getElementById('docTitle')?.value.trim();
   const category = document.getElementById('docCategory')?.value;
   const fileType = document.getElementById('docType')?.value.trim();
@@ -3474,12 +3486,20 @@ function saveCommunityDocument() {
 
   // Optimistic update via in-memory cache; onSnapshot writes localStorage + confirms
   _docsCache = (_docsCache || JSON.parse(localStorage.getItem('community_documents_data') || '[]')).concat(newDoc);
+
+  // Firestore write must be awaited; previously fire-and-forget hid failures (§7-N silent failure).
   if (window.firebase?.firestore) {
     try {
       const db = window.firebase.firestore();
       const fs = window.firebase.firestoreFunctions;
-      fs.setDoc(fs.doc(fs.collection(db, 'communityDocuments'), newDoc.id), newDoc);
-    } catch(e) { console.warn('Firestore doc save failed:', e); }
+      await fs.setDoc(fs.doc(fs.collection(db, 'communityDocuments'), newDoc.id), newDoc);
+    } catch(e) {
+      console.warn('Firestore doc save failed:', e);
+      // Roll back optimistic cache so UI doesn't lie about a successful save
+      _docsCache = (_docsCache || []).filter(d => d.id !== newDoc.id);
+      showToast('❌ บันทึกเอกสารไม่สำเร็จ: ' + (e?.message || e), 'error');
+      return;
+    }
   }
 
   document.getElementById('docTitle').value = '';

@@ -4203,7 +4203,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
 
       <!-- Add Event Form (Hidden) -->
-      <div id="addEventForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+      <div id="addEventForm" class="u-hidden" style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
         <div style="font-weight: 700; margin-bottom: 1rem;">Add / Edit Community Event</div>
         <input type="text" id="eventTitle" placeholder="Event Title" class="input-pad10">
         <div class="grid-2col">
@@ -4237,7 +4237,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
 
       <!-- Add Document Form (Hidden) -->
-      <div id="addDocForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+      <div id="addDocForm" class="u-hidden" style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
         <div style="font-weight: 700; margin-bottom: 1rem;">Add New Document</div>
         <input type="text" id="docTitle" placeholder="Document Title" class="input-pad10">
         <div class="grid-2col">
@@ -4741,27 +4741,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px;">ก่อนเดือนนี้จะแสดงเป็น "📦 Archived" (ข้อมูลเก่า ไม่นับเป็นค้างชำระ) — ใช้สำหรับระบบเพิ่งเริ่ม track</div>
     </div>
 
-    <!-- Monthly meter entry table -->
-    <div class="card" class="mb-5">
-      <div class="card-title" id="pvm-table-title">📋 ตารางมิเตอร์ &amp; สถานะชำระ — ห้องแถว</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.9rem;">
-        <select id="mt-month" data-action="renderMeterTable" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.88rem;">
-          <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
-          <option value="3">มีนาคม</option><option value="4">เมษายน</option>
-          <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
-          <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
-          <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
-          <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
-        </select>
-        <input type="number" id="mt-year" value="2569" min="2560" max="2590" data-action="renderMeterTable"
-          style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.88rem;">
-        <span style="font-size:.78rem;color:var(--text-muted);">✅ = คลิกดูรายละเอียด · ⏳ = คลิก"ออกบิล"</span>
-      </div>
-      <div id="meterTableBody"></div>
-    </div>
-
-    <!-- Vacant room checker -->
-    <div class="card" class="mb-5" id="vacantCard">
+    <!-- Vacant room checker (moved above meter table per UX request) -->
+    <div class="card mb-5" id="vacantCard">
       <div class="card-title" role="heading" aria-level="3">🚪 ตรวจสอบห้องว่าง — เลือกเดือน/ปี ที่ต้องการดู</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
         <select id="vc-month" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.9rem;">
@@ -4778,6 +4759,25 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
         <span style="font-size:.8rem;color:var(--text-muted);">ดูจากการใช้ไฟฟ้า (ถ้ามิเตอร์ไม่เพิ่ม = อาจว่าง)</span>
       </div>
       <div id="vc-result"></div>
+    </div>
+
+    <!-- Monthly meter entry table -->
+    <div class="card mb-5">
+      <div class="card-title" id="pvm-table-title">📋 ตารางมิเตอร์ &amp; สถานะชำระ — ห้องแถว</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.9rem;">
+        <select id="mt-month" data-action="renderMeterTable" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.88rem;">
+          <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+          <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+          <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+          <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+          <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+          <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+        </select>
+        <input type="number" id="mt-year" value="2569" min="2560" max="2590" data-action="renderMeterTable"
+          style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-family:var(--font-brand);font-size:.88rem;">
+        <span style="font-size:.78rem;color:var(--text-muted);">✅ = คลิกดูรายละเอียด · ⏳ = คลิก"ออกบิล"</span>
+      </div>
+      <div id="meterTableBody"></div>
     </div>
   </div>
 </div><!-- /page-bill -->
@@ -4846,7 +4846,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       </div>
 
       <!-- Add Provider Form (Hidden) -->
-      <div id="addProviderForm" style="display: none; background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
+      <div id="addProviderForm" class="u-hidden" style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
         <div style="font-weight: 700; margin-bottom: 1rem;">Add New Service Provider</div>
         <div class="grid-2col">
           <input type="text" id="providerType" placeholder="Type (internet, electricity, water, etc.)" class="pad-box">
