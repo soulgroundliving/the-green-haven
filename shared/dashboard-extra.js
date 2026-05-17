@@ -1820,7 +1820,32 @@ function renderLeaseAgreementsPage() {
   const container = document.getElementById('leaseAgreementsContainer');
   if (!container) return;
 
-  const leases = LeaseAgreementManager.getAllLeasesList();
+  // Dedupe: legacy migrations + parallel writers can leave 2+ lease records for
+  // the same (building, room, moveInDate). Keep one per natural key — prefer
+  // canonical id (NOT prefixed with "LEGACY_"), then highest rentAmount,
+  // then newest createdAt. Hidden ones still exist in storage; admin can
+  // delete them via cleanup script if desired.
+  const _allLeases = LeaseAgreementManager.getAllLeasesList();
+  const _leaseGroups = {};
+  _allLeases.forEach(l => {
+    const k = `${l.building}|${l.roomId}|${l.moveInDate || ''}|${l.tenantId || l.tenantName || ''}`;
+    if (!_leaseGroups[k]) _leaseGroups[k] = [];
+    _leaseGroups[k].push(l);
+  });
+  const _pickCanonical = arr => {
+    if (arr.length === 1) return arr[0];
+    return [...arr].sort((a, b) => {
+      const aLegacy = String(a.id || '').startsWith('LEGACY_') ? 1 : 0;
+      const bLegacy = String(b.id || '').startsWith('LEGACY_') ? 1 : 0;
+      if (aLegacy !== bLegacy) return aLegacy - bLegacy; // non-legacy first
+      const ar = Number(a.rentAmount || 0);
+      const br = Number(b.rentAmount || 0);
+      if (ar !== br) return br - ar; // higher rent first
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || '')); // newer first
+    })[0];
+  };
+  const leases = Object.values(_leaseGroups).map(_pickCanonical);
+  const _hiddenDupCount = _allLeases.length - leases.length;
 
   // Aggregate tenants from all registered buildings (SSoT: Tab ผู้เช่า)
   // We tag each tenant with its building so the info card can show it without re-asking.
@@ -1884,7 +1909,10 @@ function renderLeaseAgreementsPage() {
       </div>
 
       <!-- Lease List -->
-      <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">📋 สัญญาเช่าทั้งหมด (${leases.length})</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; flex-wrap:wrap; gap:8px;">
+        <div style="font-weight: 600; font-size: 1.1rem;">📋 สัญญาเช่าทั้งหมด (${leases.length})</div>
+        ${_hiddenDupCount > 0 ? `<div style="font-size:.78rem; color:#e65100; background:#fff3e0; padding:4px 10px; border-radius:6px; border:1px solid #ffb74d;">🔁 ซ่อน ${_hiddenDupCount} รายการซ้ำ (legacy/duplicate)</div>` : ''}
+      </div>
       ${leases.length === 0 ? '<div style="padding: 1.5rem; text-align: center; color: #999;">ยังไม่มีสัญญาเช่า</div>' : ''}
       <div style="overflow-x: auto;">
         <table style="width: 100%; border-collapse: collapse;">
@@ -3488,17 +3516,53 @@ function toggleAddDocForm() {
 async function saveCommunityDocument() {
   const title = document.getElementById('docTitle')?.value.trim();
   const category = document.getElementById('docCategory')?.value;
-  const fileType = document.getElementById('docType')?.value.trim();
-  const fileUrl = document.getElementById('docUrl')?.value.trim();
+  let fileType = document.getElementById('docType')?.value.trim();
+  let fileUrl = document.getElementById('docUrl')?.value.trim();
   const description = document.getElementById('docDescription')?.value.trim();
+  const fileInput = document.getElementById('docFile');
+  const file = fileInput?.files?.[0] || null;
 
-  if (!title || !category || !fileUrl) {
-    showToast('Please fill in Title, Category, and URL', 'warning');
+  if (!title || !category) {
+    showToast('กรุณากรอก Title และ Category', 'warning');
+    return;
+  }
+  if (!file && !fileUrl) {
+    showToast('กรุณาอัพไฟล์ หรือกรอก URL', 'warning');
+    return;
+  }
+  if (file && file.size > 5 * 1024 * 1024) {
+    showToast('ไฟล์ใหญ่เกิน 5 MB', 'warning');
     return;
   }
 
+  const docId = 'doc_' + Date.now();
+
+  // If admin uploaded a file: push to Firebase Storage, then use downloadURL.
+  // Falls back to manually-entered URL when no file was selected.
+  if (file && window.firebase?.storage && window.firebase?.storageFunctions) {
+    try {
+      showToast('📤 กำลังอัพโหลดไฟล์...', 'info');
+      const storage = window.firebase.storage();
+      const { ref: sRef, uploadBytes, getDownloadURL } = window.firebase.storageFunctions;
+      // Sanitize filename — keep extension, strip path traversal
+      const safeName = file.name.replace(/[^\w.฀-๿-]+/g, '_').slice(-80);
+      const fileRef = sRef(storage, `communityDocuments/${docId}/${safeName}`);
+      const snap = await uploadBytes(fileRef, file);
+      fileUrl = await getDownloadURL(snap.ref);
+      // Auto-detect fileType from extension if admin didn't fill it
+      if (!fileType) {
+        const ext = (safeName.split('.').pop() || '').toLowerCase();
+        fileType = ext || (file.type.startsWith('image/') ? 'image' : 'file');
+      }
+    } catch (e) {
+      console.error('Doc upload failed:', e);
+      showToast('❌ อัพโหลดไม่สำเร็จ: ' + (e?.message || e), 'error');
+      return;
+    }
+  }
+
   const newDoc = {
-    id: 'doc_' + Date.now(),
+    id: docId,
     title: title,
     category: category,
     description: description,
@@ -3526,11 +3590,11 @@ async function saveCommunityDocument() {
     }
   }
 
-  document.getElementById('docTitle').value = '';
-  document.getElementById('docCategory').value = '';
-  document.getElementById('docType').value = '';
-  document.getElementById('docUrl').value = '';
-  document.getElementById('docDescription').value = '';
+  ['docTitle', 'docCategory', 'docType', 'docUrl', 'docDescription'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const _fileInput = document.getElementById('docFile');
+  if (_fileInput) _fileInput.value = '';
 
   toggleAddDocForm();
   loadAndRenderCommunityDocs();
@@ -4283,18 +4347,18 @@ function renderRewardsAdminTable() {
       ? '<span style="color:#c62828;font-weight:600;">No</span>'
       : '<span style="color:var(--green-dark);font-weight:600;">Yes</span>';
     tr.appendChild(tdActive);
-    const tdNote = document.createElement('td');
-    tdNote.className = 'u-text-sm u-color-muted';
+    const tdQuota = document.createElement('td');
+    tdQuota.className = 'u-text-sm u-color-muted';
     if (Number(r.monthlyQuota) > 0) {
       const quotaSpan = document.createElement('span');
-      quotaSpan.style.cssText = 'display:inline-block;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;border-radius:4px;padding:1px 6px;font-size:.72rem;font-weight:600;margin-right:6px;';
-      quotaSpan.textContent = `🎯 ${r.monthlyQuota}/เดือน`;
-      tdNote.appendChild(quotaSpan);
+      quotaSpan.style.cssText = 'display:inline-block;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;border-radius:4px;padding:1px 6px;font-size:.78rem;font-weight:700;';
+      quotaSpan.textContent = `🎯 ${r.monthlyQuota} ครั้ง/เดือน`;
+      tdQuota.appendChild(quotaSpan);
+    } else {
+      tdQuota.textContent = '∞ ไม่จำกัด';
+      tdQuota.style.color = 'var(--text-muted)';
     }
-    const noteText = document.createElement('span');
-    noteText.textContent = esc(r.note || '');
-    tdNote.appendChild(noteText);
-    tr.appendChild(tdNote);
+    tr.appendChild(tdQuota);
     const tdActions = document.createElement('td');
     const editBtn = document.createElement('button');
     editBtn.textContent = 'Edit'; editBtn.className = 'u-btn-tbl-edit';
@@ -4320,7 +4384,6 @@ function openRewardEdit(rewardId) {
     document.getElementById('rewardEditIcon').value = '🎁';
     document.getElementById('rewardEditOrder').value = (_rewardsAdminCache.length + 1);
     document.getElementById('rewardEditMonthlyQuota').value = 0;
-    document.getElementById('rewardEditNote').value = '';
     document.getElementById('rewardEditActive').checked = true;
   } else {
     const r = _rewardsAdminCache.find(x => x.id === rewardId);
@@ -4330,7 +4393,6 @@ function openRewardEdit(rewardId) {
     document.getElementById('rewardEditIcon').value = r.icon || '🎁';
     document.getElementById('rewardEditOrder').value = r.order || 99;
     document.getElementById('rewardEditMonthlyQuota').value = Number(r.monthlyQuota || 0);
-    document.getElementById('rewardEditNote').value = r.note || '';
     document.getElementById('rewardEditActive').checked = r.active !== false;
   }
   modal.style.display = 'flex';
@@ -4351,7 +4413,6 @@ async function saveReward() {
   const icon = document.getElementById('rewardEditIcon').value.trim() || '🎁';
   const order = parseInt(document.getElementById('rewardEditOrder').value, 10) || 99;
   const monthlyQuota = Math.max(0, parseInt(document.getElementById('rewardEditMonthlyQuota').value, 10) || 0);
-  const note = document.getElementById('rewardEditNote').value.trim();
   const active = document.getElementById('rewardEditActive').checked;
   if (!name || !cost || cost < 1) {
     window.ghAlert('กรุณากรอกชื่อและคะแนน (>0)', { title: 'ข้อมูลไม่ครบ' });
@@ -4364,7 +4425,8 @@ async function saveReward() {
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
   const now = new Date().toISOString();
-  const data = { name, cost, icon, order, monthlyQuota, note, active, updatedAt: now };
+  // Removed `note` — quota-only mode. Tenant_app + CF auto-generate alert text.
+  const data = { name, cost, icon, order, monthlyQuota, active, updatedAt: now };
   try {
     if (id) {
       await fs.updateDoc(fs.doc(db, 'rewards', id), data);

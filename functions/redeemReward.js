@@ -76,9 +76,12 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
             if (dt && dt >= monthStart) monthlyCount++;
           });
           if (monthlyCount >= monthlyQuota) {
-            const noteSuffix = reward.note ? ` — ${reward.note}` : '';
+            // Auto-generated message — no admin note text needed.
+            const now = new Date();
+            const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            const daysLeft = Math.ceil((nextMonth - now) / 86400000);
             throw new functions.https.HttpsError('failed-precondition',
-              `ครบสิทธิ์เดือนนี้แล้ว (${monthlyCount}/${monthlyQuota} ครั้ง)${noteSuffix}`);
+              `ครบสิทธิ์เดือนนี้แล้ว (${monthlyCount}/${monthlyQuota} ครั้ง) · รออีก ${daysLeft} วันค่อยแลกใหม่ได้`);
           }
         }
         const newPoints = currentPoints - cost;
@@ -177,9 +180,12 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
           if (dt && dt >= monthStart) monthlyCount++;
         });
         if (monthlyCount >= monthlyQuota) {
-          const noteSuffix = reward.note ? ` — ${reward.note}` : '';
+          // Auto-generated message — no admin note text needed.
+          const now = new Date();
+          const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+          const daysLeft = Math.ceil((nextMonth - now) / 86400000);
           throw new functions.https.HttpsError('failed-precondition',
-            `ครบสิทธิ์เดือนนี้แล้ว (${monthlyCount}/${monthlyQuota} ครั้ง)${noteSuffix}`);
+            `ครบสิทธิ์เดือนนี้แล้ว (${monthlyCount}/${monthlyQuota} ครั้ง) · รออีก ${daysLeft} วันค่อยแลกใหม่ได้`);
         }
       }
 

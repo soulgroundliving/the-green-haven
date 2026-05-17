@@ -113,6 +113,14 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    // Community Documents — admin uploads building rules / emergency procedures
+    // / forms etc. Tenants read but cannot write.
+    match /communityDocuments/{docId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && fitsSizeLimit() && isImageOrPdf();
+      allow delete: if isAdmin();
+    }
+
     // Default deny.
     match /{allPaths=**} {
       allow read, write: if false;
