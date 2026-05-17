@@ -1018,79 +1018,92 @@ function renderOwnerInfoPage() {
       </small>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
-      <!-- Left column -->
-      <div>
-        <label class="dx-label">ชื่อ-นามสกุล (เจ้าของ/ผู้จัดทำ) *</label>
-        <input type="text" id="ownerName" value="${owner.name || ''}" placeholder="ชื่อเจ้าของ" class="dx-field">
+    <!-- 👤 Owner personal info — grouped card -->
+    <div style="background:#fff; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.5rem;">
+      <div style="font-weight:700; font-size:1.05rem; color:var(--green-dark); margin-bottom:1rem; padding-bottom:.6rem; border-bottom:1px solid var(--border);">
+        👤 ข้อมูลเจ้าของ / ผู้จัดทำ
       </div>
-      <div>
-        <label class="dx-label">เลขประจำตัวประชาชน *</label>
-        <input type="text" id="ownerIdCard" value="${owner.idCardNumber || ''}" placeholder="เลขประจำตัวประชาชน" class="dx-field">
-      </div>
-      <div>
-        <label class="dx-label">เบอร์โทรศัพท์</label>
-        <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" maxlength="10" class="dx-field">
-        <small id="ownerPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
-      </div>
-      <div>
-        <label class="dx-label">อีเมล</label>
-        <input type="email" id="ownerEmail" value="${owner.email || ''}" placeholder="อีเมล" class="dx-field">
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1.5rem;">
-      <div>
-        <label class="dx-label">ที่อยู่</label>
-        <input type="text" id="ownerAddress" value="${owner.address || ''}" placeholder="ที่อยู่" class="dx-field">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.2rem;">
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">ชื่อ-นามสกุล *</label>
+          <input type="text" id="ownerName" value="${owner.name || ''}" placeholder="ชื่อเจ้าของ" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">เลขประจำตัวประชาชน *</label>
+          <input type="text" id="ownerIdCard" value="${owner.idCardNumber || ''}" placeholder="เลขประจำตัวประชาชน" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">เบอร์โทรศัพท์</label>
+          <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" maxlength="10" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+          <small id="ownerPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">อีเมล</label>
+          <input type="email" id="ownerEmail" value="${owner.email || ''}" placeholder="อีเมล" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
       </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
-      <div>
-        <label class="dx-label">แขวง/ตำบล</label>
-        <input type="text" id="ownerSubDistrict" value="${owner.subDistrict || ''}" placeholder="แขวง/ตำบล" class="dx-field">
+    <!-- 🏠 Address — grouped card -->
+    <div style="background:#fff; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.2rem;">
+      <div style="font-weight:700; font-size:1.05rem; color:var(--green-dark); margin-bottom:1rem; padding-bottom:.6rem; border-bottom:1px solid var(--border);">
+        🏠 ที่อยู่ตามทะเบียน
       </div>
-      <div>
-        <label class="dx-label">เขต/อำเภอ</label>
-        <input type="text" id="ownerDistrict" value="${owner.district || ''}" placeholder="เขต/อำเภอ" class="dx-field">
+      <div style="margin-bottom:1rem;">
+        <label class="dx-label" style="font-size:1rem; font-weight:600;">ที่อยู่ (เลขที่ / หมู่ / ซอย / ถนน)</label>
+        <input type="text" id="ownerAddress" value="${owner.address || ''}" placeholder="เช่น 123/45 หมู่ 3 ถนนรัชดาภิเษก" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
       </div>
-      <div>
-        <label class="dx-label">จังหวัด</label>
-        <input type="text" id="ownerProvince" value="${owner.province || ''}" placeholder="จังหวัด" class="dx-field">
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
-      <div>
-        <label class="dx-label">รหัสไปรษณีย์</label>
-        <input type="text" id="ownerPostalCode" value="${owner.postalCode || ''}" placeholder="รหัสไปรษณีย์" class="dx-field">
-      </div>
-      <div>
-        <label class="dx-label">เลขประจำตัวผู้เสียภาษี</label>
-        <input type="text" id="ownerTaxId" value="${owner.taxId || ''}" placeholder="เลขประจำตัวผู้เสียภาษี" class="dx-field">
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
-      <div>
-        <label class="dx-label">ชื่อธนาคาร</label>
-        <input type="text" id="ownerBankName" value="${owner.bankName || ''}" placeholder="ชื่อธนาคาร" class="dx-field">
-      </div>
-      <div>
-        <label class="dx-label">เลขบัญชี</label>
-        <input type="text" id="ownerBankAccount" value="${owner.bankAccount || ''}" placeholder="เลขบัญชี" class="dx-field">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem;">
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">แขวง/ตำบล</label>
+          <input type="text" id="ownerSubDistrict" value="${owner.subDistrict || ''}" placeholder="แขวง/ตำบล" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">เขต/อำเภอ</label>
+          <input type="text" id="ownerDistrict" value="${owner.district || ''}" placeholder="เขต/อำเภอ" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">จังหวัด</label>
+          <input type="text" id="ownerProvince" value="${owner.province || ''}" placeholder="จังหวัด" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">รหัสไปรษณีย์</label>
+          <input type="text" id="ownerPostalCode" value="${owner.postalCode || ''}" placeholder="รหัสไปรษณีย์" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
       </div>
     </div>
 
+    <!-- 🏦 Bank + tax — grouped card -->
+    <div style="background:#fff; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.2rem;">
+      <div style="font-weight:700; font-size:1.05rem; color:var(--green-dark); margin-bottom:1rem; padding-bottom:.6rem; border-bottom:1px solid var(--border);">
+        🏦 ธนาคาร & ภาษี
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.2rem;">
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">เลขประจำตัวผู้เสียภาษี</label>
+          <input type="text" id="ownerTaxId" value="${owner.taxId || ''}" placeholder="เลขประจำตัวผู้เสียภาษี" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+          <small style="display:block; color:var(--text-muted); font-size:.8rem; margin-top:.3rem;">บุคคลธรรมดา = เลขบัตร 13 หลัก / นิติบุคคล = เลขจดทะเบียน 13 หลัก</small>
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">ชื่อธนาคาร</label>
+          <input type="text" id="ownerBankName" value="${owner.bankName || ''}" placeholder="เช่น ไทยพาณิชย์ / กสิกร" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">เลขบัญชี</label>
+          <input type="text" id="ownerBankAccount" value="${owner.bankAccount || ''}" placeholder="เลขบัญชีธนาคาร" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+      </div>
+    </div>
 
-    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-      <button onclick="saveOwnerInfo()" style="padding: 0.8rem 2rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+    <!-- Action buttons — Save primary, Delete subtle outlined -->
+    <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+      <button onclick="saveOwnerInfo()" style="padding: 0.9rem 2.2rem; background: var(--green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 1.05rem; box-shadow: 0 2px 8px rgba(76,175,80,.25);">
         💾 บันทึกข้อมูล
       </button>
-      <button onclick="clearOwnerInfo()" style="padding: 0.8rem 2rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+      <button onclick="clearOwnerInfo()" style="padding: 0.9rem 1.5rem; background: transparent; color: #d32f2f; border: 1.5px solid #ef9a9a; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: .95rem;">
         🗑️ ลบข้อมูล
       </button>
+      <small style="color:var(--text-muted); font-size:.85rem; margin-left:auto;">* คือฟิลด์ที่จำเป็นสำหรับรายงานภาษี</small>
     </div>
 
     <!-- Per-building Internet Status (subscribed by tenant_app displayBuildingInternetStatus) -->
