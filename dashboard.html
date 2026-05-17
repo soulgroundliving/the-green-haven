@@ -4857,7 +4857,20 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <div id="addProviderForm" class="u-hidden" style="background: var(--green-pale); padding: 1.5rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem;">
         <div style="font-weight: 700; margin-bottom: 1rem;">Add New Service Provider</div>
         <div class="grid-2col">
-          <input type="text" id="providerType" placeholder="Type (internet, electricity, water, etc.)" class="pad-box">
+          <select id="providerType" class="pad-box">
+            <option value="">ประเภท…</option>
+            <option value="electricity">⚡ ไฟฟ้า (electricity)</option>
+            <option value="water">💧 น้ำ/ประปา (water)</option>
+            <option value="electrician">🔌 ช่างไฟ (electrician)</option>
+            <option value="plumber">🚰 ช่างประปา (plumber)</option>
+            <option value="aircon">❄️ ช่างแอร์ (aircon)</option>
+            <option value="appliance">🧊 ช่างเครื่องใช้ไฟฟ้า (appliance)</option>
+            <option value="cleaning">🧹 ทำความสะอาด (cleaning)</option>
+            <option value="pestcontrol">🐜 กำจัดแมลง (pestcontrol)</option>
+            <option value="security">🛡️ รปภ. (security)</option>
+            <option value="gardener">🌿 สวน (gardener)</option>
+            <option value="other">📝 อื่นๆ (other)</option>
+          </select>
           <input type="text" id="providerName" placeholder="Provider Name" class="pad-box">
         </div>
         <div class="grid-2col">

@@ -3248,11 +3248,23 @@ function loadAndRenderServiceProviders() {
   }).join('');
 }
 
+function _clearLegacyProviderTypeOptions() {
+  // Remove any one-off options that editServiceProvider may have prepended for
+  // legacy free-form types. Keeps the dropdown clean across add/edit cycles
+  // so admins can't accidentally re-add a banned type (internet/maintenance).
+  const sel = document.getElementById('providerType');
+  if (!sel) return;
+  Array.from(sel.options)
+    .filter(o => o.dataset && o.dataset.legacyType === '1')
+    .forEach(o => o.remove());
+}
+
 function toggleAddProviderForm() {
   const form = document.getElementById('addProviderForm');
   if (!form) return;
   form.classList.toggle('u-hidden');
   if (!form.classList.contains('u-hidden')) {
+    _clearLegacyProviderTypeOptions();
     document.getElementById('providerType').focus();
   }
 }
@@ -3291,6 +3303,23 @@ function editServiceProvider(id) {
   const provider = providers.find(p => p.id === id);
   if (!provider) return;
 
+  // providerType is a <select> (2026-05-17 cleanup). Pre-existing free-form
+  // types from the old <input> era won't match any option — preserve the value
+  // by prepending a one-off option so the admin sees what's stored and can
+  // re-select a canonical type without losing the existing value. Marked with
+  // data-legacy-type so toggleAddProviderForm can strip it on next open.
+  _clearLegacyProviderTypeOptions();
+  const typeSel = document.getElementById('providerType');
+  if (typeSel && provider.type) {
+    const known = Array.from(typeSel.options).some(o => o.value === provider.type);
+    if (!known) {
+      const opt = document.createElement('option');
+      opt.value = provider.type;
+      opt.textContent = `${provider.type} (เดิม — โปรดเลือกประเภทใหม่)`;
+      opt.dataset.legacyType = '1';
+      typeSel.insertBefore(opt, typeSel.options[1] || null);
+    }
+  }
   document.getElementById('providerType').value = provider.type;
   document.getElementById('providerName').value = provider.name;
   document.getElementById('providerPhone').value = provider.phone;
