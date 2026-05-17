@@ -1122,11 +1122,24 @@ function renderOwnerInfoPage() {
     <div id="buildingInternetConfigContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
       <div style="text-align:center;color:var(--text-muted);padding:1rem;grid-column:span 2;">กำลังโหลด...</div>
     </div>
+
+    <!-- 📱 Per-room WiFi (Nest only — each room has private WiFi) -->
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed var(--border);">
+      <div style="font-size: 1rem; font-weight: 700; margin-bottom: .25rem;">📱 WiFi รายห้อง (Nest)</div>
+      <div style="font-size: .82rem; color: var(--text-muted); margin-bottom: 1rem;">
+        ตั้ง SSID + รหัสผ่าน WiFi ของแต่ละห้อง Nest — ลูกบ้านห้องนั้นๆ จะเห็นใน "สถานะอินเทอร์เน็ตห้องพัก"
+        <br>เก็บที่ Firestore <code>roomWifi/nest_{roomId}</code> · ลูกบ้านเห็นเฉพาะห้องตัวเอง (claim-scoped)
+      </div>
+      <div id="nestRoomWifiContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+        <div style="text-align:center;color:var(--text-muted);padding:1rem;grid-column:1/-1;">กำลังโหลด...</div>
+      </div>
+    </div>
   `;
   // Lazy-load building internet config (after Firebase ready). Payment config
   // (PromptPay/companyName/ownerName) lives in the Buildings page since 2026-05-14
   // consolidation — see CLAUDE.md §7-T.
   if (typeof renderBuildingInternetConfig === 'function') renderBuildingInternetConfig();
+  if (typeof renderNestRoomWifiConfig === 'function') renderNestRoomWifiConfig();
 }
 
 // ===== BUILDING INTERNET CONFIG (per-building ISP + status + speed) =====
@@ -1211,6 +1224,76 @@ async function saveBuildingInternetConfig(fsId) {
 if (typeof window !== 'undefined') {
   window.renderBuildingInternetConfig = renderBuildingInternetConfig;
   window.saveBuildingInternetConfig = saveBuildingInternetConfig;
+}
+
+// ===== PER-NEST-ROOM WIFI CONFIG (admin sets, tenant of that room reads) =====
+// Each Nest room has private WiFi. Storage path roomWifi/{building}_{roomId}.
+// Rule (firestore.rules): admin write, tenant of that room read (claim-scoped).
+// Tenant_app subscribes to its OWN doc only — others can't read this room's pwd.
+async function renderNestRoomWifiConfig() {
+  const container = document.getElementById('nestRoomWifiContainer');
+  if (!container) return;
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    container.innerHTML = '<div style="color:#c62828;text-align:center;padding:1rem;grid-column:1/-1;">Firestore ไม่พร้อม</div>';
+    return;
+  }
+  // Nest rooms come from RoomConfigManager (admin-managed list per Room Mgmt page).
+  const nestConfig = (typeof RoomConfigManager !== 'undefined')
+    ? RoomConfigManager.getRoomsConfig('nest') : { rooms: [] };
+  const nestRooms = (nestConfig.rooms || []).filter(r => !r.deleted);
+  if (nestRooms.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:1rem;grid-column:1/-1;">ยังไม่มีห้อง Nest — เพิ่มในหน้า "จัดการห้องพัก" ก่อน</div>';
+    return;
+  }
+  const fs = window.firebase.firestoreFunctions;
+  const db = window.firebase.firestore();
+  // Fetch all existing wifi docs in parallel
+  const snaps = await Promise.all(nestRooms.map(r =>
+    fs.getDoc(fs.doc(db, 'roomWifi', `nest_${r.id}`)).catch(() => null)
+  ));
+  const esc = s => String(s ?? '').replace(/"/g, '&quot;');
+  container.innerHTML = nestRooms.map((r, i) => {
+    const data = (snaps[i]?.exists()) ? (snaps[i].data() || {}) : {};
+    return `
+      <div style="border:1px solid var(--border); border-radius:8px; padding:1rem; background:#fafafa;">
+        <div style="font-weight:700; margin-bottom:.6rem; color:var(--green-dark);">🏢 ห้อง ${esc(r.id)}</div>
+        <label style="display:block; font-weight:600; font-size:.85rem; margin-bottom:.3rem;">SSID (ชื่อ WiFi)</label>
+        <input type="text" id="rw-nest-${esc(r.id)}-ssid" value="${esc(data.ssid)}" placeholder="เช่น Nest-N01" style="width:100%; padding:.5rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; margin-bottom:.6rem; font-family:Sarabun,sans-serif;">
+        <label style="display:block; font-weight:600; font-size:.85rem; margin-bottom:.3rem;">รหัสผ่าน</label>
+        <input type="text" id="rw-nest-${esc(r.id)}-password" value="${esc(data.password)}" placeholder="รหัส WiFi" style="width:100%; padding:.5rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; margin-bottom:.6rem; font-family:monospace;">
+        <label style="display:block; font-weight:600; font-size:.85rem; margin-bottom:.3rem;">ความเร็ว (optional)</label>
+        <input type="text" id="rw-nest-${esc(r.id)}-speed" value="${esc(data.speed)}" placeholder="100 Mbps" style="width:100%; padding:.5rem; border:1px solid #ddd; border-radius:4px; box-sizing:border-box; margin-bottom:.8rem; font-family:Sarabun,sans-serif;">
+        <button onclick="saveRoomWifiConfig('nest','${esc(r.id)}')" style="width:100%; padding:.55rem; background:var(--green); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-family:Sarabun,sans-serif; font-size:.85rem;">💾 บันทึก WiFi ห้อง ${esc(r.id)}</button>
+      </div>
+    `;
+  }).join('');
+}
+
+async function saveRoomWifiConfig(building, roomId) {
+  const ssid = document.getElementById(`rw-${building}-${roomId}-ssid`)?.value?.trim() || '';
+  const password = document.getElementById(`rw-${building}-${roomId}-password`)?.value?.trim() || '';
+  const speed = document.getElementById(`rw-${building}-${roomId}-speed`)?.value?.trim() || '';
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    showToast('Firestore ไม่พร้อม', 'error');
+    return;
+  }
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    await fs.setDoc(fs.doc(db, 'roomWifi', `${building}_${roomId}`), {
+      building, roomId, ssid, password, speed,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    showToast(`✅ บันทึก WiFi ห้อง ${roomId} แล้ว`, 'success');
+  } catch (e) {
+    console.error('saveRoomWifiConfig failed:', e);
+    showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.renderNestRoomWifiConfig = renderNestRoomWifiConfig;
+  window.saveRoomWifiConfig = saveRoomWifiConfig;
 }
 
 

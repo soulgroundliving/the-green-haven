@@ -2714,6 +2714,19 @@
                         <div>ห้อง: <strong id="roomInternetRoom">-</strong></div>
                         <div>ชนิดเครือข่าย: <span id="roomInternetSSID">-</span></div>
                     </div>
+                    <!-- Admin-managed WiFi (Nest per-room) — populated from roomWifi/{building}_{roomId} -->
+                    <div id="roomWifiAdminSection" style="display:none; margin-top:12px; padding:10px; background:#e8f5e9; border-radius:10px; font-size:var(--fs-sm);">
+                        <div style="font-weight:700; margin-bottom:6px; color:#1b5e20;">📡 WiFi ห้องคุณ (ตั้งโดยเจ้าของ)</div>
+                        <div style="display:grid; gap:4px;">
+                            <div>SSID: <strong id="roomWifiSsid" style="font-family:monospace;">-</strong></div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span>รหัส:</span>
+                                <strong id="roomWifiPassword" style="font-family:monospace; letter-spacing:1px;">-</strong>
+                                <button type="button" id="roomWifiToggleBtn" style="border:none; background:#c8e6c9; color:#1b5e20; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:.78rem;">👁 แสดง</button>
+                            </div>
+                            <div id="roomWifiSpeedRow" style="display:none;">ความเร็ว: <strong id="roomWifiSpeed">-</strong></div>
+                        </div>
+                    </div>
                     <small style="display:block; margin-top:6px; color:#aaa; font-style:italic;">* วัดจากอุปกรณ์ของคุณเอง</small>
                     <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="roomInternetLastCheck">-</span></small>
                 </div>
@@ -11638,6 +11651,77 @@
             if (conn && typeof conn.addEventListener === 'function') {
                 conn.addEventListener('change', _applyRoomInternetStatus);
             }
+        }
+
+        // ===== ADMIN-MANAGED ROOM WIFI (per-Nest-room SSID + password) =====
+        // Reads roomWifi/{building}_{roomId} — rule allows only this tenant + admins.
+        // Anti-pattern §7-U: claims-first guard, idempotent unsub, error resets unsub
+        // so the liffLinked retry can re-subscribe with correct claims.
+        let _roomWifiUnsub = null;
+        function _subscribeRoomWifi() {
+            if (_roomWifiUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            if (!_taBuilding || !_taRoom) return; // wait for real claims (anti-pattern §7-U)
+            const fs = window.firebase.firestoreFunctions;
+            const db = window.firebase.firestore();
+            const ref = fs.doc(db, 'roomWifi', `${_taBuilding}_${_taRoom}`);
+            _roomWifiUnsub = fs.onSnapshot(ref, snap => {
+                const section = document.getElementById('roomWifiAdminSection');
+                if (!section) return;
+                const data = snap.exists() ? (snap.data() || {}) : {};
+                if (!data.ssid && !data.password) {
+                    section.style.display = 'none';
+                    return;
+                }
+                section.style.display = 'block';
+                const ssidEl = document.getElementById('roomWifiSsid');
+                const pwdEl  = document.getElementById('roomWifiPassword');
+                const speedRow = document.getElementById('roomWifiSpeedRow');
+                const speedEl  = document.getElementById('roomWifiSpeed');
+                if (ssidEl) ssidEl.textContent = data.ssid || '-';
+                // Store real password in dataset; display masked initially
+                if (pwdEl) {
+                    pwdEl.dataset.real = data.password || '';
+                    pwdEl.dataset.revealed = '0';
+                    pwdEl.textContent = data.password ? '•'.repeat(Math.min(data.password.length, 12)) : '-';
+                }
+                if (data.speed && speedRow && speedEl) {
+                    speedRow.style.display = 'block';
+                    speedEl.textContent = data.speed;
+                } else if (speedRow) {
+                    speedRow.style.display = 'none';
+                }
+            }, err => {
+                console.warn('[roomWifi] subscribe failed:', err?.message || err);
+                if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                    _roomWifiUnsub = null;
+                }
+            });
+            // Eye toggle (one-time wire)
+            const toggleBtn = document.getElementById('roomWifiToggleBtn');
+            if (toggleBtn && !toggleBtn._wired) {
+                toggleBtn._wired = true;
+                toggleBtn.addEventListener('click', () => {
+                    const pwdEl = document.getElementById('roomWifiPassword');
+                    if (!pwdEl) return;
+                    const real = pwdEl.dataset.real || '';
+                    const revealed = pwdEl.dataset.revealed === '1';
+                    if (revealed) {
+                        pwdEl.textContent = '•'.repeat(Math.min(real.length, 12));
+                        pwdEl.dataset.revealed = '0';
+                        toggleBtn.textContent = '👁 แสดง';
+                    } else {
+                        pwdEl.textContent = real || '-';
+                        pwdEl.dataset.revealed = '1';
+                        toggleBtn.textContent = '🙈 ซ่อน';
+                    }
+                });
+            }
+        }
+        if (typeof _onLiffClaimsReady === 'function') {
+            _onLiffClaimsReady(_subscribeRoomWifi);
+        } else {
+            window.addEventListener('authReady', _subscribeRoomWifi);
         }
 
         // ---- LEASE RENEWAL ALERT ----
