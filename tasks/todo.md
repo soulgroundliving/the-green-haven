@@ -136,9 +136,60 @@ C-series + E2 + E3 + A7 (per C3 choice) + A8 (per B1 evidence).
 
 ---
 
-## REVIEW (after implementation)
+## REVIEW (2026-05-17 session shipped)
 
-_To be appended after Phase 1 ships and Phases 2-3 are scoped._
+**Shipped to main (5 commits):**
+
+| Commit | Scope | Files |
+|---|---|---|
+| `43be065` | Phase 1 bundle — A1-A6 + E1 | dashboard.html · shared/dashboard-extra.js · shared/dashboard-tenant-page.js |
+| `7897dec` | C7 + E2 — provider details + vacant badge | dashboard.html · shared/dashboard-extra.js · shared/dashboard-home-live.js |
+| `febde77` | C1 — Owner page light polish | shared/dashboard-extra.js |
+| `13f7a82` | C6 — LINE unlink CF + admin button | functions/unlinkLiffUser.js (NEW) · functions/index.js · shared/dashboard-main.js · dashboard.html |
+| `2f70c80` | C5 — Gamification monthly quota + alert | functions/redeemReward.js · dashboard.html · shared/dashboard-extra.js · tenant_app.html |
+
+### Phase 1 fixes (anti-pattern §7-C trio + 4 more)
+- A1 ✅ Change password modal — explicit display:flex/none (modal had inline style + class toggle mismatch)
+- A2 ✅ Service Providers form — removed inline style:display:none, added u-hidden class
+- A3 ✅ Community Events add form — same §7-C fix
+- A4 ✅ Documents upload — async/await + rollback toast; also fixed addDocForm §7-C
+- A5 ✅ Events archived greyed-out — removed opacity:0.65, kept (ผ่านแล้ว) tag
+- A6 ✅ Tenant stats race — wired updateOccupancyDashboard + updateLeaseExpiryAlerts to tenant-realtime snapshot
+- A7 ✅ Lease list rent — read live from RoomConfigManager.getRentPrice (decision C3)
+- E1 ✅ Live Feed — vacant card moved above meter table + duplicate class attr fix
+
+### Phase 2 features (per user decisions)
+- C7 ✅ Service Providers — new "รายละเอียด/Details" textarea (HTML + save/edit/render)
+- E2 ✅ Live Feed — "🟡 ว่าง — มีค้าง" orange badge for vacant rooms with meter usage + tinted row + summary pill
+- C1 ✅ Owner page — light polish: 3 section cards (Owner / Address / Bank+Tax), labels 1rem, auto-fit responsive grid, Save vs Delete distinct
+- C6 ✅ LINE unlink — atomic CF `unlinkLiffUser` (admin SDK): soft-delete liffUsers + clear linkedAuthUid from tenants/{b}/list/{r} + clear LINE fields from people/{tenantId}. Admin UI: outlined-red button on approved entries + 4th "🔌 ยกเลิกแล้ว" count card
+- C5 ✅ Gamification monthly quota — `monthlyQuota` per reward (admin), enforced in `redeemReward` CF transaction (both tenant + player branches). Tenant sees "🎯 N ครั้ง/เดือน" badge; admin's note becomes alert text (orange) when quota set. Quota=0 = unlimited (back-compat)
+
+### Decisions confirmed (no work needed)
+- **D1** Buildings → Rooms: Dropdown auto-updates via `buildingRegistryChanged` event; rooms must be added manually in Room Management
+- **D2 / C2** Internet status: Building-wide only, status quo; per-room WiFi NOT in scope (browser security blocks reading SSID/password)
+- **C4** Merge ประกาศ + events: Deferred — bug fixes priority
+
+### ⚠️ Pending CF deploys (user must run interactively)
+Both new CFs are CODE-shipped but require user to run from interactive terminal (SLIPOK_API_URL env var requires interactive prompt):
+
+```bash
+firebase deploy --only functions:unlinkLiffUser,functions:redeemReward
+```
+
+Until deployed:
+- 🔌 ยกเลิกการเชื่อม button visible but will fail
+- Monthly quota field saved by admin but NOT enforced — tenants can over-claim
+
+### ⏳ Awaiting user input
+- **B1**: Screenshot of "36 ห้อง" widget — need exact location to debug data redundancy. Code paths checked: meter table is bounded by `_getRoomsList(bld)` returning ~23, so the 36 must be in a HISTORICAL_DATA aggregator (`dashboard-home-live.js:312` sums `m.rooms[4]+m.nest[4]+m.amazon[4]` which can double-count ร้านใหญ่)
+- **B2**: Clarify whether dashboard month should be August vs May — code uses `now.getMonth()+1`; system date is 2026-05-17. Need to confirm whether user's local clock differs OR business logic needs change
+
+### Followup candidates (not in scope this session)
+- C4 announcement+events unification (architectural — 2-3 sessions)
+- E3 same as C6, shipped
+- Real-time remaining-quota counter for tenant rewards page (currently shows max only)
+- Cleanup HISTORICAL_DATA `m.amazon` double-count (depends on B1 confirmation)
 
 ---
 
