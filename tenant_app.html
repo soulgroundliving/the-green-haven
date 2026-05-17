@@ -4896,7 +4896,7 @@
         // ฟังก์ชันเข้าหน้าย่อย (แก้บั๊กเนื้อหาซ้อนกัน)
         function showSubPage(id) {
             // Guard: Nest-only sub-pages — block for Rooms (ห้องแถว) tenants
-            const NEST_ONLY_PAGES = ['building', 'smart-key-page', 'add-pet-page'];
+            const NEST_ONLY_PAGES = ['building', 'smart-key-page', 'add-pet-page', 'quest-page'];
             if (window._nestOnlyDisabled && NEST_ONLY_PAGES.includes(id)) {
                 if (typeof toast === 'function') toast('ฟีเจอร์นี้สำหรับลูกบ้านตึก Nest เท่านั้น', 'info');
                 return;
