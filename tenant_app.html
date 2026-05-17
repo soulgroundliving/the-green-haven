@@ -7395,7 +7395,7 @@
                 // when bell looks wrong. Removed in S2 cleanup.
                 const errs = window._bellLastErr || {};
                 const auds = window._bellLastAudiences || [];
-                const user = window.firebase?.auth?.currentUser;
+                const user = window.firebaseAuth?.currentUser;
                 const errLines = Object.entries(errs)
                     .filter(([_, v]) => v)
                     .map(([k, v]) => `${k}: ${_escapeBroadcastHtml(String(v))}`)
@@ -7471,7 +7471,7 @@
         async function _bellResolveAudiences() {
             const audiences = ['all'];
             try {
-                const user = window.firebase?.auth?.currentUser;
+                const user = window.firebaseAuth?.currentUser;
                 if (user && typeof user.getIdTokenResult === 'function') {
                     const res = await user.getIdTokenResult();
                     const claimed = res?.claims?.building;
