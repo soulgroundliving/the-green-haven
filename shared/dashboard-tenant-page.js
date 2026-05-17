@@ -208,6 +208,15 @@ function _setupTenantRealtimeListener(){
         all[bld][doc.id]=d;
       });
       localStorage.setItem('tenant_master_data',JSON.stringify(all));
+      // Always refresh occupancy KPIs + expiry alerts when tenant data lands.
+      // §7-K cousin: stats were defined but never wired to the data-arrival event,
+      // so on DOMContentLoaded the KPIs ran against empty localStorage → all zeros.
+      if (typeof updateOccupancyDashboard === 'function') {
+        try { updateOccupancyDashboard(); } catch (_) { /* noop */ }
+      }
+      if (typeof updateLeaseExpiryAlerts === 'function') {
+        try { updateLeaseExpiryAlerts(); } catch (_) { /* noop */ }
+      }
       if(!document.getElementById('page-tenant')?.classList.contains('u-hidden')){
         renderTenantPage();
         renderTenantTable();

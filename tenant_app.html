@@ -8292,15 +8292,22 @@
                 const name = _esc(r.name || '(unnamed)');
                 const icon = _esc(r.icon || '🎁');
                 const cost = Number(r.cost || 0);
-                const noteHtml = r.note
-                    ? `<p class="text-[9px] text-orange-500 font-bold">${_esc(r.note)}</p>`
+                const monthlyQuota = Number(r.monthlyQuota || 0);
+                // Quota badge — always visible when quota set so tenants know the limit upfront
+                const quotaBadge = monthlyQuota > 0
+                    ? `<span class="inline-block bg-orange-50 text-orange-700 border border-orange-300 rounded-md px-1.5 py-0.5 text-[9px] font-bold mr-1">🎯 ${monthlyQuota} ครั้ง/เดือน</span>`
                     : '';
+                // Note becomes alert text: only shown when quota is set (admin's reminder text)
+                const noteHtml = (monthlyQuota > 0 && r.note)
+                    ? `<p class="text-[9px] text-orange-500 font-bold mt-0.5">${_esc(r.note)}</p>`
+                    : (r.note ? `<p class="text-[9px] text-gray-500 mt-0.5">${_esc(r.note)}</p>` : '');
                 return `<div class="p-4 border border-gray-100 rounded-[1.5rem] flex items-center justify-between hover:bg-gray-50 transition">
                     <div class="flex items-center gap-4">
                         <span class="text-3xl">${icon}</span>
                         <div>
                             <p class="font-bold text-sm">${name}</p>
                             <p class="text-[10px] text-gray-400">ใช้ ${cost.toLocaleString()} Points</p>
+                            ${quotaBadge ? `<div class="mt-1">${quotaBadge}</div>` : ''}
                             ${noteHtml}
                         </div>
                     </div>

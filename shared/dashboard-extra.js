@@ -1,14 +1,20 @@
 // ===== Password Change Modal Functions =====
+// Modal has inline style="display:none" so we must set display explicitly per §7-C.
 function openChangePasswordModal() {
-  document.getElementById('changePasswordModal').classList.remove('u-hidden'); /*flex*/;
-  document.getElementById('oldPassword').focus();
+  const modal = document.getElementById('changePasswordModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  modal.classList.remove('u-hidden');
+  document.getElementById('oldPassword')?.focus();
 }
 
 function closeChangePasswordModal() {
-  document.getElementById('changePasswordModal').classList.add('u-hidden');
-  document.getElementById('oldPassword').value = '';
-  document.getElementById('newPassword').value = '';
-  document.getElementById('confirmPassword').value = '';
+  const modal = document.getElementById('changePasswordModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  modal.classList.add('u-hidden');
+  const ids = ['oldPassword', 'newPassword', 'confirmPassword'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 }
 
 async function changePassword() {
@@ -1012,79 +1018,92 @@ function renderOwnerInfoPage() {
       </small>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
-      <!-- Left column -->
-      <div>
-        <label class="dx-label">ชื่อ-นามสกุล (เจ้าของ/ผู้จัดทำ) *</label>
-        <input type="text" id="ownerName" value="${owner.name || ''}" placeholder="ชื่อเจ้าของ" class="dx-field">
+    <!-- 👤 Owner personal info — grouped card -->
+    <div style="background:#fff; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.5rem;">
+      <div style="font-weight:700; font-size:1.05rem; color:var(--green-dark); margin-bottom:1rem; padding-bottom:.6rem; border-bottom:1px solid var(--border);">
+        👤 ข้อมูลเจ้าของ / ผู้จัดทำ
       </div>
-      <div>
-        <label class="dx-label">เลขประจำตัวประชาชน *</label>
-        <input type="text" id="ownerIdCard" value="${owner.idCardNumber || ''}" placeholder="เลขประจำตัวประชาชน" class="dx-field">
-      </div>
-      <div>
-        <label class="dx-label">เบอร์โทรศัพท์</label>
-        <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" maxlength="10" class="dx-field">
-        <small id="ownerPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
-      </div>
-      <div>
-        <label class="dx-label">อีเมล</label>
-        <input type="email" id="ownerEmail" value="${owner.email || ''}" placeholder="อีเมล" class="dx-field">
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1.5rem;">
-      <div>
-        <label class="dx-label">ที่อยู่</label>
-        <input type="text" id="ownerAddress" value="${owner.address || ''}" placeholder="ที่อยู่" class="dx-field">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.2rem;">
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">ชื่อ-นามสกุล *</label>
+          <input type="text" id="ownerName" value="${owner.name || ''}" placeholder="ชื่อเจ้าของ" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">เลขประจำตัวประชาชน *</label>
+          <input type="text" id="ownerIdCard" value="${owner.idCardNumber || ''}" placeholder="เลขประจำตัวประชาชน" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">เบอร์โทรศัพท์</label>
+          <input type="tel" id="ownerPhone" value="${owner.phone || ''}" placeholder="เบอร์โทรศัพท์" maxlength="10" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+          <small id="ownerPhoneError" style="display:none;color:#d32f2f;font-size:0.85rem;margin-top:4px;"></small>
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">อีเมล</label>
+          <input type="email" id="ownerEmail" value="${owner.email || ''}" placeholder="อีเมล" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
       </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
-      <div>
-        <label class="dx-label">แขวง/ตำบล</label>
-        <input type="text" id="ownerSubDistrict" value="${owner.subDistrict || ''}" placeholder="แขวง/ตำบล" class="dx-field">
+    <!-- 🏠 Address — grouped card -->
+    <div style="background:#fff; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.2rem;">
+      <div style="font-weight:700; font-size:1.05rem; color:var(--green-dark); margin-bottom:1rem; padding-bottom:.6rem; border-bottom:1px solid var(--border);">
+        🏠 ที่อยู่ตามทะเบียน
       </div>
-      <div>
-        <label class="dx-label">เขต/อำเภอ</label>
-        <input type="text" id="ownerDistrict" value="${owner.district || ''}" placeholder="เขต/อำเภอ" class="dx-field">
+      <div style="margin-bottom:1rem;">
+        <label class="dx-label" style="font-size:1rem; font-weight:600;">ที่อยู่ (เลขที่ / หมู่ / ซอย / ถนน)</label>
+        <input type="text" id="ownerAddress" value="${owner.address || ''}" placeholder="เช่น 123/45 หมู่ 3 ถนนรัชดาภิเษก" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
       </div>
-      <div>
-        <label class="dx-label">จังหวัด</label>
-        <input type="text" id="ownerProvince" value="${owner.province || ''}" placeholder="จังหวัด" class="dx-field">
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
-      <div>
-        <label class="dx-label">รหัสไปรษณีย์</label>
-        <input type="text" id="ownerPostalCode" value="${owner.postalCode || ''}" placeholder="รหัสไปรษณีย์" class="dx-field">
-      </div>
-      <div>
-        <label class="dx-label">เลขประจำตัวผู้เสียภาษี</label>
-        <input type="text" id="ownerTaxId" value="${owner.taxId || ''}" placeholder="เลขประจำตัวผู้เสียภาษี" class="dx-field">
-      </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
-      <div>
-        <label class="dx-label">ชื่อธนาคาร</label>
-        <input type="text" id="ownerBankName" value="${owner.bankName || ''}" placeholder="ชื่อธนาคาร" class="dx-field">
-      </div>
-      <div>
-        <label class="dx-label">เลขบัญชี</label>
-        <input type="text" id="ownerBankAccount" value="${owner.bankAccount || ''}" placeholder="เลขบัญชี" class="dx-field">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem;">
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">แขวง/ตำบล</label>
+          <input type="text" id="ownerSubDistrict" value="${owner.subDistrict || ''}" placeholder="แขวง/ตำบล" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">เขต/อำเภอ</label>
+          <input type="text" id="ownerDistrict" value="${owner.district || ''}" placeholder="เขต/อำเภอ" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">จังหวัด</label>
+          <input type="text" id="ownerProvince" value="${owner.province || ''}" placeholder="จังหวัด" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">รหัสไปรษณีย์</label>
+          <input type="text" id="ownerPostalCode" value="${owner.postalCode || ''}" placeholder="รหัสไปรษณีย์" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
       </div>
     </div>
 
+    <!-- 🏦 Bank + tax — grouped card -->
+    <div style="background:#fff; padding:1.4rem; border:1px solid var(--border); border-radius:8px; margin-top:1.2rem;">
+      <div style="font-weight:700; font-size:1.05rem; color:var(--green-dark); margin-bottom:1rem; padding-bottom:.6rem; border-bottom:1px solid var(--border);">
+        🏦 ธนาคาร & ภาษี
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.2rem;">
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">เลขประจำตัวผู้เสียภาษี</label>
+          <input type="text" id="ownerTaxId" value="${owner.taxId || ''}" placeholder="เลขประจำตัวผู้เสียภาษี" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+          <small style="display:block; color:var(--text-muted); font-size:.8rem; margin-top:.3rem;">บุคคลธรรมดา = เลขบัตร 13 หลัก / นิติบุคคล = เลขจดทะเบียน 13 หลัก</small>
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">ชื่อธนาคาร</label>
+          <input type="text" id="ownerBankName" value="${owner.bankName || ''}" placeholder="เช่น ไทยพาณิชย์ / กสิกร" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+        <div>
+          <label class="dx-label" style="font-size:1rem; font-weight:600;">เลขบัญชี</label>
+          <input type="text" id="ownerBankAccount" value="${owner.bankAccount || ''}" placeholder="เลขบัญชีธนาคาร" class="dx-field" style="font-size:1rem; padding:.7rem .8rem;">
+        </div>
+      </div>
+    </div>
 
-    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-      <button onclick="saveOwnerInfo()" style="padding: 0.8rem 2rem; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+    <!-- Action buttons — Save primary, Delete subtle outlined -->
+    <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+      <button onclick="saveOwnerInfo()" style="padding: 0.9rem 2.2rem; background: var(--green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 1.05rem; box-shadow: 0 2px 8px rgba(76,175,80,.25);">
         💾 บันทึกข้อมูล
       </button>
-      <button onclick="clearOwnerInfo()" style="padding: 0.8rem 2rem; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem;">
+      <button onclick="clearOwnerInfo()" style="padding: 0.9rem 1.5rem; background: transparent; color: #d32f2f; border: 1.5px solid #ef9a9a; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: .95rem;">
         🗑️ ลบข้อมูล
       </button>
+      <small style="color:var(--text-muted); font-size:.85rem; margin-left:auto;">* คือฟิลด์ที่จำเป็นสำหรับรายงานภาษี</small>
     </div>
 
     <!-- Per-building Internet Status (subscribed by tenant_app displayBuildingInternetStatus) -->
@@ -1881,7 +1900,13 @@ function renderLeaseAgreementsPage() {
                 <td class="dx-td-plain">${lease.roomId}</td>
                 <td class="dx-td-plain">${lease.tenantName || lease.tenantId}</td>
                 <td class="dx-td-plain">${new Date(lease.moveInDate).toLocaleDateString('th-TH')}</td>
-                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: right;">฿${lease.rentAmount?.toLocaleString() || '-'}</td>
+                <td style="border: 1px solid #ddd; padding: 0.8rem; text-align: right;">${(() => {
+                  // Live rent from RoomConfigManager (current source of truth). Falls back to frozen lease.rentAmount.
+                  const live = (typeof RoomConfigManager !== 'undefined')
+                    ? (RoomConfigManager.getRentPrice(lease.building, lease.roomId) || 0) : 0;
+                  const v = live || lease.rentAmount || 0;
+                  return v ? '฿' + v.toLocaleString() : '-';
+                })()}</td>
                 <td class="dx-td-plain">
                   <span style="padding: 0.3rem 0.8rem; border-radius: 4px; background: ${lease.status === 'active' ? '#c8e6c9' : '#f5f5f5'}; color: ${lease.status === 'active' ? '#2e7d32' : '#999'}; font-weight: 600;">
                     ${lease.status === 'active' ? '✅ กำลังเช่า' : '❌ เลิกเช่า'}
@@ -3070,6 +3095,7 @@ function loadAndRenderServiceProviders() {
         <div>📱 Phone: <strong>${_esc(p.phone)}</strong></div>
         <div>📧 Email: <strong>${_esc(p.email || '-')}</strong></div>
         <div style="grid-column: 1/-1;">🌐 Website: <strong>${websiteHtml}</strong></div>
+        ${p.details ? `<div style="grid-column: 1/-1; padding-top: 0.5rem; border-top: 1px dashed var(--border); font-size: 0.85rem; color: var(--text-muted); white-space: pre-wrap;">📝 ${_esc(p.details)}</div>` : ''}
       </div>
     </div>
   `;
@@ -3091,6 +3117,7 @@ async function saveServiceProvider() {
   const phone = document.getElementById('providerPhone')?.value.trim();
   const email = document.getElementById('providerEmail')?.value.trim();
   const website = document.getElementById('providerWebsite')?.value.trim();
+  const details = document.getElementById('providerDetails')?.value.trim();
 
   if (!type || !name || !phone) {
     showToast('Please fill in Type, Name, and Phone', 'warning');
@@ -3099,14 +3126,14 @@ async function saveServiceProvider() {
 
   const newProvider = {
     id: 'sp_' + Date.now(),
-    type, name, phone, email, website,
+    type, name, phone, email, website, details,
     createdDate: new Date().toISOString()
   };
 
   // Phase 4: dual-write via ServiceProvidersStore (Firestore + localStorage)
   await ServiceProvidersStore.add(newProvider);
 
-  ['providerType','providerName','providerPhone','providerEmail','providerWebsite']
+  ['providerType','providerName','providerPhone','providerEmail','providerWebsite','providerDetails']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   toggleAddProviderForm();
   loadAndRenderServiceProviders();
@@ -3123,6 +3150,8 @@ function editServiceProvider(id) {
   document.getElementById('providerPhone').value = provider.phone;
   document.getElementById('providerEmail').value = provider.email || '';
   document.getElementById('providerWebsite').value = provider.website || '';
+  const detailsEl = document.getElementById('providerDetails');
+  if (detailsEl) detailsEl.value = provider.details || '';
 
   const form = document.getElementById('addProviderForm');
   form.classList.remove('u-hidden');
@@ -3136,11 +3165,12 @@ function editServiceProvider(id) {
       name: document.getElementById('providerName').value.trim(),
       phone: document.getElementById('providerPhone').value.trim(),
       email: document.getElementById('providerEmail').value.trim(),
-      website: document.getElementById('providerWebsite').value.trim()
+      website: document.getElementById('providerWebsite').value.trim(),
+      details: document.getElementById('providerDetails')?.value.trim() || ''
     };
     const ok = await ServiceProvidersStore.update(id, changes);
     if (ok !== false) {
-      ['providerType','providerName','providerPhone','providerEmail','providerWebsite']
+      ['providerType','providerName','providerPhone','providerEmail','providerWebsite','providerDetails']
         .forEach(i => { const el = document.getElementById(i); if (el) el.value = ''; });
       form.classList.add('u-hidden');
       button.textContent = originalText;
@@ -3280,7 +3310,7 @@ function loadAndRenderCommunityEvents() {
     const isPast = new Date(e.date) < today;
     const bldgLabel = e.building === 'nest' ? '🏢 Nest' : e.building === 'rooms' ? '🏠 ห้องแถว' : '🌐 ทุกตึก';
     return `
-    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${isPast ? '#999' : '#ff8f00'}; ${isPast ? 'opacity:0.65;' : ''}">
+    <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${isPast ? '#999' : '#ff8f00'};">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
         <div style="flex: 1;">
           <div style="font-weight: 700; font-size: 1rem;">📅 ${esc(e.title)} ${isPast ? '<span style="font-size:.7rem;color:#999;">(ผ่านแล้ว)</span>' : ''}</div>
@@ -3449,7 +3479,7 @@ function toggleAddDocForm() {
   }
 }
 
-function saveCommunityDocument() {
+async function saveCommunityDocument() {
   const title = document.getElementById('docTitle')?.value.trim();
   const category = document.getElementById('docCategory')?.value;
   const fileType = document.getElementById('docType')?.value.trim();
@@ -3474,12 +3504,20 @@ function saveCommunityDocument() {
 
   // Optimistic update via in-memory cache; onSnapshot writes localStorage + confirms
   _docsCache = (_docsCache || JSON.parse(localStorage.getItem('community_documents_data') || '[]')).concat(newDoc);
+
+  // Firestore write must be awaited; previously fire-and-forget hid failures (§7-N silent failure).
   if (window.firebase?.firestore) {
     try {
       const db = window.firebase.firestore();
       const fs = window.firebase.firestoreFunctions;
-      fs.setDoc(fs.doc(fs.collection(db, 'communityDocuments'), newDoc.id), newDoc);
-    } catch(e) { console.warn('Firestore doc save failed:', e); }
+      await fs.setDoc(fs.doc(fs.collection(db, 'communityDocuments'), newDoc.id), newDoc);
+    } catch(e) {
+      console.warn('Firestore doc save failed:', e);
+      // Roll back optimistic cache so UI doesn't lie about a successful save
+      _docsCache = (_docsCache || []).filter(d => d.id !== newDoc.id);
+      showToast('❌ บันทึกเอกสารไม่สำเร็จ: ' + (e?.message || e), 'error');
+      return;
+    }
   }
 
   document.getElementById('docTitle').value = '';
@@ -4239,7 +4277,18 @@ function renderRewardsAdminTable() {
       ? '<span style="color:#c62828;font-weight:600;">No</span>'
       : '<span style="color:var(--green-dark);font-weight:600;">Yes</span>';
     tr.appendChild(tdActive);
-    const tdNote = document.createElement('td'); tdNote.className = 'u-text-sm u-color-muted'; tdNote.textContent = esc(r.note); tr.appendChild(tdNote);
+    const tdNote = document.createElement('td');
+    tdNote.className = 'u-text-sm u-color-muted';
+    if (Number(r.monthlyQuota) > 0) {
+      const quotaSpan = document.createElement('span');
+      quotaSpan.style.cssText = 'display:inline-block;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;border-radius:4px;padding:1px 6px;font-size:.72rem;font-weight:600;margin-right:6px;';
+      quotaSpan.textContent = `🎯 ${r.monthlyQuota}/เดือน`;
+      tdNote.appendChild(quotaSpan);
+    }
+    const noteText = document.createElement('span');
+    noteText.textContent = esc(r.note || '');
+    tdNote.appendChild(noteText);
+    tr.appendChild(tdNote);
     const tdActions = document.createElement('td');
     const editBtn = document.createElement('button');
     editBtn.textContent = 'Edit'; editBtn.className = 'u-btn-tbl-edit';
@@ -4264,6 +4313,7 @@ function openRewardEdit(rewardId) {
     document.getElementById('rewardEditCost').value = '';
     document.getElementById('rewardEditIcon').value = '🎁';
     document.getElementById('rewardEditOrder').value = (_rewardsAdminCache.length + 1);
+    document.getElementById('rewardEditMonthlyQuota').value = 0;
     document.getElementById('rewardEditNote').value = '';
     document.getElementById('rewardEditActive').checked = true;
   } else {
@@ -4273,6 +4323,7 @@ function openRewardEdit(rewardId) {
     document.getElementById('rewardEditCost').value = r.cost || '';
     document.getElementById('rewardEditIcon').value = r.icon || '🎁';
     document.getElementById('rewardEditOrder').value = r.order || 99;
+    document.getElementById('rewardEditMonthlyQuota').value = Number(r.monthlyQuota || 0);
     document.getElementById('rewardEditNote').value = r.note || '';
     document.getElementById('rewardEditActive').checked = r.active !== false;
   }
@@ -4293,6 +4344,7 @@ async function saveReward() {
   const cost = parseInt(document.getElementById('rewardEditCost').value, 10);
   const icon = document.getElementById('rewardEditIcon').value.trim() || '🎁';
   const order = parseInt(document.getElementById('rewardEditOrder').value, 10) || 99;
+  const monthlyQuota = Math.max(0, parseInt(document.getElementById('rewardEditMonthlyQuota').value, 10) || 0);
   const note = document.getElementById('rewardEditNote').value.trim();
   const active = document.getElementById('rewardEditActive').checked;
   if (!name || !cost || cost < 1) {
@@ -4306,7 +4358,7 @@ async function saveReward() {
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
   const now = new Date().toISOString();
-  const data = { name, cost, icon, order, note, active, updatedAt: now };
+  const data = { name, cost, icon, order, monthlyQuota, note, active, updatedAt: now };
   try {
     if (id) {
       await fs.updateDoc(fs.doc(db, 'rewards', id), data);

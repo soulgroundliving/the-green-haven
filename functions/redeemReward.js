@@ -64,6 +64,23 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
         if (currentPoints < cost) {
           throw new functions.https.HttpsError('failed-precondition', `insufficient points: have ${currentPoints}, need ${cost}`);
         }
+        // Monthly quota enforcement (per-reward, per-player). Skipped when quota is unset/0.
+        const monthlyQuota = Number(reward.monthlyQuota || 0);
+        if (monthlyQuota > 0) {
+          const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+          const prior = await tx.get(peopleRef.collection('redemptions').where('rewardId', '==', playerRewardId));
+          let monthlyCount = 0;
+          prior.forEach(d => {
+            const ts = d.data().redeemedAt;
+            const dt = ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
+            if (dt && dt >= monthStart) monthlyCount++;
+          });
+          if (monthlyCount >= monthlyQuota) {
+            const noteSuffix = reward.note ? ` — ${reward.note}` : '';
+            throw new functions.https.HttpsError('failed-precondition',
+              `ครบสิทธิ์เดือนนี้แล้ว (${monthlyCount}/${monthlyQuota} ครั้ง)${noteSuffix}`);
+          }
+        }
         const newPoints = currentPoints - cost;
         const redemptionRef = peopleRef.collection('redemptions').doc();
         tx.set(redemptionRef, {
@@ -146,6 +163,24 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
       if (currentPoints < cost) {
         throw new functions.https.HttpsError('failed-precondition',
           `insufficient points: have ${currentPoints}, need ${cost}`);
+      }
+
+      // Monthly quota enforcement (per-reward, per-tenant). Skipped when unset/0.
+      const monthlyQuota = Number(reward.monthlyQuota || 0);
+      if (monthlyQuota > 0) {
+        const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+        const prior = await tx.get(tenantRef.collection('redemptions').where('rewardId', '==', rewardId));
+        let monthlyCount = 0;
+        prior.forEach(d => {
+          const ts = d.data().redeemedAt;
+          const dt = ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
+          if (dt && dt >= monthStart) monthlyCount++;
+        });
+        if (monthlyCount >= monthlyQuota) {
+          const noteSuffix = reward.note ? ` — ${reward.note}` : '';
+          throw new functions.https.HttpsError('failed-precondition',
+            `ครบสิทธิ์เดือนนี้แล้ว (${monthlyCount}/${monthlyQuota} ครั้ง)${noteSuffix}`);
+        }
       }
 
       const newPoints = currentPoints - cost;
