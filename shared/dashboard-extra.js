@@ -4277,7 +4277,18 @@ function renderRewardsAdminTable() {
       ? '<span style="color:#c62828;font-weight:600;">No</span>'
       : '<span style="color:var(--green-dark);font-weight:600;">Yes</span>';
     tr.appendChild(tdActive);
-    const tdNote = document.createElement('td'); tdNote.className = 'u-text-sm u-color-muted'; tdNote.textContent = esc(r.note); tr.appendChild(tdNote);
+    const tdNote = document.createElement('td');
+    tdNote.className = 'u-text-sm u-color-muted';
+    if (Number(r.monthlyQuota) > 0) {
+      const quotaSpan = document.createElement('span');
+      quotaSpan.style.cssText = 'display:inline-block;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;border-radius:4px;padding:1px 6px;font-size:.72rem;font-weight:600;margin-right:6px;';
+      quotaSpan.textContent = `🎯 ${r.monthlyQuota}/เดือน`;
+      tdNote.appendChild(quotaSpan);
+    }
+    const noteText = document.createElement('span');
+    noteText.textContent = esc(r.note || '');
+    tdNote.appendChild(noteText);
+    tr.appendChild(tdNote);
     const tdActions = document.createElement('td');
     const editBtn = document.createElement('button');
     editBtn.textContent = 'Edit'; editBtn.className = 'u-btn-tbl-edit';
@@ -4302,6 +4313,7 @@ function openRewardEdit(rewardId) {
     document.getElementById('rewardEditCost').value = '';
     document.getElementById('rewardEditIcon').value = '🎁';
     document.getElementById('rewardEditOrder').value = (_rewardsAdminCache.length + 1);
+    document.getElementById('rewardEditMonthlyQuota').value = 0;
     document.getElementById('rewardEditNote').value = '';
     document.getElementById('rewardEditActive').checked = true;
   } else {
@@ -4311,6 +4323,7 @@ function openRewardEdit(rewardId) {
     document.getElementById('rewardEditCost').value = r.cost || '';
     document.getElementById('rewardEditIcon').value = r.icon || '🎁';
     document.getElementById('rewardEditOrder').value = r.order || 99;
+    document.getElementById('rewardEditMonthlyQuota').value = Number(r.monthlyQuota || 0);
     document.getElementById('rewardEditNote').value = r.note || '';
     document.getElementById('rewardEditActive').checked = r.active !== false;
   }
@@ -4331,6 +4344,7 @@ async function saveReward() {
   const cost = parseInt(document.getElementById('rewardEditCost').value, 10);
   const icon = document.getElementById('rewardEditIcon').value.trim() || '🎁';
   const order = parseInt(document.getElementById('rewardEditOrder').value, 10) || 99;
+  const monthlyQuota = Math.max(0, parseInt(document.getElementById('rewardEditMonthlyQuota').value, 10) || 0);
   const note = document.getElementById('rewardEditNote').value.trim();
   const active = document.getElementById('rewardEditActive').checked;
   if (!name || !cost || cost < 1) {
@@ -4344,7 +4358,7 @@ async function saveReward() {
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
   const now = new Date().toISOString();
-  const data = { name, cost, icon, order, note, active, updatedAt: now };
+  const data = { name, cost, icon, order, monthlyQuota, note, active, updatedAt: now };
   try {
     if (id) {
       await fs.updateDoc(fs.doc(db, 'rewards', id), data);

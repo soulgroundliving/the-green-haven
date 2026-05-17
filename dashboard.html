@@ -5380,7 +5380,8 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
             <label>Cost (Points)<input type="number" id="rewardEditCost" min="1" class="input-sm"></label>
             <label>Icon (emoji)<input type="text" id="rewardEditIcon" placeholder="🎁" maxlength="4" class="input-sm"></label>
             <label>Order (lower shows first)<input type="number" id="rewardEditOrder" min="1" value="99" class="input-sm"></label>
-            <label>Note (optional, e.g. "limited stock")<input type="text" id="rewardEditNote" maxlength="80" class="input-sm"></label>
+            <label>Monthly quota (จำกัดครั้ง/เดือน — 0 = ไม่จำกัด)<input type="number" id="rewardEditMonthlyQuota" min="0" value="0" class="input-sm" placeholder="0 = ไม่จำกัด"></label>
+            <label>Note / Alert text (ขึ้นเป็นข้อความเตือนเมื่อมี quota)<input type="text" id="rewardEditNote" maxlength="80" placeholder="เช่น สิทธิ์จำกัด 3 ครั้ง/เดือน" class="input-sm"></label>
             <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rewardEditActive" checked> Active (visible to tenants)</label>
           </div>
           <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.5rem;">
