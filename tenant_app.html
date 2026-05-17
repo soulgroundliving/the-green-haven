@@ -7390,28 +7390,8 @@
         function _renderBroadcastsList() {
             const el = document.getElementById('broadcasts-panel-list');
             if (!el) return;
-            const renderDebugFooter = () => {
-                // Surfaces error/state info inline so users can screenshot from LIFF
-                // when bell looks wrong. Removed in S2 cleanup.
-                const errs = window._bellLastErr || {};
-                const auds = window._bellLastAudiences || [];
-                const user = window.firebaseAuth?.currentUser;
-                const errLines = Object.entries(errs)
-                    .filter(([_, v]) => v)
-                    .map(([k, v]) => `${k}: ${_escapeBroadcastHtml(String(v))}`)
-                    .join('<br>') || '(no errors)';
-                return `<details style="margin:1.2rem 1rem 0; font-size:.72rem; color:#999; padding:.8rem; background:#fafafa; border-radius:6px;">
-                    <summary style="cursor:pointer; color:#666;">🛠 ดู debug info</summary>
-                    <div style="margin-top:.6rem; line-height:1.6;">
-                        <div>audiences: [${auds.map(a => _escapeBroadcastHtml(a)).join(', ')}]</div>
-                        <div>_taBuilding: ${_escapeBroadcastHtml(_taBuilding || '(empty)')}</div>
-                        <div>signed in: ${user ? 'yes' : 'no'} ${user?.uid ? '(uid: ' + _escapeBroadcastHtml(user.uid.slice(0, 12)) + '...)' : ''}</div>
-                        <div style="margin-top:.4rem;">errors: <br>${errLines}</div>
-                    </div>
-                </details>`;
-            };
             if (!_broadcastsList.length) {
-                el.innerHTML = '<div style="text-align:center; padding:3rem 1rem; color:var(--text-muted); font-size:.92rem;">ยังไม่มีประกาศ</div>' + renderDebugFooter();
+                el.innerHTML = '<div style="text-align:center; padding:3rem 1rem; color:var(--text-muted); font-size:.92rem;">ยังไม่มีประกาศ</div>';
                 return;
             }
             const cutoff = _getLastBroadcastReadAt();
@@ -7453,7 +7433,7 @@
                     <div style="font-size:.9rem; color:var(--text-dark, #333); white-space:pre-wrap;">${body}</div>
                     ${eventMeta}
                 </div>`;
-            }).join('') + renderDebugFooter();
+            }).join('');
         }
         // C4 Session 1 v2 (2026-05-17): bell shows ALL announcement types
         // (notice/event/banner) merged with legacy broadcastMessages. UX consolidation
