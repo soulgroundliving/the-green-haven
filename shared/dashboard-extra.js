@@ -810,7 +810,12 @@ function setupAnnouncementListener() {
           .filter(d => d.type === undefined || d.type === 'banner')
           .map(d => {
             if (d.type !== 'banner') return d; // legacy doc — unchanged shape
-            const sentMs = d.sentAt?.toDate?.()?.getTime?.() ?? Date.parse(d.sentAt || '') ?? Date.now();
+            // Safely resolve sentAt → Date. Manual-backfilled docs may lack sentAt
+            // entirely (Firestore Console edits don't add Timestamps). Each fallback
+            // is independently guarded — ?? only catches null/undefined, NOT NaN.
+            let sentMs = d.sentAt?.toDate?.()?.getTime?.();
+            if (sentMs == null) sentMs = Date.parse(d.sentAt || '');
+            if (!Number.isFinite(sentMs)) sentMs = Date.now();
             const sentDate = new Date(sentMs);
             return {
               id: d.id,

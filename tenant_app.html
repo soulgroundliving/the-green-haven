@@ -10029,7 +10029,11 @@
                     // renderAnnouncements / renderCommunityFeed paths keep working.
                     const docs = snap.docs.map(d => {
                         const data = d.data() || {};
-                        const sentMs = data.sentAt?.toDate?.()?.getTime?.() ?? Date.parse(data.sentAt || '') ?? Date.now();
+                        // Safely resolve sentAt → Date. Manually-backfilled docs may
+                        // lack sentAt; `??` doesn't catch NaN from Date.parse('').
+                        let sentMs = data.sentAt?.toDate?.()?.getTime?.();
+                        if (sentMs == null) sentMs = Date.parse(data.sentAt || '');
+                        if (!Number.isFinite(sentMs)) sentMs = Date.now();
                         const sentDate = new Date(sentMs);
                         return {
                             id: d.id,
