@@ -32,51 +32,13 @@ window._pvFilter = 'today';
 
 window._pvCachedSlips = [];
 
-// Flatten payment_status (manual "paid" entries from bill flow) into slip-like objects
-function _pvLoadManualPayments(){
-  const ps = loadPS();
-  const out = [];
-  Object.keys(ps).forEach(yearMonth => {
-    const [year, month] = yearMonth.split('_').map(Number);
-    const byRoom = ps[yearMonth] || {};
-    Object.keys(byRoom).forEach(room => {
-      const p = byRoom[room];
-      if(!p || p.status !== 'paid') return;
-      const bld = detectBuildingFromRoomId(room);
-      const tsSource = p.slip?.transferDate || p.date || `${year}-${String(month).padStart(2,'0')}-05`;
-      out.push({
-        id: `ps_${yearMonth}_${room}`,
-        building: bld,
-        room: String(room),
-        amount: p.amount || p.slip?.amount || 0,
-        expectedAmount: p.amount || 0,
-        sender: p.slip?.sender || '(บันทึกโดย admin)',
-        receiver: p.slip?.receiver || '',
-        bankCode: p.slip?.bankCode || '',
-        transactionId: p.receiptNo || p.slip?.ref || '',
-        timestamp: new Date(tsSource),
-        verifiedAt: new Date(p.date || tsSource),
-        source: 'manual'
-      });
-    });
-  });
-  return out;
-}
-
-function _pvMergeSlips(firestoreSlips){
-  const manual = _pvLoadManualPayments();
-  const byKey = new Map();
-  // Firestore wins (has the real slip data). Dedupe by transactionId + room + amount + approximate time.
-  firestoreSlips.forEach(s => {
-    const k = `${s.building}|${s.room}|${s.transactionId || s.id}`;
-    byKey.set(k, s);
-  });
-  manual.forEach(s => {
-    const k = `${s.building}|${s.room}|${s.transactionId || s.id}`;
-    if(!byKey.has(k)) byKey.set(k, s);
-  });
-  return Array.from(byKey.values());
-}
+// SoT: Firestore verifiedSlips/{txid} is canonical for slip submissions.
+// Previously this module merged localStorage payment_status entries into the
+// feed via _pvLoadManualPayments() + _pvMergeSlips() — same logical payment
+// was stored in BOTH places (Firestore via verifySlip CF + localStorage via
+// bill-flow mirror) with DIFFERENT txid formats, so dedupe by txid failed
+// and the feed showed 1.5-2x record count (§7-T writer drift). Removed
+// 2026-05-17: feed now reads verifiedSlips only.
 
 function initPaymentVerify() {
   if (_pvUnsubscribe) { _pvUnsubscribe(); _pvUnsubscribe = null; }
@@ -91,7 +53,7 @@ function initPaymentVerify() {
   // hasn't been populated yet (rare: user opens Payment Verify within the
   // first ~800ms of page load before _subscribeGlobalVerifiedSlips runs).
   const renderFromList = (firestoreSlips) => {
-    const slips = _pvMergeSlips(firestoreSlips || []);
+    const slips = firestoreSlips || [];
     window._pvCachedSlips = slips;
     updatePVStats(slips);
     renderPVFeed(slips);
@@ -117,11 +79,9 @@ function initPaymentVerify() {
     renderFromList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
   }, err => {
     console.error('pv onSnapshot:', err);
-    const manual = _pvLoadManualPayments();
-    window._pvCachedSlips = manual;
-    updatePVStats(manual);
-    renderPVFeed(manual);
-    if(!manual.length) feed.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
+    window._pvCachedSlips = [];
+    updatePVStats([]);
+    feed.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">⚠️ ${err.message}</div>`;
   });
 }
 
