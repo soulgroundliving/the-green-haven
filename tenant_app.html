@@ -8267,7 +8267,9 @@
                 title.textContent = svc.label || '(service)';
                 const price = document.createElement('p');
                 price.className = `text-[10px] font-bold mt-1 ${svc.free ? 'text-green-600' : 'text-blue-600'}`;
-                price.textContent = svc.priceLabel || (svc.free ? 'ฟรี' : `${svc.price || 0} ฿ / ครั้ง`);
+                price.textContent = svc.free
+                    ? `ฟรี (${svc.quotaMonths || 6} เดือน/ครั้ง)`
+                    : (svc.priceLabel || `${svc.price || 0} ฿ / ครั้ง`);
                 inner.appendChild(icon); inner.appendChild(title); inner.appendChild(price);
                 card.appendChild(inner);
                 list.appendChild(card);
