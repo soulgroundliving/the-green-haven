@@ -377,7 +377,10 @@ describe('admin-only collections — anon tenant denied write', () => {
 });
 
 describe('public-read content — unauth user can read', () => {
-  for (const path of ['announcements/a1', 'communityEvents/e1', 'communityDocuments/d1', 'wellness_articles/w1']) {
+  // announcements/{id} removed from this set 2026-05-17 (C4 merge): read now
+  // requires signed-in + audience match. See `announcements — audience-filtered`
+  // describe block below.
+  for (const path of ['communityEvents/e1', 'communityDocuments/d1', 'wellness_articles/w1']) {
     it(`unauthenticated user CAN read ${path}`, async () => {
       await seedDoc(path);
       await assertSucceeds(getDoc(doc(UNAUTH().firestore(), path)));
@@ -844,6 +847,63 @@ describe('broadcastMessages — admin write, audience-filtered tenant read', () 
     await assertFails(addDoc(
       collection(EMAIL_ADMIN().firestore(), 'broadcastMessages'),
       { title: 't', body: 'b', audience: 'all', status: 'published' }
+    ));
+  });
+});
+
+// ── announcements (unified notice/event/banner — C4 merge 2026-05-17) ────────
+// Same audience model as broadcastMessages. Read tightened from `if true` to
+// signed-in + audience match. Write stays open to admin during Session 1
+// transition (legacy admin code still writes directly until Session 3 cutover).
+describe('announcements — audience-filtered read, admin write (C4 unified)', () => {
+  it('admin CAN read any announcement', async () => {
+    await seedDoc('announcements/A1', {
+      type: 'notice', title: 't', body: 'b', audience: 'rooms', status: 'published',
+    });
+    await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), 'announcements/A1')));
+  });
+
+  it('LIFF tenant in rooms CAN read audience=rooms announcement', async () => {
+    await seedDoc('announcements/A2', {
+      type: 'event', title: 't', body: 'b', audience: 'rooms', status: 'published',
+    });
+    await assertSucceeds(getDoc(doc(
+      LIFF_TENANT('line:U1', '15', 'rooms').firestore(),
+      'announcements/A2'
+    )));
+  });
+
+  it('LIFF tenant in rooms CAN read audience=all announcement', async () => {
+    await seedDoc('announcements/A3', {
+      type: 'banner', title: 't', body: 'b', audience: 'all', status: 'published',
+    });
+    await assertSucceeds(getDoc(doc(
+      LIFF_TENANT('line:U1', '15', 'rooms').firestore(),
+      'announcements/A3'
+    )));
+  });
+
+  it('LIFF tenant in nest CANNOT read audience=rooms announcement (building mismatch)', async () => {
+    await seedDoc('announcements/A4', {
+      type: 'notice', title: 't', body: 'b', audience: 'rooms', status: 'published',
+    });
+    await assertFails(getDoc(doc(
+      LIFF_TENANT('line:U2', 'N101', 'nest').firestore(),
+      'announcements/A4'
+    )));
+  });
+
+  it('unauthenticated CANNOT read any announcement (tightened from public-read)', async () => {
+    await seedDoc('announcements/A5', {
+      type: 'banner', title: 't', body: 'b', audience: 'all', status: 'published',
+    });
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'announcements/A5')));
+  });
+
+  it('LIFF tenant CANNOT write announcement directly (admin-only write during transition)', async () => {
+    await assertFails(addDoc(
+      collection(LIFF_TENANT().firestore(), 'announcements'),
+      { type: 'notice', title: 'spam', body: 'hijack', audience: 'all', status: 'published' }
     ));
   });
 });

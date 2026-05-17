@@ -7420,44 +7420,82 @@
                 </div>`;
             }).join('');
         }
+        // C4 Session 1 (2026-05-17): dual-source subscribe. New notices live in
+        // announcements WHERE type='notice'; legacy notices still in broadcastMessages.
+        // Merged into _broadcastsList by id; sorted by sentAt desc; truncated to 20.
+        // Session 2 will migrate legacy → new and drop the legacy subscriber.
         function _subscribeBroadcasts() {
             if (_broadcastsUnsub) return;
             if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-            // Wait until building is known — anonymous phase has no token.building claim,
-            // which causes Firestore to reject the query when building-specific docs exist.
+            // Anti-pattern §7-U: claim-presence guard FIRST, before setting unsub.
             if (!_taBuilding) return;
             const fs = window.firebase.firestoreFunctions;
             const db = window.firebase.firestore();
             const audience = _taBuilding;
+
+            const legacyCache = new Map();
+            const newCache    = new Map();
+            const sourcesReplayed = new Set();   // tracks which sources have had their first snapshot
+            const TOTAL_SOURCES = 2;
+            const rerender = (sourceId) => {
+                sourcesReplayed.add(sourceId);
+                const byId = new Map();
+                for (const d of newCache.values())    byId.set(d.id, d);
+                for (const d of legacyCache.values()) if (!byId.has(d.id)) byId.set(d.id, d);
+                const priorIds = new Set(_broadcastsList.map(b => b.id));
+                _broadcastsList = [...byId.values()].sort((a, b) => {
+                    const ta = a.sentAt?.toDate?.()?.getTime?.() ?? new Date(a.sentAt || 0).getTime();
+                    const tb = b.sentAt?.toDate?.()?.getTime?.() ?? new Date(b.sentAt || 0).getTime();
+                    return tb - ta;
+                }).slice(0, 20);
+                _renderBroadcastBadge();
+                _renderBroadcastsList();
+                // Suppress toast until BOTH sources have replayed initially —
+                // otherwise the 2nd source's initial docs fire as "new".
+                if (_broadcastsInitialReplay) {
+                    if (sourcesReplayed.size >= TOTAL_SOURCES) _broadcastsInitialReplay = false;
+                    return;
+                }
+                const fresh = _broadcastsList.find(d => !priorIds.has(d.id));
+                if (fresh) _broadcastShowToast('📣 ประกาศใหม่: ' + (fresh.title || ''));
+            };
+            const onErr = (label) => (err) => {
+                console.warn(label + ' subscribe failed:', err?.message || err);
+                // Anti-pattern §7-N + §7-U: reset composite unsub so liffLinked retry can rebind.
+                if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                    if (_broadcastsUnsub) { try { _broadcastsUnsub(); } catch(_){} }
+                    _broadcastsUnsub = null;
+                }
+            };
+
             try {
-                // Server-side filter matches the Firestore rule: audience == 'all' OR building.
-                // Without this, any building-specific doc in the result set causes a
-                // permission-denied for tenants of OTHER buildings, rejecting the whole query.
-                const q = fs.query(
+                const qLegacy = fs.query(
                     fs.collection(db, 'broadcastMessages'),
                     fs.where('audience', 'in', ['all', audience]),
                     fs.orderBy('sentAt', 'desc'),
                     fs.limit(20)
                 );
-                _broadcastsUnsub = fs.onSnapshot(q, snap => {
-                    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    const priorIds = new Set(_broadcastsList.map(b => b.id));
-                    _broadcastsList = docs;
-                    _renderBroadcastBadge();
-                    _renderBroadcastsList();
-                    // Toast on truly new broadcasts (after initial replay)
-                    if (!_broadcastsInitialReplay) {
-                        const fresh = docs.find(d => !priorIds.has(d.id));
-                        if (fresh) _broadcastShowToast('📣 ประกาศใหม่: ' + (fresh.title || ''));
-                    }
-                    _broadcastsInitialReplay = false;
-                }, err => {
-                    console.warn('broadcasts subscribe failed:', err?.message || err);
-                    // Reset so liffLinked can retry with proper claims
-                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                        _broadcastsUnsub = null;
-                    }
-                });
+                const qNew = fs.query(
+                    fs.collection(db, 'announcements'),
+                    fs.where('type', '==', 'notice'),
+                    fs.where('audience', 'in', ['all', audience]),
+                    fs.orderBy('sentAt', 'desc'),
+                    fs.limit(20)
+                );
+                const unsubLegacy = fs.onSnapshot(qLegacy, snap => {
+                    legacyCache.clear();
+                    snap.docs.forEach(d => legacyCache.set(d.id, { id: d.id, ...d.data() }));
+                    rerender('legacy');
+                }, onErr('broadcasts/legacy'));
+                const unsubNew = fs.onSnapshot(qNew, snap => {
+                    newCache.clear();
+                    snap.docs.forEach(d => newCache.set(d.id, { id: d.id, ...d.data() }));
+                    rerender('new');
+                }, onErr('announcements/notice'));
+                _broadcastsUnsub = () => {
+                    try { unsubLegacy(); } catch(_){}
+                    try { unsubNew(); } catch(_){}
+                };
             } catch (e) {
                 console.warn('broadcasts subscribe init failed:', e?.message || e);
             }
@@ -9965,16 +10003,46 @@
             }).join('');
         }
 
-        // ---- LEGACY COMMUNITY (kept for backward compat; unified feed above) ----
+        // ---- COMMUNITY BANNERS — C4 dual-read (2026-05-17) ----
+        // After C4: announcements collection holds {notice|event|banner} docs with
+        // unified audience field. For the banner panel we filter type='banner' +
+        // audience match. Legacy banner docs (pre-C4 backfilled by
+        // tools/c4-backfill-legacy-announcements.js) carry type='banner' + audience
+        // from the same merge — single query covers both populations. Anti-pattern
+        // §7-U: claim-guard FIRST, error callback resets unsub for liffLinked retry.
         let _taAnnUnsub = null;
         function _subscribeAnnouncementsFromFirestore() {
             if (_taAnnUnsub) return;
-            if (!window.firebase?.firestore) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            if (!_taBuilding) return;  // §7-U claim-presence guard
             try {
                 const db = window.firebase.firestore();
                 const fs = window.firebase.firestoreFunctions;
-                _taAnnUnsub = fs.onSnapshot(fs.collection(db, 'announcements'), snap => {
-                    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const audience = _taBuilding;
+                const q = fs.query(
+                    fs.collection(db, 'announcements'),
+                    fs.where('type', '==', 'banner'),
+                    fs.where('audience', 'in', ['all', audience])
+                );
+                _taAnnUnsub = fs.onSnapshot(q, snap => {
+                    // Normalize C4 docs back into legacy banner shape so the existing
+                    // renderAnnouncements / renderCommunityFeed paths keep working.
+                    const docs = snap.docs.map(d => {
+                        const data = d.data() || {};
+                        const sentMs = data.sentAt?.toDate?.()?.getTime?.() ?? Date.parse(data.sentAt || '') ?? Date.now();
+                        const sentDate = new Date(sentMs);
+                        return {
+                            id: d.id,
+                            icon: data.icon || '📢',
+                            title: data.title || '',
+                            content: data.body || '',
+                            date: sentDate.toISOString().split('T')[0],
+                            time: '',
+                            building: data.audience || 'all',
+                            createdAt: sentDate.toISOString(),
+                            createdBy: data.sender?.email || '📌 Admin',
+                        };
+                    });
                     const local = JSON.parse(localStorage.getItem('announcements_data') || '[]');
                     const byId = new Map();
                     local.forEach(a => byId.set(a.id, a));
@@ -9982,10 +10050,15 @@
                     localStorage.setItem('announcements_data', JSON.stringify(Array.from(byId.values())));
                     renderAnnouncements();
                     _updateCommunityBadge(docs);
-                }, err => console.warn('[announcements] subscribe failed:', err?.message || err));
+                }, err => {
+                    console.warn('[announcements/banner] subscribe failed:', err?.message || err);
+                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                        _taAnnUnsub = null;
+                    }
+                });
             } catch(e) { console.warn('tenant announcements subscribe failed:', e); }
         }
-        window.addEventListener('load', () => setTimeout(_subscribeAnnouncementsFromFirestore, 1000));
+        _onLiffClaimsReady(_subscribeAnnouncementsFromFirestore);
 
         function _updateCommunityBadge(docs) {
             const badge = document.getElementById('nav-badge-community');
@@ -10317,6 +10390,58 @@
             } catch(e) { console.warn('tenant events subscribe failed:', e); }
         }
         window.addEventListener('load', () => setTimeout(_subscribeEventsFromFirestore, 1000));
+
+        // ---- COMMUNITY EVENTS — C4 new collection subscriber (2026-05-17) ----
+        // Tenants see events from BOTH legacy communityEvents (above, public rule) AND
+        // new announcements WHERE type='event' (this subscriber, audience-scoped).
+        // Both merge into the same `community_events_data` localStorage so the existing
+        // renderCommunityEvents path renders them uniformly. Anti-pattern §7-U guard.
+        let _taNewEventsUnsub = null;
+        function _subscribeNewAnnouncementsEvents() {
+            if (_taNewEventsUnsub) return;
+            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+            if (!_taBuilding) return;  // §7-U claim-presence guard
+            try {
+                const db = window.firebase.firestore();
+                const fs = window.firebase.firestoreFunctions;
+                const audience = _taBuilding;
+                const q = fs.query(
+                    fs.collection(db, 'announcements'),
+                    fs.where('type', '==', 'event'),
+                    fs.where('audience', 'in', ['all', audience])
+                );
+                _taNewEventsUnsub = fs.onSnapshot(q, snap => {
+                    // Normalize C4 event shape → legacy event shape (title/date/time/location/description/building).
+                    const docs = snap.docs.map(d => {
+                        const data = d.data() || {};
+                        const dt = data.eventDate?.toDate?.() || (data.eventDate ? new Date(data.eventDate) : null);
+                        const dateStr = dt ? dt.toISOString().split('T')[0] : '';
+                        const timeStr = dt ? dt.toISOString().split('T')[1]?.slice(0, 5) : '';
+                        return {
+                            id: d.id,
+                            title: data.title || '',
+                            date: dateStr,
+                            time: timeStr,
+                            location: data.location || '',
+                            description: data.body || '',
+                            building: data.audience || 'all',
+                        };
+                    });
+                    const local = JSON.parse(localStorage.getItem('community_events_data') || '[]');
+                    const byId = new Map();
+                    local.forEach(e => byId.set(e.id, e));
+                    docs.forEach(e => byId.set(e.id, e));
+                    localStorage.setItem('community_events_data', JSON.stringify(Array.from(byId.values())));
+                    renderCommunityEvents();
+                }, err => {
+                    console.warn('[announcements/event] subscribe failed:', err?.message || err);
+                    if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                        _taNewEventsUnsub = null;
+                    }
+                });
+            } catch(e) { console.warn('tenant new-events subscribe failed:', e); }
+        }
+        _onLiffClaimsReady(_subscribeNewAnnouncementsEvents);
 
         function renderCommunityEvents() {
             renderCommunityFeed();

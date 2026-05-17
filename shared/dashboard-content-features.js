@@ -58,10 +58,9 @@ function saveAnnouncementsData(data) {
   console.log('✅ Announcements saved to localStorage');
 }
 
-function saveAnnouncement() {
+async function saveAnnouncement() {
   const title = document.getElementById('ann-title')?.value?.trim();
   const content = document.getElementById('ann-content')?.value?.trim();
-  const icon = document.getElementById('ann-icon')?.value?.trim() || '📢';
   const date = document.getElementById('ann-date')?.value || new Date().toISOString().split('T')[0];
   const time = document.getElementById('ann-time')?.value?.trim() || '';
 
@@ -70,51 +69,60 @@ function saveAnnouncement() {
     return;
   }
 
-  const announcement = {
-    id: `ANN${Date.now()}`,
-    building: announcementBuilding,
-    title: title,
-    content: content,
-    icon: icon,
-    date: date,
-    time: time,
-    createdAt: new Date().toISOString(),
-    createdBy: window.SecurityUtils?.getSecureSession()?.name || window.SecurityUtils?.getSecureSession()?.email || '📌 Admin'
-  };
+  // C4 Session 1: route NEW banners through publishAnnouncement CF (type='banner').
+  // The setupAnnouncementListener (dashboard-extra.js) hydrates the localStorage
+  // cache by normalizing new banner docs back into legacy shape, so the existing
+  // renderAnnouncementsList keeps working unchanged.
+  try {
+    const authInstance = window.firebaseAuth || window.auth;
+    const idToken = await authInstance?.currentUser?.getIdToken?.();
+    if (!idToken) throw new Error('Not signed in');
 
-  // Save to localStorage
-  let announcements = loadAnnouncements();
-  announcements.unshift(announcement);
-  saveAnnouncementsData(announcements);
-
-  // Save to Firestore (modular SDK)
-  if (window.firebase?.firestore) {
-    try {
-      const db = window.firebase.firestore();
-      const fs = window.firebase.firestoreFunctions;
-      fs.setDoc(fs.doc(fs.collection(db, 'announcements'), announcement.id), announcement);
-    } catch (err) {
-      console.warn('⚠️ Firestore announcement save failed:', err);
+    // Optional expiresAt — combine date+time when both provided (banner stays
+    // until that moment; missing → no expiry).
+    let expiresAt;
+    if (date && time) {
+      const ms = Date.parse(`${date}T${time}`);
+      if (Number.isFinite(ms)) expiresAt = new Date(ms).toISOString();
     }
-  }
 
-  console.log('📢 Announcement saved:', announcement);
+    const res = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/publishAnnouncement', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + idToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'banner',
+        title,
+        body: content,
+        audience: announcementBuilding,
+        ...(expiresAt ? { expiresAt } : {}),
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+
+    console.log('📢 Announcement published via CF:', json.id);
+  } catch (err) {
+    console.error('saveAnnouncement failed:', err);
+    showToast('❌ บันทึกไม่สำเร็จ: ' + (err?.message || 'unknown'), 'error');
+    return;
+  }
 
   // Clear form
   document.getElementById('ann-title').value = '';
   document.getElementById('ann-content').value = '';
-  document.getElementById('ann-icon').value = '📢';
+  const iconEl = document.getElementById('ann-icon'); if (iconEl) iconEl.value = '📢';
   document.getElementById('ann-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('ann-time').value = '';
 
-  // Show toast
+  // Show toast (admin renderer auto-refreshes via setupAnnouncementListener snapshot).
   const toast = document.createElement('div');
   toast.className = 'u-toast';
   toast.textContent = '✅ สร้างประกาศแล้ว';
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 2500);
-
-  renderAnnouncementsList();
 }
 
 function deleteAnnouncement(id) {

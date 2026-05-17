@@ -1,22 +1,23 @@
 /**
  * Dashboard — Broadcast Announcements tab.
  *
- * Admin publishes an in-app announcement via broadcastMessage CF; the doc
- * lands in broadcastMessages/{id} and tenant_app surfaces it on the World
- * Map bell icon. No LINE — free OA tier (200 msg/mo) is too restrictive.
+ * C4 merge 2026-05-17 (Session 1): writes flipped from broadcastMessage CF
+ * → publishAnnouncement CF with type='notice'. Legacy CF stays alive
+ * defensively; admin log subscribes to announcements collection filtered
+ * to type='notice'. Body limit bumped 500→1000 to match new CF schema.
  *
  * UI wires:
  *   - Title/body character counters + publish-button enable gate
  *   - Audience radio (all/rooms/nest)
  *   - Publish → ghConfirm → CF call → toast + clear form
- *   - Live log: onSnapshot(broadcastMessages orderBy sentAt desc limit 20)
+ *   - Live log: onSnapshot(announcements WHERE type='notice' orderBy sentAt desc limit 20)
  */
 (function () {
   'use strict';
 
-  const CF_URL = 'https://asia-southeast1-the-green-haven.cloudfunctions.net/broadcastMessage';
+  const CF_URL = 'https://asia-southeast1-the-green-haven.cloudfunctions.net/publishAnnouncement';
   const TITLE_MAX = 80;
-  const BODY_MAX  = 500;
+  const BODY_MAX  = 1000;
 
   let _bcLogUnsub = null;
   let _bcInited   = false;
@@ -96,7 +97,7 @@
           'Authorization': 'Bearer ' + idToken,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, body, building: audience }),
+        body: JSON.stringify({ type: 'notice', title, body, audience }),
       });
 
       const json = await res.json().catch(() => ({}));
@@ -181,19 +182,52 @@
     }
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
-    const q  = fs.query(
+    // C4 Session 1: new notices live in announcements (type='notice'); legacy
+    // notices still in broadcastMessages (read for transparency until S2 migration).
+    // C4 Session 1: explicit audience IN [...] so the query uses the composite
+    // index `type + audience + sentAt DESC` (admin's rule allows reading any audience,
+    // so listing all three values isn't a scoping limitation).
+    const qNew = fs.query(
+      fs.collection(db, 'announcements'),
+      fs.where('type', '==', 'notice'),
+      fs.where('audience', 'in', ['all', 'rooms', 'nest']),
+      fs.orderBy('sentAt', 'desc'),
+      fs.limit(20)
+    );
+    const qLegacy = fs.query(
       fs.collection(db, 'broadcastMessages'),
       fs.orderBy('sentAt', 'desc'),
       fs.limit(20)
     );
-    _bcLogUnsub = fs.onSnapshot(q, snap => {
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderLogList(docs);
-    }, err => {
-      console.warn('broadcastMessages onSnapshot:', err);
+    const newDocs = new Map();
+    const legacyDocs = new Map();
+    const rerender = () => {
+      const merged = new Map();
+      for (const d of newDocs.values())    merged.set(d.id, d);
+      for (const d of legacyDocs.values()) if (!merged.has(d.id)) merged.set(d.id, d);
+      const arr = [...merged.values()].sort((a, b) => {
+        const ta = a.sentAt?.toDate?.()?.getTime?.() ?? new Date(a.sentAt || 0).getTime();
+        const tb = b.sentAt?.toDate?.()?.getTime?.() ?? new Date(b.sentAt || 0).getTime();
+        return tb - ta;
+      }).slice(0, 20);
+      renderLogList(arr);
+    };
+    const showErr = (err, label) => {
+      console.warn('[' + label + '] onSnapshot:', err);
       const el = $('bcLogList');
       if (el) el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);font-size:.9rem;">โหลดประวัติไม่สำเร็จ: ' + escapeHtml(err.message || '') + '</div>';
-    });
+    };
+    const unsubNew = fs.onSnapshot(qNew, snap => {
+      newDocs.clear();
+      snap.docs.forEach(d => newDocs.set(d.id, { id: d.id, ...d.data() }));
+      rerender();
+    }, err => showErr(err, 'announcements/notice'));
+    const unsubLegacy = fs.onSnapshot(qLegacy, snap => {
+      legacyDocs.clear();
+      snap.docs.forEach(d => legacyDocs.set(d.id, { id: d.id, ...d.data() }));
+      rerender();
+    }, err => showErr(err, 'broadcastMessages'));
+    _bcLogUnsub = () => { try { unsubNew(); } catch(_){} try { unsubLegacy(); } catch(_){} };
   }
 
   function initBroadcastPage() {

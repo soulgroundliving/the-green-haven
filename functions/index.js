@@ -19,7 +19,17 @@ exports.deleteChecklistInstance  = require('./deleteChecklistInstance').deleteCh
 
 // Admin-only: publish in-app announcement to tenants (broadcastMessages/{id})
 // In-app only — no LINE Multicast (free tier 200/mo too low; deferred).
+// Deprecated 2026-05-17 by publishAnnouncement (C4 merge); kept alive
+// defensively while admin browsers may still hold stale JS. Session 3
+// removes this once Sessions 1-2 confirm full cutover.
 exports.broadcastMessage = require('./broadcastMessage').broadcastMessage;
+
+// Unified writer for tenant-facing announcements (notice/event/banner) —
+// writes to announcements/{auto} with type discriminator + unified audience.
+// Replaces broadcastMessage CF + direct communityEvents + direct announcements
+// writes. Tenant_app reads NEW + LEGACY merged during Session 1; Session 2 =
+// migration; Session 3 = legacy decom. See memory/lifecycle_announcements_unified.md.
+exports.publishAnnouncement = require('./publishAnnouncement').publishAnnouncement;
 
 // Admin-only: LINE push to tenant when maintenance ticket status changes.
 exports.notifyMaintenanceTenant = require('./notifyMaintenanceTenant').notifyMaintenanceTenant;

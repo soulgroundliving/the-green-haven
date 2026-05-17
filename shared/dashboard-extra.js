@@ -800,7 +800,31 @@ function setupAnnouncementListener() {
     const unsub = onSnapshot(
       collection(db, 'announcements'),
       (snapshot) => {
-        const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        // C4 Session 1: announcements collection now mixes legacy banner docs
+        // (no `type` field) and new docs (type ∈ {notice, event, banner}).
+        // For the admin "ประกาศ" tab we only care about banner-shaped data.
+        // Filter to legacy OR type=banner; normalize new banners into legacy
+        // shape so renderAnnouncementsList keeps working unchanged.
+        const docs = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(d => d.type === undefined || d.type === 'banner')
+          .map(d => {
+            if (d.type !== 'banner') return d; // legacy doc — unchanged shape
+            const sentMs = d.sentAt?.toDate?.()?.getTime?.() ?? Date.parse(d.sentAt || '') ?? Date.now();
+            const sentDate = new Date(sentMs);
+            return {
+              id: d.id,
+              icon: d.icon || '📢',
+              title: d.title || '',
+              content: d.body || '',
+              date: sentDate.toISOString().split('T')[0],
+              time: '',
+              building: d.audience || 'all',
+              createdAt: sentDate.toISOString(),
+              createdBy: d.sender?.email || '📌 Admin',
+              _source: 'announcements_new',
+            };
+          });
         const local = JSON.parse(localStorage.getItem('announcements_data') || '[]');
         const byId = new Map();
         local.forEach(a => byId.set(a.id, a));
@@ -3308,6 +3332,55 @@ async function deleteServiceProvider(id) {
 
 // ===== COMMUNITY EVENTS MANAGEMENT =====
 let _eventsUnsub = null;
+// ===== C4 merge (2026-05-17) — new-collection event subscriber =====
+// New events go to announcements/{id} with type='event' via publishAnnouncement CF.
+// Legacy events stay in communityEvents (CommunityEventsStore). This subscriber
+// hydrates the new-collection slice; loadAndRenderCommunityEvents merges both.
+window._newAnnouncementsEventCache = window._newAnnouncementsEventCache || new Map();
+window._newAnnouncementsEventUnsub = window._newAnnouncementsEventUnsub || null;
+function _subscribeNewAnnouncementsEvents() {
+  if (window._newAnnouncementsEventUnsub) return;
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) {
+    setTimeout(_subscribeNewAnnouncementsEvents, 1500);
+    return;
+  }
+  try {
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    const q = fs.query(
+      fs.collection(db, 'announcements'),
+      fs.where('type', '==', 'event')
+    );
+    window._newAnnouncementsEventUnsub = fs.onSnapshot(q, snap => {
+      window._newAnnouncementsEventCache.clear();
+      snap.docs.forEach(d => {
+        const data = d.data() || {};
+        // Adapt new schema (type/title/body/audience/eventDate/location) to
+        // legacy render shape (title/date/time/location/description/building).
+        const dt = data.eventDate?.toDate?.() || (data.eventDate ? new Date(data.eventDate) : null);
+        const dateStr = dt ? dt.toISOString().split('T')[0] : '';
+        const timeStr = dt ? dt.toISOString().split('T')[1]?.slice(0, 5) : '';
+        window._newAnnouncementsEventCache.set(d.id, {
+          id: d.id,
+          title: data.title || '',
+          date: dateStr,
+          time: timeStr,
+          location: data.location || '',
+          description: data.body || '',
+          building: data.audience || 'all',
+          _source: 'announcements',
+        });
+      });
+      if (document.getElementById('eventsList')) loadAndRenderCommunityEvents();
+    }, err => {
+      console.warn('[announcements/event] subscribe failed:', err?.message || err);
+      if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+        window._newAnnouncementsEventUnsub = null;
+      }
+    });
+  } catch (e) { console.warn('_subscribeNewAnnouncementsEvents:', e); }
+}
+
 // ===== CommunityEventsStore (2026-04-19) — Firestore canonical =====
 window.CommunityEventsStore = window.CommunityEventsStore || (function(){
   let cache = null;
@@ -3385,16 +3458,27 @@ function initCommunityEventsPage() {
       if (document.getElementById('eventsList')) loadAndRenderCommunityEvents();
     });
   }
-  CommunityEventsStore.subscribe(); // idempotent
+  CommunityEventsStore.subscribe();          // idempotent — legacy events
+  _subscribeNewAnnouncementsEvents();        // idempotent — C4 new collection
 }
 
 function loadAndRenderCommunityEvents() {
   const list = document.getElementById('eventsList');
   if (!list) return;
 
-  let events = (typeof CommunityEventsStore !== 'undefined')
+  // C4 Session 1 dual-read merge: legacy communityEvents + new announcements (type=event).
+  // Dedupe by id (defensive; no overlap yet pre-migration). New entries win since
+  // they have the type discriminator.
+  const legacyEvents = (typeof CommunityEventsStore !== 'undefined')
     ? CommunityEventsStore.getAll().slice()
     : JSON.parse(localStorage.getItem('community_events_data') || '[]');
+  const newEvents = window._newAnnouncementsEventCache
+    ? [...window._newAnnouncementsEventCache.values()]
+    : [];
+  const byId = new Map();
+  for (const e of newEvents)    byId.set(e.id, e);
+  for (const e of legacyEvents) if (!byId.has(e.id)) byId.set(e.id, e);
+  let events = [...byId.values()];
   const searchVal = document.getElementById('eventSearch')?.value.toLowerCase() || '';
   const buildingFilter = document.getElementById('eventBuildingFilter')?.value || 'all';
 
@@ -3472,20 +3556,52 @@ async function saveCommunityEvent() {
     return;
   }
 
-  const ev = _editingEventId
-    ? { ...(CommunityEventsStore.getById(_editingEventId) || {}),
-        title, date, time, location, description, building,
-        updatedDate: new Date().toISOString() }
-    : { id: 'evt_' + Date.now(),
-        title, date, time, location, description, building,
-        createdDate: new Date().toISOString() };
+  const wasEdit = !!_editingEventId;
+  const editingTarget = wasEdit ? CommunityEventsStore.getById(_editingEventId) : null;
+  const isLegacyEdit  = wasEdit && editingTarget && editingTarget._source !== 'announcements';
 
-  await CommunityEventsStore.setOne(ev);
+  try {
+    if (isLegacyEdit) {
+      // Editing a pre-C4 legacy event — preserve in communityEvents collection.
+      const ev = { ...editingTarget,
+        title, date, time, location, description, building,
+        updatedDate: new Date().toISOString() };
+      const ok = await CommunityEventsStore.setOne(ev);
+      if (!ok) throw new Error('Legacy update failed');
+    } else {
+      // New create OR editing a new-collection event (treat as create — S1 has no
+      // CF update path; admin uses Firestore Console for rare new-event edits).
+      const eventDateIso = new Date(`${date}T${time || '00:00'}`).toISOString();
+      const authInstance = window.firebaseAuth || window.auth;
+      const idToken = await authInstance?.currentUser?.getIdToken?.();
+      if (!idToken) throw new Error('Not signed in');
+      const res = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/publishAnnouncement', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + idToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'event',
+          title,
+          body: description || title,
+          audience: building,
+          eventDate: eventDateIso,
+          location,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+    }
+  } catch (e) {
+    console.error('saveCommunityEvent failed:', e);
+    showToast('❌ บันทึกไม่สำเร็จ: ' + (e?.message || 'unknown'), 'error');
+    return;
+  }
 
   ['eventTitle','eventDate','eventTime','eventLocation','eventDescription']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const bldEl = document.getElementById('eventBuilding'); if (bldEl) bldEl.value = 'all';
-  const wasEdit = !!_editingEventId;
   _editingEventId = null;
   toggleAddEventForm();
   showToast(wasEdit ? '✅ อัพเดทกิจกรรมแล้ว (☁️ Firestore)' : '✅ สร้างกิจกรรมแล้ว (☁️ Firestore)', 'success');

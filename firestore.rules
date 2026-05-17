@@ -39,9 +39,19 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ===== ANNOUNCEMENTS (admin-published) =====
+    // ===== ANNOUNCEMENTS (unified notice/event/banner — C4 merge 2026-05-17) =====
+    // Same audience model as broadcastMessages: 'all' = any signed-in user,
+    // otherwise must match request.auth.token.building. Discriminator field
+    // `type` is 'notice'|'event'|'banner' — client filters by type for surface
+    // (bell vs feed vs banner panel). Read tightened from `if true` to
+    // signed-in-required so per-building audience filter actually works.
+    // Write stays open to admin during Session 1 transition (legacy admin code
+    // still writes directly until Step 2 rewires it to publishAnnouncement CF);
+    // Session 3 will tighten to `if false` once CF is sole writer.
     match /announcements/{annId} {
-      allow read:  if true;  // public-ish tenant content
+      allow read:  if isAdmin()
+                || (isSignedIn() && resource.data.audience == 'all')
+                || (isSignedIn() && resource.data.audience == request.auth.token.building);
       allow write: if isAdmin();
     }
 
