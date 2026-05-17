@@ -577,11 +577,17 @@ function calculateOccupancy(buildingType = null) {
   const config = RoomConfigManager.getRoomsConfig(building);
   const rooms = config.rooms.filter(r => !r.deleted).map(r => r.id);
 
-  // SSoT: TenantConfigManager reads from tenant_master_data (Firestore-backed)
+  // SSoT: TenantConfigManager reads from tenant_master_data (Firestore-backed).
+  // Per tenant_config_manager_keys.md, items are keyed by `roomId` (NOT `id`).
+  // Previously `t.id` (undefined) made the set ["undefined"] → 0 matches.
+  // "มีผู้เช่า" = identity is filled OR LINE-linked OR lease records the name.
   const tenantList = typeof TenantConfigManager !== 'undefined'
     ? (TenantConfigManager.getTenantList(building) || [])
     : [];
-  const occupiedSet = new Set(tenantList.filter(t => t.name).map(t => String(t.id)));
+  const hasIdentity = t => !!(t && (t.name || t.firstName || t.lastName || t.linkedAuthUid || t.lease?.tenantName));
+  const occupiedSet = new Set(
+    tenantList.filter(hasIdentity).map(t => String(t.roomId ?? t.id ?? ''))
+  );
 
   const occupied = rooms.filter(r => occupiedSet.has(String(r))).length;
   const vacant = rooms.length - occupied;
