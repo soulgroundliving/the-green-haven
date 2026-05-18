@@ -182,11 +182,9 @@
     }
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
-    // C4 Session 1: new notices live in announcements (type='notice'); legacy
-    // notices still in broadcastMessages (read for transparency until S2 migration).
-    // C4 Session 1: explicit audience IN [...] so the query uses the composite
-    // index `type + audience + sentAt DESC` (admin's rule allows reading any audience,
-    // so listing all three values isn't a scoping limitation).
+    // C4 S2 (2026-05-18): single-source from announcements/ post-migration.
+    // Explicit audience IN [...] so the query uses the composite index
+    // `type + audience + sentAt DESC` (admin's rule allows reading any audience).
     const qNew = fs.query(
       fs.collection(db, 'announcements'),
       fs.where('type', '==', 'notice'),
@@ -194,40 +192,20 @@
       fs.orderBy('sentAt', 'desc'),
       fs.limit(20)
     );
-    const qLegacy = fs.query(
-      fs.collection(db, 'broadcastMessages'),
-      fs.orderBy('sentAt', 'desc'),
-      fs.limit(20)
-    );
-    const newDocs = new Map();
-    const legacyDocs = new Map();
-    const rerender = () => {
-      const merged = new Map();
-      for (const d of newDocs.values())    merged.set(d.id, d);
-      for (const d of legacyDocs.values()) if (!merged.has(d.id)) merged.set(d.id, d);
-      const arr = [...merged.values()].sort((a, b) => {
-        const ta = a.sentAt?.toDate?.()?.getTime?.() ?? new Date(a.sentAt || 0).getTime();
-        const tb = b.sentAt?.toDate?.()?.getTime?.() ?? new Date(b.sentAt || 0).getTime();
-        return tb - ta;
-      }).slice(0, 20);
-      renderLogList(arr);
-    };
     const showErr = (err, label) => {
       console.warn('[' + label + '] onSnapshot:', err);
       const el = $('bcLogList');
       if (el) el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);font-size:.9rem;">โหลดประวัติไม่สำเร็จ: ' + escapeHtml(err.message || '') + '</div>';
     };
     const unsubNew = fs.onSnapshot(qNew, snap => {
-      newDocs.clear();
-      snap.docs.forEach(d => newDocs.set(d.id, { id: d.id, ...d.data() }));
-      rerender();
+      const arr = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => {
+        const ta = a.sentAt?.toDate?.()?.getTime?.() ?? new Date(a.sentAt || 0).getTime();
+        const tb = b.sentAt?.toDate?.()?.getTime?.() ?? new Date(b.sentAt || 0).getTime();
+        return tb - ta;
+      });
+      renderLogList(arr);
     }, err => showErr(err, 'announcements/notice'));
-    const unsubLegacy = fs.onSnapshot(qLegacy, snap => {
-      legacyDocs.clear();
-      snap.docs.forEach(d => legacyDocs.set(d.id, { id: d.id, ...d.data() }));
-      rerender();
-    }, err => showErr(err, 'broadcastMessages'));
-    _bcLogUnsub = () => { try { unsubNew(); } catch(_){} try { unsubLegacy(); } catch(_){} };
+    _bcLogUnsub = () => { try { unsubNew(); } catch(_){} };
   }
 
   function initBroadcastPage() {

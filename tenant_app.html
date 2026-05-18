@@ -7398,8 +7398,9 @@
         _onLiffClaimsReady(_subscribeComplaintsFromFirestore);
 
         // ===== Broadcast Announcements (in-app, from admin) =====
-        // Subscribe to broadcastMessages, filter by audience (all OR matching building),
-        // keep last 20 in memory, drive bell badge + dropdown panel.
+        // Subscribe to announcements/ (all types — notice/event/banner), filter by audience
+        // resolved from token claims, keep last 20 in memory, drive bell badge + dropdown.
+        // C4 S2 (2026-05-18): single-source after migration of legacy collections.
         let _broadcastsUnsub = null;
         let _broadcastsList  = [];          // cached, filtered, newest first
         let _broadcastsInitialReplay = true; // toast suppressed during first snapshot
@@ -7522,8 +7523,9 @@
             }).join('');
         }
         // C4 Session 1 v2 (2026-05-17): bell shows ALL announcement types
-        // (notice/event/banner) merged with legacy broadcastMessages. UX consolidation
-        // — community feed "ประกาศ & กิจกรรม" section is hidden; bell is the single surface.
+        // (notice/event/banner). UX consolidation — community feed "ประกาศ & กิจกรรม"
+        // section is hidden; bell is the single surface.
+        // S2 (2026-05-18): legacy broadcastMessages + communityEvents merge dropped post-migration.
         //
         // S1 v2.1 bug fix: audience filter now derived from the ACTUAL token claim
         // (getIdTokenResult), not _taBuilding. Reason: if _taBuilding is set client-side
@@ -7568,22 +7570,18 @@
             // _taBuilding shortcut). Prevents rule denial on building-specific docs.
             const audiences = await _bellResolveAudiences();
 
-            const legacyCache = new Map();        // broadcastMessages
-            const newCache    = new Map();        // announcements (all types)
-            const legacyEventsCache = new Map();  // communityEvents (pre-C4 events)
-            const sourcesReplayed = new Set();    // tracks which sources have had their first snapshot
-            const TOTAL_SOURCES = 3;
+            // C4 S2 (2026-05-18): single-source from announcements/ post-migration.
+            // Legacy broadcastMessages + communityEvents subscribers dropped.
+            const newCache    = new Map();
+            const sourcesReplayed = new Set();
+            const TOTAL_SOURCES = 1;
             let unsubNew = null;
-            let unsubLegacy = null;
-            let unsubLegacyEvents = null;
             let retryNewTimer = null;
 
             const rerender = (sourceId) => {
                 sourcesReplayed.add(sourceId);
                 const byId = new Map();
-                for (const d of newCache.values())          byId.set(d.id, d);
-                for (const d of legacyCache.values())       if (!byId.has(d.id)) byId.set(d.id, d);
-                for (const d of legacyEventsCache.values()) if (!byId.has(d.id)) byId.set(d.id, d);
+                for (const d of newCache.values()) byId.set(d.id, d);
                 const priorIds = new Set(_broadcastsList.map(b => b.id));
                 _broadcastsList = [...byId.values()].sort((a, b) => {
                     const ta = a.sentAt?.toDate?.()?.getTime?.() ?? new Date(a.sentAt || 0).getTime();
@@ -7625,7 +7623,7 @@
                             try { unsubNew && unsubNew(); } catch(_){}
                             unsubNew = null;
                             // Composite index may still be building (1-5 min after deploy).
-                            // Retry once after 8s; legacy source keeps working in the meantime.
+                            // Retry once after 8s — bell stays empty in the meantime.
                             if (err?.code === 'failed-precondition' && !retryNewTimer) {
                                 retryNewTimer = setTimeout(() => {
                                     retryNewTimer = null;
@@ -7640,95 +7638,11 @@
                 }
             };
 
-            const subscribeLegacy = () => {
-                if (unsubLegacy) return;
-                try {
-                    const qLegacy = fs.query(
-                        fs.collection(db, 'broadcastMessages'),
-                        fs.where('audience', 'in', audiences),
-                        fs.orderBy('sentAt', 'desc'),
-                        fs.limit(20)
-                    );
-                    unsubLegacy = fs.onSnapshot(qLegacy, snap => {
-                        legacyCache.clear();
-                        snap.docs.forEach(d => legacyCache.set(d.id, { id: d.id, ...d.data() }));
-                        window._bellLastErr.legacy = null;
-                        rerender('legacy');
-                    }, err => {
-                        console.warn('broadcasts/legacy subscribe failed:', err?.message || err);
-                        window._bellLastErr.legacy = err?.code || err?.message || String(err);
-                        if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                            try { unsubLegacy && unsubLegacy(); } catch(_){}
-                            unsubLegacy = null;
-                        }
-                    });
-                } catch (e) {
-                    console.warn('broadcasts/legacy init failed:', e?.message || e);
-                    window._bellLastErr.legacy = 'init: ' + (e?.message || e);
-                }
-            };
-
-            const subscribeLegacyEvents = () => {
-                if (unsubLegacyEvents) return;
-                try {
-                    // Pre-C4 events in communityEvents/{id} — public-read rule, no audience field.
-                    // Normalize to bell-compatible shape; client-side filter using resolved audiences.
-                    const qLegacyEvents = fs.query(fs.collection(db, 'communityEvents'));
-                    unsubLegacyEvents = fs.onSnapshot(qLegacyEvents, snap => {
-                        legacyEventsCache.clear();
-                        snap.docs.forEach(d => {
-                            const data = d.data() || {};
-                            // Mirror server-side audience IN [...] using client-side filter.
-                            // Legacy collection uses `building` field; 'all' is wildcard.
-                            const docAud = data.building || 'all';
-                            if (docAud !== 'all' && !audiences.includes(docAud)) return;
-                            // Combine date + time to a Timestamp-like; fall back to date-only.
-                            let eventDateObj = null;
-                            if (data.date) {
-                                const t = data.time && /^\d{2}:\d{2}/.test(data.time) ? data.time : '00:00';
-                                const dt = new Date(`${data.date}T${t}`);
-                                if (!isNaN(dt.getTime())) eventDateObj = dt;
-                            }
-                            const createdMs = Date.parse(data.createdDate || data.createdAt || data.date || '');
-                            const sentAtIso = Number.isFinite(createdMs) ? new Date(createdMs).toISOString() : '';
-                            legacyEventsCache.set(d.id, {
-                                id: d.id,
-                                type: 'event',
-                                title: data.title || 'กิจกรรม',
-                                body: data.description || '',
-                                audience: docAud,
-                                sentAt: sentAtIso,
-                                eventDate: eventDateObj,
-                                location: data.location || '',
-                            });
-                        });
-                        window._bellLastErr.legacyEvents = null;
-                        rerender('legacyEvents');
-                    }, err => {
-                        console.warn('communityEvents/legacy subscribe failed:', err?.message || err);
-                        window._bellLastErr.legacyEvents = err?.code || err?.message || String(err);
-                        if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                            try { unsubLegacyEvents && unsubLegacyEvents(); } catch(_){}
-                            unsubLegacyEvents = null;
-                        }
-                    });
-                } catch (e) {
-                    console.warn('communityEvents/legacy init failed:', e?.message || e);
-                    window._bellLastErr.legacyEvents = 'init: ' + (e?.message || e);
-                }
-            };
-
             subscribeNew();
-            subscribeLegacy();
-            subscribeLegacyEvents();
             _broadcastsUnsub = () => {
                 if (retryNewTimer) { clearTimeout(retryNewTimer); retryNewTimer = null; }
                 try { unsubNew && unsubNew(); } catch(_){}
-                try { unsubLegacy && unsubLegacy(); } catch(_){}
-                try { unsubLegacyEvents && unsubLegacyEvents(); } catch(_){}
                 unsubNew = null;
-                unsubLegacy = null;
-                unsubLegacyEvents = null;
             };
         }
         _onLiffClaimsReady(_subscribeBroadcasts);
@@ -7748,8 +7662,8 @@
                 auth.onAuthStateChanged((user) => {
                     if (!user || !_taBuilding) return;
                     const errs = window._bellLastErr || {};
-                    const someSourceFailed = !!(errs.new || errs.legacy || errs.legacyEvents);
-                    // Re-subscribe if (a) never subscribed OR (b) at least one source
+                    const someSourceFailed = !!errs.new;
+                    // Re-subscribe if (a) never subscribed OR (b) the new-source
                     // previously failed (likely with permission-denied while auth was null).
                     // After (b) we must tear down so the idempotency check inside
                     // _subscribeBroadcasts doesn't short-circuit.
@@ -10640,31 +10554,9 @@
         }
         window._showUsageMonthDetail = _showUsageMonthDetail;
 
-        let _taEventsUnsub = null;
-        function _subscribeEventsFromFirestore() {
-            if (_taEventsUnsub) return;
-            if (!window.firebase?.firestore) return;
-            try {
-                const db = window.firebase.firestore();
-                const fs = window.firebase.firestoreFunctions;
-                _taEventsUnsub = fs.onSnapshot(fs.collection(db, 'communityEvents'), snap => {
-                    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    const local = JSON.parse(localStorage.getItem('community_events_data') || '[]');
-                    const byId = new Map();
-                    local.forEach(e => byId.set(e.id, e));
-                    docs.forEach(e => byId.set(e.id, e));
-                    localStorage.setItem('community_events_data', JSON.stringify(Array.from(byId.values())));
-                    renderCommunityEvents();
-                }, err => console.warn('[communityEvents] subscribe failed:', err?.message || err));
-            } catch(e) { console.warn('tenant events subscribe failed:', e); }
-        }
-        window.addEventListener('load', () => setTimeout(_subscribeEventsFromFirestore, 1000));
-
-        // ---- COMMUNITY EVENTS — C4 new collection subscriber (2026-05-17) ----
-        // Tenants see events from BOTH legacy communityEvents (above, public rule) AND
-        // new announcements WHERE type='event' (this subscriber, audience-scoped).
-        // Both merge into the same `community_events_data` localStorage so the existing
-        // renderCommunityEvents path renders them uniformly. Anti-pattern §7-U guard.
+        // ---- COMMUNITY EVENTS — C4 single-source subscriber (S2 2026-05-18) ----
+        // Legacy communityEvents subscriber dropped post-migration. Events come from
+        // announcements/ WHERE type='event' only, audience-scoped. Anti-pattern §7-U guard.
         let _taNewEventsUnsub = null;
         function _subscribeNewAnnouncementsEvents() {
             if (_taNewEventsUnsub) return;
@@ -10716,7 +10608,6 @@
             renderCommunityFeed();
             const el = document.getElementById('events-list');
             if (!el) return;
-            _subscribeEventsFromFirestore();
             const events = _getCommunityEventsCached();
             if (!events.length) {
                 el.innerHTML = '<div class="card" style="text-align:center;color:#aaa;font-size:var(--fs-md);">ไม่มีกิจกรรมในขณะนี้</div>';

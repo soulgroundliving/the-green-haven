@@ -800,16 +800,13 @@ function setupAnnouncementListener() {
     const unsub = onSnapshot(
       collection(db, 'announcements'),
       (snapshot) => {
-        // C4 Session 1: announcements collection now mixes legacy banner docs
-        // (no `type` field) and new docs (type ∈ {notice, event, banner}).
-        // For the admin "ประกาศ" tab we only care about banner-shaped data.
-        // Filter to legacy OR type=banner; normalize new banners into legacy
-        // shape so renderAnnouncementsList keeps working unchanged.
+        // C4 S2 (2026-05-18): all banner docs now carry type='banner' (post-backfill).
+        // Normalize banner schema into legacy render shape so renderAnnouncementsList
+        // keeps working unchanged.
         const docs = snapshot.docs
           .map(d => ({ id: d.id, ...d.data() }))
-          .filter(d => d.type === undefined || d.type === 'banner')
+          .filter(d => d.type === 'banner')
           .map(d => {
-            if (d.type !== 'banner') return d; // legacy doc — unchanged shape
             // Safely resolve sentAt → Date. Manual-backfilled docs may lack sentAt
             // entirely (Firestore Console edits don't add Timestamps). Each fallback
             // is independently guarded — ?? only catches null/undefined, NOT NaN.
@@ -3479,40 +3476,26 @@ window.CommunityEventsStore = window.CommunityEventsStore || (function(){
       }, err => console.warn('communityEvents listen:', err?.message));
     } catch(e) { console.warn('subscribe:', e); }
   }
-  if (typeof window !== 'undefined') setTimeout(subscribe, 800);
+  // C4 S2 (2026-05-18): auto-subscribe dropped — admin reads events from announcements/
+  // via _subscribeNewAnnouncementsEvents only. Store kept for S3 decom (clean removal).
   return { getAll, getById, onChange, setOne, remove, subscribe };
 })();
 
 function initCommunityEventsPage() {
   loadAndRenderCommunityEvents();
-  // Auto-rerender on cloud snapshot (F5 race fix)
-  if (typeof CommunityEventsStore !== 'undefined' && !window._eventsRendererSubscribed) {
-    window._eventsRendererSubscribed = true;
-    CommunityEventsStore.onChange(() => {
-      if (document.getElementById('eventsList')) loadAndRenderCommunityEvents();
-    });
-  }
-  CommunityEventsStore.subscribe();          // idempotent — legacy events
-  _subscribeNewAnnouncementsEvents();        // idempotent — C4 new collection
+  // C4 S2 (2026-05-18): _subscribeNewAnnouncementsEvents triggers rerender on snapshot.
+  // CommunityEventsStore subscription dropped — single-source from announcements/.
+  _subscribeNewAnnouncementsEvents();        // idempotent — C4 announcements/event subscriber
 }
 
 function loadAndRenderCommunityEvents() {
   const list = document.getElementById('eventsList');
   if (!list) return;
 
-  // C4 Session 1 dual-read merge: legacy communityEvents + new announcements (type=event).
-  // Dedupe by id (defensive; no overlap yet pre-migration). New entries win since
-  // they have the type discriminator.
-  const legacyEvents = (typeof CommunityEventsStore !== 'undefined')
-    ? CommunityEventsStore.getAll().slice()
-    : JSON.parse(localStorage.getItem('community_events_data') || '[]');
-  const newEvents = window._newAnnouncementsEventCache
+  // C4 S2 (2026-05-18): single-source from announcements/event cache.
+  let events = window._newAnnouncementsEventCache
     ? [...window._newAnnouncementsEventCache.values()]
     : [];
-  const byId = new Map();
-  for (const e of newEvents)    byId.set(e.id, e);
-  for (const e of legacyEvents) if (!byId.has(e.id)) byId.set(e.id, e);
-  let events = [...byId.values()];
   const searchVal = document.getElementById('eventSearch')?.value.toLowerCase() || '';
   const buildingFilter = document.getElementById('eventBuildingFilter')?.value || 'all';
 
@@ -3591,42 +3574,36 @@ async function saveCommunityEvent() {
   }
 
   const wasEdit = !!_editingEventId;
-  const editingTarget = wasEdit ? CommunityEventsStore.getById(_editingEventId) : null;
-  const isLegacyEdit  = wasEdit && editingTarget && editingTarget._source !== 'announcements';
+  // C4 S2 (2026-05-18): event edit disabled — updateAnnouncement CF lands in S3.
+  // S2 sealed legacy reads, so the old `isLegacyEdit → CommunityEventsStore.setOne`
+  // path is dead. Create path via publishAnnouncement CF stays.
+  if (wasEdit) {
+    showToast('การแก้ไขกิจกรรมจะรองรับใน Session 3 (เร็วๆ นี้) — กรุณาลบแล้วสร้างใหม่', 'warning');
+    return;
+  }
 
   try {
-    if (isLegacyEdit) {
-      // Editing a pre-C4 legacy event — preserve in communityEvents collection.
-      const ev = { ...editingTarget,
-        title, date, time, location, description, building,
-        updatedDate: new Date().toISOString() };
-      const ok = await CommunityEventsStore.setOne(ev);
-      if (!ok) throw new Error('Legacy update failed');
-    } else {
-      // New create OR editing a new-collection event (treat as create — S1 has no
-      // CF update path; admin uses Firestore Console for rare new-event edits).
-      const eventDateIso = new Date(`${date}T${time || '00:00'}`).toISOString();
-      const authInstance = window.firebaseAuth || window.auth;
-      const idToken = await authInstance?.currentUser?.getIdToken?.();
-      if (!idToken) throw new Error('Not signed in');
-      const res = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/publishAnnouncement', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + idToken,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'event',
-          title,
-          body: description || title,
-          audience: building,
-          eventDate: eventDateIso,
-          location,
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-    }
+    const eventDateIso = new Date(`${date}T${time || '00:00'}`).toISOString();
+    const authInstance = window.firebaseAuth || window.auth;
+    const idToken = await authInstance?.currentUser?.getIdToken?.();
+    if (!idToken) throw new Error('Not signed in');
+    const res = await fetch('https://asia-southeast1-the-green-haven.cloudfunctions.net/publishAnnouncement', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + idToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'event',
+        title,
+        body: description || title,
+        audience: building,
+        eventDate: eventDateIso,
+        location,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
   } catch (e) {
     console.error('saveCommunityEvent failed:', e);
     showToast('❌ บันทึกไม่สำเร็จ: ' + (e?.message || 'unknown'), 'error');
@@ -3638,30 +3615,17 @@ async function saveCommunityEvent() {
   const bldEl = document.getElementById('eventBuilding'); if (bldEl) bldEl.value = 'all';
   _editingEventId = null;
   toggleAddEventForm();
-  showToast(wasEdit ? '✅ อัพเดทกิจกรรมแล้ว (☁️ Firestore)' : '✅ สร้างกิจกรรมแล้ว (☁️ Firestore)', 'success');
+  showToast('✅ สร้างกิจกรรมแล้ว (☁️ Firestore)', 'success');
 }
 
+// C4 S2 (2026-05-18): edit + delete disabled — update/deleteAnnouncement CFs land in S3.
+// Reading from new cache so a future re-enable doesn't require touching legacy store.
 function editEvent(id) {
-  const ev = CommunityEventsStore.getById(id);
-  if (!ev) { showToast('ไม่พบกิจกรรม', 'warning'); return; }
-  _editingEventId = id;
-  const form = document.getElementById('addEventForm');
-  if (form) form.classList.remove('u-hidden');
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
-  set('eventTitle', ev.title);
-  set('eventDate', ev.date);
-  set('eventTime', ev.time);
-  set('eventLocation', ev.location);
-  set('eventDescription', ev.description);
-  set('eventBuilding', ev.building || 'all');
-  document.getElementById('eventTitle')?.focus();
+  showToast('การแก้ไขกิจกรรมจะรองรับใน Session 3 (เร็วๆ นี้) — กรุณาลบแล้วสร้างใหม่', 'warning');
 }
 
 async function deleteEvent(id) {
-  const ok = await window.ghConfirm('ลบกิจกรรมนี้?', { danger: true });
-  if (!ok) return;
-  await CommunityEventsStore.remove(id);
-  showToast('✅ Event deleted', 'success');
+  showToast('การลบกิจกรรมจะรองรับใน Session 3 (เร็วๆ นี้) — แก้ไขผ่าน Firestore Console ชั่วคราว', 'warning');
 }
 
 // ===== COMMUNITY DOCUMENTS MANAGEMENT =====
