@@ -1,0 +1,23 @@
+{
+  "_doc": "Sustainable file-size gate. soft = WARN at commit (non-blocking). hard = BLOCK (exit 1). growthPerCommit = WARN if single commit adds more than N net lines to this file. Bump these explicitly when extraction is genuinely infeasible — git history is the ratchet record.",
+  "tenant_app.html": {
+    "soft": 16000,
+    "hard": 20000,
+    "growthPerCommit": 500
+  },
+  "dashboard.html": {
+    "soft": 7500,
+    "hard": 10000,
+    "growthPerCommit": 500
+  },
+  "booking.html": {
+    "soft": 3500,
+    "hard": 5000,
+    "growthPerCommit": 300
+  },
+  "shared/dashboard-extra.js": {
+    "soft": 8500,
+    "hard": 11000,
+    "growthPerCommit": 500
+  }
+}

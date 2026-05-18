@@ -170,6 +170,27 @@ if command -v node &> /dev/null && [ -f tools/audit-auth-callbacks.js ]; then
   echo -e "${GREEN}✅ Auth-callback audit passed${NC}"
 fi
 
+# F. File-size gate (3-tier INFO/WARN/BLOCK — see tools/file-size-limits.json)
+# Blocks only when a tracked file exceeds its hard limit. Soft-limit and
+# growth-per-commit are surfaced as warnings (non-blocking). Limits are
+# explicit JSON so every bump shows up in git diff with rationale.
+if command -v node &> /dev/null && [ -f tools/audit-file-sizes.js ]; then
+  node tools/audit-file-sizes.js --quiet > /tmp/audit-size.out 2>&1
+  AUDIT_SIZE_EXIT=$?
+  if [ $AUDIT_SIZE_EXIT -ne 0 ]; then
+    cat /tmp/audit-size.out
+    echo ""
+    echo -e "${RED}❌ Commit blocked: file exceeded hard size limit${NC}"
+    echo -e "${YELLOW}   Extract to shared/<feature>.js OR bump 'hard' in tools/file-size-limits.json${NC}"
+    exit 1
+  fi
+  if [ -s /tmp/audit-size.out ]; then
+    echo -e "${YELLOW}File-size warnings (non-blocking):${NC}"
+    cat /tmp/audit-size.out
+  fi
+  echo -e "${GREEN}✅ File-size audit passed${NC}"
+fi
+
 # ===== 4. Memory fabricated-path scan (warn-only) =====
 # Scans handoff/journal/feedback files for backtick-quoted paths that don't
 # exist in the codebase — catches the "19 errors from one session" class

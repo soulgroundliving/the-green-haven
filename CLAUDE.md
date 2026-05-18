@@ -96,6 +96,8 @@ After ANY correction from the user, decide where to log it:
 
 **No bloat** — avoid unneeded libraries; keep the bundle light. Tailwind output stays small via JIT purge through the input file.
 
+**File-size discipline** — 3-tier gate via [tools/file-size-limits.json](tools/file-size-limits.json) (INFO/WARN/BLOCK), enforced by pre-commit hook section F. Hard limits are headroom-generous (~50% above current) so they only trigger on real drift, not normal work. New features ≥200 lines → extract to `shared/<feature>.js` and expose via `window.X = ...` (precedent: `checklist-manager.js`, `building-registry.js`). Run `npm run audit:size` to see current usage and headroom for every tracked file.
+
 ## 3. Task Management
 
 **For tasks above the Plan-First threshold (§1):**
