@@ -11958,6 +11958,7 @@
             const PAYLOAD_BYTES = 2_000_000;
             let _lastRunAt = 0;
             let _running = false;
+            let _countdownIntervalId = null;
 
             function _setStatus(text) {
                 const el = document.getElementById('speedTestStatus');
@@ -11972,16 +11973,36 @@
                 if (mbpsEl) mbpsEl.textContent = `${mbps.toFixed(1)} Mbps`;
                 if (pingEl) pingEl.textContent = `${Math.round(pingMs)} ms`;
             }
+            function _stopCountdown() {
+                if (_countdownIntervalId) {
+                    clearInterval(_countdownIntervalId);
+                    _countdownIntervalId = null;
+                }
+            }
+            function _startCountdown() {
+                _stopCountdown();
+                const tick = () => {
+                    const remaining = COOLDOWN_MS - (Date.now() - _lastRunAt);
+                    if (remaining <= 0) {
+                        _stopCountdown();
+                        _setStatus('พร้อมทดสอบใหม่แล้ว');
+                        return;
+                    }
+                    _setStatus(`รอ ${Math.ceil(remaining / 1000)} วินาทีก่อนทดสอบใหม่`);
+                };
+                tick();
+                _countdownIntervalId = setInterval(tick, 1000);
+            }
 
             async function runSpeedTest() {
                 if (_running) return;
                 const now = Date.now();
                 const sinceLast = now - _lastRunAt;
                 if (sinceLast < COOLDOWN_MS && _lastRunAt > 0) {
-                    const wait = Math.ceil((COOLDOWN_MS - sinceLast) / 1000);
-                    _setStatus(`รอ ${wait} วินาทีก่อนทดสอบใหม่`);
+                    _startCountdown();
                     return;
                 }
+                _stopCountdown();
                 _running = true;
                 const btn = document.getElementById('speedTestRunBtn');
                 if (btn) { btn.disabled = true; btn.textContent = 'กำลังทดสอบ...'; }
