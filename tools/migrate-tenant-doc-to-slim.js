@@ -11,8 +11,14 @@
  * DEFAULT: dry-run — reads Firestore, prints a per-doc audit report, NO writes.
  * --apply : execute the changes (backfills + field deletions).
  *
- * Auth: uses firebase-tools OAuth token (i.e. `firebase login` is sufficient).
- * Falls back to serviceAccountKey.json or Application Default Credentials.
+ * Auth (resolved in this order):
+ *   0. GCLOUD_ACCESS_TOKEN env var — pass an OAuth token directly. Pair with
+ *      gcloud ADC like this (PowerShell):
+ *        $env:GCLOUD_ACCESS_TOKEN = (& gcloud auth application-default print-access-token).Trim()
+ *      …or bash:  GCLOUD_ACCESS_TOKEN=$(gcloud auth application-default print-access-token) node tools/migrate-tenant-doc-to-slim.js
+ *   1. firebase-tools OAuth token in ~/.config/configstore/firebase-tools.json
+ *      (i.e. `firebase login` is sufficient).
+ *   2. functions/serviceAccountKey.json — not currently wired through; future.
  *
  * Safety:
  *   1. Verifies people/{tenantId} exists before stripping identity fields.
@@ -62,6 +68,13 @@ const DRY_RUN   = !process.argv.includes('--apply');
 // ── Access token resolution ────────────────────────────────────────────────────
 
 function getAccessToken() {
+  // 0. Env-var override — caller passes an OAuth token directly.
+  //    Pair with gcloud ADC for a fresh token; see header for one-liners.
+  if (process.env.GCLOUD_ACCESS_TOKEN) {
+    console.log('✓  Auth: GCLOUD_ACCESS_TOKEN env var');
+    return process.env.GCLOUD_ACCESS_TOKEN;
+  }
+
   // 1. Service account key (Admin SDK style — convert to OAuth via ADC)
   //    Not used here since we go REST-only. Skip for now.
 
@@ -91,8 +104,8 @@ function getAccessToken() {
   throw new Error(
     'No credentials found.\n' +
     '  Option A: run `firebase login` (uses firebase-tools token)\n' +
-    '  Option B: place service account key at functions/serviceAccountKey.json\n' +
-    '  Option C: run `gcloud auth application-default login`'
+    '  Option B: pass GCLOUD_ACCESS_TOKEN env var (pair with `gcloud auth application-default print-access-token`)\n' +
+    '  Option C: place service account key at functions/serviceAccountKey.json'
   );
 }
 
