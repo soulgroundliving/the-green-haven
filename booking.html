@@ -1159,12 +1159,12 @@
         const snap = await window.bookingFirebase.getDoc(ref);
         if (snap.exists()) {
           const d = snap.data();
-          // Canonical-first per §7-T (buildings/rooms has only promptPayId
-          // post-Tier-3F; buildings/nest still has legacy promptpayNumber
-          // until migration). Sibling reader for the QR payload is
-          // createBookingLock.js:140; both must stay in sync.
+          // Canonical-only per §7-T — all buildings/* docs migrated to
+          // promptPayId on 2026-05-18 (see tools/migrate-buildings-promptpay.js).
+          // Sibling reader for the QR payload is createBookingLock.js:140;
+          // both must stay in sync.
           state.promptpayInfo[bld] = {
-            phone: d.promptPayId || d.promptpayNumber || d.promptpay || '',
+            phone: d.promptPayId || '',
             name: d.displayName || d.name || DISPLAY_NAMES[bld],
           };
         } else {

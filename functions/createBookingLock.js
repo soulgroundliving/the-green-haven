@@ -9,7 +9,7 @@
  * Side-effects on success:
  *   1. Creates bookings/{auto} with status='locked', lockedUntil=now+20min
  *   2. Generates the PromptPay deposit QR payload (server-side — receiver
- *      phone comes from buildings/{rooms|nest}.{promptPayId|promptpayNumber}, never trusted from client)
+ *      phone comes from buildings/{rooms|nest}.promptPayId, never trusted from client)
  *   3. Returns { bookingId, qrPayload, qrAmount, lockedUntil } to client
  *
  * Region: asia-southeast1 (matches liffSignIn / verifySlip / redeemReward)
@@ -123,21 +123,17 @@ exports.createBookingLock = functions.region('asia-southeast1').https.onCall(asy
   }
   const depositAmount = monthlyRent * 2;
 
-  // ── Pull receiver phone from buildings/{canonicalBuilding}.{promptPayId|promptpayNumber} ────────
+  // ── Pull receiver phone from buildings/{canonicalBuilding}.promptPayId ────────
   // Admin configures per-building PromptPay in dashboard → Buildings page.
   // Canonical building id ('rooms', 'nest') IS the Firestore doc id since B4 migration.
-  //
-  // Field name accepts BOTH spellings: Tier 3F Buildings UI writes `promptPayId`
-  // (shared/building-registry.js, canonical since 2026-05-13). Legacy docs that
-  // pre-date Tier 3F may still hold `promptpayNumber` (e.g. `buildings/nest`
-  // seeded 2026-05-07). Reading both keeps bookings working until a migration
-  // drops the legacy field. See CLAUDE.md §7-T.
+  // All buildings/* docs are canonical-only as of 2026-05-18 migration (see
+  // tools/migrate-buildings-promptpay.js). CLAUDE.md §7-T documents the history.
   const fsBuildingId = canonicalBuilding;
   let receiverPhone;
   try {
     const buildingSnap = await firestore.doc(`buildings/${fsBuildingId}`).get();
     const bd = buildingSnap.exists ? buildingSnap.data() : {};
-    receiverPhone = String(bd.promptPayId || bd.promptpayNumber || '');
+    receiverPhone = String(bd.promptPayId || '');
   } catch (e) {
     console.error('createBookingLock: buildings read failed:', e.message);
     throw new functions.https.HttpsError('internal', 'Could not resolve receiver phone');

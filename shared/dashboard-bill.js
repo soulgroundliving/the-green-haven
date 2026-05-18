@@ -662,12 +662,11 @@ function _refreshPromptPayDisplay(){
     if (!bldg) return;
     const canonical = window.CONFIG?.getBuildingConfig?.(bldg) || bldg;
     const cfg = window._buildingPaymentCache[canonical] || window._buildingPaymentCache[bldg] || {};
-    // Fallback chain: canonical promptPayId (Buildings page is the only writer
-    // since 2026-05-14 consolidation) → legacy promptpayNumber (pre-Tier-3F
-    // docs like `buildings/nest` seeded 2026-05-07) → localStorage cache → empty.
-    // Legacy branch stays until a migration backfills `promptPayId` everywhere.
+    // Buildings page is the only writer since 2026-05-14 consolidation.
+    // All buildings/* docs are canonical-only (promptPayId) after the
+    // 2026-05-18 migration of buildings/nest. localStorage cache is the
+    // last-resort fallback for an admin viewing offline.
     const num = cfg.promptPayId
-                || cfg.promptpayNumber || cfg.payment?.promptpayNumber
                 || localStorage.getItem('promptpay') || '';
     const ownerInfo = (typeof OwnerConfigManager !== 'undefined') ? OwnerConfigManager.getOwnerInfo() : {};
     const payee = cfg.companyName || cfg.payment?.companyName

@@ -70,7 +70,7 @@
           legacyDocId,
           displayName,
           address: data.address || '',
-          promptPayId: data.promptPayId || data.promptpayNumber || '',
+          promptPayId: data.promptPayId || '',
           contact: data.contact || '',
           companyName: data.companyName || '',
           ownerName: data.ownerName || '',
