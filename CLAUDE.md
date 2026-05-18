@@ -494,6 +494,43 @@ If any "yes", you need a fallback.
 
 Related: anti-pattern N (onSnapshot must have error callback) — same family of "silent failure leaves slot dark" bugs. Both are visible only on the deployed page, not in source.
 
+### Y. `fetch('data:...')` is a network call under CSP — use atob, never fetch, for canvas/file dataURL → Blob
+
+The common cookbook recipe `const blob = await (await fetch(canvas.toDataURL('image/png'))).blob()` works on pages with no CSP. On this app it FAILS because `connect-src 'self' https: wss:` does not include `data:`, and Chromium evaluates `fetch('data:...')` against `connect-src` (treats data URLs as network destinations). The thrown error is the generic `TypeError: Failed to fetch` — same message you'd see for a real network outage, DNS failure, CORS preflight reject, or extension content-blocking. The first instinct is to chase Storage rules, IAM scopes, bucket region, CORS configuration — none of those are the cause.
+
+Incident 2026-05-18: `uploadAdminSignature` failed silently after admin clicked "บันทึกลายเซ็น" — toast "บันทึกไม่สำเร็จ", no rule denial in logs, no upload network request fired. Probe with `uploadBytes(ref, tinyBlob)` from console succeeded (proving rules + auth + bucket all fine). Root cause was the `await fetch(dataUrl)` line ABOVE the upload. Same latent bug existed in `uploadSignature` (tenant); LIFF webview seemed to tolerate it, but it's wrong-by-design either way. Fixed in `cd7f26f` by introducing `_dataUrlToBlob()` helper.
+
+**Rule:** never convert a `data:` URL to a Blob via `fetch()`. Decode the base64 payload directly:
+
+```js
+function dataUrlToBlob(dataUrl) {
+  const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
+  if (!m) throw new Error('Invalid data URL');
+  const bin = atob(m[2]);
+  const u8  = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return new Blob([u8], { type: m[1] });
+}
+```
+
+Synchronous, no network call, no CSP exposure. Works regardless of `connect-src`.
+
+**Do NOT** "fix" by widening `connect-src` to include `data:`. That lets any script materialise arbitrary content via `fetch('data:...')` (silent data-URL handler bypass) and weakens CSP for every page. The source-side fix is one helper function — the CSP-side fix would touch every HTML in the repo.
+
+Detection recipe:
+```bash
+grep -rn "fetch(.*toDataURL\|fetch(.*dataUrl\|fetch(.*dataURL" shared/ tenant_app.html dashboard.html
+```
+Every hit is a latent bug. Inspect each — if the source is a `data:` URL, replace with the helper above.
+
+**Debugging signature for this bug class** (helps recognise it next time):
+1. Toast / error says generic "failed to save / upload / process" — no specific code
+2. Console shows `TypeError: Failed to fetch` originating from your `await fetch(...)` line
+3. Storage / API endpoint shows ZERO requests (not even a failed one) in Network panel — the fetch dies before it hits the wire
+4. Direct probe of the downstream call with hand-built Blob succeeds
+
+When you see (3) — no network request fired at all despite calling `fetch()` — CSP `connect-src` is almost always the gate. Check the request's URL scheme (`data:`, `blob:`, `chrome-extension:`) and the document CSP.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
