@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="นโยบายความเป็นส่วนตัว Nature Haven — สอดคล้องกับ พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <title>นโยบายความเป็นส่วนตัว · Nature Haven</title>
+  <link rel="icon" id="dynamic-favicon" href="/shared/pwa-icon.svg">
+  <script>try{const _oi=JSON.parse(localStorage.getItem('owner_info')||'{}');if(_oi.faviconDataUrl)document.getElementById('dynamic-favicon').href=_oi.faviconDataUrl;}catch(_){}</script>
+  <link rel="stylesheet" href="/shared/brand.css">
+  <link rel="stylesheet" href="/shared/components.css">
+  <script src="/shared/theme-toggle.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: auto; }
+    body {
+      font-family: var(--font-brand);
+      background: var(--surface-page);
+      color: var(--ink);
+      line-height: var(--leading-normal);
+      min-height: 100vh;
+      padding: 24px 16px 80px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--brand-primary);
+      text-decoration: none;
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
+      padding: 8px 12px;
+      border-radius: var(--radius-xs);
+      transition: background 120ms ease;
+    }
+    .back-link:hover, .back-link:focus-visible {
+      background: var(--brand-primary-soft);
+      outline: none;
+    }
+    .back-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .theme-toggle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--surface-card);
+      border: 1px solid var(--border-base);
+      color: var(--ink);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: background 120ms ease;
+    }
+    .theme-toggle:hover, .theme-toggle:focus-visible {
+      background: var(--brand-primary-soft);
+      outline: none;
+    }
+
+    h1 {
+      font-size: var(--text-xl);
+      font-weight: var(--weight-bold);
+      color: var(--ink);
+      margin-bottom: 4px;
+      line-height: var(--leading-tight);
+    }
+    .effective-date {
+      color: var(--muted);
+      font-size: var(--text-sm);
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .intro {
+      font-size: var(--text-base);
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: var(--leading-relaxed);
+    }
+
+    details {
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 14px 0;
+    }
+    details:first-of-type { padding-top: 4px; }
+    details:last-of-type { border-bottom: none; padding-bottom: 4px; }
+    summary {
+      font-weight: var(--weight-semibold);
+      font-size: var(--text-md);
+      color: var(--ink);
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 4px 0;
+      user-select: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: '+';
+      font-size: 20px;
+      font-weight: var(--weight-regular);
+      color: var(--brand-primary);
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    details[open] summary::after { content: '−'; }
+    summary:focus-visible {
+      outline: 2px solid var(--brand-primary);
+      outline-offset: 2px;
+      border-radius: var(--radius-xs);
+    }
+
+    .answer {
+      margin-top: 12px;
+      font-size: var(--text-base);
+      line-height: var(--leading-relaxed);
+      color: var(--ink);
+    }
+    .answer p { margin-bottom: 12px; }
+    .answer p:last-child { margin-bottom: 0; }
+    .answer strong {
+      color: var(--brand-primary-dark);
+      font-weight: var(--weight-semibold);
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 32px;
+      color: var(--muted);
+      font-size: var(--text-sm);
+      line-height: var(--leading-relaxed);
+    }
+    .footer p { margin-bottom: 6px; }
+    .footer p:last-child { margin-bottom: 0; }
+    .footer a {
+      color: var(--brand-primary);
+      text-decoration: none;
+    }
+    .footer a:hover, .footer a:focus-visible {
+      text-decoration: underline;
+      outline: none;
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 16px 12px 64px; }
+      .card { padding: 18px 16px; }
+      h1 { font-size: var(--text-lg); }
+      .topbar { margin-bottom: 20px; }
+    }
+
+    /* Dark mode contrast tweaks — brand.css tokens flip automatically;
+       only add explicit overrides for the summary marker contrast. */
+    :root[data-theme="dark"] summary::after { color: var(--brand-primary-light); }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) summary::after { color: var(--brand-primary-light); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="topbar">
+      <a href="/" class="back-link" aria-label="กลับหน้าหลัก Nature Haven">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+        <span>กลับ</span>
+      </a>
+      <button type="button" class="theme-toggle" data-action="toggle-theme" aria-label="สลับธีม สว่าง / มืด / อัตโนมัติ">
+        <span data-theme-icon aria-hidden="true">◐</span>
+      </button>
+    </header>
+
+    <main>
+      <h1>นโยบายความเป็นส่วนตัว</h1>
+      <p class="effective-date">มีผลบังคับใช้ตั้งแต่ 1 พฤษภาคม 2568 · The Green Haven Co., Ltd.</p>
+
+      <section class="card" aria-labelledby="privacy-intro">
+        <p id="privacy-intro" class="intro">
+          Nature Haven เก็บข้อมูลส่วนบุคคลเฉพาะที่จำเป็นต่อการให้บริการจัดการอาคารพักอาศัย โดยปฏิบัติตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) อย่างเคร่งครัด
+        </p>
+
+        <details>
+          <summary>1. ข้อมูลที่เราเก็บรวบรวม</summary>
+          <div class="answer">
+            <p>แอปพลิเคชัน Nature Haven เก็บข้อมูลต่อไปนี้เพื่อให้บริการแก่ผู้เช่า:</p>
+            <p><strong>ข้อมูลส่วนตัว</strong><br>
+            • ชื่อ-นามสกุล, เบอร์โทรศัพท์, อีเมล, ทะเบียนรถยนต์<br>
+            • หมายเลขห้อง และอาคารที่พักอาศัย<br>
+            • วันเกิด (เพื่อคำนวณดวงชะตาประจำวัน — เก็บเฉพาะวันในสัปดาห์)<br>
+            • ชื่อเล่นที่กำหนดเอง และรูปโปรไฟล์ (Avatar)</p>
+            <p><strong>ข้อมูลสัตว์เลี้ยง</strong><br>
+            • ชื่อ, ประเภท, สายพันธุ์, เพศ, อายุ<br>
+            • สถานะการฉีดวัคซีน, วันที่ฉีดและวันหมดอายุ</p>
+            <p><strong>ข้อมูลการชำระเงิน</strong><br>
+            • ยอดบิลค่าเช่า, ค่าไฟ, ค่าน้ำ<br>
+            • สลิปการโอนเงิน (ภาพ) สำหรับการยืนยันผ่าน SlipOK API<br>
+            • Transaction Reference จาก SlipOK<br>
+            • ข้อมูลบริษัท (ชื่อ, เลขประจำตัวผู้เสียภาษี, ที่อยู่) สำหรับใบเสร็จนามบริษัท</p>
+            <p><strong>ข้อมูลการใช้งานและมิเตอร์</strong><br>
+            • ข้อมูลมิเตอร์ไฟฟ้า (หน่วยเก่า-ใหม่) และน้ำประปา<br>
+            • ประวัติการใช้งานย้อนหลัง 6 เดือน</p>
+            <p><strong>ข้อมูลการแจ้งและบริการ</strong><br>
+            • คำขอแจ้งซ่อม (หมวดหมู่, รายละเอียด, รูปภาพ, ความเร่งด่วน)<br>
+            • คำขอทำความสะอาด (วันที่, ช่วงเวลา, หมายเหตุ)<br>
+            • การแจ้งนิติ/ร้องเรียน (ประเภท, ความรุนแรง, สถานที่, รายละเอียด)<br>
+            • รูปภาพประกอบการแจ้งซ่อม</p>
+            <p><strong>ข้อมูลชุมชนและ Marketplace</strong><br>
+            • โพสต์ Marketplace (ชื่อสินค้า, ราคา, รายละเอียด, รูปภาพ)<br>
+            • LINE User ID (เมื่อผูกบัญชี LINE LIFF)</p>
+            <p><strong>ข้อมูล Gamification</strong><br>
+            • คะแนน, ระดับ, ป้าย (Badge), ความสำเร็จ (Achievement)<br>
+            • สถิติการ Login ต่อเนื่อง (Login Streak)<br>
+            • ประวัติการอ่านบทความ Wellness และการรับคะแนน</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>2. วัตถุประสงค์การใช้ข้อมูล</summary>
+          <div class="answer">
+            <p>• เพื่อให้บริการจัดการอาคารพักอาศัย เช่น ออกบิล, รับแจ้งซ่อม<br>
+            • เพื่อยืนยันการชำระเงินและออกใบเสร็จ<br>
+            • เพื่อการอนุมัติสัตว์เลี้ยงและบริการต่างๆ<br>
+            • เพื่อส่งการแจ้งเตือนผ่าน LINE<br>
+            • เพื่อระบบ Gamification สร้างแรงจูงใจในชุมชน</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>3. การแบ่งปันข้อมูล</summary>
+          <div class="answer">
+            <p>• <strong>ผู้ดูแลระบบ (Admin)</strong>: เข้าถึงข้อมูลทุกประเภทเพื่อการบริหารจัดการ<br>
+            • <strong>SlipOK API</strong>: รับสลิปการโอนเงินเพื่อยืนยัน (ไม่เก็บข้อมูลบัตรเครดิต)<br>
+            • <strong>LINE Corporation</strong>: ผ่าน LIFF SDK สำหรับการแจ้งเตือน<br>
+            • <strong>Google Firebase</strong>: สำหรับการจัดเก็บและซิงค์ข้อมูลแบบ Real-time<br>
+            • เราไม่ขายหรือเผยแพร่ข้อมูลส่วนตัวแก่บุคคลภายนอกเพื่อวัตถุประสงค์ทางการค้า</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>4. สิทธิ์ของเจ้าของข้อมูล (PDPA §30, §32)</summary>
+          <div class="answer">
+            <p>ภายใต้ พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 คุณมีสิทธิ์:<br>
+            • <strong>ขอสำเนาข้อมูล (§30)</strong>: ขอให้ admin ส่งข้อมูลของคุณในรูปแบบ JSON<br>
+            • <strong>แก้ไขข้อมูล</strong>: แก้ไขในแอปได้โดยตรง (ชื่อ, เบอร์, อีเมล, ทะเบียนรถ)<br>
+            • <strong>ลบข้อมูล (§32)</strong>: แจ้ง admin เพื่อดำเนินการ (ข้อมูลบัญชีที่กฎหมายบังคับเก็บจะถูก retain ไว้)<br>
+            • <strong>คัดค้านการประมวลผล</strong>: แจ้ง admin</p>
+            <p>ติดต่อได้ผ่าน LINE Official หรือ <a href="mailto:admin@the-green-haven.com">admin@the-green-haven.com</a></p>
+          </div>
+        </details>
+
+        <details>
+          <summary>5. ระยะเวลาการเก็บรักษาข้อมูล</summary>
+          <div class="answer">
+            <p>• <strong>ใบตรวจสภาพห้อง</strong> (รูปภาพ, ลายเซ็น, บันทึก): ลบอัตโนมัติ 2 ปีหลังแอดมินเซ็นรับ<br>
+            • <strong>ข้อมูลผู้เช่า</strong> (ชื่อ, ติดต่อ, gamification): ลบอัตโนมัติ 1 ปีหลังสิ้นสุดสัญญา<br>
+            • <strong>บิล, รายการชำระเงิน</strong>: เก็บ 5 ปี ตามประมวลรัษฎากร มาตรา 87<br>
+            • <strong>สัญญาเช่า</strong>: เก็บ 5 ปี ตาม ป.พ.พ. มาตรา 193/34</p>
+            <p>ข้อมูลที่ไม่มีวัตถุประสงค์ที่ชัดเจนจะถูกลบอัตโนมัติภายใน 5 ปีจากวันที่สร้าง</p>
+          </div>
+        </details>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>ติดต่อเรา: <a href="mailto:admin@the-green-haven.com">admin@the-green-haven.com</a></p>
+      <p>© 2568 The Green Haven Co., Ltd. — ทุกสิทธิ์สงวน</p>
+    </footer>
+  </div>
+</body>
+</html>
