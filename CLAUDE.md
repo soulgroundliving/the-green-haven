@@ -531,6 +531,45 @@ Every hit is a latent bug. Inspect each — if the source is a `data:` URL, repl
 
 When you see (3) — no network request fired at all despite calling `fetch()` — CSP `connect-src` is almost always the gate. Check the request's URL scheme (`data:`, `blob:`, `chrome-extension:`) and the document CSP.
 
+### Z. `createCustomToken(uid, claims)` developer-claims are EPHEMERAL — also call `setCustomUserClaims` to persist
+
+`admin.auth().createCustomToken(uid, { room, building, tenantId })` embeds the claims in the FIRST ID token that `signInWithCustomToken` returns. They are NOT written to the user record. Firebase auto-refreshes ID tokens roughly every hour; the new token is minted from the user record, **without** these claims unless `setCustomUserClaims` was also called for them. After that point every server-side rule check on `request.auth.token.<claim>` evaluates to `undefined` and silently rejects the read.
+
+Incident 2026-05-18: `liffSignIn` minted `{ room, building, tenantId }` claims via `createCustomToken` and trusted them. Worked perfectly for ~1 h after sign-in, then every claim-gated feature (checklist, bills, maintenance, deposits, lease, storage) returned `permission-denied` until the user closed/reopened LINE (which re-ran `liffSignIn` and minted a fresh custom token). Fixed in `a5f4e5a` by adding a fire-and-forget `setCustomUserClaims(uid, claims)` right after `createCustomToken`.
+
+**Rule:** any CF that mints a custom token with developer claims MUST also call `setCustomUserClaims`. They're complementary, not alternatives.
+
+```js
+// Mint immediate token (so signInWithCustomToken gets claims on the first ID token)
+const customToken = await admin.auth().createCustomToken(uid, claims);
+
+// Persist on the user record so EVERY future ID-token refresh re-includes them
+admin.auth().setCustomUserClaims(uid, claims)
+  .catch(e => console.warn('setCustomUserClaims failed (non-fatal):', e.message));
+
+return { customToken };
+```
+
+The `.catch` keeps it non-blocking — the initial token already has the claims, so a transient `setCustomUserClaims` failure doesn't break this session. The next sign-in retries.
+
+**Detection recipe:**
+```bash
+# Every createCustomToken call must have a setCustomUserClaims twin
+grep -rnE "createCustomToken\([^)]*,\s*\{" functions/
+# Cross-check each hit against:
+grep -rn "setCustomUserClaims" functions/
+```
+Every CF that appears in the first grep but NOT the second is a latent ~1 h bomb. The failure mode is "works for an hour, then mysteriously breaks for everyone, fixed by re-opening LINE" — extremely hard to root-cause without knowing this pattern.
+
+**Debugging signature** (this bug class is sneaky because it's time-dependent):
+1. Feature was working an hour ago for the same user
+2. No code changed; user did nothing unusual
+3. Now: `permission-denied` on Firestore/RTDB/Storage reads gated by `request.auth.token.<claim>`
+4. Closing the LIFF / re-signing-in temporarily fixes it (until next ~1 h refresh)
+5. Hardcoded admin paths still work (admin: true IS persistent — admins use the proper SDK flow)
+
+Cousin pattern to §7-P (UID-drift fixes must traverse every rule layer) and §7-U (claim-first guard in subscribe) — all three are about claims not arriving where rule eval expects them.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md

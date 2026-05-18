@@ -13280,25 +13280,7 @@
             setTimeout(retry, 4000);
             return;
           }
-          // Diagnostic dump — when permission keeps failing we need to SEE the
-          // actual state at the moment of failure. Token claims + query inputs
-          // tell us if it's a value mismatch vs missing claims vs auth issue.
-          let _diag = '';
-          try {
-            const u = window.firebaseAuth?.currentUser;
-            const tr = u ? await u.getIdTokenResult().catch(() => null) : null;
-            _diag = JSON.stringify({
-              uid: u?.uid?.slice(0, 24) || null,
-              anon: u?.isAnonymous,
-              tok_room: tr?.claims?.room ?? null,
-              tok_building: tr?.claims?.building ?? null,
-              tok_tenantId: tr?.claims?.tenantId ?? null,
-              q_b: _clBuilding,
-              q_r: _clRoomId,
-              q_uid: _clTenantUid?.slice(0, 24),
-            });
-          } catch (e) { _diag = '(diag-err: ' + (e?.message || e) + ')'; }
-          statusEl.innerHTML = `<div style="color:#c62828;padding:1rem;">โหลดข้อมูลไม่ได้: ${_esc(err.message || String(err))} <pre style="font-size:.65rem;text-align:left;background:#fff;padding:.5rem;border:1px solid #fcc;border-radius:4px;margin:.6rem 0;white-space:pre-wrap;word-break:break-all;color:#666;">${_esc(_diag)}</pre><button type="button" onclick="location.reload()" style="display:block;margin:.4rem auto 0;padding:.4rem 1.1rem;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;">🔄 รีเฟรช</button></div>`;
+          statusEl.innerHTML = `<div style="color:#c62828;padding:1rem;">โหลดข้อมูลไม่ได้: ${_esc(err.message || String(err))} <button type="button" onclick="location.reload()" style="display:block;margin:.8rem auto 0;padding:.4rem 1.1rem;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;">🔄 รีเฟรช</button></div>`;
           return;
         }
 
