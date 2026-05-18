@@ -13513,7 +13513,7 @@
           // Gate init on LIFF claims — without this, tapping before custom-token
           // sign-in completes left the page hanging on ⏳ and triggered a
           // separate permission_denied bills toast (anti-pattern A).
-          window._onLiffClaimsReady(function _clInitOnce() {
+          window._onLiffClaimsReady(async function _clInitOnce() {
             // Idempotent: re-read fresh state each fire.
             // window._liffClaims is never assigned anywhere — read from the canonical
             // module-level globals set by detectRoomBuilding() + linkAuthUid() (liffLinked).
@@ -13536,6 +13536,24 @@
               if (_clStatusEl) _clStatusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">⏳ กำลังเชื่อมต่อกับ LINE — รอสักครู่...</div>';
               return;
             }
+            // §7-U + §7-P: localStorage can populate _taRoom on the FIRST authReady
+            // (anonymous UID before liffSignIn custom-token completes) — so the
+            // _clRoomId guard above passes but the TOKEN claims are still empty.
+            // Firing the query in that window throws permission-denied because the
+            // claim-based rule branch can't be satisfied. Wait for the token to
+            // actually carry building/room claims; let liffLinked re-fire later.
+            try {
+              const u = window.firebaseAuth?.currentUser;
+              const tok = u ? await u.getIdTokenResult() : null;
+              if (!tok?.claims?.room || !tok?.claims?.building) {
+                if (_clStatusEl) _clStatusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">⏳ กำลังเชื่อมต่อกับ LINE — รอสักครู่...</div>';
+                return;
+              }
+              // Pin query inputs to the TOKEN values so rule-eval is provably
+              // satisfied (Firestore Rules check query filter == token claim).
+              _clBuilding = String(tok.claims.building);
+              _clRoomId   = String(tok.claims.room);
+            } catch (_) { /* fall through; query will surface real error if any */ }
             _initChecklistPage();
           });
           return;

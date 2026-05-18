@@ -56,6 +56,7 @@ Module._load = function (id, parent, ...rest) {
     };
     const self = {
       region: () => self,
+      runWith: () => self,
       https: { onCall: (fn) => fn, HttpsError },
       HttpsError,
     };
