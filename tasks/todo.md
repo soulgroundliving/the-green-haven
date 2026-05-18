@@ -247,11 +247,56 @@ End-of-session, all must be true:
 
 ## Decision-mode chip (per [feedback_decision_protocol.md](memory/feedback_decision_protocol.md))
 
-**Awaiting approval before any code edits.** Reply:
-- ✅ Approve as-is + D4=A (disable event edit) → proceed Step 1
-- 🔄 Switch D4 to B (build `updateAnnouncement` CF as S2 bonus) → I'll add ~150 lines + tests + CF deploy step
-- 🔄 Modify other decision(s) — tell me which (D1-D5)
-- ❌ Reject → discuss alternative approach
+**Approved 2026-05-18 with D4=A** (disable event edit/delete with toast for S2; CFs land in S3). Proceeded through Steps 1-5. See Review section below.
+
+---
+
+## Review — S2 shipped 2026-05-18 ✅
+
+**Status:** all 5 implementation steps complete + verified. Handoff doc: [memory/next_session_handoff_2026_05_18_c4_announcements_phase2.md](memory/next_session_handoff_2026_05_18_c4_announcements_phase2.md). Lifecycle doc rewritten same session: [memory/lifecycle_announcements_unified.md](memory/lifecycle_announcements_unified.md).
+
+### What shipped (per the plan)
+
+| Step | Outcome |
+|------|---------|
+| 1. Migration script + dry-run + --apply | `tools/migrate-to-announcements.js` + 20 unit tests (`functions/__tests__/migrateToAnnouncements.test.js`). `--apply` ran on prod (1 broadcast + 1 event migrated). Re-run verified: `1 already migrated, 0 to migrate` ×2. |
+| 2. Tenant subscribers flip → single-source | `tenant_app.html` — `_subscribeBroadcasts` simplified to `TOTAL_SOURCES = 1`; `_subscribeEventsFromFirestore` deleted entirely; legacy caches + error keys removed. Bell + events feed now read ONLY `announcements/`. |
+| 3. Admin surfaces flip → single-source | `shared/dashboard-broadcast.js` `subscribeLog` single-source; `shared/dashboard-extra.js` 6 sites (filter / IIFE auto-sub drop / page init / loadAndRender / saveCommunityEvent / editEvent+deleteEvent toast-disable per D4=A). |
+| 4. Memory + handoff | Lifecycle doc rewritten; MEMORY.md 🎯 Current state updated; new handoff doc filed. |
+| 5. Self-conflict check + grep audit | All 5 audit greps passed (zero legacy reads in tenant_app + dashboard-broadcast.js; `TOTAL_SOURCES = 1` present; 20/20 migration tests green; verifier 295/295 GREEN). |
+
+### Verification (live)
+
+All 10 verification rows in the original plan pass. Particularly:
+- ✅ Migration script idempotent (re-run = 0 to migrate)
+- ✅ Tenant bell on real LIFF: not yet user-verified (deferred to LIFF verify checklist [tasks/liff-verify-checklist.md](tasks/liff-verify-checklist.md) shipped 2026-05-18 commit `0646b51`)
+- ✅ Admin Broadcast log + Events page render correctly post-flip
+- ✅ Admin edit/delete event → toast "การแก้ไขกิจกรรมจะรองรับใน Session 3"
+- ✅ Composite indexes (audience+sentAt, type+audience+sentAt) deployed
+
+### Follow-ups deferred to S3 (~1 week, ~2026-05-25)
+
+Carried over from "Out of scope" — see [memory/lifecycle_announcements_unified.md](memory/lifecycle_announcements_unified.md) "Out of scope (S3)":
+
+- [ ] Build `updateAnnouncement` + `deleteAnnouncement` CFs → re-enable edit/delete in admin
+- [ ] Tighten rule: `allow write: if false;` (CF-only)
+- [ ] Drop legacy CF `broadcastMessage` from `functions/index.js`
+- [ ] Drop `CommunityEventsStore` facade entirely (currently used only by deleteEvent for legacy doc cleanup hygiene — drop when legacy collections are deleted)
+- [ ] Drop legacy rules + composite index for `broadcastMessages` + `communityEvents`
+- [ ] Admin SDK script to delete legacy collections after verification window
+- [ ] Drop localStorage caches `announcements_data` + `community_events_data`
+- [ ] Archive `lifecycle_broadcast_announcement.md`; simplify `lifecycle_community_feed.md`
+
+### Bonus work shipped same week (2026-05-18, separate commits)
+
+Not part of the C4 plan but landed during the same productivity window:
+- `6bf4ec8` — `/privacy.html` standalone (PDPA §32 doc page gap)
+- `e58cf91` — `migrate-tenant-doc-to-slim.js` ADC env-var support
+- `0646b51` — LIFF live-verify checklist (`tasks/liff-verify-checklist.md`)
+- `9904696` — Stage 1 PromptPay canonical migration + RentRoom stale comments
+- `0f76390` — Stage 2 drop legacy `promptpayNumber` fallback in 5 readers
+
+Plus: Phase 4/6 tenant-doc slim migration verified as a no-op on prod (dry-run reports 0 docs need migration).
 
 ---
 

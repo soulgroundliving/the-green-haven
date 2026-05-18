@@ -464,6 +464,11 @@ class BillingSystem {
           await BillingSystem.autogenerateBillsForAllYears(building);
           console.log(`✅ Bills auto-updated from new meter data`);
         }
+      }, (err) => {
+        // §7-N: surface runtime listener errors (permission-denied, index-missing,
+        // network drop) so bills auto-regen doesn't fail silently. The outer
+        // try/catch only catches sync setup errors.
+        console.warn(`⚠️ meter_data listener for ${building} dropped:`, err?.message || err);
       });
 
       return unsubscribe;

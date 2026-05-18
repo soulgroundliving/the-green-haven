@@ -1036,7 +1036,7 @@
         callable: (name) => httpsCallable(fns, name),
         doc: (path) => doc(fs, ...path.split('/')),
         getDoc: (ref) => getDoc(ref),
-        onSnapshot: (ref, cb) => onSnapshot(ref, cb),
+        onSnapshot: (ref, cb, errCb) => onSnapshot(ref, cb, errCb),
         // Storage SDK for client-side KYC upload (Phase 5). Direct uploads to
         // bookings/{id}/kyc/{type}.{ext} — Storage rules gate writes on
         // status ∈ {paid, kyc_pending} + 5MB cap + image|pdf.
@@ -1916,6 +1916,11 @@
       } else if (b.status === 'expired') {
         showSlipStatus('error', '⏰ ห้องหมดเวลาล็อค — กรุณาเริ่มการจองใหม่');
       }
+    }, (err) => {
+      // §7-N: without this, a permission-denied or network drop on the booking
+      // listener leaves the prospect staring at "rendering QR..." forever.
+      console.warn('[booking] listener dropped:', err?.message || err);
+      showSlipStatus('error', '⚠️ การเชื่อมต่อขาดหาย — กรุณารีเฟรชหน้า');
     });
   }
 
