@@ -13264,7 +13264,23 @@
             _clInstance = await window.ChecklistManager.getMyLatestInstance(_clTenantUid);
           }
         } catch (err) {
-          statusEl.innerHTML = `<div style="color:#c62828;padding:1rem;">โหลดข้อมูลไม่ได้: ${err.message}</div>`;
+          // §7-U/§7-P: permission-denied here usually means the auth token
+          // doesn't yet carry the building/room claims (custom-token sign-in
+          // race). Auto-retry ONCE when liffLinked next fires — that event is
+          // guaranteed to post-date setCustomUserClaims + signInWithCustomToken.
+          const isPermErr = err?.code === 'permission-denied'
+            || /Missing or insufficient permissions/i.test(err?.message || '');
+          if (isPermErr && _clClaimWait < 1) {
+            _clClaimWait++;
+            statusEl.innerHTML = `<div style="text-align:center;padding:2rem;color:#888;">⏳ รอ LIFF claims sync... <small style="display:block;margin-top:.4rem;color:#bbb;font-size:.7rem;">(retrying after LINE link refresh)</small></div>`;
+            const retry = () => { try { _initChecklistPage(); } catch (_) {} };
+            window.addEventListener('liffLinked', retry, { once: true });
+            // Belt-and-braces: also retry after 4s in case liffLinked already
+            // dispatched for this page session and won't fire again.
+            setTimeout(retry, 4000);
+            return;
+          }
+          statusEl.innerHTML = `<div style="color:#c62828;padding:1rem;">โหลดข้อมูลไม่ได้: ${_esc(err.message || String(err))} <button type="button" onclick="location.reload()" style="display:block;margin:.8rem auto 0;padding:.4rem 1.1rem;background:var(--green-dark);color:#fff;border:none;border-radius:6px;cursor:pointer;">🔄 รีเฟรช</button></div>`;
           return;
         }
 
@@ -13528,48 +13544,18 @@
               return;
             }
             if (!_clRoomId) {
-              // signInWithCustomToken hasn't completed yet — token has no room/
-              // building claims yet. Without this guard, _initChecklistPage runs
-              // with empty roomId, queries where roomId=='', gets snap.empty,
-              // shows "ยังไม่มี" + sets PDPA flag — and the later liffLinked re-
-              // fire never recovers because the user has navigated/closed by then.
-              // Per CLAUDE.md §7-U: claims-not-yet-set must guard FIRST.
-              if (_clStatusEl) _clStatusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">⏳ กำลังเชื่อมต่อกับ LINE — รอสักครู่...</div>';
+              // signInWithCustomToken hasn't completed yet — _taRoom is unset.
+              // Show clear status + diagnostic so the user knows what's pending.
+              // The _onLiffClaimsReady listener re-fires on liffLinked, so this
+              // recovers automatically once LIFF link completes.
+              if (_clStatusEl) _clStatusEl.innerHTML = `<div style="text-align:center;padding:2rem;color:#888;">⏳ รอ LIFF เชื่อมต่อห้อง... <small style="display:block;margin-top:.4rem;color:#bbb;font-size:.7rem;">(uid=${_esc(_clTenantUid.slice(0,8))} · ห้องยังไม่ถูก map)</small></div>`;
               return;
             }
-            // §7-U + §7-P: localStorage can populate _taRoom on the FIRST authReady
-            // (anonymous UID before liffSignIn custom-token completes) — so the
-            // _clRoomId guard above passes but the TOKEN claims are still empty.
-            // Firing the query in that window throws permission-denied because the
-            // claim-based rule branch can't be satisfied. Wait for the token to
-            // actually carry building/room claims; let liffLinked re-fire later.
-            try {
-              const u = window.firebaseAuth?.currentUser;
-              // First read is cached. If claims look missing, force-refresh once
-              // to pull the latest token from Firebase auth servers — covers the
-              // window where signInWithCustomToken JUST completed but the cached
-              // ID token still reflects the prior anon UID.
-              let tok = u ? await u.getIdTokenResult() : null;
-              if (u && (!tok?.claims?.room || !tok?.claims?.building)) {
-                try { tok = await u.getIdTokenResult(true); } catch (_) { /* keep cached */ }
-              }
-              if (!tok?.claims?.room || !tok?.claims?.building) {
-                if (_clStatusEl) _clStatusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">⏳ กำลังเชื่อมต่อกับ LINE — รอสักครู่...</div>';
-                // One auto-retry — catches the case where liffLinked hasn't
-                // dispatched for this page yet (mid-sign-in navigation).
-                // Without this, the page sat on ⏳ forever because the listener
-                // had already missed the liffLinked event.
-                if (_clClaimWait < 1) {
-                  _clClaimWait++;
-                  setTimeout(_clInitOnce, 2500);
-                }
-                return;
-              }
-              // Pin query inputs to the TOKEN values so rule-eval is provably
-              // satisfied (Firestore Rules check query filter == token claim).
-              _clBuilding = String(tok.claims.building);
-              _clRoomId   = String(tok.claims.room);
-            } catch (_) { /* fall through; query will surface real error if any */ }
+            // Fire the query — let Firestore enforce. If server-side token
+            // claims aren't ready yet (rare race), the catch in _initChecklistPage
+            // schedules ONE retry on the next liffLinked event. Previous attempt
+            // to client-side-gate via getIdTokenResult left the page stuck on
+            // ⏳ forever when the auth cache was out of sync with the LIFF flow.
             _initChecklistPage();
           });
           return;
