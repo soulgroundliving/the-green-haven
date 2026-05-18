@@ -189,7 +189,37 @@
       try { _adminSigUrl = await window.ChecklistManager.getSignedUrl(_viewer.adminSignaturePath); }
       catch (_) { _adminSigUrl = null; }
     }
-    _renderViewerBody();
+    // Patch URL slots in place — re-rendering the whole body would replace the
+    // admin signature canvas with a fresh one (listeners point to the OLD canvas
+    // via _sigCtx idempotency guard), and would reset scroll position. §7-X.
+    _patchViewerMedia();
+  }
+
+  function _patchViewerMedia() {
+    const body = document.getElementById('clv-body');
+    if (!body || !_viewer) return;
+
+    (_viewer.items || []).forEach((it) => {
+      if (!it.photoPath) return;
+      const slot = body.querySelector(`[data-photo-slot="${CSS.escape(String(it.id))}"]`);
+      if (!slot) return;
+      const url = _photoUrls[it.id];
+      if (url) {
+        slot.innerHTML = `<a href="${_esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:.3rem;"><img src="${_esc(url)}" alt="photo" style="max-width:120px;max-height:120px;border:1px solid #ddd;border-radius:6px;object-fit:cover;"></a>`;
+      } else {
+        slot.innerHTML = '<div style="font-size:.75rem;color:#c62828;margin-top:.25rem;">⚠️ โหลดรูปไม่สำเร็จ</div>';
+      }
+    });
+
+    const tslot = body.querySelector('[data-tenant-sig-slot]');
+    if (tslot && _tenantSigUrl) {
+      tslot.innerHTML = `<div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นผู้เช่า:</div><img src="${_esc(_tenantSigUrl)}" alt="tenant sig" style="max-width:240px;border:1px solid #ddd;border-radius:6px;background:#fff;">`;
+    }
+
+    const aslot = body.querySelector('[data-admin-sig-slot]');
+    if (aslot && _adminSigUrl) {
+      aslot.innerHTML = `<div style="margin-top:.8rem;"><div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นแอดมิน:</div><img src="${_esc(_adminSigUrl)}" alt="admin sig" style="max-width:240px;border:1px solid #ddd;border-radius:6px;background:#fff;"></div>`;
+    }
   }
 
   function _renderViewerBody() {
@@ -201,9 +231,12 @@
       ? '<div style="color:var(--text-muted);text-align:center;padding:1rem;">— ไม่มีรายการ —</div>'
       : items.map((it) => {
           const photoUrl = _photoUrls[it.id];
-          const photoBlock = photoUrl
+          const photoInner = photoUrl
             ? `<a href="${_esc(photoUrl)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:.3rem;"><img src="${_esc(photoUrl)}" alt="photo" style="max-width:120px;max-height:120px;border:1px solid #ddd;border-radius:6px;object-fit:cover;"></a>`
-            : (it.photoPath ? '<div style="font-size:.75rem;color:#888;margin-top:.25rem;">⏳ โหลดรูป...</div>' : '');
+            : '<div style="font-size:.75rem;color:#888;margin-top:.25rem;">⏳ โหลดรูป...</div>';
+          const photoBlock = it.photoPath
+            ? `<div data-photo-slot="${_esc(it.id)}">${photoInner}</div>`
+            : '';
           return `
             <div style="padding:.6rem .8rem;background:#fafafa;border:1px solid #eee;border-radius:8px;margin-bottom:.4rem;">
               <div style="display:flex;align-items:flex-start;gap:.5rem;">
@@ -218,13 +251,17 @@
           `;
         }).join('');
 
-    const tenantSigBlock = _tenantSigUrl
-      ? `<div style="margin-top:1rem;"><div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นผู้เช่า:</div><img src="${_esc(_tenantSigUrl)}" alt="tenant sig" style="max-width:240px;border:1px solid #ddd;border-radius:6px;background:#fff;"></div>`
-      : (_viewer.tenantSignaturePath ? '<div style="margin-top:1rem;font-size:.82rem;color:#888;">⏳ โหลดลายเซ็นผู้เช่า...</div>' : '');
+    const tenantSigInner = _tenantSigUrl
+      ? `<div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นผู้เช่า:</div><img src="${_esc(_tenantSigUrl)}" alt="tenant sig" style="max-width:240px;border:1px solid #ddd;border-radius:6px;background:#fff;">`
+      : '<div style="font-size:.82rem;color:#888;">⏳ โหลดลายเซ็นผู้เช่า...</div>';
+    const tenantSigBlock = _viewer.tenantSignaturePath
+      ? `<div data-tenant-sig-slot style="margin-top:1rem;">${tenantSigInner}</div>`
+      : '';
 
-    const adminSigBlock = _adminSigUrl
+    const adminSigInner = _adminSigUrl
       ? `<div style="margin-top:.8rem;"><div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.3rem;">ลายเซ็นแอดมิน:</div><img src="${_esc(_adminSigUrl)}" alt="admin sig" style="max-width:240px;border:1px solid #ddd;border-radius:6px;background:#fff;"></div>`
       : '';
+    const adminSigBlock = `<div data-admin-sig-slot>${adminSigInner}</div>`;
 
     const signPad = (_viewer.status === 'submitted' && !_adminSigUrl)
       ? `
