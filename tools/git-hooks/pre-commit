@@ -153,6 +153,23 @@ if [ $ANTIPATTERN_FOUND -eq 1 ]; then
 fi
 echo -e "${GREEN}✅ Anti-pattern checks passed${NC}"
 
+# E. Auth-callback audit (§7-A / §7-U / §7-Z) — BLOCKING
+# Every raw window.addEventListener('authReady'|'liffLinked', ...) must be
+# either (a) inside the _onLiffClaimsReady helper itself, or (b) justified
+# with a [audit-skip] comment within 3 lines above. Catches the recurring
+# "auth-gated read bypasses _onLiffClaimsReady" bug class repo-wide (not
+# just in the staged diff — section C above is the diff-level early warning).
+if command -v node &> /dev/null && [ -f tools/audit-auth-callbacks.js ]; then
+  if ! node tools/audit-auth-callbacks.js > /tmp/audit-auth-callbacks.out 2>&1; then
+    cat /tmp/audit-auth-callbacks.out
+    echo ""
+    echo -e "${RED}❌ Commit blocked: unjustified auth-callback listener${NC}"
+    echo -e "${YELLOW}   See CLAUDE.md §7-A / §7-U / §7-Z${NC}"
+    exit 1
+  fi
+  echo -e "${GREEN}✅ Auth-callback audit passed${NC}"
+fi
+
 # ===== 4. Memory fabricated-path scan (warn-only) =====
 # Scans handoff/journal/feedback files for backtick-quoted paths that don't
 # exist in the codebase — catches the "19 errors from one session" class

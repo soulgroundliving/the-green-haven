@@ -953,6 +953,9 @@
     }
     // Subscribe taxSummary once Firebase is ready (via anonymous auth)
     if (window._authUid) subscribeTaxSummary();
+    // [audit-skip] tax-filing uses email/password auth; admin/accountant claims are
+    // persistent on the user record (not LIFF ephemeral claims §7-Z), so authReady
+    // is sufficient — no liffLinked race here.
     else window.addEventListener('authReady', subscribeTaxSummary, { once: true });
   }
 

@@ -9,6 +9,7 @@
     "verify:memory": "node tools/verify-memory.js",
     "verify:memory:coverage": "node tools/verify-memory.js --coverage",
     "verify:memory:all": "node tools/verify-memory.js --all-memory",
+    "audit:auth": "node tools/audit-auth-callbacks.js",
     "install:hooks": "node tools/install-git-hooks.js",
     "postinstall": "node tools/install-git-hooks.js",
     "migrate:tenant-slim": "NODE_PATH=functions/node_modules node tools/migrate-tenant-doc-to-slim.js",

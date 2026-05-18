@@ -6443,8 +6443,10 @@
             }
         }
 
-        window.addEventListener('authReady', _subscribeMarketplace);
-        if (window.firebaseReady && window._authUid) _subscribeMarketplace();
+        // Auth-gated: depends on _taBuilding (set by loadTenantAppData after LIFF claims).
+        // Wrap via helper so liffLinked re-fires after _taBuilding becomes available.
+        // The `if (!_taBuilding) return;` guard inside (§7-U) keeps early calls idempotent.
+        _onLiffClaimsReady(_subscribeMarketplace);
 
         // เก็บข้อมูลสัตว์เลี้ยง (Global Scope)
         let petDataList = [];
@@ -8160,6 +8162,8 @@
                 } catch (e) {}
             }
         }
+        // [audit-skip] reads system/maintenanceCategories + system/complaintCategories
+        // (firestore.rules:33 — match /system/{docId} allows read:if true). No auth claim needed.
         window.addEventListener('authReady', _subscribeCategories);
         if (window.firebaseReady && window._authUid) _subscribeCategories();
 
@@ -8229,6 +8233,7 @@
                 sel.appendChild(opt);
             });
         }
+        // [audit-skip] reads system/cleaningServices — public-read (firestore.rules:33).
         window.addEventListener('authReady', _subscribeCleaningConfig);
         if (window.firebaseReady && window._authUid) _subscribeCleaningConfig();
 
@@ -8441,6 +8446,7 @@
                 }, err => console.warn('emergency contacts subscribe failed:', err.message));
             } catch (e) { console.warn('emergency contacts subscribe init failed:', e.message); }
         }
+        // [audit-skip] reads system/emergencyContacts — public-read (firestore.rules:33).
         window.addEventListener('authReady', _subscribeEmergencyContacts);
         if (window.firebaseReady && window._authUid) _subscribeEmergencyContacts();
 
@@ -8559,6 +8565,7 @@
             }
         }
         // Auto-subscribe on app ready (rewards visible to all buildings, not Nest-only)
+        // [audit-skip] reads rewards/* — public-read (firestore.rules:29).
         window.addEventListener('authReady', _subscribeRewards);
         if (window.firebaseReady && window._authUid) _subscribeRewards();
 
@@ -9046,6 +9053,7 @@
                 if (_taBuilding) applyBuildingVisibility();
             }, err => console.warn('gamificationConfig subscribe failed:', err.message));
         }
+        // [audit-skip] reads system/config — public-read (firestore.rules:33).
         window.addEventListener('authReady', _subscribeGamificationConfig);
         if (window.firebaseReady && window._authUid) _subscribeGamificationConfig();
 
@@ -11686,6 +11694,8 @@
                     if (window.firebaseAuth?.onAuthStateChanged) {
                         window.firebaseAuth.onAuthStateChanged(check);
                     } else {
+                        // [audit-skip] fallback path when onAuthStateChanged isn't available;
+                        // calls check(currentUser) which reads token claims (admin) — no Firestore read.
                         window.addEventListener('authReady', () => check(window.firebaseAuth?.currentUser), { once: true });
                     }
                 } catch(_) { clearTimeout(timer); finish({ admin: false, signedIn: false }); }
@@ -12146,6 +12156,7 @@
                 }, err => console.warn('serviceProviders subscribe failed:', err.message));
             } catch (e) { console.warn('serviceProviders subscribe init failed:', e.message); }
         }
+        // [audit-skip] reads system/serviceProviders — public-read (firestore.rules:33).
         window.addEventListener('authReady', _subscribeServiceProviders);
         if (window.firebaseReady && window._authUid) _subscribeServiceProviders();
 
@@ -13274,6 +13285,8 @@
             _clClaimWait++;
             statusEl.innerHTML = `<div style="text-align:center;padding:2rem;color:#888;">⏳ รอ LIFF claims sync... <small style="display:block;margin-top:.4rem;color:#bbb;font-size:.7rem;">(retrying after LINE link refresh)</small></div>`;
             const retry = () => { try { _initChecklistPage(); } catch (_) {} };
+            // [audit-skip] this IS the §7-U/§7-P recovery pattern — explicit one-shot
+            // liffLinked retry after a permission-denied caught above. Don't wrap.
             window.addEventListener('liffLinked', retry, { once: true });
             // Belt-and-braces: also retry after 4s in case liffLinked already
             // dispatched for this page session and won't fire again.
