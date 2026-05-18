@@ -21,6 +21,6 @@
     "node-fetch": "^2.7.0"
   },
   "devDependencies": {
-    "firebase-functions-test": "^3.1.0"
+    "firebase-functions-test": "^3.5.0"
   }
 }
