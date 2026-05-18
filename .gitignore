@@ -44,6 +44,8 @@ secrets.json
 credentials.json
 firebase-admin-key.json
 service-account.json
+serviceAccountKey.json
+functions/serviceAccountKey.json
 
 # OS
 .DS_Store
