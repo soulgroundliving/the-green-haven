@@ -9,7 +9,7 @@
  * Side-effects on success:
  *   1. Creates bookings/{auto} with status='locked', lockedUntil=now+20min
  *   2. Generates the PromptPay deposit QR payload (server-side — receiver
- *      phone comes from buildings/{RentRoom|nest}.promptpayNumber, never trusted from client)
+ *      phone comes from buildings/{rooms|nest}.{promptPayId|promptpayNumber}, never trusted from client)
  *   3. Returns { bookingId, qrPayload, qrAmount, lockedUntil } to client
  *
  * Region: asia-southeast1 (matches liffSignIn / verifySlip / redeemReward)

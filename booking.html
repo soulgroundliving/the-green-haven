@@ -1159,8 +1159,12 @@
         const snap = await window.bookingFirebase.getDoc(ref);
         if (snap.exists()) {
           const d = snap.data();
+          // Canonical-first per §7-T (buildings/rooms has only promptPayId
+          // post-Tier-3F; buildings/nest still has legacy promptpayNumber
+          // until migration). Sibling reader for the QR payload is
+          // createBookingLock.js:140; both must stay in sync.
           state.promptpayInfo[bld] = {
-            phone: d.promptpayNumber || d.promptpay || '',
+            phone: d.promptPayId || d.promptpayNumber || d.promptpay || '',
             name: d.displayName || d.name || DISPLAY_NAMES[bld],
           };
         } else {

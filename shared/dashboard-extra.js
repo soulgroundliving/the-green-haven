@@ -1143,7 +1143,7 @@ function renderOwnerInfoPage() {
     <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: .25rem;">🌐 สถานะอินเทอร์เน็ตอาคาร</div>
     <div style="font-size: .85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
       ตั้งค่าสถานะเน็ต/ผู้ให้บริการ/ความเร็ว แยกตามตึก — ลูกบ้านจะเห็น status จริงในหน้า Services.
-      <br>เก็บที่ Firestore <code>buildings/{RentRoom|nest}.internet</code> (real-time ผ่าน onSnapshot)
+      <br>เก็บที่ Firestore <code>buildings/{rooms|nest}.internet</code> (real-time ผ่าน onSnapshot)
     </div>
     <div id="buildingInternetConfigContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
       <div style="text-align:center;color:var(--text-muted);padding:1rem;grid-column:span 2;">กำลังโหลด...</div>
@@ -1169,7 +1169,8 @@ function renderOwnerInfoPage() {
 }
 
 // ===== BUILDING INTERNET CONFIG (per-building ISP + status + speed) =====
-// Same pattern as payment config: writes buildings/{RentRoom|nest}.internet (merged).
+// Same pattern as payment config: writes buildings/{canonicalId}.internet (merged)
+// where canonicalId ∈ {rooms, nest, ...} from BuildingRegistry (Tier 3F dynamic).
 // Tenant_app subscribes via displayBuildingInternetStatus onSnapshot.
 async function renderBuildingInternetConfig() {
   const container = document.getElementById('buildingInternetConfigContainer');
