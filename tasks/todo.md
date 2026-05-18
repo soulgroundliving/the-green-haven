@@ -408,6 +408,37 @@ Once these are decided, I'll execute the plan and append a Review section.
 
 ---
 
+## Review — shipped 2026-05-18 ✅
+
+User decisions (all confirmed before code touched):
+- **W1** = W1-B (2MB blob via `/api/speed-test` + `performance.now()` timing)
+- **W2** = W2-B (drop rule + ship cleanup script for later --apply)
+- **Footer wording** = as drafted ("📞 มีปัญหาเน็ต? ติดต่อทีม ISP ที่ติดตั้งเน็ตให้ห้องคุณโดยตรง")
+- **Commit shape** = 1 commit
+
+Shipped:
+- [c973b3e](https://github.com/soulgroundliving/the-green-haven/commit/c973b3e) `refactor(wifi): decommission per-Nest-room WiFi admin UI, ship tenant speed test` — 6 files, +474/-170. Pushed to `origin/main` → Vercel deploying.
+- `firebase deploy --only firestore:rules` ran successfully — `match /roomWifi/{key}` block live-dropped from prod (rules compile passed, released to cloud.firestore).
+- Memory verifier 290/290 GREEN both pre- and post-commit.
+
+What's in the commit:
+- **NEW** `api/speed-test.js` — Vercel serverless, returns N bytes (default 2MB) of `crypto.randomBytes`, `Content-Encoding: identity`, no-store cache. Same pattern as `api/config.js`.
+- **NEW** `tools/cleanup-roomWifi.js` — REST-based, dry-run-default, GCLOUD_ACCESS_TOKEN + firebase-tools OAuth fallback (same template as `tools/migrate-buildings-promptpay.js`). NOT run as part of this commit.
+- **MODIFIED** `shared/dashboard-extra.js` — removed `renderNestRoomWifiConfig` + `saveRoomWifiConfig` + HTML block + `window.*` exports
+- **MODIFIED** `tenant_app.html` — `#roomWifiAdminSection` replaced by `#speedTestSection`; `_subscribeRoomWifi` IIFE replaced by speed test IIFE (cooldown 60s, AbortController timeouts on both ping + throughput fetches)
+- **MODIFIED** `firestore.rules` — `match /roomWifi/{key}` block dropped; decommission comment left as breadcrumb
+- **MODIFIED** memory: `lifecycle_room_wifi.md` rewritten as DECOMMISSIONED + MEMORY.md WiFi line flipped to ⚰️
+
+Bug caught during diff review (fixed before commit):
+- `#speedTestResult` inline style had TWO `display:` declarations (`display:none; ... display:grid;`) — browser uses last → panel would render visible from start with `-` placeholders. Fixed to single `display:none;` so `_setResult()` reveals it.
+
+Deferred / next session:
+- **`tools/cleanup-roomWifi.js --apply`** — actually delete the orphaned `roomWifi/*` docs from prod. Rule is dropped so they're unreadable now anyway; cleanup is hygiene only. Recommended: dry-run first to see how many rooms had admin-entered creds.
+- **Live LIFF verify of speed test panel** — admin preview can verify DOM/UX structure but the `/api/speed-test` fetch from real LIFF webview is the realistic perf test. User test recommended on real LINE app within a Nest room context.
+- **Anti-pattern §7 candidate** — "scope creep: feature contradicts user's hands-off operating model" — worth considering as a §7-Y entry next time this pattern resurfaces.
+
+---
+
 ---
 
 # === ARCHIVED — Session 1 plan + review (shipped 2026-05-17) ===
