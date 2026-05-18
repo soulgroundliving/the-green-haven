@@ -132,6 +132,10 @@ exports.liffSignIn = functions
       console.error('liffSignIn: player token failed:', e.message);
       return res.status(500).json({ error: 'Failed to create player token' });
     }
+    // Persist claims on the user record so they survive ID-token refresh
+    // (see comment in tenant path below — same Firebase-Auth quirk).
+    admin.auth().setCustomUserClaims(uid, { role: 'player', tenantId })
+      .catch(e => console.warn('liffSignIn: player setCustomUserClaims failed (non-fatal):', e.message));
     return res.status(200).json({ customToken: playerToken, role: 'player', tenantId, name: playerName, phone: playerPhone });
   }
 
@@ -194,6 +198,17 @@ exports.liffSignIn = functions
     console.error('liffSignIn: createCustomToken failed:', e.message);
     return res.status(500).json({ error: 'Failed to create custom token' });
   }
+
+  // ── Persist claims on the user record so they SURVIVE ID-token refresh ────
+  // createCustomToken developer-claims are EPHEMERAL: they live only in the
+  // first ID token returned by signInWithCustomToken. After the Firebase Auth
+  // SDK auto-refreshes (~1h), the new ID token is minted from the user record
+  // — without these claims unless setCustomUserClaims has been called too.
+  // Without this, every tenant feature that depends on token.room/.building
+  // (bills, maintenance, checklist, anything claim-gated) silently breaks
+  // ~1h after a fresh LIFF sign-in. Fire-and-forget — non-blocking.
+  admin.auth().setCustomUserClaims(uid, { room, building, tenantId })
+    .catch(e => console.warn('liffSignIn: setCustomUserClaims failed (non-fatal):', e.message));
 
   // ── Write linkedAuthUid to Firestore (fire-and-forget) ────────────────────
   // Guard: skip vacant rooms so transitionToPlayer / archiveTenantOnMoveOut
