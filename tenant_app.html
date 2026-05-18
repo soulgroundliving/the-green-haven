@@ -2711,18 +2711,24 @@
                         <div>ห้อง: <strong id="roomInternetRoom">-</strong></div>
                         <div>ชนิดเครือข่าย: <span id="roomInternetSSID">-</span></div>
                     </div>
-                    <!-- Admin-managed WiFi (Nest per-room) — populated from roomWifi/{building}_{roomId} -->
-                    <div id="roomWifiAdminSection" style="display:none; margin-top:12px; padding:10px; background:#e8f5e9; border-radius:10px; font-size:var(--fs-sm);">
-                        <div style="font-weight:700; margin-bottom:6px; color:#1b5e20;">📡 WiFi ห้องคุณ (ตั้งโดยเจ้าของ)</div>
-                        <div style="display:grid; gap:4px;">
-                            <div>SSID: <strong id="roomWifiSsid" style="font-family:monospace;">-</strong></div>
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <span>รหัส:</span>
-                                <strong id="roomWifiPassword" style="font-family:monospace; letter-spacing:1px;">-</strong>
-                                <button type="button" id="roomWifiToggleBtn" style="border:none; background:#c8e6c9; color:#1b5e20; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:.78rem;">👁 แสดง</button>
+                    <!-- Speed test (tenant runs on demand, measures throughput against /api/speed-test) -->
+                    <div id="speedTestSection" style="margin-top:12px; padding:12px; background:#f1f8e9; border-radius:10px; font-size:var(--fs-sm);">
+                        <div style="font-weight:700; margin-bottom:8px; color:#1b5e20;">🚀 ทดสอบความเร็วเน็ตห้องคุณ</div>
+                        <button type="button" id="speedTestRunBtn" style="border:none; background:var(--green); color:white; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:.85rem; width:100%;">
+                            เริ่มทดสอบ
+                        </button>
+                        <div id="speedTestResult" style="display:none; margin-top:10px; grid-template-columns:1fr 1fr; gap:8px;">
+                            <div style="padding:8px; background:white; border-radius:6px; text-align:center;">
+                                <small style="color:#666;">ดาวน์โหลด</small>
+                                <div id="speedTestMbps" style="font-weight:700; font-size:1.1rem; color:#1b5e20;">-</div>
                             </div>
-                            <div id="roomWifiSpeedRow" style="display:none;">ความเร็ว: <strong id="roomWifiSpeed">-</strong></div>
+                            <div style="padding:8px; background:white; border-radius:6px; text-align:center;">
+                                <small style="color:#666;">Latency</small>
+                                <div id="speedTestPing" style="font-weight:700; font-size:1.1rem; color:#1b5e20;">-</div>
+                            </div>
                         </div>
+                        <small id="speedTestStatus" style="display:block; margin-top:8px; color:#666; min-height:1.2em;"></small>
+                        <small style="display:block; margin-top:8px; color:#5d4037; font-style:italic;">📞 มีปัญหาเน็ต? ติดต่อทีม ISP ที่ติดตั้งเน็ตให้ห้องคุณโดยตรง</small>
                     </div>
                     <small style="display:block; margin-top:6px; color:#aaa; font-style:italic;">* วัดจากอุปกรณ์ของคุณเอง</small>
                     <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="roomInternetLastCheck">-</span></small>
@@ -11939,76 +11945,93 @@
             }
         }
 
-        // ===== ADMIN-MANAGED ROOM WIFI (per-Nest-room SSID + password) =====
-        // Reads roomWifi/{building}_{roomId} — rule allows only this tenant + admins.
-        // Anti-pattern §7-U: claims-first guard, idempotent unsub, error resets unsub
-        // so the liffLinked retry can re-subscribe with correct claims.
-        let _roomWifiUnsub = null;
-        function _subscribeRoomWifi() {
-            if (_roomWifiUnsub) return;
-            if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
-            if (!_taBuilding || !_taRoom) return; // wait for real claims (anti-pattern §7-U)
-            const fs = window.firebase.firestoreFunctions;
-            const db = window.firebase.firestore();
-            const ref = fs.doc(db, 'roomWifi', `${_taBuilding}_${_taRoom}`);
-            _roomWifiUnsub = fs.onSnapshot(ref, snap => {
-                const section = document.getElementById('roomWifiAdminSection');
-                if (!section) return;
-                const data = snap.exists() ? (snap.data() || {}) : {};
-                if (!data.ssid && !data.password) {
-                    section.style.display = 'none';
+        // ===== TENANT-SIDE SPEED TEST =====
+        // Tenants self-install ISP per room — project hands-off per design intent
+        // (see lifecycle_room_wifi.md "decommissioned" + tasks/todo.md WiFi pivot
+        // 2026-05-18). App's only job: let tenant measure their own download speed
+        // + latency on demand. No SSID/password storage, no admin-managed WiFi.
+        //
+        // Implementation: fetch a 2MB random payload from /api/speed-test (W1-B),
+        // compute Mbps from elapsed time. Cooldown 60s prevents accidental spam.
+        (function () {
+            const COOLDOWN_MS = 60_000;
+            const PAYLOAD_BYTES = 2_000_000;
+            let _lastRunAt = 0;
+            let _running = false;
+
+            function _setStatus(text) {
+                const el = document.getElementById('speedTestStatus');
+                if (el) el.textContent = text || '';
+            }
+            function _setResult(mbps, pingMs) {
+                const result = document.getElementById('speedTestResult');
+                const mbpsEl = document.getElementById('speedTestMbps');
+                const pingEl = document.getElementById('speedTestPing');
+                if (!result) return;
+                result.style.display = 'grid';
+                if (mbpsEl) mbpsEl.textContent = `${mbps.toFixed(1)} Mbps`;
+                if (pingEl) pingEl.textContent = `${Math.round(pingMs)} ms`;
+            }
+
+            async function runSpeedTest() {
+                if (_running) return;
+                const now = Date.now();
+                const sinceLast = now - _lastRunAt;
+                if (sinceLast < COOLDOWN_MS && _lastRunAt > 0) {
+                    const wait = Math.ceil((COOLDOWN_MS - sinceLast) / 1000);
+                    _setStatus(`รอ ${wait} วินาทีก่อนทดสอบใหม่`);
                     return;
                 }
-                section.style.display = 'block';
-                const ssidEl = document.getElementById('roomWifiSsid');
-                const pwdEl  = document.getElementById('roomWifiPassword');
-                const speedRow = document.getElementById('roomWifiSpeedRow');
-                const speedEl  = document.getElementById('roomWifiSpeed');
-                if (ssidEl) ssidEl.textContent = data.ssid || '-';
-                // Store real password in dataset; display masked initially
-                if (pwdEl) {
-                    pwdEl.dataset.real = data.password || '';
-                    pwdEl.dataset.revealed = '0';
-                    pwdEl.textContent = data.password ? '•'.repeat(Math.min(data.password.length, 12)) : '-';
+                _running = true;
+                const btn = document.getElementById('speedTestRunBtn');
+                if (btn) { btn.disabled = true; btn.textContent = 'กำลังทดสอบ...'; }
+                _setStatus('กำลังดาวน์โหลด 2MB เพื่อวัดความเร็ว...');
+                try {
+                    // Ping: time to first byte for a tiny request (1 byte payload).
+                    const ctrlPing = new AbortController();
+                    const pingTimeout = setTimeout(() => ctrlPing.abort(), 5000);
+                    const pingT0 = performance.now();
+                    let pingMs = 0;
+                    try {
+                        const r = await fetch(`/api/speed-test?bytes=1&t=${now}`, {
+                            cache: 'no-store', signal: ctrlPing.signal
+                        });
+                        await r.arrayBuffer();
+                        pingMs = performance.now() - pingT0;
+                    } catch (_) { /* ping non-fatal */ }
+                    finally { clearTimeout(pingTimeout); }
+
+                    // Throughput: time to fully download PAYLOAD_BYTES from same origin.
+                    const ctrl = new AbortController();
+                    const dlTimeout = setTimeout(() => ctrl.abort(), 30_000);
+                    const t0 = performance.now();
+                    const resp = await fetch(`/api/speed-test?bytes=${PAYLOAD_BYTES}&t=${now}`, {
+                        cache: 'no-store', signal: ctrl.signal
+                    });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    const buf = await resp.arrayBuffer();
+                    clearTimeout(dlTimeout);
+                    const elapsedMs = performance.now() - t0;
+                    const mbps = (buf.byteLength * 8) / (elapsedMs / 1000) / 1_000_000;
+                    _setResult(mbps, pingMs);
+                    _setStatus(`อัปเดตล่าสุด: ${new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+                    _lastRunAt = Date.now();
+                } catch (e) {
+                    const msg = e?.name === 'AbortError' ? 'หมดเวลา (timeout)' : (e?.message || 'ทดสอบไม่สำเร็จ');
+                    _setStatus(`ทดสอบไม่สำเร็จ: ${msg}`);
+                } finally {
+                    _running = false;
+                    const b = document.getElementById('speedTestRunBtn');
+                    if (b) { b.disabled = false; b.textContent = 'เริ่มทดสอบใหม่'; }
                 }
-                if (data.speed && speedRow && speedEl) {
-                    speedRow.style.display = 'block';
-                    speedEl.textContent = data.speed;
-                } else if (speedRow) {
-                    speedRow.style.display = 'none';
-                }
-            }, err => {
-                console.warn('[roomWifi] subscribe failed:', err?.message || err);
-                if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
-                    _roomWifiUnsub = null;
-                }
-            });
-            // Eye toggle (one-time wire)
-            const toggleBtn = document.getElementById('roomWifiToggleBtn');
-            if (toggleBtn && !toggleBtn._wired) {
-                toggleBtn._wired = true;
-                toggleBtn.addEventListener('click', () => {
-                    const pwdEl = document.getElementById('roomWifiPassword');
-                    if (!pwdEl) return;
-                    const real = pwdEl.dataset.real || '';
-                    const revealed = pwdEl.dataset.revealed === '1';
-                    if (revealed) {
-                        pwdEl.textContent = '•'.repeat(Math.min(real.length, 12));
-                        pwdEl.dataset.revealed = '0';
-                        toggleBtn.textContent = '👁 แสดง';
-                    } else {
-                        pwdEl.textContent = real || '-';
-                        pwdEl.dataset.revealed = '1';
-                        toggleBtn.textContent = '🙈 ซ่อน';
-                    }
-                });
             }
-        }
-        if (typeof _onLiffClaimsReady === 'function') {
-            _onLiffClaimsReady(_subscribeRoomWifi);
-        } else {
-            window.addEventListener('authReady', _subscribeRoomWifi);
-        }
+
+            const runBtn = document.getElementById('speedTestRunBtn');
+            if (runBtn && !runBtn._wired) {
+                runBtn._wired = true;
+                runBtn.addEventListener('click', runSpeedTest);
+            }
+        })();
 
         // ---- LEASE RENEWAL ALERT ----
         function displayLeaseRenewalAlert() {

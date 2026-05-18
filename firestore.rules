@@ -461,18 +461,10 @@ service cloud.firestore {
       allow write:  if isAdmin();
     }
 
-    // ===== ROOM WIFI (per-Nest-room SSID + password) =====
-    // Admin writes; only the tenant of that room can read (claim match) — keeps
-    // WiFi password from leaking across rooms even though all tenants are
-    // signed-in users. Doc key format: "{building}_{roomId}" (e.g. "nest_N01").
-    match /roomWifi/{key} {
-      allow read: if isAdmin()
-               || (isSignedIn()
-                   && key == request.auth.token.building + '_' + request.auth.token.room);
-      allow write: if isAdmin();
-    }
-
     // ===== DEFAULT DENY (catch-all) =====
+    // (`roomWifi/*` decommissioned 2026-05-18 — tenants self-install ISP per room;
+    //  app provides /api/speed-test instead. See tools/cleanup-roomWifi.js to purge
+    //  orphaned docs. Lifecycle doc: lifecycle_room_wifi.md "decommissioned".)
     match /{document=**} {
       allow read, write: if false;
     }

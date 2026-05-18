@@ -300,6 +300,114 @@ Plus: Phase 4/6 tenant-doc slim migration verified as a no-op on prod (dry-run r
 
 ---
 
+# WiFi feature pivot — remove admin SSID/password, refocus tenant on speed test (Plan-First)
+
+**Threshold check:** ✅ touches 5+ files (`shared/dashboard-extra.js` admin UI + `tenant_app.html` accordion + `firestore.rules` rule block + `lifecycle_room_wifi.md` doc + MEMORY.md index) · ✅ schema change (collection `roomWifi/*` decommissioned) · ✅ data implication (existing prod docs become orphaned) · ✅ 2+ valid approaches (delete docs now vs leave orphaned; speed test impl) → **Plan-First mandatory** per CLAUDE.md §1.
+
+**Decision basis (2026-05-18 verify session):** user confirmed "ลูกบ้านที่ตั้งเน็ตส่วนตัวในห้อง" model — tenants self-install their own ISP, project hands-off, ISP support direct. Admin-entered SSID/password UI was scope creep contradicting this intent. App's job: speed + connection status only.
+
+---
+
+## Goal
+
+After this session: admin no longer enters per-room WiFi credentials anywhere; tenant_app shows speed test + online/offline status only; `roomWifi/*` collection is dead code path. Building-wide internet status (`buildings/{id}.internet`) stays untouched (separate concern).
+
+---
+
+## Tactical decisions to confirm BEFORE coding
+
+### W1. Speed test implementation
+Three viable options, increasing in accuracy + effort:
+
+| Option | What | Accuracy | Effort | Risk |
+|--------|------|----------|--------|------|
+| **W1-A** `navigator.connection.downlink` | Browser-reported estimate (Network Information API). No fetch. | Low (browser-throttled estimate, often ±50%) | XS (1 line) | None — pure read |
+| **W1-B** Fetch small payload + time | Download ~2MB asset from same-origin CDN, compute Mbps. Repeat for upload via POST. | Medium (single-stream, not multi-flow like Ookla) | S (50-80 LOC) | Low — but stream may be CPU-cached; need cache-bust + random asset selection |
+| **W1-C** Embed open-source HTML5 speed test | LibreSpeed (open source) or Cloudflare radar. iframe or imported script. | High (multi-stream, server-side timing) | M (200+ LOC + server endpoint or third-party dependency) | Medium — bundle bloat (Tailwind LIFF perf cost), third-party trust |
+
+**Recommendation: W1-B** — accurate enough for "is it usable today?" diagnostic, no third-party dep, ~50 LOC. Add an HTML asset at `/speed-test-blob.bin` (2MB random data, generated at build time + cached forever).
+
+### W2. What to do with existing `roomWifi/*` prod docs
+Per current rule, only admin (or matching room tenant) can read. After we remove reader code, they sit orphaned.
+
+| Option | Action | Pro | Con |
+|--------|--------|-----|-----|
+| **W2-A** Delete now via Admin SDK script | Run a `tools/cleanup-roomWifi.js --apply` | Clean slate, no orphans | Permanent — if rollback needed, data is gone (admin entered SSID/passwords aren't recoverable from anywhere else) |
+| **W2-B** Leave orphaned + drop rule | Remove the `match /roomWifi` block from firestore.rules; docs sit unreadable | Reversible (data still in Firestore); rule deletion is the actual security gate | Orphaned docs sit forever; small Firestore storage cost; admins might wonder where data went |
+| **W2-C** Mark deprecated + cleanup later | Update doc + flag for future migration | Safest now | Defers cleanup; relies on next session remembering |
+
+**Recommendation: W2-B** — drop rule block (closes any access path) + add cleanup migration script to repo (`tools/cleanup-roomWifi.js`, dry-run by default) without running it yet. Future session can `--apply` after confirming nothing was missed.
+
+### W3. Tenant UI inside `#roomInternetStatusSection` accordion
+The accordion currently has TWO panels: browser stats (navigator.onLine + navigator.connection) + admin-managed WiFi info. After this pivot:
+
+- Remove admin-managed panel entirely (`#roomWifiAdminSection` + `_subscribeRoomWifi` + eye-toggle)
+- Enhance browser panel: add a "🚀 ทดสอบความเร็ว" button → triggers speed test (W1) → shows Mbps + ping → cooldown 60s
+- Add a footer note: "📞 มีปัญหาเน็ต? ติดต่อทีม ISP ที่ติดตั้งเน็ตให้ห้องคุณโดยตรง" (per user intent)
+
+### W4. Drop the eye-toggle wiring + `roomWifiToggleBtn` + helper code
+Tied to W3. All `roomWifi*` references in `tenant_app.html` go away. Anti-pattern §7-U claim-first guard mention in lifecycle_room_wifi.md becomes stale.
+
+---
+
+## Files to change
+
+| File | Change | LOC delta estimate |
+|------|--------|-------------------|
+| `shared/dashboard-extra.js` | Remove `renderNestRoomWifiConfig`, `saveRoomWifiConfig`, `#nestRoomWifiContainer` HTML block (lines ~1152-1162 + ~1257-1320). Keep `renderBuildingInternetConfig` (separate concern). | -120 |
+| `tenant_app.html` | Remove `#roomWifiAdminSection` + `_subscribeRoomWifi` + eye-toggle + `_roomWifiUnsub` state. Add speed-test button + handler. | net 0 (-150 +150) |
+| `firestore.rules` | Remove `match /roomWifi/{key}` block (5 lines) + test in `__tests__` if covered | -5 |
+| `firestore.indexes.json` | Check if any `roomWifi` indexes exist (likely none — single-doc reads only) | -0 |
+| `lifecycle_room_wifi.md` | Rewrite as "decommissioned 2026-05-18" + preserve schema doc for git history | -40 |
+| `MEMORY.md` | Update Tenant-facing line for per-room WiFi → "tenant speed test + ISP-direct support" | -1 |
+| `tools/cleanup-roomWifi.js` | NEW — dry-run delete of all `roomWifi/*` docs (don't run --apply this session) | +60 |
+| `public/speed-test-blob.bin` (W1-B) | NEW — 2MB random asset; generated at build or committed as-is | +(2MB binary) |
+| CLAUDE.md §7 | Possibly add anti-pattern entry: "Scope creep — features that contradict user's hands-off intent" | optional |
+
+---
+
+## Verification steps (after code change)
+
+```bash
+# admin UI gone
+grep -n "renderNestRoomWifiConfig\|saveRoomWifiConfig\|nestRoomWifiContainer" shared/dashboard-extra.js
+# expected: 0 hits
+
+# tenant subscribe gone
+grep -n "_subscribeRoomWifi\|roomWifiAdminSection\|_roomWifiUnsub" tenant_app.html
+# expected: 0 hits
+
+# rule block gone
+grep -n "match /roomWifi" firestore.rules
+# expected: 0 hits
+
+# speed test button wired
+grep -n "speed.test\|runSpeedTest\|🚀 ทดสอบความเร็ว" tenant_app.html
+# expected: ≥3 hits (button + handler + label)
+
+# build still works
+npm run build
+
+# rules still compile
+npm run test:rules
+
+# memory verify
+npm run verify:memory
+```
+
+---
+
+## Open questions for user (before I code)
+
+1. **W1 speed test impl** — W1-A (cheap/inaccurate) / **W1-B (recommended)** / W1-C (bundle bloat)?
+2. **W2 existing data** — W2-A (delete now) / **W2-B (rule drop + script for later)** / W2-C (defer)?
+3. **Footer note wording** — "📞 มีปัญหาเน็ต? ติดต่อทีม ISP ที่ติดตั้งเน็ตให้ห้องคุณโดยตรง" — OK as-is? Or different phrasing?
+4. **Should this be one commit or multiple?** — Suggest: 1 commit for admin UI removal + 1 commit for tenant speed test + 1 commit for rule/doc cleanup. Or all-in-one if simpler.
+
+Once these are decided, I'll execute the plan and append a Review section.
+
+---
+
 ---
 
 # === ARCHIVED — Session 1 plan + review (shipped 2026-05-17) ===
