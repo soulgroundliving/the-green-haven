@@ -2329,14 +2329,14 @@
                 <div class="map-icon-bounce" style="animation-delay: 0.2s;">🛒</div>
             </button>
 
-            <button type="button" data-action="showSubPage" data-page="pet-park-page"
+            <button type="button" id="home-petpark-tile" data-action="showSubPage" data-page="pet-park-page"
                 aria-label="ไปหน้า Pet Park"
                 style="position:absolute;top:35%;left:60%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #9B59B6;">PET PARK</div>
                 <div class="map-icon-bounce" style="animation-delay: 0.4s;">🐾</div>
             </button>
 
-            <button type="button" data-action="showSubPage" data-page="quest-page"
+            <button type="button" id="home-quest-tile" data-action="showSubPage" data-page="quest-page"
                 aria-label="ไปหน้า Quest Ecosystem"
                 style="position:absolute;top:25%;left:30%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #D4AF37;">QUEST</div>
@@ -9112,11 +9112,13 @@
         //   - Water/Electricity usage charts (Nest has shared meter dashboards; Rooms bills cover this)
         //   - Smart Key (Nest QR door access; Rooms uses physical keys)
         //   - Marketplace (Nest-only tenant economy; home MARKET tile + community-page section)
+        //   - World-map QUEST + PET PARK tiles (gamification/community features, Nest-only)
         const NEST_ONLY_ELEMENT_IDS = [
             'profile-points-banner', 'profile-tab-nav', 'profile-rewards-card',
             'nav-smart-key-btn', 'pet-list-container', 'daily-modal',
             'contract-quiz-section', 'wellness-claim-area',
-            'home-market-tile', 'marketplace-section'
+            'home-market-tile', 'marketplace-section',
+            'home-quest-tile', 'home-petpark-tile'
         ];
 
         // ===== FEATURE FLAG =====
