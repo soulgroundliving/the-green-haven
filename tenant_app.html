@@ -2714,10 +2714,7 @@
                     <!-- Speed test (tenant runs on demand, measures throughput against /api/speed-test) -->
                     <div id="speedTestSection" style="margin-top:12px; padding:12px; background:#f1f8e9; border-radius:10px; font-size:var(--fs-sm);">
                         <div style="font-weight:700; margin-bottom:8px; color:#1b5e20;">🚀 ทดสอบความเร็วเน็ตห้องคุณ</div>
-                        <button type="button" id="speedTestRunBtn" style="border:none; background:var(--green); color:white; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:.85rem; width:100%;">
-                            เริ่มทดสอบ
-                        </button>
-                        <div id="speedTestResult" style="display:none; margin-top:10px; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div id="speedTestResult" style="display:none; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
                             <div style="padding:8px; background:white; border-radius:6px; text-align:center;">
                                 <small style="color:#666;">ดาวน์โหลด</small>
                                 <div id="speedTestMbps" style="font-weight:700; font-size:1.1rem; color:#1b5e20;">-</div>
@@ -2727,8 +2724,11 @@
                                 <div id="speedTestPing" style="font-weight:700; font-size:1.1rem; color:#1b5e20;">-</div>
                             </div>
                         </div>
-                        <small id="speedTestStatus" style="display:block; margin-top:8px; color:#666; min-height:1.2em;"></small>
-                        <small style="display:block; margin-top:8px; color:#5d4037; font-style:italic;">📞 มีปัญหาเน็ต? ติดต่อทีม ISP ที่ติดตั้งเน็ตให้ห้องคุณโดยตรง</small>
+                        <small id="speedTestStatus" style="display:block; margin-bottom:8px; color:#666; min-height:1.2em;"></small>
+                        <button type="button" id="speedTestRunBtn" style="border:none; background:var(--green); color:white; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:.85rem; width:100%;">
+                            เริ่มทดสอบ
+                        </button>
+                        <small style="display:block; margin-top:10px; color:#5d4037; font-style:italic;">📞 มีปัญหาเน็ต? ติดต่อทีม ISP ที่ติดตั้งเน็ตให้ห้องคุณโดยตรง</small>
                     </div>
                     <small style="display:block; margin-top:6px; color:#aaa; font-style:italic;">* วัดจากอุปกรณ์ของคุณเอง</small>
                     <small style="display:block; margin-top:8px; color:#aaa;">ตรวจสอบล่าสุด: <span id="roomInternetLastCheck">-</span></small>
@@ -11985,21 +11985,33 @@
                 _running = true;
                 const btn = document.getElementById('speedTestRunBtn');
                 if (btn) { btn.disabled = true; btn.textContent = 'กำลังทดสอบ...'; }
-                _setStatus('กำลังดาวน์โหลด 2MB เพื่อวัดความเร็ว...');
+                _setStatus('กำลังวัด latency...');
                 try {
-                    // Ping: time to first byte for a tiny request (1 byte payload).
-                    const ctrlPing = new AbortController();
-                    const pingTimeout = setTimeout(() => ctrlPing.abort(), 5000);
-                    const pingT0 = performance.now();
+                    // Ping: warm the serverless function first (cold-start is ~500ms on
+                    // first call), then 3 measured samples — take MIN to filter out
+                    // network jitter / GC pauses. Each ping is 1 byte response.
                     let pingMs = 0;
                     try {
-                        const r = await fetch(`/api/speed-test?bytes=1&t=${now}`, {
-                            cache: 'no-store', signal: ctrlPing.signal
-                        });
-                        await r.arrayBuffer();
-                        pingMs = performance.now() - pingT0;
+                        // Warmup (discarded). Bypass timeout — first call is the slow one.
+                        await (await fetch(`/api/speed-test?bytes=1&t=warmup-${now}`, { cache: 'no-store' })).arrayBuffer();
+                        // 3 measured samples in series; take min.
+                        const samples = [];
+                        for (let i = 0; i < 3; i++) {
+                            const ctrlPing = new AbortController();
+                            const pingTimeout = setTimeout(() => ctrlPing.abort(), 3000);
+                            try {
+                                const t0 = performance.now();
+                                const r = await fetch(`/api/speed-test?bytes=1&t=p${i}-${now}`, {
+                                    cache: 'no-store', signal: ctrlPing.signal
+                                });
+                                await r.arrayBuffer();
+                                samples.push(performance.now() - t0);
+                            } finally { clearTimeout(pingTimeout); }
+                        }
+                        pingMs = Math.min(...samples);
                     } catch (_) { /* ping non-fatal */ }
-                    finally { clearTimeout(pingTimeout); }
+
+                    _setStatus('กำลังดาวน์โหลด 2MB เพื่อวัดความเร็ว...');
 
                     // Throughput: time to fully download PAYLOAD_BYTES from same origin.
                     const ctrl = new AbortController();
