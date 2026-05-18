@@ -50,8 +50,27 @@
     if (!btn) return;
     const ok = title.length > 0 && body.length > 0 && title.length <= TITLE_MAX && body.length <= BODY_MAX;
     btn.disabled = !ok;
-    btn.style.opacity = ok ? '1' : '.5';
+    btn.style.opacity = ok ? '1' : '.75';
     btn.style.cursor  = ok ? 'pointer' : 'not-allowed';
+    // Hint via the status-msg slot next to the button. Skip if a busy/result
+    // message is being shown (set by setStatusMsg via dataset.busy). Once the
+    // user starts typing into a previously-cleared form, drop any leftover
+    // result message so the hint can resume.
+    const statusEl = $('bc-status-msg');
+    if (!statusEl) return;
+    const txt = statusEl.textContent || '';
+    const isResultMsg = txt.startsWith('✅') || txt.startsWith('❌');
+    if (isResultMsg && (title || body)) {
+      // User is composing a new broadcast — clear the previous result.
+      statusEl.textContent = '';
+      delete statusEl.dataset.busy;
+    }
+    if (ok) {
+      if (statusEl.textContent.startsWith('กรอก')) statusEl.textContent = '';
+    } else if (!statusEl.dataset.busy) {
+      statusEl.textContent = !title ? 'กรอกหัวข้อก่อน' : (!body ? 'กรอกข้อความก่อน' : '');
+      statusEl.style.color = 'var(--text-muted)';
+    }
   }
 
   function setStatusMsg(text, color) {
@@ -59,6 +78,7 @@
     if (!el) return;
     el.textContent = text || '';
     el.style.color = color || 'var(--text-muted)';
+    if (text) el.dataset.busy = '1'; else delete el.dataset.busy;
   }
 
   function clearForm() {
