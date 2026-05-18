@@ -2322,7 +2322,7 @@
                 <div class="map-icon-bounce animate-bounce">🏠</div>
             </button>
 
-            <button type="button" data-action="showPage--updateNavActiveIndex" data-page="community" data-nav-index="2"
+            <button type="button" id="home-market-tile" data-action="showPage--updateNavActiveIndex" data-page="community" data-nav-index="2"
                 aria-label="ไปหน้าชุมชน / ตลาด"
                 style="position:absolute;top:55%;left:65%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #E67E22;">MARKET</div>
@@ -3120,6 +3120,7 @@
             <small>วันสิ้นสุด: <strong id="leaseAlertDate">—</strong></small>
         </div>
 
+        <div id="marketplace-section">
         <div class="section-title" role="heading" aria-level="2">
             <span>Marketplace 🛒</span>
             <small id="market-post-trigger" style="color:var(--primary-green); cursor: pointer; font-weight: bold;"
@@ -3156,6 +3157,7 @@
             <div class="section-title" style="padding:0; margin-bottom:8px;"><span>ประกาศของฉัน</span></div>
             <div id="my-listings-container" style="display:grid; gap:8px;"></div>
         </div>
+        </div><!-- /marketplace-section -->
     </div>
 
     <div id="usage" class="page">
@@ -6232,10 +6234,11 @@
                 const roomHtml = (item.showRoom && item.room)
                     ? `<span style="font-size:var(--fs-xs);color:#888;">ห้อง ${_esc(item.room)}</span>`
                     : '';
-                const actionLabel = item.category === 'service' ? '📞 นัดหมาย' : isFree ? '🙋 ขอรับ' : '💬 สนใจ';
-                const actionBtn = isOwn
-                    ? `<button type="button" data-mkt-act="close" data-mid="${safeId}" style="width:100%;padding:7px;background:#f3f4f6;color:#555;border:none;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;touch-action:manipulation;">✅ ปิดประกาศ</button>`
-                    : `<button type="button" class="btn-main" data-mkt-act="contact" data-mid="${safeId}" style="width:100%;padding:7px;font-size:var(--fs-xs);margin:0;touch-action:manipulation;">${actionLabel}</button>`;
+                // Unified CTA: every card opens detail modal. Owner-only actions
+                // (close, delete) moved INTO the detail modal — main feed no longer
+                // exposes destructive actions to confuse non-owners. Owners can still
+                // manage from "ประกาศของฉัน" section below for quick access.
+                const actionBtn = `<button type="button" class="btn-main" data-mkt-act="detail" data-mid="${safeId}" style="width:100%;padding:7px;font-size:var(--fs-xs);margin:0;touch-action:manipulation;">📖 อ่านรายละเอียด</button>`;
                 return `<div class="card" style="margin:0;padding:0;overflow:hidden;">
                     <div style="height:100px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">${imageHtml}</div>
                     <div style="padding:10px;">
@@ -6257,10 +6260,9 @@
                     if (!btn) return;
                     const id = btn.dataset.mid;
                     const act = btn.dataset.mktAct;
-                    if (act === 'close') return markMarketClosed(id);
-                    if (act === 'contact') {
+                    if (act === 'detail') {
                         const it = _marketItems.find(i => i.id === id);
-                        if (it) contactSeller(it);
+                        if (it) openMarketDetail(it);
                     }
                 });
                 container._mktDelegated = true;
@@ -6319,6 +6321,85 @@
             document.querySelectorAll('.market-pill').forEach(p => p.classList.remove('market-pill-active'));
             if (btn) btn.classList.add('market-pill-active');
             renderMarketFeed();
+        }
+
+        // Open the full-detail modal for a marketplace listing. The main feed cards
+        // intentionally show ONLY a "อ่านรายละเอียด" CTA — destructive owner actions
+        // (close, delete) live INSIDE this modal so non-owners never see them.
+        // Owner gating is by ownerUid match; the same gate is enforced server-side
+        // in firestore.rules:77 (update allowed only for admin OR ownerUid match).
+        function openMarketDetail(item) {
+            if (!window.GhModal || !item) {
+                // Fallback: if modal helper hasn't loaded, jump straight to contact.
+                if (item) contactSeller(item);
+                return;
+            }
+            const isFree   = item.category === 'free';
+            const isOwn    = item.ownerUid === window._authUid;
+            const priceText = isFree ? 'ฟรี' : '฿' + (item.price || 0);
+            const priceBg  = isFree ? '#F0FDF4' : '#FFF7ED';
+            const priceCol = isFree ? '#16A34A' : '#D97706';
+            const actionLabel = item.category === 'service' ? '📞 นัดหมายผู้ให้บริการ'
+                : isFree ? '🙋 ขอรับของ' : '💬 ติดต่อผู้ขาย';
+
+            // Build body via DOM API (avoid innerHTML — §7-X footgun + XSS).
+            const body = document.createElement('div');
+            body.style.cssText = 'display:flex;flex-direction:column;gap:12px;';
+
+            if (item.imageData) {
+                const img = document.createElement('img');
+                img.src = item.imageData;
+                img.alt = item.title || '';
+                img.style.cssText = 'width:100%;border-radius:12px;max-height:280px;object-fit:cover;';
+                body.appendChild(img);
+            }
+
+            const meta = document.createElement('div');
+            meta.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;';
+            const priceBadge = document.createElement('span');
+            priceBadge.style.cssText = 'background:' + priceBg + ';color:' + priceCol + ';padding:4px 12px;border-radius:8px;font-weight:700;font-size:var(--fs-sm);';
+            priceBadge.textContent = priceText;
+            meta.appendChild(priceBadge);
+            if (item.showRoom && item.room) {
+                const roomBadge = document.createElement('span');
+                roomBadge.style.cssText = 'color:#666;font-size:var(--fs-sm);';
+                roomBadge.textContent = '· ห้อง ' + item.room;
+                meta.appendChild(roomBadge);
+            }
+            body.appendChild(meta);
+
+            if (item.desc) {
+                const desc = document.createElement('p');
+                desc.style.cssText = 'color:#444;white-space:pre-wrap;margin:0;font-size:var(--fs-base);line-height:1.6;';
+                desc.textContent = item.desc;
+                body.appendChild(desc);
+            }
+
+            if (item.lineDisplayName) {
+                const owner = document.createElement('p');
+                owner.style.cssText = 'color:#888;font-size:var(--fs-xs);margin:0;';
+                owner.textContent = 'โดย: ' + item.lineDisplayName;
+                body.appendChild(owner);
+            }
+
+            const actions = [];
+            if (isOwn) {
+                // Owner: destructive actions (matches firestore.rules:77 — only owner/admin can update/delete)
+                actions.push(
+                    { label: '🗑️ ลบประกาศ', variant: 'danger', onClick: m => { m.close(); deleteMarketItem(item.id); } },
+                    { label: '✅ ปิดประกาศ', variant: 'ghost',  onClick: m => { m.close(); markMarketClosed(item.id); } }
+                );
+            } else {
+                actions.push({ label: actionLabel, variant: 'primary', onClick: m => { m.close(); contactSeller(item); } });
+            }
+            actions.push({ label: 'ปิด', variant: 'ghost', onClick: m => m.close() });
+
+            window.GhModal.open({
+                title: item.title || 'รายละเอียดประกาศ',
+                body,
+                size: 'default',
+                actions
+            });
         }
 
         function contactSeller(item) {
@@ -9030,10 +9111,12 @@
         //   - Building info page (Nest is the only building with shared facility info card)
         //   - Water/Electricity usage charts (Nest has shared meter dashboards; Rooms bills cover this)
         //   - Smart Key (Nest QR door access; Rooms uses physical keys)
+        //   - Marketplace (Nest-only tenant economy; home MARKET tile + community-page section)
         const NEST_ONLY_ELEMENT_IDS = [
             'profile-points-banner', 'profile-tab-nav', 'profile-rewards-card',
             'nav-smart-key-btn', 'pet-list-container', 'daily-modal',
-            'contract-quiz-section', 'wellness-claim-area'
+            'contract-quiz-section', 'wellness-claim-area',
+            'home-market-tile', 'marketplace-section'
         ];
 
         // ===== FEATURE FLAG =====
