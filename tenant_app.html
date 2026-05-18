@@ -13126,6 +13126,7 @@
       let _clSigDrawing = false;
       let _clSigLastPos = null;
       let _clUploading  = false;
+      let _clClaimWait  = 0;      // claim-token retry counter
 
       // ── Signature pad setup ───────────────────────────────────────────────
       function _initSignatureCanvas() {
@@ -13544,9 +13545,24 @@
             // actually carry building/room claims; let liffLinked re-fire later.
             try {
               const u = window.firebaseAuth?.currentUser;
-              const tok = u ? await u.getIdTokenResult() : null;
+              // First read is cached. If claims look missing, force-refresh once
+              // to pull the latest token from Firebase auth servers — covers the
+              // window where signInWithCustomToken JUST completed but the cached
+              // ID token still reflects the prior anon UID.
+              let tok = u ? await u.getIdTokenResult() : null;
+              if (u && (!tok?.claims?.room || !tok?.claims?.building)) {
+                try { tok = await u.getIdTokenResult(true); } catch (_) { /* keep cached */ }
+              }
               if (!tok?.claims?.room || !tok?.claims?.building) {
                 if (_clStatusEl) _clStatusEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">⏳ กำลังเชื่อมต่อกับ LINE — รอสักครู่...</div>';
+                // One auto-retry — catches the case where liffLinked hasn't
+                // dispatched for this page yet (mid-sign-in navigation).
+                // Without this, the page sat on ⏳ forever because the listener
+                // had already missed the liffLinked event.
+                if (_clClaimWait < 1) {
+                  _clClaimWait++;
+                  setTimeout(_clInitOnce, 2500);
+                }
                 return;
               }
               // Pin query inputs to the TOKEN values so rule-eval is provably
