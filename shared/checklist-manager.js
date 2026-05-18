@@ -214,6 +214,20 @@
     return path;
   }
 
+  // CSP `connect-src 'self' https: wss:` blocks `fetch('data:...')` — Chromium
+  // treats data URL fetches as network calls subject to connect-src. Decode the
+  // base64 payload synchronously instead so the upload doesn't depend on a CSP
+  // permissiveness we don't want to add.
+  function _dataUrlToBlob(dataUrl) {
+    const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
+    if (!m) throw new Error('Invalid data URL');
+    const mime = m[1];
+    const bin = atob(m[2]);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return new Blob([u8], { type: mime });
+  }
+
   /**
    * Upload a base64 data-URL signature PNG to Storage.
    * @param {string} dataUrl  e.g. "data:image/png;base64,..."
@@ -222,10 +236,7 @@
   async function uploadSignature(instanceId, building, roomId, dataUrl) {
     const path = `checklists/${building}/${roomId}/${instanceId}/signature_tenant.png`;
     const ref = _storageRef(path);
-
-    // Convert data-URL to Blob
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
+    const blob = _dataUrlToBlob(dataUrl);
     await _uploadBytes(ref, blob, { contentType: 'image/png' });
     return path;
   }
@@ -237,8 +248,7 @@
   async function uploadAdminSignature(instanceId, building, roomId, dataUrl) {
     const path = `checklists/${building}/${roomId}/${instanceId}/signature_admin.png`;
     const ref = _storageRef(path);
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
+    const blob = _dataUrlToBlob(dataUrl);
     await _uploadBytes(ref, blob, { contentType: 'image/png' });
     return path;
   }
