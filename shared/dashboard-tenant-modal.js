@@ -1,7 +1,13 @@
 // ===== TENANT MODAL MANAGEMENT =====
-let currentEditRoomId = null;
-let currentEditBuilding = null;
-let currentEditTenantId = null;
+// Cross-script edit context — set here, read by dashboard-pdpa-erasure.js +
+// dashboard-extra.js + dashboard-main.js. MUST live on `window`: a `let` at
+// script-top-level is block-scoped to THIS <script> tag and invisible to
+// sibling scripts (the original cause of "ไม่มี tenantId" in PDPA erasure
+// modal — pre-existing since 2026-05-14). All writers below use
+// `window.X = ...` so siblings can read via `window.X` or bareword lookup.
+window.currentEditRoomId = null;
+window.currentEditBuilding = null;
+window.currentEditTenantId = null;
 
 const MONTHS_TH_SHORT = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
@@ -79,8 +85,8 @@ function openTenantModal(building, roomId) {
     building = detectBuildingFromRoomId(roomId);
   }
 
-  currentEditRoomId = roomId;
-  currentEditBuilding = building;
+  window.currentEditRoomId = roomId;
+  window.currentEditBuilding = building;
   const modal = document.getElementById('tenantModal');
 
   // Use TenantLookup to get room occupancy info
@@ -90,7 +96,7 @@ function openTenantModal(building, roomId) {
   const room = occupancyInfo.room || {};
 
   // Set tenant ID for this edit session
-  currentEditTenantId = lease.tenantId || null;
+  window.currentEditTenantId = lease.tenantId || null;
 
   // Get correct rent from RoomConfigManager
   let rentPrice = room.rentPrice || 0;
@@ -279,7 +285,7 @@ function closeTenantModal() {
   const modal = document.getElementById('tenantModal');
   modal.style.display = ''; // clear inline display:flex set in openTenantModal
   modal.classList.add('u-hidden');
-  currentEditRoomId = null;
+  window.currentEditRoomId = null;
   // Hide lease history if open — clear inline display too for symmetry
   const hist = document.getElementById('tenantLeaseHistorySection');
   if (hist) { hist.style.display = ''; hist.classList.add('u-hidden'); }
@@ -578,7 +584,7 @@ function saveTenantInfo() {
       contractFileName: contractFileNameValue,
       contractDocument: contractDocumentValue
     });
-    currentEditTenantId = tenantId; // Update for future edits
+    window.currentEditTenantId = tenantId; // Update for future edits
   }
 
   // Also save to legacy tenant_data for backward compatibility

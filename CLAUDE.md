@@ -633,6 +633,35 @@ grep -n "_liffClaims" tenant_app.html
 
 2026-05-17: fixed in `_clInitOnce`, warm-up callback, and facility-booking `showSubPage` handler (commit `55f6295`). Checklist page was stuck at ⏳ forever; facility-booking read the same phantom object. Same class as §7-A (wrong auth hook) but specifically about a non-existent object rather than a wrong event.
 
+### CC. `let X` at script top-level is NOT on `window` — cross-script readers see `undefined`
+
+Multiple `<script>` tags share the global scope ONLY for `var` and `function` declarations. `let` and `const` at script top-level are **block-scoped to that one `<script>` tag** — sibling scripts cannot see them via `window.X` OR via bareword lookup.
+
+```html
+<!-- script-A.js -->
+let currentEditTenantId = null;            // block-scoped to THIS script
+function setIt() { currentEditTenantId = 'abc'; }  // implicit-global write IF non-strict — silently DIFFERENT variable from above
+
+<!-- script-B.js (sibling) -->
+console.log(window.currentEditTenantId);   // undefined — the `let` is invisible here
+```
+
+Incident 2026-05-19: PDPA §32 erasure (`dashboard-pdpa-erasure.js`) reads `window.currentEditTenantId`. The value is declared `let currentEditTenantId = null;` in `dashboard-tenant-modal.js`. Cross-script read → `undefined` → toast "ห้องนี้ยังไม่มี tenantId" even though tenant modal clearly showed สมชาย สิบห้า ห้อง 15. Latent since the PDPA admin UI shipped 2026-05-14. Fixed in `shared/dashboard-tenant-modal.js` by converting the 3 declarations + 5 assignment sites to explicit `window.X = ...`.
+
+**Rule:** anything that needs to be visible across `<script>` tags MUST be either:
+- `window.X = ...` at top-level declaration AND at each assignment site (explicit, recommended)
+- `var X = ...` (works via hoisting but easy to miss; non-strict-mode-only)
+- NEVER `let X = ...` at top level if a sibling script reads it
+
+Audit recipe — before adding a new file that reads `window.X` from a sibling file:
+```bash
+# Find the WRITER of X
+grep -rn "^\s*\(let\|const\|var\|window\.\)\s*X\b" shared/
+# If it's `let`, the read won't work. Convert writer to `window.X` first.
+```
+
+Closely related to §7-T (two writers, one reader — field-name drift) and §7-BB (phantom window object). All three are "data flows differently than the code suggests" patterns. The §1 verify-via-grep doctrine catches drift in memory docs; this anti-pattern catches it in JS module boundaries.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
