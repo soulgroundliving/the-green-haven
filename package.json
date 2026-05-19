@@ -11,6 +11,8 @@
     "verify:memory:all": "node tools/verify-memory.js --all-memory",
     "audit:auth": "node tools/audit-auth-callbacks.js",
     "audit:size": "node tools/audit-file-sizes.js",
+    "smoke": "node tools/smoke-test/runner.js",
+    "smoke:verify": "node tools/smoke-test/verify.js",
     "lint": "eslint .",
     "install:hooks": "node tools/install-git-hooks.js",
     "postinstall": "node tools/install-git-hooks.js",

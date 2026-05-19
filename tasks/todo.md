@@ -1,228 +1,193 @@
-# Lease-Expiry Auto-Notifier — 60d / 30d → 🔔 Bell + Admin
+# Chrome MCP Smoke Test — 5 critical flows
 
 **Status:** plan-first, awaiting approval. Do NOT edit code until ✅ from user.
-**Supersedes:** previous C4 Session 2 plan (shipped 2026-05-18, see `next_session_handoff_2026_05_18_c4_announcements_phase2.md`).
+**Triggered by:** open follow-up #6 Plan #4 from `next_session_handoff_2026_05_19_evening_3_followups_closeout.md`.
+**Why now:** the morning's audit gates (§7-A/U/Z + file-size) catch static drift, but live regressions (login broken / bill won't render / verifySlip failing) still slip through. A repeatable smoke playbook closes that gap.
 
-## Goal (user request 2026-05-19)
+## Goal
 
-> "อยากให้แจ้งลูกบ้านอัตโนมัติไปเลยภายใน 60 วันมีแจ้งเตือน 1 รอบ และ 30 วัน อีก 1 รอบ
-> โดยที่แจ้งในกระดิ่งและสามารถกด redirect ไปที่หน้าต่อสัญญาได้อัตโนมัติ
-> ส่วนในหน้าแอดมินก็แจ้งเตือนอัตโนมัติ"
+A deterministic regression-catch script that Claude can run in any future session via **one command** (`npm run smoke`), exercising 5 critical user flows end-to-end against https://the-green-haven.vercel.app in **<10 minutes**, with **zero production data mutation by default**.
 
-**Two reminders only:** one when daysRemaining first hits ≤ 60, one when daysRemaining first hits ≤ 30. After that, no further notifications until renewal / move-out. Bell click → `contract-action-page`. Admin dashboard mirrors the same alerts.
+## Scope split — Chrome MCP cannot enter LIFF
 
-This **supersedes** the always-on `_leaseAlertItem()` we just shipped (`b039bc8`) — that one is "warn continuously while in window" which conflicts with the user's "exactly 2 reminders" spec. The local synthesizer comes out.
+Reality check: Chrome MCP runs in a regular Chromium tab, no LIFF SDK, no LINE auth handshake. Per [auth_liff_sot.md](../../../.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/auth_liff_sot.md), LIFF entry requires real LINE app. So "5 flows" splits two ways:
+
+| # | Domain | Admin browser (Chrome MCP, automatable) | Tenant LIFF (manual, user-only) |
+|---|--------|------------------------------------------|---------------------------------|
+| 1 | Login | admin login.html → dashboard, claims=`admin:true` | LINE → LIFF entry → `_taBuilding`/`_taRoom` set |
+| 2 | Bill | admin opens bill detail modal | tenant sees bill list + click→detail |
+| 3 | Slip | admin views verified slip in bill modal | tenant uploads slip → verifySlip CF runs |
+| 4 | Checklist | admin opens instance + co-sign UI + PNG export | tenant fills checklist + photo + signature |
+| 5 | Deposit | admin opens deposit page + deductions + receipt | tenant sees deposit badge in profile |
+
+**This plan covers the ADMIN side only** (Chrome MCP-driven, 100% automatable, every session). The tenant LIFF side already has `tasks/liff-verify-checklist.md` (manual, real-LINE-only); a tightened "5-flow extract" of it ships as a secondary deliverable.
 
 ## Architecture
 
-**Single source of truth:** new Firestore collection `leaseNotifications/{building}_{room}_{milestone}` (deterministic doc ID for idempotency).
+Hybrid model — playbook + verifier — mirrors `seed-lease-notif-test.js` + `liff-verify-checklist.md` patterns already in the repo. NO new deps (no Playwright/Puppeteer — Chrome MCP is the driver, Node verifier is post-check).
 
 ```
-leaseNotifications/{docId}                    docId = `${b}_${r}_${ms}`  e.g. "rooms_15_60d"
-├─ building              string  ('rooms' | 'nest')
-├─ room                  string  ('15' / 'N101')
-├─ tenantId              string  (people/{id})
-├─ tenantName            string  (denormalized for admin display)
-├─ milestone             string  ('60d' | '30d')
-├─ leaseEndDate          timestamp
-├─ daysRemainingAtEmit   number   (e.g. 58 if CF caught up after a missed day)
-├─ createdAt             timestamp  (serverTimestamp)
-├─ status                string  ('unread' | 'read' | 'stale')
-└─ lastReadAt            timestamp?  (when tenant opened the bell entry)
+┌─────────────────────────────────────────────────────────────┐
+│  npm run smoke                                              │
+│   ├─→ prints tasks/smoke-test-admin-playbook.md path        │
+│   ├─→ Claude executes Chrome MCP steps from playbook        │
+│   └─→ npm run smoke:verify                                  │
+│         └─→ Node script asserts post-conditions via REST    │
+│             (e.g. "did login session land + claims present")│
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Trigger:** new scheduled CF `leaseExpiryNotifier` runs daily 09:00 BKK in asia-southeast1.
+**Why hybrid not pure-script:**
+- Chrome MCP can't be driven from Node — only Claude as the agent.
+- Pure markdown playbook = no post-condition checks (eye-only).
+- Hybrid: playbook drives the UI, Node verifier asserts the data → both fail loudly.
 
-**Catch-up logic** (handles missed days, deploy gaps, paused tenants):
-```
-for each active lease (tenants/{b}/list/{r}):
-  daysRemaining = ceil((endDate - now) / 86400000)
-  if daysRemaining > 60: continue                                  # too early
-  if daysRemaining <= 60 AND !exists(`${b}_${r}_60d`):
-    write the 60d doc
-  if daysRemaining <= 30 AND !exists(`${b}_${r}_30d`):
-    write the 30d doc
-```
+**Playbook structure** (mirrors `liff-verify-checklist.md`):
+- Pre-flight (login state, network reachable, console clean)
+- 5 flow sections, each with: navigate → action → observe → assert (DOM/console/network)
+- Each step has `☐ Pass / ☐ Fail` + expected screenshot trigger
+- Post-run: paste console errors / failed screenshot list back to Claude → regression report
 
-Idempotency via deterministic ID + existence check → safe to re-run, safe to ship a backfill day-1.
+**Verifier responsibilities** (in `tools/smoke-test/verify.js`):
+- `--check-login` — given session cookie, confirm `admin: true` claim via REST `getIdTokenResult` echo
+- `--check-bill <building> <room>` — REST GET bills/{building}/{room} → assert structure (no empty body, has `totalAmount`)
+- `--check-checklist-instance <id>` — REST GET → assert `status`, `photos`, `signatures` fields present
+- `--check-deposit <building> <room>` — REST GET → assert `originalAmount` + structure
+- All read-only, all use firebase-tools OAuth (same pattern as `seed-lease-notif-test.js`).
 
-**Tenant bell read path:**
-- New onSnapshot subscriber in `tenant_app.html` — filters `leaseNotifications/` by `building == token.building AND room == token.room`
-- Result is 0–2 docs, prepended to bell list (same render slot as current `_leaseAlertItem`, same yellow-band styling)
-- Click handler on the lease-notification row → `showSubPage('contract-action-page')` + write `status:'read', lastReadAt: serverTimestamp()`
-- Remove the local `_leaseAlertItem()` synthesizer + `displayLeaseRenewalAlert` shim
-
-**Admin dashboard:**
-- Replace local localStorage compute in `populateLeaseAlerts` (`shared/dashboard-extra.js:~625-706`, hard-coded 30d threshold) with Firestore subscription on `leaseNotifications/` grouped by building + milestone
-- Existing UI cards (`#lease-expiry-alerts` rooms / `#nest-lease-expiry-alerts` nest) reused — just data source flip
-- New visual: group by milestone ("60 วัน (X)" then "30 วัน (Y)") inside each card
-- Click admin row → opens People Mgmt drawer for that tenantId (existing pattern)
+**Read-only by default** — no slip upload, no checklist creation, no deposit return in default `npm run smoke`. Those require explicit `npm run smoke:write` (opt-in, uses dedicated test data, separate plan if needed).
 
 ## Files Touched
 
 | File | Change | Why |
 |------|--------|-----|
-| `functions/leaseExpiryNotifier.js` | **NEW** scheduled CF (~120 LOC) | Daily cron, scans tenants, writes notifications |
-| `functions/index.js` | export the new CF | Wire into deploy graph |
-| `firestore.rules` | add rules for `leaseNotifications/{docId}` | tenant read own, admin read all, CF/admin write |
-| `firestore.indexes.json` | composite index `(building, room)` + `(building, milestone, status)` | needed for the two query shapes |
-| `tenant_app.html` | swap `_leaseAlertItem` synth → onSnapshot subscriber + click handler with CTA | bell shows server doc, click → renewal page |
-| `shared/dashboard-extra.js` + `dashboard.html` | replace `populateLeaseAlerts` localStorage compute → Firestore subscription | admin sees same server truth |
-| `memory/lifecycle_lease_action.md` | append "Auto-notifier" section | doc the new lifecycle |
-| `memory/lifecycle_scheduled_jobs.md` | bump CF count + register `leaseExpiryNotifier` | scheduled-job index |
-| `memory/MEMORY.md` | update lifecycle_lease_action.md line description | index sync |
+| `tasks/smoke-test-admin-playbook.md` | **NEW** (~250 LOC) | 5-flow Chrome MCP playbook, ☐ Pass/Fail per step |
+| `tasks/smoke-test-liff-playbook.md` | **NEW** (~80 LOC) | Tightened LIFF extract (tenant side) — 5 same domains, user runs in LINE |
+| `tools/smoke-test/verify.js` | **NEW** (~200 LOC) | Node post-check asserter via REST + firebase-tools OAuth |
+| `tools/smoke-test/README.md` | **NEW** (~40 LOC) | One-page how-to (npm run smoke, env setup, troubleshooting) |
+| `package.json` | add 2 scripts: `smoke`, `smoke:verify` | `npm run smoke` = print playbook path + remind sequence; `smoke:verify` = run verifier |
+| `memory/lifecycle_smoke_test.md` | **NEW** (~120 LOC) | Document the playbook lifecycle: when to run, expected runtime, recent failures log |
+| `memory/MEMORY.md` | append `🧭 Reference` entry | Index entry pointing to lifecycle_smoke_test.md |
 
-Total: ~7 code files (1 new), 1 new CF, 1 new collection, 1 rules block, 1 index pair, 3 memory docs.
+Total: 5 new files + 2 small mods. No production code touched. Zero deploy risk.
 
 ## Sprint Plan
 
-### S1 — Server-side (~30 min)
-- [ ] `functions/leaseExpiryNotifier.js` — scheduled CF, asia-southeast1, daily 09:00 BKK, Asia/Bangkok tz
-- [ ] Export in `functions/index.js`
-- [ ] `firestore.rules` — add `match /leaseNotifications/{docId}` block:
-  - tenant read: `request.auth.token.building == resource.data.building && request.auth.token.room == resource.data.room`
-  - tenant update: same gate, only `status` + `lastReadAt` fields mutable
-  - admin read+write: all
-  - CF write: bypasses rules (admin SDK)
-- [ ] `firestore.indexes.json` — composite indexes for the 2 query shapes
-- [ ] Deploy: `firebase deploy --only functions:leaseExpiryNotifier,firestore:rules,firestore:indexes`
-- [ ] Trigger CF manually once via Cloud Scheduler (or pubsub topic publish) — verify it writes docs for any currently-eligible leases without crashing
-- [ ] **Commit + push**
+### S1 — Verifier core (~45 min)
 
-### S2 — Tenant bell (~25 min)
-- [ ] Add module state in `tenant_app.html`: `_taLeaseNotifsUnsub`, `_taLeaseNotifs = []`
-- [ ] Add `_subscribeLeaseNotifications()` — gated via `_onLiffClaimsReady` (per §7-A/U), claim-presence guard, error callback (per §7-N), prior-unsub teardown on rebind (per §7-V)
-- [ ] Rewrite `_leaseAlertItem` to **read from `_taLeaseNotifs`** instead of computing locally; return most recent unread doc (30d wins over 60d if both exist) as the synthesized bell entry
-- [ ] Add click handler on the lease-notification row → `showSubPage('contract-action-page')` + setDoc merge `status:'read', lastReadAt: serverTimestamp()`
-- [ ] Remove (or stub) `displayLeaseRenewalAlert` — subscription drives re-render directly
-- [ ] **Commit + push, verify on Chrome MCP** (mock lease end-date to trigger 60d/30d, see bell entry, click → renewal page redirects)
+- [ ] Scaffold `tools/smoke-test/verify.js` with arg parser + firebase-tools OAuth bootstrap (copy from `seed-lease-notif-test.js`)
+- [ ] Implement `--check-login` (echoes user record + claim check) using `admin.auth().getUser(uid)` via REST
+- [ ] Implement `--check-bill <building> <room> [year]` — REST GET RTDB `bills/<building>/room-{r}/{year}/{month}` → assert keys
+- [ ] Implement `--check-checklist-instance <id>` — REST GET Firestore `checklists/{id}` → assert non-empty
+- [ ] Implement `--check-deposit <building> <room>` — REST GET Firestore `deposits/{b}_{r}` → assert `originalAmount` field
+- [ ] All checks output structured JSON (pass/fail + diagnostic) so the playbook can grep / pipe
 
-### S3 — Admin dashboard (~25 min)
-- [ ] Replace `populateLeaseAlerts` in `shared/dashboard-extra.js` (currently localStorage compute at 30d, lines ~625-706) with Firestore subscription on `leaseNotifications/`
-- [ ] Same building split (rooms vs nest), same `#lease-expiry-alerts` / `#nest-lease-expiry-alerts` containers
-- [ ] Group rendered items by milestone with sub-headers
-- [ ] Click row → opens People Mgmt drawer for that tenantId
-- [ ] Tear-down listener pattern (per §7-V — `realtimeListeners.leaseNotifs` slot, unsub before rebind)
-- [ ] **Commit + push, verify on Chrome MCP** (admin sees the 60d + 30d entries in both buildings' cards)
+### S2 — Admin playbook (~60 min)
 
-### S4 — Memory + verify (~15 min)
-- [ ] Append "Auto-notifier (2026-05-19)" section to `memory/lifecycle_lease_action.md` with grep-verifiable claims (file + line + function name + collection path)
-- [ ] Update `memory/lifecycle_scheduled_jobs.md` — bump CF count from 9 → 10, register `leaseExpiryNotifier` schedule + region
-- [ ] Update `memory/MEMORY.md` — bump lifecycle_lease_action.md line description
-- [ ] Run `npm run verify:memory` — green
-- [ ] **Commit + push**
+- [ ] Write `tasks/smoke-test-admin-playbook.md` covering 5 flows (login / bill / slip / checklist / deposit) from admin side
+- [ ] Each flow: Pre-state → Chrome MCP commands (literal) → Expected DOM/console/network → ☐ Pass/Fail + Obs column
+- [ ] Reference the verifier commands inline (`Run: node tools/smoke-test/verify.js --check-bill rooms 15`)
+- [ ] Pre-flight section (browser ready, Vercel reachable, admin credentials in env)
+- [ ] Failure-mode appendix (most likely break per flow + fastest diagnostic)
 
-## Risks & decisions
+### S3 — LIFF playbook (tightened) (~30 min)
 
-1. **Audience-per-tenant in `announcements/`?** Decided NO. The existing `audience: 'all'|'rooms'|'nest'` enum is building-scoped. Extending it to per-tenant would require schema changes across `publishAnnouncement` CF, bell subscriber, and rules — wider blast radius than introducing a focused `leaseNotifications/` collection. Less coupling: lease lifecycle owns its own collection.
+- [ ] Extract from `liff-verify-checklist.md` only the 5-flow-relevant rows (skip C4/PDPA-specific etc.)
+- [ ] Write `tasks/smoke-test-liff-playbook.md` — 5 sections matching admin playbook 1:1 (so cross-side regressions are visible)
+- [ ] Add "When to run" note: after any deploy that touches tenant_app.html / functions/verifySlip.js / functions/liffSignIn.js
 
-2. **Reuse existing `_leaseAlertItem` rendering?** Yes — same yellow-band styling, same virtual-item marker. Just swap data source from local compute to subscriber state. Minimizes UI churn.
+### S4 — Wiring + dry-run + memory (~45 min)
 
-3. **What if a tenant never opens the app?** They miss the in-app bell. LINE push integration is OUT of scope for this sprint — flag as follow-up. Admin can still see the dashboard alert and reach out manually.
+- [ ] Add `package.json` scripts: `"smoke": "echo 'Open tasks/smoke-test-admin-playbook.md and execute via Chrome MCP. Then run npm run smoke:verify.'"`, `"smoke:verify": "node tools/smoke-test/verify.js"`
+- [ ] Live dry-run: Claude executes playbook via Chrome MCP against https://the-green-haven.vercel.app, fills ☐ columns with actual observations, captures any drift between playbook expectation and reality
+- [ ] Fix any expectation-drift found during dry-run (playbook is wrong, not the app)
+- [ ] Write `memory/lifecycle_smoke_test.md` with verifier grep commands per §1 verify-via-grep doctrine
+- [ ] Append `MEMORY.md` reference entry
+- [ ] `npm run verify:memory` exit 0 ✓
 
-4. **What if lease end date changes (renewal approved, admin edited)?** The notification docs become stale (still say "60d left" when actual is now further out). Decision: scheduled CF re-evaluates daily; if `daysRemainingAtEmit` no longer matches reality (lease was renewed, endDate moved out > 60d), mark doc `status:'stale'`. Tenant + admin still see them as historical record. Cleaner audit trail than silent deletions.
+## Risks
 
-5. **§7-A / §7-U risk** (auth-callback bypass): new tenant subscriber MUST go through `_onLiffClaimsReady` with `if (!_taBuilding) return` claim guard. Pre-commit `audit:auth` gate will catch a missed wrapper.
+| Risk | Mitigation |
+|------|------------|
+| **Admin credentials in repo** | NEVER commit. Use `process.env.SMOKE_ADMIN_EMAIL` / `SMOKE_ADMIN_PASSWORD` (set in shell, document in `tools/smoke-test/README.md`). Verifier prompts if missing. |
+| **Production data pollution** | Default mode is READ-ONLY. Write-path smoke (`smoke:write`) is opt-in, separate plan if/when needed. |
+| **Firebase Auth token refresh mid-run** | Smoke targets <10 min runtime, well inside 1h refresh window. If a future smoke grows past 1h, add re-login step. |
+| **Vercel cold start skews timings** | Playbook expectations describe DOM state, not timing. First page load can warm-cache; subsequent assertions are deterministic. |
+| **Playbook drift vs reality** | S4 dry-run catches this on day 1. Going forward, every run that flags drift updates the playbook in the same commit. |
+| **Chrome MCP capability gap** | If a flow can't be exercised via MCP (e.g. file upload), document the gap explicitly in the playbook + cover via LIFF playbook. |
+| **§7-J ("static deploy ≠ live-verified") loops** | Smoke run = the closure. Replaces ad-hoc Chrome MCP poking with a fixed checklist. |
 
-6. **§7-V risk** (listener leaks): the new subscribers (both tenant + admin) must store unsubscribe in a stable slot AND tear down the prior listener before rebinding. Otherwise multiple subscriptions stack across rerenders.
+## Open questions (need ✓ before S1 starts)
 
-7. **§7-N risk** (silent onSnapshot errors): every onSnapshot MUST have an error callback. Silent `permission-denied` during init = stuck state with no diagnostic.
+1. **Admin credentials source** — use env vars `SMOKE_ADMIN_EMAIL` + `SMOKE_ADMIN_PASSWORD`, OR a `.env.local` file (gitignored)? Recommend **env vars** (one less file, CI-friendly later).
 
-8. **§7-Z claim risk:** the rule `request.auth.token.room == resource.data.room` requires the persistent custom claims fix from `a5f4e5a` (`setCustomUserClaims` in `liffSignIn`). Already shipped; new tenants are good. Pre-existing tenants who never re-opened LINE since 2026-05-18 may have stale tokens — they'd see permission-denied until next sign-in. Acceptable transitional state; admin can re-trigger via "ลิงก์ LINE" flow if needed.
+2. **Verifier auth model** — same as `seed-lease-notif-test.js` (firebase-tools OAuth via `firebase login`)? Recommend **yes** — already proven, zero new setup.
 
-9. **Pre-commit hooks:** verify-memory + audit-auth + audit-size + anti-pattern detection all run automatically. No special bypass needed.
+3. **Test data assumptions** — verifier needs at least one known room with bills/checklist/deposit. Use `rooms/15` (already exists, used for lease-notif test)? Recommend **yes** — same fixture, document as "smoke fixture room".
 
-## Estimated total time: ~95 min across 4 sprints, ~4 commits
+4. **Tenant LIFF playbook scope** — re-summarize from `liff-verify-checklist.md` or just keep that file as-is and reference? Recommend **re-summarize** — `liff-verify-checklist.md` is C4-era specific (PDPA, C4 announcements). The smoke version is more durable.
 
-## Branch / push plan
+## Success criteria
 
-- Current worktree branch `claude/nervous-bhabha-7b1503`, pushing directly to `main` (project workflow §5)
-- 4 atomic commits along sprint boundaries — each independently revertable
-- Vercel auto-deploys static; Firebase CLI deploys CF + rules + indexes
+- ✅ `npm run smoke` prints playbook path
+- ✅ Claude executes playbook via Chrome MCP in <10 min, fills observations
+- ✅ `npm run smoke:verify` exits 0 on healthy app, exits 1 with diagnostic on broken
+- ✅ Zero production data created/modified in default mode
+- ✅ S4 dry-run produces a baseline-clean checklist with all ☐ ticked Pass
+- ✅ `npm run verify:memory` passes (lifecycle_smoke_test.md grep-backed)
+- ✅ Future session: user says "run smoke" → Claude reads playbook → executes → reports
 
-## Verification checklist (rolled up to S4)
+## Deferred / NOT in scope
 
-- [ ] CF deployed, visible in GCP Console scheduled jobs (`firebase functions:list` or Console UI)
-- [ ] Manual trigger via Cloud Scheduler succeeds without errors; deployed CF logs show clean run
-- [ ] Mock lease (62d → set to 58d via Firestore Console): no doc written until ≤ 60d, then `${b}_${r}_60d` appears
-- [ ] Mock lease (30d): both `_60d` and `_30d` docs exist
-- [ ] Tenant bell shows the unread doc with click → renewal page redirect verified on Chrome MCP (admin preview)
-- [ ] Admin dashboard shows same docs grouped by milestone on Chrome MCP
-- [ ] Marking `status:'read'` from tenant click reflects in dashboard (no double-counts)
-- [ ] `npm run verify:memory` green
-- [ ] Optional / nice-to-have: a real Nest tenant on LINE LIFF (per §7-J)
+- Write-path smoke (`smoke:write`) — separate plan when first regression demands it
+- Playwright/Puppeteer migration — current Chrome MCP path is enough
+- CI integration (run on every deploy) — needs hosted browser + admin secret, separate infra discussion
+- Multi-environment (staging vs prod) — currently only prod exists
+- LIFF auto-run — impossible (LINE platform constraint, see auth_liff_sot.md)
 
-## After approval
+## Anti-pattern relevance
 
-Mark each item with ✅ as it ships. Append "Review" section at the end with: shipped / deferred / follow-ups (per CLAUDE.md §3).
+- **§7-J (static deploy ≠ live-verified)** — smoke IS the closure for this pattern
+- **§7-AA (pre-existing CF search)** — applied: no existing smoke runner, confirmed by grep `tools/` + `package.json`
+- **§7-I (production data actions — never automate)** — codified into the read-only default
+- **§7-N (onSnapshot must have error callback)** — verifier's REST-based checks bypass this hazard
+- **§1 verify-via-grep doctrine** — lifecycle_smoke_test.md will embed grep verifiers
 
 ---
 
-# Review (2026-05-19)
+**Approved 2026-05-19 evening (4) — "approve all defaults".** All 4 sprints shipped same session.
 
-## Shipped (5 commits → main)
+---
 
-| SHA | Sprint | Summary |
-|-----|--------|---------|
-| `ae3ebb0` | S1 | augment `remindLeaseExpiry.js` with `ensureLeaseNotificationDoc()` + new `firestore.rules` block for `leaseNotifications/{docId}` + 2 composite indexes |
-| `02aadfe` | S2 | tenant bell subscribes to `leaseNotifications/` (§7-A/U/V/N safe); replaces always-on `_leaseAlertItem()` synth; click → `contract-action-page` + mark all unread read; tier-aware colors + `แตะเพื่อต่อสัญญา →` CTA |
-| `0d02328` | S3 | admin dashboard Firestore subscription replaces localStorage compute in `populateLeaseAlerts`; grouped by tier in `#lease-expiry-alerts` / `#nest-lease-expiry-alerts`; per-tenant unread/read indicator dot |
-| `58da517` | S3.1 | §7-C fix — admin alert containers carry inline `style="display:none"` in dashboard.html; need explicit `style.display='block'` set (class toggle alone doesn't override inline) |
+## Review
 
-Plus deployed: `firestore.rules` + `firestore.indexes.json` (via `firebase deploy --only firestore:rules,firestore:indexes`).
+### Shipped (all sprints S1–S4 ✅)
 
-## Architecture pivot during sprint
+| Sprint | Output | Notes |
+|--------|--------|-------|
+| S1 | `tools/smoke-test/verify.js` (~250 LOC) | 4 subcommands: `login` / `bill` / `checklist-instance` / `deposit`. firebase-tools OAuth via configstore (mirror of `seed-lease-notif-test.js`). Read-only. Added `inconclusive: true` flag during S4 dry-run to separate "fixture absent" from "feature broken". |
+| S2 | `tasks/smoke-test-admin-playbook.md` (~270 LOC) | 5 flows (login/bill/slip/checklist/deposit) + pre-flight + failure-mode appendix + ☐ Pass/Inconclusive/Fail summary table. Selectors grep-verified against live Vercel. |
+| S3 | `tasks/smoke-test-liff-playbook.md` (~95 LOC) | Tightened 5-flow mirror for tenant LIFF, re-summarized from `liff-verify-checklist.md` (no reference, durable extract). User-driven only — Chrome MCP can't enter LIFF. |
+| S4 | `package.json` `smoke` + `smoke:verify` scripts · `tools/smoke-test/runner.js` (pre-flight + print) · `tools/smoke-test/README.md` (operator one-pager) · `memory/lifecycle_smoke_test.md` (grep-backed per §1) · `MEMORY.md` index updated (1 line in 🏛️ + 1 line in 🎯 Current state) · `npm run verify:memory` exits 0 (305 rows, +9 from this doc). |
 
-Original plan called for a NEW `leaseExpiryNotifier` CF. During S1 exploration I found `remindLeaseExpiry.js` already runs daily 08:00 BKK with 4 tiers (60/30/14/expired) + LINE push + `lease.lastExpiryTier` anti-spam — much of the work was done. Stopped, asked user, pivoted to **augmenting the existing CF** instead of duplicating. User confirmed "all 4 tiers" coverage (not just 60+30).
+### Dry-run findings (real-prod via firebase-tools OAuth)
 
-The pivot saved ~30 min of redundant work AND aligned admin-side notifications with the proven LINE push tier logic. Single source of truth: `leaseNotifications/{b}_{r}_{tier}` (where tier ∈ `expired|14|30|60`).
+| Probe | Result | Action |
+|-------|--------|--------|
+| `verify.js bill --building rooms --room 15` | ✅ 2 bills found (`TGH-256904-15-4735`, `TGH-256905-15-5811`) — RTDB + OAuth pipeline works | Kept rooms/15 as canonical smoke fixture |
+| `verify.js deposit --building rooms --room 15` | ❌ Doc not found — entire `deposits/` collection empty | Added inconclusive flag + softened pre-flight to ◯ informational |
+| `verify.js checklist-instance` | ❌ Entire `checklists/` collection empty | Same — Flow 4 starts inconclusive until tenant submits |
+| `curl https://the-green-haven.vercel.app/login.html` | ❌ 308 redirect → `/login` | Updated all URLs in playbook to canonical `/login` + `/dashboard` |
+| Login form selectors live | ✅ All 4 (`#loginEmail` `#loginPassword` `#loginBtn` `#loginForm`) | Playbook accurate |
+| Dashboard sidebar selectors live | ✅ All 5 (`data-page="bill" "tenant" "meter" "dashboard" "requests-approvals"`) | Playbook accurate |
 
-## Live verification (Chrome MCP, admin preview)
+### Deferred / NOT done
 
-**S2 tenant bell** (`?room=15&building=rooms`, mock doc `rooms_15_30`, tier=30, 28 days):
-- ✅ `_taLeaseNotifs` populated via onSnapshot
-- ✅ Bell badge shows count
-- ✅ Lease alert renders at top of bell with amber (`#e65100`) border + soft yellow bg + `แตะเพื่อต่อสัญญา →` CTA
-- ✅ Click closes bell, navigates to `#contract-action-page` ("จัดการสัญญาเช่า") with real tenant lease info
-- ✅ Doc flips to `status:'read'` + `lastReadAt` timestamp written
+- **Live Chrome MCP dry-run** — no admin creds in this worktree + no active browser session. Playbook selectors grep-verified statically against live Vercel HTML; first user run = baseline-calibration. Documented honestly in the handoff.
+- **Write-path smoke** (`smoke:write`) — separate scope per §7-I + Plan-First. File when first regression demands it.
+- **CI integration** — needs hosted browser + admin credential strategy. Separate infra discussion.
+- **Slash command for one-call execution** (`/smoke`) — productivity skill, future.
 
-**S3 admin dashboard** (Tenant Information page, mock docs across both buildings):
-- ✅ Rooms card: `⚠️ ใกล้หมดอายุ (30 วัน) (1)` + `📅 ใกล้หมดอายุ (60 วัน) (1)` — tier-grouped, per-tenant row, ● unread dot
-- ✅ Nest card: `🚨 เหลือไม่ถึง 14 วัน (1)` — red tier band
-- ✅ Listener wired via `setupLeaseNotifsListener()` from `initRoomsPage` + `initNestPage` (matches existing `setupMeterDataListener` pattern)
+### Plan #6 — only remaining follow-up
 
-## Memory updates
-
-- `lifecycle_lease_action.md` — appended "Auto-notifier" section with full architecture, tier colors, stale handling, rules + indexes. 5 grep-verifiable claims.
-- `lifecycle_scheduled_jobs.md` — `remindLeaseExpiryScheduled` row updated to note the new `leaseNotifications/` write behavior.
-- `MEMORY.md` — `lifecycle_lease_action.md` entry expanded to include the auto-notifier announcement.
-- `npm run verify:memory` → ALL GREEN (32 docs, 296 verifier rows, 0 fails).
-
-## Deferred — needs user action
-
-**CF deploy** — `firebase deploy --only functions:remindLeaseExpiryScheduled,functions:remindLeaseExpiry` from THIS worktree failed because `functions/.env` is gitignored and isn't present here (it exists in the main worktree at `C:\Users\usEr\Downloads\The_green_haven\functions\.env`). Options:
-
-1. **Deploy from main worktree:** `cd C:/Users/usEr/Downloads/The_green_haven && git pull && firebase deploy --only functions:remindLeaseExpiryScheduled,functions:remindLeaseExpiry`
-2. **Copy `.env` to this worktree** then deploy from here
-3. **Wait for next morning's 08:00 BKK run** — the scheduled job will emit notifications naturally; until then the new code paths in the CF aren't live yet, but the rules + indexes + read-path subscribers ARE deployed so anything written manually (or via direct Firestore Console insert) will surface in both tenant bell + admin dashboard.
-
-The rules + indexes deploy succeeded, so the new collection is operational from the read side. The CF write side just needs the deploy.
-
-## Follow-ups (not in scope of this sprint)
-
-1. **LINE push button target** — currently points to `?page=profile`; could be updated to `?page=contract-action` for symmetry with in-app bell click target. Single-line change to `TENANT_APP_URL` in `remindLeaseExpiry.js`.
-2. **"Lease cancelled" cleanup** — if admin manually voids a contract before the lease ends, the notification doc stays as `unread`. The daily sweep handles `endDate` extension (marks stale) but not contract cancellation. Would need a Firestore trigger on `tenants/{b}/list/{r}` deletion / status change.
-3. **Per-tenant LINE push opt-out** — some tenants might prefer admin-only contact for renewal. Currently no opt-out exists; bell + LINE both fire regardless. Could add `optOutLeaseExpiry: true` on the lease record.
-4. **Admin "mark all read" bulk action** — when admin reviews all alerts in one go, could mark all docs read with a single button instead of per-row. Out of scope; admin UI is read-only currently.
-
-## §7 anti-patterns avoided
-
-Tenant subscriber wired with all four safety patterns:
-- **§7-A**: `_onLiffClaimsReady` wrapper (not raw `addEventListener('authReady'|'liffLinked')`)
-- **§7-U**: claim-presence guard at the top (`if (!_taBuilding || !_taRoom) return`) — without it, the where() query would set unsub to a stale subscription with empty filters
-- **§7-V**: idempotency check; subscriber tears down prior listener via `realtimeListeners.leaseNotifs` slot (admin side)
-- **§7-N**: error callback resets unsub on `permission-denied` / `failed-precondition` so retry succeeds when claims/index land
-
-§7-C surfaced during admin verify — inline `style="display:none"` on `#lease-expiry-alerts` containers overrode my class-toggle. Fixed in `58da517` with explicit `style.display` set on both branches.
-
-Mock docs cleaned up — 3 deleteDoc calls completed; collection is empty pending CF deploy.
+`shared/dashboard-extra.js` refactor: currently **5,882 lines** (`Get-Content | Measure-Object -Line` 2026-05-19) — 69% of soft limit. Goal: 3-4 focused modules <2k each, preserve `window.X = ...` UMD exports. Plan-First scope. Deferred to next session per handoff `next_session_handoff_2026_05_19_evening_4_smoke_test.md`.
