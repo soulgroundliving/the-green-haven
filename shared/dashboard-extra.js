@@ -621,87 +621,122 @@ function updateOccupancyDashboard() {
   if (soonNestEl) soonNestEl.textContent = soonNest;
 }
 
-// ===== Lease Expiry Alerts =====
+// ===== Lease Expiry Alerts (server-emitted leaseNotifications/) =====
+// Replaces the prior localStorage `tenant_data.contractEnd` compute with a
+// Firestore subscription on the collection written by functions/remindLeaseExpiry.js
+// when daysRemaining crosses 60 / 30 / 14 / 0 milestones. Server is the
+// single source of truth; this client just renders from the cache populated
+// by setupLeaseNotifsListener (called from dashboard-property.js init flows).
+let _leaseNotifsCache = [];
+
+// Tier metadata — colors match the LINE Flex + tenant_app bell.
+const LEASE_TIER_META = [
+  { key: 'expired', label: '⛔ หมดอายุแล้ว',          color: '#b71c1c' },
+  { key: '14',      label: '🚨 เหลือไม่ถึง 14 วัน',   color: '#c62828' },
+  { key: '30',      label: '⚠️ ใกล้หมดอายุ (30 วัน)', color: '#e65100' },
+  { key: '60',      label: '📅 ใกล้หมดอายุ (60 วัน)', color: '#f57f17' }
+];
+
+const _LEASE_TIER_ORDER = { 'expired': 0, '14': 1, '30': 2, '60': 3 };
+
 function getExpiringLeases(buildingType = null) {
-  const tenantData = JSON.parse(localStorage.getItem('tenant_data') || '{}');
-  const tenants = tenantData.tenants || {};
-
-  // Use RoomConfigManager to get dynamic room list
+  // Reads from the Firestore-backed cache populated by setupLeaseNotifsListener.
+  // KPI count semantics preserved: original returned ≤30d only; we keep that
+  // by excluding the 60d tier (early warning, shown in the alert card but
+  // doesn't bump the "expiring soon" KPI count).
   const building = buildingType === 'nest' ? 'nest' : 'rooms';
-  const config = RoomConfigManager.getRoomsConfig(building);
-  const rooms = config.rooms
-    .filter(r => !r.deleted)
-    .map(r => r.id);
+  return _leaseNotifsCache
+    .filter(d => d.building === building && d.status !== 'stale' && d.tier !== '60')
+    .sort((a, b) => (_LEASE_TIER_ORDER[a.tier] ?? 99) - (_LEASE_TIER_ORDER[b.tier] ?? 99));
+}
 
-  const today = new Date();
-  const expiringLeases = [];
-
-  rooms.forEach(roomId => {
-    const tenant = tenants[roomId];
-    if (!tenant || !tenant.name || !tenant.contractEnd) return;
-
-    const endDate = new Date(tenant.contractEnd);
-    const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
-
-    if (daysLeft > 0 && daysLeft <= 30) {
-      expiringLeases.push({
-        roomId: roomId,
-        tenantName: tenant.name,
-        endDate: tenant.contractEnd,
-        daysLeft: daysLeft
-      });
-    }
-  });
-
-  // Sort by days left (closest first)
-  return expiringLeases.sort((a, b) => a.daysLeft - b.daysLeft);
+function _renderLeaseAlertCard(listEl, notifs) {
+  if (!listEl) return;
+  if (notifs.length === 0) { listEl.innerHTML = ''; return; }
+  // Group by tier; render most-urgent group first.
+  const byTier = {};
+  for (const t of LEASE_TIER_META) byTier[t.key] = [];
+  for (const n of notifs) { if (byTier[n.tier]) byTier[n.tier].push(n); }
+  const esc = (typeof _esc === 'function') ? _esc : (s => String(s ?? '—'));
+  listEl.innerHTML = LEASE_TIER_META
+    .filter(t => byTier[t.key].length > 0)
+    .map(t => {
+      const items = byTier[t.key].map(n => {
+        const endDateStr = (n.leaseEndDate && n.leaseEndDate.toDate)
+          ? n.leaseEndDate.toDate().toLocaleDateString('th-TH')
+          : '—';
+        const readMark = n.status === 'read'
+          ? '<span style="font-size:.7rem;color:#999;margin-left:8px;">(อ่านแล้ว)</span>'
+          : '<span style="font-size:.7rem;color:#dc3545;margin-left:8px;font-weight:bold;" title="ลูกบ้านยังไม่ได้อ่าน">●</span>';
+        return `<div style="background:white;padding:10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid ${t.color};margin-bottom:6px;">
+            <div>
+              <div style="font-weight:600;color:#333;">ห้อง ${esc(n.room)} — ${esc(n.tenantName)}${readMark}</div>
+              <div style="font-size:.85rem;color:#666;margin-top:4px;">หมดสัญญา ${endDateStr}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-weight:700;color:${t.color};font-size:1.1rem;">${n.daysRemainingAtEmit != null ? n.daysRemainingAtEmit : '—'} วัน</div>
+              <div style="font-size:.75rem;color:#999;">เหลือเวลา</div>
+            </div>
+          </div>`;
+      }).join('');
+      return `<div style="margin-bottom:10px;">
+          <div style="font-weight:700;color:${t.color};font-size:.92rem;margin-bottom:6px;">${t.label} (${byTier[t.key].length})</div>
+          ${items}
+        </div>`;
+    }).join('');
 }
 
 function updateLeaseExpiryAlerts() {
-  // Update Old Building alerts
-  const oldExpiringLeases = getExpiringLeases('old');
-  const oldAlertsDiv = document.getElementById('lease-expiry-alerts');
-  const oldListDiv = document.getElementById('lease-expiry-list');
+  // Render all four tiers (including 60d) in the card; KPI count (getExpiringLeases)
+  // excludes 60d for backwards compat.
+  const allRooms = _leaseNotifsCache.filter(d => d.building === 'rooms' && d.status !== 'stale')
+    .sort((a, b) => (_LEASE_TIER_ORDER[a.tier] ?? 99) - (_LEASE_TIER_ORDER[b.tier] ?? 99));
+  const allNest  = _leaseNotifsCache.filter(d => d.building === 'nest'  && d.status !== 'stale')
+    .sort((a, b) => (_LEASE_TIER_ORDER[a.tier] ?? 99) - (_LEASE_TIER_ORDER[b.tier] ?? 99));
 
-  if (oldExpiringLeases.length > 0) {
-    oldAlertsDiv.classList.remove('u-hidden');
-    oldListDiv.innerHTML = oldExpiringLeases.map(lease => `
-      <div style="background:white;padding:10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid #fbc02d;">
-        <div>
-          <div style="font-weight:600;color:#333;">🟡 ห้อง ${lease.roomId} — ${lease.tenantName}</div>
-          <div style="font-size:.85rem;color:#666;margin-top:4px;">หมดสัญญา ${new Date(lease.endDate).toLocaleDateString('th-TH')}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:700;color:#f57f17;font-size:1.1rem;">${lease.daysLeft} วัน</div>
-          <div style="font-size:.75rem;color:#999;">เหลือเวลา</div>
-        </div>
-      </div>
-    `).join('');
-  } else {
-    oldAlertsDiv.classList.add('u-hidden');
+  const oldAlertsDiv = document.getElementById('lease-expiry-alerts');
+  const oldListDiv   = document.getElementById('lease-expiry-list');
+  if (oldAlertsDiv) {
+    if (allRooms.length > 0) { oldAlertsDiv.classList.remove('u-hidden'); _renderLeaseAlertCard(oldListDiv, allRooms); }
+    else                     { oldAlertsDiv.classList.add('u-hidden'); }
   }
 
-  // Update Nest Building alerts
-  const nestExpiringLeases = getExpiringLeases('nest');
   const nestAlertsDiv = document.getElementById('nest-lease-expiry-alerts');
-  const nestListDiv = document.getElementById('nest-lease-expiry-list');
+  const nestListDiv   = document.getElementById('nest-lease-expiry-list');
+  if (nestAlertsDiv) {
+    if (allNest.length > 0) { nestAlertsDiv.classList.remove('u-hidden'); _renderLeaseAlertCard(nestListDiv, allNest); }
+    else                    { nestAlertsDiv.classList.add('u-hidden'); }
+  }
+}
 
-  if (nestExpiringLeases.length > 0) {
-    nestAlertsDiv.classList.remove('u-hidden');
-    nestListDiv.innerHTML = nestExpiringLeases.map(lease => `
-      <div style="background:white;padding:10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid #fbc02d;">
-        <div>
-          <div style="font-weight:600;color:#333;">🟡 ห้อง ${lease.roomId} — ${lease.tenantName}</div>
-          <div style="font-size:.85rem;color:#666;margin-top:4px;">หมดสัญญา ${new Date(lease.endDate).toLocaleDateString('th-TH')}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:700;color:#f57f17;font-size:1.1rem;">${lease.daysLeft} วัน</div>
-          <div style="font-size:.75rem;color:#999;">เหลือเวลา</div>
-        </div>
-      </div>
-    `).join('');
-  } else {
-    nestAlertsDiv.classList.add('u-hidden');
+// Firestore subscriber — single point of update for both buildings' cards
+// + KPI counts. Wired from dashboard-property.js initRoomsPage / initNestPage.
+function setupLeaseNotifsListener() {
+  if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
+  if (!window.firebaseAuth?.currentUser) return;
+  // §7-V: prior-unsub teardown before rebind.
+  if (typeof realtimeListeners.leaseNotifs === 'function') {
+    try { realtimeListeners.leaseNotifs(); } catch (_) {}
+    realtimeListeners.leaseNotifs = null;
+  }
+  const db = window.firebase.firestore();
+  const { collection, onSnapshot } = window.firebase.firestoreFunctions;
+  try {
+    realtimeListeners.leaseNotifs = onSnapshot(
+      collection(db, 'leaseNotifications'),
+      (snap) => {
+        _leaseNotifsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        updateLeaseExpiryAlerts();
+        if (typeof updateOccupancyDashboard === 'function') updateOccupancyDashboard();
+      },
+      (err) => {
+        // §7-N: surface errors. Permission-denied here = admin token missing
+        // admin:true claim; failed-precondition = missing composite index.
+        console.error('❌ leaseNotifs listener error:', err?.code, err?.message);
+      }
+    );
+  } catch (err) {
+    console.error('Error setting up leaseNotifs listener:', err);
   }
 }
 

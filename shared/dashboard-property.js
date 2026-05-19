@@ -43,6 +43,7 @@ function initRoomsPage(){
   setupRoomDataListener();
   setupLeaseDataListener();
   setupMeterDataListener();
+  if (typeof setupLeaseNotifsListener === 'function') setupLeaseNotifsListener();
 
   const allTenants = loadTenants();
   const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
@@ -707,6 +708,7 @@ function initNestPage(){
   setupRoomDataListener();
   setupLeaseDataListener();
   setupMeterDataListener();
+  if (typeof setupLeaseNotifsListener === 'function') setupLeaseNotifsListener();
 
   // Update info cards from live RoomConfigManager data (must be before early returns)
   updateNestInfoCards();
