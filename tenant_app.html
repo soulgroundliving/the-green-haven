@@ -2540,6 +2540,18 @@
             </div>
         </div>
 
+        <!-- Lease-renewal mirror surface. The community page (#leaseRenewalAlert at
+             tenant_app.html:3117) is no longer reachable for Rooms tenants since
+             #nav-community-btn is hidden via NEST_ONLY_ELEMENT_IDS — so the alert
+             must surface here on home page where every tenant lands.
+             displayLeaseRenewalAlert() renders identical state into both banners
+             (id-prefix-matched: leaseAlertTitle*/Message*/Date*). -->
+        <div id="leaseRenewalAlertHome" class="card" style="display:none; background:#fff8e1; border-left:5px solid #ffc107; margin: 0 15px 12px;">
+            <strong id="leaseAlertTitleHome">⚠️ สัญญาเช่าใกล้หมดอายุ</strong>
+            <p id="leaseAlertMessageHome" style="margin:6px 0; font-size:var(--fs-sm);"></p>
+            <small>วันสิ้นสุด: <strong id="leaseAlertDateHome">—</strong></small>
+        </div>
+
         <!-- C4 Session 1 v2 (2026-05-17): community feed announcement+event section
              hidden — all announcement surfaces consolidated into the 🔔 Bell panel.
              Subscribers still hydrate localStorage caches (harmless) but the visible
@@ -12186,34 +12198,53 @@
         })();
 
         // ---- LEASE RENEWAL ALERT ----
+        // Renders identical state into BOTH banner surfaces:
+        //   - #leaseRenewalAlert        (community page; Nest still reaches via nav)
+        //   - #leaseRenewalAlertHome    (home page mirror; only surface for Rooms after nav hide)
+        // Each banner's child elements share an id prefix (leaseAlertTitle*/Message*/Date*)
+        // so a scoped `banner.querySelector('[id^="..."]')` finds the right one per surface.
         function displayLeaseRenewalAlert() {
-            const banner = document.getElementById('leaseRenewalAlert');
+            const banners = ['leaseRenewalAlert', 'leaseRenewalAlertHome']
+                .map(id => document.getElementById(id)).filter(Boolean);
+            if (banners.length === 0) return;
             const lease = _legacyLease();
-            if (!banner || !lease || !(lease.endDate || lease.moveOutDate)) return;
+            if (!lease || !(lease.endDate || lease.moveOutDate)) {
+                banners.forEach(b => { b.style.display = 'none'; });
+                return;
+            }
             try {
                 const endDate = new Date(lease.endDate || lease.moveOutDate);
                 const today = new Date();
                 const daysRemaining = Math.ceil((endDate - today) / 86400000);
-                const titleEl = document.getElementById('leaseAlertTitle');
-                const msgEl   = document.getElementById('leaseAlertMessage');
-                const dateEl  = document.getElementById('leaseAlertDate');
+                let display = 'none', titleText = null, msgText = null, dateText = null;
+                let bgColor = null, borderColor = null;
                 if (daysRemaining <= 0) {
-                    banner.style.display = 'block';
-                    banner.style.background = '#f8d7da';
-                    banner.style.borderLeftColor = '#dc3545';
-                    if (titleEl) titleEl.textContent = '❌ สัญญาเช่าหมดอายุแล้ว';
-                    if (msgEl)   msgEl.textContent = 'โปรดติดต่อ Admin ทันทีเพื่อจัดการสัญญา';
-                    if (dateEl)  dateEl.textContent = endDate.toLocaleDateString('th-TH');
+                    display = 'block';
+                    bgColor = '#f8d7da';
+                    borderColor = '#dc3545';
+                    titleText = '❌ สัญญาเช่าหมดอายุแล้ว';
+                    msgText   = 'โปรดติดต่อ Admin ทันทีเพื่อจัดการสัญญา';
+                    dateText  = endDate.toLocaleDateString('th-TH');
                 } else if (daysRemaining <= 60) {
-                    banner.style.display = 'block';
-                    if (daysRemaining <= 7 && titleEl) titleEl.textContent = '🚨 สัญญาเช่าใกล้หมดอายุ!';
-                    else if (daysRemaining <= 30 && titleEl) titleEl.textContent = '⚠️ สัญญาเช่าใกล้หมดอายุ';
-                    else if (titleEl) titleEl.textContent = '📢 แจ้งเตือนการต่ออายุสัญญา';
-                    if (msgEl) msgEl.textContent = `สัญญาของคุณจะหมดอายุในอีก ${daysRemaining} วัน`;
-                    if (dateEl) dateEl.textContent = endDate.toLocaleDateString('th-TH', {year:'numeric',month:'long',day:'numeric'});
-                } else {
-                    banner.style.display = 'none';
+                    display = 'block';
+                    if (daysRemaining <= 7) titleText = '🚨 สัญญาเช่าใกล้หมดอายุ!';
+                    else if (daysRemaining <= 30) titleText = '⚠️ สัญญาเช่าใกล้หมดอายุ';
+                    else titleText = '📢 แจ้งเตือนการต่ออายุสัญญา';
+                    msgText  = `สัญญาของคุณจะหมดอายุในอีก ${daysRemaining} วัน`;
+                    dateText = endDate.toLocaleDateString('th-TH', {year:'numeric',month:'long',day:'numeric'});
                 }
+                banners.forEach(banner => {
+                    banner.style.display = display;
+                    if (display === 'none') return;
+                    if (bgColor) banner.style.background = bgColor;
+                    if (borderColor) banner.style.borderLeftColor = borderColor;
+                    const titleEl = banner.querySelector('[id^="leaseAlertTitle"]');
+                    const msgEl   = banner.querySelector('[id^="leaseAlertMessage"]');
+                    const dateEl  = banner.querySelector('[id^="leaseAlertDate"]');
+                    if (titleEl && titleText) titleEl.textContent = titleText;
+                    if (msgEl   && msgText)   msgEl.textContent   = msgText;
+                    if (dateEl  && dateText)  dateEl.textContent  = dateText;
+                });
             } catch(e) { console.warn('displayLeaseRenewalAlert:', e); }
         }
 
