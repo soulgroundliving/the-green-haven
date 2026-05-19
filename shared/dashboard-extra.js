@@ -3931,104 +3931,13 @@ function removePetApproval(building, room, id) {
   });
 }
 
-// ===== LEASE RENEWAL ALERTS SETTINGS =====
-function initLeaseSettingsPage() {
-  loadAndRenderLeaseSettings();
-}
-
-function loadAndRenderLeaseSettings() {
-  // Load current settings
-  const settings = JSON.parse(localStorage.getItem('lease_alert_settings') || '{"threshold": 60, "severity": "warning"}');
-  document.getElementById('alertThreshold').value = settings.threshold || 60;
-  document.getElementById('alertSeverity').value = settings.severity || 'warning';
-
-  // Load lease expirations
-  loadAndRenderLeaseExpirations();
-}
-
-function loadAndRenderLeaseExpirations() {
-  const container = document.getElementById('leaseExpiryList');
-  if (!container) return;
-
-  // Get all leases
-  const leases = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key.startsWith('lease_')) {
-      try {
-        const lease = JSON.parse(localStorage.getItem(key));
-        if (lease && lease.status === 'active') leases.push(lease);
-      } catch (e) {}
-    }
-  }
-
-  const threshold = parseInt(document.getElementById('alertThreshold')?.value || 60);
-  const today = new Date();
-  const expiringLeases = [];
-
-  leases.forEach(lease => {
-    const endDate = new Date(lease.moveOutDate || lease.moveInDate);
-    if (lease.duration) {
-      endDate.setMonth(endDate.getMonth() + lease.duration);
-    } else {
-      endDate.setFullYear(endDate.getFullYear() + 1);
-    }
-
-    const daysUntilExpiry = Math.floor((endDate - today) / (1000 * 60 * 60 * 24));
-    if (daysUntilExpiry >= 0 && daysUntilExpiry <= threshold) {
-      expiringLeases.push({ ...lease, daysUntilExpiry, expiryDate: endDate });
-    }
-  });
-
-  expiringLeases.sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
-
-  if (expiringLeases.length === 0) {
-    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">✅ No leases expiring soon</div>';
-    return;
-  }
-
-  container.innerHTML = expiringLeases.map(lease => {
-    let urgency = 'notice';
-    if (lease.daysUntilExpiry <= 7) urgency = 'urgent';
-    else if (lease.daysUntilExpiry <= 30) urgency = 'warning';
-
-    const urgencyColor = urgency === 'urgent' ? '#f44336' : urgency === 'warning' ? '#ff9800' : '#2196f3';
-    const urgencyIcon = urgency === 'urgent' ? '🚨' : urgency === 'warning' ? '⚠️' : 'ℹ️';
-
-    return `
-      <div class="card" style="margin-bottom: 1rem; border-left: 4px solid ${urgencyColor};">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <div style="flex: 1;">
-            <div style="font-weight: 700; font-size: 1rem;">🏠 Room ${lease.roomId}</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
-              Building: <strong>${lease.building === 'rooms' ? 'Rooms Building' : 'Nest Building'}</strong>
-            </div>
-          </div>
-          <span style="padding: 0.6rem 1rem; border-radius: 20px; background: ${urgencyColor}; color: white; font-size: 0.85rem; font-weight: 600; white-space: nowrap;">${urgencyIcon} ${lease.daysUntilExpiry} days</span>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem; margin-top: 1rem;">
-          <div>👤 Tenant: <strong>${lease.tenantName || lease.tenantId}</strong></div>
-          <div>📅 Expires: <strong>${lease.expiryDate.toLocaleDateString('th-TH')}</strong></div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function saveLeaseAlertSettings() {
-  const threshold = parseInt(document.getElementById('alertThreshold')?.value || 60);
-  const severity = document.getElementById('alertSeverity')?.value || 'warning';
-
-  if (threshold < 1 || threshold > 365) {
-    showToast('Threshold must be between 1 and 365 days', 'warning');
-    return;
-  }
-
-  const settings = { threshold, severity };
-  localStorage.setItem('lease_alert_settings', JSON.stringify(settings));
-  showToast('✅ Lease alert settings saved', 'success');
-  loadAndRenderLeaseSettings();
-}
+// LEASE RENEWAL ALERTS SETTINGS — removed 2026-05-19.
+// The 'แจ้งเตือน' tab was superseded by the auto-notifier system; tier
+// thresholds are now hardcoded in functions/remindLeaseExpiry.js (60/30/14/expired)
+// and the list view moved to the ผู้เช่า tab via leaseNotifications/ subscription.
+// initLeaseSettingsPage / loadAndRenderLeaseSettings / loadAndRenderLeaseExpirations
+// / saveLeaseAlertSettings + their localStorage 'lease_alert_settings' deleted with
+// the tab DOM (dashboard.html). See lifecycle_lease_action.md §Auto-notifier.
 
 // ===== COMPLAINTS PAGE =====
 // ===== RequestsStore — single facade for complaints/maintenance/housekeeping =====

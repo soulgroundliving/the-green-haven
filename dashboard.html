@@ -3368,13 +3368,6 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
               <div class="ten-stat-label">สัญญาใกล้หมด (30 วัน)</div>
             </div>
           </div>
-          <div class="card ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="alerts">
-            <div class="ten-stat-icon">🔔</div>
-            <div class="ten-stat-body">
-              <div class="ten-stat-value c-red" id="tenSum-alert">—</div>
-              <div class="ten-stat-label">แจ้งเตือนเร่งด่วน (&lt;7 วัน)</div>
-            </div>
-          </div>
           <div class="card ten-stat-card" data-action="showPageTab" data-page="tenant" data-tab="requests">
             <div class="ten-stat-icon">📨</div>
             <div class="ten-stat-body">
@@ -3455,7 +3448,6 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     <button id="tenant-main-tab-btn-tenants" class="year-tab active" data-action="switchTenantMainTab" data-tab="tenants">👥 ผู้เช่า</button>
     <button id="tenant-main-tab-btn-leases" class="year-tab" data-action="switchTenantMainTab" data-tab="leases">📋 สัญญา</button>
     <button id="tenant-main-tab-btn-requests" class="year-tab" data-action="switchTenantMainTab" data-tab="requests">📨 คำขอ <span id="leaseRequestsBadge" style="display:none;background:var(--red-dark);color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
-    <button id="tenant-main-tab-btn-alerts" class="year-tab" data-action="switchTenantMainTab" data-tab="alerts">🔔 แจ้งเตือน</button>
     <button id="tenant-main-tab-btn-bookings" class="year-tab" data-action="switchTenantMainTab" data-tab="bookings">🗓️ จอง <span id="bookingsBadge" style="display:none;background:var(--blue-dark);color:white;border-radius:10px;padding:2px 8px;font-size:.72rem;margin-left:4px;">0</span></button>
   </div>
   <div id="tenant-main-tab-tenants">
@@ -3681,34 +3673,11 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
     </div>
   </div>
 
-  <!-- TAB 4: แจ้งเตือน -->
-  <div id="tenant-main-tab-alerts" style="display:none;">
-    <div class="card">
-      <div style="background:var(--green-pale);padding:1.5rem;border-radius:var(--radius-sm);margin-bottom:1.5rem;">
-        <div style="font-weight:700;margin-bottom:1rem;">Alert Configuration</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
-          <div>
-            <label style="display:block;margin-bottom:.5rem;font-weight:600;">Alert Threshold (days)</label>
-            <input type="number" id="alertThreshold" min="1" max="365" value="60" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);">
-            <small style="color:var(--text-muted);">Show alert when lease expires within X days</small>
-          </div>
-          <div>
-            <label style="display:block;margin-bottom:.5rem;font-weight:600;">Alert Severity Level</label>
-            <select id="alertSeverity" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);">
-              <option value="notice">ℹ️ Notice</option>
-              <option value="warning">⚠️ Warning</option>
-              <option value="urgent">🚨 Urgent</option>
-            </select>
-          </div>
-        </div>
-        <button data-action="saveLeaseAlertSettings" class="btn-receipt" style="margin-top:1rem;padding:10px 20px;">💾 Save Settings</button>
-      </div>
-      <div style="margin-top:2rem;">
-        <div style="font-weight:700;margin-bottom:1rem;font-size:1.05rem;">📋 Upcoming Lease Expirations</div>
-        <div id="leaseExpiryList"></div>
-      </div>
-    </div>
-  </div>
+  <!-- TAB 4 "แจ้งเตือน" removed 2026-05-19 — superseded by the auto-notifier
+       system. Lease alerts now render on the ผู้เช่า tab via Firestore-backed
+       leaseNotifications/ subscription (see lifecycle_lease_action.md §Auto-notifier).
+       Old localStorage threshold/severity config no longer applies — tiers are
+       hardcoded in functions/remindLeaseExpiry.js. -->
 
   <!-- TAB 5: จอง (LIFF Booking flow — Phase 4 admin sub-tab) -->
   <div id="tenant-main-tab-bookings" style="display:none;">

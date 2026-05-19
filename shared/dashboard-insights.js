@@ -1479,7 +1479,8 @@
   }
   async function renderTenantDashSummary() {
     const expEl  = document.getElementById('tenSum-exp');
-    const alEl   = document.getElementById('tenSum-alert');
+    // tenSum-alert card removed 2026-05-19 — the 'แจ้งเตือน' tab it deep-linked to
+    // was superseded by the leaseNotifications/ auto-notifier (see lifecycle_lease_action.md).
     const reqEl  = document.getElementById('tenSum-req');
     const bookEl = document.getElementById('tenSum-book');
     if (!expEl) return;
@@ -1489,14 +1490,13 @@
     try {
       if (typeof loadTenants === 'function') {
         const tenants = loadTenants();
-        let exp30 = 0, exp7 = 0;
+        let exp30 = 0;
         Object.values(tenants).forEach(t => {
           if (!t.name || !t.contractEnd) return;
           const diff = (new Date(t.contractEnd) - today) / 86400000;
-          if (diff >= 0 && diff <= 30) { exp30++; if (diff <= 7) exp7++; }
+          if (diff >= 0 && diff <= 30) exp30++;
         });
         if (expEl) { expEl.textContent = String(exp30); if (!exp30) expEl.classList.remove('c-amber'); }
-        if (alEl)  { alEl.textContent  = String(exp7);  if (!exp7)  alEl.classList.remove('c-red'); }
       }
     } catch(e) { /* silent */ }
 

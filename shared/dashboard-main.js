@@ -110,7 +110,7 @@ window.switchTenantMainTab = function(tab, btn) {
   if(btn) btn.classList.add('active');
   if(tab === 'leases' && typeof initLeaseAgreementsPage === 'function') initLeaseAgreementsPage();
   if(tab === 'requests' && typeof initLeaseRequestsPage === 'function') initLeaseRequestsPage();
-  if(tab === 'alerts' && typeof initLeaseSettingsPage === 'function') initLeaseSettingsPage();
+  // tab === 'alerts' removed 2026-05-19 — superseded by leaseNotifications/ auto-notifier.
   if(tab === 'bookings' && typeof initBookingsAdmin === 'function') initBookingsAdmin();
 };
 
@@ -789,7 +789,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'saveWellnessArticle') { typeof saveWellnessArticle === 'function' && saveWellnessArticle(); return; }
     if (a === 'resetWellnessForm') { typeof resetWellnessForm === 'function' && resetWellnessForm(); return; }
     if (a === 'seedWellnessStarters') { typeof seedWellnessStarters === 'function' && seedWellnessStarters(); return; }
-    if (a === 'saveLeaseAlertSettings') { typeof saveLeaseAlertSettings === 'function' && saveLeaseAlertSettings(); return; }
+    // 'saveLeaseAlertSettings' dispatch removed 2026-05-19 — the form it served is gone.
     if (a === 'saveTrackingStart') { typeof saveTrackingStart === 'function' && saveTrackingStart(); return; }
     if (a === 'checkVacant') { typeof checkVacant === 'function' && checkVacant(); return; }
     if (a === 'saveEmergencyContact') { typeof saveEmergencyContact === 'function' && saveEmergencyContact(); return; }
