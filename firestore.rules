@@ -39,6 +39,31 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ===== LEASE NOTIFICATIONS (auto-emitted by remindLeaseExpiry CF) =====
+    // Per-tenant lease-expiry notifications at the 60/30/14/expired tier
+    // milestones. Powers in-app 🔔 bell + admin dashboard.
+    //
+    // Doc ID is deterministic: {building}_{room}_{tier}. CF writes via admin
+    // SDK (rules bypassed). Tenants read their own + can mark as read; admin
+    // reads/writes everything.
+    //
+    // Tenant update is gated to `status` and `lastReadAt` only — they can't
+    // edit the tier, doc body, or anyone else's notifications.
+    match /leaseNotifications/{docId} {
+      allow read:   if isAdmin()
+                 || (isSignedIn()
+                     && resource.data.building == request.auth.token.building
+                     && resource.data.room == request.auth.token.room);
+      allow create: if isAdmin();  // CF uses admin SDK (bypasses rules)
+      allow update: if isAdmin()
+                 || (isSignedIn()
+                     && resource.data.building == request.auth.token.building
+                     && resource.data.room == request.auth.token.room
+                     && request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['status', 'lastReadAt']));
+      allow delete: if isAdmin();
+    }
+
     // ===== ANNOUNCEMENTS (unified notice/event/banner — C4 merge 2026-05-17) =====
     // Same audience model as broadcastMessages: 'all' = any signed-in user,
     // otherwise must match request.auth.token.building. Discriminator field

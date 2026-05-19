@@ -129,6 +129,31 @@ async function pushLineMessage(lineUserId, flex, token) {
   return lineUserId;
 }
 
+// Idempotent write to leaseNotifications/{building}_{room}_{tier} for the
+// in-app 🔔 bell surface (tenant_app) + admin dashboard. Doc ID is deterministic
+// so re-firing the same tier on a catch-up run is a no-op. Returns true if a
+// new doc was created, false if it already existed.
+async function ensureLeaseNotificationDoc(building, lease, tier, daysLeft) {
+  const docId = `${building}_${lease.roomId}_${tier.key}`;
+  const ref = firestore.collection('leaseNotifications').doc(docId);
+  const existing = await ref.get();
+  if (existing.exists) return false;
+  await ref.set({
+    building,
+    room: String(lease.roomId),
+    tenantId: lease.tenantId || null,
+    tenantName: lease.tenantName || '(ไม่ระบุชื่อ)',
+    tier: tier.key,
+    leaseEndDate: lease.moveOutDate
+      ? admin.firestore.Timestamp.fromDate(new Date(lease.moveOutDate))
+      : null,
+    daysRemainingAtEmit: daysLeft,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    status: 'unread'
+  });
+  return true;
+}
+
 async function runExpirySweep() {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) {
@@ -141,7 +166,7 @@ async function runExpirySweep() {
   todayMidnight.setHours(0, 0, 0, 0);
   const todayMidnightMs = todayMidnight.getTime();
 
-  let scanned = 0, sent = 0, skipped = 0, errors = 0;
+  let scanned = 0, sent = 0, skipped = 0, errors = 0, bellWrites = 0;
   const adminSummary = [];  // { building, room, tenant, daysLeft, tier, notified }
 
   const buildings = await getAllBuildings();
@@ -175,6 +200,16 @@ async function runExpirySweep() {
 
       // Anti-spam: only fire when tier newly changed or no alert yet.
       if (lease.lastExpiryTier === tier.key) { skipped++; continue; }
+
+      // Emit the in-app bell + admin dashboard surface (leaseNotifications/).
+      // Happens BEFORE the liffUsers query so unlinked tenants still get the
+      // bell entry when they eventually open the app. Idempotent via doc ID.
+      try {
+        const created = await ensureLeaseNotificationDoc(building, lease, tier, daysLeft);
+        if (created) bellWrites++;
+      } catch (e) {
+        console.warn(`⚠️ leaseNotifications write failed ${building}/${lease.roomId} tier=${tier.key}: ${e.message}`);
+      }
 
       // Find linked LINE users for this room
       let usersSnap;
@@ -238,8 +273,8 @@ async function runExpirySweep() {
       `   ${e.building}/${e.room} (${e.tenant}) — tier=${e.tier} daysLeft=${e.daysLeft} notified=${e.notified}`
     ));
   }
-  console.log(`🗓️ Lease-expiry sweep: scanned=${scanned} sent=${sent} skipped=${skipped} errors=${errors}`);
-  return { scanned, sent, skipped, errors, summary: adminSummary };
+  console.log(`🗓️ Lease-expiry sweep: scanned=${scanned} sent=${sent} bellWrites=${bellWrites} skipped=${skipped} errors=${errors}`);
+  return { scanned, sent, bellWrites, skipped, errors, summary: adminSummary };
 }
 
 // ============================================================
