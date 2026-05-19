@@ -572,6 +572,40 @@ Every CF that appears in the first grep but NOT the second is a latent ~1 h bomb
 
 Cousin pattern to §7-P (UID-drift fixes must traverse every rule layer) and §7-U (claim-first guard in subscribe) — all three are about claims not arriving where rule eval expects them.
 
+### AA. Pre-existing CF search — grep `functions/` before writing a new scheduled CF
+
+Mid-S1 of the 2026-05-19 lease auto-notifier sprint, I wrote ~120 LOC of a brand-new `leaseExpiryNotifier` CF (daily-scheduled, scans tenants, writes notifications) — then discovered `functions/remindLeaseExpiry.js` already ran daily 08:00 BKK with the exact same 4 tiers (60/30/14/expired) + anti-spam + region. The new file was deleted; the sprint pivoted to **augmenting the existing CF** (added `ensureLeaseNotificationDoc()` write inside the existing fire block). Wasted ~10 min + a confusing dead-end commit before the architectural pivot.
+
+Root cause: planned from the feature name ("lease expiry notifier") without grepping `functions/` for related domain words first. The existing CF used the verb "remind" not "notify"; the doc index in MEMORY.md (`lifecycle_scheduled_jobs.md`) DID list it but I didn't read that file in the planning phase.
+
+**Rule:** before writing a new scheduled CF (or any CF in an existing feature area), grep `functions/` for related domain keywords AND read the relevant lifecycle doc. Especially:
+
+| Domain | Grep targets |
+|--------|--------------|
+| Reminders / notifications | `remind*`, `notify*` |
+| Cleanup / archival | `cleanup*`, `archive*` |
+| Sweeps / batches | filename suffix `Scheduled` |
+| Domain keywords | lease, bill, slip, expir, etc. |
+
+Detection recipe (run BEFORE writing functions/<newCF>.js):
+
+```bash
+# Tier 1: existing files in the domain
+ls functions/ | grep -iE "lease|expir|notif|remind"
+
+# Tier 2: any CF that matches the domain keyword
+grep -rln "pubsub.schedule" functions/ | xargs grep -l "<domain keyword>"
+
+# Tier 3: lifecycle doc — read it end-to-end if it exists
+grep -l "<feature name>" ~/.claude/projects/*/memory/lifecycle_*.md
+```
+
+If anything matches, READ those CFs end-to-end before designing the new one. 80% of the time you'll augment instead of duplicate.
+
+**Why this is its own anti-pattern (not just a workflow rule):** the cost is invisible until it bites. Writing 100 LOC of new code, getting halfway through deploy, then realizing you duplicated an existing CF means: revert the new file, untangle the test data, ask the user about scope, replan. The frontend cousin (anti-pattern O) catches the same class of mistake on the HTML side; this one closes the loop on the CF side.
+
+Related: §7-K (defined ≠ wired) is also about discovery — what's in the code vs what runs. §7-K assumes you found the function; this one is about finding it in the first place.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
