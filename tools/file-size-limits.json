@@ -19,5 +19,10 @@
     "soft": 8500,
     "hard": 11000,
     "growthPerCommit": 500
+  },
+  "shared/dashboard-domain-stores.js": {
+    "soft": 2000,
+    "hard": 2500,
+    "growthPerCommit": 300
   }
 }

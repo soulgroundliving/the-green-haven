@@ -1,193 +1,196 @@
-# Chrome MCP Smoke Test — 5 critical flows
+# Refactor shared/dashboard-extra.js — Phase 1: extract domain stores
 
 **Status:** plan-first, awaiting approval. Do NOT edit code until ✅ from user.
-**Triggered by:** open follow-up #6 Plan #4 from `next_session_handoff_2026_05_19_evening_3_followups_closeout.md`.
-**Why now:** the morning's audit gates (§7-A/U/Z + file-size) catch static drift, but live regressions (login broken / bill won't render / verifySlip failing) still slip through. A repeatable smoke playbook closes that gap.
+**Triggered by:** Plan #6 from `next_session_handoff_2026_05_19_evening_4_smoke_test.md` (last remaining follow-up from evening-3 closeout).
+**Why now:** `dashboard-extra.js` is currently **6,555 lines** — 77% of soft limit (8,500) per `tools/file-size-limits.json`. Recent growth (lease alerts, C4 merge) is pushing it toward the WARN tier. Splitting NOW is cheaper than splitting after the next 2 features.
 
-## Goal
+## Goal (this session)
 
-A deterministic regression-catch script that Claude can run in any future session via **one command** (`npm run smoke`), exercising 5 critical user flows end-to-end against https://the-green-haven.vercel.app in **<10 minutes**, with **zero production data mutation by default**.
+Extract the **4 domain-store IIFEs** from `dashboard-extra.js` into a single new module `shared/dashboard-domain-stores.js` (~1,000 LOC). Result:
+- `dashboard-extra.js` shrinks from 6,555 → ~5,500 LOC (16% reduction, drops back below 65% of soft limit)
+- `dashboard-domain-stores.js` is a single self-contained module with the 4 stores all admin code already depends on
+- All `window.X` UMD exports preserved verbatim — zero changes to public API surface
+- Smoke test (Plan #4, shipped commit `67b0b26`) gives regression-catch coverage for the change
 
-## Scope split — Chrome MCP cannot enter LIFF
+## Why staged (Phase 1 only, not big-bang)
 
-Reality check: Chrome MCP runs in a regular Chromium tab, no LIFF SDK, no LINE auth handshake. Per [auth_liff_sot.md](../../../.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/auth_liff_sot.md), LIFF entry requires real LINE app. So "5 flows" splits two ways:
+Per CLAUDE.md §1 Plan-First criteria, refactoring 6,555 lines in one go fails ALL three reversibility/risk thresholds. The handoff goal "3-4 focused modules each <2k lines" is the **destination**, not a one-session ask. Survey found:
 
-| # | Domain | Admin browser (Chrome MCP, automatable) | Tenant LIFF (manual, user-only) |
-|---|--------|------------------------------------------|---------------------------------|
-| 1 | Login | admin login.html → dashboard, claims=`admin:true` | LINE → LIFF entry → `_taBuilding`/`_taRoom` set |
-| 2 | Bill | admin opens bill detail modal | tenant sees bill list + click→detail |
-| 3 | Slip | admin views verified slip in bill modal | tenant uploads slip → verifySlip CF runs |
-| 4 | Checklist | admin opens instance + co-sign UI + PNG export | tenant fills checklist + photo + signature |
-| 5 | Deposit | admin opens deposit page + deductions + receipt | tenant sees deposit badge in profile |
+| Refactor obstacle | Severity | Phase-1 impact |
+|---|---|---|
+| `let realtimeListeners = {}` (L759) — module-level state used by 13 call sites across init/listeners/lease alerts | HIGH — naive split breaks all real-time listeners | **Avoided** — Phase 1 doesn't touch these lines |
+| `currentEditBuilding` / `currentEditTenantId` — referenced from 3 OTHER shared/*.js files (`dashboard-tenant-modal.js`, `dashboard-pdpa-erasure.js`, `dashboard-main.js`) | HIGH — they must already exist as globals OR refactor needs a window-ize pass first | **Avoided** — Phase 1 doesn't touch lease/tenant sections |
+| `_leaseRequestsUnsub`, `_eventsUnsub`, `_docsUnsub`, etc. — 18+ module-level lets, one per feature section | LOW — each is naturally section-scoped already | **Phase 1 moves only the 4 IIFE-wrapped stores; their `let` siblings come with them as a clean unit** |
+| Double-assignment bug: `window.updateRoomStatuses` is set at BOTH L572 and L946 (the second one wins, the first is dead code) | LOW (cosmetic) | **Not touched** — not in scope; a separate `chore:` commit |
 
-**This plan covers the ADMIN side only** (Chrome MCP-driven, 100% automatable, every session). The tenant LIFF side already has `tasks/liff-verify-checklist.md` (manual, real-LINE-only); a tightened "5-flow extract" of it ships as a secondary deliverable.
+The 4 stores being extracted are ALL standalone IIFEs (`window.Store = window.Store || (function(){...})()`) — self-contained, no shared lets with other sections, idempotent declaration. Lowest possible split risk.
 
-## Architecture
+## What Phase 1 extracts (exact line ranges in current file)
 
-Hybrid model — playbook + verifier — mirrors `seed-lease-notif-test.js` + `liff-verify-checklist.md` patterns already in the repo. NO new deps (no Playwright/Puppeteer — Chrome MCP is the driver, Node verifier is post-check).
+| Source range | Section | LOC | What |
+|---|---|---|---|
+| L3074-3331 | ServiceProvidersStore + UI helpers | 258 | `window.ServiceProvidersStore = ...` IIFE + supporting render fns |
+| L3332-3598 | CommunityEventsStore + C4 merge | 267 | `_newAnnouncementsEventCache/Unsub` globals + `window.CommunityEventsStore` IIFE |
+| L3942-4095 | RequestsStore (complaints/maint/hk) | 154 | `_RequestsStoreComplaintsUnsub` + `window.RequestsStore` IIFE |
+| L5287-5682 | HistoricalDataStore | 396 | `window.HistoricalDataStore` IIFE |
+| **Total extracted** | | **1,075** | Single new file `shared/dashboard-domain-stores.js` |
+
+Note: gaps in the line ranges (L3599-3941, L4096-5286) STAY in `dashboard-extra.js` — they're separate domains (community docs, pet approvals, gamification, policy/rewards, reports, billing import). Those go in future phases.
+
+## Architecture — destination after Phase 1
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  npm run smoke                                              │
-│   ├─→ prints tasks/smoke-test-admin-playbook.md path        │
-│   ├─→ Claude executes Chrome MCP steps from playbook        │
-│   └─→ npm run smoke:verify                                  │
-│         └─→ Node script asserts post-conditions via REST    │
-│             (e.g. "did login session land + claims present")│
-└─────────────────────────────────────────────────────────────┘
+shared/
+├── dashboard-extra.js          (~5,500 LOC, was 6,555) — everything except the 4 stores
+└── dashboard-domain-stores.js  (~1,075 LOC, NEW)       — 4 stores + their unsub vars
 ```
 
-**Why hybrid not pure-script:**
-- Chrome MCP can't be driven from Node — only Claude as the agent.
-- Pure markdown playbook = no post-condition checks (eye-only).
-- Hybrid: playbook drives the UI, Node verifier asserts the data → both fail loudly.
+**Script load order in `dashboard.html`** (currently L5561):
 
-**Playbook structure** (mirrors `liff-verify-checklist.md`):
-- Pre-flight (login state, network reachable, console clean)
-- 5 flow sections, each with: navigate → action → observe → assert (DOM/console/network)
-- Each step has `☐ Pass / ☐ Fail` + expected screenshot trigger
-- Post-run: paste console errors / failed screenshot list back to Claude → regression report
+```html
+<!-- BEFORE Phase 1 -->
+<script src="./shared/dashboard-extra.js"></script>
+<script src="./shared/dashboard-insights.js"></script>
 
-**Verifier responsibilities** (in `tools/smoke-test/verify.js`):
-- `--check-login` — given session cookie, confirm `admin: true` claim via REST `getIdTokenResult` echo
-- `--check-bill <building> <room>` — REST GET bills/{building}/{room} → assert structure (no empty body, has `totalAmount`)
-- `--check-checklist-instance <id>` — REST GET → assert `status`, `photos`, `signatures` fields present
-- `--check-deposit <building> <room>` — REST GET → assert `originalAmount` + structure
-- All read-only, all use firebase-tools OAuth (same pattern as `seed-lease-notif-test.js`).
+<!-- AFTER Phase 1 -->
+<script src="./shared/dashboard-domain-stores.js"></script>  <!-- NEW, must load first -->
+<script src="./shared/dashboard-extra.js"></script>
+<script src="./shared/dashboard-insights.js"></script>
+```
 
-**Read-only by default** — no slip upload, no checklist creation, no deposit return in default `npm run smoke`. Those require explicit `npm run smoke:write` (opt-in, uses dedicated test data, separate plan if needed).
+Order requirement: domain-stores BEFORE dashboard-extra, because `dashboard-extra` calls into these stores (e.g. `RequestsStore.subscribeComplaints()`). Putting domain-stores AFTER would mean `window.RequestsStore` is `undefined` at the moment dashboard-extra tries to use it during init.
 
-## Files Touched
+## Files Touched (Phase 1)
 
 | File | Change | Why |
 |------|--------|-----|
-| `tasks/smoke-test-admin-playbook.md` | **NEW** (~250 LOC) | 5-flow Chrome MCP playbook, ☐ Pass/Fail per step |
-| `tasks/smoke-test-liff-playbook.md` | **NEW** (~80 LOC) | Tightened LIFF extract (tenant side) — 5 same domains, user runs in LINE |
-| `tools/smoke-test/verify.js` | **NEW** (~200 LOC) | Node post-check asserter via REST + firebase-tools OAuth |
-| `tools/smoke-test/README.md` | **NEW** (~40 LOC) | One-page how-to (npm run smoke, env setup, troubleshooting) |
-| `package.json` | add 2 scripts: `smoke`, `smoke:verify` | `npm run smoke` = print playbook path + remind sequence; `smoke:verify` = run verifier |
-| `memory/lifecycle_smoke_test.md` | **NEW** (~120 LOC) | Document the playbook lifecycle: when to run, expected runtime, recent failures log |
-| `memory/MEMORY.md` | append `🧭 Reference` entry | Index entry pointing to lifecycle_smoke_test.md |
+| `shared/dashboard-domain-stores.js` | **NEW** (~1,075 LOC) | The 4 IIFEs moved verbatim + their let-decl siblings |
+| `shared/dashboard-extra.js` | DELETE the 4 extracted ranges + add 1-line header comment noting the extraction | Shrink + breadcrumb for next reader |
+| `dashboard.html` | Add 1 `<script>` tag before existing `dashboard-extra.js` | Load order |
+| `tools/file-size-limits.json` | Update `dashboard-extra.js` line-count baseline + register `dashboard-domain-stores.js` | Audit gate needs to know new file |
+| `memory/lifecycle_stores_facade.md` | Note that the 4 stores moved to their own file | Architecture doc sync |
+| `memory/MEMORY.md` | One-line update on lifecycle_stores_facade entry | Index sync |
 
-Total: 5 new files + 2 small mods. No production code touched. Zero deploy risk.
+Total: 1 new file, 4 mods. No production code logic changes — pure structural move.
 
 ## Sprint Plan
 
-### S1 — Verifier core (~45 min)
+### S1 — Extract domain-stores.js (~60 min)
 
-- [ ] Scaffold `tools/smoke-test/verify.js` with arg parser + firebase-tools OAuth bootstrap (copy from `seed-lease-notif-test.js`)
-- [ ] Implement `--check-login` (echoes user record + claim check) using `admin.auth().getUser(uid)` via REST
-- [ ] Implement `--check-bill <building> <room> [year]` — REST GET RTDB `bills/<building>/room-{r}/{year}/{month}` → assert keys
-- [ ] Implement `--check-checklist-instance <id>` — REST GET Firestore `checklists/{id}` → assert non-empty
-- [ ] Implement `--check-deposit <building> <room>` — REST GET Firestore `deposits/{b}_{r}` → assert `originalAmount` field
-- [ ] All checks output structured JSON (pass/fail + diagnostic) so the playbook can grep / pipe
+- [ ] Create `shared/dashboard-domain-stores.js` with file header (purpose + extracted-from breadcrumb + load-order requirement)
+- [ ] Copy L3074-3331 (ServiceProvidersStore) — verbatim, no edits
+- [ ] Copy L3332-3598 (CommunityEventsStore + C4 cache vars) — verbatim
+- [ ] Copy L3942-4095 (RequestsStore) — verbatim, including outer `_RequestsStoreComplaintsUnsub` let
+- [ ] Copy L5287-5682 (HistoricalDataStore) — verbatim
+- [ ] Verify line count of new file ≤ 1,100 (margin for header)
 
-### S2 — Admin playbook (~60 min)
+### S2 — Trim dashboard-extra.js (~30 min)
 
-- [ ] Write `tasks/smoke-test-admin-playbook.md` covering 5 flows (login / bill / slip / checklist / deposit) from admin side
-- [ ] Each flow: Pre-state → Chrome MCP commands (literal) → Expected DOM/console/network → ☐ Pass/Fail + Obs column
-- [ ] Reference the verifier commands inline (`Run: node tools/smoke-test/verify.js --check-bill rooms 15`)
-- [ ] Pre-flight section (browser ready, Vercel reachable, admin credentials in env)
-- [ ] Failure-mode appendix (most likely break per flow + fastest diagnostic)
+- [ ] Delete L3074-3331 (replace with 1-line `// Moved to shared/dashboard-domain-stores.js (commit <SHA>)` breadcrumb)
+- [ ] Delete L3332-3598 (same breadcrumb)
+- [ ] Delete L3942-4095 (same breadcrumb)
+- [ ] Delete L5287-5682 (same breadcrumb)
+- [ ] Verify line count: 6,555 − 1,075 ≈ 5,480
 
-### S3 — LIFF playbook (tightened) (~30 min)
+### S3 — Wire + verify (~30 min)
 
-- [ ] Extract from `liff-verify-checklist.md` only the 5-flow-relevant rows (skip C4/PDPA-specific etc.)
-- [ ] Write `tasks/smoke-test-liff-playbook.md` — 5 sections matching admin playbook 1:1 (so cross-side regressions are visible)
-- [ ] Add "When to run" note: after any deploy that touches tenant_app.html / functions/verifySlip.js / functions/liffSignIn.js
+- [ ] Update `dashboard.html` L5561 — add `<script src="./shared/dashboard-domain-stores.js"></script>` BEFORE `dashboard-extra.js`
+- [ ] Update `tools/file-size-limits.json` — update `dashboard-extra.js` baseline and register the new file
+- [ ] Run `npm run audit:size` — confirm both files pass file-size gate
+- [ ] Run `npm run audit:auth` — confirm no auth callback regressions
+- [ ] `curl https://the-green-haven.vercel.app/dashboard` after push — confirm both `<script>` tags present in HTML
+- [ ] Run `node tools/smoke-test/verify.js bill --building rooms --room 15` post-deploy — confirm verifier still passes (regression check for Plan #4 wiring)
 
-### S4 — Wiring + dry-run + memory (~45 min)
+### S4 — Live UI verify + memory docs (~30 min)
 
-- [ ] Add `package.json` scripts: `"smoke": "echo 'Open tasks/smoke-test-admin-playbook.md and execute via Chrome MCP. Then run npm run smoke:verify.'"`, `"smoke:verify": "node tools/smoke-test/verify.js"`
-- [ ] Live dry-run: Claude executes playbook via Chrome MCP against https://the-green-haven.vercel.app, fills ☐ columns with actual observations, captures any drift between playbook expectation and reality
-- [ ] Fix any expectation-drift found during dry-run (playbook is wrong, not the app)
-- [ ] Write `memory/lifecycle_smoke_test.md` with verifier grep commands per §1 verify-via-grep doctrine
-- [ ] Append `MEMORY.md` reference entry
-- [ ] `npm run verify:memory` exit 0 ✓
+- [ ] Open admin dashboard via Chrome MCP on Vercel post-deploy
+- [ ] Navigate to People Mgmt → confirm RequestsStore-backed complaints panel renders (not stuck loading)
+- [ ] Navigate to Content Mgmt → confirm CommunityEventsStore-backed events list renders
+- [ ] Navigate to Service Providers section → confirm ServiceProvidersStore-backed list renders
+- [ ] Navigate to Reports/HistoricalData area → confirm HistoricalDataStore-backed years render
+- [ ] If any store fails to render, REVERT the commit — Phase 1 must be invisible to the user
+- [ ] Update `memory/lifecycle_stores_facade.md` + grep-verifier in `## Verification`
+- [ ] Update `memory/MEMORY.md` index line for lifecycle_stores_facade
+- [ ] `npm run verify:memory` exit 0
+- [ ] Write `memory/next_session_handoff_2026_05_19_evening_5_phase1.md` with Phase 2 roadmap
 
 ## Risks
 
-| Risk | Mitigation |
-|------|------------|
-| **Admin credentials in repo** | NEVER commit. Use `process.env.SMOKE_ADMIN_EMAIL` / `SMOKE_ADMIN_PASSWORD` (set in shell, document in `tools/smoke-test/README.md`). Verifier prompts if missing. |
-| **Production data pollution** | Default mode is READ-ONLY. Write-path smoke (`smoke:write`) is opt-in, separate plan if/when needed. |
-| **Firebase Auth token refresh mid-run** | Smoke targets <10 min runtime, well inside 1h refresh window. If a future smoke grows past 1h, add re-login step. |
-| **Vercel cold start skews timings** | Playbook expectations describe DOM state, not timing. First page load can warm-cache; subsequent assertions are deterministic. |
-| **Playbook drift vs reality** | S4 dry-run catches this on day 1. Going forward, every run that flags drift updates the playbook in the same commit. |
-| **Chrome MCP capability gap** | If a flow can't be exercised via MCP (e.g. file upload), document the gap explicitly in the playbook + cover via LIFF playbook. |
-| **§7-J ("static deploy ≠ live-verified") loops** | Smoke run = the closure. Replaces ad-hoc Chrome MCP poking with a fixed checklist. |
+| Risk | Likelihood | Mitigation |
+|------|-----------|------------|
+| **Load-order mistake** — domain-stores loaded AFTER dashboard-extra → undefined references at init | LOW | S3 step explicitly orders the `<script>` tags; S4 live verify catches in seconds |
+| **Missed cross-reference** — some closure inside dashboard-extra references `_RequestsStoreComplaintsUnsub` or other extracted let | MEDIUM | grep-audit each extracted let name in dashboard-extra.js AFTER the trim (S2); if found, move the caller too |
+| **Auth audit gate flags the new file** — pre-commit hook complains about §7-A/U/Z patterns in extracted code | LOW (none of the stores touch auth) | `npm run audit:auth` in S3 catches this before commit |
+| **File-size gate trips** — `dashboard-extra.js` still over WARN even after trim | LOW (5,480 LOC is below 8,500 soft limit) | S3 audit:size confirms |
+| **§7-K (defined ≠ wired)** — forget to add `<script>` tag in dashboard.html | MEDIUM | Wired into the S3 sprint as the FIRST thing to check; S4 live verify is the catch-all |
+| **§7-V (setupXxx listener leak)** — none of the extracted stores set up listeners in `setupXxx` patterns; they own their unsub | LOW | None of the 4 stores fit the §7-V pattern (they're not invoked re-entrantly per page nav) |
+| **A user is mid-session when the change deploys** | LOW (smoke runs <10 min) + the change is structurally invisible | Vercel rolling deploy makes this an N-second seam, no worse than any other deploy |
 
-## Open questions (need ✓ before S1 starts)
+## Smoke test as the verifier
 
-1. **Admin credentials source** — use env vars `SMOKE_ADMIN_EMAIL` + `SMOKE_ADMIN_PASSWORD`, OR a `.env.local` file (gitignored)? Recommend **env vars** (one less file, CI-friendly later).
+Plan #4 (shipped same day, commit `67b0b26`) gives exactly the regression coverage this refactor needs:
 
-2. **Verifier auth model** — same as `seed-lease-notif-test.js` (firebase-tools OAuth via `firebase login`)? Recommend **yes** — already proven, zero new setup.
+```bash
+# Pre-deploy baseline:
+node tools/smoke-test/verify.js bill --building rooms --room 15
+# Expected: {"check":"bill","target":"rooms/15","pass":true,...}
 
-3. **Test data assumptions** — verifier needs at least one known room with bills/checklist/deposit. Use `rooms/15` (already exists, used for lease-notif test)? Recommend **yes** — same fixture, document as "smoke fixture room".
+# Post-deploy baseline (should be identical):
+# Same command, same expected result. If it differs, deploy broke RTDB pipeline → revert.
 
-4. **Tenant LIFF playbook scope** — re-summarize from `liff-verify-checklist.md` or just keep that file as-is and reference? Recommend **re-summarize** — `liff-verify-checklist.md` is C4-era specific (PDPA, C4 announcements). The smoke version is more durable.
+# Admin smoke playbook flows 2, 4 (bill + checklist views via Chrome MCP) exercise:
+# - dashboard.html script load order is intact
+# - RequestsStore-backed admin surfaces still render
+# - CommunityEventsStore-backed announcements still render
+```
 
-## Success criteria
+This is the first non-trivial use of the smoke system after shipping it — closes the validation loop on `lifecycle_smoke_test.md`.
 
-- ✅ `npm run smoke` prints playbook path
-- ✅ Claude executes playbook via Chrome MCP in <10 min, fills observations
-- ✅ `npm run smoke:verify` exits 0 on healthy app, exits 1 with diagnostic on broken
-- ✅ Zero production data created/modified in default mode
-- ✅ S4 dry-run produces a baseline-clean checklist with all ☐ ticked Pass
-- ✅ `npm run verify:memory` passes (lifecycle_smoke_test.md grep-backed)
-- ✅ Future session: user says "run smoke" → Claude reads playbook → executes → reports
+## Phase 2 — what's deferred (NOT this session)
 
-## Deferred / NOT in scope
+Captured for next handoff:
 
-- Write-path smoke (`smoke:write`) — separate plan when first regression demands it
-- Playwright/Puppeteer migration — current Chrome MCP path is enough
-- CI integration (run on every deploy) — needs hosted browser + admin secret, separate infra discussion
-- Multi-environment (staging vs prod) — currently only prod exists
-- LIFF auto-run — impossible (LINE platform constraint, see auth_liff_sot.md)
+1. **Window-ize cross-module state** — `currentEditBuilding` / `currentEditTenantId` / `currentEditRoom` need to become explicit `window.X` exports (or get moved to `dashboard-main.js` as the canonical owner). Pre-req for Tenant/Lease module extraction.
+2. **Window-ize `realtimeListeners`** — convert `let realtimeListeners` → `window.realtimeListeners`. Pre-req for splitting init/listeners from real-time consumers.
+3. **Extract Tenant + Lease module** — L1294-2543 (lease requests + tenant master + lease agreements + document hub) → `shared/dashboard-tenant-lease.js`. ~1,250 LOC. Depends on (1).
+4. **Extract Bills module** — L2544-3040 + L4541-5286 (bill generation + billing import) → `shared/dashboard-bills.js`. ~1,200 LOC. Depends on `_resolveBillRecipient` careful relocation.
+5. **Extract Config module** — L1016-1659 (owner info + building internet + apartment logo) + L4284-4540 (policy/rewards CRUD) → `shared/dashboard-config.js`. ~1,000 LOC.
+6. **Extract Admin Ops module** — L6456-6555 (grantAdminRole, cleanupAnonUsers, runAwardComplaintFreeMonthDryRun, cleanupAdminListeners) → `shared/dashboard-admin-ops.js`. ~100 LOC.
+7. **Fix double-assignment bug** — `window.updateRoomStatuses` at L572 vs L946; keep the one in `init` section, delete the other. Cosmetic but worth a clean-up commit.
+
+Final destination after Phase 1 + Phase 2:
+
+```
+shared/
+├── dashboard-extra.js          (~800 LOC) — core init only (password modal, listeners, debug)
+├── dashboard-domain-stores.js  (~1,075 LOC)
+├── dashboard-tenant-lease.js   (~1,250 LOC)
+├── dashboard-bills.js          (~1,200 LOC)
+├── dashboard-config.js         (~1,000 LOC)
+└── dashboard-admin-ops.js      (~100 LOC)
+```
+
+All files <2k LOC, the original target.
+
+## Success criteria for Phase 1
+
+- ✅ `shared/dashboard-domain-stores.js` exists with the 4 stores moved verbatim
+- ✅ `shared/dashboard-extra.js` shrunk to ~5,480 LOC
+- ✅ `dashboard.html` loads both files in correct order
+- ✅ `npm run audit:size` + `audit:auth` exit 0
+- ✅ Post-deploy `verify.js bill` returns `pass: true` (regression catch)
+- ✅ Live admin UI: complaints, events, providers, history pages all render
+- ✅ `npm run verify:memory` exit 0 with updated `lifecycle_stores_facade.md`
+- ✅ `next_session_handoff` doc covers Phase 2 roadmap
 
 ## Anti-pattern relevance
 
-- **§7-J (static deploy ≠ live-verified)** — smoke IS the closure for this pattern
-- **§7-AA (pre-existing CF search)** — applied: no existing smoke runner, confirmed by grep `tools/` + `package.json`
-- **§7-I (production data actions — never automate)** — codified into the read-only default
-- **§7-N (onSnapshot must have error callback)** — verifier's REST-based checks bypass this hazard
-- **§1 verify-via-grep doctrine** — lifecycle_smoke_test.md will embed grep verifiers
+- **§7-K (defined ≠ wired)** — directly applicable; pre-commit hook + S3 audit catches
+- **§7-V (setupXxx listener leak)** — none of the extracted stores fit; verified by survey
+- **§7-AA (pre-existing search)** — applied: confirmed no existing extracted dashboard module file via `ls shared/dashboard-*.js`
+- **§1 verify-via-grep doctrine** — Phase 1 memory updates will embed grep verifiers
+- **§7-J (static deploy ≠ live-verified)** — closed by Plan #4 smoke playbook + S4 live UI verify
 
 ---
 
-**Approved 2026-05-19 evening (4) — "approve all defaults".** All 4 sprints shipped same session.
-
----
-
-## Review
-
-### Shipped (all sprints S1–S4 ✅)
-
-| Sprint | Output | Notes |
-|--------|--------|-------|
-| S1 | `tools/smoke-test/verify.js` (~250 LOC) | 4 subcommands: `login` / `bill` / `checklist-instance` / `deposit`. firebase-tools OAuth via configstore (mirror of `seed-lease-notif-test.js`). Read-only. Added `inconclusive: true` flag during S4 dry-run to separate "fixture absent" from "feature broken". |
-| S2 | `tasks/smoke-test-admin-playbook.md` (~270 LOC) | 5 flows (login/bill/slip/checklist/deposit) + pre-flight + failure-mode appendix + ☐ Pass/Inconclusive/Fail summary table. Selectors grep-verified against live Vercel. |
-| S3 | `tasks/smoke-test-liff-playbook.md` (~95 LOC) | Tightened 5-flow mirror for tenant LIFF, re-summarized from `liff-verify-checklist.md` (no reference, durable extract). User-driven only — Chrome MCP can't enter LIFF. |
-| S4 | `package.json` `smoke` + `smoke:verify` scripts · `tools/smoke-test/runner.js` (pre-flight + print) · `tools/smoke-test/README.md` (operator one-pager) · `memory/lifecycle_smoke_test.md` (grep-backed per §1) · `MEMORY.md` index updated (1 line in 🏛️ + 1 line in 🎯 Current state) · `npm run verify:memory` exits 0 (305 rows, +9 from this doc). |
-
-### Dry-run findings (real-prod via firebase-tools OAuth)
-
-| Probe | Result | Action |
-|-------|--------|--------|
-| `verify.js bill --building rooms --room 15` | ✅ 2 bills found (`TGH-256904-15-4735`, `TGH-256905-15-5811`) — RTDB + OAuth pipeline works | Kept rooms/15 as canonical smoke fixture |
-| `verify.js deposit --building rooms --room 15` | ❌ Doc not found — entire `deposits/` collection empty | Added inconclusive flag + softened pre-flight to ◯ informational |
-| `verify.js checklist-instance` | ❌ Entire `checklists/` collection empty | Same — Flow 4 starts inconclusive until tenant submits |
-| `curl https://the-green-haven.vercel.app/login.html` | ❌ 308 redirect → `/login` | Updated all URLs in playbook to canonical `/login` + `/dashboard` |
-| Login form selectors live | ✅ All 4 (`#loginEmail` `#loginPassword` `#loginBtn` `#loginForm`) | Playbook accurate |
-| Dashboard sidebar selectors live | ✅ All 5 (`data-page="bill" "tenant" "meter" "dashboard" "requests-approvals"`) | Playbook accurate |
-
-### Deferred / NOT done
-
-- **Live Chrome MCP dry-run** — no admin creds in this worktree + no active browser session. Playbook selectors grep-verified statically against live Vercel HTML; first user run = baseline-calibration. Documented honestly in the handoff.
-- **Write-path smoke** (`smoke:write`) — separate scope per §7-I + Plan-First. File when first regression demands it.
-- **CI integration** — needs hosted browser + admin credential strategy. Separate infra discussion.
-- **Slash command for one-call execution** (`/smoke`) — productivity skill, future.
-
-### Plan #6 — only remaining follow-up
-
-`shared/dashboard-extra.js` refactor: currently **5,882 lines** (`Get-Content | Measure-Object -Line` 2026-05-19) — 69% of soft limit. Goal: 3-4 focused modules <2k each, preserve `window.X = ...` UMD exports. Plan-First scope. Deferred to next session per handoff `next_session_handoff_2026_05_19_evening_4_smoke_test.md`.
+**Ready for review.** Reply ✅ to start S1, or note any scope change. Especially: do you want Phase 1 only this session, or include the double-assignment bug fix (anti-pattern would say "no — separate concern")?
