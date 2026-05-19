@@ -35,8 +35,11 @@ function getActiveRoomsWithMetadata(building, metadataArray) {
 
 // ===== ROOMS PAGE =====
 function initRoomsPage(){
-  updateOccupancyDashboard();
-  updateLeaseExpiryAlerts();
+  // Guard cross-script bareword calls — functions live in dashboard-extra.js
+  // as top-level declarations; matches the pattern at dashboard-tenant-modal.js
+  // L731-32 etc. Silences ReferenceError spam without changing behavior.
+  if (typeof updateOccupancyDashboard === 'function') updateOccupancyDashboard();
+  if (typeof updateLeaseExpiryAlerts === 'function') updateLeaseExpiryAlerts();
 
   // Set up real-time Firebase listeners (setupMeterDataListener is idempotent —
   // unsubs prior onSnapshot before creating a new one so rerenders don't stack).
@@ -700,8 +703,9 @@ function toggleNestRoomView(view, btn){
 
 // Initialize Nest compact grid when page loads
 function initNestPage(){
-  updateOccupancyDashboard();
-  updateLeaseExpiryAlerts();
+  // Guard cross-script bareword calls — see initRoomsPage above for rationale.
+  if (typeof updateOccupancyDashboard === 'function') updateOccupancyDashboard();
+  if (typeof updateLeaseExpiryAlerts === 'function') updateLeaseExpiryAlerts();
 
   // Set up real-time Firebase listeners (setupMeterDataListener is idempotent —
   // unsubs prior onSnapshot before creating a new one so rerenders don't stack).

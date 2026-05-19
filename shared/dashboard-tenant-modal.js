@@ -654,9 +654,12 @@ function saveTenantInfo() {
   // Close modal
   closeTenantModal();
 
-  // Refresh UI
-  updateRoomStatuses();
-  updateOccupancyDashboard();
+  // Refresh UI — guard mirrors the pattern at L731-32, L798-99, L856-57 in
+  // this same file. dashboard-extra.js declares these as top-level functions
+  // but cross-script bareword resolution can fail in minified builds; the
+  // guard matches every other call site and silences ReferenceError spam.
+  if (typeof updateRoomStatuses === 'function') updateRoomStatuses();
+  if (typeof updateOccupancyDashboard === 'function') updateOccupancyDashboard();
 
   // Refresh current page
   const currentPage = document.querySelector('.page.active');
