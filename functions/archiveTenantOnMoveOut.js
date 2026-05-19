@@ -200,9 +200,37 @@ exports.archiveTenantOnMoveOut = functions
       }
     }
 
-    // Each subdoc costs 2 ops (set archive + delete original) plus 3 ops for
-    // parent (archive set + list update + tracker), so ceiling check:
-    const totalOps = 3 + (totalSubDocs * 2);
+    // ── Resolve lease pointer + existence (anti-pattern §7-L fix 2026-05-20) ──
+    // Without this, the archive batch clears the tenant doc but leaves
+    // leases/{b}/list/{leaseId}.status='active' orphaned. getActiveLease()
+    // legacy fallback then scans active leases by (building,roomId) and finds
+    // the orphan — UI shows the room as still occupied with stale tenant info.
+    //
+    // LeaseId resolution prefers the most-canonical pointer first:
+    //   1. tenantData.lease.leaseId (Phase 3d reduced mirror)
+    //   2. tenantData.activeContractId (Phase 4 SSoT pointer)
+    //   3. contractId (computed above from tenantData.contractId, legacy)
+    // If the lease doc doesn't exist (incomplete legacy data), skip silently —
+    // the batch must not fail because of an orphaned tenant→lease pointer.
+    const leaseIdToEnd = (tenantData.lease && tenantData.lease.leaseId)
+      || tenantData.activeContractId
+      || (tenantData.contractId ? tenantData.contractId : null);
+    let leaseRefToEnd = null;
+    if (leaseIdToEnd) {
+      const candidateRef = firestore.collection('leases').doc(building).collection('list').doc(String(leaseIdToEnd));
+      const leaseSnap = await candidateRef.get();
+      if (leaseSnap.exists) {
+        leaseRefToEnd = candidateRef;
+      } else {
+        console.warn(`archiveTenantOnMoveOut: lease leases/${building}/list/${leaseIdToEnd} not found — skipping status update (incomplete legacy doc?)`);
+      }
+    } else {
+      console.warn(`archiveTenantOnMoveOut: no leaseId on tenants/${building}/list/${roomId} (lease.leaseId/activeContractId/contractId all empty) — skipping lease status update`);
+    }
+
+    // Each subdoc costs 2 ops (set archive + delete original) plus parent ops:
+    // archive set + tenant blank + (optional) lease status update = 2 or 3.
+    const totalOps = (leaseRefToEnd ? 3 : 2) + (totalSubDocs * 2);
     if (totalOps > BATCH_OP_LIMIT) {
       throw new functions.https.HttpsError('resource-exhausted',
         `Tenant has ${totalSubDocs} subcollection docs (${totalOps} ops) — exceeds batch limit ${BATCH_OP_LIMIT}. Manual admin SDK migration needed.`);
@@ -246,6 +274,19 @@ exports.archiveTenantOnMoveOut = functions
       lastArchivedAt: now,
       lastArchivedContractId: contractId,
     });
+
+    // 4. Mark the active lease as 'ended' (anti-pattern §7-L fix 2026-05-20).
+    //    Without this, getActiveLease() legacy fallback finds the orphan and
+    //    the UI keeps showing the room as occupied even after archive.
+    if (leaseRefToEnd) {
+      batch.update(leaseRefToEnd, {
+        status: 'ended',
+        endedAt: now,
+        endReason: archiveReason,
+        endedBy: callerUid,
+        endedByEmail: callerEmail,
+      });
+    }
 
     try {
       await batch.commit();

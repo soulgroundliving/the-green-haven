@@ -126,7 +126,28 @@ exports.transitionToPlayer = functions
       }
     }
 
-    const totalOps = 4 + (totalSubDocs * 2); // archive set + blank + people set + liffUsers update + subcoll copies
+    // ── Resolve lease pointer + existence (anti-pattern §7-L fix 2026-05-20) ──
+    // Mirror of archiveTenantOnMoveOut.js — without this the lease stays
+    // status='active' after the player transition, and getActiveLease() finds
+    // the orphan. revertTransitionToPlayer (kin CF) re-flips status back to
+    // 'active' so the lifecycle pair is symmetric.
+    const leaseIdToEnd = (tenantData.lease && tenantData.lease.leaseId)
+      || tenantData.activeContractId
+      || (tenantData.contractId ? tenantData.contractId : null);
+    let leaseRefToEnd = null;
+    if (leaseIdToEnd) {
+      const candidateRef = firestore.collection('leases').doc(building).collection('list').doc(String(leaseIdToEnd));
+      const leaseSnap = await candidateRef.get();
+      if (leaseSnap.exists) {
+        leaseRefToEnd = candidateRef;
+      } else {
+        console.warn(`transitionToPlayer: lease leases/${building}/list/${leaseIdToEnd} not found — skipping status update`);
+      }
+    } else {
+      console.warn(`transitionToPlayer: no leaseId on tenants/${building}/list/${roomId} — skipping lease status update`);
+    }
+
+    const totalOps = (leaseRefToEnd ? 5 : 4) + (totalSubDocs * 2); // archive set + blank + people set + liffUsers + (optional) lease + subcoll copies
     if (totalOps > BATCH_OP_LIMIT) {
       throw new functions.https.HttpsError('resource-exhausted',
         `Tenant has ${totalSubDocs} subcoll docs (${totalOps} ops) — exceeds batch limit.`);
@@ -168,7 +189,20 @@ exports.transitionToPlayer = functions
       lastArchivedContractId: contractId,
     });
 
-    // 4. Upsert people/{tenantId} — identity + gamification + currentLease: null
+    // 4. Mark the active lease as ended (anti-pattern §7-L fix 2026-05-20) —
+    //    mirror of archiveTenantOnMoveOut. End-reason distinguishes player
+    //    transition from a full move-out, so audit + revert flow can tell.
+    if (leaseRefToEnd) {
+      batch.update(leaseRefToEnd, {
+        status: 'ended',
+        endedAt: now,
+        endReason: 'transitioned_to_player',
+        endedBy: context.auth.uid,
+        endedByEmail: callerEmail,
+      });
+    }
+
+    // 5. Upsert people/{tenantId} — identity + gamification + currentLease: null
     const gamification = tenantData.gamification || {};
     const peopleRef = firestore.collection('people').doc(tenantId);
     batch.set(peopleRef, {

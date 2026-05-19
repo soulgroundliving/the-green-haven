@@ -146,8 +146,21 @@ exports.revertTransitionToPlayer = functions
       }
     }
 
-    // Op count: tenant set + people update + liffUsers set + archive update + subcoll copies
-    const totalOps = 4 + totalSubDocs;
+    // ── Check lease existence for re-activation (anti-pattern §7-L fix 2026-05-20) ──
+    // contractId on archive doc IS the leaseId. transitionToPlayer (kin CF)
+    // marks this lease 'ended' as of the §7-L fix, so revert must flip it back
+    // to 'active'. Pre-fix-deployed reverts on already-orphaned leases also
+    // benefit: the update is idempotent — sets status='active' regardless of
+    // what it currently is.
+    const leaseRefToRestore = firestore.collection('leases').doc(building).collection('list').doc(contractId);
+    const leaseSnapToRestore = await leaseRefToRestore.get();
+    const restoreLease = leaseSnapToRestore.exists;
+    if (!restoreLease) {
+      console.warn(`revertTransitionToPlayer: lease leases/${building}/list/${contractId} not found — cannot re-activate (archive contract may predate Phase-3d lease split)`);
+    }
+
+    // Op count: tenant set + people update + liffUsers set + archive update + (optional) lease + subcoll copies
+    const totalOps = (restoreLease ? 5 : 4) + totalSubDocs;
     if (totalOps > BATCH_OP_LIMIT) {
       throw new functions.https.HttpsError('resource-exhausted',
         `Archive has ${totalSubDocs} subcoll docs (${totalOps} ops) — exceeds batch limit ${BATCH_OP_LIMIT}`);
@@ -227,6 +240,20 @@ exports.revertTransitionToPlayer = functions
       revertedBy: context.auth.uid,
       revertedByEmail: callerEmail,
     });
+
+    // Re-activate the lease (mirror of transitionToPlayer.js §7-L fix). Idempotent:
+    // sets status='active' + deletes ended* fields whether or not they exist.
+    if (restoreLease) {
+      batch.update(leaseRefToRestore, {
+        status: 'active',
+        endedAt: admin.firestore.FieldValue.delete(),
+        endReason: admin.firestore.FieldValue.delete(),
+        endedBy: admin.firestore.FieldValue.delete(),
+        endedByEmail: admin.firestore.FieldValue.delete(),
+        revertedAt: now,
+        revertedBy: context.auth.uid,
+      });
+    }
 
     try {
       await batch.commit();

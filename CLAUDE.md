@@ -662,6 +662,45 @@ grep -rn "^\s*\(let\|const\|var\|window\.\)\s*X\b" shared/
 
 Closely related to §7-T (two writers, one reader — field-name drift) and §7-BB (phantom window object). All three are "data flows differently than the code suggests" patterns. The §1 verify-via-grep doctrine catches drift in memory docs; this anti-pattern catches it in JS module boundaries.
 
+### DD. Lifecycle CFs that touch one collection must also update sibling collections — UI readers fall through
+
+A specialized form of §7-L (code-only cleanup ≠ data migrated). When a CF performs a state-transition (archive, transition, revert), it must update EVERY collection that downstream readers might fall through to. Missing one ⇒ orphan rows that UI reads as if the transition never happened.
+
+Incident 2026-05-20: user reported "ห้อง 15 ยังโชว์ผู้เช่า" after `archiveTenantOnMoveOut` returned success. Investigation:
+
+1. `archiveTenantOnMoveOut.js` clears `tenants/{b}/list/{r}` (sets `name=''`, `tenantId=''`, deletes `.lease` subobject, `status='vacant'`) ✓
+2. `archiveTenantOnMoveOut.js` does **NOT** touch `leases/{b}/list/{leaseId}.status` — stays `'active'`
+3. `LeaseAgreementManager.getActiveLease(b, r)` in `shared/lease-config.js`:
+   - L62: Phase 4 SSoT path checks `ssotDoc.lease?.leaseId` — fails (lease subobject deleted) ✓
+   - L88-94: Legacy fallback iterates `getAllLeases()` and finds the orphan `status='active'` row → returns lease with tenant info
+4. `TenantLookup.getTenantByRoom(b, r)` calls `getActiveLease` → gets orphan → returns fake tenant data
+5. UI tenant modal shows "สมชาย สิบห้า · 🟢 มีผู้เช่า" even though tenant was archived
+
+Same bug present in `transitionToPlayer.js` (player transition) and `revertTransitionToPlayer.js` (kin restore — should re-activate the lease).
+
+**Rule:** every lifecycle CF must update **all collections that UI fall-through chains depend on**, not just the "main" doc it owns. For tenants the fall-through pairs are:
+
+| Primary write | Sibling that MUST also be updated |
+|---|---|
+| `tenants/{b}/list/{r}` cleared | `leases/{b}/list/{leaseId}.status` → `'ended'` |
+| `tenants/{b}/list/{r}` restored | `leases/{b}/list/{leaseId}.status` → `'active'` + delete `endedAt`/`endReason` |
+| `people/{tenantId}` upserted | `liffUsers/{lineUserId}.role` set (transitionToPlayer already does this) |
+
+Detection recipe (run when reviewing or writing a new state-transition CF):
+```bash
+# 1. Identify all places UI readers fall through to in this domain
+grep -rn "filter.*status === 'active'\|getActive\|status: 'active'" shared/
+
+# 2. For each fall-through source collection, the CF must update it.
+#    Specifically for tenant lifecycle:
+grep -nE "leases/|leaseRef|LeaseAgreement|liffUsers" functions/archiveTenantOnMoveOut.js functions/transitionToPlayer.js functions/revertTransitionToPlayer.js
+# Each CF must touch leases/{b}/list/{leaseId} — if grep returns 0 hits in a CF, the bug is back.
+```
+
+Fix shipped 2026-05-20: all 3 CFs now `batch.update` the lease doc in the SAME batch as the tenant doc clear/restore. Plus `tools/fix-orphan-leases.js` one-shot — finds existing orphans (active lease whose `tenants/{b}/list/{r}.tenantId` is empty or mismatched) and marks them `status='ended'`.
+
+Closely related to §7-L (data migration vs code cleanup), §7-T (writer/reader drift), §7-CC (cross-script identifier resolution). Family: "the write looked right, but a downstream reader sees something different than you intended."
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
