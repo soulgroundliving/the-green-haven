@@ -2540,17 +2540,8 @@
             </div>
         </div>
 
-        <!-- Lease-renewal mirror surface. The community page (#leaseRenewalAlert at
-             tenant_app.html:3117) is no longer reachable for Rooms tenants since
-             #nav-community-btn is hidden via NEST_ONLY_ELEMENT_IDS — so the alert
-             must surface here on home page where every tenant lands.
-             displayLeaseRenewalAlert() renders identical state into both banners
-             (id-prefix-matched: leaseAlertTitle*/Message*/Date*). -->
-        <div id="leaseRenewalAlertHome" class="card" style="display:none; background:#fff8e1; border-left:5px solid #ffc107; margin: 0 15px 12px;">
-            <strong id="leaseAlertTitleHome">⚠️ สัญญาเช่าใกล้หมดอายุ</strong>
-            <p id="leaseAlertMessageHome" style="margin:6px 0; font-size:var(--fs-sm);"></p>
-            <small>วันสิ้นสุด: <strong id="leaseAlertDateHome">—</strong></small>
-        </div>
+        <!-- Lease-renewal alert moved to the 🔔 bell panel — single notification
+             surface for all tenants. See _leaseAlertItem() + _renderBroadcastsList(). -->
 
         <!-- C4 Session 1 v2 (2026-05-17): community feed announcement+event section
              hidden — all announcement surfaces consolidated into the 🔔 Bell panel.
@@ -3125,26 +3116,9 @@
             <p>แบ่งปันและร่วมกันสร้างสังคมที่อบอุ่น 🤝</p>
         </div>
 
-        <!-- ported from tenant.html: lease renewal alert -->
-        <div id="leaseRenewalAlert" class="card" style="display:none; background:#fff8e1; border-left:5px solid #ffc107; margin: 0 15px 12px;">
-            <strong id="leaseAlertTitle">⚠️ สัญญาเช่าใกล้หมดอายุ</strong>
-            <p id="leaseAlertMessage" style="margin:6px 0; font-size:var(--fs-sm);"></p>
-            <small>วันสิ้นสุด: <strong id="leaseAlertDate">—</strong></small>
-        </div>
-
-        <!-- Rooms-only community context — shown when Marketplace section is hidden for Rooms tenants.
-             Toggled by applyBuildingVisibility() based on _taBuilding. Lease alert (above) still
-             surfaces when active; this card explains the page when no alert is visible. -->
-        <div id="community-rooms-empty" class="gh-empty-state" style="display:none; margin: 0 15px;">
-            <div class="gh-empty-state__illust">
-                <svg viewBox="0 0 120 120" aria-hidden="true">
-                    <path d="M44 52 v22 a4 4 0 0 0 4 4 h24 a4 4 0 0 0 4-4 v-22 a16 16 0 0 0-32 0 z"/>
-                    <path d="M56 82 a4 4 0 0 0 8 0"/>
-                </svg>
-            </div>
-            <p class="gh-empty-state__title">ชุมชนของคุณ</p>
-            <p class="gh-empty-state__text">หน้านี้แสดงการแจ้งเตือนสัญญาเช่าของคุณ — ประกาศจากนิติบุคคลดูได้ที่ไอคอน 🔔 ด้านบน</p>
-        </div>
+        <!-- Lease-renewal alert moved to the 🔔 bell panel (see _leaseAlertItem).
+             Previous standalone banner element + Rooms-only empty state retired —
+             bell is the single notification surface for all tenants. -->
 
         <div id="marketplace-section">
         <div class="section-title" role="heading" aria-level="2">
@@ -7551,10 +7525,47 @@
         }
         function _unreadBroadcastCount() {
             const cutoff = _getLastBroadcastReadAt();
-            return _broadcastsList.filter(d => {
+            const broadcasts = _broadcastsList.filter(d => {
                 const iso = _broadcastSentAtIso(d);
                 return iso && (!cutoff || iso > cutoff);
             }).length;
+            // Lease-renewal alert is a persistent reminder — counts as unread
+            // for as long as the tenant's lease is within the 60-day warning
+            // window, regardless of when they last opened the bell.
+            return broadcasts + (_leaseAlertItem() ? 1 : 0);
+        }
+        // Synthesizes a bell item for the tenant's own lease when expiry is
+        // ≤ 60 days away. Returns null otherwise. Local-only (no Firestore);
+        // recomputed on every bell render so it picks up _taLease changes.
+        function _leaseAlertItem() {
+            const lease = (typeof _legacyLease === 'function') ? _legacyLease() : (_taLease || {});
+            if (!lease || !(lease.endDate || lease.moveOutDate)) return null;
+            try {
+                const endDate = new Date(lease.endDate || lease.moveOutDate);
+                if (isNaN(endDate.getTime())) return null;
+                const daysRemaining = Math.ceil((endDate - new Date()) / 86400000);
+                if (daysRemaining > 60) return null;
+                let title, icon;
+                if (daysRemaining <= 0) {
+                    icon = '❌';
+                    title = 'สัญญาเช่าหมดอายุแล้ว';
+                } else {
+                    icon = daysRemaining <= 7 ? '🚨' : daysRemaining <= 30 ? '⚠️' : '📢';
+                    title = daysRemaining <= 7 ? 'สัญญาเช่าใกล้หมดอายุ!' : 'สัญญาเช่าใกล้หมดอายุ';
+                }
+                const dateStr = endDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+                const body = daysRemaining <= 0
+                    ? `วันสิ้นสุด ${dateStr} · โปรดติดต่อ Admin เพื่อจัดการสัญญา`
+                    : `สัญญาของคุณจะหมดอายุในอีก ${daysRemaining} วัน · วันสิ้นสุด ${dateStr}`;
+                return {
+                    type: 'notice',
+                    title: `${icon} ${title}`,
+                    body,
+                    sentAt: new Date().toISOString(),
+                    _virtualLeaseAlert: true,
+                    _daysRemaining: daysRemaining
+                };
+            } catch (e) { return null; }
         }
         function _renderBroadcastBadge() {
             const badge = document.getElementById('map-bell-badge');
@@ -7592,7 +7603,10 @@
         function _renderBroadcastsList() {
             const el = document.getElementById('broadcasts-panel-list');
             if (!el) return;
-            if (!_broadcastsList.length) {
+            // Synthesize lease alert at top of list (when expiry ≤ 60 days).
+            const leaseItem = _leaseAlertItem();
+            const items = leaseItem ? [leaseItem, ..._broadcastsList] : _broadcastsList;
+            if (!items.length) {
                 el.innerHTML = '<div style="text-align:center; padding:3rem 1rem; color:var(--text-muted); font-size:.92rem;">ยังไม่มีประกาศ</div>';
                 return;
             }
@@ -7610,26 +7624,35 @@
                 if (!d || isNaN(d.getTime())) return '';
                 return `${d.getDate()} ${MONTHS_TH[d.getMonth()]} ${d.getFullYear()+543} · ${('0'+d.getHours()).slice(-2)}:${('0'+d.getMinutes()).slice(-2)}`;
             };
-            el.innerHTML = _broadcastsList.map(d => {
+            el.innerHTML = items.map(d => {
                 const iso    = _broadcastSentAtIso(d);
-                const unread = iso && (!cutoff || iso > cutoff);
+                // Lease alert is always treated as unread — it's a persistent
+                // reminder until the lease is renewed.
+                const unread = d._virtualLeaseAlert ? true : (iso && (!cutoff || iso > cutoff));
                 const type   = d.type || 'notice';
                 const badge  = TYPE_BADGE[type] || '📢';
-                const label  = TYPE_LABEL[type] || 'ประกาศ';
+                const label  = d._virtualLeaseAlert ? 'สัญญาเช่า' : (TYPE_LABEL[type] || 'ประกาศ');
                 const title  = _escapeBroadcastHtml(d.title || '(ไม่มีหัวข้อ)');
                 const body   = _escapeBroadcastHtml(d.body || '');
-                const when   = _broadcastRelTime(iso);
+                const when   = d._virtualLeaseAlert ? '' : _broadcastRelTime(iso);
+                // Lease alert: warning color (red ≤7 days, amber otherwise) on the
+                // border + soft yellow background so it stands apart from regular
+                // announcements. Days remaining drives the urgency tier.
+                const isUrgent = d._virtualLeaseAlert && d._daysRemaining <= 7;
+                const leaseBorder = d._virtualLeaseAlert
+                    ? `border-left:3px solid ${isUrgent ? '#dc3545' : '#ffc107'};`
+                    : (unread ? 'border-left:3px solid var(--primary-green, #4caf50);' : '');
+                const leaseBg = d._virtualLeaseAlert ? 'background:#fff8e1;' : '';
                 // Event-specific: show date + location below body.
                 const eventMeta = (type === 'event' && (d.eventDate || d.location)) ? `
                     <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #e5e7eb; font-size:.82rem; color:var(--text-muted); display:flex; flex-wrap:wrap; gap:12px;">
                         ${d.eventDate ? `<span>📅 ${_escapeBroadcastHtml(fmtEventDate(d.eventDate))}</span>` : ''}
                         ${d.location ? `<span>📍 ${_escapeBroadcastHtml(d.location)}</span>` : ''}
                     </div>` : '';
-                return `<div style="border-bottom:1px solid var(--border, #e5e5e5); padding:14px 20px;
-                            ${unread ? 'border-left:3px solid var(--primary-green, #4caf50);' : ''}">
+                return `<div style="border-bottom:1px solid var(--border, #e5e5e5); padding:14px 20px; ${leaseBorder} ${leaseBg}">
                     <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:.35rem;">
-                        <strong style="font-size:.98rem; ${unread ? 'color:var(--text-dark);' : 'color:var(--text-muted);'}">${badge} ${title}</strong>
-                        <span style="font-size:.78rem; color:var(--text-muted); white-space:nowrap;">${when}</span>
+                        <strong style="font-size:.98rem; ${unread ? 'color:var(--text-dark);' : 'color:var(--text-muted);'}">${d._virtualLeaseAlert ? '' : badge + ' '}${title}</strong>
+                        ${when ? `<span style="font-size:.78rem; color:var(--text-muted); white-space:nowrap;">${when}</span>` : ''}
                     </div>
                     <div style="font-size:.74rem; color:var(--text-muted); margin-bottom:.4rem;">${label}</div>
                     <div style="font-size:.9rem; color:var(--text-dark, #333); white-space:pre-wrap;">${body}</div>
@@ -9184,12 +9207,6 @@
             const roomsFallback = document.getElementById('profile-rooms-fallback');
             if (roomsFallback) {
                 roomsFallback.style.display = _taBuilding === 'rooms' ? 'block' : 'none';
-            }
-            // Rooms-only community-tab context card. '' falls back to .gh-empty-state's
-            // display:flex (shared/components.css:407); 'none' overrides it for Nest.
-            const communityRoomsEmpty = document.getElementById('community-rooms-empty');
-            if (communityRoomsEmpty) {
-                communityRoomsEmpty.style.display = _taBuilding === 'rooms' ? '' : 'none';
             }
 
             // ===== PRE-LAUNCH MODE =====
@@ -12198,53 +12215,16 @@
         })();
 
         // ---- LEASE RENEWAL ALERT ----
-        // Renders identical state into BOTH banner surfaces:
-        //   - #leaseRenewalAlert        (community page; Nest still reaches via nav)
-        //   - #leaseRenewalAlertHome    (home page mirror; only surface for Rooms after nav hide)
-        // Each banner's child elements share an id prefix (leaseAlertTitle*/Message*/Date*)
-        // so a scoped `banner.querySelector('[id^="..."]')` finds the right one per surface.
+        // Renders into the 🔔 bell panel via _leaseAlertItem() synthesized in
+        // _renderBroadcastsList. The standalone banner surfaces (community page
+        // + home page mirror) were retired — bell is the single notification
+        // surface. This function is kept as a thin shim so existing callers
+        // (init flow, window.displayLeaseRenewalAlert) still trigger the badge
+        // and list refresh when tenant data lands.
         function displayLeaseRenewalAlert() {
-            const banners = ['leaseRenewalAlert', 'leaseRenewalAlertHome']
-                .map(id => document.getElementById(id)).filter(Boolean);
-            if (banners.length === 0) return;
-            const lease = _legacyLease();
-            if (!lease || !(lease.endDate || lease.moveOutDate)) {
-                banners.forEach(b => { b.style.display = 'none'; });
-                return;
-            }
             try {
-                const endDate = new Date(lease.endDate || lease.moveOutDate);
-                const today = new Date();
-                const daysRemaining = Math.ceil((endDate - today) / 86400000);
-                let display = 'none', titleText = null, msgText = null, dateText = null;
-                let bgColor = null, borderColor = null;
-                if (daysRemaining <= 0) {
-                    display = 'block';
-                    bgColor = '#f8d7da';
-                    borderColor = '#dc3545';
-                    titleText = '❌ สัญญาเช่าหมดอายุแล้ว';
-                    msgText   = 'โปรดติดต่อ Admin ทันทีเพื่อจัดการสัญญา';
-                    dateText  = endDate.toLocaleDateString('th-TH');
-                } else if (daysRemaining <= 60) {
-                    display = 'block';
-                    if (daysRemaining <= 7) titleText = '🚨 สัญญาเช่าใกล้หมดอายุ!';
-                    else if (daysRemaining <= 30) titleText = '⚠️ สัญญาเช่าใกล้หมดอายุ';
-                    else titleText = '📢 แจ้งเตือนการต่ออายุสัญญา';
-                    msgText  = `สัญญาของคุณจะหมดอายุในอีก ${daysRemaining} วัน`;
-                    dateText = endDate.toLocaleDateString('th-TH', {year:'numeric',month:'long',day:'numeric'});
-                }
-                banners.forEach(banner => {
-                    banner.style.display = display;
-                    if (display === 'none') return;
-                    if (bgColor) banner.style.background = bgColor;
-                    if (borderColor) banner.style.borderLeftColor = borderColor;
-                    const titleEl = banner.querySelector('[id^="leaseAlertTitle"]');
-                    const msgEl   = banner.querySelector('[id^="leaseAlertMessage"]');
-                    const dateEl  = banner.querySelector('[id^="leaseAlertDate"]');
-                    if (titleEl && titleText) titleEl.textContent = titleText;
-                    if (msgEl   && msgText)   msgEl.textContent   = msgText;
-                    if (dateEl  && dateText)  dateEl.textContent  = dateText;
-                });
+                if (typeof _renderBroadcastBadge === 'function') _renderBroadcastBadge();
+                if (typeof _renderBroadcastsList === 'function') _renderBroadcastsList();
             } catch(e) { console.warn('displayLeaseRenewalAlert:', e); }
         }
 
