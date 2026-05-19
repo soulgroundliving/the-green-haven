@@ -3120,6 +3120,20 @@
             <small>วันสิ้นสุด: <strong id="leaseAlertDate">—</strong></small>
         </div>
 
+        <!-- Rooms-only community context — shown when Marketplace section is hidden for Rooms tenants.
+             Toggled by applyBuildingVisibility() based on _taBuilding. Lease alert (above) still
+             surfaces when active; this card explains the page when no alert is visible. -->
+        <div id="community-rooms-empty" class="gh-empty-state" style="display:none; margin: 0 15px;">
+            <div class="gh-empty-state__illust">
+                <svg viewBox="0 0 120 120" aria-hidden="true">
+                    <path d="M44 52 v22 a4 4 0 0 0 4 4 h24 a4 4 0 0 0 4-4 v-22 a16 16 0 0 0-32 0 z"/>
+                    <path d="M56 82 a4 4 0 0 0 8 0"/>
+                </svg>
+            </div>
+            <p class="gh-empty-state__title">ชุมชนของคุณ</p>
+            <p class="gh-empty-state__text">หน้านี้แสดงการแจ้งเตือนสัญญาเช่าของคุณ — ประกาศจากนิติบุคคลดูได้ที่ไอคอน 🔔 ด้านบน</p>
+        </div>
+
         <div id="marketplace-section">
         <div class="section-title" role="heading" aria-level="2">
             <span>Marketplace 🛒</span>
@@ -9154,6 +9168,12 @@
             const roomsFallback = document.getElementById('profile-rooms-fallback');
             if (roomsFallback) {
                 roomsFallback.style.display = _taBuilding === 'rooms' ? 'block' : 'none';
+            }
+            // Rooms-only community-tab context card. '' falls back to .gh-empty-state's
+            // display:flex (shared/components.css:407); 'none' overrides it for Nest.
+            const communityRoomsEmpty = document.getElementById('community-rooms-empty');
+            if (communityRoomsEmpty) {
+                communityRoomsEmpty.style.display = _taBuilding === 'rooms' ? '' : 'none';
             }
 
             // ===== PRE-LAUNCH MODE =====
