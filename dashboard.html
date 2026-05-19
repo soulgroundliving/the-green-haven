@@ -357,6 +357,13 @@
 
   // Initialize Firebase on page load
   window.addEventListener('load', async () => {
+    // One-shot cleanup: 'lease_alert_settings' was the localStorage key for the
+    // removed '🔔 แจ้งเตือน' admin tab (commit 6a57e61, 2026-05-19). The tab DOM
+    // + its read/write code were deleted in the same commit; this orphan key
+    // remains on browsers that used the old tab. Idempotent no-op if absent.
+    // Safe to delete this block after 2026-11 (all affected admin browsers
+    // will have re-opened the dashboard at least once by then).
+    try { localStorage.removeItem('lease_alert_settings'); } catch (_) {}
     console.log('🚀 Initializing Firebase integration...');
     await _fbInitPromise; // ensure auth is set before onAuthStateChanged
 
