@@ -606,6 +606,33 @@ If anything matches, READ those CFs end-to-end before designing the new one. 80%
 
 Related: §7-K (defined ≠ wired) is also about discovery — what's in the code vs what runs. §7-K assumes you found the function; this one is about finding it in the first place.
 
+### BB. `window._liffClaims` is a phantom — always use `_taBuilding` / `_taRoom` globals
+
+`window._liffClaims` is never assigned anywhere in this codebase. Any code that reads it gets `{}` every time, silently producing empty strings instead of real claims — causing auth-gated pages to appear stuck (⏳ forever) with no console error.
+
+```js
+// ❌ WRONG — window._liffClaims is never set; tok is always {}
+const tok = window._liffClaims || {};
+_clBuilding = tok.building || 'rooms';  // always 'rooms'
+_clRoomId   = tok.room     || '';       // always ''
+
+// ✅ CORRECT — same source every other auth-gated subscriber uses
+_clBuilding = _taBuilding || 'rooms';
+_clRoomId   = _taRoom     || '';
+```
+
+The canonical source of room and building for auth-gated code is:
+- `_taBuilding` / `_taRoom` — module-level globals in `tenant_app.html`, set by `detectRoomBuilding()` (from localStorage/sessionStorage) and overwritten with real values at `linkAuthUid()` BEFORE `liffLinked` fires (lines 9257-9258)
+- `window._tenantAppBuilding` / `window._tenantAppRoom` — same values exposed globally
+
+Audit recipe — grep for any remaining phantom reads before adding new auth-gated code:
+```bash
+grep -n "_liffClaims" tenant_app.html
+# Should return 0 results. Any hit = bug.
+```
+
+2026-05-17: fixed in `_clInitOnce`, warm-up callback, and facility-booking `showSubPage` handler (commit `55f6295`). Checklist page was stuck at ⏳ forever; facility-booking read the same phantom object. Same class as §7-A (wrong auth hook) but specifically about a non-existent object rather than a wrong event.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md

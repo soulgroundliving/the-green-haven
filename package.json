@@ -24,5 +24,8 @@
     "firebase": "^11.0.0",
     "glob": "^11.0.0",
     "tailwindcss": "^3.4.19"
+  },
+  "dependencies": {
+    "firebase-functions": "^4.9.0"
   }
 }
