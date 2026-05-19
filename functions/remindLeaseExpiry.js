@@ -21,6 +21,13 @@
  *   - the lease just crossed into a new tier (60→30→14→0)
  * Same-tier re-runs within the window are silently skipped.
  *
+ * Stale reconciliation: each sweep also walks leaseNotifications/{status:unread}
+ * and marks docs as status:'stale' when (a) the source lease is no longer
+ * active (cancelled/moved-out), (b) the lease was extended past 60 days, or
+ * (c) the lease has shifted to a different tier band. ensureLeaseNotificationDoc()
+ * resurrects a stale doc if the tier re-applies — covers the rare reactivation
+ * case. We never delete: status:'stale' preserves audit trail.
+ *
  * Cost: LINE Messaging API free tier 200 push/mo. Lease expiries are
  * rare events (30 rooms × maybe 5 expiries/yr × 4 alerts = 20/yr).
  *
@@ -55,10 +62,17 @@ const TIERS = [
 function pickTier(daysLeft) {
   // daysLeft can be negative (expired). We fire at exactly 0 (today), then
   // stop (admin handles post-expiry manually — no point pinging tenant every
-  // day). Positive days → find the smallest tier threshold that still covers.
+  // day). Positive days → find the SMALLEST tier threshold that still covers
+  // daysLeft. TIERS is sorted [expired=0, 14, 30, 60] ascending, so iterating
+  // in natural order returns the most-urgent tier the lease is still inside.
+  // Example: daysLeft=12 → checks 14 first (12<=14 ✓) → returns tier=14.
+  // (Bug 2026-05-19 was using .reverse() here, which always returned tier=60
+  // for any daysLeft 1-60 — latent because no lease had crossed into the
+  // window since deploy.)
   if (daysLeft === 0) return TIERS.find(t => t.key === 'expired');
   if (daysLeft < 0) return null;  // post-expiry silence
-  for (const t of TIERS.slice().reverse()) {  // 60 → 30 → 14
+  for (const t of TIERS) {  // expired(0) → 14 → 30 → 60
+    if (t.key === 'expired') continue;  // handled above
     if (daysLeft <= t.threshold) return t;
   }
   return null;  // further away than 60 days
@@ -132,12 +146,18 @@ async function pushLineMessage(lineUserId, flex, token) {
 // Idempotent write to leaseNotifications/{building}_{room}_{tier} for the
 // in-app 🔔 bell surface (tenant_app) + admin dashboard. Doc ID is deterministic
 // so re-firing the same tier on a catch-up run is a no-op. Returns true if a
-// new doc was created, false if it already existed.
+// new doc was created (or resurrected from stale), false if it already exists
+// as unread/read.
+//
+// Resurrection: if the doc previously existed with status:'stale' (marked by
+// the reconciliation pass after a lease was cancelled/extended), and the lease
+// re-entered this tier band, overwrite to status:'unread' so the alert fires
+// again. Otherwise a reactivated lease would silently miss its bell entry.
 async function ensureLeaseNotificationDoc(building, lease, tier, daysLeft) {
   const docId = `${building}_${lease.roomId}_${tier.key}`;
   const ref = firestore.collection('leaseNotifications').doc(docId);
   const existing = await ref.get();
-  if (existing.exists) return false;
+  if (existing.exists && existing.data().status !== 'stale') return false;
   await ref.set({
     building,
     room: String(lease.roomId),
@@ -158,7 +178,7 @@ async function runExpirySweep() {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) {
     console.warn('⚠️ LINE_CHANNEL_ACCESS_TOKEN not set — aborting');
-    return { scanned: 0, sent: 0, skipped: 0 };
+    return { scanned: 0, sent: 0, bellWrites: 0, staleMarked: 0, skipped: 0, errors: 0 };
   }
 
   const todayMs = Date.now();
@@ -168,6 +188,10 @@ async function runExpirySweep() {
 
   let scanned = 0, sent = 0, skipped = 0, errors = 0, bellWrites = 0;
   const adminSummary = [];  // { building, room, tenant, daysLeft, tier, notified }
+  // Built during the scan loop; consumed by the stale-reconciliation pass
+  // below to detect notifications whose source lease is gone, cancelled,
+  // or no longer in the tier band that produced the doc.
+  const activeLeaseMap = new Map();  // "{building}_{roomId}" → lease
 
   const buildings = await getAllBuildings();
   for (const building of buildings) {
@@ -185,6 +209,7 @@ async function runExpirySweep() {
     for (const doc of leaseSnap.docs) {
       const lease = { id: doc.id, ...doc.data() };
       scanned++;
+      if (lease.roomId) activeLeaseMap.set(`${building}_${lease.roomId}`, lease);
       if (!lease.moveOutDate) { skipped++; continue; }
 
       const endMs = new Date(lease.moveOutDate).getTime();
@@ -267,14 +292,68 @@ async function runExpirySweep() {
     }
   }
 
+  // Stale reconciliation — mark notification docs as stale when the source
+  // lease is no longer active, has been extended past the alert window, or
+  // has shifted into a different tier. The tenant bell + admin renderer both
+  // filter status !== 'stale' so this is the cleanup path for:
+  //   - Lease cancelled or moved-out (status !== 'active' → not in leaseMap)
+  //   - Lease extended past 60 days (pickTier returns null)
+  //   - Lease tier shifted (e.g. notif at tier='60' but lease is now in '30')
+  // Resurrection happens automatically: ensureLeaseNotificationDoc() above
+  // overwrites a stale doc if its tier re-applies. Audit trail preserved
+  // (we mark stale, never delete).
+  let staleMarked = 0;
+  try {
+    const notifSnap = await firestore.collection('leaseNotifications')
+      .where('status', '==', 'unread')
+      .get();
+    for (const notifDoc of notifSnap.docs) {
+      const notif = notifDoc.data();
+      const lease = activeLeaseMap.get(`${notif.building}_${notif.room}`);
+      let reason = null;
+      if (!lease) {
+        reason = 'source lease no longer active';
+      } else if (lease.moveOutDate) {
+        const endMs = new Date(lease.moveOutDate).getTime();
+        if (!isNaN(endMs)) {
+          const endMidnight = new Date(endMs);
+          endMidnight.setHours(0, 0, 0, 0);
+          const newDaysLeft = Math.round((endMidnight.getTime() - todayMidnightMs) / (1000 * 60 * 60 * 24));
+          const newTier = pickTier(newDaysLeft);
+          if (!newTier) {
+            reason = `lease extended past alert window (now ${newDaysLeft} days)`;
+          } else if (newTier.key !== notif.tier) {
+            reason = `tier shifted ${notif.tier} → ${newTier.key}`;
+          }
+        }
+      }
+      if (reason) {
+        try {
+          await notifDoc.ref.update({
+            status: 'stale',
+            staleReason: reason,
+            staleAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          staleMarked++;
+          console.log(`🪦 stale ${notifDoc.id}: ${reason}`);
+        } catch (e) {
+          console.warn(`⚠️ stale update failed ${notifDoc.id}: ${e.message}`);
+        }
+      }
+    }
+  } catch (e) {
+    console.error(`❌ stale reconciliation failed: ${e.message}`);
+    errors++;
+  }
+
   if (adminSummary.length > 0) {
     console.log('📋 Lease-expiry sweep summary:');
     adminSummary.forEach(e => console.log(
       `   ${e.building}/${e.room} (${e.tenant}) — tier=${e.tier} daysLeft=${e.daysLeft} notified=${e.notified}`
     ));
   }
-  console.log(`🗓️ Lease-expiry sweep: scanned=${scanned} sent=${sent} bellWrites=${bellWrites} skipped=${skipped} errors=${errors}`);
-  return { scanned, sent, bellWrites, skipped, errors, summary: adminSummary };
+  console.log(`🗓️ Lease-expiry sweep: scanned=${scanned} sent=${sent} bellWrites=${bellWrites} staleMarked=${staleMarked} skipped=${skipped} errors=${errors}`);
+  return { scanned, sent, bellWrites, staleMarked, skipped, errors, summary: adminSummary };
 }
 
 // ============================================================
