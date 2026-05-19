@@ -33,7 +33,7 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
-const TENANT_APP_URL = 'https://the-green-haven.vercel.app/tenant_app.html?page=profile';
+const TENANT_APP_URL = 'https://the-green-haven.vercel.app/tenant_app.html?page=contract';
 const THAI_MONTHS_SHORT = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
                            'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 const { getAllBuildings } = require('./buildingRegistry');
