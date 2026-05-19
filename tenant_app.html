@@ -4830,7 +4830,7 @@
             <i class="fas fa-leaf" aria-hidden="true"></i>บริการ
             <span id="nav-badge-services" aria-live="polite" style="display:none; position:absolute; top:4px; right:8px; background:var(--alert); color:white; border-radius:50%; width:16px; height:16px; font-size:var(--fs-sm); display:none; align-items:center; justify-content:center; font-weight:bold;"></span>
         </button>
-        <button type="button" class="nav-item" aria-label="ชุมชน" data-action="showPage--markCommunityRead" data-page="community" style="position:relative;">
+        <button type="button" id="nav-community-btn" class="nav-item" aria-label="ชุมชน" data-action="showPage--markCommunityRead" data-page="community" style="position:relative;">
             <i class="fas fa-comments" aria-hidden="true"></i>ชุมชน
             <span id="nav-badge-community" aria-live="polite" style="display:none; position:absolute; top:4px; right:10px; width:8px; height:8px; background:var(--alert); border-radius:50%;"></span>
         </button>
@@ -9132,7 +9132,11 @@
             'nav-smart-key-btn', 'pet-list-container', 'daily-modal',
             'contract-quiz-section', 'wellness-claim-area',
             'home-market-tile', 'marketplace-section',
-            'home-quest-tile', 'home-petpark-tile'
+            'home-quest-tile', 'home-petpark-tile',
+            // Nav bar: Rooms has no marketplace/QUEST/PET PARK, so the only thing
+            // left on the community page is the lease-renewal alert. Hidden from
+            // nav per user 2026-05-19 — see follow-up about mirroring lease alert.
+            'nav-community-btn'
         ];
 
         // ===== FEATURE FLAG =====
