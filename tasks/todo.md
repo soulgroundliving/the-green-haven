@@ -155,3 +155,74 @@ Total: ~7 code files (1 new), 1 new CF, 1 new collection, 1 rules block, 1 index
 ## After approval
 
 Mark each item with ✅ as it ships. Append "Review" section at the end with: shipped / deferred / follow-ups (per CLAUDE.md §3).
+
+---
+
+# Review (2026-05-19)
+
+## Shipped (5 commits → main)
+
+| SHA | Sprint | Summary |
+|-----|--------|---------|
+| `ae3ebb0` | S1 | augment `remindLeaseExpiry.js` with `ensureLeaseNotificationDoc()` + new `firestore.rules` block for `leaseNotifications/{docId}` + 2 composite indexes |
+| `02aadfe` | S2 | tenant bell subscribes to `leaseNotifications/` (§7-A/U/V/N safe); replaces always-on `_leaseAlertItem()` synth; click → `contract-action-page` + mark all unread read; tier-aware colors + `แตะเพื่อต่อสัญญา →` CTA |
+| `0d02328` | S3 | admin dashboard Firestore subscription replaces localStorage compute in `populateLeaseAlerts`; grouped by tier in `#lease-expiry-alerts` / `#nest-lease-expiry-alerts`; per-tenant unread/read indicator dot |
+| `58da517` | S3.1 | §7-C fix — admin alert containers carry inline `style="display:none"` in dashboard.html; need explicit `style.display='block'` set (class toggle alone doesn't override inline) |
+
+Plus deployed: `firestore.rules` + `firestore.indexes.json` (via `firebase deploy --only firestore:rules,firestore:indexes`).
+
+## Architecture pivot during sprint
+
+Original plan called for a NEW `leaseExpiryNotifier` CF. During S1 exploration I found `remindLeaseExpiry.js` already runs daily 08:00 BKK with 4 tiers (60/30/14/expired) + LINE push + `lease.lastExpiryTier` anti-spam — much of the work was done. Stopped, asked user, pivoted to **augmenting the existing CF** instead of duplicating. User confirmed "all 4 tiers" coverage (not just 60+30).
+
+The pivot saved ~30 min of redundant work AND aligned admin-side notifications with the proven LINE push tier logic. Single source of truth: `leaseNotifications/{b}_{r}_{tier}` (where tier ∈ `expired|14|30|60`).
+
+## Live verification (Chrome MCP, admin preview)
+
+**S2 tenant bell** (`?room=15&building=rooms`, mock doc `rooms_15_30`, tier=30, 28 days):
+- ✅ `_taLeaseNotifs` populated via onSnapshot
+- ✅ Bell badge shows count
+- ✅ Lease alert renders at top of bell with amber (`#e65100`) border + soft yellow bg + `แตะเพื่อต่อสัญญา →` CTA
+- ✅ Click closes bell, navigates to `#contract-action-page` ("จัดการสัญญาเช่า") with real tenant lease info
+- ✅ Doc flips to `status:'read'` + `lastReadAt` timestamp written
+
+**S3 admin dashboard** (Tenant Information page, mock docs across both buildings):
+- ✅ Rooms card: `⚠️ ใกล้หมดอายุ (30 วัน) (1)` + `📅 ใกล้หมดอายุ (60 วัน) (1)` — tier-grouped, per-tenant row, ● unread dot
+- ✅ Nest card: `🚨 เหลือไม่ถึง 14 วัน (1)` — red tier band
+- ✅ Listener wired via `setupLeaseNotifsListener()` from `initRoomsPage` + `initNestPage` (matches existing `setupMeterDataListener` pattern)
+
+## Memory updates
+
+- `lifecycle_lease_action.md` — appended "Auto-notifier" section with full architecture, tier colors, stale handling, rules + indexes. 5 grep-verifiable claims.
+- `lifecycle_scheduled_jobs.md` — `remindLeaseExpiryScheduled` row updated to note the new `leaseNotifications/` write behavior.
+- `MEMORY.md` — `lifecycle_lease_action.md` entry expanded to include the auto-notifier announcement.
+- `npm run verify:memory` → ALL GREEN (32 docs, 296 verifier rows, 0 fails).
+
+## Deferred — needs user action
+
+**CF deploy** — `firebase deploy --only functions:remindLeaseExpiryScheduled,functions:remindLeaseExpiry` from THIS worktree failed because `functions/.env` is gitignored and isn't present here (it exists in the main worktree at `C:\Users\usEr\Downloads\The_green_haven\functions\.env`). Options:
+
+1. **Deploy from main worktree:** `cd C:/Users/usEr/Downloads/The_green_haven && git pull && firebase deploy --only functions:remindLeaseExpiryScheduled,functions:remindLeaseExpiry`
+2. **Copy `.env` to this worktree** then deploy from here
+3. **Wait for next morning's 08:00 BKK run** — the scheduled job will emit notifications naturally; until then the new code paths in the CF aren't live yet, but the rules + indexes + read-path subscribers ARE deployed so anything written manually (or via direct Firestore Console insert) will surface in both tenant bell + admin dashboard.
+
+The rules + indexes deploy succeeded, so the new collection is operational from the read side. The CF write side just needs the deploy.
+
+## Follow-ups (not in scope of this sprint)
+
+1. **LINE push button target** — currently points to `?page=profile`; could be updated to `?page=contract-action` for symmetry with in-app bell click target. Single-line change to `TENANT_APP_URL` in `remindLeaseExpiry.js`.
+2. **"Lease cancelled" cleanup** — if admin manually voids a contract before the lease ends, the notification doc stays as `unread`. The daily sweep handles `endDate` extension (marks stale) but not contract cancellation. Would need a Firestore trigger on `tenants/{b}/list/{r}` deletion / status change.
+3. **Per-tenant LINE push opt-out** — some tenants might prefer admin-only contact for renewal. Currently no opt-out exists; bell + LINE both fire regardless. Could add `optOutLeaseExpiry: true` on the lease record.
+4. **Admin "mark all read" bulk action** — when admin reviews all alerts in one go, could mark all docs read with a single button instead of per-row. Out of scope; admin UI is read-only currently.
+
+## §7 anti-patterns avoided
+
+Tenant subscriber wired with all four safety patterns:
+- **§7-A**: `_onLiffClaimsReady` wrapper (not raw `addEventListener('authReady'|'liffLinked')`)
+- **§7-U**: claim-presence guard at the top (`if (!_taBuilding || !_taRoom) return`) — without it, the where() query would set unsub to a stale subscription with empty filters
+- **§7-V**: idempotency check; subscriber tears down prior listener via `realtimeListeners.leaseNotifs` slot (admin side)
+- **§7-N**: error callback resets unsub on `permission-denied` / `failed-precondition` so retry succeeds when claims/index land
+
+§7-C surfaced during admin verify — inline `style="display:none"` on `#lease-expiry-alerts` containers overrode my class-toggle. Fixed in `58da517` with explicit `style.display` set on both branches.
+
+Mock docs cleaned up — 3 deleteDoc calls completed; collection is empty pending CF deploy.
