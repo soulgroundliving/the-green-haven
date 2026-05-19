@@ -694,18 +694,33 @@ function updateLeaseExpiryAlerts() {
   const allNest  = _leaseNotifsCache.filter(d => d.building === 'nest'  && d.status !== 'stale')
     .sort((a, b) => (_LEASE_TIER_ORDER[a.tier] ?? 99) - (_LEASE_TIER_ORDER[b.tier] ?? 99));
 
+  // §7-C: the containers have inline style="display:none" in dashboard.html
+  // (lines ~3486 / ~3511) so `classList.remove('u-hidden')` doesn't override.
+  // Must set `style.display` explicitly here for both branches.
   const oldAlertsDiv = document.getElementById('lease-expiry-alerts');
   const oldListDiv   = document.getElementById('lease-expiry-list');
   if (oldAlertsDiv) {
-    if (allRooms.length > 0) { oldAlertsDiv.classList.remove('u-hidden'); _renderLeaseAlertCard(oldListDiv, allRooms); }
-    else                     { oldAlertsDiv.classList.add('u-hidden'); }
+    if (allRooms.length > 0) {
+      oldAlertsDiv.classList.remove('u-hidden');
+      oldAlertsDiv.style.display = 'block';
+      _renderLeaseAlertCard(oldListDiv, allRooms);
+    } else {
+      oldAlertsDiv.classList.add('u-hidden');
+      oldAlertsDiv.style.display = 'none';
+    }
   }
 
   const nestAlertsDiv = document.getElementById('nest-lease-expiry-alerts');
   const nestListDiv   = document.getElementById('nest-lease-expiry-list');
   if (nestAlertsDiv) {
-    if (allNest.length > 0) { nestAlertsDiv.classList.remove('u-hidden'); _renderLeaseAlertCard(nestListDiv, allNest); }
-    else                    { nestAlertsDiv.classList.add('u-hidden'); }
+    if (allNest.length > 0) {
+      nestAlertsDiv.classList.remove('u-hidden');
+      nestAlertsDiv.style.display = 'block';
+      _renderLeaseAlertCard(nestListDiv, allNest);
+    } else {
+      nestAlertsDiv.classList.add('u-hidden');
+      nestAlertsDiv.style.display = 'none';
+    }
   }
 }
 
