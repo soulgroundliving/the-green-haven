@@ -9713,9 +9713,15 @@
             const auth = window.firebaseAuth;
             // Fast-path: already signed in with custom token (non-anonymous) + claims present.
             // Covers returning users whose session persisted in IndexedDB.
+            // Force-refresh (true) — getIdTokenResult() without it returns the CACHED
+            // token, which still carries pre-unlink claims for up to ~1 h after admin
+            // strips them. force=true makes the SDK fetch a fresh token; if the user
+            // was unlinked + revokeRefreshTokens was called, this throws and we fall
+            // through to the liffSignIn POST → 403 'unlinked' → _applyUnlinkedMode.
+            // One extra round-trip on every LIFF open is the correctness cost.
             if (auth?.currentUser && !auth.currentUser.isAnonymous) {
                 try {
-                    const tr = await auth.currentUser.getIdTokenResult();
+                    const tr = await auth.currentUser.getIdTokenResult(true);
                     if (tr.claims.room && tr.claims.building) {
                         window.dispatchEvent(new Event('liffLinked'));
                         return { linked: true, room: tr.claims.room, building: tr.claims.building };
@@ -9728,7 +9734,17 @@
                         window.dispatchEvent(new Event('liffLinked'));
                         return { linked: true, role: 'player' };
                     }
-                } catch (_) {}
+                    // Token refreshed successfully but no useful claims → user was
+                    // unlinked server-side. Fall through to the LIFF POST which will
+                    // return 403 'unlinked' and trigger _applyUnlinkedMode.
+                } catch (e) {
+                    // auth/user-token-expired (post-revokeRefreshTokens) or transient.
+                    // Either way: fall through to liffSignIn POST. Don't swallow the
+                    // error silently — log for debugging, drop the local user state
+                    // so the POST path can install a fresh sign-in cleanly.
+                    console.warn('fast-path token refresh failed → falling to liffSignIn:', e?.code || e?.name, e?.message);
+                    try { await auth.signOut(); } catch(_) {}
+                }
             }
 
             // Get LIFF ID token — the sole credential sent to the CF.
