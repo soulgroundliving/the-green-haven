@@ -756,7 +756,9 @@ function setupLeaseNotifsListener() {
 }
 
 // ===== REAL-TIME FIREBASE LISTENERS =====
-let realtimeListeners = {};
+// §7-CC: window-attached so cleanupAdminListeners + future extracted modules
+// can read/write the same listener map across <script> tag boundaries.
+window.realtimeListeners = window.realtimeListeners || {};
 
 function setupRoomDataListener() {
   // Room data comes from RoomConfigManager (local config), not Firestore subcollection.
@@ -827,12 +829,12 @@ function updateRealtimeStatus(connected) {
 
 function stopRealtimeListeners() {
   // Unsubscribe from all listeners
-  Object.values(realtimeListeners).forEach(unsubscribe => {
+  Object.values(window.realtimeListeners).forEach(unsubscribe => {
     if (typeof unsubscribe === 'function') {
       unsubscribe();
     }
   });
-  realtimeListeners = {};
+  window.realtimeListeners = {};
   console.log('✅ Real-time listeners stopped');
 }
 
@@ -1292,7 +1294,9 @@ if (typeof window !== 'undefined') {
 }
 
 // ===== LEASE REQUESTS QUEUE (Firestore leaseRequests) =====
-let _leaseRequestsUnsub = null;
+// §7-CC: _leaseRequestsUnsub window-attached so cleanupAdminListeners + future
+// extracted dashboard-tenant-lease.js can read it cross-script.
+window._leaseRequestsUnsub = null;
 let _leaseRequestsCache = [];
 let _leaseRequestsFilter = 'all';
 
@@ -1302,12 +1306,12 @@ function _esc(s) {
 }
 
 function initLeaseRequestsPage() {
-  if (_leaseRequestsUnsub) return; // idempotent
+  if (window._leaseRequestsUnsub) return; // idempotent
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
   const colRef = fs.collection(db, 'leaseRequests');
-  _leaseRequestsUnsub = fs.onSnapshot(colRef, snap => {
+  window._leaseRequestsUnsub = fs.onSnapshot(colRef, snap => {
     _leaseRequestsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     renderLeaseRequestsList();
@@ -3074,18 +3078,20 @@ if (typeof window !== 'undefined') {
 // Moved to shared/dashboard-domain-stores.js (2026-05-19 Phase 1 refactor) — ServiceProviders section
 // Moved to shared/dashboard-domain-stores.js (2026-05-19 Phase 1 refactor) — CommunityEvents section
 // ===== COMMUNITY DOCUMENTS MANAGEMENT =====
-let _docsUnsub = null;
+// §7-CC: _docsUnsub window-attached so cleanupAdminListeners + future extracted
+// dashboard-config.js can read it cross-script.
+window._docsUnsub = null;
 let _docsCache = null; // null = not yet hydrated from Firestore; falls back to localStorage
 
 function initCommunityDocsPage() {
   loadAndRenderCommunityDocs();
-  if (_docsUnsub) return;
+  if (window._docsUnsub) return;
   if (!window.firebase?.firestore) return;
   try {
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
     const col = fs.collection(db, 'communityDocuments');
-    _docsUnsub = fs.onSnapshot(col, snap => {
+    window._docsUnsub = fs.onSnapshot(col, snap => {
       const remote = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const local = _docsCache || JSON.parse(localStorage.getItem('community_documents_data') || '[]');
       const byId = new Map();
@@ -3263,17 +3269,19 @@ function deleteDocument(id) {
 // ===== PET REGISTRATION APPROVALS =====
 // SSoT: tenants/{building}/list/{roomId}/pets/{petId} (matches tenant_app.html write path)
 // Admin reads via collectionGroup('pets') so any pet under any room is picked up.
-let _petsUnsub = null;
+// §7-CC: _petsUnsub window-attached so cleanupAdminListeners + future extracted
+// dashboard-tenant-lease.js can read it cross-script.
+window._petsUnsub = null;
 let _petsFromFirestore = [];
 function initPetApprovalsPage() {
   loadAndRenderPetApprovals();
-  if (_petsUnsub) return;
+  if (window._petsUnsub) return;
   if (!window.firebase?.firestore) return;
   try {
     const db = window.firebase.firestore();
     const fs = window.firebase.firestoreFunctions;
     const cg = fs.collectionGroup(db, 'pets');
-    _petsUnsub = fs.onSnapshot(cg, snap => {
+    window._petsUnsub = fs.onSnapshot(cg, snap => {
       _petsFromFirestore = snap.docs.map(d => {
         // Path: tenants/{building}/list/{roomId}/pets/{petId}
         const parts = d.ref.path.split('/');
@@ -3522,14 +3530,16 @@ function switchGamificationTab(tabName, btn) {
 }
 
 // ===== GAMIFICATION LIVE TOGGLE =====
-let _gamificationConfigUnsub = null;
+// §7-CC: _gamificationConfigUnsub window-attached so cleanupAdminListeners +
+// future extracted dashboard-config.js can read it cross-script.
+window._gamificationConfigUnsub = null;
 function subscribeGamificationConfig() {
-  if (_gamificationConfigUnsub) return;
+  if (window._gamificationConfigUnsub) return;
   if (!window.firebase?.firestoreFunctions) return;
   try {
     const fs = window.firebase.firestoreFunctions;
     const db = window.firebase.firestore();
-    _gamificationConfigUnsub = fs.onSnapshot(fs.doc(db, 'system', 'config'), snap => {
+    window._gamificationConfigUnsub = fs.onSnapshot(fs.doc(db, 'system', 'config'), snap => {
       const live = snap.exists() ? snap.data().gamificationLive === true : false;
       renderGamificationToggle(live);
     }, err => console.warn('gamificationConfig dashboard subscribe failed:', err.message));
@@ -3703,16 +3713,18 @@ async function savePolicyDoc(key) {
 }
 
 // ===== REWARDS ADMIN CRUD (Firestore `rewards/` collection) =====
-let _rewardsAdminUnsub = null;
+// §7-CC: _rewardsAdminUnsub window-attached so cleanupAdminListeners + future
+// extracted dashboard-config.js can read it cross-script.
+window._rewardsAdminUnsub = null;
 let _rewardsAdminCache = [];
 
 function loadRewardsAdmin() {
-  if (_rewardsAdminUnsub) return; // idempotent
+  if (window._rewardsAdminUnsub) return; // idempotent
   if (!window.firebase?.firestore || !window.firebase?.firestoreFunctions) return;
   const fs = window.firebase.firestoreFunctions;
   const db = window.firebase.firestore();
   const colRef = fs.collection(db, 'rewards');
-  _rewardsAdminUnsub = fs.onSnapshot(colRef, snap => {
+  window._rewardsAdminUnsub = fs.onSnapshot(colRef, snap => {
     _rewardsAdminCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (a.order || 999) - (b.order || 999));
     renderRewardsAdminTable();
@@ -5464,12 +5476,12 @@ window.runAwardComplaintFreeMonthDryRun = runAwardComplaintFreeMonthDryRun;
 // multiple times — each unsub becomes a no-op once invoked.
 function cleanupAdminListeners() {
   const unsubs = [
-    ['_leaseRequestsUnsub', _leaseRequestsUnsub],
-    ['_docsUnsub', _docsUnsub],
-    ['_petsUnsub', _petsUnsub],
-    ['_rewardsAdminUnsub', _rewardsAdminUnsub],
+    ['_leaseRequestsUnsub', window._leaseRequestsUnsub],
+    ['_docsUnsub', window._docsUnsub],
+    ['_petsUnsub', window._petsUnsub],
+    ['_rewardsAdminUnsub', window._rewardsAdminUnsub],
     ['_RequestsStoreComplaintsUnsub', window._RequestsStoreComplaintsUnsub],
-    ['_gamificationConfigUnsub', _gamificationConfigUnsub]
+    ['_gamificationConfigUnsub', window._gamificationConfigUnsub]
   ];
   for (const [name, fn] of unsubs) {
     if (typeof fn === 'function') {
