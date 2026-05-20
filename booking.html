@@ -1131,10 +1131,18 @@
   const KYC_REQUIRED = ['idCardFront', 'idCardBack'];
 
   // ── On-screen debug panel ─────────────────────────────────────────────────
-  // Activated by appending ?debug=1 to the booking URL — lets us read logs
-  // on iOS LIFF where Safari Web Inspector isn't practical. _dlog() does
-  // BOTH: console.log + append a line to #bookDebugLog.
-  const _debugOn = /[?&]debug=1/.test(location.search);
+  // Activated by appending ?debug=1 to the booking URL once — persisted to
+  // localStorage so the flag survives LIFF redirect (which can strip query
+  // params) and subsequent reopens. Append ?debug=0 to turn off again.
+  // _dlog() does BOTH: console.log + append a line to #bookDebugLog.
+  let _debugOn = /[?&]debug=1/.test(location.search);
+  const _debugOff = /[?&]debug=0/.test(location.search);
+  try {
+    if (_debugOff) localStorage.removeItem('bk_debug');
+    else if (_debugOn) localStorage.setItem('bk_debug', '1');
+    else if (localStorage.getItem('bk_debug') === '1') _debugOn = true;
+  } catch (_) { /* storage disabled — non-fatal */ }
+
   function _dlog(msg) {
     try { console.log(msg); } catch (_) {}
     if (!_debugOn) return;
@@ -1145,16 +1153,26 @@
     el.appendChild(line);
     el.parentElement.scrollTop = el.parentElement.scrollHeight;
   }
-  if (_debugOn) {
-    document.addEventListener('DOMContentLoaded', () => {
-      const panel = document.getElementById('bookDebugPanel');
-      if (panel) panel.classList.remove('hide');
-      const clearBtn = document.getElementById('bookDebugClear');
-      if (clearBtn) clearBtn.addEventListener('click', () => {
+
+  function _initDebugPanel() {
+    const panel = document.getElementById('bookDebugPanel');
+    if (panel) panel.classList.remove('hide');
+    const clearBtn = document.getElementById('bookDebugClear');
+    if (clearBtn && !clearBtn._wired) {
+      clearBtn._wired = true;
+      clearBtn.addEventListener('click', () => {
         const log = document.getElementById('bookDebugLog');
         if (log) log.innerHTML = '';
       });
-    });
+    }
+    _dlog('[booking] debug panel active — DOM ready=' + document.readyState);
+  }
+  if (_debugOn) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', _initDebugPanel);
+    } else {
+      _initDebugPanel();
+    }
   }
 
   // ── Lock persistence (survives refresh / LIFF restart within 20-min window) ─
