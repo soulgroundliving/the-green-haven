@@ -726,6 +726,17 @@
   ⚠️ ไม่มีการเชื่อมต่ออินเทอร์เน็ต — กรุณาตรวจสอบและรีเฟรช
 </div>
 
+<!-- On-screen debug panel — visible only when URL has ?debug=1.
+     Lets us read console.log output on iOS LIFF where Safari Web Inspector
+     isn't practical. The panel appends every _dlog(msg) call in real time. -->
+<div id="bookDebugPanel" class="hide" style="position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:rgba(0,0,0,0.85);color:#0f0;font-family:monospace;font-size:11px;padding:8px;z-index:9999;line-height:1.4;">
+  <div style="color:#fff;border-bottom:1px solid #444;padding-bottom:4px;margin-bottom:4px;display:flex;justify-content:space-between;">
+    <span>🐞 debug</span>
+    <button id="bookDebugClear" style="background:#333;color:#fff;border:1px solid #666;padding:2px 8px;font-size:11px;cursor:pointer;">clear</button>
+  </div>
+  <div id="bookDebugLog"></div>
+</div>
+
 <div class="app-shell" id="main-content">
 
   <header class="app-header">
@@ -1118,6 +1129,33 @@
   };
 
   const KYC_REQUIRED = ['idCardFront', 'idCardBack'];
+
+  // ── On-screen debug panel ─────────────────────────────────────────────────
+  // Activated by appending ?debug=1 to the booking URL — lets us read logs
+  // on iOS LIFF where Safari Web Inspector isn't practical. _dlog() does
+  // BOTH: console.log + append a line to #bookDebugLog.
+  const _debugOn = /[?&]debug=1/.test(location.search);
+  function _dlog(msg) {
+    try { console.log(msg); } catch (_) {}
+    if (!_debugOn) return;
+    const el = document.getElementById('bookDebugLog');
+    if (!el) return;
+    const line = document.createElement('div');
+    line.textContent = `${new Date().toTimeString().slice(0,8)}  ${msg}`;
+    el.appendChild(line);
+    el.parentElement.scrollTop = el.parentElement.scrollHeight;
+  }
+  if (_debugOn) {
+    document.addEventListener('DOMContentLoaded', () => {
+      const panel = document.getElementById('bookDebugPanel');
+      if (panel) panel.classList.remove('hide');
+      const clearBtn = document.getElementById('bookDebugClear');
+      if (clearBtn) clearBtn.addEventListener('click', () => {
+        const log = document.getElementById('bookDebugLog');
+        if (log) log.innerHTML = '';
+      });
+    });
+  }
 
   // ── Lock persistence (survives refresh / LIFF restart within 20-min window) ─
   // Server holds the canonical lock in bookings/{id}; sessionStorage just lets
@@ -1991,15 +2029,15 @@
   // by accident" case (better than losing the lock entirely).
   async function tryRestoreLockFromServer() {
     if (!window.bookingFirebase || !window.firebaseAuth?.currentUser) {
-      console.warn('[booking] server restore skipped: firebase/auth not ready');
+      _dlog('[booking] server restore skipped: firebase/auth not ready');
       return false;
     }
     const uid = window.firebaseAuth.currentUser.uid;
     if (!uid) {
-      console.warn('[booking] server restore skipped: no uid');
+      _dlog('[booking] server restore skipped: no uid');
       return false;
     }
-    console.log('[booking] server restore: querying for uid=' + uid);
+    _dlog('[booking] server restore: querying for uid=' + uid);
     try {
       const fb = window.bookingFirebase;
       const q = fb.query(
@@ -2009,7 +2047,7 @@
         fb.limit(5)
       );
       const snap = await fb.getDocs(q);
-      console.log('[booking] server restore: got ' + snap.size + ' candidate(s)');
+      _dlog('[booking] server restore: got ' + snap.size + ' candidate(s)');
       if (snap.empty) return false;
       // Pick the lock with the latest lockedUntil that's still in the future.
       const now = Date.now();
@@ -2018,15 +2056,15 @@
         const data = d.data() || {};
         const lu = data.lockedUntil;
         const luMs = lu && typeof lu.toMillis === 'function' ? lu.toMillis() : 0;
-        console.log('[booking] server restore: candidate ' + d.id + ' lockedUntil=' + (luMs ? new Date(luMs).toISOString() : 'unset') + ' (remain ' + Math.round((luMs - now) / 1000) + 's)');
+        _dlog('[booking] candidate ' + d.id.slice(-8) + ' remain=' + Math.round((luMs - now) / 1000) + 's status=' + (data.status || '?') + ' uid=' + (data.prospectUid || '?').slice(-6));
         if (luMs <= now + 1000) return;
         if (!best || luMs > best.luMs) best = { id: d.id, data, luMs };
       });
       if (!best) {
-        console.warn('[booking] server restore: all candidates already expired');
+        _dlog('[booking] server restore: all candidates already expired');
         return false;
       }
-      console.log('[booking] server restore: restoring ' + best.id);
+      _dlog('[booking] server restore: restoring ' + best.id);
       const b = best.data;
       _restoreStateFrom({
         bookingId: best.id,
@@ -2047,7 +2085,7 @@
       _persistLock();
       return true;
     } catch (e) {
-      console.warn('[booking] server restore failed:', e?.code || '', e?.message || e);
+      _dlog('[booking] server restore failed: ' + (e?.code || '') + ' ' + (e?.message || e));
       return false;
     }
   }
