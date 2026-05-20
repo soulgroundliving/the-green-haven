@@ -482,7 +482,7 @@ async function unlinkLiffLink(lineUserId, displayName){
     return;
   }
   try {
-    const callable = window.firebase.functions().httpsCallable('unlinkLiffUser');
+    const callable = window.firebase.functions.httpsCallable('unlinkLiffUser');
     const result = await callable({ lineUserId });
     const r = result?.data || {};
     if (typeof showToast === 'function') {
