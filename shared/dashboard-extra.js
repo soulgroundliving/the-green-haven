@@ -568,9 +568,6 @@ function updateRoomStatuses() {
   });
 }
 
-// Update room statuses when tenant data changes
-window.updateRoomStatuses = updateRoomStatuses;
-
 // ===== Occupancy Dashboard =====
 function calculateOccupancy(buildingType = null) {
   const building = buildingType === 'nest' ? 'nest' : 'rooms';
@@ -810,10 +807,15 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeCloudData();
 });
 
-// Update occupancy and lease alerts when room statuses are updated
-const originalUpdateRoomStatuses = window.updateRoomStatuses;
+// window.updateRoomStatuses — wrapper that runs the room-pill repaint THEN
+// updates the occupancy KPIs + lease-expiry alerts. Cross-script callers in
+// dashboard-tenant-modal.js + dashboard-pdpa-erasure.js invoke this name as a
+// bareword; non-strict global lookup resolves it to THIS function, so they
+// get the full repaint + KPI refresh in one call. Local bareword references
+// inside this file still hit the inner `updateRoomStatuses()` function via
+// JS scope precedence (no recursion).
 window.updateRoomStatuses = function() {
-  originalUpdateRoomStatuses();
+  updateRoomStatuses();
   updateOccupancyDashboard();
   updateLeaseExpiryAlerts();
 };
