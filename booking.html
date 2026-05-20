@@ -767,6 +767,13 @@
   <!-- ──────────── Step 1: Calendar / Room picker ──────────── -->
   <section id="stepPicker" class="step">
 
+    <!-- Recovery banner — shown when Firestore has an active lock for this user.
+         Populated by tryRestoreLockFromServer; click goes back to Step 3. -->
+    <div id="recoveryBanner" class="hide" style="background:var(--brand-primary-wash);border:1px solid var(--brand-primary);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-4);cursor:pointer;">
+      <div style="font-size: var(--text-sm); color: var(--brand-primary-dark); font-weight:600;" id="recoveryBannerTitle">📌 พบการจองที่ค้างอยู่</div>
+      <div style="font-size: var(--text-xs); color: var(--shadow); margin-top: 4px;" id="recoveryBannerSub">กดเพื่อกลับไปจ่ายมัดจำ</div>
+    </div>
+
     <div class="building-tabs">
       <button id="bldRoomsBtn" class="building-tab active" data-bld="rooms">
         ห้องแถว <span class="room-count" id="bldRoomsCount">— ห้องว่าง</span>
@@ -2045,14 +2052,35 @@
   // Async server-side fallback. Fires only when sessionStorage is empty —
   // the brief Step-1 → Step-3 swap is acceptable for the "I closed LIFF
   // by accident" case (better than losing the lock entirely).
+  // Banner diagnostic — populated on failure paths so user sees WHY restore
+  // didn't fire (sticks even after hideBoot). Hidden when restore succeeds.
+  function _setRecoveryBanner(title, sub, onClick) {
+    const banner = document.getElementById('recoveryBanner');
+    if (!banner) return;
+    const t = document.getElementById('recoveryBannerTitle');
+    const s = document.getElementById('recoveryBannerSub');
+    if (t) t.textContent = title;
+    if (s) s.textContent = sub;
+    banner.classList.remove('hide');
+    if (onClick) {
+      banner.onclick = onClick;
+      banner.style.cursor = 'pointer';
+    } else {
+      banner.onclick = null;
+      banner.style.cursor = 'default';
+    }
+  }
+
   async function tryRestoreLockFromServer() {
     if (!window.bookingFirebase || !window.firebaseAuth?.currentUser) {
       _dlog('[booking] server restore skipped: firebase=' + !!window.bookingFirebase + ' auth=' + !!window.firebaseAuth?.currentUser);
+      _setRecoveryBanner('⚠️ ไม่สามารถตรวจสอบการจองได้', 'firebase=' + !!window.bookingFirebase + ' auth=' + !!window.firebaseAuth?.currentUser);
       return false;
     }
     const uid = window.firebaseAuth.currentUser.uid;
     if (!uid) {
       _dlog('[booking] server restore skipped: no uid');
+      _setRecoveryBanner('⚠️ ไม่สามารถตรวจสอบการจองได้', 'no uid');
       return false;
     }
     _dlog('[booking] server restore: querying for uid=' + uid + ' lineUserId=' + (state.lineUserId || '?').slice(-12));
@@ -2066,7 +2094,10 @@
       );
       const snap = await fb.getDocs(q);
       _dlog('[booking] server restore: got ' + snap.size + ' candidate(s)');
-      if (snap.empty) return false;
+      if (snap.empty) {
+        _setRecoveryBanner('ไม่พบการจองค้างอยู่', 'uid=' + uid.slice(-12) + ' · ไม่มี doc ที่ status=locked');
+        return false;
+      }
       // Pick the lock with the latest lockedUntil that's still in the future.
       const now = Date.now();
       let best = null;
@@ -2080,6 +2111,7 @@
       });
       if (!best) {
         _dlog('[booking] server restore: all candidates already expired');
+        _setRecoveryBanner('การจองที่ค้างอยู่หมดอายุแล้ว', snap.size + ' รายการ — เริ่มจองใหม่');
         return false;
       }
       _dlog('[booking] server restore: restoring ' + best.id);
@@ -2104,6 +2136,7 @@
       return true;
     } catch (e) {
       _dlog('[booking] server restore failed: ' + (e?.code || '') + ' ' + (e?.message || e));
+      _setRecoveryBanner('⚠️ ตรวจสอบการจองไม่สำเร็จ', (e?.code || 'error') + ': ' + (e?.message || e).slice(0, 80), () => tryRestoreLockFromServer());
       return false;
     }
   }
