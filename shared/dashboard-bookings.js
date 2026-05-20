@@ -23,6 +23,7 @@
   let _searchTerm = '';
   let _modalOpen = false;
   let _countdownTimer = null;      // single 1s ticker for all locked-row countdowns
+  const _expireFlightSet = new Set();  // bookingIds currently being auto-expired (de-dupe)
 
   const STATUS_PILL = {
     locked:        { label: '🔒 ล็อคไว้',     bg: '#fff3e0', color: '#e65100' },
@@ -123,6 +124,9 @@
     // Spin up countdown ticker only when at least one locked row is showing
     if (root.querySelector('[data-bk-countdown]')) startCountdownTicker();
     else stopCountdownTicker();
+
+    // Sweep stale locks (defensive — covers gaps in scheduled CF execution)
+    autoExpireStaleLocks();
   }
 
   function applyFilter(rows) {
@@ -188,11 +192,45 @@
     </tr>`;
   }
 
+  // ── Auto-expire fallback (client-side defense for scheduled CF) ───────────
+  // expireBookingLocks runs every 5 min server-side. If that CF is unhealthy
+  // (deploy gap, index missing, throwing errors), abandoned locks would sit
+  // forever showing "🔒 ล็อคไว้" in the admin table. This sweep runs on every
+  // render + after a row's countdown hits 0 — any locked row whose lockedUntil
+  // is in the past gets flipped to status='expired' via direct admin write
+  // (allowed by firestore.rules at /bookings/{bookingId}). onSnapshot then
+  // re-renders the row with the correct pill. In-flight set prevents N
+  // simultaneous writes for the same doc across rapid ticks.
+  function autoExpireStaleLocks() {
+    if (!window.firebase?.firestoreFunctions || !window.firebase?.firestore) return;
+    const fs = window.firebase.firestoreFunctions;
+    const db = window.firebase.firestore();
+    const now = Date.now();
+    _bookings.forEach(b => {
+      if (b.status !== 'locked' || !b.lockedUntil) return;
+      const lockMs = typeof b.lockedUntil.toMillis === 'function'
+        ? b.lockedUntil.toMillis()
+        : Number(b.lockedUntil);
+      if (lockMs > now) return;
+      if (_expireFlightSet.has(b.id)) return;
+      _expireFlightSet.add(b.id);
+      const ref = fs.doc(db, 'bookings', b.id);
+      fs.setDoc(ref, {
+        status: 'expired',
+        expiredAt: fs.serverTimestamp(),
+        expiredBy: 'admin-ui-fallback',
+        updatedAt: fs.serverTimestamp(),
+      }, { merge: true })
+        .catch(e => console.warn('[bookings] auto-expire failed:', b.id, e?.message || e))
+        .finally(() => _expireFlightSet.delete(b.id));
+    });
+  }
+
   // ── Realtime countdown ticker ─────────────────────────────────────────────
   // One setInterval ticks every 1s and updates ALL locked-row countdowns via
   // data-bk-countdown="<expireMs>". When a countdown hits 0 we freeze the cell
-  // to "หมดเวลา"; the scheduled CF (every 5 min) flips the doc status to
-  // 'expired' shortly after, and onSnapshot then re-renders the row's pill.
+  // to "หมดเวลา" AND fire autoExpireStaleLocks to flip the doc immediately
+  // (instead of waiting up to 5 min for the scheduled CF).
   function formatCountdown(ms) {
     if (ms <= 0) return '⏰ หมดเวลา';
     const totalSec = Math.floor(ms / 1000);
@@ -204,6 +242,7 @@
     const cells = document.querySelectorAll('[data-bk-countdown]');
     if (cells.length === 0) { stopCountdownTicker(); return; }
     const now = Date.now();
+    let anyExpired = false;
     cells.forEach(el => {
       const expireMs = Number(el.dataset.bkCountdown);
       if (!expireMs) return;
@@ -212,8 +251,10 @@
       if (remain <= 0) {
         el.style.color = '#c62828';
         el.removeAttribute('data-bk-countdown');  // freeze; status will flip via onSnapshot
+        anyExpired = true;
       }
     });
+    if (anyExpired) autoExpireStaleLocks();
   }
   function startCountdownTicker() {
     if (_countdownTimer) return;
