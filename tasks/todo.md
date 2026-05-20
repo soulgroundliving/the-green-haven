@@ -167,15 +167,60 @@ Post-ship doc updates (NOT in code commit — separate memory edits):
 
 ### S5 — Memory doc updates + handoff (~30 min)
 
-- [ ] Update `lifecycle_tenant_transitions.md`:
+- [x] Update `lifecycle_tenant_transitions.md`:
   - Move § C from "Missing" table → "Existing" table with CF link + state-write matrix per mode
   - Add to ## Verification grep list: `ls functions/renewLease.js`
-- [ ] Update `lifecycle_lease_action.md`: add reference to renewLease in admin renewal path
-- [ ] Write `next_session_handoff_2026_05_22_renewlease.md` with: summary, commits, verification greps, follow-up items (e.g. backfill scripts for legacy leases missing `extensions[]` shape)
-- [ ] Update `MEMORY.md` ## Current state with new entry
-- [ ] Run `npm run verify:memory` — must be GREEN
-- [ ] Append "Review" section to this `tasks/todo.md` per CLAUDE.md §1
-- [ ] Commit: `docs(memory): C renewLease shipped — lifecycle + handoff updates`
+  - Update prioritisation list — strike-through C
+- [x] Update `lifecycle_lease_action.md` L94 — admin-side workflow pointer to renewLease for renew requests + archive for moveout requests
+- [x] Write `next_session_handoff_2026_05_21_renewlease_shipped.md` with: summary, all 5 commits, ⚠️ DEPLOY checklist (firebase deploy + Chrome MCP E2E both modes), verification greps, open follow-ups (#1 deploy, #2 live verify, #3 A restoreReturningTenant, #4 leaseRequest deep-link, #5 audit log quota cleanup)
+- [x] Update `MEMORY.md` ## Current state with new entry — subsumes the F-anomalies entry which moved to second
+- [x] Run `npm run verify:memory` — 34 docs · 318 rows · 0 fails ✅
+- [x] Append "Review" section to this `tasks/todo.md` (below)
+- [ ] Commit (final): `docs(memory): C renewLease shipped — lifecycle + handoff + Review (S5)`
+
+---
+
+# Review (post-ship summary)
+
+## Shipped this Plan #C run (5 commits, ~5 hours)
+
+| # | SHA | Sprint | Notes |
+|---|---|---|---|
+| 1 | [`2a17df0`](https://github.com/soulgroundliving/the-green-haven/commit/2a17df0) | Mismatch B closeout (XS, scope from prior plan) | -73 / +5 LOC. §7-K orphan cleanup in dashboard-property.js + F2 predicate sync in dashboard-tenant-page.js |
+| 2 | [`c4dcbdb`](https://github.com/soulgroundliving/the-green-haven/commit/c4dcbdb) | S1 | CF stub + auth + validation + 18 tests |
+| 3 | [`75212f6`](https://github.com/soulgroundliving/the-green-haven/commit/75212f6) | S2 | Renewal mode (novation) — 7-op atomic batch + 10 tests |
+| 4 | [`c6e6c63`](https://github.com/soulgroundliving/the-green-haven/commit/c6e6c63) | S3 | Extension mode (variation) — arrayUnion + 9 tests |
+| 5 | [`99868ae`](https://github.com/soulgroundliving/the-green-haven/commit/99868ae) | S4 | Admin dashboard UI — new `shared/dashboard-lease-renew.js` (355 LOC) + button + dispatcher |
+| 6 | (next) | S5 commit | Memory doc + handoff updates |
+
+Total test impact: 254 → 273 (+19 net; full suite green throughout)
+
+## Deferred / follow-up (in next_session_handoff_2026_05_21_renewlease_shipped.md)
+
+1. **DEPLOY** — `firebase deploy --only functions:renewLease` (REQUIRED before UI works)
+2. **Live verify** — Chrome MCP E2E both modes on Vercel; verify Firestore + RTDB state
+3. **A — restoreReturningTenant** (S effort) — prioritisation #2 from lifecycle_tenant_transitions.md
+4. **leaseRequest deep-link** (XS) — after `actLeaseRequest` approves a renew request, link admin to the 📝 ต่อสัญญา button
+5. **Audit log quota cleanup** (XS-S, defer) — `audit_logs/leases` has no auto-cleanup; add `cleanupOldAuditLogs` later if costs become real
+
+## Implementation deviations from plan (all documented in commits)
+
+- **D1 audit path** — used `audit_logs/leases` (canonical CF-side path matching `audit_logs/bills`) instead of plan's `system/audit_logs` (which is the client-side path used by `shared/audit.js`)
+- **D6 newLeaseId** — adopted existing `CONTRACT_${Date.now()}_${roomId}` from `convertBookingToTenant.js:219` instead of plan's `LEASE_${tenantId}_${endDate.getTime()}` (collision-free; visual consistency across codebase)
+- **Pre-read leaseNotifications** — replaced with idempotent unconditional delete (Firestore delete on missing doc is no-op; saves 4 reads per renewal)
+- **Document upload** — text input for Storage path/URL (admin pastes from existing "เอกสาร" tab upload) instead of inline file widget (avoids duplicate upload UX)
+
+## What surprised me
+
+- The lifecycle doc said "extension mode rejects status='ended' leases" — but the same applies to renewal mode (both call _readLeaseState which guards on status). Single guard, not duplicated.
+- `firebase-functions/v1` test stub pattern in `cleanupPlayersOver1Year.test.js` (vs the convertBookingToTenant style without it) — used the cleaner pattern by stubbing only `firebase-admin` and letting `firebase-functions/v1` come from real node_modules.
+- File counts already-tracked in `tools/file-size-limits.json` got automatically picked up by `audit:size` even for the new `dashboard-lease-renew.js` file (audit only flags tracked files; new file is fine to skip tracking until it nears 400 LOC).
+
+## Lessons (no new §7 anti-pattern — fit existing)
+
+- §7-DD discipline carried wholesale from `archiveTenantOnMoveOut.js` → `renewLease.js`. The `_readLeaseState` helper pattern made both modes share the same pre-condition guards.
+- §7-CC compliance baked in from day 1 — `window.openRenewLeaseModal` (not `let openRenewLeaseModal`), uses existing `window.currentEditBuilding/RoomId/TenantId`.
+- Per [feedback_session_efficiency.md](feedback_session_efficiency.md): ship when mechanical, end with choice menu, update before creating new memory. Followed.
 
 ---
 
