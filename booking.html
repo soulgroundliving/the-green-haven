@@ -900,8 +900,8 @@
           <div style="font-size: 2rem; margin-bottom: var(--space-2);">📤</div>
           <div style="font-size: var(--text-sm); color: var(--shadow);">แตะเพื่อเลือกรูปสลิป</div>
         </div>
+        <img id="slipPreview" class="slip-preview hide" alt="สลิปธนาคาร">
       </label>
-      <img id="slipPreview" class="slip-preview hide" alt="สลิปธนาคาร" style="margin-top: var(--space-3);">
       <div id="slipStatus" class="status-line hide"></div>
       <button id="slipVerifyBtn" class="btn btn-primary hide" style="width:100%; margin-top: var(--space-3);">ยืนยันสลิปและตรวจสอบอัตโนมัติ</button>
       <button id="expiredRestartBtn" class="btn btn-primary hide" style="width:100%; margin-top: var(--space-3);">เริ่มการจองใหม่อีกครั้ง</button>
@@ -916,14 +916,7 @@
         <button id="cancelConfirmNo"  class="btn btn-secondary" style="flex:1; max-width:120px;">ไม่</button>
       </div>
     </div>
-    <!-- Extra bottom padding so sticky CTA never overlaps content -->
-    <div style="height: 72px;"></div>
   </section>
-
-  <!-- Sticky slip upload CTA (shown during payment step, hidden after slip selected) -->
-  <div id="slipStickyCta" class="slip-sticky-cta hide">
-    <button id="slipStickyBtn" class="btn btn-primary" style="width:100%;">📎 โอนเสร็จแล้ว? แนบสลิปที่นี่</button>
-  </div>
 
   <!-- ──────────── Step 4: Confirmation ──────────── -->
   <section id="stepConfirm" class="step hide">
