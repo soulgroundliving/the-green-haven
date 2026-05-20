@@ -761,6 +761,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'archiveTenantOnMoveOut') { typeof archiveTenantOnMoveOut === 'function' && archiveTenantOnMoveOut(); return; }
     if (a === 'transitionToPlayer') { typeof transitionToPlayer === 'function' && transitionToPlayer(); return; }
     if (a === 'revertTransitionToPlayer') { typeof revertTransitionToPlayer === 'function' && revertTransitionToPlayer(); return; }
+    if (a === 'openRenewLeaseModal') { typeof window.openRenewLeaseModal === 'function' && window.openRenewLeaseModal(); return; }
     // PDPA §32 admin erasure (modal flow in shared/dashboard-pdpa-erasure.js)
     if (a === 'confirmAdminDataDeletion') { typeof window.confirmAdminDataDeletion === 'function' && window.confirmAdminDataDeletion(); return; }
     if (a === '_pdpaAdmCancel')          { typeof window._pdpaAdmCancel          === 'function' && window._pdpaAdmCancel();          return; }

@@ -153,16 +153,17 @@ Post-ship doc updates (NOT in code commit — separate memory edits):
 
 ### S4 — Dashboard UI — modal + button + form (~75 min)
 
-- [ ] Create `shared/dashboard-lease-renew.js`:
-  - Modal markup builder (similar pattern to `closeFacilityConfigModal` etc.)
-  - Form: new endDate (date input), mode toggle (segmented control: ต่อสัญญาใหม่ / ขยายระยะเวลา), optional new rent + deposit, optional document upload (reuse existing file widget), notes
-  - Pre-fill: current endDate + current rentAmount as placeholder
-  - Validation: newEndDate > today, newEndDate > current endDate
-  - On submit: `httpsCallable('renewLease')` + loading state + toast on success + close modal + refresh tenant page
-- [ ] Wire "📝 ต่อสัญญา" button in `shared/dashboard-tenant-modal.js` (existing tenant modal context section)
-- [ ] Add script tag `<script src="./shared/dashboard-lease-renew.js"></script>` in `dashboard.html` AFTER `dashboard-tenant-modal.js`
-- [ ] Add modal markup container in `dashboard.html` (or inject from JS on first open — pick one)
-- [ ] Commit: `feat(renewLease): admin dashboard UI (📝 ต่อสัญญา button + dual-mode modal)`
+- [x] Create `shared/dashboard-lease-renew.js` (355 LOC, under 400 cap):
+  - Modal markup built lazily on open via DOM injection (no HTML in dashboard.html)
+  - Form: new endDate (date input pre-filled to +1yr), mode toggle (radio + tabbed visual), rent + deposit (renewal-only), Storage path text input (renewal-only — no in-modal upload widget; admin pastes from existing "เอกสาร" tab upload), notes textarea
+  - Pre-fill: current endDate + +1yr suggested + current rent/deposit as placeholders
+  - Client-side validation mirrors CF: newEndDate > today + > old endDate (red error block in modal)
+  - On submit: `httpsCallable('renewLease')` + loading state + toast + close tenant modal + refresh
+- [x] Add "📝 ต่อสัญญา" button to dashboard.html L3138 (data-action="openRenewLeaseModal", placed beside Checklist button in tenant modal footer)
+- [x] Add script tag in dashboard.html AFTER dashboard-tenant-modal.js
+- [x] Wire dispatcher in shared/dashboard-main.js (next to archive/transition handlers)
+- [x] Modal markup injected from JS on first open — chose injection over HTML scaffolding (cleaner contained surface; aligns with §1 minimal blast radius)
+- [x] Commit: `feat(renewLease): admin dashboard UI (📝 ต่อสัญญา dual-mode modal)`
 
 ### S5 — Memory doc updates + handoff (~30 min)
 

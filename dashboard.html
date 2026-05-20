@@ -3136,6 +3136,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
       <button data-action="transitionToPlayer" title="ย้ายผู้เช่าเป็น Community Member — ยังอยู่ใน LINE ได้ แต่เข้าถึงเฉพาะ community / wellness / gamification" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#0f766e;border:1.5px solid #99f6e4;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;"">🎮 ย้ายเป็น Community</button>
       <button data-action="revertTransitionToPlayer" title="ย้อน transitionToPlayer ที่ทำผิด — ห้องว่างที่มี lastArchivedContractId='transitioned_to_player' จะกลับเป็น tenant ปกติ; revoke player claim; เก็บ archive doc ไว้เป็น audit" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#c2410c;border:1.5px solid #fed7aa;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;"">↩️ ย้อนกลับเป็น Tenant</button>
       <button data-action="openChecklistModal" title="สร้าง checklist ตรวจห้องสำหรับผู้เช่าคนนี้ (เข้า/ออก)" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#1565c0;border:1.5px solid #90caf9;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;">🗒️ Checklist ห้อง</button>
+      <button data-action="openRenewLeaseModal" title="ต่อสัญญาเช่า — โหมด renewal (เซ็นใหม่) หรือ extension (ขยายวันสิ้นสุด)" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:var(--green-dark, #1b5e20);border:1.5px solid #a5d6a7;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;">📝 ต่อสัญญา</button>
       <button data-action="confirmAdminDataDeletion" title="PDPA §32 — ลบข้อมูลผู้เช่า (ผู้เช่า active ไม่อนุญาต ต้อง transitionToPlayer/archive ก่อน)" style="flex:1;min-width:160px;padding:14px 20px;background:#fff;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;">🗑️ ลบข้อมูล (PDPA §32)</button>
       <button data-action="closeTenantModal" style="flex:1;min-width:120px;padding:14px 24px;background:var(--border);color:var(--text);border:none;border-radius:var(--radius-sm);font-family:var(--font-brand);font-weight:700;cursor:pointer;font-size:.95rem;transition:all .3s;"">ปิด</button>
     </div>
@@ -5443,6 +5444,7 @@ html[data-theme="dark"] .dash-data-table tbody tr:hover{
 <script src="./shared/dashboard-property.js"></script>
 <script src="./shared/dashboard-tenant-page.js"></script>
 <script src="./shared/dashboard-tenant-modal.js"></script>
+<script src="./shared/dashboard-lease-renew.js"></script>
 <script src="./shared/dashboard-bookings.js"></script>
 <script src="./shared/dashboard-requests-admin.js"></script>
 <script src="./shared/dashboard-broadcast.js"></script>
