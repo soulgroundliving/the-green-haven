@@ -2047,7 +2047,7 @@
   // by accident" case (better than losing the lock entirely).
   async function tryRestoreLockFromServer() {
     if (!window.bookingFirebase || !window.firebaseAuth?.currentUser) {
-      _dlog('[booking] server restore skipped: firebase/auth not ready');
+      _dlog('[booking] server restore skipped: firebase=' + !!window.bookingFirebase + ' auth=' + !!window.firebaseAuth?.currentUser);
       return false;
     }
     const uid = window.firebaseAuth.currentUser.uid;
@@ -2055,7 +2055,7 @@
       _dlog('[booking] server restore skipped: no uid');
       return false;
     }
-    _dlog('[booking] server restore: querying for uid=' + uid);
+    _dlog('[booking] server restore: querying for uid=' + uid + ' lineUserId=' + (state.lineUserId || '?').slice(-12));
     try {
       const fb = window.bookingFirebase;
       const q = fb.query(
@@ -2510,11 +2510,19 @@
       renderDateStrip();
       // P1 #9: rooms list starts as skeleton — availability comes from CF below
       renderRoomsList();
-      hideBoot();
       // Resume active lock if user refreshed during Step 3 (within 20-min window).
-      // Sync first (sessionStorage); if miss, async Firestore query covers the
-      // "closed LIFF entirely" case. onSnapshot reconciles either way.
-      if (!tryRestoreLock()) tryRestoreLockFromServer();
+      // Sync first (sessionStorage); if miss, AWAIT Firestore query so the
+      // "closed LIFF entirely" case lands directly on Step 3 instead of
+      // briefly flashing Step 1.
+      if (!tryRestoreLock()) {
+        setBootMsg('🔍 ตรวจสอบการจองที่ค้างอยู่…');
+        // Race against a 5s timeout so a slow Firestore never wedges boot
+        await Promise.race([
+          tryRestoreLockFromServer(),
+          new Promise(r => setTimeout(r, 5000)),
+        ]);
+      }
+      hideBoot();
       // Fetch availability for both buildings; refreshAvailability() re-renders when done
       Promise.all([
         refreshAvailability('rooms'),
