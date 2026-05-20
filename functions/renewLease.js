@@ -372,6 +372,140 @@ async function _runRenewalMode(input, callerUid, callerEmail, firestore) {
 }
 
 /**
+ * Runs the extension-mode batch. Variation — single lease doc; endDate
+ * updated in place, extensions[] appended via arrayUnion. No new lease doc,
+ * no rent change (use renewal mode for that).
+ *
+ * Legacy graceful handling: if the lease doc has no extensions[] field at
+ * all (older docs pre-date this feature), arrayUnion just initialises it.
+ * Existing-but-wrong-shape (e.g. extensions={} object) is treated as fresh
+ * — we replace with an array containing only the new entry. This rare-but-
+ * recoverable case is logged.
+ */
+async function _runExtensionMode(input, callerUid, callerEmail, firestore) {
+  const { building, roomId, newEndDate, notes, newRentAmount, newDeposit } = input;
+
+  // Extension mode never changes rent/deposit — those go via renewal. Reject
+  // up front so admin doesn't think the change took effect silently.
+  if (newRentAmount !== undefined) {
+    throw new functions.https.HttpsError('invalid-argument',
+      `newRentAmount not allowed in extension mode — use mode='renewal' for rent changes`);
+  }
+  if (newDeposit !== undefined) {
+    throw new functions.https.HttpsError('invalid-argument',
+      `newDeposit not allowed in extension mode — use mode='renewal' for deposit changes`);
+  }
+
+  const state = await _readLeaseState(firestore, building, roomId);
+  const { tenantRef, tenantId, leaseId, oldLeaseRef, oldLeaseData, oldEndDate } = state;
+
+  if (newEndDate.getTime() <= oldEndDate.getTime()) {
+    throw new functions.https.HttpsError('invalid-argument',
+      `newEndDate (${newEndDate.toISOString()}) must be after current endDate (${oldEndDate.toISOString()})`);
+  }
+
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  const startIso = oldEndDate.toISOString();
+  const endIso = newEndDate.toISOString();
+
+  // Build the extension entry. Note: `at` is wall-clock here (not serverTs)
+  // because arrayUnion + serverTimestamp() sentinel don't play together —
+  // serverTimestamp() inside arrayUnion silently becomes null on commit.
+  // The lease.updatedAt field still uses serverTimestamp(); the per-entry
+  // timestamp here trades server-trust for usability.
+  const extensionEntry = {
+    at: new Date().toISOString(),
+    fromEndDate: startIso,
+    toEndDate: endIso,
+    by: callerUid,
+    byEmail: callerEmail,
+    notes: notes || '',
+  };
+
+  // Detect wrong-shape extensions field (defensive). Treat anything other
+  // than an array as "no extensions yet" and reset.
+  const existingExtensions = oldLeaseData.extensions;
+  const extensionsIsArray = Array.isArray(existingExtensions);
+  if (existingExtensions !== undefined && !extensionsIsArray) {
+    console.warn(`renewLease[extension]: lease ${leaseId} has non-array extensions field ` +
+      `(${typeof existingExtensions}) — resetting to fresh array`);
+  }
+
+  // ── Build single Firestore batch ──────────────────────────────────────────
+  const batch = firestore.batch();
+
+  // 1. Lease doc — update endDate + append extension entry
+  const leasePatch = {
+    moveOutDate: endIso,
+    updatedAt: now,
+    lastExtendedAt: now,
+    lastExtendedBy: callerUid,
+  };
+  if (extensionsIsArray || existingExtensions === undefined) {
+    leasePatch.extensions = admin.firestore.FieldValue.arrayUnion(extensionEntry);
+  } else {
+    // wrong-shape recovery — overwrite with fresh single-entry array
+    leasePatch.extensions = [extensionEntry];
+  }
+  batch.update(oldLeaseRef, leasePatch);
+
+  // 2. Tenant doc — mirror endDate. Lease pointer stays the same.
+  batch.update(tenantRef, {
+    contractEnd: endIso,
+    lease: {
+      leaseId,
+      status: 'active',
+      startDate: String(oldLeaseData.contractStart || oldLeaseData.moveInDate || ''),
+      endDate: endIso,
+    },
+    updatedAt: now,
+  });
+
+  // 3. Clear stale notification tiers — same idempotent delete as renewal
+  for (const tier of LEASE_NOTIF_TIERS) {
+    const notifRef = firestore.collection('leaseNotifications').doc(`${building}_${roomId}_${tier}`);
+    batch.delete(notifRef);
+  }
+
+  try {
+    await batch.commit();
+  } catch (e) {
+    console.error('renewLease[extension]: batch commit failed:', e);
+    throw new functions.https.HttpsError('internal',
+      e.message || 'Extension batch commit failed');
+  }
+
+  const auditPayload = {
+    action: 'lease_extended',
+    mode: 'extension',
+    building, room: roomId,
+    tenantId,
+    leaseId,
+    fromEndDate: startIso,
+    toEndDate: endIso,
+    extensionEntryAt: extensionEntry.at,
+    extensionCountAfter: extensionsIsArray ? existingExtensions.length + 1 : 1,
+    notes: notes || '',
+    actor: callerEmail || callerUid,
+    actorUid: callerUid,
+  };
+
+  console.log(`renewLease[extension]: ${building}/${roomId} ${leaseId} ${startIso} → ${endIso} ` +
+    `(entry #${auditPayload.extensionCountAfter}, by=${auditPayload.actor})`);
+
+  return {
+    success: true,
+    mode: 'extension',
+    building, roomId,
+    leaseId,
+    fromEndDate: startIso,
+    toEndDate: endIso,
+    extensionCountAfter: auditPayload.extensionCountAfter,
+    auditPayload,
+  };
+}
+
+/**
  * Best-effort RTDB audit write. Logs + swallows on failure — Firestore batch
  * is the source of truth; audit is observability only.
  */
@@ -407,25 +541,21 @@ exports.renewLease = functions
 
     const firestore = admin.firestore();
 
-    if (input.mode === 'renewal') {
-      const result = await _runRenewalMode(input, callerUid, callerEmail, firestore);
-      // Fire-and-await is fine — audit write is fast (single push). If we
-      // really want to never block on it we can drop the await; for now the
-      // ~20ms latency cost is worth the test reproducibility.
-      await _writeAuditLog(result.auditPayload);
-      const { auditPayload, ...callerResult } = result;
-      return callerResult;
-    }
-
-    // S3 STUB — extension-mode branch lands next sprint
-    throw new functions.https.HttpsError('unimplemented',
-      `renewLease ${input.mode} mode is not yet implemented (S3 pending)`);
+    const runner = input.mode === 'renewal' ? _runRenewalMode : _runExtensionMode;
+    const result = await runner(input, callerUid, callerEmail, firestore);
+    // Fire-and-await is fine — audit write is fast (single push). If we
+    // really want to never block on it we can drop the await; for now the
+    // ~20ms latency cost is worth the test reproducibility.
+    await _writeAuditLog(result.auditPayload);
+    const { auditPayload, ...callerResult } = result;
+    return callerResult;
   });
 
 // Export internals for unit testing.
 exports._validateInput = _validateInput;
 exports._readLeaseState = _readLeaseState;
 exports._runRenewalMode = _runRenewalMode;
+exports._runExtensionMode = _runExtensionMode;
 exports._writeAuditLog = _writeAuditLog;
 exports._VALID_MODES = VALID_MODES;
 exports._ROOM_ID_RE = ROOM_ID_RE;

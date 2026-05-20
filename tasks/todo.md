@@ -145,11 +145,11 @@ Post-ship doc updates (NOT in code commit — separate memory edits):
 
 ### S3 — Extension mode (opt-in) — append to extensions[] (~45 min)
 
-- [ ] Branch in CF on `mode='extension'`: skip new-lease creation; instead `arrayUnion` append to `leases/{b}/list/{leaseId}.extensions[]`
-- [ ] Reject extension mode if: lease already `status='ended'`, lease has no `extensions[]` field shape yet AND legacy-doc grace (init `extensions: []`)
-- [ ] Add 2 happy-path tests: first extension, second extension (verify arrayUnion appends, not replaces)
-- [ ] Add 1 edge test: extension with rentChange — verify `rentChange` recorded in extension entry but `lease.rentAmount` NOT mutated (rent change goes on next renewal, not extension)
-- [ ] Commit: `feat(renewLease): extension mode (variation) — arrayUnion endDate stretch`
+- [x] Branch in CF on `mode='extension'`: skip new-lease creation; instead `arrayUnion` append to `leases/{b}/list/{leaseId}.extensions[]`
+- [x] Reject extension mode if: lease already `status='ended'` (failed-precondition); newRentAmount/newDeposit provided (invalid-argument — rent changes belong to renewal); legacy wrong-shape extensions field (object/etc) → reset with raw array (defensive recovery; logged)
+- [x] Add 3 happy-path tests: first extension (initialises via arrayUnion), second extension (arrayUnion appends), extension with notes (carries to entry + audit)
+- [x] Add 2 edge tests: wrong-shape extensions recovery + audit log written
+- [x] Commit: `feat(renewLease): extension mode (variation) — arrayUnion endDate stretch + 9 tests (S3)`
 
 ### S4 — Dashboard UI — modal + button + form (~75 min)
 

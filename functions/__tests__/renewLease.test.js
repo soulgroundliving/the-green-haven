@@ -286,15 +286,15 @@ describe('renewLease — S1 (auth + validation)', () => {
   });
 
   describe('Validation passes → state read attempted', () => {
-    it('extension mode still hits unimplemented (S3 pending)', async () => {
-      await expectHttpsError(
-        renewLease.run({ ...goodInput(), mode: 'extension' }, adminContext()),
-        'unimplemented'
-      );
-    });
     it('renewal mode with no tenant doc → not-found', async () => {
       // resetStubs leaves tenantDoc=null → renewal mode hits _readLeaseState
       await expectHttpsError(renewLease.run(goodInput(), adminContext()), 'not-found');
+    });
+    it('extension mode with no tenant doc → not-found (S3 — no longer unimplemented)', async () => {
+      await expectHttpsError(
+        renewLease.run({ ...goodInput(), mode: 'extension' }, adminContext()),
+        'not-found'
+      );
     });
   });
 
@@ -496,6 +496,168 @@ describe('renewLease — S2 (renewal mode)', () => {
         renewLease.run({ ...goodInput(), newEndDate: futureDate(395) }, adminContext()),
         'internal'
       );
+    });
+  });
+});
+
+// ── S3 — Extension mode (variation) ───────────────────────────────────────────
+
+describe('renewLease — S3 (extension mode)', () => {
+  beforeEach(() => { resetStubs(); });
+
+  describe('Pre-condition guards', () => {
+    it('rejects newRentAmount in extension mode (rent changes belong to renewal)', async () => {
+      seedActiveLease({ oldEndDate: futureDate(30) });
+      await expectHttpsError(
+        renewLease.run({
+          ...goodInput(), mode: 'extension',
+          newEndDate: futureDate(395), newRentAmount: 5500,
+        }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('rejects newDeposit in extension mode', async () => {
+      seedActiveLease({ oldEndDate: futureDate(30) });
+      await expectHttpsError(
+        renewLease.run({
+          ...goodInput(), mode: 'extension',
+          newEndDate: futureDate(395), newDeposit: 11000,
+        }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('rejects when newEndDate ≤ current endDate', async () => {
+      seedActiveLease({ oldEndDate: futureDate(365) });
+      await expectHttpsError(
+        renewLease.run({
+          ...goodInput(), mode: 'extension', newEndDate: futureDate(30),
+        }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('rejects when old lease is not status=active', async () => {
+      seedActiveLease({ leaseExtras: { status: 'ended' } });
+      await expectHttpsError(
+        renewLease.run({
+          ...goodInput(), mode: 'extension', newEndDate: futureDate(395),
+        }, adminContext()),
+        'failed-precondition'
+      );
+    });
+  });
+
+  describe('Happy paths — batch contents', () => {
+    it('first extension on a lease with no extensions[] field: arrayUnion initialises', async () => {
+      const seeded = seedActiveLease({ oldEndDate: futureDate(30) });
+      const result = await renewLease.run({
+        ...goodInput(), mode: 'extension',
+        newEndDate: futureDate(395),
+        notes: 'tenant requested 1yr extension',
+      }, adminContext());
+
+      assert.equal(result.success, true);
+      assert.equal(result.mode, 'extension');
+      assert.equal(result.leaseId, seeded.oldLeaseId, 'lease pointer unchanged in extension mode');
+      assert.equal(result.extensionCountAfter, 1);
+
+      // 1. Lease updated in place — endDate + extensions arrayUnion
+      const leaseUpdate = captured.batchOps.find(o => o.op === 'update' && o.path.endsWith(`/${seeded.oldLeaseId}`));
+      assert.ok(leaseUpdate, 'lease update op present');
+      assert.equal(leaseUpdate.data.moveOutDate, new Date(result.toEndDate).toISOString());
+      assert.ok(leaseUpdate.data.extensions, 'extensions field present');
+      assert.ok(leaseUpdate.data.extensions.__arrayUnion, 'extensions uses arrayUnion sentinel');
+      const entries = leaseUpdate.data.extensions.__arrayUnion;
+      assert.equal(entries.length, 1);
+      assert.equal(entries[0].notes, 'tenant requested 1yr extension');
+      assert.equal(entries[0].by, 'admin-uid');
+
+      // 2. Tenant doc — contractEnd + lease.endDate mirrored, leaseId UNCHANGED
+      const tenantUpdate = captured.batchOps.find(o => o.op === 'update' && o.path.startsWith('tenants/'));
+      assert.ok(tenantUpdate);
+      assert.equal(tenantUpdate.data.contractEnd, result.toEndDate);
+      assert.equal(tenantUpdate.data.lease.leaseId, seeded.oldLeaseId);
+      assert.equal(tenantUpdate.data.lease.endDate, result.toEndDate);
+
+      // 3. No new lease doc created
+      const setOps = captured.batchOps.filter(o => o.op === 'set');
+      assert.equal(setOps.length, 0, 'extension mode must not create new lease doc');
+
+      // 4. All 4 leaseNotifications tiers deleted (same as renewal)
+      const deletes = captured.batchOps.filter(o => o.op === 'delete' && o.path.startsWith('leaseNotifications/'));
+      assert.equal(deletes.length, _LEASE_NOTIF_TIERS.length);
+
+      // 5. Audit log: type=lease_extended, count=1
+      const audit = captured.auditPushes[0];
+      assert.equal(audit.action, 'lease_extended');
+      assert.equal(audit.mode, 'extension');
+      assert.equal(audit.extensionCountAfter, 1);
+    });
+
+    it('second extension: arrayUnion appends (count reflects prior entries)', async () => {
+      const seeded = seedActiveLease({
+        oldEndDate: futureDate(30),
+        leaseExtras: {
+          extensions: [
+            { at: '2026-03-01T00:00:00.000Z', fromEndDate: '2026-02-01', toEndDate: '2026-05-01', by: 'admin-a' },
+          ],
+        },
+      });
+      const result = await renewLease.run({
+        ...goodInput(), mode: 'extension', newEndDate: futureDate(395),
+      }, adminContext());
+
+      assert.equal(result.extensionCountAfter, 2, 'count after = prior 1 + this 1');
+
+      const leaseUpdate = captured.batchOps.find(o => o.op === 'update' && o.path.endsWith(`/${seeded.oldLeaseId}`));
+      // Verify arrayUnion still used (Firestore preserves prior entries on the
+      // server side) — the entry we ship is just THIS extension
+      const entries = leaseUpdate.data.extensions.__arrayUnion;
+      assert.equal(entries.length, 1, 'arrayUnion only sends THIS entry; server merges');
+    });
+
+    it('extension with notes carries notes into entry + audit', async () => {
+      seedActiveLease({ oldEndDate: futureDate(30) });
+      const result = await renewLease.run({
+        ...goodInput(), mode: 'extension',
+        newEndDate: futureDate(395),
+        notes: 'verbal agreement 2026-05-20 — no doc change',
+      }, adminContext());
+
+      const leaseUpdate = captured.batchOps.find(o => o.op === 'update' && o.path.startsWith('leases/'));
+      assert.equal(leaseUpdate.data.extensions.__arrayUnion[0].notes,
+        'verbal agreement 2026-05-20 — no doc change');
+      assert.equal(captured.auditPushes[0].notes, 'verbal agreement 2026-05-20 — no doc change');
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('wrong-shape extensions field (object not array): resets to fresh array', async () => {
+      const seeded = seedActiveLease({
+        oldEndDate: futureDate(30),
+        leaseExtras: { extensions: { someKey: 'wrong type' } }, // object, not array
+      });
+      const result = await renewLease.run({
+        ...goodInput(), mode: 'extension', newEndDate: futureDate(395),
+      }, adminContext());
+
+      assert.equal(result.success, true);
+      assert.equal(result.extensionCountAfter, 1, 'count starts fresh when prior shape was wrong');
+
+      const leaseUpdate = captured.batchOps.find(o => o.op === 'update' && o.path.endsWith(`/${seeded.oldLeaseId}`));
+      // Should be raw array (not arrayUnion sentinel) — defensive overwrite path
+      assert.ok(Array.isArray(leaseUpdate.data.extensions),
+        'wrong-shape recovery uses plain array, not arrayUnion');
+      assert.equal(leaseUpdate.data.extensions.length, 1);
+    });
+
+    it('audit log also written for extension mode', async () => {
+      seedActiveLease({ oldEndDate: futureDate(30) });
+      await renewLease.run({
+        ...goodInput(), mode: 'extension', newEndDate: futureDate(395),
+      }, adminContext());
+      assert.equal(captured.auditPushes.length, 1);
+      assert.equal(captured.auditPushes[0].action, 'lease_extended');
+      assert.equal(captured.auditPushes[0].mode, 'extension');
     });
   });
 });
