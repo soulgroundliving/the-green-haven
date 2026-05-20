@@ -66,13 +66,18 @@ exports.unlinkLiffUser = functions
       // preserve prior approval data for audit
     });
 
-    // 2. Clear LINE link from tenant doc (if exists)
+    // 2. Clear LINE link from tenant doc (if exists). Capture legacyAuthUid
+    // BEFORE the FieldValue.delete() so we can strip its custom claims later
+    // (§7-Z: claims set via setCustomUserClaims are persistent until cleared
+    // — leftover claims would let the user keep full LIFF access after unlink).
+    let legacyAuthUid = null;
     if (building && room) {
       const tenantRef = db
         .collection('tenants').doc(String(building))
         .collection('list').doc(String(room));
       const tenantSnap = await tenantRef.get();
       if (tenantSnap.exists) {
+        legacyAuthUid = tenantSnap.data()?.linkedAuthUid || null;
         batch.update(tenantRef, {
           linkedAuthUid: FieldValue.delete(),
           linkedAt: FieldValue.delete(),
@@ -89,6 +94,10 @@ exports.unlinkLiffUser = functions
     let peopleCleared = 0;
     if (!peopleQuery.empty) {
       peopleQuery.forEach(doc => {
+        // people.linkedAuthUid may also hold a UID — catch both shapes.
+        if (!legacyAuthUid) {
+          legacyAuthUid = doc.data()?.linkedAuthUid || null;
+        }
         batch.update(doc.ref, {
           lineUserId: FieldValue.delete(),
           linkedAuthUid: FieldValue.delete(),
@@ -100,9 +109,37 @@ exports.unlinkLiffUser = functions
 
     await batch.commit();
 
+    // 4. Strip persistent custom claims + revoke cached refresh tokens.
+    // Without this, the user's existing ID token retains {room, building,
+    // tenantId} for up to ~1 h and the user record continues minting full-claim
+    // tokens forever (§7-Z). Two UIDs may be in play per liffSignIn comments:
+    //   - 'line:' + lineUserId — deterministic UID minted by liffSignIn
+    //   - legacyAuthUid       — pre-liffSignIn anonymous UID from linkAuthUid era
+    // Fire-and-forget: failures here don't break the batch (which is already
+    // committed). They'll surface on the next token refresh and S2/S3 handle it.
+    const deterministicUid = 'line:' + lineUserId;
+    const uidsToClear = [deterministicUid];
+    if (legacyAuthUid && legacyAuthUid !== deterministicUid) {
+      uidsToClear.push(legacyAuthUid);
+    }
+    const auth = admin.auth();
+    await Promise.allSettled(
+      uidsToClear.map(async uid => {
+        try {
+          await auth.setCustomUserClaims(uid, {});
+          await auth.revokeRefreshTokens(uid);
+        } catch (e) {
+          // user-not-found is expected when legacyAuthUid was already cleaned
+          // up by cleanupAnonymousUsers — log warn, don't throw.
+          console.warn(`unlinkLiffUser: claim/token clear failed for ${uid}: ${e?.message || e}`);
+        }
+      })
+    );
+
     console.log(
       `🔌 unlinkLiffUser: ${lineUserId} unlinked by ${adminUid} ` +
-      `· tenant=${building || '-'}/${room || '-'} · people=${peopleCleared}`
+      `· tenant=${building || '-'}/${room || '-'} · people=${peopleCleared} ` +
+      `· uidsCleared=${uidsToClear.length}`
     );
 
     return {
@@ -111,5 +148,6 @@ exports.unlinkLiffUser = functions
       building: building || null,
       room: room || null,
       peopleCleared,
+      uidsCleared: uidsToClear.length,
     };
   });

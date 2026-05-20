@@ -113,7 +113,7 @@
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
       import { getDatabase, ref, get, set, update, remove, onValue, push, child } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-      import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+      import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, onIdTokenChanged, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink, sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
       import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit, deleteDoc, addDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
       import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
       import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
@@ -163,6 +163,7 @@
           window.firebasePhone = { RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, unlink };
           window.firebaseSendEmailVerification = sendEmailVerification;
           window.firebaseSignInWithCustomToken = signInWithCustomToken;
+          window.firebaseOnIdTokenChanged = onIdTokenChanged;
           window.firebaseReady = true;
           window.dispatchEvent(new Event('firebaseInitialized'));
           // Anonymous sign-in is the foundation of the LIFF flow:
@@ -9621,6 +9622,78 @@
             if (contractSection) contractSection.style.display = 'none';
         }
 
+        // World-map-only mode — applied when admin unlinks the LINE account.
+        // Two entry points: (a) _callLiffSignIn 403 status='unlinked' (next LIFF open),
+        // (b) _setupClaimLossListener detects mid-session claim removal (within ~1h
+        // after admin clicks unlink — once SDK refreshes the ID token).
+        // Idempotent via window._unlinkedModeApplied so both paths can fire safely.
+        function _applyUnlinkedMode() {
+            if (window._unlinkedModeApplied) return;
+            window._unlinkedModeApplied = true;
+            // Force navigate to world map immediately (covers mid-session case where
+            // user might be on another page like บิล/profile when claims are stripped).
+            try { if (typeof showPage === 'function') showPage('world-map'); } catch(_) {}
+            // Block top-level page navigation away from world-map (silent redirect).
+            const _origShowPage = window.showPage;
+            if (typeof _origShowPage === 'function') {
+                window.showPage = function(id, el) {
+                    if (id === 'world-map' || id === 'world-map-page') return _origShowPage(id, el);
+                    return _origShowPage('world-map', null);
+                };
+            }
+            // Block sub-page navigation — Quest / Pet Park / Smart Key etc. all
+            // need claim-gated reads to be useful, so route everything back home.
+            const _origShowSubPage = window.showSubPage;
+            if (typeof _origShowSubPage === 'function') {
+                window.showSubPage = function(id) {
+                    if (id === 'world-map-page' || id === 'world-map') return _origShowSubPage(id);
+                    if (typeof toast === 'function') {
+                        toast('🔌 บัญชี LINE ถูกยกเลิกการเชื่อม — ติดต่อ admin เพื่อเชื่อมใหม่', 'info');
+                    }
+                    return;
+                };
+            }
+            // Persistent banner above world map (safe-area aware for iOS notch).
+            try {
+                if (!document.getElementById('unlinked-banner')) {
+                    const banner = document.createElement('div');
+                    banner.id = 'unlinked-banner';
+                    banner.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;background:#FFF3E0;color:#BF360C;padding:8px 12px;font-size:.78rem;text-align:center;z-index:100;border-bottom:1px solid #FFCC80;font-family:var(--font-brand,system-ui);line-height:1.4;';
+                    banner.textContent = '🔌 บัญชี LINE ถูกยกเลิกการเชื่อม — กรุณาติดต่อ admin เพื่อเชื่อมใหม่';
+                    document.body.appendChild(banner);
+                }
+            } catch(_) {}
+            console.log('🔌 unlinked mode applied — world-map only');
+        }
+
+        // S3 detector: claims stripped mid-session.
+        // unlinkLiffUser CF calls setCustomUserClaims({}) + revokeRefreshTokens —
+        // forces the SDK to fetch a fresh ID token. When the refreshed token has
+        // no useful claims, switch to unlinked mode without requiring close+reopen.
+        // §7-U cousin: idempotent via window._claimListenerSet.
+        function _setupClaimLossListener() {
+            const auth = window.firebaseAuth;
+            const fn = window.firebaseOnIdTokenChanged;
+            if (!auth || !fn || window._claimListenerSet) return;
+            window._claimListenerSet = true;
+            let hadClaims = null;
+            fn(auth, async user => {
+                if (!user || user.isAnonymous) { hadClaims = false; return; }
+                try {
+                    const tr = await user.getIdTokenResult();
+                    const useful = !!(tr.claims.room && tr.claims.building) || tr.claims.role === 'player';
+                    if (hadClaims === true && !useful && !window._unlinkedMode) {
+                        console.warn('🔌 LIFF claims lost mid-session — switching to unlinked mode');
+                        window._unlinkedMode = true;
+                        _applyUnlinkedMode();
+                    }
+                    hadClaims = useful;
+                } catch (e) {
+                    console.warn('claim listener error:', e?.message || e);
+                }
+            });
+        }
+
         // Call liffSignIn CF: verify LIFF ID token server-side → Firebase custom token.
         // Returns: { linked: true, room, building } | { linked: false, status } | null (error)
         async function _callLiffSignIn() {
@@ -9691,7 +9764,17 @@
             }
 
             if (resp.status === 404) return { linked: false, status: null }; // first-time user
-            if (resp.status === 403) return { linked: false, status: data.status || 'pending' };
+            if (resp.status === 403) {
+                // Admin-initiated unlink: caller expects linked===true for "render the
+                // app shell"; UI gate from _applyUnlinkedMode keeps user on world map.
+                // Same shape as player path so init flow stays uniform.
+                if (data.status === 'unlinked') {
+                    window._unlinkedMode = true;
+                    _applyUnlinkedMode();
+                    return { linked: true, role: 'unlinked' };
+                }
+                return { linked: false, status: data.status || 'pending' };
+            }
             if (!resp.ok) {
                 const msg = data.error || `HTTP ${resp.status}`;
                 console.error('⛔ liffSignIn CF rejected:', msg);
@@ -9881,6 +9964,10 @@
                 if (inLine) _showLiffErrorOverlay('Firebase ยังไม่พร้อม — รีเฟรชหน้าใหม่');
                 return null;
             }
+
+            // S3: catch mid-session claim loss (admin unlinks while user is on LIFF).
+            // Idempotent — safe even if init runs twice (orientation change, etc.).
+            _setupClaimLossListener();
 
             // Verify LIFF token server-side and get custom token (no client Firestore read).
             if (inLine) _showLiffConnectingOverlay('🔐 กำลังตั้งค่าสิทธิ์...');
