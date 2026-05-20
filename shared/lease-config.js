@@ -366,10 +366,21 @@ class LeaseAgreementManager {
         querySnap.forEach(doc => {
           leases[doc.id] = doc.data();
         });
-        // Save to localStorage as backup
-        const stored = JSON.parse(localStorage.getItem('lease_agreements_data') || '{}');
-        stored[building] = leases;
-        localStorage.setItem('lease_agreements_data', JSON.stringify(stored));
+        // Write FLAT — `lease_agreements_data` = { leaseId: {...lease, building} }.
+        // Matches createLease + refreshLeasesFromFirestore + _setupLeaseRealtimeListener.
+        // The legacy `stored[building] = leases` (nested) shape produced wrapper
+        // entries that `Object.values(getAllLeases())` returned as orphan rows
+        // showing "undefined undefined Invalid Date" in สัญญาเช่าทั้งหมด until the
+        // realtime listener filter caught up. Same pass also drops legacy nested
+        // leftovers from prior sessions so existing browsers self-heal on reload.
+        const all = this.getAllLeases();
+        Object.keys(all).forEach(id => {
+          const v = all[id];
+          if (!v || typeof v !== 'object' || !v.building) delete all[id];   // legacy nested wrapper / malformed
+          else if (v.building === building) delete all[id];                  // same-building flat orphan
+        });
+        Object.assign(all, leases);
+        this.saveLeases(all);
         console.log(`✅ Leases for ${building} loaded from Firebase (${querySnap.size} items)`);
         return leases;
       }
