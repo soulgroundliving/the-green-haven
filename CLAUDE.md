@@ -701,6 +701,110 @@ Fix shipped 2026-05-20: all 3 CFs now `batch.update` the lease doc in the SAME b
 
 Closely related to §7-L (data migration vs code cleanup), §7-T (writer/reader drift), §7-CC (cross-script identifier resolution). Family: "the write looked right, but a downstream reader sees something different than you intended."
 
+### EE. Top-level `function X()` + `window.X = wrapper` self-recursion — capture-before-reassign required
+
+Classic script-mode trap. In a regular `<script>` tag, top-level `function X()` only creates a property on `window` — it does NOT create a separate lexical binding. Reassigning `window.X = function() { X(); ...}` overwrites that property; the bareword `X()` inside the wrapper looks up via the global object and finds the wrapper itself → infinite recursion.
+
+Incident 2026-05-20 (Phase 2 S6 commit `48b47ed`): commit "collapsed" what it called a redundant double-assign:
+
+```js
+// BEFORE (working — captures original BEFORE reassign):
+function updateRoomStatuses() { /* repaint room pills */ }
+window.updateRoomStatuses = updateRoomStatuses;            // L572 — looked "dead"
+const originalUpdateRoomStatuses = window.updateRoomStatuses;  // freeze reference
+window.updateRoomStatuses = function() {
+  originalUpdateRoomStatuses();   // ← captured = inner fn, safe
+  updateOccupancyDashboard();
+  updateLeaseExpiryAlerts();
+};
+
+// AFTER S6 (broken — relied on bogus "JS scope precedence"):
+function updateRoomStatuses() { /* repaint room pills */ }
+window.updateRoomStatuses = function() {
+  updateRoomStatuses();           // ← bareword → global → wrapper → ∞
+  updateOccupancyDashboard();
+  updateLeaseExpiryAlerts();
+};
+```
+
+The S6 commit message claimed "Local bareword references inside this file still hit the inner `updateRoomStatuses()` function via JS scope precedence (no recursion)" — that's wrong. Top-level `function` decl in a classic script populates the global object; there is no separate "inner" lexical binding to fall back to. `RangeError: Maximum call stack size exceeded` fires on first call (DOMContentLoaded handler) → dashboard skeletons never resolve → user sees blank cards.
+
+**Rule:** any wrapper that reassigns `window.X` while wanting to call the original MUST capture the reference first:
+
+```js
+const _innerX = window.X;        // freeze the current value BEFORE the next line
+window.X = function (...args) {
+  _innerX(...args);              // captured reference — no recursion
+  /* extra work */
+};
+```
+
+The capture name should be obviously distinct (`_innerX`, `_origX`) to telegraph the pattern. `const` (not `let`) emphasises immutability.
+
+**Detection recipe** — grep for the trap shape before committing:
+
+```bash
+# Any window.X = function(){...} that calls X() inside via bareword
+grep -rnE "^window\.\w+\s*=\s*function" shared/ tenant_app.html dashboard.html | while read line; do
+  # If the wrapper body contains the same bareword as the assigned property → suspect
+  : # manual review — automated detection here is messy because the body spans lines
+done
+```
+
+Real-world test: load the deployed bundle in Chrome MCP and trigger every code path that calls the wrapper. RangeError will fire on the first invocation; "static analysis passed" + "git push succeeded" + "static smoke walked the page" all proved insufficient for S6 — the page rendered when the wrapper wasn't called, broke the moment it was.
+
+Closely related: §7-CC (`let X` at top-level isn't on `window`) is the inverse pattern. `let` creates a lexical binding but no window property; `function` declaration creates a window property but no separate lexical binding. Both cause silent cross-script breakage.
+
+### FF. Reversing custom claims — `setCustomUserClaims({})` alone leaves a ~1h leak
+
+§7-Z established the FORWARD direction: minting a token without also calling `setCustomUserClaims` is ephemeral (claims gone after ~1h). The REVERSE direction has its own three-part contract that all sites must observe together:
+
+1. **Server (CF):** `admin.auth().setCustomUserClaims(uid, {})` strips claims from the user record. Required, but insufficient alone.
+2. **Server (CF):** `admin.auth().revokeRefreshTokens(uid)` updates `tokensValidAfterTime`. Without this, the SDK's next refresh succeeds and mints a new token from the record state (now claim-less) — but the SDK only refreshes when it decides to, typically every ~50 min.
+3. **Client (fast-path):** `user.getIdTokenResult(true)` — force-refresh — on session-restore paths. Without it, the client SDK serves the CACHED ID token (still has claims) until the token's natural ~1h expiry. The user can keep walking back into authenticated surfaces with stale claims for nearly an hour.
+
+Incident 2026-05-20: `unlinkLiffUser` shipped (1) and (2) in commit `ba084ef` but the tenant_app `_callLiffSignIn` fast-path still used `getIdTokenResult()` cached. Result: admin clicks 🔌 ยกเลิกการเชื่อม, server says "claims gone", but the user's open LIFF tab returns `linked: true` from the fast-path (cached token has full claims) → ลูกบ้านยังเข้าห้องได้. User reported it. Fix in `3e159ff` switched fast-path to `getIdTokenResult(true)` + signOut on throw + fall through to liffSignIn POST → 403 unlinked → S2 mode.
+
+**Rule:** every claim-reversal CF (unlinkLiffUser, archiveTenantOnMoveOut, transitionToPlayer when it removes a role, future kin-removal flows) must do ALL THREE legs:
+
+```js
+// In the CF, AFTER batch.commit:
+const uids = [deterministicUid];
+if (legacyUid && legacyUid !== deterministicUid) uids.push(legacyUid);
+await Promise.allSettled(uids.map(async u => {
+  try {
+    await admin.auth().setCustomUserClaims(u, {});
+    await admin.auth().revokeRefreshTokens(u);
+  } catch (e) {
+    // user-not-found expected when legacy anon UID was cleaned up earlier
+    if (e?.code !== 'auth/user-not-found') console.warn(...);
+  }
+}));
+```
+
+```js
+// In any client "is the cached session still valid?" fast-path:
+const tr = await auth.currentUser.getIdTokenResult(true);  // force network refresh
+// On throw (auth/user-token-expired post-revoke): signOut + fall through to fresh sign-in.
+```
+
+**Detection recipe:**
+
+```bash
+# Every claim-reversal CF must call BOTH setCustomUserClaims + revokeRefreshTokens
+grep -rln "setCustomUserClaims\s*(\s*\w\+\s*,\s*{}" functions/  # claim strippers
+grep -rln "revokeRefreshTokens" functions/                       # token revokers
+# Diff the two lists. Anything in the first but not the second is half-finished.
+
+# Every client fast-path that trusts a cached ID token for auth-gated rendering
+grep -rn "getIdTokenResult()" tenant_app.html dashboard.html shared/
+# Each hit needs justification — for unlinked-tolerant paths it should be (true).
+```
+
+**Backfill required when shipping this pattern late:** if a CF was deployed in the (1)-only state, run a one-shot script that walks the relevant Firestore status field and applies (1)+(2) to every existing record. Template: `tools/backfill-unlinked-claims.js` (mirror of `tools/backfill-liff-claims.js`). Without the backfill, the existing N records keep stale claims until manually re-unlinked. Cost is one Firebase Admin pass per record.
+
+Closely related to §7-Z (forward minting also needs the persistent-claims dual-write). Family: "Firebase Auth state has two halves — the user record and the cached ID token — and you must explicitly invalidate both, or one will leak."
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
