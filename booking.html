@@ -1990,9 +1990,16 @@
   // the brief Step-1 → Step-3 swap is acceptable for the "I closed LIFF
   // by accident" case (better than losing the lock entirely).
   async function tryRestoreLockFromServer() {
-    if (!window.bookingFirebase || !window.firebaseAuth?.currentUser) return false;
+    if (!window.bookingFirebase || !window.firebaseAuth?.currentUser) {
+      console.warn('[booking] server restore skipped: firebase/auth not ready');
+      return false;
+    }
     const uid = window.firebaseAuth.currentUser.uid;
-    if (!uid) return false;
+    if (!uid) {
+      console.warn('[booking] server restore skipped: no uid');
+      return false;
+    }
+    console.log('[booking] server restore: querying for uid=' + uid);
     try {
       const fb = window.bookingFirebase;
       const q = fb.query(
@@ -2002,6 +2009,7 @@
         fb.limit(5)
       );
       const snap = await fb.getDocs(q);
+      console.log('[booking] server restore: got ' + snap.size + ' candidate(s)');
       if (snap.empty) return false;
       // Pick the lock with the latest lockedUntil that's still in the future.
       const now = Date.now();
@@ -2010,10 +2018,15 @@
         const data = d.data() || {};
         const lu = data.lockedUntil;
         const luMs = lu && typeof lu.toMillis === 'function' ? lu.toMillis() : 0;
+        console.log('[booking] server restore: candidate ' + d.id + ' lockedUntil=' + (luMs ? new Date(luMs).toISOString() : 'unset') + ' (remain ' + Math.round((luMs - now) / 1000) + 's)');
         if (luMs <= now + 1000) return;
         if (!best || luMs > best.luMs) best = { id: d.id, data, luMs };
       });
-      if (!best) return false;
+      if (!best) {
+        console.warn('[booking] server restore: all candidates already expired');
+        return false;
+      }
+      console.log('[booking] server restore: restoring ' + best.id);
       const b = best.data;
       _restoreStateFrom({
         bookingId: best.id,
@@ -2034,7 +2047,7 @@
       _persistLock();
       return true;
     } catch (e) {
-      console.warn('[booking] server restore failed:', e?.message || e);
+      console.warn('[booking] server restore failed:', e?.code || '', e?.message || e);
       return false;
     }
   }
