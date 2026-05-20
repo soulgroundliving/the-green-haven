@@ -1382,20 +1382,26 @@
 
     // Overlay rentPrice from RTDB — the admin's source of truth for prices.
     // Falls back to DEFAULT_ROOMS_CONFIG values if RTDB is unreachable.
+    // §7-R defense: LIFF webview can leave a get() hanging indefinitely on
+    // stale TLS — race each call against a 5s timeout so boot never wedges.
     const rtdbFn = window.firebaseDatabaseGet;
     const rtdbRef = window.firebaseDatabaseRef;
     const rtdbDb  = window.firebaseDatabase;
     if (rtdbFn && rtdbRef && rtdbDb) {
+      const RTDB_TIMEOUT_MS = 5000;
       await Promise.all([['rooms', rooms], ['nest', nest]].map(async ([bld, list]) => {
         try {
-          const snap = await rtdbFn(rtdbRef(rtdbDb, `rooms_config/${bld}`));
+          const snap = await Promise.race([
+            rtdbFn(rtdbRef(rtdbDb, `rooms_config/${bld}`)),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('rtdb-timeout')), RTDB_TIMEOUT_MS)),
+          ]);
           const rtdb = snap.val() || {};
           list.forEach(r => {
             const price = rtdb[r.id]?.rentPrice;
             if (price) r.rentPrice = Number(price);
           });
         } catch (e) {
-          console.warn(`loadRoomsConfig: RTDB price fetch failed (${bld}):`, e?.message);
+          console.warn(`loadRoomsConfig: RTDB price fetch failed (${bld}):`, e?.message || e);
         }
       }));
     }
