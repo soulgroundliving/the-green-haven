@@ -261,3 +261,55 @@ Total commits: **6** (one per sprint — clean revert points). Each commit indep
 1. **Sprint ordering** — recommended S1→S2→S3→S4→S5→S6 (prereq first, then extractions, cosmetic last). Alternative: do S6 first (it's smallest, builds confidence). Both are safe.
 2. **Single PR or per-sprint pushes** — recommended: push after each S so Vercel deploys incrementally and any regression is caught early. Alternative: hold all 6 commits locally, push once after S6. Speeds iteration but defers smoke verification.
 3. **`cleanupAdminListeners` placement** — confirm "stays in extra.js" or move to admin-ops.
+
+---
+
+# Review (2026-05-21 — Phase 2 SHIPPED)
+
+All 6 sprints landed + pushed to main, 6 commits + 2 sub-bug commits before them. End-state matches plan.
+
+## What shipped
+
+| Commit | SHA | Δ extra.js | Notes |
+|---|---|---|---|
+| feat(leases): add Firestore onSnapshot listener | `7e3df34` | — | Sub-bug #1, dashboard-tenant-page.js |
+| refactor(tenant-page): remove §7-DD-redundant bridge | `e06d378` | — | Sub-bug #2, dashboard-tenant-page.js |
+| S1 — window-ize realtimeListeners + 5 unsub vars | `9c79c0e` | 5,484 → 5,497 (+13 comments) | Prereq, no behavior change |
+| S2 — extract dashboard-tenant-lease.js | `84f1911` | 5,497 → 4,210 (-23%) | 1,318 LOC new file |
+| S3 — extract dashboard-bills.js | `0b81ad6` | 4,210 → 2,971 (-29%) | 1,257 LOC new file |
+| S4 — extract dashboard-config.js | `fda35e0` | 2,971 → 1,817 (-39%) | 1,181 LOC new file |
+| S5 — extract dashboard-admin-ops.js | `7659cca` | 1,817 → 1,673 (-8%) | 165 LOC new file |
+| S6 — collapse window.updateRoomStatuses double-assign | `48b47ed` | 1,673 → 1,675 (+net 2 — comment) | cosmetic |
+
+**dashboard-extra.js**: 5,484 → **1,675 LOC** (-69%, 65% → 20% of soft 8,500). All 5 new modules <66% of their soft 2,000.
+
+## Files NOT touched (deliberate, per plan)
+
+- `cleanupAdminListeners` + beforeunload — stayed in dashboard-extra.js per user decision (Q3 of plan approval)
+- OWNER INSIGHTS PAGE (L4612-5417 of original) — explicitly out of Phase 2 scope; ~800 LOC stays in extra.js residual
+- `loadOwnerInfoFromFirebase` call sites — only the calls live in extra.js; the implementation is in shared/owner-config.js (untouched)
+
+## Deferred / follow-up candidates
+
+- **Insights extraction** (dashboard-insights.js OR dashboard-insights-old.js for the OLD `_insights*` block in extra.js residual) — would drop extra.js to ~860 LOC. Not Plan-First-required at current size; can defer indefinitely.
+- **Misplaced functions cleanup** — the orphan logo helpers (was at L1421-1486 of pre-S1 extra.js) are now in dashboard-config.js inside the LOGO block. Naming convention could be improved (`uploadOwnerLogo` vs `uploadApartmentLogo`) but pure rename; defer.
+- **Live admin UI verification via Chrome MCP** — Phase 2 verifications were pre-commit-gates (audit:size + audit:auth + verify:memory + Node --check syntax). Real-data verification (open dashboard → click each extracted page → verify renders) was NOT done. **Recommend as first action next session before any new work.**
+
+## Anti-pattern verification
+
+- §7-CC closed for all 5 extracted modules' shared globals (S1 prereq)
+- §7-V preserved verbatim in moved listeners (each has prior-unsub teardown)
+- §7-N preserved verbatim (each onSnapshot has error callback)
+- §7-K (defined ≠ wired) — every `window.X = ...` in new files has at least one caller; verified via syntactic re-parse passing
+- §7-J (static deploy ≠ live-verified) — open; see "Deferred" above
+
+## Memory docs updated (user-scoped, NOT in commits)
+
+- lifecycle_pets_registration.md (S2)
+- lifecycle_storage_uploads.md (S2)
+- lifecycle_tenant_ssot.md (S2 + S4)
+- lifecycle_lease_action.md (S2)
+- lifecycle_stores_facade.md (S3 stale-claim fix)
+- lifecycle_insights_analytics.md (S5)
+- owner_config.md (S4)
+- gamification_ssot.md (S4)
