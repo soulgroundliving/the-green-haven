@@ -409,15 +409,19 @@ service cloud.firestore {
 
     // ===== FACILITY BOOKINGS (Tier 3G) =====
     // Tenant creates a booking only for their own building (token.building match).
-    // Tenant reads only their own bookings. Admin reads/writes all.
+    // Tenant reads only their own bookings. Admin reads/writes all
+    // (admin bypass on create added 2026-05-21 to match this comment + enable
+    // emergency direct writes from Firebase Console; the normal flow is still
+    // createFacilityBooking CF which uses admin SDK and bypasses rules anyway).
     // Cancel is handled server-side via cancelFacilityBooking CF.
     match /facilityBookings/{bookingId} {
       allow read:  if isAdmin()
                 || (isSignedIn() && resource.data.tenantUid == request.auth.uid);
-      allow create: if isSignedIn()
-                 && request.auth.token.building != null
-                 && request.resource.data.tenantBuilding == request.auth.token.building
-                 && request.resource.data.tenantUid == request.auth.uid;
+      allow create: if isAdmin()
+                 || (isSignedIn()
+                    && request.auth.token.building != null
+                    && request.resource.data.tenantBuilding == request.auth.token.building
+                    && request.resource.data.tenantUid == request.auth.uid);
       allow update, delete: if isAdmin();
     }
 

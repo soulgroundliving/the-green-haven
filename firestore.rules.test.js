@@ -518,6 +518,10 @@ describe('accountant role — tax-filing read access, no admin paths (Phase 4A S
 
 describe('wellnessClaimed — tenant create-only (idempotent)', () => {
   it('anon tenant can create claim doc', async () => {
+    // Rule (L267-273) requires parent tenants/{b}/list/{r}.linkedAuthUid ==
+    // request.auth.uid for create. ANON() defaults to uid='tenant-1' — seed
+    // the parent doc with matching linkedAuthUid so the rule's get() resolves.
+    await seedDoc('tenants/rooms/list/101', { linkedAuthUid: 'tenant-1', building: 'rooms', roomId: '101' });
     await assertSucceeds(setDoc(
       doc(ANON().firestore(), 'tenants/rooms/list/101/wellnessClaimed/article-1'),
       { claimedAt: 'now' }
