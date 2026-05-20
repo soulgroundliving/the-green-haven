@@ -165,9 +165,14 @@
     const lockMs = b.status === 'locked' && b.lockedUntil
       ? (typeof b.lockedUntil.toMillis === 'function' ? b.lockedUntil.toMillis() : Number(b.lockedUntil))
       : 0;
-    const countdownHtml = (lockMs > Date.now())
-      ? `<div data-bk-countdown="${lockMs}" style="font-size:.72rem;color:#e65100;margin-top:2px;font-variant-numeric:tabular-nums;font-weight:600;">${formatCountdown(lockMs - Date.now())}</div>`
-      : '';
+    let countdownHtml = '';
+    if (lockMs > Date.now()) {
+      // Active lock — render ticking countdown
+      countdownHtml = `<div data-bk-countdown="${lockMs}" style="font-size:.72rem;color:#e65100;margin-top:2px;font-variant-numeric:tabular-nums;font-weight:600;">${formatCountdown(lockMs - Date.now())}</div>`;
+    } else if (lockMs > 0) {
+      // Stale lock — past expiry but status still 'locked'; auto-expire is firing
+      countdownHtml = `<div style="font-size:.72rem;color:#c62828;margin-top:2px;font-weight:600;">⏰ หมดเวลาแล้ว · กำลังอัปเดต…</div>`;
+    }
 
     return `<tr style="border-top:1px solid var(--border, #e0e0e0);">
       <td style="padding:.5rem .8rem;color:var(--text-muted, #666);font-size:.8rem;">${created}</td>
@@ -202,7 +207,10 @@
   // re-renders the row with the correct pill. In-flight set prevents N
   // simultaneous writes for the same doc across rapid ticks.
   function autoExpireStaleLocks() {
-    if (!window.firebase?.firestoreFunctions || !window.firebase?.firestore) return;
+    if (!window.firebase?.firestoreFunctions || !window.firebase?.firestore) {
+      console.warn('[bookings] auto-expire skipped: firebase not ready');
+      return;
+    }
     const fs = window.firebase.firestoreFunctions;
     const db = window.firebase.firestore();
     const now = Date.now();
@@ -214,6 +222,7 @@
       if (lockMs > now) return;
       if (_expireFlightSet.has(b.id)) return;
       _expireFlightSet.add(b.id);
+      console.log(`[bookings] auto-expire firing: ${b.id} (lockedUntil=${new Date(lockMs).toISOString()})`);
       const ref = fs.doc(db, 'bookings', b.id);
       fs.setDoc(ref, {
         status: 'expired',
@@ -221,6 +230,7 @@
         expiredBy: 'admin-ui-fallback',
         updatedAt: fs.serverTimestamp(),
       }, { merge: true })
+        .then(() => console.log(`[bookings] auto-expire OK: ${b.id}`))
         .catch(e => console.warn('[bookings] auto-expire failed:', b.id, e?.message || e))
         .finally(() => _expireFlightSet.delete(b.id));
     });
