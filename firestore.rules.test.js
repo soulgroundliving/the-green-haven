@@ -405,6 +405,22 @@ describe('liffUsers — any auth creates, only admin approves/deletes', () => {
     await seedDoc('liffUsers/U_LINE_1', { status: 'pending' });
     await assertSucceeds(updateDoc(doc(EMAIL_ADMIN().firestore(), 'liffUsers/U_LINE_1'), { status: 'approved' }));
   });
+
+  // 2026-05-21: own-doc read re-opened (§7-FF leg 4 — mid-session unlink listener).
+  it('LIFF user CAN read own liffUsers doc (uid = line:userId)', async () => {
+    await seedDoc('liffUsers/U_LINE_1', { status: 'approved', room: '101', building: 'rooms' });
+    await assertSucceeds(getDoc(doc(LIFF_TENANT('line:U_LINE_1').firestore(), 'liffUsers/U_LINE_1')));
+  });
+
+  it('LIFF user CANNOT read another user liffUsers doc', async () => {
+    await seedDoc('liffUsers/U_LINE_1', { status: 'approved' });
+    await assertFails(getDoc(doc(LIFF_TENANT('line:U_LINE_2').firestore(), 'liffUsers/U_LINE_1')));
+  });
+
+  it('anonymous tenant (non-line: uid) CANNOT read liffUsers doc', async () => {
+    await seedDoc('liffUsers/U_LINE_1', { status: 'approved' });
+    await assertFails(getDoc(doc(ANON('tenant-1').firestore(), 'liffUsers/U_LINE_1')));
+  });
 });
 
 describe('marketplace — owner-only mutations', () => {

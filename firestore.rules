@@ -373,11 +373,18 @@ service cloud.firestore {
     }
 
     // ===== LIFF USER LINKS (LINE → tenant link approval) =====
-    // Read tightened to isAdmin() — liffSignIn CF reads liffUsers server-side via
-    // admin SDK (bypasses rules). Clients no longer need direct read access.
-    // create stays isSignedIn() so tenants can still submit link requests from client.
+    // Reads:
+    //   - admin always
+    //   - LIFF user reading own doc — deterministic UID is 'line:' + userId
+    //     per liffSignIn CF. Re-opened to own-doc on 2026-05-21 to enable the
+    //     real-time mid-session unlink listener in tenant_app (§7-FF). Own-doc
+    //     fields (lineUserId/displayName/room/building/status/requestedAt etc.)
+    //     are not sensitive to the user themselves; cross-user reads still blocked.
+    // create stays isSignedIn() so tenants can submit link requests from client.
+    // update, delete admin-only (liffSignIn CF / unlinkLiffUser CF / admin UI).
     match /liffUsers/{userId} {
-      allow read:   if isAdmin();
+      allow read:   if isAdmin()
+                     || (isSignedIn() && request.auth.uid == 'line:' + userId);
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }

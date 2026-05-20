@@ -9679,6 +9679,59 @@
             console.log('🔌 unlinked mode applied — world-map only');
         }
 
+        // S4 detector: real-time Firestore status flip. Pairs with S3 (claim-loss
+        // via SDK token refresh, slow path ~50min worst case) — this listener
+        // catches admin unlink action on the NEXT Firestore snapshot tick (typically
+        // sub-second), shrinking the worst-case mid-session window from ~50min to
+        // ~immediate. Reads own liffUsers doc (rule loosened 2026-05-21 to allow
+        // own-doc read by deterministic UID 'line:'+userId).
+        // Guards: §7-U claim-first (need _lineUserId), §7-V unsub-before-rebind
+        // (call site is one-shot via _unlinkStatusListenerSet, but defensive),
+        // §7-N error callback (surface + reset on perm-denied for retry).
+        function _setupUnlinkStatusListener() {
+            if (window._unlinkStatusListenerSet) return;
+            if (!window._lineUserId) return;
+            if (!window.firebase?.firestore) return;
+            const fs = window.firebase.firestoreFunctions;
+            if (!fs?.onSnapshot || !fs?.doc || !fs?.collection) return;
+            // Defensive unsub of any prior listener (§7-V); should not happen
+            // given the idempotency flag above, but cheap insurance for the case
+            // where the flag was reset by a permission-denied retry.
+            if (typeof window._unlinkStatusUnsub === 'function') {
+                try { window._unlinkStatusUnsub(); } catch (_) {}
+                window._unlinkStatusUnsub = null;
+            }
+            try {
+                const db = window.firebase.firestore();
+                const ref = fs.doc(fs.collection(db, 'liffUsers'), window._lineUserId);
+                window._unlinkStatusListenerSet = true;
+                window._unlinkStatusUnsub = fs.onSnapshot(
+                    ref,
+                    snap => {
+                        if (!snap || !snap.exists || !snap.exists()) return;
+                        const status = snap.data()?.status;
+                        if (status === 'unlinked' && !window._unlinkedModeApplied) {
+                            console.warn('🔌 liffUsers status flipped to unlinked — applying mode immediately');
+                            window._unlinkedMode = true;
+                            _applyUnlinkedMode();
+                        }
+                    },
+                    err => {
+                        console.warn('[unlinkStatus] subscribe failed:', err?.message || err);
+                        // Reset on transient/permission errors so a future call
+                        // (e.g. on liffLinked re-fire) can resubscribe successfully.
+                        if (err?.code === 'permission-denied' || err?.code === 'failed-precondition') {
+                            window._unlinkStatusListenerSet = false;
+                            window._unlinkStatusUnsub = null;
+                        }
+                    }
+                );
+            } catch (e) {
+                console.warn('[unlinkStatus] setup threw:', e?.message || e);
+                window._unlinkStatusListenerSet = false;
+            }
+        }
+
         // S3 detector: claims stripped mid-session.
         // unlinkLiffUser CF calls setCustomUserClaims({}) + revokeRefreshTokens —
         // forces the SDK to fetch a fresh ID token. When the refreshed token has
@@ -10005,6 +10058,14 @@
             if (result?.linked) {
                 window._lineLinkStatus = 'approved';
                 if (inLine) _hideLiffConnectingOverlay();
+                // S4: subscribe to own liffUsers doc so an admin unlink action
+                // flips us to unlinked mode on the next snapshot tick (sub-second)
+                // instead of waiting for the ~50min SDK token refresh that S3
+                // (_setupClaimLossListener) depends on. Safe to call here — at
+                // this point _lineUserId is set, firebase is ready, and the user
+                // is signed in with the deterministic UID needed to pass the
+                // own-doc read rule.
+                _setupUnlinkStatusListener();
                 return { linked: true };
             }
             // linked: false → pending/rejected/first-time, or null → error (banner already shown)
