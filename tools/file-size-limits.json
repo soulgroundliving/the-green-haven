@@ -29,5 +29,10 @@
     "soft": 2000,
     "hard": 2500,
     "growthPerCommit": 300
+  },
+  "shared/dashboard-bills.js": {
+    "soft": 2000,
+    "hard": 2500,
+    "growthPerCommit": 300
   }
 }
