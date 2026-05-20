@@ -805,6 +805,39 @@ grep -rn "getIdTokenResult()" tenant_app.html dashboard.html shared/
 
 Closely related to §7-Z (forward minting also needs the persistent-claims dual-write). Family: "Firebase Auth state has two halves — the user record and the cached ID token — and you must explicitly invalidate both, or one will leak."
 
+### GG. LIFF redirect strips URL `?query=params` — use localStorage for sticky toggles
+
+When the user opens `https://liff.line.me/<channelId>?debug=1` (or any LIFF endpoint URL with a query param), LINE's redirect to the configured webview endpoint can DROP the query string. `?debug=1`, `?next=/dashboard`, `?coupon=abc`, custom feature-flag toggles — none of these are reliable in LIFF. The same URL works perfectly in Safari/Chrome (because there's no LIFF redirect involved), so the bug is invisible during desktop testing.
+
+Incident 2026-05-21: `booking.html` shipped an on-screen debug panel gated on `/[?&]debug=1/.test(location.search)`. Tester appended `?debug=1` to the LIFF URL → LINE webview opened the page but the query param wasn't in `location.search` → panel never showed. We thought the panel was broken (`DOMContentLoaded` timing issue was a separate cousin bug also fixed in the same session) when in fact the trigger never fired.
+
+**Rule:** any URL-driven toggle that must survive LIFF redirect MUST persist to `localStorage` on first detection, then read from BOTH `location.search` AND storage on every subsequent visit:
+
+```js
+let _toggleOn = /[?&]foo=1/.test(location.search);
+const _toggleOff = /[?&]foo=0/.test(location.search);
+try {
+  if (_toggleOff) localStorage.removeItem('toggle_foo');
+  else if (_toggleOn) localStorage.setItem('toggle_foo', '1');
+  else if (localStorage.getItem('toggle_foo') === '1') _toggleOn = true;
+} catch (_) { /* storage disabled — non-fatal */ }
+```
+
+Always provide an explicit OFF trigger (`?foo=0` here) — otherwise the toggle is sticky forever once set.
+
+**Affects:** `tenant_app.html`, `booking.html`, any future LIFF entrypoint. Especially relevant for QA / debug flags, deep-link parameters, and feature-flag overrides.
+
+**Detection recipe:** any new `URLSearchParams`/`location.search` lookup added to a LIFF-entry HTML must have a sibling localStorage persistence path, OR a comment explaining why ephemeral-only is intentional.
+
+```bash
+grep -rn "location.search\|URLSearchParams" tenant_app.html booking.html
+# Every hit on a LIFF-loaded page is a candidate for query-strip bug.
+```
+
+Family with §7-S (LIFF auth multi-instance) and §7-R (LIFF webview TLS stale): all are "LIFF behaves differently from a normal browser, and the difference is invisible until you test on LINE itself."
+
+**Related extension to §7-R:** the original §7-R was scoped to `fetch()` in LIFF webview. Same session (2026-05-21) confirmed it applies equally to `firebase-database`'s `get()` — `loadRoomsConfig` hung at "🌿 กำลังโหลดข้อมูลห้อง…" indefinitely waiting on `firebaseDatabaseGet(ref(db, 'rooms_config/rooms'))` until the user gave up. Fix is identical: `Promise.race([get(ref), new Promise((_, rej) => setTimeout(() => rej(new Error('rtdb-timeout')), 5000))])`. So §7-R's rule should be read as "any await on Firebase SDK that goes over the wire (fetch, RTDB get, Firestore getDoc, getDocs, storage uploadBytes) in LIFF webview must have a Promise.race timeout" — not just fetch.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md
