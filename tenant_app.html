@@ -1479,6 +1479,15 @@
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
+        /* Unlinked mode — admin removed the LINE↔room link. Hide every interactive
+           CTA so "เห็นได้แค่หน้า world map" actually holds (the JS gate already
+           redirects navigation, but a button user clicks only to see a toast is
+           half-baked UX). Banner from _applyUnlinkedMode stays. */
+        body.gh-unlinked-mode #map-bell-btn,
+        body.gh-unlinked-mode #world-map-page .map-container > button {
+            display: none !important;
+        }
+
         .day-card {
             background: #F3F4F6;
             border-radius: 15px;
@@ -9630,6 +9639,10 @@
         function _applyUnlinkedMode() {
             if (window._unlinkedModeApplied) return;
             window._unlinkedModeApplied = true;
+            // body class drives the CSS gate that hides world-map CTAs + bell icon.
+            // Paired with the JS navigation gates below — CSS hides clickables,
+            // JS catches anything that still tries to navigate (defense in depth).
+            try { document.body.classList.add('gh-unlinked-mode'); } catch(_) {}
             // Force navigate to world map immediately (covers mid-session case where
             // user might be on another page like บิล/profile when claims are stripped).
             try { if (typeof showPage === 'function') showPage('world-map'); } catch(_) {}
