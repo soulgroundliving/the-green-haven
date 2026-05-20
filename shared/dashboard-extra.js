@@ -185,13 +185,24 @@ function getPaymentStatus(roomId) {
   return 'paid';
 }
 
+// Canonical "occupied" predicate — shared between the Nest/Rooms stats card
+// (calculateOccupancy) and the per-room grid renderers (getRoomColorStatus).
+// Both checks read from the SSoT projection so a LIFF-linked tenant with no
+// explicit name field, or a lease-derived name only, still counts as occupied
+// in both surfaces. Prior to this helper, getRoomColorStatus checked only
+// `tenant.name` while calculateOccupancy checked the full identity set, so
+// the stats card and the room grid could disagree on occupancy counts.
+window.hasTenantIdentity = function (t) {
+  return !!(t && (t.name || t.firstName || t.lastName || t.linkedAuthUid || t.lease?.tenantName));
+};
+
 // ===== Room Color Status Function =====
 function getRoomColorStatus(roomId, room) {
   const allTenants = loadTenants();
   const tenant = allTenants[roomId];
 
   // Vacant = gray
-  if (!tenant || !tenant.name) {
+  if (!window.hasTenantIdentity(tenant)) {
     return { color: '#e0e0e0', icon: '⚪', label: 'ว่าง' };
   }
 
@@ -577,13 +588,13 @@ function calculateOccupancy(buildingType = null) {
   // SSoT: TenantConfigManager reads from tenant_master_data (Firestore-backed).
   // Per tenant_config_manager_keys.md, items are keyed by `roomId` (NOT `id`).
   // Previously `t.id` (undefined) made the set ["undefined"] → 0 matches.
-  // "มีผู้เช่า" = identity is filled OR LINE-linked OR lease records the name.
+  // "มีผู้เช่า" predicate lives in window.hasTenantIdentity so getRoomColorStatus
+  // uses the same definition — keeps stats card and grid in lockstep.
   const tenantList = typeof TenantConfigManager !== 'undefined'
     ? (TenantConfigManager.getTenantList(building) || [])
     : [];
-  const hasIdentity = t => !!(t && (t.name || t.firstName || t.lastName || t.linkedAuthUid || t.lease?.tenantName));
   const occupiedSet = new Set(
-    tenantList.filter(hasIdentity).map(t => String(t.roomId ?? t.id ?? ''))
+    tenantList.filter(window.hasTenantIdentity).map(t => String(t.roomId ?? t.id ?? ''))
   );
 
   const occupied = rooms.filter(r => occupiedSet.has(String(r))).length;
