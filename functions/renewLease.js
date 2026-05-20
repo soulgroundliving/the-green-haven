@@ -37,6 +37,21 @@ const { getValidBuildings } = require('./buildingRegistry');
 const VALID_MODES = new Set(['renewal', 'extension']);
 const ROOM_ID_RE = /^[A-Za-z0-9ก-๛]{1,20}$/;
 
+// Tier keys must match functions/remindLeaseExpiry.js TIERS — these are the
+// possible doc ids at leaseNotifications/{building}_{roomId}_{tier}. Renewal +
+// extension both clear all four (idempotent — Firestore delete on a missing
+// doc is a no-op) so the scheduler re-emits fresh tiers from the new endDate.
+const LEASE_NOTIF_TIERS = ['60', '30', '14', 'expired'];
+
+// Helper — read a date-ish field off a Firestore doc (could be ISO string,
+// Firestore Timestamp, or millis). Returns a Date or null.
+function _parseDateField(v) {
+  if (!v) return null;
+  if (typeof v.toDate === 'function') return v.toDate(); // Firestore Timestamp
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 /**
  * Parses + validates input. Returns a normalised payload OR throws
  * functions.https.HttpsError. Split out so unit tests can exercise the
@@ -142,6 +157,237 @@ async function _validateInput(data) {
   };
 }
 
+/**
+ * Reads pre-conditions for both modes — tenant doc + active lease doc.
+ * Returns { tenantRef, tenantData, oldLeaseRef, oldLeaseData, oldEndDate }
+ * or throws HttpsError. Pulled out for white-box testing.
+ *
+ * §7-DD discipline: the lease pointer chain mirrors archiveTenantOnMoveOut
+ * exactly so renewals + archives agree on which lease is "active" for a room.
+ */
+async function _readLeaseState(firestore, building, roomId) {
+  const tenantRef = firestore.collection('tenants').doc(building).collection('list').doc(roomId);
+  const tenantSnap = await tenantRef.get();
+  if (!tenantSnap.exists) {
+    throw new functions.https.HttpsError('not-found',
+      `tenants/${building}/list/${roomId} does not exist`);
+  }
+  const tenantData = tenantSnap.data() || {};
+
+  // Tenant must have a real identity (mirror archive CF guard at L158-168)
+  const tenantId = String(tenantData.tenantId || '').trim();
+  if (!tenantId) {
+    throw new functions.https.HttpsError('failed-precondition',
+      `Room ${building}/${roomId} has no tenantId — vacant rooms cannot be renewed`);
+  }
+
+  // Lease pointer chain — same precedence as archiveTenantOnMoveOut L215-217
+  const leaseId = (tenantData.lease && tenantData.lease.leaseId)
+    || tenantData.activeContractId
+    || (tenantData.contractId ? String(tenantData.contractId) : null);
+  if (!leaseId) {
+    throw new functions.https.HttpsError('failed-precondition',
+      `Room ${building}/${roomId} has tenantId but no active lease pointer ` +
+      `(lease.leaseId / activeContractId / contractId all empty) — cannot renew`);
+  }
+
+  const oldLeaseRef = firestore.collection('leases').doc(building).collection('list').doc(String(leaseId));
+  const oldLeaseSnap = await oldLeaseRef.get();
+  if (!oldLeaseSnap.exists) {
+    throw new functions.https.HttpsError('failed-precondition',
+      `Lease doc leases/${building}/list/${leaseId} not found — tenant doc points at a non-existent lease`);
+  }
+  const oldLeaseData = oldLeaseSnap.data() || {};
+
+  // Block double-renewal: lease must currently be 'active'. status='ended' or
+  // 'renewed' means a prior op already closed it; refuse to overwrite.
+  const status = String(oldLeaseData.status || 'active');
+  if (status !== 'active') {
+    throw new functions.https.HttpsError('failed-precondition',
+      `Lease ${leaseId} has status='${status}' — only 'active' leases can be renewed`);
+  }
+
+  // moveOutDate is the canonical end-date field on lease docs (see
+  // convertBookingToTenant.js:312). Some legacy docs may carry endDate instead;
+  // fall back if needed.
+  const oldEndDate = _parseDateField(oldLeaseData.moveOutDate) || _parseDateField(oldLeaseData.endDate);
+  if (!oldEndDate) {
+    throw new functions.https.HttpsError('failed-precondition',
+      `Lease ${leaseId} has no parseable moveOutDate/endDate — cannot determine renewal start point`);
+  }
+
+  return { tenantRef, tenantData, tenantId, leaseId, oldLeaseRef, oldLeaseData, oldEndDate };
+}
+
+/**
+ * Runs the renewal-mode batch. Pure helper — caller owns the auth check + input
+ * validation. Returns the audit payload to be written separately (RTDB) so a
+ * test can assert against it without engaging RTDB.
+ */
+async function _runRenewalMode(input, callerUid, callerEmail, firestore) {
+  const { building, roomId, newEndDate, newRentAmount, newDeposit,
+          contractDocument, contractFileName, notes } = input;
+
+  const state = await _readLeaseState(firestore, building, roomId);
+  const { tenantRef, tenantData, tenantId, leaseId: oldLeaseId,
+          oldLeaseRef, oldLeaseData, oldEndDate } = state;
+
+  // newEndDate must strictly extend the lease. Past the validator's "future"
+  // check, this catches the case where admin types a date that's after today
+  // but before the existing endDate (i.e. shortening — not a renewal).
+  if (newEndDate.getTime() <= oldEndDate.getTime()) {
+    throw new functions.https.HttpsError('invalid-argument',
+      `newEndDate (${newEndDate.toISOString()}) must be after current endDate (${oldEndDate.toISOString()})`);
+  }
+
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  const newLeaseId = `CONTRACT_${Date.now()}_${roomId}`;
+  const newLeaseRef = firestore.collection('leases').doc(building).collection('list').doc(newLeaseId);
+
+  // Resolved values for the new lease — explicit overrides win, else inherit
+  const resolvedRent = (newRentAmount !== undefined) ? newRentAmount : Number(oldLeaseData.rentAmount) || 0;
+  const resolvedDeposit = (newDeposit !== undefined) ? newDeposit : Number(oldLeaseData.deposit) || 0;
+  const resolvedDocPath = contractDocument || String(oldLeaseData.contractDocument || '');
+  const resolvedDocName = contractFileName || String(oldLeaseData.contractFileName || '');
+
+  // contractMonths derived from start-to-end span (rounded). Admin may want a
+  // different value but the common case is "matches actual span" — easier
+  // to derive than to require admin input.
+  const monthsBetween = Math.max(1, Math.round(
+    (newEndDate.getTime() - oldEndDate.getTime()) / (30 * 86400 * 1000)
+  ));
+
+  const startIso = oldEndDate.toISOString();
+  const endIso = newEndDate.toISOString();
+
+  // ── Build single Firestore batch ──────────────────────────────────────────
+  const batch = firestore.batch();
+
+  // 1. Old lease → status='renewed' + back-pointer to the new doc
+  batch.update(oldLeaseRef, {
+    status: 'renewed',
+    renewedAt: now,
+    renewedToLeaseId: newLeaseId,
+    renewedBy: callerUid,
+    renewedByEmail: callerEmail,
+    updatedAt: now,
+  });
+
+  // 2. New lease — clone of old + new dates + (optional) rent/deposit overrides
+  const newLeaseData = {
+    id: newLeaseId,
+    building,
+    roomId,
+    tenantId,
+    tenantName: String(oldLeaseData.tenantName || tenantData.name || ''),
+    moveInDate: startIso,
+    moveOutDate: endIso,
+    contractStart: startIso,
+    contractMonths: monthsBetween,
+    rentAmount: resolvedRent,
+    deposit: resolvedDeposit,
+    depositPaid: !!oldLeaseData.depositPaid,
+    depositPaidAt: oldLeaseData.depositPaidAt || null,
+    depositSlipRef: String(oldLeaseData.depositSlipRef || ''),
+    status: 'active',
+    contractFileName: resolvedDocName,
+    contractDocument: resolvedDocPath,
+    priorLeaseId: oldLeaseId,
+    renewedFromLeaseId: oldLeaseId,
+    renewalNotes: notes,
+    sourceBookingId: String(oldLeaseData.sourceBookingId || ''),
+    createdDate: now,
+    updatedAt: now,
+  };
+  batch.set(newLeaseRef, newLeaseData, { merge: false });
+
+  // 3. Tenant doc — point at new lease + mirror endDate + (optional) rent
+  const tenantPatch = {
+    contractEnd: endIso,
+    contractStart: startIso,
+    contractMonths: monthsBetween,
+    activeContractId: newLeaseId,
+    contractId: newLeaseId,
+    lease: {
+      leaseId: newLeaseId,
+      status: 'active',
+      startDate: startIso,
+      endDate: endIso,
+    },
+    updatedAt: now,
+  };
+  if (newRentAmount !== undefined) tenantPatch.rentAmount = resolvedRent;
+  if (newDeposit !== undefined) tenantPatch.deposit = resolvedDeposit;
+  if (resolvedDocPath) tenantPatch.contractDocument = resolvedDocPath;
+  if (resolvedDocName) tenantPatch.contractFileName = resolvedDocName;
+  batch.update(tenantRef, tenantPatch);
+
+  // 4. Clear stale leaseNotifications tier docs — idempotent (delete on
+  //    missing doc is a no-op) so we don't need to pre-read existence.
+  for (const tier of LEASE_NOTIF_TIERS) {
+    const notifRef = firestore.collection('leaseNotifications').doc(`${building}_${roomId}_${tier}`);
+    batch.delete(notifRef);
+  }
+
+  try {
+    await batch.commit();
+  } catch (e) {
+    console.error('renewLease[renewal]: batch commit failed:', e);
+    throw new functions.https.HttpsError('internal',
+      e.message || 'Renewal batch commit failed');
+  }
+
+  // ── Audit payload (caller writes to RTDB best-effort outside the batch) ──
+  const auditPayload = {
+    action: 'lease_renewed',
+    mode: 'renewal',
+    building, room: roomId,
+    tenantId,
+    oldLeaseId,
+    newLeaseId,
+    oldEndDate: oldEndDate.toISOString(),
+    newEndDate: endIso,
+    oldRent: Number(oldLeaseData.rentAmount) || 0,
+    newRent: resolvedRent,
+    rentChanged: (newRentAmount !== undefined) && (resolvedRent !== (Number(oldLeaseData.rentAmount) || 0)),
+    depositChanged: (newDeposit !== undefined) && (resolvedDeposit !== (Number(oldLeaseData.deposit) || 0)),
+    documentReplaced: !!contractDocument,
+    notes: notes || '',
+    actor: callerEmail || callerUid,
+    actorUid: callerUid,
+  };
+
+  console.log(`renewLease[renewal]: ${building}/${roomId} ${oldLeaseId} → ${newLeaseId} ` +
+    `(rent ${auditPayload.oldRent}→${resolvedRent}, by=${auditPayload.actor})`);
+
+  return {
+    success: true,
+    mode: 'renewal',
+    building, roomId,
+    oldLeaseId, newLeaseId,
+    oldEndDate: oldEndDate.toISOString(),
+    newEndDate: endIso,
+    auditPayload,
+  };
+}
+
+/**
+ * Best-effort RTDB audit write. Logs + swallows on failure — Firestore batch
+ * is the source of truth; audit is observability only.
+ */
+async function _writeAuditLog(payload) {
+  try {
+    if (!admin.database) return; // shouldn't happen, but be defensive
+    const ref = admin.database().ref('audit_logs/leases').push();
+    await ref.set({
+      ...payload,
+      at: admin.database.ServerValue.TIMESTAMP,
+    });
+  } catch (e) {
+    console.warn('renewLease: audit log write failed (non-fatal):', e && e.message ? e.message : e);
+  }
+}
+
 exports.renewLease = functions
   .region('asia-southeast1')
   .https.onCall(async (data, context) => {
@@ -156,14 +402,31 @@ exports.renewLease = functions
 
     // ── Input validation ────────────────────────────────────────────────────
     const input = await _validateInput(data);
+    const callerUid = context.auth.uid;
+    const callerEmail = String(context.auth.token.email || '');
 
-    // S1 STUB — state-write branches land in S2 (renewal) and S3 (extension).
-    // Tests assert that validation passed by catching this specific code.
+    const firestore = admin.firestore();
+
+    if (input.mode === 'renewal') {
+      const result = await _runRenewalMode(input, callerUid, callerEmail, firestore);
+      // Fire-and-await is fine — audit write is fast (single push). If we
+      // really want to never block on it we can drop the await; for now the
+      // ~20ms latency cost is worth the test reproducibility.
+      await _writeAuditLog(result.auditPayload);
+      const { auditPayload, ...callerResult } = result;
+      return callerResult;
+    }
+
+    // S3 STUB — extension-mode branch lands next sprint
     throw new functions.https.HttpsError('unimplemented',
-      `renewLease ${input.mode} mode is not yet implemented (S2/S3 pending)`);
+      `renewLease ${input.mode} mode is not yet implemented (S3 pending)`);
   });
 
 // Export internals for unit testing.
 exports._validateInput = _validateInput;
+exports._readLeaseState = _readLeaseState;
+exports._runRenewalMode = _runRenewalMode;
+exports._writeAuditLog = _writeAuditLog;
 exports._VALID_MODES = VALID_MODES;
 exports._ROOM_ID_RE = ROOM_ID_RE;
+exports._LEASE_NOTIF_TIERS = LEASE_NOTIF_TIERS;

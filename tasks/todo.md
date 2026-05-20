@@ -123,25 +123,25 @@ Post-ship doc updates (NOT in code commit — separate memory edits):
 
 ### S1 — CF stub + auth/validation harness + test scaffold (~45 min)
 
-- [ ] Create `functions/renewLease.js` with: region SE1, admin claim check, building/roomId validation (reuse `getValidBuildings`), mode validation (`renewal` | `extension`), newEndDate parse + future-only check
-- [ ] Wire `exports.renewLease` in `functions/index.js`
-- [ ] Create `tests/renewLease.test.js` with: 4 auth tests (unauth/non-admin/bad-building/bad-room) + mode-validation test + future-endDate test
-- [ ] All 6 tests pass against the stub (CF throws on bad input but is otherwise a no-op)
-- [ ] Commit: `feat(renewLease): CF stub + auth gates + input validation tests`
+- [x] Create `functions/renewLease.js` with: region SE1, admin claim check, building/roomId validation (reuse `getValidBuildings`), mode validation (`renewal` | `extension`), newEndDate parse + future-only check
+- [x] Wire `exports.renewLease` in `functions/index.js`
+- [x] Create `tests/renewLease.test.js` with: 4 auth tests (unauth/non-admin/bad-building/bad-room) + mode-validation test + future-endDate test
+- [x] All 6 tests pass against the stub (CF throws on bad input but is otherwise a no-op) — shipped 18 tests (exceeded plan)
+- [x] Commit `c4dcbdb`: `feat(renewLease): CF stub + auth + validation + 18 tests (S1)`
 
 **Why this sprint:** lock the contract surface first. Validation gates + tests come before any state mutation.
 
 ### S2 — Renewal mode (default) — full state write + happy-path test (~75 min)
 
-- [ ] Read pre-conditions: tenant doc must exist + have tenantId + have active lease (via `tenantData.lease.leaseId || activeContractId || contractId`)
-- [ ] Resolve old lease ref (mirror `archiveTenantOnMoveOut:215-229` § leaseId resolution)
-- [ ] Pre-read `leaseNotifications/{b}_{r}_*` to know which to delete
-- [ ] Build single Firestore batch: ops 1-4 from renewal matrix above
-- [ ] Generate newLeaseId deterministically: `LEASE_${tenantId}_${endDate.getTime()}` (pattern match: `LEGACY_${tenantId}_${ts}` from archive CF L176)
-- [ ] Commit batch + write RTDB audit log
-- [ ] Add 3 happy-path tests: rent unchanged, rent increased, rent + deposit increased
-- [ ] Add 2 edge tests: old lease already `status='ended'` (fail with failed-precondition), endDate ≤ old endDate (fail with invalid-argument)
-- [ ] Commit: `feat(renewLease): renewal mode (novation) — batched lease-end + new-lease creation`
+- [x] Read pre-conditions: tenant doc must exist + have tenantId + have active lease (via `tenantData.lease.leaseId || activeContractId || contractId`)
+- [x] Resolve old lease ref (mirror `archiveTenantOnMoveOut:215-229` § leaseId resolution)
+- [x] Pre-read `leaseNotifications/{b}_{r}_*` to know which to delete — REPLACED with idempotent unconditional delete (Firestore delete on missing doc is no-op; saves 4 reads)
+- [x] Build single Firestore batch: ops 1-4 from renewal matrix above (7 ops total: 1 update old + 1 set new + 1 update tenant + 4 delete notif tiers)
+- [x] Generate newLeaseId — adopted existing `CONTRACT_${Date.now()}_${roomId}` pattern from convertBookingToTenant.js:219 (matches; D6 plan deviation noted)
+- [x] Commit batch + write RTDB audit log — path used `audit_logs/leases` (parallel to existing `audit_logs/bills` in generateBillsOnMeterUpdate); D1 plan said `system/audit_logs` but that's the client write path
+- [x] Add 3 happy-path tests: rent unchanged, rent increased, rent + deposit + doc replaced
+- [x] Add 2 edge tests: shipped 6 pre-condition guards + 3 happy + 3 side-effects = 10 S2 tests (exceeded plan)
+- [x] Commit: `feat(renewLease): renewal mode + 10 batch/side-effect tests (S2)`
 
 ### S3 — Extension mode (opt-in) — append to extensions[] (~45 min)
 
