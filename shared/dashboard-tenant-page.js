@@ -176,6 +176,7 @@ function initTenantPage(){
     });
   }
   _setupTenantRealtimeListener();
+  _setupLeaseRealtimeListener();
 }
 
 let _tenantListenerUnsubscribers=[];
@@ -230,6 +231,58 @@ function _setupTenantRealtimeListener(){
       }
     },err=>console.warn('tenant listener error:',err));
     _tenantListenerUnsubscribers.push(unsub);
+  });
+}
+
+// Mirror of _setupTenantRealtimeListener for leases/{bld}/list.
+// Without this, dashboard writes via CFs (archive/transition/revert) or
+// `tools/fix-orphan-leases.js` reach Firestore but never refresh the
+// localStorage `lease_agreements_data` cache. LeaseAgreementManager.getActiveLease()
+// legacy fallback + _projectSSoTToFlat both read from that cache, so admins
+// saw stale rent/contract data until manual reload.
+//
+// §7-V: tears down prior listeners before rebinding (safe across init re-fires
+// and buildingRegistryChanged events).
+// §7-N: error callback surfaces failures instead of silent loading.
+let _leaseListenerUnsubscribers=[];
+function _setupLeaseRealtimeListener(){
+  _leaseListenerUnsubscribers.forEach(fn=>{ try{ fn(); }catch(_){} });
+  _leaseListenerUnsubscribers=[];
+  if(!window.firebase?.firestoreFunctions) return;
+  const {collection,onSnapshot}=window.firebase.firestoreFunctions;
+  const db=window.firebase.firestore();
+  const _bldgs = (window.BuildingRegistry?.list()?.map(b=>b.id)) || ['rooms','nest'];
+  _bldgs.forEach(bld=>{
+    const unsub=onSnapshot(collection(db,`leases/${bld}/list`),snap=>{
+      // Flat keying — `lease_agreements_data` = { leaseId: {...lease, building} }.
+      // Matches createLease + refreshLeasesFromFirestore shape (the canonical
+      // one that getActiveLease's legacy fallback iterates).
+      const all=JSON.parse(localStorage.getItem('lease_agreements_data')||'{}');
+      // Drop orphans: any local lease for THIS building that isn't in the snapshot
+      // (e.g. server-side delete or status flip the cleanup tool just applied).
+      Object.keys(all).forEach(id=>{
+        if(all[id]?.building===bld) delete all[id];
+      });
+      snap.forEach(doc=>{ all[doc.id]=doc.data(); });
+      localStorage.setItem('lease_agreements_data',JSON.stringify(all));
+      // Re-render visible tenant/property pages so lease-derived fields
+      // (contractEnd, rentAmount, deposit projected by _projectSSoTToFlat)
+      // reflect the new lease state without a manual reload.
+      if(!document.getElementById('page-tenant')?.classList.contains('u-hidden')){
+        if(typeof renderTenantPage==='function') renderTenantPage();
+        if(typeof renderTenantTable==='function') renderTenantTable();
+        if(typeof updateTenantAlertBlock==='function') updateTenantAlertBlock();
+      }
+      if(typeof updateLeaseExpiryAlerts==='function'){
+        try{ updateLeaseExpiryAlerts(); }catch(_){}
+      }
+      if(!document.getElementById('page-property')?.classList.contains('u-hidden')){
+        const nestVisible = !document.getElementById('property-nest-section')?.classList.contains('u-hidden');
+        if(nestVisible && typeof initNestPage==='function') initNestPage();
+        else if(typeof initRoomsPage==='function') initRoomsPage();
+      }
+    },err=>console.warn('lease listener error:',err));
+    _leaseListenerUnsubscribers.push(unsub);
   });
 }
 
@@ -889,11 +942,14 @@ function loadTenantProfile(){
 
 // Re-wire Firestore listeners whenever the building registry updates
 // (new building added or archived via the Buildings admin page).
-// _setupTenantRealtimeListener tears down existing listeners before
-// re-iterating the current BuildingRegistry.list() — idempotent & safe.
+// Both setup fns tear down existing listeners before re-iterating the
+// current BuildingRegistry.list() — idempotent & safe.
 window.addEventListener('buildingRegistryChanged', function() {
   if (typeof _setupTenantRealtimeListener === 'function') {
     _setupTenantRealtimeListener();
+  }
+  if (typeof _setupLeaseRealtimeListener === 'function') {
+    _setupLeaseRealtimeListener();
   }
 });
 
