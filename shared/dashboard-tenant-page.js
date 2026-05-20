@@ -193,20 +193,7 @@ function _setupTenantRealtimeListener(){
       const all=JSON.parse(localStorage.getItem('tenant_master_data')||'{}');
       if(!all[bld])all[bld]={};
       snap.forEach(doc=>{
-        const d=doc.data();
-        // Bridge: if SSoT identity is empty, pull tenantName from the
-        // localStorage lease record (SSoT path from getActiveLease omits it).
-        if(!d.name && !d.firstName && !d.lastName &&
-           typeof LeaseAgreementManager!=='undefined' &&
-           typeof LeaseAgreementManager.getAllLeases==='function'){
-          const all=LeaseAgreementManager.getAllLeases();
-          const ls=Object.values(all).find(l=>
-            l.building===bld && String(l.roomId)===String(doc.id) &&
-            l.status==='active' && l.tenantName
-          );
-          if(ls?.tenantName) d.name=ls.tenantName;
-        }
-        all[bld][doc.id]=d;
+        all[bld][doc.id]=doc.data();
       });
       localStorage.setItem('tenant_master_data',JSON.stringify(all));
       // Always refresh occupancy KPIs + expiry alerts when tenant data lands.
