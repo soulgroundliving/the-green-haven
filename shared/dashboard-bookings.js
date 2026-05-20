@@ -22,6 +22,7 @@
   let _filterStatus = 'pending';   // 'all' | 'pending' | 'paid' | 'kyc' | 'converted' | 'cancelled' | 'expired'
   let _searchTerm = '';
   let _modalOpen = false;
+  let _countdownTimer = null;      // single 1s ticker for all locked-row countdowns
 
   const STATUS_PILL = {
     locked:        { label: '🔒 ล็อคไว้',     bg: '#fff3e0', color: '#e65100' },
@@ -118,6 +119,10 @@
       root._delegated = true;
       root.addEventListener('click', handleRowClick);
     }
+
+    // Spin up countdown ticker only when at least one locked row is showing
+    if (root.querySelector('[data-bk-countdown]')) startCountdownTicker();
+    else stopCountdownTicker();
   }
 
   function applyFilter(rows) {
@@ -151,6 +156,15 @@
 
     const actions = renderActions(b);
 
+    // Realtime countdown for locked rows — admin sees "เหลือ MM:SS"
+    // ticking down to 0. lockedUntil is a Firestore Timestamp.
+    const lockMs = b.status === 'locked' && b.lockedUntil
+      ? (typeof b.lockedUntil.toMillis === 'function' ? b.lockedUntil.toMillis() : Number(b.lockedUntil))
+      : 0;
+    const countdownHtml = (lockMs > Date.now())
+      ? `<div data-bk-countdown="${lockMs}" style="font-size:.72rem;color:#e65100;margin-top:2px;font-variant-numeric:tabular-nums;font-weight:600;">${formatCountdown(lockMs - Date.now())}</div>`
+      : '';
+
     return `<tr style="border-top:1px solid var(--border, #e0e0e0);">
       <td style="padding:.5rem .8rem;color:var(--text-muted, #666);font-size:.8rem;">${created}</td>
       <td style="padding:.5rem .8rem;">
@@ -165,12 +179,48 @@
       <td style="padding:.5rem .8rem;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">฿${formatNum(b.depositAmount)}</td>
       <td style="padding:.5rem .8rem;">
         <span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:.78rem;background:${s.bg};color:${s.color};">${s.label}</span>
+        ${countdownHtml}
         ${b.earlyBirdEligible ? '<div style="font-size:.7rem;color:#1a5c38;margin-top:2px;">🎁 Early Bird +500</div>' : ''}
       </td>
       <td style="padding:.5rem .8rem;">
         <div style="display:flex;flex-wrap:wrap;gap:.3rem;">${actions}</div>
       </td>
     </tr>`;
+  }
+
+  // ── Realtime countdown ticker ─────────────────────────────────────────────
+  // One setInterval ticks every 1s and updates ALL locked-row countdowns via
+  // data-bk-countdown="<expireMs>". When a countdown hits 0 we freeze the cell
+  // to "หมดเวลา"; the scheduled CF (every 5 min) flips the doc status to
+  // 'expired' shortly after, and onSnapshot then re-renders the row's pill.
+  function formatCountdown(ms) {
+    if (ms <= 0) return '⏰ หมดเวลา';
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `⏱ เหลือ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} นาที`;
+  }
+  function tickCountdowns() {
+    const cells = document.querySelectorAll('[data-bk-countdown]');
+    if (cells.length === 0) { stopCountdownTicker(); return; }
+    const now = Date.now();
+    cells.forEach(el => {
+      const expireMs = Number(el.dataset.bkCountdown);
+      if (!expireMs) return;
+      const remain = expireMs - now;
+      el.textContent = formatCountdown(remain);
+      if (remain <= 0) {
+        el.style.color = '#c62828';
+        el.removeAttribute('data-bk-countdown');  // freeze; status will flip via onSnapshot
+      }
+    });
+  }
+  function startCountdownTicker() {
+    if (_countdownTimer) return;
+    _countdownTimer = setInterval(tickCountdowns, 1000);
+  }
+  function stopCountdownTicker() {
+    if (_countdownTimer) { clearInterval(_countdownTimer); _countdownTimer = null; }
   }
 
   function renderActions(b) {
@@ -492,6 +542,9 @@
   // Expose for testing / future hot-swap
   window.dashboardBookings = {
     refresh: render,
-    teardown: () => { if (_unsub) { try { _unsub(); } catch (_) {} _unsub = null; } },
+    teardown: () => {
+      if (_unsub) { try { _unsub(); } catch (_) {} _unsub = null; }
+      stopCountdownTicker();
+    },
   };
 })();

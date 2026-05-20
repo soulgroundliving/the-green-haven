@@ -1110,9 +1110,49 @@
     kycUploaded: { idCardFront: false, idCardBack: false, houseReg: false, employmentLetter: false },
     kycSubmitting: false,
     kycSubmitted: false,
+    _durationMonths: 0,            // remembered for sessionStorage restore
   };
 
   const KYC_REQUIRED = ['idCardFront', 'idCardBack'];
+
+  // ── Lock persistence (survives refresh / LIFF restart within 20-min window) ─
+  // Server holds the canonical lock in bookings/{id}; sessionStorage just lets
+  // the client re-enter Step 3 directly instead of restarting from Step 1.
+  // onSnapshot reconciles if the doc was cancelled/expired/paid since the snapshot.
+  const LOCK_STORAGE_KEY = 'bk_active_lock';
+  function _persistLock() {
+    if (!state.bookingId || !state.lockedUntilMs) return;
+    try {
+      sessionStorage.setItem(LOCK_STORAGE_KEY, JSON.stringify({
+        bookingId: state.bookingId,
+        lockedUntilMs: state.lockedUntilMs,
+        qrPayload: state.qrPayload,
+        qrAmount: state.qrAmount,
+        monthlyRent: state.monthlyRent,
+        earlyBirdEligible: state.earlyBirdEligible,
+        earlyBirdPoints: state.earlyBirdPoints,
+        building: state.building,
+        selectedRoom: state.selectedRoom,
+        selectedDate: state.selectedDate,
+        durationMonths: state._durationMonths || 0,
+      }));
+    } catch (_) { /* quota/disabled — non-fatal */ }
+  }
+  function _clearLock() {
+    try { sessionStorage.removeItem(LOCK_STORAGE_KEY); } catch (_) {}
+  }
+  function _readPersistedLock() {
+    try {
+      const raw = sessionStorage.getItem(LOCK_STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || !data.bookingId || !Number(data.lockedUntilMs)) return null;
+      // Add 1s buffer — refusing within the final second avoids re-entering
+      // Step 3 just to have countdown immediately fire "หมดเวลา"
+      if (Number(data.lockedUntilMs) <= Date.now() + 1000) return null;
+      return data;
+    } catch (_) { return null; }
+  }
 
   // ── Step progress indicator ───────────────────────────────
   // P1 #1: update the 4-step pill strip based on current step (1-4)
@@ -1686,6 +1726,8 @@
       state.earlyBirdEligible = !!data.earlyBirdEligible;
       state.earlyBirdPoints = Number(data.earlyBirdPoints || 0);
       state.lockedUntilMs = Number(data.lockedUntil) || 0;
+      state._durationMonths = duration;
+      _persistLock();
 
       closeBookingModal();
       enterPaymentStep(duration);
@@ -1772,6 +1814,7 @@
       if (remainMs <= 0) {
         clearInterval(state.countdownTimer);
         state.countdownTimer = null;
+        _clearLock();
         tickEl.classList.add('danger');
         txtEl.textContent = 'หมดเวลา';
         // Disable upload
@@ -1900,6 +1943,30 @@
     el.textContent = msg;
   }
 
+  // ── Restore active lock on page load (refresh / LIFF restart) ─────────────
+  // Reads sessionStorage.bk_active_lock; if lockedUntilMs is still in the future,
+  // jumps straight to Step 3 with restored QR + countdown. onSnapshot then
+  // reconciles — if the doc is gone/cancelled/expired/paid in Firestore,
+  // the subscription handler shows the right error and clears storage.
+  function tryRestoreLock() {
+    const p = _readPersistedLock();
+    if (!p) return false;
+    state.bookingId = p.bookingId;
+    state.lockedUntilMs = Number(p.lockedUntilMs);
+    state.qrPayload = p.qrPayload || null;
+    state.qrAmount = Number(p.qrAmount || 0);
+    state.monthlyRent = Number(p.monthlyRent || 0);
+    state.earlyBirdEligible = !!p.earlyBirdEligible;
+    state.earlyBirdPoints = Number(p.earlyBirdPoints || 0);
+    state.building = p.building || 'rooms';
+    state.selectedRoom = p.selectedRoom || { id: '?', name: '?' };
+    state.selectedDate = p.selectedDate || null;
+    state._durationMonths = Number(p.durationMonths || 12);
+    enterPaymentStep(state._durationMonths);
+    subscribeToBooking(p.bookingId);
+    return true;
+  }
+
   // ── Live booking subscription (onSnapshot) ────────────────
   function subscribeToBooking(bookingId) {
     if (state.bookingUnsubscribe) {
@@ -1909,13 +1976,23 @@
     if (!window.bookingFirebase) return;
     const ref = window.bookingFirebase.doc('bookings/' + bookingId);
     state.bookingUnsubscribe = window.bookingFirebase.onSnapshot(ref, snap => {
-      if (!snap.exists()) return;
+      if (!snap.exists()) { _clearLock(); return; }
       const b = snap.data();
       if (b.status === 'paid' && !state.confirmed) {
         state.confirmed = true;
         enterConfirmStep(b);
       } else if (b.status === 'expired') {
+        _clearLock();
+        if (state.countdownTimer) { clearInterval(state.countdownTimer); state.countdownTimer = null; }
         showSlipStatus('error', '⏰ ห้องหมดเวลาล็อค — กรุณาเริ่มการจองใหม่');
+        const restartBtn = document.getElementById('expiredRestartBtn');
+        if (restartBtn) restartBtn.classList.remove('hide');
+      } else if (b.status === 'cancelled') {
+        _clearLock();
+        if (state.countdownTimer) { clearInterval(state.countdownTimer); state.countdownTimer = null; }
+        showSlipStatus('error', '✕ การจองถูกยกเลิก — กรุณาเริ่มการจองใหม่');
+        const restartBtn = document.getElementById('expiredRestartBtn');
+        if (restartBtn) restartBtn.classList.remove('hide');
       }
     }, (err) => {
       // §7-N: without this, a permission-denied or network drop on the booking
@@ -1945,6 +2022,7 @@
     sessionStorage.removeItem('bk_firstName');
     sessionStorage.removeItem('bk_lastName');
     sessionStorage.removeItem('bk_phone');
+    _clearLock();
 
     // P1 #5: hide sticky CTA and 5-min warning on success
     const stickyCta = document.getElementById('slipStickyCta');
@@ -2091,6 +2169,7 @@
       state.bookingUnsubscribe = null;
     }
     if (state.countdownTimer) { clearInterval(state.countdownTimer); state.countdownTimer = null; }
+    _clearLock();
     // Don't flip status server-side — expireBookingLocks will pick it up
     state.bookingId = null;
     state.lockedUntilMs = 0;
@@ -2291,6 +2370,9 @@
       // P1 #9: rooms list starts as skeleton — availability comes from CF below
       renderRoomsList();
       hideBoot();
+      // Resume active lock if user refreshed during Step 3 (within 20-min window).
+      // Sync restore — trusts persisted timestamp; onSnapshot reconciles if stale.
+      tryRestoreLock();
       // Fetch availability for both buildings; refreshAvailability() re-renders when done
       Promise.all([
         refreshAvailability('rooms'),
