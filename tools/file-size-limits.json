@@ -24,5 +24,10 @@
     "soft": 2000,
     "hard": 2500,
     "growthPerCommit": 300
+  },
+  "shared/dashboard-tenant-lease.js": {
+    "soft": 2000,
+    "hard": 2500,
+    "growthPerCommit": 300
   }
 }
