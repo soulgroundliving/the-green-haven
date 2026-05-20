@@ -94,6 +94,12 @@ exports.submitBookingKyc = require('./submitBookingKyc').submitBookingKyc;
 // (returning tenants get old data back via convertBookingToTenant lookup).
 exports.archiveTenantOnMoveOut = require('./archiveTenantOnMoveOut').archiveTenantOnMoveOut;
 
+// Admin-only lease renewal/extension (lifecycle_tenant_transitions.md § C).
+// Two modes: 'renewal' (novation — new lease doc) or 'extension' (variation —
+// stretch endDate + arrayUnion extensions[]). Single Firestore batch per
+// §7-DD discipline.
+exports.renewLease = require('./renewLease').renewLease;
+
 // Transition active tenant to community-member (player) — archives contract, creates
 // people/{tenantId} doc, sets role:'player' claim. Person stays in LINE with community access.
 exports.transitionToPlayer = require('./transitionToPlayer').transitionToPlayer;

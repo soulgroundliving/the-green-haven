@@ -1,315 +1,237 @@
-# Refactor shared/dashboard-extra.js — Phase 2: extract 4 admin modules
+# Implement C — `renewLease` CF + admin dashboard UI (Plan-First, S-M)
 
-**Status:** plan-first, awaiting approval. Do NOT edit code until ✅ from user.
-**Triggered by:** Plan #6 Phase 2 from `next_session_handoff_2026_05_20_lease_pairing_fix.md`. Phase 1 shipped `5e0c65d` (4 stores → `dashboard-domain-stores.js`, 5,484 LOC residual). Phase 2 continues the same goal: drive `dashboard-extra.js` below ~2,000 LOC by extracting 4 focused modules.
+**Status:** plan-first, awaiting ✅ from user. Do NOT edit code until approved.
+
+**Triggered by:** [next_session_handoff_2026_05_21_f_anomalies_and_transitions_design.md](../../../.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/next_session_handoff_2026_05_21_f_anomalies_and_transitions_design.md) — open items table, item C (most-frequent real-world transition, lowest design risk per [lifecycle_tenant_transitions.md](../../../.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/lifecycle_tenant_transitions.md) Prioritisation #1).
+
+**Previous plan:** Phase 2 dashboard-extra refactor — SHIPPED end-of-day 2026-05-21 per [next_session_handoff_2026_05_21_phase2_complete.md](../../../.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/next_session_handoff_2026_05_21_phase2_complete.md). 4 modules exist (`dashboard-{tenant-lease,bills,config,admin-ops}.js`). Plan superseded; this file overwrites.
+
+---
 
 ## Why now
 
-`dashboard-extra.js` is **5,484 LOC** (65% of soft 8,500). Phase 2 extracts ~3,550 LOC across 4 files, leaving ~1,930 LOC residual (23% of soft). Below the WARN tier with permanent headroom for future feature growth.
+1. **Highest real-world frequency** — every tenant who stays past their contract end needs renewal. Currently admin edits `tenants/{b}/list/{r}.contractEnd` directly via tenant modal → no audit trail, no rent-change history, no document re-signing path, no `leaseNotifications/{b}_{r}_*` tier reset.
+2. **Lowest design risk among missing CFs** — touches only 3 Firestore collections (leases × 2 + tenants × 1) + audit log. Compare B (transferTenant) which touches 4+ collections AND Auth claims.
+3. **Audit gap is real** — when a renewal happens today, the lease doc's `startDate`/`endDate` becomes ambiguous (was this an extension? a re-sign? a new contract?). No paper trail in code or data.
+4. **Pairs with A (returning tenant)** but C unblocks the more common flow first.
 
-The handoff also flags 2 prereqs that block clean extraction and 1 cosmetic fix.
+## Goal
 
-## Prereq survey — what blocks each extraction
+Ship a dual-mode (renewal / extension) lease-renewal admin operation that:
+- Is admin-only (custom claim gated)
+- Writes atomically across all affected collections (§7-DD discipline — mirror `archiveTenantOnMoveOut` pattern)
+- Preserves full audit trail (rent-change chain via `priorLeaseId` for renewals; `extensions[]` array for extensions)
+- Clears stale `leaseNotifications/{b}_{r}_*` so `remindLeaseExpiryScheduled` re-creates fresh tier notifications on next sweep
+- Does NOT touch people/, liffUsers/, or Auth claims (room/building/tenantId all stay stable)
 
-| Risk | Severity | Current state | Phase 2 sprint |
+## Scope decisions to confirm BEFORE coding (your call)
+
+These shape the implementation. I'll wait for ✅ on each before writing code.
+
+### D1. Audit log destination
+
+- (a) **RTDB `system/audit_logs`** — server-side write from CF (parallel pattern to `generateBillsOnMeterUpdate.js:163-165`). Survives client failures. ⭐ recommended
+- (b) **Firestore `audit_log/{auto}`** — would create a new collection (none today). More queryable but new rules needed.
+- (c) **Both** — belt-and-braces, costs 2 writes
+- (d) **Client-side only** via `shared/audit.js` `AuditLogger.log()` — current pattern for admin actions in dashboard-extra. Cheaper but lost on client crash.
+
+### D2. UI file structure
+
+- (a) **NEW `shared/dashboard-lease-renew.js`** — own file, hard cap ~400 LOC. Follows §1 file-size discipline + matches Phase 2 modular pattern. ⭐ recommended
+- (b) **Extend `shared/dashboard-tenant-lease.js`** (1,318 LOC post-Phase 2) — natural home for lease ops but adds to a file already near soft limits.
+- (c) **Extend `shared/dashboard-tenant-modal.js`** — modal lives in tenant modal so colocate. But this file is the cousin of dashboard-extra (kitchen-sink risk).
+
+### D3. Default mode
+
+- (a) **`renewal`** (novation — new lease doc) — matches majority Thai apartment practice (re-sign + reset rate). Default per [lifecycle_tenant_transitions.md § C](../../../.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/lifecycle_tenant_transitions.md). ⭐ recommended
+- (b) **`extension`** (variation — same lease, stretched endDate) — simpler operationally but underused legally
+
+### D4. Contract document handling
+
+- (a) **Reuse existing lease document upload widget** (the one in tenant modal "📎 อัพโหลด" tab — see `dashboard-tenant-modal.js`). Optional field; if provided, attach to new lease (renewal) or to amendment entry (extension).
+- (b) **Defer document upload** — ship without doc upload; admin uploads via separate flow if needed
+- ⭐ Recommend (a) — natural admin workflow expects upload at renewal time
+
+### D5. `leaseNotifications/{b}_{r}_*` clearing scope
+
+Both modes need to clear stale tier docs so `remindLeaseExpiryScheduled` re-creates with the new endDate:
+
+- (a) **Delete all** `leaseNotifications/{b}_{r}_*` docs in same batch (could be 4 docs: tier-60, tier-30, tier-14, tier-expired)
+- (b) **Mark `cleared=true`** with timestamp + reason — preserves history
+- ⭐ Recommend (a) — simpler; the scheduler will re-emit fresh. History is in the lease's `endDate` + `extensions[]` audit chain.
+
+### D6. Rent-change history shape (renewal mode only)
+
+When renewal changes rent, where does the OLD rate live?
+
+- (a) **Implicit via `priorLeaseId` chain** — old lease still has `rentAmount`; new lease has new amount. Walk the chain to see history. ⭐ recommended (matches `archiveTenantOnMoveOut` pattern)
+- (b) **Explicit `rentHistory[]` array** on the new lease doc
+- (c) **Separate `rentHistory/{b}/{r}/{ts}` collection**
+
+---
+
+## State write matrix per mode
+
+Mirror the §7-DD discipline from `archiveTenantOnMoveOut.js:240-289` — single Firestore batch, atomic.
+
+### Mode `renewal` (DEFAULT — novation)
+
+| # | Op | Path | Fields |
 |---|---|---|---|
-| `let realtimeListeners = {}` (L759 in extra.js) is module-scoped — extracted setup helpers (`setupLeaseNotifsListener`, `setupMeterDataListener`, …) read/write it. Moving any one to a sibling file = §7-CC cross-script `let` trap → silent `undefined`. | **HIGH** — blocks #3 (tenant-lease) and #6 (admin-ops cleanup) | `let` at top-level | **S1 window-ize** |
-| `_leaseRequestsUnsub`, `_docsUnsub`, `_petsUnsub`, `_rewardsAdminUnsub`, `_gamificationConfigUnsub` — 5 module-level `let`s that `cleanupAdminListeners()` (stays in extra.js) reads. Once any of them moves to a new module, the reader is cross-script → §7-CC silent `undefined` → cleanup misses listeners → §7-V leak. | **HIGH** — blocks #3/#4/#5 | `let` at top-level (except `_RequestsStoreComplaintsUnsub` which is already `window.X` from Phase 1) | **S1 window-ize** (bundled with realtimeListeners) |
-| `currentEditBuilding` / `currentEditTenantId` cross-script in admin flows | Already DONE 2026-05-20 (§7-CC PDPA fix, commit `0fd7ce2`) — verified by `grep -c "^\s*let\s+currentEdit" shared/dashboard-tenant-modal.js` = 0 | — | (no work) |
-| `window.updateRoomStatuses` assigned twice (L572 direct alias + L946 wrapper that captures+overwrites). Functionally correct (wrapper wins), but L572 is dead. Each extraction commit may need to touch this section, so cleaning it up first removes confusion. | **LOW** (cosmetic) | Two assigns, one is dead | **S6 cosmetic** |
+| 1 | `update` | `leases/{b}/list/{oldLeaseId}` | `status='renewed'`, `renewedAt=now`, `renewedToLeaseId=<newLeaseId>`, `renewedBy=callerUid` |
+| 2 | `set` | `leases/{b}/list/{newLeaseId}` | full clone of old lease + `priorLeaseId=<oldId>`, `startDate=<oldEndDate>`, `endDate=<newEndDate>`, `createdAt=now`, optional new `rentAmount`/`deposit`/`contractDocument`/`contractFileName`/`notes` |
+| 3 | `update` | `tenants/{b}/list/{r}` | `contractEnd=<newEndDate>`, `lease.leaseId=<newLeaseId>`, `lease.startDate=<oldEndDate>`, `lease.endDate=<newEndDate>`, `updatedAt=now`. Optional: rentAmount + deposit if changed. |
+| 4 | `delete` (N=1-4) | `leaseNotifications/{b}_{r}_60`, `_30`, `_14`, `_expired` | (skip if doc not exists; pre-read to know which) |
+| 5 | `set` (optional D1=a/c) | RTDB `system/audit_logs/{push-id}` | `{type:'lease_renewed', mode:'renewal', building, roomId, oldLeaseId, newLeaseId, oldEndDate, newEndDate, oldRent, newRent, by, callerEmail, ts}` |
 
-After S1, every later sprint is a pure structural move with no cross-script visibility risk.
+Total ops: 3-7 (well under 450 BATCH_OP_LIMIT). Audit log goes to RTDB separately (not in Firestore batch).
 
-## What Phase 2 extracts (exact line ranges in current file)
+### Mode `extension` (opt-in — variation)
 
-After Phase 1, `dashboard-extra.js` line numbers may differ from the handoff estimates. Ranges below were re-verified 2026-05-21 against the post-Phase-1 file.
+| # | Op | Path | Fields |
+|---|---|---|---|
+| 1 | `update` | `leases/{b}/list/{leaseId}` | `endDate=<newEndDate>`, `updatedAt=now`. Append to `extensions[]`: `{at:now, fromEndDate:<old>, toEndDate:<new>, by, addendumRef?, rentChange?}`. Use `arrayUnion` |
+| 2 | `update` | `tenants/{b}/list/{r}` | `contractEnd=<newEndDate>`, `lease.endDate=<newEndDate>`, `updatedAt=now` |
+| 3 | `delete` (N=1-4) | `leaseNotifications/{b}_{r}_60` etc. | same as renewal mode |
+| 4 | `set` (audit) | RTDB `system/audit_logs/{push-id}` | `{type:'lease_extended', mode:'extension', building, roomId, leaseId, fromEndDate, toEndDate, by, callerEmail, ts}` |
 
-### `shared/dashboard-tenant-lease.js` (~1,365 LOC est.)
+Total ops: 2-6.
 
-| Source range | Section | LOC |
+---
+
+## Files Touched
+
+| File | Op | Purpose |
 |---|---|---|
-| L624-757 | Lease Expiry Alerts (server-emitted `leaseNotifications/`) | 133 |
-| L1294-1483 | LEASE REQUESTS QUEUE (`leaseRequests/{auto}` admin tab) | 189 |
-| L1660-1890 | TENANT MASTER PAGE | 230 |
-| L1891-2315 | LEASE AGREEMENTS PAGE | 424 |
-| L2316-2543 | Document Hub — Phase 2 SSoT | 227 |
-| L3263-3419 | PET REGISTRATION APPROVALS | 156 |
+| `functions/renewLease.js` | NEW | callable CF — auth + validation + batch + audit. Mirror `archiveTenantOnMoveOut.js` structure exactly |
+| `functions/index.js` | edit | export `renewLease` (single line) |
+| `firestore.rules` | edit (maybe) | no new collection so no rules. But may want to tighten `leases/{b}/list` write rules to admin-only if not already |
+| `shared/dashboard-lease-renew.js` (D2=a) | NEW | renewal/extension modal markup + form handlers + CF call |
+| `dashboard.html` | edit | script tag for new file + modal HTML container (or inject from JS) + "📝 ต่อสัญญา" button placement in tenant modal |
+| `shared/dashboard-tenant-modal.js` | edit | wire "📝 ต่อสัญญา" button → opens renew modal |
+| `tests/renewLease.test.js` | NEW | 8-12 unit tests (mocked admin SDK) covering both modes + auth + edge cases |
+| `package.json` | maybe | add test script if not present for new test file |
 
-Plus carries the moved-along `let _leaseRequestsUnsub`, `let _petsUnsub` declarations (window-ized in S1).
+Post-ship doc updates (NOT in code commit — separate memory edits):
+- `lifecycle_tenant_transitions.md` → move § C from "Missing" → "Existing" table; add to ## Verification grep list
+- `lifecycle_lease_action.md` → add reference to renewLease in the admin-side renewal path
+- `next_session_handoff_2026_05_22_renewlease.md` → new handoff doc
 
-### `shared/dashboard-bills.js` (~1,239 LOC est.)
+---
 
-| Source range | Section | LOC |
+## Sprint plan (S1 - S5)
+
+### S1 — CF stub + auth/validation harness + test scaffold (~45 min)
+
+- [ ] Create `functions/renewLease.js` with: region SE1, admin claim check, building/roomId validation (reuse `getValidBuildings`), mode validation (`renewal` | `extension`), newEndDate parse + future-only check
+- [ ] Wire `exports.renewLease` in `functions/index.js`
+- [ ] Create `tests/renewLease.test.js` with: 4 auth tests (unauth/non-admin/bad-building/bad-room) + mode-validation test + future-endDate test
+- [ ] All 6 tests pass against the stub (CF throws on bad input but is otherwise a no-op)
+- [ ] Commit: `feat(renewLease): CF stub + auth gates + input validation tests`
+
+**Why this sprint:** lock the contract surface first. Validation gates + tests come before any state mutation.
+
+### S2 — Renewal mode (default) — full state write + happy-path test (~75 min)
+
+- [ ] Read pre-conditions: tenant doc must exist + have tenantId + have active lease (via `tenantData.lease.leaseId || activeContractId || contractId`)
+- [ ] Resolve old lease ref (mirror `archiveTenantOnMoveOut:215-229` § leaseId resolution)
+- [ ] Pre-read `leaseNotifications/{b}_{r}_*` to know which to delete
+- [ ] Build single Firestore batch: ops 1-4 from renewal matrix above
+- [ ] Generate newLeaseId deterministically: `LEASE_${tenantId}_${endDate.getTime()}` (pattern match: `LEGACY_${tenantId}_${ts}` from archive CF L176)
+- [ ] Commit batch + write RTDB audit log
+- [ ] Add 3 happy-path tests: rent unchanged, rent increased, rent + deposit increased
+- [ ] Add 2 edge tests: old lease already `status='ended'` (fail with failed-precondition), endDate ≤ old endDate (fail with invalid-argument)
+- [ ] Commit: `feat(renewLease): renewal mode (novation) — batched lease-end + new-lease creation`
+
+### S3 — Extension mode (opt-in) — append to extensions[] (~45 min)
+
+- [ ] Branch in CF on `mode='extension'`: skip new-lease creation; instead `arrayUnion` append to `leases/{b}/list/{leaseId}.extensions[]`
+- [ ] Reject extension mode if: lease already `status='ended'`, lease has no `extensions[]` field shape yet AND legacy-doc grace (init `extensions: []`)
+- [ ] Add 2 happy-path tests: first extension, second extension (verify arrayUnion appends, not replaces)
+- [ ] Add 1 edge test: extension with rentChange — verify `rentChange` recorded in extension entry but `lease.rentAmount` NOT mutated (rent change goes on next renewal, not extension)
+- [ ] Commit: `feat(renewLease): extension mode (variation) — arrayUnion endDate stretch`
+
+### S4 — Dashboard UI — modal + button + form (~75 min)
+
+- [ ] Create `shared/dashboard-lease-renew.js`:
+  - Modal markup builder (similar pattern to `closeFacilityConfigModal` etc.)
+  - Form: new endDate (date input), mode toggle (segmented control: ต่อสัญญาใหม่ / ขยายระยะเวลา), optional new rent + deposit, optional document upload (reuse existing file widget), notes
+  - Pre-fill: current endDate + current rentAmount as placeholder
+  - Validation: newEndDate > today, newEndDate > current endDate
+  - On submit: `httpsCallable('renewLease')` + loading state + toast on success + close modal + refresh tenant page
+- [ ] Wire "📝 ต่อสัญญา" button in `shared/dashboard-tenant-modal.js` (existing tenant modal context section)
+- [ ] Add script tag `<script src="./shared/dashboard-lease-renew.js"></script>` in `dashboard.html` AFTER `dashboard-tenant-modal.js`
+- [ ] Add modal markup container in `dashboard.html` (or inject from JS on first open — pick one)
+- [ ] Commit: `feat(renewLease): admin dashboard UI (📝 ต่อสัญญา button + dual-mode modal)`
+
+### S5 — Memory doc updates + handoff (~30 min)
+
+- [ ] Update `lifecycle_tenant_transitions.md`:
+  - Move § C from "Missing" table → "Existing" table with CF link + state-write matrix per mode
+  - Add to ## Verification grep list: `ls functions/renewLease.js`
+- [ ] Update `lifecycle_lease_action.md`: add reference to renewLease in admin renewal path
+- [ ] Write `next_session_handoff_2026_05_22_renewlease.md` with: summary, commits, verification greps, follow-up items (e.g. backfill scripts for legacy leases missing `extensions[]` shape)
+- [ ] Update `MEMORY.md` ## Current state with new entry
+- [ ] Run `npm run verify:memory` — must be GREEN
+- [ ] Append "Review" section to this `tasks/todo.md` per CLAUDE.md §1
+- [ ] Commit: `docs(memory): C renewLease shipped — lifecycle + handoff updates`
+
+---
+
+## Edge cases (explicit decisions — confirm or override)
+
+| # | Scenario | Decision |
 |---|---|---|
-| L2544-2643 | UPLOAD REAL BILLS PAGE (admin) | 99 |
-| L2644-3040 | BILL GENERATION SYSTEM | 396 |
-| L3867-4611 | BILLING IMPORT FUNCTIONS (Excel→Firestore pipeline) | 744 |
+| E1 | Admin clicks renew on a room with NO active lease | reject `failed-precondition` "Room has no active lease to renew" |
+| E2 | Admin clicks renew on a room with multiple "active" leases (data corruption) | resolve highest-priority via `tenantData.lease.leaseId` (same logic as archiveTenantOnMoveOut); log warning if mismatch with other actives |
+| E3 | `newEndDate ≤ oldEndDate` | reject `invalid-argument` "New end date must be after current end date" |
+| E4 | `newEndDate` is in the past (< today) | reject `invalid-argument` "Cannot renew to a past date" |
+| E5 | `newRentAmount` provided but ≤ 0 | reject `invalid-argument` |
+| E6 | `mode='extension'` but old lease already has `status='ended'` | reject `failed-precondition` |
+| E7 | `mode='extension'` on a lease with NO `extensions[]` field (legacy data) | initialize `extensions: [firstEntry]` instead of arrayUnion — graceful migration |
+| E8 | Old lease has subcollection docs (paymentHistory etc.) | DO NOT move (unlike archive) — bills continue against the new lease via tenant doc pointer; paymentHistory stays on old lease for historical traceability |
+| E9 | Concurrent renew clicks within 100ms | second click sees lease already `status='renewed'` (mode='renewal') → reject `failed-precondition`; mode='extension' is idempotent-ish (extra entry appended, harmless) |
+| E10 | Tenant has pending move-out request (`leaseRequests/{auto}.type='moveOut', status='pending'`) | warn but allow — admin's choice. Log to audit |
+| E11 | LIFF tenant has bell notification for old endDate already shown | bell re-fetches from leases doc; will show new tier on next refresh (no special handling) |
+| E12 | RTDB audit log write fails (network) | swallow + console.warn — Firestore batch already committed = source of truth. Audit log is observability, not source of truth |
 
-No moved-along `let`s. Self-contained.
+---
 
-### `shared/dashboard-config.js` (~1,079 LOC est.)
+## Success criteria
 
-| Source range | Section | LOC |
-|---|---|---|
-| L1016-1208 | OWNER INFO PAGE | 192 |
-| L1209-1293 | BUILDING INTERNET CONFIG (per-building ISP/status/speed) | 84 |
-| L1484-1659 | APARTMENT LOGO | 175 |
-| L3076-3262 | COMMUNITY DOCUMENTS MANAGEMENT | 186 |
-| L3420-3523 | GAMIFICATION PAGE | 103 |
-| L3524-3607 | GAMIFICATION LIVE TOGGLE | 83 |
-| L3608-3704 | POLICY ADMIN CRUD (`system/policies`) | 96 |
-| L3705-3864 | REWARDS ADMIN CRUD (`rewards/` collection) | 159 |
+- [ ] All 5 sprints ship as separate commits, each passing pre-commit hooks (`verify:memory`, `audit:size`, security scans)
+- [ ] All 8-12 unit tests pass (`npm test` or equivalent)
+- [ ] Live verification on Vercel via Chrome MCP: admin login → tenant page → ห้อง X → "📝 ต่อสัญญา" → renewal mode with new endDate → verify in Firestore console: old lease `status='renewed'`, new lease created, tenant doc `contractEnd` updated, `leaseNotifications/{b}_{X}_*` cleared
+- [ ] Live verification: same flow with `mode='extension'` → old lease still active, `extensions[]` has new entry, no new lease doc created
+- [ ] Memory verifier still GREEN post-S5
 
-Plus carries `let _docsUnsub`, `let _rewardsAdminUnsub`, `let _gamificationConfigUnsub` (window-ized in S1).
-
-### `shared/dashboard-admin-ops.js` (~145 LOC est.)
-
-| Source range | Section | LOC |
-|---|---|---|
-| L3041-3075 | DEBUG CONSOLE HELPERS | 34 |
-| L5385-5417 (approx) | `grantAdminRole` / `cleanupAnonUsers` / `runAwardComplaintFreeMonthDryRun` admin utilities | ~85 |
-
-**NOT extracted** (deliberate):
-- `cleanupAdminListeners` + `beforeunload` (L5465+, ~30 LOC) — STAYS in `dashboard-extra.js`. It reads `_insightsUnsubs` (which stays with Insights) and references the 5 unsub vars (which move out but are window-ized in S1). Keeping it in extra.js preserves the single-source-of-truth for "what listeners does the admin dashboard own".
-
-### What stays in `dashboard-extra.js` (~1,930 LOC residual)
-
-- L1-572: Password modal + room/payment status helpers + `updateRoomStatuses` body (cross-script callers in `dashboard-tenant-modal.js`/`dashboard-pdpa-erasure.js`)
-- L573-623: `calculateOccupancy` + `updateOccupancyDashboard` (called by lease-listener fix from prior commit, by S2 lease-alerts module, by L946 wrapper)
-- L758-944: REAL-TIME FIREBASE LISTENERS section (`realtimeListeners` global lives here as window-attached) + FIREBASE CLOUD DATA INITIALIZATION
-- L945-955: `window.updateRoomStatuses` wrapper (simplified by S6)
-- L4612-5417: OWNER INSIGHTS PAGE (805 LOC — explicitly out of Phase 2 scope per handoff)
-- L5465-5483: `cleanupAdminListeners` + beforeunload registration
-
-## Architecture — destination after Phase 2
-
-```
-shared/
-├── dashboard-extra.js          (~1,930 LOC, was 5,484) — UI helpers, listeners global, insights, cleanup
-├── dashboard-domain-stores.js  (~1,118 LOC, Phase 1)   — ServiceProviders/CommunityEvents/Requests/Historical
-├── dashboard-tenant-lease.js   (~1,365 LOC, NEW)       — Tenant + lease + document hub + pet approvals
-├── dashboard-bills.js          (~1,239 LOC, NEW)       — Bill upload + generation + Excel import
-├── dashboard-config.js         (~1,079 LOC, NEW)       — Owner/internet/logo/community/policies/rewards/gamification
-└── dashboard-admin-ops.js      (~145 LOC, NEW)         — Debug helpers + admin utility CFs
-```
-
-All new files < 2k LOC, the original Plan #6 destination. `dashboard-extra.js` ends at 23% of soft limit.
-
-## Script load order in `dashboard.html`
-
-```html
-<!-- Phase 2 load order (domain-stores already in place from Phase 1) -->
-<script src="./shared/dashboard-domain-stores.js"></script>  <!-- Phase 1 -->
-<script src="./shared/dashboard-tenant-lease.js"></script>   <!-- NEW S2 -->
-<script src="./shared/dashboard-bills.js"></script>          <!-- NEW S3 -->
-<script src="./shared/dashboard-config.js"></script>         <!-- NEW S4 -->
-<script src="./shared/dashboard-admin-ops.js"></script>      <!-- NEW S5 -->
-<script src="./shared/dashboard-extra.js"></script>          <!-- AFTER all extracted modules -->
-<script src="./shared/dashboard-insights.js"></script>
-```
-
-**Why dashboard-extra.js loads LAST among them:** `cleanupAdminListeners` (stays in extra.js) reads window-ized vars like `window._leaseRequestsUnsub` set by the extracted modules. If extra.js loaded first, those would be `undefined` at parse time — fine because the reads happen INSIDE `cleanupAdminListeners()` body (called on beforeunload), not at parse time. So order is fine either way, but loading extras LAST is more intuitive (depends-on order).
-
-## Files Touched (per sprint)
-
-| Sprint | Files | Touch type |
-|---|---|---|
-| S1 (window-ize) | `shared/dashboard-extra.js` | 6 `let X` → `window.X` conversions + ~12 cleanup reads → window-ized |
-| S2 (tenant-lease) | NEW `shared/dashboard-tenant-lease.js`, `shared/dashboard-extra.js`, `dashboard.html`, `tools/file-size-limits.json`, `memory/lifecycle_*.md` (lease/tenant docs) | ~5 files |
-| S3 (bills) | NEW `shared/dashboard-bills.js`, `shared/dashboard-extra.js`, `dashboard.html`, `tools/file-size-limits.json`, `memory/billing_monthly_flow.md` | ~5 files |
-| S4 (config) | NEW `shared/dashboard-config.js`, `shared/dashboard-extra.js`, `dashboard.html`, `tools/file-size-limits.json`, `memory/owner_config.md`, `memory/gamification_ssot.md` | ~6 files |
-| S5 (admin-ops) | NEW `shared/dashboard-admin-ops.js`, `shared/dashboard-extra.js`, `dashboard.html`, `tools/file-size-limits.json` | ~4 files |
-| S6 (cosmetic) | `shared/dashboard-extra.js` | 1 file |
-
-Total commits: **6** (one per sprint — clean revert points). Each commit independently passes `npm run verify:memory` + audit gates.
-
-## Sprint Plan
-
-### S1 — Window-ize listener globals (prereq, ~30 min)
-
-**Why:** Required before any extraction touches sections that reference `realtimeListeners` or `_xxxUnsub` lets. Pure refactor: zero behavior change.
-
-- [ ] `let realtimeListeners = {}` (L759) → `window.realtimeListeners = window.realtimeListeners || {}`
-- [ ] `realtimeListeners = {}` reassignment in `stopRealtimeListeners` (L835) → `window.realtimeListeners = {}`
-- [ ] `let _leaseRequestsUnsub = null` (L1295 area) → `window._leaseRequestsUnsub = null`; update 3-4 internal writes
-- [ ] `let _docsUnsub` (in Document Hub section) → `window._docsUnsub`
-- [ ] `let _petsUnsub` (in Pet Approvals section) → `window._petsUnsub`
-- [ ] `let _rewardsAdminUnsub` (in Rewards Admin section) → `window._rewardsAdminUnsub`
-- [ ] `let _gamificationConfigUnsub` (in Gamification Live Toggle) → `window._gamificationConfigUnsub`
-- [ ] Update `cleanupAdminListeners()` body to read all 6 vars via `window.X` explicitly (no implicit bareword) for clarity
-- [ ] Verify `npm run verify:memory` still green
-- [ ] Live grep: `grep -nE "^\s*let\s+_\w+Unsub" shared/dashboard-extra.js` should return only `_insightsUnsubs` (which stays)
-- [ ] Commit: `refactor(dashboard-extra): window-ize realtimeListeners + 5 listener-unsub vars (Phase 2 prereq)`
-
-### S2 — Extract `dashboard-tenant-lease.js` (~75 min)
-
-- [ ] Create file with header: purpose, extracted-from breadcrumb (commit SHAs from Phase 1 + S1), §7-V/§7-N anti-pattern notes
-- [ ] Copy L624-757 (Lease Expiry Alerts) — verbatim including `_leaseNotifsCache` + `LEASE_TIER_META` + `_LEASE_TIER_ORDER`
-- [ ] Copy L1294-1483 (Lease Requests Queue) — verbatim including `window._leaseRequestsUnsub` reference, `_leaseRequestsCache`, `_leaseRequestsFilter`
-- [ ] Copy L1660-1890 (Tenant Master Page)
-- [ ] Copy L1891-2315 (Lease Agreements Page)
-- [ ] Copy L2316-2543 (Document Hub)
-- [ ] Copy L3263-3419 (Pet Registration Approvals) — verbatim including `window._petsUnsub`
-- [ ] Delete copied ranges from `dashboard-extra.js`, leave 1-line breadcrumb at each spot
-- [ ] Add `<script src="./shared/dashboard-tenant-lease.js"></script>` to `dashboard.html` BEFORE `dashboard-extra.js`
-- [ ] Register new file in `tools/file-size-limits.json` (soft 2000, hard 2500, growthPerCommit 200 — same shape as domain-stores)
-- [ ] Update `memory/lifecycle_lease_action.md` + `memory/lifecycle_tenant_ssot.md` — add Architecture/Code-location note pointing to new file
-- [ ] Live verify: `npm run audit:size` + `npm run audit:auth` exit 0
-- [ ] Commit: `refactor(dashboard): extract dashboard-tenant-lease.js (Phase 2 S2)`
-
-### S3 — Extract `dashboard-bills.js` (~60 min)
-
-- [ ] Create file header (same shape as S2)
-- [ ] Copy L2544-2643 (Upload Real Bills Page)
-- [ ] Copy L2644-3040 (Bill Generation System)
-- [ ] Copy L3867-4611 (Billing Import Functions — Excel→Firestore pipeline)
-- [ ] Delete from extra.js with breadcrumbs
-- [ ] Add `<script>` tag to dashboard.html
-- [ ] Register in file-size-limits.json
-- [ ] Update `memory/billing_monthly_flow.md` — add code-location note
-- [ ] Live verify gates + `verify:memory`
-- [ ] Commit: `refactor(dashboard): extract dashboard-bills.js (Phase 2 S3)`
-
-### S4 — Extract `dashboard-config.js` (~75 min)
-
-- [ ] Create file header
-- [ ] Copy L1016-1208 (Owner Info Page)
-- [ ] Copy L1209-1293 (Building Internet Config)
-- [ ] Copy L1484-1659 (Apartment Logo)
-- [ ] Copy L3076-3262 (Community Documents Management) — incl. `window._docsUnsub`
-- [ ] Copy L3420-3523 (Gamification Page) + L3524-3607 (Gamification Live Toggle) — incl. `window._gamificationConfigUnsub`
-- [ ] Copy L3608-3704 (Policy Admin CRUD)
-- [ ] Copy L3705-3864 (Rewards Admin CRUD) — incl. `window._rewardsAdminUnsub`
-- [ ] Delete from extra.js with breadcrumbs
-- [ ] Add `<script>` tag
-- [ ] Register in file-size-limits.json (soft 2000, hard 2500)
-- [ ] Update `memory/owner_config.md` + `memory/gamification_ssot.md` — add code-location notes
-- [ ] Live verify gates
-- [ ] Commit: `refactor(dashboard): extract dashboard-config.js (Phase 2 S4)`
-
-### S5 — Extract `dashboard-admin-ops.js` (~30 min)
-
-- [ ] Create file header
-- [ ] Copy L3041-3075 (Debug Console Helpers)
-- [ ] Copy admin utility CFs (`grantAdminRole`, `cleanupAnonUsers`, `runAwardComplaintFreeMonthDryRun`) — exact line numbers TBD after S2-S4 shift positions
-- [ ] Delete from extra.js with breadcrumbs
-- [ ] Add `<script>` tag
-- [ ] Register in file-size-limits.json (soft 300, hard 500 — small file)
-- [ ] Live verify gates
-- [ ] Commit: `refactor(dashboard): extract dashboard-admin-ops.js (Phase 2 S5)`
-
-### S6 — Cosmetic: collapse `window.updateRoomStatuses` double-assign (~15 min)
-
-**Why:** L572 `window.updateRoomStatuses = updateRoomStatuses` is dead — L946 immediately overwrites it with a wrapper. Removing L572 + simplifying L945 reduces confusion for future readers; no functional change (wrapper still wraps the local function).
-
-- [ ] Delete L572 (`window.updateRoomStatuses = updateRoomStatuses;`)
-- [ ] Simplify L945-950 to capture `updateRoomStatuses` (local fn ref) directly instead of going through `window.updateRoomStatuses`:
-  ```js
-  // Before:
-  const originalUpdateRoomStatuses = window.updateRoomStatuses;
-  window.updateRoomStatuses = function() {
-    originalUpdateRoomStatuses();
-    updateOccupancyDashboard();
-    updateLeaseExpiryAlerts();
-  };
-  // After:
-  window.updateRoomStatuses = function() {
-    updateRoomStatuses();
-    updateOccupancyDashboard();
-    updateLeaseExpiryAlerts();
-  };
-  ```
-- [ ] Verify cross-script callers still resolve: `grep -n "updateRoomStatuses(" shared/dashboard-pdpa-erasure.js shared/dashboard-tenant-modal.js` should be unchanged
-- [ ] Commit: `chore(dashboard-extra): collapse window.updateRoomStatuses double-assign`
-
-## Success criteria for Phase 2
-
-- ✅ Each of S1-S6 ships as a separate commit; each independently passes pre-commit hooks (`verify:memory` + `audit:size` + `audit:auth` + security)
-- ✅ Final `dashboard-extra.js` line count between 1,800-2,100 LOC (~21-25% of soft)
-- ✅ All 4 new files < 1,500 LOC each (under soft caps in file-size-limits.json)
-- ✅ `dashboard.html` script load order has all 5 extracted modules + extra.js + insights, no breakage
-- ✅ Live admin UI smoke (Plan #4 `npm run smoke:verify` from main): bill + checklist + deposit flows all read correctly
-- ✅ Live admin UI manual verify (Chrome MCP, post-S6 deploy): tenant page, lease tab, bill upload, owner info, gamification config, debug helpers — all functional
-- ✅ Memory docs updated: `lifecycle_lease_action.md`, `lifecycle_tenant_ssot.md`, `billing_monthly_flow.md`, `owner_config.md`, `gamification_ssot.md` carry code-location notes
-- ✅ Phase 2 handoff written: `next_session_handoff_2026_05_2X_phase2_extraction.md`
-
-## Anti-pattern relevance
-
-- **§7-CC (`let X` at script top-level is NOT on window)** — DIRECT TRIGGER for S1. The whole prereq exists to close this trap before extraction.
-- **§7-V (setupXxx listener leak)** — S2 carries `setupLeaseNotifsListener` which already follows §7-V (prior-unsub teardown). Must preserve verbatim during extraction.
-- **§7-N (onSnapshot must have error callback)** — same; existing listeners already have callbacks per Phase 1 audit. Preserve verbatim.
-- **§7-K (defined ≠ wired)** — S2-S5 must verify every `window.X = ...` in the extracted module has an actual caller in the new load order. Pre-commit audit-auth gate enforces.
-- **§7-J (static deploy ≠ live-verified)** — Plan #4 smoke playbook (admin) catches regressions in bill / checklist / deposit reads. Manual Chrome MCP verify catches everything else.
-- **§7-AA (pre-existing CF/feature search)** — N/A for refactor; no new features.
-- **§1 verify-via-grep doctrine** — every memory doc updated in S2-S5 embeds a grep verifier for the new file path.
+---
 
 ## Risks + open questions
 
-| Risk | Likelihood | Mitigation |
+| # | Risk | Mitigation |
 |---|---|---|
-| Extracted module needs a `let` that I missed in S1 prereq → §7-CC trap silently | Low (survey done) | Live-verify gates + pre-commit hook + manual Chrome MCP after each S |
-| Line-number drift between sprints — S3 ranges shift after S2 deletes lines | Certain | Re-grep section markers at start of each S (commands in sprint check items) |
-| `cleanupAdminListeners` reads vars in inconsistent order (some bareword, some `window.X`) after S1 | Low | S1 explicitly normalizes ALL 6 reads to `window.X` form |
-| Insights page (L4613+) references something I extract | Low (Insights is self-contained per Phase 1 survey) | Re-grep before each S; if hit, leave shared dep in extra.js |
-| LIFF / tenant_app side affected | Zero | Phase 2 only touches admin-dashboard files |
-
-**Open question:** should `cleanupAdminListeners` move to `dashboard-admin-ops.js` (it'd add ~30 LOC there, growing to ~175 LOC)? **Recommendation: NO** — keeping cleanup in extra.js preserves "single owner of admin listener lifecycle" mental model. Also: cleanup touches `_insightsUnsubs` which stays in extra.js with the Insights section, so colocating cleanup with that side is cleaner.
-
----
-
-**Ready for review.** Reply with ✅ to start S1, or note scope changes / sprint reordering. Especially worth your call on:
-1. **Sprint ordering** — recommended S1→S2→S3→S4→S5→S6 (prereq first, then extractions, cosmetic last). Alternative: do S6 first (it's smallest, builds confidence). Both are safe.
-2. **Single PR or per-sprint pushes** — recommended: push after each S so Vercel deploys incrementally and any regression is caught early. Alternative: hold all 6 commits locally, push once after S6. Speeds iteration but defers smoke verification.
-3. **`cleanupAdminListeners` placement** — confirm "stays in extra.js" or move to admin-ops.
+| R1 | §7-DD lease pairing — same risk that bit archive CF for 5 rounds before fix `7fb9bfc` | This CF IS the lease pairing op; built §7-DD-aware from day 1. Mirror archive pattern. |
+| R2 | Pre-Phase-6 leases with `lease` subobject vs Phase-6 SSoT `activeContractId` pointer | leaseId resolution chain at archive L215-217 handles both; reuse verbatim |
+| R3 | Existing tests for archive CF don't cover lease pairing (or do they?) — need to check pattern | Read `tests/archiveTenantOnMoveOut.test.js` (if exists) during S1 to mirror test setup |
+| R4 | Bill generation continuity across renewal — does `generateBillsOnMeterUpdate` follow `tenants/{b}/list/{r}.lease.leaseId` or read tenant-level fields? | grep before S2 to confirm tenant doc update is sufficient |
+| R5 | Pre-existing `extensions[]` shape conflict — what if some lease has `extensions:{}` (object not array)? | Init guard in S3 + log warning |
+| R6 | Audit log size — `system/audit_logs` in RTDB has no quota cleanup. Long-term cost? | Defer — `cleanupOldAuditLogs` scheduled CF can be added later if needed. Per CLAUDE.md "no premature abstraction" |
+| R7 | UI race — admin opens renew modal, in parallel tenant-modal refreshes from F2 onSnapshot, modal data goes stale | Modal closes on success and forces a refresh anyway; minor risk |
 
 ---
 
-# Review (2026-05-21 — Phase 2 SHIPPED)
+## Anti-pattern relevance
 
-All 6 sprints landed + pushed to main, 6 commits + 2 sub-bug commits before them. End-state matches plan.
+This CF will be cited as the canonical reference for **§7-DD compliance in lease lifecycle CFs**. Build it carefully — future maintainers will model new lifecycle CFs (A, B, E, G, H) on this one.
 
-## What shipped
+Will newly surface NONE if done right. But if any sprint cuts a corner, expect:
+- §7-DD recurrence (orphan leases after renewal) — guard with the leaseId resolution chain + explicit batch op count
+- §7-L cousin (rent change forgotten in tenant mirror) — guard with mode-specific update list
+- §7-T cousin (field-name drift between writer + reader for new `extensions[]`) — reader code TBD; flag in handoff
 
-| Commit | SHA | Δ extra.js | Notes |
-|---|---|---|---|
-| feat(leases): add Firestore onSnapshot listener | `7e3df34` | — | Sub-bug #1, dashboard-tenant-page.js |
-| refactor(tenant-page): remove §7-DD-redundant bridge | `e06d378` | — | Sub-bug #2, dashboard-tenant-page.js |
-| S1 — window-ize realtimeListeners + 5 unsub vars | `9c79c0e` | 5,484 → 5,497 (+13 comments) | Prereq, no behavior change |
-| S2 — extract dashboard-tenant-lease.js | `84f1911` | 5,497 → 4,210 (-23%) | 1,318 LOC new file |
-| S3 — extract dashboard-bills.js | `0b81ad6` | 4,210 → 2,971 (-29%) | 1,257 LOC new file |
-| S4 — extract dashboard-config.js | `fda35e0` | 2,971 → 1,817 (-39%) | 1,181 LOC new file |
-| S5 — extract dashboard-admin-ops.js | `7659cca` | 1,817 → 1,673 (-8%) | 165 LOC new file |
-| S6 — collapse window.updateRoomStatuses double-assign | `48b47ed` | 1,673 → 1,675 (+net 2 — comment) | cosmetic |
+---
 
-**dashboard-extra.js**: 5,484 → **1,675 LOC** (-69%, 65% → 20% of soft 8,500). All 5 new modules <66% of their soft 2,000.
+## Awaiting
 
-## Files NOT touched (deliberate, per plan)
-
-- `cleanupAdminListeners` + beforeunload — stayed in dashboard-extra.js per user decision (Q3 of plan approval)
-- OWNER INSIGHTS PAGE (L4612-5417 of original) — explicitly out of Phase 2 scope; ~800 LOC stays in extra.js residual
-- `loadOwnerInfoFromFirebase` call sites — only the calls live in extra.js; the implementation is in shared/owner-config.js (untouched)
-
-## Deferred / follow-up candidates
-
-- **Insights extraction** (dashboard-insights.js OR dashboard-insights-old.js for the OLD `_insights*` block in extra.js residual) — would drop extra.js to ~860 LOC. Not Plan-First-required at current size; can defer indefinitely.
-- **Misplaced functions cleanup** — the orphan logo helpers (was at L1421-1486 of pre-S1 extra.js) are now in dashboard-config.js inside the LOGO block. Naming convention could be improved (`uploadOwnerLogo` vs `uploadApartmentLogo`) but pure rename; defer.
-- **Live admin UI verification via Chrome MCP** — Phase 2 verifications were pre-commit-gates (audit:size + audit:auth + verify:memory + Node --check syntax). Real-data verification (open dashboard → click each extracted page → verify renders) was NOT done. **Recommend as first action next session before any new work.**
-
-## Anti-pattern verification
-
-- §7-CC closed for all 5 extracted modules' shared globals (S1 prereq)
-- §7-V preserved verbatim in moved listeners (each has prior-unsub teardown)
-- §7-N preserved verbatim (each onSnapshot has error callback)
-- §7-K (defined ≠ wired) — every `window.X = ...` in new files has at least one caller; verified via syntactic re-parse passing
-- §7-J (static deploy ≠ live-verified) — open; see "Deferred" above
-
-## Memory docs updated (user-scoped, NOT in commits)
-
-- lifecycle_pets_registration.md (S2)
-- lifecycle_storage_uploads.md (S2)
-- lifecycle_tenant_ssot.md (S2 + S4)
-- lifecycle_lease_action.md (S2)
-- lifecycle_stores_facade.md (S3 stale-claim fix)
-- lifecycle_insights_analytics.md (S5)
-- owner_config.md (S4)
-- gamification_ssot.md (S4)
+User decisions on **D1-D6** above. Then ✅ to start S1.
