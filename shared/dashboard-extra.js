@@ -810,12 +810,18 @@ document.addEventListener('DOMContentLoaded', function() {
 // window.updateRoomStatuses — wrapper that runs the room-pill repaint THEN
 // updates the occupancy KPIs + lease-expiry alerts. Cross-script callers in
 // dashboard-tenant-modal.js + dashboard-pdpa-erasure.js invoke this name as a
-// bareword; non-strict global lookup resolves it to THIS function, so they
-// get the full repaint + KPI refresh in one call. Local bareword references
-// inside this file still hit the inner `updateRoomStatuses()` function via
-// JS scope precedence (no recursion).
+// bareword which non-strict global lookup resolves to THIS wrapper.
+//
+// Capture-before-reassign pattern: top-level `function updateRoomStatuses()`
+// only creates the window property — it does NOT create a separate lexical
+// binding in the script scope. Once `window.updateRoomStatuses = function(){}`
+// reassigns, any bareword `updateRoomStatuses()` inside the wrapper resolves
+// to the wrapper itself (via window) → INFINITE RECURSION (Phase 2 S6 trap).
+// Capturing the original window value here freezes the reference to the
+// L555 inner fn so the wrapper can call it without re-entry.
+const _innerUpdateRoomStatuses = window.updateRoomStatuses;
 window.updateRoomStatuses = function() {
-  updateRoomStatuses();
+  _innerUpdateRoomStatuses();
   updateOccupancyDashboard();
   updateLeaseExpiryAlerts();
 };
