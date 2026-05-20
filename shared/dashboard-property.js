@@ -1,7 +1,4 @@
-// ===== ROOM FILTER STATE =====
 const _escProp = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-let currentRoomFilter = 'all'; // all, occupied, vacant, overdue
-let currentNestFilter = 'all'; // all, occupied, vacant, overdue
 
 // ===== HELPER: Get active rooms with merged metadata =====
 function getActiveRoomsWithMetadata(building, metadataArray) {
@@ -102,25 +99,6 @@ function initRoomsPage(){
 
 }
 
-// ===== ROOM FILTER FUNCTION =====
-function setRoomFilter(filter) {
-  currentRoomFilter = filter;
-
-  // Update button styles
-  const buttons = document.querySelectorAll('.filter-btn');
-  buttons.forEach(btn => {
-    btn.classList.remove('active');
-    // CSS .filter-btn handles inactive state
-  });
-
-  // Find and style the active button
-  const activeBtn = event.target;
-  activeBtn.classList.add('active');
-  // CSS .filter-btn.active handles active state
-
-  renderCompactRoomGrid();
-}
-
 // ===== COMPACT ROOM GRID RENDERING =====
 function renderCompactRoomGrid(){
   const allTenants = loadTenants();
@@ -129,21 +107,8 @@ function renderCompactRoomGrid(){
   const rooms = getActiveRoomsWithMetadata('rooms', window.ROOMS_OLD);
 
   // Apply search filter
-  let filtered=rooms.filter(r=>r.id.toString().toLowerCase().includes(searchTerm) || (allTenants[r.id]?.name||'').toLowerCase().includes(searchTerm));
+  const filtered=rooms.filter(r=>r.id.toString().toLowerCase().includes(searchTerm) || (allTenants[r.id]?.name||'').toLowerCase().includes(searchTerm));
 
-  // Apply status filter
-  filtered = filtered.filter(r => {
-    if (currentRoomFilter === 'all') return true;
-
-    const statusInfo = getRoomColorStatus(r.id, r);
-    const paymentStatus = getPaymentStatus(r.id);
-
-    if (currentRoomFilter === 'occupied') return statusInfo.label === 'มี';
-    if (currentRoomFilter === 'vacant') return statusInfo.label === 'ว่าง';
-    if (currentRoomFilter === 'overdue') return paymentStatus === 'overdue';
-
-    return true;
-  });
   const grid=document.getElementById('roomCompactGrid');
   if(!grid) return;
 
@@ -496,25 +461,6 @@ function applyBatchRentAdjustment() {
 // window.NEST_ROOMS is now defined in shared-config.js
 // Use window.CONFIG.nest_rooms instead
 
-// ===== SET NEST FILTER =====
-function setNestFilter(filter) {
-  currentNestFilter = filter;
-
-  // Update button styles
-  const buttons = document.querySelectorAll('.filter-btn-nest');
-  buttons.forEach(btn => {
-    btn.classList.remove('active');
-    // CSS .filter-btn handles inactive state
-  });
-
-  // Find and style the active button
-  const activeBtn = event.target;
-  activeBtn.classList.add('active');
-  // CSS .filter-btn.active handles active state
-
-  renderNestCompactGrid();
-}
-
 // ===== RENDER NEST COMPACT GRID =====
 function renderNestCompactGrid(){
   const allTenants = loadTenants();
@@ -523,24 +469,10 @@ function renderNestCompactGrid(){
   const rooms = getActiveRoomsWithMetadata('nest', window.NEST_ROOMS);
 
   // Apply search filter
-  let filtered = rooms.filter(r =>
+  const filtered = rooms.filter(r =>
     r.id.toString().toLowerCase().includes(searchTerm) ||
     (allTenants[r.id]?.name || '').toLowerCase().includes(searchTerm)
   );
-
-  // Apply status filter
-  filtered = filtered.filter(r => {
-    if (currentNestFilter === 'all') return true;
-
-    const statusInfo = getRoomColorStatus(r.id, r);
-    const paymentStatus = getPaymentStatus(r.id);
-
-    if (currentNestFilter === 'occupied') return statusInfo.label === 'มี';
-    if (currentNestFilter === 'vacant') return statusInfo.label === 'ว่าง';
-    if (currentNestFilter === 'overdue') return paymentStatus === 'overdue';
-
-    return true;
-  });
 
   const grid = document.getElementById('nestCompactGrid');
 

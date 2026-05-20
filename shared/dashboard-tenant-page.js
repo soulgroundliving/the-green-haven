@@ -353,7 +353,7 @@ function renderTenantPage(){
     const t=tenants[r.id];
     const matchSearch=!searchTerm||r.id.toString().toLowerCase().includes(searchTerm)||(t?.name||'').toLowerCase().includes(searchTerm);
     if(!matchSearch)return false;
-    const isOcc=!!t?.name;
+    const isOcc=window.hasTenantIdentity(t);
     if(currentTenantFilter==='occupied')return isOcc;
     if(currentTenantFilter==='vacant')return !isOcc;
     if(currentTenantFilter==='expiring'){
@@ -366,7 +366,7 @@ function renderTenantPage(){
 
   grid.innerHTML=filtered.map(r=>{
     const t=tenants[r.id];
-    const isOcc=!!t?.name;
+    const isOcc=window.hasTenantIdentity(t);
     const isCom=r.type==='commercial';
     const mi=(t?.moveInDate||t?.moveIn)?new Date(t.moveInDate||t.moveIn).toLocaleDateString('th-TH',{month:'short',day:'numeric'}):'—';
     const ce=t?.contractEnd?new Date(t.contractEnd).toLocaleDateString('th-TH',{month:'short',day:'numeric',year:'2-digit'}):'—';
@@ -429,7 +429,7 @@ function renderTenantTable(){
     return roomStr.includes(searchTerm)||nameStr.includes(searchTerm);
   }).map(r=>{
     const t=tenants[r.id]||{};
-    const isOcc=!!t?.name;
+    const isOcc=window.hasTenantIdentity(t);
     const isCom=r.type==='commercial';
     const mi=(t.moveInDate||t.moveIn)?new Date(t.moveInDate||t.moveIn).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const ce=t.contractEnd?new Date(t.contractEnd).toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
