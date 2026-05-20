@@ -624,11 +624,8 @@ window.renderPVHistory = function(){
       if (s.building && s.building !== building) return false;
       return true;
     });
-    const manual = _pvLoadManualPayments().filter(s => s.building === building && s.room === String(room));
-
     const byKey = new Map();
     fromSource.forEach(s => byKey.set(s.transactionId || s.id || `s_${_ts(s).getTime()}`, s));
-    manual.forEach(s => { const k = s.transactionId || s.id || `m_${_ts(s).getTime()}`; if (!byKey.has(k)) byKey.set(k, s); });
     const slips = Array.from(byKey.values()).sort((a, b) => _ts(b) - _ts(a));
 
     // Update summary stats from slip records
