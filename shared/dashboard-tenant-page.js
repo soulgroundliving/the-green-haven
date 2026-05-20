@@ -245,10 +245,15 @@ function _setupLeaseRealtimeListener(){
       // Matches createLease + refreshLeasesFromFirestore shape (the canonical
       // one that getActiveLease's legacy fallback iterates).
       const all=JSON.parse(localStorage.getItem('lease_agreements_data')||'{}');
-      // Drop orphans: any local lease for THIS building that isn't in the snapshot
-      // (e.g. server-side delete or status flip the cleanup tool just applied).
+      // Drop orphans:
+      //   1. Local leases for THIS building (server-side delete / status flip / cleanup tool just applied)
+      //   2. Local leases whose `building` isn't a registered building — undefined,
+      //      typo, removed building (pre-Tier-3F legacy data). Exact-match check
+      //      `b===bld` alone left these stranded forever — they only displayed
+      //      as "Nest" because the row renderer defaults non-rooms to "Nest" label.
       Object.keys(all).forEach(id=>{
-        if(all[id]?.building===bld) delete all[id];
+        const b=all[id]?.building;
+        if(b===bld || b==null || !_bldgs.includes(b)) delete all[id];
       });
       snap.forEach(doc=>{ all[doc.id]=doc.data(); });
       localStorage.setItem('lease_agreements_data',JSON.stringify(all));
