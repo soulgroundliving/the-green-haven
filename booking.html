@@ -1006,7 +1006,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getDatabase, ref as dbRef, get as dbGet } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
   import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, onSnapshot, collection, query, where, getDocs, limit } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
   import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-functions.js";
   import { getStorage, ref as storageRef, uploadBytes } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
@@ -1038,6 +1038,10 @@
         doc: (path) => doc(fs, ...path.split('/')),
         getDoc: (ref) => getDoc(ref),
         onSnapshot: (ref, cb, errCb) => onSnapshot(ref, cb, errCb),
+        // Query helpers — used by tryRestoreLock to find an active lock for the
+        // signed-in user when sessionStorage was lost (e.g. LIFF closed entirely).
+        collection: (path) => collection(fs, path),
+        query, where, getDocs, limit,
         // Storage SDK for client-side KYC upload (Phase 5). Direct uploads to
         // bookings/{id}/kyc/{type}.{ext} — Storage rules gate writes on
         // status ∈ {paid, kyc_pending} + 5MB cap + image|pdf.
@@ -1943,14 +1947,17 @@
     el.textContent = msg;
   }
 
-  // ── Restore active lock on page load (refresh / LIFF restart) ─────────────
-  // Reads sessionStorage.bk_active_lock; if lockedUntilMs is still in the future,
-  // jumps straight to Step 3 with restored QR + countdown. onSnapshot then
-  // reconciles — if the doc is gone/cancelled/expired/paid in Firestore,
-  // the subscription handler shows the right error and clears storage.
-  function tryRestoreLock() {
-    const p = _readPersistedLock();
-    if (!p) return false;
+  // ── Restore active lock on page load ──────────────────────────────────────
+  // Two-tier restore so the user gets back to Step 3 whether they refreshed
+  // OR closed LIFF entirely:
+  //   1. sessionStorage.bk_active_lock (sync, instant) — survives refresh
+  //   2. Firestore query for `bookings where prospectUid == auth.uid AND
+  //      status == 'locked'` (async, ~300ms) — survives LIFF close, browser
+  //      cache clear, etc.; persists the result back to sessionStorage so the
+  //      next refresh is instant.
+  // onSnapshot reconciles afterwards — if the doc transitions away from
+  // 'locked' (paid/expired/cancelled), subscribeToBooking handles it.
+  function _restoreStateFrom(p) {
     state.bookingId = p.bookingId;
     state.lockedUntilMs = Number(p.lockedUntilMs);
     state.qrPayload = p.qrPayload || null;
@@ -1964,7 +1971,66 @@
     state._durationMonths = Number(p.durationMonths || 12);
     enterPaymentStep(state._durationMonths);
     subscribeToBooking(p.bookingId);
+  }
+
+  function tryRestoreLock() {
+    const p = _readPersistedLock();
+    if (!p) return false;
+    _restoreStateFrom(p);
     return true;
+  }
+
+  // Async server-side fallback. Fires only when sessionStorage is empty —
+  // the brief Step-1 → Step-3 swap is acceptable for the "I closed LIFF
+  // by accident" case (better than losing the lock entirely).
+  async function tryRestoreLockFromServer() {
+    if (!window.bookingFirebase || !window.firebaseAuth?.currentUser) return false;
+    const uid = window.firebaseAuth.currentUser.uid;
+    if (!uid) return false;
+    try {
+      const fb = window.bookingFirebase;
+      const q = fb.query(
+        fb.collection('bookings'),
+        fb.where('prospectUid', '==', uid),
+        fb.where('status', '==', 'locked'),
+        fb.limit(5)
+      );
+      const snap = await fb.getDocs(q);
+      if (snap.empty) return false;
+      // Pick the lock with the latest lockedUntil that's still in the future.
+      const now = Date.now();
+      let best = null;
+      snap.docs.forEach(d => {
+        const data = d.data() || {};
+        const lu = data.lockedUntil;
+        const luMs = lu && typeof lu.toMillis === 'function' ? lu.toMillis() : 0;
+        if (luMs <= now + 1000) return;
+        if (!best || luMs > best.luMs) best = { id: d.id, data, luMs };
+      });
+      if (!best) return false;
+      const b = best.data;
+      _restoreStateFrom({
+        bookingId: best.id,
+        lockedUntilMs: best.luMs,
+        qrPayload: b.promptPayPayload,
+        qrAmount: b.qrAmount,
+        monthlyRent: b.monthlyRent,
+        earlyBirdEligible: !!b.earlyBirdEligible,
+        earlyBirdPoints: Number(b.earlyBirdPoints || 0),
+        building: b.building,
+        selectedRoom: { id: b.roomId, name: b.roomId },
+        selectedDate: b.startDate && typeof b.startDate.toDate === 'function'
+          ? b.startDate.toDate().toISOString().slice(0, 10)
+          : null,
+        durationMonths: Number(b.durationMonths || 12),
+      });
+      // Persist so subsequent refreshes are instant (no Firestore round-trip).
+      _persistLock();
+      return true;
+    } catch (e) {
+      console.warn('[booking] server restore failed:', e?.message || e);
+      return false;
+    }
   }
 
   // ── Live booking subscription (onSnapshot) ────────────────
@@ -2371,8 +2437,9 @@
       renderRoomsList();
       hideBoot();
       // Resume active lock if user refreshed during Step 3 (within 20-min window).
-      // Sync restore — trusts persisted timestamp; onSnapshot reconciles if stale.
-      tryRestoreLock();
+      // Sync first (sessionStorage); if miss, async Firestore query covers the
+      // "closed LIFF entirely" case. onSnapshot reconciles either way.
+      if (!tryRestoreLock()) tryRestoreLockFromServer();
       // Fetch availability for both buildings; refreshAvailability() re-renders when done
       Promise.all([
         refreshAvailability('rooms'),
