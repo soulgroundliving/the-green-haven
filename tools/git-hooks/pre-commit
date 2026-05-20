@@ -91,16 +91,20 @@ ANTIPATTERN_FOUND=0
 
 STAGED_DIFF=$(git diff --cached -- '*.js' '*.html' 2>/dev/null)
 
-# A. Firebase compat API (v11 modular only — firebase.database() / compat chain calls)
-# Wrong:  firebase.database().ref(path).once('value')
+# A. Firebase compat API (v11 modular only — firebase.{database,auth,storage,functions}() chain calls)
+# Wrong:   firebase.database().ref(path).once('value')
+#          firebase.functions().httpsCallable('name')
 # Correct: window.firebaseGet(window.firebaseRef(window.firebaseDatabase, path))
+#          window.firebase.functions.httpsCallable('name')
+# `functions` added 2026-05-20 after §7-B in unlinkLiffUser (commit 03f84fb) slipped through.
 if echo "$STAGED_DIFF" | grep -E "^\+" | grep -qvE "^\+\+" && \
-   echo "$STAGED_DIFF" | grep -E "^\+[^+]" | grep -qE "firebase\.database\(\)|\.ref\(['\"]" ; then
-  # narrower check: .ref() on a firebase object (not window.firebaseRef)
-  if echo "$STAGED_DIFF" | grep -E "^\+[^+]" | grep -qE "firebase\.(database|auth|storage)\(\)\." ; then
-    echo -e "${RED}❌ BLOCKED: Firebase compat API detected (firebase.database().xxx)${NC}"
+   echo "$STAGED_DIFF" | grep -E "^\+[^+]" | grep -qE "firebase\.(database|auth|storage|functions)\(\)|\.ref\(['\"]" ; then
+  # narrower check: compat chain call on a firebase service
+  if echo "$STAGED_DIFF" | grep -E "^\+[^+]" | grep -qE "firebase\.(database|auth|storage|functions)\(\)\." ; then
+    echo -e "${RED}❌ BLOCKED: Firebase compat API detected (firebase.{database,auth,storage,functions}().xxx)${NC}"
     echo -e "${YELLOW}   This codebase uses Firebase v11 modular SDK — no compat layer exists${NC}"
-    echo -e "${YELLOW}   Use: window.firebaseGet(window.firebaseRef(window.firebaseDatabase, path))${NC}"
+    echo -e "${YELLOW}   db/auth/storage: use window.firebaseGet / window.firebaseRef / window.firebaseDatabase${NC}"
+    echo -e "${YELLOW}   functions:       use window.firebase.functions.httpsCallable('name')${NC}"
     echo -e "${YELLOW}   See CLAUDE.md §7B for full pattern reference${NC}"
     ANTIPATTERN_FOUND=1
   fi
