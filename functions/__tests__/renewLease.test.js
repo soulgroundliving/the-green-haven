@@ -326,6 +326,40 @@ describe('renewLease — S1 (auth + validation)', () => {
       assert.equal(result.contractFileName, '');
       assert.equal(result.notes, '');
     });
+
+    it('accepts optional newStartDate ISO string and parses to Date', async () => {
+      const iso = futureDate(60); // strictly before newEndDate at +365d
+      const result = await _validateInput({ ...goodInput(), newStartDate: iso });
+      assert.ok(result.newStartDate instanceof Date,
+        'newStartDate should be a Date instance when provided');
+      assert.equal(result.newStartDate.toISOString(), iso);
+    });
+
+    it('leaves newStartDate undefined when omitted (backward-compat)', async () => {
+      const result = await _validateInput(goodInput());
+      assert.equal(result.newStartDate, undefined,
+        'omitted newStartDate must remain undefined so renewal mode defaults to oldEndDate');
+    });
+
+    it('rejects non-Date newStartDate', async () => {
+      await expectHttpsError(
+        _validateInput({ ...goodInput(), newStartDate: 'not-a-date' }),
+        'invalid-argument'
+      );
+    });
+
+    it('rejects newStartDate >= newEndDate (zero or negative term)', async () => {
+      const sameAsEnd = futureDate(365); // identical to default newEndDate
+      await expectHttpsError(
+        _validateInput({ ...goodInput(), newStartDate: sameAsEnd }),
+        'invalid-argument'
+      );
+      const afterEnd = futureDate(400);
+      await expectHttpsError(
+        _validateInput({ ...goodInput(), newStartDate: afterEnd }),
+        'invalid-argument'
+      );
+    });
   });
 });
 
@@ -467,6 +501,66 @@ describe('renewLease — S2 (renewal mode)', () => {
       assert.equal(audit.rentChanged, true);
       assert.equal(audit.depositChanged, true);
       assert.equal(audit.documentReplaced, true);
+    });
+
+    it('explicit newStartDate (P4) sets new lease + tenant.lease + audit start to that value', async () => {
+      const seeded = seedActiveLease({ oldEndDate: futureDate(30) });
+      // Custom gap: tenant takes a 60-day break, new lease starts 60d after oldEndDate
+      const customStart = futureDate(90);     // 30 + 60 = ~90 days from today
+      const customEnd = futureDate(90 + 365); // 1-year term from customStart
+
+      const result = await renewLease.run(
+        { ...goodInput(), newStartDate: customStart, newEndDate: customEnd },
+        adminContext()
+      );
+      assert.equal(result.success, true);
+
+      // New lease's contractStart / moveInDate must use customStart, NOT oldEndDate
+      const newSet = captured.batchOps.find(o => o.op === 'set' && o.path.endsWith(`/${result.newLeaseId}`));
+      assert.equal(newSet.data.contractStart, customStart);
+      assert.equal(newSet.data.moveInDate, customStart);
+
+      // Tenant lease subobject startDate also reflects customStart
+      const tenantUpdate = captured.batchOps.find(o => o.op === 'update' && o.path.startsWith('tenants/'));
+      assert.equal(tenantUpdate.data.lease.startDate, customStart);
+      assert.equal(tenantUpdate.data.contractStart, customStart);
+
+      // Audit carries newStartDate + startGapDays so admins can see the gap shipped
+      const audit = captured.auditPushes[0];
+      assert.equal(audit.newStartDate, customStart);
+      assert.ok(audit.startGapDays >= 55 && audit.startGapDays <= 65,
+        `startGapDays ~60 expected, got ${audit.startGapDays}`);
+    });
+
+    it('omitted newStartDate (P4 backward-compat): start defaults to oldEndDate; audit startGapDays=0', async () => {
+      const seeded = seedActiveLease({ oldEndDate: futureDate(30) });
+      const result = await renewLease.run(
+        { ...goodInput(), newEndDate: futureDate(395) },
+        adminContext()
+      );
+      assert.equal(result.success, true);
+
+      const newSet = captured.batchOps.find(o => o.op === 'set' && o.path.endsWith(`/${result.newLeaseId}`));
+      // contractStart equals oldEndDate (the seeded futureDate(30))
+      assert.equal(newSet.data.contractStart, seeded.oldEndDate);
+      assert.equal(newSet.data.moveInDate, seeded.oldEndDate);
+
+      const audit = captured.auditPushes[0];
+      assert.equal(audit.newStartDate, seeded.oldEndDate);
+      assert.equal(audit.startGapDays, 0, 'no gap when newStartDate omitted');
+    });
+
+    it('newStartDate before oldEndDate is rejected (no overlap with active lease)', async () => {
+      // oldEndDate = +30d. Attempted newStartDate = +20d → would overlap.
+      seedActiveLease({ oldEndDate: futureDate(30) });
+      await expectHttpsError(
+        renewLease.run({
+          ...goodInput(),
+          newStartDate: futureDate(20),
+          newEndDate: futureDate(395),
+        }, adminContext()),
+        'invalid-argument'
+      );
     });
   });
 

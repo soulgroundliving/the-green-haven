@@ -21,7 +21,7 @@
  *
  * Region: asia-southeast1
  * Auth:   caller MUST have admin custom claim
- * Input:  { building, roomId, newEndDate, mode?, newRentAmount?, newDeposit?,
+ * Input:  { building, roomId, newEndDate, newStartDate?, mode?, newRentAmount?, newDeposit?,
  *           contractDocument?, contractFileName?, notes? }
  * Output: { success, mode, building, roomId, oldLeaseId, newLeaseId?, oldEndDate, newEndDate }
  *
@@ -65,6 +65,7 @@ async function _validateInput(data) {
     building,
     roomId,
     newEndDate,
+    newStartDate,
     mode,
     newRentAmount,
     newDeposit,
@@ -110,6 +111,23 @@ async function _validateInput(data) {
       `newEndDate must be in the future (got '${parsedEndDate.toISOString()}', now '${new Date(now).toISOString()}')`);
   }
 
+  // ── newStartDate (optional — when omitted, renewal starts at oldEndDate) ──
+  // Type + shape only here (no Firestore reads). The against-oldEndDate check
+  // happens in _runRenewalMode after the state read.
+  let parsedStartDate;
+  if (newStartDate !== undefined && newStartDate !== null && newStartDate !== '') {
+    const d = new Date(newStartDate);
+    if (Number.isNaN(d.getTime())) {
+      throw new functions.https.HttpsError('invalid-argument',
+        `newStartDate is not a valid date (got '${newStartDate}')`);
+    }
+    if (d.getTime() >= parsedEndDate.getTime()) {
+      throw new functions.https.HttpsError('invalid-argument',
+        `newStartDate (${d.toISOString()}) must be strictly before newEndDate (${parsedEndDate.toISOString()})`);
+    }
+    parsedStartDate = d;
+  }
+
   // ── Optional numerics — present + positive if provided ───────────────────
   let normalisedRent;
   if (newRentAmount !== undefined && newRentAmount !== null) {
@@ -149,6 +167,7 @@ async function _validateInput(data) {
     roomId,
     mode: normalisedMode,
     newEndDate: parsedEndDate,
+    newStartDate: parsedStartDate,
     newRentAmount: normalisedRent,
     newDeposit: normalisedDeposit,
     contractDocument: contractDocument || '',
@@ -225,7 +244,7 @@ async function _readLeaseState(firestore, building, roomId) {
  * test can assert against it without engaging RTDB.
  */
 async function _runRenewalMode(input, callerUid, callerEmail, firestore) {
-  const { building, roomId, newEndDate, newRentAmount, newDeposit,
+  const { building, roomId, newEndDate, newStartDate, newRentAmount, newDeposit,
           contractDocument, contractFileName, notes } = input;
 
   const state = await _readLeaseState(firestore, building, roomId);
@@ -240,6 +259,15 @@ async function _runRenewalMode(input, callerUid, callerEmail, firestore) {
       `newEndDate (${newEndDate.toISOString()}) must be after current endDate (${oldEndDate.toISOString()})`);
   }
 
+  // newStartDate (if provided) must NOT predate oldEndDate — that would mean
+  // the new lease starts while the OLD one is still legally in force (overlap).
+  // Gap (newStartDate > oldEndDate) is allowed — admin's choice for a break period.
+  const resolvedStartDate = newStartDate || oldEndDate;
+  if (newStartDate && newStartDate.getTime() < oldEndDate.getTime()) {
+    throw new functions.https.HttpsError('invalid-argument',
+      `newStartDate (${newStartDate.toISOString()}) must be on or after current endDate (${oldEndDate.toISOString()}) — overlap with active lease not allowed`);
+  }
+
   const now = admin.firestore.FieldValue.serverTimestamp();
   const newLeaseId = `CONTRACT_${Date.now()}_${roomId}`;
   const newLeaseRef = firestore.collection('leases').doc(building).collection('list').doc(newLeaseId);
@@ -250,14 +278,15 @@ async function _runRenewalMode(input, callerUid, callerEmail, firestore) {
   const resolvedDocPath = contractDocument || String(oldLeaseData.contractDocument || '');
   const resolvedDocName = contractFileName || String(oldLeaseData.contractFileName || '');
 
-  // contractMonths derived from start-to-end span (rounded). Admin may want a
-  // different value but the common case is "matches actual span" — easier
-  // to derive than to require admin input.
+  // contractMonths derived from resolvedStart → newEnd span. With newStartDate
+  // omitted (default), this matches the old formula (start = oldEndDate). With
+  // a custom newStartDate > oldEndDate, this yields a shorter term reflecting
+  // the actual contract period (admin's gap choice doesn't pad contractMonths).
   const monthsBetween = Math.max(1, Math.round(
-    (newEndDate.getTime() - oldEndDate.getTime()) / (30 * 86400 * 1000)
+    (newEndDate.getTime() - resolvedStartDate.getTime()) / (30 * 86400 * 1000)
   ));
 
-  const startIso = oldEndDate.toISOString();
+  const startIso = resolvedStartDate.toISOString();
   const endIso = newEndDate.toISOString();
 
   // ── Build single Firestore batch ──────────────────────────────────────────
@@ -346,7 +375,11 @@ async function _runRenewalMode(input, callerUid, callerEmail, firestore) {
     oldLeaseId,
     newLeaseId,
     oldEndDate: oldEndDate.toISOString(),
+    newStartDate: startIso,
     newEndDate: endIso,
+    startGapDays: newStartDate
+      ? Math.round((newStartDate.getTime() - oldEndDate.getTime()) / 86400000)
+      : 0,
     oldRent: Number(oldLeaseData.rentAmount) || 0,
     newRent: resolvedRent,
     rentChanged: (newRentAmount !== undefined) && (resolvedRent !== (Number(oldLeaseData.rentAmount) || 0)),
