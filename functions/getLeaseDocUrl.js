@@ -7,10 +7,14 @@
  *   the contract indefinitely. We issue a v4 signed URL capped at 1 hour so
  *   a leaked link expires quickly (PDPA pattern, same as getChecklistMediaUrl).
  *
- * Auth gates (mirrors storage.rules /leases/... — easy to audit side-by-side):
+ * Auth gates (3 paths — first one that passes wins):
  *   • Admin claim, OR
- *   • Tenant whose (room, building) custom-token claims match the path segments.
- *     Claim-based gate survives UID rotation (anon-UID drift, anti-pattern P).
+ *   • Tenant whose (room, building) custom-token claims match the path segments
+ *     (claim-based gate survives anon-UID rotation, anti-pattern P), OR
+ *   • Tenant whose linkedAuthUid in tenants/{b}/list/{r} matches context.auth.uid
+ *     (server-side cross-check — handles claim drift after §7-Z window when the
+ *     ID token auto-refreshes and persistent claims weren't set, but the user is
+ *     still the registered tenant of that room per Firestore SoT).
  *
  * Input:   { path: "leases/{building}/{roomId}/{leaseId}/{fileName}" }
  * Returns: { url, expiresAt }   url is a v4 signed URL valid for 1 h
@@ -49,13 +53,39 @@ exports.getLeaseDocUrl = functions
     const isAdmin = tok.admin === true;
 
     if (!isAdmin) {
-      // Tenant: custom-token claims must match the path.
-      // Claims survive anon-UID rotation; raw auth.uid comparison would not.
-      if (tok.room !== roomId || tok.building !== building) {
-        throw new functions.https.HttpsError(
-          'permission-denied',
-          'Token claims do not match the requested lease path',
-        );
+      // Path 1 — claim match (preferred; no Firestore read needed).
+      const claimsMatch = tok.room === roomId && tok.building === building;
+
+      if (!claimsMatch) {
+        // Path 2 — Firestore SoT cross-check. Tenant's claims may have drifted
+        // (admin re-issued claims, token auto-refresh after §7-Z window without
+        // setCustomUserClaims call, anon-UID rotated, etc.) but they are still
+        // the registered tenant of the room per tenants/{b}/list/{r}.
+        // Storage rules can't do this cross-check; the CF can.
+        const firestore = admin.firestore();
+        let tenantSnap;
+        try {
+          tenantSnap = await firestore
+            .collection('tenants').doc(building)
+            .collection('list').doc(roomId)
+            .get();
+        } catch (e) {
+          console.error('getLeaseDocUrl: tenant doc read failed for',
+            `${building}/${roomId}`, '—', e.message);
+          throw new functions.https.HttpsError(
+            'permission-denied',
+            'Token claims do not match and tenant doc lookup failed',
+          );
+        }
+        const tenantData = tenantSnap.exists ? (tenantSnap.data() || {}) : {};
+        const linkedAuthUid = String(tenantData.linkedAuthUid || '');
+        if (!linkedAuthUid || linkedAuthUid !== context.auth.uid) {
+          throw new functions.https.HttpsError(
+            'permission-denied',
+            'Token claims do not match the requested lease path and tenant doc linkedAuthUid is not this user',
+          );
+        }
+        // SoT match — caller is the linked tenant of this room.
       }
     }
 

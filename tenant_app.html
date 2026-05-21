@@ -13250,7 +13250,19 @@
                 if (url) return url;
                 console.warn('[LeaseDoc] getLeaseDocUrl returned no url for', path);
             } catch (err) {
-                console.error('[LeaseDoc] getLeaseDocUrl error for', path, '—', err?.code || err?.name, err?.message);
+                // Dump claim presence — main reason CF rejects is missing room/building
+                // claims (token auto-refresh after §7-Z window without persistent set).
+                try {
+                    const u = window.firebaseAuth?.currentUser;
+                    const tr = u ? await u.getIdTokenResult(true) : null;  // force-refresh
+                    const c = tr?.claims || {};
+                    console.error('[LeaseDoc] getLeaseDocUrl error for', path,
+                      '—', err?.code || err?.name, err?.message,
+                      '· uid=' + (u?.uid?.slice(0,12) || 'none'),
+                      '· claims:', { room: c.room || null, building: c.building || null, admin: !!c.admin, role: c.role || null, tenantId: c.tenantId || null });
+                } catch (_) {
+                    console.error('[LeaseDoc] getLeaseDocUrl error for', path, '—', err?.code || err?.name, err?.message);
+                }
             }
             // Fallback: direct getDownloadURL (rules-gated, same auth subject).
             try {
