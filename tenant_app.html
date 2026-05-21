@@ -13242,36 +13242,71 @@
             if (path.startsWith('data:') || /^https?:\/\//i.test(path)) return path;
             if (!path.startsWith('leases/')) return path;
 
-            // Primary: signed URL via CF.
-            try {
+            // Helper — invoke the callable once.
+            const _callCF = async () => {
                 const fn = window.firebase.functions.httpsCallable('getLeaseDocUrl');
                 const result = await fn({ path });
-                const url = result?.data?.url;
+                return result?.data?.url || null;
+            };
+
+            // Attempt 1: CF with current cached ID token.
+            let cfErr;
+            try {
+                const url = await _callCF();
                 if (url) return url;
                 console.warn('[LeaseDoc] getLeaseDocUrl returned no url for', path);
             } catch (err) {
-                // Dump claim presence — main reason CF rejects is missing room/building
-                // claims (token auto-refresh after §7-Z window without persistent set).
+                cfErr = err;
+            }
+
+            // Attempt 2: force-refresh ID token (in case claims were re-issued
+            // server-side after the cached token was minted), then retry CF.
+            // The CF's Path 2 (linkedAuthUid match) doesn't depend on claims, so
+            // this retry mainly helps when persistent claims got written between
+            // the first and second call. Cheap insurance against §7-Z races.
+            if (cfErr) {
                 try {
                     const u = window.firebaseAuth?.currentUser;
-                    const tr = u ? await u.getIdTokenResult(true) : null;  // force-refresh
+                    if (u) await u.getIdToken(true);
+                    const url = await _callCF();
+                    if (url) return url;
+                } catch (err2) {
+                    cfErr = err2;
+                }
+            }
+
+            // CF still failing — dump diagnostic to console for ops.
+            if (cfErr) {
+                try {
+                    const u = window.firebaseAuth?.currentUser;
+                    const tr = u ? await u.getIdTokenResult(false) : null;
                     const c = tr?.claims || {};
                     console.error('[LeaseDoc] getLeaseDocUrl error for', path,
-                      '—', err?.code || err?.name, err?.message,
+                      '—', cfErr?.code || cfErr?.name, cfErr?.message,
                       '· uid=' + (u?.uid?.slice(0,12) || 'none'),
                       '· claims:', { room: c.room || null, building: c.building || null, admin: !!c.admin, role: c.role || null, tenantId: c.tenantId || null });
                 } catch (_) {
-                    console.error('[LeaseDoc] getLeaseDocUrl error for', path, '—', err?.code || err?.name, err?.message);
+                    console.error('[LeaseDoc] getLeaseDocUrl error for', path, '—', cfErr?.code || cfErr?.name, cfErr?.message);
                 }
             }
+
             // Fallback: direct getDownloadURL (rules-gated, same auth subject).
+            // Mainly useful for admin-claim users; tenants without room/building
+            // claims will hit storage/unauthorized here too — but that's still a
+            // meaningful surface compared to swallowing the error silently.
             try {
                 const storage = window.firebase.storage();
                 const { ref: sRef, getDownloadURL: sGetDownloadURL } = window.firebase.storageFunctions;
                 return await sGetDownloadURL(sRef(storage, path));
-            } catch (err2) {
-                console.error('[LeaseDoc] getDownloadURL fallback failed for', path, '—', err2?.code || err2?.name, err2?.message);
-                toast('ไม่สามารถเปิดเอกสารได้: ' + (err2?.code || err2?.message || 'unknown error'), 'error');
+            } catch (err3) {
+                console.error('[LeaseDoc] getDownloadURL fallback failed for', path, '—', err3?.code || err3?.name, err3?.message);
+                // Prefer the CF error code (more actionable — tells caller exactly
+                // which auth gate failed) over the storage rule's generic code.
+                const cfCode = cfErr?.code || cfErr?.name;
+                const friendlyHint = cfCode === 'functions/permission-denied'
+                    ? ' กรุณาปิด LINE จาก app switcher แล้วเปิดใหม่เพื่อรีเฟรชสิทธิ์'
+                    : '';
+                toast('ไม่สามารถเปิดเอกสารได้: ' + (cfCode || err3?.code || err3?.message || 'unknown') + friendlyHint, 'error');
                 return null;
             }
         }
