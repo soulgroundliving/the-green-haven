@@ -104,6 +104,7 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 
 const { getValidBuildings } = require('./buildingRegistry');
+const { appendLog } = require('./_occupancyLog');
 
 const VALID_MODES = new Set(['variation', 'novation']);
 const ROOM_ID_RE = /^[A-Za-z0-9ก-๛]{1,20}$/;
@@ -404,6 +405,28 @@ function _buildOldRoomClearPatch(now) {
 }
 
 /**
+ * Resolve a non-empty tenantName for occupancyLog entries (helper required-
+ * field check rejects empty string). Fallback chain:
+ *   1. lease.tenantName (set at convertBookingToTenant time — most canonical)
+ *   2. tenants doc name (live identity at transfer moment)
+ *   3. composed firstName + lastName from tenants doc
+ *   4. 'unknown' last-resort so the log entry still writes
+ *
+ * Exposed for white-box tests covering missing-name edge case.
+ */
+function _resolveTenantName(leaseData, tenantData) {
+  const leaseName = String((leaseData && leaseData.tenantName) || '').trim();
+  if (leaseName) return leaseName;
+  const docName = String((tenantData && tenantData.name) || '').trim();
+  if (docName) return docName;
+  const first = String((tenantData && tenantData.firstName) || '').trim();
+  const last  = String((tenantData && tenantData.lastName)  || '').trim();
+  const composed = [first, last].filter(Boolean).join(' ').trim();
+  if (composed) return composed;
+  return 'unknown';
+}
+
+/**
  * Variation mode batch. Single lease doc, amendments[] arrayUnion entry.
  * Lease moves room (roomId field updated) but startDate/endDate/leaseId stay.
  *
@@ -532,6 +555,41 @@ async function _runVariationMode(input, callerUid, callerEmail, firestore) {
     activeRoom: newRoomId,
     updatedAt: now,
   }, { merge: true });
+
+  // 5. Plan B' S2: paired occupancyLog entries (transferred_out + transferred_in)
+  //    in same batch as the lease + tenant moves. Discriminator = amendment
+  //    timestamp (unique per event, allows multiple transfers of same lease to
+  //    coexist without idempotency collisions per _occupancyLog.js doc).
+  const tenantNameForLog = _resolveTenantName(oldLeaseData, oldTenantData);
+  const personIdForLog = String(oldTenantData.personId || tenantId);
+  try {
+    appendLog(batch, firestore, {
+      tenantId, tenantName: tenantNameForLog, personId: personIdForLog,
+      building, roomId: oldRoomId,
+      action: 'transferred_out',
+      reason: notes || null,
+      otherBuilding: newBuilding, otherRoom: newRoomId,
+      leaseId,
+      by: callerUid, byEmail: callerEmail || null,
+      source: 'transferTenant.variation',
+      discriminator: amendmentEntry.at,
+    });
+    appendLog(batch, firestore, {
+      tenantId, tenantName: tenantNameForLog, personId: personIdForLog,
+      building: newBuilding, roomId: newRoomId,
+      action: 'transferred_in',
+      reason: notes || null,
+      otherBuilding: building, otherRoom: oldRoomId,
+      leaseId,
+      by: callerUid, byEmail: callerEmail || null,
+      source: 'transferTenant.variation',
+      discriminator: amendmentEntry.at,
+    });
+  } catch (logErr) {
+    console.error('transferTenant[variation]: occupancyLog append failed (aborting):', logErr.message);
+    throw new functions.https.HttpsError('internal',
+      `occupancyLog append failed: ${logErr.message}`);
+  }
 
   try {
     await batch.commit();
@@ -706,6 +764,41 @@ async function _runNovationMode(input, callerUid, callerEmail, firestore) {
     activeRoom: newRoomId,
     updatedAt: now,
   }, { merge: true });
+
+  // 6. Plan B' S2: paired occupancyLog entries. transferred_out carries the OLD
+  //    leaseId, transferred_in carries the NEW leaseId (each entry's leaseId is
+  //    the lease in effect at the time of the event). Discriminator pairs them
+  //    via the OTHER lease's id per _occupancyLog.js doc.
+  const tenantNameForLog = _resolveTenantName(oldLeaseData, oldTenantData);
+  const personIdForLog = String(oldTenantData.personId || tenantId);
+  try {
+    appendLog(batch, firestore, {
+      tenantId, tenantName: tenantNameForLog, personId: personIdForLog,
+      building, roomId: oldRoomId,
+      action: 'transferred_out',
+      reason: notes || null,
+      otherBuilding: newBuilding, otherRoom: newRoomId,
+      leaseId: oldLeaseId,
+      by: callerUid, byEmail: callerEmail || null,
+      source: 'transferTenant.novation',
+      discriminator: newLeaseId,
+    });
+    appendLog(batch, firestore, {
+      tenantId, tenantName: tenantNameForLog, personId: personIdForLog,
+      building: newBuilding, roomId: newRoomId,
+      action: 'transferred_in',
+      reason: notes || null,
+      otherBuilding: building, otherRoom: oldRoomId,
+      leaseId: newLeaseId,
+      by: callerUid, byEmail: callerEmail || null,
+      source: 'transferTenant.novation',
+      discriminator: oldLeaseId,
+    });
+  } catch (logErr) {
+    console.error('transferTenant[novation]: occupancyLog append failed (aborting):', logErr.message);
+    throw new functions.https.HttpsError('internal',
+      `occupancyLog append failed: ${logErr.message}`);
+  }
 
   try {
     await batch.commit();
@@ -915,6 +1008,7 @@ exports._updateLiffUserAndClaims = _updateLiffUserAndClaims;
 exports._writeAuditLog = _writeAuditLog;
 exports._carryIdentity = _carryIdentity;
 exports._buildOldRoomClearPatch = _buildOldRoomClearPatch;
+exports._resolveTenantName = _resolveTenantName;
 exports._VALID_MODES = VALID_MODES;
 exports._ROOM_ID_RE = ROOM_ID_RE;
 exports._IDENTITY_FIELDS = IDENTITY_FIELDS;

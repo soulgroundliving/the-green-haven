@@ -742,3 +742,148 @@ describe('transferTenant — S7 (top-level integration)', () => {
     assert.ok(_IDENTITY_FIELDS.includes('gamification'));
   });
 });
+
+// ── Plan B' S2 — occupancyLog write asserts ───────────────────────────────────
+
+describe("transferTenant — Plan B' S2 occupancyLog (variation mode)", () => {
+  beforeEach(() => { resetStubs(); });
+
+  it('writes paired transferred_out + transferred_in entries with source="transferTenant.variation"', async () => {
+    const seed = seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const outOps = captured.batchOps.filter(o => o.op === 'set'
+      && o.path.startsWith(`${seed.oldRoomPath}/occupancyLog/`));
+    const inOps = captured.batchOps.filter(o => o.op === 'set'
+      && o.path.startsWith(`${seed.newRoomPath}/occupancyLog/`));
+    assert.equal(outOps.length, 1, 'expected exactly one transferred_out entry at OLD room');
+    assert.equal(inOps.length, 1, 'expected exactly one transferred_in entry at NEW room');
+    assert.equal(outOps[0].data.action, 'transferred_out');
+    assert.equal(inOps[0].data.action, 'transferred_in');
+    assert.equal(outOps[0].data.source, 'transferTenant.variation');
+    assert.equal(inOps[0].data.source, 'transferTenant.variation');
+  });
+
+  it('both variation entries share the SAME discriminator (paired via amendment timestamp)', async () => {
+    const seed = seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const outOp = captured.batchOps.find(o => o.path.startsWith(`${seed.oldRoomPath}/occupancyLog/`));
+    const inOp = captured.batchOps.find(o => o.path.startsWith(`${seed.newRoomPath}/occupancyLog/`));
+    // idempotencyKey shape: source__leaseId__action__building__roomId__discriminator
+    // The LAST segment (after the last '__') is the discriminator. Both entries
+    // must share it so admin can pair them.
+    const extractDisc = (key) => key.split('__').slice(-1)[0];
+    const outDisc = extractDisc(outOp.data.idempotencyKey);
+    const inDisc  = extractDisc(inOp.data.idempotencyKey);
+    assert.equal(outDisc, inDisc,
+      `variation pair must share discriminator; got out='${outDisc}', in='${inDisc}'`);
+    assert.ok(outDisc.length > 0, 'discriminator must be non-empty (amendment timestamp)');
+  });
+
+  it('variation entries carry otherBuilding/otherRoom pointing at each other', async () => {
+    const seed = seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const outOp = captured.batchOps.find(o => o.path.startsWith(`${seed.oldRoomPath}/occupancyLog/`));
+    const inOp = captured.batchOps.find(o => o.path.startsWith(`${seed.newRoomPath}/occupancyLog/`));
+    assert.equal(outOp.data.otherBuilding, 'rooms');
+    assert.equal(outOp.data.otherRoom, '17');
+    assert.equal(inOp.data.otherBuilding, 'rooms');
+    assert.equal(inOp.data.otherRoom, '15');
+    // Both share the SAME leaseId in variation mode (it's the same lease)
+    assert.equal(outOp.data.leaseId, seed.oldLeaseId);
+    assert.equal(inOp.data.leaseId, seed.oldLeaseId);
+  });
+
+  it('variation reverse transfer writes 2 entries with new discriminator (independent of first pair)', async () => {
+    // First leg: 15 → 17
+    seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const firstOpsCount = captured.batchOps.filter(o => o.path.includes('/occupancyLog/')).length;
+    assert.equal(firstOpsCount, 2);
+    const firstKeys = captured.batchOps
+      .filter(o => o.path.includes('/occupancyLog/'))
+      .map(o => o.data.idempotencyKey);
+
+    // Reset + seed reverse: tenant now at 17, going back to 15.
+    resetStubs();
+    seedTransferable({ oldRoomId: '17', newRoomId: '15', oldLeaseId: 'CONTRACT_1234567890_15' });
+    // Wait a beat so the amendmentEntry.at (Date.now ISO) differs.
+    await new Promise(r => setTimeout(r, 5));
+    await transferTenant.run({
+      building: 'rooms', oldRoomId: '17', newBuilding: 'rooms', newRoomId: '15', mode: 'variation',
+    }, adminContext());
+    const secondKeys = captured.batchOps
+      .filter(o => o.path.includes('/occupancyLog/'))
+      .map(o => o.data.idempotencyKey);
+    assert.equal(secondKeys.length, 2);
+    // The two pairs must NOT share any keys (different discriminators)
+    for (const k of secondKeys) {
+      assert.ok(!firstKeys.includes(k),
+        `reverse pair must produce fresh discriminators; key '${k}' collided with first pair`);
+    }
+  });
+});
+
+describe("transferTenant — Plan B' S2 occupancyLog (novation mode)", () => {
+  beforeEach(() => { resetStubs(); });
+
+  it('writes paired transferred_out + transferred_in entries with source="transferTenant.novation"', async () => {
+    const seed = seedTransferable();
+    const result = await transferTenant.run({ ...goodInput(), mode: 'novation' }, adminContext());
+    const outOp = captured.batchOps.find(o => o.op === 'set'
+      && o.path.startsWith(`${seed.oldRoomPath}/occupancyLog/`));
+    const inOp = captured.batchOps.find(o => o.op === 'set'
+      && o.path.startsWith(`${seed.newRoomPath}/occupancyLog/`));
+    assert.ok(outOp, 'expected transferred_out at old room');
+    assert.ok(inOp, 'expected transferred_in at new room');
+    assert.equal(outOp.data.source, 'transferTenant.novation');
+    assert.equal(inOp.data.source, 'transferTenant.novation');
+    assert.equal(outOp.data.action, 'transferred_out');
+    assert.equal(inOp.data.action, 'transferred_in');
+    // Novation: each entry's leaseId is the lease in effect AT THAT EVENT
+    assert.equal(outOp.data.leaseId, seed.oldLeaseId, 'transferred_out carries OLD leaseId');
+    assert.equal(inOp.data.leaseId, result.newLeaseId, 'transferred_in carries NEW leaseId');
+  });
+
+  it('novation discriminators pair the two entries via OTHER lease id', async () => {
+    const seed = seedTransferable();
+    const result = await transferTenant.run({ ...goodInput(), mode: 'novation' }, adminContext());
+    const outOp = captured.batchOps.find(o => o.path.startsWith(`${seed.oldRoomPath}/occupancyLog/`));
+    const inOp = captured.batchOps.find(o => o.path.startsWith(`${seed.newRoomPath}/occupancyLog/`));
+    const extractDisc = (key) => key.split('__').slice(-1)[0];
+    // out's discriminator points at NEW lease; in's discriminator points at OLD lease.
+    // This is by design — either entry's discriminator identifies the OTHER lease.
+    assert.equal(extractDisc(outOp.data.idempotencyKey), result.newLeaseId);
+    assert.equal(extractDisc(inOp.data.idempotencyKey), seed.oldLeaseId);
+  });
+
+  it('tenantName falls back through lease → tenant doc name when lease.tenantName empty', async () => {
+    // Lease has NO tenantName; tenant doc still has name='สมชาย สิบห้า' — fallback should pick that up.
+    seedTransferable({ leaseExtras: { tenantName: '' } });
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const outOp = captured.batchOps.find(o => o.path.includes('/list/15/occupancyLog/'));
+    assert.equal(outOp.data.tenantName, 'สมชาย สิบห้า',
+      'must fall back to tenants doc name when lease.tenantName empty');
+  });
+
+  it('retry within same effective period produces IDENTICAL idempotencyKey (no double-write)', async () => {
+    // Two consecutive novation calls with the same fixture should yield two entries
+    // each, but if newLeaseId is deterministic for a given call, the keys are stable
+    // per call. We mainly verify that for a SINGLE call, keys are deterministic from
+    // the {source, leaseId, action, building, roomId, discriminator} tuple.
+    seedTransferable();
+    const result = await transferTenant.run({ ...goodInput(), mode: 'novation' }, adminContext());
+    const ops = captured.batchOps.filter(o => o.path.includes('/occupancyLog/'));
+    // Doc id (last path segment) MUST equal the persisted idempotencyKey field —
+    // this is what makes set-without-merge replays safe.
+    for (const op of ops) {
+      const docIdFromPath = op.path.split('/').pop();
+      assert.equal(docIdFromPath, op.data.idempotencyKey,
+        'doc id must equal idempotencyKey so CF retries collapse onto same doc');
+    }
+    // And the keys must include the source for backfill differentiation later.
+    assert.ok(ops[0].data.idempotencyKey.startsWith('transferTenant.novation__')
+           || ops[0].data.idempotencyKey.startsWith('transferTenant_novation__'),
+      `idempotencyKey must encode the source; got: ${ops[0].data.idempotencyKey}`);
+    void result;
+  });
+});

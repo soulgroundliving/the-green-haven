@@ -241,22 +241,19 @@ Total: **~15 files, ~1,200-1,400 LOC net new + modified.** Well above 5-file Pla
 - [x] **Deploy:** `firebase deploy --only firestore:rules,functions:convertBookingToTenant` — rules released + CF updated in asia-southeast1.
 - [x] **Checkpoint:** helper module exists ✓; rule blocks update/delete enforced by rule tests ✓; convertBookingToTenant writes one log entry per call (verified in tests) ✓; **production already accepts new occupancyLog writes** (only convertBookingToTenant writes them for now — S2 expands).
 
-### S2 — Wire `archiveTenantOnMoveOut` + `transferTenant` (~2-3 hr)
+### S2 — Wire `archiveTenantOnMoveOut` + `transferTenant` ✅ SHIPPED
 
-- [ ] **S2.1** Update `archiveTenantOnMoveOut.js` to `appendLog(batch, fs, {action:'archived', source:'archiveTenantOnMoveOut', ...})`. Add 3 unit tests (write present · idempotencyKey shape · works for both clean + leftover-orphan paths).
-- [ ] **S2.2** Update `transferTenant.js` BOTH modes to write 2 log entries each (out at oldRoom + in at newRoom):
-  - variation: `source: 'transferTenant.variation'`
-  - novation: `source: 'transferTenant.novation'`
-  - Include `otherBuilding` + `otherRoom` on both entries (so reader can pair them)
-- [ ] **S2.3** Add 8 unit tests to `transferTenant.test.js`:
-  - variation forward writes 2 log entries with paired idempotency keys
-  - variation reverse same
-  - novation forward writes 2 log entries + carries leaseId of OLD lease in 'transferred_out' but NEW lease in 'transferred_in'
-  - missing tenantName fallback (use lease.tenantName || tenants doc name || '')
-  - retry produces same idempotencyKey → second call is no-op (set on same doc)
-- [ ] **S2.4** Run full test suite — expect baseline + 11 new.
-- [ ] **Commit:** `feat(occupancyLog): wire archive + transfer (both modes) (S2)`
-- [ ] **Checkpoint:** all 3 transition CFs write occupancyLog. Test suite green.
+- [x] **S2.1** `archiveTenantOnMoveOut.js` now calls `appendLog(batch, firestore, {action:'archived', source:'archiveTenantOnMoveOut', discriminator:'', leaseId: leaseIdToEnd || contractId, ...})` BEFORE `batch.commit()`. On helper throw, aborts via `HttpsError('internal', ...)` so an archive without history is impossible. `totalOps` bumped by 1 (now `(leaseRefToEnd ? 4 : 3) + (totalSubDocs * 2)`).
+- [x] **S2.2** `transferTenant.js` both modes write 2 paired log entries inside the existing batch:
+  - **variation**: `source='transferTenant.variation'`, BOTH entries carry the SAME `leaseId` (same lease moves rooms) and `discriminator = amendmentEntry.at` (the ISO timestamp of the amendments[] entry) so the pair shares a discriminator.
+  - **novation**: `source='transferTenant.novation'`, `transferred_out` carries OLD `leaseId` + `discriminator = newLeaseId`; `transferred_in` carries NEW `leaseId` + `discriminator = oldLeaseId`. Either side's discriminator identifies the OTHER lease — admin can pair without re-reading.
+  - Both entries on both modes carry `otherBuilding` + `otherRoom` pointing at each other.
+  - New helper `_resolveTenantName(leaseData, tenantData)` exported — fallback chain `lease.tenantName → tenant.name → firstName+lastName → 'unknown'` so empty identity never trips the helper's required-field check.
+- [x] **S2.3a** NEW `functions/__tests__/archiveTenantOnMoveOut.test.js` (no test file existed before): 18 tests covering auth (2) + validation (4) + pre-conditions (4) + batch shape (5) + occupancyLog write (3). All GREEN.
+- [x] **S2.3b** `functions/__tests__/transferTenant.test.js` +8 occupancyLog tests in 2 suites (variation × 4: paired writes, shared discriminator, otherBuilding/otherRoom pair, reverse-transfer-fresh-discriminator; novation × 4: paired writes, paired-via-OTHER-lease-id discriminator, tenantName fallback, doc-id=idempotencyKey replay safety). 51 → 59 tests on this file, all GREEN.
+- [x] **S2.4** `npm run test:unit` → **360/360 GREEN** (was 334 after S1; +18 archive + +8 transfer = 360).
+- [x] **Commit:** `feat(occupancyLog): wire archive + transfer (both modes) (S2)`
+- [x] **Checkpoint:** 3/4 transition CFs now write occupancyLog (convertBookingToTenant via S1; archiveTenantOnMoveOut + transferTenant via S2). `restoreReturningTenant` not yet implemented (Plan B' future A). Test suite green.
 
 ### S3 — Reader module + UI surface (~3-4 hr)
 

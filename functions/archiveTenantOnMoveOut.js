@@ -56,6 +56,7 @@ if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
 const { getValidBuildings } = require('./buildingRegistry');
+const { appendLog } = require('./_occupancyLog');
 
 const VALID_REASONS = new Set(['moved_out', 'reassigned', 'admin_action']);
 
@@ -229,8 +230,9 @@ exports.archiveTenantOnMoveOut = functions
     }
 
     // Each subdoc costs 2 ops (set archive + delete original) plus parent ops:
-    // archive set + tenant blank + (optional) lease status update = 2 or 3.
-    const totalOps = (leaseRefToEnd ? 3 : 2) + (totalSubDocs * 2);
+    // archive set + tenant blank + (optional) lease status update + occupancyLog
+    // set = 3 or 4.
+    const totalOps = (leaseRefToEnd ? 4 : 3) + (totalSubDocs * 2);
     if (totalOps > BATCH_OP_LIMIT) {
       throw new functions.https.HttpsError('resource-exhausted',
         `Tenant has ${totalSubDocs} subcollection docs (${totalOps} ops) — exceeds batch limit ${BATCH_OP_LIMIT}. Manual admin SDK migration needed.`);
@@ -286,6 +288,35 @@ exports.archiveTenantOnMoveOut = functions
         endedBy: callerUid,
         endedByEmail: callerEmail,
       });
+    }
+
+    // 5. Plan B' S1/S2: append-only occupancyLog entry — `archived`. In the
+    //    SAME batch so partial failure rolls back the log too (§7-DD: every
+    //    state-transition CF must update every sibling collection downstream
+    //    readers fall through to). Discriminator='' is exhaustive per
+    //    _occupancyLog.js docs (one archive per leaseId is unique).
+    const personIdFromPeopleHint = tenantData.personId ? String(tenantData.personId) : tenantId;
+    try {
+      appendLog(batch, firestore, {
+        tenantId,
+        tenantName: String(tenantData.name || tenantData.firstName || ''),
+        personId: personIdFromPeopleHint,
+        building,
+        roomId,
+        action: 'archived',
+        reason: archiveReason,
+        leaseId: leaseIdToEnd || contractId,
+        by: callerUid,
+        byEmail: callerEmail || null,
+        source: 'archiveTenantOnMoveOut',
+        discriminator: '',
+      });
+    } catch (logErr) {
+      // Aborting here (before commit) prevents an archive without history —
+      // wrong source/action is a deploy bug, not a runtime condition.
+      console.error('archiveTenantOnMoveOut: occupancyLog append failed (aborting):', logErr.message);
+      throw new functions.https.HttpsError('internal',
+        `occupancyLog append failed: ${logErr.message}`);
     }
 
     try {
