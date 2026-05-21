@@ -1,0 +1,920 @@
+/**
+ * transferTenant — admin-only callable that moves an active tenant to a
+ * different room (same building or different building).
+ *
+ * Two legal modes:
+ *
+ *   - 'variation' (DEFAULT, การแก้ไขสัญญา) — same lease doc, identity moved
+ *     between rooms, amendments[] arrayUnion entry recording the change. The
+ *     lease's startDate / endDate / tenure clock stay intact. This matches
+ *     Thai property practice for mutual room-change requests (เปลี่ยนห้องระหว่างสัญญา)
+ *     where landlord + tenant agree to amend rather than re-sign.
+ *
+ *   - 'novation' (การเปลี่ยนสัญญา) — OLD lease set to status='transferred' +
+ *     transferredToLeaseId pointer; NEW lease created at the new room with
+ *     priorLeaseId chain. Use when terms are substantially new (different
+ *     building, new deposit terms, new clauses) and a fresh paper trail
+ *     is genuinely warranted.
+ *
+ * Both modes:
+ *   - Move tenant identity from tenants/{oldBuilding}/list/{oldRoomId} to
+ *     tenants/{newBuilding}/list/{newRoomId} (single atomic batch)
+ *   - Update people/{tenantId}.currentBuilding + currentRoom
+ *   - Update liffUsers/{lineUserId}.building + room (if a LINE link exists)
+ *   - Re-mint Firebase Auth custom claims with new {room, building, tenantId}
+ *     + revokeRefreshTokens for the linkedAuthUid (and any legacy anon UID)
+ *     per §7-FF — without this the cached LIFF ID token keeps pointing at
+ *     the old room for up to ~1 h.
+ *   - Write RTDB audit entry at audit_logs/leases/{push} with action
+ *     'tenant_transferred' + mode + from-room + to-room.
+ *
+ * What this CF does NOT do (out of scope this sprint):
+ *   - Does NOT move historical bills, paymentHistory, redemptions,
+ *     maintenance tickets, complaints, checklists. Those stay attached
+ *     to the old room (room-keyed per current data model). Admin can
+ *     manually re-issue checklists at the new room if needed.
+ *   - Does NOT prorate bills. transferDeposit / prorateBills flags accepted
+ *     but only recorded in the audit log — actual deposit ledger + meter
+ *     pro-rate is a follow-up sprint.
+ *   - Does NOT touch gamification (it lives on people/ which is identity-
+ *     keyed; transfer is location-only).
+ *
+ * Mirrors archiveTenantOnMoveOut + renewLease + unlinkLiffUser patterns:
+ *   - §7-DD: single batched Firestore write so partial transfers impossible
+ *   - §7-FF: 3-leg claim refresh (setCustomUserClaims + revokeRefreshTokens
+ *            server-side + client force-refresh handled by tenant_app's
+ *            existing _callLiffSignIn fast-path)
+ *   - LeaseId resolution chain matches archive (tenants.lease.leaseId ||
+ *     activeContractId || contractId)
+ *
+ * Region: asia-southeast1
+ * Auth:   caller MUST have admin custom claim
+ * Input:  {
+ *   building,         // CURRENT building (canonical 'rooms' | 'nest' | ...)
+ *   oldRoomId,        // CURRENT room
+ *   newBuilding,      // TARGET building (may equal `building`)
+ *   newRoomId,        // TARGET room (must currently be vacant)
+ *   mode?,            // 'variation' (default) | 'novation'
+ *   effectiveDate?,   // ISO string — when transfer takes effect (default: now)
+ *   transferDeposit?, // boolean (default true) — deposit stays with tenant
+ *   prorateBills?,    // boolean (default false) — admin handles meter manually
+ *   newRentAmount?,   // number — novation mode only (variation must not change rent)
+ *   newDeposit?,      // number — novation mode only
+ *   contractDocument?,// string — Storage path / URL (novation typically requires)
+ *   contractFileName?,// string — file display name
+ *   notes?,           // string — admin's freeform note
+ * }
+ * Output: {
+ *   success, mode, building, oldRoomId, newBuilding, newRoomId,
+ *   tenantId, oldLeaseId, newLeaseId?,   // newLeaseId only in novation mode
+ *   effectiveDate, transferDeposit, prorateBills,
+ *   claimsRefreshed,  // count of UIDs that had claims re-minted
+ * }
+ *
+ * State write matrix per mode (§7-DD audit):
+ *
+ *   variation:
+ *     tenants/{oldB}/list/{oldR}    →  clear identity (like archive, keep
+ *                                       building/roomId/status='vacant')
+ *     tenants/{newB}/list/{newR}    →  set identity carried from oldR +
+ *                                       new lease subobject (same leaseId)
+ *     leases/{oldB}/list/{leaseId}  →  arrayUnion amendments[{at, from, to,
+ *                                       by, mode}] + roomId=newRoomId +
+ *                                       building=newBuilding + updatedAt
+ *     people/{tenantId}             →  currentBuilding=newB + currentRoom=newR
+ *     liffUsers/{lineUserId}        →  building=newB + room=newR (if linked)
+ *     Auth custom claims            →  setCustomUserClaims(linkedUid,
+ *                                       {room:newR, building:newB, tenantId,
+ *                                        ...preserved}) + revokeRefreshTokens
+ *     RTDB audit_logs/leases        →  push {action: 'tenant_transferred',
+ *                                       mode: 'variation', ...}
+ *
+ *   novation:
+ *     (same tenants/oldR/newR moves)
+ *     leases/{oldB}/list/{oldLeaseId} → status='transferred' +
+ *                                        transferredToLeaseId + endedAt +
+ *                                        endReason='transferred'
+ *     leases/{newB}/list/{newLeaseId} → create with priorLeaseId chain +
+ *                                        transferredFromLeaseId + fresh dates
+ *     (rest same as variation)
+ */
+const functions = require('firebase-functions/v1');
+const admin = require('firebase-admin');
+
+if (!admin.apps.length) admin.initializeApp();
+
+const { getValidBuildings } = require('./buildingRegistry');
+
+const VALID_MODES = new Set(['variation', 'novation']);
+const ROOM_ID_RE = /^[A-Za-z0-9ก-๛]{1,20}$/;
+
+// Helper — see renewLease._parseDateField. Parse Firestore Timestamp, ISO
+// string, or millis-number into a JS Date or null.
+function _parseDateField(v) {
+  if (!v) return null;
+  if (typeof v.toDate === 'function') return v.toDate();
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Validate + normalise input. Returns normalised payload OR throws HttpsError.
+ * Pure — no Firestore reads. Exported for white-box testing.
+ *
+ * Mode default: 'variation' (per lifecycle_tenant_transitions.md § B vote —
+ * mutual room-change is most-common operationally + preserves tenure clock).
+ */
+async function _validateInput(data) {
+  const {
+    building,
+    oldRoomId,
+    newBuilding,
+    newRoomId,
+    mode,
+    effectiveDate,
+    transferDeposit,
+    prorateBills,
+    newRentAmount,
+    newDeposit,
+    contractDocument,
+    contractFileName,
+    notes,
+  } = data || {};
+
+  // ── Buildings (both validated against registry) ─────────────────────────
+  const validBuildings = await getValidBuildings();
+  if (!validBuildings.has(building)) {
+    throw new functions.https.HttpsError('invalid-argument',
+      `building must be one of [${Array.from(validBuildings).join(', ')}] (got '${building}')`);
+  }
+  if (!validBuildings.has(newBuilding)) {
+    throw new functions.https.HttpsError('invalid-argument',
+      `newBuilding must be one of [${Array.from(validBuildings).join(', ')}] (got '${newBuilding}')`);
+  }
+
+  // ── Room IDs ────────────────────────────────────────────────────────────
+  if (typeof oldRoomId !== 'string' || !ROOM_ID_RE.test(oldRoomId)) {
+    throw new functions.https.HttpsError('invalid-argument',
+      `oldRoomId must be 1-20 alphanumeric/Thai chars (got '${oldRoomId}')`);
+  }
+  if (typeof newRoomId !== 'string' || !ROOM_ID_RE.test(newRoomId)) {
+    throw new functions.https.HttpsError('invalid-argument',
+      `newRoomId must be 1-20 alphanumeric/Thai chars (got '${newRoomId}')`);
+  }
+
+  // Same-room transfer is a no-op (and would otherwise corrupt state when
+  // the batch tries to clear+populate the same doc in one batch).
+  if (building === newBuilding && oldRoomId === newRoomId) {
+    throw new functions.https.HttpsError('invalid-argument',
+      `Cannot transfer to the same room (${building}/${oldRoomId} → ${newBuilding}/${newRoomId})`);
+  }
+
+  // ── Mode ────────────────────────────────────────────────────────────────
+  const normalisedMode = String(mode || 'variation');
+  if (!VALID_MODES.has(normalisedMode)) {
+    throw new functions.https.HttpsError('invalid-argument',
+      `mode must be one of: ${[...VALID_MODES].join(', ')} (got '${mode}')`);
+  }
+
+  // Variation must NOT change rent/deposit — that's a novation concern.
+  // Admin should pick mode='novation' if they need fresh financial terms.
+  if (normalisedMode === 'variation') {
+    if (newRentAmount !== undefined) {
+      throw new functions.https.HttpsError('invalid-argument',
+        `newRentAmount not allowed in variation mode — use mode='novation' for rent changes`);
+    }
+    if (newDeposit !== undefined) {
+      throw new functions.https.HttpsError('invalid-argument',
+        `newDeposit not allowed in variation mode — use mode='novation' for deposit changes`);
+    }
+  }
+
+  // ── effectiveDate (optional; defaults to "now") ─────────────────────────
+  let normalisedEffectiveDate;
+  if (effectiveDate === undefined || effectiveDate === null || effectiveDate === '') {
+    normalisedEffectiveDate = new Date();
+  } else {
+    const d = new Date(effectiveDate);
+    if (Number.isNaN(d.getTime())) {
+      throw new functions.https.HttpsError('invalid-argument',
+        `effectiveDate is not a valid date (got '${effectiveDate}')`);
+    }
+    // Allow today; reject only strictly past (more than 1 day ago) to
+    // tolerate timezone fuzz. Future dates are accepted (admin may schedule).
+    if (d.getTime() < Date.now() - 86400 * 1000) {
+      throw new functions.https.HttpsError('invalid-argument',
+        `effectiveDate is more than 1 day in the past (got '${d.toISOString()}')`);
+    }
+    normalisedEffectiveDate = d;
+  }
+
+  // ── Optional numerics (novation only) ───────────────────────────────────
+  let normalisedRent;
+  if (newRentAmount !== undefined && newRentAmount !== null) {
+    const n = Number(newRentAmount);
+    if (!Number.isFinite(n) || n <= 0) {
+      throw new functions.https.HttpsError('invalid-argument',
+        `newRentAmount must be a positive number (got '${newRentAmount}')`);
+    }
+    normalisedRent = n;
+  }
+  let normalisedDeposit;
+  if (newDeposit !== undefined && newDeposit !== null) {
+    const n = Number(newDeposit);
+    if (!Number.isFinite(n) || n < 0) {
+      throw new functions.https.HttpsError('invalid-argument',
+        `newDeposit must be >= 0 (got '${newDeposit}')`);
+    }
+    normalisedDeposit = n;
+  }
+
+  // ── Optional booleans (default true / false respectively) ───────────────
+  const normalisedTransferDeposit = (transferDeposit === undefined) ? true : !!transferDeposit;
+  const normalisedProrateBills = (prorateBills === undefined) ? false : !!prorateBills;
+
+  // ── Optional strings ────────────────────────────────────────────────────
+  if (contractDocument !== undefined && typeof contractDocument !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument',
+      'contractDocument must be a string (Storage path or download URL)');
+  }
+  if (contractFileName !== undefined && typeof contractFileName !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument',
+      'contractFileName must be a string');
+  }
+  if (notes !== undefined && typeof notes !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument',
+      'notes must be a string');
+  }
+
+  return {
+    building,
+    oldRoomId,
+    newBuilding,
+    newRoomId,
+    mode: normalisedMode,
+    effectiveDate: normalisedEffectiveDate,
+    transferDeposit: normalisedTransferDeposit,
+    prorateBills: normalisedProrateBills,
+    newRentAmount: normalisedRent,
+    newDeposit: normalisedDeposit,
+    contractDocument: contractDocument || '',
+    contractFileName: contractFileName || '',
+    notes: notes || '',
+  };
+}
+
+/**
+ * Reads pre-conditions for transfer. Returns:
+ *   { oldTenantRef, oldTenantData, tenantId, leaseId,
+ *     oldLeaseRef, oldLeaseData, oldEndDate, oldStartDate,
+ *     newTenantRef, newTenantData }
+ * or throws HttpsError. Exported for white-box testing.
+ *
+ * Guards:
+ *   1. OLD tenant doc must exist with tenantId (room must be occupied).
+ *   2. OLD lease must exist with status='active'.
+ *   3. NEW tenant doc — if it exists, must be vacant (no tenantId).
+ *      If it doesn't exist, that's fine (we'll create it in the batch).
+ */
+async function _readTransferState(firestore, building, oldRoomId, newBuilding, newRoomId) {
+  // ── OLD tenant doc ──────────────────────────────────────────────────────
+  const oldTenantRef = firestore.collection('tenants').doc(building).collection('list').doc(oldRoomId);
+  const oldTenantSnap = await oldTenantRef.get();
+  if (!oldTenantSnap.exists) {
+    throw new functions.https.HttpsError('not-found',
+      `tenants/${building}/list/${oldRoomId} does not exist`);
+  }
+  const oldTenantData = oldTenantSnap.data() || {};
+
+  const tenantId = String(oldTenantData.tenantId || '').trim();
+  if (!tenantId) {
+    throw new functions.https.HttpsError('failed-precondition',
+      `Room ${building}/${oldRoomId} has no tenantId — vacant rooms cannot be transferred`);
+  }
+  if (!String(oldTenantData.name || '').trim() && !String(oldTenantData.firstName || '').trim()) {
+    throw new functions.https.HttpsError('failed-precondition',
+      `Room ${building}/${oldRoomId} has tenantId but no name — incomplete tenant record`);
+  }
+
+  // ── OLD lease pointer chain (same precedence as archive + renew CFs) ───
+  const leaseId = (oldTenantData.lease && oldTenantData.lease.leaseId)
+    || oldTenantData.activeContractId
+    || (oldTenantData.contractId ? String(oldTenantData.contractId) : null);
+  if (!leaseId) {
+    throw new functions.https.HttpsError('failed-precondition',
+      `Room ${building}/${oldRoomId} has tenantId but no active lease pointer ` +
+      `(lease.leaseId / activeContractId / contractId all empty) — cannot transfer`);
+  }
+
+  const oldLeaseRef = firestore.collection('leases').doc(building).collection('list').doc(String(leaseId));
+  const oldLeaseSnap = await oldLeaseRef.get();
+  if (!oldLeaseSnap.exists) {
+    throw new functions.https.HttpsError('failed-precondition',
+      `Lease doc leases/${building}/list/${leaseId} not found — tenant doc points at a non-existent lease`);
+  }
+  const oldLeaseData = oldLeaseSnap.data() || {};
+
+  const status = String(oldLeaseData.status || 'active');
+  if (status !== 'active') {
+    throw new functions.https.HttpsError('failed-precondition',
+      `Lease ${leaseId} has status='${status}' — only 'active' leases can be transferred`);
+  }
+
+  const oldEndDate = _parseDateField(oldLeaseData.moveOutDate) || _parseDateField(oldLeaseData.endDate);
+  const oldStartDate = _parseDateField(oldLeaseData.contractStart) || _parseDateField(oldLeaseData.moveInDate);
+  if (!oldEndDate) {
+    throw new functions.https.HttpsError('failed-precondition',
+      `Lease ${leaseId} has no parseable moveOutDate/endDate — cannot transfer`);
+  }
+
+  // ── NEW tenant doc (must be vacant or non-existent) ─────────────────────
+  const newTenantRef = firestore.collection('tenants').doc(newBuilding).collection('list').doc(newRoomId);
+  const newTenantSnap = await newTenantRef.get();
+  const newTenantData = newTenantSnap.exists ? (newTenantSnap.data() || {}) : null;
+  if (newTenantData) {
+    const newTenantId = String(newTenantData.tenantId || '').trim();
+    if (newTenantId) {
+      throw new functions.https.HttpsError('already-exists',
+        `Target room ${newBuilding}/${newRoomId} is occupied (tenantId='${newTenantId}') — must be vacant to receive transfer`);
+    }
+  }
+
+  return {
+    oldTenantRef, oldTenantData, tenantId, leaseId,
+    oldLeaseRef, oldLeaseData, oldEndDate, oldStartDate,
+    newTenantRef, newTenantData,
+  };
+}
+
+/**
+ * Identity fields to MOVE from old room to new room. Mirror archive's
+ * FIELDS_TO_CLEAR list inverted — anything blanked on archive is anything
+ * we need to carry on transfer.
+ *
+ * Building + roomId are set explicitly to the NEW values (not carried).
+ * Lease fields are recomputed per mode (variation: same leaseId; novation: new).
+ */
+const IDENTITY_FIELDS = [
+  'name', 'firstName', 'lastName', 'phone', 'email', 'emailVerified',
+  'lineID', 'address', 'idCardNumber',
+  'tenantId', 'linkedAuthUid', 'linkedAt', 'phoneVerifiedAt',
+  'licensePlate', 'emergencyContact', 'companyInfo',
+  'gamification', 'sourceBookingId',
+];
+
+/**
+ * Build the identity carry-over object for the new tenant doc.
+ */
+function _carryIdentity(oldTenantData) {
+  const carried = {};
+  for (const f of IDENTITY_FIELDS) {
+    if (oldTenantData[f] !== undefined) carried[f] = oldTenantData[f];
+  }
+  return carried;
+}
+
+/**
+ * Fields to BLANK on the old tenant doc post-transfer. Identical to
+ * archiveTenantOnMoveOut's FIELDS_TO_CLEAR but does NOT touch lease subobject
+ * (lease is handled per-mode). Status becomes 'vacant' immediately (Q4=immediate).
+ */
+function _buildOldRoomClearPatch(now) {
+  return {
+    // Identity
+    name: '', firstName: '', lastName: '', phone: '', email: '',
+    emailVerified: false, lineID: '', address: '', idCardNumber: '',
+    tenantId: '', contractId: '',
+    linkedAuthUid: '', linkedAt: admin.firestore.FieldValue.delete(),
+    phoneVerifiedAt: admin.firestore.FieldValue.delete(),
+    // Lease state (lease subobject handled per-mode below)
+    moveInDate: '', moveOutDate: '', rentAmount: 0, deposit: 0,
+    depositPaid: false, contractDocument: '', contractFileName: '',
+    contractStart: '', contractEnd: '', contractMonths: 0,
+    lease: admin.firestore.FieldValue.delete(),
+    activeContractId: '',
+    // Misc
+    notes: '', licensePlate: '',
+    emergencyContact: null, companyInfo: null,
+    gamification: null, sourceBookingId: '',
+    // Room metadata
+    status: 'vacant',
+    updatedAt: now,
+    lastTransferredAt: now,
+  };
+}
+
+/**
+ * Variation mode batch. Single lease doc, amendments[] arrayUnion entry.
+ * Lease moves room (roomId field updated) but startDate/endDate/leaseId stay.
+ *
+ * Pure helper — caller owns auth + validation. Returns audit payload.
+ */
+async function _runVariationMode(input, callerUid, callerEmail, firestore) {
+  const {
+    building, oldRoomId, newBuilding, newRoomId,
+    effectiveDate, transferDeposit, prorateBills, notes,
+  } = input;
+
+  const state = await _readTransferState(firestore, building, oldRoomId, newBuilding, newRoomId);
+  const { oldTenantRef, oldTenantData, tenantId, leaseId,
+          oldLeaseRef, oldLeaseData, oldEndDate, newTenantRef } = state;
+
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  const effectiveIso = effectiveDate.toISOString();
+
+  // Detect wrong-shape amendments field (mirror renewLease._runExtensionMode
+  // defensive handling — older lease docs predate this field).
+  const existingAmendments = oldLeaseData.amendments;
+  const amendmentsIsArray = Array.isArray(existingAmendments);
+  if (existingAmendments !== undefined && !amendmentsIsArray) {
+    console.warn(`transferTenant[variation]: lease ${leaseId} has non-array amendments field ` +
+      `(${typeof existingAmendments}) — resetting to fresh array`);
+  }
+
+  // Build amendment entry (wall-clock `at` per renewLease._runExtensionMode
+  // comment — serverTimestamp() inside arrayUnion silently becomes null).
+  const amendmentEntry = {
+    at: new Date().toISOString(),
+    effectiveDate: effectiveIso,
+    type: 'room_transfer',
+    fromBuilding: building,
+    fromRoom: oldRoomId,
+    toBuilding: newBuilding,
+    toRoom: newRoomId,
+    transferDeposit,
+    prorateBills,
+    by: callerUid,
+    byEmail: callerEmail,
+    notes: notes || '',
+  };
+
+  // ── Batch ───────────────────────────────────────────────────────────────
+  const batch = firestore.batch();
+
+  // 1. NEW tenant doc — populate with carried identity + same lease pointer
+  const carriedIdentity = _carryIdentity(oldTenantData);
+  const newTenantPatch = {
+    ...carriedIdentity,
+    building: newBuilding,
+    roomId: newRoomId,
+    status: 'occupied',
+    contractStart: String(oldLeaseData.contractStart || oldLeaseData.moveInDate || ''),
+    contractEnd: oldEndDate.toISOString(),
+    contractMonths: Number(oldLeaseData.contractMonths) || 0,
+    rentAmount: Number(oldLeaseData.rentAmount) || 0,
+    deposit: Number(oldLeaseData.deposit) || 0,
+    depositPaid: !!oldLeaseData.depositPaid,
+    activeContractId: leaseId,
+    contractId: leaseId,
+    lease: {
+      leaseId,
+      status: 'active',
+      startDate: String(oldLeaseData.contractStart || oldLeaseData.moveInDate || ''),
+      endDate: oldEndDate.toISOString(),
+    },
+    contractDocument: String(oldLeaseData.contractDocument || ''),
+    contractFileName: String(oldLeaseData.contractFileName || ''),
+    createdAt: now,
+    updatedAt: now,
+    transferredFromBuilding: building,
+    transferredFromRoom: oldRoomId,
+    lastTransferredAt: now,
+  };
+  // Using set with merge:false so the NEW doc fully replaces any stale
+  // data (e.g. a previously-archived shell). The pre-condition guard already
+  // verified the doc is vacant or non-existent.
+  batch.set(newTenantRef, newTenantPatch, { merge: false });
+
+  // 2. OLD tenant doc — blank identity (mirror archiveTenantOnMoveOut)
+  batch.update(oldTenantRef, _buildOldRoomClearPatch(now));
+
+  // 3. Lease doc — update roomId + building + append amendment entry
+  const leasePatch = {
+    building: newBuilding,
+    roomId: newRoomId,
+    updatedAt: now,
+    lastAmendedAt: now,
+    lastAmendedBy: callerUid,
+  };
+  if (amendmentsIsArray || existingAmendments === undefined) {
+    leasePatch.amendments = admin.firestore.FieldValue.arrayUnion(amendmentEntry);
+  } else {
+    leasePatch.amendments = [amendmentEntry];
+  }
+  // If the lease is at a different doc path (newBuilding != building) the
+  // doc would need to be moved. Lease docs are keyed by leaseId not roomId,
+  // BUT the path includes building (leases/{b}/list/{leaseId}). For variation
+  // across buildings, we must move the doc.
+  if (newBuilding !== building) {
+    // Cross-building variation: read full lease data, create at new path,
+    // delete at old path. Same batch keeps atomicity.
+    const newLeaseRef = firestore.collection('leases').doc(newBuilding).collection('list').doc(String(leaseId));
+    batch.set(newLeaseRef, {
+      ...oldLeaseData,
+      ...leasePatch,
+      // Amendments field needs the resolved value (not the FieldValue sentinel
+      // — set() with the sentinel inside a NEW doc-set won't apply arrayUnion).
+      amendments: amendmentsIsArray
+        ? [...existingAmendments, amendmentEntry]
+        : [amendmentEntry],
+    });
+    batch.delete(oldLeaseRef);
+  } else {
+    batch.update(oldLeaseRef, leasePatch);
+  }
+
+  // 4. people doc — update currentBuilding + currentRoom
+  const peopleRef = firestore.collection('people').doc(String(tenantId));
+  batch.set(peopleRef, {
+    currentBuilding: newBuilding,
+    currentRoom: newRoomId,
+    activeBuilding: newBuilding,
+    activeRoom: newRoomId,
+    updatedAt: now,
+  }, { merge: true });
+
+  try {
+    await batch.commit();
+  } catch (e) {
+    console.error('transferTenant[variation]: batch commit failed:', e);
+    throw new functions.https.HttpsError('internal',
+      e.message || 'Variation batch commit failed');
+  }
+
+  // ── Post-batch: liffUsers update + claim refresh (§7-FF) ────────────────
+  const linkedAuthUid = String(oldTenantData.linkedAuthUid || '').trim();
+  const claimsRefreshed = await _updateLiffUserAndClaims({
+    firestore,
+    tenantId,
+    linkedAuthUid,
+    newBuilding,
+    newRoomId,
+  });
+
+  const auditPayload = {
+    action: 'tenant_transferred',
+    mode: 'variation',
+    fromBuilding: building, fromRoom: oldRoomId,
+    toBuilding: newBuilding, toRoom: newRoomId,
+    tenantId,
+    leaseId,
+    effectiveDate: effectiveIso,
+    transferDeposit, prorateBills,
+    amendmentCountAfter: amendmentsIsArray ? existingAmendments.length + 1 : 1,
+    claimsRefreshed,
+    notes: notes || '',
+    actor: callerEmail || callerUid,
+    actorUid: callerUid,
+  };
+
+  console.log(`transferTenant[variation]: ${building}/${oldRoomId} → ${newBuilding}/${newRoomId} ` +
+    `(tenantId=${tenantId}, lease=${leaseId}, amendments=${auditPayload.amendmentCountAfter}, ` +
+    `claimsRefreshed=${claimsRefreshed}, by=${auditPayload.actor})`);
+
+  return {
+    success: true,
+    mode: 'variation',
+    building, oldRoomId, newBuilding, newRoomId,
+    tenantId, oldLeaseId: leaseId,
+    effectiveDate: effectiveIso,
+    transferDeposit, prorateBills,
+    claimsRefreshed,
+    auditPayload,
+  };
+}
+
+/**
+ * Novation mode batch. OLD lease set to status='transferred' + pointer to
+ * NEW lease; NEW lease created at the new room with priorLeaseId chain.
+ *
+ * Pure helper — caller owns auth + validation. Returns audit payload.
+ */
+async function _runNovationMode(input, callerUid, callerEmail, firestore) {
+  const {
+    building, oldRoomId, newBuilding, newRoomId,
+    effectiveDate, transferDeposit, prorateBills, notes,
+    newRentAmount, newDeposit, contractDocument, contractFileName,
+  } = input;
+
+  const state = await _readTransferState(firestore, building, oldRoomId, newBuilding, newRoomId);
+  const { oldTenantRef, oldTenantData, tenantId, leaseId: oldLeaseId,
+          oldLeaseRef, oldLeaseData, oldEndDate, newTenantRef } = state;
+
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  const effectiveIso = effectiveDate.toISOString();
+  const newLeaseId = `CONTRACT_${Date.now()}_${newRoomId}`;
+  const newLeaseRef = firestore.collection('leases').doc(newBuilding).collection('list').doc(newLeaseId);
+
+  // Resolved values for new lease — novation may override rent/deposit
+  const resolvedRent = (newRentAmount !== undefined) ? newRentAmount : Number(oldLeaseData.rentAmount) || 0;
+  const resolvedDeposit = (newDeposit !== undefined) ? newDeposit : Number(oldLeaseData.deposit) || 0;
+  const resolvedDocPath = contractDocument || String(oldLeaseData.contractDocument || '');
+  const resolvedDocName = contractFileName || String(oldLeaseData.contractFileName || '');
+
+  // The new lease keeps the old's endDate (novation doesn't extend term).
+  // If admin wants a new endDate, they fire renewLease against the new room
+  // separately (per Q2=sequential CFs).
+  const endIso = oldEndDate.toISOString();
+
+  // ── Batch ───────────────────────────────────────────────────────────────
+  const batch = firestore.batch();
+
+  // 1. NEW tenant doc — populate with carried identity + NEW lease pointer
+  const carriedIdentity = _carryIdentity(oldTenantData);
+  const newTenantPatch = {
+    ...carriedIdentity,
+    building: newBuilding,
+    roomId: newRoomId,
+    status: 'occupied',
+    contractStart: effectiveIso,
+    contractEnd: endIso,
+    contractMonths: Number(oldLeaseData.contractMonths) || 0,
+    rentAmount: resolvedRent,
+    deposit: resolvedDeposit,
+    depositPaid: !!oldLeaseData.depositPaid,
+    activeContractId: newLeaseId,
+    contractId: newLeaseId,
+    lease: {
+      leaseId: newLeaseId,
+      status: 'active',
+      startDate: effectiveIso,
+      endDate: endIso,
+    },
+    contractDocument: resolvedDocPath,
+    contractFileName: resolvedDocName,
+    createdAt: now,
+    updatedAt: now,
+    transferredFromBuilding: building,
+    transferredFromRoom: oldRoomId,
+    transferredFromLeaseId: oldLeaseId,
+    lastTransferredAt: now,
+  };
+  batch.set(newTenantRef, newTenantPatch, { merge: false });
+
+  // 2. OLD tenant doc — blank identity
+  batch.update(oldTenantRef, _buildOldRoomClearPatch(now));
+
+  // 3. OLD lease — status='transferred' + pointer to new lease
+  batch.update(oldLeaseRef, {
+    status: 'transferred',
+    transferredAt: now,
+    transferredToLeaseId: newLeaseId,
+    transferredBy: callerUid,
+    transferredByEmail: callerEmail,
+    endReason: 'transferred',
+    updatedAt: now,
+  });
+
+  // 4. NEW lease — fresh doc
+  const newLeaseData = {
+    id: newLeaseId,
+    building: newBuilding,
+    roomId: newRoomId,
+    tenantId,
+    tenantName: String(oldLeaseData.tenantName || oldTenantData.name || ''),
+    moveInDate: effectiveIso,
+    moveOutDate: endIso,
+    contractStart: effectiveIso,
+    contractMonths: Number(oldLeaseData.contractMonths) || 0,
+    rentAmount: resolvedRent,
+    deposit: resolvedDeposit,
+    depositPaid: !!oldLeaseData.depositPaid,
+    depositPaidAt: oldLeaseData.depositPaidAt || null,
+    depositSlipRef: String(oldLeaseData.depositSlipRef || ''),
+    status: 'active',
+    contractFileName: resolvedDocName,
+    contractDocument: resolvedDocPath,
+    priorLeaseId: oldLeaseId,
+    transferredFromLeaseId: oldLeaseId,
+    transferredFromBuilding: building,
+    transferredFromRoom: oldRoomId,
+    transferDeposit,
+    prorateBills,
+    transferNotes: notes,
+    sourceBookingId: String(oldLeaseData.sourceBookingId || ''),
+    createdDate: now,
+    updatedAt: now,
+  };
+  batch.set(newLeaseRef, newLeaseData, { merge: false });
+
+  // 5. people doc — update location
+  const peopleRef = firestore.collection('people').doc(String(tenantId));
+  batch.set(peopleRef, {
+    currentBuilding: newBuilding,
+    currentRoom: newRoomId,
+    activeBuilding: newBuilding,
+    activeRoom: newRoomId,
+    updatedAt: now,
+  }, { merge: true });
+
+  try {
+    await batch.commit();
+  } catch (e) {
+    console.error('transferTenant[novation]: batch commit failed:', e);
+    throw new functions.https.HttpsError('internal',
+      e.message || 'Novation batch commit failed');
+  }
+
+  // ── Post-batch: liffUsers update + claim refresh (§7-FF) ────────────────
+  const linkedAuthUid = String(oldTenantData.linkedAuthUid || '').trim();
+  const claimsRefreshed = await _updateLiffUserAndClaims({
+    firestore,
+    tenantId,
+    linkedAuthUid,
+    newBuilding,
+    newRoomId,
+  });
+
+  const auditPayload = {
+    action: 'tenant_transferred',
+    mode: 'novation',
+    fromBuilding: building, fromRoom: oldRoomId,
+    toBuilding: newBuilding, toRoom: newRoomId,
+    tenantId,
+    oldLeaseId,
+    newLeaseId,
+    effectiveDate: effectiveIso,
+    transferDeposit, prorateBills,
+    oldRent: Number(oldLeaseData.rentAmount) || 0,
+    newRent: resolvedRent,
+    rentChanged: (newRentAmount !== undefined) && (resolvedRent !== (Number(oldLeaseData.rentAmount) || 0)),
+    depositChanged: (newDeposit !== undefined) && (resolvedDeposit !== (Number(oldLeaseData.deposit) || 0)),
+    documentReplaced: !!contractDocument,
+    claimsRefreshed,
+    notes: notes || '',
+    actor: callerEmail || callerUid,
+    actorUid: callerUid,
+  };
+
+  console.log(`transferTenant[novation]: ${building}/${oldRoomId} → ${newBuilding}/${newRoomId} ` +
+    `(${oldLeaseId} → ${newLeaseId}, tenantId=${tenantId}, rent ${auditPayload.oldRent}→${resolvedRent}, ` +
+    `claimsRefreshed=${claimsRefreshed}, by=${auditPayload.actor})`);
+
+  return {
+    success: true,
+    mode: 'novation',
+    building, oldRoomId, newBuilding, newRoomId,
+    tenantId, oldLeaseId, newLeaseId,
+    effectiveDate: effectiveIso,
+    transferDeposit, prorateBills,
+    claimsRefreshed,
+    auditPayload,
+  };
+}
+
+/**
+ * Update liffUsers/{lineUserId}.building+room AND re-mint Firebase Auth
+ * custom claims for the linked UID(s) per §7-FF three-leg:
+ *   1. setCustomUserClaims with new {room, building, tenantId} (+ preserve)
+ *   2. revokeRefreshTokens so the cached ID token can no longer be used
+ *      against rules that gate by request.auth.token.room
+ * Step 3 (client-side force-refresh) is handled by tenant_app's existing
+ * `_callLiffSignIn` fast-path (lines 9775-9800 — verified P1.1).
+ *
+ * Mirrors unlinkLiffUser's claim-handling pattern except minting fresh
+ * claims rather than stripping them. Returns the count of UIDs successfully
+ * updated (best-effort — failures here don't undo the Firestore batch).
+ */
+async function _updateLiffUserAndClaims({ firestore, tenantId, linkedAuthUid, newBuilding, newRoomId }) {
+  let claimsRefreshed = 0;
+
+  // ── Step A: find lineUserId via people doc lookup ───────────────────────
+  // people/{tenantId} carries lineUserId after liffSignIn links; the
+  // deterministic UID is 'line:' + lineUserId (per liffSignIn.js convention).
+  let lineUserId = null;
+  let peopleData = null;
+  try {
+    const peopleSnap = await firestore.collection('people').doc(String(tenantId)).get();
+    if (peopleSnap.exists) {
+      peopleData = peopleSnap.data() || {};
+      lineUserId = String(peopleData.lineUserId || '').trim() || null;
+    }
+  } catch (e) {
+    console.warn(`transferTenant: people lookup for ${tenantId} failed (non-fatal):`, e.message);
+  }
+
+  // ── Step B: update liffUsers/{lineUserId}.building + room ───────────────
+  if (lineUserId) {
+    try {
+      const liffRef = firestore.collection('liffUsers').doc(lineUserId);
+      const liffSnap = await liffRef.get();
+      if (liffSnap.exists) {
+        await liffRef.update({
+          building: newBuilding,
+          room: newRoomId,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } else {
+        console.warn(`transferTenant: liffUsers/${lineUserId} missing despite people.lineUserId set — skipping liff update`);
+      }
+    } catch (e) {
+      console.warn(`transferTenant: liffUsers update for ${lineUserId} failed (non-fatal):`, e.message);
+    }
+  }
+
+  // ── Step C: re-mint claims for both deterministic + legacy UIDs ─────────
+  // Two UIDs may be in play (per unlinkLiffUser pattern):
+  //   - deterministicUid = 'line:' + lineUserId (current liffSignIn flow)
+  //   - linkedAuthUid    = pre-liffSignIn anonymous UID stored on tenant doc
+  const uidsToRefresh = [];
+  if (lineUserId) uidsToRefresh.push('line:' + lineUserId);
+  if (linkedAuthUid && !uidsToRefresh.includes(linkedAuthUid)) {
+    uidsToRefresh.push(linkedAuthUid);
+  }
+
+  if (uidsToRefresh.length === 0) {
+    // No linked Auth UID — tenant has never signed into LIFF. Nothing to
+    // refresh. This is normal for manually-created tenants who never used
+    // the LINE link.
+    return 0;
+  }
+
+  const newClaims = {
+    room: newRoomId,
+    building: newBuilding,
+    tenantId,
+  };
+
+  const auth = admin.auth();
+  const results = await Promise.allSettled(
+    uidsToRefresh.map(async uid => {
+      try {
+        // Preserve any non-room/building/tenantId claims that may be on
+        // the user record (e.g. role='player' from a prior player phase —
+        // although that combination shouldn't occur).
+        const userRecord = await auth.getUser(uid).catch(() => null);
+        const existingClaims = (userRecord && userRecord.customClaims) || {};
+        const mergedClaims = { ...existingClaims, ...newClaims };
+        await auth.setCustomUserClaims(uid, mergedClaims);
+        await auth.revokeRefreshTokens(uid);
+        return uid;
+      } catch (e) {
+        // auth/user-not-found is expected for legacyAuthUid that was cleaned
+        // up by cleanupAnonymousUsers — log warn, don't throw.
+        if (e && e.code === 'auth/user-not-found') {
+          console.info(`transferTenant: ${uid} not found (legacy UID likely cleaned up) — skipping`);
+        } else {
+          console.warn(`transferTenant: claim refresh failed for ${uid}: ${e?.message || e}`);
+        }
+        throw e;
+      }
+    })
+  );
+  claimsRefreshed = results.filter(r => r.status === 'fulfilled').length;
+  return claimsRefreshed;
+}
+
+/**
+ * Best-effort RTDB audit write. Same pattern as renewLease._writeAuditLog.
+ */
+async function _writeAuditLog(payload) {
+  try {
+    if (!admin.database) return;
+    const ref = admin.database().ref('audit_logs/leases').push();
+    await ref.set({
+      ...payload,
+      at: admin.database.ServerValue.TIMESTAMP,
+    });
+  } catch (e) {
+    console.warn('transferTenant: audit log write failed (non-fatal):', e && e.message ? e.message : e);
+  }
+}
+
+exports.transferTenant = functions
+  .region('asia-southeast1')
+  .https.onCall(async (data, context) => {
+    // ── Auth ────────────────────────────────────────────────────────────────
+    if (!context.auth || !context.auth.uid) {
+      throw new functions.https.HttpsError('unauthenticated', 'Sign-in required');
+    }
+    if (context.auth.token.admin !== true) {
+      throw new functions.https.HttpsError('permission-denied',
+        'Admin claim required to transfer a tenant');
+    }
+
+    // ── Input validation ────────────────────────────────────────────────────
+    const input = await _validateInput(data);
+    const callerUid = context.auth.uid;
+    const callerEmail = String(context.auth.token.email || '');
+
+    const firestore = admin.firestore();
+
+    const runner = input.mode === 'variation' ? _runVariationMode : _runNovationMode;
+    const result = await runner(input, callerUid, callerEmail, firestore);
+    await _writeAuditLog(result.auditPayload);
+    const { auditPayload, ...callerResult } = result;
+    return callerResult;
+  });
+
+// Export internals for unit testing.
+exports._validateInput = _validateInput;
+exports._readTransferState = _readTransferState;
+exports._runVariationMode = _runVariationMode;
+exports._runNovationMode = _runNovationMode;
+exports._updateLiffUserAndClaims = _updateLiffUserAndClaims;
+exports._writeAuditLog = _writeAuditLog;
+exports._carryIdentity = _carryIdentity;
+exports._buildOldRoomClearPatch = _buildOldRoomClearPatch;
+exports._VALID_MODES = VALID_MODES;
+exports._ROOM_ID_RE = ROOM_ID_RE;
+exports._IDENTITY_FIELDS = IDENTITY_FIELDS;
