@@ -1,195 +1,204 @@
-# Implement B — `transferTenant` CF + composite "📝 ต่อสัญญา/ย้ายห้อง" UI (Plan-First, M)
+# Plan B' — Per-room occupancyLog: durable + scalable + audit-grade history
 
 **Status:** plan-first, awaiting ✅ from user. Do NOT edit code until approved.
 
-**Triggered by:** [next_session_handoff_2026_05_21_renewlease_verified_redesign_spec.md](../../../.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/next_session_handoff_2026_05_21_renewlease_verified_redesign_spec.md) — user surfaced mid-test that current "📝 ต่อสัญญา" modal handles same-room renewal ONLY, but real intent includes (i) custom newStartDate, (ii) toggle ห้องเดิม/ห้องใหม่, (iii) room picker, (iv) inline contract upload, (v) auto-fill new-room defaults, (vi) overall "reduce data entry".
+**Triggered by:** User feedback 2026-05-21 evening (7) after Plan B P3-P7 closed —
+"เราเคยย้ายลูกบ้านไปห้อง 17 แต่ใน history จะไม่ขึ้นว่าเคยอยู่ห้องนั้น ... เราควรมี record
+ว่าผู้เช่าคนนี้เคยไปอยู่ห้องไหนบ้าง". Confirmed via grep of [LeaseAgreementManager.getLeaseHistory()](shared/lease-config.js:97):
+filters by **current** `lease.roomId === roomId` — variation transfers flip the field
+in-place so the OLD room loses the lease from its history view. Data trail exists
+(`amendments[]`, RTDB `audit_logs/leases`) but is not indexed by room.
 
-**Previous plan:** C renewLease CF + admin UI — SHIPPED + LIVE-VERIFIED 2026-05-21 (commits `c4dcbdb` / `75212f6` / `c6e6c63` / `99868ae` / deploy `firebase deploy --only functions:renewLease`). Plan-Review section closed in prior session. This file overwrites that plan.
+**Previous plan:** Plan B (transferTenant + composite UI) — SHIPPED + LIVE-VERIFIED
+all 4 paths via real user clicks 2026-05-21 evening (7). Review section closed.
+This file overwrites that plan.
 
-**Architectural Direction (LOCKED — do not re-litigate):** Direction B = 2 CFs + composite UI.
-- Keep `renewLease` as-is (same-room renewal + extension modes). Verified live.
-- Build NEW `transferTenant` CF — room change only, novation OR variation modes.
-- Rebuild "📝 ต่อสัญญา" modal as a composite UI that routes to renewLease or transferTenant (or both, sequenced) depending on user toggle.
+**Explicit design criteria from user** (must thread through every sprint):
+1. **ยั่งยืน** — append-only · immutable docs · rule blocks UPDATE/DELETE on logs
+2. **Scalable** — composite indexes ready · collectionGroup-friendly · pagination
+3. **Audit/compliance** — by/byEmail/at/source on every entry · no gap in chain · idempotent retries
 
 ---
 
 ## Why now
 
-1. **Real user request from live testing** — user verbatim: _"ลดการกรอกข้อมูล"_ + _"ทำเป็น choice ถ้าต่อสัญญาห้องเดิม หรือย้ายไปห้องใหม่"_. Direct UX gap caught while exercising the just-shipped renewLease flow.
-2. **§7-DD high-risk transition (per [lifecycle_tenant_transitions.md § B](../../../.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/lifecycle_tenant_transitions.md))** — touches 4+ collections + Auth claims. Currently zero CF support; admin must do it manually = high drift risk.
-3. **Pairs naturally with renewLease** — both surface in the same modal, both end up being the "this tenant is staying" flow with one toggle (same room vs new room).
-4. **Unblocks lifecycle map B** — transitions.md prioritisation #4. After this, only A (returning tenant), G/H (forced-archive variants), and the data-model-change items remain on the missing list.
+1. **Real UX gap** — admin opens "📋 ประวัติผู้เช่าเก่า" for a room and sees nothing if the
+   prior tenant was variation-transferred away. Data isn't lost (`amendments[]` carries it),
+   but the indexed surface doesn't expose it. §7-T cousin (writer/reader drift).
+2. **Unblocks compliance & legal** — PDPA §32 data-deletion + future tenant-DSR
+   requests need a queryable per-tenant occupancy timeline. Today building from scratch
+   requires scanning every lease's `amendments[]` array.
+3. **Future-proofs every upcoming lifecycle CF** — A (returning tenant), G/H
+   (forced archive), E (lease assignment) ALL benefit from the same indexed log.
+   Shipping the schema now means every future state-transition CF inherits "free"
+   room + tenant history surfaces.
+4. **Backfillable from existing data** — `leases/.../amendments[]` + `priorLeaseId`
+   chain + `transferredToLeaseId` already carry every event we need. One-shot script
+   reconstructs the log without manual recall.
 
 ## Goal
 
-Ship `transferTenant` CF + composite admin UI so admin can, in one modal, perform:
+Ship a per-room occupancy history collection that:
+- Survives every existing + future state transition (move-in, move-out,
+  transfer, archive, restore, lease assignment) without code change to readers
+- Answers BOTH "ใครเคยอยู่ห้อง 17?" and "ฉันเคยอยู่ห้องไหนบ้าง?" via single Firestore query
+- Carries a complete audit trail (actor + timestamp + source CF + reason) on EVERY entry
+- Is **append-only + immutable** — Firestore rule rejects update/delete on log docs
+- Has zero data loss on retry — idempotent via deterministic keys
+- Backfills correctly from existing prod data without manual reconstruction
 
-| Path | What user picks | CFs fired |
-|---|---|---|
-| Renew same room | toggle="ห้องเดิม" + new endDate | `renewLease` (existing) |
-| Extend same room | toggle="ห้องเดิม" + mode="extension" + new endDate | `renewLease` extension mode (existing) |
-| Move room only | toggle="ห้องใหม่" + pick room (same endDate, no rent change) | `transferTenant` (NEW) |
-| Move room + renew | toggle="ห้องใหม่" + pick room + new endDate (+ optional rent change) | `transferTenant` (NEW), then `renewLease` from new-room context |
+## Schema decisions to confirm BEFORE coding (your call)
 
-With these guarantees:
-- Admin-only (custom claim gated)
-- §7-DD discipline — single batched Firestore write for transferTenant
-- §7-FF discipline — `setCustomUserClaims` + `revokeRefreshTokens` on `token.room` change
-- Atomic-or-fail (no partial transfers); composite UI orchestrates sequential CFs with rollback messaging if step 2 fails after step 1 succeeded
-- Existing renewLease is NOT modified except for ONE optional `newStartDate` parameter (backward-compatible)
+### D1. Subcollection vs flat collection
 
-## Scope decisions to confirm BEFORE coding (your call)
+- (a) **Subcollection** `tenants/{building}/list/{roomId}/occupancyLog/{auto}` ⭐ recommended
+  - Pros: room-scoped queries trivial (`getDocs(.../occupancyLog)`); rules mirror tenants pattern; existing precedent (`wellnessClaimed`, `pets` per firestore.rules:316/340); `collectionGroup('occupancyLog')` answers per-tenant queries
+  - Cons: 2 docs per transfer = 2 batched writes in different subcollection paths
+- (b) **Flat top-level collection** `roomOccupancyLog/{auto}` with `{building, roomId, ...}`
+  - Pros: one rule block; one composite index suffices
+  - Cons: new top-level collection adds project surface; rule scoping awkward (admin all + tenant-self + nobody-else)
+- (c) **Per-tenant subcollection** `people/{personId}/occupancyLog/{auto}`
+  - Pros: tenant timeline trivial
+  - Cons: "who lived in room 17" requires collectionGroup scan; loses room-scoped affordance
 
-### Q1. Lease ID continuity on transfer (recommendation: fresh id)
+### D2. Schema fields (immutable per doc)
 
-- (a) **Fresh `CONTRACT_{ts}_{newRoom}` ID** for the new lease, linked to old via `priorLeaseId` + `transferredFromLeaseId`. Matches renewLease pattern. ⭐ recommended
-- (b) **Keep old leaseId** under the new room key (rename). Cleaner if you think of lease-as-tenure rather than lease-as-contract, but breaks the immutable-id invariant.
-- (c) **Same id, suffix with `-T1`/`-T2`** for transfer count. Visible chain but ugly.
+Proposed (recommend):
+```js
+{
+  // Identity (denormalized for query-without-join)
+  tenantId: string,           // canonical id (carries across rooms)
+  tenantName: string,         // display copy at time of event
+  personId: string | null,    // people/{personId} link if present
 
-### Q2. Combined transfer-with-endDate-change (recommendation: sequential CFs)
+  // Where + when
+  building: string,           // 'rooms' | 'nest' | ...
+  roomId: string,
+  at: Timestamp,              // serverTimestamp() at write — sort key
 
-- (a) **Composite UI fires 2 CFs in sequence** — `transferTenant` first (room change, same endDate), then `renewLease` against new room with newEndDate. Each CF stays single-purpose, audit trail is two clear entries. ⭐ recommended
-- (b) **Single `transferTenant` accepts optional `newEndDate`** — one atomic batch but balloons transferTenant scope; cousins to "god CF".
-- (c) **New `transferAndRenew` CF** — third CF that wraps both. Triples test surface for a rare path.
+  // What happened
+  action: 'moved_in' | 'moved_out' | 'transferred_in' | 'transferred_out'
+        | 'archived'  | 'restored',
+  reason: string | null,      // human-readable (admin notes / archive reason)
 
-### Q3. Tenant LIFF session impact on `token.room` change (recommendation: verify existing handling sufficient)
+  // Cross-reference for the room-pair side of a transfer (null for non-transfer)
+  otherBuilding: string | null,
+  otherRoom: string | null,
 
-After transferTenant changes `token.room`, the tenant's cached LIFF ID token still points at the old room until refresh. Per §7-FF the CF MUST call `setCustomUserClaims + revokeRefreshTokens`. Question: does tenant_app's existing fast-path (which now uses `getIdTokenResult(true)` per 2026-05-20 night handoff) gracefully re-mint claims?
+  // Lease at the time
+  leaseId: string,
 
-- (a) **Yes — same `unlinkLiffUser` pattern works for room change.** Verify by reading tenant_app `_callLiffSignIn`. If yes, no client change needed. ⭐ likely
-- (b) **No — need explicit "your room changed, please reopen LINE" client toast.** Adds 30 min UI work to P3.
+  // Actor (admin caller — every entry MUST have this)
+  by: string,                 // admin UID
+  byEmail: string | null,     // admin email (denormalized — survives user delete)
 
-Will resolve in P1 spec phase by reading `_callLiffSignIn` + checking handoff `2026-05-20_liff_unlink_gate_complete.md`.
+  // Provenance (which CF wrote this — for backfill differentiation + audit)
+  source: 'convertBookingToTenant' | 'transferTenant.variation' | 'transferTenant.novation'
+        | 'archiveTenantOnMoveOut' | 'restoreReturningTenant' | 'backfill' | 'manual',
 
-### Q4. Old-room vacancy timing on transfer (recommendation: immediate)
+  // Idempotency key — deterministic per event (re-runs don't double-write)
+  // Shape: '{source}-{leaseId}-{action}-{building}-{roomId}' (no ts because ts can be
+  // serverTimestamp sentinel; uniqueness comes from the structural triple).
+  idempotencyKey: string,
 
-- (a) **Immediate vacate** — same Firestore batch clears old-room tenant doc + ends old lease + populates new-room tenant doc. Atomicity wins. Undo = call transferTenant again old↔new. ⭐ recommended
-- (b) **24-hour "ย้ายไป..." badge** before vacate — admin can undo within window. Adds a state machine; new "transferring" status; cron sweep to flip to "vacant" after 24h.
+  // Optional compliance/notes blob — admin can attach free text
+  notes: string | null,
+}
+```
 
-### Q5. Cleanup of test tenant ทดสอบ ห้อง15 (your call — recommendation: keep)
+Confirm or override.
 
-Production currently has `tenants/rooms/list/15 = ทดสอบ ห้อง15` with 2 leases (one renewed, one active) from the 2026-05-21 evening verification.
+### D3. Doc ID strategy (idempotency)
 
-- (a) **Keep as fixture** — exercise transferTenant against this same tenant in P3 (transfer ห้อง 15 → some vacant ห้อง, then back). Production already had 1 pre-existing orphan lease so adding 2 more for active testing is low cost. ⭐ recommended
-- (b) **Clean now (P0)** — admin UI archive → `tools/fix-orphan-leases.js` for the ended leases. Removes "ทดสอบ" from prod data. Adds ~15 min before P1 starts.
-- (c) **Clean AFTER sprint** — keep through P3 verification, archive at P7.
+- (a) **Deterministic ID = idempotencyKey** ⭐ recommended
+  - Pros: re-running backfill is no-op (set with merge:false would fail; we use set without merge); CF retries hit the same key
+  - Cons: must hash long keys (Firestore doc ID ≤ 1500 bytes — fine for our shape)
+- (b) **Auto ID** (`doc(coll).id`)
+  - Pros: simpler
+  - Cons: CF retry doubles writes; backfill needs explicit dedup logic
 
-### Q6. Sprint phasing — ship all P1-P7 in one approval cycle, or split
+### D4. Append-only rule enforcement
 
-- (a) **Single plan, ship all 7 phases** — fastest end-to-end. ⭐ recommended for momentum
-- (b) **Split: approve P1-P4 (CF + tests + deploy + verify), then plan P5-P7 (UI + lifecycle doc) separately** — safer if user wants to inspect CF outcomes before committing to UI rebuild
+Recommend: write `occupancyLog` rule that blocks `update` + `delete` entirely (even for admin).
+Compliance-grade history MUST be tamper-proof from the dashboard. Admin who needs to
+correct an error writes a NEW entry (`action: 'corrected'` or a `correctedById` link).
+
+- (a) **Strict immutable** ⭐ recommended — admin cannot edit or delete after write
+- (b) **Soft immutable** — admin can delete but UI hides the action
+- (c) **Mutable** — admin can edit (rejected: defeats audit grade)
+
+### D5. Writes within existing CFs' batches
+
+Each occupancyLog write MUST be in the same Firestore batch as the lease/tenant update
+it accompanies. Partial-success would create orphan log entries OR lose history.
+
+- (a) **Single batch** ⭐ — atomicity guaranteed; failure rolls everything back
+- (b) **Separate write after batch.commit** — simpler code but breaks atomicity invariant
+
+### D6. Backfill strategy
+
+- (a) **Lease-derived reconstruction** ⭐ recommended
+  - Iterate every lease doc in `leases/{b}/list/*`
+  - For each lease:
+    - Write `moved_in` at `lease.contractStart` / `lease.moveInDate`
+    - If `amendments[]`: for each amendment, write `transferred_out` at `fromRoom` + `transferred_in` at `toRoom` (sorted by `at`)
+    - If `status='transferred'`: write `transferred_out` at terminal `transferredAt` + matching `transferred_in` at the **next** lease doc (via `transferredToLeaseId`)
+    - If `status='renewed'`: NO write (renewal doesn't change room — already covered by next lease's `moved_in`)
+    - If `status='ended'`: write `moved_out` at `endedAt`
+  - Use `source: 'backfill'` + deterministic idempotencyKey so re-runs are safe
+- (b) **No backfill** — only forward events tracked
+  - Pros: simplest
+  - Cons: existing data forever opaque; defeats "ผู้เช่าเก่า" use case for ทดสอบ ห้อง15's 6-deep chain
+
+### D7. Reader API shape
+
+- (a) **`OccupancyLog.getByRoom(building, roomId, opts)`** — new module ⭐ recommended
+  - Pure read; pagination via `limit` + `startAfter`; sorted by `at` DESC
+  - Companion `OccupancyLog.getByTenant(tenantId, opts)` via collectionGroup
+- (b) **Extend `LeaseAgreementManager.getLeaseHistory(building, roomId)`** to merge log + leases
+  - Pros: one entry point for callers
+  - Cons: mixes two collections, harder to test
 
 ---
 
-## Phasing — 7 phases, ~5-7 sessions estimated
+## State write contract — what each CF writes
 
-Each phase ends with a verifiable checkpoint. Mark complete only on green checkpoint.
+Mirror existing §7-DD batches. EVERY transition adds 1-2 log entries TO THE SAME BATCH.
 
-### Phase 1 — Spec `transferTenant` CF ✅ DONE
+### `transferTenant` (variation)
 
-- [x] **P1.1** Read `_callLiffSignIn` in `tenant_app.html` + `unlinkLiffUser` handling docs → resolve Q3
-  → tenant_app.html:9765-9800. Fast-path uses `getIdTokenResult(true)` force-refresh; on `auth/user-token-expired` falls through to `liffSignIn` POST which re-mints fresh custom token. **Q3=(a) — no client changes needed**, server-side §7-FF three-leg is sufficient.
-- [x] **P1.2** Write CF skeleton signature `transferTenant(building, oldRoomId, newBuilding, newRoomId, opts)` — see `functions/transferTenant.js`
-- [x] **P1.3** State-write matrix embedded as CF JSDoc (lines 60-95) — variation + novation legs documented
-- [x] **P1.4** Default mode = `variation` (per lifecycle § B vote)
-- [x] **Checkpoint:** spec embedded as JSDoc; §7-DD matrix per-mode explicit; §7-FF claim-refresh helper isolated as `_updateLiffUserAndClaims`.
+| Existing batch ops | + occupancyLog adds |
+|---|---|
+| set tenants/{newRoom} | + write `transferred_in` at newRoom subcol |
+| update tenants/{oldRoom} (clear) | + write `transferred_out` at oldRoom subcol |
+| update lease (`amendments[]` arrayUnion + roomId flip) | (no extra) |
+| RTDB audit_logs/leases | (unchanged) |
 
-### Phase 2 — Implement `transferTenant` CF + unit tests ✅ DONE
+### `transferTenant` (novation)
 
-- [x] **P2.1** `functions/transferTenant.js` created (920 LOC) — `_validateInput`, `_readTransferState`, `_runVariationMode`, `_runNovationMode`, `_updateLiffUserAndClaims` (§7-FF), `_writeAuditLog`, top-level `exports.transferTenant`
-- [x] **P2.2** `functions/__tests__/transferTenant.test.js` created — 51 tests across 7 sprint groups (S1 auth+validation: 17, S2 state-read: 7, S3 variation: 7, S4 novation: 5, S5 claim-refresh: 7, S6 audit: 3, S7 integration: 3, plus 2 helper subtests)
-- [x] **P2.3** Wired into `functions/index.js:107` (right after renewLease)
-- [x] **P2.4** transferTenant tests: 51/51 green
-- [x] **P2.5** Full functions suite: 324/324 green (273 baseline + 51 new) — zero regressions
-- [x] **Checkpoint:** ALL 51 transferTenant tests pass; renewLease tests + full suite untouched/green.
+Same 2 occupancyLog entries (in/out) — `source: 'transferTenant.novation'`. New lease creation
+is referenced via `leaseId` field in the log entry.
 
-### Phase 3 — Deploy + live-verify `transferTenant`
+### `archiveTenantOnMoveOut`
 
-- [ ] **P3.1** From the MAIN repo (NOT worktree; `functions/node_modules` lives there): `firebase deploy --only functions:transferTenant` — region SE1
-- [ ] **P3.2** Live verification via Chrome MCP — playbook:
-  - Login as admin on https://the-green-haven.vercel.app
-  - Pick a vacant target room (recommend: pick a Nest room or rooms 14/16/17 — verify vacant first via tenant page)
-  - Open DevTools console; call `transferTenant` via `window.firebase.functions.httpsCallable('transferTenant')` with `{ building: 'rooms', oldRoomId: '15', newBuilding: 'rooms', newRoomId: '<chosen>', opts: { mode: 'variation' } }`
-  - Verify 11 Firestore + Auth checks (mirror the renewLease verification table):
-    - old `tenants/rooms/list/15` cleared (status='vacant', name='')
-    - new `tenants/rooms/list/<chosen>` populated with carried identity
-    - old lease `status` (variation: still `active`, novation: `transferred` + `transferredToLeaseId`)
-    - new lease created (novation only) with `priorLeaseId`
-    - `amendments[]` arrayUnion entry (variation only)
-    - Auth `getUser(uid).customClaims.room === '<chosen>'`
-    - RTDB `audit_logs/leases/{push}` entry with `action='tenant_transferred'`
-    - tenant_app — close LIFF, reopen, verify room shown is now `<chosen>` (claim refresh worked per §7-FF)
-- [ ] **P3.3** If all 11 green: §7-J probation CLOSED for transferTenant. Reverse-transfer (move ทดสอบ ห้อง15 back to ห้อง 15) for next session's fixture reuse.
-- [ ] **P3.4** If anything red: rollback via reverse-transfer or `tools/fix-orphan-leases.js`; debug; re-deploy; retry. Do NOT proceed to P4 until P3 green.
-- [ ] **Checkpoint:** transferTenant deployed; live-verified both modes; §7-J probation closed; test fixture restored to ห้อง 15.
+| + occupancyLog | `moved_out` (action) + `archived` (action) — split into 2 events OR fold into 1 with `action: 'archived'` |
 
-### Phase 4 — Add optional `newStartDate` to renewLease (backward-compat)
+Recommend: ONE entry `action: 'archived'` (move-out is a special case of archive when no
+transferTo is set).
 
-- [ ] **P4.1** Edit `functions/renewLease.js` `_validateInput`:
-  - Add optional `newStartDate` field — accept ISO string or null/undefined
-  - When omitted: behavior unchanged (start = oldEndDate). When provided: validate it's a Date, validate `oldEndDate <= newStartDate < newEndDate`
-- [ ] **P4.2** Edit `_runRenewalMode`:
-  - Use `input.newStartDate || oldEndDate.toISOString()` as `startIso`
-  - `contractMonths` computed from `(newEndDate - resolvedStart)` instead of `(newEndDate - oldEndDate)`
-- [ ] **P4.3** Add 3 tests to `renewLease.test.js`:
-  - validate accepts ISO newStartDate
-  - validate rejects newStartDate that is before oldEndDate (would create gap-but-overlap)
-  - validate rejects newStartDate ≥ newEndDate (zero or negative term)
-  - renewal mode honors explicit newStartDate
-- [ ] **P4.4** Run renewLease suite → green; run full suite → green
-- [ ] **P4.5** Deploy: `firebase deploy --only functions:renewLease`
-- [ ] **P4.6** Live verify via Chrome MCP — single test call with `newStartDate` set; verify new lease's `contractStart` matches input, not oldEndDate
-- [ ] **Checkpoint:** renewLease accepts optional newStartDate; backward-compat preserved (calls without it behave identically); deployed; live-verified.
+### `convertBookingToTenant`
 
-### Phase 5 — Composite UI: rebuild `shared/dashboard-lease-renew.js`
+| + occupancyLog | `moved_in` at the assigned room |
 
-- [ ] **P5.1** Add room-toggle radio group at top of modal (above all existing inputs):
-  - "📄 ต่อสัญญาห้องเดิม" (default — keeps existing renewLease flow)
-  - "🚪 ย้ายไปห้องใหม่" (new — reveals room picker)
-- [ ] **P5.2** Room picker (revealed when "ย้ายไปห้องใหม่" selected):
-  - Building dropdown (sourced from `BuildingRegistry.list()`)
-  - Room dropdown (sourced from `tenants/{building}/list/*` filtered by `status === 'vacant'` — pattern from `shared/dashboard-requests-admin.js:1445`)
-  - Show selected room's rent/deposit/address as auto-fill preview (sourced from `buildings/{building}/rooms/{roomId}` registry where present, else lease-default)
-  - Move-only checkbox: "🎯 ย้ายอย่างเดียว (ไม่เปลี่ยนวันสิ้นสุดสัญญา)" — if checked, hide newEndDate field + fire transferTenant ONLY
-- [ ] **P5.3** Custom `newStartDate` field (always visible):
-  - Default = oldEndDate (matches renewLease's current implicit behavior)
-  - In transfer mode, defaults to `effectiveDate=today` and labeled "วันเริ่มที่ห้องใหม่"
-- [ ] **P5.4** Inline contract upload widget (replaces existing text URL field):
-  - File input → `<input type="file" accept=".pdf,.jpg,.png">`
-  - On change: upload to `gs://...firebasestorage.../leaseDocuments/{building}/{roomId}/{timestamp}_{filename}` using existing pattern from `shared/dashboard-tenant-lease.js:859`
-  - On success: store `contractDocument` (Storage path) + `contractFileName` for CF payload
-  - Show upload progress + filename + 🗑️ remove button
-- [ ] **P5.5** Submit handler dispatch:
-  - Mode = "ห้องเดิม" (renewal/extension) → fire `renewLease` (existing path, with `newStartDate` if set)
-  - Mode = "ห้องใหม่" + move-only → fire `transferTenant` only
-  - Mode = "ห้องใหม่" + endDate changed → fire `transferTenant` first; on success, fire `renewLease` against `{building: newBuilding, roomId: newRoomId}`; on transferTenant failure → toast + abort; on renewLease-after-transfer failure → toast WITH NOTICE "ย้ายห้องสำเร็จแต่ต่อสัญญาไม่สำเร็จ — แก้ไขใน tenant modal" (transfer is the atomic op; the renewal is the second leg)
-- [ ] **P5.6** Hard cap target: ≤ 600 LOC for `shared/dashboard-lease-renew.js` (currently 355). If exceeds, extract `_lrRoomPicker.js` helper. **No file-size override.**
-- [ ] **P5.7** Pre-commit hook check: `npm run audit:size` shows the file within hard limits.
-- [ ] **Checkpoint:** Modal opens; toggle works; room picker populates from vacant rooms; upload widget round-trips a file; both single-CF and dual-CF paths fire correctly on submit.
+### Future: `restoreReturningTenant` (planned A)
 
-### Phase 6 — E2E: cover all 4 user paths against `ทดสอบ ห้อง15`
+| + occupancyLog | `restored` at the room being re-occupied |
 
-Use Chrome MCP. Each path is one verification cycle.
+### `renewLease`
 
-- [ ] **P6.1** Path A: Renew-same — open modal on ห้อง 15, leave toggle="ห้องเดิม", change endDate to 2029, submit → verify renewLease ran (new leaseId), tenant doc updated, audit log entry. Expected: §7-J test pattern from prior session.
-- [ ] **P6.2** Path B: Extend-same — open modal, switch mode-radio to "extension", change endDate to 2029, submit → verify `extensions[]` arrayUnion entry, same leaseId, no new lease doc.
-- [ ] **P6.3** Path C: Transfer-only — open modal, toggle="ย้ายไปห้องใหม่", pick vacant room (e.g. ห้อง 17), check "ย้ายอย่างเดียว", submit → verify transferTenant ran, old room cleared, new room populated, claims re-minted (admin tab inspect), NO new lease (variation).
-- [ ] **P6.4** Path D: Transfer+renew — start from path-C end state, open modal on ห้อง 17, toggle="ย้ายไปห้องใหม่", pick ห้อง 15 (now vacant), change endDate to 2030, submit → verify transferTenant ran first (audit entry), then renewLease ran against ห้อง 15 (audit entry), both legs visible in `audit_logs/leases/`.
-- [ ] **Checkpoint:** all 4 paths verified live. Each Firestore + Auth + RTDB write inspected via Chrome MCP javascript_tool. Zero console errors.
-
-### Phase 7 — Memory + doc updates
-
-- [ ] **P7.1** Update [lifecycle_tenant_transitions.md](../../../.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/lifecycle_tenant_transitions.md):
-  - Move § B from "Missing transitions" → "Existing transitions" table
-  - Update Prioritisation list (B done; A becomes next #1)
-  - Add `transferTenant` verifier to ## Verification grep block
-- [ ] **P7.2** Update MEMORY.md 🎯 Current state — add a `next_session_handoff_2026_05_<date>_transfertenant_shipped.md` entry; demote 2026-05-21 evening (5) entry one slot
-- [ ] **P7.3** If §7-J probation closed for transferTenant via P3.3 — link in `next_session_handoff_*.md`
-- [ ] **P7.4** Run `npm run verify:memory` — must exit 0 before commit
-- [ ] **P7.5** Pre-commit hook self-test on the touched memory files: passes
-- [ ] **P7.6** Commit per type: `feat(transferTenant): CF + admin UI for room-change (Plan B)` — one commit per phase if granularity helps, else single bundle
-- [ ] **P7.7** Push to origin/main; Vercel auto-deploys
-- [ ] **Checkpoint:** docs + memory in sync; verify:memory green; everything pushed.
+**NO write to occupancyLog** — renewal doesn't change room. The existing tenant's
+`moved_in` from a prior CF already covers their presence at this room. (`amendments[]` on
+the lease still tracks lease-level events; occupancyLog is room-level.)
 
 ---
 
@@ -197,68 +206,174 @@ Use Chrome MCP. Each path is one verification cycle.
 
 | File | Action | Est LOC |
 |---|---|---|
-| `functions/transferTenant.js` | NEW | ~450 |
-| `functions/__tests__/transferTenant.test.js` | NEW | ~600 (25 tests) |
-| `functions/renewLease.js` | MODIFY (add optional newStartDate) | +~40 |
-| `functions/__tests__/renewLease.test.js` | MODIFY (+3 tests) | +~80 |
-| `functions/index.js` | MODIFY (add transferTenant export) | +1 |
-| `shared/dashboard-lease-renew.js` | REWRITE (composite UI) | 355 → ~600 |
-| `shared/building-registry.js` | LIKELY-NO-CHANGE (read-only consumer) | 0 |
-| `lifecycle_tenant_transitions.md` | MODIFY (move B; update verifier) | +~30 |
-| `MEMORY.md` | MODIFY (1 line in 🎯 + entry in handoff index) | +2 |
-| NEW handoff | NEW `next_session_handoff_*.md` | ~80 |
+| `functions/_occupancyLog.js` | NEW — helper module exporting `appendLog(batch, opts)` + `buildIdempotencyKey(opts)` | ~120 |
+| `functions/transferTenant.js` | MODIFY — both modes call `appendLog` in batch (2 entries each) | +~40 |
+| `functions/__tests__/transferTenant.test.js` | MODIFY (+8 tests covering log writes both modes + idempotency + missing-claim guard) | +~140 |
+| `functions/archiveTenantOnMoveOut.js` | MODIFY — call `appendLog` for archive event | +~20 |
+| `functions/__tests__/archiveTenantOnMoveOut.test.js` | MODIFY (+3 tests for log write + idempotency) | +~60 |
+| `functions/convertBookingToTenant.js` | MODIFY — call `appendLog` for moved_in | +~15 |
+| `functions/__tests__/convertBookingToTenant.test.js` | MODIFY (+3 tests) | +~50 |
+| `firestore.rules` | MODIFY — append `occupancyLog/{auto}` subcollection rule (admin-read + tenant-self-read + create-only via CF + reject update/delete) | +~25 |
+| `firestore.rules.test.js` | MODIFY (+8 rule tests covering each access pattern) | +~120 |
+| `shared/lease-config.js` | MODIFY — `LeaseAgreementManager.getLeaseHistory()` augmented to also pull occupancyLog AND/OR add new `OccupancyLog` module | +~30 |
+| `shared/occupancy-log.js` | NEW — `OccupancyLog.getByRoom`, `OccupancyLog.getByTenant`, helper formatters | ~120 |
+| `shared/dashboard-tenant-modal.js` | MODIFY — `showTenantLeaseHistory` renders merged view: lease docs + occupancyLog timeline | +~80 |
+| `dashboard.html` | MODIFY — add `shared/occupancy-log.js` script tag | +1 |
+| `tools/backfill-occupancy-log.js` | NEW — dry-run + apply backfill script | ~200 |
+| `lifecycle_tenant_transitions.md` | UPDATE Existing rows · ## Verification block · Cross-references | +~30 |
+| `next_session_handoff_2026_05_22_occupancy_log.md` | NEW handoff | ~90 |
+| `MEMORY.md` | UPDATE 🎯 Current state | +2 |
 
-Total: ~7 files, ~1,800 LOC net new + modified. Beyond the §1 Plan-First threshold of 5 files. **Plan-First mandatory** (already in plan-first per this file).
+Total: **~15 files, ~1,200-1,400 LOC net new + modified.** Well above 5-file Plan-First threshold.
+
+---
+
+## Sprint plan (S1-S7, ~6-8 sessions estimated)
+
+### S1 — Schema + rule + helper module + first CF wire ✅ SHIPPED `687771f`
+
+- [x] **S1.1** Created `functions/_occupancyLog.js` (167 LOC): `appendLog(writer, firestore, payload)` accepts both batch AND tx (both have `.set`). `buildIdempotencyKey({source,leaseId,action,building,roomId,discriminator})` returns `__`-joined sanitized key. Schema fully documented in JSDoc + `VALID_ACTIONS` + `VALID_SOURCES` sets for compile-time-ish validation.
+- [x] **S1.2** Updated `firestore.rules` — nested rule at `tenants/{b}/list/{r}/occupancyLog/{eventId}` + collectionGroup wildcard at `/{path=**}/occupancyLog/{eventId}` (catches per-tenant timeline queries). `create, update, delete: if false` everywhere = CF-only via Admin SDK + tamper-proof.
+- [x] **S1.3** `firestore.rules.test.js` +8 tests: admin read all · tenant-self read · cross-tenant blocked · unauth blocked · client create blocked · admin update blocked (tamper-proof) · admin delete blocked (audit-grade) · admin collectionGroup succeeds. **188/188 GREEN.**
+- [x] **S1.4** Wired `convertBookingToTenant.js` — `appendLog(tx, firestore, {action:'moved_in', source:'convertBookingToTenant', discriminator: bookingId, ...})` inside existing transaction. Throws abort the conversion on log build failure (catches bad source/action at deploy-time, not runtime).
+- [x] **S1.5** Tests: `npm run test:unit` → **334/334 GREEN** (was 331; +3 occupancyLog write asserts on convertBookingToTenant). `firebase emulators:exec ... node --test firestore.rules.test.js` → **188/188 GREEN**.
+- [x] **Commit:** `687771f feat(occupancyLog): append-only per-room history + convertBookingToTenant wire (S1)`
+- [x] **Deploy:** `firebase deploy --only firestore:rules,functions:convertBookingToTenant` — rules released + CF updated in asia-southeast1.
+- [x] **Checkpoint:** helper module exists ✓; rule blocks update/delete enforced by rule tests ✓; convertBookingToTenant writes one log entry per call (verified in tests) ✓; **production already accepts new occupancyLog writes** (only convertBookingToTenant writes them for now — S2 expands).
+
+### S2 — Wire `archiveTenantOnMoveOut` + `transferTenant` (~2-3 hr)
+
+- [ ] **S2.1** Update `archiveTenantOnMoveOut.js` to `appendLog(batch, fs, {action:'archived', source:'archiveTenantOnMoveOut', ...})`. Add 3 unit tests (write present · idempotencyKey shape · works for both clean + leftover-orphan paths).
+- [ ] **S2.2** Update `transferTenant.js` BOTH modes to write 2 log entries each (out at oldRoom + in at newRoom):
+  - variation: `source: 'transferTenant.variation'`
+  - novation: `source: 'transferTenant.novation'`
+  - Include `otherBuilding` + `otherRoom` on both entries (so reader can pair them)
+- [ ] **S2.3** Add 8 unit tests to `transferTenant.test.js`:
+  - variation forward writes 2 log entries with paired idempotency keys
+  - variation reverse same
+  - novation forward writes 2 log entries + carries leaseId of OLD lease in 'transferred_out' but NEW lease in 'transferred_in'
+  - missing tenantName fallback (use lease.tenantName || tenants doc name || '')
+  - retry produces same idempotencyKey → second call is no-op (set on same doc)
+- [ ] **S2.4** Run full test suite — expect baseline + 11 new.
+- [ ] **Commit:** `feat(occupancyLog): wire archive + transfer (both modes) (S2)`
+- [ ] **Checkpoint:** all 3 transition CFs write occupancyLog. Test suite green.
+
+### S3 — Reader module + UI surface (~3-4 hr)
+
+- [ ] **S3.1** Create `shared/occupancy-log.js`:
+  - `OccupancyLog.getByRoom(building, roomId, {limit=50, startAfter=null})` → list sorted by `at` DESC
+  - `OccupancyLog.getByTenant(tenantId, {limit=50})` → collectionGroup query
+  - Pagination cursor helpers
+  - Pure read; uses `window.firebase.firestoreFunctions`
+- [ ] **S3.2** Update `shared/dashboard-tenant-modal.js` `showTenantLeaseHistory(building, roomId)`:
+  - Fetch BOTH `LeaseAgreementManager.getLeaseHistory()` AND `OccupancyLog.getByRoom()`
+  - Render merged timeline sorted by date: each entry shows `action icon · tenantName · at · source CF`
+  - Highlight `transferred_in/out` so admin sees the pair at a glance
+  - Empty-state: "ยังไม่มีประวัติผู้เช่า" (existing)
+- [ ] **S3.3** Wire script tag `<script src="./shared/occupancy-log.js"></script>` in `dashboard.html` BEFORE `dashboard-tenant-modal.js`
+- [ ] **S3.4** Composite index for collectionGroup query — `firestore.indexes.json`: `{collectionGroup: 'occupancyLog', fields:[{tenantId, asc}, {at, desc}]}` + deploy via `firebase deploy --only firestore:indexes`
+- [ ] **Commit:** `feat(occupancyLog): reader module + ประวัติผู้เช่าเก่า surface (S3)`
+- [ ] **Checkpoint:** Modal "ประวัติผู้เช่าเก่า" shows BOTH lease docs AND occupancyLog events.
+
+### S4 — Backfill script (S effort, sensitive) (~3-4 hr)
+
+- [ ] **S4.1** Create `tools/backfill-occupancy-log.js`:
+  - `--dry-run` (default): scan all `leases/*/list/*`, derive events, print count + sample, no writes
+  - `--apply`: same scan + write to Firestore via Admin SDK
+  - Idempotent: re-runs use same `buildIdempotencyKey` → set on same doc, no duplicates
+  - `--building <b>` filter for incremental rollout
+- [ ] **S4.2** Event derivation logic (mirror S1 schema):
+  - For each lease, write `moved_in` at `lease.contractStart`/`moveInDate`
+  - For amendments[]: per entry, write `transferred_out` at `fromRoom` + `transferred_in` at `toRoom` (sort by `at`)
+  - For `status='transferred'`: write `transferred_out` at `transferredAt`, paired `transferred_in` via `transferredToLeaseId` chain
+  - For `status='ended'`: write `moved_out` at `endedAt`
+  - Skip `status='renewed'` (renewal doesn't change room)
+  - `source: 'backfill'` on every entry
+- [ ] **S4.3** Run `--dry-run` against production. Expected output: count of events ≈ 2-3× count of leases (each lease has at least move-in + move-out, transferred leases have extra pair).
+- [ ] **S4.4** Apply for `building='rooms'` first. Verify via spot-check of ทดสอบ ห้อง15's chain. Then apply for `nest`.
+- [ ] **S4.5** Live verify: Open "ประวัติผู้เช่าเก่า" for ห้อง 17 → should show "transferred_in 2026-05-21" + "transferred_out 2026-05-21" entries for ทดสอบ ห้อง15.
+- [ ] **Commit:** `feat(occupancyLog): backfill script + applied to prod (S4)`
+- [ ] **Checkpoint:** Backfill applied; "ประวัติผู้เช่าเก่า" for every previously-touched room shows history.
+
+### S5 — Live verify all 6 lifecycle CFs round-trip (~1-2 hr)
+
+- [ ] **S5.1** Chrome MCP E2E walk on ทดสอบ ห้อง15 (still the fixture):
+  - convertBookingToTenant (skip — would need a fresh booking + admin convert; existing log entries from backfill suffice)
+  - transferTenant variation forward + reverse → verify 2+2 = 4 log entries written
+  - transferTenant novation forward + reverse → verify 2+2 = 4 log entries written
+  - archiveTenantOnMoveOut → verify 1 log entry written
+- [ ] **S5.2** Verify "ประวัติผู้เช่าเก่า" UI shows the new entries in order with correct icons + actors
+- [ ] **S5.3** Verify rule blocking: from DevTools, attempt to write/update/delete via client SDK → expect permission-denied on all 3
+- [ ] **S5.4** Verify tenant-self-read: switch to tenant LIFF, query own `OccupancyLog.getByTenant(tenantId)` → should return their entries only
+- [ ] **Checkpoint:** All 4 transition CFs write log correctly; rule enforcement verified; tenant-self-read works.
+
+### S6 — Memory + handoff (~1 hr)
+
+- [ ] **S6.1** Update `lifecycle_tenant_transitions.md`:
+  - § Existing transitions table — add `occupancyLog` column showing which CFs write to it
+  - ## Verification — add grep for `_occupancyLog.appendLog` callers (should be 4 CFs)
+  - ## Cross-references — link to new module + reader
+- [ ] **S6.2** Write `next_session_handoff_2026_05_22_occupancy_log.md`
+- [ ] **S6.3** Update MEMORY.md 🎯 Current state
+- [ ] **S6.4** Run `npm run verify:memory` → must exit 0
+- [ ] **S6.5** Append Review section to this `tasks/todo.md`
+- [ ] **Commit:** `docs(memory): occupancyLog shipped + lifecycle update (S6)`
+- [ ] **Checkpoint:** Memory sync · verify:memory green · handoff in place.
+
+---
+
+## Invariants — must hold across every sprint
+
+1. **Append-only**: Firestore rule blocks update/delete on `occupancyLog/{auto}` even for admin claim. Audit-grade.
+2. **Atomicity**: occupancyLog writes are in the SAME batch as their parent state change. No orphan log entries.
+3. **Idempotency**: deterministic `idempotencyKey` derived from `{source, leaseId, action, building, roomId}`. Retries are safe.
+4. **Denormalized snapshot**: `tenantName` + `by`/`byEmail` written at event time so the log survives identity edits.
+5. **Pair completeness**: transferTenant writes BOTH legs (out + in) in same batch. Never have a half-pair.
+6. **Source-traceability**: every entry has `source` field naming the CF or backfill that wrote it.
+7. **Time monotone**: `at` is serverTimestamp() at write — no client clocks.
+8. **PDPA-respectful**: tenant can read their OWN entries via collectionGroup + claim.tenantId match; cannot read others'.
 
 ## Risks + mitigations
 
-| Risk | Mitigation |
-|---|---|
-| Auth claim refresh fails silently after transfer | §7-FF three-leg in P2.1: `setCustomUserClaims` + `revokeRefreshTokens` + client `getIdTokenResult(true)` in P3.2 verification |
-| §7-DD orphan lease drift | P2.1 batch includes lease-doc updates for both modes; P2.2 test asserts old-lease + new-lease state |
-| Composite UI race when renewLease-after-transferTenant fails | P5.5 explicit toast distinguishes "ย้ายห้องสำเร็จแต่ต่อสัญญาไม่สำเร็จ" — admin can re-run renewLease against new room from tenant modal |
-| File-size pre-commit hook blocks P5 | P5.6 hard cap 600 LOC; extract helper if exceeded |
-| Production data left in inconsistent state by botched P3 | P3.4 explicit rollback via reverse-transfer + `tools/fix-orphan-leases.js` |
-| Test data `ทดสอบ ห้อง15` polluted further | Q5 default keeps as fixture; final cleanup in P7 if desired |
-| `_callLiffSignIn` doesn't gracefully handle room-change | P1.1 reads it before P2 implementation; if not, P3 adds explicit client refresh prompt |
-
-## Pre-flight (before approving)
-
-- [x] User answered AskUserQuestion 2026-05-21 evening (7): "Pickup P3-P7 here (merge งานพี่น้อง)" + "keep test data fixture (Q5=a)"
-- [x] Q1-Q4 technical defaults baked into shipped code per plan (fresh leaseId, sequential CFs for transfer+renew, §7-FF three-leg, immediate vacate)
-- [x] Q6 — single approval (all P3-P7 in one cycle)
-
-## Review (P3-P7 shipped — 2026-05-21 evening 7)
-
-5 commits → main + 2 firebase deploys + 1 handoff doc + lifecycle_tenant_transitions.md restructure.
-
-### Phases closed
-
-| Phase | SHA | What landed |
+| # | Risk | Mitigation |
 |---|---|---|
-| Cherry-pick P1+P2 | [`7bbc3c2`](https://github.com/soulgroundliving/the-green-haven/commit/7bbc3c2) | Pulled `30800a7` from parallel worktree `eloquent-engelbart-326c72`; ff-merged to main. CF + 51 unit tests landed in the user's `main`. |
-| P3 — Deploy + live verify | (deploy + Chrome MCP) | `firebase deploy --only functions:transferTenant`. Variation + novation forward+reverse cycles verified. 11/11 Firestore checks + amendments[] + RTDB audit_logs/leases entry GREEN. §7-J probation **CLOSED**. Cross-mode chain test (novation forward + variation reverse) green. Minor doc-vs-code drift noted: JSDoc says `endedAt` on novation, code writes `transferredAt` — flagged in handoff. |
-| P4 — renewLease newStartDate | [`3b44082`](https://github.com/soulgroundliving/the-green-haven/commit/3b44082) | Optional param + 7 new tests (44 total in file, 331/331 full suite). Deployed. Live-verified call `{newStartDate:'2028-04-21', newEndDate:'2029-04-21'}` showed contractStart, contractMonths=12, audit.startGapDays=60 all correct. §7-DD regression checks 4/4 green. |
-| P5 — Composite UI | [`d29007d`](https://github.com/soulgroundliving/the-green-haven/commit/d29007d) | `shared/dashboard-lease-renew.js` (355 → 631 LOC) + extracted `shared/dashboard-lease-renew-roompicker.js` (133 LOC) per P5.6 hard-cap remedy. dashboard.html wires roompicker before main. Dispatch matrix: same+renewal/extension → renewLease; new+transferOnly → transferTenant; new+!transferOnly → transferTenant THEN renewLease@newRoom with half-success messaging. |
-| P6 — UI verify | [`65020b0`](https://github.com/soulgroundliving/the-green-haven/commit/65020b0) (bug fix) | Modal mounts, room toggle/action toggle/transferOnly checkbox all wire correctly. Room picker populates 22 vacant rooms. Auto-fill from `buildings/rooms/rooms/17` returned rent=1200, deposit=2400. **Caught + fixed P6 bug**: submit label wasn't updating on transferOnly toggle — `_lrAttachHandlers` was missing `_lrUpdateDispatchLabel` call. |
-| P7 — Memory + handoff | (out-of-repo) | [lifecycle_tenant_transitions.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\lifecycle_tenant_transitions.md) § B moved Missing → Existing + ## Verification block extended with transferTenant greps; new [next_session_handoff_2026_05_21_transfertenant_shipped.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\next_session_handoff_2026_05_21_transfertenant_shipped.md); MEMORY.md 🎯 Current state has new top entry; `npm run verify:memory` GREEN (34 docs · 322 rows · 0 fails). |
+| R1 | Backfill double-writes existing entries from forward-CFs (race during deploy window) | Idempotency key + Firestore `set` (no merge) on same doc id |
+| R2 | Batch grows beyond Firestore 500-op limit (multi-leg transfer + log writes) | Current max: variation 8 ops + 2 logs = 10. Novation: 10 ops + 2 logs = 12. Far below limit. |
+| R3 | Composite index needed for collectionGroup query fails on first deploy → user query stuck "loading" (§7-N pattern) | Add index BEFORE deploying client code that calls it; verify in Firestore Console |
+| R4 | Rule too strict (admin can't read their own audit) | Add explicit `request.auth.token.admin == true` allow; rule test must cover this |
+| R5 | renewLease should NOT write to log — but oversight could add one | Explicit comment in renewLease.js + grep verifier in S6 confirming `renewLease.js` has zero `appendLog` calls |
+| R6 | Backfill amendments[] event ordering — duplicate entries if amendments[] sorts wrong | Sort by `at` field within amendments before iterating |
+| R7 | Existing prod leases with malformed dates / missing fields → backfill skips silently | Dry-run reports skipped count + reasons; admin reviews before apply |
+| R8 | Re-running backfill writes new "by" field if admin context changes between runs | `by: 'system-backfill'` (constant) for backfill source — not admin UID |
 
-### Deferred (next-session follow-ups)
+## Anti-pattern relevance
 
-1. **P5 final UI submit-button click round-trip** — exercise actual click through the modal for each of the 4 dispatch paths. Per §7-I, requires user action. ~30 sec each, 4 paths.
-2. **transferTenant.js JSDoc cleanup** — line 95 says novation sets `endedAt`, code writes `transferredAt`. XS doc-only fix.
-3. **UI polish**: `newStartDate` input should clear (or default to today) when switching room-mode to "new". Currently preserves prior value. XS.
-4. **§7-FF Auth claim refresh on REAL tenant** — current verification used a fixture without a linked liffUser; `claimsRefreshed=0` in CF return. Validate end-to-end with a real linked LINE user (low-risk variation transfer + reopen LIFF + verify `token.room` flipped).
-5. **A — restoreReturningTenant** — next on lifecycle_tenant_transitions.md prioritisation list (S effort).
+- **§7-DD (lifecycle CFs update siblings)** — extends to a 4th collection (occupancyLog) for transferTenant; design baked in from S1
+- **§7-T (writer/reader drift)** — this sprint IS the resolution to a §7-T cousin (variation lease.roomId field updates but reader filters by it)
+- **§7-N (onSnapshot must have error callback)** — reader uses `getDocs` (one-shot) initially; if we add live updates later, MUST wire error callback
+- **§7-FF (claim reversal contract)** — N/A here (occupancyLog doesn't change Auth claims)
+- **§7-J (static deploy ≠ live verified)** — S5 closes probation for the 4 wired CFs via E2E walk
 
-### What surprised me
+May newly surface: idempotency-key-collision pattern if `{source, leaseId, action, building, roomId}` isn't unique enough — extension would document as new anti-pattern.
 
-- The §7-J probation pattern (static deploy ≠ live verified) caught a real bug at P6 — the UI dispatcher submit label wasn't updating on `transferOnly` change. Would have shipped with confusing UX (label says "ย้าย + ต่อสัญญา" even when the button only fires transferTenant). Static review wouldn't have caught it; the live Chrome MCP toggle test did.
-- The OLD tenants/rooms/list/15 had `status='vacant'` corruption BEFORE this session (leftover from upstream sessions). The first variation transfer cycle auto-repaired it because `_runVariationMode` sets explicit `status: 'occupied'` on the populated new-doc. Free fix.
-- `TenantLookup.getTenantList(building)` doesn't exist on the live module — the LRRoomPicker code I wrote assumed it does. The fallback path (direct Firestore scan) saved it. Worth noting in any future doc that mentions `TenantLookup`.
-- `buildings/rooms/rooms/17` HAS a doc with rent + deposit defaults. The auto-fill UX works for real registry data; this was an unverified-from-spec guess that turned out correct.
-- File-size discipline forced a clean extraction (LRRoomPicker module) — the resulting split is actually cleaner architecture than one big file would have been. Plan B's "if exceeds, extract" was the right rule.
+---
 
-### Anti-pattern relevance
+## Open questions to resolve before approving
 
-This sprint touched §7-DD (lifecycle CFs update sibling collections, mirrored verbatim from `archiveTenantOnMoveOut` into both `_runVariationMode` and `_runNovationMode`), §7-FF (three-leg claim refresh — `setCustomUserClaims` + `revokeRefreshTokens` for det. + legacy UIDs in `_updateLiffUserAndClaims`), §7-J (static deploy ≠ live verified — closed for transferTenant, closed for renewLease P4). No new anti-pattern surfaced — all categories were known patterns + correctly applied from day 1.
+1. **D1** — subcollection (recommended a) vs flat collection (b) vs per-tenant (c)?
+2. **D2** — schema fields as proposed, or add/remove anything? (e.g. do we want `priorLeaseId` field on log entries too?)
+3. **D3** — deterministic idempotency key (a) vs auto ID (b)?
+4. **D4** — strict immutable (a, recommended)?
+5. **D5** — single-batch atomicity (a, recommended)?
+6. **D6** — backfill yes (a, recommended) or skip (b)?
+7. **D7** — new `OccupancyLog` module (a) vs extend existing manager (b)?
+
+---
+
+## Awaiting
+
+User decisions on **D1-D7** above (or "go with recommendations on all"). Then ✅ to start S1.
+
+## Review
+
+(To be filled at end of sprint per CLAUDE.md §1 Plan-First Protocol)
