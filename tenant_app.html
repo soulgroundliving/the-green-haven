@@ -13229,22 +13229,37 @@
         }
 
         // ---- LEASE AGREEMENT VIEW / DOWNLOAD ----
-        // Uses getLeaseDocUrl CF to mint a 1-hour signed URL (PDPA-friendly —
-        // no permanent download token exposed to the client). Falls back to the
-        // legacy contractDocument URL if the path-based flow is not wired yet.
+        // Prefers getLeaseDocUrl CF (PDPA-friendly 1-h signed URL). Falls back to
+        // direct Firebase Storage getDownloadURL — storage.rules /leases/* already
+        // grants tenant read when token.room+token.building match the path, so the
+        // direct path works for the same user the CF would have authorised.
+        // Losing the short-TTL on fallback is acceptable: viewer is preserved.
         async function _getLeaseSignedUrl() {
             const path = window.currentContractDocument;
             if (!path) return null;
-            // Legacy: base64 data URL or external https URL — use directly, no CF needed.
+            // Legacy: base64 data URL or external https URL — use directly, no resolve needed.
+            if (typeof path !== 'string') return null;
+            if (path.startsWith('data:') || /^https?:\/\//i.test(path)) return path;
             if (!path.startsWith('leases/')) return path;
-            // New flow: storage path → CF mints 1-hour signed URL (PDPA-friendly).
+
+            // Primary: signed URL via CF.
             try {
                 const fn = window.firebase.functions.httpsCallable('getLeaseDocUrl');
                 const result = await fn({ path });
-                return result?.data?.url || null;
+                const url = result?.data?.url;
+                if (url) return url;
+                console.warn('[LeaseDoc] getLeaseDocUrl returned no url for', path);
             } catch (err) {
-                console.error('[LeaseDoc] getLeaseDocUrl error:', err);
-                toast('ไม่สามารถเปิดเอกสารได้ กรุณาลองใหม่', 'error');
+                console.error('[LeaseDoc] getLeaseDocUrl error for', path, '—', err?.code || err?.name, err?.message);
+            }
+            // Fallback: direct getDownloadURL (rules-gated, same auth subject).
+            try {
+                const storage = window.firebase.storage();
+                const { ref: sRef, getDownloadURL: sGetDownloadURL } = window.firebase.storageFunctions;
+                return await sGetDownloadURL(sRef(storage, path));
+            } catch (err2) {
+                console.error('[LeaseDoc] getDownloadURL fallback failed for', path, '—', err2?.code || err2?.name, err2?.message);
+                toast('ไม่สามารถเปิดเอกสารได้: ' + (err2?.code || err2?.message || 'unknown error'), 'error');
                 return null;
             }
         }

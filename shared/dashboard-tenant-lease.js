@@ -996,14 +996,37 @@ async function viewLeaseDocuments(leaseId) {
   const body = document.getElementById('leaseDocumentsBody');
   const sections = [];
 
-  // Section 1a: Contract base64 stored directly in lease record (from tenant modal upload)
+  // Resolve a contractDocument value (data: URL, http(s) URL, or Firebase Storage
+  // path) into a usable href. renewLease + transferTenant write the Storage PATH
+  // (e.g. "leases/rooms/15/{leaseId}/lease-renewal-X.jpg"), which used to render
+  // as `<a href="leases/...">` → browser resolves to `https://the-green-haven.
+  // vercel.app/leases/...` → 404. We now await getDownloadURL for storage paths
+  // before building the link.
+  async function _resolveContractHref(value) {
+    if (!value || typeof value !== 'string') return null;
+    if (value.startsWith('data:') || /^https?:\/\//i.test(value)) return value;
+    try {
+      const storage = window.firebase.storage();
+      const { ref: sRef, getDownloadURL: sGetDownloadURL } = window.firebase.storageFunctions;
+      return await sGetDownloadURL(sRef(storage, value));
+    } catch (e) {
+      console.warn('[LeaseDocs] getDownloadURL failed for', value, '—', e.message);
+      return null;
+    }
+  }
+
+  // Section 1a: Contract base64/path stored directly in lease record (from tenant modal upload)
   if (lease.contractDocument) {
     const fname = lease.contractFileName || 'lease-contract';
+    const href = await _resolveContractHref(lease.contractDocument);
+    const linkInner = href
+      ? `<a href="${_escapeAttr(href)}" download="${_escapeAttr(fname)}" target="_blank" rel="noopener noreferrer" style="color:#2e7d32;font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>`
+      : `<span style="color:#c62828;font-weight:600;">⚠️ ${_escapeHTML(fname)} (โหลดไฟล์ไม่สำเร็จ)</span>`;
     sections.push(`
       <div class="dx-mb">
         <div style="font-weight:700;color:#1b5e20;margin-bottom:.5rem;font-size:.95rem;">📋 สัญญาเช่า (อัพโหลดผ่าน Tab ผู้เช่า)</div>
         <div style="padding:10px 12px;background:#e8f5e9;border-left:3px solid #4caf50;border-radius:4px;font-size:.88rem;">
-          <a href="${_escapeAttr(lease.contractDocument)}" download="${_escapeAttr(fname)}" style="color:#2e7d32;font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>
+          ${linkInner}
           ${lease.contractUploadedAt ? `<div style="font-size:.75rem;color:#999;margin-top:3px;">อัพโหลด: ${new Date(lease.contractUploadedAt).toLocaleString('th-TH')}</div>` : ''}
         </div>
       </div>
@@ -1022,11 +1045,15 @@ async function viewLeaseDocuments(leaseId) {
   // Section 2: Legacy contractDocument (base64 in tenant record — pre-Phase-3 data)
   if (tenant?.contractDocument) {
     const fname = tenant.contractFileName || 'contract-legacy';
+    const href = await _resolveContractHref(tenant.contractDocument);
+    const linkInner = href
+      ? `<a href="${_escapeAttr(href)}" download="${_escapeAttr(fname)}" target="_blank" rel="noopener noreferrer" style="color:#e65100;font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>`
+      : `<span style="color:#c62828;font-weight:600;">⚠️ ${_escapeHTML(fname)} (โหลดไฟล์ไม่สำเร็จ)</span>`;
     sections.push(`
       <div class="dx-mb">
         <div style="font-weight:700;color:#bf360c;margin-bottom:.5rem;font-size:.95rem;">📄 สัญญาเช่า (Legacy — อยู่ใน tenant record, รอย้าย)</div>
         <div style="padding:10px 12px;background:#fff3e0;border-left:3px solid #ff9800;border-radius:4px;font-size:.88rem;">
-          <a href="${_escapeAttr(tenant.contractDocument)}" download="${_escapeAttr(fname)}" style="color:#e65100;font-weight:600;text-decoration:none;">⬇️ ${_escapeHTML(fname)}</a>
+          ${linkInner}
           <div style="font-size:.75rem;color:#999;margin-top:3px;">ข้อมูลเก่าก่อน Phase 3 — จะย้ายไป lease SSoT อัตโนมัติเมื่อมีการแก้ไขผ่าน Tab ผู้เช่า</div>
         </div>
       </div>
