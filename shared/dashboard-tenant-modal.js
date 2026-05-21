@@ -319,10 +319,19 @@ async function showTenantLeaseHistory(building, roomId) {
     ? LeaseAgreementManager.getLeaseHistory(building, roomId)
     : [];
 
-  if (!leases.length) {
+  // Plan B' S3: merge in the per-room occupancyLog (newest first). OccupancyLog
+  // exposes events the lease docs don't capture cleanly — variation transfers
+  // (lease roomId field flipped in-place), archive events, restored events.
+  // Empty list on read failure (e.g. composite index still building); UI still
+  // renders the lease-based rows.
+  const events = (typeof OccupancyLog !== 'undefined')
+    ? OccupancyLog.pairTransfers(await OccupancyLog.getByRoom(building, roomId, { limit: 50 }))
+    : [];
+
+  if (!leases.length && !events.length) {
     content.innerHTML = '<p style="color:var(--text-muted);">ยังไม่มีประวัติผู้เช่า</p>';
   } else {
-    content.innerHTML = leases.map(l => {
+    const leaseRows = leases.map(l => {
       const moveIn  = l.moveInDate    ? new Date(l.moveInDate).toLocaleDateString('th-TH')    : '—';
       const moveOut = l.moveOutDate   ? new Date(l.moveOutDate).toLocaleDateString('th-TH')   : (l.status==='active'?'ปัจจุบัน':'—');
       const badge   = l.status==='active'
@@ -333,6 +342,35 @@ async function showTenantLeaseHistory(building, roomId) {
         <div style="font-size:.78rem;color:var(--text-muted);">${moveIn} → ${moveOut}</div>
       </div>`;
     }).join('');
+
+    const eventRows = events.map(e => {
+      const when = OccupancyLog.formatAt(e.atDate);
+      const tenant = e.tenantName || '—';
+      const actor = e.byEmail || e.by || '—';
+      // For paired transfers the row shows directional arrow; for others the
+      // single-room context is implied.
+      const detail = e.paired
+        ? `${e.fromBuilding||''}/${e.fromRoom||''} → ${e.toBuilding||''}/${e.toRoom||''}`
+        : '';
+      const note = e.reason ? ` · ${e.reason}` : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed var(--border);">
+        <div>
+          <span style="font-size:.95rem;margin-right:6px;">${e.meta.icon}</span>
+          <strong>${e.meta.label}</strong>
+          <span style="color:var(--text-muted);font-size:.85rem;"> · ${tenant}${note}</span>
+          ${detail ? `<div style="font-size:.72rem;color:var(--text-muted);margin-left:24px;">${detail}</div>` : ''}
+        </div>
+        <div style="font-size:.72rem;color:var(--text-muted);text-align:right;" title="${e.sourceLabel} · ${actor}">${when}</div>
+      </div>`;
+    }).join('');
+
+    const leaseBlock = leases.length
+      ? `<div style="font-size:.78rem;color:var(--text-muted);font-weight:600;margin:.4rem 0 .2rem;">สัญญาเช่า (${leases.length})</div>${leaseRows}`
+      : '';
+    const eventBlock = events.length
+      ? `<div style="font-size:.78rem;color:var(--text-muted);font-weight:600;margin:.8rem 0 .2rem;">เหตุการณ์ (${events.length})</div>${eventRows}`
+      : '';
+    content.innerHTML = leaseBlock + eventBlock;
   }
   section.style.display = 'block'; // override inline display:none from dashboard.html:2181
   section.classList.remove('u-hidden');

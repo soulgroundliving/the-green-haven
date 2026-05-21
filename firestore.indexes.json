@@ -173,6 +173,14 @@
         { "fieldPath": "building", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "occupancyLog",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "at", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

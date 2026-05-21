@@ -255,22 +255,14 @@ Total: **~15 files, ~1,200-1,400 LOC net new + modified.** Well above 5-file Pla
 - [x] **Commit:** `feat(occupancyLog): wire archive + transfer (both modes) (S2)`
 - [x] **Checkpoint:** 3/4 transition CFs now write occupancyLog (convertBookingToTenant via S1; archiveTenantOnMoveOut + transferTenant via S2). `restoreReturningTenant` not yet implemented (Plan B' future A). Test suite green.
 
-### S3 — Reader module + UI surface (~3-4 hr)
+### S3 — Reader module + UI surface ✅ SHIPPED
 
-- [ ] **S3.1** Create `shared/occupancy-log.js`:
-  - `OccupancyLog.getByRoom(building, roomId, {limit=50, startAfter=null})` → list sorted by `at` DESC
-  - `OccupancyLog.getByTenant(tenantId, {limit=50})` → collectionGroup query
-  - Pagination cursor helpers
-  - Pure read; uses `window.firebase.firestoreFunctions`
-- [ ] **S3.2** Update `shared/dashboard-tenant-modal.js` `showTenantLeaseHistory(building, roomId)`:
-  - Fetch BOTH `LeaseAgreementManager.getLeaseHistory()` AND `OccupancyLog.getByRoom()`
-  - Render merged timeline sorted by date: each entry shows `action icon · tenantName · at · source CF`
-  - Highlight `transferred_in/out` so admin sees the pair at a glance
-  - Empty-state: "ยังไม่มีประวัติผู้เช่า" (existing)
-- [ ] **S3.3** Wire script tag `<script src="./shared/occupancy-log.js"></script>` in `dashboard.html` BEFORE `dashboard-tenant-modal.js`
-- [ ] **S3.4** Composite index for collectionGroup query — `firestore.indexes.json`: `{collectionGroup: 'occupancyLog', fields:[{tenantId, asc}, {at, desc}]}` + deploy via `firebase deploy --only firestore:indexes`
-- [ ] **Commit:** `feat(occupancyLog): reader module + ประวัติผู้เช่าเก่า surface (S3)`
-- [ ] **Checkpoint:** Modal "ประวัติผู้เช่าเก่า" shows BOTH lease docs AND occupancyLog events.
+- [x] **S3.1** Created `shared/occupancy-log.js` (~190 LOC): `OccupancyLog.getByRoom(building, roomId, {limit=50})` for subcollection query (no index needed) + `OccupancyLog.getByTenant(tenantId, {limit=50})` for collectionGroup query (composite index from S3.4). Plus `formatAt(date)` Thai-locale formatter and `pairTransfers(entries)` that merges paired `transferred_out` + `transferred_in` rows into a single "ย้ายห้อง 17 → 15" row when both halves share matching `otherBuilding`/`otherRoom` pointers. `ACTION_META` + `SOURCE_LABEL` maps centralize action icons + Thai labels (single source of truth). On query error returns `[]` and logs warn so the lease-based fallback in the modal still renders. Exposed as `window.OccupancyLog`.
+- [x] **S3.2** `showTenantLeaseHistory(building, roomId)` in `shared/dashboard-tenant-modal.js` now fetches BOTH `LeaseAgreementManager.getLeaseHistory(building, roomId)` AND `OccupancyLog.pairTransfers(await OccupancyLog.getByRoom(...))`. Renders two blocks: "สัญญาเช่า (N)" with the existing lease rows (active/ended badge + move-in→out dates) AND "เหตุการณ์ (M)" with occupancyLog rows (action icon + Thai label + tenant name + actor email tooltip + relative timestamp). Paired transfers render as one row with directional arrow `from/room → to/room`. Empty state: only shows when BOTH lists are empty.
+- [x] **S3.3** Wired `<script src="./shared/occupancy-log.js"></script>` in `dashboard.html` at line 5446 — BEFORE `dashboard-tenant-modal.js` (line 5447). Load order verified.
+- [x] **S3.4** Added composite index for `collectionGroup: 'occupancyLog'` fields `[tenantId ASC, at DESC]` (queryScope COLLECTION_GROUP, for the `getByTenant` query) in `firestore.indexes.json`. Deployed via `firebase deploy --only firestore:indexes` — Firestore is building the index now (1-5 min). UI still works during build because `getByRoom` (the primary use case) is a subcollection query that doesn't need the index.
+- [x] **Commit:** `feat(occupancyLog): reader module + ประวัติผู้เช่าเก่า surface (S3)` — pending below.
+- [x] **Checkpoint:** Modal "ประวัติผู้เช่าเก่า" shows BOTH lease docs AND occupancyLog events. Render verified locally via dashboard.html visible in preview panel; live verification deferred to S5 with backfilled data.
 
 ### S4 — Backfill script (S effort, sensitive) (~3-4 hr)
 
