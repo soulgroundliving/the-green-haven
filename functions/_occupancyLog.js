@@ -55,6 +55,8 @@ const VALID_SOURCES = new Set([
   'transferTenant.variation',
   'transferTenant.novation',
   'archiveTenantOnMoveOut',
+  'transitionToPlayer',
+  'revertTransitionToPlayer',
   'restoreReturningTenant',
   'backfill',
 ]);

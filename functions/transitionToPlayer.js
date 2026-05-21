@@ -32,13 +32,14 @@ if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
 const { getValidBuildings } = require('./buildingRegistry');
+const { appendLog } = require('./_occupancyLog');
 
 const ARCHIVED_SUBCOLLECTIONS = [
   'paymentHistory', 'redemptions', 'wellnessClaimed', 'pets', 'complaintFreeMonthAwarded',
 ];
 
-// Lower than archiveTenantOnMoveOut (450) — leaves room for the extra people/ write.
-const BATCH_OP_LIMIT = 440;
+// Lower than archiveTenantOnMoveOut (450) — leaves room for the extra people/ write + occupancyLog entry.
+const BATCH_OP_LIMIT = 438;
 
 const FIELDS_TO_CLEAR = {
   name: '', firstName: '', lastName: '', phone: '', email: '',
@@ -147,7 +148,8 @@ exports.transitionToPlayer = functions
       console.warn(`transitionToPlayer: no leaseId on tenants/${building}/list/${roomId} — skipping lease status update`);
     }
 
-    const totalOps = (leaseRefToEnd ? 5 : 4) + (totalSubDocs * 2); // archive set + blank + people set + liffUsers + (optional) lease + subcoll copies
+    // ops: archive set + blank + people set + occupancyLog set + (optional) lease + subcoll copies
+    const totalOps = (leaseRefToEnd ? 6 : 5) + (totalSubDocs * 2);
     if (totalOps > BATCH_OP_LIMIT) {
       throw new functions.https.HttpsError('resource-exhausted',
         `Tenant has ${totalSubDocs} subcoll docs (${totalOps} ops) — exceeds batch limit.`);
@@ -228,6 +230,34 @@ exports.transitionToPlayer = functions
       transitionedBy: context.auth.uid,
       updatedAt: now,
     }, { merge: true });
+
+    // 6. Plan B' occupancyLog — action='archived' (transition functionally archives
+    //    the lease). Mirrors archiveTenantOnMoveOut's wiring. discriminator='' since
+    //    one transition per leaseId is exhaustive (reverts undo the lease-end but
+    //    don't write a new transition event — see revertTransitionToPlayer's
+    //    'restored' entry). §7-DD: every sibling collection that downstream readers
+    //    fall through to must be updated in the same batch.
+    const personIdForLog = tenantData.personId ? String(tenantData.personId) : tenantId;
+    try {
+      appendLog(batch, firestore, {
+        tenantId,
+        tenantName: String(tenantData.name || tenantData.firstName || ''),
+        personId: personIdForLog,
+        building,
+        roomId,
+        action: 'archived',
+        reason: 'transitioned_to_player',
+        leaseId: leaseIdToEnd || contractId,
+        by: context.auth.uid,
+        byEmail: callerEmail || null,
+        source: 'transitionToPlayer',
+        discriminator: '',
+      });
+    } catch (logErr) {
+      console.error('transitionToPlayer: occupancyLog append failed (aborting):', logErr.message);
+      throw new functions.https.HttpsError('internal',
+        `occupancyLog append failed: ${logErr.message}`);
+    }
 
     try {
       await batch.commit();

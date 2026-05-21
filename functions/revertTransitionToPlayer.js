@@ -45,6 +45,7 @@ if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
 const { getValidBuildings } = require('./buildingRegistry');
+const { appendLog } = require('./_occupancyLog');
 
 const ARCHIVED_SUBCOLLECTIONS = [
   'paymentHistory', 'redemptions', 'wellnessClaimed', 'pets', 'complaintFreeMonthAwarded',
@@ -55,7 +56,7 @@ const ARCHIVE_METADATA_FIELDS = new Set([
   'archivedAt', 'archivedReason', 'archivedBy', 'archivedByEmail', 'sourceRoom',
 ]);
 
-const BATCH_OP_LIMIT = 440;
+const BATCH_OP_LIMIT = 438; // leaves headroom for occupancyLog write
 
 exports.revertTransitionToPlayer = functions
   .region('asia-southeast1')
@@ -159,8 +160,8 @@ exports.revertTransitionToPlayer = functions
       console.warn(`revertTransitionToPlayer: lease leases/${building}/list/${contractId} not found — cannot re-activate (archive contract may predate Phase-3d lease split)`);
     }
 
-    // Op count: tenant set + people update + liffUsers set + archive update + (optional) lease + subcoll copies
-    const totalOps = (restoreLease ? 5 : 4) + totalSubDocs;
+    // Op count: tenant set + people update + liffUsers set + archive update + occupancyLog + (optional) lease + subcoll copies
+    const totalOps = (restoreLease ? 6 : 5) + totalSubDocs;
     if (totalOps > BATCH_OP_LIMIT) {
       throw new functions.https.HttpsError('resource-exhausted',
         `Archive has ${totalSubDocs} subcoll docs (${totalOps} ops) — exceeds batch limit ${BATCH_OP_LIMIT}`);
@@ -253,6 +254,32 @@ exports.revertTransitionToPlayer = functions
         revertedAt: now,
         revertedBy: context.auth.uid,
       });
+    }
+
+    // Plan B' occupancyLog — action='restored' (the inverse of transitionToPlayer's
+    // 'archived' event). Same batch so a partial commit can't yield a restored
+    // tenant without an audit entry. discriminator='' since one restore per lease
+    // is exhaustive (the archive doc's revertedAt guard prevents repeat reverts).
+    const personIdForLog = String(personData.personId || tenantId);
+    try {
+      appendLog(batch, firestore, {
+        tenantId,
+        tenantName: personOverrides.name || String(archiveData.name || archiveData.firstName || ''),
+        personId: personIdForLog,
+        building,
+        roomId,
+        action: 'restored',
+        reason: 'reverted_from_player',
+        leaseId: contractId,
+        by: context.auth.uid,
+        byEmail: callerEmail || null,
+        source: 'revertTransitionToPlayer',
+        discriminator: '',
+      });
+    } catch (logErr) {
+      console.error('revertTransitionToPlayer: occupancyLog append failed (aborting):', logErr.message);
+      throw new functions.https.HttpsError('internal',
+        `occupancyLog append failed: ${logErr.message}`);
     }
 
     try {
