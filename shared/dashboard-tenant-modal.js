@@ -149,12 +149,27 @@ function openTenantModal(building, roomId) {
   const evEl = document.getElementById('modalTenantEmailVerified');
   if (evEl) evEl.textContent = tenant.email ? (tenant.emailVerified ? '✅ ยืนยันแล้ว' : '(ยังไม่ยืนยัน)') : '';
   document.getElementById('modalTenantLicensePlate').value = tenant.licensePlate || '';
-  document.getElementById('modalTenantMoveIn').value = tenant.moveInDate || '';
+  // Normalize anything (full ISO from renewLease/transferTenant, Date object,
+  // YYYY-MM-DD already, or empty) to YYYY-MM-DD — <input type="date"> silently
+  // rejects values it can't parse, leaving the field blank. renewLease.js +
+  // transferTenant.js write full toISOString() ("2030-10-21T17:00:00.000Z"),
+  // which is why dates were not pre-filling after a renewal.
+  const _toDateInputValue = (v) => {
+    if (!v) return '';
+    if (typeof v === 'string') {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+      const m = v.match(/^(\d{4}-\d{2}-\d{2})/);
+      if (m) return m[1];
+    }
+    const d = (v instanceof Date) ? v : new Date(v);
+    return Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : '';
+  };
+  document.getElementById('modalTenantMoveIn').value = _toDateInputValue(tenant.moveInDate);
   const _csEl = document.getElementById('modalTenantContractStart');
-  if (_csEl) _csEl.value = tenant.contractStart || tenant.moveInDate || '';
+  if (_csEl) _csEl.value = _toDateInputValue(tenant.contractStart || tenant.moveInDate);
   const _cmEl = document.getElementById('modalTenantContractMonths');
   if (_cmEl) _cmEl.value = tenant.contractMonths || '';
-  document.getElementById('modalTenantContractEnd').value = tenant.contractEnd || '';
+  document.getElementById('modalTenantContractEnd').value = _toDateInputValue(tenant.contractEnd);
   // Meter fields removed - no longer used
   document.getElementById('modalTenantNotes').value = tenant.notes || '';
 

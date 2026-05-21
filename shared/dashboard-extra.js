@@ -430,19 +430,62 @@ function showContractDocument(roomId, tenant) {
   const content = document.createElement('div');
   content.className = 'u-modal-doc-body';
 
-  // Check if it's a PDF or image
-  if (tenant.contractDocument.startsWith('data:application/pdf')) {
-    // Display PDF
-    const iframe = document.createElement('iframe');
-    iframe.src = tenant.contractDocument;
-    iframe.className = 'u-form-input u-iframe-full';
-    content.appendChild(iframe);
-  } else if (tenant.contractDocument.startsWith('data:image')) {
-    // Display image
-    const img = document.createElement('img');
-    img.src = tenant.contractDocument;
-    img.className = 'u-img-contain';
-    content.appendChild(img);
+  // 4 possible shapes for contractDocument:
+  //   a. 'data:application/pdf;base64,...'  — legacy Tab ผู้เช่า upload (Firestore)
+  //   b. 'data:image/...'                   — legacy image, same path
+  //   c. 'https://...' / 'http://...'       — signed/public URL (documentURLs.agreement era)
+  //   d. 'leases/{b}/{r}/{leaseId}/...'     — Storage PATH only — current renewLease /
+  //                                            transferTenant writers. Needs getDownloadURL.
+  // Case (d) used to fall into the else branch and surface "ไม่สามารถแสดงไฟล์นี้"
+  // even though the file was uploaded fine. Resolve to a download URL and render
+  // by extension instead.
+  const _renderInline = (url) => {
+    const lower = String(url).split('?')[0].toLowerCase();
+    if (lower.endsWith('.pdf') || /^data:application\/pdf/i.test(url)) {
+      const iframe = document.createElement('iframe');
+      iframe.src = url;
+      iframe.className = 'u-form-input u-iframe-full';
+      content.appendChild(iframe);
+    } else if (/^data:image|\.(jpe?g|png|gif|webp|bmp|heic|svg)$/i.test(lower) || /^data:image/i.test(url)) {
+      const img = document.createElement('img');
+      img.src = url;
+      img.className = 'u-img-contain';
+      content.appendChild(img);
+    } else {
+      // Unknown extension — give the user a working link rather than a dead-end.
+      content.innerHTML = `<p style="color:#666;">ไม่สามารถแสดงตัวอย่างไฟล์ชนิดนี้ — ใช้ปุ่ม "ดาวน์โหลด" ด้านล่าง</p>
+        <p style="margin-top:8px;"><a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#2d8653;font-weight:600;">เปิดในแท็บใหม่ →</a></p>`;
+    }
+  };
+  const docRef = tenant.contractDocument;
+  if (typeof docRef === 'string' && /^https?:\/\//i.test(docRef)) {
+    _renderInline(docRef);
+  } else if (typeof docRef === 'string' && docRef.startsWith('data:')) {
+    _renderInline(docRef);
+  } else if (typeof docRef === 'string' && docRef.length > 0) {
+    // Storage path (case d) — resolve via Firebase Storage SDK. Admin's read
+    // grant on storage.rules lets getDownloadURL return a long-lived token URL.
+    content.innerHTML = '<p style="color:#666;">⏳ กำลังโหลดเอกสาร...</p>';
+    try {
+      const storage = window.firebase.storage();
+      const { ref: sRef, getDownloadURL } = window.firebase.storageFunctions;
+      const fileRef = sRef(storage, docRef);
+      getDownloadURL(fileRef)
+        .then((url) => {
+          // Stash for downloadContractAsFile fallback so its href is the
+          // resolved URL, not the raw Storage path.
+          tenant.contractDocumentResolvedUrl = url;
+          content.innerHTML = '';
+          _renderInline(url);
+        })
+        .catch((e) => {
+          console.error('getDownloadURL failed for', docRef, e);
+          content.innerHTML = `<p style="color:#c62828;">โหลดเอกสารไม่สำเร็จ: ${_esc(e.message || String(e))}</p>`;
+        });
+    } catch (e) {
+      console.error('Firebase Storage SDK not available:', e);
+      content.innerHTML = '<p style="color:#c62828;">Firebase Storage ยังไม่พร้อม</p>';
+    }
   } else {
     content.innerHTML = '<p style="color:#666;">ไม่สามารถแสดงไฟล์นี้</p>';
   }
