@@ -10090,6 +10090,25 @@
             // linked: false → pending/rejected/first-time, or null → error (banner already shown)
             if (result) window._lineLinkStatus = result.status || null;
             if (inLine) _hideLiffConnectingOverlay();
+
+            // Returning tenant whose link request is pending/rejected (e.g. after
+            // they submitted relink form). hasRoomEarly fast-path may have already
+            // skipped awaiting LIFF and let initTenantApp render the home/bills
+            // shell from cached localStorage data — looking "logged in" while
+            // Firestore status is still pending + claims are revoked. Clear the
+            // room cache and force the pending/rejected overlay on top, so the
+            // user actually sees the right state and can't read stale UI as
+            // "approved". Pairs with submitRelinkRequest's same cleanup.
+            if (result && !result.linked && (result.status === 'pending' || result.status === 'rejected')) {
+                try {
+                    localStorage.removeItem('tenant_app_room');
+                    sessionStorage.removeItem('user');
+                } catch(_) {}
+                if (typeof showLiffLinkStatus === 'function') {
+                    showLiffLinkStatus(result.status);
+                }
+                document.getElementById('app-loading-splash')?.remove();
+            }
             return result;
         }
 
@@ -10237,8 +10256,17 @@
                 }
                 // Success — tear down the unlinked-mode UI overlays so the
                 // pending-state overlay (showLiffLinkStatus) can take over cleanly.
+                // Also clear the cached room from prior session — user is now in
+                // 'pending' not 'approved', so any next reload (hasRoomEarly
+                // fast-path or otherwise) must NOT short-circuit into rendering
+                // the home/bills shell from stale localStorage. initLiffAndLink
+                // has the symmetric clear for the reload path.
                 try { document.getElementById('unlinked-banner')?.remove(); } catch(_) {}
                 try { document.body.classList.remove('gh-unlinked-mode'); } catch(_) {}
+                try {
+                    localStorage.removeItem('tenant_app_room');
+                    sessionStorage.removeItem('user');
+                } catch(_) {}
                 showLiffLinkStatus('pending');
                 toast('✅ ส่งคำขอเรียบร้อย รอ admin อนุมัติ', 'success');
             } catch (e) {
