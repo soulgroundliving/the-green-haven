@@ -570,9 +570,12 @@ function _lrAttachHandlers(modal, ctx) {
     input.addEventListener('change', (e) => _lrSwitchActionMode(modal, e.target.value));
   });
 
-  // Transfer-only checkbox
+  // Transfer-only checkbox — affects BOTH date visibility AND submit label
   const transferOnlyCheck = modal.querySelector('#gh-lr-transfer-only');
-  if (transferOnlyCheck) transferOnlyCheck.addEventListener('change', () => _lrUpdateDatesVisibility(modal));
+  if (transferOnlyCheck) transferOnlyCheck.addEventListener('change', () => {
+    _lrUpdateDatesVisibility(modal);
+    _lrUpdateDispatchLabel(modal);
+  });
 
   // Building change repopulates room picker
   const newBuildingSel = modal.querySelector('#gh-lr-new-building');
