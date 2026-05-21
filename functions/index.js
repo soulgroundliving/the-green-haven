@@ -100,6 +100,13 @@ exports.archiveTenantOnMoveOut = require('./archiveTenantOnMoveOut').archiveTena
 // §7-DD discipline.
 exports.renewLease = require('./renewLease').renewLease;
 
+// Admin-only tenant transfer between rooms (lifecycle_tenant_transitions.md § B).
+// Two modes: 'variation' (DEFAULT — same lease, amendments[] arrayUnion) or
+// 'novation' (old lease ended, new lease created). Re-mints Auth claims per
+// §7-FF (setCustomUserClaims + revokeRefreshTokens) so token.room reflects
+// the new room within ~1 LIFF refresh cycle. Single Firestore batch per §7-DD.
+exports.transferTenant = require('./transferTenant').transferTenant;
+
 // Transition active tenant to community-member (player) — archives contract, creates
 // people/{tenantId} doc, sets role:'player' claim. Person stays in LINE with community access.
 exports.transitionToPlayer = require('./transitionToPlayer').transitionToPlayer;

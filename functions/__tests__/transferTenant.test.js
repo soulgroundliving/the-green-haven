@@ -1,0 +1,744 @@
+/**
+ * Unit tests for transferTenant — covers auth, validation, state read,
+ * variation mode batch shape, novation mode batch shape, claim refresh
+ * (§7-FF), and audit log payload.
+ *
+ * Mirrors renewLease.test.js's stub harness but adds:
+ *   - NEW tenant doc (must be vacant or non-existent)
+ *   - people doc (for lineUserId lookup → claim refresh)
+ *   - liffUsers doc (for building/room update)
+ *   - admin.auth() stub capturing setCustomUserClaims + revokeRefreshTokens
+ *
+ * Run: node --test functions/__tests__/transferTenant.test.js
+ */
+'use strict';
+
+const { describe, it, beforeEach } = require('node:test');
+const assert = require('node:assert/strict');
+
+// ── Stub state ────────────────────────────────────────────────────────────────
+
+let stubState = {};
+let captured = {};
+
+function resetStubs(overrides = {}) {
+  stubState = {
+    // tenants/{b}/list/{r} — keyed by full path so old + new are distinct
+    docs: {},                  // { 'tenants/rooms/list/15': {...}, ... }
+    // batch.commit() throws this if non-null
+    batchCommitError: null,
+    // audit RTDB push throws this if non-null
+    auditWriteError: null,
+    // admin.auth().setCustomUserClaims throws this for given uid if set
+    claimErrors: {},           // { uid: 'user-not-found' | 'permission-denied' }
+    // admin.auth().getUser returns this customClaims for given uid
+    existingClaims: {},        // { uid: { admin: true } }
+    ...overrides,
+  };
+  captured = {
+    batchOps: [],              // { op, path, data?, options? }
+    auditPushes: [],
+    setCustomClaims: [],       // [{ uid, claims }]
+    revokeRefreshTokens: [],   // [uid, uid]
+    getUserCalls: [],          // [uid]
+    liffUserUpdates: [],       // [{ path, patch }] — non-batched updates
+  };
+}
+resetStubs();
+
+// ── firebase-admin stub ───────────────────────────────────────────────────────
+
+function makeSnap(path) {
+  const data = stubState.docs[path];
+  return {
+    exists: data !== undefined && data !== null,
+    data: () => data || {},
+    ref: { path },
+  };
+}
+
+function makeDocRef(path) {
+  return {
+    path,
+    collection: (sub) => makeColl(`${path}/${sub}`),
+    get: async () => makeSnap(path),
+    // Non-batched update path (used by _updateLiffUserAndClaims)
+    update: async (patch) => {
+      captured.liffUserUpdates.push({ path, patch });
+      // Apply to stubState so subsequent reads see the change
+      if (stubState.docs[path] !== undefined && stubState.docs[path] !== null) {
+        stubState.docs[path] = { ...stubState.docs[path], ...patch };
+      }
+    },
+  };
+}
+
+function makeColl(path) {
+  return {
+    path,
+    doc: (id) => makeDocRef(`${path}/${id}`),
+    get: async () => ({ forEach: (_fn) => {} }),
+  };
+}
+
+const fsBatch = () => ({
+  set: (ref, data, options) => captured.batchOps.push({ op: 'set', path: ref.path, data, options: options || null }),
+  update: (ref, data) => captured.batchOps.push({ op: 'update', path: ref.path, data }),
+  delete: (ref) => captured.batchOps.push({ op: 'delete', path: ref.path }),
+  commit: async () => {
+    if (stubState.batchCommitError) throw new Error(stubState.batchCommitError);
+  },
+});
+
+const firestoreFn = Object.assign(
+  () => ({
+    collection: (path) => makeColl(path),
+    batch: fsBatch,
+  }),
+  {
+    FieldValue: {
+      serverTimestamp: () => '__serverTs__',
+      delete: () => '__delete__',
+      arrayUnion: (...args) => ({ __arrayUnion: args }),
+    },
+    Timestamp: {
+      fromDate: (d) => ({ toDate: () => d, toMillis: () => d.getTime() }),
+    },
+  }
+);
+
+const dbRefPush = () => ({
+  set: async (payload) => {
+    if (stubState.auditWriteError) throw new Error(stubState.auditWriteError);
+    captured.auditPushes.push(payload);
+  },
+});
+
+const dbFn = Object.assign(
+  () => ({
+    ref: (_path) => ({ push: () => dbRefPush() }),
+  }),
+  { ServerValue: { TIMESTAMP: '__rtdbTs__' } }
+);
+
+const authFn = () => ({
+  getUser: async (uid) => {
+    captured.getUserCalls.push(uid);
+    const err = stubState.claimErrors[uid];
+    if (err === 'user-not-found') {
+      const e = new Error('There is no user record corresponding to the provided identifier.');
+      e.code = 'auth/user-not-found';
+      throw e;
+    }
+    return { uid, customClaims: stubState.existingClaims[uid] || {} };
+  },
+  setCustomUserClaims: async (uid, claims) => {
+    const err = stubState.claimErrors[uid];
+    if (err === 'user-not-found') {
+      const e = new Error('There is no user record corresponding to the provided identifier.');
+      e.code = 'auth/user-not-found';
+      throw e;
+    }
+    captured.setCustomClaims.push({ uid, claims });
+  },
+  revokeRefreshTokens: async (uid) => {
+    captured.revokeRefreshTokens.push(uid);
+  },
+});
+
+const adminStub = {
+  apps: [{}],
+  initializeApp: () => {},
+  firestore: firestoreFn,
+  database: dbFn,
+  auth: authFn,
+};
+
+const Module = require('node:module');
+const originalLoad = Module._load;
+Module._load = function (request, parent, isMain) {
+  if (request === 'firebase-admin') return adminStub;
+  return originalLoad.apply(this, arguments);
+};
+
+const {
+  transferTenant,
+  _validateInput,
+  _readTransferState,
+  _runVariationMode,
+  _runNovationMode,
+  _updateLiffUserAndClaims,
+  _IDENTITY_FIELDS,
+} = require('../transferTenant');
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function adminContext() {
+  return { auth: { uid: 'admin-uid', token: { admin: true, email: 'admin@test' } } };
+}
+
+function tenantContext() {
+  return { auth: { uid: 'tenant-uid', token: { admin: false } } };
+}
+
+function futureDate(daysAhead = 365) {
+  return new Date(Date.now() + daysAhead * 86400 * 1000).toISOString();
+}
+
+const goodInput = () => ({
+  building: 'rooms',
+  oldRoomId: '15',
+  newBuilding: 'rooms',
+  newRoomId: '17',
+});
+
+async function expectHttpsError(promise, code) {
+  let caught;
+  try {
+    await promise;
+  } catch (e) {
+    caught = e;
+  }
+  assert.ok(caught, `expected HttpsError with code='${code}', got success`);
+  assert.equal(caught.code, code,
+    `expected code='${code}', got '${caught.code}' (message: ${caught.message})`);
+  return caught;
+}
+
+/**
+ * Seed a tenant at oldRoomId + active lease + vacant newRoomId.
+ * Returns { tenantId, oldLeaseId, oldEndDate }.
+ */
+function seedTransferable(overrides = {}) {
+  const oldEndDate = overrides.oldEndDate || futureDate(180);
+  const oldLeaseId = overrides.oldLeaseId || 'CONTRACT_1234567890_15';
+  const tenantId = overrides.tenantId || 'TENANT_t_15';
+  const oldRoomPath = `tenants/${overrides.building || 'rooms'}/list/${overrides.oldRoomId || '15'}`;
+  const leasePath = `leases/${overrides.building || 'rooms'}/list/${oldLeaseId}`;
+  const newRoomPath = `tenants/${overrides.newBuilding || 'rooms'}/list/${overrides.newRoomId || '17'}`;
+
+  stubState.docs[oldRoomPath] = {
+    name: 'สมชาย สิบห้า',
+    firstName: 'สมชาย',
+    lastName: 'สิบห้า',
+    phone: '0900000015',
+    tenantId,
+    linkedAuthUid: overrides.linkedAuthUid !== undefined ? overrides.linkedAuthUid : 'line:U_TEST_LINE_UID',
+    activeContractId: oldLeaseId,
+    contractId: oldLeaseId,
+    lease: { leaseId: oldLeaseId, status: 'active' },
+    contractEnd: oldEndDate,
+    rentAmount: 4500,
+    deposit: 9000,
+    status: 'occupied',
+    ...overrides.oldTenantExtras,
+  };
+  stubState.docs[leasePath] = {
+    id: oldLeaseId,
+    building: overrides.building || 'rooms',
+    roomId: overrides.oldRoomId || '15',
+    tenantId,
+    tenantName: 'สมชาย สิบห้า',
+    rentAmount: 4500,
+    deposit: 9000,
+    moveOutDate: oldEndDate,
+    contractStart: '2026-02-21T00:00:00.000Z',
+    moveInDate: '2026-02-21T00:00:00.000Z',
+    contractFileName: 'lease_2025.pdf',
+    contractDocument: 'gs://bucket/leases/old.pdf',
+    status: 'active',
+    depositPaid: true,
+    depositPaidAt: '2026-01-01T00:00:00.000Z',
+    contractMonths: 12,
+    ...overrides.leaseExtras,
+  };
+  // New room: by default DOES NOT exist (vacant target). Set explicitly to test "exists+vacant" or "exists+occupied".
+  if (overrides.newRoomDoc !== undefined) {
+    stubState.docs[newRoomPath] = overrides.newRoomDoc;
+  }
+
+  // people doc — has lineUserId for claim-refresh leg
+  stubState.docs[`people/${tenantId}`] = {
+    tenantId,
+    lineUserId: overrides.lineUserId === undefined ? 'U_TEST_LINE_UID' : overrides.lineUserId,
+    currentBuilding: overrides.building || 'rooms',
+    currentRoom: overrides.oldRoomId || '15',
+    ...overrides.peopleExtras,
+  };
+
+  // liffUsers doc (deterministic UID convention: 'line:' + lineUserId)
+  if (overrides.lineUserId !== null) {
+    stubState.docs[`liffUsers/${overrides.lineUserId || 'U_TEST_LINE_UID'}`] = {
+      lineUserId: overrides.lineUserId || 'U_TEST_LINE_UID',
+      building: overrides.building || 'rooms',
+      room: overrides.oldRoomId || '15',
+      status: 'approved',
+      ...overrides.liffExtras,
+    };
+  }
+
+  return { tenantId, oldLeaseId, oldEndDate, oldRoomPath, leasePath, newRoomPath };
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+describe('transferTenant — S1 (auth + validation)', () => {
+  beforeEach(() => { resetStubs(); });
+
+  describe('Auth gates', () => {
+    it('rejects unauthenticated callers', async () => {
+      await expectHttpsError(transferTenant.run(goodInput(), { auth: null }), 'unauthenticated');
+    });
+    it('rejects callers without admin claim', async () => {
+      await expectHttpsError(transferTenant.run(goodInput(), tenantContext()), 'permission-denied');
+    });
+  });
+
+  describe('Input validation', () => {
+    it('rejects invalid building', async () => {
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), building: 'not-a-building' }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('rejects invalid newBuilding', async () => {
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), newBuilding: 'not-a-building' }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('rejects malformed oldRoomId / newRoomId', async () => {
+      for (const bad of ['', 'room#1', 'a'.repeat(21)]) {
+        await expectHttpsError(
+          transferTenant.run({ ...goodInput(), oldRoomId: bad }, adminContext()),
+          'invalid-argument'
+        );
+        await expectHttpsError(
+          transferTenant.run({ ...goodInput(), newRoomId: bad }, adminContext()),
+          'invalid-argument'
+        );
+      }
+    });
+    it('rejects same-room transfer (no-op)', async () => {
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), newRoomId: '15' }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('rejects unknown mode', async () => {
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), mode: 'unknown' }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('rejects newRentAmount in variation mode (rent must use novation)', async () => {
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), mode: 'variation', newRentAmount: 5000 }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('rejects newDeposit in variation mode', async () => {
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), mode: 'variation', newDeposit: 10000 }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('rejects invalid effectiveDate', async () => {
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), effectiveDate: 'not-a-date' }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('rejects effectiveDate more than 1 day in the past', async () => {
+      const longAgo = new Date(Date.now() - 5 * 86400 * 1000).toISOString();
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), effectiveDate: longAgo }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('accepts effectiveDate today / yesterday (timezone tolerance)', async () => {
+      // Just validates — state read will then fail with not-found (no seed)
+      seedTransferable();
+      const todayIso = new Date().toISOString();
+      // not-found is the expected NEXT failure (no tenant doc → wait we DID seed).
+      // So this should succeed all the way through to variation mode.
+      const result = await transferTenant.run(
+        { ...goodInput(), effectiveDate: todayIso },
+        adminContext()
+      );
+      assert.equal(result.success, true);
+    });
+    it('rejects non-positive newRentAmount in novation', async () => {
+      for (const bad of [0, -100]) {
+        await expectHttpsError(
+          transferTenant.run({ ...goodInput(), mode: 'novation', newRentAmount: bad }, adminContext()),
+          'invalid-argument'
+        );
+      }
+    });
+    it('rejects negative newDeposit in novation', async () => {
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), mode: 'novation', newDeposit: -1 }, adminContext()),
+        'invalid-argument'
+      );
+    });
+    it('rejects non-string contractDocument / contractFileName / notes', async () => {
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), contractDocument: 123 }, adminContext()),
+        'invalid-argument'
+      );
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), contractFileName: {} }, adminContext()),
+        'invalid-argument'
+      );
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), notes: [] }, adminContext()),
+        'invalid-argument'
+      );
+    });
+  });
+
+  describe('_validateInput direct (white-box)', () => {
+    it('normalises mode to "variation" when omitted', async () => {
+      const result = await _validateInput(goodInput());
+      assert.equal(result.mode, 'variation');
+    });
+    it('defaults effectiveDate to now (~ within 5s)', async () => {
+      const before = Date.now();
+      const result = await _validateInput(goodInput());
+      const t = result.effectiveDate.getTime();
+      assert.ok(t >= before && t <= Date.now() + 5000, `effectiveDate ${t} not near now ${before}`);
+    });
+    it('defaults transferDeposit=true, prorateBills=false', async () => {
+      const result = await _validateInput(goodInput());
+      assert.equal(result.transferDeposit, true);
+      assert.equal(result.prorateBills, false);
+    });
+    it('coerces explicit booleans for transferDeposit / prorateBills', async () => {
+      const result = await _validateInput({
+        ...goodInput(),
+        transferDeposit: 0,    // truthy → false
+        prorateBills: 'yes',   // truthy → true
+      });
+      assert.equal(result.transferDeposit, false);
+      assert.equal(result.prorateBills, true);
+    });
+  });
+});
+
+describe('transferTenant — S2 (state read)', () => {
+  beforeEach(() => { resetStubs(); });
+
+  it('throws not-found when old tenant doc does not exist', async () => {
+    await expectHttpsError(transferTenant.run(goodInput(), adminContext()), 'not-found');
+  });
+
+  it('throws failed-precondition when old room has no tenantId', async () => {
+    seedTransferable({ oldTenantExtras: { tenantId: '' } });
+    await expectHttpsError(transferTenant.run(goodInput(), adminContext()), 'failed-precondition');
+  });
+
+  it('throws failed-precondition when tenant has no name', async () => {
+    seedTransferable({ oldTenantExtras: { name: '', firstName: '', lastName: '' } });
+    await expectHttpsError(transferTenant.run(goodInput(), adminContext()), 'failed-precondition');
+  });
+
+  it('throws failed-precondition when lease doc missing', async () => {
+    const seed = seedTransferable();
+    // Remove lease but keep tenant pointer
+    delete stubState.docs[seed.leasePath];
+    await expectHttpsError(transferTenant.run(goodInput(), adminContext()), 'failed-precondition');
+  });
+
+  it('throws failed-precondition when lease.status !== active', async () => {
+    seedTransferable({ leaseExtras: { status: 'ended' } });
+    await expectHttpsError(transferTenant.run(goodInput(), adminContext()), 'failed-precondition');
+  });
+
+  it('throws already-exists when target room is occupied', async () => {
+    seedTransferable({ newRoomDoc: { tenantId: 'TENANT_other', name: 'อื่น' } });
+    await expectHttpsError(transferTenant.run(goodInput(), adminContext()), 'already-exists');
+  });
+
+  it('accepts target room that exists but is vacant', async () => {
+    seedTransferable({ newRoomDoc: { tenantId: '', status: 'vacant', building: 'rooms', roomId: '17' } });
+    const result = await transferTenant.run(goodInput(), adminContext());
+    assert.equal(result.success, true);
+  });
+});
+
+describe('transferTenant — S3 (variation mode batch)', () => {
+  beforeEach(() => { resetStubs(); });
+
+  it('writes new tenant doc with carried identity', async () => {
+    const seed = seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const setOps = captured.batchOps.filter(o => o.op === 'set' && o.path === seed.newRoomPath);
+    assert.equal(setOps.length, 1);
+    const data = setOps[0].data;
+    // Identity carried
+    assert.equal(data.name, 'สมชาย สิบห้า');
+    assert.equal(data.tenantId, seed.tenantId);
+    assert.equal(data.phone, '0900000015');
+    // Lease pointer same as old
+    assert.equal(data.activeContractId, seed.oldLeaseId);
+    assert.equal(data.lease.leaseId, seed.oldLeaseId);
+    // Location updated to new room
+    assert.equal(data.building, 'rooms');
+    assert.equal(data.roomId, '17');
+    assert.equal(data.status, 'occupied');
+  });
+
+  it('clears old tenant doc to vacant', async () => {
+    const seed = seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const upd = captured.batchOps.find(o => o.op === 'update' && o.path === seed.oldRoomPath);
+    assert.ok(upd, 'expected old tenant doc update');
+    assert.equal(upd.data.tenantId, '');
+    assert.equal(upd.data.name, '');
+    assert.equal(upd.data.status, 'vacant');
+    // lease subobject deletion sentinel
+    assert.equal(upd.data.lease, '__delete__');
+  });
+
+  it('appends amendment entry to lease via arrayUnion', async () => {
+    const seed = seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation', notes: 'ตกลงย้ายห้อง' }, adminContext());
+    const leaseUpd = captured.batchOps.find(o => o.op === 'update' && o.path === seed.leasePath);
+    assert.ok(leaseUpd, 'expected lease update');
+    assert.equal(leaseUpd.data.roomId, '17');
+    assert.equal(leaseUpd.data.building, 'rooms');
+    assert.ok(leaseUpd.data.amendments && leaseUpd.data.amendments.__arrayUnion,
+      'amendments must use arrayUnion sentinel');
+    const entry = leaseUpd.data.amendments.__arrayUnion[0];
+    assert.equal(entry.type, 'room_transfer');
+    assert.equal(entry.fromRoom, '15');
+    assert.equal(entry.toRoom, '17');
+    assert.equal(entry.notes, 'ตกลงย้ายห้อง');
+    assert.equal(entry.by, 'admin-uid');
+  });
+
+  it('keeps lease status="active" in variation (no transferredToLeaseId)', async () => {
+    const seed = seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const leaseUpd = captured.batchOps.find(o => o.op === 'update' && o.path === seed.leasePath);
+    assert.equal(leaseUpd.data.status, undefined, 'variation must NOT change lease status');
+    assert.equal(leaseUpd.data.transferredToLeaseId, undefined);
+  });
+
+  it('does NOT create a new lease doc in variation (same-building)', async () => {
+    seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const leaseSets = captured.batchOps.filter(o => o.op === 'set' && o.path.startsWith('leases/'));
+    assert.equal(leaseSets.length, 0, 'variation same-building must not create a new lease');
+  });
+
+  it('moves lease doc across buildings when newBuilding != building', async () => {
+    const seed = seedTransferable({ newBuilding: 'nest', newRoomId: 'N101' });
+    await transferTenant.run(
+      { ...goodInput(), newBuilding: 'nest', newRoomId: 'N101', mode: 'variation' },
+      adminContext()
+    );
+    const newLeasePath = `leases/nest/list/${seed.oldLeaseId}`;
+    const sets = captured.batchOps.filter(o => o.op === 'set' && o.path === newLeasePath);
+    const deletes = captured.batchOps.filter(o => o.op === 'delete' && o.path === seed.leasePath);
+    assert.equal(sets.length, 1, 'cross-building variation must create lease at new path');
+    assert.equal(deletes.length, 1, 'cross-building variation must delete old lease path');
+    // New lease doc has amendments resolved (NOT arrayUnion sentinel)
+    assert.ok(Array.isArray(sets[0].data.amendments), 'cross-building set must resolve amendments to array');
+  });
+
+  it('updates people doc with new location', async () => {
+    const seed = seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const peopleOps = captured.batchOps.filter(o => o.path === `people/${seed.tenantId}`);
+    assert.equal(peopleOps.length, 1);
+    assert.equal(peopleOps[0].data.currentRoom, '17');
+    assert.equal(peopleOps[0].data.currentBuilding, 'rooms');
+  });
+});
+
+describe('transferTenant — S4 (novation mode batch)', () => {
+  beforeEach(() => { resetStubs(); });
+
+  it('creates NEW lease doc with priorLeaseId chain', async () => {
+    seedTransferable();
+    const result = await transferTenant.run({ ...goodInput(), mode: 'novation' }, adminContext());
+    assert.ok(result.newLeaseId, 'novation must return newLeaseId');
+    const newLeasePath = `leases/rooms/list/${result.newLeaseId}`;
+    const newLeaseSet = captured.batchOps.find(o => o.op === 'set' && o.path === newLeasePath);
+    assert.ok(newLeaseSet, 'expected new lease doc set');
+    assert.equal(newLeaseSet.data.priorLeaseId, 'CONTRACT_1234567890_15');
+    assert.equal(newLeaseSet.data.transferredFromLeaseId, 'CONTRACT_1234567890_15');
+    assert.equal(newLeaseSet.data.transferredFromRoom, '15');
+    assert.equal(newLeaseSet.data.roomId, '17');
+    assert.equal(newLeaseSet.data.status, 'active');
+  });
+
+  it('sets old lease status="transferred" + transferredToLeaseId', async () => {
+    const seed = seedTransferable();
+    const result = await transferTenant.run({ ...goodInput(), mode: 'novation' }, adminContext());
+    const oldLeaseUpd = captured.batchOps.find(o => o.op === 'update' && o.path === seed.leasePath);
+    assert.ok(oldLeaseUpd, 'expected old lease update');
+    assert.equal(oldLeaseUpd.data.status, 'transferred');
+    assert.equal(oldLeaseUpd.data.transferredToLeaseId, result.newLeaseId);
+    assert.equal(oldLeaseUpd.data.endReason, 'transferred');
+  });
+
+  it('applies newRentAmount override in novation', async () => {
+    seedTransferable();
+    const result = await transferTenant.run(
+      { ...goodInput(), mode: 'novation', newRentAmount: 5500 },
+      adminContext()
+    );
+    const newLeasePath = `leases/rooms/list/${result.newLeaseId}`;
+    const newLeaseSet = captured.batchOps.find(o => o.op === 'set' && o.path === newLeasePath);
+    assert.equal(newLeaseSet.data.rentAmount, 5500);
+  });
+
+  it('inherits old rent when newRentAmount omitted', async () => {
+    seedTransferable();
+    const result = await transferTenant.run({ ...goodInput(), mode: 'novation' }, adminContext());
+    const newLeasePath = `leases/rooms/list/${result.newLeaseId}`;
+    const newLeaseSet = captured.batchOps.find(o => o.op === 'set' && o.path === newLeasePath);
+    assert.equal(newLeaseSet.data.rentAmount, 4500);
+  });
+
+  it('does NOT touch amendments array (novation creates fresh lease)', async () => {
+    const seed = seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'novation' }, adminContext());
+    const oldLeaseUpd = captured.batchOps.find(o => o.op === 'update' && o.path === seed.leasePath);
+    assert.equal(oldLeaseUpd.data.amendments, undefined, 'novation must not amend old lease array');
+  });
+});
+
+describe('transferTenant — S5 (claim refresh §7-FF)', () => {
+  beforeEach(() => { resetStubs(); });
+
+  it('calls setCustomUserClaims with new room+building+tenantId on linked UID', async () => {
+    seedTransferable({ linkedAuthUid: 'line:U_TEST_LINE_UID' });
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    assert.ok(captured.setCustomClaims.length > 0, 'expected setCustomUserClaims to be called');
+    const claim = captured.setCustomClaims.find(c => c.uid === 'line:U_TEST_LINE_UID');
+    assert.ok(claim, 'expected deterministic UID claim refresh');
+    assert.equal(claim.claims.room, '17');
+    assert.equal(claim.claims.building, 'rooms');
+    assert.equal(claim.claims.tenantId, 'TENANT_t_15');
+  });
+
+  it('calls revokeRefreshTokens for the refreshed UID', async () => {
+    seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    assert.ok(captured.revokeRefreshTokens.includes('line:U_TEST_LINE_UID'),
+      'expected revokeRefreshTokens for deterministic UID');
+  });
+
+  it('preserves existing admin claim when merging', async () => {
+    seedTransferable({ linkedAuthUid: 'line:U_TEST_LINE_UID' });
+    stubState.existingClaims['line:U_TEST_LINE_UID'] = { admin: false, role: 'tenant' };
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const claim = captured.setCustomClaims.find(c => c.uid === 'line:U_TEST_LINE_UID');
+    assert.equal(claim.claims.role, 'tenant', 'must merge with existing claims');
+    assert.equal(claim.claims.room, '17', 'must apply new room');
+  });
+
+  it('refreshes both deterministic + legacy UIDs when they differ', async () => {
+    seedTransferable({ linkedAuthUid: 'legacy_anon_uid_xyz' });
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const uids = captured.setCustomClaims.map(c => c.uid).sort();
+    assert.deepEqual(uids, ['legacy_anon_uid_xyz', 'line:U_TEST_LINE_UID'].sort());
+  });
+
+  it('handles auth/user-not-found for legacy UID gracefully', async () => {
+    seedTransferable({ linkedAuthUid: 'legacy_anon_cleaned_up' });
+    stubState.claimErrors['legacy_anon_cleaned_up'] = 'user-not-found';
+    const result = await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    // Deterministic UID should still succeed
+    assert.equal(result.claimsRefreshed, 1);
+  });
+
+  it('returns claimsRefreshed=0 when tenant has never linked LIFF', async () => {
+    seedTransferable({ linkedAuthUid: '', lineUserId: null });
+    const result = await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    assert.equal(result.claimsRefreshed, 0);
+    assert.equal(captured.setCustomClaims.length, 0);
+  });
+
+  it('updates liffUsers/{lineUserId}.building+room', async () => {
+    seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const upd = captured.liffUserUpdates.find(u => u.path === 'liffUsers/U_TEST_LINE_UID');
+    assert.ok(upd, 'expected liffUsers update');
+    assert.equal(upd.patch.building, 'rooms');
+    assert.equal(upd.patch.room, '17');
+  });
+});
+
+describe('transferTenant — S6 (audit log)', () => {
+  beforeEach(() => { resetStubs(); });
+
+  it('writes RTDB audit entry on variation', async () => {
+    seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation', notes: 'test note' }, adminContext());
+    assert.equal(captured.auditPushes.length, 1);
+    const audit = captured.auditPushes[0];
+    assert.equal(audit.action, 'tenant_transferred');
+    assert.equal(audit.mode, 'variation');
+    assert.equal(audit.fromRoom, '15');
+    assert.equal(audit.toRoom, '17');
+    assert.equal(audit.notes, 'test note');
+    assert.equal(audit.actor, 'admin@test');
+  });
+
+  it('writes RTDB audit entry on novation', async () => {
+    seedTransferable();
+    const result = await transferTenant.run(
+      { ...goodInput(), mode: 'novation', newRentAmount: 5500 },
+      adminContext()
+    );
+    assert.equal(captured.auditPushes.length, 1);
+    const audit = captured.auditPushes[0];
+    assert.equal(audit.mode, 'novation');
+    assert.equal(audit.newLeaseId, result.newLeaseId);
+    assert.equal(audit.oldLeaseId, 'CONTRACT_1234567890_15');
+    assert.equal(audit.rentChanged, true);
+    assert.equal(audit.newRent, 5500);
+  });
+
+  it('does NOT fail the call when audit write throws', async () => {
+    seedTransferable();
+    stubState.auditWriteError = 'rtdb-down';
+    const result = await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    assert.equal(result.success, true, 'audit failure must be swallowed');
+  });
+});
+
+describe('transferTenant — S7 (top-level integration)', () => {
+  beforeEach(() => { resetStubs(); });
+
+  it('returns mode + tenantId + lease IDs on success', async () => {
+    seedTransferable();
+    const result = await transferTenant.run({ ...goodInput(), mode: 'novation' }, adminContext());
+    assert.equal(result.success, true);
+    assert.equal(result.mode, 'novation');
+    assert.equal(result.tenantId, 'TENANT_t_15');
+    assert.equal(result.oldLeaseId, 'CONTRACT_1234567890_15');
+    assert.match(result.newLeaseId, /^CONTRACT_\d+_17$/);
+  });
+
+  it('throws internal on batch.commit failure', async () => {
+    seedTransferable();
+    stubState.batchCommitError = 'firestore-down';
+    await expectHttpsError(
+      transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext()),
+      'internal'
+    );
+  });
+
+  it('IDENTITY_FIELDS export sanity check', () => {
+    assert.ok(_IDENTITY_FIELDS.includes('name'));
+    assert.ok(_IDENTITY_FIELDS.includes('tenantId'));
+    assert.ok(_IDENTITY_FIELDS.includes('linkedAuthUid'));
+    assert.ok(_IDENTITY_FIELDS.includes('gamification'));
+  });
+});
