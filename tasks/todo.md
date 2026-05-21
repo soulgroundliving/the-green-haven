@@ -224,10 +224,41 @@ Total: ~7 files, ~1,800 LOC net new + modified. Beyond the §1 Plan-First thresh
 
 ## Pre-flight (before approving)
 
-- [ ] User picks defaults for Q1-Q6 (or confirms recommendations)
-- [ ] User confirms test data fixture decision (Q5)
-- [ ] User confirms single approval vs split (Q6)
+- [x] User answered AskUserQuestion 2026-05-21 evening (7): "Pickup P3-P7 here (merge งานพี่น้อง)" + "keep test data fixture (Q5=a)"
+- [x] Q1-Q4 technical defaults baked into shipped code per plan (fresh leaseId, sequential CFs for transfer+renew, §7-FF three-leg, immediate vacate)
+- [x] Q6 — single approval (all P3-P7 in one cycle)
 
-## Review
+## Review (P3-P7 shipped — 2026-05-21 evening 7)
 
-(To be filled at end of sprint per CLAUDE.md §1 Plan-First Protocol)
+5 commits → main + 2 firebase deploys + 1 handoff doc + lifecycle_tenant_transitions.md restructure.
+
+### Phases closed
+
+| Phase | SHA | What landed |
+|---|---|---|
+| Cherry-pick P1+P2 | [`7bbc3c2`](https://github.com/soulgroundliving/the-green-haven/commit/7bbc3c2) | Pulled `30800a7` from parallel worktree `eloquent-engelbart-326c72`; ff-merged to main. CF + 51 unit tests landed in the user's `main`. |
+| P3 — Deploy + live verify | (deploy + Chrome MCP) | `firebase deploy --only functions:transferTenant`. Variation + novation forward+reverse cycles verified. 11/11 Firestore checks + amendments[] + RTDB audit_logs/leases entry GREEN. §7-J probation **CLOSED**. Cross-mode chain test (novation forward + variation reverse) green. Minor doc-vs-code drift noted: JSDoc says `endedAt` on novation, code writes `transferredAt` — flagged in handoff. |
+| P4 — renewLease newStartDate | [`3b44082`](https://github.com/soulgroundliving/the-green-haven/commit/3b44082) | Optional param + 7 new tests (44 total in file, 331/331 full suite). Deployed. Live-verified call `{newStartDate:'2028-04-21', newEndDate:'2029-04-21'}` showed contractStart, contractMonths=12, audit.startGapDays=60 all correct. §7-DD regression checks 4/4 green. |
+| P5 — Composite UI | [`d29007d`](https://github.com/soulgroundliving/the-green-haven/commit/d29007d) | `shared/dashboard-lease-renew.js` (355 → 631 LOC) + extracted `shared/dashboard-lease-renew-roompicker.js` (133 LOC) per P5.6 hard-cap remedy. dashboard.html wires roompicker before main. Dispatch matrix: same+renewal/extension → renewLease; new+transferOnly → transferTenant; new+!transferOnly → transferTenant THEN renewLease@newRoom with half-success messaging. |
+| P6 — UI verify | [`65020b0`](https://github.com/soulgroundliving/the-green-haven/commit/65020b0) (bug fix) | Modal mounts, room toggle/action toggle/transferOnly checkbox all wire correctly. Room picker populates 22 vacant rooms. Auto-fill from `buildings/rooms/rooms/17` returned rent=1200, deposit=2400. **Caught + fixed P6 bug**: submit label wasn't updating on transferOnly toggle — `_lrAttachHandlers` was missing `_lrUpdateDispatchLabel` call. |
+| P7 — Memory + handoff | (out-of-repo) | [lifecycle_tenant_transitions.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\lifecycle_tenant_transitions.md) § B moved Missing → Existing + ## Verification block extended with transferTenant greps; new [next_session_handoff_2026_05_21_transfertenant_shipped.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\next_session_handoff_2026_05_21_transfertenant_shipped.md); MEMORY.md 🎯 Current state has new top entry; `npm run verify:memory` GREEN (34 docs · 322 rows · 0 fails). |
+
+### Deferred (next-session follow-ups)
+
+1. **P5 final UI submit-button click round-trip** — exercise actual click through the modal for each of the 4 dispatch paths. Per §7-I, requires user action. ~30 sec each, 4 paths.
+2. **transferTenant.js JSDoc cleanup** — line 95 says novation sets `endedAt`, code writes `transferredAt`. XS doc-only fix.
+3. **UI polish**: `newStartDate` input should clear (or default to today) when switching room-mode to "new". Currently preserves prior value. XS.
+4. **§7-FF Auth claim refresh on REAL tenant** — current verification used a fixture without a linked liffUser; `claimsRefreshed=0` in CF return. Validate end-to-end with a real linked LINE user (low-risk variation transfer + reopen LIFF + verify `token.room` flipped).
+5. **A — restoreReturningTenant** — next on lifecycle_tenant_transitions.md prioritisation list (S effort).
+
+### What surprised me
+
+- The §7-J probation pattern (static deploy ≠ live verified) caught a real bug at P6 — the UI dispatcher submit label wasn't updating on `transferOnly` change. Would have shipped with confusing UX (label says "ย้าย + ต่อสัญญา" even when the button only fires transferTenant). Static review wouldn't have caught it; the live Chrome MCP toggle test did.
+- The OLD tenants/rooms/list/15 had `status='vacant'` corruption BEFORE this session (leftover from upstream sessions). The first variation transfer cycle auto-repaired it because `_runVariationMode` sets explicit `status: 'occupied'` on the populated new-doc. Free fix.
+- `TenantLookup.getTenantList(building)` doesn't exist on the live module — the LRRoomPicker code I wrote assumed it does. The fallback path (direct Firestore scan) saved it. Worth noting in any future doc that mentions `TenantLookup`.
+- `buildings/rooms/rooms/17` HAS a doc with rent + deposit defaults. The auto-fill UX works for real registry data; this was an unverified-from-spec guess that turned out correct.
+- File-size discipline forced a clean extraction (LRRoomPicker module) — the resulting split is actually cleaner architecture than one big file would have been. Plan B's "if exceeds, extract" was the right rule.
+
+### Anti-pattern relevance
+
+This sprint touched §7-DD (lifecycle CFs update sibling collections, mirrored verbatim from `archiveTenantOnMoveOut` into both `_runVariationMode` and `_runNovationMode`), §7-FF (three-leg claim refresh — `setCustomUserClaims` + `revokeRefreshTokens` for det. + legacy UIDs in `_updateLiffUserAndClaims`), §7-J (static deploy ≠ live verified — closed for transferTenant, closed for renewLease P4). No new anti-pattern surfaced — all categories were known patterns + correctly applied from day 1.
