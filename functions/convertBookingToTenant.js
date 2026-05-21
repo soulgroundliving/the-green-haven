@@ -38,6 +38,10 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
 
+// Plan B' S1: shared helper for the room-occupancy audit log (subcollection
+// at tenants/{b}/list/{r}/occupancyLog/{key}). Append-only per Firestore rule.
+const { appendLog } = require('./_occupancyLog');
+
 const CONVERT_ELIGIBLE_STATUSES = new Set(['paid', 'kyc_approved']);
 const SKIP_KYC_STATUSES = new Set(['paid', 'kyc_pending', 'kyc_approved']);
 
@@ -387,6 +391,32 @@ exports.convertBookingToTenant = functions.region('asia-southeast1').https.onCal
         earlyBirdAwardedPoints: awardEarlyBird ? ebPoints : 0,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+
+      // Plan B' S1: append-only occupancyLog entry for this room. Lives in
+      // the SAME transaction so partial failure rolls back the log too
+      // (no orphan history). Discriminator=bookingId ensures CF retries +
+      // backfill collapse onto the same doc id (set without merge).
+      try {
+        appendLog(tx, firestore, {
+          tenantId,
+          tenantName: String(booking.prospectName || ''),
+          personId: tenantId,                           // people/{tenantId} pointer
+          building,
+          roomId,
+          action: 'moved_in',
+          leaseId: contractId,
+          by: context.auth.uid,
+          byEmail: String(context.auth.token.email || '') || null,
+          source: 'convertBookingToTenant',
+          discriminator: bookingId,
+          notes: priorTenantId ? `Returning tenant (priorTenantId=${priorTenantId})` : null,
+        });
+      } catch (logErr) {
+        // Re-throw inside the txn so the whole conversion aborts. Wrong source
+        // / action / missing field is a deploy bug, not a runtime condition.
+        console.error('convertBookingToTenant: occupancyLog append failed (aborting):', logErr.message);
+        throw logErr;
+      }
 
       return {
         bookingId,

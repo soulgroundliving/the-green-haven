@@ -273,6 +273,24 @@ service cloud.firestore {
            get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
         allow update, delete: if isAdmin();
       }
+
+      // occupancyLog — append-only audit-grade history of every tenant
+      // move-in / move-out / transfer / archive on this room. Written by CFs
+      // ONLY (transferTenant, archiveTenantOnMoveOut, convertBookingToTenant,
+      // future restoreReturningTenant) via Admin SDK which bypasses these
+      // rules. Direct client writes are blocked; updates + deletes are blocked
+      // for everyone including admin — the log is tamper-proof.
+      //
+      // Reads: admin (audit), tenant-self (their own entries — supports DSR
+      // requests + "where did I live" view in tenant_app). Cross-tenant reads
+      // blocked. See functions/_occupancyLog.js for schema spec. Plan B' S1.
+      match /occupancyLog/{eventId} {
+        allow read:   if isAdmin()
+                     || (isSignedIn()
+                         && request.auth.token.tenantId != null
+                         && resource.data.tenantId == request.auth.token.tenantId);
+        allow create, update, delete: if false;
+      }
     }
 
     // ===== TENANTS ARCHIVE (Phase 1 — preserve identity on move-out) =====
@@ -352,6 +370,22 @@ service cloud.firestore {
     // queries. Tenants never run this query (admin dashboard only).
     match /{path=**}/wellnessClaimed/{articleId} {
       allow read: if isAdmin();
+    }
+
+    // ===== OCCUPANCY LOG — collectionGroup query support (Plan B' S1) =====
+    // The nested rule (line ~277) only matches the specific room path
+    // tenants/{b}/list/{r}/occupancyLog/{event}, NOT collectionGroup queries.
+    // Two use cases for collectionGroup:
+    //   (1) admin viewing a tenant's full timeline across rooms
+    //   (2) tenant_app showing "ฉันเคยอยู่ห้องไหนบ้าง" (DSR-grade)
+    // Tenant-self path requires the doc's tenantId to equal the caller's
+    // claim — same gate as the nested rule. Writes blocked everywhere.
+    match /{path=**}/occupancyLog/{eventId} {
+      allow read: if isAdmin()
+               || (isSignedIn()
+                   && request.auth.token.tenantId != null
+                   && resource.data.tenantId == request.auth.token.tenantId);
+      allow write: if false;
     }
 
     // ===== METER DATA =====

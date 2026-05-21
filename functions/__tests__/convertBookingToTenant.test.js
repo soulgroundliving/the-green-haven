@@ -313,3 +313,59 @@ describe('convertBookingToTenant — Phase 6 slim tenant doc', () => {
     assert.ok(p.linkedAuthUid);
   });
 });
+
+// ── Tests: Plan B' S1 — occupancyLog write ──────────────────────────────────
+
+describe("convertBookingToTenant — Plan B' S1 occupancyLog write", () => {
+  beforeEach(() => { resetStubs(); });
+
+  it('appends ONE occupancyLog entry at the new room (action=moved_in) per conversion', async () => {
+    const result = await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
+
+    const logSet = findSet('tenants/rooms/list/20/occupancyLog/');
+    assert.ok(logSet, 'occupancyLog entry must be written under the new tenant room');
+
+    const e = logSet.data;
+    assert.equal(e.action, 'moved_in');
+    assert.equal(e.source, 'convertBookingToTenant');
+    assert.equal(e.building, 'rooms');
+    assert.equal(e.roomId, '20');
+    assert.equal(e.tenantId, result.tenantId);
+    assert.equal(e.leaseId, result.contractId);
+    assert.equal(e.by, 'admin-uid');
+    assert.ok(e.idempotencyKey, 'idempotencyKey must be persisted in the doc body too');
+    // Pair fields should be null for non-transfer events
+    assert.equal(e.otherBuilding, null);
+    assert.equal(e.otherRoom, null);
+  });
+
+  it('occupancyLog doc id is deterministic = idempotencyKey (booking retry safe)', async () => {
+    const result = await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
+
+    const logSet = findSet('tenants/rooms/list/20/occupancyLog/');
+    const docIdFromPath = logSet.path.split('/').pop();
+    assert.equal(docIdFromPath, logSet.data.idempotencyKey,
+      'doc id MUST equal idempotencyKey so retries / backfill collapse onto same doc');
+
+    // Shape: source__leaseId__action__building__roomId__discriminator
+    // Discriminator for convertBookingToTenant = bookingId
+    assert.ok(docIdFromPath.includes('convertBookingToTenant'));
+    assert.ok(docIdFromPath.includes('moved_in'));
+    assert.ok(docIdFromPath.includes('rooms__20'));
+    assert.ok(docIdFromPath.includes('BKtest001'));
+  });
+
+  it('occupancyLog entry carries denormalized tenantName + by + byEmail (audit fields)', async () => {
+    const result = await convertBookingToTenant.run({ bookingId: 'BKtest001' }, adminContext());
+
+    const logSet = findSet('tenants/rooms/list/20/occupancyLog/');
+    assert.equal(logSet.data.tenantName, 'ทดสอบ ทดสอบ',
+      'tenantName must be denormalized so log survives identity edits');
+    assert.equal(logSet.data.by, 'admin-uid');
+    // byEmail comes from context.auth.token.email — null if absent on the
+    // adminContext stub. Either way the field MUST be present in the doc.
+    assert.ok('byEmail' in logSet.data, 'byEmail field must be present (null OK if no email on token)');
+    assert.equal(logSet.data.personId, result.tenantId,
+      'personId points at the people/{id} doc (= tenantId in this codebase)');
+  });
+});

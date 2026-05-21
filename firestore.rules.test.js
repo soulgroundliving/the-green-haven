@@ -555,6 +555,86 @@ describe('wellnessClaimed — tenant create-only (idempotent)', () => {
   });
 });
 
+describe('occupancyLog — append-only audit history (Plan B\' S1)', () => {
+  // Helper: LIFF tenant with explicit tenantId claim (the rule's read gate)
+  const LIFF_WITH_TENANT_ID = (uid, tenantId, room = '101', building = 'rooms') =>
+    testEnv.authenticatedContext(uid, {
+      tenantId, room, building,
+      firebase: { sign_in_provider: 'custom' }
+    });
+
+  it('admin can read all occupancyLog entries', async () => {
+    await seedDoc('tenants/rooms/list/101/occupancyLog/key1', {
+      tenantId: 'TENANT_X', action: 'moved_in', source: 'convertBookingToTenant'
+    });
+    await assertSucceeds(getDoc(
+      doc(EMAIL_ADMIN().firestore(), 'tenants/rooms/list/101/occupancyLog/key1')
+    ));
+  });
+
+  it('tenant can read their OWN occupancyLog entries (via tenantId claim)', async () => {
+    await seedDoc('tenants/rooms/list/101/occupancyLog/key1', {
+      tenantId: 'TENANT_OWN', action: 'moved_in', source: 'convertBookingToTenant'
+    });
+    const ctx = LIFF_WITH_TENANT_ID('line:abc', 'TENANT_OWN');
+    await assertSucceeds(getDoc(doc(ctx.firestore(), 'tenants/rooms/list/101/occupancyLog/key1')));
+  });
+
+  it('tenant CANNOT read OTHER tenant\'s occupancyLog entries (cross-tenant leak block)', async () => {
+    await seedDoc('tenants/rooms/list/101/occupancyLog/key1', {
+      tenantId: 'TENANT_OTHER', action: 'moved_in', source: 'convertBookingToTenant'
+    });
+    const ctx = LIFF_WITH_TENANT_ID('line:abc', 'TENANT_OWN');
+    await assertFails(getDoc(doc(ctx.firestore(), 'tenants/rooms/list/101/occupancyLog/key1')));
+  });
+
+  it('unauth user CANNOT read any occupancyLog', async () => {
+    await seedDoc('tenants/rooms/list/101/occupancyLog/key1', {
+      tenantId: 'TENANT_X', action: 'moved_in', source: 'convertBookingToTenant'
+    });
+    await assertFails(getDoc(doc(UNAUTH().firestore(), 'tenants/rooms/list/101/occupancyLog/key1')));
+  });
+
+  it('client CANNOT create occupancyLog directly (CF-only via Admin SDK)', async () => {
+    // Even admin via client SDK is blocked — only Admin SDK (which bypasses rules) writes.
+    await assertFails(setDoc(
+      doc(EMAIL_ADMIN().firestore(), 'tenants/rooms/list/101/occupancyLog/forge'),
+      { tenantId: 'TENANT_X', action: 'moved_in', source: 'convertBookingToTenant' }
+    ));
+    await assertFails(setDoc(
+      doc(ANON().firestore(), 'tenants/rooms/list/101/occupancyLog/forge'),
+      { tenantId: 'TENANT_X', action: 'moved_in', source: 'convertBookingToTenant' }
+    ));
+  });
+
+  it('admin CANNOT update an existing occupancyLog entry (tamper-proof invariant)', async () => {
+    await seedDoc('tenants/rooms/list/101/occupancyLog/key1', {
+      tenantId: 'TENANT_X', action: 'moved_in', source: 'convertBookingToTenant'
+    });
+    await assertFails(updateDoc(
+      doc(EMAIL_ADMIN().firestore(), 'tenants/rooms/list/101/occupancyLog/key1'),
+      { action: 'archived' }
+    ));
+  });
+
+  it('admin CANNOT delete an occupancyLog entry (audit-grade — history is permanent)', async () => {
+    await seedDoc('tenants/rooms/list/101/occupancyLog/key1', {
+      tenantId: 'TENANT_X', action: 'moved_in', source: 'convertBookingToTenant'
+    });
+    await assertFails(deleteDoc(
+      doc(EMAIL_ADMIN().firestore(), 'tenants/rooms/list/101/occupancyLog/key1')
+    ));
+  });
+
+  it('admin collectionGroup query across rooms succeeds (per-tenant timeline)', async () => {
+    await seedDoc('tenants/rooms/list/101/occupancyLog/k1', { tenantId: 'TENANT_Y', action: 'moved_in', source: 'convertBookingToTenant' });
+    await seedDoc('tenants/nest/list/N201/occupancyLog/k2', { tenantId: 'TENANT_Y', action: 'transferred_in', source: 'transferTenant.variation' });
+    await assertSucceeds(getDocs(
+      query(collectionGroup(EMAIL_ADMIN().firestore(), 'occupancyLog'))
+    ));
+  });
+});
+
 describe('bookings — CF-only writes, prospect reads own only', () => {
   const sampleBooking = (prospectUid) => ({
     prospectUid,
