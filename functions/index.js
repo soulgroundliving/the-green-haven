@@ -57,6 +57,12 @@ exports.liffSignIn = require('./liffSignIn').liffSignIn;
 // LINE user as still-linked. Keeps liffUsers doc for audit trail.
 exports.unlinkLiffUser = require('./unlinkLiffUser').unlinkLiffUser;
 
+// Community-member (post-unlink) in-app path to request a fresh room link.
+// HTTPS endpoint, LIFF idToken as sole credential (mirror liffSignIn).
+// Allowed transitions: liffUsers.status ∈ {unlinked, rejected} → pending.
+// Fires notifyLiffRequest so admin gets the same LINE push as a new request.
+exports.requestRoomRelink = require('./requestRoomRelink').requestRoomRelink;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOKING FLOW (LIFF prospect → deposit-paid booking → admin convert to tenant)
 // Separate auth namespace from liffSignIn (uid prefix "book:" vs "line:") so

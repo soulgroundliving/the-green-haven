@@ -1480,13 +1480,18 @@
         }
 
         /* Unlinked mode — admin removed the LINE↔room link. Hide every interactive
-           CTA so "เห็นได้แค่หน้า world map" actually holds (the JS gate already
-           redirects navigation, but a button user clicks only to see a toast is
-           half-baked UX). Banner from _applyUnlinkedMode stays. */
+           CTA EXCEPT the "ต่อสัญญาใหม่" relink pin (#relink-pin), which is the
+           sole in-app path back for the tenant. JS navigation gate in
+           _applyUnlinkedMode still routes anything else back to world-map.
+           Banner from _applyUnlinkedMode stays. */
         body.gh-unlinked-mode #map-bell-btn,
-        body.gh-unlinked-mode #world-map-page .map-container > button {
+        body.gh-unlinked-mode #world-map-page .map-container > button:not(#relink-pin) {
             display: none !important;
         }
+        /* #relink-pin is hidden by default — only shown when unlinked mode is active.
+           Keeps it invisible to active tenants who don't need it. */
+        #relink-pin { display: none; }
+        body.gh-unlinked-mode #relink-pin { display: block; }
 
         .day-card {
             background: #F3F4F6;
@@ -2358,6 +2363,20 @@
                 style="position:absolute;top:70%;left:18%;z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
                 <div class="map-label" style="background: #0EA5E9;">PAY BILL</div>
                 <div class="map-icon-bounce" style="animation-delay: 0.6s;">💳</div>
+            </button>
+
+            <!-- Relink pin — only visible to community members in unlinked mode
+                 (display rule above gates #relink-pin to body.gh-unlinked-mode).
+                 Opens the standard "ขอเชื่อมห้อง" form via showRelinkForm() so the
+                 LIFF user can ask admin for a fresh room link without external
+                 contact. Server-side write via requestRoomRelink CF — see
+                 functions/requestRoomRelink.js. Centred so it's the sole focus
+                 when every other pin is hidden. -->
+            <button type="button" id="relink-pin" data-action="showRelinkForm"
+                aria-label="ขอเชื่อมห้องใหม่"
+                style="position:absolute;top:48%;left:50%;transform:translate(-50%,-50%);z-index:30;text-align:center;touch-action:manipulation;background:none;border:none;padding:0;font:inherit;cursor:pointer;">
+                <div class="map-label" style="background:#2d8653;">ต่อสัญญาใหม่</div>
+                <div class="map-icon-bounce" style="animation-delay: 0.2s;">🔄</div>
             </button>
         </div>
     </div>
@@ -10135,7 +10154,102 @@
             if (greet && window._lineProfile) greet.textContent = `สวัสดีคุณ ${window._lineProfile.displayName} 👋`;
             document.getElementById('liff-link-form-box').style.display = '';
             document.getElementById('liff-link-status-box').style.display = 'none';
+            // Reset submit button to fresh-signup mode (in case showRelinkForm
+            // swapped it earlier this session). The standard create path uses
+            // client setDoc → submitLiffLinkRequest.
+            const btn = document.getElementById('liff-link-submit-btn');
+            if (btn) {
+                btn.dataset.action = 'submitLiffLinkRequest';
+                btn.textContent = '🔗 ส่งคำขอเชื่อมบัญชี';
+                btn.disabled = false;
+            }
         }
+
+        // Re-link path — same overlay/form as showLiffLinkForm, but the submit
+        // routes through the requestRoomRelink CF (admin SDK) because the user's
+        // liffUsers/{lineId} doc already exists in a terminal state (unlinked /
+        // rejected) and the firestore rule blocks client-side update of that
+        // doc. The CF validates LIFF idToken + room/building, flips status to
+        // 'pending', and notifies admin via the same LINE push as a fresh
+        // signup. Triggered from the #relink-pin on the world map (unlinked
+        // mode only) and from the "ส่งคำขอใหม่" button on the rejected status.
+        function showRelinkForm() {
+            const host = document.getElementById('liff-link-overlay');
+            if (!host) return;
+            host.style.display = 'flex';
+            const greet = document.getElementById('liff-link-greeting');
+            if (greet) {
+                const name = window._lineProfile?.displayName || 'ลูกบ้าน';
+                greet.textContent = `สวัสดีคุณ ${name} — ขอเชื่อมห้องใหม่ได้ที่นี่`;
+            }
+            document.getElementById('liff-link-form-box').style.display = '';
+            document.getElementById('liff-link-status-box').style.display = 'none';
+            const btn = document.getElementById('liff-link-submit-btn');
+            if (btn) {
+                btn.dataset.action = 'submitRelinkRequest';
+                btn.textContent = '🔄 ส่งคำขอเชื่อมห้อง';
+                btn.disabled = false;
+            }
+        }
+        window.showRelinkForm = showRelinkForm;
+
+        async function submitRelinkRequest() {
+            const bld = document.getElementById('liff-link-building').value;
+            const room = document.getElementById('liff-link-room').value.trim();
+            if (!bld || !room) { toast('กรุณาเลือกตึกและใส่หมายเลขห้อง', 'error'); return; }
+            const btn = document.getElementById('liff-link-submit-btn');
+            const resetBtn = () => { if (btn) { btn.disabled = false; btn.textContent = '🔄 ส่งคำขอเชื่อมห้อง'; } };
+            if (btn) { btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
+
+            // LIFF idToken is the sole credential — server verifies via LINE /verify.
+            // No Firebase Auth required (the user may be anonymous post-unlink).
+            let idToken;
+            try {
+                if (typeof liff === 'undefined' || !liff.getIDToken) {
+                    throw new Error('LIFF SDK ไม่พร้อม กรุณาเปิดผ่าน LINE');
+                }
+                idToken = liff.getIDToken();
+                if (!idToken) throw new Error('ดึง LIFF token ไม่สำเร็จ');
+            } catch (e) {
+                toast('❌ ' + e.message, 'error');
+                resetBtn();
+                return;
+            }
+
+            // §7-R: any wire-bound await inside LIFF webview needs an AbortController
+            // timeout — LINE's TLS connection cache can hang fetch() indefinitely.
+            const ctrl = new AbortController();
+            const to = setTimeout(() => ctrl.abort(), 12000);
+            try {
+                const resp = await fetch(
+                    'https://asia-southeast1-the-green-haven.cloudfunctions.net/requestRoomRelink',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ idToken, building: bld, room: String(room) }),
+                        signal: ctrl.signal,
+                    }
+                );
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok) {
+                    const msg = data.error || `HTTP ${resp.status}`;
+                    throw new Error(msg);
+                }
+                // Success — tear down the unlinked-mode UI overlays so the
+                // pending-state overlay (showLiffLinkStatus) can take over cleanly.
+                try { document.getElementById('unlinked-banner')?.remove(); } catch(_) {}
+                try { document.body.classList.remove('gh-unlinked-mode'); } catch(_) {}
+                showLiffLinkStatus('pending');
+                toast('✅ ส่งคำขอเรียบร้อย รอ admin อนุมัติ', 'success');
+            } catch (e) {
+                const aborted = e?.name === 'AbortError' || /aborted/i.test(e?.message || '');
+                toast('❌ ' + (aborted ? 'เซิร์ฟเวอร์ตอบช้า — ลองปิด LINE จาก app switcher แล้วเปิดใหม่' : e.message), 'error');
+                resetBtn();
+            } finally {
+                clearTimeout(to);
+            }
+        }
+        window.submitRelinkRequest = submitRelinkRequest;
 
         function showLiffLinkStatus(status) {
             const host = document.getElementById('liff-link-overlay');
@@ -10149,8 +10263,10 @@
             const detail = status === 'rejected'
                 ? 'กรุณาติดต่อ admin โดยตรงหรือส่งคำขอใหม่'
                 : 'เมื่ออนุมัติแล้วจะเข้าใช้งานได้อัตโนมัติ กรุณารอสักครู่';
+            // Rejected path → showRelinkForm (CF write); doc already exists so a
+            // direct client setDoc would be blocked by the liffUsers update rule.
             const actionBtn = status === 'rejected'
-                ? '<button data-action="showLiffLinkForm" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">🔄 ส่งคำขอใหม่</button>'
+                ? '<button data-action="showRelinkForm" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">🔄 ส่งคำขอใหม่</button>'
                 : '<button data-action="reloadPage" style="padding:10px 24px;background:var(--primary-green);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;touch-action:manipulation;">🔄 ตรวจสอบอีกครั้ง</button>';
             box.innerHTML = `<div style="font-size:var(--fs-lg);margin-bottom:1rem;">${icon}</div>
                 <div style="font-weight:800;font-size:var(--fs-lg);margin-bottom:.5rem;">${title}</div>
