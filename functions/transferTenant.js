@@ -78,10 +78,19 @@
  *                                       building/roomId/status='vacant')
  *     tenants/{newB}/list/{newR}    →  set identity carried from oldR +
  *                                       new lease subobject (same leaseId)
- *     leases/{oldB}/list/{leaseId}  →  arrayUnion amendments[{at, from, to,
- *                                       by, mode}] + roomId=newRoomId +
- *                                       building=newBuilding + updatedAt
- *     people/{tenantId}             →  currentBuilding=newB + currentRoom=newR
+ *     leases/{oldB}/list/{leaseId}  →  arrayUnion amendments[{at, effectiveDate,
+ *                                       type:'room_transfer', fromBuilding/Room,
+ *                                       toBuilding/Room, transferDeposit,
+ *                                       prorateBills, by, byEmail, notes}] +
+ *                                       roomId=newRoomId + building=newBuilding +
+ *                                       updatedAt + lastAmendedAt + lastAmendedBy
+ *                                       (cross-building variation: doc MOVED —
+ *                                       set new path + delete old in same batch)
+ *     people/{tenantId}             →  currentBuilding=newB + currentRoom=newR +
+ *                                       activeBuilding/Room + updatedAt
+ *     tenants/{oldB}/list/{oldR}/occupancyLog/{key} →  action='transferred_out'
+ *     tenants/{newB}/list/{newR}/occupancyLog/{key} →  action='transferred_in'
+ *                                       (paired; discriminator = amendment.at)
  *     liffUsers/{lineUserId}        →  building=newB + room=newR (if linked)
  *     Auth custom claims            →  setCustomUserClaims(linkedUid,
  *                                       {room:newR, building:newB, tenantId,
@@ -92,10 +101,14 @@
  *   novation:
  *     (same tenants/oldR/newR moves)
  *     leases/{oldB}/list/{oldLeaseId} → status='transferred' +
- *                                        transferredToLeaseId + endedAt +
- *                                        endReason='transferred'
+ *                                        transferredToLeaseId + transferredAt +
+ *                                        transferredBy + transferredByEmail +
+ *                                        endReason='transferred' + updatedAt
  *     leases/{newB}/list/{newLeaseId} → create with priorLeaseId chain +
  *                                        transferredFromLeaseId + fresh dates
+ *     occupancyLog (paired, both rooms) → transferred_out (oldLeaseId) +
+ *                                        transferred_in (newLeaseId);
+ *                                        discriminator = the OTHER lease's id
  *     (rest same as variation)
  */
 const functions = require('firebase-functions/v1');

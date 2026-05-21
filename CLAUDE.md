@@ -240,6 +240,8 @@ Vercel "deploy succeeded" + HTTP smoke test + unit tests + fallback list working
 2. Log/inspect the actual returned data (canonical IDs, displayName, expected fields).
 3. Cross-check vs the assumption — fallbacks/mocks hide drift silently.
 
+**Sub-lesson — empty-collection composite-index verify is trivially-passing.** 2026-05-21 (9): prior session's `firebase deploy --only firestore:indexes` was missing from production, but `OccupancyLog.getByTenant()` returned `[]` (looked "working") because the collection had zero docs and Firestore short-circuits empty queries WITHOUT consulting any composite index. After `--apply` wrote 15 docs, same query threw `failed-precondition: query requires an index`. Verify composite indexes by **state**, not by running the query: `gcloud firestore indexes composite list --format="value(name,state)"` — only `READY` counts as serving. Or seed ≥1 doc that exercises the exact `WHERE field == X` + `ORDER BY field DESC` combo before claiming the index is live.
+
 ### K. Defined ≠ wired — grep for callers
 A function existing in the codebase doesn't mean it runs. Phase 6 audit caught `prefetchAllPeople()` defined in `shared/tenant-lookup.js:238` but with **zero callers anywhere** — slim tenant docs would have rendered "—" for every name on the admin dashboard.
 
