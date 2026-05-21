@@ -13300,13 +13300,18 @@
                 return await sGetDownloadURL(sRef(storage, path));
             } catch (err3) {
                 console.error('[LeaseDoc] getDownloadURL fallback failed for', path, '—', err3?.code || err3?.name, err3?.message);
-                // Prefer the CF error code (more actionable — tells caller exactly
-                // which auth gate failed) over the storage rule's generic code.
+                // Prefer the CF error code + message (more actionable — the CF
+                // surfaces exactly which auth gate failed) over storage's
+                // generic "unauthorized". CF message contains shape-only
+                // diagnostic (e.g. "linkedAuthUid=empty, caller.uid=line:") so
+                // sharing the toast screenshot tells us the failure mode.
                 const cfCode = cfErr?.code || cfErr?.name;
+                const cfMsg = cfErr?.message || '';
                 const friendlyHint = cfCode === 'functions/permission-denied'
-                    ? ' กรุณาปิด LINE จาก app switcher แล้วเปิดใหม่เพื่อรีเฟรชสิทธิ์'
+                    ? ' (กรุณาปิด LINE จาก app switcher แล้วเปิดใหม่)'
                     : '';
-                toast('ไม่สามารถเปิดเอกสารได้: ' + (cfCode || err3?.code || err3?.message || 'unknown') + friendlyHint, 'error');
+                const detail = cfMsg && cfMsg.length < 200 ? ' — ' + cfMsg : '';
+                toast('ไม่สามารถเปิดเอกสาร: ' + (cfCode || err3?.code || err3?.message || 'unknown') + detail + friendlyHint, 'error');
                 return null;
             }
         }
