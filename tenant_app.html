@@ -13288,6 +13288,38 @@
                 } catch (_) {
                     console.error('[LeaseDoc] getLeaseDocUrl error for', path, '—', cfErr?.code || cfErr?.name, cfErr?.message);
                 }
+
+                // Auto-recovery — if the session has a stale shape (non-line:/non-book:
+                // UID + no useful claims) and we haven't tried it yet this LIFF session,
+                // force signOut + reload to trigger a fresh liffSignIn handshake. This
+                // typically fixes the case where a prior login.html / admin session is
+                // still cached in the LINE in-app browser and `_callLiffSignIn`'s
+                // signOut→signInWithCustomToken didn't replace it cleanly.
+                try {
+                    const u = window.firebaseAuth?.currentUser;
+                    const tr = u ? await u.getIdTokenResult(false) : null;
+                    const c = tr?.claims || {};
+                    const uid = u?.uid || '';
+                    const isStaleSession = uid
+                        && !uid.startsWith('line:')
+                        && !uid.startsWith('book:')
+                        && c.admin !== true
+                        && c.role !== 'player'
+                        && cfErr?.code === 'functions/permission-denied';
+                    const alreadyRecovered = sessionStorage.getItem('_leaseDocRecoveryTried') === '1';
+                    if (isStaleSession && !alreadyRecovered && typeof liff !== 'undefined' && liff?.isInClient?.()) {
+                        sessionStorage.setItem('_leaseDocRecoveryTried', '1');
+                        toast('🔄 รีเฟรชสิทธิ์...', 'info');
+                        try { await window.firebaseAuth.signOut(); } catch(_) {}
+                        // Clear room cache so liffSignIn POST goes through cleanly.
+                        try { localStorage.removeItem('tenant_app_room'); } catch(_) {}
+                        try { sessionStorage.removeItem('user'); } catch(_) {}
+                        // Small delay so user sees the toast, then reload — fresh page
+                        // load re-runs initLiffAndLink → _callLiffSignIn → custom token.
+                        setTimeout(() => window.location.reload(), 800);
+                        return null;
+                    }
+                } catch (_) {}
             }
 
             // Fallback: direct getDownloadURL (rules-gated, same auth subject).

@@ -51,8 +51,12 @@ exports.getLeaseDocUrl = functions
 
     const tok = context.auth.token || {};
     const isAdmin = tok.admin === true;
+    // Path 0b — building manager (SaaS prep role; see firestore.rules
+    // isBuildingManager helper). Granted via grantBuildingManager CF / tool.
+    const managedBuildings = Array.isArray(tok.managedBuildings) ? tok.managedBuildings : [];
+    const isBuildingManager = managedBuildings.includes(building);
 
-    if (!isAdmin) {
+    if (!isAdmin && !isBuildingManager) {
       // Path 1 — claim match (preferred; no Firestore read needed).
       const claimsMatch = tok.room === roomId && tok.building === building;
       // Path 1b — tenantId claim match. Survives anon-UID rotation AND room
