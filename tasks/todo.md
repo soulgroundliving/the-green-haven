@@ -264,25 +264,40 @@ Total: **~15 files, ~1,200-1,400 LOC net new + modified.** Well above 5-file Pla
 - [x] **Commit:** `feat(occupancyLog): reader module + ประวัติผู้เช่าเก่า surface (S3)` — pending below.
 - [x] **Checkpoint:** Modal "ประวัติผู้เช่าเก่า" shows BOTH lease docs AND occupancyLog events. Render verified locally via dashboard.html visible in preview panel; live verification deferred to S5 with backfilled data.
 
-### S4 — Backfill script (S effort, sensitive) (~3-4 hr)
+### S4 — Backfill script (dry-run shipped; --apply deferred to user)
 
-- [ ] **S4.1** Create `tools/backfill-occupancy-log.js`:
-  - `--dry-run` (default): scan all `leases/*/list/*`, derive events, print count + sample, no writes
-  - `--apply`: same scan + write to Firestore via Admin SDK
-  - Idempotent: re-runs use same `buildIdempotencyKey` → set on same doc, no duplicates
-  - `--building <b>` filter for incremental rollout
-- [ ] **S4.2** Event derivation logic (mirror S1 schema):
-  - For each lease, write `moved_in` at `lease.contractStart`/`moveInDate`
-  - For amendments[]: per entry, write `transferred_out` at `fromRoom` + `transferred_in` at `toRoom` (sort by `at`)
-  - For `status='transferred'`: write `transferred_out` at `transferredAt`, paired `transferred_in` via `transferredToLeaseId` chain
-  - For `status='ended'`: write `moved_out` at `endedAt`
-  - Skip `status='renewed'` (renewal doesn't change room)
-  - `source: 'backfill'` on every entry
-- [ ] **S4.3** Run `--dry-run` against production. Expected output: count of events ≈ 2-3× count of leases (each lease has at least move-in + move-out, transferred leases have extra pair).
-- [ ] **S4.4** Apply for `building='rooms'` first. Verify via spot-check of ทดสอบ ห้อง15's chain. Then apply for `nest`.
-- [ ] **S4.5** Live verify: Open "ประวัติผู้เช่าเก่า" for ห้อง 17 → should show "transferred_in 2026-05-21" + "transferred_out 2026-05-21" entries for ทดสอบ ห้อง15.
-- [ ] **Commit:** `feat(occupancyLog): backfill script + applied to prod (S4)`
-- [ ] **Checkpoint:** Backfill applied; "ประวัติผู้เช่าเก่า" for every previously-touched room shows history.
+- [x] **S4.1** Created `tools/backfill-occupancy-log.js` (~400 LOC):
+  - `--dry-run` default (no writes); `--apply` gate; `--building <b>` filter for incremental rollout
+  - REST + OAuth-token path (mirrors `tools/migrate-tenant-doc-to-slim.js` — bypasses Firestore rules via cloud-platform scope same as Admin SDK would)
+  - Re-implements `buildIdempotencyKey` identically to `functions/_occupancyLog.js` so backfill re-runs are idempotent
+  - Writes via PATCH (no merge) to a deterministic doc ID, embedding the historical ISO timestamp in `at` (more accurate than serverTimestamp for backfill)
+- [x] **S4.2** Event derivation rules (matches live-CF discriminators):
+  - `moved_in` only when lease is the CHAIN ROOT (no `priorLeaseId` AND no `transferredFromLeaseId`) — discriminator = `sourceBookingId || leaseId`
+  - For each `amendments[]` `type==='room_transfer'` entry: emit `transferred_out` at `fromRoom` + `transferred_in` at `toRoom` (discriminator = amendment.at ISO)
+  - Status `'transferred'`: emit `transferred_out` at THIS room (disc = nextLeaseId) + `transferred_in` at the NEXT lease's room (disc = thisLeaseId) — paired
+  - Status `'ended'`: emit `moved_out` (disc = '')
+  - Status `'renewed'` / `'active'` / `'superseded'`: no terminal event (renewal doesn't change room; new lease is suppressed because it has `priorLeaseId`)
+  - `source: 'backfill'` on every entry — distinguishes from live writes in audit
+  - `by: 'system-backfill'`, `byEmail: null`
+- [x] **S4.3** Ran `--dry-run` against production 2026-05-21:
+  ```
+  ── Building: rooms ──
+    leases found: 7
+    events derived: 15  (ratio 2.14 — within 2-3x expectation)
+    skipped: 0
+  ── Building: nest ──
+    leases found: 0 (no nest leases yet)
+  ── Action breakdown ──
+    moved_in: 2     (LEGACY + chain-root TENANT_1774620396700)
+    moved_out: 1    (LEGACY 'ended')
+    transferred_in: 6
+    transferred_out: 6
+  ```
+  Chronology matches ทดสอบ ห้อง15's known history (P3 transferred ห้อง15↔17 multiple times + novation + reverse).
+- [ ] **S4.4 (deferred — user-triggered per §7-I)** Apply for `building='rooms'` first; verify ทดสอบ ห้อง15 chain. Then `nest`.
+- [ ] **S4.5 (deferred until S4.4)** Live-verify "ประวัติผู้เช่าเก่า" for ห้อง 17.
+- [x] **Commit:** `feat(occupancyLog): backfill script (dry-run only) (S4)` — pending below.
+- [ ] **Checkpoint:** Backfill script ready, dry-run verified, --apply deferred to user.
 
 ### S5 — Live verify all 6 lifecycle CFs round-trip (~1-2 hr)
 
