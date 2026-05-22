@@ -2394,6 +2394,18 @@
     html:not([data-theme="light"]) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
     html:not([data-theme="light"]) select,
     html:not([data-theme="light"]) textarea { background: var(--surface-card); color: var(--ink); border-color: var(--stone); }
+    /* Buttons + visible chips/cards — mirror html[data-theme="dark"] rules so
+       Safari/macOS users on OS dark mode get the same treatment as users
+       who flipped the explicit theme toggle. */
+    html:not([data-theme="light"]) .year-tab { background: var(--surface-card); }
+    html:not([data-theme="light"]) .btn-doc-action { background: var(--surface-card); }
+    html:not([data-theme="light"]) .btn-doc-action.red { background: var(--red); }
+    html:not([data-theme="light"]) .filter-btn-tenant { background: var(--surface-card); color: var(--ink); }
+    html:not([data-theme="light"]) .tenant-card.occ { background: var(--surface-card); }
+    html:not([data-theme="light"]) .tenant-card.vac { background: var(--surface-card); }
+    html:not([data-theme="light"]) .doc-body { background: var(--surface-card); }
+    html:not([data-theme="light"]) .view-toggle-btn.active { background: var(--surface-card); color: var(--ink); }
+    html:not([data-theme="light"]) .info-chip { background: var(--surface-card); }
   }
 
 /* ── D2: generated-content utility classes (dashboard-extra.js) ─────────
