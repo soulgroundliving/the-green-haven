@@ -1,268 +1,344 @@
-# CRITICAL Security Sprint — 2026-05-22
+# P4 HIGH security batch — 2026-05-23
 
 **Status:** plan-first, awaiting ✅ from user. Do NOT edit code until approved.
 
-**Prior plan archived:** [tasks/todo-plan-b-prime-archive.md](tasks/todo-plan-b-prime-archive.md) (Plan B' occupancyLog — S2+S3+S4+S6 shipped per `3c79fc1`, S5 partial, Review section never closed).
+**Previous plan:** Plan B' Per-room occupancyLog — SHIPPED prior session (commits `3c79fc1` etc.). Review section closed in archived plan. This file overwrites that.
+
+**Source:** `next_session_handoff_2026_05_22_critical_sprint_followups.md` PRIORITY 4 (HIGH security batch deferred from `aa62ca4` sprint). User picked this in 2026-05-23 (1) handoff resume.
 
 ---
 
-## Scope
+## Scope decision — ship 5 of 6 P4 items this session (user-approved 2026-05-23)
 
-ปิด **7 CRITICAL** (5 จาก multi-dimensional review + **2 ใหม่** จาก deep rules review ที่ second-pass จัดเป็น CRITICAL หลังเห็น attack scenario ที่ trivial-to-exploit).
+| Item | Decision | Why |
+|---|---|---|
+| **P4.1 CORS hardening on 17 onRequest CFs** | DEFER | Risk: `liffSignIn` + `liffBookingSignIn` are called from LIFF webview — restricting Origin can break tenant LIFF flow. Needs per-CF audit + LIFF Origin research. |
+| **P4.2 liffUsers create rule** | ✅ SHIP | Rules-only, small surface, test-able |
+| **P4.3 marketplace ownerUid** | ✅ SHIP | Rules-only, one-line addition, test-able |
+| **P4.4 buildings/{id} all-readable** | ✅ SHIP (user opted in) | Reader audit drives approach choice (subcollection-split vs scoped-read). Decision made in Phase 1 after grep |
+| **P4.5 RTDB housekeeping** | ✅ SHIP (after audit) | Rules-only IF zero tenant-write callers; if any, escalate (CF write path first) |
+| **P4.6 isBuildingManager substring** | ✅ SHIP w/ defensive `is list` rule guard | User opted in for guard; audit A4 must run first to confirm no existing manager has a string claim |
 
-ไม่รวม: HIGH/MEDIUM/LOW → next sprint (table ด้านล่าง).
+Net: 5 P4 items this session. P4.1 deferred to own sprint.
+
+**Why this packaging:** keeps the changeset rules-mostly (firestore.rules + database.rules.json + grant-building-manager.js + new tests). Single `firebase deploy --only firestore:rules,database` after merge, no CF deploy. Avoids the high-blast-radius LIFF Origin question.
 
 ---
 
-## 🚨 2 CRITICAL ใหม่ (เกิดจาก deep review — promoted from MED in first pass)
+## Branch strategy (user-approved)
 
-### NC-1 — RTDB `payments` tenant-writable: forge payment records
-**[config/database.rules.json:29-31](config/database.rules.json:29)**
+New worktree + new branch off `claude/fervent-kare-f45fb1`. Branch name: `claude/p4-rules-hardening`.
 
-`.write` ใช้ `auth.token.room == $room && auth.token.building == $building` → tenant ที่ login ปกติ call ตรงๆ ได้:
+Worktree path: `C:\Users\usEr\Downloads\The_green_haven\.claude\worktrees\p4-rules-hardening`
 
-```js
-firebaseSet(ref(db, 'payments/rooms/15/anyBillId'),
-  { amount: 9999, status: 'paid', billId: 'anyBillId' });
+Why: sprint already has Fix #5 (facilityBookings claim fallback), Fix #7 (tenants update self-ownership), Cat-A `_authSoT` helper, and the rules tests covering all of those. P4 rule changes stack cleanly on top. When fervent-kare merges to main, this branch fast-forwards on top.
+
+---
+
+## Phase 1 — Audit ✅ COMPLETE (2026-05-23)
+
+### A1 housekeeping — ESCALATE P4.5 to defer
+
+- [x] Tenant LIFF writes directly to RTDB `housekeeping/{building}/{room}/{id}` at [tenant_app.html:5554](tenant_app.html:5554) via `window.firebaseSet`.
+- [x] Admin reads from same path in [dashboard-domain-stores.js:566+](shared/dashboard-domain-stores.js:566) (RequestsStore) and writes status updates via [dashboard-requests-admin.js:1247](shared/dashboard-requests-admin.js:1247).
+- **Same NC-1 forge pattern.** Tenant-writable + admin-trusted = forge vector for cleaning credits / ticket inflation.
+- **Decision:** **DEFER P4.5 → next sprint.** Locking RTDB to admin-write requires a `submitHousekeepingTicket` CF (mirror of `verifySlip` for cleaning), proper validation, and update of tenant_app to call the CF. Out of scope for rules-only batch.
+
+### A2 liffUsers writer — field allowlist updated
+
+- [x] Only one writer: [tenant_app.html:10141-10150](tenant_app.html:10141) `fs.setDoc(fs.doc(..., 'liffUsers', _lineUserId), payload)`
+- [x] Payload schema:
+  ```js
+  {
+    lineUserId: window._lineUserId,
+    lineDisplayName: window._lineProfile?.displayName || '',  // NOT "displayName"
+    linePictureUrl: window._lineProfile?.pictureUrl || '',     // NOT "pictureUrl"
+    room: String(room),
+    building: bld,
+    status: 'pending',
+    requestedAt: new Date().toISOString()                       // NOT request.time
+  }
+  ```
+- **Adjustment to P4.2:** allowlist must use `lineDisplayName`/`linePictureUrl` (not the names I assumed in v1 of plan). `requestedAt` is a client-generated ISO string, not `request.time` — drop that check OR coerce. Keep `status == 'pending'` to prevent self-approve.
+
+### A3 marketplace create — safe
+
+- [x] Single create site: [tenant_app.html:6531-6541](tenant_app.html:6531) — `addDoc(collection(db, 'marketplace'), { ..., ownerUid: window._authUid })` already sets ownerUid to own auth UID.
+- **Conclusion:** P4.3 rule tightening is transparent. Will not break legitimate flow.
+
+### A4 managedBuildings claim shape — safe to add `is list` guard
+
+- [x] Two writers: [tools/grant-building-manager.js:88](tools/grant-building-manager.js:88) (CLI) and [functions/grantBuildingManager.js:78](functions/grantBuildingManager.js:78) (CF).
+- [x] Both writers set claim from an Array source (`args.slice(1).filter(...)` in CLI; `Array.isArray(buildings)` validated in CF).
+- [x] Existing `_authSoT.js:75` already does `Array.isArray(tok.managedBuildings) ? tok.managedBuildings : []` defensively.
+- **Conclusion:** zero existing managers have string claims. P4.6-2 `is list` rule guard is safe to add — no historical manager breaks.
+- **Bonus finding:** the CF (`grantBuildingManager.js`) DOES validate buildings against `getValidBuildings()` registry; the CLI tool (`tools/grant-building-manager.js`) does NOT. P4.6-1 = port validation to the CLI tool.
+
+### A5 buildings/{id} readers — REVISED P4.4 path
+
+- [x] **tenant_app.html (signed-in tenants):** reads ONLY `buildings/{_taBuilding}` (own building from token claim) via direct `doc()`. No list-all read. ([tenant_app.html:8695](tenant_app.html:8695), [:12418](tenant_app.html:12418))
+- [x] **booking.html (anonymous prospects):** reads BOTH `buildings/rooms` AND `buildings/nest` (list-all equivalent) at [booking.html:1257-1278](booking.html:1257) for PromptPay info display. **Anonymous prospects have no `token.building` claim** — Approach A (scope-by-claim) would break booking entirely.
+- [x] **dashboard (admin):** uses `BuildingRegistry` which does `getDocs(collection(db, 'buildings'))` — list-all read. Admin can bypass scoping. ([shared/building-registry.js:48](shared/building-registry.js:48))
+- **Decision:** Approach A (scope-by-claim) is OFF the table because of booking.html anonymous reads.
+- **Revised P4.4 path:** **Approach B (subcollection split).** Move only the actually-private fields to `buildings/{id}/private/{docId}` admin-only. Keep top-level fields (promptPayId, companyName, ownerName, displayName, internet subdoc) readable to all signed-in for compatibility with booking.html and tenant_app.html.
+- **Field classification:**
+  - **TOP-LEVEL (keep readable to signed-in):** `displayName`, `promptPayId`, `companyName`, `ownerName`, `internet` subdoc
+  - **PRIVATE (move to subcollection):** `ownerEmail` (admin contact), `contact` (admin phone), possibly `address` (debatable — appears on receipt?)
+- **Implementation cost:** rule add + dashboard reader/writer update + optional migration script. **Bigger than expected.**
+
+---
+
+**User decisions captured 2026-05-23 (after audit):**
+
+1. **P4.5 RTDB housekeeping** — DEFER (audit-blocked). Reason above.
+2. **P4.4 B-full chosen.** Receipt audit confirmed: tenant_app `_recipientCo.address` is the tenant's own company address, NOT building. dashboard-bill.js line 1073 only prints tenant company address. So building `address` is admin-only-readable → safe to move private.
+   - **Private subcollection fields:** `ownerEmail` + `contact` + `address`
+   - **Top-level (stays readable to signed-in):** `displayName`, `promptPayId`, `companyName`, `ownerName`, `internet` subdoc
+
+---
+
+## Phase 2 — P4.2 liffUsers create hardening
+
+**File:** `firestore.rules:432`
+
+Current (sprint state):
 ```
-
-Admin reconciliation อ่านจาก RTDB เห็น "paid" — อาจไม่ cross-check `verifiedSlips` → bill ถูกมาร์คชำระโดย slip ปลอม.
-
-- **Risk:** financial fraud trivial
-- **Fix (1 line):** `.write` → `"auth != null && auth.token.admin == true"` (เหมือน bills/)
-- **Pre-fix cross-check:** memory บอก `shared/tenant-system.js:1499` มี `firebaseSet` ลง payments → ต้องตรวจ flow นั้นว่ายังต้องการเขียนตรงไหม หรือควรไปผ่าน verifySlip CF
-
-### NC-2 — `tenants/{b}/list/{r}` update: cross-tenant PII overwrite
-**[firestore.rules:242-244](firestore.rules:242)**
-
-Update rule ไม่มี ownership check. signed-in user คนใดก็ได้ (รวม anon booking prospect) เขียน `name`/`phone`/`email`/`nationalId` ของห้องอื่นได้. block แค่ `gamification`/`rentAmount`/`building`/`roomId`/`tenantId`.
-
-- **Risk:** PII tampering ใครๆ ก็ทำได้
-- **Fix:** เพิ่ม `(isAdmin() || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid))` AND existing `affectedKeys().hasOnly()` block
-- **Pre-fix gotcha:** tenant ที่ยังไม่ link (linkedAuthUid ว่าง) จะอัพเดท self-profile ผ่าน path นี้ไม่ได้ — ต้องมั่นใจ liffSignIn / admin link flow seed `linkedAuthUid` ก่อน (`grep linkedAuthUid functions/`)
-
----
-
-## ✅ Phase 1 — Code Edits (no deploy, all in repo)
-
-### Fix #1 — smoke_config.json hygiene
-ไฟล์เก็บ Firebase Web API key (public-by-design แต่ config-commit ขัด hygiene). Pre-commit hook ดักเฉพาะ pattern `firebaseConfig.*apiKey` ไม่ใช่ raw JSON shape.
-
-- [ ] Add `smoke_config*.json` to `.gitignore` (line ใหม่ใต้ `smoke_*.html` ที่มีอยู่)
-- [ ] `git rm --cached smoke_config.json` (ไฟล์ยังอยู่ local, ไม่ถูก git track)
-- [ ] Update `tools/smoke-test/*.js` runner (ถ้ามี ref smoke_config.json) ให้โหลด config ผ่าน `/api/config` runtime แทน
-- **Why:** ลบ vector + ป้องกัน config drift local/CI + ตรงตามจุดยืน .gitignore เดิม
-
-### Fix #2 — Slip rate-limit fail-CLOSED (2 CFs)
-**[functions/verifySlip.js:103-107](functions/verifySlip.js:103)** ปัจจุบัน:
-```js
-} catch (error) {
-  console.error('❌ Rate limit check failed:', error);
-  return true;   // ← fail open
+match /liffUsers/{userId} {
+  allow read:   if isAdmin() || (isSignedIn() && request.auth.uid == 'line:' + userId);
+  allow create: if isSignedIn();
+  allow update, delete: if isAdmin();
 }
 ```
 
-**[functions/verifyBookingSlip.js:85-88](functions/verifyBookingSlip.js:85)** — pattern เดียวกัน.
+Attack surface today: any signed-in user (including anon prospects from booking LIFF) can `setDoc(doc(db, 'liffUsers/U_ATTACKER_PICK'), { displayName: 'สมชาย (ผู้ดูแล)', status: 'approved', ... })` — pre-poisoning the admin approval queue with impersonation entries. Admin "approve" flow then mints claims for the wrong UID, or admin opens detail modal and sees fake info.
 
-- [ ] Change return `true` → `false` (deny)
-- [ ] Caller code already handles `false` → returns 503 ไปแล้ว — ตรวจ caller path
-- **Why deny:** transient Firestore throttle ≠ free pass. 503 spike เห็นและ alertable; abuse spike เงียบ.
+- [ ] **P4.2-1** — Tighten create to UID-match + field allowlist + size caps:
 
-### Fix #3 — `_billFlex.js` surface silent errors
-**[functions/_billFlex.js:45](functions/_billFlex.js:45)** — `loadRoomConfig` catch ปัจจุบัน:
-```js
-} catch (e) { /* fall through to defaults */ }
+```
+allow create: if isSignedIn()
+  && request.auth.uid == 'line:' + userId
+  && request.resource.data.keys().hasOnly(['lineUserId', 'displayName', 'pictureUrl', 'room', 'building', 'status', 'requestedAt'])
+  && request.resource.data.lineUserId is string
+  && request.resource.data.lineUserId.size() <= 64
+  && request.resource.data.displayName is string
+  && request.resource.data.displayName.size() <= 80
+  && (!('pictureUrl' in request.resource.data) || request.resource.data.pictureUrl.size() <= 512)
+  && request.resource.data.status == 'pending'
+  && request.resource.data.requestedAt == request.time;
 ```
 
-**[functions/_billFlex.js:54-56](functions/_billFlex.js:54)** — `loadOwnerInfo` catch silent return blank.
+**Why each clause:**
+- `auth.uid == 'line:' + userId` — closes impersonation. `liffSignIn` CF uses deterministic UID format `line:<lineUserId>` (per `auth_liff_sot.md`), so this matches naturally for the legitimate flow.
+- `hasOnly([...])` — locks the field shape so attacker can't sneak `admin: true` or other extras
+- string + size caps — bounds attack surface size (DoS via large blob)
+- `status == 'pending'` — caller cannot self-approve
+- `requestedAt == request.time` — caller cannot backdate
 
-- [ ] เพิ่ม `console.error('[_billFlex] loadRoomConfig failed for', building, roomId, ':', e?.message || e)` ใน catch
-- [ ] เพิ่ม `console.error('[_billFlex] loadOwnerInfo failed:', e?.message || e)` ใน loadOwnerInfo
-- **Behavior:** ไม่เปลี่ยน — ยัง fall through to DEFAULTS, แค่มี log line ให้เห็น failure
-- **Why:** ปัจจุบันบิลออกด้วย DEFAULT rates (rooms: rent 1200 / นี่อาจไม่ตรงห้องจริง) โดยไม่มีอะไรเตือน
-
-### Fix #4 — CSP enforce
-**[vercel.json:39](vercel.json:39)** — เปลี่ยน header name `Content-Security-Policy-Report-Only` → `Content-Security-Policy`.
-
-- [ ] Single-char-class change in vercel.json
-- [ ] **DO NOT** remove `style-src-attr 'unsafe-inline'` ในรอบนี้ — a11y review พบ 297 hardcoded hex (inline style) ใน tenant_app → ลบจะแตกหน้า
-- **Why this round:** hash whitelist 26 ตัวเสียเปล่าทั้งหมดถ้ายัง Report-Only
-- **Risk mitigation:** existing CSP `'unsafe-inline'` ยังอยู่ใน script-src/style-src → backward-compat OK ในรอบเดียว
-
-### Fix #5 — `facilityBookings` claim fallback (closes §7-P gap)
-**[firestore.rules:451-460](firestore.rules:451)** — read rule L453 ใช้แค่ `tenantUid == request.auth.uid`. หลัง LIFF anon-UID rotation → booking สูญหาย invisible แม้ tenant คนเดียวกัน.
-
-- [ ] Mirror checklistInstances dual-path ที่ L495-497 — เพิ่ม:
-  ```
-  || (isSignedIn()
-      && resource.data.tenantBuilding == request.auth.token.building
-      && resource.data.tenantRoom == request.auth.token.room)
-  ```
-  ลง read rule
-- Create rule L457 มี `tenantBuilding == request.auth.token.building` แล้ว ✓ — ไม่ต้องแก้
-- Keep `tenantUid == request.auth.uid` stamp at create (defensive double-anchor)
-
-### Fix #6 — RTDB payments admin-only write (NC-1)
-**[config/database.rules.json:29-31](config/database.rules.json:29)**
-
-- [ ] **Pre-fix:** `grep -rn "firebaseSet.*payments\|set.*payments/" shared/ tenant_app.html dashboard.html` — บันทึก call site ทุกตัว
-- [ ] ถ้ามี client write — refactor ไปผ่าน CF ที่เหมาะสม (อาจเป็น verifySlip → markBillPaidInRTDB ที่มีอยู่)
-- [ ] เปลี่ยน `.write` → `"auth != null && auth.token.admin == true"`
-- [ ] Read rule keep current (tenant อ่าน payment ตัวเองได้)
-
-### Fix #7 — tenants update self-ownership (NC-2)
-**[firestore.rules:242-244](firestore.rules:242)**
-
-- [ ] **Pre-fix:** `grep -rn "linkedAuthUid" functions/ shared/` — ยืนยัน linkedAuthUid ถูก seed ทุกเส้นทาง link (liffSignIn, admin manual link)
-- [ ] เพิ่ม condition: `(isAdmin() || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid))` AND existing affectedKeys() block
-- **Risk:** ถ้ามี tenant ใน prod ที่ `linkedAuthUid` ว่าง — self-update จะถูก block → ต้อง backfill ก่อน OR ใช้ admin UI
+- [ ] **P4.2-2** — Add rules tests (2 new):
+  - Positive: LIFF tenant creates own `liffUsers/U_self` with allowed fields → succeeds
+  - Negative: LIFF tenant tries to create `liffUsers/U_other` with `auth.uid = 'line:U_self'` → fails
+  - Negative: LIFF tenant tries to create own doc with `status: 'approved'` → fails
 
 ---
 
-## ✅ Phase 2 — Local Verification (read-back, no deploy)
+## Phase 3 — P4.3 marketplace ownerUid
 
-- [ ] Cross-session self-conflict check (§7-G): re-read ALL session diffs end-to-end
-- [ ] `npm run verify:memory` (pre-commit hook auto แต่ check ล่วงหน้า)
-- [ ] `npm run test:rules` — ~70 cases ต้องผ่าน + **เพิ่ม new test cases:**
-  - NC-1 — anon/tenant client write to `payments/...` → expect deny
-  - NC-2 — signed-in non-owner write to `tenants/rooms/list/X` → expect deny; owner self-write OK
-  - #5 — facilityBookings read after UID rotation (mock anon UID drift) → expect allow via claim fallback
+**File:** `firestore.rules:99-103`
 
----
-
-## ✅ Phase 3 — Deploy (USER-CONTROLLED per §7-I, no auto-deploy)
-
-- [ ] User: `firebase deploy --only firestore:rules,database` (rules atomic deploy)
-- [ ] User: `firebase deploy --only functions:verifySlip,functions:verifyBookingSlip,functions:notifyTenantOnMeterUpload,functions:notifyBillOnCreate` (all _billFlex importers)
-- [ ] User: `git push origin main` → Vercel auto-deploy → CSP enforce live
-
----
-
-## ✅ Phase 4 — Live Verification (Chrome MCP, no auto-click per §7-I)
-
-- [ ] Admin dashboard → DevTools console → check CSP violation reports (was silent in Report-Only)
-- [ ] **Probe forge payment** (LIFF webview as tenant): paste in console:
-  ```js
-  firebaseSet(ref('payments/rooms/15/test_forge_' + Date.now()),
-    { amount: 1, status: 'paid' })
-  ```
-  → expect `PERMISSION_DENIED`
-- [ ] **Probe PII overwrite** (admin preview as room 15): paste in console:
-  ```js
-  updateDoc(doc(db, 'tenants/rooms/list/14'), { name: 'attacker' })
-  ```
-  → expect `PERMISSION_DENIED`
-- [ ] **facilityBooking UID-rotation test:** open LIFF booking, `await auth.currentUser.getIdToken(true)`, close tab, reopen — confirm booking still visible
-- [ ] **_billFlex log path:** mock failure by temporarily denying `rooms_config` read for one tenant → trigger meter upload → check CF logs for new error line
-
----
-
-## ⏭️ Deferred to next sprint (knowingly)
-
-| Item | Severity | Why deferred |
-|------|----------|--------------|
-| CORS `*` on 17 admin endpoints | HIGH | needs shared CORS helper extract — refactor scope |
-| `liffUsers` create no schema | HIGH | needs `userId == 'line:' + ...` check + allowlist |
-| RTDB `housekeeping` tenant-writable | HIGH | same pattern as NC-1, lower business risk |
-| `buildings/{id}` promptPayId all-readable | HIGH | needs decision: split sensitive to admin subcoll? |
-| Marketplace `ownerUid` impersonation | HIGH | needs `ownerUid == request.auth.uid` create stamp |
-| `isBuildingManager` `'ro' in 'rooms'` CEL | HIGH | only via admin grant error — fix grant tool first |
-| HTML-escape 14 dups → `window.ghEsc` | HIGH (XSS path) | careful grep-replace, batch w/ brand cleanup |
-| `dashboard-extra.js` split (1734 LOC) | MED | architectural refactor |
-| `BuildingPolicy` for building #3 | MED | strategic, not urgent |
-| A11y/Brand cleanup batch | C+ | UX debt |
-| 6 silent-failure sites | C+ | separate sprint |
-| Remove CSP `style-src-attr 'unsafe-inline'` | MED | gated on inline-style cleanup |
-| Legacy RTDB `tenants` + `financials` nodes | LOW | verify zero callers + cleanup |
-
----
-
-## Estimated effort
-- Phase 1 (code): ~75 min (#6 pre-fix grep may grow scope)
-- Phase 2 (verify local + new test cases): ~30 min
-- Phase 3 (deploy): user, ~15 min total
-- Phase 4 (verify live): ~30 min
-- **Total: ~2h sprint**
-
-## Files touched
-- `.gitignore` (+1 line)
-- `smoke_config.json` (removed from tracking, stays local)
-- `tools/smoke-test/*.js` (if any references — refactor)
-- `functions/verifySlip.js` (1-line change)
-- `functions/verifyBookingSlip.js` (1-line change)
-- `functions/_billFlex.js` (2 catch + log)
-- `vercel.json` (1 header rename)
-- `firestore.rules` (2 rules: facilityBookings + tenants)
-- `config/database.rules.json` (1 path: payments)
-- `test/firestore.rules.test.*` (add 3 new cases)
-- Optionally `shared/tenant-system.js` (if NC-1 cross-check finds client payment-write)
-
----
-
-## Review (2026-05-22 evening — Phase 1+2 complete, awaiting user for Phase 3 deploy)
-
-### ✅ Shipped (Phase 1 — code in working tree, NOT committed)
-1. **smoke_config.json** — removed from git tracking (staged delete), `.gitignore` updated. No code refactor needed (grep confirmed zero callers).
-2. **Rate-limit fail-CLOSED** — both [functions/verifySlip.js:103](functions/verifySlip.js:103) and [functions/verifyBookingSlip.js:85](functions/verifyBookingSlip.js:85) now `return false` on infra error + descriptive log.
-3. **_billFlex.js error surfacing** — [functions/_billFlex.js:45](functions/_billFlex.js:45) `loadRoomConfig` + L57 `loadOwnerInfo` now log on catch. Fallback to DEFAULTS preserved.
-4. **CSP enforce** — [vercel.json:39](vercel.json:39) header renamed to `Content-Security-Policy`. `style-src-attr 'unsafe-inline'` retained (defer until inline-style cleanup batch).
-5. **facilityBookings claim fallback** — [firestore.rules:451-465](firestore.rules:451) read rule now mirrors checklistInstances 3-path pattern (admin / tenantUid / tenantBuilding+tenantRoom claims). §7-P closed at this surface.
-6. **RTDB payments admin-only write** — [config/database.rules.json:30](config/database.rules.json:30) lock + [functions/verifySlip.js markBillPaidInRTDB:308](functions/verifySlip.js:308) added Admin SDK push to `payments/{b}/{r}/{pushId}` with shape matching legacy client push (billId, month, year, amount, paidAt ISO, method, transRef, source='cf:verifySlip').
-7. **tenants update self-ownership** — [firestore.rules:242-256](firestore.rules:242) update rule now requires `(isAdmin() OR linkedAuthUid match)` AND the existing affectedKeys block. Verified all active tenants have linkedAuthUid via [functions/liffSignIn.js:218-244](functions/liffSignIn.js:218) writes.
-
-### ✅ Tests (376 unit + 192 rules, ALL PASS)
-- Added [firestore.rules.test.js:157-198](firestore.rules.test.js:157) — replaced "anon CAN update non-sensitive" with 3 tests reflecting NC-2 rule: anon CANNOT update, linked CAN update, linked CANNOT update sensitive.
-- Added [firestore.rules.test.js:~1296-1326](firestore.rules.test.js:1296) — 2 facilityBookings tests: UID-rotation read via claim fallback (Fix #5), cross-building claim mismatch denies.
-- **NC-1 RTDB unit test DEFERRED** — firestore.rules.test.js infra is Firestore-only; adding RTDB would need `database:` config in initializeTestEnvironment + emulator port + new test helpers. Out of sprint scope.
-
-### ⚠️ Pre-existing issues uncovered (NOT this sprint's fault)
-- **`npm run verify:memory` has 1 fail unrelated to this sprint** — Cat-A CF hardening (commits `c98b7f6 _authSoT helper` + `5bbdbf8 migrate to _authSoT` + 5 more 6-path ports) was shipped on other branches (`claude/<various>`) but **NEVER MERGED to main**. `functions/_authSoT.js` doesn't exist in this worktree. The verifier in `lifecycle_pdpa_checklist.md:142` was written assuming Cat-A had landed. **Fix applied this sprint:** updated the verifier to target `functions/_authSoT.js` (literal user request) — will pass once Cat-A merges. **Still fails on this branch** until Cat-A merge lands. Pre-commit hook WILL block this commit. Options: (a) cherry-pick / merge the Cat-A branches into main first; (b) `git commit --no-verify` (last resort, but pre-existing-condition is the unusual case CLAUDE.md doesn't explicitly cover); (c) defer this sprint until Cat-A is merged.
-- **Dead code (§7-K)** — [shared/tenant-system.js:1488-1513](shared/tenant-system.js:1488) `TenantFirebaseSync.updatePayment` is defined but has ZERO callers. Discovered during pre-fix grep. Safe to delete in cleanup sprint.
-
-### 🚀 Phase 3 — User must run (deploy commands)
-```bash
-# 1. Deploy rules (Firestore + RTDB atomic)
-firebase deploy --only firestore:rules,database
-
-# 2. Deploy CFs (importers of _billFlex + the two slip CFs)
-firebase deploy --only functions:verifySlip,functions:verifyBookingSlip,functions:notifyTenantOnMeterUpload,functions:notifyBillOnCreate
-
-# 3. Push to Vercel (CSP enforce + .gitignore changes)
-git add .gitignore config/database.rules.json firestore.rules firestore.rules.test.js functions/_billFlex.js functions/verifyBookingSlip.js functions/verifySlip.js vercel.json tasks/todo.md tasks/todo-plan-b-prime-archive.md
-git status   # verify ONLY the intended files staged + smoke_config.json deletion
-# Pre-commit verify:memory will fail on getChecklistMediaUrl — see "Pre-existing issues" above.
-# If fix-forward chosen: address that BEFORE commit. Otherwise commit with --no-verify (last resort).
-git commit
-git push origin main
+Current:
+```
+match /marketplace/{id} {
+  allow read:   if isSignedIn();
+  allow create: if isSignedIn();
+  allow update: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.ownerUid);
+  allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerUid);
+}
 ```
 
-### 🔍 Phase 4 — Live verification probes (Chrome MCP, no auto-click per §7-I)
-Open admin dashboard on https://the-green-haven.vercel.app + DevTools console:
+Attack: tenant-A creates listing with `ownerUid = 'line:UVICTIM'`. Now tenant-A can update/delete via admin route, but tenant-VICTIM cannot delete (rule requires `auth.uid == ownerUid` → mismatch). Listing is "stuck" attributed to victim.
 
-1. **CSP enforce verification** — refresh, check console for CSP violations (now BLOCKING; was silent in Report-Only).
-2. **Forge payment probe** (paste in LIFF tenant console):
-   ```js
-   firebaseSet(ref('payments/rooms/15/test_forge_' + Date.now()), { amount: 1, status: 'paid' })
-   ```
-   → **expect `PERMISSION_DENIED`** (was succeeding pre-NC-1).
-3. **PII overwrite probe** (paste in admin preview as room 15):
-   ```js
-   updateDoc(doc(db, 'tenants/rooms/list/14'), { name: 'attacker' })
-   ```
-   → **expect `PERMISSION_DENIED`** (was succeeding pre-NC-2). Then test as the legit room-14 owner: should still succeed if linkedAuthUid matches.
-4. **facilityBooking UID-rotation** — open LIFF booking, then `await auth.currentUser.getIdToken(true)`, close tab, reopen → booking must still appear.
-5. **_billFlex log path** — trigger meter upload that causes a permission_denied on `rooms_config/{b}/{r}` (e.g. malformed config) → check CF logs for `[_billFlex] loadRoomConfig failed for ...` line.
-6. **Payment CF audit** — verify a real slip → check RTDB `payments/{b}/{r}` for new doc with `source: 'cf:verifySlip'`.
+- [ ] **P4.3-1** — Add ownerUid enforcement on create:
 
-### 📝 Out-of-sprint follow-ups (next sprint candidates)
-1. **Fix `verify:memory` getChecklistMediaUrl verifier** (1-line fix to verifier OR add pattern back to CF)
-2. **Delete `TenantFirebaseSync.updatePayment` dead code** (§7-K cleanup)
-3. **Remove legacy tenant_app.html:12122 client push** to payments/bills paths (already silent-failing per locked-down rule; remove dead retry)
-4. **NC-1 RTDB unit test** — add `database:` config to test env, write RTDB rule tests
-5. **CSP `style-src-attr 'unsafe-inline'` removal** — gated on inline-style cleanup batch (297 hex hardcoded in tenant_app)
-6. **Update memory lifecycle docs** — `lifecycle_verifyslip.md` (new payments/ CF write), `firestore_schema_canonical.md` (tenants update gate), `billing_monthly_flow.md` (rate-limit fail-closed semantics)
-7. **HIGH security findings** (still pending from deep review): CORS `*` on 17 admin endpoints, liffUsers schema, marketplace ownerUid spoofing, buildings PII, RTDB housekeeping, isBuildingManager CEL substring
+```
+allow create: if isSignedIn()
+  && request.resource.data.ownerUid == request.auth.uid;
+```
 
-### 🧠 Potential new §7 anti-patterns (defer to user judgment — CLAUDE.md already 944 LOC)
-- **"II. Rate-limit checks must fail CLOSED, not open"** — both slip CFs had explicit `return true` on catch with "fail open" comment. Recurring vulnerability pattern; would warrant a §7 entry if it surfaces again.
-- **"JJ. Tenant-writable RTDB path with admin-only readers = forgery vector"** — `payments/` was tenant-writable so client could push records that admin reconciliation displayed as truth. Pattern: never let principals lower in the auth chain write data that higher principals trust without server-side validation.
+- [ ] **P4.3-2** — Add rules tests (2 new):
+  - Positive: tenant creates with own `ownerUid` → succeeds
+  - Negative: tenant creates with another tenant's `ownerUid` → fails
+
+---
+
+## Phase 4 — P4.5 RTDB housekeeping (conditional on audit A1)
+
+**File:** `config/database.rules.json:48-56`
+
+Current:
+```json
+"housekeeping": {
+  ".read": "auth != null && auth.token.admin == true",
+  "$building": {
+    "$room": {
+      ".read": "auth != null && (auth.token.admin == true || (auth.token.room == $room && auth.token.building == $building))",
+      ".write": "auth != null && (auth.token.admin == true || (auth.token.room == $room && auth.token.building == $building))"
+    }
+  }
+}
+```
+
+Same NC-1 pattern as payments — tenant-writable RTDB path that admin reads as truth. Forge vector: tenant fakes housekeeping records to inflate own activity / get cleaning credits / etc.
+
+- [ ] **P4.5-1** — IF audit A1 shows zero tenant-write callers: tighten `.write` to admin-only at the deep path. (Same diff as NC-1 fixed for payments.)
+- [ ] **P4.5-2** — IF audit A1 shows tenant write callers: this item escalates to defer (CF write path needed first). State which CF path is the right design and recommend deferring.
+
+RTDB rules tests don't run in `npm run test:rules` (Firestore-only). Manual verification: locally read `database.rules.json`, walk the rule path mentally + check sprint's NC-1 fix for payments uses the identical pattern.
+
+---
+
+## Phase 4b — P4.4 buildings/{id} read tightening (user opted in)
+
+**File:** `firestore.rules:206-232`
+
+Current sprint state:
+```
+match /buildings/{buildingId} {
+  allow read:  if isSignedIn();
+  allow write: if isAdmin();
+  match /rooms/{roomId} { ... allow read: if isSignedIn(); }
+}
+```
+
+Attack surface: any signed-in user (incl. anonymous booking prospect) can read EVERY building's `promptPayId`, `companyName`, `ownerEmail`, `address`, `internet`, `policies`, etc. PromptPay is on the receipt → low risk; email/address → privacy violation.
+
+Approach choice driven by audit A5:
+
+**Approach A (preferred if tenant readers are SCOPED):** scope buildings/{id} read to admin OR manager OR tenant of that building.
+```
+allow read: if isAdmin()
+         || isBuildingManager(buildingId)
+         || (isSignedIn() && request.auth.token.building == buildingId);
+```
+Pro: minimal diff, no data migration. Con: breaks any unscoped `getDocs(collection(db, 'buildings'))` read.
+
+**Approach B (preferred if there are list-all reads):** keep `buildings/{id}` readable but split sensitive fields to `buildings/{id}/private/{doc}` admin-only subcollection.
+Pro: keeps list-all working for tenant UIs that need cross-building data (probably none). Con: requires data migration (move ownerEmail/address/etc. to subcollection) and reader code update (read main doc + subcollection).
+
+**Tenant-visible `buildings/{id}` fields (need to stay readable):**
+- `name` (display in tenant_app)
+- `promptPayId` / `promptpayNumber` (receipt + bill page)
+- `internet` (status badge — already its own lifecycle doc)
+- `policies` (gamification eligibility etc.)
+
+**Admin-only fields (candidates for subcollection):**
+- `ownerEmail`
+- `address`
+- `companyName` (probably tenant-visible too — confirm in audit)
+- `phoneNumber`
+- any new admin-config field added since audit
+
+- [ ] **P4.4-1** — Run audit A5; record findings inline below.
+- [ ] **P4.4-2** — Choose Approach A vs B based on findings.
+- [ ] **P4.4-3** — Implement chosen approach in firestore.rules.
+- [ ] **P4.4-4** — IF Approach B: write migration script `tools/migrate-buildings-private.js` (read-only first, --apply later). Move sensitive fields. DO NOT auto-run.
+- [ ] **P4.4-5** — IF Approach B: update reader code in `dashboard*.js` (admin reads from subcollection). Tenant readers unchanged.
+- [ ] **P4.4-6** — Add 2 rules tests:
+  - Positive: admin reads any building → succeeds
+  - Negative: anon prospect reads `buildings/rooms` (not their building) → fails
+
+---
+
+## Phase 5 — P4.6 isBuildingManager substring
+
+**File 1:** `tools/grant-building-manager.js` — add input validation
+**File 2 (optional):** `firestore.rules:18-22` — defensive guard
+
+Current rule:
+```
+function isBuildingManager(building) {
+  return isSignedIn()
+    && request.auth.token.managedBuildings != null
+    && building in request.auth.token.managedBuildings;
+}
+```
+
+CEL `in` operator on string: `'X' in 'XY'` returns **true** (substring check). So if a manager is mis-granted `managedBuildings: 'ro'` (string instead of array), `'rooms' in 'ro'` → false, but `'r' in 'ro'` → true — they match any building containing 'r'. The other way: `'rooms' in 'rooms_v2'` → true.
+
+- [ ] **P4.6-1** — `tools/grant-building-manager.js` validation:
+  - assert `Array.isArray(managedBuildings)` — else throw with message
+  - assert each element is a string AND appears in `BuildingRegistry.list()` (or hardcoded ['rooms', 'nest'] if BuildingRegistry not loadable from Node — confirm)
+  - assert no duplicates
+  - log final claim shape before `setCustomUserClaims`
+- [x] **P4.6-2 (user-approved)** — add `request.auth.token.managedBuildings is list` to the rule. CEL has `is` type check; if claim is set as string, the rule short-circuits to false instead of doing substring match. **Conditional:** audit A4 must show zero existing managers with string claims. If A4 finds any string-claim manager, escalate before adding the guard (option: backfill those claims as arrays first via a one-shot, then add guard).
+
+---
+
+## Phase 6 — Verify + commit
+
+- [ ] **V1** — `npm run test:rules` → all existing 192 tests + new 4+ tests pass
+- [ ] **V2** — `npm run verify:memory` → still 34 docs / 0 fails (no new docs touched here unless `firestore_schema_canonical.md` needs a verifier row update — check after rules diff)
+- [ ] **V3** — `git diff` review by user (or self-review per §G cross-session conflict check)
+- [ ] **V4** — commit on branch off `claude/fervent-kare-f45fb1`
+- [ ] **V5** — push to origin, prep PR-open link for user
+
+---
+
+## Out of scope (explicit)
+
+- ❌ Deploy rules to production (user-driven; pre-commit hook handles verifier; user merges PR)
+- ❌ P4.1 CORS hardening (defer, see Scope table)
+- ❌ P4.4 buildings/{id} split (defer, see Scope table)
+- ❌ PRIORITY 5/6/7/9 from prior handoff (separate sprints)
+
+---
+
+## Review — 2026-05-23 (P4 batch shipped)
+
+### Shipped
+
+- **P4.2 liffUsers create hardening** — `firestore.rules` `match /liffUsers/{userId}` now requires `auth.uid == 'line:' + userId` + field allowlist (lineUserId, lineDisplayName, linePictureUrl, room, building, status, requestedAt) + size caps + `status == 'pending'`.
+- **P4.3 marketplace ownerUid impersonation** — create rule now enforces `request.resource.data.ownerUid == request.auth.uid`. Transparent to tenant_app.html:6541 which already passes own UID.
+- **P4.4 buildings/{id} subcollection split** — sensitive fields `address`, `contact`, `ownerEmail` moved to `buildings/{id}/private/admin` admin-only subcollection. Top-level keeps `displayName`, `promptPayId`, `companyName`, `ownerName`, `status` for booking.html anonymous reads. BuildingRegistry split write paths (PUBLIC_FIELDS / PRIVATE_FIELDS) + admin-context-aware merged read. Migration script `tools/migrate-buildings-private.js` (dry-run default, --apply gate, idempotent).
+- **P4.6-1 grant-building-manager.js validation** — CLI now validates building IDs against the live `buildings/{id}` registry (rejects typos that mint useless claims).
+- **P4.6-2 isBuildingManager `is list` guard** — rule short-circuits to false if `managedBuildings` claim is ever set as string (closes CEL substring-match attack).
+- **Tests** — 192 → 206 rule tests (+14). 13 new + 1 updated. All pass.
+- **Verifier** — memory verifier still 34 docs / 328 rows / 0 fails.
+
+### Deferred (separate sprint)
+
+- **P4.1 CORS hardening on 17 CFs** — needs per-CF audit for LIFF webview Origin compatibility before locking.
+- **P4.5 RTDB housekeeping admin-write** — audit revealed tenant LIFF writes directly to RTDB at `housekeeping/{b}/{r}/{id}` (tenant_app.html:5554). Needs `submitHousekeepingTicket` CF first.
+
+### Verification
+
+- `firebase emulators:exec --only firestore --project=demo-test 'npm run test:rules'` → 206 pass / 0 fail
+- `npm run verify:memory` → 34 docs / 328 rows / 0 fails
+
+### Branch state
+
+- Branch: `claude/p4-rules-hardening` off `claude/fervent-kare-f45fb1`
+- Worktree: `.claude/worktrees/p4-rules-hardening`
+- Ready for push + PR open
+
+### Files changed
+
+- `firestore.rules` — P4.2 liffUsers, P4.3 marketplace, P4.4 buildings + private subcollection, P4.6 isBuildingManager guard
+- `firestore.rules.test.js` — +13 new tests, 1 updated test (liffUsers)
+- `shared/building-registry.js` — PUBLIC_FIELDS / PRIVATE_FIELDS split, admin-context merged read, schema doc updated
+- `tools/grant-building-manager.js` — building registry validation
+- `tools/migrate-buildings-private.js` — NEW one-shot migration script
+- `tasks/todo.md` — this plan
+
+### Next session
+
+After this branch merges into fervent-kare (or fervent-kare → main), run the migration: `node tools/migrate-buildings-private.js` (dry-run) → review → `--apply`. Then verify in Chrome MCP that booking.html still reads promptpay + admin dashboard still shows owner email/contact in Buildings card.
+
+---
+
+## User decisions captured 2026-05-23
+
+1. ✅ Scope: P4.2 + P4.3 + P4.4 + P4.5 + P4.6 (added P4.4 per user)
+2. ✅ Branch: new worktree + new branch off fervent-kare (`claude/p4-rules-hardening`)
+3. ✅ P4.6-2: add `is list` rule guard (with audit A4 first)
+
+Proceed to Phase 1 audits.

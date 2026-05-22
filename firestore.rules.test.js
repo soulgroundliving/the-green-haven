@@ -415,11 +415,61 @@ describe('public-read content — unauth user can read', () => {
   }
 });
 
-describe('liffUsers — any auth creates, only admin approves/deletes', () => {
-  it('anon tenant can create their own liff link request', async () => {
-    await assertSucceeds(setDoc(doc(ANON('U_LINE_1').firestore(), 'liffUsers/U_LINE_1'), {
-      building: 'rooms', room: '101', status: 'pending'
-    }));
+describe('liffUsers — UID-gated creates with field allowlist (P4.2 hardened 2026-05-23)', () => {
+  // Canonical payload tenant_app.html:10141 writes — keeps tests in sync with code
+  const LIFF_PAYLOAD = (overrides = {}) => ({
+    lineUserId: 'U_LINE_1',
+    lineDisplayName: 'สมชาย',
+    linePictureUrl: 'https://profile.line-scdn.net/abc',
+    room: '101',
+    building: 'rooms',
+    status: 'pending',
+    requestedAt: new Date().toISOString(),
+    ...overrides
+  });
+
+  it('LIFF tenant with matching uid can create own liff link request', async () => {
+    await assertSucceeds(setDoc(
+      doc(LIFF_TENANT('line:U_LINE_1').firestore(), 'liffUsers/U_LINE_1'),
+      LIFF_PAYLOAD()
+    ));
+  });
+
+  it('LIFF tenant CANNOT impersonate another user (uid mismatch)', async () => {
+    // Caller uid is line:U_LINE_2, trying to create liffUsers/U_LINE_1
+    await assertFails(setDoc(
+      doc(LIFF_TENANT('line:U_LINE_2').firestore(), 'liffUsers/U_LINE_1'),
+      LIFF_PAYLOAD()
+    ));
+  });
+
+  it('Anonymous tenant (non-line: uid) CANNOT create liffUsers (closes pre-poison)', async () => {
+    // Attacker is anonymous booking prospect / generic anon — uid doesn't have 'line:' prefix
+    await assertFails(setDoc(
+      doc(ANON('U_LINE_1').firestore(), 'liffUsers/U_LINE_1'),
+      LIFF_PAYLOAD()
+    ));
+  });
+
+  it('LIFF tenant CANNOT self-approve by setting status:approved', async () => {
+    await assertFails(setDoc(
+      doc(LIFF_TENANT('line:U_LINE_1').firestore(), 'liffUsers/U_LINE_1'),
+      LIFF_PAYLOAD({ status: 'approved' })
+    ));
+  });
+
+  it('LIFF tenant CANNOT add unknown fields (e.g. admin:true)', async () => {
+    await assertFails(setDoc(
+      doc(LIFF_TENANT('line:U_LINE_1').firestore(), 'liffUsers/U_LINE_1'),
+      { ...LIFF_PAYLOAD(), admin: true }
+    ));
+  });
+
+  it('LIFF tenant CANNOT exceed lineDisplayName size cap (100 chars)', async () => {
+    await assertFails(setDoc(
+      doc(LIFF_TENANT('line:U_LINE_1').firestore(), 'liffUsers/U_LINE_1'),
+      LIFF_PAYLOAD({ lineDisplayName: 'X'.repeat(101) })
+    ));
   });
 
   it('anon tenant CANNOT update (approve themselves) or delete', async () => {
@@ -459,6 +509,25 @@ describe('marketplace — owner-only mutations', () => {
   it('non-owner CANNOT update someone else listing', async () => {
     await seedDoc('marketplace/m1', { title: 'old', ownerUid: 'tenant-X' });
     await assertFails(updateDoc(doc(ANON('tenant-Y').firestore(), 'marketplace/m1'), { title: 'hijacked' }));
+  });
+
+  // P4.3 (2026-05-23): create rule now enforces ownerUid == auth.uid.
+  // Prior to this, a tenant could create a listing attributed to a victim's
+  // UID; the victim then couldn't delete it (own-UID match required).
+  it('tenant creates listing with own ownerUid → succeeds', async () => {
+    await assertSucceeds(addDoc(collection(ANON('tenant-X').firestore(), 'marketplace'), {
+      title: 'cool stuff',
+      ownerUid: 'tenant-X',
+      createdAt: new Date().toISOString()
+    }));
+  });
+
+  it('tenant CANNOT create listing with another tenant ownerUid (impersonation)', async () => {
+    await assertFails(addDoc(collection(ANON('tenant-X').firestore(), 'marketplace'), {
+      title: 'frame the victim',
+      ownerUid: 'tenant-VICTIM',
+      createdAt: new Date().toISOString()
+    }));
   });
 });
 
@@ -1182,6 +1251,45 @@ describe('buildings — admin CRUD, signed-in read (Multi-Property registry)', (
   it('unauthenticated CANNOT create a building doc', async () => {
     await assertFails(setDoc(doc(UNAUTH().firestore(), BLD_PATH), BLD_DATA));
   });
+
+  // P4.4 (2026-05-23): sensitive fields moved to admin-only subcollection.
+  describe('buildings/{id}/private/admin — admin-only sensitive fields', () => {
+    const PRIV_PATH = 'buildings/test_b1/private/admin';
+    const PRIV_DATA = {
+      address: '123 Test Road, Bangkok',
+      contact: '02-xxx-xxxx',
+      ownerEmail: 'landlord@example.com'
+    };
+
+    it('admin can read private/admin subdoc', async () => {
+      await seedDoc(PRIV_PATH, PRIV_DATA);
+      await assertSucceeds(getDoc(doc(EMAIL_ADMIN().firestore(), PRIV_PATH)));
+    });
+
+    it('admin can write private/admin subdoc', async () => {
+      await assertSucceeds(setDoc(doc(EMAIL_ADMIN().firestore(), PRIV_PATH), PRIV_DATA));
+    });
+
+    it('LIFF tenant CANNOT read private/admin subdoc (closes leak to signed-in users)', async () => {
+      await seedDoc(PRIV_PATH, PRIV_DATA);
+      await assertFails(getDoc(doc(LIFF_TENANT().firestore(), PRIV_PATH)));
+    });
+
+    it('anonymous booking prospect CANNOT read private/admin subdoc', async () => {
+      await seedDoc(PRIV_PATH, PRIV_DATA);
+      await assertFails(getDoc(doc(PROSPECT().firestore(), PRIV_PATH)));
+    });
+
+    it('building manager CANNOT read private/admin (kept owner-only)', async () => {
+      await seedDoc(PRIV_PATH, PRIV_DATA);
+      await assertFails(getDoc(doc(BUILDING_MANAGER(['test_b1']).firestore(), PRIV_PATH)));
+    });
+
+    it('accountant CANNOT read private/admin (admin-only)', async () => {
+      await seedDoc(PRIV_PATH, PRIV_DATA);
+      await assertFails(getDoc(doc(ACCOUNTANT().firestore(), PRIV_PATH)));
+    });
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1249,6 +1357,21 @@ describe('building manager — scoped read, no write (Tier 3c)', () => {
   it('user with no managedBuildings claim CANNOT use building manager path', async () => {
     await seedDoc(TENANT_PATH, TENANT_DATA);
     await assertFails(getDoc(doc(EMAIL_NO_CLAIM().firestore(), TENANT_PATH)));
+  });
+
+  // P4.6 (2026-05-23): `is list` type guard against substring-match attack.
+  // CEL `in` operator on a string does substring check, not array membership.
+  // If managedBuildings is ever set as a string instead of array,
+  // `'rooms' in 'rooms_extra'` returns true → cross-building access leak.
+  it('CEL substring vuln: managedBuildings as string is rejected by is-list guard', async () => {
+    await seedDoc(TENANT_PATH, TENANT_DATA);
+    // Spoof the claim shape: pass a string instead of array
+    const STRING_MANAGER = testEnv.authenticatedContext('mgr-string-1', {
+      managedBuildings: 'rooms_extra',  // attacker-set string containing 'rooms'
+      firebase: { sign_in_provider: 'password' }
+    });
+    // Without the `is list` guard, this would silently succeed via substring match
+    await assertFails(getDoc(doc(STRING_MANAGER.firestore(), TENANT_PATH)));
   });
 });
 
