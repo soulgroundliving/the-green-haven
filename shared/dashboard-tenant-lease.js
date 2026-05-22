@@ -1209,20 +1209,38 @@ function initPetApprovalsPage() {
     const fs = window.firebase.firestoreFunctions;
     const cg = fs.collectionGroup(db, 'pets');
     window._petsUnsub = fs.onSnapshot(cg, snap => {
-      _petsFromFirestore = snap.docs.map(d => {
-        // Path: tenants/{building}/list/{roomId}/pets/{petId}
-        const parts = d.ref.path.split('/');
-        const pathBuilding = parts[1];
-        const pathRoom     = parts[3];
-        const data = d.data();
-        return {
-          id: d.id,
-          ...data,
-          // Trust path over field for admin write-back, but keep field as default.
-          building: data.building || pathBuilding,
-          room:     data.room     || pathRoom,
-        };
-      });
+      // Filter out archived pets — §7-T discipline. collectionGroup('pets')
+      // matches BOTH live (`tenants/{b}/list/{r}/pets/{id}`) and archived
+      // (`tenants/{b}/archive/{contractId}/pets/{id}`) paths because the
+      // collection name is identical. Without the path-segment guard, admin
+      // queue renders archived pets (with `room: contractId` from parts[3])
+      // and insights overcount each move-out cycle.
+      _petsFromFirestore = snap.docs
+        .filter(d => {
+          const parts = d.ref.path.split('/');
+          // tenants/{b}/list/{r}/pets/{id}            → parts[2] === 'list'    (live, keep)
+          // tenants/{b}/archive/{cid}/pets/{id}       → parts[2] === 'archive' (skip)
+          if (parts[2] === 'list') return true;
+          if (parts[2] === 'archive') return false;
+          // Unexpected shape — log so future drift is visible (e.g. someone
+          // adds a third subcollection-of-pets without updating this filter).
+          console.warn('[pets cg] unexpected path shape — skipping:', d.ref.path);
+          return false;
+        })
+        .map(d => {
+          // Path: tenants/{building}/list/{roomId}/pets/{petId}
+          const parts = d.ref.path.split('/');
+          const pathBuilding = parts[1];
+          const pathRoom     = parts[3];
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            // Trust path over field for admin write-back, but keep field as default.
+            building: data.building || pathBuilding,
+            room:     data.room     || pathRoom,
+          };
+        });
       loadAndRenderPetApprovals();
     }, err => console.warn('pets onSnapshot failed:', err));
   } catch(e) { console.warn('pets subscribe failed:', e); }
@@ -1311,16 +1329,9 @@ async function _writePetToFirestore(building, room, id, patch){
     await fs.setDoc(docRef, patch, { merge: true });
   } catch(e) { console.warn('Firestore pet update failed:', e); }
 }
-async function _deletePetFromFirestore(building, room, id){
-  if (!window.firebase?.firestore) return;
-  if (!building || !room || !id) { console.warn('pet delete missing building/room/id', { building, room, id }); return; }
-  try {
-    const db = window.firebase.firestore();
-    const fs = window.firebase.firestoreFunctions;
-    const docRef = fs.doc(db, 'tenants', building, 'list', String(room), 'pets', id);
-    await fs.deleteDoc(docRef);
-  } catch(e) { console.warn('Firestore pet delete failed:', e); }
-}
+// _deletePetFromFirestore removed 2026-05-23 — was orphaning Storage files
+// at pets/{b}/{r}/{id}/* on admin "🗑️ Remove". Replaced by deletePetMedia CF
+// which deletes Firestore doc + Storage in one server call (admin-only gated).
 
 function approvePet(building, room, id) {
   _writePetToFirestore(building, room, id, { status: 'approved', approvalDate: new Date().toISOString() });
@@ -1335,10 +1346,22 @@ function rejectPet(building, room, id) {
   });
 }
 
-function removePetApproval(building, room, id) {
-  window.ghConfirm('ลบการขึ้นทะเบียนสัตว์เลี้ยงนี้?', { danger: true }).then(ok => {
-    if (!ok) return;
-    _deletePetFromFirestore(building, room, id);
-    showToast('✅ Pet registration removed', 'success');
-  });
+async function removePetApproval(building, room, id) {
+  const ok = await window.ghConfirm('ลบการขึ้นทะเบียนสัตว์เลี้ยงนี้?\n(จะลบรูป + สมุดวัคซีนใน Storage ด้วย)', { danger: true });
+  if (!ok) return;
+  if (!building || !room || !id) {
+    console.warn('removePetApproval: missing building/room/id', { building, room, id });
+    showToast('❌ ข้อมูลไม่ครบ', 'error');
+    return;
+  }
+  try {
+    const callable = window.firebase.functions.httpsCallable('deletePetMedia');
+    const res = await callable({ building, roomId: String(room), petId: String(id) });
+    const data = res?.data || {};
+    const errSuffix = data.storageErrors ? ` (Storage: ${data.storageErrors} error)` : '';
+    showToast(`✅ ลบสำเร็จ — ลบไฟล์ ${data.storageDeleted || 0} ไฟล์${errSuffix}`, 'success');
+  } catch (e) {
+    console.warn('deletePetMedia call failed:', e);
+    showToast(`❌ ลบไม่สำเร็จ: ${e.message || 'unknown'}`, 'error');
+  }
 }

@@ -1100,8 +1100,15 @@
       const totalHouse = hStatus.pending + hStatus.inprogress + hStatus.done;
 
       // Pet Approvals (Firestore collectionGroup 'pets')
+      // Mirror of the §7-T filter in shared/dashboard-tenant-lease.js — exclude
+      // archived pets so this KPI doesn't inflate on every move-out cycle.
       const pStatus = { pending: 0, approved: 0, rejected: 0 };
       petsSnap.forEach(d => {
+        // tenants/{b}/list/{r}/pets/{id}            → parts[2]==='list'    (live, count)
+        // tenants/{b}/archive/{cid}/pets/{id}       → parts[2]==='archive' (skip)
+        const parts = d.ref.path.split('/');
+        if (parts[2] !== 'list') return;
+
         const s = (d.data().status || 'pending').toLowerCase();
         if (s in pStatus) pStatus[s]++; else pStatus.pending++;
       });

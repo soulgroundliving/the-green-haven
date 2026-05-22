@@ -289,6 +289,17 @@ exports.revertTransitionToPlayer = functions
       throw new functions.https.HttpsError('internal', e.message || 'Batch commit failed');
     }
 
+    // ── Pet Storage NOT restored (asymmetric with archiveTenantOnMoveOut) ──
+    // transitionToPlayer (kin CF) deliberately did NOT delete Storage files
+    // at pets/{b}/{r}/{petId}/* — see comment in transitionToPlayer.js. The
+    // files are still in place; the Firestore subcollection copies above
+    // restore the doc structure that points at those URLs. Nothing to do here.
+    //
+    // archiveTenantOnMoveOut, in contrast, DOES delete Storage files because
+    // full move-out is one-way (no revert CF exists). If you ever add such a
+    // revert, you must also restore Storage from a backup snapshot — Storage
+    // delete in archiveTenantOnMoveOut is irreversible without backup.
+
     // ── Post-batch: replace player claim with tenant claim ────────────────
     // Fire-and-forget. If this fails, admin can manually re-set via
     // grant-admin-claim tool or by calling this CF again (idempotent —

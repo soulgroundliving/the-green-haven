@@ -20,12 +20,23 @@ service firebase.storage {
 
     // ===== PETS — photo + vaccine book =====
     // Path: pets/{building}/{room}/{petId}/{file=**}
-    // Write scoped to the caller's own room/building via custom claims (set by
-    // liffSignIn). Admin bypasses for ops/cleanup. Without this scoping any
-    // signed-in tenant could overwrite another room's pet photos or fill the
-    // bucket with orphan files (quota / data-poisoning risk). Audit 2026-04-28.
+    // Write + READ scoped to the caller's own room/building via custom claims
+    // (set by liffSignIn). Admin bypasses for ops/cleanup. Audit 2026-04-28
+    // covered writes; 2026-05-23 audit also tightened READ from `isSignedIn()`
+    // to claim-match because (a) the prior rule let a new tenant of room 15
+    // read the old tenant's vaccine book PDF if they enumerated petId, and
+    // (b) photoURL/vaccineBookURL tokens persist in archived Firestore docs
+    // even after archiveTenantOnMoveOut deletes the Storage files.
+    //
+    // Tenants only render their OWN pets via the room-scoped subscription at
+    // tenants/{b}/list/{r}/pets — never need cross-room read. Admin queue
+    // uses the Firestore-stored download tokens (photoURL field) not direct
+    // Storage paths so admin reading via `isAdmin()` covers operational use.
     match /pets/{building}/{room}/{petId}/{file=**} {
-      allow read: if isSignedIn();
+      allow read: if isAdmin()
+        || (isSignedIn()
+            && request.auth.token.room == room
+            && request.auth.token.building == building);
       allow write: if fitsSizeLimit() && isImageOrPdf()
         && (isAdmin()
             || (isSignedIn()

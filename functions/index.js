@@ -100,6 +100,13 @@ exports.submitBookingKyc = require('./submitBookingKyc').submitBookingKyc;
 // (returning tenants get old data back via convertBookingToTenant lookup).
 exports.archiveTenantOnMoveOut = require('./archiveTenantOnMoveOut').archiveTenantOnMoveOut;
 
+// Admin-only single-pet delete (Firestore doc + Storage files).
+// Replaces the prior client `_deletePetFromFirestore` direct-write path which
+// only deleted the Firestore doc and left `pets/{b}/{r}/{petId}/*` orphan in
+// Storage. Server-side helps symmetry with archiveTenantOnMoveOut + future
+// PDPA audit logging.
+exports.deletePetMedia = require('./deletePetMedia').deletePetMedia;
+
 // Admin-only lease renewal/extension (lifecycle_tenant_transitions.md § C).
 // Two modes: 'renewal' (novation — new lease doc) or 'extension' (variation —
 // stretch endDate + arrayUnion extensions[]). Single Firestore batch per
