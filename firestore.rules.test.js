@@ -154,12 +154,39 @@ describe('tenants — sensitive field protection', () => {
     await assertFails(updateDoc(doc(db, 'tenants/rooms/list/101'), { tenantId: 'HIJACK' }));
   });
 
-  it('anonymous tenant CAN update non-sensitive contact fields', async () => {
+  // NC-2 (2026-05-22 security sprint): pre-fix, the affectedKeys block alone
+  // allowed ANY signed-in user (incl. anonymous booking prospect) to overwrite
+  // name/phone/email/nationalId of any tenant's room doc. Self-ownership gate
+  // via linkedAuthUid now required for non-admin writes.
+  it('anonymous tenant WITHOUT linkedAuthUid match CANNOT update tenant doc (NC-2 fix)', async () => {
+    // Default seedTenant() does NOT set linkedAuthUid → caller (ANON 'tenant-1')
+    // does not own this doc → update must fail even on non-sensitive fields.
     const db = ANON().firestore();
+    await assertFails(updateDoc(doc(db, 'tenants/rooms/list/101'), {
+      phone: '0899999999',
+      email: 'new@test',
+      lineID: 'newLine'
+    }));
+  });
+
+  it('LIFF-linked tenant CAN update own non-sensitive contact fields (linkedAuthUid match)', async () => {
+    // Re-seed with linkedAuthUid matching the caller's uid. seedTenant uses
+    // setDoc (not merge) so this fully replaces the beforeEach default.
+    await seedTenant({ linkedAuthUid: 'linked-uid-1' });
+    const db = ANON('linked-uid-1').firestore();
     await assertSucceeds(updateDoc(doc(db, 'tenants/rooms/list/101'), {
       phone: '0899999999',
       email: 'new@test',
       lineID: 'newLine'
+    }));
+  });
+
+  it('LIFF-linked tenant CANNOT update sensitive fields even with linkedAuthUid match', async () => {
+    // Ownership + affectedKeys block are AND-ed: even owner cannot bump gamification.
+    await seedTenant({ linkedAuthUid: 'linked-uid-1' });
+    const db = ANON('linked-uid-1').firestore();
+    await assertFails(updateDoc(doc(db, 'tenants/rooms/list/101'), {
+      gamification: { points: 999999 }
     }));
   });
 
@@ -1291,6 +1318,37 @@ describe('facilityBookings — slot reservations (Tier 3G)', () => {
 
   it('unauthenticated user CANNOT create facilityBookings', async () => {
     await assertFails(setDoc(doc(UNAUTH().firestore(), BOOKING_PATH), BOOKING_DATA));
+  });
+
+  // Fix #5 (2026-05-22 security sprint): close §7-P gap on facilityBookings.
+  // After a fresh LIFF session re-mints a new anonymous UID, the booking
+  // (whose tenantUid was stamped at create time) becomes invisible to its own
+  // tenant unless the read rule has a claim-based fallback. Mirrors the
+  // checklistInstances pattern (firestore.rules:494-497).
+  it('LIFF tenant CAN read facilityBooking via claim fallback after UID rotation (Fix #5 / §7-P)', async () => {
+    // Doc stamped with an OLD anon UID (now stale — different from caller).
+    await seedDoc(BOOKING_PATH, {
+      ...BOOKING_DATA,
+      tenantUid: 'anon-old-uid-no-longer-current',
+      tenantBuilding: 'rooms',
+      tenantRoom: '101',
+    });
+    // Caller is the same tenant in a NEW LIFF session: fresh UID, but claims
+    // still point to building=rooms, room=101. Read must succeed via fallback.
+    const newSessionDb = LIFF_TENANT('line:U_FRESH_LIFF_SESSION', '101', 'rooms').firestore();
+    await assertSucceeds(getDoc(doc(newSessionDb, BOOKING_PATH)));
+  });
+
+  it('LIFF tenant CANNOT read facilityBooking for different building (claim mismatch)', async () => {
+    await seedDoc(BOOKING_PATH, {
+      ...BOOKING_DATA,
+      tenantUid: 'anon-old-uid',
+      tenantBuilding: 'rooms',
+      tenantRoom: '101',
+    });
+    // Caller is a tenant of NEST building, NOT rooms — claim fallback must NOT match.
+    const otherBldDb = LIFF_TENANT('line:U_NEST_TENANT', 'N101', 'nest').firestore();
+    await assertFails(getDoc(doc(otherBldDb, BOOKING_PATH)));
   });
 });
 

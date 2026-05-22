@@ -239,8 +239,18 @@ service cloud.firestore {
       allow read: if isAdmin()
                || isBuildingManager(building)
                || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid);
-      allow update: if isSignedIn() &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['gamification', 'rentAmount', 'building', 'roomId', 'tenantId']);
+      // Update: admin always; otherwise self-ownership required AND the
+      // protected-field block (gamification/rentAmount/building/roomId/
+      // tenantId). Without the linkedAuthUid gate (added 2026-05-22 security
+      // sprint, NC-2 fix), any signed-in user — including an anonymous
+      // booking prospect — could overwrite name/phone/email/nationalId of
+      // any tenant's room doc since the affectedKeys block alone leaves
+      // every PII field writable.
+      allow update: if (
+          isAdmin()
+          || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid)
+        )
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['gamification', 'rentAmount', 'building', 'roomId', 'tenantId']);
       allow create, delete: if isAdmin();
       allow write: if isAdmin();
 
@@ -449,8 +459,21 @@ service cloud.firestore {
     // createFacilityBooking CF which uses admin SDK and bypasses rules anyway).
     // Cancel is handled server-side via cancelFacilityBooking CF.
     match /facilityBookings/{bookingId} {
+      // Read paths (any one is sufficient):
+      //   (a) admin
+      //   (b) tenantUid == auth.uid — works when LIFF session UID matches
+      //       the snapshot taken at create time
+      //   (c) tenantBuilding + tenantRoom match the caller's custom claims —
+      //       survives anon-UID drift (fresh LIFF session mints a new
+      //       anonymous UID; claims still point to the same room). Mirrors
+      //       checklistInstances pattern at L494-497. Closes §7-P at this
+      //       surface — without (c), tenant booking is permanently invisible
+      //       after the first LIFF re-open that mints a new anon UID.
       allow read:  if isAdmin()
-                || (isSignedIn() && resource.data.tenantUid == request.auth.uid);
+                || (isSignedIn() && resource.data.tenantUid == request.auth.uid)
+                || (isSignedIn()
+                    && resource.data.tenantBuilding == request.auth.token.building
+                    && resource.data.tenantRoom == request.auth.token.room);
       allow create: if isAdmin()
                  || (isSignedIn()
                     && request.auth.token.building != null

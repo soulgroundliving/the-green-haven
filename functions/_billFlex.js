@@ -42,7 +42,12 @@ async function loadRoomConfig(building, roomId) {
     const snap = await rtdb.ref(`rooms_config/${building}/${roomId}`).once('value');
     const cfg = snap.val();
     if (cfg && cfg.rentPrice) return cfg;
-  } catch (e) { /* fall through to defaults */ }
+  } catch (e) {
+    // Surface the RTDB read failure — without this log, the silent fallback to
+    // DEFAULTS produces bills with wrong rent/electric/water rates and no
+    // diagnostic trail. Behavior unchanged: still falls through to DEFAULTS.
+    console.error('[_billFlex] loadRoomConfig failed for', building, roomId, ':', e?.message || e);
+  }
   return DEFAULTS[building] || DEFAULTS.rooms;
 }
 
@@ -52,6 +57,10 @@ async function loadOwnerInfo() {
     const d = snap.data() || {};
     return { bankName: d.bankName || '', bankAccount: d.bankAccount || '', name: d.name || '' };
   } catch (e) {
+    // Surface the Firestore read failure — without this log, generated bills /
+    // receipts silently render with blank bankAccount / ownerName. Behavior
+    // unchanged: still returns blank-string sentinels.
+    console.error('[_billFlex] loadOwnerInfo failed:', e?.message || e);
     return { bankName: '', bankAccount: '', name: '' };
   }
 }
