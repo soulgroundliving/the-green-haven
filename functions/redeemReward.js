@@ -18,6 +18,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { checkRateLimit } = require('./_rateLimit');
+const { assertTenantAccess } = require('./_authSoT');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -128,15 +129,16 @@ exports.redeemReward = functions.region('asia-southeast1').https.onCall(async (d
   }
   const canonicalBuilding = String(building).toLowerCase();
 
-  // Ownership check — caller's claims must match requested room/building.
-  // Admin bypasses (ops/testing). Without this, any signed-in user could
-  // drain another tenant's points by passing their building+roomId.
-  if (tok.admin !== true) {
-    if (tok.room !== String(roomId) || tok.building !== canonicalBuilding) {
-      throw new functions.https.HttpsError('permission-denied',
-        'You can only redeem rewards for your own room');
-    }
-  }
+  // Ownership check — _authSoT 6-path model (admin / manager / claim /
+  // tenantId-sot / uid-sot). The SoT fallback survives §7-Z claim-strip
+  // windows so legitimate tenants whose ID token auto-refreshed past the
+  // persistent-claim fix can still redeem without re-opening LIFF.
+  await assertTenantAccess({
+    building: canonicalBuilding,
+    roomId:   String(roomId),
+    context, firestore,
+    HttpsError: functions.https.HttpsError,
+  });
 
   const rewardRef = firestore.collection('rewards').doc(rewardId);
   const tenantRef = firestore.collection('tenants').doc(canonicalBuilding).collection('list').doc(String(roomId));
