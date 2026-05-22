@@ -84,6 +84,11 @@
       font-size: 14px;
       transition: all 0.3s;
       background: white;
+      /* Pin text colour against brand.css `--ink` which auto-flips white in
+         OS dark mode — the form card is hardcoded white, so text must stay
+         dark regardless of system theme. Without this, Safari with system
+         dark mode renders white-on-white invisible inputs. */
+      color: #1a2332;
     }
 
     .form-group input:hover {
@@ -95,6 +100,18 @@
       border-color: var(--brand-primary);
       box-shadow: 0 0 8px rgba(45, 134, 83, 0.1);
       background: white;
+    }
+
+    /* Safari autofill paints text with `-webkit-text-fill-color` (not `color`)
+       and an internal yellow background. Override both so autofilled email/
+       password match the manually-typed look on the white card. */
+    .form-group input:-webkit-autofill,
+    .form-group input:-webkit-autofill:hover,
+    .form-group input:-webkit-autofill:focus,
+    .form-group input:-webkit-autofill:active {
+      -webkit-text-fill-color: #1a2332;
+      -webkit-box-shadow: 0 0 0 1000px white inset;
+      caret-color: #1a2332;
     }
 
     /* Only show red border AFTER user types something invalid — not on empty placeholder */
@@ -1284,7 +1301,7 @@
         title: 'รีเซ็ตรหัสผ่าน',
         body: '<p style="margin:0 0 12px;font-size:14px;color:var(--muted);">กรอกอีเมลที่ใช้ลงทะเบียน ระบบจะส่งลิงก์รีเซ็ตให้ทันที</p>' +
           '<input type="email" id="gh-reset-email" placeholder="email@example.com" autocomplete="email" inputmode="email" ' +
-          'style="width:100%;padding:10px 12px;border:1.5px solid var(--stone);border-radius:8px;font-size:14px;box-sizing:border-box;font-family:inherit;">' +
+          'style="width:100%;padding:10px 12px;border:1.5px solid var(--stone);border-radius:8px;font-size:14px;box-sizing:border-box;font-family:inherit;background:#fff;color:#1a2332;">' +
           '<div id="gh-reset-err" role="alert" style="display:none;margin-top:8px;color:var(--alert);font-size:13px;"></div>',
         actions: [
           { label: 'ยกเลิก', variant: 'ghost', onClick: function(m) { m.close(); } },
