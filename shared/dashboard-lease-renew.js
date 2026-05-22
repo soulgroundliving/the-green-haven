@@ -88,7 +88,7 @@ function _lrSuggestNewEndDate(currentEnd) {
 // Upload one contract file to Storage. Returns Storage path on success.
 // Throws on too-large file or upload error — caller surfaces to UI.
 async function _lrUploadContractFile(file, building, roomId, leaseId) {
-  if (!file) return '';
+  if (!file) return { path: '', url: '' };
   if (file.size > _LR_UPLOAD_MAX_BYTES) {
     throw new Error(`ไฟล์ใหญ่เกิน 5MB (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
   }
@@ -99,9 +99,14 @@ async function _lrUploadContractFile(file, building, roomId, leaseId) {
   const storagePath = `leases/${building}/${roomId}/${leaseId || 'pending'}/${fileName}`;
   const fileRef = sRef(storage, storagePath);
   const snapshot = await uploadBytes(fileRef, file);
-  // Probe download URL to surface auth errors early (best-effort; don't fail upload)
-  try { await getDownloadURL(snapshot.ref); } catch (_) { /* OK */ }
-  return storagePath;
+  // Resolve a permanent download URL so the CF can write the canonical
+  // documentURLs.agreement = { url, path, fileName, uploadedAt } object on the
+  // new lease doc — matches Tab สัญญา's shape so the admin doc viewer renders
+  // identically for renewals + transfers. Failure to resolve URL is not fatal:
+  // the path-only legacy fields still get written (readers fall through).
+  let downloadUrl = '';
+  try { downloadUrl = await getDownloadURL(snapshot.ref); } catch (_) { /* OK */ }
+  return { path: storagePath, url: downloadUrl };
 }
 
 function _lrBuildModalHtml(ctx) {
@@ -356,7 +361,7 @@ function _lrCollectInputs(modal) {
 }
 
 // Throws on bad number — caller catches and surfaces.
-function _lrApplyFinancialFields(payload, inputs, contractDocPath, contractFileName) {
+function _lrApplyFinancialFields(payload, inputs, contractDocPath, contractFileName, contractDocUrl) {
   if (inputs.rentRaw !== '') {
     const n = Number(inputs.rentRaw);
     if (!Number.isFinite(n) || n <= 0) throw new Error('ค่าเช่าใหม่ต้องเป็นตัวเลข > 0');
@@ -370,6 +375,8 @@ function _lrApplyFinancialFields(payload, inputs, contractDocPath, contractFileN
   if (contractDocPath) {
     payload.contractDocument = contractDocPath;
     payload.contractFileName = contractFileName;
+    // Optional canonical URL — CF writes documentURLs.agreement when present.
+    if (contractDocUrl) payload.contractDocumentUrl = contractDocUrl;
   }
 }
 
@@ -447,11 +454,14 @@ async function _lrSubmit(ctx) {
 
   // ── Optional file upload (renewal/extension paths only — transfer-only skips) ─
   let contractDocumentPath = '';
+  let contractDocumentUrl  = '';
   let contractFileName = '';
   if (docFile && needsEndDate) {
     _lrSetSubmitBusy(modal, true, 'กำลังอัพโหลดสัญญา…');
     try {
-      contractDocumentPath = await _lrUploadContractFile(docFile, roomMode === 'new' ? newBuilding : building, roomMode === 'new' ? newRoomId : roomId, lease.id || lease.leaseId);
+      const uploaded = await _lrUploadContractFile(docFile, roomMode === 'new' ? newBuilding : building, roomMode === 'new' ? newRoomId : roomId, lease.id || lease.leaseId);
+      contractDocumentPath = uploaded.path;
+      contractDocumentUrl  = uploaded.url;
       contractFileName = docFile.name;
     } catch (e) {
       _lrSetSubmitBusy(modal, false);
@@ -468,7 +478,7 @@ async function _lrSubmit(ctx) {
       const payload = { building, roomId, mode: actionMode, newEndDate: parsedEnd.toISOString(), notes: notes.trim() };
       if (parsedStart) payload.newStartDate = parsedStart.toISOString();
       if (actionMode === 'renewal') {
-        _lrApplyFinancialFields(payload, inputs, contractDocumentPath, contractFileName);
+        _lrApplyFinancialFields(payload, inputs, contractDocumentPath, contractFileName, contractDocumentUrl);
       }
       const callable = window.firebase.functions.httpsCallable('renewLease');
       const res = await callable(payload);
@@ -489,7 +499,7 @@ async function _lrSubmit(ctx) {
       notes: transferOnly ? `${notes.trim()} | ย้ายอย่างเดียว` : `${notes.trim()} | ย้าย+ต่อ`,
     };
     if (transferMode === 'novation') {
-      _lrApplyFinancialFields(transferPayload, inputs, contractDocumentPath, contractFileName);
+      _lrApplyFinancialFields(transferPayload, inputs, contractDocumentPath, contractFileName, contractDocumentUrl);
     }
     const xferCallable = window.firebase.functions.httpsCallable('transferTenant');
     const xferRes = await xferCallable(transferPayload);
@@ -510,6 +520,7 @@ async function _lrSubmit(ctx) {
     if (contractDocumentPath && transferMode === 'variation') {
       renewPayload.contractDocument = contractDocumentPath;
       renewPayload.contractFileName = contractFileName;
+      if (contractDocumentUrl) renewPayload.contractDocumentUrl = contractDocumentUrl;
     }
     try {
       const renewCallable = window.firebase.functions.httpsCallable('renewLease');

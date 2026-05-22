@@ -152,6 +152,7 @@ async function _validateInput(data) {
     newDeposit,
     contractDocument,
     contractFileName,
+    contractDocumentUrl,
     notes,
   } = data || {};
 
@@ -255,6 +256,12 @@ async function _validateInput(data) {
     throw new functions.https.HttpsError('invalid-argument',
       'contractFileName must be a string');
   }
+  // Optional download URL paired with contractDocument (Storage path). Same
+  // contract as renewLease — enables the canonical documentURLs.agreement write.
+  if (contractDocumentUrl !== undefined && typeof contractDocumentUrl !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument',
+      'contractDocumentUrl must be a string');
+  }
   if (notes !== undefined && typeof notes !== 'string') {
     throw new functions.https.HttpsError('invalid-argument',
       'notes must be a string');
@@ -273,6 +280,7 @@ async function _validateInput(data) {
     newDeposit: normalisedDeposit,
     contractDocument: contractDocument || '',
     contractFileName: contractFileName || '',
+    contractDocumentUrl: contractDocumentUrl || '',
     notes: notes || '',
   };
 }
@@ -488,7 +496,12 @@ async function _runVariationMode(input, callerUid, callerEmail, firestore) {
   const batch = firestore.batch();
 
   // 1. NEW tenant doc — populate with carried identity + same lease pointer
+  // Mirror contractPath/contractFileName onto the lease subobject too so the
+  // tenant_app contract reader (which checks _taLease.contractPath first) stays
+  // on the canonical path for variation transfers. Same lease doc, same agreement.
   const carriedIdentity = _carryIdentity(oldTenantData);
+  const carriedDocPath = String(oldLeaseData.contractDocument || '');
+  const carriedDocName = String(oldLeaseData.contractFileName || '');
   const newTenantPatch = {
     ...carriedIdentity,
     building: newBuilding,
@@ -507,9 +520,11 @@ async function _runVariationMode(input, callerUid, callerEmail, firestore) {
       status: 'active',
       startDate: String(oldLeaseData.contractStart || oldLeaseData.moveInDate || ''),
       endDate: oldEndDate.toISOString(),
+      contractPath: carriedDocPath,
+      contractFileName: carriedDocName,
     },
-    contractDocument: String(oldLeaseData.contractDocument || ''),
-    contractFileName: String(oldLeaseData.contractFileName || ''),
+    contractDocument: carriedDocPath,
+    contractFileName: carriedDocName,
     createdAt: now,
     updatedAt: now,
     transferredFromBuilding: building,
@@ -664,7 +679,7 @@ async function _runNovationMode(input, callerUid, callerEmail, firestore) {
   const {
     building, oldRoomId, newBuilding, newRoomId,
     effectiveDate, transferDeposit, prorateBills, notes,
-    newRentAmount, newDeposit, contractDocument, contractFileName,
+    newRentAmount, newDeposit, contractDocument, contractFileName, contractDocumentUrl,
   } = input;
 
   const state = await _readTransferState(firestore, building, oldRoomId, newBuilding, newRoomId);
@@ -681,6 +696,20 @@ async function _runNovationMode(input, callerUid, callerEmail, firestore) {
   const resolvedDeposit = (newDeposit !== undefined) ? newDeposit : Number(oldLeaseData.deposit) || 0;
   const resolvedDocPath = contractDocument || String(oldLeaseData.contractDocument || '');
   const resolvedDocName = contractFileName || String(oldLeaseData.contractFileName || '');
+
+  // Canonical document object — same shape contract as renewLease. When a
+  // new upload is provided, build the fresh object; otherwise inherit old.
+  let resolvedDocAgreement = null;
+  if (contractDocument && contractDocumentUrl) {
+    resolvedDocAgreement = {
+      url: contractDocumentUrl,
+      path: contractDocument,
+      fileName: resolvedDocName,
+      uploadedAt: new Date().toISOString(),
+    };
+  } else if (oldLeaseData.documentURLs && oldLeaseData.documentURLs.agreement) {
+    resolvedDocAgreement = oldLeaseData.documentURLs.agreement;
+  }
 
   // The new lease keeps the old's endDate (novation doesn't extend term).
   // If admin wants a new endDate, they fire renewLease against the new room
@@ -710,6 +739,8 @@ async function _runNovationMode(input, callerUid, callerEmail, firestore) {
       status: 'active',
       startDate: effectiveIso,
       endDate: endIso,
+      contractPath: resolvedDocPath,
+      contractFileName: resolvedDocName,
     },
     contractDocument: resolvedDocPath,
     contractFileName: resolvedDocName,
@@ -766,6 +797,9 @@ async function _runNovationMode(input, callerUid, callerEmail, firestore) {
     createdDate: now,
     updatedAt: now,
   };
+  if (resolvedDocAgreement) {
+    newLeaseData.documentURLs = { agreement: resolvedDocAgreement };
+  }
   batch.set(newLeaseRef, newLeaseData, { merge: false });
 
   // 5. people doc — update location

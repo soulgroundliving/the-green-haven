@@ -396,6 +396,12 @@ describe('transferTenant — S1 (auth + validation)', () => {
         'invalid-argument'
       );
     });
+    it('rejects non-string contractDocumentUrl', async () => {
+      await expectHttpsError(
+        transferTenant.run({ ...goodInput(), contractDocumentUrl: { invalid: true } }, adminContext()),
+        'invalid-argument'
+      );
+    });
   });
 
   describe('_validateInput direct (white-box)', () => {
@@ -556,6 +562,17 @@ describe('transferTenant — S3 (variation mode batch)', () => {
     assert.equal(peopleOps[0].data.currentRoom, '17');
     assert.equal(peopleOps[0].data.currentBuilding, 'rooms');
   });
+
+  it('carries old lease contractPath onto new tenant lease subobject (mirror for tenant_app reader)', async () => {
+    const seed = seedTransferable();
+    await transferTenant.run({ ...goodInput(), mode: 'variation' }, adminContext());
+    const newTenantSet = captured.batchOps.find(o => o.op === 'set' && o.path === seed.newRoomPath);
+    // Seed sets lease.contractDocument = 'gs://bucket/leases/old.pdf' →
+    // variation should mirror it as lease.contractPath on the new tenant doc
+    // so tenant_app's _taLease.contractPath read finds it cleanly.
+    assert.equal(newTenantSet.data.lease.contractPath, 'gs://bucket/leases/old.pdf');
+    assert.equal(newTenantSet.data.lease.contractFileName, 'lease_2025.pdf');
+  });
 });
 
 describe('transferTenant — S4 (novation mode batch)', () => {
@@ -609,6 +626,47 @@ describe('transferTenant — S4 (novation mode batch)', () => {
     await transferTenant.run({ ...goodInput(), mode: 'novation' }, adminContext());
     const oldLeaseUpd = captured.batchOps.find(o => o.op === 'update' && o.path === seed.leasePath);
     assert.equal(oldLeaseUpd.data.amendments, undefined, 'novation must not amend old lease array');
+  });
+
+  it('novation with contractDocumentUrl: writes canonical documentURLs.agreement on new lease + lease.contractPath mirror', async () => {
+    seedTransferable();
+    const result = await transferTenant.run({
+      ...goodInput(),
+      mode: 'novation',
+      contractDocument: 'leases/rooms/17/NEW_LEASE/lease-renewal-1779999.pdf',
+      contractFileName: 'lease_novated_2026.pdf',
+      contractDocumentUrl: 'https://firebasestorage.example.com/?token=novation',
+    }, adminContext());
+
+    const newLeasePath = `leases/rooms/list/${result.newLeaseId}`;
+    const newLeaseSet = captured.batchOps.find(o => o.op === 'set' && o.path === newLeasePath);
+    assert.ok(newLeaseSet.data.documentURLs, 'documentURLs object present on novated lease');
+    assert.equal(newLeaseSet.data.documentURLs.agreement.url, 'https://firebasestorage.example.com/?token=novation');
+    assert.equal(newLeaseSet.data.documentURLs.agreement.path, 'leases/rooms/17/NEW_LEASE/lease-renewal-1779999.pdf');
+    assert.equal(newLeaseSet.data.documentURLs.agreement.fileName, 'lease_novated_2026.pdf');
+    // Legacy path field still written (reader fallback chain)
+    assert.equal(newLeaseSet.data.contractDocument, 'leases/rooms/17/NEW_LEASE/lease-renewal-1779999.pdf');
+
+    // New tenant doc — lease.contractPath is what tenant_app.html reads first
+    const newTenantPath = 'tenants/rooms/list/17';
+    const newTenantSet = captured.batchOps.find(o => o.op === 'set' && o.path === newTenantPath);
+    assert.equal(newTenantSet.data.lease.contractPath, 'leases/rooms/17/NEW_LEASE/lease-renewal-1779999.pdf');
+    assert.equal(newTenantSet.data.lease.contractFileName, 'lease_novated_2026.pdf');
+  });
+
+  it('novation without new upload but old lease has documentURLs.agreement: new lease INHERITS it', async () => {
+    const existingAgreement = {
+      url: 'https://firebasestorage.example.com/old?token=xyz',
+      path: 'leases/rooms/15/OLD_LEASE/old.pdf',
+      fileName: 'old.pdf',
+      uploadedAt: '2026-01-01T00:00:00.000Z',
+    };
+    seedTransferable({ leaseExtras: { documentURLs: { agreement: existingAgreement } } });
+
+    const result = await transferTenant.run({ ...goodInput(), mode: 'novation' }, adminContext());
+    const newLeasePath = `leases/rooms/list/${result.newLeaseId}`;
+    const newLeaseSet = captured.batchOps.find(o => o.op === 'set' && o.path === newLeasePath);
+    assert.deepEqual(newLeaseSet.data.documentURLs.agreement, existingAgreement);
   });
 });
 

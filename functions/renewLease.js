@@ -71,6 +71,7 @@ async function _validateInput(data) {
     newDeposit,
     contractDocument,
     contractFileName,
+    contractDocumentUrl,
     notes,
   } = data || {};
 
@@ -157,6 +158,16 @@ async function _validateInput(data) {
     throw new functions.https.HttpsError('invalid-argument',
       'contractFileName must be a string');
   }
+  // Optional download URL paired with contractDocument (Storage path).
+  // When the caller probes getDownloadURL post-upload and passes it through,
+  // we persist the canonical `documentURLs.agreement = {url, path, fileName, uploadedAt}`
+  // object so Tab สัญญา renders newly-renewed leases identically to docs
+  // uploaded via the Tab สัญญา UI. Absence is fine — readers fall through
+  // to the path-only legacy shape.
+  if (contractDocumentUrl !== undefined && typeof contractDocumentUrl !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument',
+      'contractDocumentUrl must be a string');
+  }
   if (notes !== undefined && typeof notes !== 'string') {
     throw new functions.https.HttpsError('invalid-argument',
       'notes must be a string');
@@ -172,6 +183,7 @@ async function _validateInput(data) {
     newDeposit: normalisedDeposit,
     contractDocument: contractDocument || '',
     contractFileName: contractFileName || '',
+    contractDocumentUrl: contractDocumentUrl || '',
     notes: notes || '',
   };
 }
@@ -245,7 +257,7 @@ async function _readLeaseState(firestore, building, roomId) {
  */
 async function _runRenewalMode(input, callerUid, callerEmail, firestore) {
   const { building, roomId, newEndDate, newStartDate, newRentAmount, newDeposit,
-          contractDocument, contractFileName, notes } = input;
+          contractDocument, contractFileName, contractDocumentUrl, notes } = input;
 
   const state = await _readLeaseState(firestore, building, roomId);
   const { tenantRef, tenantData, tenantId, leaseId: oldLeaseId,
@@ -277,6 +289,22 @@ async function _runRenewalMode(input, callerUid, callerEmail, firestore) {
   const resolvedDeposit = (newDeposit !== undefined) ? newDeposit : Number(oldLeaseData.deposit) || 0;
   const resolvedDocPath = contractDocument || String(oldLeaseData.contractDocument || '');
   const resolvedDocName = contractFileName || String(oldLeaseData.contractFileName || '');
+
+  // Canonical document object — written when a new upload is provided. When
+  // the renewal re-uses the prior contract (no new upload), inherit the old
+  // lease's documentURLs.agreement so the new lease's Tab สัญญา view doesn't
+  // silently downgrade to the path-only legacy shape.
+  let resolvedDocAgreement = null;
+  if (contractDocument && contractDocumentUrl) {
+    resolvedDocAgreement = {
+      url: contractDocumentUrl,
+      path: contractDocument,
+      fileName: resolvedDocName,
+      uploadedAt: new Date().toISOString(),
+    };
+  } else if (oldLeaseData.documentURLs && oldLeaseData.documentURLs.agreement) {
+    resolvedDocAgreement = oldLeaseData.documentURLs.agreement;
+  }
 
   // contractMonths derived from resolvedStart → newEnd span. With newStartDate
   // omitted (default), this matches the old formula (start = oldEndDate). With
@@ -328,9 +356,16 @@ async function _runRenewalMode(input, callerUid, callerEmail, firestore) {
     createdDate: now,
     updatedAt: now,
   };
+  if (resolvedDocAgreement) {
+    newLeaseData.documentURLs = { agreement: resolvedDocAgreement };
+  }
   batch.set(newLeaseRef, newLeaseData, { merge: false });
 
   // 3. Tenant doc — point at new lease + mirror endDate + (optional) rent
+  // lease.contractPath / lease.contractFileName mirror what Tab สัญญา writes
+  // on direct uploads — keeps tenant_app.html's contract-doc reader on the
+  // canonical path field (it reads `_taLease.contractPath` first, then falls
+  // back to legacy `contractDocument`).
   const tenantPatch = {
     contractEnd: endIso,
     contractStart: startIso,
@@ -342,6 +377,8 @@ async function _runRenewalMode(input, callerUid, callerEmail, firestore) {
       status: 'active',
       startDate: startIso,
       endDate: endIso,
+      contractPath: resolvedDocPath || '',
+      contractFileName: resolvedDocName || '',
     },
     updatedAt: now,
   };

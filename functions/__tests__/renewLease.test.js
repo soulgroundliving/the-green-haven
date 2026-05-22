@@ -503,6 +503,88 @@ describe('renewLease — S2 (renewal mode)', () => {
       assert.equal(audit.documentReplaced, true);
     });
 
+    it('contractDocumentUrl provided: writes canonical documentURLs.agreement + tenant lease.contractPath mirror', async () => {
+      seedActiveLease({ oldEndDate: futureDate(30) });
+      const result = await renewLease.run({
+        ...goodInput(),
+        newEndDate: futureDate(395),
+        contractDocument: 'leases/rooms/15/NEW_LEASE/lease-renewal-1779999.pdf',
+        contractFileName: 'lease_2026.pdf',
+        contractDocumentUrl: 'https://firebasestorage.example.com/?token=abc',
+      }, adminContext());
+
+      const newSet = captured.batchOps.find(o => o.op === 'set' && o.path.endsWith(`/${result.newLeaseId}`));
+      // Canonical documentURLs.agreement object — Tab สัญญา reader prefers this
+      assert.ok(newSet.data.documentURLs, 'documentURLs object present');
+      assert.ok(newSet.data.documentURLs.agreement, 'documentURLs.agreement present');
+      assert.equal(newSet.data.documentURLs.agreement.url, 'https://firebasestorage.example.com/?token=abc');
+      assert.equal(newSet.data.documentURLs.agreement.path, 'leases/rooms/15/NEW_LEASE/lease-renewal-1779999.pdf');
+      assert.equal(newSet.data.documentURLs.agreement.fileName, 'lease_2026.pdf');
+      assert.ok(newSet.data.documentURLs.agreement.uploadedAt, 'uploadedAt timestamp stamped');
+      // Legacy contractDocument still written (reader fallback chain)
+      assert.equal(newSet.data.contractDocument, 'leases/rooms/15/NEW_LEASE/lease-renewal-1779999.pdf');
+
+      // Tenant mirror — lease.contractPath is what tenant_app.html reads first
+      const tenantUpdate = captured.batchOps.find(o => o.op === 'update' && o.path.startsWith('tenants/'));
+      assert.equal(tenantUpdate.data.lease.contractPath, 'leases/rooms/15/NEW_LEASE/lease-renewal-1779999.pdf');
+      assert.equal(tenantUpdate.data.lease.contractFileName, 'lease_2026.pdf');
+      assert.equal(tenantUpdate.data.contractDocument, 'leases/rooms/15/NEW_LEASE/lease-renewal-1779999.pdf');
+    });
+
+    it('no new upload but old lease has documentURLs.agreement: new lease INHERITS the agreement object', async () => {
+      const existingAgreement = {
+        url: 'https://firebasestorage.example.com/old?token=xyz',
+        path: 'leases/rooms/15/OLD_LEASE/old.pdf',
+        fileName: 'old.pdf',
+        uploadedAt: '2026-01-01T00:00:00.000Z',
+      };
+      seedActiveLease({
+        oldEndDate: futureDate(30),
+        leaseExtras: { documentURLs: { agreement: existingAgreement } },
+      });
+
+      const result = await renewLease.run(
+        { ...goodInput(), newEndDate: futureDate(395) },
+        adminContext()
+      );
+
+      const newSet = captured.batchOps.find(o => o.op === 'set' && o.path.endsWith(`/${result.newLeaseId}`));
+      // Renewal without new upload: inherit the canonical object so the new
+      // lease's Tab สัญญา view doesn't silently downgrade.
+      assert.deepEqual(newSet.data.documentURLs.agreement, existingAgreement);
+    });
+
+    it('no contract anywhere: no documentURLs written, lease.contractPath is empty string', async () => {
+      seedActiveLease({
+        oldEndDate: futureDate(30),
+        leaseExtras: { contractDocument: '', contractFileName: '' },
+      });
+
+      const result = await renewLease.run(
+        { ...goodInput(), newEndDate: futureDate(395) },
+        adminContext()
+      );
+
+      const newSet = captured.batchOps.find(o => o.op === 'set' && o.path.endsWith(`/${result.newLeaseId}`));
+      assert.equal(newSet.data.documentURLs, undefined, 'no documentURLs key when no source');
+
+      const tenantUpdate = captured.batchOps.find(o => o.op === 'update' && o.path.startsWith('tenants/'));
+      assert.equal(tenantUpdate.data.lease.contractPath, '');
+      assert.equal(tenantUpdate.data.lease.contractFileName, '');
+    });
+
+    it('rejects non-string contractDocumentUrl', async () => {
+      seedActiveLease({ oldEndDate: futureDate(30) });
+      await expectHttpsError(
+        renewLease.run({
+          ...goodInput(),
+          newEndDate: futureDate(395),
+          contractDocumentUrl: { invalid: 'object' },
+        }, adminContext()),
+        'invalid-argument'
+      );
+    });
+
     it('explicit newStartDate (P4) sets new lease + tenant.lease + audit start to that value', async () => {
       const seeded = seedActiveLease({ oldEndDate: futureDate(30) });
       // Custom gap: tenant takes a 60-day break, new lease starts 60d after oldEndDate
