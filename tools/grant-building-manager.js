@@ -69,6 +69,24 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
 
 admin.initializeApp(initOpts);
 
+// P4.6-1 (2026-05-23): validate buildings against the live registry before
+// granting the claim. Without this, a typo on the CLI (e.g. `node tools/...
+// manager@x rom` instead of `rooms`) would mint a claim with a non-canonical
+// building id that no `isBuildingManager(building)` check in firestore.rules
+// would ever match — silently broken. The companion functions/grantBuildingManager.js
+// CF already validates via `getValidBuildings()`; this brings the CLI to parity.
+async function fetchValidBuildingIds(db) {
+  const snap = await db.collection('buildings').get();
+  const ids = new Set();
+  snap.forEach(doc => {
+    const data = doc.data() || {};
+    // Skip archived buildings — they shouldn't be assignable as managed
+    if (data.status === 'archived') return;
+    ids.add(doc.id);
+  });
+  return ids;
+}
+
 (async () => {
   let user;
   try {
@@ -77,6 +95,39 @@ admin.initializeApp(initOpts);
     console.error(`❌ No Firebase Auth user found for "${email}". Make sure the user has signed in at least once.`);
     console.error(`   Underlying error: ${e.message}`);
     process.exit(1);
+  }
+
+  // Validate buildings argument shape + identifiers (skip on revoke)
+  if (!revoke) {
+    if (!Array.isArray(buildings)) {
+      console.error('❌ Internal error: buildings is not an array. This is a parser bug.');
+      process.exit(1);
+    }
+    const dupes = buildings.filter((b, i) => buildings.indexOf(b) !== i);
+    if (dupes.length > 0) {
+      console.error(`❌ Duplicate building ids in arguments: ${[...new Set(dupes)].join(', ')}`);
+      process.exit(1);
+    }
+    const db = admin.firestore();
+    let validIds;
+    try {
+      validIds = await fetchValidBuildingIds(db);
+    } catch (e) {
+      console.error(`❌ Could not fetch buildings registry for validation: ${e.message}`);
+      console.error('   This validation is required to prevent typos that mint useless claims.');
+      console.error('   If this is a fresh install with zero buildings, seed at least one first.');
+      process.exit(1);
+    }
+    if (validIds.size === 0) {
+      console.error('❌ No active buildings in registry. Seed buildings/{id} docs first.');
+      process.exit(1);
+    }
+    const invalid = buildings.filter(b => !validIds.has(b));
+    if (invalid.length > 0) {
+      console.error(`❌ Unknown building id(s): ${invalid.join(', ')}`);
+      console.error(`   Valid building ids: ${[...validIds].join(', ')}`);
+      process.exit(1);
+    }
   }
 
   const existingClaims = user.customClaims || {};
