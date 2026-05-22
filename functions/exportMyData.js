@@ -7,8 +7,10 @@
  * compiles every personal-data location for the calling tenant into a
  * single JSON payload.
  *
- * Auth: tenant — must carry room/building claims (set by linkAuthUid or
- *       liffSignIn). Tenant-scoped: returns ONLY their own data.
+ * Auth: tenant — verified via _authSoT 6-path model (admin / managedBuildings
+ *       / claim / tenantId-sot / linkedAuthUid-sot). Building/room resolved
+ *       via claims, then people-doc fallback, so the export survives §7-Z
+ *       claim-strip windows. Tenant-scoped: returns ONLY their own data.
  *
  * Input:  none (the token identifies the caller)
  * Output: {
@@ -35,6 +37,7 @@
  */
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
+const { resolveTenantClaims, assertTenantAccess } = require('./_authSoT');
 
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
@@ -63,16 +66,25 @@ exports.exportMyData = functions
     }
     const authUid   = context.auth.uid;
     const tok       = context.auth.token || {};
-    const room      = String(tok.room     || '');
-    const building  = String(tok.building || '');
     const tenantId  = String(tok.tenantId || '');
     const lineUserId = String(tok.lineUserId || '') ||
                        (String(authUid).startsWith('line:') ? String(authUid).slice(5) : '');
 
-    if (!room || !building) {
+    // Resolve building/room via claims OR people-doc fallback (§7-Z survival
+    // window). Then verify ownership via _authSoT 6-path SoT crosscheck.
+    const { building, roomId: room } = await resolveTenantClaims({
+      context, firestore,
+      HttpsError: functions.https.HttpsError,
+    });
+    if (!building || !room) {
       throw new functions.https.HttpsError('permission-denied',
-        'room and building claims required to export tenant data');
+        'Unable to resolve tenant room/building — claims missing and people-doc lookup empty');
     }
+    await assertTenantAccess({
+      building, roomId: room,
+      context, firestore,
+      HttpsError: functions.https.HttpsError,
+    });
 
     const exportedAt = Date.now();
     console.log(`[exportMyData] uid=${authUid} tenantId=${tenantId} ${building}/${room}`);
