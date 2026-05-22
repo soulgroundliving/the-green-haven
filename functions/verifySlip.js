@@ -101,9 +101,12 @@ async function checkRateLimit(userId, timeWindow = 'minute') {
 
     return true;
   } catch (error) {
-    console.error('❌ Rate limit check failed:', error);
-    // On error, allow request (fail open)
-    return true;
+    console.error('❌ Rate limit check failed (failing CLOSED for safety):', error);
+    // Fail CLOSED — Firestore throttle/outage should NOT silently grant a bypass
+    // of all three rate-limit windows simultaneously. Caller turns false into a
+    // 'resource-exhausted' HttpsError → client gets a retry-able 503-shape.
+    // A 503 spike is alertable; an abuse spike via fail-open is silent.
+    return false;
   }
 }
 
@@ -301,6 +304,45 @@ async function markBillPaidInRTDB(slipData, params) {
     if (matched > 0) {
       await ref.update(updates);
       console.log(`💸 RTDB bill(s) marked paid: ${buildingRaw}/${room} × ${matched} (${billMonth}/${billYearBE})`);
+    }
+
+    // Mirror payment record into payments/{b}/{r}/{pushId} for admin
+    // reconciliation audit trail. RTDB payments .write rule locked to
+    // admin-only as of 2026-05-22 security sprint (anti-pattern NC-1 fix);
+    // this CF write via Admin SDK is the new canonical writer. Previously
+    // tenant_app.html:12122 pushed from client — that path now silent-fails
+    // per the locked-down rule (caught by existing try/catch; localStorage
+    // cache preserves tenant UI). Runs even when matched === 0 so the slip
+    // audit trail has no gaps if a matching bill is missing.
+    //
+    // Field shape mirrors the legacy client push at tenant_app.html:12100
+    // (billId/month/year/amount/paidAt/method/transRef/building/room) so
+    // downstream readers (TenantFirebaseSync.loadPaymentHistory, dashboard
+    // reconciliation) see consistent records pre- and post-migration.
+    try {
+      const firstMatchedBillId = matched > 0
+        ? Object.keys(updates).find(k => k.endsWith('/status'))?.split('/')[0] || null
+        : null;
+      const nowIso = new Date().toISOString();
+      await rtdb.ref(`payments/${buildingRaw}/${room}`).push({
+        billId: firstMatchedBillId,
+        month: billMonth,
+        year: billYearBE,
+        amount: Number(slipData.amount) || 0,
+        paidAt: nowIso,
+        createdAt: nowIso,
+        method: 'PromptPay',
+        slipOkVerified: true,
+        transRef: slipData.transactionId || null,
+        transactionId: slipData.transactionId || null,  // alias for forward-compat readers
+        building: buildingRaw,
+        room: room,
+        sender: (slipData.sender && (slipData.sender.displayName || slipData.sender.name)) || '',
+        matchedBillCount: matched,
+        source: 'cf:verifySlip',
+      });
+    } catch (paymentsErr) {
+      console.error('⚠️ markBillPaidInRTDB: payments/ audit write failed:', paymentsErr?.message);
     }
   } catch (e) {
     console.error('⚠️ markBillPaidInRTDB failed:', e?.message);

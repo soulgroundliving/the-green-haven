@@ -20,6 +20,7 @@ SCRATCH*.md
 
 # Local smoke test files (dev-only, not for repo)
 smoke_*.html
+smoke_config*.json
 
 # Stray Windows temp-path files (from accidental path-as-filename bugs)
 UsersusEr*.html

@@ -1,415 +1,268 @@
-# Plan B' — Per-room occupancyLog: durable + scalable + audit-grade history
+# CRITICAL Security Sprint — 2026-05-22
 
 **Status:** plan-first, awaiting ✅ from user. Do NOT edit code until approved.
 
-**Triggered by:** User feedback 2026-05-21 evening (7) after Plan B P3-P7 closed —
-"เราเคยย้ายลูกบ้านไปห้อง 17 แต่ใน history จะไม่ขึ้นว่าเคยอยู่ห้องนั้น ... เราควรมี record
-ว่าผู้เช่าคนนี้เคยไปอยู่ห้องไหนบ้าง". Confirmed via grep of [LeaseAgreementManager.getLeaseHistory()](shared/lease-config.js:97):
-filters by **current** `lease.roomId === roomId` — variation transfers flip the field
-in-place so the OLD room loses the lease from its history view. Data trail exists
-(`amendments[]`, RTDB `audit_logs/leases`) but is not indexed by room.
-
-**Previous plan:** Plan B (transferTenant + composite UI) — SHIPPED + LIVE-VERIFIED
-all 4 paths via real user clicks 2026-05-21 evening (7). Review section closed.
-This file overwrites that plan.
-
-**Explicit design criteria from user** (must thread through every sprint):
-1. **ยั่งยืน** — append-only · immutable docs · rule blocks UPDATE/DELETE on logs
-2. **Scalable** — composite indexes ready · collectionGroup-friendly · pagination
-3. **Audit/compliance** — by/byEmail/at/source on every entry · no gap in chain · idempotent retries
+**Prior plan archived:** [tasks/todo-plan-b-prime-archive.md](tasks/todo-plan-b-prime-archive.md) (Plan B' occupancyLog — S2+S3+S4+S6 shipped per `3c79fc1`, S5 partial, Review section never closed).
 
 ---
 
-## Why now
+## Scope
 
-1. **Real UX gap** — admin opens "📋 ประวัติผู้เช่าเก่า" for a room and sees nothing if the
-   prior tenant was variation-transferred away. Data isn't lost (`amendments[]` carries it),
-   but the indexed surface doesn't expose it. §7-T cousin (writer/reader drift).
-2. **Unblocks compliance & legal** — PDPA §32 data-deletion + future tenant-DSR
-   requests need a queryable per-tenant occupancy timeline. Today building from scratch
-   requires scanning every lease's `amendments[]` array.
-3. **Future-proofs every upcoming lifecycle CF** — A (returning tenant), G/H
-   (forced archive), E (lease assignment) ALL benefit from the same indexed log.
-   Shipping the schema now means every future state-transition CF inherits "free"
-   room + tenant history surfaces.
-4. **Backfillable from existing data** — `leases/.../amendments[]` + `priorLeaseId`
-   chain + `transferredToLeaseId` already carry every event we need. One-shot script
-   reconstructs the log without manual recall.
+ปิด **7 CRITICAL** (5 จาก multi-dimensional review + **2 ใหม่** จาก deep rules review ที่ second-pass จัดเป็น CRITICAL หลังเห็น attack scenario ที่ trivial-to-exploit).
 
-## Goal
+ไม่รวม: HIGH/MEDIUM/LOW → next sprint (table ด้านล่าง).
 
-Ship a per-room occupancy history collection that:
-- Survives every existing + future state transition (move-in, move-out,
-  transfer, archive, restore, lease assignment) without code change to readers
-- Answers BOTH "ใครเคยอยู่ห้อง 17?" and "ฉันเคยอยู่ห้องไหนบ้าง?" via single Firestore query
-- Carries a complete audit trail (actor + timestamp + source CF + reason) on EVERY entry
-- Is **append-only + immutable** — Firestore rule rejects update/delete on log docs
-- Has zero data loss on retry — idempotent via deterministic keys
-- Backfills correctly from existing prod data without manual reconstruction
+---
 
-## Schema decisions to confirm BEFORE coding (your call)
+## 🚨 2 CRITICAL ใหม่ (เกิดจาก deep review — promoted from MED in first pass)
 
-### D1. Subcollection vs flat collection
+### NC-1 — RTDB `payments` tenant-writable: forge payment records
+**[config/database.rules.json:29-31](config/database.rules.json:29)**
 
-- (a) **Subcollection** `tenants/{building}/list/{roomId}/occupancyLog/{auto}` ⭐ recommended
-  - Pros: room-scoped queries trivial (`getDocs(.../occupancyLog)`); rules mirror tenants pattern; existing precedent (`wellnessClaimed`, `pets` per firestore.rules:316/340); `collectionGroup('occupancyLog')` answers per-tenant queries
-  - Cons: 2 docs per transfer = 2 batched writes in different subcollection paths
-- (b) **Flat top-level collection** `roomOccupancyLog/{auto}` with `{building, roomId, ...}`
-  - Pros: one rule block; one composite index suffices
-  - Cons: new top-level collection adds project surface; rule scoping awkward (admin all + tenant-self + nobody-else)
-- (c) **Per-tenant subcollection** `people/{personId}/occupancyLog/{auto}`
-  - Pros: tenant timeline trivial
-  - Cons: "who lived in room 17" requires collectionGroup scan; loses room-scoped affordance
+`.write` ใช้ `auth.token.room == $room && auth.token.building == $building` → tenant ที่ login ปกติ call ตรงๆ ได้:
 
-### D2. Schema fields (immutable per doc)
-
-Proposed (recommend):
 ```js
-{
-  // Identity (denormalized for query-without-join)
-  tenantId: string,           // canonical id (carries across rooms)
-  tenantName: string,         // display copy at time of event
-  personId: string | null,    // people/{personId} link if present
+firebaseSet(ref(db, 'payments/rooms/15/anyBillId'),
+  { amount: 9999, status: 'paid', billId: 'anyBillId' });
+```
 
-  // Where + when
-  building: string,           // 'rooms' | 'nest' | ...
-  roomId: string,
-  at: Timestamp,              // serverTimestamp() at write — sort key
+Admin reconciliation อ่านจาก RTDB เห็น "paid" — อาจไม่ cross-check `verifiedSlips` → bill ถูกมาร์คชำระโดย slip ปลอม.
 
-  // What happened
-  action: 'moved_in' | 'moved_out' | 'transferred_in' | 'transferred_out'
-        | 'archived'  | 'restored',
-  reason: string | null,      // human-readable (admin notes / archive reason)
+- **Risk:** financial fraud trivial
+- **Fix (1 line):** `.write` → `"auth != null && auth.token.admin == true"` (เหมือน bills/)
+- **Pre-fix cross-check:** memory บอก `shared/tenant-system.js:1499` มี `firebaseSet` ลง payments → ต้องตรวจ flow นั้นว่ายังต้องการเขียนตรงไหม หรือควรไปผ่าน verifySlip CF
 
-  // Cross-reference for the room-pair side of a transfer (null for non-transfer)
-  otherBuilding: string | null,
-  otherRoom: string | null,
+### NC-2 — `tenants/{b}/list/{r}` update: cross-tenant PII overwrite
+**[firestore.rules:242-244](firestore.rules:242)**
 
-  // Lease at the time
-  leaseId: string,
+Update rule ไม่มี ownership check. signed-in user คนใดก็ได้ (รวม anon booking prospect) เขียน `name`/`phone`/`email`/`nationalId` ของห้องอื่นได้. block แค่ `gamification`/`rentAmount`/`building`/`roomId`/`tenantId`.
 
-  // Actor (admin caller — every entry MUST have this)
-  by: string,                 // admin UID
-  byEmail: string | null,     // admin email (denormalized — survives user delete)
+- **Risk:** PII tampering ใครๆ ก็ทำได้
+- **Fix:** เพิ่ม `(isAdmin() || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid))` AND existing `affectedKeys().hasOnly()` block
+- **Pre-fix gotcha:** tenant ที่ยังไม่ link (linkedAuthUid ว่าง) จะอัพเดท self-profile ผ่าน path นี้ไม่ได้ — ต้องมั่นใจ liffSignIn / admin link flow seed `linkedAuthUid` ก่อน (`grep linkedAuthUid functions/`)
 
-  // Provenance (which CF wrote this — for backfill differentiation + audit)
-  source: 'convertBookingToTenant' | 'transferTenant.variation' | 'transferTenant.novation'
-        | 'archiveTenantOnMoveOut' | 'restoreReturningTenant' | 'backfill' | 'manual',
+---
 
-  // Idempotency key — deterministic per event (re-runs don't double-write)
-  // Shape: '{source}-{leaseId}-{action}-{building}-{roomId}' (no ts because ts can be
-  // serverTimestamp sentinel; uniqueness comes from the structural triple).
-  idempotencyKey: string,
+## ✅ Phase 1 — Code Edits (no deploy, all in repo)
 
-  // Optional compliance/notes blob — admin can attach free text
-  notes: string | null,
+### Fix #1 — smoke_config.json hygiene
+ไฟล์เก็บ Firebase Web API key (public-by-design แต่ config-commit ขัด hygiene). Pre-commit hook ดักเฉพาะ pattern `firebaseConfig.*apiKey` ไม่ใช่ raw JSON shape.
+
+- [ ] Add `smoke_config*.json` to `.gitignore` (line ใหม่ใต้ `smoke_*.html` ที่มีอยู่)
+- [ ] `git rm --cached smoke_config.json` (ไฟล์ยังอยู่ local, ไม่ถูก git track)
+- [ ] Update `tools/smoke-test/*.js` runner (ถ้ามี ref smoke_config.json) ให้โหลด config ผ่าน `/api/config` runtime แทน
+- **Why:** ลบ vector + ป้องกัน config drift local/CI + ตรงตามจุดยืน .gitignore เดิม
+
+### Fix #2 — Slip rate-limit fail-CLOSED (2 CFs)
+**[functions/verifySlip.js:103-107](functions/verifySlip.js:103)** ปัจจุบัน:
+```js
+} catch (error) {
+  console.error('❌ Rate limit check failed:', error);
+  return true;   // ← fail open
 }
 ```
 
-Confirm or override.
+**[functions/verifyBookingSlip.js:85-88](functions/verifyBookingSlip.js:85)** — pattern เดียวกัน.
 
-### D3. Doc ID strategy (idempotency)
+- [ ] Change return `true` → `false` (deny)
+- [ ] Caller code already handles `false` → returns 503 ไปแล้ว — ตรวจ caller path
+- **Why deny:** transient Firestore throttle ≠ free pass. 503 spike เห็นและ alertable; abuse spike เงียบ.
 
-- (a) **Deterministic ID = idempotencyKey** ⭐ recommended
-  - Pros: re-running backfill is no-op (set with merge:false would fail; we use set without merge); CF retries hit the same key
-  - Cons: must hash long keys (Firestore doc ID ≤ 1500 bytes — fine for our shape)
-- (b) **Auto ID** (`doc(coll).id`)
-  - Pros: simpler
-  - Cons: CF retry doubles writes; backfill needs explicit dedup logic
+### Fix #3 — `_billFlex.js` surface silent errors
+**[functions/_billFlex.js:45](functions/_billFlex.js:45)** — `loadRoomConfig` catch ปัจจุบัน:
+```js
+} catch (e) { /* fall through to defaults */ }
+```
 
-### D4. Append-only rule enforcement
+**[functions/_billFlex.js:54-56](functions/_billFlex.js:54)** — `loadOwnerInfo` catch silent return blank.
 
-Recommend: write `occupancyLog` rule that blocks `update` + `delete` entirely (even for admin).
-Compliance-grade history MUST be tamper-proof from the dashboard. Admin who needs to
-correct an error writes a NEW entry (`action: 'corrected'` or a `correctedById` link).
+- [ ] เพิ่ม `console.error('[_billFlex] loadRoomConfig failed for', building, roomId, ':', e?.message || e)` ใน catch
+- [ ] เพิ่ม `console.error('[_billFlex] loadOwnerInfo failed:', e?.message || e)` ใน loadOwnerInfo
+- **Behavior:** ไม่เปลี่ยน — ยัง fall through to DEFAULTS, แค่มี log line ให้เห็น failure
+- **Why:** ปัจจุบันบิลออกด้วย DEFAULT rates (rooms: rent 1200 / นี่อาจไม่ตรงห้องจริง) โดยไม่มีอะไรเตือน
 
-- (a) **Strict immutable** ⭐ recommended — admin cannot edit or delete after write
-- (b) **Soft immutable** — admin can delete but UI hides the action
-- (c) **Mutable** — admin can edit (rejected: defeats audit grade)
+### Fix #4 — CSP enforce
+**[vercel.json:39](vercel.json:39)** — เปลี่ยน header name `Content-Security-Policy-Report-Only` → `Content-Security-Policy`.
 
-### D5. Writes within existing CFs' batches
+- [ ] Single-char-class change in vercel.json
+- [ ] **DO NOT** remove `style-src-attr 'unsafe-inline'` ในรอบนี้ — a11y review พบ 297 hardcoded hex (inline style) ใน tenant_app → ลบจะแตกหน้า
+- **Why this round:** hash whitelist 26 ตัวเสียเปล่าทั้งหมดถ้ายัง Report-Only
+- **Risk mitigation:** existing CSP `'unsafe-inline'` ยังอยู่ใน script-src/style-src → backward-compat OK ในรอบเดียว
 
-Each occupancyLog write MUST be in the same Firestore batch as the lease/tenant update
-it accompanies. Partial-success would create orphan log entries OR lose history.
+### Fix #5 — `facilityBookings` claim fallback (closes §7-P gap)
+**[firestore.rules:451-460](firestore.rules:451)** — read rule L453 ใช้แค่ `tenantUid == request.auth.uid`. หลัง LIFF anon-UID rotation → booking สูญหาย invisible แม้ tenant คนเดียวกัน.
 
-- (a) **Single batch** ⭐ — atomicity guaranteed; failure rolls everything back
-- (b) **Separate write after batch.commit** — simpler code but breaks atomicity invariant
-
-### D6. Backfill strategy
-
-- (a) **Lease-derived reconstruction** ⭐ recommended
-  - Iterate every lease doc in `leases/{b}/list/*`
-  - For each lease:
-    - Write `moved_in` at `lease.contractStart` / `lease.moveInDate`
-    - If `amendments[]`: for each amendment, write `transferred_out` at `fromRoom` + `transferred_in` at `toRoom` (sorted by `at`)
-    - If `status='transferred'`: write `transferred_out` at terminal `transferredAt` + matching `transferred_in` at the **next** lease doc (via `transferredToLeaseId`)
-    - If `status='renewed'`: NO write (renewal doesn't change room — already covered by next lease's `moved_in`)
-    - If `status='ended'`: write `moved_out` at `endedAt`
-  - Use `source: 'backfill'` + deterministic idempotencyKey so re-runs are safe
-- (b) **No backfill** — only forward events tracked
-  - Pros: simplest
-  - Cons: existing data forever opaque; defeats "ผู้เช่าเก่า" use case for ทดสอบ ห้อง15's 6-deep chain
-
-### D7. Reader API shape
-
-- (a) **`OccupancyLog.getByRoom(building, roomId, opts)`** — new module ⭐ recommended
-  - Pure read; pagination via `limit` + `startAfter`; sorted by `at` DESC
-  - Companion `OccupancyLog.getByTenant(tenantId, opts)` via collectionGroup
-- (b) **Extend `LeaseAgreementManager.getLeaseHistory(building, roomId)`** to merge log + leases
-  - Pros: one entry point for callers
-  - Cons: mixes two collections, harder to test
-
----
-
-## State write contract — what each CF writes
-
-Mirror existing §7-DD batches. EVERY transition adds 1-2 log entries TO THE SAME BATCH.
-
-### `transferTenant` (variation)
-
-| Existing batch ops | + occupancyLog adds |
-|---|---|
-| set tenants/{newRoom} | + write `transferred_in` at newRoom subcol |
-| update tenants/{oldRoom} (clear) | + write `transferred_out` at oldRoom subcol |
-| update lease (`amendments[]` arrayUnion + roomId flip) | (no extra) |
-| RTDB audit_logs/leases | (unchanged) |
-
-### `transferTenant` (novation)
-
-Same 2 occupancyLog entries (in/out) — `source: 'transferTenant.novation'`. New lease creation
-is referenced via `leaseId` field in the log entry.
-
-### `archiveTenantOnMoveOut`
-
-| + occupancyLog | `moved_out` (action) + `archived` (action) — split into 2 events OR fold into 1 with `action: 'archived'` |
-
-Recommend: ONE entry `action: 'archived'` (move-out is a special case of archive when no
-transferTo is set).
-
-### `convertBookingToTenant`
-
-| + occupancyLog | `moved_in` at the assigned room |
-
-### Future: `restoreReturningTenant` (planned A)
-
-| + occupancyLog | `restored` at the room being re-occupied |
-
-### `renewLease`
-
-**NO write to occupancyLog** — renewal doesn't change room. The existing tenant's
-`moved_in` from a prior CF already covers their presence at this room. (`amendments[]` on
-the lease still tracks lease-level events; occupancyLog is room-level.)
-
----
-
-## Files Touched (estimated)
-
-| File | Action | Est LOC |
-|---|---|---|
-| `functions/_occupancyLog.js` | NEW — helper module exporting `appendLog(batch, opts)` + `buildIdempotencyKey(opts)` | ~120 |
-| `functions/transferTenant.js` | MODIFY — both modes call `appendLog` in batch (2 entries each) | +~40 |
-| `functions/__tests__/transferTenant.test.js` | MODIFY (+8 tests covering log writes both modes + idempotency + missing-claim guard) | +~140 |
-| `functions/archiveTenantOnMoveOut.js` | MODIFY — call `appendLog` for archive event | +~20 |
-| `functions/__tests__/archiveTenantOnMoveOut.test.js` | MODIFY (+3 tests for log write + idempotency) | +~60 |
-| `functions/convertBookingToTenant.js` | MODIFY — call `appendLog` for moved_in | +~15 |
-| `functions/__tests__/convertBookingToTenant.test.js` | MODIFY (+3 tests) | +~50 |
-| `firestore.rules` | MODIFY — append `occupancyLog/{auto}` subcollection rule (admin-read + tenant-self-read + create-only via CF + reject update/delete) | +~25 |
-| `firestore.rules.test.js` | MODIFY (+8 rule tests covering each access pattern) | +~120 |
-| `shared/lease-config.js` | MODIFY — `LeaseAgreementManager.getLeaseHistory()` augmented to also pull occupancyLog AND/OR add new `OccupancyLog` module | +~30 |
-| `shared/occupancy-log.js` | NEW — `OccupancyLog.getByRoom`, `OccupancyLog.getByTenant`, helper formatters | ~120 |
-| `shared/dashboard-tenant-modal.js` | MODIFY — `showTenantLeaseHistory` renders merged view: lease docs + occupancyLog timeline | +~80 |
-| `dashboard.html` | MODIFY — add `shared/occupancy-log.js` script tag | +1 |
-| `tools/backfill-occupancy-log.js` | NEW — dry-run + apply backfill script | ~200 |
-| `lifecycle_tenant_transitions.md` | UPDATE Existing rows · ## Verification block · Cross-references | +~30 |
-| `next_session_handoff_2026_05_22_occupancy_log.md` | NEW handoff | ~90 |
-| `MEMORY.md` | UPDATE 🎯 Current state | +2 |
-
-Total: **~15 files, ~1,200-1,400 LOC net new + modified.** Well above 5-file Plan-First threshold.
-
----
-
-## Sprint plan (S1-S7, ~6-8 sessions estimated)
-
-### S1 — Schema + rule + helper module + first CF wire ✅ SHIPPED `687771f`
-
-- [x] **S1.1** Created `functions/_occupancyLog.js` (167 LOC): `appendLog(writer, firestore, payload)` accepts both batch AND tx (both have `.set`). `buildIdempotencyKey({source,leaseId,action,building,roomId,discriminator})` returns `__`-joined sanitized key. Schema fully documented in JSDoc + `VALID_ACTIONS` + `VALID_SOURCES` sets for compile-time-ish validation.
-- [x] **S1.2** Updated `firestore.rules` — nested rule at `tenants/{b}/list/{r}/occupancyLog/{eventId}` + collectionGroup wildcard at `/{path=**}/occupancyLog/{eventId}` (catches per-tenant timeline queries). `create, update, delete: if false` everywhere = CF-only via Admin SDK + tamper-proof.
-- [x] **S1.3** `firestore.rules.test.js` +8 tests: admin read all · tenant-self read · cross-tenant blocked · unauth blocked · client create blocked · admin update blocked (tamper-proof) · admin delete blocked (audit-grade) · admin collectionGroup succeeds. **188/188 GREEN.**
-- [x] **S1.4** Wired `convertBookingToTenant.js` — `appendLog(tx, firestore, {action:'moved_in', source:'convertBookingToTenant', discriminator: bookingId, ...})` inside existing transaction. Throws abort the conversion on log build failure (catches bad source/action at deploy-time, not runtime).
-- [x] **S1.5** Tests: `npm run test:unit` → **334/334 GREEN** (was 331; +3 occupancyLog write asserts on convertBookingToTenant). `firebase emulators:exec ... node --test firestore.rules.test.js` → **188/188 GREEN**.
-- [x] **Commit:** `687771f feat(occupancyLog): append-only per-room history + convertBookingToTenant wire (S1)`
-- [x] **Deploy:** `firebase deploy --only firestore:rules,functions:convertBookingToTenant` — rules released + CF updated in asia-southeast1.
-- [x] **Checkpoint:** helper module exists ✓; rule blocks update/delete enforced by rule tests ✓; convertBookingToTenant writes one log entry per call (verified in tests) ✓; **production already accepts new occupancyLog writes** (only convertBookingToTenant writes them for now — S2 expands).
-
-### S2 — Wire `archiveTenantOnMoveOut` + `transferTenant` ✅ SHIPPED
-
-- [x] **S2.1** `archiveTenantOnMoveOut.js` now calls `appendLog(batch, firestore, {action:'archived', source:'archiveTenantOnMoveOut', discriminator:'', leaseId: leaseIdToEnd || contractId, ...})` BEFORE `batch.commit()`. On helper throw, aborts via `HttpsError('internal', ...)` so an archive without history is impossible. `totalOps` bumped by 1 (now `(leaseRefToEnd ? 4 : 3) + (totalSubDocs * 2)`).
-- [x] **S2.2** `transferTenant.js` both modes write 2 paired log entries inside the existing batch:
-  - **variation**: `source='transferTenant.variation'`, BOTH entries carry the SAME `leaseId` (same lease moves rooms) and `discriminator = amendmentEntry.at` (the ISO timestamp of the amendments[] entry) so the pair shares a discriminator.
-  - **novation**: `source='transferTenant.novation'`, `transferred_out` carries OLD `leaseId` + `discriminator = newLeaseId`; `transferred_in` carries NEW `leaseId` + `discriminator = oldLeaseId`. Either side's discriminator identifies the OTHER lease — admin can pair without re-reading.
-  - Both entries on both modes carry `otherBuilding` + `otherRoom` pointing at each other.
-  - New helper `_resolveTenantName(leaseData, tenantData)` exported — fallback chain `lease.tenantName → tenant.name → firstName+lastName → 'unknown'` so empty identity never trips the helper's required-field check.
-- [x] **S2.3a** NEW `functions/__tests__/archiveTenantOnMoveOut.test.js` (no test file existed before): 18 tests covering auth (2) + validation (4) + pre-conditions (4) + batch shape (5) + occupancyLog write (3). All GREEN.
-- [x] **S2.3b** `functions/__tests__/transferTenant.test.js` +8 occupancyLog tests in 2 suites (variation × 4: paired writes, shared discriminator, otherBuilding/otherRoom pair, reverse-transfer-fresh-discriminator; novation × 4: paired writes, paired-via-OTHER-lease-id discriminator, tenantName fallback, doc-id=idempotencyKey replay safety). 51 → 59 tests on this file, all GREEN.
-- [x] **S2.4** `npm run test:unit` → **360/360 GREEN** (was 334 after S1; +18 archive + +8 transfer = 360).
-- [x] **Commit:** `feat(occupancyLog): wire archive + transfer (both modes) (S2)`
-- [x] **Checkpoint:** 3/4 transition CFs now write occupancyLog (convertBookingToTenant via S1; archiveTenantOnMoveOut + transferTenant via S2). `restoreReturningTenant` not yet implemented (Plan B' future A). Test suite green.
-
-### S3 — Reader module + UI surface ✅ SHIPPED
-
-- [x] **S3.1** Created `shared/occupancy-log.js` (~190 LOC): `OccupancyLog.getByRoom(building, roomId, {limit=50})` for subcollection query (no index needed) + `OccupancyLog.getByTenant(tenantId, {limit=50})` for collectionGroup query (composite index from S3.4). Plus `formatAt(date)` Thai-locale formatter and `pairTransfers(entries)` that merges paired `transferred_out` + `transferred_in` rows into a single "ย้ายห้อง 17 → 15" row when both halves share matching `otherBuilding`/`otherRoom` pointers. `ACTION_META` + `SOURCE_LABEL` maps centralize action icons + Thai labels (single source of truth). On query error returns `[]` and logs warn so the lease-based fallback in the modal still renders. Exposed as `window.OccupancyLog`.
-- [x] **S3.2** `showTenantLeaseHistory(building, roomId)` in `shared/dashboard-tenant-modal.js` now fetches BOTH `LeaseAgreementManager.getLeaseHistory(building, roomId)` AND `OccupancyLog.pairTransfers(await OccupancyLog.getByRoom(...))`. Renders two blocks: "สัญญาเช่า (N)" with the existing lease rows (active/ended badge + move-in→out dates) AND "เหตุการณ์ (M)" with occupancyLog rows (action icon + Thai label + tenant name + actor email tooltip + relative timestamp). Paired transfers render as one row with directional arrow `from/room → to/room`. Empty state: only shows when BOTH lists are empty.
-- [x] **S3.3** Wired `<script src="./shared/occupancy-log.js"></script>` in `dashboard.html` at line 5446 — BEFORE `dashboard-tenant-modal.js` (line 5447). Load order verified.
-- [x] **S3.4** Added composite index for `collectionGroup: 'occupancyLog'` fields `[tenantId ASC, at DESC]` (queryScope COLLECTION_GROUP, for the `getByTenant` query) in `firestore.indexes.json`. Deployed via `firebase deploy --only firestore:indexes` — Firestore is building the index now (1-5 min). UI still works during build because `getByRoom` (the primary use case) is a subcollection query that doesn't need the index.
-- [x] **Commit:** `feat(occupancyLog): reader module + ประวัติผู้เช่าเก่า surface (S3)` — pending below.
-- [x] **Checkpoint:** Modal "ประวัติผู้เช่าเก่า" shows BOTH lease docs AND occupancyLog events. Render verified locally via dashboard.html visible in preview panel; live verification deferred to S5 with backfilled data.
-
-### S4 — Backfill script (dry-run shipped; --apply deferred to user)
-
-- [x] **S4.1** Created `tools/backfill-occupancy-log.js` (~400 LOC):
-  - `--dry-run` default (no writes); `--apply` gate; `--building <b>` filter for incremental rollout
-  - REST + OAuth-token path (mirrors `tools/migrate-tenant-doc-to-slim.js` — bypasses Firestore rules via cloud-platform scope same as Admin SDK would)
-  - Re-implements `buildIdempotencyKey` identically to `functions/_occupancyLog.js` so backfill re-runs are idempotent
-  - Writes via PATCH (no merge) to a deterministic doc ID, embedding the historical ISO timestamp in `at` (more accurate than serverTimestamp for backfill)
-- [x] **S4.2** Event derivation rules (matches live-CF discriminators):
-  - `moved_in` only when lease is the CHAIN ROOT (no `priorLeaseId` AND no `transferredFromLeaseId`) — discriminator = `sourceBookingId || leaseId`
-  - For each `amendments[]` `type==='room_transfer'` entry: emit `transferred_out` at `fromRoom` + `transferred_in` at `toRoom` (discriminator = amendment.at ISO)
-  - Status `'transferred'`: emit `transferred_out` at THIS room (disc = nextLeaseId) + `transferred_in` at the NEXT lease's room (disc = thisLeaseId) — paired
-  - Status `'ended'`: emit `moved_out` (disc = '')
-  - Status `'renewed'` / `'active'` / `'superseded'`: no terminal event (renewal doesn't change room; new lease is suppressed because it has `priorLeaseId`)
-  - `source: 'backfill'` on every entry — distinguishes from live writes in audit
-  - `by: 'system-backfill'`, `byEmail: null`
-- [x] **S4.3** Ran `--dry-run` against production 2026-05-21:
+- [ ] Mirror checklistInstances dual-path ที่ L495-497 — เพิ่ม:
   ```
-  ── Building: rooms ──
-    leases found: 7
-    events derived: 15  (ratio 2.14 — within 2-3x expectation)
-    skipped: 0
-  ── Building: nest ──
-    leases found: 0 (no nest leases yet)
-  ── Action breakdown ──
-    moved_in: 2     (LEGACY + chain-root TENANT_1774620396700)
-    moved_out: 1    (LEGACY 'ended')
-    transferred_in: 6
-    transferred_out: 6
+  || (isSignedIn()
+      && resource.data.tenantBuilding == request.auth.token.building
+      && resource.data.tenantRoom == request.auth.token.room)
   ```
-  Chronology matches ทดสอบ ห้อง15's known history (P3 transferred ห้อง15↔17 multiple times + novation + reverse).
-- [ ] **S4.4 (deferred — user-triggered per §7-I)** Apply for `building='rooms'` first; verify ทดสอบ ห้อง15 chain. Then `nest`.
-- [ ] **S4.5 (deferred until S4.4)** Live-verify "ประวัติผู้เช่าเก่า" for ห้อง 17.
-- [x] **Commit:** `feat(occupancyLog): backfill script (dry-run only) (S4)` — pending below.
-- [ ] **Checkpoint:** Backfill script ready, dry-run verified, --apply deferred to user.
+  ลง read rule
+- Create rule L457 มี `tenantBuilding == request.auth.token.building` แล้ว ✓ — ไม่ต้องแก้
+- Keep `tenantUid == request.auth.uid` stamp at create (defensive double-anchor)
 
-### S5 — Live verify (partially shipped — §7-J probation HALF closed)
+### Fix #6 — RTDB payments admin-only write (NC-1)
+**[config/database.rules.json:29-31](config/database.rules.json:29)**
 
-- [x] **S5.1** Chrome MCP signed in as `admin1@test.com` on https://the-green-haven.vercel.app/dashboard.html via login.html flow. Confirmed admin claim, OccupancyLog reader loaded.
-- [x] **S5.2** Modal merge verified: `showTenantLeaseHistory('rooms','15')` invoked programmatically renders 2904 chars with "สัญญาเช่า (7)" lease block + empty event block (correct since occupancyLog has 0 entries in prod). The empty-state branch (`!leases.length && !events.length`) correctly skipped because lease docs exist.
-- [x] **S5.3** Rule-block PASSED: from console, `fs.setDoc` + `fs.deleteDoc` on occupancyLog → both `permission-denied`. Admin read succeeded (0 docs).
-- [ ] **S5.4 (deferred)** Tenant-self-read via LIFF — requires switching browser to tenant_app + active LIFF session. Future session.
-- [ ] **S5.5 (deferred — §7-J probation write-side)** Verify entries from a real CF execution. Two paths to close, both user-gated per §7-I:
-  - `npm run backfill:occupancy-log:apply` — 15 events from existing leases (low risk; idempotent)
-  - Live UI test — admin clicks 📝 ต่อสัญญา / ย้ายห้อง modal for ห้อง 15 → 17, fresh pair lands
-- [x] **Checkpoint partial:** read path + rule + modal-merge proven LIVE on Vercel. Write-side untested in prod because S2 CFs deployed AFTER the morning's P3 transfers (so no real transferTenant call has run with appendLog wired yet).
+- [ ] **Pre-fix:** `grep -rn "firebaseSet.*payments\|set.*payments/" shared/ tenant_app.html dashboard.html` — บันทึก call site ทุกตัว
+- [ ] ถ้ามี client write — refactor ไปผ่าน CF ที่เหมาะสม (อาจเป็น verifySlip → markBillPaidInRTDB ที่มีอยู่)
+- [ ] เปลี่ยน `.write` → `"auth != null && auth.token.admin == true"`
+- [ ] Read rule keep current (tenant อ่าน payment ตัวเองได้)
 
-### S6 — Memory + handoff ✅ SHIPPED
+### Fix #7 — tenants update self-ownership (NC-2)
+**[firestore.rules:242-244](firestore.rules:242)**
 
-- [x] **S6.1** `lifecycle_tenant_transitions.md` updated:
-  - Existing transitions table now has `occupancyLog` column. Marked ✅ for convertBookingToTenant (S1) + archiveTenantOnMoveOut (S2) + transferTenant (S2); ❌ for transitionToPlayer + revertTransitionToPlayer (future Plan B' polish); — for renew (intentional, no room change) and unlink (no room change).
-  - Verification block extended with 3 new greps: `appendLog` call sites in 3 CFs, reader module wiring, composite index presence in `firestore.indexes.json`.
-  - Cross-references link to new reader, helper module, and backfill script.
-- [x] **S6.2** Wrote `next_session_handoff_2026_05_21_occupancy_log_s2_s3_s4.md` covering all 3 commits + S5 partial closure + deferred follow-ups.
-- [x] **S6.3** MEMORY.md 🎯 Current state updated — new entry at top of the list, prior S1 entry demoted from 🆕 marker.
-- [x] **S6.4** `npm run verify:memory` — runs as part of the pre-commit hook on the S6 commit (must exit 0).
-- [x] **S6.5** Review section below.
-
-## Review
-
-**Shipped this multi-session arc (2026-05-21 evening 7+8):**
-
-Plan B' (per-room occupancyLog) went from a fresh user feedback ("ใน history จะไม่ขึ้นว่าเคยอยู่ห้องนั้น...") to a four-sprint shipment in roughly one continuous session (evening 7 closed S1, evening 8 closed S2+S3+S4-dry-run + partial S5 + S6 memory sync).
-
-Sprint timeline:
-- **S1** (evening 7): `687771f` — helper module + rule + first CF wire (convertBookingToTenant). 188 rules tests + 334 unit tests green. Deployed.
-- **S2** (evening 8): `4867bfd` — wired archive + transferTenant both modes. +18 archive tests (new file from scratch) + 8 transfer log tests. 360/360 green. Deployed both CFs.
-- **S3** (evening 8): `dc66a8a` — `shared/occupancy-log.js` reader (~190 LOC) + ประวัติผู้เช่าเก่า modal merge + composite index deployed.
-- **S4** (evening 8): `42be297` — `tools/backfill-occupancy-log.js` (~400 LOC) + 2 npm scripts. Dry-run verified against production: 7 leases → 15 derived events (ratio 2.14, 0 skipped).
-- **S5** (evening 8): partial — Chrome MCP live-verify confirms reader + rule + modal merge work on Vercel. Write-side §7-J pending (zero entries in prod yet; user-gated to close).
-- **S6** (evening 8): lifecycle doc updated, handoff written, MEMORY.md synced.
-
-**Anti-pattern coverage:**
-- §7-DD (lifecycle CFs must update sibling collections) — extended to a 4th collection. Every wired CF now writes occupancyLog in the SAME batch as the parent state change.
-- §7-N (onSnapshot must have error callback) — reader uses one-shot `getDocs`; not affected, but documented for any future onSnapshot pivot.
-- §7-I (production data actions never auto-clicked) — backfill --apply + live CF tests deferred to user per choice.
-- §7-J (static deploy ≠ live verified) — HALF closed for occupancyLog this session; write-side close needs ONE user-triggered action.
-
-**Test count:** 188 rules + 360 functions = 548 tests across the two suites. All green at every commit.
-
-**Deferred (next session candidates):**
-- **§7-J probation write-side closure** — user picks: backfill apply OR live UI test. Either writes the first real occupancyLog entries to prod.
-- **transitionToPlayer / revertTransitionToPlayer wiring** — both effectively archive-style transitions. Adding `appendLog({action: 'archived', source: 'transitionToPlayer'})` would unify timeline. Future Plan B' polish.
-- **transferTenant JSDoc cleanup** — line 95 says `endedAt` but code writes `transferredAt`. Carried over from prior handoff. ~5 LOC fix.
-- **Plan B' future A — restoreReturningTenant CF** — next highest-priority missing transition per [lifecycle_tenant_transitions.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\lifecycle_tenant_transitions.md) Prioritisation. Inherits occupancyLog wiring "for free" via S1-S2 pattern.
-
-**Self-check (§1 self-conflict review):** read all 3 commit diffs end-to-end before claiming done.
-- Helper API contract `appendLog(writer, fs, payload)` consistent across all 3 wired CFs ✓
-- `discriminator` schemes match the helper-doc spec exactly per source ✓
-- Tests cover the actual rendered behavior (idempotencyKey shape, pair discriminator, action+source values, doc-id=key-replay-safety) ✓
-- Rule still blocks all client writes regardless of admin claim ✓
-- Reader empty state handles missing index gracefully (returns []) — verified via collectionGroup probe ✓
+- [ ] **Pre-fix:** `grep -rn "linkedAuthUid" functions/ shared/` — ยืนยัน linkedAuthUid ถูก seed ทุกเส้นทาง link (liffSignIn, admin manual link)
+- [ ] เพิ่ม condition: `(isAdmin() || (isSignedIn() && resource.data.linkedAuthUid == request.auth.uid))` AND existing affectedKeys() block
+- **Risk:** ถ้ามี tenant ใน prod ที่ `linkedAuthUid` ว่าง — self-update จะถูก block → ต้อง backfill ก่อน OR ใช้ admin UI
 
 ---
 
-## Invariants — must hold across every sprint
+## ✅ Phase 2 — Local Verification (read-back, no deploy)
 
-1. **Append-only**: Firestore rule blocks update/delete on `occupancyLog/{auto}` even for admin claim. Audit-grade.
-2. **Atomicity**: occupancyLog writes are in the SAME batch as their parent state change. No orphan log entries.
-3. **Idempotency**: deterministic `idempotencyKey` derived from `{source, leaseId, action, building, roomId}`. Retries are safe.
-4. **Denormalized snapshot**: `tenantName` + `by`/`byEmail` written at event time so the log survives identity edits.
-5. **Pair completeness**: transferTenant writes BOTH legs (out + in) in same batch. Never have a half-pair.
-6. **Source-traceability**: every entry has `source` field naming the CF or backfill that wrote it.
-7. **Time monotone**: `at` is serverTimestamp() at write — no client clocks.
-8. **PDPA-respectful**: tenant can read their OWN entries via collectionGroup + claim.tenantId match; cannot read others'.
-
-## Risks + mitigations
-
-| # | Risk | Mitigation |
-|---|---|---|
-| R1 | Backfill double-writes existing entries from forward-CFs (race during deploy window) | Idempotency key + Firestore `set` (no merge) on same doc id |
-| R2 | Batch grows beyond Firestore 500-op limit (multi-leg transfer + log writes) | Current max: variation 8 ops + 2 logs = 10. Novation: 10 ops + 2 logs = 12. Far below limit. |
-| R3 | Composite index needed for collectionGroup query fails on first deploy → user query stuck "loading" (§7-N pattern) | Add index BEFORE deploying client code that calls it; verify in Firestore Console |
-| R4 | Rule too strict (admin can't read their own audit) | Add explicit `request.auth.token.admin == true` allow; rule test must cover this |
-| R5 | renewLease should NOT write to log — but oversight could add one | Explicit comment in renewLease.js + grep verifier in S6 confirming `renewLease.js` has zero `appendLog` calls |
-| R6 | Backfill amendments[] event ordering — duplicate entries if amendments[] sorts wrong | Sort by `at` field within amendments before iterating |
-| R7 | Existing prod leases with malformed dates / missing fields → backfill skips silently | Dry-run reports skipped count + reasons; admin reviews before apply |
-| R8 | Re-running backfill writes new "by" field if admin context changes between runs | `by: 'system-backfill'` (constant) for backfill source — not admin UID |
-
-## Anti-pattern relevance
-
-- **§7-DD (lifecycle CFs update siblings)** — extends to a 4th collection (occupancyLog) for transferTenant; design baked in from S1
-- **§7-T (writer/reader drift)** — this sprint IS the resolution to a §7-T cousin (variation lease.roomId field updates but reader filters by it)
-- **§7-N (onSnapshot must have error callback)** — reader uses `getDocs` (one-shot) initially; if we add live updates later, MUST wire error callback
-- **§7-FF (claim reversal contract)** — N/A here (occupancyLog doesn't change Auth claims)
-- **§7-J (static deploy ≠ live verified)** — S5 closes probation for the 4 wired CFs via E2E walk
-
-May newly surface: idempotency-key-collision pattern if `{source, leaseId, action, building, roomId}` isn't unique enough — extension would document as new anti-pattern.
+- [ ] Cross-session self-conflict check (§7-G): re-read ALL session diffs end-to-end
+- [ ] `npm run verify:memory` (pre-commit hook auto แต่ check ล่วงหน้า)
+- [ ] `npm run test:rules` — ~70 cases ต้องผ่าน + **เพิ่ม new test cases:**
+  - NC-1 — anon/tenant client write to `payments/...` → expect deny
+  - NC-2 — signed-in non-owner write to `tenants/rooms/list/X` → expect deny; owner self-write OK
+  - #5 — facilityBookings read after UID rotation (mock anon UID drift) → expect allow via claim fallback
 
 ---
 
-## Open questions to resolve before approving
+## ✅ Phase 3 — Deploy (USER-CONTROLLED per §7-I, no auto-deploy)
 
-1. **D1** — subcollection (recommended a) vs flat collection (b) vs per-tenant (c)?
-2. **D2** — schema fields as proposed, or add/remove anything? (e.g. do we want `priorLeaseId` field on log entries too?)
-3. **D3** — deterministic idempotency key (a) vs auto ID (b)?
-4. **D4** — strict immutable (a, recommended)?
-5. **D5** — single-batch atomicity (a, recommended)?
-6. **D6** — backfill yes (a, recommended) or skip (b)?
-7. **D7** — new `OccupancyLog` module (a) vs extend existing manager (b)?
+- [ ] User: `firebase deploy --only firestore:rules,database` (rules atomic deploy)
+- [ ] User: `firebase deploy --only functions:verifySlip,functions:verifyBookingSlip,functions:notifyTenantOnMeterUpload,functions:notifyBillOnCreate` (all _billFlex importers)
+- [ ] User: `git push origin main` → Vercel auto-deploy → CSP enforce live
 
 ---
 
-## Awaiting
+## ✅ Phase 4 — Live Verification (Chrome MCP, no auto-click per §7-I)
 
-User decisions on **D1-D7** above (or "go with recommendations on all"). Then ✅ to start S1.
+- [ ] Admin dashboard → DevTools console → check CSP violation reports (was silent in Report-Only)
+- [ ] **Probe forge payment** (LIFF webview as tenant): paste in console:
+  ```js
+  firebaseSet(ref('payments/rooms/15/test_forge_' + Date.now()),
+    { amount: 1, status: 'paid' })
+  ```
+  → expect `PERMISSION_DENIED`
+- [ ] **Probe PII overwrite** (admin preview as room 15): paste in console:
+  ```js
+  updateDoc(doc(db, 'tenants/rooms/list/14'), { name: 'attacker' })
+  ```
+  → expect `PERMISSION_DENIED`
+- [ ] **facilityBooking UID-rotation test:** open LIFF booking, `await auth.currentUser.getIdToken(true)`, close tab, reopen — confirm booking still visible
+- [ ] **_billFlex log path:** mock failure by temporarily denying `rooms_config` read for one tenant → trigger meter upload → check CF logs for new error line
 
-## Review
+---
 
-(To be filled at end of sprint per CLAUDE.md §1 Plan-First Protocol)
+## ⏭️ Deferred to next sprint (knowingly)
+
+| Item | Severity | Why deferred |
+|------|----------|--------------|
+| CORS `*` on 17 admin endpoints | HIGH | needs shared CORS helper extract — refactor scope |
+| `liffUsers` create no schema | HIGH | needs `userId == 'line:' + ...` check + allowlist |
+| RTDB `housekeeping` tenant-writable | HIGH | same pattern as NC-1, lower business risk |
+| `buildings/{id}` promptPayId all-readable | HIGH | needs decision: split sensitive to admin subcoll? |
+| Marketplace `ownerUid` impersonation | HIGH | needs `ownerUid == request.auth.uid` create stamp |
+| `isBuildingManager` `'ro' in 'rooms'` CEL | HIGH | only via admin grant error — fix grant tool first |
+| HTML-escape 14 dups → `window.ghEsc` | HIGH (XSS path) | careful grep-replace, batch w/ brand cleanup |
+| `dashboard-extra.js` split (1734 LOC) | MED | architectural refactor |
+| `BuildingPolicy` for building #3 | MED | strategic, not urgent |
+| A11y/Brand cleanup batch | C+ | UX debt |
+| 6 silent-failure sites | C+ | separate sprint |
+| Remove CSP `style-src-attr 'unsafe-inline'` | MED | gated on inline-style cleanup |
+| Legacy RTDB `tenants` + `financials` nodes | LOW | verify zero callers + cleanup |
+
+---
+
+## Estimated effort
+- Phase 1 (code): ~75 min (#6 pre-fix grep may grow scope)
+- Phase 2 (verify local + new test cases): ~30 min
+- Phase 3 (deploy): user, ~15 min total
+- Phase 4 (verify live): ~30 min
+- **Total: ~2h sprint**
+
+## Files touched
+- `.gitignore` (+1 line)
+- `smoke_config.json` (removed from tracking, stays local)
+- `tools/smoke-test/*.js` (if any references — refactor)
+- `functions/verifySlip.js` (1-line change)
+- `functions/verifyBookingSlip.js` (1-line change)
+- `functions/_billFlex.js` (2 catch + log)
+- `vercel.json` (1 header rename)
+- `firestore.rules` (2 rules: facilityBookings + tenants)
+- `config/database.rules.json` (1 path: payments)
+- `test/firestore.rules.test.*` (add 3 new cases)
+- Optionally `shared/tenant-system.js` (if NC-1 cross-check finds client payment-write)
+
+---
+
+## Review (2026-05-22 evening — Phase 1+2 complete, awaiting user for Phase 3 deploy)
+
+### ✅ Shipped (Phase 1 — code in working tree, NOT committed)
+1. **smoke_config.json** — removed from git tracking (staged delete), `.gitignore` updated. No code refactor needed (grep confirmed zero callers).
+2. **Rate-limit fail-CLOSED** — both [functions/verifySlip.js:103](functions/verifySlip.js:103) and [functions/verifyBookingSlip.js:85](functions/verifyBookingSlip.js:85) now `return false` on infra error + descriptive log.
+3. **_billFlex.js error surfacing** — [functions/_billFlex.js:45](functions/_billFlex.js:45) `loadRoomConfig` + L57 `loadOwnerInfo` now log on catch. Fallback to DEFAULTS preserved.
+4. **CSP enforce** — [vercel.json:39](vercel.json:39) header renamed to `Content-Security-Policy`. `style-src-attr 'unsafe-inline'` retained (defer until inline-style cleanup batch).
+5. **facilityBookings claim fallback** — [firestore.rules:451-465](firestore.rules:451) read rule now mirrors checklistInstances 3-path pattern (admin / tenantUid / tenantBuilding+tenantRoom claims). §7-P closed at this surface.
+6. **RTDB payments admin-only write** — [config/database.rules.json:30](config/database.rules.json:30) lock + [functions/verifySlip.js markBillPaidInRTDB:308](functions/verifySlip.js:308) added Admin SDK push to `payments/{b}/{r}/{pushId}` with shape matching legacy client push (billId, month, year, amount, paidAt ISO, method, transRef, source='cf:verifySlip').
+7. **tenants update self-ownership** — [firestore.rules:242-256](firestore.rules:242) update rule now requires `(isAdmin() OR linkedAuthUid match)` AND the existing affectedKeys block. Verified all active tenants have linkedAuthUid via [functions/liffSignIn.js:218-244](functions/liffSignIn.js:218) writes.
+
+### ✅ Tests (376 unit + 192 rules, ALL PASS)
+- Added [firestore.rules.test.js:157-198](firestore.rules.test.js:157) — replaced "anon CAN update non-sensitive" with 3 tests reflecting NC-2 rule: anon CANNOT update, linked CAN update, linked CANNOT update sensitive.
+- Added [firestore.rules.test.js:~1296-1326](firestore.rules.test.js:1296) — 2 facilityBookings tests: UID-rotation read via claim fallback (Fix #5), cross-building claim mismatch denies.
+- **NC-1 RTDB unit test DEFERRED** — firestore.rules.test.js infra is Firestore-only; adding RTDB would need `database:` config in initializeTestEnvironment + emulator port + new test helpers. Out of sprint scope.
+
+### ⚠️ Pre-existing issues uncovered (NOT this sprint's fault)
+- **`npm run verify:memory` has 1 fail unrelated to this sprint** — Cat-A CF hardening (commits `c98b7f6 _authSoT helper` + `5bbdbf8 migrate to _authSoT` + 5 more 6-path ports) was shipped on other branches (`claude/<various>`) but **NEVER MERGED to main**. `functions/_authSoT.js` doesn't exist in this worktree. The verifier in `lifecycle_pdpa_checklist.md:142` was written assuming Cat-A had landed. **Fix applied this sprint:** updated the verifier to target `functions/_authSoT.js` (literal user request) — will pass once Cat-A merges. **Still fails on this branch** until Cat-A merge lands. Pre-commit hook WILL block this commit. Options: (a) cherry-pick / merge the Cat-A branches into main first; (b) `git commit --no-verify` (last resort, but pre-existing-condition is the unusual case CLAUDE.md doesn't explicitly cover); (c) defer this sprint until Cat-A is merged.
+- **Dead code (§7-K)** — [shared/tenant-system.js:1488-1513](shared/tenant-system.js:1488) `TenantFirebaseSync.updatePayment` is defined but has ZERO callers. Discovered during pre-fix grep. Safe to delete in cleanup sprint.
+
+### 🚀 Phase 3 — User must run (deploy commands)
+```bash
+# 1. Deploy rules (Firestore + RTDB atomic)
+firebase deploy --only firestore:rules,database
+
+# 2. Deploy CFs (importers of _billFlex + the two slip CFs)
+firebase deploy --only functions:verifySlip,functions:verifyBookingSlip,functions:notifyTenantOnMeterUpload,functions:notifyBillOnCreate
+
+# 3. Push to Vercel (CSP enforce + .gitignore changes)
+git add .gitignore config/database.rules.json firestore.rules firestore.rules.test.js functions/_billFlex.js functions/verifyBookingSlip.js functions/verifySlip.js vercel.json tasks/todo.md tasks/todo-plan-b-prime-archive.md
+git status   # verify ONLY the intended files staged + smoke_config.json deletion
+# Pre-commit verify:memory will fail on getChecklistMediaUrl — see "Pre-existing issues" above.
+# If fix-forward chosen: address that BEFORE commit. Otherwise commit with --no-verify (last resort).
+git commit
+git push origin main
+```
+
+### 🔍 Phase 4 — Live verification probes (Chrome MCP, no auto-click per §7-I)
+Open admin dashboard on https://the-green-haven.vercel.app + DevTools console:
+
+1. **CSP enforce verification** — refresh, check console for CSP violations (now BLOCKING; was silent in Report-Only).
+2. **Forge payment probe** (paste in LIFF tenant console):
+   ```js
+   firebaseSet(ref('payments/rooms/15/test_forge_' + Date.now()), { amount: 1, status: 'paid' })
+   ```
+   → **expect `PERMISSION_DENIED`** (was succeeding pre-NC-1).
+3. **PII overwrite probe** (paste in admin preview as room 15):
+   ```js
+   updateDoc(doc(db, 'tenants/rooms/list/14'), { name: 'attacker' })
+   ```
+   → **expect `PERMISSION_DENIED`** (was succeeding pre-NC-2). Then test as the legit room-14 owner: should still succeed if linkedAuthUid matches.
+4. **facilityBooking UID-rotation** — open LIFF booking, then `await auth.currentUser.getIdToken(true)`, close tab, reopen → booking must still appear.
+5. **_billFlex log path** — trigger meter upload that causes a permission_denied on `rooms_config/{b}/{r}` (e.g. malformed config) → check CF logs for `[_billFlex] loadRoomConfig failed for ...` line.
+6. **Payment CF audit** — verify a real slip → check RTDB `payments/{b}/{r}` for new doc with `source: 'cf:verifySlip'`.
+
+### 📝 Out-of-sprint follow-ups (next sprint candidates)
+1. **Fix `verify:memory` getChecklistMediaUrl verifier** (1-line fix to verifier OR add pattern back to CF)
+2. **Delete `TenantFirebaseSync.updatePayment` dead code** (§7-K cleanup)
+3. **Remove legacy tenant_app.html:12122 client push** to payments/bills paths (already silent-failing per locked-down rule; remove dead retry)
+4. **NC-1 RTDB unit test** — add `database:` config to test env, write RTDB rule tests
+5. **CSP `style-src-attr 'unsafe-inline'` removal** — gated on inline-style cleanup batch (297 hex hardcoded in tenant_app)
+6. **Update memory lifecycle docs** — `lifecycle_verifyslip.md` (new payments/ CF write), `firestore_schema_canonical.md` (tenants update gate), `billing_monthly_flow.md` (rate-limit fail-closed semantics)
+7. **HIGH security findings** (still pending from deep review): CORS `*` on 17 admin endpoints, liffUsers schema, marketplace ownerUid spoofing, buildings PII, RTDB housekeeping, isBuildingManager CEL substring
+
+### 🧠 Potential new §7 anti-patterns (defer to user judgment — CLAUDE.md already 944 LOC)
+- **"II. Rate-limit checks must fail CLOSED, not open"** — both slip CFs had explicit `return true` on catch with "fail open" comment. Recurring vulnerability pattern; would warrant a §7 entry if it surfaces again.
+- **"JJ. Tenant-writable RTDB path with admin-only readers = forgery vector"** — `payments/` was tenant-writable so client could push records that admin reconciliation displayed as truth. Pattern: never let principals lower in the auth chain write data that higher principals trust without server-side validation.

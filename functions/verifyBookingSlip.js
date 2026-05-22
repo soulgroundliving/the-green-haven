@@ -83,8 +83,12 @@ async function checkRateLimit(uid, timeWindow) {
     await ref.update({ count: data.count + 1, updatedAt: new Date() });
     return true;
   } catch (e) {
-    console.error('checkRateLimit failed:', e.message);
-    return true; // fail open — don't lock out users on infra blip
+    console.error('checkRateLimit failed (failing CLOSED for safety):', e.message);
+    // Fail CLOSED — Firestore throttle/outage should NOT silently grant a bypass
+    // of all three rate-limit windows simultaneously. Caller turns false into
+    // a 'resource-exhausted' HttpsError → client gets a retry-able 503-shape.
+    // A 503 spike is alertable; an abuse spike via fail-open is silent.
+    return false;
   }
 }
 
