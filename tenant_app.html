@@ -12109,7 +12109,9 @@
                 building: _taBuilding,
                 room: _taRoom
             };
-            // 1. localStorage (offline cache)
+            // localStorage offline cache only. RTDB payment record + bill status
+            // are written server-side by verifySlip CF — rules deny tenant writes
+            // to payments/ and bills/{id}/status.
             try {
                 const key = `payment_${_taBuilding}_${_taRoom}`;
                 const existing = JSON.parse(localStorage.getItem(key)||'[]');
@@ -12117,19 +12119,6 @@
                 localStorage.setItem(key, JSON.stringify(existing));
                 _taPayments = existing;
             } catch(e) {}
-            // 2. RTDB — push payment record + flip bill status. Without this, reload shows "ยังไม่จ่าย".
-            try {
-                if (window.firebaseDatabase && window.firebaseRef && window.firebaseSet && window.firebasePush) {
-                    const paymentsRef = window.firebaseRef(window.firebaseDatabase, `payments/${_taBuilding}/${_taRoom}`);
-                    const newPayRef = window.firebasePush(paymentsRef);
-                    await window.firebaseSet(newPayRef, record);
-                    const billRef = window.firebaseRef(window.firebaseDatabase, `bills/${_taBuilding}/${_taRoom}/${billId}/status`);
-                    await window.firebaseSet(billRef, 'paid');
-                    const paidAtRef = window.firebaseRef(window.firebaseDatabase, `bills/${_taBuilding}/${_taRoom}/${billId}/paidAt`);
-                    await window.firebaseSet(paidAtRef, record.paidAt);
-                    console.log('✅ Payment + bill status synced to Firebase');
-                }
-            } catch (e) { console.warn('⚠️ Firebase payment sync failed (kept in localStorage):', e.message); }
             if (_taCurrentBill) _taCurrentBill.status = 'paid';
             // Mirror status into _taBills so render functions see it without reload
             const idx = _taBills.findIndex(b => (b.id||b.billId) === billId);

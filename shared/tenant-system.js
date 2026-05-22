@@ -1486,33 +1486,6 @@ class TenantFirebaseSync {
   }
 
   /**
-   * Update payment record in Firebase
-   */
-  static async updatePayment(billId, paymentData) {
-    try {
-      if (!this.database || !window.firebaseRef || !window.firebaseSet) {
-        console.warn('⚠️ Firebase not available');
-        return false;
-      }
-
-      const paymentRef = window.firebaseRef(this.database,
-        `payments/${this.currentBuilding}/${this.currentRoom}/${billId}`);
-
-      await window.firebaseSet(paymentRef, {
-        ...paymentData,
-        billId,
-        updatedAt: new Date().toISOString()
-      });
-
-      console.log('✅ Payment updated in Firebase:', billId);
-      return true;
-    } catch (error) {
-      console.error('❌ Error updating payment:', error);
-      return false;
-    }
-  }
-
-  /**
    * Debug: List all paths and structure in Firebase
    * Call from console: TenantFirebaseSync.debugFirebaseStructure()
    */
