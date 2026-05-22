@@ -840,6 +840,64 @@ Family with §7-S (LIFF auth multi-instance) and §7-R (LIFF webview TLS stale):
 
 **Related extension to §7-R:** the original §7-R was scoped to `fetch()` in LIFF webview. Same session (2026-05-21) confirmed it applies equally to `firebase-database`'s `get()` — `loadRoomsConfig` hung at "🌿 กำลังโหลดข้อมูลห้อง…" indefinitely waiting on `firebaseDatabaseGet(ref(db, 'rooms_config/rooms'))` until the user gave up. Fix is identical: `Promise.race([get(ref), new Promise((_, rej) => setTimeout(() => rej(new Error('rtdb-timeout')), 5000))])`. So §7-R's rule should be read as "any await on Firebase SDK that goes over the wire (fetch, RTDB get, Firestore getDoc, getDocs, storage uploadBytes) in LIFF webview must have a Promise.race timeout" — not just fetch.
 
+### HH. Global `onAuthStateChanged` anon fallback races with deliberate `signOut → signInWithCustomToken` swap on LIFF pages
+
+Classic recurring auth-race trap that ate ~3 sessions before root cause was found. A LIFF-entry page (tenant_app.html) had an old global handler that auto-called `signInAnonymously()` whenever `currentUser` became null — vestigial from the pre-`liffSignIn` flow but never removed. The `_callLiffSignIn` swap path deliberately calls `auth.signOut()` (to wipe a stale admin/email session from IndexedDB before installing the new `line:Uxxx` identity), which fires the global handler → kicks off `signInAnonymously()` asynchronously → races the awaited `signInWithCustomToken()`. Whichever network call resolves LAST wins. When anon wins (~20-40% of opens, depends on TLS cache state and network), the user ends up with a random Firebase anonymous UID instead of `line:Uxxx`. Every server gate keyed on `auth.uid` then sees the wrong UID — checkable via `auth.uid` not starting with `line:` or `book:` AND no useful claims.
+
+Symptoms (very specific signature — recognise this and check the global handler FIRST):
+1. Tenant works inside LIFF for one session, suddenly hits permission-denied on a feature gated by `request.auth.uid == resource.data.linkedAuthUid` (lease doc, checklist photo, custom CF SoT check)
+2. `console.log(auth.currentUser.uid)` shows a random alphanumeric UID, NOT `line:Uxxx`
+3. `getIdTokenResult()` returns claims with NO room/building/admin/role
+4. CF logs show `caller.uid=<random>` not matching `linkedAuthUid=line:Uxxx`
+5. Closing LINE + reopen sometimes fixes it (because the race resolves differently on second try)
+
+**Rule:** any page that drives auth via `signOut → signInWithCustomToken` (LIFF pages) MUST NOT have an unconditional `signInAnonymously` fallback in a global `onAuthStateChanged` handler. Either:
+
+a. **Remove the anon fallback entirely** if the page is LIFF-only (booking.html pattern — just `_authUid = user?.uid || null;`).
+b. **Gate the anon fallback on `!/Line\//i.test(navigator.userAgent)`** if the page also serves non-LIFF visitors needing isSignedIn() reads (marketplace, community feeds).
+
+```js
+// ✅ CORRECT — LIFF gate prevents the race
+onAuthStateChanged(auth, async (user) => {
+  if (user) { window._authUid = user.uid; dispatchEvent(new Event('authReady')); return; }
+  const inLine = /Line\//i.test(navigator.userAgent);
+  if (inLine) { dispatchEvent(new Event('authReady')); return; }  // _callLiffSignIn owns auth here
+  try { await signInAnonymously(auth); } catch (err) { ... }
+});
+
+// ❌ WRONG — global anon fallback races signInWithCustomToken
+onAuthStateChanged(auth, async (user) => {
+  if (user) { ... return; }
+  try { await signInAnonymously(auth); } catch (err) { ... }
+});
+```
+
+**Detection recipe** — audit every LIFF-entry HTML for this pattern:
+
+```bash
+# Find pages that call signInAnonymously
+grep -rn "signInAnonymously" tenant_app.html booking.html login.html dashboard.html
+# Cross-check against pages that also call signInWithCustomToken
+grep -rn "signInWithCustomToken" tenant_app.html booking.html login.html dashboard.html
+# Any file in BOTH lists is suspect — if its onAuthStateChanged has an unconditional
+# anon fallback, the race is latent.
+```
+
+**Why it's hard to spot in code review:**
+- The global handler and `_callLiffSignIn` are 9,000+ lines apart in tenant_app.html. Reading either in isolation looks fine.
+- The race is intermittent (depends on network timing). "Works on my machine" + "works when I reload" hide it.
+- The comment on the legacy anon fallback claimed "Anonymous MUST stay enabled" — anchoring to a constraint that no longer applied (linkAuthUid had been replaced by liffSignIn long ago, but nobody updated the comment).
+- The symptom (random anon UID) looks superficially like "user not signed in yet" — easy to attribute to a different bug class.
+
+**Lesson on vestigial code:** when an architectural change replaces an old auth flow (linkAuthUid → liffSignIn), grep for EVERY use of the old primitives (`signInAnonymously`, `signInAnonymously(auth)`) and either delete them or document why they must stay. The half-removed migration leaves race-prone hybrids that bite later. Comments that say "X is required because Y" become time bombs when Y goes away.
+
+**Sibling patterns:**
+- §7-Z (custom-token claims are ephemeral without `setCustomUserClaims`) — same "auth half-fixed during refactor" family. Both bugs ate a session before root cause was found, both fixes were 5 lines, both vestigial issues from incomplete migrations.
+- §7-P (UID-drift fixes must traverse every rule layer) — when the UID flips unexpectedly, every place that checks UID breaks. Same root cause class: the UID didn't end up where the system expects.
+- §7-U (claim-first guard in subscribe) — different bug, same lesson on multiple-auth-events-firing.
+
+Fix landed 2026-05-22 (commit `<pending>`) by gating the anon fallback at [tenant_app.html:177](tenant_app.html:177) on `!/Line\//i.test(navigator.userAgent)`. Auto-recovery in `_getLeaseSignedUrl` (§Stale LIFF webview session in auth_liff_sot.md) retained as belt-and-suspenders for one release cycle.
+
 ---
 
 ## 6. Cross-references — where to look in MEMORY.md

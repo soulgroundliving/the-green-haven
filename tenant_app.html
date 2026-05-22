@@ -166,17 +166,32 @@
           window.firebaseOnIdTokenChanged = onIdTokenChanged;
           window.firebaseReady = true;
           window.dispatchEvent(new Event('firebaseInitialized'));
-          // Anonymous sign-in is the foundation of the LIFF flow:
-          //   1. signInAnonymously → anon UID
-          //   2. linkAuthUid CF sets {room, building} custom claims ON that UID
-          //   3. Token refresh → RTDB rules see the claims → bills load
-          // If Anonymous is disabled at Firebase Console, step 1 fails → there's
-          // no UID to attach claims to → bills + maintenance + every per-room
-          // RTDB read returns permission_denied. Until linkAuthUid is refactored
-          // to issue custom tokens server-side, Anonymous MUST stay enabled.
+          // Auth state observer. Inside the LINE in-app browser, `_callLiffSignIn`
+          // owns the auth flow end-to-end: signOut → signInWithCustomToken with
+          // the line:Uxxx deterministic UID. We MUST NOT auto-sign-in anonymously
+          // here, because the explicit signOut in _callLiffSignIn (needed to wipe
+          // a stale admin/email session before the custom-token swap) would
+          // trigger this handler, kick off signInAnonymously asynchronously, and
+          // race the signInWithCustomToken — whichever resolves LAST wins. If
+          // signInAnonymously wins, the user ends up with a random anon UID
+          // instead of line:Uxxx, every server gate keyed on auth.uid fails,
+          // and the user appears "stuck" (see auth_liff_sot.md "Stale LIFF
+          // webview session" + CLAUDE.md §7-HH).
+          //
+          // Outside LIFF (admin-preview, regular browser visitor reading
+          // marketplace/community pages that allow isSignedIn() reads), the
+          // anonymous fallback is preserved to maintain existing behavior.
           onAuthStateChanged(auth, async (user) => {
             if (user) {
               window._authUid = user.uid;
+              window.dispatchEvent(new Event('authReady'));
+              return;
+            }
+            // LIFF gate: inside LINE webview, let _callLiffSignIn drive the auth
+            // flow. Dispatch authReady so subscribers don't hang waiting; they
+            // find currentUser=null and skip until liffLinked fires.
+            const inLine = /Line\//i.test(navigator.userAgent);
+            if (inLine) {
               window.dispatchEvent(new Event('authReady'));
               return;
             }
@@ -187,14 +202,7 @@
               // auth/admin-restricted-operation = Anonymous disabled at console.
               const isAnonBlocked = err && (err.code === 'auth/admin-restricted-operation' || /admin-restricted/i.test(err.message || ''));
               if (isAnonBlocked) {
-                console.error('⛔ Anonymous sign-in is DISABLED at Firebase Console — bills + tenant features are blocked. Re-enable Anonymous in Firebase Auth providers until linkAuthUid is refactored.');
-                // Surface a visible banner so the tenant doesn't see silent broken UI
-                try {
-                  const banner = document.createElement('div');
-                  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c62828;color:#fff;padding:.6rem 1rem;font-size:.85rem;z-index:9999;text-align:center;';
-                  banner.textContent = '⛔ ระบบยังไม่พร้อมใช้งาน (auth) — กรุณาแจ้งแอดมิน';
-                  document.body.appendChild(banner);
-                } catch(_) {}
+                console.warn('⚠️ Anonymous sign-in disabled at Firebase Console — non-LIFF visitor reads will require explicit sign-in.');
               } else {
                 console.warn('⚠️ Anonymous sign-in failed:', err.message);
               }
