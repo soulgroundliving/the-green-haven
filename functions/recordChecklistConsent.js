@@ -8,13 +8,16 @@
  *   record. PDPA enforcement may require us to demonstrate consent — so we
  *   ALSO mint a server-side ledger row at consents/{tenantId}_{purpose}.
  *
- * Auth: tenant — must have room+building claims (linkAuthUid path) OR be
- *       signed in via the LIFF custom-token path (which carries the same).
+ * Auth: tenant — verified via _authSoT 6-path model:
+ *       admin / managedBuildings / claim match / tenantId-sot / linkedAuthUid-sot.
+ *       Building/room is resolved via claims, then people-doc fallback,
+ *       so the consent write survives §7-Z claim-strip windows.
  * Input:  { purpose: 'checklist_v1', noticeVersion: 'v1' }
  * Returns: { recorded: true, consentedAt }
  */
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
+const { resolveTenantClaims, assertTenantAccess } = require('./_authSoT');
 
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
@@ -28,15 +31,23 @@ exports.recordChecklistConsent = functions
       throw new functions.https.HttpsError('unauthenticated', 'Sign-in required');
     }
 
-    const tok = context.auth.token || {};
-    const room     = String(tok.room     || '');
-    const building = String(tok.building || '');
-    const tenantId = String(tok.tenantId || '') || `uid:${context.auth.uid}`;
-
-    if (!room || !building) {
+    // Resolve building/room from claims OR people-doc fallback (§7-Z survives
+    // claim strip after ~1h ID token refresh). Then verify the caller is
+    // the registered tenant of the resolved room via assertTenantAccess.
+    const { building, roomId: room } = await resolveTenantClaims({
+      context, firestore, HttpsError: functions.https.HttpsError,
+    });
+    if (!building || !room) {
       throw new functions.https.HttpsError('permission-denied',
-        'room and building claims required');
+        'Unable to resolve room/building — claims missing and people-doc lookup empty');
     }
+    await assertTenantAccess({
+      building, roomId: room,
+      context, firestore, HttpsError: functions.https.HttpsError,
+    });
+
+    const tok = context.auth.token || {};
+    const tenantId = String(tok.tenantId || '') || `uid:${context.auth.uid}`;
 
     const purpose = String(data?.purpose || '');
     if (!VALID_PURPOSES.has(purpose)) {
