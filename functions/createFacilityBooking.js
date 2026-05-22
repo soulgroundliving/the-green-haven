@@ -22,6 +22,7 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { getValidBuildings } = require('./buildingRegistry');
+const { resolveTenantClaims, assertTenantAccess } = require('./_authSoT');
 
 if (!admin.apps.length) admin.initializeApp();
 const firestore = admin.firestore();
@@ -40,14 +41,6 @@ exports.createFacilityBooking = functions
     }
     const tok = context.auth.token || {};
     const isAdmin = tok.admin === true;
-    const isTenant = !!(tok.room && tok.building);
-
-    if (!isAdmin && !isTenant) {
-      throw new functions.https.HttpsError(
-        'permission-denied',
-        'Only tenants (with room/building claims) or admins can book facilities'
-      );
-    }
 
     // ── Input validation ───────────────────────────────────────────────────
     const { building, facilityType, slot, date, timeSlot } = data || {};
@@ -70,10 +63,32 @@ exports.createFacilityBooking = functions
         `timeSlot must be one of: ${[...VALID_TIME_SLOTS].join(', ')}`);
     }
 
-    // Tenants can only book for their own building
-    if (!isAdmin && tok.building !== building) {
-      throw new functions.https.HttpsError('permission-denied',
-        'Tenants may only book facilities in their own building');
+    // Tenant ownership check — _authSoT 6-path model. resolveTenantClaims
+    // pulls from tok.room/tok.building OR people-doc fallback (§7-Z survival
+    // after ~1h claim-strip window). assertTenantAccess then runs the
+    // SoT crosscheck against tenants/{building}/list/{roomId}.linkedAuthUid
+    // + tenantId. Admin bypasses both via Path 0.
+    let resolvedTenantRoom = '';
+    if (!isAdmin) {
+      const resolved = await resolveTenantClaims({
+        context, firestore,
+        HttpsError: functions.https.HttpsError,
+      });
+      if (!resolved.building || !resolved.roomId) {
+        throw new functions.https.HttpsError('permission-denied',
+          'Unable to resolve tenant room/building — claims missing and people-doc lookup empty');
+      }
+      if (resolved.building !== building) {
+        throw new functions.https.HttpsError('permission-denied',
+          'Tenants may only book facilities in their own building');
+      }
+      await assertTenantAccess({
+        building: resolved.building,
+        roomId:   resolved.roomId,
+        context, firestore,
+        HttpsError: functions.https.HttpsError,
+      });
+      resolvedTenantRoom = resolved.roomId;
     }
 
     // ── Building validation ────────────────────────────────────────────────
@@ -136,9 +151,9 @@ exports.createFacilityBooking = functions
 
     // ── Tenant identity ────────────────────────────────────────────────────
     const tenantUid  = context.auth.uid;
-    const tenantRoom = isAdmin ? (data.tenantRoom || '') : (tok.room || '');
+    const tenantRoom = isAdmin ? (data.tenantRoom || '') : resolvedTenantRoom;
     let tenantName = '';
-    if (isTenant && tenantRoom) {
+    if (!isAdmin && tenantRoom) {
       try {
         const snap = await firestore
           .collection('tenants').doc(building).collection('list').doc(tenantRoom).get();
