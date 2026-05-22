@@ -896,7 +896,7 @@ grep -rn "signInWithCustomToken" tenant_app.html booking.html login.html dashboa
 - §7-P (UID-drift fixes must traverse every rule layer) — when the UID flips unexpectedly, every place that checks UID breaks. Same root cause class: the UID didn't end up where the system expects.
 - §7-U (claim-first guard in subscribe) — different bug, same lesson on multiple-auth-events-firing.
 
-Fix landed 2026-05-22 (commit `<pending>`) by gating the anon fallback at [tenant_app.html:177](tenant_app.html:177) on `!/Line\//i.test(navigator.userAgent)`. Auto-recovery in `_getLeaseSignedUrl` (§Stale LIFF webview session in auth_liff_sot.md) retained as belt-and-suspenders for one release cycle.
+Fix landed 2026-05-22 (commit `4d40328`) by gating the anon fallback at [tenant_app.html:177](tenant_app.html:177) on `!/Line\//i.test(navigator.userAgent)`. Auto-recovery in `_getLeaseSignedUrl` (§Stale LIFF webview session in auth_liff_sot.md) retained as belt-and-suspenders for one release cycle.
 
 ---
 
