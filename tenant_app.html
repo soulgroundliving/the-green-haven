@@ -9479,10 +9479,16 @@
                     const el = document.getElementById(id);
                     if (!el) return;
                     el.classList.remove('coming-soon-locked');
-                    // usage-feature-grid needs display:grid explicitly — empty string removes
-                    // the inline 'display:grid' from HTML and falls back to CSS default (block),
-                    // which breaks the 4-column layout.
-                    if (id === 'daily-modal') { el.style.display = ''; return; } // keep closed
+                    // daily-modal has NO CSS rule binding display:none, so per §7-C, `''`
+                    // would fall back to <div> default `block` — leaving the modal visible
+                    // as a left-aligned strip. Must be explicit `none`. Also: don't trample
+                    // an OPEN modal — openDailyModal/checkDailyLogin set `display:flex`, and
+                    // applyBuildingVisibility can re-fire while it's open (e.g. admin preview
+                    // building-switch, gamificationConfig snapshot).
+                    if (id === 'daily-modal') {
+                        if (el.style.display !== 'flex') el.style.display = 'none';
+                        return;
+                    }
                     el.style.display = '';
                 });
                 window._gamificationDisabled = false;
