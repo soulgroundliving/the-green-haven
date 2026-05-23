@@ -174,6 +174,11 @@ exports.redeemReward = require('./redeemReward').redeemReward;
 // Daily login check-in (1 pt/day + streak bonus every 7 days)
 exports.claimDailyLoginPoints = require('./claimDailyLoginPoints').claimDailyLoginPoints;
 
+// Quiz claims — server-trusted (closes Session A client-side localStorage gap).
+// Server reads canonical quiz from Firestore + grades + writes idempotent marker.
+exports.claimWellnessQuizPoints = require('./claimWellnessQuizPoints').claimWellnessQuizPoints;
+exports.claimContractQuizPoints = require('./claimContractQuizPoints').claimContractQuizPoints;
+
 // seedAppConfig removed 2026-04-28: one-shot setup completed; admin manages
 // system/* + buildings/{X}.info via dashboard CRUD or Firestore Console.
 // Was an unauthenticated HTTP endpoint that could merge-overwrite customized

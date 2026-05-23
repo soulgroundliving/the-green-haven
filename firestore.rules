@@ -344,6 +344,26 @@ service cloud.firestore {
            get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
         allow update, delete: if isAdmin();
       }
+      // wellnessQuizPassed — server-trusted quiz pass marker (Session B).
+      // CF-only create — TIGHTER than wellnessClaimed: only claimWellnessQuizPoints
+      // CF (admin SDK bypasses rules) can write here. Direct client writes blocked
+      // so a tenant can't forge a passed-marker via Firestore client. Tenant reads
+      // own room via linkedAuthUid match. Audit 2026-05-23.
+      match /wellnessQuizPassed/{markerId} {
+        allow read:   if isAdmin() ||
+          (isSignedIn() &&
+           get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
+        allow create, update, delete: if isAdmin();
+      }
+      // contractQuizPassed — server-trusted contract-quiz pass marker (Session B).
+      // CF-only create — same rationale as wellnessQuizPassed. Singleton per
+      // month (markerId = YYYY-MM); claimContractQuizPoints CF is sole writer.
+      match /contractQuizPassed/{markerId} {
+        allow read:   if isAdmin() ||
+          (isSignedIn() &&
+           get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
+        allow create, update, delete: if isAdmin();
+      }
 
       // occupancyLog — append-only audit-grade history of every tenant
       // move-in / move-out / transfer / archive on this room. Written by CFs
@@ -411,6 +431,15 @@ service cloud.firestore {
               && request.auth.token.tenantId == tenantId);
         allow update, delete: if isAdmin();
       }
+      // wellnessQuizPassed (player branch) — server-trusted quiz pass marker.
+      // CF-only create. Players read own marker via tenantId claim match. Session B.
+      match /wellnessQuizPassed/{markerId} {
+        allow read: if isAdmin()
+          || (isSignedIn()
+              && request.auth.token.role == 'player'
+              && request.auth.token.tenantId == tenantId);
+        allow create, update, delete: if isAdmin();
+      }
 
       // redemptions — written by redeemReward CF (admin SDK).
       // Player reads own history; admin reads all.
@@ -440,6 +469,17 @@ service cloud.firestore {
     // (lines 193-201) only matches the specific path, not collectionGroup
     // queries. Tenants never run this query (admin dashboard only).
     match /{path=**}/wellnessClaimed/{articleId} {
+      allow read: if isAdmin();
+    }
+
+    // ===== QUIZ PASSED — collectionGroup query support (admin only) =====
+    // Dashboard insights "Quiz Engagement" card calls collectionGroup on both
+    // markers to aggregate pass rates. Nested rules above only match specific
+    // paths; collectionGroup needs its own wildcard. Tenants never run this query.
+    match /{path=**}/wellnessQuizPassed/{markerId} {
+      allow read: if isAdmin();
+    }
+    match /{path=**}/contractQuizPassed/{markerId} {
       allow read: if isAdmin();
     }
 

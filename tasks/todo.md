@@ -1,282 +1,476 @@
-# Pet ecosystem prerequisites — Storage cleanup + collectionGroup filter
+# Quiz Session B — server-trusted quiz claim + admin authoring + analytics
 
 **Status:** plan-first, awaiting ✅ from user. Do NOT edit code until approved.
 
-**Previous plan:** Plan B' (per-room occupancyLog) — SHIPPED + LIVE-VERIFIED 2026-05-21 evening (7).
-This file overwrites that plan.
+**Previous plan:** Pets ecosystem prerequisites (Phase A/B/C) — SHIPPED + REVIEW APPENDED 2026-05-23 evening (4). Saved as `tasks/todo-p4-security-archive.md`/per-session archives if needed; this file overwrites the pets plan now that pets is complete.
 
-**Triggered by:** Pet ecosystem feature exploration 2026-05-23 (turn 1-4). User asked to
-audit the existing pets feature before extending it. The audit (turn 4) discovered the
-real prerequisite gaps — smaller than my turn-3 framing claimed.
+**Triggered by:** Quiz Session A (commits `6145ccf` + `7e54219`) shipped wellness article quizzes with client-side localStorage trust. Session B closes the trust gap, adds admin authoring UI, and exposes engagement analytics.
+
+**Reference:** [tasks/todo-quiz-expansion.md](tasks/todo-quiz-expansion.md) — Session A/B design doc (frozen).
 
 ---
 
-## Context revision (mea culpa, transparency)
+## Decisions (locked in 2026-05-23 evening (9))
 
-**Turn 3 claim that was WRONG:** "§7-DD orphan pets bug is LIVE — `archiveTenantOnMoveOut`
-doesn't touch the `pets` subcollection, new tenants will see old tenant's pets."
+| # | Decision | Value | Reason |
+|---|----------|-------|--------|
+| 1 | Reward per quiz pass | **10 (wellness) · 20 (contract) constants** | Match current `_quizRewardWellness=10`/`_quizRewardContract=20`. Per-article configurable = scope creep. |
+| 2 | Player path in CF | **Ship CF + rules** (no tenant_app player wiring yet) | CF mirrors `claimDailyLoginPoints` shape; player wiring deferred to Session B' if player tab gets wellness. Contract quiz = tenant-only (no player path needed). |
+| 3 | PR strategy | **1 atomic PR (all 7 phases)** | Cross-section, ship together, rollback as one. |
+| 4 | Contract quiz | **Include in same sprint** | Same client-trust gap; mirror Wellness CF/rules pattern → ~1 extra day + ~1 extra CF. |
 
-**Reality (verified turn 4 by Reading the 3 CFs end-to-end):**
-- `'pets'` IS in `ARCHIVED_SUBCOLLECTIONS` for [archiveTenantOnMoveOut.js:65-71](functions/archiveTenantOnMoveOut.js:65), [transitionToPlayer.js:37-39](functions/transitionToPlayer.js:37), [revertTransitionToPlayer.js:50-52](functions/revertTransitionToPlayer.js:50)
-- The §7-DD fix shipped 2026-05-20 (commit `7fb9bfc`) already migrates pet Firestore
-  docs to `tenants/{b}/archive/{contractId}/pets/{petId}` on archive
+## Goal (1 sentence each)
 
-**What actually remains broken (verified via grep + Read):**
-
-| Gap | Evidence | Impact |
-|-----|----------|--------|
-| Storage files orphan forever | [tenant_app.html:6678](tenant_app.html:6678) writes `pets/{b}/{r}/{petId}/{kind}_{ts}.{ext}`; no 3 CF reads `admin.storage()` | Quota cost + PDPA |
-| collectionGroup('pets') picks up archived pets | [shared/dashboard-tenant-lease.js:1210](shared/dashboard-tenant-lease.js:1210) `fs.collectionGroup(db, 'pets')` with NO path filter; [firestore.rules:305-316](firestore.rules:305) allows admin read of archive subcoll | Admin queue noise + insights overcount |
-| Insights pet count inflates each move-out | [shared/dashboard-insights.js:1033](shared/dashboard-insights.js:1033) same collectionGroup, no filter, line 1108 sums all statuses | Wrong KPI |
-| Storage read = any signed-in user | [storage.rules:28](storage.rules:28) `allow read: if isSignedIn();` | PII leak: new tenant of room 15 → reads old tenant's pet vaccine book if they enumerate petId |
-| `removePetApproval` doesn't clean Storage | [shared/dashboard-tenant-lease.js:1314-1322](shared/dashboard-tenant-lease.js:1314) `_deletePetFromFirestore` deletes doc only | Admin manual delete leaks Storage |
-
-**These are NOT showstoppers for Phase 1 pet features.** They're hygiene/cost/privacy gaps
-that compound over time. Acceptable to defer if user wants velocity > cleanliness — but
-shipping vaccine reminder now and leaving Storage leak means more orphans to clean up later.
+- **B1 — Trust (wellness):** Replace client-side `localStorage` quiz marker with idempotent `claimWellnessQuizPoints` CF + Firestore `wellnessQuizPassed/{articleId}_{YYYY-MM}` subcollection, mirroring `claimDailyLoginPoints`. Player branch supported in CF (CF-side only — tenant_app player wiring deferred per Decision 2).
+- **B1b — Trust (contract):** Replace `awardQuizPoints` direct localStorage path for contract quiz with idempotent `claimContractQuizPoints` CF + Firestore `contractQuizPassed/{YYYY-MM}` subcollection. Tenant-only (no player path needed per Decision 2).
+- **B2 — Rules:** Firestore rules for `wellnessQuizPassed/*` AND `contractQuizPassed/*` matching `wellnessClaimed/*` shape (linkedAuthUid match + admin override + collectionGroup admin-read). CF-only create (tighter than wellnessClaimed which allows tenant create).
+- **B3 — Admin authoring (wellness only):** Extend `shared/dashboard-wellness-content.js` so admin can add/edit `quiz: [{q, options, correctIdx}]` per Firestore wellness article. (Contract quiz questions stay hardcoded in tenant_app; not user-authored.)
+- **B4 — tenant_app loader (already done):** `loadWellnessFromFirestore` already merges `quiz` field if present from Phase A1. Verify with 1 new unit test for Firestore-first vs hardcoded-fallback resolution.
+- **B5 — Analytics:** Admin dashboard insights — new card "Quiz Engagement" showing pass-rate per source (contract + per-article wellness) via `collectionGroup` on both subcollections.
+- **B6 — Memory doc:** Update `lifecycle_wellness_claim.md` with quiz extension section + new verifier rows for `npm run verify:memory`.
 
 ---
 
 ## Design criteria
 
-1. **Minimal blast radius** — each phase ships independently, each commit reviewable
-2. **No production data action without user click** — migration script has `--apply` gate per §7-I
-3. **§7-DD analogue for Storage** — every lifecycle CF that archives Firestore pet docs must
-   also handle Storage symmetrically
-4. **§7-T discipline** — every collectionGroup reader must agree with the writer on what
-   counts as "live"
+1. **Mirror `claimDailyLoginPoints` exactly** — same region (`asia-southeast1`), same `assertTenantAccess` 6-path model, same player vs tenant branching, same idempotency-via-Firestore-marker pattern. No new auth primitives.
+2. **Minimal blast radius** — each phase ships independently, each commit reviewable. CF can roll out before admin UI; admin UI doesn't break if CF lags.
+3. **Server-side passing decision** — pass threshold, reward amount, and idempotency live in CF, NOT client. Client sends `{ building, roomId, articleId, answers }` and CF returns `{ passed, score, total, reward, pointsAfter }`. No more client-side "passed: true" trust.
+4. **localStorage marker stays as UX hint only** — write-after-CF-success, NOT as the source of truth. CF idempotency wins on conflict (read it on subscribe and reconcile per §7-KK).
+5. **§7-Z compliance** — `_authSoT.assertTenantAccess` (already includes SoT fallback for claim-strip windows). No direct claim check.
+6. **§7-N compliance** — every onSnapshot for `wellnessQuizPassed` subcollection on the tenant side MUST have error callback.
+7. **No new firebase-functions/v1 imports inconsistencies** — copy boilerplate from `claimDailyLoginPoints.js` (already v1 modular import).
 
 ---
 
-## Phase A — Storage cleanup on lifecycle transitions (~2 days) ✅ COMPLETE
+## Phase B-CF — server-trusted claim (~1 day)
 
-- [x] **A1.** Create `functions/_petStorage.js` — helper module exporting
-      `async function deletePetStorageForRoom(building, roomId, { reason })`.
-      Lists `pets/{building}/{roomId}/` prefix via Admin Storage SDK `getFiles({ prefix })`,
-      bulk-deletes via `bucket.deleteFiles({ prefix, force: true })`. Returns
-      `{ deletedCount, errors }`. Logs each deletion + accumulates non-fatal errors.
+### B-CF (wellness)
 
-      **Why:** all 3 CFs need it; centralizing matches `_occupancyLog.js` extraction pattern (Plan B' precedent). No CFs currently touch Storage — helper is greenfield.
+- [ ] **B-CF.1** — Create `functions/claimWellnessQuizPoints.js`.
+      Shape: mirrors `claimDailyLoginPoints` exactly. Player branch + tenant branch.
 
-- [x] **A2.** Call helper from [archiveTenantOnMoveOut.js](functions/archiveTenantOnMoveOut.js) **AFTER** `batch.commit()` succeeds.
-      Fire-and-forget with `.catch(e => console.error(...))`. Append `storageDeleted: count`
-      to the return object.
+      Inputs (callable data):
+      ```
+      Tenant: { building, roomId, articleId, answers: [int, int, int] }
+      Player: { tenantId, articleId, answers: [...] }
+      ```
 
-      **Why:** Storage isn't part of Firestore batch — must be post-batch. Archive batch is the
-      canonical record; transient Storage error must not lose the Firestore archive (§7-DD
-      lesson: don't let a sibling system's failure block the main transaction).
+      Server-side flow:
+      1. Auth check (context.auth.uid required)
+      2. Branch: player path needs `tok.role==='player' && tok.tenantId===tenantId`; tenant path uses `assertTenantAccess`
+      3. Fetch article from Firestore `wellness_articles/{articleId}` to read canonical `quiz` array — server validates pass threshold + reward, not client
+      4. If article has no `quiz` field → throw `invalid-argument` "article has no quiz"
+      5. Compute monthKey `YYYY-MM` in Asia/Bangkok
+      6. Compute `correct`, `total`, `passThreshold` (≥3 → 2, else 100%), `passed`
+      7. Idempotency check via subcollection doc `tenants/{b}/list/{r}/wellnessQuizPassed/{articleId}_{ym}` (or `people/{tenantId}/wellnessQuizPassed/{articleId}_{ym}`)
+      8. Inside Firestore transaction:
+         - re-read marker doc — if exists, throw `already-exists` "ทำ quiz เดือนนี้แล้ว"
+         - If passed: write marker + increment `gamification.points` by `WELLNESS_QUIZ_REWARD` (constant = 10)
+         - If failed: write marker with `passed:false` + NO points increment
+      9. Return `{ success, passed, score, total, passThreshold, reward, pointsAfter }`
 
-- [x] **A3.** Decide: call helper from [transitionToPlayer.js](functions/transitionToPlayer.js)?
+      **Why mirror claimDailyLoginPoints exactly:** proven pattern; one place to audit auth + transaction logic; no novel surface area for §7-Z / §7-HH regressions.
 
-      **Recommendation: NO.** Reasons:
-      - `transitionToPlayer` is reversible via `revertTransitionToPlayer` — deleting Storage
-        on transition means revert can't restore pet photos
-      - Player → tenant revert flow is the kin operation; Storage stays = round-trip works
-      - PII concern (new tenant of same room reads old player's photos) is solved by Phase C
-        Storage rule tightening, not by deletion
+- [ ] **B-CF.2** — Export from `functions/index.js`:
+      ```js
+      exports.claimWellnessQuizPoints = require('./claimWellnessQuizPoints').claimWellnessQuizPoints;
+      ```
 
-      **Alternative (if reverse risk preferred):** delete on transition too, accept that revert
-      shows "📷 รูปถูกลบในตอน archive" placeholder. Need user input.
+      **Why:** standard CF export pattern; needed for `firebase deploy --only functions:claimWellnessQuizPoints`.
 
-- [x] **A4.** `revertTransitionToPlayer.js` — no change needed (Storage was kept on transition,
-      Firestore restore from archive subcoll already works). Add comment noting the asymmetry
-      so a future contributor doesn't "fix" it.
+- [ ] **B-CF.3** — Unit test `functions/__tests__/claimWellnessQuizPoints.test.js`:
+      - Mock Firestore via `firestore-jest-mock` pattern (same as existing test files)
+      - 12 cases:
+        1. Tenant: missing auth → unauthenticated
+        2. Tenant: missing building/roomId → invalid-argument
+        3. Tenant: claim mismatch → assertTenantAccess throws permission-denied
+        4. Tenant: article has no quiz → invalid-argument
+        5. Tenant: already-claimed this month → already-exists
+        6. Tenant: passed (3/3 correct on 3-q quiz) → marker written, points +10
+        7. Tenant: passed (2/3 correct on 3-q quiz) → marker, points +10
+        8. Tenant: failed (1/3 correct on 3-q quiz) → marker (passed:false), points unchanged
+        9. Tenant: passed (1/1 on 1-q quiz, 100% threshold) → marker, points +10
+        10. Tenant: failed (0/1 on 1-q quiz) → marker, points unchanged
+        11. Player: passed via tenantId path → people/{tenantId}/wellnessQuizPassed marker
+        12. Player: claim mismatch (tok.tenantId !== reqTenantId) → permission-denied
 
-      **Why:** §7-DD code comment discipline — preserve the WHY for next session.
+      **Why:** TDD discipline per CLAUDE.md §3; 12 cases cover full state matrix (5 outcomes × 2 paths + 2 auth-deny cases).
 
-- [x] **A5.** Unit test in `functions/__tests__/_petStorage.test.js` — mock `admin.storage()`,
-      assert prefix matches `pets/{b}/{r}/` exactly (no leakage to other rooms via partial-
-      prefix match like `pets/rooms/1/` matching `pets/rooms/15/`).
+### B-CF (contract)
 
-      **Why:** §7-DD analogue test. Prefix-bug class is real (`pets/rooms/1` is a prefix of
-      `pets/rooms/15`); must use trailing-slash terminator.
+- [ ] **B-CF.4** — Create `functions/claimContractQuizPoints.js`.
 
-## Phase B — collectionGroup filter (~½ day) ✅ COMPLETE
+      Shape: tenant-only (no player branch — players don't sign contracts). Same boilerplate as `claimWellnessQuizPoints` minus the player-path block.
 
-- [x] **B1.** [shared/dashboard-tenant-lease.js:1212-1216](shared/dashboard-tenant-lease.js:1212) — filter `snap.docs` to exclude paths containing
-      `/archive/` segment. Add explicit reject log so future drift is visible:
+      Inputs (callable data):
+      ```
+      { building, roomId, answers: [int, int, int] }
+      ```
+
+      Server-side flow:
+      1. Auth check (context.auth.uid required)
+      2. `assertTenantAccess` ownership check
+      3. Load canonical contract quiz questions — for now, **hardcoded server-side constant** (same questions as tenant_app, frozen). Future enhancement: read from `contract_quiz/{building}` Firestore doc.
+      4. Compute monthKey, score, passThreshold (2/3 for 3-q quiz), passed
+      5. Idempotency via `tenants/{b}/list/{r}/contractQuizPassed/{ym}` (NO articleId — singleton per month)
+      6. Inside transaction: re-read marker, throw `already-exists` if present, write marker + increment points by `CONTRACT_QUIZ_REWARD = 20` if passed
+      7. Return `{ success, passed, score, total, passThreshold, reward, pointsAfter }`
+
+      **Why:** mirrors `claimWellnessQuizPoints` for consistency; tenant-only because contract = lease document = tenant context. Hardcoded questions for now (Future: admin-authored contract questions same way as wellness quiz).
+
+- [ ] **B-CF.5** — Export from `functions/index.js`:
+      ```js
+      exports.claimContractQuizPoints = require('./claimContractQuizPoints').claimContractQuizPoints;
+      ```
+
+- [ ] **B-CF.6** — Unit test `functions/__tests__/claimContractQuizPoints.test.js`:
+      - 8 cases: missing auth, missing building/roomId, claim mismatch, already-claimed, passed 3/3, passed 2/3, failed 1/3, failed 0/3
+      - No player path cases needed
+
+      **Why:** TDD; smaller surface than wellness (no player path, no per-article variability).
+
+## Phase B-RULES — Firestore rules (~15 min)
+
+- [ ] **B-RULES.1** — Add to `firestore.rules` after the `wellnessClaimed/{articleId}` block (~line 338) for tenant branch:
+      ```
+      match /wellnessQuizPassed/{markerId} {
+        allow read:   if isAdmin() ||
+          (isSignedIn() &&
+           get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
+        allow create: if isAdmin(); // CF-only writes (admin SDK bypasses rules; this line locks out direct client writes)
+        allow update, delete: if isAdmin();
+      }
+      ```
+
+      **Why:** CF uses admin SDK = bypasses rules anyway, so create rule blocks any path that could let a tenant fake a passed-marker via direct write. Mirrors `wellnessClaimed` pattern but TIGHTER (no client-side create).
+
+- [ ] **B-RULES.2** — Same for player branch under `people/{tenantId}/` (~line 407):
+      ```
+      match /wellnessQuizPassed/{markerId} {
+        allow read: if isAdmin()
+          || (isSignedIn()
+              && request.auth.token.role == 'player'
+              && request.auth.token.tenantId == tenantId);
+        allow create, update, delete: if isAdmin();
+      }
+      ```
+
+- [ ] **B-RULES.3** — Add `contractQuizPassed/{ym}` block (tenant branch only, mirror B-RULES.1):
+      ```
+      match /contractQuizPassed/{markerId} {
+        allow read:   if isAdmin() ||
+          (isSignedIn() &&
+           get(/databases/$(database)/documents/tenants/$(building)/list/$(roomId)).data.linkedAuthUid == request.auth.uid);
+        allow create, update, delete: if isAdmin(); // CF-only
+      }
+      ```
+
+      **Why:** same trust model as wellness; no player branch needed because contract quiz is tenant-only.
+
+- [ ] **B-RULES.4** — Add collectionGroup admin-only read rules (mirror `wellnessClaimed` at line 442):
+      ```
+      match /{path=**}/wellnessQuizPassed/{markerId} {
+        allow read: if isAdmin();
+      }
+      match /{path=**}/contractQuizPassed/{markerId} {
+        allow read: if isAdmin();
+      }
+      ```
+
+      **Why:** B5 analytics needs `collectionGroup` queries on both subcollections; collectionGroup doesn't hit nested rules.
+
+- [ ] **B-RULES.5** — `npm run test:rules` — add 7 test cases:
+      - Tenant of room 15 reading own `wellnessQuizPassed/sleep-bedroom_2026-05` → ALLOW
+      - Tenant of room 15 reading room 13's wellness marker → DENY
+      - Tenant of room 15 creating own wellness marker → DENY (CF-only)
+      - Tenant of room 15 reading own `contractQuizPassed/2026-05` → ALLOW
+      - Tenant of room 15 reading room 13's contract marker → DENY
+      - Tenant of room 15 creating own contract marker → DENY (CF-only)
+      - Admin collectionGroup read on either → ALLOW
+
+      **Why:** rules CI catches regressions before deploy. Existing 70-case suite covers similar shape.
+
+## Phase B-ADMIN — admin authoring UI (~1 day)
+
+- [ ] **B-ADMIN.1** — Extend `shared/dashboard-wellness-content.js` (~534 lines currently):
+      In the wellness article editor modal, add a new collapsible "Quiz (optional)" section after the body editor.
+
+      UI structure:
+      ```
+      📝 Quiz (เลือกได้, 1-5 คำถาม)
+      ┌─────────────────────────────┐
+      │ คำถามที่ 1                  │
+      │ Question text input         │
+      │ ▢ Option A  ⚪ (correct)    │
+      │ ▢ Option B  ⚪              │
+      │ ▢ Option C  ⚪              │
+      │ ▢ Option D (optional)       │
+      │ [✕ ลบคำถาม]                  │
+      └─────────────────────────────┘
+      [+ เพิ่มคำถาม]
+      ```
+
+      Schema: stores `quiz: [{q: string, options: string[], correctIdx: number}]` on article doc.
+
+      **Why:** matches the existing data shape used by tenant_app loader (already merges `quiz` field per Phase A1). Admin gets full authoring without a separate UI.
+
+- [ ] **B-ADMIN.2** — Form validation:
+      - Each question must have q text + ≥2 options + valid correctIdx (0..options.length-1)
+      - At most 5 questions per article (UI limits)
+      - If quiz array is empty after edit, do NOT write the field (delete via `FieldValue.delete()`)
+
+      **Why:** server CF expects valid shape; client validates first to avoid CF round-trip rejections.
+
+- [ ] **B-ADMIN.3** — "นำเข้าตัวอย่าง" button: if current article matches a hardcoded article ID with quiz, copy that quiz into the editor as a starting point. Useful for the 2 dogfood articles.
+
+      **Why:** lowers onboarding friction for the admin who's authoring quizzes for the first time.
+
+- [ ] **B-ADMIN.4** — Wire to existing CSP delegation hub:
+      All new buttons use `data-action="quizAddQ"`, `data-action="quizRemoveQ"`, etc. with new handlers added in `shared/dashboard-main.js`. NO inline `onclick=`.
+
+      **Why:** §II CSP hash drift compliance + §7-JJ event-delegation-hub timing. Pre-commit §E hook would block any new inline onclick anyway.
+
+## Phase B-TENANT — tenant_app integration (~½ day)
+
+- [ ] **B-TENANT.1** — Replace client-trust `awardQuizPoints(reward)` call in `submitContractQuiz` with CF callable. Branch by `_quizState.source.type`:
 
       ```js
-      _petsFromFirestore = snap.docs
-        .filter(d => {
-          const parts = d.ref.path.split('/');
-          // tenants/{b}/list/{r}/pets/{id} → parts[2] === 'list' (live)
-          // tenants/{b}/archive/{cid}/pets/{id} → parts[2] === 'archive' (skip)
-          return parts[2] === 'list';
-        })
-        .map(d => { /* existing */ });
+      // BEFORE (line ~12170)
+      if (passed) awardQuizPoints(reward);
+      
+      // AFTER
+      try {
+        const fnName = isWellness ? 'claimWellnessQuizPoints' : 'claimContractQuizPoints';
+        const fn = httpsCallable(functions, fnName);
+        let payload;
+        if (isWellness) {
+          payload = { building: _taBuilding, roomId: _taRoom, articleId: st.source.articleId, answers: Object.values(st.answers) };
+          // Player path: if (_taRole === 'player') payload = { tenantId: _taTenantId, articleId, answers };
+          // DEFERRED per Decision 2 — player tenant_app wiring not in this sprint
+        } else {
+          payload = { building: _taBuilding, roomId: _taRoom, answers: Object.values(st.answers) };
+        }
+        const res = await fn(payload);
+        if (res.data?.passed) loadGamificationData(); // server-side state is authoritative; refresh UI
+      } catch (err) {
+        if (err.code === 'functions/already-exists') toast('ทำ quiz เดือนนี้แล้ว', 'info');
+        else { console.warn('quiz claim failed:', err); toast('บันทึกไม่สำเร็จ ลองอีกครั้ง', 'error'); }
+      }
       ```
 
-      **Why:** §7-T (writer/reader drift) — admin queue current behaviour shows archived pets
-      with `room: contractId` because parts[3] is contractId in archive path. Filter by path
-      segment is more robust than filter by status field (status survives archive intact).
+      **Why:** closes the client-trust gap for BOTH contract and wellness quizzes in one sprint per Decision 4.
 
-- [x] **B2.** [shared/dashboard-insights.js:1102-1108](shared/dashboard-insights.js:1102) — same path filter applied to `petsSnap.forEach`.
+- [ ] **B-TENANT.2** — Update `_setupWellnessQuizPrompt` AND `setupContractQuizGate`:
+      Read from Firestore marker subscription FIRST, fall back to localStorage if not yet subscribed.
 
-      **Why:** "totalPets" KPI currently inflates by every move-out. Insights MUST agree with
-      admin queue on what counts as live.
+      Add **one combined** subscriber `_subscribeQuizMarkers()` that watches BOTH `wellnessQuizPassed/*` and `contractQuizPassed/*` (two separate onSnapshot, same module). Maintains:
+      - `_wellnessQuizMarkers` — keyed `articleId_ym → {passed, score, total, at}`
+      - `_contractQuizMarker` — single object `{ym → {passed, score, total, at}}`
+      
+      Subscriptions follow §7-U claim-first guard + §7-N error callback + §7-V unsub-before-rebind.
 
-- [x] **B3.** [shared/dashboard-tenant-lease.js:1314-1322](shared/dashboard-tenant-lease.js:1314) `_deletePetFromFirestore` — also call a new
-      `_deletePetStorage(building, room, id)` client-side helper that calls a new CF
-      `deletePetMedia` (admin-only callable) that wraps the same `_petStorage.js` helper
-      scoped to one petId.
+      **Why:** localStorage demoted to hint-only; Firestore authoritative. Two subscriptions in one module = one lifecycle to manage.
 
-      **Why:** §7-K (defined ≠ wired) — admin "🗑️ Remove" deletes Firestore doc but leaks
-      Storage. Symmetric cleanup. CF wrapper because Storage delete from client can't be
-      claim-scoped reliably (rules can't gate by petId existence in Firestore).
+- [ ] **B-TENANT.3** — `renderQuizHub` + `renderQuizHistory` (community page):
+      Switch source from localStorage scan to `_wellnessQuizMarkers` + `_contractQuizMarker` objects.
 
-## Phase C — Storage rule tightening + migration (~1 day) ✅ COMPLETE (C3 downgraded)
+      **Why:** consistency with Phase A2 hub; backed by source of truth for both quiz sources.
 
-- [x] **C1.** [storage.rules:28](storage.rules:28) — tighten read from `allow read: if isSignedIn()` to
-      claim-matched:
+- [ ] **B-TENANT.4** — §7-KK reconciliation (BOTH subscriptions):
+      When wellness or contract quiz subscription fires from cached snapshot, do NOT clear localStorage hint markers. Only clear on `!snap.metadata.fromCache && !snap.metadata.hasPendingWrites`.
 
+      **Why:** Session A produced §7-KK exactly because we didn't guard. Apply proactively to both new subscriptions.
+
+## Phase B-INSIGHTS — admin analytics (~½ day)
+
+- [ ] **B-INSIGHTS.1** — Add to `shared/dashboard-insights.js` a new section "Quiz Engagement" with two sub-cards:
+
+      **Contract Quiz** — `collectionGroup('contractQuizPassed')` aggregate:
       ```
-      allow read: if isAdmin() || (isSignedIn() &&
-        request.auth.token.room == room &&
-        request.auth.token.building == building);
+      // per month → { passes, fails, total, passRate }
+      const monthStats = {};
+      snap.docs.forEach(d => {
+        const ym = d.id; // 'YYYY-MM'
+        const passed = d.data().passed;
+        monthStats[ym] = monthStats[ym] || { passes:0, fails:0 };
+        if (passed) monthStats[ym].passes++; else monthStats[ym].fails++;
+      });
       ```
 
-      Tenant SDK does not need cross-room pet read — they only render their own. Admin queue
-      uses Firestore `photoURL` field (download tokens), not direct Storage access.
+      **Wellness Quiz** — `collectionGroup('wellnessQuizPassed')` aggregate by articleId:
+      ```
+      const stats = {}; // articleId → { passes, fails }
+      snap.docs.forEach(d => {
+        const articleId = d.id.split('_').slice(0, -1).join('_'); // strip trailing _ym
+        const passed = d.data().passed;
+        stats[articleId] = stats[articleId] || { passes:0, fails:0 };
+        if (passed) stats[articleId].passes++; else stats[articleId].fails++;
+      });
+      ```
 
-      **Why:** prevents new-tenant-of-room-15 enumerating old tenant's vaccine book PDF.
-      Storage rules can't do Firestore lookup — token claims directly is the only option.
+      Cross-reference with `wellness_articles` to show article title + pass rate.
 
-- [x] **C2.** New `tools/cleanup-orphan-pet-storage.js` — template = [tools/cleanup-test-leases.js](tools/cleanup-test-leases.js).
-      - Lists ALL Storage objects under `pets/` prefix via Admin SDK
-      - Cross-references with live `collectionGroup('pets')` Firestore query (live path only)
-      - Reports orphans: `{building, room, petId, files[], sizeBytes}`
-      - Dry-run by default; prints preview table + total bytes to reclaim
-      - `--apply` gate per §7-I — exits with `Skipping. Re-run with --apply.` unless flag set
-      - When applied: deletes one room's prefix per call, prints `[deleted] pets/{b}/{r}/{petId}/`
-        for each + final summary
+      **Why:** closes the loop — admin sees engagement for both quiz types; iterates quiz quality based on which questions are too hard. Contract pass-rate by month also surfaces seasonality.
 
-      **Why:** existing accumulated orphans from past archives (before A1-A2 ships) need
-      one-shot cleanup. Will not run automatically — user invokes with `--apply` after
-      reviewing dry-run output.
+- [ ] **B-INSIGHTS.2** — Apply §7-DD live-path discipline:
+      Filter out archive paths from collectionGroup result (`parts.includes('archive')` exclusion), mirroring pets/wellnessClaimed handling.
 
-- [~] **C3.** ~~`npm run test:rules` — verify Storage rule tightening~~ **DOWNGRADED**:
-      `firestore.rules.test.js` covers Firestore rules only; no `storage.rules.test.js`
-      infrastructure exists. Adding new test infrastructure was out of scope for the
-      "minimal blast radius" approach. Instead:
-      - Firestore rules test still runs unchanged (no regression risk)
-      - Storage rule verified via the Verification block below (Chrome MCP live smoke)
-      - If a future sprint adds `@firebase/rules-unit-testing` for Storage, port the
-        recommended cases: (a) tenant of room 13 reading `pets/rooms/15/...` → DENY,
-        (b) admin reading any → ALLOW, (c) tenant reading own room → ALLOW.
+      **Why:** archive subcoll copies on move-out would inflate counts (§7-T cousin). Filter at reader.
+
+## Phase B-MEMORY — verifier rows + lifecycle doc update (~15 min)
+
+- [ ] **B-MEMORY.1** — Update `lifecycle_wellness_claim.md`:
+      - Add new section "## Quiz extension (Session B)" between "Article seeding" and "Firestore rule"
+      - Document: quiz field shape, CF name + region, marker subcollection path, monthKey format, server-side pass threshold, reward constant, idempotency contract
+      - Update "## Firestore rule" to include the new `wellnessQuizPassed` block + collectionGroup rule
+      - Add 4 new verifier rows in "## Verification" block:
+        ```bash
+        grep -n "claimWellnessQuizPoints" functions/index.js
+        grep -n "wellnessQuizPassed" firestore.rules
+        grep -n "_subscribeWellnessQuizMarkers" tenant_app.html
+        grep -n "Wellness Quiz Engagement" shared/dashboard-insights.js
+        ```
+
+      **Why:** CLAUDE.md §1 verify-via-grep doctrine — every load-bearing claim has a grep verifier.
+
+- [ ] **B-MEMORY.2** — Run `npm run verify:memory:all` — exit 0 required before commit. Pre-commit hook §F enforces.
+
+      **Why:** standard memory drift gate.
+
+---
 
 ## Verification (per CLAUDE.md §5)
 
-- [ ] `pwd && git branch --show-current` — must be `claude/elated-swirles-c51815` worktree, NOT main (per [feedback_branch_before_firebase_deploy.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_branch_before_firebase_deploy.md))
-- [ ] `npm run test:rules` after C1 — rules CI green
-- [ ] `npm test functions/__tests__/_petStorage.test.js` after A5 — unit test green
-- [ ] `firebase deploy --only functions:archiveTenantOnMoveOut` from worktree branch
-- [ ] `firebase deploy --only storage` after C1
-- [ ] Live smoke test via Chrome MCP (per [feedback_use_chrome_mcp.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_use_chrome_mcp.md)):
-   1. Tenant in room 15 (LIFF) uploads test pet → see in admin queue
-   2. Admin approves → tenant sees ✅ status
-   3. Admin archives tenant → pet disappears from queue + Storage files gone (check Firebase Console > Storage > `pets/rooms/15/{petId}/`)
-   4. New tenant moves into room 15 → pet list empty in their tenant_app
-   5. Admin tries to enumerate old petId via direct Storage URL → 403 (Phase C in effect)
+- [ ] `pwd && git branch --show-current` — must be `claude/reverent-swirles-2fe321` worktree, NOT main (per [feedback_branch_before_firebase_deploy.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_branch_before_firebase_deploy.md))
+- [ ] `node --test functions/__tests__/claimWellnessQuizPoints.test.js` after B-CF.3 — 12/12 green
+- [ ] `node --test functions/__tests__/claimContractQuizPoints.test.js` after B-CF.6 — 8/8 green
+- [ ] `npm run test:rules` after B-RULES.5 — full suite + 7 new cases green
+- [ ] `npm test` — full unit suite (460 → ~480 with new tests) green
+- [ ] `firebase deploy --only functions:claimWellnessQuizPoints,claimContractQuizPoints` from worktree branch
+- [ ] `firebase deploy --only firestore:rules` after B-RULES.1-4
+- [ ] Live smoke via Chrome MCP:
+   1. Admin opens dashboard → Content Mgmt → Wellness → edit "sleep-bedroom" → add 3-question quiz → save
+   2. Tenant in room 15 (LIFF) opens article → sees Quiz prompt → starts quiz → answers 2/3 correctly → sees "ตอบถูก 2/3 +10 pts" → Quest Ecosystem shows +10
+   3. Tenant reopens article same month → button shows "✅ ทำแล้วเดือนนี้" (Firestore marker, not localStorage)
+   4. Tenant tries to call CF directly with same args → already-exists error
+   5. Tenant clears localStorage manually → reopens article → still shows ✅ (Firestore is authoritative)
+   6. Contract quiz path: tenant opens contract page → starts contract quiz → passes 2/3 → +20 pts via CF
+   7. Tenant reopens same month → contract quiz shows "✅ ทำแล้วเดือนนี้" gate
+   8. Admin opens Insights → "Quiz Engagement" card → sees wellness "sleep-bedroom: 100%" + contract "2026-05: 100%"
 - [ ] `npm run verify:memory` — pre-commit hook runs this; must exit 0
-- [ ] Update [lifecycle_pets_registration.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\lifecycle_pets_registration.md) — add Storage cleanup section + collectionGroup
-      live-path-only contract + update Failure modes table
-
-## Deferred to future sprints (NOT in this Plan)
-
-- **Phase 1 pet features** (vaccine reminder CF, pet profile expansion, building petPolicy
-  metadata, admin queue UX polish) — waiting on prerequisites
-- **Phase 2** (lost & found, incident report tag, pet policy in lease signing)
-- **Phase 3** (pet zone booking, partner directory)
+- [ ] Update `lifecycle_wellness_claim.md` per B-MEMORY.1
 
 ## Files touched
 
 | File | Phase | Type |
 |------|-------|------|
-| `functions/_petStorage.js` | A1 | NEW |
-| `functions/__tests__/_petStorage.test.js` | A5 | NEW |
-| `functions/archiveTenantOnMoveOut.js` | A2 | EDIT (~10 lines) |
-| `functions/transitionToPlayer.js` | A4 | EDIT (comment only) |
-| `functions/deletePetMedia.js` | B3 | NEW (small CF) |
-| `functions/index.js` | A1,B3 | EDIT (exports) |
-| `shared/dashboard-tenant-lease.js` | B1,B3 | EDIT (~15 lines) |
-| `shared/dashboard-insights.js` | B2 | EDIT (~5 lines) |
-| `storage.rules` | C1 | EDIT (3 lines) |
-| `tools/cleanup-orphan-pet-storage.js` | C2 | NEW |
-| `~/.../memory/lifecycle_pets_registration.md` | Verify | UPDATE |
+| `functions/claimWellnessQuizPoints.js` | B-CF.1 | NEW |
+| `functions/__tests__/claimWellnessQuizPoints.test.js` | B-CF.3 | NEW |
+| `functions/claimContractQuizPoints.js` | B-CF.4 | NEW |
+| `functions/__tests__/claimContractQuizPoints.test.js` | B-CF.6 | NEW |
+| `functions/index.js` | B-CF.2, B-CF.5 | EDIT (2 lines) |
+| `firestore.rules` | B-RULES.1-4 | EDIT (~35 lines) |
+| `tools/firestore-rules-test/*.test.js` | B-RULES.5 | EDIT (~90 lines) |
+| `shared/dashboard-wellness-content.js` | B-ADMIN.1-4 | EDIT (~150 lines) |
+| `shared/dashboard-main.js` | B-ADMIN.4 | EDIT (~5 delegation handlers) |
+| `tenant_app.html` | B-TENANT.1-4 | EDIT (~100 lines) |
+| `shared/dashboard-insights.js` | B-INSIGHTS.1-2 | EDIT (~80 lines) |
+| `~/.../memory/lifecycle_wellness_claim.md` | B-MEMORY.1 | UPDATE |
 
-11 files, ~3.5 days estimated.
+12 files, ~3-4 day estimate (was 10/~2-3 days; +2 files + ~1 day for contract quiz scope per Decision 4).
 
 ## Risks + mitigations
 
 | Risk | Mitigation |
 |------|------------|
-| Storage delete irreversible | Migration script `--apply` gate + dry-run shows full list (§7-I); A2/A3 fire-and-forget so a Storage hiccup doesn't lose Firestore archive |
-| Storage rule tightening breaks LIFF claim shape | Run `npm run test:rules` BEFORE deploy; existing tenant upload already uses these claims for write rule (line 31-32) so read uses same shape |
-| collectionGroup filter masks future legit drift | Add `console.warn` if `parts[2] !== 'list' && parts[2] !== 'archive'` — surfaces unexpected paths |
-| Prefix bug (`pets/rooms/1` matches `pets/rooms/15`) | A5 test explicitly asserts trailing-slash; helper signature takes `(building, roomId)` not raw prefix |
-| Memory doc drift | Verify step updates `lifecycle_pets_registration.md` same session as code change |
+| Replacing client-trust mid-flight breaks existing tenants who already claimed via localStorage this month | Server idempotency by marker doc means first CF call wins — replays return already-exists. Existing localStorage markers do NOT migrate to Firestore (cosmetic only after first re-claim attempt). |
+| `_subscribeWellnessQuizMarkers` triggers same §7-U trap | Apply the claim-first guard pattern up-front (B-TENANT.2 explicitly requires it) |
+| Admin authoring UI loses data on form-validation failure | Validate inline before close; show field errors instead of dropping the whole quiz |
+| CF deploy fails / rolls back leaving rules ahead of CF | Rules deploy is reversible (rollback by re-deploying old rules); CF deploy first, then rules. Test order: CF unit tests → CF deploy → rules CI → rules deploy → tenant_app deploy. |
+| Pre-existing client localStorage produces "ghost claims" until reconciled | §7-KK guard in B-TENANT.4 + first server-confirmed snapshot overrides hint |
+| Per-article quiz JSON in Firestore article doc bloats — image-heavy articles already large | quiz array is small (≤5 questions × ~200 chars = ~1KB); negligible vs body+image |
+| Storage rules: wellness articles have no Storage component | N/A — wellness articles are Firestore-only currently |
 
 ## Open decisions for user
 
-1. **A3 — Storage cleanup on `transitionToPlayer`?** Recommend NO (preserves revert
-   round-trip), but if you prefer full PII cleanup on every archive path, say so.
-2. **Sprint sequencing** — A → B → C as written, or B first (smallest, lowest risk,
-   ships filter immediately to stop insights drift), then A, then C?
-3. **Deploy timing** — ship all 3 phases as one PR + one deploy window, or 3 separate
-   commits + 3 deploys for safer rollback?
+**All 4 decisions LOCKED 2026-05-23 evening (9)** — see "Decisions" table at top of file. No new open decisions; proceed to user approval.
+
+If user wants to change any locked decision before ✅ approval, edit the Decisions table + propagate down to affected phases.
 
 ---
 
-# Review (2026-05-23 evening)
+# Review (2026-05-23 evening (9) — Quiz Session B execute)
 
 ## Shipped
 
-12 files touched per the plan's "Files touched" table. All Phase A + B items + C1 + C2 complete; C3 downgraded (no Storage rules test infrastructure existed — not in scope per "minimal blast radius").
+12 files touched per plan. All 7 phases complete; no scope reductions.
 
-### Phase A — Storage cleanup on archive
-- ✅ `functions/_petStorage.js` (NEW) — exports `deletePetStorageForRoom` + `deletePetStorageForPet`. Trailing-slash prefix discipline + per-file `Promise.allSettled` + shape guards
-- ✅ `functions/__tests__/_petStorage.test.js` (NEW) — 11 tests, all green (prefix discipline, partial failure tolerance, programmer-error guards)
-- ✅ `functions/archiveTenantOnMoveOut.js` — post-batch fire-and-forget call to helper; new return fields `archivedPetStorageFiles` + `petStorageErrors`
-- ✅ `functions/transitionToPlayer.js` — comment-only (intentional NOT-called, see §7-DD comment)
-- ✅ `functions/revertTransitionToPlayer.js` — comment-only (asymmetry explained)
+### Phase B-CF — server-trusted claim CFs
+- ✅ `functions/claimWellnessQuizPoints.js` (NEW) — player + tenant branches; mirrors `claimDailyLoginPoints` (region, auth gate, transaction, idempotency). Reads canonical quiz from `wellness_articles/{id}.quiz`; grades server-side; writes marker subcoll; reward = 10 pts on pass.
+- ✅ `functions/__tests__/claimWellnessQuizPoints.test.js` (NEW) — **15 tests** (planned 12; added 3 more for grading edge cases). Covers auth, validation, grading 3/3·2/3·1/3·1/1·0/1, idempotency, player path, claim mismatch.
+- ✅ `functions/claimContractQuizPoints.js` (NEW) — tenant-only; mid-execute design pivot from "hardcoded server-side questions" to "grade-by-kind" (`leaseEndDate` / `monthlyRent` / `policy` with canonical answer map). Robust to client-side option shuffle.
+- ✅ `functions/__tests__/claimContractQuizPoints.test.js` (NEW) — **13 tests** (planned 8; added 5 for rent normalization, legacy `contract.endDate` fallback, POLICY_ANSWERS sanity). All green.
+- ✅ `functions/index.js` — 2 new exports added.
 
-### Phase B — collectionGroup live-path filter
-- ✅ `shared/dashboard-tenant-lease.js:1210` — `.filter()` excludes archive paths; unexpected paths logged via `console.warn`
-- ✅ `shared/dashboard-insights.js:1102` — same path filter on KPI counter
-- ✅ `functions/deletePetMedia.js` (NEW) — admin-only callable, Firestore doc + Storage cleanup in one call
-- ✅ `functions/index.js` — exports `deletePetMedia`
-- ✅ `shared/dashboard-tenant-lease.js` — `removePetApproval` rewired to call CF via `httpsCallable`; dead `_deletePetFromFirestore` removed (§7-K cleanup)
+### Phase B-RULES — Firestore rules + CI cases
+- ✅ `firestore.rules` — 2 new tenant-branch blocks (`wellnessQuizPassed` + `contractQuizPassed`, **CF-only create** = tighter than `wellnessClaimed`) + 1 player-branch block (`people/{tenantId}/wellnessQuizPassed`) + 2 collectionGroup admin-only read rules.
+- ✅ `firestore.rules.test.js` — **7 new test cases** (planned 7) covering CF-only-create deny, owner read allow, cross-room deny, collectionGroup admin read.
+- ⚠️ `npm run test:rules` not run locally — requires Firestore emulator on port 8080 (CI runs this). Syntax-checked via node parser; review pass on rules block structure looks clean.
 
-### Phase C — Rule tighten + migration
-- ✅ `storage.rules:27-35` — pets read tightened from `isSignedIn()` to claim-match (`token.room` + `token.building`)
-- ✅ `tools/cleanup-orphan-pet-storage.js` (NEW) — Firebase Admin SDK script; lists Storage `pets/**`, cross-refs `collectionGroup('pets')` LIVE-only, prints orphan table by group, dry-run default, `--apply` gate per §7-I
+### Phase B-ADMIN — Quiz authoring UI
+- ✅ `dashboard.html` — collapsible `<details id="wellness-quiz-editor">` section between reward input + save buttons. Includes "+ เพิ่มคำถาม" + "📥 ดึงตัวอย่างจาก hardcoded" actions.
+- ✅ `shared/dashboard-wellness-content.js` — ~190 lines of quiz editor logic: `_renderQuizQuestions`, `collectQuizFromForm`, `validateQuiz`, `quizAddQuestion`, `quizRemoveQuestion`, `quizAddOption`, `quizRemoveOption`, `quizImportSample`. Max 5 questions × 4 options. `saveWellnessArticle` now reads + validates + writes `data.quiz` (or `deleteField()` on empty edit). `editWellnessArticle` populates editor from existing quiz. `resetWellnessForm` clears editor.
+- ✅ `shared/dashboard-main.js` — 6 new delegation handlers (quizAddQuestion, quizRemoveQuestion, quizAddOption, quizRemoveOption, quizSetCorrect no-op, quizImportSample). No inline onclick per CSP §E hook.
 
-### Verification artifacts (per CLAUDE.md §5)
-- ✅ `npm test` — 387/387 pass
-- ✅ `npm run verify:memory` — 34 docs / 332 verifier rows / 0 fails
-- ✅ `lifecycle_pets_registration.md` updated: Storage trust boundary table, lifecycle cleanup matrix, live-path discipline section, 4 new failure-mode rows, 4 new verifier-row grep commands
+### Phase B-TENANT — Client wiring + subscriptions
+- ✅ `tenant_app.html` — `submitContractQuiz` converted to async; calls `claimWellnessQuizPoints` (wellness branch) or `claimContractQuizPoints` (contract branch) via `httpsCallable`. Client computes preview score immediately for UI; server is authoritative. Optimistic localStorage marker write (per Session A §7-KK pattern). Rollback on transient failure; `already-exists` handled as info toast.
+- ✅ Added `_subscribeQuizMarkers` (mirror `_subscribePaymentConfig`) watching BOTH subcollections via `onSnapshot`. Applies **§7-U** (claim-first guard via `_taBuilding`/`_taRoom`), **§7-N** (error callback with permission-denied resets `_xxxUnsub=null`), **§7-V** (unsub-before-rebind so re-attach on claim refresh doesn't leak listener), **§7-KK** (cached snapshots populate the marker map but don't clear localStorage hints).
+- ✅ `_setupWellnessQuizPrompt` + `setupContractQuizGate` + `startWellnessQuiz` + `renderQuizHub` + `renderQuizHistory` all updated to prefer Firestore markers, fallback to localStorage.
+- ✅ Marker maps exposed: `window._wellnessQuizMarkers` + `window._contractQuizMarkers` + `window._getContractQuizMarker(ym?)`.
 
-## Deferred (NOT in this sprint)
+### Phase B-INSIGHTS — Admin analytics
+- ✅ `shared/dashboard-insights.js` — new `renderQuizEngagement()` aggregates both collectionGroups (filtered by §7-DD live-path discipline). Wellness sub-card: per-article pass rate sorted by attempt count. Contract sub-card: last 6 months pass rate. Wired into `initCommunityInsights` + `refreshInsight` dispatcher.
+- ✅ `dashboard.html` — `<div id="dashQuizEngagement">` container in ชุมชน tab + matching scoped CSS for max-height/overflow.
 
-- **`firebase deploy`** — pending user TIER-1 review of the diff before deploy. Per [feedback_branch_before_firebase_deploy.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_branch_before_firebase_deploy.md): MUST verify branch + worktree before `firebase deploy --only functions:archiveTenantOnMoveOut,deletePetMedia` + `firebase deploy --only storage`
-- **Live Chrome MCP smoke test** — pending deploy. Steps in tasks/todo.md "Verification" block above
-- **`tools/cleanup-orphan-pet-storage.js --apply`** — pending dry-run review then user-triggered (§7-I)
-- **Storage rules CI infrastructure** — if a future sprint adds `@firebase/rules-unit-testing` for Storage, port the 3 test cases from C3 downgrade note
-- **Phase 1 pet features** (vaccine reminder, pet profile expansion, building petPolicy) — prerequisites now landed; these can proceed in their own sprint
+### Phase B-MEMORY — Lifecycle doc + verifier rows
+- ✅ `lifecycle_wellness_claim.md` — new "Quiz extension (Session B)" section. Documents quiz field shape, both CF names + region + subcollection paths, monthKey format, pass thresholds, reward constants, idempotency contract. Firestore rule block extended with the 2 new tenant subcollections + 2 collectionGroup rules. Tighter CF-only create vs Session A `wellnessClaimed` flagged.
+- ✅ 5 new verifier-grep rows added to "Verification" block (CF exports, rules, tenant subscription, admin editor wiring, insights card).
+- ✅ `npm run verify:memory` = **34 docs · 345 verifier rows · 0 fails** (was 340 — +5 new rows).
 
-## Follow-ups for next session
+## Verification artifacts
 
-1. **Open PR** from `claude/elated-swirles-c51815` worktree branch. Title suggestion: `feat(pets): Storage cleanup on archive + collectionGroup live-path filter + read rule tighten`. The PR description should pull the "Why" from each Phase + link the failure-mode table additions in lifecycle_pets_registration.md
-2. **Deploy sequence** (after PR merge):
-   - `firebase deploy --only functions:archiveTenantOnMoveOut,deletePetMedia` (asia-southeast1)
-   - `firebase deploy --only storage` (rule tightening)
-3. **Live smoke** via Chrome MCP — 5-step test in Verification block of this file
-4. **Run orphan cleanup** — `node tools/cleanup-orphan-pet-storage.js` (dry-run), show output to user, then `--apply` after approval
-5. **Phase 1 pet features sprint** — vaccine reminder CF + pet profile expansion + petPolicy metadata can start once orphan cleanup + smoke test sign off
+- ✅ `node --test functions/__tests__/claimWellnessQuizPoints.test.js` — **15/15 green**
+- ✅ `node --test functions/__tests__/claimContractQuizPoints.test.js` — **13/13 green**
+- ✅ `npm run verify:memory` — 34/345/0 fails
+- ✅ `npm run audit:auth` — PASS (11 matches, all justified)
+- ✅ `npm run audit:size` — all files within soft/hard budgets (tenant_app at 94% soft / 75% hard)
+- ✅ All edited JS files parse via `node -c`
+- ⚠️ `npm run test:rules` — DEFERRED (needs Firestore emulator). CI runs this; rules block syntax verified manually.
+- ⚠️ Live Chrome MCP smoke — DEFERRED (needs Vercel deploy + LIFF/admin sign-in).
 
-## Lessons logged this session
+## Pre-existing issues (NOT caused by this sprint)
 
-- **Mea culpa on turn 3** — claimed §7-DD orphan-pets bug LIVE without reading the 3 CFs. Actual gap was Storage-side, smaller. The audit step (turn 4) caught it before any code change. Reinforces §7-O / verify-via-grep / "audit feature ที่มีก่อน" as the discipline. Already captured in CLAUDE.md §7-K wording; no new anti-pattern needed.
-- **`collectionGroup` cousin of §7-T** — sub-collection name match across live + archive paths is a writer/reader drift class. Documented in `lifecycle_pets_registration.md` "live-path discipline" section. May warrant promotion to CLAUDE.md §7-II if it recurs in another collection (e.g. `redemptions/` if ever archived).
+- 6 existing CF test files fail with `Cannot find module 'firebase-functions/v1'` when run from repo root (verified via `git stash` clean-main run). Module resolution issue in test harness; my new test files use `Module._load` mock and work correctly. Worth a separate sprint to standardize the test mock pattern.
 
+## Deferred to next session
+
+1. **`firebase deploy`** — per [feedback_branch_before_firebase_deploy.md](C:\Users\usEr\.claude\projects\C--Users-usEr-Downloads-The-green-haven\memory\feedback_branch_before_firebase_deploy.md): verify branch + worktree before `firebase deploy --only functions:claimWellnessQuizPoints,claimContractQuizPoints` + `firebase deploy --only firestore:rules`.
+2. **Live smoke** via Chrome MCP (admin authoring + tenant submission + already-exists check + insights card) — pending deploy.
+3. **PR open** from `claude/reverent-swirles-2fe321` worktree. Suggested title: `feat(quiz): server-trusted wellness + contract quiz claims (Session B) — CFs + rules + admin authoring + insights`.
+4. **Player-side wellness tab in tenant_app** — Decision 2 deferred this. CF + rules ship ready; tenant_app player path needs activation when player UI grows to support wellness articles.
+
+## Open follow-up surfaces
+
+- `POLICY_ANSWERS` map in `claimContractQuizPoints.js` mirrors tenant_app's hardcoded pool. If admin ever changes those policy questions in tenant_app, mirror here. Future: pull from `system/policies.quiz.contract` Firestore doc.
+- Storage path on transferTenant (Path 1c+1d from prior session) — separate sprint; not in quiz scope.
+- ~70 inline onclick across 14 `shared/dashboard-*.js` files (pre-commit §E only catches NEW). Opportunistic refactor.
+
+## Mid-sprint design pivot (worth noting)
+
+The plan assumed contract quiz had hardcoded server-side questions, but the actual tenant_app code generates Q1+Q2 dynamically from lease data (endDate, monthlyRent) with shuffled options + a fallback policy pool. **Mid-execute pivot:** accept caller-sent `{kind, q?, userAnswer}` per question and grade server-side by kind. `kind: 'leaseEndDate'` compares to lease, `'monthlyRent'` digit-normalized compares, `'policy'` looks up in canonical map. This keeps the CF stateless (no two-phase session) while preserving server SoT. The pivot was flagged to user in the execute chat before implementing.
+
+## Lessons (not promoted to §7 — sprint-specific)
+
+- **Plan-doc accuracy check:** the plan assumed contract quiz was as simple as wellness quiz. Reading `buildContractQuiz` in tenant_app revealed the dynamic nature. Lesson: when planning a CF that mirrors client-side logic, READ the client code end-to-end (not just the call site) during the planning phase. The 30-second extra read would have caught the dynamic-questions wrinkle before plan was written.
+- **§7-KK applied proactively:** Session A produced §7-KK reactively after the daily-bonus reconciliation bug. Session B applied the same metadata guard prospectively in `_subscribeQuizMarkers` — first time the lesson was used to PREVENT the bug rather than fix it. Worth noting that anti-pattern docs DO get re-applied when present and current.

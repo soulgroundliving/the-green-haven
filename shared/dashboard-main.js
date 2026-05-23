@@ -800,6 +800,13 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if (a === 'saveWellnessArticle') { typeof saveWellnessArticle === 'function' && saveWellnessArticle(); return; }
     if (a === 'resetWellnessForm') { typeof resetWellnessForm === 'function' && resetWellnessForm(); return; }
     if (a === 'seedWellnessStarters') { typeof seedWellnessStarters === 'function' && seedWellnessStarters(); return; }
+    // Quiz editor (Session B) — admin authors per-article wellness quizzes.
+    if (a === 'quizAddQuestion')    { typeof window.quizAddQuestion === 'function' && window.quizAddQuestion(); return; }
+    if (a === 'quizRemoveQuestion') { typeof window.quizRemoveQuestion === 'function' && window.quizRemoveQuestion(el.dataset.qi); return; }
+    if (a === 'quizAddOption')      { typeof window.quizAddOption === 'function' && window.quizAddOption(el.dataset.qi); return; }
+    if (a === 'quizRemoveOption')   { typeof window.quizRemoveOption === 'function' && window.quizRemoveOption(el.dataset.qi, el.dataset.oi); return; }
+    if (a === 'quizSetCorrect')     { typeof window.quizSetCorrect === 'function' && window.quizSetCorrect(el.dataset.qi, el.dataset.oi); return; }
+    if (a === 'quizImportSample')   { typeof window.quizImportSample === 'function' && window.quizImportSample(); return; }
     // 'saveLeaseAlertSettings' dispatch removed 2026-05-19 — the form it served is gone.
     if (a === 'saveTrackingStart') { typeof saveTrackingStart === 'function' && saveTrackingStart(); return; }
     if (a === 'checkVacant') { typeof checkVacant === 'function' && checkVacant(); return; }
