@@ -164,6 +164,27 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    // ===== MARKETPLACE — tenant listing images (Spec v1.0 S0.2) =====
+    // Path: marketplace/{postId}/{fileName}
+    // Read: any signed-in tenant (matches firestore.rules /marketplace read).
+    // Write: owner of the marketplace/{postId} Firestore doc (cross-checked via
+    //   firestore.get). Doc must exist FIRST — client flow is addDoc → upload.
+    // Delete: admin or owner.
+    // 10MB cap + image-only — base64 inline was 80KB typical at 400px/q=0.75;
+    // Storage gives headroom for higher-res photos in future sprints.
+    match /marketplace/{postId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if fitsSizeLimit() && isImageOrPdf()
+        && (isAdmin()
+            || (isSignedIn()
+                && firestore.exists(/databases/(default)/documents/marketplace/$(postId))
+                && firestore.get(/databases/(default)/documents/marketplace/$(postId)).data.ownerUid == request.auth.uid));
+      allow delete: if isAdmin()
+        || (isSignedIn()
+            && firestore.exists(/databases/(default)/documents/marketplace/$(postId))
+            && firestore.get(/databases/(default)/documents/marketplace/$(postId)).data.ownerUid == request.auth.uid);
+    }
+
     // Default deny.
     match /{allPaths=**} {
       allow read, write: if false;
