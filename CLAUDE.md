@@ -6,7 +6,7 @@ Loaded at every session start. Overrides any default behavior — follow exactly
 
 Two docs auto-load at session start; they are **complementary, not duplicates**:
 
-- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-T** (project-specific lessons that auto-load every session).
+- **This file (CLAUDE.md)** — *workflow + stack + recurring anti-patterns* · in the repo · committed to git · "how to work in this codebase". Owns: protocol rules, tech stack table, build/deploy commands, **§7 anti-patterns A-JJ** (project-specific lessons that auto-load every session).
 - **MEMORY.md** at `~/.claude/projects/C--Users-usEr-Downloads-The-green-haven/memory/MEMORY.md` — *architecture + history* · user-scoped · NOT committed · "what's in this codebase + what I've learned about this user". Owns: critical rules, system lifecycles, working-style feedback, archive.
 
 **Boundary rule for new content:**
@@ -947,6 +947,33 @@ When you see (1) + (2) + (4) simultaneously: hash drift is the first hypothesis.
 - §7-J (static deploy ≠ live-data verified) — extension: static deploy ≠ live-page-render verified. Vercel showed "deploy succeeded" on every pre-2026-05-23 fervent-kare push. Production was broken.
 
 Fix landed 2026-05-23 (commit `9f29338`) by `npm run csp:hash && node tools/update-vercel-csp.js && git commit vercel.json tools/csp-hashes.json tools/update-vercel-csp.js` → push → Vercel redeploy → login.html visually verified back to the intended dark-green-gradient + 450px white card design.
+
+### JJ. `btn.click()` timing race — event delegation hub not registered at 900ms checkpoint
+
+`btn.click()` routes through the event delegation hub in `shared/dashboard-main.js`. That hub is registered **inside** a `DOMContentLoaded` callback that first `await`s Firebase ready (up to 2s). Any programmatic click fired before that await resolves silently drops — no handler is listening yet.
+
+Incident 2026-05-23 (commit `c32a5d9`): the 900ms DOMContentLoaded timer in `dashboard-home-live.js` called `btn.click()` to trigger `setYear → initDashboardCharts`. On cold loads, Firebase was still initializing so the delegation hub wasn't registered yet. Click fired, nothing handled it, `initDashboardCharts` never ran, `dash-cold-skeleton` persisted indefinitely. `_initialDashboardYear = true` (timer fired) AND `_dashRenderCooldownUntil` set — so the `_waitForHistStore` onChange rerender was blocked within the 1s cooldown window. No subsequent trigger. Skeleton stuck forever.
+
+**Rule:** never use `btn.click()` for programmatic initialization that races DOMContentLoaded. Call the target function directly. Pass `btn` as an argument if the function needs it for UI highlighting.
+
+```js
+// ❌ WRONG — relies on event delegation hub being registered (may not be at 900ms)
+if (btn) btn.click();
+else if (typeof setYear === 'function') setYear(beYear, null);  // fallback never reached when btn exists
+
+// ✅ CORRECT — direct call, always works; btn passed for active-tab highlight
+setYear(beYear, btn || null);
+```
+
+Detection recipe:
+```bash
+# Timer-triggered programmatic clicks on data-action elements — potential race
+grep -rn "setTimeout" shared/ dashboard.html | grep "\.click()"
+# Cross-check: is the target function's event delegation hub registered in a DOMContentLoaded async callback?
+grep -n "DOMContentLoaded.*async\|addEventListener.*click" shared/dashboard-main.js | head -5
+```
+
+Sibling patterns: §7-A (wrong event timing for auth-gated reads), §7-U (claims not ready on first auth event fire). All three are "the trigger fired but the handler wasn't ready yet" variations.
 
 ---
 
