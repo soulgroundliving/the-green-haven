@@ -2432,18 +2432,16 @@
             </div>
             <div style="font-size: var(--fs-sm); color: #666; margin-bottom: 25px;">Log in everyday and earn rewards!</div>
 
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px;">
-                <div class="day-card active">1 Day<br>💰 1</div>
-                <div class="day-card active">2 Days<br>💰 1</div>
-                <div class="day-card today">
-                    <span class="get-badge">GET</span>
-                    3 Days<br>💰 1
-                </div>
+            <div id="daily-bonus-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px;">
+                <!-- Rendered by _renderDailyBonusCards() based on gamification.dailyStreak + lastDailyClaim -->
+                <div class="day-card today"><span class="get-badge">GET</span>1 Day<br>💰 1</div>
+                <div class="day-card">2 Days<br>💰 1</div>
+                <div class="day-card">3 Days<br>💰 1</div>
                 <div class="day-card">4 Days<br>💰 1</div>
                 <div class="day-card">5 Days<br>💰 1</div>
                 <div class="day-card">6 Days<br>💰 1</div>
             </div>
-            <div class="day-card" style="grid-column: span 3; padding: 15px; margin-top: 5px;">
+            <div id="daily-bonus-day7" class="day-card" style="grid-column: span 3; padding: 15px; margin-top: 5px;">
                 7 Days ✨ Special Bonus +3 Pts
             </div>
 
@@ -5081,6 +5079,68 @@
         // ------------------------------------------
         // ส่วนที่ 2: ระบบเช็กอินรับแต้มรายวัน
         // ------------------------------------------
+        // Daily streak state — populated by _subscribeEcoPoints snapshot.
+        // Mirrors the CF schema in functions/claimDailyLoginPoints.js (gamification.dailyStreak/lastDailyClaim).
+        // Default values render Day 1 GET — safe for brand-new tenants whose doc has no gamification field yet.
+        let _dailyStreak = 0;
+        let _lastDailyClaim = null;
+
+        function _bkkDateString(d) {
+            return new Date(d.getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+        }
+
+        // Mirror the CF's streak math: same-day = already claimed, yesterday = continue, gap/none = reset to 1.
+        // Returns { cyclePos: 1-7 (today's slot in the 7-day cycle), isClaimableNow: bool }.
+        function _computeDailyBonusState() {
+            const today = _bkkDateString(new Date());
+            const yesterday = _bkkDateString(new Date(Date.now() - 86400000));
+            let nextStreak, isClaimableNow;
+            if (_lastDailyClaim === today) {
+                nextStreak = Math.max(1, _dailyStreak || 1);
+                isClaimableNow = false;
+            } else if (_lastDailyClaim === yesterday) {
+                nextStreak = (_dailyStreak || 0) + 1;
+                isClaimableNow = true;
+            } else {
+                nextStreak = 1;
+                isClaimableNow = true;
+            }
+            const cyclePos = ((nextStreak - 1) % 7) + 1;
+            return { cyclePos, isClaimableNow };
+        }
+
+        function _renderDailyBonusCards() {
+            const { cyclePos, isClaimableNow } = _computeDailyBonusState();
+            const grid = document.getElementById('daily-bonus-grid');
+            if (grid) {
+                grid.innerHTML = [1,2,3,4,5,6].map(d => {
+                    let cls = 'day-card', badge = '';
+                    if (d < cyclePos) {
+                        cls = 'day-card active';
+                    } else if (d === cyclePos) {
+                        if (isClaimableNow) { cls = 'day-card today'; badge = '<span class="get-badge">GET</span>'; }
+                        else cls = 'day-card active';
+                    }
+                    return `<div class="${cls}">${badge}${d} Day${d>1?'s':''}<br>💰 1</div>`;
+                }).join('');
+            }
+            const day7 = document.getElementById('daily-bonus-day7');
+            if (day7) {
+                let cls = 'day-card', badge = '';
+                if (cyclePos === 7) {
+                    if (isClaimableNow) { cls = 'day-card today'; badge = '<span class="get-badge">GET</span>'; }
+                    else cls = 'day-card active';
+                }
+                day7.className = cls;
+                day7.innerHTML = badge + '7 Days ✨ Special Bonus +3 Pts';
+            }
+        }
+
+        function _refreshDailyBonusIfOpen() {
+            const m = document.getElementById('daily-modal');
+            if (m && m.style.display === 'flex') _renderDailyBonusCards();
+        }
+
         // 1. ฟังก์ชันเช็ก — Nest only unless player mode
         function checkDailyLogin() {
             const isPlayer = window._isPlayerMode && window._playerProfile?.tenantId;
@@ -5093,6 +5153,7 @@
             if (localStorage.getItem(claimKey) === bkkToday) return;
             const modal = document.getElementById('daily-modal');
             if (!modal) return;
+            _renderDailyBonusCards();
             const nav = document.getElementById('main-nav-bar');
             if (nav) nav.style.display = 'none';
             modal.style.height = (window.innerHeight || 600) + 'px';
@@ -8928,6 +8989,9 @@
                             const lastPts = parseInt(sessionStorage.getItem('_badgeCheckPts') || '-1');
                             if (pts !== lastPts) { sessionStorage.setItem('_badgeCheckPts', String(pts)); _checkBadgesViaFF(); }
                         }
+                        _dailyStreak = Number(gam.dailyStreak) || 0;
+                        _lastDailyClaim = gam.lastDailyClaim || null;
+                        _refreshDailyBonusIfOpen();
                         const badges = Array.isArray(gam.badges) ? gam.badges : [];
                         _lastKnownBadges = badges;
                         if (typeof _renderBadgeGrid === 'function') _renderBadgeGrid(badges);
@@ -8957,6 +9021,9 @@
                         const lastPts = parseInt(sessionStorage.getItem('_badgeCheckPts') || '-1');
                         if (pts !== lastPts) { sessionStorage.setItem('_badgeCheckPts', String(pts)); _checkBadgesViaFF(); }
                     }
+                    _dailyStreak = Number(gam.dailyStreak) || 0;
+                    _lastDailyClaim = gam.lastDailyClaim || null;
+                    _refreshDailyBonusIfOpen();
                     const badges = Array.isArray(gam.badges) ? gam.badges : [];
                     _lastKnownBadges = badges;
                     _renderBadgeGrid(badges);
